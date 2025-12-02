@@ -1,6 +1,14 @@
 // server.js (ESM version, compatible with "type": "module")
 import WebSocket, { WebSocketServer } from "ws";
 
+
+//// NEW LOGGING ----
+const SERVER_LAG_WARN_MS = 30;   // warn when client→server delay > 30ms
+const SERVER_LAG_HARD_MS = 100;  // big warning > 100ms
+
+const DEBUG_NET = false;
+
+
 const PORT = 8080;
 const HOST = "0.0.0.0";
 
@@ -74,6 +82,7 @@ wss.on("connection", (ws) => {
 
     ws.on("message", (data) => {
         let msg;
+        let nowServer = Date.now();        //// NEW LOGGING ---- raw server ms
         try {
             msg = JSON.parse(data.toString());
         } catch (e) {
@@ -89,18 +98,66 @@ wss.on("connection", (ws) => {
         // Enforce the sender's playerId
         msg.playerId = playerId;
 
+        
+
         if (msg.type === "input") {
             // Relay inputs to everyone.
             // Host will apply them; followers will ignore them.
-            // Shape: { type: "input", playerId, button, pressed }
+            // Shape: { type: "input", playerId, button, pressed, sentAtMs?, sentWallMs? }
             if (typeof msg.button !== "string" || typeof msg.pressed !== "boolean") {
                 console.warn("[server] malformed input from playerId", playerId, ":", msg);
                 return;
             }
 
+            if (DEBUG_NET) {
+            const nowServer = Date.now();
+            if (typeof msg.sentWallMs === "number") {
+                const delayCS = nowServer - msg.sentWallMs;
+                const seq = typeof msg.inputSeq === "number" ? msg.inputSeq : -1;
+
+                if (delayCS > SERVER_LAG_HARD_MS) {
+                    console.warn(
+                        "[serverLag] HARD",
+                        "| seq=", seq,
+                        "| player=", playerId,
+                        "| button=", msg.button,
+                        "| pressed=", msg.pressed,
+                        "| client→server≈", delayCS.toFixed(1), "ms",
+                        "| serverWallMs=", nowServer
+                    );
+                } else if (delayCS > SERVER_LAG_WARN_MS) {
+                    console.warn(
+                        "[serverLag] WARN",
+                        "| seq=", seq,
+                        "| player=", playerId,
+                        "| button=", msg.button,
+                        "| pressed=", msg.pressed,
+                        "| client→server≈", delayCS.toFixed(1), "ms",
+                        "| serverWallMs=", nowServer
+                    );
+                }
+
+                // Also forward these so the host *could* log them if needed
+                msg.serverRecvAt = nowServer;
+                msg.serverSentAt = Date.now();
+            }
+        }
+
+
+
+
+
+
+            // --- END NEW ---
+
             // console.log("[server] relaying input:", msg);
             broadcast(msg);
+
         } else if (msg.type === "state") {
+
+            //// NEW LOGGING ---- add server timestamp for state forwarding
+            msg.serverSentAt = Date.now();
+
             // Only the host (playerId 1) is allowed to send state snapshots.
             if (playerId !== 1) {
                 console.warn("[server] non-host tried to send state; ignoring. playerId =", playerId);

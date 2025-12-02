@@ -99,10 +99,10 @@ class HeroScene extends Phaser.Scene {
     if (g.__heroEngineHostStarted) return;
     g.__heroEngineHostStarted = true;
 
-    console.log(">>> [HeroScene.create] __startHeroEngineHost: importing WorkingHeroEngine25");
+    console.log(">>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser");
 
-    // 1) Load the MakeCode HeroEngine module
-    const engineMod: any = await import("./WorkingHeroEngine25");
+    // 1) Load the wrapped HeroEngine module (with Phaser shims)
+    const engineMod: any = await import("./HeroEngineInPhaser");
 
     // 2) Load the Phaser glue and install the host overrides
     const glue: any = await import("./heroEnginePhaserGlue");
@@ -114,17 +114,12 @@ class HeroScene extends Phaser.Scene {
     await import("./heroLogicHost");
 
     // 4) Patch SpriteKind.create on ANY SpriteKind we can see
-    //    We handle both:
-    //      - engineMod.SpriteKind (module-scoped)
-    //      - globalThis.SpriteKind (if the build puts it there)
     const skGlobal: any = (globalThis as any).SpriteKind;
     const skMod: any = engineMod.SpriteKind;
 
-    // Determine a single canonical SpriteKind object to patch
     let sk: any = skMod || skGlobal;
 
     if (!sk) {
-        // Last resort: create one on globalThis if truly missing
         sk = {};
         (globalThis as any).SpriteKind = sk;
     }
@@ -138,7 +133,6 @@ class HeroScene extends Phaser.Scene {
         };
     }
 
-    // Make sure both views point at the same object, if possible
     if (skMod && skMod !== sk) {
         engineMod.SpriteKind = sk;
     }
@@ -155,6 +149,7 @@ class HeroScene extends Phaser.Scene {
         console.warn(">>> [HeroScene.create] HeroEngine.start not found on engine module or globalThis");
     }
 
+    
     // 6) Schedule a sprite dump to verify everything
     console.log(">>> [HeroScene.create] scheduling sprite dump (host only)");
     setTimeout(() => {
@@ -172,6 +167,12 @@ class HeroScene extends Phaser.Scene {
             });
     }, 1000);
 };
+
+
+
+
+
+
 
 
 
@@ -255,8 +256,8 @@ new Phaser.Game({
     type: Phaser.AUTO,
 
     // Keep your actual game world at 320×240
-    width: 320,
-    height: 240,
+    width: 640, //320,
+    height: 480, // 240,
 
     parent: "app",
     backgroundColor: "#000000",

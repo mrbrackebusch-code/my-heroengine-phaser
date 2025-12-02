@@ -1,69 +1,6 @@
-// -----------------------------------------------------
-// MakeCode-compatible randint helper for Phaser build
-// (safe in Arcade too; just shadows the built-in)
-// -----------------------------------------------------
-function randint(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 
 // --------------------------------------------------------------
-// Sprite kinds - type declarations for TS (no top-level create())
-// --------------------------------------------------------------
-namespace SpriteKind {
-    export let Hero: number
-    export let HeroWeapon: number
-    export let HeroAura: number
-    export let EnemySpawner: number
-    export let SupportBeam: number
-    export let SupportIcon: number
-    export let Wall: number
-}
-
-
-
-// =====================================================================
-// PHASER-ONLY SHIM – DO NOT COPY THIS BLOCK INTO MAKECODE ARCADE
-// =====================================================================
-(function phaserSpriteKindShim() {
-    // In the Phaser build, this module has its own SpriteKind object
-    // that does NOT see Player/Enemy created in arcadeCompat.ts.
-    // Here we force this module's SpriteKind to use the same ids
-    // that arcadeCompat expects.
-    const SK: any = SpriteKind as any;
-
-    // Match arcadeCompat's ids
-    if (SK.Player == null) SK.Player = 1;
-    if (SK.Enemy == null) SK.Enemy = 2;
-
-    // Stabilize custom kinds for the compat layer
-    SK.Hero = 50;
-    SK.HeroWeapon = 51;
-    SK.HeroAura = 52;
-    SK.EnemySpawner = 53;
-    SK.SupportBeam = 54;
-    SK.SupportIcon = 55;
-    SK.Wall = 56;
-})();
-// =====================================================================
-// END PHASER-ONLY SHIM
-// =====================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --------------------------------------------------------------
-// Sprite kinds - type declarations for TS (no top-level create()) You DON'T need to copy this over to Phaser, but it doesn't break anything if you do
+// Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
 // --------------------------------------------------------------
 namespace SpriteKind {
     export let Hero: number
@@ -1747,7 +1684,7 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
 
     heroTargetCircles[heroIndex] = null
 
-    initHeroHP(heroIndex, hero, 100000) //Should be 100 when for reals, for debugging infinite power!
+    initHeroHP(heroIndex, hero, 100)
     initHeroMana(heroIndex, hero, 2000)
     refreshHeroController(heroIndex)
 
@@ -5627,35 +5564,3 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --------------------------------------------------------------
-// Phaser-only glue: expose HeroEngine namespace on globalThis
-// (Safe in MakeCode Arcade: guarded by typeof globalThis.)
-// --------------------------------------------------------------
-if (typeof globalThis !== "undefined") {
-    (globalThis as any).HeroEngine = HeroEngine;
-}

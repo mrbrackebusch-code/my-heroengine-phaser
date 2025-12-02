@@ -10,6 +10,87 @@
 const DEBUG_SETFLAG = false;
 let _setFlagLogCount = 0;
 
+// GLOBAL DEBUG FLAGS
+const DEBUG_WRAP_TEX = false;   // 👈 disable spam
+
+// MASTER NETWORK DEBUG FLAG
+const DEBUG_NET = false;
+
+
+const INPUT_LAG_WARN_MS = 120;          // already have this
+const INPUT_LAG_WARN_EXCESS_MS = 80;    // how much above baseline counts as "bad"
+
+let _inputLagBaselineMs = 0;
+let _inputLagBaselineSamples = 0;
+let _lastInputLagWarnMs = 0;
+
+
+// New: per-input processing time thresholds (host only)
+const INPUT_PROC_WARN_MS = 1.5;          // ms, log if host spends longer than this per input
+const INPUT_PROC_SPAM_GAP_MS = 0.5;      // don't re-log at nearly the same cost
+
+let _lastInputProcWarnMs = 0;
+
+
+const PERF_FPS_WARN = 55;                // always log if fps < this
+const PERF_MIN_LOG_INTERVAL_MS = 3000;   // ms between normal perf logs
+
+let _lastPerfLogMs = 0;
+
+const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
+
+
+
+// ---------------------------------------
+// Host perf buckets (arcadeCompat.ts)
+// ---------------------------------------
+let _hostPerfLastDumpMs = 0
+let _hostPerfFrameCount = 0
+let _hostPerfAccumTickMs = 0
+let _hostPerfAccumSyncMs = 0
+let _hostPerfAccumSnapMs = 0
+let _hostPerfLastSpriteCount = 0
+let _hostPerfLastSnapshotSprites = 0
+
+function _hostPerfNowMs(): number {
+    if (typeof performance !== "undefined" && performance.now) {
+        return performance.now()
+    }
+    return Date.now()
+}
+
+function _hostPerfMaybeDump(nowMs: number) {
+    const elapsed = nowMs - _hostPerfLastDumpMs
+    if (elapsed < 1000) return
+    if (_hostPerfFrameCount <= 0) {
+        _hostPerfLastDumpMs = nowMs
+        return
+    }
+
+    const avgTick = _hostPerfAccumTickMs / _hostPerfFrameCount
+    const avgSync = _hostPerfAccumSyncMs / _hostPerfFrameCount
+    const avgSnap = _hostPerfAccumSnapMs / _hostPerfFrameCount
+
+    const fps = (_hostPerfFrameCount * 1000) / elapsed
+
+    console.log(
+        "[perf.host]",
+        "fps≈", fps.toFixed(1),
+        "avgTickMs≈", avgTick.toFixed(2),
+        "avgSyncMs≈", avgSync.toFixed(2),
+        "avgSnapMs≈", avgSnap.toFixed(2),
+        "sprites≈", _hostPerfLastSpriteCount,
+        "snapSprites≈", _hostPerfLastSnapshotSprites
+    )
+
+    _hostPerfLastDumpMs = nowMs
+    _hostPerfFrameCount = 0
+    _hostPerfAccumTickMs = 0
+    _hostPerfAccumSyncMs = 0
+    _hostPerfAccumSnapMs = 0
+}
+
+
 
 
 
@@ -685,9 +766,10 @@ namespace sprites {
     let _syncCallCount = 0;
     let _attachCallCount = 0;
 
+
     const MAX_SYNC_VERBOSE = 5;       // fully log first 60 frames
     const SYNC_EVERY_N_AFTER = 300;   // then log every 300th frame
-    const SPRITE_SYNC_LOG_MOD = 30;   // log every 30th frame *after* that
+    const SPRITE_SYNC_LOG_MOD = 300;   // log every 300th frame *after* that
 
     const MAX_ATTACH_VERBOSE = 2;    // log first 20 sprite attach attempts
     const DEBUG_SPRITE_ATTACH = false; // master switch for attach logging
@@ -695,7 +777,7 @@ namespace sprites {
     const DEBUG_PROJECTILE_NATIVE = false;  // flip off when done debugging
 
 
-
+    const DEBUG_NET_SNAPSHOT = false;  // master switch for per-snapshot logs
 
 
 
@@ -976,36 +1058,42 @@ function _attachNativeSprite(s: Sprite): void {
         ? (sc.textures.get(texKey) as Phaser.Textures.CanvasTexture)
         : null;
 
-    // If a texture exists but its size doesn't match the MakeCode image, destroy it
-    if (tex) {
-        const src = tex.source[0];
-        const texW = src.width | 0;
-        const texH = src.height | 0;
+        // If a texture exists but its size doesn't match the MakeCode image, destroy it
+        if (tex) {
+            const src = tex.source[0];
+            const texW = src.width | 0;
+            const texH = src.height | 0;
 
-        if (texW !== w || texH !== h) {
-            console.log(
-                "[WRAP-TEX-RECREATE]",
-                "| id", s.id,
-                "| old tex w,h", texW, texH,
-                "| new img w,h", w, h
-            );
-            sc.textures.remove(texKey);
-            tex = null;
+            if (texW !== w || texH !== h) {
+                if (DEBUG_WRAP_TEX) {
+                    console.log(
+                        "[WRAP-TEX-RECREATE]",
+                        "| id", s.id,
+                        "| old tex w,h", texW, texH,
+                        "| new img w,h", w, h
+                    );
+                }
+                sc.textures.remove(texKey);
+                tex = null;
+            }
         }
-    }
 
-    // (Re)create texture with the correct size
-    if (!tex) {
-        tex = sc.textures.createCanvas(texKey, w, h);
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-            console.log(
-                "[WRAP-TEX-CREATE]",
-                "| id", s.id,
-                "| texKey", texKey,
-                "| tex w,h", tex.source[0].width, tex.source[0].height
-            );
+
+        // (Re)create texture with the correct size
+        if (!tex) {
+            tex = sc.textures.createCanvas(texKey, w, h);
+
+            if (DEBUG_WRAP_TEX && _attachCallCount <= MAX_ATTACH_VERBOSE) {
+                console.log(
+                    "[WRAP-TEX-CREATE]",
+                    "| id", s.id,
+                    "| texKey", texKey,
+                    "| tex w,h", tex.source[0].width, tex.source[0].height
+                );
+            }
         }
-    }
+
+    
 
     // Now tex is guaranteed to have width/height == image width/height
     const ctx = tex.context;
@@ -1081,6 +1169,7 @@ function _attachNativeSprite(s: Sprite): void {
     ctx.putImageData(imgData, 0, 0);
     tex.refresh();
 
+
     // --- NATIVE IMAGE HANDLING --------------------------------------------
     if (s.native) {
         const n: any = s.native;
@@ -1088,16 +1177,20 @@ function _attachNativeSprite(s: Sprite): void {
         const nativeH = n.height | 0;
 
         if (nativeW !== w || nativeH !== h) {
-            console.log(
-                "[WRAP-NATIVE-RECREATE]",
-                "| id", s.id,
-                "| old native w,h", nativeW, nativeH,
-                "| new img w,h", w, h
-            );
+            if (DEBUG_WRAP_TEX) {
+                console.log(
+                    "[WRAP-NATIVE-RECREATE]",
+                    "| id", s.id,
+                    "| old native w,h", nativeW, nativeH,
+                    "| new img w,h", w, h
+                );
+            }
             n.destroy();
             s.native = undefined as any;
         }
     }
+
+
 
     if (!s.native) {
         const n = sc.add.image(s.x, s.y, texKey);
@@ -1331,26 +1424,43 @@ function _debugDumpSpritePixels(s: Sprite, label: string) {
 let _syncPerfFrames = 0;
 let _syncPerfLastReportMs = 0;
 
+
 // ======================================================
 // PHASER NATIVE SPRITE SYNC
 // ======================================================
 export function _syncNativeSprites(): void {
+    const t0 = _hostPerfNowMs()
     _syncCallCount++;
 
     const sc: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
-    const shouldLog = _syncCallCount % SPRITE_SYNC_LOG_MOD === 0;
+
+    // Decide whether to log this frame
+    let shouldLog = false;
+
+    // 1) Early startup: log the first few frames
+    if (_syncCallCount <= MAX_SYNC_VERBOSE) {
+        shouldLog = true;
+    }
+    // 2) After that: log every SYNC_EVERY_N_AFTER frames
+    else if (_syncCallCount % SYNC_EVERY_N_AFTER === 0) {
+        shouldLog = true;
+    }
+    // 3) Long-term: log every SPRITE_SYNC_LOG_MOD frames
+    else if (_syncCallCount % SPRITE_SYNC_LOG_MOD === 0) {
+        shouldLog = true;
+    }
 
     if (shouldLog) {
         console.log(
             "[_syncNativeSprites]",
-            "call#",
-            _syncCallCount,
-            "scenePresent=",
-            !!sc,
-            "spriteCount=",
-            _allSprites.length
+            "call#", _syncCallCount,
+            "scenePresent=", !!sc,
+            "spriteCount=", _allSprites.length
         );
     }
+    
+
+
 
     // If Phaser scene isn’t ready yet, don’t touch textures / natives
     if (!sc) {
@@ -1553,18 +1663,30 @@ export function _syncNativeSprites(): void {
             }
 
             const fps = (_syncPerfFrames * 1000) / elapsed;
+            const spriteCount = all.length;
 
-            console.log(
-                "[perf.sync]",
-                "fps≈", fps.toFixed(1),
-                "sprites=", all.length,
-                "kindHist=", kindHist
-            );
+            // Only log when we actually care
+            if (PERF_ALWAYS_LOG || fps < PERF_FPS_WARN) {
+                console.log(
+                    "[perf.sync]",
+                    "fps≈", fps.toFixed(1),
+                    "sprites=", spriteCount,
+                    "kindHist=", kindHist
+                );
+            }
 
             _syncPerfFrames = 0;
             _syncPerfLastReportMs = nowMs;
         }
+
     }
+
+    const t1 = _hostPerfNowMs()
+    _hostPerfAccumSyncMs += (t1 - t0)
+    
+    const spriteCount = all.length;
+    // If you already have spriteCount, make sure you assign:
+    _hostPerfLastSpriteCount = spriteCount
 }
 
 
@@ -1893,8 +2015,8 @@ if (_overlapHandlers.length && spritesSnapshot.length > 1) {
 ------------------------------------------------------- */
 
 namespace screen {
-    export let width: number = 320;
-    export let height: number = 240;
+    export let width: number = 640;
+    export let height: number = 480;
 }
 
 
@@ -1904,6 +2026,16 @@ namespace screen {
 namespace scene {
     export const HUD_Z = 100;
     export const UPDATE_PRIORITY = 10;
+
+
+    export function screenWidth(): number {
+    // Use the compat screen namespace
+    return screen.width | 0
+    }
+
+    export function screenHeight(): number {
+        return screen.height | 0
+    }
 
 
 
@@ -1956,6 +2088,46 @@ export function setBackgroundColor(colorIndex: number): void {
 
 }
 
+
+
+// ------------------------------------------------------
+// tiles namespace (stub) – just enough for HeroEngine
+// ------------------------------------------------------
+namespace tiles {
+    // Minimal shape; expand later if you want real data
+    export interface TileMapData {
+        id: string;      // e.g., "level1"
+        // add width/height/data later if needed
+    }
+
+    let _current: TileMapData | null = null;
+
+    export function setCurrentTilemap(tm: TileMapData): void {
+        _current = tm;
+        console.log("[tiles.setCurrentTilemap] (stub) current =", tm);
+    }
+
+    export function currentTilemap(): TileMapData | null {
+        return _current;
+    }
+}
+
+
+
+
+// ------------------------------------------------------
+// tilemap`...` tagged template (stub)
+// ------------------------------------------------------
+function tilemap(
+    strings: TemplateStringsArray,
+    ...expr: any[]
+): tiles.TileMapData {
+    // In MakeCode, this is compile-time. Here we just
+    // turn `tilemap`level1`` into an object with id "level1".
+    const id = strings.join("${}");
+    console.log("[tilemap] (stub) requested map id =", id, "expr =", expr);
+    return { id };
+}
 
 
 
@@ -2041,6 +2213,8 @@ namespace game {
     //     run game.onUpdate / onUpdateInterval handlers. World state for
     //     followers is driven by netWorld.apply(...) from host snapshots.
     export function _tick(): void {
+        const t0 = _hostPerfNowMs()
+
         const now = runtime();
         if (_lastTick === 0) _lastTick = now;
         const dtMs = now - _lastTick;
@@ -2087,6 +2261,12 @@ namespace game {
 
         // 3) Keep compat sprites and Phaser visuals aligned
         sprites._syncNativeSprites();
+
+        const t1 = _hostPerfNowMs()
+        _hostPerfFrameCount++
+        _hostPerfAccumTickMs += (t1 - t0)
+
+        _hostPerfMaybeDump(t1)
 
     }
 
@@ -2743,6 +2923,9 @@ export function apply(snap: WorldSnapshot): void {
 ;(globalThis as any).controller = controller;
 ;(globalThis as any).effects = effects;
 
+;(globalThis as any).tiles = tiles;
+;(globalThis as any).tilemap = tilemap;
+
 ;(globalThis as any).SpriteKind = SpriteKind;
 ;(globalThis as any).SpriteFlag = SpriteFlag;
 ;(globalThis as any).CollisionDirection = CollisionDirection;
@@ -2872,16 +3055,28 @@ export function registerLocalPlayer(slotIndex: number, name: string | null) {
 /* -------------------------------------------------------
    Network client – WebSocket → controller bridge
 ------------------------------------------------------- */
-
 type NetMessage =
     | { type: "assign"; playerId: number; name?: string }
-    | { type: "input"; playerId: number; button: string; pressed: boolean }
+    | {
+          type: "input";
+          playerId: number;
+          button: string;
+          pressed: boolean;
+          // Timestamp (ms) when the client sent this input
+          sentAtMs?: number;
+      }
     | { type: "state"; playerId: number; snapshot: netWorld.WorldSnapshot };
+
+    
+
 
 class NetworkClient {
     private ws: WebSocket | null = null;
     playerId: number | null = null;
     url: string;
+
+    // NEW: per-client monotonically increasing input sequence
+    private inputSeq: number = 0;
 
     constructor(url: string) {
         this.url = url;
@@ -2919,6 +3114,8 @@ class NetworkClient {
         };
     }
 
+
+
     // Send a button event up to the server
     sendInput(button: string, pressed: boolean) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -2929,14 +3126,33 @@ class NetworkClient {
             console.warn("[net] no playerId yet; ignoring input");
             return;
         }
+
+        // Bump sequence number
+        const seq = ++this.inputSeq;
+
+        // High-res time for *this page only* (host RTT measurement)
+        const perfNow =
+            typeof performance !== "undefined" ? performance.now() : null;
+
+        // Wall-clock time for cross-process comparisons (client↔server)
+        const wallNow = Date.now();
+
         const payload: NetMessage = {
             type: "input",
             playerId: this.playerId,
             button,
-            pressed
+            pressed,
+            // For host-side [inputLag.net]
+            sentAtMs: perfNow != null ? perfNow : wallNow,
+            // For server lag + cross-process correlation
+            sentWallMs: wallNow,
+            // NEW: shared ID so all logs can line up
+            inputSeq: seq
         };
+
         this.ws.send(JSON.stringify(payload));
     }
+
 
     // Host uses this to send snapshots of the world state
     sendWorldSnapshot(snap: netWorld.WorldSnapshot) {
@@ -3094,18 +3310,111 @@ class NetworkClient {
             const btnName = msg.button;       // "left" | "right" | "up" | "down" | "A" | "B"
             const pressed = !!msg.pressed;
 
-            console.log(
-                "[net] HOST applying input:",
-                "playerId=", playerId,
-                "button=", btnName,
-                "pressed=", pressed
-            );
+            // ---------------------------------------------------------
+            // 1) Measure input *arrival* lag (client -> host)
+            // ---------------------------------------------------------
+            let lagMs = -1;
+            if (typeof msg.sentAtMs === "number") {
+                const nowMs =
+                    typeof performance !== "undefined" ? performance.now() : Date.now();
+                lagMs = nowMs - msg.sentAtMs;
 
+                // Establish a baseline to account for clock offset + normal latency
+                if (_inputLagBaselineSamples < 20) {
+                    if (_inputLagBaselineSamples === 0 || lagMs < _inputLagBaselineMs) {
+                        _inputLagBaselineMs = lagMs;
+                    }
+                    _inputLagBaselineSamples++;
+                }
+
+                // If we have a baseline, look at *extra* lag beyond that
+                let excessMs = lagMs;
+                if (_inputLagBaselineSamples > 0) {
+                    excessMs = lagMs - _inputLagBaselineMs;
+                }
+
+                let spriteCount = 0;
+                try {
+                    spriteCount = sprites.allSprites().length;
+                } catch (e) {
+                    // ignore; non-fatal
+                }
+
+
+
+                
+                const shouldWarn =
+                    excessMs > INPUT_LAG_WARN_EXCESS_MS &&
+                    lagMs > INPUT_LAG_WARN_MS &&
+                    Math.abs(lagMs - _lastInputLagWarnMs) > 50;
+
+                if (DEBUG_NET && shouldWarn) {
+                    _lastInputLagWarnMs = lagMs;
+
+                    const hostWallNow = Date.now();
+                    const seq = (msg as any).inputSeq ?? -1;
+                    const sentWall = (msg as any).sentWallMs ?? null;
+
+                    console.warn(
+                        "[inputLag.net]",
+                        "seq=", seq,
+                        "playerId=", playerId,
+                        "button=", btnName,
+                        "pressed=", pressed,
+                        "lagMs≈", lagMs.toFixed(1),
+                        "baseline≈", _inputLagBaselineMs.toFixed(1),
+                        "excessMs≈", excessMs.toFixed(1),
+                        "sprites=", spriteCount,
+                        "sentWallMs=", sentWall,
+                        "hostWallMs=", hostWallNow
+                    );
+                }
+            }
+
+            // ---------------------------------------------------------
+            // 2) Measure *host processing* time for this input
+            // ---------------------------------------------------------
             const btn: any = ctrl[btnName];
             if (!btn || typeof btn._setPressed !== "function") return;
 
-            btn._setPressed(pressed);
+            const procStartMs =
+                typeof performance !== "undefined" ? performance.now() : Date.now();
+
+            btn._setPressed(pressed);    // <-- actual host-side work for this input
+
+            const procEndMs =
+                typeof performance !== "undefined" ? performance.now() : Date.now();
+            const procMs = procEndMs - procStartMs;
+
+            // Only log if host processing is unusually slow
+            if (
+                procMs > INPUT_PROC_WARN_MS &&
+                Math.abs(procMs - _lastInputProcWarnMs) > INPUT_PROC_SPAM_GAP_MS
+            ) {
+                _lastInputProcWarnMs = procMs;
+
+                let spriteCountForProc = 0;
+                try {
+                    spriteCountForProc = sprites.allSprites().length;
+                } catch (e) {
+                    // ignore
+                }
+
+                console.warn(
+                    "[inputProc.net]",
+                    "playerId=", playerId,
+                    "button=", btnName,
+                    "pressed=", pressed,
+                    "procMs≈", procMs.toFixed(3),
+                    lagMs >= 0 ? "lagMs≈ " + lagMs.toFixed(1) : "lagMs≈ n/a",
+                    "sprites=", spriteCountForProc
+                );
+            }
+
+            // (no extra return; we're done)
         }
+
+
     }
 }
 
@@ -3159,6 +3468,8 @@ let _snapshotPerfLastReportMs = 0;
 
 // Called from game._tick() on the host to periodically send world snapshots
 function _maybeSendWorldSnapshotTick() {
+    const snapT0 = _hostPerfNowMs();
+
     const g: any = (globalThis as any);
     if (!g || !g.__isHost) return;
 
@@ -3215,8 +3526,9 @@ function _maybeSendWorldSnapshotTick() {
         _snapshotPerfLastReportMs = now;
     }
 
+
     // Light cadence log so you can correlate with follower if needed
-    if (_snapshotSentCount <= 10 || _snapshotSentCount % 60 === 0) {
+    if (_snapshotSentCount <= 3 || _snapshotSentCount % 300 === 0) {
         console.log(
             "[net.host] snapshot #",
             _snapshotSentCount,
@@ -3227,7 +3539,25 @@ function _maybeSendWorldSnapshotTick() {
         );
     }
 
+    const snapT1 = _hostPerfNowMs()
+
+    _hostPerfAccumSnapMs += (snapT1 - snapT0)
+
+    // Keep track of how many sprites are in the snapshot
+    try {
+        if (snap && snap.sprites && snap.sprites.length != null) {
+            _hostPerfLastSnapshotSprites = snap.sprites.length
+        }
+    } catch (e) {
+        // ignore
+    }
+
     _netClient.sendWorldSnapshot(snap);
+
+    
+
+
+
 }
 
 

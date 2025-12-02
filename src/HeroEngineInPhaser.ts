@@ -1,3 +1,4 @@
+
 // -----------------------------------------------------
 // MakeCode-compatible randint helper for Phaser build
 // (safe in Arcade too; just shadows the built-in)
@@ -5,7 +6,6 @@
 function randint(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
 
 // --------------------------------------------------------------
 // Sprite kinds - type declarations for TS (no top-level create())
@@ -19,8 +19,6 @@ namespace SpriteKind {
     export let SupportIcon: number
     export let Wall: number
 }
-
-
 
 // =====================================================================
 // PHASER-ONLY SHIM – DO NOT COPY THIS BLOCK INTO MAKECODE ARCADE
@@ -51,19 +49,8 @@ namespace SpriteKind {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 // --------------------------------------------------------------
-// Sprite kinds - type declarations for TS (no top-level create()) You DON'T need to copy this over to Phaser, but it doesn't break anything if you do
+// Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
 // --------------------------------------------------------------
 namespace SpriteKind {
     export let Hero: number
@@ -1747,7 +1734,7 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
 
     heroTargetCircles[heroIndex] = null
 
-    initHeroHP(heroIndex, hero, 100000) //Should be 100 when for reals, for debugging infinite power!
+    initHeroHP(heroIndex, hero, 100)
     initHeroMana(heroIndex, hero, 2000)
     refreshHeroController(heroIndex)
 
@@ -5630,28 +5617,6 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // --------------------------------------------------------------
 // Phaser-only glue: expose HeroEngine namespace on globalThis
 // (Safe in MakeCode Arcade: guarded by typeof globalThis.)
@@ -5659,3 +5624,4 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
 if (typeof globalThis !== "undefined") {
     (globalThis as any).HeroEngine = HeroEngine;
 }
+
