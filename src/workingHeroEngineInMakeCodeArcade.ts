@@ -1,0 +1,4807 @@
+// --------------------------------------------------------------
+// HERO ENGINE V20 – FUNCTION INDEX
+// --------------------------------------------------------------
+//
+// SECTION 0 - UPDATE STATUS AND COMMENTARY
+//   (no top-level functions)
+//
+// SECTION 1 - ENGINE CONSTANTS, DATA KEYS & GLOBALS
+//   (no top-level functions)
+//
+// SECTION 2 - HELPER FUNCTIONS
+//   makeBaseStats() – Allocate and initialize a STAT[] array with defaults for a single move.
+//   getBaseMoveDurationMs() – Return baseline move duration in ms for a given button/family.
+//   getBasePower() – Return baseline damage/power budget for a button/family.
+//   animIdToKey() – Convert a numeric animation ID into a string key for hero animations.
+//   distanceTo() – Compute Euclidean distance between two sprites.
+//   distSqPointToSprite() – Compute squared distance from a world point to a sprite's center.
+//   worldPointAlongRay() – Return a point along a ray from a sprite, given direction and distance.
+//   tintImageReplace() – Clone an image while remapping a color (for aura/tint effects).
+//   getAimVectorForHero() – Compute normalized aim vector for a hero from facing/inputs.
+//   r2() – Round a value to 2 decimal places (numeric helper).
+//   r3() – Round a value to 3 decimal places (numeric helper).
+//
+// SECTION 3 - STUDENT HOOKS: HERO LOGIC & ANIMATION
+//   hero1Logic() – Student-editable logic for Hero 1's behavior each frame.
+//   hero2Logic() – Student-editable logic for Hero 2's behavior each frame.
+//   hero3Logic() – Student-editable logic for Hero 3's behavior each frame.
+//   hero4Logic() – Student-editable logic for Hero 4's behavior each frame.
+//   animateHero1() – Student-editable animation for Hero 1 based on state/facing.
+//   animateHero2() – Student-editable animation for Hero 2 based on state/facing.
+//   animateHero3() – Student-editable animation for Hero 3 based on state/facing.
+//   animateHero4() – Student-editable animation for Hero 4 based on state/facing.
+//
+// SECTION 4 - PLAYER SPRITES CREATION AND CONTROL
+//   runHeroLogicForHero() – Call the appropriate heroXLogic() for the given hero index.
+//   calculateMoveStatsForFamily() – Dispatch to calculateXStats() for the chosen family/button.
+//   doHeroMoveForPlayer() – Entry point when a player presses a move button; resolves family, spends mana, and executes the move.
+//   heroImageForPlayer() – Return the base sprite image for the hero controlled by a given player.
+//   createHeroForPlayer() – Create and initialize a hero sprite for a specific player index.
+//   setupHeroes() – Create all hero sprites, assign them to players, and initialize hero arrays.
+//   lockHeroControls() – Mark a hero as busy and prevent input until a given time.
+//   unlockHeroControls() – Clear a hero's busy flag and restore control.
+//   refreshHeroController() – Rebind hardware controllers to hero sprites (e.g., after respawn/reset).
+//   getHeroDirectionName() – Return a string like "up"/"down"/"left"/"right" for current hero facing.
+//   updateHeroFacingsFromVelocity() – Update hero facing direction based on its velocity vector.
+//   callHeroAnim() – Call the appropriate animateHeroX() helper for the given hero index.
+//
+// SECTION 5 - HERO STATS AND UI
+//   initHeroHP() – Initialize hero HP, HP bar sprite, and HP-related data fields.
+//   updateHeroHPBar() – Update hero HP bar width/position based on current HP.
+//   initHeroMana() – Initialize hero mana pool and mana bar sprite for a hero.
+//   updateHeroManaBar() – Update hero mana bar to reflect current mana value.
+//   flashHeroManaBar() – Temporarily flash the hero mana bar (e.g., on insufficient mana).
+//   applyDamageToHeroIndex() – Apply damage to a hero, clamp HP, and trigger HP-related effects.
+//   flashHeroOnDamage() – Briefly flash the hero sprite when taking damage.
+//   regenHeroManaAll() – Regenerate mana for all heroes each tick/frame.
+//   showDamageNumber() – Spawn a floating text sprite showing damage dealt at a position.
+//   createAuraImageFromHero() – Generate an aura outline image based on a hero's sprite bitmap.
+//   ensureHeroAuraSprite() – Ensure a hero has an attached aura sprite and create it if missing.
+//   updateHeroAuras() – Update aura sprites (position, visibility, style) for all heroes.
+//
+// SECTION 6 - ON OVERLAP - COLLISIONS AND INTERACTIONS BETWEEN KINDS
+//   hasSignificantOverlap() – Return true if two sprites overlap enough to count as a hit/collision.
+//
+// SECTION S - STRENGTH MOVE MODULE
+//   calculateStrengthStats() – Compute STAT[] for the Strength family based on base time and traits.
+//   executeStrengthMove() – Perform a Strength move: spend mana, lock hero, and schedule the smash.
+//   getStrengthInnerRadiusForHero() – Return the inner radius for the Strength smash hit area around a hero.
+//   findHeroLeadingEdgeDistance() – Compute distance from hero center to leading edge in facing direction.
+//   spawnStrengthSwingProjectile() – Spawn the visual Strength smash projectile attached to a hero.
+//   updateStrengthProjectilesMotionFor() – Move Strength smash projectiles and decide when they expire.
+//   buildStrengthSmashBitmap() – Build the custom bitmap used to render the Strength smash arc.
+//
+// SECTION A - AGILITY MOVE MODULE
+//   calculateAgilityStats() – Compute STAT[] for the Agility family based on base time and traits.
+//   executeAgilityMove() – Perform an Agility move: spend mana, lock hero, and start dash/thrust.
+//   updateAgilityComboOnHit() – Update the hero's combo meter and state after an Agility hit.
+//   getComboDamageMultPct() – Return damage multiplier percent based on current combo streak.
+//   spawnAgilityThrustProjectile() – Spawn the melee thrust hitbox/visual for an Agility move.
+//   createAgilityArrowSegmentImage() – Create the segment image used for Agility thrust trails/arrow.
+//   updateAgilityProjectilesMotionFor() – Move Agility thrust projectiles and handle dash follow-through/timing.
+//   debugAgilityDashProgress() – Visual/logging helper to inspect dash integration over time.
+//   debugDashIntegratorTick() – Helper used by debugAgilityDashProgress() to step the integrator.
+//   showComboPop() – Spawn a temporary "Nx" combo popup over the hero sprite.
+//   ensureComboMeter() – Ensure a combo meter sprite exists for a hero and attach/position it.
+//
+// SECTION I - INTELLECT MOVE MODULE
+//   calculateIntellectStats() – Compute STAT[] for the Intellect family based on base time and traits.
+//   executeIntellectMove() – Perform an Intellect move: start targeting mode and consume mana.
+//   beginIntellectTargeting() – Create a controllable Intellect spell projectile and enter steering mode.
+//   runIntellectDetonation() – Handle Intellect projectile detonation, damage application, and linger spawn.
+//   finishIntellectSpellForHero() – Clean up Intellect spell state and unlock hero after spell ends.
+//   updateIntellectSpellsControl() – Per-frame steering/motion control for active Intellect spells.
+//   detonateIntellectSpellAt() – Helper to detonate an Intellect spell at a specific world (x,y).
+//   processIntellectLingers() – Update Intellect linger sprites (DoT, visuals, cleanup).
+//
+// SECTION H - HEAL AND SUPPORT SPELLS MODULE
+//   detonateHealSpellAt() – Trigger a heal/support effect centered at a given world point.
+//   applyHealToHeroIndex() – Apply healing and buffs to a specific hero index.
+//   calculateHealStats() – Compute STAT[] for the Heal family based on base time and traits.
+//   executeHealMove() – Perform a Heal move: spawn heal/support effect and consume mana.
+//
+// SECTION E - ENEMY MODULE
+//   enemyImageForKind() – Return the base sprite image for a given enemy kind.
+//   spawnEnemyOfKind() – Spawn a single enemy of the requested kind at a specified position.
+//   setupEnemySpawners() – Create invisible spawner sprites around the arena edges (current version).
+//   setupEnemySpawnersBUGGED() – Older/broken spawner setup kept for reference while debugging.
+//   spawnEnemyFromRandomSpawnerWeighted() – Randomly pick a spawner and enemy kind using weights and spawn it.
+//   updateEnemyHoming() – Update enemy velocity to home toward their chosen hero target.
+//   spawnDummyEnemy() – Spawn a dummy/test enemy for development purposes.
+//   setupTestEnemies() – Spawn an initial batch of test enemies.
+//   getEnemyIndex() – Return the index of an enemy sprite inside the enemies[] array.
+//   getHeroIndex() – Return the index of a hero sprite inside the heroes[] array.
+//   initEnemyHP() – Initialize enemy HP and attach an HP bar sprite.
+//   updateEnemyHPBar() – Update enemy HP bar based on current HP.
+//   applyDamageToEnemyIndex() – Apply damage to an enemy, clamp HP, and handle death logic.
+//   flashEnemyOnDamage() – Flash the enemy sprite briefly when it takes damage.
+//
+// SECTION F - FINAL SECTION - onUpdates, GAME LOOP, INPUT, ENEMY AI/WAVES & STARTUP
+//   updateHeroProjectiles() – Per-frame update for STR/AGI projectiles; leaves driven spells to their modules.
+//   updateProjectilesCleanup() – Destroy projectiles whose timed DESTROY_AT has passed.
+//   updatePlayerInputs() – Poll controllers and convert button state into move intents.
+//   updateMeleeProjectilesMotion() – Legacy melee projectile updater (older path, mostly superseded).
+//   updateHeroControlLocks() – Per-frame check to unlock heroes whose busyUntil has expired.
+//   updateEnemyEffects() – Update enemy slow/weakness/status-effect timers and visuals.
+//
+
+
+// ================================================================
+// SECTION 1 - ENGINE CONSTANTS, DATA KEYS & GLOBALS
+// ================================================================
+// --------------------------------------------------------------
+// SECTION 1 – CONSTANTS, DATA KEYS, GLOBALS
+// Purpose:
+//   • Centralize all tuning constants and enums
+//   • Define sprite data "schemas" for heroes, enemies, and projectiles
+//   • Declare the core global arrays the engine loops over
+// --------------------------------------------------------------
+
+// --------------------------------------------------------------
+// Debug flags
+// Used by: agility / integrator debug logging & probes
+// --------------------------------------------------------------
+const DEBUG_AGILITY = true
+const DBG_INTERVAL_MS = 50
+const DEBUG_INTEGRATOR = true
+const DBG_INT_INTERVAL_MS = 50
+
+// --------------------------------------------------------------
+// Screen config
+// Used by: spawn positions, UI layout, enemy spawners, etc.
+// --------------------------------------------------------------
+
+namespace userconfig {
+    export const ARCADE_SCREEN_WIDTH = 160
+    export const ARCADE_SCREEN_HEIGHT = 120
+}
+
+// --------------------------------------------------------------
+// Sprite kinds
+// Used by: overlap handlers, queries, filtering by kind
+// NOTE: Enemies use built-in SpriteKind.Enemy
+// --------------------------------------------------------------
+namespace SpriteKind {
+    export const Hero = SpriteKind.create()
+    export const HeroWeapon = SpriteKind.create()
+    export const HeroAura = SpriteKind.create()
+    export const EnemySpawner = SpriteKind.create()
+
+    // Support visuals
+    export const SupportBeam = SpriteKind.create()
+    export const SupportIcon = SpriteKind.create()
+    // IMPORTANT: Use built-in SpriteKind.Enemy (do NOT redeclare)
+}
+
+// --------------------------------------------------------------
+// Family / element enums
+// FAMILY: which move "bucket" the hero is using
+// ELEM: damage type / flavor for future resistances
+// Used by: calculateXStats(), executeXMove(), damage logic
+// --------------------------------------------------------------
+// Families
+const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
+
+// Elements
+const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, HEAL: 5 }
+
+// --------------------------------------------------------------
+// Animation keys
+// Used by: callHeroAnim(), animateHeroX()
+// --------------------------------------------------------------
+const ANIM = {
+    IDLE: "idle",
+    A: "A-Move",
+    B: "B-Move",
+    AB: "A+B Move",
+    ID: { IDLE: 0, A: 1, B: 2, AB: 3 }
+}
+
+// --------------------------------------------------------------
+// STAT index map – per-move stats array
+// One STAT[] is produced by calculateXStats() for each move.
+// Used by: executeXMove(), STR/AGI motion, INT/HEAL detonation logic.
+// --------------------------------------------------------------
+const STAT = {
+    DAMAGE_MULT: 0,        // overall damage multiplier vs base power
+    MOVE_DURATION: 1,      // how long the move owns the hero (ms)
+    LUNGE_SPEED: 2,        // AGI dash / thrust speed (px/s)
+    COMBO_WINDOW: 3,       // AGI combo window duration (ms)
+
+    SLOW_PCT: 4,
+    SLOW_DURATION: 5,
+    WEAKEN_PCT: 6,
+    WEAKEN_DURATION: 7,
+
+    TARGETING_TIME: 8,     // INT steer window (ms)
+    RING_RADIUS: 9,        // INT detonation radius
+    CHANNEL_POWER: 10,     // INT / HEAL potency
+    KNOCKBACK_PCT: 11,     // knockback strength %
+
+    // Family-specific knobs we want centralized
+    STRENGTH_TOTAL_ARC_DEG: 12, // total degrees swept by STR smash
+    STRENGTH_SWING_MS: 13,      // STR swing duration (ms)
+    AGILITY_LAND_BUFFER_MS: 14, // AGI landing grace buffer (ms)
+
+    LEN: 15                    // length of STAT[] arrays
+}
+
+// --------------------------------------------------------------
+// OUT array – student-facing move definition
+// Shape: [FAMILY, mana, trait1, trait2, trait3, trait4, target, element, animId]
+// Used by: calculateMoveStatsForFamily(), executeXMove()
+// --------------------------------------------------------------
+const OUT = {
+    FAMILY: 0,
+    TRAIT1: 1, TRAIT2: 2, TRAIT3: 3, TRAIT4: 4,
+    ELEMENT: 5,
+    ANIM_ID: 6,
+    LEN: 7
+}
+
+
+// --------------------------------------------------------------
+// Contact / i-frames / visual tuning
+// Used by: hero damage, overlap tests, AGI visuals, feedback
+// --------------------------------------------------------------
+const HERO_CONTACT_MIN_OVERLAP_PCT = 25
+const HERO_IFRAME_MS = 600
+const AGI_LANDING_BUFFER_MS = 80
+const HERO_DAMAGE_FLASH_MS = 150
+const AGI_MIN_VISUAL_LEN = 3
+
+// --------------------------------------------------------------
+// HERO_DATA – sprite data schema for hero sprites
+// Ownership:
+//   • Written by: setupHeroes(), initHeroHP(), initHeroMana(),
+//                 executeXMove(), combo / dash / iframe logic
+//   • Read by:    applyDamageToHeroIndex(), control-lock logic,
+//                 combo handling, AGI/STR/INT modules, auras
+// --------------------------------------------------------------
+
+const HERO_DATA = {
+    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
+    FAMILY: "family", BUTTON: "btn",
+    TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
+    INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
+    TARGET_START_MS: "tStart", TARGET_LOCK_MS: "tLock",
+    IS_CONTROLLING_SPELL: "isCtrlSpell",
+    COMBO_COUNT: "comboCount", COMBO_MULT: "comboMult",
+    LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
+    IFRAME_UNTIL: "iUntil",
+    AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
+    AGI_COMBO_UNTIL: "aComboUntil",    // when AGI combo window ends (ms)
+    STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
+    OWNER: "owner",                    // which player "owns" this hero
+
+    // NEW: engine-side state we want exposed
+    BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
+    MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
+    DAMAGE_AMP_MULT: "dmgMult",        // heroDamageAmpMult[heroIndex]
+    BUFF_JSON: "buffsJson"             // JSON snapshot of heroBuffs[heroIndex]
+}
+
+
+// --------------------------------------------------------------
+// ENEMY_DATA – sprite data schema for enemies
+// Ownership:
+//   • Written by: spawnEnemyOfKind(), initEnemyHP(), enemy AI setup
+//   • Read by:    updateEnemyHoming(), updateEnemyEffects(),
+//                 applyDamageToEnemyIndex(), wave logic
+// --------------------------------------------------------------
+const ENEMY_DATA = {
+    HP: "hp",
+    MAX_HP: "maxHp",
+
+    SPEED: "spd",                 // base movement speed for homing AI
+    TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
+    REGEN_PCT: "regenPct",        // % regen per tick (if used later)
+
+    SLOW_PCT: "slowPct",
+    SLOW_UNTIL: "slowUntil",
+    WEAKEN_PCT: "weakPct",
+    WEAKEN_UNTIL: "weakUntil",
+    KNOCKBACK_UNTIL: "kbUntil",
+
+    ATK_PHASE: "atkPhase",        // current attack state (enum/int)
+    ATK_UNTIL: "atkUntil",        // time current attack phase ends
+    ATK_COOLDOWN_UNTIL: "atkCd"   // when enemy can attack again
+}
+
+// --------------------------------------------------------------
+// PROJ_DATA – sprite data schema for hero projectiles
+// Includes STR/AGI melee hitboxes and INT/HEAL driven spells.
+// Ownership:
+//   • Written by: spawnStrengthSwingProjectile(),
+//                 spawnAgilityThrustProjectile(),
+//                 beginIntellectTargeting(), runIntellectDetonation(),
+//                 detonateHealSpellAt()
+//   • Read by:    updateHeroProjectiles(),
+//                 updateAgilityProjectilesMotionFor(),
+//                 updateStrengthProjectilesMotionFor(),
+//                 updateIntellectSpellsControl(),
+//                 processIntellectLingers(),
+//                 updateProjectilesCleanup()
+// --------------------------------------------------------------
+const PROJ_DATA = {
+    DAMAGE: "dmg",
+    IS_HEAL: "isHeal",
+    HERO_INDEX: "heroIndex",
+    FAMILY: "family",
+    BUTTON: "btn",
+
+    // Status effects applied on hit
+    SLOW_PCT: "slowPct",
+    SLOW_DURATION_MS: "slowDur",
+    WEAKEN_PCT: "weakPct",
+    WEAKEN_DURATION_MS: "weakDur",
+    KNOCKBACK_PCT: "kbPct",
+
+    HIT_MASK: "hitMask",          // bookkeeping for multi-hit behavior
+
+    // Motion / geometry
+    MOVE_TYPE: "mvType",
+    START_TIME: "startMs",
+    REACH_T: "reachT",
+    TAIL_AT_REACH: "tailAtReach",
+    MAX_REACH: "maxReach",
+    DIR_X: "dirX",
+    DIR_Y: "dirY",
+    THRUST_PPS: "thrustPps",
+    ARROW_LEN: "arrowLen",
+    LAST_T: "lastT",
+    DASH_MS: "dashMs",
+    DASH_END_MS: "dashEndMs",
+
+    START_HERO_X: "hStartX",
+    START_HERO_Y: "hStartY",
+
+    TERMINUS_HIT: "termHit",
+    TERMINUS_X: "termX",
+    TERMINUS_Y: "termY",
+    TERMINUS_MS: "termMs",
+
+    DESTROY_AT: "destroyAt",       // runtime() time when projectile should be destroyed
+
+    SUPPORT_TARGET_HERO: "supTgtHero",
+    SUPPORT_BUFF_KIND: "supBuffKind",
+    SUPPORT_BUFF_POWER: "supBuffPower",
+    SUPPORT_BUFF_DURATION: "supBuffDur"
+}
+
+// --------------------------------------------------------------
+// Intellect spell sprite-data keys (non-enum string keys)
+// Used by: INT detonation & linger animation
+// --------------------------------------------------------------
+const INT_DETONATED_KEY = "INT_DET"
+const INT_TERM_X_KEY = "INT_TX"
+const INT_TERM_Y_KEY = "INT_TY"
+const INT_RADIUS_KEY = "INT_RAD"
+// Detonation animation timing keys
+const INT_DETONATE_START_KEY = "INT_DS"   // detonation start time (ms)
+const INT_DETONATE_END_KEY = "INT_DE"     // detonation end time (ms)
+
+// NEW: control window (when the player must finish aiming)
+const INT_CTRL_UNTIL_KEY = "INT_CTRL_UNTIL"
+
+
+
+// --------------------------------------------------------------
+// GLOBAL ARRAYS – core engine collections
+// These are what the main update loops iterate over.
+// --------------------------------------------------------------
+let heroes: Sprite[] = []
+let enemies: Sprite[] = []
+let heroProjectiles: Sprite[] = []
+
+// Global world time (ms since this game instance started)
+// We update this once per master update so the wrapper/save system
+// has a single authoritative value to export.
+let worldRuntimeMs = 0
+
+
+
+// NEW: hero buff state (per-hero arrays)
+let heroBuffs: any[][] = [[], [], [], []]
+let heroMoveSpeedMult: number[] = [1, 1, 1, 1]   // haste from buffs
+let heroDamageAmpMult: number[] = [1, 1, 1, 1]   // damage amp from buffs (hooked later)
+
+let heroHPBars: StatusBarSprite[] = []
+let heroManaBars: StatusBarSprite[] = []
+let enemyHPBars: StatusBarSprite[] = []
+let heroComboMeters: Sprite[] = []
+
+let playerToHeroIndex: number[] = [-1, -1, -1, -1, -1]
+
+// Hero-facing and targeting helpers
+let heroFacingX: number[] = []
+let heroFacingY: number[] = []
+let heroTargetCircles: Sprite[] = []
+let heroControlledSpells: Sprite[] = []
+let heroAuras: Sprite[] = []
+
+// Simple "intent" placeholder for P1 (used by input logic)
+let p1Intent = ""
+
+// Simple "intent" placeholder for P2 (used by input logic)
+let p2Intent = ""
+
+// Simple "intent" placeholder for P3 (used by input logic)
+let p3Intent = ""
+
+// Simple "intent" placeholder for P4 (used by input logic)
+let p4Intent = ""
+
+// Control-lock timestamps: when each hero's inputs should unlock
+let heroBusyUntil: number[] = []
+
+const BUFF_KIND_HASTE = 1
+const BUFF_KIND_DAMAGE_AMP = 2
+const BUFF_KIND_SHIELD = 3
+
+// Support puzzle directions
+const SUP_DIR_UP = 0
+const SUP_DIR_DOWN = 1
+const SUP_DIR_LEFT = 2
+const SUP_DIR_RIGHT = 3
+
+// Per-hero support puzzle state
+let supportPuzzleActive: boolean[] = [false, false, false, false]
+let supportPuzzleSeq: number[][] = [[], [], [], []]
+let supportPuzzleProgress: number[] = [0, 0, 0, 0]
+let supportPuzzleIcons: Sprite[][] = [[], [], [], []]
+let supportPuzzleStartMs: number[] = [0, 0, 0, 0]
+// For edge detection on D-pad
+let supportPuzzlePrevMask: number[] = [0, 0, 0, 0]
+
+// Pending buff payload per hero (what to apply when the beam arrives)
+let supportPendingBuffPower: number[] = [0, 0, 0, 0]
+let supportPendingBuffDuration: number[] = [0, 0, 0, 0]
+let supportPendingBuffKind: number[] = [BUFF_KIND_HASTE, BUFF_KIND_HASTE, BUFF_KIND_HASTE, BUFF_KIND_HASTE]
+
+
+
+
+
+
+
+
+// --------------------------------------------------------------
+// Aura colors – by family
+// Used by: createAuraImageFromHero(), updateHeroAuras()
+// --------------------------------------------------------------
+const AURA_COLOR_STRENGTH = 2
+const AURA_COLOR_AGILITY = 5
+const AURA_COLOR_INTELLECT = 8
+const AURA_COLOR_HEAL = 7 // green-ish
+
+
+// ================================================================
+// SECTION 2 - HELPER FUNCTIONS
+// ================================================================
+// Utility helpers used across the engine. Stateless. No side effects.
+function makeBaseStats(baseTimeMs: number) {
+    const stats: number[] = []
+    for (let i = 0; i < STAT.LEN; i++) stats[i] = 0
+    stats[STAT.DAMAGE_MULT] = 100
+    stats[STAT.MOVE_DURATION] = baseTimeMs
+    return stats
+}
+
+function getBaseMoveDurationMs(button: string, family: number) {
+    let base = 300
+    if (family == FAMILY.STRENGTH) base = 400
+    else if (family == FAMILY.AGILITY) base = 250
+    else if (family == FAMILY.INTELLECT || family == FAMILY.HEAL) base = 350
+    if (button == "A+B") base += 150
+    return base
+}
+
+function getBasePower(family: number) {
+    if (family == FAMILY.STRENGTH) return 15
+    if (family == FAMILY.AGILITY) return 10
+    if (family == FAMILY.INTELLECT) return 8
+    if (family == FAMILY.HEAL) return 8
+    return 5
+}
+
+// Map numeric anim IDs to string keys (used by callHeroAnim)
+function animIdToKey(id: number) {
+    if (id == ANIM.ID.A) return ANIM.A
+    if (id == ANIM.ID.B) return ANIM.B
+    if (id == ANIM.ID.AB) return ANIM.AB
+    return ANIM.IDLE
+}
+
+function distanceTo(a: Sprite, b: Sprite): number {
+    if (!a || !b) return 99999
+    const dx = b.x - a.x, dy = b.y - a.y
+    return Math.sqrt(dx * dx + dy * dy)
+}
+
+function distSqPointToSprite(px: number, py: number, s: Sprite): number { const dx = px - s.x, dy = py - s.y; return dx * dx + dy * dy }
+
+function worldPointAlongRay(ax: number, ay: number, nx: number, ny: number, s: number) { return [ax + nx * s, ay + ny * s] }
+
+// Tint helper: remap one color index to another
+function tintImageReplace(imgBase: Image, fromColor: number, toColor: number): Image {
+    const w = imgBase.width, h = imgBase.height
+    const out = image.create(w, h)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const p = imgBase.getPixel(x, y)
+        out.setPixel(x, y, p == fromColor ? toColor : p)
+    }
+    return out
+}
+
+function getAimVectorForHero(heroIndex: number) {
+    let dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
+    if (dx == 0 && dy == 0) { dx = 1; dy = 0 }
+    return [dx, dy]
+}
+
+function r2(v: number) { return Math.round(v * 100) / 100 }
+function r3(v: number) { return Math.round(v * 1000) / 1000 }
+
+
+// ================================================================
+// SECTION 3 - STUDENT HOOKS: HERO LOGIC & ANIMATION
+// ================================================================
+// Student-facing logic/animation functions. Safe for modification.
+// Engine never writes to these.
+// Example logic (Hero 1). Students will customize.
+function hero1Logic(button: string, heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[]) {
+    const me = heroesArr[heroIndex]
+    let targetIndex = -1
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            const e = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) { best = d; targetIndex = i }
+        }
+    }
+
+    // --- NEW: check if any hero is below 100 HP ---
+    let anyHeroLow = false
+    for (let i = 0; i < heroesArr.length; i++) {
+        const h = heroesArr[i]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+    // A: Strength, B: Agility, A+B: Intellect. If low HP on A, try Heal instead.
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [FAMILY.HEAL, 25, 25, 25, 25, ELEM.HEAL, ANIM.ID.A]
+        } else {
+            return [FAMILY.STRENGTH, 10, 10, 300, 200, ELEM.NONE, ANIM.ID.A]
+        }
+    }
+    if (button == "B") return [FAMILY.AGILITY, 4, 30, 30, 30, ELEM.NONE, ANIM.ID.B]
+    if (button == "A+B") return [FAMILY.INTELLECT, 100, 25, 25, 25, ELEM.NONE, ANIM.ID.AB]
+    return [FAMILY.STRENGTH, 0, 25, 25, 25, ELEM.NONE, ANIM.ID.IDLE]
+}
+
+// Scaffolds 2–4 (unchanged selection)
+function hero2Logic(button: string, heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[]) {
+    const me = heroesArr[heroIndex]
+    let targetIndex = -1
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            const e = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) { best = d; targetIndex = i }
+        }
+    }
+
+    // --- NEW: check if any hero is below 100 HP ---
+    let anyHeroLow = false
+    for (let i = 0; i < heroesArr.length; i++) {
+        const h = heroesArr[i]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+
+
+    // A: Strength, B: Agility, A+B: Intellect. If low HP on A, try Heal instead.
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [FAMILY.HEAL, 25, 25, 25, 25, ELEM.HEAL, ANIM.ID.A]
+        } else {
+            return [FAMILY.STRENGTH, 10, 10, 50, 200, ELEM.NONE, ANIM.ID.A]
+        }
+    }
+    if (button == "B") return [FAMILY.AGILITY, 4, 30, 30, 30, ELEM.NONE, ANIM.ID.B]
+    if (button == "A+B") return [FAMILY.INTELLECT, 12, 25, 25, 25, ELEM.NONE, ANIM.ID.AB]
+    return [FAMILY.STRENGTH, 0, 25, 25, 25, ELEM.NONE, ANIM.ID.IDLE]
+}
+
+
+function hero3Logic(button: string, heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[]) {
+    const me = heroesArr[heroIndex]
+    let targetIndex = -1
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            const e = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) { best = d; targetIndex = i }
+        }
+    }
+
+    // --- NEW: check if any hero is below 100 HP ---
+    let anyHeroLow = false
+    for (let i = 0; i < heroesArr.length; i++) {
+        const h = heroesArr[i]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+
+
+    // A: Strength, B: Agility, A+B: Intellect. If low HP on A, try Heal instead.
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [FAMILY.HEAL, 25, 25, 25, 25, ELEM.HEAL, ANIM.ID.A]
+        } else {
+            return [FAMILY.STRENGTH, 10, 10, 50, 200, ELEM.NONE, ANIM.ID.A]
+        }
+    }
+    if (button == "B") return [FAMILY.AGILITY, 4, 30, 30, 30, ELEM.NONE, ANIM.ID.B]
+    if (button == "A+B") return [FAMILY.INTELLECT, 12, 25, 25, 25, ELEM.NONE, ANIM.ID.AB]
+    return [FAMILY.STRENGTH, 0, 25, 25, 25, ELEM.NONE, ANIM.ID.IDLE]
+}
+
+
+function hero4Logic(button: string, heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[]) {
+    const me = heroesArr[heroIndex]
+    let targetIndex = -1
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            const e = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) { best = d; targetIndex = i }
+        }
+    }
+
+    // --- NEW: check if any hero is below 100 HP ---
+    let anyHeroLow = false
+    for (let i = 0; i < heroesArr.length; i++) {
+        const h = heroesArr[i]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+
+
+    // A: Strength, B: Agility, A+B: Intellect. If low HP on A, try Heal instead.
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [FAMILY.HEAL, 25, 25, 25, 25, ELEM.HEAL, ANIM.ID.A]
+        } else {
+            return [FAMILY.STRENGTH, 10, 10, 50, 200, ELEM.NONE, ANIM.ID.A]
+        }
+    }
+    if (button == "B") return [FAMILY.AGILITY, 4, 30, 30, 30, ELEM.NONE, ANIM.ID.B]
+    if (button == "A+B") return [FAMILY.INTELLECT, 12, 25, 25, 25, ELEM.NONE, ANIM.ID.AB]
+    return [FAMILY.STRENGTH, 0, 25, 25, 25, ELEM.NONE, ANIM.ID.IDLE]
+}
+
+
+// Animation hooks (students replace images later)
+//// Temporary "idle" art for each hero.
+// Students will replace these with their own images/animations.
+
+const DEMO_HERO1_IDLE = img`
+    . . . . . . f f f f . . . . . .
+    . . . . f f f 2 2 f f f . . . .
+    . . . f f f 2 2 2 2 f f f . . .
+    . . f f f e e e e e e f f f . .
+    . . f f e 2 2 2 2 2 2 e e f . .
+    . . f e 2 f f f f f f 2 e f . .
+    . . f f f f e e e e f f f f . .
+    . f f e f b f 4 4 f b f e f f .
+    . f e e 4 1 f d d f 1 4 e e f .
+    . . f e e d d d d d d e e f . .
+    . . . f e e 4 4 4 4 e e f . . .
+    . . e 4 f 2 2 2 2 2 2 f 4 e . .
+    . . 4 d f 2 2 2 2 2 2 f d 4 . .
+    . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
+    . . . . . f f f f f f . . . . .
+    . . . . . f f . . f f . . . . .
+`
+const DEMO_HERO2_IDLE = img`
+    . . . . . . c c c c . . . . . .
+    . . . . c c c 5 5 c c c . . . .
+    . . . c c c 5 5 5 5 c c c . . .
+    . . c c c e e e e e e c c c . .
+    . . c c e 5 5 5 5 5 5 e e c . .
+    . . c e 5 c c c c c c 5 e c . .
+    . . c c c c e e e e c c c c . .
+    . c c e c b c 4 4 c b c e c c .
+    . c e e 4 1 c d d c 1 4 e e c .
+    . . c e e d d d d d d e e c . .
+    . . . c e e 4 4 4 4 e e c . . .
+    . . e 4 c 5 5 5 5 5 5 c 4 e . .
+    . . 4 d c 5 5 5 5 5 5 c d 4 . .
+    . . 4 4 c 4 4 7 7 4 4 c 4 4 . .
+    . . . . . c c c c c c . . . . .
+    . . . . . c c . . c c . . . . .
+`
+const DEMO_HERO3_IDLE = img`
+    . . . . . . 6 6 6 6 . . . . . .
+    . . . . 6 6 6 3 3 6 6 6 . . . .
+    . . . 6 6 6 3 3 3 3 6 6 6 . . .
+    . . 6 6 6 e e e e e e 6 6 6 . .
+    . . 6 6 e 3 3 3 3 3 3 e e 6 . .
+    . . 6 e 3 6 6 6 6 6 6 3 e 6 . .
+    . . 6 6 6 6 e e e e 6 6 6 6 . .
+    . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 .
+    . 6 e e 4 1 6 d d 6 1 4 e e 6 .
+    . . 6 e e d d d d d d e e 6 . .
+    . . . 6 e e 4 4 4 4 e e 6 . . .
+    . . e 4 6 3 3 3 3 3 3 6 4 e . .
+    . . 4 d 6 3 3 3 3 3 3 6 d 4 . .
+    . . 4 4 6 4 4 9 9 4 4 6 4 4 . .
+    . . . . . 6 6 6 6 6 6 . . . . .
+    . . . . . 6 6 . . 6 6 . . . . .
+`
+const DEMO_HERO4_IDLE = img`
+    . . . . . . 8 8 8 8 . . . . . .
+    . . . . 8 8 8 7 7 8 8 8 . . . .
+    . . . 8 8 8 7 7 7 7 8 8 8 . . .
+    . . 8 8 8 e e e e e e 8 8 8 . .
+    . . 8 8 e 7 7 7 7 7 7 e e 8 . .
+    . . 8 e 7 8 8 8 8 8 8 7 e 8 . .
+    . . 8 8 8 8 e e e e 8 8 8 8 . .
+    . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 .
+    . 8 e e 4 1 8 d d 8 1 4 e e 8 .
+    . . 8 e e d d d d d d e e 8 . .
+    . . . 8 e e 4 4 4 4 e e 8 . . .
+    . . e 4 8 7 7 7 7 7 7 8 4 e . .
+    . . 4 d 8 7 7 7 7 7 7 8 d 4 . .
+    . . 4 4 8 4 4 9 9 4 4 8 4 4 . .
+    . . . . . 8 8 8 8 8 8 . . . . .
+    . . . . . 8 8 . . 8 8 . . . . .
+`
+
+// Students can replace this logic completely.
+// Right now, each hero just uses its idle image regardless of direction or animKey.
+
+function animateHero1(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO1_IDLE)
+}
+
+function animateHero2(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO2_IDLE)
+}
+
+function animateHero3(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO3_IDLE)
+}
+
+function animateHero4(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO4_IDLE)
+}
+
+
+// ================================================================
+// SECTION 4 - PLAYER SPRITES CREATION AND CONTROL
+// ================================================================
+// Creating, locking/unlocking, and animating heroes. 
+// Owns hero movement, controller binding, and base stats.
+
+// Default hero profile names per slot (index 0..3).
+// On MakeCode, this is the only thing used.
+// On Phaser, the wrapper can override via globalThis.__heroProfiles.
+const HERO_SLOT_PROFILE_DEFAULTS = ["Default", "Default", "Default", "Default"];
+
+// Hook: resolve a "profile name" for this hero.
+// In Phaser, the wrapper may set (globalThis as any).__heroProfiles
+// to an array like ["Jason", "Default", "Default", "Default"].
+// In MakeCode, globalThis may not exist, so we swallow errors and
+// just fall back to the default profile.
+function getHeroProfileForHeroIndex(heroIndex: number): string {
+    const hero = heroes[heroIndex];
+    if (!hero) return "Default";
+
+    // Prefer mapping by owner/playerId so join order lines up with profiles
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    const slotIndex = ownerId > 0 ? ownerId - 1 : heroIndex;
+
+    let name = HERO_SLOT_PROFILE_DEFAULTS[slotIndex] || "Default";
+
+    // Optional override for environments that support globalThis (Phaser).
+    // Wrapped in try/catch so MakeCode can safely ignore it.
+    //try {
+        //const g: any = (globalThis as any);
+        //if (g && g.__heroProfiles && typeof g.__heroProfiles[slotIndex] === "string") {
+    //        name = g.__heroProfiles[slotIndex];
+    //    }
+    //} catch (e) {
+        // Ignore: environments without globalThis (e.g., MakeCode Arcade)
+        // will just use the default.
+    //}
+
+    return name;
+}
+
+
+
+function runHeroLogicForHero(heroIndex: number, button: string) {
+    const hero = heroes[heroIndex];
+    if (!hero) return null;
+
+    // Hook for later: which profile owns this hero?
+    const profile = getHeroProfileForHeroIndex(heroIndex);
+
+    // CURRENT BEHAVIOR: ignore profile and route exactly as before.
+    // Later, you can branch on `profile` if you want different logic.
+    if (heroIndex == 0) return hero1Logic(button, heroIndex, enemies, heroes);
+    if (heroIndex == 1) return hero2Logic(button, heroIndex, enemies, heroes);
+    if (heroIndex == 2) return hero3Logic(button, heroIndex, enemies, heroes);
+    if (heroIndex == 3) return hero4Logic(button, heroIndex, enemies, heroes);
+    return hero1Logic(button, heroIndex, enemies, heroes);
+}
+
+
+
+
+
+
+function calculateMoveStatsForFamily(family: number, button: string, traits: number[]) {
+    const baseTime = getBaseMoveDurationMs(button, family)
+    if (family == FAMILY.STRENGTH) return calculateStrengthStats(baseTime, traits)
+    if (family == FAMILY.AGILITY) return calculateAgilityStats(baseTime, traits)
+    if (family == FAMILY.INTELLECT) return calculateIntellectStats(baseTime, traits)
+    if (family == FAMILY.HEAL) return calculateHealStats(baseTime, traits)
+    return makeBaseStats(baseTime)
+}
+
+
+
+function doHeroMoveForPlayer(playerId: number, button: string) {
+    const heroIndex = playerToHeroIndex[playerId]
+    if (heroIndex < 0 || heroIndex >= heroes.length) return
+    const hero = heroes[heroIndex]
+    if (!hero) return
+    const now = game.runtime()
+
+    // Trap world time so the wrapper/save system can see it
+    worldRuntimeMs = now
+
+    // Respect busy window
+    const busyUntil = heroBusyUntil[heroIndex] || 0
+    if (busyUntil > 0 && now < busyUntil) return
+
+    // If already steering an intellect spell, ignore new move inputs
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) return
+
+    // If in the middle of a support puzzle, ignore new move inputs
+    if (supportPuzzleActive[heroIndex]) return
+
+    // -----------------------------
+    // Student logic (OUT array)
+    // -----------------------------
+    const out = runHeroLogicForHero(heroIndex, button)
+    if (!out || out.length < OUT.LEN) return
+
+    const family = out[OUT.FAMILY]
+    const t1 = out[OUT.TRAIT1] | 0
+    const t2 = out[OUT.TRAIT2] | 0
+    const t3 = out[OUT.TRAIT3] | 0
+    const t4 = out[OUT.TRAIT4] | 0
+    const element = out[OUT.ELEMENT] | 0
+    const animId = out[OUT.ANIM_ID] | 0
+
+    // traits[1..4] are the same pools as before; traits[5] holds element for future use
+    const traits = [0, t1, t2, t3, t4, element]
+
+    // Persist family + traits on hero (modules read these)
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, family)
+    sprites.setDataString(hero, HERO_DATA.BUTTON, button)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT1, t1)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT2, t2)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
+
+    const animKey = animIdToKey(animId)
+
+    // Trait-driven move stats (per family)
+    const stats = calculateMoveStatsForFamily(family, button, traits)
+
+    // -----------------------------
+    // Mana cost & check
+    // -----------------------------
+    // Simple sum of the four trait values
+    let manaCost = t1 + t2 + t3 + t4
+    if (manaCost < 0) manaCost = 0
+
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+    if (mana < manaCost) {
+        flashHeroManaBar(heroIndex)
+        return
+    }
+    mana -= manaCost
+    sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+    updateHeroManaBar(heroIndex)
+
+    // -----------------------------
+    // Aim / movement setup
+    // Shared for STR/AGI; INT/HEAL get zero lunge
+    // -----------------------------
+    const aim = getAimVectorForHero(heroIndex)
+    let ax = aim[0], ay = aim[1]
+    if (ax == 0 && ay == 0) { ax = 1; ay = 0 }
+    const mag = Math.sqrt(ax * ax + ay * ay) || 1
+    ax /= mag; ay /= mag
+
+    // Apply haste multiplier to lunge speed
+    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const baseLunge = stats[STAT.LUNGE_SPEED] | 0
+    const rawLunge = baseLunge * hasteMult
+    const lungeCapped = Math.max(0, Math.min(rawLunge, 500))
+
+    if (family == FAMILY.STRENGTH || family == FAMILY.AGILITY) {
+        hero.vx = ax * lungeCapped
+        hero.vy = ay * lungeCapped
+    } else {
+        hero.vx = 0
+        hero.vy = 0
+    }
+
+    const moveDuration = stats[STAT.MOVE_DURATION] | 0
+    const L_exec = Math.idiv(lungeCapped * moveDuration, 1000)
+    sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
+
+    // -----------------------------
+    // Control lock & agility extras
+    // (unchanged pattern from OLD version)
+    // -----------------------------
+
+
+
+
+    // --- Control lock & agility extras ---
+
+    // STR / AGI / INT use timed lock via heroBusyUntil
+  
+    if (family == FAMILY.STRENGTH || family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
+        lockHeroControls(heroIndex)
+        heroBusyUntil[heroIndex] = now + moveDuration
+
+        // NEW: mirror control-lock timestamp onto the hero sprite
+        sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, heroBusyUntil[heroIndex])
+
+    
+    } else if (family == FAMILY.HEAL) {
+        // SUPPORT/HEAL: no timed lock here.
+        // beginSupportPuzzleForHero() will call lockHeroControls()
+        // and the puzzle end will call unlockHeroControls().
+        hero.vx = 0
+        hero.vy = 0
+    }
+
+    // Agility-specific landing + combo windows
+    if (family == FAMILY.AGILITY) {
+        const landBufferMs = stats[STAT.AGILITY_LAND_BUFFER_MS] || AGI_LANDING_BUFFER_MS
+        sprites.setDataNumber(
+            hero,
+            HERO_DATA.AGI_DASH_UNTIL,
+            now + moveDuration + landBufferMs
+        )
+        const comboWindow = stats[STAT.COMBO_WINDOW] | 0
+        sprites.setDataNumber(
+            hero,
+            HERO_DATA.AGI_COMBO_UNTIL,
+            comboWindow > 0 ? now + moveDuration + comboWindow : 0
+        )
+    } else {
+        sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+    }
+
+
+
+
+
+
+
+
+
+
+    // -----------------------------
+    // Fire animation (students own the sprite art)
+    // -----------------------------
+    callHeroAnim(heroIndex, animKey, moveDuration)
+
+    // -----------------------------
+    // Hand off to family-specific executors
+    // -----------------------------
+    if (family == FAMILY.STRENGTH) {
+        executeStrengthMove(heroIndex, hero, button, traits, stats)
+        return
+    }
+
+    if (family == FAMILY.AGILITY) {
+        executeAgilityMove(heroIndex, hero, button, traits, stats)
+        return
+    }
+
+    if (family == FAMILY.INTELLECT) {
+        executeIntellectMove(heroIndex, hero, button, traits, stats, now)
+        return
+    }
+
+    if (family == FAMILY.HEAL) {
+        executeHealMove(heroIndex, hero, button, traits, stats, now)
+        return
+    }
+
+    // Any future family types would fall through here.
+}
+
+
+
+
+
+
+function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before) */
+    if (playerId == 1) return img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 2 2 f f f . . . .
+        . . . f f f 2 2 2 2 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 2 2 2 2 2 2 e e f . .
+        . . f e 2 f f f f f f 2 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 4 4 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 2 2 2 2 2 2 f 4 e . .
+        . . 4 d f 2 2 2 2 2 2 f d 4 . .
+        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `
+    if (playerId == 2) return img`
+        . . . . . . c c c c . . . . . .
+        . . . . c c c 5 5 c c c . . . .
+        . . . c c c 5 5 5 5 c c c . . .
+        . . c c c e e e e e e c c c . .
+        . . c c e 5 5 5 5 5 5 e e c . .
+        . . c e 5 c c c c c c 5 e c . .
+        . . c c c c e e e e c c c c . .
+        . c c e c b c 4 4 c b c e c c .
+        . c e e 4 1 c d d c 1 4 e e c .
+        . . c e e d d d d d d e e c . .
+        . . . c e e 4 4 4 4 e e c . . .
+        . . e 4 c 5 5 5 5 5 5 c 4 e . .
+        . . 4 d c 5 5 5 5 5 5 c d 4 . .
+        . . 4 4 c 4 4 7 7 4 4 c 4 4 . .
+        . . . . . c c c c c c . . . . .
+        . . . . . c c . . c c . . . . .
+    `
+    if (playerId == 3) return img`
+        . . . . . . 6 6 6 6 . . . . . .
+        . . . . 6 6 6 3 3 6 6 6 . . . .
+        . . . 6 6 6 3 3 3 3 6 6 6 . . .
+        . . 6 6 6 e e e e e e 6 6 6 . .
+        . . 6 6 e 3 3 3 3 3 3 e e 6 . .
+        . . 6 e 3 6 6 6 6 6 6 3 e 6 . .
+        . . 6 6 6 6 e e e e 6 6 6 6 . .
+        . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 .
+        . 6 e e 4 1 6 d d 6 1 4 e e 6 .
+        . . 6 e e d d d d d d e e 6 . .
+        . . . 6 e e 4 4 4 4 e e 6 . . .
+        . . e 4 6 3 3 3 3 3 3 6 4 e . .
+        . . 4 d 6 3 3 3 3 3 3 6 d 4 . .
+        . . 4 4 6 4 4 9 9 4 4 6 4 4 . .
+        . . . . . 6 6 6 6 6 6 . . . . .
+        . . . . . 6 6 . . 6 6 . . . . .
+    `
+    return img`
+        . . . . . . 8 8 8 8 . . . . . .
+        . . . . 8 8 8 7 7 8 8 8 . . . .
+        . . . 8 8 8 7 7 7 7 8 8 8 . . .
+        . . 8 8 8 e e e e e e 8 8 8 . .
+        . . 8 8 e 7 7 7 7 7 7 e e 8 . .
+        . . 8 e 7 8 8 8 8 8 8 7 e 8 . .
+        . . 8 8 8 8 e e e e 8 8 8 8 . .
+        . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 .
+        . 8 e e 4 1 8 d d 8 1 4 e e 8 .
+        . . 8 e e d d d d d d e e 8 . .
+        . . . 8 e e 4 4 4 4 e e 8 . . .
+        . . e 4 8 7 7 7 7 7 7 8 4 e . .
+        . . 4 d 8 7 7 7 7 7 7 8 d 4 . .
+        . . 4 4 8 4 4 9 9 4 4 8 4 4 . .
+        . . . . . 8 8 8 8 8 8 . . . . .
+        . . . . . 8 8 . . 8 8 . . . . .
+    `
+}
+
+function createHeroForPlayer(playerId: number, startX: number, startY: number) {
+    // Start with a blank placeholder; student animation will set the real image
+    const hero = sprites.create(image.create(16, 16), SpriteKind.Player)
+    hero.x = startX; hero.y = startY; hero.z = 20
+
+    const heroIndex = heroes.length; heroes.push(hero)
+    playerToHeroIndex[playerId] = heroIndex
+
+    sprites.setDataNumber(hero, HERO_DATA.OWNER, playerId)
+    heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
+    heroBusyUntil[heroIndex] = 0
+
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_COUNT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_MULT, 100)
+    sprites.setDataNumber(hero, HERO_DATA.LAST_HIT_TIME, 0)
+    sprites.setDataString(hero, HERO_DATA.LAST_MOVE_KEY, "")
+    sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, FAMILY.STRENGTH)
+    sprites.setDataString(hero, HERO_DATA.BUTTON, "")
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT2, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT3, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT4, 25)
+
+
+    // NEW: initialize mirrored engine-side fields
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.MOVE_SPEED_MULT, 1)
+    sprites.setDataNumber(hero, HERO_DATA.DAMAGE_AMP_MULT, 1)
+    sprites.setDataString(hero, HERO_DATA.BUFF_JSON, "[]")
+
+
+
+    heroTargetCircles[heroIndex] = null
+
+    initHeroHP(heroIndex, hero, 100)
+    initHeroMana(heroIndex, hero, 1000)
+    refreshHeroController(heroIndex)
+
+    // NEW: let the student animation hook define what this hero actually looks like
+    // "idle" here is your base/default state; 0 duration so it's just an image set
+    callHeroAnim(heroIndex, "idle", 0)
+}
+
+function setupHeroes() {
+    createHeroForPlayer(1, 80, 60)
+    createHeroForPlayer(2, 40, 60)
+    createHeroForPlayer(3, 120, 60)
+    createHeroForPlayer(4, 80, 90)
+}
+
+function lockHeroControls(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, hero.vx)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, hero.vy)
+    refreshHeroController(heroIndex)
+}
+
+function unlockHeroControls(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    hero.vx = 0; hero.vy = 0
+    refreshHeroController(heroIndex)
+}
+
+
+function refreshHeroController(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+    const baseSpeed = 50
+    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const speed = locked ? 0 : baseSpeed * hasteMult
+
+    if (playerId == 1) controller.player1.moveSprite(hero, speed, speed)
+    else if (playerId == 2) controller.player2.moveSprite(hero, speed, speed)
+    else if (playerId == 3) controller.player3.moveSprite(hero, speed, speed)
+    else if (playerId == 4) controller.player4.moveSprite(hero, speed, speed)
+}
+
+
+
+function refreshHeroControllerBUGGED(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+    const baseSpeed = 50
+    const mult = heroMoveSpeedMult[heroIndex] || 1
+    const speed = locked ? 0 : baseSpeed * mult
+
+    const vx = speed
+    const vy = speed
+    if (playerId == 1) controller.player1.moveSprite(hero, vx, vy)
+    else if (playerId == 2) controller.player2.moveSprite(hero, vx, vy)
+    else if (playerId == 3) controller.player3.moveSprite(hero, vx, vy)
+    else if (playerId == 4) controller.player4.moveSprite(hero, vx, vy)
+}
+
+
+function getHeroDirectionName(heroIndex: number) {
+    const dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
+    if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
+}
+
+function updateHeroFacingsFromVelocity() {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+        const vx = hero.vx, vy = hero.vy
+        if (vx == 0 && vy == 0) continue
+        let dx = 0, dy = 0
+        if (vx > 0) dx = 1; else if (vx < 0) dx = -1
+        if (vy > 0) dy = 1; else if (vy < 0) dy = -1
+        if (dx != 0 || dy != 0) { heroFacingX[i] = dx; heroFacingY[i] = dy }
+    }
+}
+
+function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+    if (family == FAMILY.STRENGTH || family == FAMILY.INTELLECT || family == FAMILY.HEAL) hero.startEffect(effects.trail, timeMs)
+    const direction = getHeroDirectionName(heroIndex)
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    if (playerId == 1) animateHero1(hero, animKey, timeMs, direction)
+    else if (playerId == 2) animateHero2(hero, animKey, timeMs, direction)
+    else if (playerId == 3) animateHero3(hero, animKey, timeMs, direction)
+    else if (playerId == 4) animateHero4(hero, animKey, timeMs, direction)
+}
+
+
+
+// ================================================================
+// SECTION 5 - HERO STATS AND UI
+// ================================================================
+// HP, Mana, Combo, Aura visuals. 
+// Owns bar creation + update per frame.
+
+function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
+    sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHPVal)
+    sprites.setDataNumber(hero, HERO_DATA.HP, maxHPVal)
+    const bar = statusbars.create(20, 3, StatusBarKind.Health)
+    bar.attachToSprite(hero); bar.setOffsetPadding(0, 2)
+    bar.max = 100; bar.value = 100
+    heroHPBars[heroIndex] = bar
+}
+
+function updateHeroHPBar(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const bar = heroHPBars[heroIndex]; if (!bar) return
+    const hp = sprites.readDataNumber(hero, HERO_DATA.HP)
+    let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP); if (maxHp <= 0) maxHp = 1
+    bar.value = Math.max(0, Math.min(100, Math.idiv(hp * 100, maxHp)))
+}
+
+function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
+    sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxManaVal)
+    sprites.setDataNumber(hero, HERO_DATA.MANA, maxManaVal)
+    const bar = statusbars.create(20, 2, StatusBarKind.Energy)
+    bar.attachToSprite(hero); bar.setOffsetPadding(0, 1)
+    bar.max = 100; bar.value = 100; bar.setColor(9, 1)
+    heroManaBars[heroIndex] = bar
+}
+
+function updateHeroManaBar(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const bar = heroManaBars[heroIndex]; if (!bar) return
+    const mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+    let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxMana <= 0) maxMana = 1
+    bar.value = Math.max(0, Math.min(100, Math.idiv(mana * 100, maxMana)))
+    bar.setColor(9, 1)
+}
+
+function flashHeroManaBar(heroIndex: number) {
+    const bar = heroManaBars[heroIndex]; if (!bar) return
+    bar.setColor(2, 1)
+}
+
+function applyDamageToHeroIndex(heroIndex: number, amount: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    let hp = sprites.readDataNumber(hero, HERO_DATA.HP)
+    hp = Math.max(0, hp - amount)
+    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
+    updateHeroHPBar(heroIndex)
+    flashHeroOnDamage(hero)
+    if (hp <= 0) hero.destroy(effects.disintegrate, 200)
+}
+
+function flashHeroOnDamage(hero: Sprite) {
+    const flashDuration = 150, flashInterval = 50
+    const start = game.runtime()
+    game.onUpdate(function () {
+        const elapsed = game.runtime() - start
+        if (elapsed >= flashDuration) { hero.setFlag(SpriteFlag.Invisible, false); return }
+        const phase = Math.idiv(elapsed, flashInterval)
+        hero.setFlag(SpriteFlag.Invisible, phase % 2 == 0)
+    })
+}
+
+function regenHeroManaAll(percentOfMax: number) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+        const maxM = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxM <= 0) continue
+        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+        let gain = Math.idiv(maxM * percentOfMax, 100)
+        if (gain < 1 && mana < maxM) gain = 1
+        mana = Math.min(maxM, mana + gain)
+        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+        updateHeroManaBar(i)
+    }
+}
+
+function showDamageNumber(x: number, y: number, amount: number) {
+    const txt = textsprite.create("" + amount)
+    txt.setPosition(x, y); txt.setMaxFontHeight(6); txt.lifespan = 400; txt.vy = -20
+}
+
+
+
+function createAuraImageFromHero(hero: Sprite, color: number): Image {
+    const base = hero.image
+    const w = base.width, h = base.height
+    const outline = image.create(w, h)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const px = base.getPixel(x, y); if (px == 0) continue
+        let isBorder = false
+        for (let ny = -1; ny <= 1 && !isBorder; ny++) for (let nx = -1; nx <= 1 && !isBorder; nx++) {
+            if (nx == 0 && ny == 0) continue
+            const xx = x + nx, yy = y + ny
+            if (xx < 0 || yy < 0 || xx >= w || yy >= h) isBorder = true
+            else if (base.getPixel(xx, yy) == 0) isBorder = true
+        }
+        if (isBorder) outline.setPixel(x, y, color)
+    }
+    return outline
+}
+
+function ensureHeroAuraSprite(heroIndex: number): Sprite {
+    let aura = heroAuras[heroIndex]
+    const hero = heroes[heroIndex]; if (!hero) return null
+    if (!aura) {
+        aura = sprites.create(image.create(hero.image.width, hero.image.height), SpriteKind.HeroAura)
+        heroAuras[heroIndex] = aura
+    }
+    aura.z = hero.z + 1
+    return aura
+}
+
+function updateHeroAuras() {
+    const now = game.runtime()
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        let showAura = false
+        let color = 0
+        const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+
+        if (family == FAMILY.STRENGTH && (heroBusyUntil[i] || 0) > now) { showAura = true; color = AURA_COLOR_STRENGTH }
+        if (family == FAMILY.AGILITY) {
+            const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
+            const comboUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL)
+            if (dashUntil > now || comboUntil > now) { showAura = true; color = AURA_COLOR_AGILITY }
+        }
+        if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_INTELLECT }
+        if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_HEAL }
+
+        // Aura sprite
+        const aura = heroAuras[i]
+        if (!showAura) { if (aura) aura.setFlag(SpriteFlag.Invisible, true) }
+        else {
+            const active = ensureHeroAuraSprite(i); if (active) {
+                active.setImage(createAuraImageFromHero(hero, color))
+                active.setFlag(SpriteFlag.Invisible, false)
+                active.x = hero.x; active.y = hero.y; active.z = hero.z + 1
+            }
+        }
+
+        // Agility combo meter (thin 1px bar below the mana bar)
+        const comboUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL) | 0
+        const meter = heroComboMeters[i]
+        if (comboUntil > now) {
+            const m = ensureComboMeter(i); if (m) {
+                const total = 300 // matches STAT.COMBO_WINDOW baseline
+                const remain = Math.max(0, Math.min(total, comboUntil - now))
+                const frac = remain / total
+                const w = 20, h = 1
+                const fill = Math.max(1, Math.floor(w * frac))
+                const img = image.create(w, h)
+                for (let x = 0; x < w; x++) img.setPixel(x, 0, x < fill ? 5 : 0) // 5 = yellow
+                m.setImage(img)
+                m.setFlag(SpriteFlag.Invisible, false)
+                // place just below mana bar (which is 2px high with small padding)
+                m.x = hero.x
+                m.y = hero.y + (hero.height >> 1) + 5
+            }
+        } else {
+            if (meter) meter.setFlag(SpriteFlag.Invisible, true)
+        }
+
+    }
+}
+
+
+//This function is a cop out and LAZY. It should actually do a real aura that is 2 pixels wider than the hero's outline, not just a stupid lazy circle that is spawned on top of the hero. ChatGPT--if you are reading this flag it for the user to address
+function triggerSupportGlowPulse(heroIndex: number) {
+    const hero = heroes[heroIndex]
+    if (!hero) {
+        console.log("SUPPORT GLOW: no hero at index " + heroIndex)
+        return
+    }
+
+    console.log("SUPPORT GLOW: creating aura for hero " + heroIndex)
+
+    const auraImg = img`
+        . . 7 7 7 7 7 . .
+        . 7 7 . . . 7 7 .
+        7 7 . . . . . 7 7
+        7 . . . . . . . 7
+        7 . . . . . . . 7
+        7 . . . . . . . 7
+        7 7 . . . . . 7 7
+        . 7 7 . . . 7 7 .
+        . . 7 7 7 7 7 . .
+    `
+
+    const aura = sprites.create(auraImg, SpriteKind.HeroAura)
+    aura.setFlag(SpriteFlag.Ghost, true)
+    aura.setFlag(SpriteFlag.AutoDestroy, true)
+
+    // Draw ABOVE hero so it's not hidden by the hero sprite
+    aura.z = hero.z + 1
+    aura.x = hero.x
+    aura.y = hero.y
+
+    let ticks = 0
+    const flashInterval = 60 // ms
+
+    game.onUpdateInterval(flashInterval, function () {
+        if (!aura || (aura.flags & sprites.Flag.Destroyed)) return
+
+        ticks++
+        // even ticks visible, odd ticks invisible
+        aura.setFlag(SpriteFlag.Invisible, (ticks % 2 != 0))
+
+        if (ticks >= 8) {
+            console.log("SUPPORT GLOW: destroying aura for hero " + heroIndex)
+            aura.destroy()
+        }
+    })
+}
+
+
+
+
+
+// ================================================================
+// SECTION 6 - ON OVERLAP - COLLISIONS AND INTERACTIONS BETWEEN KINDS
+// ================================================================
+// Overlap logic shared by STR/AGI/INT/HEAL effects.
+
+
+// HeroWeapon ↔ Enemy (STR/AGI: normal; INTELLECT: detonate; HEAL: ignore enemies)
+sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, enemy) {
+    const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY)
+    const heroIndex = sprites.readDataNumber(weapon, PROJ_DATA.HERO_INDEX)
+
+    // HEAL: ignore enemy overlaps entirely
+    if (family == FAMILY.HEAL) return
+
+    // INTELLECT: detonate once, no destroy now
+    if (family == FAMILY.INTELLECT) {
+        if (!sprites.readDataNumber(weapon, INT_DETONATED_KEY)) {
+            console.log(
+                `[INT DEBUG] OVERLAP DETONATION hero=${heroIndex} ` +
+                `spell=(${weapon.x},${weapon.y}) enemy=(${enemy.x},${enemy.y})`
+            )
+            detonateIntellectSpellAt(weapon, weapon.x, weapon.y)
+        }
+        return
+    }
+
+    // STR/AGI payload (once per enemy)
+    const button = sprites.readDataString(weapon, PROJ_DATA.BUTTON)
+    const isHeal = (sprites.readDataNumber(weapon, PROJ_DATA.IS_HEAL) | 0) == 1
+    const slowPct = sprites.readDataNumber(weapon, PROJ_DATA.SLOW_PCT) | 0
+    const slowDurationMs = sprites.readDataNumber(weapon, PROJ_DATA.SLOW_DURATION_MS) | 0
+    const weakenPct = sprites.readDataNumber(weapon, PROJ_DATA.WEAKEN_PCT) | 0
+    const weakenDurationMs = sprites.readDataNumber(weapon, PROJ_DATA.WEAKEN_DURATION_MS) | 0
+    const knockbackPct = sprites.readDataNumber(weapon, PROJ_DATA.KNOCKBACK_PCT) | 0
+    const eIndex = getEnemyIndex(enemy); if (eIndex < 0 || heroIndex < 0 || heroIndex >= heroes.length) return
+    const hero = heroes[heroIndex]; if (!hero) return
+    let hitMask = sprites.readDataNumber(weapon, PROJ_DATA.HIT_MASK) | 0
+    const bit = 1 << eIndex; if (hitMask & bit) return
+    sprites.setDataNumber(weapon, PROJ_DATA.HIT_MASK, hitMask | bit)
+    const now = game.runtime()
+    if (slowPct > 0 && slowDurationMs > 0) { sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, slowPct); sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, now + slowDurationMs) }
+    if (weakenPct > 0 && weakenDurationMs > 0) { sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, weakenPct); sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, now + weakenDurationMs) }
+    let dmg = sprites.readDataNumber(weapon, PROJ_DATA.DAMAGE) | 0
+    if (dmg > 0) {
+        if (family == FAMILY.AGILITY) {
+            const comboMultPct = getComboDamageMultPct(heroIndex)
+            dmg = Math.idiv(dmg * comboMultPct, 100)
+            updateAgilityComboOnHit(heroIndex, button)
+        }
+        applyDamageToEnemyIndex(eIndex, dmg)
+        showDamageNumber(enemy.x, enemy.y - 6, dmg)
+    }
+    if (isHeal && dmg > 0) applyHealToHeroIndex(heroIndex, dmg)
+    if (knockbackPct > 0) {
+        const dx = enemy.x - hero.x, dy = enemy.y - hero.y
+        let mag = Math.sqrt(dx * dx + dy * dy); if (mag == 0) mag = 1
+        const kbSpeed = 40
+        enemy.vx = Math.idiv(dx * kbSpeed, mag); enemy.vy = Math.idiv(dy * kbSpeed, mag)
+        const baseDuration = 150, extraPerPct = 5
+        const kbDuration = baseDuration + knockbackPct * extraPerPct
+        sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, now + kbDuration)
+    }
+})
+
+// NEW: HeroWeapon ↔ Player (HEAL detonates on allies)
+sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, hero) {
+    const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY)
+    if (family != FAMILY.HEAL) return
+    if (!sprites.readDataNumber(weapon, INT_DETONATED_KEY)) detonateHealSpellAt(weapon, weapon.x, weapon.y)
+})
+
+
+function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: number): boolean {
+    const heroW = hero.width, heroH = hero.height, enemyW = enemy.width, enemyH = enemy.height
+    const halfHW = Math.idiv(heroW, 2), halfHH = Math.idiv(heroH, 2), halfEW = Math.idiv(enemyW, 2), halfEH = Math.idiv(enemyH, 2)
+    const dx = Math.abs(hero.x - enemy.x), dy = Math.abs(hero.y - enemy.y)
+    const overlapX = (halfHW + halfEW) - dx, overlapY = (halfHH + halfEH) - dy
+    if (overlapX <= 0 || overlapY <= 0) return false
+    const overlapArea = overlapX * overlapY, heroArea = heroW * heroH
+    return overlapArea * 100 >= heroArea * minHeroAreaPct
+}
+
+// Player ↔ Enemy contact (with agility invuln & weaken on enemy attacks)
+sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
+    const heroIndex = getHeroIndex(hero); if (heroIndex < 0) return
+    if (!hasSignificantOverlap(hero, enemy, HERO_CONTACT_MIN_OVERLAP_PCT)) return
+    const now = game.runtime()
+    const iframeUntil = sprites.readDataNumber(hero, HERO_DATA.IFRAME_UNTIL)
+    if (iframeUntil > 0 && now < iframeUntil) return
+    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+    if (family == FAMILY.AGILITY) {
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (locked && dashUntil > 0 && now < dashUntil) return
+    }
+    let dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE); if (dmg <= 0) dmg = 5
+    let weakenPct = sprites.readDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT)
+    const weakenUntil = sprites.readDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL)
+    if (weakenPct > 0 && weakenUntil <= now) { weakenPct = 0; sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0) }
+    if (weakenPct > 0) { const factor = 100 - weakenPct; dmg = (factor <= 0) ? 0 : Math.idiv(dmg * factor, 100) }
+    if (dmg <= 0) return
+    applyDamageToHeroIndex(heroIndex, dmg)
+    showDamageNumber(hero.x, hero.y - 6, dmg)
+    sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, now + HERO_IFRAME_MS)
+})
+
+
+// ====================================================
+// SECTION S - STRENGTH MOVE MODULE
+// ====================================================
+// Strength moves: smash arc, timing, lifetimes, projectile owner.
+
+//Strength traits should be calculated using: windup duration/damage at trait[1], reach distance at trait[2], total arc degrees at trait[3], knockback amount at traits[4]
+// Strength calculation should use the 
+
+// Strength traits mapping:
+// traits[1] = windup duration & damage
+// traits[2] = reach distance
+// traits[3] = total arc degrees
+// traits[4] = knockback amount
+
+
+// Strength traits mapping:
+// traits[1] = windup duration & damage
+// traits[2] = reach distance
+// traits[3] = total arc degrees
+// traits[4] = knockback amount
+
+// Strength traits mapping:
+// traits[1] = windup duration & damage
+// traits[2] = reach distance
+// traits[3] = total arc degrees
+// traits[4] = knockback amount
+
+function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Pull raw trait values, floor at 0, NO upper cap
+    let tWind = (traits[1] | 0)
+    let tReach = (traits[2] | 0)
+    let tArc = (traits[3] | 0)
+    let tKnock = (traits[4] | 0)
+
+    if (tWind < 0) tWind = 0
+    if (tReach < 0) tReach = 0
+    if (tArc < 0) tArc = 0
+    if (tKnock < 0) tKnock = 0
+
+    // ----------------------------------------------------
+    // WINDUP (traits[1]) → damage, move duration, swing time
+    // ----------------------------------------------------
+    // Damage starts at 80%, then +2% per point of tWind
+    // (no upper bound; can get absurd)
+    stats[STAT.DAMAGE_MULT] = 80 + tWind * 2
+
+    // Move duration: baseTimeMs plus 10ms per point of tWind
+    stats[STAT.MOVE_DURATION] = baseTimeMs + tWind * 10
+
+    // Swing animation: 400ms plus 5ms per point of tWind
+    stats[STAT.STRENGTH_SWING_MS] = 400 + tWind * 5
+
+    // ----------------------------------------------------
+    // REACH (traits[2]) → lunge speed
+    // ----------------------------------------------------
+    // Lunge speed: base 10, +1 per point of tReach (unbounded)
+    stats[STAT.LUNGE_SPEED] = 10 + tReach
+
+    // ----------------------------------------------------
+    // ARC (traits[3]) → total swing arc degrees
+    // ----------------------------------------------------
+    // Base 30°, +1° per point of tArc, but NEVER above 360°
+    let arcDeg = 30 + tArc
+    if (arcDeg > 360) arcDeg = 360
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = arcDeg
+
+    // ----------------------------------------------------
+    // KNOCKBACK (traits[4]) → knockback percentage
+    // ----------------------------------------------------
+    // Knockback: 150% base, +5% per point of tKnock (unbounded)
+    stats[STAT.KNOCKBACK_PCT] = 150 + tKnock * 5
+
+    return stats
+}
+
+
+function calculateStrengthStatsOLDCODE3(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Pull raw trait values and clamp them into a sane 0–100 band
+    let tWind = (traits[1] | 0)
+    let tReach = (traits[2] | 0)
+    let tArc = (traits[3] | 0)
+    let tKnock = (traits[4] | 0)
+
+    if (tWind < 0) tWind = 0
+    if (tWind > 1000) tWind = 1000
+    if (tReach < 0) tReach = 0
+    if (tReach > 1000) tReach = 1000
+    if (tArc < 0) tArc = 0
+    if (tArc > 360) tArc = 360
+    if (tKnock < 0) tKnock = 0
+    if (tKnock > 1000) tKnock = 1000
+
+    // ----------------------------------------------------
+    // WINDUP (traits[1]) → damage, move duration, swing time
+    // ----------------------------------------------------
+    // Damage: 80% → 160% as tWind goes 0 → 100
+    stats[STAT.DAMAGE_MULT] = 80 + Math.idiv(tWind * 80, 100)
+
+    // Move duration: 100% → 200% of baseTimeMs as tWind goes 0 → 100
+    const durMultPct = 100 + tWind // 0 → +100%
+    stats[STAT.MOVE_DURATION] = Math.idiv(baseTimeMs * durMultPct, 100)
+
+    // Swing animation time: 400ms → 800ms as tWind goes 0 → 100
+    stats[STAT.STRENGTH_SWING_MS] = 400 + Math.idiv(tWind * 400, 100)
+
+    // ----------------------------------------------------
+    // REACH (traits[2]) → lunge speed
+    // ----------------------------------------------------
+    // Lunge speed: 10 → 30 as tReach goes 0 → 100
+    stats[STAT.LUNGE_SPEED] = 10 + Math.idiv(tReach * 20, 100)
+
+    // ----------------------------------------------------
+    // ARC (traits[3]) → total swing arc degrees
+    // ----------------------------------------------------
+    // Arc: 30° → 150° as tArc goes 0 → 100
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 30 + Math.idiv(tArc * 120, 100)
+
+    // ----------------------------------------------------
+    // KNOCKBACK (traits[4]) → knockback percentage
+    // ----------------------------------------------------
+    // Knockback: 150% → 350% as tKnock goes 0 → 100
+    stats[STAT.KNOCKBACK_PCT] = 150 + Math.idiv(tKnock * 200, 100)
+
+    return stats
+}
+
+
+function calculateStrengthStatsOLDCODE2(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    const tWind = traits[1] || 0   // duration & damage pool
+    const tReach = traits[2] || 0   // lunge distance
+    const tArc = traits[3] || 0   // swing total degrees
+    const tKnock = traits[4] || 0   // knockback power
+
+    // Normalize
+    const total = Math.max(1, tWind + tReach + tArc + tKnock)
+    const pWind = tWind / total
+    const pReach = tReach / total
+    const pArc = tArc / total
+    const pKnock = tKnock / total
+
+    // -------------------------------
+    // DAMAGE — scales off windup/damage pool
+    // -------------------------------
+    // 80 → 160 scale
+    stats[STAT.DAMAGE_MULT] = 80 + Math.round(pWind * 80)
+
+    // -------------------------------
+    // MOVE DURATION — longer with more windup investment
+    // -------------------------------
+    const durMultPct = 100 + Math.round(pWind * 120)  // up to +120%
+    stats[STAT.MOVE_DURATION] = Math.idiv(baseTimeMs * durMultPct, 100)
+
+    // -------------------------------
+    // LUNGE SPEED — influenced by reach
+    // -------------------------------
+    // Base 10 → up to +20
+    stats[STAT.LUNGE_SPEED] = 10 + Math.round(pReach * 20)
+
+    // -------------------------------
+    // TOTAL ARC — fully trait-driven
+    // -------------------------------
+    // Base 30°, up to +120° (max 150° swing)
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 30 + Math.round(pArc * 120)
+
+    // -------------------------------
+    // KNOCKBACK — influenced only by tKnock and slightly by tWind
+    // -------------------------------
+    // Starts at +200%, up to +350%
+    stats[STAT.KNOCKBACK_PCT] = 200 + Math.round(pKnock * 150)
+
+    // -------------------------------
+    // SWING TIMING — scale partially by windup
+    // -------------------------------
+    // Base 500ms → up to 800ms
+    stats[STAT.STRENGTH_SWING_MS] = 500 + Math.round(pWind * 300)
+
+    return stats
+}
+
+
+function calculateStrengthStatsOLDCODE(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+    const drPool = traits[1] || 0
+    const powerPool = traits[2] || 0
+    const windPool = traits[3] || 0
+    const kbPool = traits[4] || 0
+    const total = Math.max(1, drPool + powerPool + windPool + kbPool)
+    const sharePower = powerPool / total
+    const shareWind = windPool / total
+    const shareKnock = kbPool / total
+
+    // Core balance knobs for static moves, should be hooked up to traits
+    stats[STAT.DAMAGE_MULT] = 80 + Math.round(sharePower * 80)
+    const durationMultPct = 100 + Math.round(shareWind * 100)
+    stats[STAT.MOVE_DURATION] = Math.idiv(baseTimeMs * durationMultPct, 100)
+    stats[STAT.LUNGE_SPEED] = 10
+    stats[STAT.KNOCKBACK_PCT] = 200 + Math.round(shareWind * 100 + shareKnock * 50)
+
+    // Strength-specific shape / timing parameters (centralized here)
+    // These were previously hard-coded in the swing spawn / bitmap builder.
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 30  // sweep angle of the smash arc
+    stats[STAT.STRENGTH_SWING_MS] = 500       // duration of the swing animation
+
+    return stats
+}
+
+
+function executeStrengthMove(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[]
+) {
+    // Base damage from family + trait-driven multiplier
+    const baseDamage = getBasePower(FAMILY.STRENGTH)
+    const damageMult = stats[STAT.DAMAGE_MULT] | 0
+    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
+    if (dmg < 1) dmg = 1
+
+    // Debuff / knockback knobs – all trait-driven via stats
+    const slowPct = stats[STAT.SLOW_PCT] | 0
+    const slowDurationMs = stats[STAT.SLOW_DURATION] | 0
+    const weakenPct = stats[STAT.WEAKEN_PCT] | 0
+    const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
+    const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
+
+    // Strength-specific animation knobs (centralized in calculateStrengthStats)
+    const swingDurationMs = stats[STAT.STRENGTH_SWING_MS] || 220
+    const totalArcDeg = stats[STAT.STRENGTH_TOTAL_ARC_DEG] || 150
+
+    const isHeal = false // Strength move never heals
+
+    spawnStrengthSwingProjectile(
+        heroIndex, hero,
+        dmg, isHeal, button,
+        slowPct, slowDurationMs,
+        weakenPct, weakenDurationMs,
+        knockbackPct,
+        swingDurationMs,
+        totalArcDeg
+    )
+}
+
+
+// Cached strength inner radius for this hero.
+// - Computed lazily on first Strength use
+// - Based on a circular bound that fully contains the hero sprite
+// - Adds a small margin so the Strength arc will sit outside the aura/outline.
+function getStrengthInnerRadiusForHero(hero: Sprite): number {
+    // Check cache first
+    let cached = sprites.readDataNumber(hero, HERO_DATA.STR_INNER_RADIUS)
+    if (cached > 0) return cached
+
+    const img = hero.image
+    if (!img) return 0
+
+    const w = img.width
+    const h = img.height
+
+    // Center of the sprite in image-space
+    const cx = w / 2
+    const cy = h / 2
+
+    // Circumradius: smallest circle that contains the full sprite
+    const heroRadius = Math.sqrt(cx * cx + cy * cy)
+
+    // Aura thickness (~1px) plus a tiny spacing gap so the Strength arc
+    // will appear just outside the aura outline.
+    const auraThickness = 1
+    const spacing = 1
+
+    const inner0 = heroRadius + auraThickness + spacing
+
+    // Cache on the hero for all future Strength uses
+    sprites.setDataNumber(hero, HERO_DATA.STR_INNER_RADIUS, inner0)
+
+    return inner0
+}
+
+// Find the hero's true leading edge along (nx, ny) in *image* space.
+// We start at the hero's center pixel and march outward, tracking the last
+// non-transparent pixel before we hit transparency or leave the sprite.
+function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): number {
+    const img = hero.image
+    if (!img) {
+        console.log("S-EDGE: no image on hero")
+        return 0
+    }
+
+    const w = img.width
+    const h = img.height
+
+    // Center of the sprite in image coordinates
+    const cx = w / 2
+    const cy = h / 2
+
+    console.log("S-EDGE: img " + w + "x" + h + " cx=" + cx + " cy=" + cy +
+        " dir=(" + nx + "," + ny + ")")
+
+    let lastOpaqueDist = 0
+    let sawOpaque = false
+
+    // Max distance we could possibly need: diagonal of the sprite
+    const maxDist = Math.sqrt(w * w + h * h)
+    const maxSteps = Math.ceil(maxDist)
+
+    // March in 1px steps from center outward
+    for (let step = 0; step <= maxSteps; step++) {
+        const d = step
+        const px = Math.round(cx + nx * d)
+        const py = Math.round(cy + ny * d)
+
+        // Leaving the sprite bounds counts as "transparent"
+        if (px < 0 || py < 0 || px >= w || py >= h) {
+            if (sawOpaque) {
+                console.log("S-EDGE: out of bounds after opaque at d=" + d +
+                    " lastOpaque=" + lastOpaqueDist)
+            } else {
+                console.log("S-EDGE: out of bounds before any opaque at d=" + d)
+            }
+            break
+        }
+
+        const p = img.getPixel(px, py)
+
+        if (p != 0) {
+            // Solid pixel – keep extending the edge
+            if (!sawOpaque) {
+                console.log("S-EDGE: first opaque at d=" + d +
+                    " px=" + px + " py=" + py + " color=" + p)
+            }
+            lastOpaqueDist = d
+            sawOpaque = true
+        } else if (sawOpaque) {
+            // First transparent after at least one solid pixel -> stop
+            console.log("S-EDGE: first transparent after opaque at d=" + d +
+                " lastOpaque=" + lastOpaqueDist)
+            break
+        }
+    }
+
+    console.log("S-EDGE: result sawOpaque=" + sawOpaque +
+        " lastOpaqueDist=" + lastOpaqueDist)
+
+    if (!sawOpaque) return 0
+    return lastOpaqueDist
+}
+
+function spawnStrengthSwingProjectile(
+    heroIndex: number,
+    hero: Sprite,
+    dmg: number,
+    isHeal: boolean,
+    button: string,
+    slowPct: number,
+    slowDurMs: number,
+    weakenPct: number,
+    weakenDurMs: number,
+    knockbackPct: number,
+    swingDurationMs: number,
+    totalArcDeg: number
+) {
+
+    const now = game.runtime()
+    const aim = getAimVectorForHero(heroIndex)
+
+    // Normalize facing
+    let nx = aim[0]
+    let ny = aim[1]
+    if (nx == 0 && ny == 0) { nx = 1; ny = 0 }
+    const mag = Math.sqrt(nx * nx + ny * ny) || 1
+    nx /= mag
+    ny /= mag
+
+    // Inner radius: circle that fully contains hero sprite + aura + spacing
+    const inner0 = getStrengthInnerRadiusForHero(hero)
+
+    // "Reach" = how far beyond that inner circle this move extends.
+    // For now, we hardcode to roughly one hero-size; later this becomes trait-driven.
+    const reachFromInner = Math.max(hero.width, hero.height)
+
+    // Create initial image at progress = 0 (tiny nub / initial thrust)
+    const img0 = buildStrengthSmashBitmap(nx, ny, inner0, reachFromInner, totalArcDeg, 0)
+
+
+    const proj = sprites.create(img0, SpriteKind.HeroWeapon)
+    proj.z = hero.z + 1
+    proj.vx = 0
+    proj.vy = 0
+    proj.setPosition(hero.x, hero.y)
+
+    const swingDuration = 220
+
+    // Persist parameters for per-frame updater
+    sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
+    sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
+
+
+    // Persist parameters for per-frame updater
+    sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
+    sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
+    sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg)
+    sprites.setDataNumber(proj, "SS_NX", nx)
+    sprites.setDataNumber(proj, "SS_NY", ny)
+
+    // Semantics changed:
+    //  - "SS_ATTACH" now stores inner0 (the inner radius from hero center)
+    //  - "SS_REACH_FRONT" now stores the extra reach beyond inner0
+    sprites.setDataNumber(proj, "SS_ATTACH", inner0)
+    sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner)
+
+    proj.lifespan = swingDuration
+    heroProjectiles.push(proj)
+
+    // Standard projectile data (unchanged)
+    sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex)
+    sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.STRENGTH)
+    sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
+    sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, dmg)
+    sprites.setDataNumber(proj, PROJ_DATA.IS_HEAL, isHeal ? 1 : 0)
+    sprites.setDataNumber(proj, PROJ_DATA.SLOW_PCT, slowPct)
+    sprites.setDataNumber(proj, PROJ_DATA.SLOW_DURATION_MS, slowDurMs)
+    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_PCT, weakenPct)
+    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs)
+    sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct)
+    sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing")
+}
+
+function updateStrengthProjectilesMotionFor(
+    proj: Sprite, hero: Sprite, heroIndex: number, nowMs: number, iInArray: number
+): boolean {
+    const startMs = (sprites.readDataNumber(proj, PROJ_DATA.START_TIME) | 0) || nowMs
+    const swingMs = (sprites.readDataNumber(proj, "SS_SWING_MS") | 0) || 220
+    const age = nowMs - startMs
+    if (age >= swingMs) {
+        console.log("S-UPDATE: DONE heroIndex=" + heroIndex +
+            " age=" + age + " swingMs=" + swingMs)
+        proj.destroy()
+        heroProjectiles.removeAt(iInArray)
+        return false
+    }
+
+    proj.vx = 0
+    proj.vy = 0
+
+    // 🔧 FIX: do NOT use `||` here, or we'll corrupt vertical directions
+    let nx = sprites.readDataNumber(proj, "SS_NX")
+    let ny = sprites.readDataNumber(proj, "SS_NY")
+
+    // Optional sanity fallback if something ever stored (0,0)
+    if (nx == 0 && ny == 0) {
+        nx = 1
+        ny = 0
+        console.log("S-UPDATE: WARNING nx,ny were (0,0); defaulted to (1,0)")
+    }
+
+    const attachPx = (sprites.readDataNumber(proj, "SS_ATTACH") | 0)
+    const reachFromFront = (sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0)
+    const t = Math.max(0, Math.min(1, age / Math.max(1, swingMs)))
+
+    console.log("S-UPDATE: heroIndex=" + heroIndex +
+        " age=" + age + "/" + swingMs +
+        " t=" + t +
+        " dir=(" + nx + "," + ny + ")" +
+        " attachPx=" + attachPx +
+        " reach=" + reachFromFront +
+        " heroPos=(" + hero.x + "," + hero.y + ")" +
+        " heroVel=(" + hero.vx + "," + hero.vy + ")" +
+        " projPos=(" + proj.x + "," + proj.y + ")" +
+        " projVel=(" + proj.vx + "," + proj.vy + ")")
+
+    const totalArcDeg = sprites.readDataNumber(proj, "SS_ARC_DEG") || 150
+    proj.setImage(buildStrengthSmashBitmap(nx, ny, attachPx, reachFromFront, totalArcDeg, t))
+    proj.setPosition(hero.x, hero.y)  // center-anchored
+    return true
+}
+
+function buildStrengthSmashBitmap(
+    nx: number, ny: number,
+    inner0: number, reachExtra: number,
+    totalArcDeg: number,
+    progress: number
+): Image {
+
+    // Clamp inputs
+    if (progress < 0) progress = 0
+    if (progress > 1) progress = 1
+    if (inner0 < 0) inner0 = 0
+    if (reachExtra < 1) reachExtra = 1
+
+    const outerR = inner0 + reachExtra
+
+    // Constants controlling animation / shape
+    // Constants controlling animation / shape
+    const PHASE1_FRAC = 0.25         // % of anim spent in thrust phase
+    const TOTAL_ARC_DEG = totalArcDeg // total degrees (± around forward), now passed in
+
+    // Strength: how far past the hero's boundary the arc extends (in pixels)
+    const STRENGTH_REACH_EXTRA = 32
+    const HALF_ARC_DEG = TOTAL_ARC_DEG / 2
+    const RAD_PER_DEG = Math.PI / 180
+    const angleStepDeg = 3
+    const angleStepRad = angleStepDeg * RAD_PER_DEG
+
+    // Orthonormal frame: forward=(nx,ny), side=(-ny,nx)
+    const sx = -ny
+    const sy = nx
+
+    // Allocate an image big enough to hold the full outer radius
+    const outerInt = Math.ceil(outerR)
+    const pad = 2
+    const half = outerInt + pad
+    const size = half * 2 + 1
+    const img = image.create(size, size)
+
+    // ------------------------------------------------------------
+    // PHASE 1: forward thrust (no angular sweep yet)
+    // ------------------------------------------------------------
+    if (progress <= PHASE1_FRAC) {
+        const thrustT = progress / PHASE1_FRAC
+        const tipR = inner0 + reachExtra * thrustT
+
+        // Straight "spear" along forward direction, from inner0 → tipR.
+        for (let r = inner0; r <= tipR; r++) {
+            const px = nx * r
+            const py = ny * r
+            const ix = Math.round(px) + half
+            const iy = Math.round(py) + half
+            if (ix >= 0 && ix < size && iy >= 0 && iy < size) {
+                img.setPixel(ix, iy, 2)
+            }
+        }
+
+        // Outline (color 15) around any color-2 pixel
+        for (let x = 0; x < size; x++) {
+            for (let y = 0; y < size; y++) {
+                if (img.getPixel(x, y) == 2) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            if (dx == 0 && dy == 0) continue
+                            const ox = x + dx
+                            const oy = y + dy
+                            if (ox < 0 || oy < 0 || ox >= size || oy >= size) continue
+                            if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, 15)
+                        }
+                    }
+                }
+            }
+        }
+
+        return img
+    }
+
+    // ------------------------------------------------------------
+    // PHASE 2: sweeping arc
+    // ------------------------------------------------------------
+    const sweepT = (progress - PHASE1_FRAC) / (1 - PHASE1_FRAC)
+    const halfArcRadMax = HALF_ARC_DEG * RAD_PER_DEG
+    const halfArcRad = halfArcRadMax * sweepT
+
+    if (halfArcRad <= 0) {
+        // Edge case: just draw a nub at outerR straight ahead
+        const px = nx * outerR
+        const py = ny * outerR
+        const ix = Math.round(px) + half
+        const iy = Math.round(py) + half
+        if (ix >= 0 && ix < size && iy >= 0 && iy < size) {
+            img.setPixel(ix, iy, 2)
+        }
+    } else {
+        // Number of angle steps to go from -halfArcRad → +halfArcRad
+        const stepsFloat = halfArcRad / angleStepRad
+        let steps = Math.floor(stepsFloat) * 2 + 1
+        if (steps < 1) steps = 1
+
+        const centerIndex = (steps - 1) / 2
+
+        for (let i = 0; i < steps; i++) {
+            const alpha = -halfArcRad + i * angleStepRad
+            const distFromCenter = Math.abs(i - centerIndex)
+
+            // Inner radius tapers toward outerR:
+            //   - at center: inner ≈ inner0
+            //   - at ends:   inner ≈ outerR - 1 (1-pixel thick)
+            let innerR = inner0 + distFromCenter
+            if (innerR > outerR - 1) innerR = outerR - 1
+            if (innerR < inner0) innerR = inner0
+
+            const cosA = Math.cos(alpha)
+            const sinA = Math.sin(alpha)
+            const dxDir = nx * cosA + sx * sinA
+            const dyDir = ny * cosA + sy * sinA
+
+            for (let r = innerR; r <= outerR; r++) {
+                const px = dxDir * r
+                const py = dyDir * r
+                const ix = Math.round(px) + half
+                const iy = Math.round(py) + half
+                if (ix >= 0 && ix < size && iy >= 0 && iy < size) {
+                    img.setPixel(ix, iy, 2)
+                }
+            }
+        }
+    }
+
+    // Outline (color 15) around any color-2 pixel
+    for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
+            if (img.getPixel(x, y) == 2) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx == 0 && dy == 0) continue
+                        const ox = x + dx
+                        const oy = y + dy
+                        if (ox < 0 || oy < 0 || ox >= size || oy >= size) continue
+                        if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, 15)
+                    }
+                }
+            }
+        }
+    }
+
+    return img
+}
+
+
+// ====================================================
+// SECTION A - AGILITY MOVE MODULE
+// ====================================================
+// Agility moves: dash/thrust, combo logic, arrow segments, DPS tracking.
+
+
+//Agility traits should be calculated using: baseComboWindow at traits[1], speed of dash at traits[2], invulnerability window at traits[3], slow/cripple amount at traits[4]
+// Agility
+// Agility traits:
+// traits[1] = baseComboWindow
+// traits[2] = speed of dash
+// traits[3] = invulnerability window
+// traits[4] = slow / cripple amount
+
+// Agility traits:
+// traits[1] = baseComboWindow
+// traits[2] = speed of dash
+// traits[3] = invulnerability window
+// traits[4] = slow / cripple amount
+
+function calculateAgilityStats(
+    baseTimeMs: number,
+    traits: number[]
+) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Pull raw trait values, floor at 0 (no upper caps)
+    let tCombo = (traits[1] | 0)  // combo window
+    let tDash = (traits[2] | 0)  // dash speed
+    let tIFrame = (traits[3] | 0)  // invulnerability window
+    let tSlow = (traits[4] | 0)  // slow / cripple
+
+    if (tCombo < 0) tCombo = 0
+    if (tDash < 0) tDash = 0
+    if (tIFrame < 0) tIFrame = 0
+    if (tSlow < 0) tSlow = 0
+
+    // ----------------------------------------------------
+    // COMBO WINDOW (traits[1]) + a bit of damage flavor
+    // ----------------------------------------------------
+    // Base combo window 200ms, +5ms per point of tCombo
+    stats[STAT.COMBO_WINDOW] = 200 + tCombo * 5
+
+    // Damage: 60% base, +1% per point of tCombo (can go absurd)
+    stats[STAT.DAMAGE_MULT] = 60 + tCombo
+
+    // ----------------------------------------------------
+    // DASH SPEED (traits[2]) → lunge speed ONLY
+    // ----------------------------------------------------
+    // Lunge speed: base 250, +5 per point of tDash
+    // (global lunge clamp to 500 still happens in the dash code)
+    stats[STAT.LUNGE_SPEED] = 250 + tDash * 5
+
+    // ----------------------------------------------------
+    // MOVE DURATION – no longer tied to dash speed
+    // ----------------------------------------------------
+    // Start from baseTimeMs and let combo make the window a bit longer
+    let moveDur = baseTimeMs + tCombo * 2
+    if (moveDur < 50) moveDur = 50  // safety: never 0/negative
+    stats[STAT.MOVE_DURATION] = moveDur
+
+    // ----------------------------------------------------
+    // INVULNERABILITY (traits[3]) → landing buffer / i-frames
+    // ----------------------------------------------------
+    // Base AGI_LANDING_BUFFER_MS + 2ms per point of tIFrame
+    stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS + tIFrame * 2
+
+    // ----------------------------------------------------
+    // SLOW / CRIPPLE (traits[4])
+    // ----------------------------------------------------
+    // Slow percent: 10% base, +2% per point of tSlow
+    stats[STAT.SLOW_PCT] = 10 + tSlow * 2
+
+    // Slow duration: 200ms base, +20ms per point of tSlow
+    stats[STAT.SLOW_DURATION] = 200 + tSlow * 20
+
+    return stats
+}
+
+
+function calculateAgilityStatsOLDCODE2(
+    baseTimeMs: number,
+    traits: number[]
+) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Pull raw trait values, floor at 0, no upper caps
+    let tCombo = (traits[1] | 0)  // combo window
+    let tDash = (traits[2] | 0)  // dash speed
+    let tIFrame = (traits[3] | 0) // invulnerability window
+    let tSlow = (traits[4] | 0)  // slow/cripple
+
+    if (tCombo < 0) tCombo = 0
+    if (tDash < 0) tDash = 0
+    if (tIFrame < 0) tIFrame = 0
+    if (tSlow < 0) tSlow = 0
+
+    // ----------------------------------------------------
+    // COMBO WINDOW (traits[1]) + a bit of damage flavor
+    // ----------------------------------------------------
+    // Base combo window 200ms, +5ms per point of tCombo
+    stats[STAT.COMBO_WINDOW] = 200 + tCombo * 5
+
+    // Damage: 60% base, +1% per point of tCombo
+    stats[STAT.DAMAGE_MULT] = 60 + tCombo
+
+    // ----------------------------------------------------
+    // DASH SPEED (traits[2]) → lunge speed and duration
+    // ----------------------------------------------------
+    // Faster dash = shorter move duration
+    // Start at baseTimeMs and subtract 5ms per point of tDash,
+    // but never go below 50ms so we don't crash timing
+    let moveDur = baseTimeMs - tDash * 5
+    if (moveDur < 50) moveDur = 50
+    stats[STAT.MOVE_DURATION] = moveDur
+
+    // Lunge speed: base 200, +10 per point of tDash (can get absurd)
+    stats[STAT.LUNGE_SPEED] = 200 + tDash * 10
+
+    // ----------------------------------------------------
+    // INVULNERABILITY (traits[3]) → landing buffer / i-frameish
+    // ----------------------------------------------------
+    // Treat AGILITY_LAND_BUFFER_MS as the base i-frame window and
+    // add 2ms per point of tIFrame.
+    stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS + tIFrame * 2
+
+    // ----------------------------------------------------
+    // SLOW / CRIPPLE (traits[4])
+    // ----------------------------------------------------
+    // Slow percent: 10% base, +2% per point of tSlow
+    stats[STAT.SLOW_PCT] = 10 + tSlow * 2
+
+    // Slow duration: 200ms base, +20ms per point of tSlow
+    stats[STAT.SLOW_DURATION] = 200 + tSlow * 20
+
+    return stats
+}
+
+
+function calculateAgilityStatsOLDCODE(
+    baseTimeMs: number,
+    traits: number[]
+) {
+    const stats = makeBaseStats(baseTimeMs)
+    const dmgPool = traits[1] || 0
+    const timePool = traits[2] || 0
+    const movePool = traits[3] || 0
+    const cripPool = traits[4] || 0
+    const total = Math.max(1, dmgPool + timePool + movePool + cripPool)
+    const shareDmg = dmgPool / total
+    const shareTime = timePool / total
+    const shareMove = movePool / total
+    const shareCrip = cripPool / total
+
+    // Core balance knobs
+    stats[STAT.DAMAGE_MULT] = 80 + Math.round(shareDmg * 80)
+    let durationMultPct = 100 - Math.round(shareTime * 30)
+    if (durationMultPct < 70) durationMultPct = 70
+    stats[STAT.MOVE_DURATION] = Math.idiv(baseTimeMs * durationMultPct, 100)
+
+    // Round to 10s so we don't see odd +9 due to integer dt
+    const baseDashSpeed = 400
+    const rawSpeed = baseDashSpeed + Math.round(shareMove * 30)
+    const rounded10 = Math.round(rawSpeed / 10) * 10
+    stats[STAT.LUNGE_SPEED] = Math.max(0, rounded10)
+
+    stats[STAT.SLOW_PCT] = 20 + Math.round(shareCrip * 60)
+    stats[STAT.SLOW_DURATION] = 200 + Math.round(shareCrip * 800)
+    stats[STAT.COMBO_WINDOW] = 300
+
+    // Agility-specific extras (centralized here)
+    // Landing buffer previously came from global AGI_LANDING_BUFFER_MS.
+    stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS
+
+    return stats
+}
+
+
+function executeAgilityMove(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[]
+) {
+    // Base damage from family + trait-driven multiplier
+    const baseDamage = getBasePower(FAMILY.AGILITY)
+    const damageMult = stats[STAT.DAMAGE_MULT] | 0
+    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
+    if (dmg < 1) dmg = 1
+
+    // Cripple / slow / debuff knobs – from agility stats
+    const slowPct = stats[STAT.SLOW_PCT] | 0
+    const slowDurationMs = stats[STAT.SLOW_DURATION] | 0
+    const weakenPct = stats[STAT.WEAKEN_PCT] | 0
+    const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
+    const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
+
+    const isHeal = false // Agility is pure offense right now
+
+    spawnAgilityThrustProjectile(
+        heroIndex, hero,
+        dmg, isHeal, button,
+        slowPct, slowDurationMs,
+        weakenPct, weakenDurationMs,
+        knockbackPct
+    )
+}
+
+// Agility combo system + UI meter support
+function updateAgilityComboOnHit(heroIndex: number, button: string) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const now = game.runtime()
+    const lastTime = sprites.readDataNumber(hero, HERO_DATA.LAST_HIT_TIME)
+    const lastKey = sprites.readDataString(hero, HERO_DATA.LAST_MOVE_KEY)
+    let comboCount = sprites.readDataNumber(hero, HERO_DATA.COMBO_COUNT)
+    const delta = now - lastTime
+    if (delta < 300 && lastKey != button) comboCount += 1
+    else comboCount = 1
+    if (comboCount < 1) comboCount = 1
+    if (comboCount > 4) comboCount = 4
+    const table = [100, 100, 120, 140, 160]
+    const mult = table[comboCount]
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_COUNT, comboCount)
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_MULT, mult)
+    sprites.setDataNumber(hero, HERO_DATA.LAST_HIT_TIME, now)
+    sprites.setDataString(hero, HERO_DATA.LAST_MOVE_KEY, button)
+    showComboPop(hero, comboCount)
+}
+function getComboDamageMultPct(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return 100
+    const val = sprites.readDataNumber(hero, HERO_DATA.COMBO_MULT)
+    return val > 0 ? val : 100
+}
+
+// AGILITY - thrust / skewer projectile
+function spawnAgilityThrustProjectile(
+    heroIndex: number,
+    hero: Sprite,
+    baseDamage: number,
+    isHeal: boolean,
+    button: string,
+    slowPct: number,
+    slowDurationMs: number,
+    weakenPct: number,
+    weakenDurationMs: number,
+    knockbackPct: number
+): Sprite {
+    const nowMs = game.runtime()
+
+    // Freeze direction at cast (mirror doHeroMoveForPlayer normalization)
+    const aim = getAimVectorForHero(heroIndex)
+    let nx = aim[0]
+    let ny = aim[1]
+    if (nx == 0 && ny == 0) {
+        nx = 1
+        ny = 0
+    }
+    const mag = Math.sqrt(nx * nx + ny * ny) || 1
+    nx /= mag
+    ny /= mag
+
+    // Planned reach (center→center), computed earlier into "AGI_L_EXEC"
+    let L = sprites.readDataNumber(hero, "AGI_L_EXEC") | 0
+    if (L < 1) L = 1
+
+    // Create projectile; updater will replace image + position each frame
+    const proj = sprites.create(image.create(2, 2), SpriteKind.HeroWeapon)
+    proj.z = hero.z + 1
+    proj.vx = 0
+    proj.vy = 0
+    proj.x = hero.x
+    proj.y = hero.y
+    // Start with a degenerate segment; real geometry is handled in the updater
+    proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny))
+
+    // Core identifiers
+    sprites.setDataString(
+        proj,
+        PROJ_DATA.MOVE_TYPE,
+        (L <= 0 ? "agilityStabLow" : "agilityStab")
+    )
+    sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex)
+    sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
+    sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.AGILITY)
+
+    // Combat stats (pass-through from caller)
+    sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, baseDamage | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.IS_HEAL, isHeal ? 1 : 0)
+    sprites.setDataNumber(proj, PROJ_DATA.SLOW_PCT, slowPct | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.SLOW_DURATION_MS, slowDurationMs | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_PCT, weakenPct | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurationMs | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct | 0)
+
+    // Direction + timing fields used by the updater
+    sprites.setDataNumber(proj, PROJ_DATA.DIR_X, nx)
+    sprites.setDataNumber(proj, PROJ_DATA.DIR_Y, ny)
+    sprites.setDataNumber(proj, PROJ_DATA.START_TIME, nowMs)
+    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
+    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
+
+    // Planned reach for execution (center-based; updater converts to front edge frame)
+    sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
+
+    // Runtime fields for updater
+    sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs)
+    sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, 0)
+    sprites.setDataNumber(proj, PROJ_DATA.REACH_T, 0)
+    sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
+
+    // Keep the V17 dash bookkeeping; updater doesn't depend on it, but other systems might
+    const dashEnd = heroBusyUntil[heroIndex] | 0
+    sprites.setDataNumber(proj, PROJ_DATA.DASH_END_MS, dashEnd)
+
+    // Track for per-frame updates
+    heroProjectiles.push(proj)
+
+    // Debug stamp (kept from V10/V17 hybrid)
+    if (DEBUG_AGILITY) {
+        let seq = sprites.readDataNumber(hero, "DBG_SEQ") | 0
+        seq++
+        sprites.setDataNumber(hero, "DBG_SEQ", seq)
+        sprites.setDataNumber(proj, "dbgId", seq)
+        sprites.setDataNumber(proj, "dbgLast", 0)
+        function r3(v: number) { return Math.round(v * 1000) / 1000 }
+        console.log(
+            `[AGI ${seq}] SPAWN hero=${heroIndex} L_exec=${L} dir=(${r3(nx)},${r3(ny)}) @(${hero.x | 0},${hero.y | 0})`
+        )
+    }
+
+    return proj
+}
+
+
+// 8.1 — AGILITY helpers (unchanged core)
+function createAgilityArrowSegmentImage(sBack: number, sFront: number, nx: number, ny: number): Image { /* same as before */
+    const sx = -ny, sy = nx
+    let sb = sBack, sf = sFront
+    if (sf < sb) { const t = sb; sb = sf; sf = t }
+    const pad = 2
+    const baseHalf = 1
+    const sideHalf = baseHalf + 1
+    const fMin = sb
+    const fMax = sf + 2
+    function cornerX(f: number, wside: number) { return nx * f + sx * wside }
+    function cornerY(f: number, wside: number) { return ny * f + sy * wside }
+    const xs = [cornerX(fMin, -sideHalf), cornerX(fMin, sideHalf), cornerX(fMax, -sideHalf), cornerX(fMax, sideHalf)]
+    const ys = [cornerY(fMin, -sideHalf), cornerY(fMin, sideHalf), cornerY(fMax, -sideHalf), cornerY(fMax, sideHalf)]
+    let minX = xs[0], maxX = xs[0], minY = ys[0], maxY = ys[0]
+    for (let j = 1; j < 4; j++) { if (xs[j] < minX) minX = xs[j]; if (xs[j] > maxX) maxX = xs[j]; if (ys[j] < minY) minY = ys[j]; if (ys[j] > maxY) maxY = ys[j] }
+    minX = Math.floor(minX) - pad; maxX = Math.ceil(maxX) + pad
+    minY = Math.floor(minY) - pad; maxY = Math.ceil(maxY) + pad
+    const w = Math.max(1, maxX - minX + 1), h = Math.max(1, maxY - minY + 1)
+    const img = image.create(w, h)
+    function mapX(sForward: number, wSide: number) { return Math.round(nx * sForward + sx * wSide) - minX }
+    function mapY(sForward: number, wSide: number) { return Math.round(ny * sForward + sy * wSide) - minY }
+    const sStart = Math.floor(sb), sEnd = Math.floor(sf)
+    for (let s = sStart; s <= sEnd; s++) { const px = mapX(s, 0), py = mapY(s, 0); if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, 5) }
+    for (let woff = -baseHalf; woff <= baseHalf; woff++) {
+        const hx = mapX(sf, woff), hy = mapY(sf, woff); if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, 5)
+    }
+    { const hx = mapX(sf + 1, 0), hy = mapY(sf + 1, 0); if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, 5) }
+    for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (img.getPixel(x, y) == 5)
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0) continue
+            const ox = x + dx, oy = y + dy
+            if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue
+            if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, 15)
+        }
+    { const nxp = mapX(sf + 2, 0), nyp = mapY(sf + 2, 0); if (nxp >= 0 && nxp < w && nyp >= 0 && nyp < h) img.setPixel(nxp, nyp, 15) }
+    { const px = mapX(sf, 0), py = mapY(sf, 0); if (px >= 0 && px < w && py >= 0 && py < h && img.getPixel(px, py) == 0) img.setPixel(px, py, 5) }
+    return img
+}
+
+
+// AGILITY - world-space extend + reel motion (V10 behavior)
+function updateAgilityProjectilesMotionFor(
+    proj: Sprite,
+    hero: Sprite,
+    heroIndex: number,
+    nowMs: number,
+    iInArray: number
+): boolean {
+    // Planned reach measured from HERO CENTER along the dash ray (saved at spawn)
+    let L = sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) || 0
+    if (L < 1) L = 1
+
+    // Frozen dash direction saved at spawn; fall back to aim/facing if absent
+    let nx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X)
+    let ny = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y)
+    if (!nx && !ny) {
+        const aim = getAimVectorForHero(heroIndex)
+        nx = aim[0]
+        ny = aim[1]
+        if (!nx && !ny) {
+            nx = heroFacingX[heroIndex] || 1
+            ny = heroFacingY[heroIndex] || 0
+        }
+    }
+    let m = Math.sqrt(nx * nx + ny * ny)
+    if (m < 1e-6) {
+        nx = 1
+        ny = 0
+        m = 1
+    }
+    nx /= m
+    ny /= m
+
+    // Anchor point = hero center at cast time (world-space)
+    const anchorX = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_X)
+    const anchorY = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_Y)
+
+    // Distance from hero center to the FRONT EDGE in the dash direction:
+    // use width for horizontal, height for vertical (and blend for diagonals)
+    const attachPx =
+        0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
+
+    // Your segment drawer renders a 1px nose at (sf + 2). Stop the "head base" at L - 2,
+    // so the visual nose lands at L.
+    const sBackAtCast = attachPx
+    let sFrontStop = L - 2
+    if (sFrontStop <= sBackAtCast) {
+        sFrontStop = sBackAtCast + 4 // safety so we always have a positive length
+        L = sFrontStop + 2
+        sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
+    }
+    const maxLen = Math.max(0, sFrontStop - sBackAtCast)
+
+    // Runtime state: previous sample time, current arrow length, and the time we first reached full length
+    const PREV_S_KEY = "prevS"
+    const lastT = sprites.readDataNumber(proj, PROJ_DATA.LAST_T) || nowMs
+    let arrowLen = sprites.readDataNumber(proj, PROJ_DATA.ARROW_LEN) || 0
+    let reachT = sprites.readDataNumber(proj, PROJ_DATA.REACH_T) || 0
+
+    // Hero's forward progress along the dash ray (project hero's displacement onto (nx,ny))
+    const sHero = (hero.x - anchorX) * nx + (hero.y - anchorY) * ny
+    let prevS = sprites.readDataNumber(proj, PREV_S_KEY)
+    if (prevS !== 0 && !prevS) prevS = sHero
+
+    const dtSec = Math.max(0.0005, (nowMs - lastT) / 1000)
+    const vHero = Math.max(0, (sHero - prevS) / dtSec)
+
+    // Arrow extends faster than the hero to "lead" the dash, then parks and reels in
+    const k = 2.5
+    const vArrow = vHero * k
+
+    let sBack: number
+    let sFront: number
+
+    if (reachT <= 0) {
+        // Phase A — extend: grow only the front from the front edge
+        arrowLen = arrowLen + vArrow * dtSec
+        if (arrowLen >= maxLen) {
+            arrowLen = maxLen
+            reachT = nowMs
+            sprites.setDataNumber(proj, PROJ_DATA.REACH_T, reachT)
+        }
+        sBack = sBackAtCast
+        sFront = sBackAtCast + arrowLen
+    } else {
+        // Phase B — reel: keep head fixed at sFrontStop; pull tail forward over a fixed short time
+        const REEL_MS = 200
+        const u = Math.max(0, Math.min(1, (nowMs - reachT) / REEL_MS))
+        arrowLen = maxLen * (1 - u)
+        if (arrowLen <= 0) {
+            proj.destroy()
+            heroProjectiles.removeAt(iInArray)
+            return false
+        }
+        sFront = sFrontStop
+        sBack = sFront - arrowLen
+    }
+
+    // Persist runtime state
+    sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs)
+    sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, arrowLen)
+    sprites.setDataNumber(proj, PREV_S_KEY, sHero)
+
+    // --- World-space bounding box for the segment sprite ---
+    const sx = -ny
+    const sy = nx
+    const pad = 2
+    const sideHalf = 2
+
+    const fMin = sBack
+    const fMax = sFront + 2 // include nose
+
+    function cornerX(f: number, wside: number) {
+        return nx * f + sx * wside
+    }
+    function cornerY(f: number, wside: number) {
+        return ny * f + sy * wside
+    }
+
+    const xs = [
+        cornerX(fMin, -sideHalf),
+        cornerX(fMin, sideHalf),
+        cornerX(fMax, -sideHalf),
+        cornerX(fMax, sideHalf)
+    ]
+    const ys = [
+        cornerY(fMin, -sideHalf),
+        cornerY(fMin, sideHalf),
+        cornerY(fMax, -sideHalf),
+        cornerY(fMax, sideHalf)
+    ]
+
+    let minXW = xs[0]
+    let maxXW = xs[0]
+    let minYW = ys[0]
+    let maxYW = ys[0]
+    for (let j = 1; j < 4; j++) {
+        if (xs[j] < minXW) minXW = xs[j]
+        if (xs[j] > maxXW) maxXW = xs[j]
+        if (ys[j] < minYW) minYW = ys[j]
+        if (ys[j] > maxYW) maxYW = ys[j]
+    }
+
+    minXW = Math.floor(minXW) - pad
+    maxXW = Math.ceil(maxXW) + pad
+    minYW = Math.floor(minYW) - pad
+    maxYW = Math.ceil(maxYW) + pad
+
+    // Replace image and place it in world space
+    proj.setImage(createAgilityArrowSegmentImage(sBack, sFront, nx, ny))
+    proj.vx = 0
+    proj.vy = 0
+    proj.x = anchorX + (minXW + maxXW) / 2
+    proj.y = anchorY + (minYW + maxYW) / 2
+
+    // Optional: keep V10-style debug trace
+    if (DEBUG_AGILITY) {
+        const dbgId = sprites.readDataNumber(proj, "dbgId") | 0
+        const dbgLast = sprites.readDataNumber(proj, "dbgLast") | 0
+        const DBG_INTERVAL_MS = 50
+        if (dbgId && nowMs - dbgLast >= DBG_INTERVAL_MS) {
+            sprites.setDataNumber(proj, "dbgLast", nowMs)
+
+            const sHeroFront = sHero + attachPx
+            const sNose = sFront + 2
+            const heroFrontXY = worldPointAlongRay(anchorX, anchorY, nx, ny, sHeroFront)
+            const arrowNoseXY = worldPointAlongRay(anchorX, anchorY, nx, ny, sNose)
+            const deltaFN = sNose - sHeroFront
+
+            const ax = Math.abs(nx)
+            const ay = Math.abs(ny)
+            const dirTag = ax > 0.999 ? "HORIZ" : ay > 0.999 ? "VERT" : "DIAG"
+
+            function r(v: number) { return Math.round(v * 100) / 100 }
+
+            console.log(
+                `[AGI ${dbgId}] ${dirTag} ` +
+                `L=${L} w=${hero.width} h=${hero.height} attachPx=${r(attachPx)} | ` +
+                `sBack=${r(sBack)} sFront=${r(sFront)} ` +
+                `sHeroFront=${r(sHeroFront)} sNose=${r(sNose)} Δ=${r(deltaFN)} | ` +
+                `heroFront=(${heroFrontXY[0] | 0},${heroFrontXY[1] | 0}) ` +
+                `nose=(${arrowNoseXY[0] | 0},${arrowNoseXY[1] | 0})`
+            )
+        }
+    }
+
+    return true
+}
+
+
+// DEBUG helpers (unchanged)
+function debugAgilityDashProgress(hero: Sprite, heroIndex: number) { /* unchanged */ }
+
+function debugDashIntegratorTick(hero: Sprite) { /* unchanged */ }
+
+// NEW: combo pop ("1x", …)
+function showComboPop(hero: Sprite, multX: number) {
+    const t = textsprite.create(multX + "x")
+    t.setPosition(hero.x, hero.y - 12)
+    t.setMaxFontHeight(6)
+    t.lifespan = 500
+    t.vy = -15
+}
+
+// NEW: small draining meter above hero for agility combo
+function ensureComboMeter(heroIndex: number): Sprite {
+    let m = heroComboMeters[heroIndex]
+    const hero = heroes[heroIndex]; if (!hero) return null
+    if (!m) {
+        m = sprites.create(image.create(22, 2), SpriteKind.HeroAura)
+        m.z = hero.z + 2
+        heroComboMeters[heroIndex] = m
+    }
+    return m
+}
+
+
+// ====================================================
+// SECTION I - INTELLECT MOVE MODULE
+// ====================================================
+// Intellect: steerable spells, detonation, lingers, cleanup timers.
+
+
+//Intellect traits should be calculated using: spell energy/inertia at traits[1], spell AEO size at traits[2], maximum spell targeting duration at traits[3], weakness at traits[4] (weakness is a placeholder until we better define intellect's debuff)
+// Intellect
+// Intellect traits mapping:
+// traits[1] = spell energy / inertia
+// traits[2] = spell AOE size
+// traits[3] = maximum spell targeting duration
+// traits[4] = weakness (debuff)
+
+function calculateIntellectStats(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Pull raw trait values and floor at 0 (no upper caps)
+    let tEnergy = (traits[1] | 0)   // energy / inertia
+    let tSize = (traits[2] | 0)   // AOE size
+    let tTarget = (traits[3] | 0)   // max targeting duration
+    let tWeak = (traits[4] | 0)   // weakness debuff
+
+    if (tEnergy < 0) tEnergy = 0
+    if (tSize < 0) tSize = 0
+    if (tTarget < 0) tTarget = 0
+    if (tWeak < 0) tWeak = 0
+
+    // ----------------------------------------------------
+    // TARGETING DURATION (traits[3])
+    // ----------------------------------------------------
+    // How long you can "aim" the spell before it fires.
+    // Base 500ms + 50ms per point of tTarget (can get absurdly long).
+    let targetingTime = 500 + tTarget * 50
+    // Safety: never allow 0 or negative (shouldn't happen with floor, but just in case):
+    if (targetingTime < 50) targetingTime = 50
+    stats[STAT.TARGETING_TIME] = targetingTime
+
+    // ----------------------------------------------------
+    // AOE SIZE (traits[2]) → ring radius
+    // ----------------------------------------------------
+    // Base radius 8px + 1px per point of tSize.
+    // No cap here; huge values just mean huge circles.
+    stats[STAT.RING_RADIUS] = 8 + tSize
+
+    // ----------------------------------------------------
+    // ENERGY / INERTIA (traits[1]) → damage, channel power, move duration
+    // ----------------------------------------------------
+    // Damage multiplier: 60% base + 2% per point of tEnergy
+    stats[STAT.DAMAGE_MULT] = 60 + tEnergy * 2
+
+    // Channel power: 100 base + 5 per point of tEnergy
+    stats[STAT.CHANNEL_POWER] = 100 + tEnergy * 5
+
+    // Move duration: baseTimeMs + 5ms per point of tEnergy
+    // (Big, heavy, high-energy spells take longer.)
+    let moveDur = baseTimeMs + tEnergy * 5
+    if (moveDur < 50) moveDur = 50 // minimal safety floor
+    stats[STAT.MOVE_DURATION] = moveDur
+
+    // ----------------------------------------------------
+    // WEAKNESS (traits[4]) → debuff strength and duration
+    // ----------------------------------------------------
+    // Weaken percent: 5% base + 1% per point of tWeak
+    stats[STAT.WEAKEN_PCT] = 5 + tWeak
+
+    // Weaken duration: 500ms base + 20ms per point of tWeak
+    stats[STAT.WEAKEN_DURATION] = 500 + tWeak * 20
+
+    return stats
+}
+
+
+function calculateIntellectStatsOLDCODE(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+    const tTime = traits[1] || 0
+    const tSize = traits[2] || 0
+    const chanPool = traits[3] || 0
+    const weakPool = traits[4] || 0
+    const total = Math.max(1, tTime + tSize + chanPool + weakPool)
+    const shareTime = tTime / total
+    const shareSize = tSize / total
+    const shareChan = chanPool / total
+    const shareWeak = weakPool / total
+
+    // Core timing / shape knobs
+    let targetingTime = 150 + Math.round(shareTime * 350)
+    if (targetingTime < 5000) targetingTime = 5000  // hard floor lives here now
+    stats[STAT.TARGETING_TIME] = targetingTime
+
+    stats[STAT.RING_RADIUS] = 24 - Math.round(shareSize * 12)
+    stats[STAT.DAMAGE_MULT] = 80 + Math.round(shareChan * 80)
+    stats[STAT.CHANNEL_POWER] = 100 + Math.round(shareChan * 100)
+
+    const durationMultPct = 100 + Math.round(shareChan * 80)
+    stats[STAT.MOVE_DURATION] = Math.idiv(baseTimeMs * durationMultPct, 100)
+
+    stats[STAT.WEAKEN_PCT] = 10 + Math.round(shareWeak * 40)
+    stats[STAT.WEAKEN_DURATION] = 500 + Math.round(shareWeak * 1000)
+
+    return stats
+}
+
+
+function executeIntellectMove(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[],
+    now: number
+) {
+    // Targeting window from trait-driven stats (clamped with hard floor)
+    const targetingTime = (stats[STAT.TARGETING_TIME] | 0) || 5000 // hard floor now set in calculateIntellectStats
+
+    // Stamp hero control metadata
+    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, true)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, now)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, targetingTime)
+
+    // Delegate all spell creation + damage math to the intellect module
+    // (beginIntellectTargeting already re-reads traits and calculates its own stats)
+    beginIntellectTargeting(heroIndex, targetingTime, button, FAMILY.INTELLECT)
+}
+
+function beginIntellectTargeting(
+    heroIndex: number,
+    spellLifetimeMs: number,
+    button: string,
+    family: number
+) {
+    const hero = heroes[heroIndex]; if (!hero) return
+
+    // Pull hero traits
+    const t1 = sprites.readDataNumber(hero, HERO_DATA.TRAIT1)
+    const t2 = sprites.readDataNumber(hero, HERO_DATA.TRAIT2)
+    const t3 = sprites.readDataNumber(hero, HERO_DATA.TRAIT3)
+    const t4 = sprites.readDataNumber(hero, HERO_DATA.TRAIT4)
+    const traits = [0, t1, t2, t3, t4]
+
+    // Stats from traits
+    const stats = calculateMoveStatsForFamily(family, button, traits)
+
+    // Control window: final targeting time already computed in calculateIntellectStats
+    const lifespanMs = (stats[STAT.TARGETING_TIME] || 5000)
+
+
+    const baseDamage = getBasePower(family)
+    const damageMult = stats[STAT.DAMAGE_MULT]
+    let dmg = Math.idiv(baseDamage * damageMult, 100)
+    if (dmg < 1) dmg = 1
+
+    const weakenPct = stats[STAT.WEAKEN_PCT]
+    const weakenDurMs = stats[STAT.WEAKEN_DURATION]
+
+    // Aim vector from hero
+    const dir = getAimVectorForHero(heroIndex)
+    let dx = dir[0], dy = dir[1]
+    if (dx == 0 && dy == 0) { dx = 1; dy = 0 }
+
+    const baseSpeed = 30
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag == 0) mag = 1
+    const vx = Math.idiv(dx * baseSpeed, mag)
+    const vy = Math.idiv(dy * baseSpeed, mag)
+
+    // Lock hero motion, mark as controlling a spell
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, true)
+
+    const imgCore = (family == FAMILY.HEAL)
+        ? img`
+            . 7 7 7 .
+            7 7 7 7 7
+            7 7 7 7 7
+            . 7 7 7 .
+        `
+        : img`
+            . 8 8 8 .
+            8 8 8 8 8
+            8 8 8 8 8
+            . 8 8 8 .
+        `
+
+    const spell = sprites.createProjectileFromSprite(imgCore, hero, vx, vy)
+    spell.setKind(SpriteKind.HeroWeapon)
+
+    // 🔧 IMPORTANT: give the projectile a real lifespan (like v10),
+    // long enough for targeting + detonation visuals.
+    // Add a bit of buffer beyond the targeting window.
+    spell.lifespan = lifespanMs + 1000
+
+    const now = game.runtime()
+
+    // Control time window (our own floor / timer detonation)
+    const ctrlUntil = now + lifespanMs
+//    sprites.setDataNumber(spell, "INT_CTRL_UNTIL", ctrlUntil)
+
+    sprites.setDataNumber(spell, INT_CTRL_UNTIL_KEY, ctrlUntil)
+
+
+
+    // 🔵 DEBUG: log spawn + control window
+    console.log(
+        `[INT DEBUG] SPAWN hero=${heroIndex} family=${family} ` +
+        `now=${now} ctrlUntil=${ctrlUntil} lifespanMs=${lifespanMs} ` +
+        `pos=(${hero.x},${hero.y}) vxvy=(${vx},${vy})`
+    )
+
+    heroControlledSpells[heroIndex] = spell
+    heroProjectiles.push(spell)
+
+    sprites.setDataNumber(spell, PROJ_DATA.HERO_INDEX, heroIndex)
+    sprites.setDataNumber(spell, PROJ_DATA.FAMILY, family)
+    sprites.setDataString(spell, PROJ_DATA.BUTTON, button)
+
+    // Intellect: actual damage; Heal: 0 here (we compute healing on detonation)
+    sprites.setDataNumber(
+        spell,
+        PROJ_DATA.DAMAGE,
+        (family == FAMILY.HEAL) ? 0 : dmg
+    )
+    sprites.setDataNumber(spell, PROJ_DATA.IS_HEAL, (family == FAMILY.HEAL) ? 1 : 0)
+    sprites.setDataNumber(spell, PROJ_DATA.SLOW_PCT, 0)
+    sprites.setDataNumber(spell, PROJ_DATA.SLOW_DURATION_MS, 0)
+    sprites.setDataNumber(spell, PROJ_DATA.WEAKEN_PCT, weakenPct)
+    sprites.setDataNumber(spell, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs)
+    sprites.setDataNumber(spell, PROJ_DATA.KNOCKBACK_PCT, 0)
+
+    // Default AoE radius; traits can later tune this
+    sprites.setDataNumber(spell, INT_RADIUS_KEY, 16)
+}
+
+function runIntellectDetonation(spell: Sprite, lingerMs: number) {
+    if (!spell || (spell.flags & sprites.Flag.Destroyed)) return
+
+    const now = game.runtime()
+
+    // How long the tendril animation should last (ms)
+    const totalLinger = Math.max(200, Math.min(1200, lingerMs))
+
+    // Pull max radius from traits; fall back to something sane
+    let maxRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
+    if (maxRadius <= 0) maxRadius = 16
+
+    // Make the sprite's image large enough to contain the full explosion
+    const size = maxRadius * 2 + 2
+    const img = image.create(size, size)
+    img.fill(0)
+    spell.setImage(img)
+
+    // Center it visually at the same world location
+    // (Using spell.x / spell.y as world position is unchanged.)
+    spell.z += 1
+
+    // Move sprite so its visual center = actual detonation point
+    spell.x -= img.width >> 1
+    spell.y -= img.height >> 1
+
+    // Store timing for per-frame animation
+    sprites.setDataNumber(spell, INT_DETONATE_START_KEY, now)
+    sprites.setDataNumber(spell, INT_DETONATE_END_KEY, now + totalLinger)
+
+    // Schedule actual cleanup: spell will be destroyed AFTER the animation
+    sprites.setDataNumber(spell, PROJ_DATA.DESTROY_AT, now + totalLinger + 100)
+}
+
+// Finish helper
+function finishIntellectSpellForHero(heroIndex: number) {
+    if (heroIndex < 0 || heroIndex >= heroes.length) return
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
+    const spell = heroControlledSpells[heroIndex]
+    if (spell) heroControlledSpells[heroIndex] = null
+    heroBusyUntil[heroIndex] = 0
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
+    unlockHeroControls(heroIndex)
+}
+
+function updateIntellectSpellsControl() {
+    const baseAccel = 40, maxSpeed = 80
+    const now = game.runtime()
+
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        const isCtrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
+        if (!isCtrl) continue
+
+        const spell = heroControlledSpells[i]; if (!spell) continue
+
+        // Fizzle if floor elapsed and no detonation yet
+//        const ctrlUntil = sprites.readDataNumber(spell, "INT_CTRL_UNTIL") | 0
+
+        const ctrlUntil = sprites.readDataNumber(spell, INT_CTRL_UNTIL_KEY) | 0
+
+
+        if (ctrlUntil > 0 && now >= ctrlUntil && !sprites.readDataNumber(spell, INT_DETONATED_KEY)) {
+            const fam = sprites.readDataNumber(spell, PROJ_DATA.FAMILY)
+
+            // DEBUG: timer-based detonation / fizzle
+            console.log(
+                `[INT DEBUG] TIMER DETONATION hero=${i} family=${fam} ` +
+                `now=${now} ctrlUntil=${ctrlUntil} delta=${now - ctrlUntil}`
+            )
+
+            if (fam == FAMILY.HEAL) detonateHealSpellAt(spell, spell.x, spell.y)
+            else detonateIntellectSpellAt(spell, spell.x, spell.y)
+            continue
+        }
+
+        // If already detonated, don't move
+        if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) continue
+
+        // Controls
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        let ctrl: controller.Controller = null
+        if (ownerId == 1) ctrl = controller.player1
+        else if (ownerId == 2) ctrl = controller.player2
+        else if (ownerId == 3) ctrl = controller.player3
+        else if (ownerId == 4) ctrl = controller.player4
+        if (!ctrl) continue
+
+        let ax = 0, ay = 0
+        if (ctrl.left.isPressed()) ax -= baseAccel
+        if (ctrl.right.isPressed()) ax += baseAccel
+        if (ctrl.up.isPressed()) ay -= baseAccel
+        if (ctrl.down.isPressed()) ay += baseAccel
+
+        if (ax != 0 || ay != 0) {
+            spell.vx += ax
+            spell.vy += ay
+
+            const vx = spell.vx, vy = spell.vy
+            const speedSq = vx * vx + vy * vy
+            const maxSq = maxSpeed * maxSpeed
+            if (speedSq > maxSq) {
+                const m = Math.sqrt(speedSq)
+                spell.vx = Math.idiv(vx * maxSpeed, m)
+                spell.vy = Math.idiv(vy * maxSpeed, m)
+            }
+        }
+    }
+}
+
+// INTELLECT: one-time detonation at (termX, termY) with AoE damage+weaken
+function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
+    if (!spell) return
+    if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
+
+    const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
+
+    // 👉 As soon as detonation begins, give control back to the hero
+    if (heroIndex >= 0 && heroIndex < heroes.length) {
+        finishIntellectSpellForHero(heroIndex)
+    }
+
+    // (Optional debug – keep or delete as you like)
+    const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
+    const dmg = sprites.readDataNumber(spell, PROJ_DATA.DAMAGE) | 0
+    console.log(
+        `[INT DEBUG] DETONATE intellect hero=${heroIndex} family=${family} ` +
+        `at=(${termX},${termY}) dmg=${dmg}`
+    )
+
+    // Mark detonated & pin position
+    sprites.setDataNumber(spell, INT_DETONATED_KEY, 1)
+    sprites.setDataNumber(spell, INT_TERM_X_KEY, termX)
+    sprites.setDataNumber(spell, INT_TERM_Y_KEY, termY)
+    spell.vx = 0
+    spell.vy = 0
+    spell.x = termX
+    spell.y = termY
+
+    // AoE parameters
+    let radius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
+    if (radius <= 0) radius = 16
+    const rSq = radius * radius
+
+    const weakenPct = sprites.readDataNumber(spell, PROJ_DATA.WEAKEN_PCT) | 0
+    const weakenMs = sprites.readDataNumber(spell, PROJ_DATA.WEAKEN_DURATION_MS) | 0
+
+    // Damage from spell data
+    const dmgNow = sprites.readDataNumber(spell, PROJ_DATA.DAMAGE) | 0
+
+    // Instant AoE over enemies[]
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e) continue
+
+        if (distSqPointToSprite(termX, termY, e) <= rSq) {
+            if (dmgNow > 0) {
+                applyDamageToEnemyIndex(i, dmgNow)
+                showDamageNumber(e.x, e.y - 6, dmgNow)
+            }
+            if (weakenPct > 0 && weakenMs > 0) {
+                const now = game.runtime()
+                sprites.setDataNumber(e, ENEMY_DATA.WEAKEN_PCT, weakenPct)
+                sprites.setDataNumber(e, ENEMY_DATA.WEAKEN_UNTIL, now + weakenMs)
+            }
+        }
+    }
+
+    // Visual + cleanup (spell will be destroyed later, but hero is already free)
+    runIntellectDetonation(spell, Math.max(400, weakenMs))
+}
+
+function processIntellectLingers() {
+    const now = game.runtime()
+
+    const totalTendrils = 18        // 9 long + 9 short
+    const longCount = 9
+    const shortCount = totalTendrils - longCount
+
+    const rotationSpeed = 0.008     // radians per ms (spin speed)
+    const growthFrac = 0.4          // portion of time spent "growing" before spin
+
+    const jagSegments = 5           // number of steps along each tendril
+    const jagAmplitude = 0.5        // BIGGER wiggle (≈ "15" feel instead of "5")
+
+    for (let i = 0; i < heroProjectiles.length; i++) {
+        const proj = heroProjectiles[i]
+        if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
+
+        if (!sprites.readDataNumber(proj, INT_DETONATED_KEY)) continue
+
+        const startMs = sprites.readDataNumber(proj, INT_DETONATE_START_KEY) | 0
+        const endMs = sprites.readDataNumber(proj, INT_DETONATE_END_KEY) | 0
+        if (startMs <= 0 || endMs <= startMs) continue
+
+        const total = endMs - startMs
+        const elapsed = now - startMs
+        if (elapsed < 0) continue
+
+        // Clamp animation progress [0, 1]
+        let t = elapsed / total
+        if (t > 1) t = 1
+
+        let maxRadius = sprites.readDataNumber(proj, INT_RADIUS_KEY) | 0
+        if (maxRadius <= 0) maxRadius = 16
+
+        // Long tendrils go to full radius; short ones to half radius
+        const longMax = maxRadius
+        const shortMax = Math.max(1, maxRadius >> 1)
+
+        const currentLongRadius = Math.max(
+            1,
+            Math.floor(longMax * (0.2 + 0.8 * t))
+        )
+        const currentShortRadius = Math.max(
+            1,
+            Math.floor(shortMax * (0.2 + 0.8 * t))
+        )
+
+        const img = proj.image
+        if (!img) continue
+
+        const w = img.width
+        const h = img.height
+        const cx = w >> 1
+        const cy = h >> 1
+
+        // Clear previous frame
+        img.fill(0)
+
+        const colorIndex = 8
+        const twoPi = 2 * Math.PI
+
+        // "Grow, then spin": no rotation during the first growthFrac of the lifetime
+        const growthMs = total * growthFrac
+        let spinElapsed = elapsed - growthMs
+        if (spinElapsed < 0) spinElapsed = 0
+
+        const baseAngleLong = spinElapsed * rotationSpeed          // clockwise
+        const baseAngleShort = -spinElapsed * rotationSpeed        // counterclockwise
+
+        const heroIndex = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX) | 0
+
+        for (let k = 0; k < totalTendrils; k++) {
+            const isLong = k < longCount
+            const setIndex = isLong ? k : (k - longCount)
+            const perSetCount = isLong ? longCount : shortCount
+
+            // Angle fraction within its own ring (9 long distributed, 9 short distributed)
+            const fraction = perSetCount > 0 ? setIndex / perSetCount : 0
+
+            const maxR = isLong ? currentLongRadius : currentShortRadius
+            const baseAngle = isLong ? baseAngleLong : baseAngleShort
+
+            // Alternate jag pattern: +1 vs -1 (up/down vs down/up)
+            const patternSign = (k % 2 == 0) ? 1 : -1
+
+            // Slight per-tendril variation
+            const perTendrilPhase = (heroIndex * 0.3 + k * 0.5)
+
+            let prevX = cx
+            let prevY = cy
+
+            for (let s = 1; s <= jagSegments; s++) {
+                const segFrac = s / jagSegments
+                const rBase = maxR * segFrac
+
+                // Flip offset direction each segment for up/down/up/down look
+                const segDir = (s % 2 == 0) ? 1 : -1
+
+                // Wiggle angle – larger near center, smaller toward tip
+                const wiggle = patternSign * segDir * jagAmplitude * (1 - segFrac)
+
+                const angle = baseAngle
+                    + fraction * twoPi
+                    + wiggle
+                    + perTendrilPhase * 0.02
+
+                const ex = cx + Math.round(rBase * Math.cos(angle))
+                const ey = cy + Math.round(rBase * Math.sin(angle))
+
+                // Draw thicker tendril: main line + a slight perpendicular offset
+                img.drawLine(prevX, prevY, ex, ey, colorIndex)
+
+                const dx = ex - prevX
+                const dy = ey - prevY
+                const segLenSq = dx * dx + dy * dy
+                if (segLenSq > 0) {
+                    // Perpendicular unit step (approx) for width
+                    let px = -dy
+                    let py = dx
+                    // Normalize to length 1-ish
+                    if (px != 0 || py != 0) {
+                        const mag = Math.sqrt(px * px + py * py)
+                        px = Math.idiv(px, mag)
+                        py = Math.idiv(py, mag)
+                        img.drawLine(prevX + px, prevY + py, ex + px, ey + py, colorIndex)
+                    }
+                }
+
+                prevX = ex
+                prevY = ey
+            }
+        }
+
+        // Tiny core so center isn't empty
+        img.setPixel(cx, cy, colorIndex)
+    }
+}
+
+// Return control when the projectile ends
+sprites.onDestroyed(SpriteKind.HeroWeapon, function (proj) {
+    const family = sprites.readDataNumber(proj, PROJ_DATA.FAMILY)
+    if (family != FAMILY.INTELLECT && family != FAMILY.HEAL) return
+    const heroIndex = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX)
+    if (heroIndex < 0 || heroIndex >= heroes.length) return
+    if (heroControlledSpells[heroIndex] == proj) { heroControlledSpells[heroIndex] = null; finishIntellectSpellForHero(heroIndex) }
+})
+
+
+// ====================================================
+// SECTION H - HEAL AND SUPPORT SPELLS MODULE
+// ====================================================
+// Heal/support effects. Drives healing & buff application.
+
+// HEAL: one-time detonation that heals heroes only (no enemy effect)
+
+const SUPPORT_BEAM_SPEED = 80 // pixels per second-ish
+
+// 2-wavelength "sine" made of single pixels (12×7), three phase frames
+const SUPPORT_BEAM_WAVE0 = img`
+    . . . . . . . . . . . .
+    . . 7 . . . . . . . 7 .
+    . 7 . 7 . . . . . 7 . 7
+    7 . . . 7 . . . 7 . . .
+    . . . . . 7 . 7 . . . .
+    . . . . . . 7 . . . . .
+    . . . . . . . . . . . .
+`
+const SUPPORT_BEAM_WAVE1 = img`
+    . . . . . . . . . . . .
+    . 7 . . . . . . . 7 . .
+    7 . 7 . . . . . 7 . 7 .
+    . . . 7 . . . 7 . . . 7
+    . . . . 7 . 7 . . . . .
+    . . . . . 7 . . . . . .
+    . . . . . . . . . . . .
+`
+const SUPPORT_BEAM_WAVE2 = img`
+    . . . . . . . . . . . .
+    . . . 7 . . . . . . . 7
+    7 . 7 . 7 . . . . . 7 .
+    . 7 . . . 7 . . . 7 . .
+    . . . . . . 7 . 7 . . .
+    . . . . . . . 7 . . . .
+    . . . . . . . . . . . .
+`
+
+
+function spawnSupportBeam(
+    casterHeroIndex: number,
+    targetHeroIndex: number,
+    buffKind: number,
+    buffPower: number,
+    buffDurationMs: number
+) {
+    const caster = heroes[casterHeroIndex]
+    const target = heroes[targetHeroIndex]
+    if (!caster || !target) return
+
+    // Start with a tiny blank image; we'll redraw it programmatically each frame
+    const beamImg = image.create(2, 2)
+    beamImg.fill(0)
+
+    const beam = sprites.create(beamImg, SpriteKind.SupportBeam)
+    beam.x = (caster.x + target.x) / 2
+    beam.y = (caster.y + target.y) / 2
+    beam.z = caster.z + 1
+
+    sprites.setDataString(beam, PROJ_DATA.MOVE_TYPE, "supportbeam")
+    sprites.setDataNumber(beam, PROJ_DATA.HERO_INDEX, casterHeroIndex)
+    sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_TARGET_HERO, targetHeroIndex)
+    sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_BUFF_KIND, buffKind)
+    sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_BUFF_POWER, buffPower)
+    sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_BUFF_DURATION, buffDurationMs)
+
+    // Track travel distance along the line from caster → target
+    sprites.setDataNumber(beam, "SUP_TRAVEL", 0)
+
+    heroProjectiles.push(beam)
+}
+
+
+function updateSupportBeamFor(proj: Sprite, casterHeroIndex: number, now: number, iInArray: number): boolean {
+    const caster = heroes[casterHeroIndex]
+    const targetHeroIndex = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_TARGET_HERO) | 0
+    const target = heroes[targetHeroIndex]
+
+    if (!caster || (caster.flags & sprites.Flag.Destroyed) || !target || (target.flags & sprites.Flag.Destroyed)) {
+        proj.destroy()
+        return false
+    }
+
+    // World-space line from caster → target
+    const x0 = caster.x
+    const y0 = caster.y
+    const x1 = target.x
+    const y1 = target.y
+
+    const dx = x1 - x0
+    const dy = y1 - y0
+    const distSq = dx * dx + dy * dy
+    const dist = Math.sqrt(distSq) || 1
+
+    // If they're basically on top of each other, just finish immediately
+    if (dist < 2) {
+        const kind = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_KIND) | 0
+        const power = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_POWER) | 0
+        const dur = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_DURATION) | 0
+        console.log("SUPPORT BEAM: very short, applying buff immediately to hero " + targetHeroIndex)
+        applySupportBuffToHero(targetHeroIndex, kind, power, dur)
+        proj.destroy()
+        return false
+    }
+
+    // How far the "head" has travelled from caster toward target
+    let travel = sprites.readDataNumber(proj, "SUP_TRAVEL") | 0
+    const stepPerFrame = 3 // pixels per update
+    travel += stepPerFrame
+    sprites.setDataNumber(proj, "SUP_TRAVEL", travel)
+
+    // When head passes target, apply buff and end
+    if (travel >= dist) {
+        const kind = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_KIND) | 0
+        const power = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_POWER) | 0
+        const dur = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_DURATION) | 0
+
+        console.log("SUPPORT BEAM: reached hero " + targetHeroIndex + ", applying buff")
+        applySupportBuffToHero(targetHeroIndex, kind, power, dur)
+        proj.destroy()
+        return false
+    }
+
+    // ------------------------------------------
+    // Rectangle that fully spans caster↔target
+    // ------------------------------------------
+    const margin = 6
+    const minX = Math.min(x0, x1) - margin
+    const minY = Math.min(y0, y1) - margin
+    const maxX = Math.max(x0, x1) + margin
+    const maxY = Math.max(y0, y1) + margin
+
+    const imgWidth = Math.max(1, (maxX - minX) | 0)
+    const imgHeight = Math.max(1, (maxY - minY) | 0)
+
+    const beamImg = image.create(imgWidth, imgHeight)
+    beamImg.fill(0)
+
+    // Position the sprite so its image covers [minX,maxX]×[minY,maxY]
+    proj.x = minX + imgWidth / 2
+    proj.y = minY + imgHeight / 2
+
+    // ------------------------------------------
+    // Wave parameters
+    // ------------------------------------------
+    const buffPower = sprites.readDataNumber(proj, PROJ_DATA.SUPPORT_BUFF_POWER) | 0
+
+    // Unit direction along the line
+    const ux = dx / dist
+    const uy = dy / dist
+
+    // Perpendicular direction
+    const px = -uy
+    const py = ux
+
+    // Head / tail distances along the line
+    const headDist = travel
+    let tailLength = 10 + buffPower * 0.3
+    if (tailLength < 10) tailLength = 10
+    if (tailLength > dist * 0.75) tailLength = dist * 0.75
+    const tailDist = Math.max(0, headDist - tailLength)
+
+    const twoPi = 6.28318
+    const cycles = 2
+    const basePhase = (now % 1000) / 1000 * twoPi
+
+    const samples = 40
+
+    // --- Per-buff amplitudes from caster's traits ---
+    const pool1 = sprites.readDataNumber(caster, HERO_DATA.TRAIT1) | 0 // heal
+    const pool2 = sprites.readDataNumber(caster, HERO_DATA.TRAIT2) | 0 // haste
+    const pool3 = sprites.readDataNumber(caster, HERO_DATA.TRAIT3) | 0 // dmg amp
+    const pool4 = sprites.readDataNumber(caster, HERO_DATA.TRAIT4) | 0 // shield / DR
+
+    // Map channels: 0=heal, 1=haste, 2=damage amp, 3=shield/DR
+    const channelColors = [7, 9, 1, 2] // green, yellow, blue, red
+
+    for (let s = 0; s < samples; s++) {
+        const tFrac = s / (samples - 1)
+        const dAlong = tailDist + (headDist - tailDist) * tFrac
+        if (dAlong < 0 || dAlong > dist) continue
+
+        const wx = x0 + ux * dAlong
+        const wy = y0 + uy * dAlong
+        const tNorm = dAlong / dist
+
+        // Four possible channels
+        for (let c = 0; c < 4; c++) {
+            let pool = 0
+            if (c == 0) pool = pool1
+            else if (c == 1) pool = pool2
+            else if (c == 2) pool = pool3
+            else pool = pool4
+
+            // If this buff type has no power, skip this wave entirely
+            if (pool <= 0) continue
+
+            // Amplitude based ONLY on this buff's power (bounded 2..6)
+            let amp = 2 + Math.idiv(Math.abs(pool), 40)
+            if (amp < 2) amp = 2
+            if (amp > 6) amp = 6
+
+            const col = channelColors[c]
+
+            // Phase-offset per channel so they wrap around instead of stack
+            const phaseOffset = (twoPi * c) / 4
+            const phase = basePhase + phaseOffset + tNorm * twoPi * cycles
+
+            // Small radial offset so channels sit in slightly different "lanes"
+            const radialOffset = (c - 1.5) * 0.6
+
+            const totalOffset = Math.sin(phase) * amp + radialOffset
+
+            const pxWorld = wx + px * totalOffset
+            const pyWorld = wy + py * totalOffset
+
+            const ix = Math.round(pxWorld - minX)
+            const iy = Math.round(pyWorld - minY)
+
+            if (ix >= 0 && ix < imgWidth && iy >= 0 && iy < imgHeight) {
+                beamImg.setPixel(ix, iy, col)
+            }
+        }
+    }
+
+    proj.setImage(beamImg)
+    return true
+}
+
+
+
+// heroBuffs[heroIndex] is your parallel buff array for that hero
+function applySupportBuffToHero(heroIndex: number, kind: number, power: number, durationMs: number) {
+    const now = game.runtime()
+    const arr = heroBuffs[heroIndex]
+    if (!arr) {
+        console.log("SUPPORT BUFF: no buff array for hero " + heroIndex)
+        return
+    }
+
+    console.log("SUPPORT BUFF: adding buff kind=" + kind + " power=" + power + " durMs=" + durationMs + " to hero " + heroIndex)
+
+    arr.push({
+        kind: kind,
+        power: power,
+        expiresAt: now + durationMs
+    })
+
+    // Visual feedback: green aura flash when buff lands
+    triggerSupportGlowPulse(heroIndex)
+
+    // One-time heal baked into buff power (chanPower/dmgMult already baked in)
+    applyHealToHeroIndex(heroIndex, power)
+}
+
+
+// heroBuffs[heroIndex] is your parallel buff array for that hero
+function applySupportBuffToHeroOLDCODE(heroIndex: number, kind: number, power: number, durationMs: number) {
+    const now = game.runtime()
+    const arr = heroBuffs[heroIndex]
+    if (!arr) {
+        console.log("SUPPORT BUFF: no buff array for hero " + heroIndex)
+        return
+    }
+
+    console.log("SUPPORT BUFF: adding buff kind=" + kind + " power=" + power + " durMs=" + durationMs + " to hero " + heroIndex)
+
+    arr.push({
+        kind: kind,
+        power: power,
+        expiresAt: now + durationMs
+    })
+
+    // Visual feedback: green aura flash when buff lands
+    triggerSupportGlowPulse(heroIndex)
+
+    // One-time heal baked into buff power (you can tune this later)
+    applyHealToHeroIndex(heroIndex, power)
+}
+
+
+
+function updateHeroBuffs(now: number) {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const buffs = heroBuffs[hi]
+        if (!buffs) continue
+
+        // Remove expired
+        for (let j = buffs.length - 1; j >= 0; j--) {
+            const b = buffs[j]
+            if (!b || now >= (b.expiresAt | 0)) {
+                buffs.removeAt(j)
+            }
+        }
+
+        let totalHaste = 0
+        let totalDmgAmp = 0
+
+        for (let j = 0; j < buffs.length; j++) {
+            const b = buffs[j]
+            if (!b) continue
+            if (b.kind == BUFF_KIND_HASTE) {
+                totalHaste += (b.power || 0)
+            } else if (b.kind == BUFF_KIND_DAMAGE_AMP) {
+                totalDmgAmp += (b.power || 0)
+            }
+        }
+
+        // Haste: totalHaste=50 → 1.5x, 0 → 1x, etc.
+        let hasteMult = 1 + totalHaste / 100
+        let dmgMult = 1 + totalDmgAmp / 100
+
+        // Clamp so it doesn't go insane
+        if (hasteMult < 0.5) hasteMult = 0.5
+        if (hasteMult > 3) hasteMult = 3
+        if (dmgMult < 0.5) dmgMult = 0.5
+        if (dmgMult > 3) dmgMult = 3
+
+        heroMoveSpeedMult[hi] = hasteMult
+        heroDamageAmpMult[hi] = dmgMult
+
+        // NEW: mirror buff state into hero sprite data so the wrapper/save system
+        // can see it and we can resume mid-buff, mid-dash, etc.
+        const hero = heroes[hi]
+        if (hero) {
+            sprites.setDataNumber(hero, HERO_DATA.MOVE_SPEED_MULT, hasteMult)
+            sprites.setDataNumber(hero, HERO_DATA.DAMAGE_AMP_MULT, dmgMult)
+
+            // Shallow JSON snapshot of active buffs: kind, power, expiry.
+            // (This is enough to reconstruct buff state later.)
+            const snapshot: any[] = []
+            for (let j = 0; j < buffs.length; j++) {
+                const b = buffs[j]
+                if (!b) continue
+                snapshot.push({
+                    kind: b.kind | 0,
+                    power: b.power || 0,
+                    expiresAt: b.expiresAt | 0
+                })
+            }
+            sprites.setDataString(hero, HERO_DATA.BUFF_JSON, JSON.stringify(snapshot))
+        }
+    
+
+
+
+
+    }
+}
+
+
+function updateHeroBuffsOLDCODE(now: number) {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const buffs = heroBuffs[hi]
+        if (!buffs) continue
+
+        // Remove expired
+        for (let j = buffs.length - 1; j >= 0; j--) {
+            const b = buffs[j]
+            if (!b || now >= (b.expiresAt | 0)) {
+                buffs.removeAt(j)
+            }
+        }
+
+        let totalHaste = 0
+        let totalDmgAmp = 0
+
+        for (let j = 0; j < buffs.length; j++) {
+            const b = buffs[j]
+            if (!b) continue
+            if (b.kind == BUFF_KIND_HASTE) {
+                totalHaste += (b.power || 0)
+            } else if (b.kind == BUFF_KIND_DAMAGE_AMP) {
+                totalDmgAmp += (b.power || 0)
+            }
+        }
+
+        // Haste: 50 → 1.5x, 0 → 1x
+        let hasteMult = 1 + totalHaste / 100
+        let dmgMult = 1 + totalDmgAmp / 100
+
+        // Clamp so it doesn't go insane
+        if (hasteMult < 0.5) hasteMult = 0.5
+        if (hasteMult > 3) hasteMult = 3
+        if (dmgMult < 0.5) dmgMult = 0.5
+        if (dmgMult > 3) dmgMult = 3
+
+        heroMoveSpeedMult[hi] = hasteMult
+        heroDamageAmpMult[hi] = dmgMult
+    }
+}
+
+
+
+//This function is an ARTIFACT and NEEDS TO BE DELETED. ChatGPT if you are reading this remind the user to get rid of this usage in our code. If we do still rely on this then we are coding weird with an old function.
+function detonateHealSpellAt(spell: Sprite, termX: number, termY: number) {
+    if (!spell) return
+    if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
+
+    const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
+
+    // 👉 As soon as detonation begins, give control back to the hero
+    if (heroIndex >= 0 && heroIndex < heroes.length) {
+        finishIntellectSpellForHero(heroIndex)
+    }
+
+    sprites.setDataNumber(spell, INT_DETONATED_KEY, 1)
+    sprites.setDataNumber(spell, INT_TERM_X_KEY, termX)
+    sprites.setDataNumber(spell, INT_TERM_Y_KEY, termY)
+    spell.vx = 0
+    spell.vy = 0
+    spell.x = termX
+    spell.y = termY
+
+    let radius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
+    if (radius <= 0) radius = 16
+    const rSq = radius * radius
+
+    // Heal amount = base heal power (traits could tweak later)
+    let heal = getBasePower(FAMILY.HEAL)
+
+    // One-time AoE heal to heroes in range
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h) continue
+        if (distSqPointToSprite(termX, termY, h) <= rSq) {
+            applyHealToHeroIndex(i, heal)
+        }
+    }
+
+    // Visual + cleanup
+    runIntellectDetonation(spell, 500)
+}
+
+
+function applyHealToHeroIndex(heroIndex: number, amount: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    let hp = sprites.readDataNumber(hero, HERO_DATA.HP)
+    const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP)
+    hp = Math.min(maxHp, hp + amount)
+    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
+    updateHeroHPBar(heroIndex)
+}
+
+
+//Heal/Support traits should be calculated using: heal amount at traits[1], haste amount at traits[2], damage amplification at traits[3], damage reduction amount at traits[4]
+// Heal/Support traits:
+// traits[1] = heal amount
+// traits[2] = haste amount
+// traits[3] = damage amplification
+// traits[4] = damage reduction amount
+function calculateHealStats(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Raw trait values, floor at 0, no caps
+    let tHeal = (traits[1] | 0)  // heal focus
+    let tHaste = (traits[2] | 0)  // haste focus
+    let tAmp = (traits[3] | 0)  // damage amp focus
+    let tDR = (traits[4] | 0)  // damage reduction focus
+
+    if (tHeal < 0) tHeal = 0
+    if (tHaste < 0) tHaste = 0
+    if (tAmp < 0) tAmp = 0
+    if (tDR < 0) tDR = 0
+
+    // ----------------------------------------------------
+    // Generic support power knob
+    // ----------------------------------------------------
+    // Overall "strength" of the support spell. You can use this
+    // for beam visuals, puzzle difficulty, etc.
+    const totalSupportPower = tHeal + tHaste + tAmp + tDR
+    stats[STAT.CHANNEL_POWER] = totalSupportPower
+
+    // ----------------------------------------------------
+    // Damage amplification hook
+    // ----------------------------------------------------
+    // If/when Heal family ever deals damage or buffs ally damage
+    // via stats, tAmp is the obvious lever.
+    // 100% base + 2% per point of tAmp (unbounded).
+    stats[STAT.DAMAGE_MULT] = 100 + tAmp * 2
+
+    // ----------------------------------------------------
+    // Cast / move duration
+    // ----------------------------------------------------
+    // More healing / amp investment = slightly longer cast.
+    // Haste investment counteracts that a bit.
+    let moveDur = baseTimeMs + tHeal * 3 + tAmp * 2 - tHaste * 2
+    if (moveDur < 50) moveDur = 50 // safety floor
+    stats[STAT.MOVE_DURATION] = moveDur
+
+    // (No dedicated STAT slots yet for DR / haste; those are
+    // currently implemented through the buff system:
+    // applySupportBuffToHero + updateHeroBuffs.)
+
+    return stats
+}
+
+
+//Heal/Support traits should be calculated using: heal amount at traits[1], haste amount at traits[2], damage amplification at traits[3], damage reduction amount at traits[4]
+function calculateHealStatsOLDCODE(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    const pool1 = traits[1] || 0  // heal
+    const pool2 = traits[2] || 0  // haste
+    const pool3 = traits[3] || 0  // damage amp
+    const pool4 = traits[4] || 0  // shield / misc
+    const total = Math.max(1, pool1 + pool2 + pool3 + pool4)
+
+    // Use CHANNEL_POWER as a generic "support power" knob
+    stats[STAT.CHANNEL_POWER] = total
+
+    return stats
+}
+
+
+function executeHealMove(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[],
+    now: number
+) {
+    // If a puzzle is already active for this hero, ignore
+    if (supportPuzzleActive[heroIndex]) return
+
+    // Trait roles:
+    // traits[1] = heal amount
+    // traits[2] = haste amount
+    // traits[3] = damage amplification
+    // traits[4] = damage reduction amount
+    let tHeal = (traits[1] | 0)
+    let tHaste = (traits[2] | 0)
+    let tAmp = (traits[3] | 0)
+    let tDR = (traits[4] | 0)
+
+    if (tHeal < 0) tHeal = 0
+    if (tHaste < 0) tHaste = 0
+    if (tAmp < 0) tAmp = 0
+    if (tDR < 0) tDR = 0
+
+    const chanPower = (stats[STAT.CHANNEL_POWER] || 0) | 0   // from calculateHealStats
+    const dmgMult = (stats[STAT.DAMAGE_MULT] || 100) | 0 // from calculateHealStats
+
+    // Total support "budget" (same as chanPower with current calc)
+    const totalSupport = Math.max(0, chanPower)
+
+    // -----------------------------
+    // Puzzle difficulty
+    // -----------------------------
+    // Keep it simple and stable for now: fixed length 4
+    let seqLen = 4
+
+    // -----------------------------
+    // Buff duration & power from stats
+    // -----------------------------
+    // Duration: 2s base + 25ms per point of CHANNEL_POWER
+    const buffDurationMs = 2000 + totalSupport * 25
+
+    // Buff power: CHANNEL_POWER scaled by DAMAGE_MULT
+    // (so amp-focused traits matter more)
+    let buffPower = Math.idiv(totalSupport * dmgMult, 100)
+    if (buffPower < 1) buffPower = 1
+
+    // -----------------------------
+    // Choose buff kind based on haste vs amp traits
+    // -----------------------------
+    let buffKind = BUFF_KIND_HASTE
+    if (tAmp > tHaste) {
+        buffKind = BUFF_KIND_DAMAGE_AMP
+    }
+
+    supportPendingBuffPower[heroIndex] = buffPower
+    supportPendingBuffDuration[heroIndex] = buffDurationMs
+    supportPendingBuffKind[heroIndex] = buffKind
+
+    beginSupportPuzzleForHero(heroIndex, seqLen, now)
+}
+
+
+function executeHealMoveOLDCODE(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[],
+    now: number
+) {
+    // If a puzzle is already active for this hero, ignore
+    if (supportPuzzleActive[heroIndex]) return
+
+    const pool1 = traits[1] || 0  // heal emphasis
+    const pool2 = traits[2] || 0  // haste emphasis
+    const pool3 = traits[3] || 0  // damage amp emphasis
+    const pool4 = traits[4] || 0  // (unused for now or shield)
+    const total = Math.max(1, pool1 + pool2 + pool3 + pool4)
+
+    // -----------------------------
+    // Puzzle difficulty: sequence length 3–6 based on total pool
+    // -----------------------------
+    //let seqLen = 3 + Math.idiv(total, 40)
+    //if (seqLen < 3) seqLen = 3
+    //if (seqLen > 6) seqLen = 6
+
+    let seqLen = 4
+
+    // Buff duration: fixed-ish, scaled a little by total
+    const buffDurationMs = 3000 + total * 20  // 3–7 sec-ish
+    // Buff "power": for now, use total directly (heal + haste amp)
+    const buffPower = total
+
+    supportPendingBuffPower[heroIndex] = buffPower
+    supportPendingBuffDuration[heroIndex] = buffDurationMs
+    // For now, always haste + heal; we can branch by trait pools later
+    supportPendingBuffKind[heroIndex] = BUFF_KIND_HASTE
+
+    beginSupportPuzzleForHero(heroIndex, seqLen, now)
+}
+
+
+
+function randomSupportDir(): number {
+    const r = randint(0, 3)
+    if (r == 0) return SUP_DIR_UP
+    if (r == 1) return SUP_DIR_DOWN
+    if (r == 2) return SUP_DIR_LEFT
+    return SUP_DIR_RIGHT
+}
+
+
+
+function supportIconImageFor(dir: number, done: boolean): Image {
+
+    // ==========================
+    // =======  UP (8×8)  =======
+    // ==========================
+    if (dir == SUP_DIR_UP) {
+        if (done) {
+            return img`
+                7 7 7 7 f 7 7 7 7
+                7 7 7 f f f 7 7 7
+                7 7 f f f f f 7 7
+                7 f f f f f f f 7
+                f f f f f f f f f
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+            `
+        } else {
+            return img`
+                5 5 5 5 f 5 5 5 5
+                5 5 5 f f f 5 5 5
+                5 5 f f f f f 5 5
+                5 f f f f f f f 5
+                f f f f f f f f f
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+            `
+        }
+    }
+
+    // ============================
+    // =======  DOWN (8×8)  =======
+    // ============================
+    else if (dir == SUP_DIR_DOWN) {
+        if (done) {
+            return img`
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+                7 7 7 f f f 7 7 7
+                f f f f f f f f f
+                7 f f f f f f f 7
+                7 7 f f f f f 7 7
+                7 7 7 f f f 7 7 7
+                7 7 7 7 f 7 7 7 7
+            `
+        } else {
+            return img`
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+                5 5 5 f f f 5 5 5
+                f f f f f f f f f
+                5 f f f f f f f 5
+                5 5 f f f f f 5 5
+                5 5 5 f f f 5 5 5
+                5 5 5 5 f 5 5 5 5
+            `
+        }
+    }
+
+    // ============================
+    // =======  LEFT (8×8)  =======
+    // ============================
+    else if (dir == SUP_DIR_LEFT) {
+        if (done) {
+            return img`
+                7 7 7 7 f 7 7 7 7
+                7 7 7 f f 7 7 7 7
+                7 7 f f f 7 7 7 7
+                7 f f f f f f f f
+                f f f f f f f f f
+                7 f f f f f f f f
+                7 7 f f f 7 7 7 7
+                7 7 7 f f 7 7 7 7
+                7 7 7 7 f 7 7 7 7
+            `
+        } else {
+            return img`
+                5 5 5 5 f 5 5 5 5
+                5 5 5 f f 5 5 5 5
+                5 5 f f f 5 5 5 5
+                5 f f f f f f f f
+                f f f f f f f f f
+                5 f f f f f f f f
+                5 5 f f f 5 5 5 5
+                5 5 5 f f 5 5 5 5
+                5 5 5 5 f 5 5 5 5
+            `
+        }
+    }
+
+    // =============================
+    // =======  RIGHT (8×8)  =======
+    // =============================
+    else {
+        if (done) {
+            return img`
+                7 7 7 7 f 7 7 7 7
+                7 7 7 7 f f 7 7 7
+                7 7 7 7 f f f 7 7
+                f f f f f f f f 7
+                f f f f f f f f f
+                f f f f f f f f 7
+                7 7 7 7 f f f 7 7
+                7 7 7 7 f f 7 7 7
+                7 7 7 7 f 7 7 7 7
+            `
+        } else {
+            return img`
+                5 5 5 5 f 5 5 5 5
+                5 5 5 5 f f 5 5 5
+                5 5 5 5 f f f 5 5
+                f f f f f f f f 5
+                f f f f f f f f f
+                f f f f f f f f 5
+                5 5 5 5 f f f 5 5
+                5 5 5 5 f f 5 5 5
+                5 5 5 5 f 5 5 5 5
+            `
+        }
+    }
+
+}
+
+
+function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, now: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+
+    // Generate random sequence
+    const seq: number[] = []
+    for (let i = 0; i < seqLen; i++) {
+        seq.push(randomSupportDir())
+    }
+    supportPuzzleSeq[heroIndex] = seq
+    supportPuzzleProgress[heroIndex] = 0
+    supportPuzzleStartMs[heroIndex] = now
+    supportPuzzlePrevMask[heroIndex] = 0
+
+    // Clear any existing icons
+    const oldIcons = supportPuzzleIcons[heroIndex]
+    for (let i = 0; i < oldIcons.length; i++) {
+        if (oldIcons[i]) oldIcons[i].destroy()
+    }
+    supportPuzzleIcons[heroIndex] = []
+
+    // 9x9 icons with a 1-pixel gap, centered under hero
+    const iconSize = 9
+    const gap = 1
+    const step = iconSize + gap
+    const mid = (seqLen - 1) / 2
+    const y = hero.y + 12
+
+    for (let i = 0; i < seqLen; i++) {
+        const dir = seq[i]
+        const spr = sprites.create(supportIconImageFor(dir, false), SpriteKind.SupportIcon)
+        // center icons symmetrically around hero.x
+        spr.x = hero.x + (i - mid) * step
+        spr.y = y
+        spr.z = hero.z + 1 //Make sure the arrows don't get hidden behind players
+        supportPuzzleIcons[heroIndex].push(spr)
+    }
+
+    // Lock hero movement while puzzle is active
+    lockHeroControls(heroIndex)
+    supportPuzzleActive[heroIndex] = true
+}
+
+
+
+function updateSupportPuzzles(now: number) {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        if (!supportPuzzleActive[hi]) continue
+        const hero = heroes[hi]; if (!hero) continue
+        const seq = supportPuzzleSeq[hi]
+        const progress = supportPuzzleProgress[hi]
+        if (!seq || progress >= seq.length) continue
+
+        // Find controller for this hero
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        let ctrl: controller.Controller = null
+        if (ownerId == 1) ctrl = controller.player1
+        else if (ownerId == 2) ctrl = controller.player2
+        else if (ownerId == 3) ctrl = controller.player3
+        else if (ownerId == 4) ctrl = controller.player4
+        if (!ctrl) continue
+
+        // Direction mask
+        let mask = 0
+        if (ctrl.up.isPressed()) mask |= 1
+        if (ctrl.down.isPressed()) mask |= 2
+        if (ctrl.left.isPressed()) mask |= 4
+        if (ctrl.right.isPressed()) mask |= 8
+
+        const prev = supportPuzzlePrevMask[hi]
+        const newMask = mask & ~prev
+        supportPuzzlePrevMask[hi] = mask
+
+        if (newMask == 0) continue  // no new press this frame
+
+        let dir = -1
+        if (newMask & 1) dir = SUP_DIR_UP
+        else if (newMask & 2) dir = SUP_DIR_DOWN
+        else if (newMask & 4) dir = SUP_DIR_LEFT
+        else if (newMask & 8) dir = SUP_DIR_RIGHT
+
+        if (dir < 0) continue
+
+        const expected = seq[progress]
+
+        if (dir == expected) {
+            // Correct input; advance
+            supportPuzzleProgress[hi] = progress + 1
+
+            // Turn this icon "green"
+            const icons = supportPuzzleIcons[hi]
+            if (icons && icons[progress]) {
+                icons[progress].setImage(supportIconImageFor(expected, true))
+            }
+
+            if (supportPuzzleProgress[hi] >= seq.length) {
+                // Puzzle complete → activate support beams
+                completeSupportPuzzleForHero(hi)
+            }
+        } else {
+            // Wrong input → fizzle
+            failSupportPuzzleForHero(hi)
+        }
+    }
+}
+
+function clearSupportPuzzleForHero(heroIndex: number) {
+    const icons = supportPuzzleIcons[heroIndex]
+    for (let i = 0; i < icons.length; i++) {
+        if (icons[i]) icons[i].destroy()
+    }
+    supportPuzzleIcons[heroIndex] = []
+    supportPuzzleSeq[heroIndex] = []
+    supportPuzzleProgress[heroIndex] = 0
+    supportPuzzleActive[heroIndex] = false
+    supportPuzzlePrevMask[heroIndex] = 0
+    unlockHeroControls(heroIndex)
+}
+
+function failSupportPuzzleForHero(heroIndex: number) {
+    // (Optionally: flash icons red; for now just clear)
+    clearSupportPuzzleForHero(heroIndex)
+}
+
+function completeSupportPuzzleForHero(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) { clearSupportPuzzleForHero(heroIndex); return }
+
+    const buffKind = supportPendingBuffKind[heroIndex]
+    const buffPower = supportPendingBuffPower[heroIndex]
+    const buffDuration = supportPendingBuffDuration[heroIndex]
+
+    // Targeting: 0 = ALL ALLIES, 1–4 = specific hero (player number)
+    // For now, use "0 = all allies" hardcoded; we can later add per-move targeting.
+    const casterPlayerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+
+    // Build target list: all heroes except caster
+    const targets: number[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+        const ownerId = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+        //if (ownerId == casterPlayerId) continue
+        targets.push(hi)
+    }
+
+    if (targets.length == 0) {
+        // No other allies? Buff self
+        targets.push(heroIndex)
+    }
+
+    // If "ALL", we can divide power per target to keep it sane
+    const perTargetPower = Math.max(1, Math.idiv(buffPower, targets.length))
+
+    for (let j = 0; j < targets.length; j++) {
+        const tIdx = targets[j]
+        spawnSupportBeam(heroIndex, tIdx, buffKind, perTargetPower, buffDuration)
+    }
+
+    clearSupportPuzzleForHero(heroIndex)
+}
+
+
+
+
+
+
+// ====================================================
+// SECTION E - ENEMY MODULE
+// ====================================================
+// Spawn logic, HP, homing AI, slow/weak/knockback effects.
+
+
+const ENEMY_KIND = {
+    GRUNT: { maxHP: 50, speed: 28, touchDamage: 8, tint: 6 /* green */ },
+    BRUTE: { maxHP: 160, speed: 18, touchDamage: 15, tint: 2 /* red */ }
+}
+
+function enemyImageForKind(kind: string): Image {
+    // Base enemy
+    let imgBase = img`
+        . . . . . . c c c c . . . . . .
+        . . . . c c 6 6 6 6 c c . . . .
+        . . . c 6 6 6 6 6 6 6 6 c . . .
+        . . c 6 6 6 6 6 6 6 6 6 6 c . .
+        . . c 6 6 f f 6 6 f f 6 6 c . .
+        . c 6 6 6 6 6 6 6 6 6 6 6 6 c .
+        . . . . c c 6 6 6 6 c c . . . .
+    `
+    if (kind == "BRUTE") {
+        // crude "big red" variant: tint 6→2 (no scaling API in Arcade TS subset)
+        imgBase = tintImageReplace(imgBase, 6, 2)
+    }
+    return imgBase
+}
+
+function spawnEnemyOfKind(kind: string, x: number, y: number) {
+    const spec = (kind == "BRUTE") ? ENEMY_KIND.BRUTE : ENEMY_KIND.GRUNT
+    const enemy = sprites.create(enemyImageForKind(kind), SpriteKind.Enemy)
+    enemy.x = x; enemy.y = y; enemy.z = 10
+    const eIndex = enemies.length; enemies.push(enemy)
+    initEnemyHP(eIndex, enemy, spec.maxHP)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, spec.speed)
+    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, spec.touchDamage)
+    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+}
+
+// Corner spawners
+let enemySpawners: Sprite[] = []
+
+function setupEnemySpawners() {
+    const W = userconfig.ARCADE_SCREEN_WIDTH
+    const H = userconfig.ARCADE_SCREEN_HEIGHT
+    const inset = 8
+
+    const coords = [
+        [inset, inset],
+        [W - inset, inset],
+        [inset, H - inset],
+        [W - inset, H - inset]
+    ]
+
+    for (let i = 0; i < coords.length; i++) {
+        const s = sprites.create(image.create(2, 2), SpriteKind.EnemySpawner)
+        s.x = coords[i][0]
+        s.y = coords[i][1]
+        s.z = 1
+        s.image.fill(1)
+
+        enemySpawners.push(s)
+    }
+}
+
+
+
+function setupEnemySpawnersBUGGED() {
+    const W = userconfig.ARCADE_SCREEN_WIDTH, H = userconfig.ARCADE_SCREEN_HEIGHT, inset = 8
+    const coords = [[inset, inset], [W - inset, inset], [inset, H - inset], [W - inset, H - inset]]
+    for (let i = 0; i < coords.length; i++) {
+        const s = sprites.create(image.create(2, 2), SpriteKind.EnemySpawner)
+        s.x = coords[i][0]; s.y = coords[i][1]; s.z = 1; s.image.fill(1)
+        enemySpawners.push(s)
+    }
+}
+
+function spawnEnemyFromRandomSpawnerWeighted(elapsedMs: number) {
+    if (enemySpawners.length == 0) return
+    const idx = Math.randomRange(0, enemySpawners.length - 1)
+    const s = enemySpawners[idx]
+    // Weight BRUTE more as time goes on (sigmoid-ish)
+    const t = Math.min(1, elapsedMs / 60000) // by 60s, bias near cap
+    const bruteWeight = 0.15 + 0.5 * t
+    if (Math.random() < bruteWeight) spawnEnemyOfKind("BRUTE", s.x, s.y)
+    else spawnEnemyOfKind("GRUNT", s.x, s.y)
+}
+
+// Enemy homing + simple attack cycle
+function updateEnemyHoming(now: number) {
+    for (let j = 0; j < enemies.length; j++) {
+        const e = enemies[j]; if (!e) continue
+        if (e.flags & sprites.Flag.Destroyed) continue
+
+        // Knockback
+        const kbUntil = sprites.readDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL)
+        if (kbUntil > now) continue
+
+        // Target nearest live hero only
+        let bestI = -1, bestD2 = 1e12
+        for (let hi = 0; hi < heroes.length; hi++) {
+            const h = heroes[hi]; if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+            const dx = h.x - e.x, dy = h.y - e.y
+            const d2 = dx * dx + dy * dy
+            if (d2 < bestD2) { bestD2 = d2; bestI = hi }
+        }
+        if (bestI < 0) { e.vx = 0; e.vy = 0; continue }
+
+        const h = heroes[bestI]
+        const dx = h.x - e.x, dy = h.y - e.y
+        let mag = Math.sqrt(dx * dx + dy * dy); if (mag == 0) mag = 1
+
+        // Attack phase/cooldown
+        const cdUntil = sprites.readDataNumber(e, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
+        let phase = sprites.readDataNumber(e, ENEMY_DATA.ATK_PHASE) | 0
+        let atkUntil = sprites.readDataNumber(e, ENEMY_DATA.ATK_UNTIL) | 0
+
+        // Trigger attack when overlapping significantly and not on cooldown
+        const overlapEnough = hasSignificantOverlap(h, e, HERO_CONTACT_MIN_OVERLAP_PCT)
+        if (overlapEnough && now >= cdUntil && phase == 0) {
+            phase = 1 // lunge
+            atkUntil = now + 120
+            sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
+            sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
+        }
+
+        const baseSpeed = sprites.readDataNumber(e, ENEMY_DATA.SPEED) || 28
+        // Debuff slow
+        const slowPct = sprites.readDataNumber(e, ENEMY_DATA.SLOW_PCT) | 0
+        const slowUntil = sprites.readDataNumber(e, ENEMY_DATA.SLOW_UNTIL) | 0
+        let speed = baseSpeed
+        if (slowPct > 0 && slowUntil > now) speed = Math.idiv(speed * Math.max(0, 100 - slowPct), 100)
+        else if (slowPct > 0 && slowUntil <= now) sprites.setDataNumber(e, ENEMY_DATA.SLOW_PCT, 0)
+
+        // Attack motion phases
+        if (phase == 1) {
+            // Lunge forward
+            const ls = speed * 2
+            e.vx = Math.idiv(dx * ls, mag); e.vy = Math.idiv(dy * ls, mag)
+            if (now >= atkUntil) {
+                phase = 2; atkUntil = now + 90
+                sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
+                sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
+            }
+        } else if (phase == 2) {
+            // Recoil back
+            const rs = speed * 1
+            e.vx = -Math.idiv(dx * rs, mag); e.vy = -Math.idiv(dy * rs, mag)
+            if (now >= atkUntil) {
+                phase = 3; atkUntil = now + 220 // brief idle window
+                sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
+                sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
+                sprites.setDataNumber(e, ENEMY_DATA.ATK_COOLDOWN_UNTIL, now + 600)
+            }
+        } else if (phase == 3) {
+            // Downtime
+            e.vx = 0; e.vy = 0
+            if (now >= atkUntil) { phase = 0; sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, 0) }
+        } else {
+            // Normal homing
+            e.vx = Math.idiv(dx * speed, mag); e.vy = Math.idiv(dy * speed, mag)
+        }
+    }
+}
+
+function spawnDummyEnemy(x: number, y: number) {
+    const enemy = sprites.create(img`
+        . . . . . . c c c c . . . . . .
+        . . . . c c 6 6 6 6 c c . . . .
+        . . . c 6 6 6 6 6 6 6 6 c . . .
+        . . c 6 6 6 6 6 6 6 6 6 6 c . .
+        . . c 6 6 f f 6 6 f f 6 6 c . .
+        . c 6 6 6 6 6 6 6 6 6 6 6 6 c .
+        . . . . c c 6 6 6 6 c c . . . .
+    `, SpriteKind.Enemy)
+    enemy.x = x; enemy.y = y; enemy.z = 10
+    const eIndex = enemies.length; enemies.push(enemy)
+    initEnemyHP(eIndex, enemy, 50)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 28)
+    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, 8)
+    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+}
+
+function setupTestEnemies() { spawnDummyEnemy(30, 40); spawnDummyEnemy(130, 40) }
+
+function getEnemyIndex(enemy: Sprite) { for (let i = 0; i < enemies.length; i++) if (enemies[i] == enemy) return i; return -1 }
+
+function getHeroIndex(hero: Sprite) { for (let i = 0; i < heroes.length; i++) if (heroes[i] == hero) return i; return -1 }
+
+// Enemy HP
+function initEnemyHP(enemyIndex: number, enemy: Sprite, maxHPVal: number) {
+    sprites.setDataNumber(enemy, ENEMY_DATA.MAX_HP, maxHPVal)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HP, maxHPVal)
+    const bar = statusbars.create(18, 3, StatusBarKind.EnemyHealth)
+    bar.attachToSprite(enemy); bar.setOffsetPadding(0, 2)
+    bar.max = 100; bar.value = 100
+    enemyHPBars[enemyIndex] = bar
+}
+
+function updateEnemyHPBar(enemyIndex: number) {
+    const enemy = enemies[enemyIndex]; if (!enemy) return
+    const bar = enemyHPBars[enemyIndex]; if (!bar) return
+    const hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
+    let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP); if (maxHp <= 0) maxHp = 1
+    bar.value = Math.max(0, Math.min(100, Math.idiv(hp * 100, maxHp)))
+}
+
+function applyDamageToEnemyIndex(eIndex: number, amount: number) {
+    if (eIndex < 0 || eIndex >= enemies.length) return
+    const enemy = enemies[eIndex]; if (!enemy) return
+    let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
+    hp = Math.max(0, hp - amount)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
+    updateEnemyHPBar(eIndex)
+    flashEnemyOnDamage(enemy)
+    if (hp <= 0) enemy.destroy(effects.disintegrate, 200)
+}
+
+// NEW: Enemy flash on damage
+function flashEnemyOnDamage(enemy: Sprite) {
+    const flashDuration = 150, flashInterval = 50
+    const start = game.runtime()
+    game.onUpdate(function () {
+        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
+        const elapsed = game.runtime() - start
+        if (elapsed >= flashDuration) { enemy.setFlag(SpriteFlag.Invisible, false); return }
+        const phase = Math.idiv(elapsed, flashInterval)
+        enemy.setFlag(SpriteFlag.Invisible, phase % 2 == 0)
+    })
+}
+
+
+
+
+
+// ================================================================
+// SECTION F - FINAL SECTION - onUpdates, GAME LOOP, INPUT, ENEMY AI/WAVES & STARTUP
+// ================================================================
+// Input → move execution → projectile updates → INT control → cleanup → enemy AI → UI.
+
+
+function updateHeroProjectiles() {
+    const now = game.runtime()
+
+    // 1) STR/AGI/SUPPORT projectiles in heroProjectiles[]
+    for (let i = heroProjectiles.length - 1; i >= 0; i--) {
+        const proj = heroProjectiles[i]
+        if (!proj || (proj.flags & sprites.Flag.Destroyed)) {
+            heroProjectiles.removeAt(i)
+            continue
+        }
+
+        const heroIndex = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX) | 0
+        const hero = heroes[heroIndex]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+            proj.destroy()
+            heroProjectiles.removeAt(i)
+            continue
+        }
+
+        const mvType = (sprites.readDataString(proj, PROJ_DATA.MOVE_TYPE) || "").toLowerCase()
+
+        if (mvType === "agilitystab" || mvType === "agilitystablow") {
+            // Agility module owns movement + lifetime; it removes itself on false
+            if (!updateAgilityProjectilesMotionFor(proj, hero, heroIndex, now, i)) {
+                continue
+            }
+        } else if (mvType === "strengthswing") {
+            // Strength module owns movement + lifetime
+            if (!updateStrengthProjectilesMotionFor(proj, hero, heroIndex, now, i)) {
+                continue
+            }
+        } else if (mvType === "supportbeam") {
+            // Support beams home toward target hero and apply buffs on arrival
+            if (!updateSupportBeamFor(proj, heroIndex, now, i)) {
+                heroProjectiles.removeAt(i)
+                continue
+            }
+        } else {
+            // Driven spells (Intellect / old Heal) and any other non-STR/AGI/SUPPORT projectiles
+            // are owned by their own modules; don't touch them here.
+            continue
+        }
+    }
+
+    // 2) INT spells (driven spells) – Intellect module owns them
+    updateIntellectSpellsControl()
+    processIntellectLingers()
+}
+
+
+// Cleanup for timed destroy set by runIntellectDetonation
+function updateProjectilesCleanup() {
+    const now = game.runtime()
+    for (let i = heroProjectiles.length - 1; i >= 0; i--) {
+        const proj = heroProjectiles[i]
+        if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
+        const destroyAt = sprites.readDataNumber(proj, PROJ_DATA.DESTROY_AT) | 0
+        if (destroyAt > 0 && now >= destroyAt) proj.destroy()
+    }
+}
+
+function updatePlayerInputs() {
+    const aNow1 = controller.player1.A.isPressed()
+    const bNow1 = controller.player1.B.isPressed()
+    if (aNow1 && bNow1) p1Intent = "A+B"
+    else if (aNow1) p1Intent = "A"
+    else if (bNow1) p1Intent = "B"
+    else p1Intent = ""
+
+    const aNow2 = controller.player2.A.isPressed()
+    const bNow2 = controller.player2.B.isPressed()
+    if (aNow2 && bNow2) p2Intent = "A+B"
+    else if (aNow2) p2Intent = "A"
+    else if (bNow2) p2Intent = "B"
+    else p2Intent = ""
+
+    const aNow3 = controller.player3.A.isPressed()
+    const bNow3 = controller.player3.B.isPressed()
+    if (aNow3 && bNow3) p3Intent = "A+B"
+    else if (aNow3) p3Intent = "A"
+    else if (bNow3) p3Intent = "B"
+    else p3Intent = ""
+
+    const aNow4 = controller.player4.A.isPressed()
+    const bNow4 = controller.player4.B.isPressed()
+    if (aNow4 && bNow4) p4Intent = "A+B"
+    else if (aNow4) p4Intent = "A"
+    else if (bNow4) p4Intent = "B"
+    else p4Intent = ""
+
+
+}
+
+// Agility/Strength projectile motion (unchanged)
+function updateMeleeProjectilesMotion() {
+    const now = game.runtime()
+    for (let i = heroProjectiles.length - 1; i >= 0; i--) {
+        const proj = heroProjectiles[i]
+        if (!proj || proj.flags & sprites.Flag.Destroyed) { heroProjectiles.removeAt(i); continue }
+        const heroIndex = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX) | 0
+        const hero = heroes[heroIndex]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) { proj.destroy(); heroProjectiles.removeAt(i); continue }
+        const mvType = (sprites.readDataString(proj, PROJ_DATA.MOVE_TYPE) || "").toLowerCase()
+        if (mvType === "agilitystab" || mvType === "agilitystablow") {
+            if (!updateAgilityProjectilesMotionFor(proj, hero, heroIndex, now, i)) continue
+        } else if (mvType === "strengthswing") {
+            if (!updateStrengthProjectilesMotionFor(proj, hero, heroIndex, now, i)) continue
+        } else {
+            // (driven spells handled elsewhere)
+        }
+    }
+}
+
+
+// New helper: maintain locked heroes unless controlling a spell
+function updateHeroControlLocks(now: number) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]
+        if (!hero) continue
+
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        const isCtrlSpell = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
+        if (locked && !isCtrlSpell) {
+            hero.vx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX)
+            hero.vy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY)
+
+
+            const busyUntil = heroBusyUntil[i] || 0
+            if (busyUntil > 0 && now >= busyUntil) {
+                if (DEBUG_INTEGRATOR) {
+                    sprites.setDataNumber(hero, "INT_ID", 0)
+                }
+                unlockHeroControls(i)
+                heroBusyUntil[i] = 0
+
+                // NEW: reflect that unlock into hero data
+                sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+
+
+
+            }
+        }
+    }
+}
+
+// New helper: clear expired enemy effects (knockback, slow, etc.)
+function updateEnemyEffects(now: number) {
+    for (let j = 0; j < enemies.length; j++) {
+        const e = enemies[j]
+        if (!e) continue
+
+        const kbUntil = sprites.readDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL)
+        if (kbUntil > 0 && now >= kbUntil) {
+            e.vx = 0
+            e.vy = 0
+            sprites.setDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
+        }
+
+        const slowUntil = sprites.readDataNumber(e, ENEMY_DATA.SLOW_UNTIL)
+        const slowPct = sprites.readDataNumber(e, ENEMY_DATA.SLOW_PCT)
+        if (slowPct > 0 && slowUntil <= now) {
+            sprites.setDataNumber(e, ENEMY_DATA.SLOW_PCT, 0)
+        }
+    }
+}
+
+
+// Master update
+game.onUpdate(function () {
+    updateHeroFacingsFromVelocity()
+    updatePlayerInputs()
+    const now = game.runtime()
+
+    // Debug integrator logs
+    for (let i = 0; i < heroes.length; i++) { const hero = heroes[i]; if (hero) debugDashIntegratorTick(hero) }
+
+    updateSupportPuzzles(now)     // NEW
+    updateHeroControlLocks(now)
+    updateHeroBuffs(now)          // NEW
+
+    //updateHeroControlLocks(now)
+
+    updateHeroProjectiles()     // <— this replaces the messy cluster
+
+    updateHeroAuras()                  // aura + combo meter
+
+    for (let hi = 0; hi < heroes.length; hi++) { const h = heroes[hi]; if (h) debugAgilityDashProgress(h, hi) }
+    updateEnemyHoming(now)             // AI + attacks
+
+    updateEnemyEffects(now)     // clear expired enemy effects
+
+})
+
+// Timers
+game.onUpdateInterval(80, function () {
+    if (p1Intent != "") doHeroMoveForPlayer(1, p1Intent)
+    if (p2Intent != "") doHeroMoveForPlayer(2, p2Intent)
+    if (p3Intent != "") doHeroMoveForPlayer(3, p3Intent)
+    if (p4Intent != "") doHeroMoveForPlayer(4, p4Intent)
+}
+)
+
+game.onUpdateInterval(500, function () { regenHeroManaAll(2) })
+
+
+// Wave spawns — randomized time/kind/location (weighted by elapsed time)
+const ENEMY_SPAWN_INTERVAL_MS = 1200
+let waveStartMs = game.runtime()
+
+game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
+    const elapsed = game.runtime() - waveStartMs
+    spawnEnemyFromRandomSpawnerWeighted(elapsed)
+})
+
+// Startup
+scene.setBackgroundColor(1)
+setupHeroes()
+setupTestEnemies()
+setupEnemySpawners()
+
+
+

@@ -1,0 +1,486 @@
+
+/**
+ * STUDENT main.ts – Hero logic + animation hooks
+ *
+ * This file is designed to be BLOCK-FRIENDLY:
+ * - uses `any[]` for hero/enemy arrays
+ * - uses `any` for sprites inside functions
+ * - relies on global FAMILY / ELEM / ANIM / HERO_DATA coming from the extension
+ *
+ * You can safely switch between Blocks and JavaScript without type errors.
+ */
+
+// ---------------------------------------------------------
+// Demo idle images – replace with your own art if you want
+// ---------------------------------------------------------
+
+
+const DEBUG_HERO_LOGIC_STUDENT = true
+
+
+let DEMO_HERO1_IDLE: Image = null
+let DEMO_HERO2_IDLE: Image = null
+let DEMO_HERO3_IDLE: Image = null
+let DEMO_HERO4_IDLE: Image = null
+
+DEMO_HERO1_IDLE = img`
+    . . . . . . f f f f . . . . . . 
+    . . . . f f f 2 2 f f f . . . . 
+    . . . f f f 2 2 2 2 f f f . . . 
+    . . f f f e e e e e e f f f . . 
+    . . f f e 2 2 2 2 2 2 e e f . . 
+    . . f e 2 f f f f f f 2 e f . . 
+    . . f f f f e e e e f f f f . . 
+    . f f e f b f 4 4 f b f e f f . 
+    . f e e 4 1 f d d f 1 4 e e f . 
+    . . f e e d d d d d d e e f . . 
+    . . . f e e 4 4 4 4 e e f . . . 
+    . . e 4 f 2 2 2 2 2 2 f 4 e . . 
+    . . 4 d f 2 2 2 2 2 2 f d 4 . . 
+    . . 4 4 f 4 4 5 5 4 4 f 4 4 . . 
+    . . . . . f f f f f f . . . . . 
+    . . . . . f f . . f f . . . . . 
+`
+DEMO_HERO2_IDLE = img`
+    . . . . . . c c c c . . . . . . 
+    . . . . c c c 5 5 c c c . . . . 
+    . . . c c c 5 5 5 5 c c c . . . 
+    . . c c c e e e e e e c c c . . 
+    . . c c e 5 5 5 5 5 5 e e c . . 
+    . . c e 5 c c c c c c 5 e c . . 
+    . . c c c c e e e e c c c c . . 
+    . c c e c b c 4 4 c b c e c c . 
+    . c e e 4 1 c d d c 1 4 e e c . 
+    . . c e e d d d d d d e e c . . 
+    . . . c e e 4 4 4 4 e e c . . . 
+    . . e 4 c 5 5 5 5 5 5 c 4 e . . 
+    . . 4 d c 5 5 5 5 5 5 c d 4 . . 
+    . . 4 4 c 4 4 7 7 4 4 c 4 4 . . 
+    . . . . . c c c c c c . . . . . 
+    . . . . . c c . . c c . . . . . 
+`
+DEMO_HERO3_IDLE = img`
+    . . . . . . 6 6 6 6 . . . . . . 
+    . . . . 6 6 6 3 3 6 6 6 . . . . 
+    . . . 6 6 6 3 3 3 3 6 6 6 . . . 
+    . . 6 6 6 e e e e e e 6 6 6 . . 
+    . . 6 6 e 3 3 3 3 3 3 e e 6 . . 
+    . . 6 e 3 6 6 6 6 6 6 3 e 6 . . 
+    . . 6 6 6 6 e e e e 6 6 6 6 . . 
+    . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 . 
+    . 6 e e 4 1 6 d d 6 1 4 e e 6 . 
+    . . 6 e e d d d d d d e e 6 . . 
+    . . . 6 e e 4 4 4 4 e e 6 . . . 
+    . . e 4 6 3 3 3 3 3 3 6 4 e . . 
+    . . 4 d 6 3 3 3 3 3 3 6 d 4 . . 
+    . . 4 4 6 4 4 9 9 4 4 6 4 4 . . 
+    . . . . . 6 6 6 6 6 6 . . . . . 
+    . . . . . 6 6 . . 6 6 . . . . . 
+`
+DEMO_HERO4_IDLE = img`
+    . . . . . . 8 8 8 8 . . . . . . 
+    . . . . 8 8 8 7 7 8 8 8 . . . . 
+    . . . 8 8 8 7 7 7 7 8 8 8 . . . 
+    . . 8 8 8 e e e e e e 8 8 8 . . 
+    . . 8 8 e 7 7 7 7 7 7 e e 8 . . 
+    . . 8 e 7 8 8 8 8 8 8 7 e 8 . . 
+    . . 8 8 8 8 e e e e 8 8 8 8 . . 
+    . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 . 
+    . 8 e e 4 1 8 d d 8 1 4 e e 8 . 
+    . . 8 e e d d d d d d e e 8 . . 
+    . . . 8 e e 4 4 4 4 e e 8 . . . 
+    . . e 4 8 7 7 7 7 7 7 8 4 e . . 
+    . . 4 d 8 7 7 7 7 7 7 8 d 4 . . 
+    . . 4 4 8 4 4 9 9 4 4 8 4 4 . . 
+    . . . . . 8 8 8 8 8 8 . . . . . 
+    . . . . . 8 8 . . 8 8 . . . . . 
+`
+
+// ---------------------------------------------------------
+// Animation hooks – called by the engine
+// ---------------------------------------------------------
+
+function animateHero1(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO1_IDLE)
+}
+
+function animateHero2(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO2_IDLE)
+}
+
+function animateHero3(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO3_IDLE)
+}
+
+function animateHero4(hero: Sprite, animKey: string, timeMs: number, direction: string) {
+    hero.setImage(DEMO_HERO4_IDLE)
+}
+
+// ---------------------------------------------------------
+// Hero logic hooks – 4 heroes, called by engine
+// ---------------------------------------------------------
+
+function hero1Logic(
+    button: string,
+    heroIndex: number,
+    enemiesArr: any[],
+    heroesArr: any[]
+): number[] {
+
+    if (DEBUG_HERO_LOGIC_STUDENT) {
+        const enemiesLen = enemiesArr ? enemiesArr.length : -1;
+        const heroesLen = heroesArr ? heroesArr.length : -1;
+        console.log(
+            "[hero1Logic] ENTER button=" + button +
+            " heroIndex=" + heroIndex +
+            " enemiesLen=" + enemiesLen +
+            " heroesLen=" + heroesLen
+        );
+    }
+
+    let me: any = heroesArr[heroIndex]
+    let targetIndex = -1
+
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            let e: any = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) {
+                best = d
+                targetIndex = i
+            }
+        }
+    }
+
+    let anyHeroLow = false
+    for (let j = 0; j < heroesArr.length; j++) {
+        let h: any = heroesArr[j]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [
+                FAMILY.HEAL,
+                25, 25, 25, 25,
+                ELEM.HEAL,
+                ANIM.ID.A
+            ]
+        } else {
+            return [
+                FAMILY.STRENGTH,
+                10, 10, 300, 200,
+                ELEM.NONE,
+                ANIM.ID.A
+            ]
+        }
+    }
+    if (button == "B") {
+        return [
+            FAMILY.AGILITY,
+            4, 30, 30, 30,
+            ELEM.NONE,
+            ANIM.ID.B
+        ]
+    }
+    if (button == "A+B") {
+        return [
+            FAMILY.INTELLECT,
+            100, 25, 25, 25,
+            ELEM.NONE,
+            ANIM.ID.AB
+        ]
+    }
+    return [
+        FAMILY.STRENGTH,
+        0, 25, 25, 25,
+        ELEM.NONE,
+        ANIM.ID.IDLE
+    ]
+}
+
+function hero2Logic(
+    button: string,
+    heroIndex: number,
+    enemiesArr: any[],
+    heroesArr: any[]
+): number[] {
+
+    if (DEBUG_HERO_LOGIC_STUDENT) {
+        const enemiesLen = enemiesArr ? enemiesArr.length : -1;
+        const heroesLen = heroesArr ? heroesArr.length : -1;
+        console.log(
+            "[hero2Logic] ENTER button=" + button +
+            " heroIndex=" + heroIndex +
+            " enemiesLen=" + enemiesLen +
+            " heroesLen=" + heroesLen
+        );
+    }
+
+    let me2: any = heroesArr[heroIndex]
+    let targetIndex2 = -1
+
+    if (me2 && enemiesArr.length > 0) {
+        let best2 = 1e9
+        for (let k = 0; k < enemiesArr.length; k++) {
+            let f: any = enemiesArr[k]
+            if (!f || (f.flags & sprites.Flag.Destroyed)) continue
+            const g = distanceTo(me2, f)
+            if (g < best2) {
+                best2 = g
+                targetIndex2 = k
+            }
+        }
+    }
+
+    let anyHeroLow2 = false
+    for (let l = 0; l < heroesArr.length; l++) {
+        let m: any = heroesArr[l]
+        if (!m) continue
+        const hp2 = sprites.readDataNumber(m, HERO_DATA.HP) | 0
+        if (hp2 > 0 && hp2 < 50) {
+            anyHeroLow2 = true
+            break
+        }
+    }
+
+    if (button == "A") {
+        if (anyHeroLow2) {
+            return [
+                FAMILY.HEAL,
+                25, 25, 25, 25,
+                ELEM.HEAL,
+                ANIM.ID.A
+            ]
+        } else {
+            return [
+                FAMILY.STRENGTH,
+                10, 10, 50, 200,
+                ELEM.NONE,
+                ANIM.ID.A
+            ]
+        }
+    }
+    if (button == "B") {
+        return [
+            FAMILY.AGILITY,
+            4, 30, 30, 30,
+            ELEM.NONE,
+            ANIM.ID.B
+        ]
+    }
+    if (button == "A+B") {
+        return [
+            FAMILY.INTELLECT,
+            12, 25, 25, 25,
+            ELEM.NONE,
+            ANIM.ID.AB
+        ]
+    }
+    return [
+        FAMILY.STRENGTH,
+        0, 25, 25, 25,
+        ELEM.NONE,
+        ANIM.ID.IDLE
+    ]
+}
+
+function hero3Logic(
+    button: string,
+    heroIndex: number,
+    enemiesArr: any[],
+    heroesArr: any[]
+): number[] {
+
+
+    if (DEBUG_HERO_LOGIC_STUDENT) {
+        const enemiesLen = enemiesArr ? enemiesArr.length : -1;
+        const heroesLen = heroesArr ? heroesArr.length : -1;
+        console.log(
+            "[hero3Logic] ENTER button=" + button +
+            " heroIndex=" + heroIndex +
+            " enemiesLen=" + enemiesLen +
+            " heroesLen=" + heroesLen
+        );
+    }
+
+    let me3: any = heroesArr[heroIndex]
+    let targetIndex3 = -1
+
+    if (me3 && enemiesArr.length > 0) {
+        let best3 = 1e9
+        for (let n = 0; n < enemiesArr.length; n++) {
+            let o: any = enemiesArr[n]
+            if (!o || (o.flags & sprites.Flag.Destroyed)) continue
+            const p = distanceTo(me3, o)
+            if (p < best3) {
+                best3 = p
+                targetIndex3 = n
+            }
+        }
+    }
+
+    let anyHeroLow3 = false
+    for (let q = 0; q < heroesArr.length; q++) {
+        let r: any = heroesArr[q]
+        if (!r) continue
+        const hp3 = sprites.readDataNumber(r, HERO_DATA.HP) | 0
+        if (hp3 > 0 && hp3 < 50) {
+            anyHeroLow3 = true
+            break
+        }
+    }
+
+    if (button == "A") {
+        if (anyHeroLow3) {
+            return [
+                FAMILY.HEAL,
+                25, 25, 25, 25,
+                ELEM.HEAL,
+                ANIM.ID.A
+            ]
+        } else {
+            return [
+                FAMILY.STRENGTH,
+                10, 10, 50, 200,
+                ELEM.NONE,
+                ANIM.ID.A
+            ]
+        }
+    }
+    if (button == "B") {
+        return [
+            FAMILY.AGILITY,
+            4, 30, 30, 30,
+            ELEM.NONE,
+            ANIM.ID.B
+        ]
+    }
+    if (button == "A+B") {
+        return [
+            FAMILY.INTELLECT,
+            12, 25, 25, 25,
+            ELEM.NONE,
+            ANIM.ID.AB
+        ]
+    }
+    return [
+        FAMILY.STRENGTH,
+        0, 25, 25, 25,
+        ELEM.NONE,
+        ANIM.ID.IDLE
+    ]
+}
+
+
+function hero4Logic(
+    button: string,
+    heroIndex: number,
+    enemiesArr: any[],
+    heroesArr: any[]
+): number[] {
+
+
+    if (DEBUG_HERO_LOGIC_STUDENT) {
+        const enemiesLen = enemiesArr ? enemiesArr.length : -1;
+        const heroesLen = heroesArr ? heroesArr.length : -1;
+        console.log(
+            "[hero4Logic] ENTER button=" + button +
+            " heroIndex=" + heroIndex +
+            " enemiesLen=" + enemiesLen +
+            " heroesLen=" + heroesLen
+        );
+    }
+
+
+
+    let me4: any = heroesArr[heroIndex]
+    let targetIndex4 = -1
+
+    if (me4 && enemiesArr.length > 0) {
+        let best4 = 1e9
+        for (let s = 0; s < enemiesArr.length; s++) {
+            let t: any = enemiesArr[s]
+            if (!t || (t.flags & sprites.Flag.Destroyed)) continue
+            const u = distanceTo(me4, t)
+            if (u < best4) {
+                best4 = u
+                targetIndex4 = s
+            }
+        }
+    }
+
+    let anyHeroLow4 = false
+    for (let v = 0; v < heroesArr.length; v++) {
+        let w: any = heroesArr[v]
+        if (!w) continue
+        const hp4 = sprites.readDataNumber(w, HERO_DATA.HP) | 0
+        if (hp4 > 0 && hp4 < 50) {
+            anyHeroLow4 = true
+            break
+        }
+    }
+
+    if (button == "A") {
+        if (anyHeroLow4) {
+            return [
+                FAMILY.HEAL,
+                25, 25, 25, 25,
+                ELEM.HEAL,
+                ANIM.ID.A
+            ]
+        } else {
+            return [
+                FAMILY.STRENGTH,
+                10, 10, 50, 200,
+                ELEM.NONE,
+                ANIM.ID.A
+            ]
+        }
+    }
+    if (button == "B") {
+        return [
+            FAMILY.AGILITY,
+            4, 30, 30, 30,
+            ELEM.NONE,
+            ANIM.ID.B
+        ]
+    }
+    if (button == "A+B") {
+        return [
+            FAMILY.INTELLECT,
+            12, 25, 25, 25,
+            ELEM.NONE,
+            ANIM.ID.AB
+        ]
+    }
+    return [
+        FAMILY.STRENGTH,
+        0, 25, 25, 25,
+        ELEM.NONE,
+        ANIM.ID.IDLE
+    ]
+}
+
+// ---------------------------------------------------------
+// HOOKS + START ENGINE
+// ---------------------------------------------------------
+
+HeroEngine.hero1LogicHook = hero1Logic
+HeroEngine.hero2LogicHook = hero2Logic
+HeroEngine.hero3LogicHook = hero3Logic
+HeroEngine.hero4LogicHook = hero4Logic
+
+HeroEngine.animateHero1Hook = animateHero1
+HeroEngine.animateHero2Hook = animateHero2
+HeroEngine.animateHero3Hook = animateHero3
+HeroEngine.animateHero4Hook = animateHero4
+
+HeroEngine.start()

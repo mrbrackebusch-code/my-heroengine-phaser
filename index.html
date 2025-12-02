@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>my-heroengine-phaser</title>
+
+    <!-- ADD THIS -->
+    <style>
+      /* Ensure the Phaser canvas has a visible border */
+      #app canvas {
+        border: 2px solid black;
+        box-sizing: border-box;
+        image-rendering: pixelated; /* optional but ideal for your pixel art */
+      }
+
+      /* Optional: center the game nicely */
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        background: white;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
