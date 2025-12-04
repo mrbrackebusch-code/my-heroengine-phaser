@@ -52,6 +52,14 @@ let _hostPerfAccumSnapMs = 0
 let _hostPerfLastSpriteCount = 0
 let _hostPerfLastSnapshotSprites = 0
 
+
+let _frameAttachMsAccum = 0;
+let _frameAttachCreateCount = 0;
+let _frameAttachUpdateCount = 0;
+
+
+
+
 function _hostPerfNowMs(): number {
     if (typeof performance !== "undefined" && performance.now) {
         return performance.now()
@@ -1014,6 +1022,8 @@ function _attachNativeSprite(s: Sprite): void {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
 
+    const tA0 = _hostPerfNowMs();
+
     if (!sc) {
         if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log("[_attachNativeSprite] NO SCENE — skipping for sprite", s.id);
@@ -1190,7 +1200,8 @@ function _attachNativeSprite(s: Sprite): void {
         }
     }
 
-
+    let native = s.native as any;
+    let didCreate = false;
 
     if (!s.native) {
         const n = sc.add.image(s.x, s.y, texKey);
@@ -1207,6 +1218,8 @@ function _attachNativeSprite(s: Sprite): void {
                 "| native.height", n.height
             );
         }
+        didCreate = true;
+
     }
 
     // Focused log + compute non-zero pixels
@@ -1234,6 +1247,12 @@ function _attachNativeSprite(s: Sprite): void {
             );
         }
     }
+
+    const tA1 = _hostPerfNowMs();
+    _frameAttachMsAccum += (tA1 - tA0);
+
+    if (didCreate) _frameAttachCreateCount++;
+    else _frameAttachUpdateCount++;
 }
 
 
@@ -1460,6 +1479,20 @@ export function _syncNativeSprites(): void {
     }
     
 
+    // --- per-frame perf counters + timers ---------------------
+    let removedHard = 0;       // Destroyed/engineDestroyed/imageGone
+    let removedByPixels = 0;   // autoHideByPixels -> PIXEL-DESTROY
+    let frameAttachCount = 0;  // how many times we call _attachNativeSprite
+
+    let tSceneEnd = t0;        // after scene checks
+    let tLoopStart = 0;        // start of main sprite loop
+    let tLoopEnd = 0;          // end of main sprite loop
+
+    // Attach timing / counts (global accumulators for this frame)
+    _frameAttachMsAccum = 0;
+    _frameAttachCreateCount = 0;
+    _frameAttachUpdateCount = 0;
+
 
 
     // If Phaser scene isn’t ready yet, don’t touch textures / natives
@@ -1468,8 +1501,16 @@ export function _syncNativeSprites(): void {
         return;
     }
 
+    // mark end of scene-check step
+    tSceneEnd = _hostPerfNowMs();
+
     // Local alias so we can use this in perf + loops
     const all = _allSprites;
+
+
+    // mark start of main sprite loop
+    tLoopStart = _hostPerfNowMs();
+
 
     // Walk backwards so we can safely splice destroyed sprites
     for (let i = all.length - 1; i >= 0; i--) {
@@ -1489,12 +1530,16 @@ export function _syncNativeSprites(): void {
         const hardDead = hasDestroyedFlag || engineDestroyed || imageGone;
 
         if (hardDead) {
+            
+            removedHard++;
+
             if (shouldLog && (s.kind === 11 || s.kind === 12)) {
                 console.log(
                     "[SYNC] HARD-DESTROY",
                     "| id", s.id,
                     "| kind", s.kind,
                     "| flags", flags,
+                    "| hasDestroyedFlag", hasDestroyedFlag,
                     "| engineDestroyed", engineDestroyed,
                     "| imageGone", imageGone
                 );
@@ -1519,6 +1564,7 @@ export function _syncNativeSprites(): void {
         }
 
         // --- LIVE SPRITE PATH ------------------------------------------------
+        frameAttachCount++;
         _attachNativeSprite(s);
 
         const native = s.native as any;
@@ -1574,6 +1620,9 @@ export function _syncNativeSprites(): void {
             (s.kind === 11 || s.kind === 12 || s.kind === 9100);
 
         if (deadByPixels) {
+
+            removedByPixels++;
+
             if (shouldLog) {
                 console.log(
                     "[SYNC] PIXEL-DESTROY",
@@ -1643,6 +1692,10 @@ export function _syncNativeSprites(): void {
         }
     }
 
+    // mark end of main sprite loop
+    tLoopEnd = _hostPerfNowMs();
+
+
     // ==== PERF / LEAK DEBUG (runs once per ~second) ====
     const nowMs = performance.now();
 
@@ -1685,8 +1738,42 @@ export function _syncNativeSprites(): void {
     _hostPerfAccumSyncMs += (t1 - t0)
     
     const spriteCount = all.length;
-    // If you already have spriteCount, make sure you assign:
     _hostPerfLastSpriteCount = spriteCount
+
+    
+    if (shouldLog) {
+        const totalMs = t1 - t0;
+        const sceneMs = tSceneEnd - t0;
+        const loopMs = tLoopEnd - tLoopStart;
+        const otherMsRaw = totalMs - sceneMs - loopMs;
+        const otherMs = otherMsRaw < 0 ? 0 : otherMsRaw;
+
+        const attachMs = _frameAttachMsAccum;
+        const loopOtherMsRaw = loopMs - attachMs;
+        const loopOtherMs = loopOtherMsRaw < 0 ? 0 : loopOtherMsRaw;
+
+        console.log(
+            "[perf.syncSteps]",
+            "call#", _syncCallCount,
+            "sprites=", spriteCount,
+            "totalMs≈", totalMs.toFixed(3),
+            "sceneMs≈", sceneMs.toFixed(3),
+            "loopMs≈", loopMs.toFixed(3),
+            "loopAttachMs≈", attachMs.toFixed(3),
+            "loopOtherMs≈", loopOtherMs.toFixed(3),
+            "otherMs≈", otherMs.toFixed(3),
+            "removedHard=", removedHard,
+            "removedByPixels=", removedByPixels,
+            "attachCalls=", frameAttachCount,
+            "attachCreates=", _frameAttachCreateCount,
+            "attachUpdates=", _frameAttachUpdateCount
+        );
+    }
+
+
+    // (rest of your existing host perf snapshot logic stays as-is)
+
+
 }
 
 
