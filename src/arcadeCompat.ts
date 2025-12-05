@@ -57,6 +57,9 @@ let _frameAttachMsAccum = 0;
 let _frameAttachCreateCount = 0;
 let _frameAttachUpdateCount = 0;
 
+let _frameAttachTexMs = 0;         // texture create/recreate time
+let _frameAttachPixelMs = 0;       // pixel upload + putImageData + refresh
+let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
 
 
 
@@ -788,6 +791,9 @@ namespace sprites {
     const DEBUG_NET_SNAPSHOT = false;  // master switch for per-snapshot logs
 
 
+    // Extra per-sprite pixel introspection (second full scan per sprite).
+    // Leave this false for normal play; turn on only when debugging pixel issues.
+    const DEBUG_SPRITE_PIXELS = false;
 
 
 
@@ -911,89 +917,34 @@ namespace sprites {
 
 
 
-function _debugSpritePixels(s: Sprite, reason: string): number {
-    const img = s.image;
-    const dataKeys = Object.keys(s.data || {});
-    const kind = s.kind as number | undefined;
-    const kindName = kind === undefined ? "undefined" : _getSpriteKindName(kind || 0);
-
-    // If no image: still report "0 pixels" for visibility logic,
-    // but optionally log.
-    if (!img) {
-        const roleNoImg = _classifySpriteRole(kind || 0, dataKeys);
-        const wantLogNoImg = _shouldLogSprite(kind || 0, dataKeys);
-
-        if (wantLogNoImg) {
-            console.log(
-                "[WRAP-IMG]", reason,
-                "| id", s.id,
-                "| ROLE", roleNoImg,
-                "| kind", kind, `(${kindName})`,
-                "| NO IMAGE",
-                "| dataKeys", dataKeys
-            );
+    // Purely for debugging pixel shapes / bounds.
+    // Called only when DEBUG_SPRITE_PIXELS is true.
+    function _debugSpritePixels(s: Sprite, label: string): number {
+        const img = s.image as any;
+        if (!img) {
+            console.log(`[PIXELS] ${label} id=${s.id} kind=${s.kind} NO IMAGE`);
+            return 0;
         }
-        // Treat as empty for auto-hide purposes
-        return 0;
-    }
 
-    const w = img.width;
-    const h = img.height;
+        const w = img.width | 0;
+        const h = img.height | 0;
+        console.log(`[PIXELS] ${label} id=${s.id} kind=${s.kind} w=${w} h=${h}`);
 
-    // Always compute the pixel mask
-    let nonZero = 0;
-    let minX = w, minY = h, maxX = -1, maxY = -1;
+        let nonZero = 0;
 
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            const p = img.getPixel(x, y);
-            if (p !== 0) {
-                nonZero++;
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (x > maxX) maxX = x;
-                if (y > maxY) maxY = y;
+        for (let y = 0; y < h; y++) {
+            let row = "";
+            for (let x = 0; x < w; x++) {
+                const p = img.getPixel(x, y); // 0..15
+                if (p !== 0) nonZero++;
+
+                row += p === 0 ? "." : p.toString(16);
             }
+            console.log(`[PIXELS] ${label} id=${s.id} y=${y}: ${row}`);
         }
+
+        return nonZero;
     }
-
-    
-
-
-    const role = _classifySpriteRole(kind || 0, dataKeys);
-    const wantLog = _shouldLogSprite(kind || 0, dataKeys);
-    const bbox = nonZero > 0 ? `${minX},${minY} -> ${maxX},${maxY}` : "NONE";
-
-    // Only the log is gated by DEBUG_* flags now
-    if (wantLog) {
-        console.log(
-            "[WRAP-IMG]", reason,
-            "| id", s.id,
-            "| ROLE", role,
-            "| kind", kind, `(${kindName})`,
-            "| w,h", w, h,
-            "| nonZero", nonZero,
-            "| bbox", bbox,
-            "| dataKeys", dataKeys
-        );
-    }
-
-    //Print out all the pixels
-
-    // After existing [WRAP-IMG] console.log:
-//    if (s.kind === 11 /* projectile */) {
-//        dumpImagePixels(`ARROW id=${s.id}`, s.image);
-//}
-
-//    if (s.kind === 12) {
-//    dumpImagePixels(`AURA id=${s.id}`, s.image);
-//}
-
-
-    
-    // Always return the true pixel count for visibility logic
-    return nonZero;
-}
 
 
 
@@ -1014,6 +965,7 @@ function _debugSpritePixels(s: Sprite, reason: string): number {
 
 
 
+    
 
 
 
@@ -1035,6 +987,7 @@ function _attachNativeSprite(s: Sprite): void {
         if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log("[_attachNativeSprite] sprite has NO image", s);
         }
+        _frameAttachEarlyOutCount++;
         return;
     }
 
@@ -1051,6 +1004,7 @@ function _attachNativeSprite(s: Sprite): void {
             "h=", h,
             "image=", s.image
         );
+        _frameAttachEarlyOutCount++;
         return;
     }
 
@@ -1064,68 +1018,77 @@ function _attachNativeSprite(s: Sprite): void {
     }
 
     // --- TEXTURE HANDLING -------------------------------------------------
+    const tTex0 = _hostPerfNowMs();
+
     let tex = sc.textures.exists(texKey)
         ? (sc.textures.get(texKey) as Phaser.Textures.CanvasTexture)
         : null;
 
-        // If a texture exists but its size doesn't match the MakeCode image, destroy it
-        if (tex) {
-            const src = tex.source[0];
-            const texW = src.width | 0;
-            const texH = src.height | 0;
+    // If a texture exists but its size doesn't match the MakeCode image, destroy it
+    if (tex) {
+        const src = tex.source[0];
+        const texW = src.width | 0;
+        const texH = src.height | 0;
 
-            if (texW !== w || texH !== h) {
-                if (DEBUG_WRAP_TEX) {
-                    console.log(
-                        "[WRAP-TEX-RECREATE]",
-                        "| id", s.id,
-                        "| old tex w,h", texW, texH,
-                        "| new img w,h", w, h
-                    );
-                }
-                sc.textures.remove(texKey);
-                tex = null;
-            }
-        }
-
-
-        // (Re)create texture with the correct size
-        if (!tex) {
-            tex = sc.textures.createCanvas(texKey, w, h);
-
-            if (DEBUG_WRAP_TEX && _attachCallCount <= MAX_ATTACH_VERBOSE) {
+        if (texW !== w || texH !== h) {
+            if (DEBUG_WRAP_TEX) {
                 console.log(
-                    "[WRAP-TEX-CREATE]",
+                    "[WRAP-TEX-RECREATE]",
                     "| id", s.id,
-                    "| texKey", texKey,
-                    "| tex w,h", tex.source[0].width, tex.source[0].height
+                    "| old tex w,h", texW, texH,
+                    "| new img w,h", w, h
                 );
             }
+            sc.textures.remove(texKey);
+            tex = null;
         }
+    }
 
-    
+    // (Re)create texture with the correct size
+    if (!tex) {
+        tex = sc.textures.createCanvas(texKey, w, h);
+
+        if (DEBUG_WRAP_TEX && _attachCallCount <= MAX_ATTACH_VERBOSE) {
+            console.log(
+                "[WRAP-TEX-CREATE]",
+                "| id", s.id,
+                "| texKey", texKey,
+                "| tex w,h", tex.source[0].width, tex.source[0].height
+            );
+        }
+    }
+
+    const tTex1 = _hostPerfNowMs();
+    _frameAttachTexMs += (tTex1 - tTex0);
+
+    // --- PIXEL UPLOAD -----------------------------------------------------
 
     // Now tex is guaranteed to have width/height == image width/height
     const ctx = tex.context;
     if (!ctx) {
         console.error("[_attachNativeSprite] no 2D context for", texKey);
+        _frameAttachEarlyOutCount++;
         return;
     }
+
+    const tPix0 = _hostPerfNowMs();
+
     ctx.clearRect(0, 0, w, h);
 
-    // --- Rebuild pixel data from MakeCode image ---
-    const imgData = ctx.createImageData(w, h);
-    const palette = MAKECODE_PALETTE as any[];
     const pixelsLen = w * h;
+    const imgData = ctx.createImageData(w, h);
+    const palette = MAKECODE_PALETTE as number[][];
+
+    let nonZero = 0;
 
     for (let i = 0; i < pixelsLen; i++) {
         const x = i % w;
         const y = (i / w) | 0;
         const idx = i * 4;
 
-        const p = s.image.getPixel(x, y);  // 0–15 in Arcade
+        const p = s.image.getPixel(x, y); // 0..15 palette index
 
-        // Treat 0 as transparent, like Arcade sprites
+        // Treat 0 as transparent, like Arcade
         if (p <= 0) {
             imgData.data[idx + 0] = 0;
             imgData.data[idx + 1] = 0;
@@ -1133,12 +1096,6 @@ function _attachNativeSprite(s: Sprite): void {
             imgData.data[idx + 3] = 0;
             continue;
         }
-
-
-
-
-
-
 
         const color = palette[p];
         if (!color) {
@@ -1156,12 +1113,6 @@ function _attachNativeSprite(s: Sprite): void {
                     "paletteLength=", palette.length
                 );
             }
-
-
-
-
-
-
             imgData.data[idx + 0] = 0;
             imgData.data[idx + 1] = 0;
             imgData.data[idx + 2] = 0;
@@ -1174,13 +1125,22 @@ function _attachNativeSprite(s: Sprite): void {
         imgData.data[idx + 1] = g;
         imgData.data[idx + 2] = b;
         imgData.data[idx + 3] = 255;
+
+        nonZero++;
     }
+
+    // Cache for visibility logic (projectile/overlay auto-hide, etc.)
+    (s as any)._lastNonZeroPixels = nonZero;
 
     ctx.putImageData(imgData, 0, 0);
     tex.refresh();
 
+    const tPix1 = _hostPerfNowMs();
+    _frameAttachPixelMs += (tPix1 - tPix0);
 
-    // --- NATIVE IMAGE HANDLING --------------------------------------------
+
+
+        // --- NATIVE IMAGE HANDLING --------------------------------------------
     if (s.native) {
         const n: any = s.native;
         const nativeW = n.width | 0;
@@ -1219,12 +1179,18 @@ function _attachNativeSprite(s: Sprite): void {
             );
         }
         didCreate = true;
-
+        native = n;
     }
 
-    // Focused log + compute non-zero pixels
-    const nonZero = _debugSpritePixels(s, "attach#" + _attachCallCount);
-    (s as any)._lastNonZeroPixels = nonZero;  // cache for visibility logic
+    // We already computed nonZero in the main upload loop.
+    // Keep that as the authoritative value for visibility logic.
+    let nonZeroAttach = (s as any)._lastNonZeroPixels as number;
+
+    // Optional extra pixel-debug scan (second full pass) – gated.
+    if (DEBUG_SPRITE_PIXELS) {
+        nonZeroAttach = _debugSpritePixels(s, "attach#" + _attachCallCount);
+        (s as any)._lastNonZeroPixels = nonZeroAttach;
+    }
 
     // Extra: detailed projectile log
     if (DEBUG_PROJECTILE_NATIVE && s.native) {
@@ -1243,7 +1209,7 @@ function _attachNativeSprite(s: Sprite): void {
                 "| z", s.z,
                 "| visible", s.native.visible,
                 "| img w,h", w, h,
-                "| nonZero", nonZero
+                "| nonZeroAttach", nonZeroAttach
             );
         }
     }
@@ -1312,11 +1278,11 @@ function _attachNativeSprite(s: Sprite): void {
 
 
         // NEW:
-        const nonZero = _debugSpritePixels(s, "create");
-        (s as any)._lastNonZeroPixels = nonZero;
+        const nonZeroCreate = _debugSpritePixels(s, "create");
+        (s as any)._lastNonZeroPixels = nonZeroCreate;
 
         // AFTER you've counted nonZero pixels for s.image
-        if (s.kind === 12 && nonZero === 0 && s.native) {
+        if (s.kind === 12 && nonZeroCreate === 0 && s.native) {
             console.log(`[AURA] id=${s.id} image went fully blank -> hiding native sprite`);
             s.native.visible = false;
             return; // don't reattach a texture for an empty image
@@ -1439,6 +1405,25 @@ function _debugDumpSpritePixels(s: Sprite, label: string) {
 
 
 
+//
+//
+//
+// This is the end of attach native sprites
+//
+//
+//
+
+
+
+
+
+
+
+// ======================================================
+// PHASER NATIVE SPRITE SYNC
+// ======================================================
+
+
 // Put these at module scope (top of arcadeCompat.ts, near other globals)
 let _syncPerfFrames = 0;
 let _syncPerfLastReportMs = 0;
@@ -1492,6 +1477,11 @@ export function _syncNativeSprites(): void {
     _frameAttachMsAccum = 0;
     _frameAttachCreateCount = 0;
     _frameAttachUpdateCount = 0;
+    _frameAttachTexMs = 0;
+    _frameAttachPixelMs = 0;
+    _frameAttachEarlyOutCount = 0;
+
+
 
 
 
@@ -1760,14 +1750,18 @@ export function _syncNativeSprites(): void {
             "sceneMs≈", sceneMs.toFixed(3),
             "loopMs≈", loopMs.toFixed(3),
             "loopAttachMs≈", attachMs.toFixed(3),
+            "loopAttachTexMs≈", _frameAttachTexMs.toFixed(3),
+            "loopAttachPixelMs≈", _frameAttachPixelMs.toFixed(3),
             "loopOtherMs≈", loopOtherMs.toFixed(3),
             "otherMs≈", otherMs.toFixed(3),
             "removedHard=", removedHard,
             "removedByPixels=", removedByPixels,
             "attachCalls=", frameAttachCount,
             "attachCreates=", _frameAttachCreateCount,
-            "attachUpdates=", _frameAttachUpdateCount
+            "attachUpdates=", _frameAttachUpdateCount,
+            "attachEarlyOuts=", _frameAttachEarlyOutCount
         );
+
     }
 
 
