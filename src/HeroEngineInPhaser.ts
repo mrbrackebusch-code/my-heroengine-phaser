@@ -49,6 +49,22 @@ namespace SpriteKind {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --------------------------------------------------------------
 // Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
 // --------------------------------------------------------------
@@ -274,7 +290,7 @@ namespace HeroEngine {
         direction: string
     ) => void;
 
-    
+
     function defaultHeroLogic(
         button: string,
         heroIndex: number,
@@ -284,15 +300,103 @@ namespace HeroEngine {
         return [FAMILY.STRENGTH, 0, 0, 0, 0, ELEM.NONE, ANIM.ID.IDLE];
     }
 
-
     function defaultHeroAnim(
         hero: Sprite,
         animKey: string,
         timeMs: number,
         direction: string
     ): void {
-        // no-op default
+
+        // OWNER, not index, determines which hero it is
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER);
+
+        // Hardcoded idle sprites for each hero
+        // These NEVER appear in student project, so Blocks stays clean.
+
+        const idle1 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 2 2 f f f . . . .
+        . . . f f f 2 2 2 2 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 2 2 2 2 2 2 e e f . .
+        . . f e 2 f f f f f f 2 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 4 4 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 2 2 2 2 2 2 f 4 e . .
+        . . 4 d f 2 2 2 2 2 2 f d 4 . .
+        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+        const idle2 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f a a f f f . . . .
+        . . . f f f a a a a f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e a a a a a a e e f . .
+        . . f e a f f f f f f a e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 6 6 f b f e f f .
+        . f e e a 6 f d d f 6 a e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 4 4 4 4 4 4 f 4 e . .
+        . . 4 d f 4 4 4 4 4 4 f d 4 . .
+        . . 4 4 f a a a a a a f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+        const idle3 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 7 7 f f f . . . .
+        . . . f f f 7 7 7 7 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 7 7 7 7 7 7 e e f . .
+        . . f e 7 f f f f f f 7 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 8 8 f b f e f f .
+        . f e e 4 8 f d d f 8 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 7 7 7 7 7 7 f 4 e . .
+        . . 4 d f 7 7 7 7 7 7 f d 4 . .
+        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+        const idle4 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 8 8 f f f . . . .
+        . . . f f f 8 8 8 8 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 8 8 8 8 8 8 e e f . .
+        . . f e 8 f f f f f f 8 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 1 1 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 8 8 8 8 8 8 f 4 e . .
+        . . 4 d f 8 8 8 8 8 8 f d 4 . .
+        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+        if (owner === 1) hero.setImage(idle1);
+        else if (owner === 2) hero.setImage(idle2);
+        else if (owner === 3) hero.setImage(idle3);
+        else if (owner === 4) hero.setImage(idle4);
+        else hero.setImage(idle1);
     }
+
+
 
     // Strongly typed hooks now
     export let hero1LogicHook: any = defaultHeroLogic;
@@ -306,7 +410,7 @@ namespace HeroEngine {
     export let animateHero3Hook: HeroAnimFn = defaultHeroAnim;
     export let animateHero4Hook: HeroAnimFn = defaultHeroAnim;
 
-    
+
     // Overridable hook for hero logic.
     // Arcade: stays null → we fall back to runHeroLogicForHero.
     // Phaser: heroEnginePhaserGlue.ts overrides this.
@@ -329,8 +433,8 @@ namespace HeroEngine {
 
         ensureHeroSpriteKinds();
 
-        initWorldTileMap() 
-        
+        initWorldTileMap()
+
         scene.setBackgroundColor(1);
         tiles.setCurrentTilemap(tilemap`level1`)
         setupHeroes();
@@ -442,7 +546,7 @@ ensureHeroSpriteKinds();
 const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
 
 // Elements
-const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, HEAL: 5 }
+const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5 }
 
 // --------------------------------------------------------------
 // Animation keys
@@ -556,9 +660,15 @@ const ENEMY_DATA = {
     HP: "hp",
     MAX_HP: "maxHp",
 
+
+    
     SPEED: "spd",                 // base movement speed for homing AI
     TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
     REGEN_PCT: "regenPct",        // % regen per tick (if used later)
+
+
+    // NEW: logical monster identifier so Phaser wrapper can pick LPC sheet
+    MONSTER_ID: "monsterId",
 
     SLOW_PCT: "slowPct",
     SLOW_UNTIL: "slowUntil",
@@ -926,6 +1036,8 @@ function _buildTilesIntoSprites(map: number[][]): void {
             s.left = c * tile
             s.top = r * tile
             s.z = 5
+
+
         }
     }
 }
@@ -1286,7 +1398,9 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
         ];
     }
 
-    let out: number[];
+    //let out: number[];
+    let out: any[];
+
     try {
         out = fn(button, heroIndex, localEnemies, localHeroes);
     } catch (e) {
@@ -1319,8 +1433,34 @@ HeroEngine.runHeroLogicForHeroHook = runHeroLogicForHero;
 
 
 
+// Positional unpack (allow strings or numbers from Blocks)
+// 0: family, 1–4: trait pools, 5: element, 6: anim
+function coerceFamily(val: any): number {
+    if (typeof val === "string") {
+        const s = val.toLowerCase()
+        if (s === "strength") return FAMILY.STRENGTH
+        if (s === "agility") return FAMILY.AGILITY
+        if (s === "intelligence" || s === "intellect") return FAMILY.INTELLECT
+        if (s === "support" || s === "heal") return FAMILY.HEAL
+    }
+    return (val | 0)
+}
 
-
+function coerceElement(val: any): number {
+    if (typeof val === "string") {
+        const s = val.toLowerCase()
+        if (s === "none") return ELEM.NONE
+        if (s === "grass" || s === "plant" || s === "plants") return ELEM.GRASS
+        if (s === "fire") return ELEM.FIRE
+        if (s === "water") return ELEM.WATER
+        if (s === "electric" || s === "lightning") return ELEM.ELECTRIC
+        // Earth support — you'll add ELEM.EARTH yourself
+        if (s === "earth" && (ELEM as any).EARTH !== undefined) {
+            return (ELEM as any).EARTH
+        }
+    }
+    return (val | 0)
+}
 
 
 function calculateMoveStatsForFamily(family: number, button: string, traits: number[]) {
@@ -1345,7 +1485,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     if (DEBUG_HERO_LOGIC) {
         console.log("[doHeroMoveForPlayer] ENTER playerId=" + playerId + "button=" + button + "heroIndex=" + heroIndex)
     }
-    
+
     // Trap world time so the wrapper/save system can see it
     worldRuntimeMs = now
 
@@ -1364,7 +1504,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-        // -----------------------------
+    // -----------------------------
     // Student logic (OUT array)
     // Shape: [family, t1, t2, t3, t4, element, animId]
     // -----------------------------
@@ -1378,7 +1518,8 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         );
     }
 
-    let out: number[];
+    //let out: number[];
+    let out: any[]; //So we can get strings for the names from students
     try {
         out = hook(heroIndex, button);
     } catch (e) {
@@ -1409,20 +1550,30 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return;
     }
 
+
+    const family = coerceFamily(out[0])      // FAMILY
+    const t1 = out[1] | 0                    // TRAIT1
+    const t2 = out[2] | 0                    // TRAIT2
+    const t3 = out[3] | 0                    // TRAIT3
+    const t4 = out[4] | 0                    // TRAIT4
+    const element = coerceElement(out[5])    // ELEMENT
+
+
+
     // Positional unpack (avoid OUT.* at runtime in Arcade)
-    const family = out[0] | 0;  // FAMILY
-    const t1 = out[1] | 0;      // TRAIT1
-    const t2 = out[2] | 0;      // TRAIT2
-    const t3 = out[3] | 0;      // TRAIT3
-    const t4 = out[4] | 0;      // TRAIT4
-    const element = out[5] | 0; // ELEMENT
-    const animId = out[6] | 0;  // ANIM_ID
+    //    const family = out[0] | 0;  // FAMILY
+    //    const t1 = out[1] | 0;      // TRAIT1
+    //    const t2 = out[2] | 0;      // TRAIT2
+    //    const t3 = out[3] | 0;      // TRAIT3
+    //    const t4 = out[4] | 0;      // TRAIT4
+    //    const element = out[5] | 0; // ELEMENT
+    //    const animId = out[6] | 0;  // ANIM_ID
 
 
 
 
 
-    
+
     // traits[1..4] are the same pools as before; traits[5] holds element for future use
     const traits = [0, t1, t2, t3, t4, element]
 
@@ -1434,7 +1585,19 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
 
-    const animKey = animIdToKey(animId)
+    //const animKey = animIdToKey(animId)
+    // Animation ID: allow either a free-form string from Blocks or a numeric ID
+    let animKey: string
+    const rawAnim = out[6]
+    if (typeof rawAnim === "string") {
+        // Students can return any animation key they like, e.g. "idle", "FireSlash", "MyWeirdAnim"
+        animKey = rawAnim
+    } else {
+        const animId = (rawAnim | 0)
+        animKey = animIdToKey(animId)
+    }
+
+
 
     // Trait-driven move stats (per family)
     const stats = calculateMoveStatsForFamily(family, button, traits)
@@ -1507,10 +1670,10 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     // --- Control lock & agility extras ---
 
     // STR / AGI / INT use timed lock via heroBusyUntil
-  
+
     if (family == FAMILY.STRENGTH || family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
         lockHeroControls(heroIndex)
-        
+
         const unlockAt = now + moveDuration
         heroBusyUntil[heroIndex] = unlockAt
 
@@ -1522,7 +1685,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         // NEW: mirror control-lock timestamp onto the hero sprite
         //sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, heroBusyUntil[heroIndex])
 
-    
+
     } else if (family == FAMILY.HEAL) {
         // SUPPORT/HEAL: no timed lock here.
         // beginSupportPuzzleForHero() will call lockHeroControls()
@@ -1695,7 +1858,7 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     // NEW: seed previous position for collisions
     sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x)
     sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y)
-    
+
     const heroIndex = heroes.length; heroes.push(hero)
     playerToHeroIndex[playerId] = heroIndex
 
@@ -1744,10 +1907,10 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
 }
 
 function setupHeroes() {
-    
+
     const W = userconfig.ARCADE_SCREEN_WIDTH
     const H = userconfig.ARCADE_SCREEN_HEIGHT
-    const centerW = W/2
+    const centerW = W / 2
     const centerH = H / 2
     const offset = 20
 
@@ -1841,7 +2004,7 @@ function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
     if (family == FAMILY.STRENGTH || family == FAMILY.INTELLECT || family == FAMILY.HEAL) hero.startEffect(effects.trail, timeMs)
     const direction = getHeroDirectionName(heroIndex)
     const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
-    
+
     if (playerId == 1) HeroEngine.animateHero1Hook(hero, animKey, timeMs, direction)
     else if (playerId == 2) HeroEngine.animateHero2Hook(hero, animKey, timeMs, direction)
     else if (playerId == 3) HeroEngine.animateHero3Hook(hero, animKey, timeMs, direction)
@@ -3410,7 +3573,7 @@ function beginIntellectTargeting(
 
     // Control time window (our own floor / timer detonation)
     const ctrlUntil = now + lifespanMs
-//    sprites.setDataNumber(spell, "INT_CTRL_UNTIL", ctrlUntil)
+    //    sprites.setDataNumber(spell, "INT_CTRL_UNTIL", ctrlUntil)
 
     sprites.setDataNumber(spell, INT_CTRL_UNTIL_KEY, ctrlUntil)
 
@@ -3507,7 +3670,7 @@ function updateIntellectSpellsControl() {
         const spell = heroControlledSpells[i]; if (!spell) continue
 
         // Fizzle if floor elapsed and no detonation yet
-//        const ctrlUntil = sprites.readDataNumber(spell, "INT_CTRL_UNTIL") | 0
+        //        const ctrlUntil = sprites.readDataNumber(spell, "INT_CTRL_UNTIL") | 0
 
         const ctrlUntil = sprites.readDataNumber(spell, INT_CTRL_UNTIL_KEY) | 0
 
@@ -4090,7 +4253,7 @@ function updateHeroBuffs(now: number) {
             }
             sprites.setDataString(hero, HERO_DATA.BUFF_JSON, JSON.stringify(snapshot))
         }
-    
+
 
 
 
@@ -4597,11 +4760,60 @@ function completeSupportPuzzleForHero(heroIndex: number) {
 
 
 const ENEMY_KIND = {
-    GRUNT:  { maxHP: 50,  speed: 28, touchDamage: 8,  tint: 6  /* green  */ },
-    RUNNER: { maxHP: 30,  speed: 42, touchDamage: 6,  tint: 7  /* yellow */ },
-    BRUTE:  { maxHP: 160, speed: 18, touchDamage: 15, tint: 2  /* red    */ },
-    ELITE:  { maxHP: 260, speed: 22, touchDamage: 20, tint: 10 /* purple */ }
-}
+    GRUNT: { maxHP: 50, speed: 28, touchDamage: 8, tint: 6  /* green  */ },
+    RUNNER: { maxHP: 30, speed: 42, touchDamage: 6, tint: 7  /* yellow */ },
+    BRUTE: { maxHP: 160, speed: 18, touchDamage: 15, tint: 2  /* red    */ },
+    ELITE: { maxHP: 260, speed: 22, touchDamage: 20, tint: 10 /* purple */ }
+};
+    // Archetypes are now INTERNAL ONLY. Waves & spawns use real monster IDs,
+    // and we map those IDs onto these archetypes for stats + placeholder art.
+
+    const ENEMY_ARCHETYPE_KEYS = ["GRUNT", "RUNNER", "BRUTE", "ELITE"]
+
+    // Map REAL monster IDs (from your LPC filenames) → archetype key.
+    // TODO: replace the example strings here with the actual IDs from your atlas
+    // (e.g. "imp blue", "spider green", "dragon red", etc.).
+    const MONSTER_ARCHETYPE: any = {
+        // Examples ONLY – change to your real ids:
+        "imp blue": "GRUNT",
+        "imp red": "RUNNER",
+        "spider green": "RUNNER",
+        "big worm": "BRUTE",
+        "dragon red": "ELITE"
+    }
+
+    // Pick an archetype for a given monster id.
+    // 1) If there is an explicit entry in MONSTER_ARCHETYPE, use that.
+    // 2) Otherwise hash the name into one of the archetypes so everything
+    //    at least has *some* stats and placeholder art.
+    function resolveArchetypeForMonster(monsterId: string): string {
+        const direct = MONSTER_ARCHETYPE[monsterId]
+        if (direct) return direct
+
+        let h = 0
+        for (let i = 0; i < monsterId.length; i++) {
+            h = (h + monsterId.charCodeAt(i)) & 0xffff
+        }
+        return ENEMY_ARCHETYPE_KEYS[h % ENEMY_ARCHETYPE_KEYS.length]
+    }
+
+    // Stats lookup by monster id (HP / speed / touchDamage)
+    function enemyStatsForMonsterId(monsterId: string) {
+        const arche = resolveArchetypeForMonster(monsterId)
+        const spec = (ENEMY_KIND as any)[arche]
+        if (spec) return spec
+        return ENEMY_KIND.GRUNT
+    }
+
+    // Placeholder MakeCode image for a monster id.
+    // Phaser ignores this and uses full LPC art based on sprite.data["name"].
+    function enemyPlaceholderImageForMonster(monsterId: string): Image {
+        const arche = resolveArchetypeForMonster(monsterId)
+        return enemyImageForKind(arche)
+    }
+
+
+
 
 function enemyImageForKind(kind: string): Image {
 
@@ -4774,24 +4986,75 @@ function enemyImageForKind(kind: string): Image {
     return imgBase
 }
 
-function spawnEnemyOfKind(kind: string, x: number, y: number) {
-    const spec = (ENEMY_KIND as any)[kind] || ENEMY_KIND.GRUNT
-    const enemy = sprites.create(enemyImageForKind(kind), SpriteKind.Enemy)
-    enemy.x = x; enemy.y = y; enemy.z = 10
-    const eIndex = enemies.length; enemies.push(enemy)
-    initEnemyHP(eIndex, enemy, spec.maxHP)
-    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, spec.speed)
-    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, spec.touchDamage)
-    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
+// --------------------------------------------------------------
+// Enemy attack phase constants (copied from Arcade engine)
+// --------------------------------------------------------------
+const ENEMY_ATK_PHASE_IDLE    = 0
+const ENEMY_ATK_PHASE_WINDUP  = 1
+const ENEMY_ATK_PHASE_ATTACK  = 2
+const ENEMY_ATK_PHASE_RECOVER = 3
+
+
+
+
+
+function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite: boolean): Sprite {
+    const stats = enemyStatsForMonsterId(monsterId, elite)
+
+    const img = enemyPlaceholderImageForMonster(monsterId)
+    const enemy = sprites.create(img, SpriteKind.Enemy)
+    enemy.x = x
+    enemy.y = y
+
+ console.log(
+    "[HeroEngine.spawnEnemy] created",
+    "id=", enemy.id,
+    "kind=", enemy.kind,
+    "x=", enemy.x, "y=", enemy.y,
+    "vx=", enemy.vx, "vy=", enemy.vy,
+    "wave=", currentWaveIndex
+//    "tier=", enemyTier
+
+)
+
+
+
+    sprites.setDataNumber(enemy, ENEMY_DATA.HP, stats.hp)
+    sprites.setDataNumber(enemy, ENEMY_DATA.MAX_HP, stats.hp)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, stats.speed)
+    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, stats.touchDamage)
+    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, stats.regenPct)
+
+    // NEW: remember which logical monster this is (Phaser / LPC will read this)
+    sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterId)
+
     sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
+
     sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
+
+
+    
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+
+    console.log(
+        "[HE.spawned Enemy Of Kind]" +
+        "id=" + enemy.id +
+        "kind=" + enemy.kind +
+        "monsterId=" +  monsterId +
+        "dataKeys=" + Object.keys((enemy as any).data || {})
+    );
+
+    return enemy
 }
+
+
+
+
 
 
 // Corner spawners
@@ -5078,7 +5341,34 @@ function updateEnemyHoming(now: number) {
             _enemySteerTowardHero(e, h, speed)
             //e.vx = Math.idiv(dx * speed, mag); e.vy = Math.idiv(dy * speed, mag)
         }
+
+        // --- NEW: update label for animation phase + facing dir ---
+        // (death is handled in applyDamageToEnemyIndex; see below)
+        const hpNow = sprites.readDataNumber(e, ENEMY_DATA.HP)
+        if (hpNow <= 0) {
+            sprites.setDataString(e, "phase", "death")
+        } else {
+            // Any non-zero ATK_PHASE counts as "attack" for animation purposes
+            const atkPhase = sprites.readDataNumber(e, ENEMY_DATA.ATK_PHASE) | 0
+            const phaseLabel = atkPhase > 0 ? "attack" : "walk"
+            sprites.setDataString(e, "phase", phaseLabel)
+
+            // Crude direction from dx/dy (toward hero)
+            const absDx = Math.abs(dx), absDy = Math.abs(dy)
+            let dir = "down"
+            if (absDx >= absDy) {
+                dir = dx >= 0 ? "right" : "left"
+            } else {
+                dir = dy >= 0 ? "down" : "up"
+            }
+            sprites.setDataString(e, "dir", dir)
+        }
+
     }
+
+
+
+
 }
 
 function spawnDummyEnemy(x: number, y: number) {
@@ -5107,7 +5397,13 @@ function spawnDummyEnemy(x: number, y: number) {
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
 }
 
-function setupTestEnemies() { spawnDummyEnemy(30, 40); spawnDummyEnemy(130, 40) }
+//function setupTestEnemies() { spawnDummyEnemy(30, 40); spawnDummyEnemy(130, 40) }
+function setupTestEnemies() {
+    // Use the real enemy spawn path so Phaser sees monsterId, phase, dir, etc.
+    spawnEnemyOfKind("imp blue", 30, 40, /*elite=*/ false);
+    spawnEnemyOfKind("imp blue", 130, 40, /*elite=*/ false);
+}
+
 
 function getEnemyIndex(enemy: Sprite) { for (let i = 0; i < enemies.length; i++) if (enemies[i] == enemy) return i; return -1 }
 
@@ -5142,8 +5438,13 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number) {
     sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
     updateEnemyHPBar(eIndex)
     flashEnemyOnDamage(enemy)
-    if (hp <= 0) enemy.destroy(effects.disintegrate, 200)
+    if (hp <= 0) {
+        // NEW: flag this so Phaser can play a death animation
+        sprites.setDataString(enemy, "phase", "death")
+        enemy.destroy(effects.disintegrate, 200)
+    }
 }
+
 
 
 
@@ -5379,7 +5680,7 @@ game.onUpdate(function () {
 
     // NEW: enforce collisions with logical wall tiles
     resolveTilemapCollisions()
-    
+
     for (let hi = 0; hi < heroes.length; hi++) { const h = heroes[hi]; if (h) debugAgilityDashProgress(h, hi) }
     updateEnemyHoming(now)             // AI + attacks
 
@@ -5442,9 +5743,9 @@ game.onUpdateInterval(80, function () {
 });
 
 
-game.onUpdateInterval(500, function () { 
+game.onUpdateInterval(500, function () {
     if (!HeroEngine._isStarted()) return
-    regenHeroManaAll(2) 
+    regenHeroManaAll(2)
 })
 
 
@@ -5484,67 +5785,135 @@ function showWaveBanner(waveIdx: number) {
 // The interval below is the *tick* rate; WAVE_DEFS controls spawn density + types.
 const ENEMY_SPAWN_INTERVAL_MS = 1200
 
-const WAVE_DEFS = [
+    const POSSIBLE_MONSTERS = [
+
+        "bat",
+        "bee",
+        "beetle",
+        "big worm",
+        "dragon red",
+        "eyeball",
+        "ghost",
+        "goblin",
+        "golem",
+        "golem white",
+        "googon",
+        "imp blue",
+        "imp green",
+        "imp red",
+        "man eater flower",
+        "minotaur red",
+        "pumpking",
+        "slime",
+        "slime black",
+        "slime blue",
+        "slime brown",
+        "slime green",
+        "slime lightblue",
+        "slime projectile",
+        "slime red",
+        "slime violet",
+        "slime yellow",
+        "small worm",
+        "snake",
+        "spider black",
+        "spider black yellow",
+        "spider blue",
+        "spider blue orange",
+        "spider blue silver",
+        "spider green",
+        "spider green yellow dot",
+        "spider green yellow stripe",
+        "spider red",
+        "spider red yellow",
+        "spider silver red",
+        "wolf light brown"
+    ]
+
+    const WAVE_DEFS = [
     {
         label: "Wave 1 – Warmup",
-        durationMs: 12000,
+        durationMs: 1200,
         breakMs: 4000,
-        spawnChance: 0.5,              // 50% of ticks spawn
-        kinds: ["GRUNT"],
+        spawnChance: 0.5,
+        // TODO: use your real monster ids here
+        kinds: ["imp blue", "bat"],
         weights: [1]
     },
     {
         label: "Wave 2 – More Grunts",
-        durationMs: 14000,
+        durationMs: 2400,
         breakMs: 4000,
-        spawnChance: 0.75,             // 75% of ticks spawn
-        kinds: ["GRUNT"],
+        spawnChance: 0.75,
+        kinds: ["imp blue"],
         weights: [1]
     },
     {
-        label: "Wave 3 – Runners Join",
-        durationMs: 16000,
-        breakMs: 4500,
-        spawnChance: 0.8,
-        kinds: ["GRUNT", "RUNNER"],
-        weights: [3, 1]                // few runners
+        label: "Wave 3 – Runners appear",
+        durationMs: 2400,
+        breakMs: 5000,
+        spawnChance: 0.9,
+        kinds: ["imp blue", "spider green"],
+        weights: [3, 2]
     },
     {
-        label: "Wave 4 – Brutes Arrive",
-        durationMs: 18000,
-        breakMs: 4500,
-        spawnChance: 0.9,
-        kinds: ["GRUNT", "RUNNER", "BRUTE"],
-        weights: [3, 2, 1]
+        label: "Wave 4 – Big guys",
+        durationMs: 2400,
+        breakMs: 5000,
+        spawnChance: 1.0,
+        kinds: ["imp blue", "spider green", "big worm"],
+        weights: [2, 2, 2]
     },
     {
         label: "Wave 5 – Elite Mix",
-        durationMs: 20000,
+        durationMs: 2400,
         breakMs: 5000,
         spawnChance: 1.0,
-        kinds: ["GRUNT", "RUNNER", "BRUTE", "ELITE"],
+        kinds: ["imp blue", "spider green", "big worm", "dragon red"],
         weights: [3, 3, 2, 2]
     }
 ]
+
 
 // Wave state
 let currentWaveIndex = 0
 let currentWaveIsBreak = true
 let wavePhaseUntilMs = game.runtime() + 1000 // short delay before first wave
 
+// Debug: cycle through all POSSIBLE_MONSTERS on Wave 1
+let debugMonsterIndex = 0
+
+
+
 function pickEnemyKindForWave(waveIdx: number): string {
-    if (!WAVE_DEFS || WAVE_DEFS.length == 0) return "GRUNT"
+    // Returns a REAL monster id (as used by WAVE_DEFS.kinds).
+    if (!WAVE_DEFS || WAVE_DEFS.length == 0) return "imp blue" // fallback
+
     if (waveIdx < 0) waveIdx = 0
     if (waveIdx >= WAVE_DEFS.length) waveIdx = WAVE_DEFS.length - 1
+
+    // --- WAVE 1 DEBUG MODE ---
+    // Wave 0: cycle deterministically through POSSIBLE_MONSTERS.
+    if (waveIdx === 0 && POSSIBLE_MONSTERS && POSSIBLE_MONSTERS.length > 0) {
+        const idx = debugMonsterIndex % POSSIBLE_MONSTERS.length
+        const name = POSSIBLE_MONSTERS[idx]
+        debugMonsterIndex++
+        return name
+    }
+    // --- END DEBUG MODE ---
+
     const w = WAVE_DEFS[waveIdx]
-    if (!w || !w.kinds || !w.weights || w.kinds.length == 0) return "GRUNT"
+    if (!w || !w.kinds || !w.weights || w.kinds.length == 0) {
+        return WAVE_DEFS[0].kinds[0]
+    }
 
     let total = 0
     for (let i = 0; i < w.weights.length; i++) {
         const wt = w.weights[i] | 0
         if (wt > 0) total += wt
     }
-    if (total <= 0) return "GRUNT"
+    if (total <= 0) return w.kinds[0]
+
     let roll = randint(1, total)
     for (let i = 0; i < w.kinds.length; i++) {
         const wt = w.weights[i] | 0
@@ -5552,8 +5921,10 @@ function pickEnemyKindForWave(waveIdx: number): string {
         if (roll <= wt) return w.kinds[i]
         roll -= wt
     }
-    return "GRUNT"
+
+    return w.kinds[0]
 }
+
 
 game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     if (!HeroEngine._isStarted()) return
@@ -5564,7 +5935,10 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     if (!WAVE_DEFS || WAVE_DEFS.length == 0) {
         const idx = randint(0, enemySpawners.length - 1)
         const s = enemySpawners[idx]
-        spawnEnemyOfKind("GRUNT", s.x, s.y)
+        // Spawns a default real monster id if you ever run with no WAVE_DEFS
+        console.log("Doing a default imp blue call to spawn enemy Of Kind")
+        spawnEnemyOfKind("imp blue", s.x, s.y)
+        
         return
     }
 
@@ -5607,6 +5981,7 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     const idx = randint(0, enemySpawners.length - 1)
     const s = enemySpawners[idx]
     const kind = pickEnemyKindForWave(currentWaveIndex)
+    console.log("Making a call to spawn enemy Of Kind")
     spawnEnemyOfKind(kind, s.x, s.y)
 })
 

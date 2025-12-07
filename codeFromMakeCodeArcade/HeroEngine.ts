@@ -206,7 +206,59 @@ namespace SpriteKind {
 
 
 
+const HERO_DATA = {
+    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
+    FAMILY: "family", BUTTON: "btn",
+    TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
+    INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
+    TARGET_START_MS: "tStart", TARGET_LOCK_MS: "tLock",
+    IS_CONTROLLING_SPELL: "isCtrlSpell",
+    COMBO_COUNT: "comboCount", COMBO_MULT: "comboMult",
+    LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
+    IFRAME_UNTIL: "iUntil",
+    AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
+    AGI_COMBO_UNTIL: "aComboUntil",    // when AGI combo window ends (ms)
+    STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
+    OWNER: "owner",                    // which player "owns" this hero
+
+    // NEW: engine-side state we want exposed
+    BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
+    MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
+    DAMAGE_AMP_MULT: "dmgMult",        // heroDamageAmpMult[heroIndex]
+    BUFF_JSON: "buffsJson",             // JSON snapshot of heroBuffs[heroIndex]
+
+    // NEW: for tile-collision rollback
+    PREV_X: "prevX",
+    PREV_Y: "prevY"
+}
+
+
+const ENEMY_DATA = {
+    HP: "hp",
+    MAX_HP: "maxHp",
+
+    SPEED: "spd",                 // base movement speed for homing AI
+    TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
+    REGEN_PCT: "regenPct",        // % regen per tick (if used later)
+
+    SLOW_PCT: "slowPct",
+    SLOW_UNTIL: "slowUntil",
+    WEAKEN_PCT: "weakPct",
+    WEAKEN_UNTIL: "weakUntil",
+    KNOCKBACK_UNTIL: "kbUntil",
+
+    ATK_PHASE: "atkPhase",        // current attack state (enum/int)
+    ATK_UNTIL: "atkUntil",        // time current attack phase ends
+    ATK_COOLDOWN_UNTIL: "atkCd",  // when enemy can attack again
+
+    NAME: "name",                 // string: logical name / kind (e.g. "GRUNT")
+    FAMILY: "family"              // string: higher-level family (e.g. "slime")
+}
+
+
+
 namespace HeroEngine {
+
 
     // Block-safe function type for student logic
     export type HeroLogicFn = (
@@ -234,15 +286,103 @@ namespace HeroEngine {
         return [FAMILY.STRENGTH, 0, 0, 0, 0, ELEM.NONE, ANIM.ID.IDLE];
     }
 
+function defaultHeroAnim(
+    hero: Sprite,
+    animKey: string,
+    timeMs: number,
+    direction: string
+): void {
 
-    function defaultHeroAnim(
-        hero: Sprite,
-        animKey: string,
-        timeMs: number,
-        direction: string
-    ): void {
-        // no-op default
-    }
+    // OWNER, not index, determines which hero it is
+    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER);
+
+    // Hardcoded idle sprites for each hero
+    // These NEVER appear in student project, so Blocks stays clean.
+
+    const idle1 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 2 2 f f f . . . .
+        . . . f f f 2 2 2 2 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 2 2 2 2 2 2 e e f . .
+        . . f e 2 f f f f f f 2 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 4 4 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 2 2 2 2 2 2 f 4 e . .
+        . . 4 d f 2 2 2 2 2 2 f d 4 . .
+        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+    const idle2 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f a a f f f . . . .
+        . . . f f f a a a a f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e a a a a a a e e f . .
+        . . f e a f f f f f f a e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 6 6 f b f e f f .
+        . f e e a 6 f d d f 6 a e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 4 4 4 4 4 4 f 4 e . .
+        . . 4 d f 4 4 4 4 4 4 f d 4 . .
+        . . 4 4 f a a a a a a f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+    const idle3 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 7 7 f f f . . . .
+        . . . f f f 7 7 7 7 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 7 7 7 7 7 7 e e f . .
+        . . f e 7 f f f f f f 7 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 8 8 f b f e f f .
+        . f e e 4 8 f d d f 8 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 7 7 7 7 7 7 f 4 e . .
+        . . 4 d f 7 7 7 7 7 7 f d 4 . .
+        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+    const idle4 = img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 8 8 f f f . . . .
+        . . . f f f 8 8 8 8 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 8 8 8 8 8 8 e e f . .
+        . . f e 8 f f f f f f 8 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 1 1 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 8 8 8 8 8 8 f 4 e . .
+        . . 4 d f 8 8 8 8 8 8 f d 4 . .
+        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `;
+
+    if (owner === 1) hero.setImage(idle1);
+    else if (owner === 2) hero.setImage(idle2);
+    else if (owner === 3) hero.setImage(idle3);
+    else if (owner === 4) hero.setImage(idle4);
+    else hero.setImage(idle1);
+}
+
+
 
     // Strongly typed hooks now
     export let hero1LogicHook: any = defaultHeroLogic;
@@ -392,7 +532,7 @@ ensureHeroSpriteKinds();
 const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
 
 // Elements
-const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, HEAL: 5 }
+const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5 }
 
 // --------------------------------------------------------------
 // Animation keys
@@ -459,6 +599,7 @@ const AGI_LANDING_BUFFER_MS = 80
 const HERO_DAMAGE_FLASH_MS = 150
 const AGI_MIN_VISUAL_LEN = 3
 
+
 // --------------------------------------------------------------
 // HERO_DATA – sprite data schema for hero sprites
 // Ownership:
@@ -468,32 +609,6 @@ const AGI_MIN_VISUAL_LEN = 3
 //                 combo handling, AGI/STR/INT modules, auras
 // --------------------------------------------------------------
 
-const HERO_DATA = {
-    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
-    FAMILY: "family", BUTTON: "btn",
-    TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
-    INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
-    TARGET_START_MS: "tStart", TARGET_LOCK_MS: "tLock",
-    IS_CONTROLLING_SPELL: "isCtrlSpell",
-    COMBO_COUNT: "comboCount", COMBO_MULT: "comboMult",
-    LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
-    IFRAME_UNTIL: "iUntil",
-    AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
-    AGI_COMBO_UNTIL: "aComboUntil",    // when AGI combo window ends (ms)
-    STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
-    OWNER: "owner",                    // which player "owns" this hero
-
-    // NEW: engine-side state we want exposed
-    BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
-    MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
-    DAMAGE_AMP_MULT: "dmgMult",        // heroDamageAmpMult[heroIndex]
-    BUFF_JSON: "buffsJson",             // JSON snapshot of heroBuffs[heroIndex]
-
-    // NEW: for tile-collision rollback
-    PREV_X: "prevX",
-    PREV_Y: "prevY"
-}
-
 
 // --------------------------------------------------------------
 // ENEMY_DATA – sprite data schema for enemies
@@ -502,24 +617,77 @@ const HERO_DATA = {
 //   • Read by:    updateEnemyHoming(), updateEnemyEffects(),
 //                 applyDamageToEnemyIndex(), wave logic
 // --------------------------------------------------------------
-const ENEMY_DATA = {
-    HP: "hp",
-    MAX_HP: "maxHp",
 
-    SPEED: "spd",                 // base movement speed for homing AI
-    TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
-    REGEN_PCT: "regenPct",        // % regen per tick (if used later)
+// List of visual monster variants to cycle through on spawn.
+// You can (and should) extend this to all ~40 you care about.
+// These names should match whatever your Phaser wrapper expects.
+const MONSTER_VISUAL_SEQUENCE = [
+    "bat",
+    "bee",
+    "beetle",
+    "big worm",
+    "eyeball",
+    "ghost",
+    "goblin",
+    "golem",
+    "golem white",
+    "googon",
+    "imp blue",
+    "imp green",
+    "imp red",
+    "man eater flower",
+    "minotaur red",
+    "pumpking",
+    "slime",
+    "slime black",
+    "slime blue",
+    "slime brown",
+    "slime green",
+    "slime lightblue",
+    "slime red",
+    "slime violet",
+    "slime yellow",
+    "small worm",
+    "snake",
+    "wolf light brown"
+]
 
-    SLOW_PCT: "slowPct",
-    SLOW_UNTIL: "slowUntil",
-    WEAKEN_PCT: "weakPct",
-    WEAKEN_UNTIL: "weakUntil",
-    KNOCKBACK_UNTIL: "kbUntil",
+// Index for cycling
+let monsterVisualIndex = 0
 
-    ATK_PHASE: "atkPhase",        // current attack state (enum/int)
-    ATK_UNTIL: "atkUntil",        // time current attack phase ends
-    ATK_COOLDOWN_UNTIL: "atkCd"   // when enemy can attack again
+function nextMonsterVisualName(): string {
+    if (MONSTER_VISUAL_SEQUENCE.length === 0) return "slime"
+    const name = MONSTER_VISUAL_SEQUENCE[monsterVisualIndex]
+    monsterVisualIndex = (monsterVisualIndex + 1) % MONSTER_VISUAL_SEQUENCE.length
+    return name
 }
+
+function familyFromVisualName(name: string): string {
+    const lower = name.toLowerCase()
+
+    if (lower.indexOf("slime") >= 0) return "slime"
+    if (lower.indexOf("spider") >= 0) return "spider"
+    if (lower.indexOf("worm") >= 0) return "worm"          // big / small worm
+    if (lower.indexOf("imp") >= 0) return "imp"
+    if (lower.indexOf("golem white") >= 0) return "golem_white"
+    if (lower.indexOf("golem") >= 0) return "golem"
+    if (lower.indexOf("bat") >= 0) return "bat"
+    if (lower.indexOf("bee") >= 0) return "bee"
+    if (lower.indexOf("beetle") >= 0) return "beetle"
+    if (lower.indexOf("eyeball") >= 0) return "eyeball"
+    if (lower.indexOf("ghost") >= 0) return "ghost"
+    if (lower.indexOf("goblin") >= 0) return "goblin"
+    if (lower.indexOf("googon") >= 0) return "googon"
+    if (lower.indexOf("minotaur") >= 0) return "minotaur"
+    if (lower.indexOf("pumpking") >= 0) return "pumpking"
+    if (lower.indexOf("wolf") >= 0) return "wolf"
+
+    // Fallback: use the whole name as its own family
+    return name
+}
+
+
+
 
 // --------------------------------------------------------------
 // PROJ_DATA – sprite data schema for hero projectiles
@@ -1236,7 +1404,9 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
         ];
     }
 
-    let out: number[];
+    //let out: number[];
+    let out: any[];
+    
     try {
         out = fn(button, heroIndex, localEnemies, localHeroes);
     } catch (e) {
@@ -1269,8 +1439,34 @@ HeroEngine.runHeroLogicForHeroHook = runHeroLogicForHero;
 
 
 
+    // Positional unpack (allow strings or numbers from Blocks)
+    // 0: family, 1–4: trait pools, 5: element, 6: anim
+    function coerceFamily(val: any): number {
+        if (typeof val === "string") {
+            const s = val.toLowerCase()
+            if (s === "strength") return FAMILY.STRENGTH
+            if (s === "agility") return FAMILY.AGILITY
+            if (s === "intelligence" || s === "intellect") return FAMILY.INTELLECT
+            if (s === "support" || s === "heal") return FAMILY.HEAL
+        }
+        return (val | 0)
+    }
 
-
+    function coerceElement(val: any): number {
+        if (typeof val === "string") {
+            const s = val.toLowerCase()
+            if (s === "none") return ELEM.NONE
+            if (s === "grass" || s === "plant" || s === "plants") return ELEM.GRASS
+            if (s === "fire") return ELEM.FIRE
+            if (s === "water") return ELEM.WATER
+            if (s === "electric" || s === "lightning") return ELEM.ELECTRIC
+            // Earth support — you'll add ELEM.EARTH yourself
+            if (s === "earth" && (ELEM as any).EARTH !== undefined) {
+                return (ELEM as any).EARTH
+            }
+        }
+        return (val | 0)
+    }
 
 
 function calculateMoveStatsForFamily(family: number, button: string, traits: number[]) {
@@ -1328,7 +1524,8 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         );
     }
 
-    let out: number[];
+    //let out: number[];
+    let out: any[]; //So we can get strings for the names from students
     try {
         out = hook(heroIndex, button);
     } catch (e) {
@@ -1359,14 +1556,24 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return;
     }
 
+
+    const family = coerceFamily(out[0])      // FAMILY
+    const t1 = out[1] | 0                    // TRAIT1
+    const t2 = out[2] | 0                    // TRAIT2
+    const t3 = out[3] | 0                    // TRAIT3
+    const t4 = out[4] | 0                    // TRAIT4
+    const element = coerceElement(out[5])    // ELEMENT
+
+
+        
     // Positional unpack (avoid OUT.* at runtime in Arcade)
-    const family = out[0] | 0;  // FAMILY
-    const t1 = out[1] | 0;      // TRAIT1
-    const t2 = out[2] | 0;      // TRAIT2
-    const t3 = out[3] | 0;      // TRAIT3
-    const t4 = out[4] | 0;      // TRAIT4
-    const element = out[5] | 0; // ELEMENT
-    const animId = out[6] | 0;  // ANIM_ID
+//    const family = out[0] | 0;  // FAMILY
+//    const t1 = out[1] | 0;      // TRAIT1
+//    const t2 = out[2] | 0;      // TRAIT2
+//    const t3 = out[3] | 0;      // TRAIT3
+//    const t4 = out[4] | 0;      // TRAIT4
+//    const element = out[5] | 0; // ELEMENT
+//    const animId = out[6] | 0;  // ANIM_ID
 
 
 
@@ -1384,8 +1591,20 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
 
-    const animKey = animIdToKey(animId)
+    //const animKey = animIdToKey(animId)
+    // Animation ID: allow either a free-form string from Blocks or a numeric ID
+    let animKey: string
+    const rawAnim = out[6]
+    if (typeof rawAnim === "string") {
+        // Students can return any animation key they like, e.g. "idle", "FireSlash", "MyWeirdAnim"
+        animKey = rawAnim
+    } else {
+        const animId = (rawAnim | 0)
+        animKey = animIdToKey(animId)
+    }
 
+
+    
     // Trait-driven move stats (per family)
     const stats = calculateMoveStatsForFamily(family, button, traits)
 
@@ -1874,7 +2093,7 @@ function regenHeroManaAll(percentOfMax: number) {
         const maxM = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxM <= 0) continue
         let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
         let gain = Math.idiv(maxM * percentOfMax, 100)
-        if (gain < 1 && mana < maxM) gain = 1
+        if (gain < 1 && mana < maxM) gain = 5 //1 percent normally, 5 for letting students test
         mana = Math.min(maxM, mana + gain)
         sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
         updateHeroManaBar(i)
@@ -4724,25 +4943,36 @@ function enemyImageForKind(kind: string): Image {
     return imgBase
 }
 
-function spawnEnemyOfKind(kind: string, x: number, y: number) {
-    const spec = (ENEMY_KIND as any)[kind] || ENEMY_KIND.GRUNT
-    const enemy = sprites.create(enemyImageForKind(kind), SpriteKind.Enemy)
-    enemy.x = x; enemy.y = y; enemy.z = 10
-    const eIndex = enemies.length; enemies.push(enemy)
-    initEnemyHP(eIndex, enemy, spec.maxHP)
-    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, spec.speed)
-    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, spec.touchDamage)
-    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
-}
+    function spawnEnemyOfKind(kind: string, x: number, y: number) {
+        const spec = (ENEMY_KIND as any)[kind] || ENEMY_KIND.GRUNT
+        const enemy = sprites.create(enemyImageForKind(kind), SpriteKind.Enemy)
+        enemy.x = x
+        enemy.y = y
+        enemy.z = 10
 
+        // NEW: get the next visual name in the cycle & derive family
+        const visualName = nextMonsterVisualName()
+        const family = familyFromVisualName(visualName)
+
+        sprites.setDataString(enemy, ENEMY_DATA.NAME, visualName)
+        sprites.setDataString(enemy, ENEMY_DATA.FAMILY, family)
+
+        const eIndex = enemies.length
+        enemies.push(enemy)
+
+        initEnemyHP(eIndex, enemy, spec.maxHP)
+        sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, spec.speed)
+        sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, spec.touchDamage)
+        sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+    }
 
 // Corner spawners
 let enemySpawners: Sprite[] = []

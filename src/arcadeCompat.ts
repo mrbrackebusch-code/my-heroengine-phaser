@@ -5,6 +5,12 @@
   Step 2: wire these stubs to Phaser / real game loop.
 */
 
+// arcadeCompat.ts
+//import { tryAttachMonsterSprite } from "./monsterAnimGlue";
+
+// ✅ create a module object called `monsterAnimGlue`
+import * as monsterAnimGlue from "./monsterAnimGlue";
+
 
 // Put this near the top of arcadeCompat.ts with your other debug toggles
 const DEBUG_SETFLAG = false;
@@ -804,7 +810,7 @@ namespace sprites {
     // ---- EXTRA DEBUG FOR PIXEL SHAPES / AURAS / PROJECTILES ----
 
     // Master switch
-    const DEBUG_SPRITE_PIXELS = false;
+    //const DEBUG_SPRITE_PIXELS = false;
 
     // If true, log *everything* (ignores per-role toggles & limits)
     const DEBUG_SPRITE_PIXELS_ALL = false;
@@ -969,7 +975,6 @@ namespace sprites {
 
 
 
-
 function _attachNativeSprite(s: Sprite): void {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
@@ -1013,9 +1018,45 @@ function _attachNativeSprite(s: Sprite): void {
             "[_attachNativeSprite] START",
             "spriteId=", s.id,
             "w,h=", w, h,
-            "pixelsLen=", w * h
+            "pixelsLen=", w * h,
         );
-    }
+
+
+
+        // --- LPC DEBUG: inspect sprite data and existing texture ---
+//        const dataAny = (sprite as any).data;
+//        let dataDump: any = undefined;
+//        let dataKeys: string[] = [];
+
+//        try {
+//            if (dataAny) {
+//                if (typeof dataAny.getAllKeys === "function") {
+//                   dataKeys = dataAny.getAllKeys();
+//                } else if (typeof dataAny.keys === "function") {
+//                    dataKeys = dataAny.keys();
+//                }
+//
+//                dataDump = {};
+//                for (const k of dataKeys) {
+//                    try {
+//                       dataDump[k] = dataAny.get(k);
+//                    } catch { /* ignore */ }
+//                }
+//            }
+ //       } catch { /* ignore */ }
+//
+//        console.log("[LPC DEBUG] _attachNativeSprite candidate", {
+//            spriteId,
+//            kind: (sprite as any).kind,
+ //           texKey: (native as any).texture && (native as any).texture.key,
+ //           dataKeys,
+ //           dataDump,
+ //       });
+
+
+   }
+
+
 
     // --- TEXTURE HANDLING -------------------------------------------------
     const tTex0 = _hostPerfNowMs();
@@ -1060,6 +1101,10 @@ function _attachNativeSprite(s: Sprite): void {
 
     const tTex1 = _hostPerfNowMs();
     _frameAttachTexMs += (tTex1 - tTex0);
+
+
+
+
 
     // --- PIXEL UPLOAD -----------------------------------------------------
 
@@ -1140,7 +1185,17 @@ function _attachNativeSprite(s: Sprite): void {
 
 
 
-        // --- NATIVE IMAGE HANDLING --------------------------------------------
+
+
+
+
+
+
+
+
+    // --- NATIVE IMAGE / SPRITE HANDLING --------------------------------------------
+
+    // If a native already exists but its size changed, destroy it so we can recreate.
     if (s.native) {
         const n: any = s.native;
         const nativeW = n.width | 0;
@@ -1163,14 +1218,24 @@ function _attachNativeSprite(s: Sprite): void {
     let native = s.native as any;
     let didCreate = false;
 
-    if (!s.native) {
-        const n = sc.add.image(s.x, s.y, texKey);
+    if (!native) {
+        // Decide whether this should be an animatable Sprite or a simple Image.
+        const role = _classifySpriteRole((s.kind as number) || 0, Object.keys((s as any).data || {}));
+        const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
+
+        // For enemies/actors, use Sprite so LPC animations can run.
+        const n = isEnemyLike
+            ? sc.add.sprite(s.x, s.y, texKey)
+            : sc.add.image(s.x, s.y, texKey);
+
         n.setOrigin(0.5, 0.5);
         s.native = n;
+        native = n;
+        didCreate = true;
 
         if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log(
-                "[WRAP-NATIVE] create sprite",
+                isEnemyLike ? "[WRAP-NATIVE] create enemy sprite" : "[WRAP-NATIVE] create sprite",
                 "| id", s.id,
                 "| kind", s.kind,
                 "| texKey", texKey,
@@ -1178,28 +1243,26 @@ function _attachNativeSprite(s: Sprite): void {
                 "| native.height", n.height
             );
         }
-        didCreate = true;
-        native = n;
+    } else {
+        // Keep native in sync with Arcade sprite position.
+        native.setPosition(s.x, s.y);
     }
 
     // We already computed nonZero in the main upload loop.
-    // Keep that as the authoritative value for visibility logic.
     let nonZeroAttach = (s as any)._lastNonZeroPixels as number;
 
-    // Optional extra pixel-debug scan (second full pass) – gated.
     if (DEBUG_SPRITE_PIXELS) {
         nonZeroAttach = _debugSpritePixels(s, "attach#" + _attachCallCount);
         (s as any)._lastNonZeroPixels = nonZeroAttach;
     }
 
-    // Extra: detailed projectile log
-    if (DEBUG_PROJECTILE_NATIVE && s.native) {
-        const dataKeys = Object.keys(s.data || {});
+    if (DEBUG_PROJECTILE_NATIVE && native) {
+        const dataKeys2 = Object.keys((s as any).data || {});
         const kind = s.kind as number | undefined;
         const kindName = kind === undefined ? "undefined" : _getSpriteKindName(kind);
-        const role = _classifySpriteRole(kind || 0, dataKeys);
+        const role2 = _classifySpriteRole(kind || 0, dataKeys2);
 
-        if (role === "PROJECTILE") {
+        if (role2 === "PROJECTILE") {
             console.log(
                 "[WRAP-NATIVE] create projectile",
                 "| id", s.id,
@@ -1207,7 +1270,7 @@ function _attachNativeSprite(s: Sprite): void {
                 "| texKey", texKey,
                 "| x,y", s.x, s.y,
                 "| z", s.z,
-                "| visible", s.native.visible,
+                "| visible", native.visible,
                 "| img w,h", w, h,
                 "| nonZeroAttach", nonZeroAttach
             );
@@ -1277,10 +1340,15 @@ function _attachNativeSprite(s: Sprite): void {
         }
 
 
-        // NEW:
+        
+    // Optional extra pixel-debug scan (second full pass) – gated.
+    if (DEBUG_SPRITE_PIXELS) {
         const nonZeroCreate = _debugSpritePixels(s, "create");
         (s as any)._lastNonZeroPixels = nonZeroCreate;
+    }
 
+
+        
         // AFTER you've counted nonZero pixels for s.image
         if (s.kind === 12 && nonZeroCreate === 0 && s.native) {
             console.log(`[AURA] id=${s.id} image went fully blank -> hiding native sprite`);
@@ -1416,8 +1484,28 @@ function _debugDumpSpritePixels(s: Sprite, label: string) {
 
 
 
+function _propagateLabelDataToNative(s: Sprite): void {
+    const native: any = s.native;
+    if (!native || typeof native.setData !== "function") return;
 
+    const data = s.data || {};
 
+    // Prefer explicit name; fall back to monsterId or enemyName
+    const name =
+        (data["name"] as any) ??
+        (data["monsterId"] as any) ??
+        (data["enemyName"] as any);
+
+    if (name !== undefined && name !== null && name !== "") {
+        native.setData("name", name);
+    }
+    if (data["phase"] !== undefined) {
+        native.setData("phase", data["phase"]);
+    }
+    if (data["dir"] !== undefined) {
+        native.setData("dir", data["dir"]);
+    }
+}
 
 // ======================================================
 // PHASER NATIVE SPRITE SYNC
@@ -1427,6 +1515,8 @@ function _debugDumpSpritePixels(s: Sprite, label: string) {
 // Put these at module scope (top of arcadeCompat.ts, near other globals)
 let _syncPerfFrames = 0;
 let _syncPerfLastReportMs = 0;
+
+
 
 
 // ======================================================
@@ -1573,6 +1663,109 @@ export function _syncNativeSprites(): void {
 
         native.x = s.x;
         native.y = s.y;
+
+
+        // If this sprite is an enemy (or actor), mirror label data → native.
+        // That way Phaser can read name/phase/dir directly from the native sprite.
+        const dataKeys = Object.keys(s.data || {});
+        const role = _classifySpriteRole(s.kind, dataKeys);
+
+
+
+
+
+
+
+        if (role === "ENEMY" || role === "ACTOR") {
+            // Make sure the snapshot has a real data bag we can mutate
+            if (!(s as any).data) (s as any).data = {};
+            const data: any = (s as any).data;
+
+            const name =
+                data["name"] ??
+                data["monsterId"] ??
+                data["enemyName"] ??
+                "";
+            // ...
+
+            const phase = ((data["phase"] as string) || "walk") as MonsterAnimPhase;
+
+            let dirForAnim = (data["dir"] as string | undefined) as MonsterDirection | undefined;
+            if (!dirForAnim) {
+                if (s.vx > 0)      dirForAnim = "right" as MonsterDirection;
+                else if (s.vx < 0) dirForAnim = "left"  as MonsterDirection;
+                else if (s.vy < 0) dirForAnim = "up"    as MonsterDirection;
+                else               dirForAnim = "down"  as MonsterDirection;
+            }
+
+            // --- NEW ---
+            (data as any)["name"]  = name;
+            (data as any)["phase"] = phase;
+            (data as any)["dir"]   = dirForAnim;
+            // ------------
+
+
+
+            // Pull from the engine sprite’s data bag (same object as `data`)
+            const srcData: any = (s as any).data || {};
+
+            // Mirror anything we care about back into the main data bag
+            if (srcData["monsterId"] !== undefined) data["monsterId"] = srcData["monsterId"];
+            if (srcData["name"]      !== undefined) data["name"]      = srcData["name"];
+            if (srcData["phase"]     !== undefined) data["phase"]     = srcData["phase"];
+            if (srcData["dir"]       !== undefined) data["dir"]       = srcData["dir"];
+            if (srcData["hp"]        !== undefined) data["hp"]        = srcData["hp"];
+            if (srcData["maxHp"]     !== undefined) data["maxHp"]     = srcData["maxHp"];
+
+            _propagateLabelDataToNative(s);  // now this sees name/phase/dir on s.data
+
+
+
+            if (role === "ENEMY" && _syncCallCount <= 200) {
+                console.log(
+                    "[SYNC.ENEMY]",
+                    "id=", s.id,
+                    "kind=", s.kind,
+                    "kindName=", SpriteKind[s.kind] || s.kind,
+                    "monsterId=", srcData["monsterId"],
+                    "name=", srcData["name"],
+                    "phase=", srcData["phase"],
+                    "dir=", srcData["dir"],
+                    "hp=", srcData["hp"],
+                    "maxHp=", srcData["maxHp"]
+                );
+            }
+
+                const nativeAny: any = s.native;
+                const enemy: any = nativeAny;
+                if (!enemy) {
+                    continue;
+                }
+
+                // --- NEW: drive LPC monster animation on this enemy sprite ---
+                const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
+                if (role === "ENEMY" && glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
+                    glueAny.applyMonsterAnimationForSprite(enemy);
+                }
+                // --------------------------------------------------------------
+
+                // Debug what we're actually going to drive monsterAtlas with
+                if (_syncCallCount <= 200) {
+                    console.log("[sync enemy] name=", name, "phase=", phase, "dir=", dirForAnim, "texKey=", enemy.texture?.key);
+                }
+
+                continue;
+        }
+
+
+
+
+
+
+
+
+
+
 
         // EXTRA DEBUG: raw projectile state before visibility logic
         if (DEBUG_PROJECTILE_NATIVE && shouldLog && s.kind === 11) {

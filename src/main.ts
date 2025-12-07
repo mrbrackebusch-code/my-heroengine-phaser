@@ -4,6 +4,15 @@ import Phaser from "phaser";
 
 console.log(">>> [main.ts] dynamic-import version loaded");
 
+import {
+    preloadMonsterSheets,
+    buildMonsterAtlas,
+    type MonsterAtlas
+} from "./monsterAtlas";
+
+import { applyMonsterAnimationForSprite } from "./monsterAnimGlue";
+
+
 
 // Somewhere near the top of main.ts:
 declare const globalThis: any;
@@ -49,9 +58,18 @@ function applyUrlProfileToGlobals() {
 
 
 class HeroScene extends Phaser.Scene {
+
+    private monsterAtlas?: MonsterAtlas;
+
     constructor() {
         super("hero");
     }
+
+    preload() {
+        console.log(">>> [HeroScene.preload] loading LPC monster sheets");
+        preloadMonsterSheets(this);
+    }
+
 
     async create() {
         const g = globalThis as any;
@@ -221,9 +239,28 @@ class HeroScene extends Phaser.Scene {
         console.log(">>> [HeroScene.create] imports finished");
 
 
+        // --- Build LPC monster atlas after assets + HeroEngine are ready ---
+        try {
+            this.monsterAtlas = buildMonsterAtlas(this);
+            (this as any).__monsterAtlas = this.monsterAtlas;
+            (globalThis as any).__monsterAtlas = this.monsterAtlas;
+
+            console.log(
+                ">>> [HeroScene.create] monster atlas built; ids =",
+                Object.keys(this.monsterAtlas)
+            );
+        } catch (e) {
+            console.error(">>> [HeroScene.create] FAILED to build monster atlas", e);
+        }
+
 
 
     }
+
+
+
+
+
 
     update(time: number, delta: number) {
         const gAny: any = (globalThis as any);
@@ -240,7 +277,25 @@ class HeroScene extends Phaser.Scene {
                 console.error(">>> [HeroScene.update] _tick ERROR:", e);
             }
         }
+
+        // --- NEW: drive monster animations from name/phase/dir ---
+        this.children.each((obj: Phaser.GameObjects.GameObject) => {
+            // Only interested in sprites that can play animations
+            const sprite = obj as Phaser.GameObjects.Sprite;
+            if (!sprite.anims || typeof sprite.getData !== "function") return;
+
+            const monsterName = sprite.getData("name");
+            if (!monsterName) return; // not labeled as a monster
+
+            applyMonsterAnimationForSprite(sprite);
+        });
+
+
     }
+
+
+
+
 }
 
 
