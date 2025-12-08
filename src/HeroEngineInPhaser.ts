@@ -5548,8 +5548,9 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 }
 
 
-let _lastEnemyHomingLogMs = 0
 
+
+let _lastEnemyHomingLogMs = 0
 
 function updateEnemyHoming(nowMs: number) {
     // Build a list of live heroes from the existing heroes[] array
@@ -5584,6 +5585,17 @@ function updateEnemyHoming(nowMs: number) {
         if (deathUntil > 0) {
             // While in death phase, don't move; once the timer expires, destroy and clear arrays.
             if (nowMs >= deathUntil) {
+
+                console.log(
+                "[enemyHoming] DEATH HOLD",
+                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                "phase=", sprites.readDataString(enemy, "phase") || "(none)",
+                "x=", enemy.x, "y=", enemy.y,
+                "t=", nowMs
+                )
+                
+                _lastEnemyHomingLogMs = nowMs
+
                 const bar = enemyHPBars[ei]
                 if (bar) {
                     bar.destroy()
@@ -5591,10 +5603,6 @@ function updateEnemyHoming(nowMs: number) {
                 }
                 enemy.destroy()
                 enemies[ei] = null
-            } else {
-                // Freeze while death animation is playing
-                enemy.vx = 0
-                enemy.vy = 0
             }
             continue
         }
@@ -5602,9 +5610,8 @@ function updateEnemyHoming(nowMs: number) {
         // --- Phase for animation: "walk" / "attack" / "death" ---
         let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
 
-        // Belt & suspenders:
-        // If we're flagged as "death" but somehow have no DEATH_UNTIL,
-        // freeze and skip steering so they don't glide.
+        // If we're in death phase but somehow don't have a timer (edge-case),
+        // freeze and skip steering so LPC can finish the animation.
         if (phaseStr === "death") {
             enemy.vx = 0
             enemy.vy = 0
@@ -5614,7 +5621,6 @@ function updateEnemyHoming(nowMs: number) {
         // --- Knockback: if still in knockback window, skip AI steering ---
         const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
         if (kbUntil > 0 && nowMs < kbUntil) {
-            // Knockback helper owns vx/vy; just don't fight it.
             continue
         }
 
@@ -5755,6 +5761,9 @@ function updateEnemyHoming(nowMs: number) {
             }
             if (attackMs < 150) attackMs = 150
 
+            // NEW: tell Phaser how long the attack animation should last
+            sprites.setDataNumber(enemy, "attackAnimMs", attackMs)
+
             // Enter attack state
             sprites.setDataString(enemy, "phase", "attack")
             sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
@@ -5889,18 +5898,14 @@ function updateEnemyHPBar(enemyIndex: number) {
 }
 
 
-
 function applyDamageToEnemyIndex(eIndex: number, amount: number) {
     if (eIndex < 0 || eIndex >= enemies.length) return
-    const enemy = enemies[eIndex]
-    if (!enemy) return
+    const enemy = enemies[eIndex]; if (!enemy) return
 
     let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
     hp = Math.max(0, hp - amount)
 
-    // Damage number (comment out if you prefer the caller to own this)
     showDamageNumber(enemy.x, enemy.y - 6, amount, "damage")
-
     sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
     updateEnemyHPBar(eIndex)
     flashEnemyOnDamage(enemy)
@@ -5911,28 +5916,27 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number) {
         if (existing > 0) return
 
         const now = game.runtime()
-        const deathDurationMs = 900  // tweak if you want longer-visible deaths
+        const deathDurationMs = 900  // tweak this and LPC death anim will auto-match
 
-        // Tell Phaser / monsterAnimGlue: switch to death anim
+        // Tell Phaser: switch to death anim
         sprites.setDataString(enemy, "phase", "death")
 
-        // Clear attack state completely
+        // Tell Phaser how long the death animation should last
+        sprites.setDataNumber(enemy, "deathAnimMs", deathDurationMs)
+
+        // Clear attack state
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
 
-        // Stop any motion
+        // Freeze motion
         enemy.vx = 0
         enemy.vy = 0
-
-        // Belt & suspenders: also clear knockback so they don't glide while dead
-        sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
 
         // Let updateEnemyHoming own the actual destroy timing
         sprites.setDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL, now + deathDurationMs)
     }
 }
-
 
 
 

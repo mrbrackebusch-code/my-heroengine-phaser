@@ -10,9 +10,10 @@ const LAST_ANIM_KEY  = "__monsterLastAnimKey";
 const LAST_PHASE_KEY = "__monsterLastPhase";
 const LAST_DIR_KEY   = "__monsterLastDir";
 
-const MONSTER_WALK_FPS   = 4;   // nice and chill walk
-const MONSTER_ATTACK_FPS = 4;  // a bit snappier
-const MONSTER_DEATH_FPS  = 4;   // slow enough to see the death
+// Fallback FPS if we don't have per-phase durations
+const FALLBACK_WALK_FPS   = 4;
+const FALLBACK_ATTACK_FPS = 4;
+const FALLBACK_DEATH_FPS  = 4;
 
 // ---------------------------------------------------------------------
 // Helper: locate the MonsterAtlas regardless of where we stashed it.
@@ -29,6 +30,51 @@ function getMonsterAtlasFromScene(scene: Phaser.Scene): MonsterAtlas | undefined
         // and global escape hatch
         ((globalThis as any).__monsterAtlas as MonsterAtlas | undefined)
     );
+}
+
+// ---------------------------------------------------------------------
+// Helper: per-phase duration → FPS
+// ---------------------------------------------------------------------
+function getPhaseDurationMs(phase: Phase, data: any): number {
+    if (!data || !data.get) return 0;
+
+    if (phase === "death") {
+        // Set by applyDamageToEnemyIndex on the MakeCode side
+        return (data.get("deathAnimMs") as number) || 0;
+    }
+
+    if (phase === "attack") {
+        // Set by updateEnemyHoming when an attack starts
+        return (data.get("attackAnimMs") as number) || 0;
+    }
+
+    return 0;
+}
+
+function computePhaseFps(
+    phase: Phase,
+    frameCount: number,
+    data: any
+): number {
+    const durationMs = getPhaseDurationMs(phase, data);
+
+    if (durationMs > 0 && frameCount > 0) {
+        const durationSec = durationMs / 1000;
+        let fps = frameCount / durationSec;
+
+        // Clamp to something sane so you don't get 0.0001 FPS or 200 FPS
+        if (fps < 2) fps = 2;
+        if (fps > 24) fps = 24;
+
+        return fps;
+    }
+
+    // Fallback: your old global values
+    if (phase === "walk")   return FALLBACK_WALK_FPS;
+    if (phase === "attack") return FALLBACK_ATTACK_FPS;
+    if (phase === "death")  return FALLBACK_DEATH_FPS;
+
+    return FALLBACK_WALK_FPS;
 }
 
 // ---------------------------------------------------------------------
@@ -149,8 +195,6 @@ export function applyMonsterAnimationForSprite(
     const mgr = scene.anims;
 
     if (!mgr.exists(animKey)) {
-
-
         // Prefer a per-phase texture key if provided by the atlas
         const phaseTexture: Partial<Record<Phase, string>> | undefined = animSet.phaseTexture;
 
@@ -160,19 +204,8 @@ export function applyMonsterAnimationForSprite(
             (animSet.textureKey as string) ||
             animSet.id;
 
-
-        // Pick FPS + repeat based on phase
-        let fps: number;
-        if (phase === "walk") {
-            fps = MONSTER_WALK_FPS;
-        } else if (phase === "attack") {
-            fps = MONSTER_ATTACK_FPS;
-        } else if (phase === "death") {
-            fps = MONSTER_DEATH_FPS;
-        } else {
-            fps = MONSTER_WALK_FPS;
-        }
-
+        // FPS from per-sprite duration if present, otherwise fallback
+        const fps = computePhaseFps(phase, frames.length, data);
         const repeat = (phase === "death") ? 0 : -1;
 
         console.log(
