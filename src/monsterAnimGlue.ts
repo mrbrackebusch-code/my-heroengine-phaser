@@ -10,9 +10,9 @@ const LAST_ANIM_KEY  = "__monsterLastAnimKey";
 const LAST_PHASE_KEY = "__monsterLastPhase";
 const LAST_DIR_KEY   = "__monsterLastDir";
 
-const MONSTER_WALK_FPS   = 6;   // nice and chill walk
-const MONSTER_ATTACK_FPS = 10;  // a bit snappier
-const MONSTER_DEATH_FPS  = 6;   // slow enough to see the death
+const MONSTER_WALK_FPS   = 4;   // nice and chill walk
+const MONSTER_ATTACK_FPS = 4;  // a bit snappier
+const MONSTER_DEATH_FPS  = 4;   // slow enough to see the death
 
 // ---------------------------------------------------------------------
 // Helper: locate the MonsterAtlas regardless of where we stashed it.

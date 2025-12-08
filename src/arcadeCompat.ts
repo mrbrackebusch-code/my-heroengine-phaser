@@ -1000,6 +1000,25 @@ function _attachNativeSprite(s: Sprite): void {
     const h = s.image.height | 0;
     const texKey = "sprite_" + s.id;
 
+
+    // If this sprite's native is already using a non-MakeCode texture
+    // (e.g., an LPC spritesheet like "bee" or "imp blue"),
+    // skip the pixel-upload path and just keep its position in sync elsewhere.
+    const existingNative: any = s.native;
+    if (
+        existingNative &&
+        existingNative.texture &&
+        existingNative.texture.key &&
+        existingNative.texture.key !== texKey
+    ) {
+        existingNative.x = s.x;
+        existingNative.y = s.y;
+        return;
+    }
+
+
+
+
     if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
         console.error(
             "[_attachNativeSprite] INVALID image size – skipping texture",
@@ -1635,6 +1654,10 @@ export function _syncNativeSprites(): void {
             s.native = null;
 
             const texKey = "sprite_" + s.id;
+
+
+
+
             if (sc.textures && sc.textures.exists(texKey)) {
                 sc.textures.remove(texKey);
             }
@@ -1847,6 +1870,9 @@ export function _syncNativeSprites(): void {
             s.native = null;
 
             const texKey = "sprite_" + s.id;
+
+
+
             if (sc.textures && sc.textures.exists(texKey)) {
                 sc.textures.remove(texKey);
             }

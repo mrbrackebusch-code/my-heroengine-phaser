@@ -184,52 +184,62 @@ function buildFramesForSheet(
     const source = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
     const cols = Math.floor(source.width / sheet.width);
 
-    const starts = Object.entries(sheet.phaseStarts)
-        .map(([ph, col]) => ({ ph: ph as Phase, col: col! }))
-        .sort((a, b) => a.col - b.col);
 
-    let endCol = cols;
-    for (const s of starts) {
-        if (s.col > startCol) {
-            endCol = s.col;
-            break;
+
+
+
+        const starts = Object.entries(sheet.phaseStarts)
+            .map(([ph, col]) => ({ ph: ph as Phase, col: col! }))
+            .sort((a, b) => a.col - b.col);
+
+        let endCol = cols;
+        for (const s of starts) {
+            if (s.col > startCol) {
+                endCol = s.col;
+                break;
+            }
         }
-    }
 
-    const colStart0 = startCol - 1;
-    const colEnd0 = endCol - 1;
+        // ✅ NEW: if this sheet only has one phase (like "imp blue ... 1Walk"),
+        // treat it as running all the way to the last column.
+        const colStart0 = startCol - 1;
+        const colEnd0 =
+            starts.length === 1
+                ? cols        // use *all* columns to the end of the sheet
+                : endCol - 1; // multi-phase: [startCol .. endCol-1)
 
-    const dirFrames: PhaseDirFrames = {};
-    const allDirs: Dir[] = ["up", "down", "left", "right"];
+        const dirFrames: PhaseDirFrames = {};
+        const allDirs: Dir[] = ["up", "down", "left", "right"];
 
-    if (sheet.dirs && sheet.dirs.length > 0 && !sheet.rowCountOverride) {
-        const dirRows = sheet.dirs.length;
-        const totalSharedRows = sheet.sharedDeathRows;
+        if (sheet.dirs && sheet.dirs.length > 0 && !sheet.rowCountOverride) {
+            const dirRows = sheet.dirs.length;
+            const totalSharedRows = sheet.sharedDeathRows;
 
-        let sharedDeath: number[] = [];
-        if (phase === "death" && totalSharedRows > 0) {
-            const sharedStart = dirRows;
-            for (let r = 0; r < totalSharedRows; r++) {
-                const row = sharedStart + r;
-                for (let c = colStart0; c < colEnd0; c++) {
-                    sharedDeath.push(row * cols + c);
+            let sharedDeath: number[] = [];
+            if (phase === "death" && totalSharedRows > 0) {
+                const sharedStart = dirRows;
+                for (let r = 0; r < totalSharedRows; r++) {
+                    const row = sharedStart + r;
+                    for (let c = colStart0; c < colEnd0; c++) {
+                        sharedDeath.push(row * cols + c);
+                    }
                 }
             }
-        }
 
-        for (let i = 0; i < sheet.dirs.length; i++) {
-            const row = i;
-            const dir = sheet.dirs[i];
-            const frames: number[] = [];
-            for (let c = colStart0; c < colEnd0; c++) {
-                frames.push(row * cols + c);
+            for (let i = 0; i < sheet.dirs.length; i++) {
+                const row = i;
+                const dir = sheet.dirs[i];
+                const frames: number[] = [];
+                for (let c = colStart0; c < colEnd0; c++) {
+                    frames.push(row * cols + c);
+                }
+                if (phase === "death" && sharedDeath.length > 0) {
+                    frames.push(...sharedDeath);
+                }
+                if (frames.length > 0) dirFrames[dir] = frames;
             }
-            if (phase === "death" && sharedDeath.length > 0) {
-                frames.push(...sharedDeath);
-            }
-            if (frames.length > 0) dirFrames[dir] = frames;
-        }
-    } else {
+        } else {
+    
         const row = 0;
         const frames: number[] = [];
         for (let c = colStart0; c < colEnd0; c++) {
