@@ -10,6 +10,10 @@ const LAST_ANIM_KEY  = "__monsterLastAnimKey";
 const LAST_PHASE_KEY = "__monsterLastPhase";
 const LAST_DIR_KEY   = "__monsterLastDir";
 
+const MONSTER_WALK_FPS   = 6;   // nice and chill walk
+const MONSTER_ATTACK_FPS = 10;  // a bit snappier
+const MONSTER_DEATH_FPS  = 6;   // slow enough to see the death
+
 // ---------------------------------------------------------------------
 // Helper: locate the MonsterAtlas regardless of where we stashed it.
 // ---------------------------------------------------------------------
@@ -101,7 +105,7 @@ export function applyMonsterAnimationForSprite(
     }
 
     const phases = animSet.phases as {
-        walk?:  Record<Dir, number[]>;
+        walk?:   Record<Dir, number[]>;
         attack?: Record<Dir, number[]>;
         death?:  Record<Dir, number[]>;
     };
@@ -138,21 +142,30 @@ export function applyMonsterAnimationForSprite(
     // Build / play Phaser animation
     // -----------------------------------------------------------------
     const safeMonsterId = monsterIdRaw.replace(/\s+/g, "_").toLowerCase();
-    const EXTRAsafeMonsterID = safeMonsterId.replace(/ /g, "_")
     const phaseKey = phase.toString().toLowerCase() as Phase;
     const dirKey   = dir.toString().toLowerCase() as Dir;
-    const animKey  = `${EXTRAsafeMonsterID}_${phaseKey}_${dirKey}`;
-
-//    const animKey = `${}_${phase}_${dir}`;
+    const animKey  = `${safeMonsterId}_${phaseKey}_${dirKey}`;
 
     const mgr = scene.anims;
 
-
-    
     if (!mgr.exists(animKey)) {
         const textureKey: string = animSet.textureKeys
             ? animSet.textureKeys[0]
             : animSet.textureKey || animSet.id;
+
+        // Pick FPS + repeat based on phase
+        let fps: number;
+        if (phase === "walk") {
+            fps = MONSTER_WALK_FPS;
+        } else if (phase === "attack") {
+            fps = MONSTER_ATTACK_FPS;
+        } else if (phase === "death") {
+            fps = MONSTER_DEATH_FPS;
+        } else {
+            fps = MONSTER_WALK_FPS;
+        }
+
+        const repeat = (phase === "death") ? 0 : -1;
 
         console.log(
             "[MonsterAnimGlue] creating anim",
@@ -161,8 +174,14 @@ export function applyMonsterAnimationForSprite(
             animSet.id,
             "using texture=",
             textureKey,
+            "phase=",
+            phase,
             "frames=",
-            frames
+            frames,
+            "fps=",
+            fps,
+            "repeat=",
+            repeat
         );
 
         mgr.create({
@@ -171,8 +190,8 @@ export function applyMonsterAnimationForSprite(
                 key: textureKey,
                 frame: frameIndex
             })),
-            frameRate: 8,
-            repeat: -1
+            frameRate: fps,
+            repeat
         });
     }
 
@@ -189,9 +208,6 @@ export function applyMonsterAnimationForSprite(
     data.set(LAST_ANIM_KEY,  animKey);
     data.set(LAST_PHASE_KEY, phaseKey);
     data.set(LAST_DIR_KEY,   dirKey);
-
-
-    sprite.anims.play(animKey, true);
 }
 
 // Tiny helper if you want it from arcadeCompat (returns success/fail)
