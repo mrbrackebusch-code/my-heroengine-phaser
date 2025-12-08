@@ -149,9 +149,17 @@ export function applyMonsterAnimationForSprite(
     const mgr = scene.anims;
 
     if (!mgr.exists(animKey)) {
-        const textureKey: string = animSet.textureKeys
-            ? animSet.textureKeys[0]
-            : animSet.textureKey || animSet.id;
+
+
+        // Prefer a per-phase texture key if provided by the atlas
+        const phaseTexture: Partial<Record<Phase, string>> | undefined = animSet.phaseTexture;
+
+        const textureKey: string =
+            (phaseTexture && phaseTexture[phase]) ||
+            (animSet.textureKeys && animSet.textureKeys[0]) ||
+            (animSet.textureKey as string) ||
+            animSet.id;
+
 
         // Pick FPS + repeat based on phase
         let fps: number;

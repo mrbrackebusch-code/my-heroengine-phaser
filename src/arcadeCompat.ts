@@ -1688,118 +1688,82 @@ export function _syncNativeSprites(): void {
         native.y = s.y;
 
 
-        // If this sprite is an enemy (or actor), mirror label data → native.
-        // That way Phaser can read name/phase/dir directly from the native sprite.
+
+
+                // If this sprite is an enemy (or actor), drive LPC animations via MonsterAnimGlue.
         const dataKeys = Object.keys(s.data || {});
         const role = _classifySpriteRole(s.kind, dataKeys);
 
-
-
-
-
-
-
         if (role === "ENEMY" || role === "ACTOR") {
-            // Make sure the snapshot has a real data bag we can mutate
+            // Engine-side data bag
             if (!(s as any).data) (s as any).data = {};
             const data: any = (s as any).data;
 
-            const name =
-                data["name"] ??
-                data["monsterId"] ??
-                data["enemyName"] ??
+            // Pull canonical fields from the engine data
+            const monsterId =
+                sprites.readDataString(s, "monsterId") ||
+                sprites.readDataString(s, "enemyName") ||
+                sprites.readDataString(s, "name") ||
                 "";
-            // ...
 
+            type MonsterAnimPhase = "walk" | "attack" | "death";
+            type MonsterDirection = "up" | "down" | "left" | "right";
 
+            let phase = (sprites.readDataString(s, "phase") as MonsterAnimPhase) || "walk";
 
-            const phase = ((data["phase"] as string) || "walk") as MonsterAnimPhase;
-            const dir = ((data["dir"] as string) || "down") as MonsterAnimPhase;
-
-
-            //phase = phase1 //sprite.data[ENEMY_DATA.phase] || "walk";
-            //dir   = sprite.data[ENEMY_DATA.dir] || "down";
-
-
-            let dirForAnim = (data["dir"] as string | undefined) as MonsterDirection | undefined;
-            if (!dirForAnim) {
-                if (s.vx > 0)      dirForAnim = "right" as MonsterDirection;
-                else if (s.vx < 0) dirForAnim = "left"  as MonsterDirection;
-                else if (s.vy < 0) dirForAnim = "up"    as MonsterDirection;
-                else               dirForAnim = "down"  as MonsterDirection;
+            let dir = sprites.readDataString(s, "dir") as MonsterDirection | undefined;
+            if (!dir) {
+                // Fallback: infer direction from velocity if dir isn't explicitly set
+                if (s.vx > 0)      dir = "right";
+                else if (s.vx < 0) dir = "left";
+                else if (s.vy > 0) dir = "down";
+                else               dir = "up";
             }
 
-            // --- NEW ---
-            (data as any)["name"]  = name;
-            (data as any)["phase"] = phase;
-            (data as any)["dir"]   = dirForAnim;
-            // ------------
+            // Mirror back into the engine data bag for consistency
+            if (monsterId) data["monsterId"] = monsterId;
+            if (monsterId && !data["name"]) data["name"] = monsterId;
+            data["phase"] = phase;
+            data["dir"]   = dir;
 
-
-
-            // Pull from the engine sprite’s data bag (same object as `data`)
-            const srcData: any = (s as any).data || {};
-
-            // Mirror anything we care about back into the main data bag
-            if (srcData["monsterId"] !== undefined) data["monsterId"] = srcData["monsterId"];
-            if (srcData["name"]      !== undefined) data["name"]      = srcData["name"];
-            if (srcData["phase"]     !== undefined) data["phase"]     = srcData["phase"];
-            if (srcData["dir"]       !== undefined) data["dir"]       = srcData["dir"];
-            if (srcData["hp"]        !== undefined) data["hp"]        = srcData["hp"];
-            if (srcData["maxHp"]     !== undefined) data["maxHp"]     = srcData["maxHp"];
-
-            _propagateLabelDataToNative(s);  // now this sees name/phase/dir on s.data
-
-
-            const DEBUG_ENEMY_SYNC = false;
-
-            if (role === "ENEMY" && _syncCallCount <= 200 && DEBUG_ENEMY_SYNC === true) {
-                console.log(
-                    "[SYNC.ENEMY]",
-                    "id=", s.id,
-                    "kind=", s.kind,
-                    "kindName=", SpriteKind[s.kind] || s.kind,
-                    "monsterId=", srcData["monsterId"],
-                    "name=", srcData["name"],
-                    "phase=", srcData["phase"],
-                    "dir=", srcData["dir"],
-                    "hp=", srcData["hp"],
-                    "maxHp=", srcData["maxHp"]
-                );
-
-                const currentAnim = s.anims && s.anims.currentAnim;
-                const currentFrame = s.anims && s.anims.currentFrame;
-
-                console.log(
-                    "[sync enemy sprite state]",
-                    "id=", s["__spriteId"], // or whatever id you log elsewhere
-                    "texture=", s.texture && s.texture.key,
-                    "animKey=", currentAnim && currentAnim.key,
-                    "frameIndex=", currentFrame && currentFrame.index
-                );
-
-            }
-
-                const nativeAny: any = s.native;
-                const enemy: any = nativeAny;
-                if (!enemy) {
-                    continue;
-                }
-
-                // --- NEW: drive LPC monster animation on this enemy sprite ---
-                const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
-                if (role === "ENEMY" && glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
-                    glueAny.applyMonsterAnimationForSprite(enemy);
-                }
-                // --------------------------------------------------------------
-
-                // Debug what we're actually going to drive monsterAtlas with
-                if (_syncCallCount <= 200) {
-                    console.log("[sync enemy] name=", name, "phase=", phase, "dir=", dirForAnim, "texKey=", enemy.texture?.key);
-                }
-
+            const nativeAny: any = s.native;
+            if (!nativeAny || typeof nativeAny.setData !== "function") {
                 continue;
+            }
+
+            // Push into Phaser DataManager so MonsterAnimGlue can read it
+            nativeAny.setData("monsterId", monsterId);
+            nativeAny.setData("name",      monsterId);
+            nativeAny.setData("phase",     phase);
+            nativeAny.setData("dir",       dir);
+
+            // --- Drive LPC animation every sync ---
+            const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
+            const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
+
+            if (glueAny && typeof glueAny.tryAttachMonsterSprite === "function") {
+                glueAny.tryAttachMonsterSprite(enemySprite);
+            } else if (glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
+                glueAny.applyMonsterAnimationForSprite(enemySprite);
+            }
+
+            // Focused debug for imp blue so we can see what anim actually plays
+            if (monsterId === "imp blue") {
+                console.log(
+                    "[SYNC→Phaser] imp blue",
+                    "phase=", phase,
+                    "dir=", dir,
+                    "texKey=", enemySprite.texture && enemySprite.texture.key,
+                    "currentAnim=",
+                        enemySprite.anims &&
+                        enemySprite.anims.currentAnim &&
+                        enemySprite.anims.currentAnim.key
+                );
+            }
+
+            continue;
         }
+
 
 
 

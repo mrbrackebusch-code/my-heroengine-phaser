@@ -696,10 +696,12 @@ const ENEMY_DATA = {
     homeX: "homeX",
     homeY: "homeY",
     dir: "dir",
-    phase: "phase"
+    phase: "phase",
 
 }
 
+
+const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT
 
 // --------------------------------------------------------------
 // PROJ_DATA – sprite data schema for hero projectiles
@@ -4779,10 +4781,10 @@ function completeSupportPuzzleForHero(heroIndex: number) {
 // Spawn logic, HP, homing AI, slow/weak/knockback effects.
 
 const ENEMY_KIND = {
-    GRUNT:  { maxHP:  5, speed: 28, touchDamage:  8, tint: 6,  attackRatePct: 100 /* baseline */ },
-    RUNNER: { maxHP:  3, speed: 42, touchDamage:  6, tint: 7,  attackRatePct: 130 /* quicker strikes */ },
-    BRUTE:  { maxHP: 16, speed: 18, touchDamage: 15, tint: 2,  attackRatePct: 70  /* slow, chunky */ },
-    ELITE:  { maxHP: 26, speed: 22, touchDamage: 20, tint: 10, attackRatePct: 110 /* a bit faster */ }
+    GRUNT:  { maxHP:  50, speed: 20, touchDamage:  8, tint: 6,  attackRatePct: 100 /* baseline */ },
+    RUNNER: { maxHP:  30, speed: 42, touchDamage:  6, tint: 7,  attackRatePct: 130 /* quicker strikes */ },
+    BRUTE:  { maxHP: 80, speed: 15, touchDamage: 15, tint: 2,  attackRatePct: 70  /* slow, chunky */ },
+    ELITE:  { maxHP: 10, speed: 5, touchDamage: 20, tint: 10, attackRatePct: 110 /* a bit faster */ }
 }
     // Archetypes are now INTERNAL ONLY. Waves & spawns use real monster IDs,
     // and we map those IDs onto these archetypes for stats + placeholder art.
@@ -5484,13 +5486,7 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 }
 
 
-
-
 let _lastEnemyHomingLogMs = 0
-
-
-
-
 
 function updateEnemyHoming(nowMs: number) {
     // Build a list of live heroes from the existing heroes[] array
@@ -5555,6 +5551,275 @@ function updateEnemyHoming(nowMs: number) {
         // --- Phase for animation: "walk" / "attack" / "death" ---
         let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
 
+        // Attack book-keeping
+        const atkPhase = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_PHASE) | 0
+        const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
+        const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
+
+        // ------------------------------------------------------------
+        // 1) If we are CURRENTLY in attack phase, either:
+        //    - stay attacking (vx=vy=0), or
+        //    - finish the attack, flip back to walk, set cooldown.
+        // ------------------------------------------------------------
+        if (phaseStr === "attack") {
+            if (nowMs >= atkUntil) {
+                // Attack finished → go back to walking and start a cooldown
+                sprites.setDataString(enemy, "phase", "walk")
+                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
+                phaseStr = "walk"
+            } else {
+                // Still mid-attack: stand in place and swing
+                enemy.vx = 0
+                enemy.vy = 0
+
+                if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+                    console.log(
+                        "[enemyHoming] ATTACK HOLD",
+                        "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                        "phase=", phaseStr,
+                        "x=", enemy.x, "y=", enemy.y,
+                        "vx=", enemy.vx, "vy=", enemy.vy,
+                        "t=", nowMs
+                    )
+                    _lastEnemyHomingLogMs = nowMs
+                }
+                continue
+            }
+        }
+
+        // --- Movement speed (base, before slow/weak, etc.) ---
+        const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
+        const slowPct = sprites.readDataNumber(enemy, ENEMY_DATA.SLOW_PCT) || 0
+        let speed = baseSpeed
+        if (slowPct > 0) {
+            speed = Math.idiv(baseSpeed * (100 - slowPct), 100)
+            if (speed <= 0) speed = 1
+        }
+
+        // ------------------------------------------------------------
+        // 2) Choose target: nearest hero by distance to HERO EDGE,
+        //    not hero center. Treat hero as a rectangle hitbox.
+        // ------------------------------------------------------------
+        let target = heroTargets[0]
+        let bestD2 = 1e9
+        let bestDx = 0
+        let bestDy = 0
+        let bestEdgeX = target.x
+        let bestEdgeY = target.y
+
+        for (let hi = 0; hi < heroTargets.length; hi++) {
+            const h = heroTargets[hi]
+
+            // Get hero width/height from image if possible
+            const img: any = (h as any).image
+            const heroW =
+                (img && img.width) ||
+                (h as any).width ||
+                16
+            const heroH =
+                (img && img.height) ||
+                (h as any).height ||
+                16
+
+            const halfW = heroW / 2
+            const halfH = heroH / 2
+
+            const left   = h.x - halfW
+            const right  = h.x + halfW
+            const top    = h.y - halfH
+            const bottom = h.y + halfH
+
+            // Clamp enemy position to hero rectangle to get closest edge point
+            let edgeX = enemy.x
+            if (edgeX < left) edgeX = left
+            else if (edgeX > right) edgeX = right
+
+            let edgeY = enemy.y
+            if (edgeY < top) edgeY = top
+            else if (edgeY > bottom) edgeY = bottom
+
+            const dxEdge = edgeX - enemy.x
+            const dyEdge = edgeY - enemy.y
+            const d2 = dxEdge * dxEdge + dyEdge * dyEdge
+
+            if (d2 < bestD2) {
+                bestD2 = d2
+                target = h
+                bestDx = dxEdge
+                bestDy = dyEdge
+                bestEdgeX = edgeX
+                bestEdgeY = edgeY
+            }
+        }
+
+        // ------------------------------------------------------------
+        // 3) Maybe START a new attack if we are close enough to EDGE
+        //    and off cooldown.
+        // ------------------------------------------------------------
+        const atkRangePx = 20
+        const atkRange2 = atkRangePx * atkRangePx
+
+        if (bestD2 <= atkRange2 && nowMs >= atkCooldownUntil) {
+            // Direction we will face for the attack (based on edge offset)
+            let attackDir = "down"
+            if (Math.abs(bestDx) > Math.abs(bestDy)) {
+                attackDir = bestDx >= 0 ? "right" : "left"
+            } else {
+                attackDir = bestDy >= 0 ? "down" : "up"
+            }
+
+            // Scale attack duration by per-enemy attack rate
+            const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
+            const baseAttackDurationMs = 350
+            let attackMs = baseAttackDurationMs
+            if (atkRatePct !== 100) {
+                attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
+            }
+            if (attackMs < 150) attackMs = 150
+
+            // Enter attack state
+            sprites.setDataString(enemy, "phase", "attack")
+            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
+            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackMs)
+            sprites.setDataString(enemy, "dir", attackDir)
+
+            // Freeze movement while attacking
+            enemy.vx = 0
+            enemy.vy = 0
+
+            const mid = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)"
+            if (ei === 0) {
+                console.log(
+                    "[enemyHoming] START ATTACK",
+                    "monsterId=", mid,
+                    "phase=", "attack",
+                    "d2=", bestD2,
+                    "attackMs=", attackMs
+                )
+            }
+
+            // IMPORTANT: bail out of steering; _syncNativeSprites + monsterAnimGlue
+            // will see phase="attack" + dir and swap the LPC anim.
+            continue
+        }
+
+        // If we're basically on the hero edge, stop (but stay in walk phase)
+        if (bestD2 < 1) {
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+            continue
+        }
+
+        // ------------------------------------------------------------
+        // 4) Steering: walk toward the closest EDGE point instead of center
+        // ------------------------------------------------------------
+        const origTX = target.x
+        const origTY = target.y
+
+        // Temporarily treat the hero as if its "target point"
+        // were the closest edge point we computed.
+        ;(target as any).x = bestEdgeX
+        ;(target as any).y = bestEdgeY
+
+        _enemySteerTowardHero(enemy, target, speed)
+
+        // Restore hero's real center so we don't break anything else
+        ;(target as any).x = origTX
+        ;(target as any).y = origTY
+
+        // --- Direction string for animation ("up"/"down"/"left"/"right") ---
+        let dir = "down"
+        if (Math.abs(enemy.vx) > Math.abs(enemy.vy)) {
+            dir = enemy.vx >= 0 ? "right" : "left"
+        } else {
+            dir = enemy.vy >= 0 ? "down" : "up"
+        }
+        sprites.setDataString(enemy, "dir", dir)
+
+        // --- DEBUG log (throttled, first enemy only) ---
+        if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+            console.log(
+                "[enemyHoming] tick",
+                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                "phase=", phaseStr,
+                "x=", enemy.x, "y=", enemy.y,
+                "vx=", enemy.vx, "vy=", enemy.vy,
+                "t=", nowMs
+            )
+            _lastEnemyHomingLogMs = nowMs
+        }
+    }
+}
+
+function updateEnemyHomingOLD2(nowMs: number) {
+    // Build a list of live heroes from the existing heroes[] array
+    const heroTargets: Sprite[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h && !(h.flags & sprites.Flag.Destroyed)) {
+            heroTargets.push(h)
+        }
+    }
+
+    // If there are no heroes, zero out enemy velocities and bail
+    if (heroTargets.length == 0) {
+        for (let ei = 0; ei < enemies.length; ei++) {
+            const e = enemies[ei]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            e.vx = 0
+            e.vy = 0
+        }
+        return
+    }
+
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const enemy = enemies[ei]
+        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
+
+        const anyEnemy = enemy as any
+        if (!anyEnemy.data) continue // not fully initialized
+
+        // --- Death timing: we scheduled this in applyDamageToEnemyIndex ---
+        const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
+        if (deathUntil > 0) {
+            // While in death phase, don't move; once the timer expires, destroy and clear arrays.
+            if (nowMs >= deathUntil) {
+                const bar = enemyHPBars[ei]
+                if (bar) {
+                    bar.destroy()
+                    enemyHPBars[ei] = null
+                }
+                enemy.destroy()
+                enemies[ei] = null
+            }
+            continue
+        }
+
+        // --- Knockback: if still in knockback window, skip AI steering ---
+        const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
+        if (kbUntil > 0 && nowMs < kbUntil) {
+            continue
+        }
+
+        // --- Home position (for RETURNING_HOME) ---
+        let homeX = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_X)
+        let homeY = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_Y)
+        if (!homeX && !homeY) {
+            homeX = enemy.x
+            homeY = enemy.y
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
+        }
+
+        // --- Phase for animation: "walk" / "attack" / "death" ---
+        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+
+        // Attack cooldown (prevents spam)
+        const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
+
+
         // Attack timing / cooldown
         if (phaseStr === "attack") {
             const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
@@ -5596,13 +5861,54 @@ function updateEnemyHoming(nowMs: number) {
             }
         }
 
-        // If we're basically on top of the hero, stop
+
+
+        // --- Attack decision: close enough + off cooldown → start attack ---
+        const atkRange = ENEMY_MELEE_RANGE_PX
+        const atkRange2 = atkRange * atkRange
+
+        if (bestD2 <= atkRange2 && nowMs >= atkCooldownUntil) {
+            // Scale attack duration by atkRatePct if you want snappier/faster enemies
+            const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
+            const baseAttackMs = 350
+            let attackDurationMs = Math.idiv(baseAttackMs * 100, atkRatePct)
+            if (attackDurationMs < 150) attackDurationMs = 150
+
+            // Enter attack phase: this is what drives the LPC attack animation
+            sprites.setDataString(enemy, "phase", "attack")
+            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackDurationMs)
+
+            // Let the "attack in progress" block handle cooldown once it's done
+
+            // Freeze movement during the swing; attack phase branch will keep it frozen
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+
+            if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+                console.log(
+                    "[enemyHoming] START ATTACK",
+                    "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                    "phase=", "attack",
+                    "d2=", bestD2,
+                    "attackMs=", attackDurationMs
+                )
+                _lastEnemyHomingLogMs = nowMs
+            }
+            continue
+        }
+
+        // If we're basically on top of the hero but still on cooldown, just stop
         if (bestD2 < 1) {
             enemy.vx = 0
             enemy.vy = 0
             sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
             continue
         }
+
+
+
+
 
         // --- Steering: use your tile-aware BFS helper ---
         _enemySteerTowardHero(enemy, target, speed)

@@ -8,6 +8,8 @@ export interface PhaseDirFrames {
     [dir: string]: number[] | undefined; // keys will be Dir
 }
 
+
+
 export interface MonsterAnimSet {
     /** e.g. "imp blue", "spider green yellow dot" */
     id: string;
@@ -21,6 +23,8 @@ export interface MonsterAnimSet {
         attack?: PhaseDirFrames;
         death?: PhaseDirFrames;
     };
+    /** Optional: which texture key to use for each phase */
+    phaseTexture?: Partial<Record<Phase, string>>;
 }
 
 export type MonsterAtlas = Record<string, MonsterAnimSet>;
@@ -354,6 +358,16 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
             textureKeys: orderedSheets.map(s => s.textureKey),
             phases: {}
         };
+
+
+
+        // NEW: remember which sheet we picked for each phase
+        const phaseTexture: Partial<Record<Phase, string>> = {};
+        if (walkSheets[0])   phaseTexture.walk   = walkSheets[0].textureKey;
+        if (attackSheets[0]) phaseTexture.attack = attackSheets[0].textureKey;
+        if (deathSheets[0])  phaseTexture.death  = deathSheets[0].textureKey;
+        animSet.phaseTexture = phaseTexture;
+
 
         // Build phases only from selected sheets
         for (const sheet of orderedSheets) {
