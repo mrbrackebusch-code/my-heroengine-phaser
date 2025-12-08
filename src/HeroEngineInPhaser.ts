@@ -440,6 +440,8 @@ namespace HeroEngine {
         setupHeroes();
         setupTestEnemies();
         setupEnemySpawners();
+        startEnemyWaves();
+
     }
 }
 
@@ -678,8 +680,26 @@ const ENEMY_DATA = {
 
     ATK_PHASE: "atkPhase",        // current attack state (enum/int)
     ATK_UNTIL: "atkUntil",        // time current attack phase ends
-    ATK_COOLDOWN_UNTIL: "atkCd"   // when enemy can attack again
+    ATK_COOLDOWN_UNTIL: "atkCd",   // when enemy can attack again
+
+    HOME_X: "HOMEX",
+    HOME_Y: "HOMEY",
+    RETURNING_HOME: "returningHome",
+    
+    ATK_ORIGIN_X: "atkOriginX",
+    ATK_ORIGIN_Y: "atkOriginY",
+    RETURNING_TO_ORIGIN: "returningToOrigin",
+    ATK_RATE_PCT: "atkRatePct",
+
+    // NEW: death timing
+    DEATH_UNTIL: "deathUntil",
+    homeX: "homeX",
+    homeY: "homeY",
+    dir: "dir",
+    phase: "phase"
+
 }
+
 
 // --------------------------------------------------------------
 // PROJ_DATA – sprite data schema for hero projectiles
@@ -1897,7 +1917,7 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
 
     heroTargetCircles[heroIndex] = null
 
-    initHeroHP(heroIndex, hero, 100)
+    initHeroHP(heroIndex, hero, 1000)
     initHeroMana(heroIndex, hero, 2000)
     refreshHeroController(heroIndex)
 
@@ -4758,59 +4778,159 @@ function completeSupportPuzzleForHero(heroIndex: number) {
 // ====================================================
 // Spawn logic, HP, homing AI, slow/weak/knockback effects.
 
-
 const ENEMY_KIND = {
-    GRUNT: { maxHP: 50, speed: 28, touchDamage: 8, tint: 6  /* green  */ },
-    RUNNER: { maxHP: 30, speed: 42, touchDamage: 6, tint: 7  /* yellow */ },
-    BRUTE: { maxHP: 160, speed: 18, touchDamage: 15, tint: 2  /* red    */ },
-    ELITE: { maxHP: 260, speed: 22, touchDamage: 20, tint: 10 /* purple */ }
-};
+    GRUNT:  { maxHP:  5, speed: 28, touchDamage:  8, tint: 6,  attackRatePct: 100 /* baseline */ },
+    RUNNER: { maxHP:  3, speed: 42, touchDamage:  6, tint: 7,  attackRatePct: 130 /* quicker strikes */ },
+    BRUTE:  { maxHP: 16, speed: 18, touchDamage: 15, tint: 2,  attackRatePct: 70  /* slow, chunky */ },
+    ELITE:  { maxHP: 26, speed: 22, touchDamage: 20, tint: 10, attackRatePct: 110 /* a bit faster */ }
+}
     // Archetypes are now INTERNAL ONLY. Waves & spawns use real monster IDs,
     // and we map those IDs onto these archetypes for stats + placeholder art.
+    const POSSIBLE_MONSTERS_TO_SPAWN = [
+        "bat",
+        "bee",
+        "beetle",
+        "big worm",
+        "dragon red",
+        "eyeball",
+        "ghost",
+        "goblin",
+        "golem",
+        "golem white",
+        "googon",
+        "imp blue",
+        "imp green",
+        "imp red",
+        "man eater flower",
+        "minotaur red",
+        "pumpking",
+        "slime",
+        "slime black",
+        "slime blue",
+        "slime brown",
+        "slime green",
+        "slime lightblue",
+        "slime projectile",
+        "slime red",
+        "slime violet",
+        "slime yellow",
+        "small worm",
+        "snake",
+        "spider black",
+        "spider black yellow",
+        "spider blue",
+        "spider blue orange",
+        "spider blue silver",
+        "spider green",
+        "spider green yellow dot",
+        "spider green yellow stripe",
+        "spider red",
+        "spider red yellow",
+        "spider silver red",
+        "wolf light brown"
+    ]
 
-    const ENEMY_ARCHETYPE_KEYS = ["GRUNT", "RUNNER", "BRUTE", "ELITE"]
 
-    // Map REAL monster IDs (from your LPC filenames) → archetype key.
-    // TODO: replace the example strings here with the actual IDs from your atlas
-    // (e.g. "imp blue", "spider green", "dragon red", etc.).
-    const MONSTER_ARCHETYPE: any = {
-        // Examples ONLY – change to your real ids:
-        "imp blue": "GRUNT",
-        "imp red": "RUNNER",
-        "spider green": "RUNNER",
-        "big worm": "BRUTE",
-        "dragon red": "ELITE"
+    const ENEMY_ARCHETYPE_KEYS = ["FLYING", "STATIONARY", "UNDERGROUND", "SLOWSTRONG", "CRITTER", "HUMANOID", "SLIMES", "SPIDERS", "IMPS", "FASTWEAK", "SPECIAL", "WEAK", "STRONG", "AVERAGE", "BOSS", "FAST", "SLOW", "MEDIUM", "TANK", "RANGED"]
+
+    // Map REAL monster IDs (from your LPC filenames) → label tags.
+    // Each entry is: [category, strength-band, speed-band, optional extras...]
+    const MONSTER_ARCHETYPE: { [id: string]: string[] } = {
+        "bat": ["FLYING", "WEAK", "FAST"],
+        "bee": ["FLYING", "WEAK", "MEDIUM"],
+        "beetle": ["CRITTER", "WEAK", "SLOW", "TANK"],
+        "big worm": ["UNDERGROUND", "SLOWSTRONG", "STRONG", "STATIONARY"],
+        "dragon red": ["BOSS", "STRONG", "FLYING"],
+        "eyeball": ["FLYING", "RANGED", "STRONG"],
+        "ghost": ["FLYING", "AVERAGE", "MEDIUM"],
+        "goblin": ["HUMANOID", "AVERAGE", "MEDIUM"],
+        "golem": ["HUMANOID", "SLOW", "TANK", "STRONG"],
+        "golem white": ["HUMANOID", "SLOW", "TANK", "STRONG"],
+        "googon": ["STATIONARY", "SLOW", "WEAK", "SPECIAL"],
+        "imp blue": ["IMPS", "FLYING", "HUMANOID", "WEAK", "MEDIUM"],
+        "imp green": ["IMPS", "FLYING", "HUMANOID", "WEAK", "MEDIUM"],
+        "imp red": ["IMPS", "FLYING", "HUMANOID", "WEAK", "MEDIUM"],
+        "man eater flower": ["STATIONARY", "WEAK", "MEDIUM", "SPECIAL"],
+        "minotaur red": ["HUMANOID", "MEDIUM", "AVERAGE", "STRONG"],
+        "pumpking": ["FLYING", "SLOW", "AVERAGE", "SPECIAL"],
+        "slime": ["SLIMES", "WEAK", "SLOW"],
+        "slime black": ["SLIMES", "WEAK", "FAST"],
+        "slime blue": ["SLIMES", "WEAK", "FAST"],
+        "slime brown": ["SLIMES", "WEAK", "FAST"],
+        "slime green": ["SLIMES", "WEAK", "MEDIUM"],
+        "slime lightblue": ["SLIMES", "WEAK", "MEDIUM"],
+        "slime projectile": ["SLIMES", "WEAK", "FAST", "RANGED"],
+        "slime red": ["SLIMES", "AVERAGE", "SLOW"],
+        "slime violet": ["SLIMES", "WEAK", "SLOW"],
+        "slime yellow": ["SLIMES", "WEAK", "SLOW"],
+        "small worm": ["UNDERGROUND", "WEAK", "FAST"],
+        "snake": ["CRITTER", "WEAK", "FAST"],
+        "spider black": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider black yellow": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider blue": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider blue orange": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider blue silver": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider green": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider green yellow dot": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider green yellow stripe": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider red": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider red yellow": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "spider silver red": ["SPIDERS", "AVERAGE", "MEDIUM"],
+        "wolf light brown": ["CRITTER", "AVERAGE", "FAST"]
     }
 
-    // Pick an archetype for a given monster id.
-    // 1) If there is an explicit entry in MONSTER_ARCHETYPE, use that.
-    // 2) Otherwise hash the name into one of the archetypes so everything
-    //    at least has *some* stats and placeholder art.
-    function resolveArchetypeForMonster(monsterId: string): string {
-        const direct = MONSTER_ARCHETYPE[monsterId]
-        if (direct) return direct
 
-        let h = 0
-        for (let i = 0; i < monsterId.length; i++) {
-            h = (h + monsterId.charCodeAt(i)) & 0xffff
-        }
-        return ENEMY_ARCHETYPE_KEYS[h % ENEMY_ARCHETYPE_KEYS.length]
-    }
 
-    // Stats lookup by monster id (HP / speed / touchDamage)
-    function enemyStatsForMonsterId(monsterId: string) {
-        const arche = resolveArchetypeForMonster(monsterId)
-        const spec = (ENEMY_KIND as any)[arche]
-        if (spec) return spec
-        return ENEMY_KIND.GRUNT
-    }
+            // Map monster labels → a stat archetype key in ENEMY_KIND
+            function pickEnemyKindForMonster(monsterId: string): string {
+                const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
 
-    // Placeholder MakeCode image for a monster id.
-    // Phaser ignores this and uses full LPC art based on sprite.data["name"].
-    function enemyPlaceholderImageForMonster(monsterId: string): Image {
-        const arche = resolveArchetypeForMonster(monsterId)
-        return enemyImageForKind(arche)
-    }
+                // Explicit BOSS → ELITE
+                if (tags.indexOf("BOSS") >= 0) return "ELITE"
+
+                // Big chunky / tanky things → BRUTE
+                if (tags.indexOf("SLOWSTRONG") >= 0 ||
+                    tags.indexOf("TANK") >= 0 ||
+                    tags.indexOf("STRONG") >= 0) {
+                    return "BRUTE"
+                }
+
+                // Very fast / weak things → RUNNER
+                if (tags.indexOf("FASTWEAK") >= 0 ||
+                    (tags.indexOf("FAST") >= 0 && tags.indexOf("WEAK") >= 0)) {
+                    return "RUNNER"
+                }
+
+                // Generic weak → GRUNT
+                if (tags.indexOf("WEAK") >= 0) return "GRUNT"
+
+                // Fallback by speed
+                if (tags.indexOf("FAST") >= 0) return "RUNNER"
+                if (tags.indexOf("SLOW") >= 0) return "BRUTE"
+
+                // Default
+                return "GRUNT"
+            }
+
+            // Keep this around in case anything else calls it.
+            function resolveArchetypeForMonster(monsterId: string): string {
+                return pickEnemyKindForMonster(monsterId)
+            }
+
+            // Stats lookup by monster id (HP / speed / touchDamage)
+            function enemyStatsForMonsterId(monsterId: string) {
+                const kindKey = pickEnemyKindForMonster(monsterId)
+                const spec = (ENEMY_KIND as any)[kindKey]
+                if (spec) return spec
+                return ENEMY_KIND.GRUNT
+            }
+
+            // Placeholder MakeCode image for a monster id.
+            // Phaser ignores this and uses full LPC art based on sprite.data["name"].
+            function enemyPlaceholderImageForMonster(monsterId: string): Image {
+                const kindKey = pickEnemyKindForMonster(monsterId)
+                return enemyImageForKind(kindKey)
+            }
 
 
 
@@ -4995,35 +5115,35 @@ const ENEMY_ATK_PHASE_ATTACK  = 2
 const ENEMY_ATK_PHASE_RECOVER = 3
 
 
-
-
-
-function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite: boolean): Sprite {
-    const stats = enemyStatsForMonsterId(monsterId, elite)
+function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boolean): Sprite {
+    const stats = enemyStatsForMonsterId(monsterId) // or pass elite if you later use it    const stats = enemyStatsForMonsterId(monsterId)  // see next section for stats fix
 
     const img = enemyPlaceholderImageForMonster(monsterId)
     const enemy = sprites.create(img, SpriteKind.Enemy)
     enemy.x = x
     enemy.y = y
 
- console.log(
-    "[HeroEngine.spawnEnemy] created",
-    "id=", enemy.id,
-    "kind=", enemy.kind,
-    "x=", enemy.x, "y=", enemy.y,
-    "vx=", enemy.vx, "vy=", enemy.vy,
-    "wave=", currentWaveIndex
-//    "tier=", enemyTier
-
-)
+    // Remember spawn/home position
+    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, x)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, y)
+    sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
 
 
+    // *** NEW: register in enemies[] so AI sees it ***
+    const eIndex = enemies.length
+    enemies.push(enemy)
 
-    sprites.setDataNumber(enemy, ENEMY_DATA.HP, stats.hp)
-    sprites.setDataNumber(enemy, ENEMY_DATA.MAX_HP, stats.hp)
+    // Use your HP init helper so bars + MAX_HP/HP are consistent
+    const maxHPVal = (stats as any).maxHP || 50
+    initEnemyHP(eIndex, enemy, maxHPVal)
+
+    // Now store other stats
     sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, stats.speed)
     sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, stats.touchDamage)
-    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, stats.regenPct)
+    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, (stats as any).regenPct || 0)
+
+ // NEW: per-enemy attack speed scalar (percent)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, (stats as any).attackRatePct || 100)
 
     // NEW: remember which logical monster this is (Phaser / LPC will read this)
     sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterId)
@@ -5032,11 +5152,7 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite: boolea
     sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, 0)
-
     sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
-
-
-    
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
@@ -5044,14 +5160,13 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite: boolea
     console.log(
         "[HE.spawned Enemy Of Kind]" +
         "id=" + enemy.id +
-        "kind=" + enemy.kind +
-        "monsterId=" +  monsterId +
-        "dataKeys=" + Object.keys((enemy as any).data || {})
-    );
+        " kind=" + enemy.kind +
+        " monsterId=" + monsterId +
+        " dataKeys=" + Object.keys((enemy as any).data || {})
+    )
 
     return enemy
 }
-
 
 
 
@@ -5103,6 +5218,112 @@ function setupEnemySpawners() {
         enemySpawners.push(s)
     }
 }
+
+
+
+
+// --------------------------------------------------------------
+// Wave configuration
+// --------------------------------------------------------------
+
+// Global flags you can flip later.
+const TEST_WAVE_ENABLED = false     // show ALL monsters once
+const DEBUG_WAVE_ENABLED = false     // focus on a single monster type
+const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
+
+let currentWaveIndex = 0
+
+// "Real" waves – you can expand / tweak this list.
+// Each wave is just an id + a list of monsterIds to spawn.
+const REAL_WAVES: { id: string, monsters: string[] }[] = [
+    {
+        id: "wave1_slimes_intro",
+        monsters: [
+            "slime", "slime green", "slime blue",
+            "slime yellow", "slime brown"
+        ]
+    },
+    {
+        id: "wave2_spiders",
+        monsters: [
+            "spider black",
+            "spider blue",
+            "spider green",
+            "spider red"
+        ]
+    },
+    {
+        id: "wave3_mixed",
+        monsters: [
+            "imp blue", "imp red",
+            "snake", "wolf light brown",
+            "golem", "minotaur red"
+        ]
+    }
+    // TODO: add more "real" waves in the order you want.
+]
+
+
+
+// Spawn a "real" wave by index using REAL_WAVES
+function spawnRealWave(index: number) {
+    if (index < 0 || index >= REAL_WAVES.length) return
+    if (enemySpawners.length == 0) return
+
+    const wave = REAL_WAVES[index]
+    console.log("[HE.spawnRealWave]", index, wave.id)
+
+    for (let i = 0; i < wave.monsters.length; i++) {
+        const monsterId = wave.monsters[i]
+        const spawner = enemySpawners[i % enemySpawners.length]
+        spawnEnemyOfKind(monsterId, spawner.x, spawner.y, /*elite=*/ false)
+    }
+}
+
+// TEST wave: spawn every monster in POSSIBLE_MONSTERS_TO_SPAWN once.
+// Uses the four corner spawners, cycling through them.
+function spawnTestWave() {
+    if (enemySpawners.length == 0) return
+    console.log("[HE.spawnTestWave] spawning all monsters (boom boom boom)")
+
+    for (let i = 0; i < POSSIBLE_MONSTERS_TO_SPAWN.length; i++) {
+        const monsterId = POSSIBLE_MONSTERS_TO_SPAWN[i]
+        const spawner = enemySpawners[i % enemySpawners.length]
+        spawnEnemyOfKind(monsterId, spawner.x, spawner.y, /*elite=*/ false)
+    }
+}
+
+// DEBUG wave: only a single monster type, on every spawner
+function spawnDebugWave(monsterId?: string) {
+    if (enemySpawners.length == 0) return
+    const id = monsterId || DEBUG_MONSTER_ID
+    console.log("[HE.spawnDebugWave] monsterId=", id)
+
+    for (let i = 0; i < enemySpawners.length; i++) {
+        const spawner = enemySpawners[i]
+        spawnEnemyOfKind(id, spawner.x, spawner.y, /*elite=*/ false)
+    }
+}
+
+// Entry point: call this after setupEnemySpawners() when you want enemies.
+function startEnemyWaves() {
+    if (DEBUG_WAVE_ENABLED) {
+        spawnDebugWave(DEBUG_MONSTER_ID)
+        return
+    }
+    if (TEST_WAVE_ENABLED) {
+        spawnTestWave()
+        return
+    }
+
+    // Normal progression: start at currentWaveIndex in REAL_WAVES
+    spawnRealWave(currentWaveIndex)
+}
+
+
+
+
+
 
 
 // --------------------------------------------------------------
@@ -5265,111 +5486,153 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 
 
 
+let _lastEnemyHomingLogMs = 0
 
-// Enemy homing + simple attack cycle
-function updateEnemyHoming(now: number) {
-    for (let j = 0; j < enemies.length; j++) {
-        const e = enemies[j]; if (!e) continue
-        if (e.flags & sprites.Flag.Destroyed) continue
 
-        // Knockback
-        const kbUntil = sprites.readDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL)
-        if (kbUntil > now) continue
 
-        // Target nearest live hero only
-        let bestI = -1, bestD2 = 1e12
-        for (let hi = 0; hi < heroes.length; hi++) {
-            const h = heroes[hi]; if (!h || (h.flags & sprites.Flag.Destroyed)) continue
-            const dx = h.x - e.x, dy = h.y - e.y
-            const d2 = dx * dx + dy * dy
-            if (d2 < bestD2) { bestD2 = d2; bestI = hi }
+
+
+function updateEnemyHoming(nowMs: number) {
+    // Build a list of live heroes from the existing heroes[] array
+    const heroTargets: Sprite[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h && !(h.flags & sprites.Flag.Destroyed)) {
+            heroTargets.push(h)
         }
-        if (bestI < 0) { e.vx = 0; e.vy = 0; continue }
-
-        const h = heroes[bestI]
-        const dx = h.x - e.x, dy = h.y - e.y
-        let mag = Math.sqrt(dx * dx + dy * dy); if (mag == 0) mag = 1
-
-        // Attack phase/cooldown
-        const cdUntil = sprites.readDataNumber(e, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
-        let phase = sprites.readDataNumber(e, ENEMY_DATA.ATK_PHASE) | 0
-        let atkUntil = sprites.readDataNumber(e, ENEMY_DATA.ATK_UNTIL) | 0
-
-        // Trigger attack when overlapping significantly and not on cooldown
-        const overlapEnough = hasSignificantOverlap(h, e, HERO_CONTACT_MIN_OVERLAP_PCT)
-        if (overlapEnough && now >= cdUntil && phase == 0) {
-            phase = 1 // lunge
-            atkUntil = now + 120
-            sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
-            sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
-        }
-
-        const baseSpeed = sprites.readDataNumber(e, ENEMY_DATA.SPEED) || 28
-        // Debuff slow
-        const slowPct = sprites.readDataNumber(e, ENEMY_DATA.SLOW_PCT) | 0
-        const slowUntil = sprites.readDataNumber(e, ENEMY_DATA.SLOW_UNTIL) | 0
-        let speed = baseSpeed
-        if (slowPct > 0 && slowUntil > now) speed = Math.idiv(speed * Math.max(0, 100 - slowPct), 100)
-        else if (slowPct > 0 && slowUntil <= now) sprites.setDataNumber(e, ENEMY_DATA.SLOW_PCT, 0)
-
-        // Attack motion phases
-        if (phase == 1) {
-            // Lunge forward
-            const ls = speed * 2
-            e.vx = Math.idiv(dx * ls, mag); e.vy = Math.idiv(dy * ls, mag)
-            if (now >= atkUntil) {
-                phase = 2; atkUntil = now + 90
-                sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
-                sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
-            }
-        } else if (phase == 2) {
-            // Recoil back
-            const rs = speed * 1
-            e.vx = -Math.idiv(dx * rs, mag); e.vy = -Math.idiv(dy * rs, mag)
-            if (now >= atkUntil) {
-                phase = 3; atkUntil = now + 220 // brief idle window
-                sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, phase)
-                sprites.setDataNumber(e, ENEMY_DATA.ATK_UNTIL, atkUntil)
-                sprites.setDataNumber(e, ENEMY_DATA.ATK_COOLDOWN_UNTIL, now + 600)
-            }
-        } else if (phase == 3) {
-            // Downtime
-            e.vx = 0; e.vy = 0
-            if (now >= atkUntil) { phase = 0; sprites.setDataNumber(e, ENEMY_DATA.ATK_PHASE, 0) }
-        } else {
-            // Normal homing
-            _enemySteerTowardHero(e, h, speed)
-            //e.vx = Math.idiv(dx * speed, mag); e.vy = Math.idiv(dy * speed, mag)
-        }
-
-        // --- NEW: update label for animation phase + facing dir ---
-        // (death is handled in applyDamageToEnemyIndex; see below)
-        const hpNow = sprites.readDataNumber(e, ENEMY_DATA.HP)
-        if (hpNow <= 0) {
-            sprites.setDataString(e, "phase", "death")
-        } else {
-            // Any non-zero ATK_PHASE counts as "attack" for animation purposes
-            const atkPhase = sprites.readDataNumber(e, ENEMY_DATA.ATK_PHASE) | 0
-            const phaseLabel = atkPhase > 0 ? "attack" : "walk"
-            sprites.setDataString(e, "phase", phaseLabel)
-
-            // Crude direction from dx/dy (toward hero)
-            const absDx = Math.abs(dx), absDy = Math.abs(dy)
-            let dir = "down"
-            if (absDx >= absDy) {
-                dir = dx >= 0 ? "right" : "left"
-            } else {
-                dir = dy >= 0 ? "down" : "up"
-            }
-            sprites.setDataString(e, "dir", dir)
-        }
-
     }
 
+    // If there are no heroes, zero out enemy velocities and bail
+    if (heroTargets.length == 0) {
+        for (let ei = 0; ei < enemies.length; ei++) {
+            const e = enemies[ei]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            e.vx = 0
+            e.vy = 0
+        }
+        return
+    }
 
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const enemy = enemies[ei]
+        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
 
+        const anyEnemy = enemy as any
+        if (!anyEnemy.data) continue // not fully initialized
 
+        // --- Death timing: we scheduled this in applyDamageToEnemyIndex ---
+        const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
+        if (deathUntil > 0) {
+            // While in death phase, don't move; once the timer expires, destroy and clear arrays.
+            if (nowMs >= deathUntil) {
+                const bar = enemyHPBars[ei]
+                if (bar) {
+                    bar.destroy()
+                    enemyHPBars[ei] = null
+                }
+                enemy.destroy()
+                enemies[ei] = null
+            }
+            continue
+        }
+
+        // --- Knockback: if still in knockback window, skip AI steering ---
+        const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
+        if (kbUntil > 0 && nowMs < kbUntil) {
+            continue
+        }
+
+        // --- Home position (for RETURNING_HOME) ---
+        let homeX = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_X)
+        let homeY = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_Y)
+        if (!homeX && !homeY) {
+            homeX = enemy.x
+            homeY = enemy.y
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
+        }
+
+        // --- Phase for animation: "walk" / "attack" / "death" ---
+        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+
+        // Attack timing / cooldown
+        if (phaseStr === "attack") {
+            const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
+            if (nowMs >= atkUntil) {
+                // Attack finished → go back to walking and start a cooldown
+                sprites.setDataString(enemy, "phase", "walk")
+                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
+                phaseStr = "walk"
+            }
+        }
+
+        // If we’re in attack phase, don’t move (stand in place and swing)
+        if (phaseStr === "attack") {
+            enemy.vx = 0
+            enemy.vy = 0
+            continue
+        }
+
+        // --- Movement speed (base, before slow/weak, etc.) ---
+        const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
+        const slowPct = sprites.readDataNumber(enemy, ENEMY_DATA.SLOW_PCT) || 0
+        let speed = baseSpeed
+        if (slowPct > 0) {
+            speed = Math.idiv(baseSpeed * (100 - slowPct), 100)
+            if (speed <= 0) speed = 1
+        }
+
+        // --- Choose target: nearest hero using the heroes[] array ---
+        let target = heroTargets[0]
+        let bestD2 = 1e9
+        for (let hi = 0; hi < heroTargets.length; hi++) {
+            const h = heroTargets[hi]
+            const dxH = h.x - enemy.x
+            const dyH = h.y - enemy.y
+            const d2 = dxH * dxH + dyH * dyH
+            if (d2 < bestD2) {
+                bestD2 = d2
+                target = h
+            }
+        }
+
+        // If we're basically on top of the hero, stop
+        if (bestD2 < 1) {
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+            continue
+        }
+
+        // --- Steering: use your tile-aware BFS helper ---
+        _enemySteerTowardHero(enemy, target, speed)
+
+        // --- Direction string for animation ("up"/"down"/"left"/"right") ---
+        let dir = "down"
+        if (Math.abs(enemy.vx) > Math.abs(enemy.vy)) {
+            dir = enemy.vx >= 0 ? "right" : "left"
+        } else {
+            dir = enemy.vy >= 0 ? "down" : "up"
+        }
+        sprites.setDataString(enemy, "dir", dir)
+
+        // --- DEBUG log (throttled, first enemy only) ---
+        if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+            console.log(
+                "[enemyHoming] tick",
+                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                "phase=", phaseStr,
+                "x=", enemy.x, "y=", enemy.y,
+                "vx=", enemy.vx, "vy=", enemy.vy,
+                "t=", nowMs
+            )
+            _lastEnemyHomingLogMs = nowMs
+        }
+    }
 }
+
+
+
 
 function spawnDummyEnemy(x: number, y: number) {
     const enemy = sprites.create(img`
@@ -5432,19 +5695,39 @@ function updateEnemyHPBar(enemyIndex: number) {
 function applyDamageToEnemyIndex(eIndex: number, amount: number) {
     if (eIndex < 0 || eIndex >= enemies.length) return
     const enemy = enemies[eIndex]; if (!enemy) return
+
     let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
     hp = Math.max(0, hp - amount)
+
     showDamageNumber(enemy.x, enemy.y - 6, amount, "damage")
     sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
     updateEnemyHPBar(eIndex)
     flashEnemyOnDamage(enemy)
+
     if (hp <= 0) {
-        // NEW: flag this so Phaser can play a death animation
+        // Already dying? don't reschedule
+        const existing = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
+        if (existing > 0) return
+
+        const now = game.runtime()
+        const deathDurationMs = 900  // try 1500–2000ms temporarily if you want to *see* it
+
+        // Tell Phaser: switch to death anim
         sprites.setDataString(enemy, "phase", "death")
-        enemy.destroy(effects.disintegrate, 200)
+
+        // Clear attack state
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+
+        // Freeze motion
+        enemy.vx = 0
+        enemy.vy = 0
+
+        // Let updateEnemyHoming own the actual destroy timing
+        sprites.setDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL, now + deathDurationMs)
     }
 }
-
 
 
 
@@ -5644,6 +5927,7 @@ function updateEnemyEffects(now: number) {
 }
 
 
+
 // Master update
 game.onUpdate(function () {
     if (!HeroEngine._isStarted()) return
@@ -5810,7 +6094,7 @@ const ENEMY_SPAWN_INTERVAL_MS = 1200
         "slime brown",
         "slime green",
         "slime lightblue",
-        "slime projectile",
+//        "slime projectile",
         "slime red",
         "slime violet",
         "slime yellow",
@@ -5876,7 +6160,7 @@ const ENEMY_SPAWN_INTERVAL_MS = 1200
 
 
 // Wave state
-let currentWaveIndex = 0
+//let currentWaveIndex = 0
 let currentWaveIsBreak = true
 let wavePhaseUntilMs = game.runtime() + 1000 // short delay before first wave
 

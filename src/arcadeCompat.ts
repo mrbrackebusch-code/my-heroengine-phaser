@@ -1688,7 +1688,15 @@ export function _syncNativeSprites(): void {
                 "";
             // ...
 
+
+
             const phase = ((data["phase"] as string) || "walk") as MonsterAnimPhase;
+            const dir = ((data["dir"] as string) || "down") as MonsterAnimPhase;
+
+
+            //phase = phase1 //sprite.data[ENEMY_DATA.phase] || "walk";
+            //dir   = sprite.data[ENEMY_DATA.dir] || "down";
+
 
             let dirForAnim = (data["dir"] as string | undefined) as MonsterDirection | undefined;
             if (!dirForAnim) {
@@ -1720,8 +1728,9 @@ export function _syncNativeSprites(): void {
             _propagateLabelDataToNative(s);  // now this sees name/phase/dir on s.data
 
 
+            const DEBUG_ENEMY_SYNC = false;
 
-            if (role === "ENEMY" && _syncCallCount <= 200) {
+            if (role === "ENEMY" && _syncCallCount <= 200 && DEBUG_ENEMY_SYNC === true) {
                 console.log(
                     "[SYNC.ENEMY]",
                     "id=", s.id,
@@ -1734,6 +1743,18 @@ export function _syncNativeSprites(): void {
                     "hp=", srcData["hp"],
                     "maxHp=", srcData["maxHp"]
                 );
+
+                const currentAnim = s.anims && s.anims.currentAnim;
+                const currentFrame = s.anims && s.anims.currentFrame;
+
+                console.log(
+                    "[sync enemy sprite state]",
+                    "id=", s["__spriteId"], // or whatever id you log elsewhere
+                    "texture=", s.texture && s.texture.key,
+                    "animKey=", currentAnim && currentAnim.key,
+                    "frameIndex=", currentFrame && currentFrame.index
+                );
+
             }
 
                 const nativeAny: any = s.native;

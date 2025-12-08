@@ -238,12 +238,16 @@ class HeroScene extends Phaser.Scene {
 
         console.log(">>> [HeroScene.create] imports finished");
 
-
         // --- Build LPC monster atlas after assets + HeroEngine are ready ---
         try {
             this.monsterAtlas = buildMonsterAtlas(this);
+
+            // keep these if you want the extra access points:
             (this as any).__monsterAtlas = this.monsterAtlas;
             (globalThis as any).__monsterAtlas = this.monsterAtlas;
+
+            // *** KEY LINE: make it visible via scene.registry ***
+            this.registry.set("monsterAtlas", this.monsterAtlas);
 
             console.log(
                 ">>> [HeroScene.create] monster atlas built; ids =",
@@ -277,18 +281,6 @@ class HeroScene extends Phaser.Scene {
                 console.error(">>> [HeroScene.update] _tick ERROR:", e);
             }
         }
-
-        // --- NEW: drive monster animations from name/phase/dir ---
-        this.children.each((obj: Phaser.GameObjects.GameObject) => {
-            // Only interested in sprites that can play animations
-            const sprite = obj as Phaser.GameObjects.Sprite;
-            if (!sprite.anims || typeof sprite.getData !== "function") return;
-
-            const monsterName = sprite.getData("name");
-            if (!monsterName) return; // not labeled as a monster
-
-            applyMonsterAnimationForSprite(sprite);
-        });
 
 
     }

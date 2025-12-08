@@ -1,50 +1,121 @@
 // monsterAnimGlue.ts
 import type Phaser from "phaser";
-import {
-    getMonsterAnimForSprite,
-    type Phase as MonsterPhase
-} from "./monsterAtlas";
+import type { MonsterAtlas } from "./monsterAtlas";
 
 type Dir = "up" | "down" | "left" | "right";
 type Phase = "walk" | "attack" | "death";
 
-/**
- * Reads name/phase/dir from a Phaser sprite's data and plays the right anim.
- * Uses the MonsterAtlas built in HeroScene.create().
- *
- * Expected animation keys: `${monsterId}_${phase}_${dir}`
- * e.g. "imp blue_walk_right"
- */
+// Data keys we use on the Phaser sprite
+const LAST_ANIM_KEY  = "__monsterLastAnimKey";
+const LAST_PHASE_KEY = "__monsterLastPhase";
+const LAST_DIR_KEY   = "__monsterLastDir";
+
+// ---------------------------------------------------------------------
+// Helper: locate the MonsterAtlas regardless of where we stashed it.
+// ---------------------------------------------------------------------
+function getMonsterAtlasFromScene(scene: Phaser.Scene): MonsterAtlas | undefined {
+    const anyScene = scene as any;
+
+    return (
+        // preferred: Phaser registry
+        (scene.registry?.get?.("monsterAtlas") as MonsterAtlas | undefined) ||
+        // also allow scene fields
+        (anyScene.monsterAtlas as MonsterAtlas | undefined) ||
+        (anyScene.__monsterAtlas as MonsterAtlas | undefined) ||
+        // and global escape hatch
+        ((globalThis as any).__monsterAtlas as MonsterAtlas | undefined)
+    );
+}
+
+// ---------------------------------------------------------------------
+// Core: read data fields (monsterId/name/phase/dir) and play the right anim
+// ---------------------------------------------------------------------
 export function applyMonsterAnimationForSprite(
     sprite: Phaser.GameObjects.Sprite
 ): void {
     const scene = sprite.scene;
-    if (!scene || !sprite.anims) return;
+    const data = sprite.getDataManager ? sprite.getDataManager() : sprite.data;
+    if (!data) return;
 
-    const monsterIdRaw = (sprite.getData("name") as string) || "";
-    if (!monsterIdRaw) return; // not one of our monsters
-
-    const phase = ((sprite.getData("phase") as Phase) || "walk") as MonsterPhase;
-    const dir   = (sprite.getData("dir")   as Dir)   || "down";
-
-    // Look up atlas — HeroScene sets both a scene field and a global
-    const anyScene: any = scene as any;
-    const atlas =
-        anyScene.__monsterAtlas || (globalThis as any).__monsterAtlas;
+    const atlas = getMonsterAtlasFromScene(scene);
     if (!atlas) {
-        // Atlas not ready yet; keep placeholder
+        // Atlas not built yet – just skip.
         return;
     }
 
-    const animSet = getMonsterAnimForSprite(atlas, sprite);
+    // Prefer explicit monsterId/monsterName; fall back to "name"
+    const monsterIdRaw: string | undefined =
+        (data.get("monsterId")   as string | undefined) ||
+        (data.get("monsterName") as string | undefined) ||
+        (data.get("name")        as string | undefined) ||
+        (sprite.name             as string | undefined);
+
+    if (!monsterIdRaw) {
+        console.warn("[MonsterAnimGlue] sprite missing monster id/name", sprite);
+        return;
+    }
+
+    const phase = ((data.get("phase") as Phase) || "walk") as Phase;
+    const dir   = ((data.get("dir")   as Dir)   || "down") as Dir;
+
+    // Early-out if nothing changed since last tick
+    const lastAnimKey  = data.get(LAST_ANIM_KEY)  as string | undefined;
+    const lastPhase    = data.get(LAST_PHASE_KEY) as Phase  | undefined;
+    const lastDir      = data.get(LAST_DIR_KEY)   as Dir    | undefined;
+    const currentAnim  = sprite.anims?.currentAnim?.key;
+
+    if (
+        lastAnimKey &&
+        lastAnimKey === currentAnim &&
+        lastPhase === phase &&
+        lastDir   === dir
+    ) {
+        // Same animation, same phase + dir → no work
+        return;
+    }
+
+    // -----------------------------------------------------------------
+    // Look up the MonsterAnimSet in the atlas using the raw id.
+    // Your atlas keys include "slime brown", "imp blue", etc.
+    // -----------------------------------------------------------------
+    const candidates = [
+        monsterIdRaw,
+        monsterIdRaw.toLowerCase(),
+        monsterIdRaw.toUpperCase()
+    ];
+
+    let animSet: any = undefined;
+    let chosenKey: string | undefined;
+
+    for (const k of candidates) {
+        if ((atlas as any)[k]) {
+            animSet = (atlas as any)[k];
+            chosenKey = k;
+            break;
+        }
+    }
+
     if (!animSet) {
         console.warn("[MonsterAnimGlue] no animSet in atlas for", monsterIdRaw);
         return;
     }
 
-    const perPhase = animSet.phases[phase];
+    const phases = animSet.phases as {
+        walk?:  Record<Dir, number[]>;
+        attack?: Record<Dir, number[]>;
+        death?:  Record<Dir, number[]>;
+    };
+
+    const perPhase = phases[phase];
     if (!perPhase) {
-        console.warn("[MonsterAnimGlue] no phase", phase, "for", animSet.id);
+        console.warn(
+            "[MonsterAnimGlue] no phase",
+            phase,
+            "for",
+            animSet.id,
+            "atlasKey=",
+            chosenKey
+        );
         return;
     }
 
@@ -52,105 +123,82 @@ export function applyMonsterAnimationForSprite(
     if (!frames || frames.length === 0) {
         console.warn(
             "[MonsterAnimGlue] no frames for",
-            "id=", animSet.id,
-            "phase=", phase,
-            "dir=", dir,
-            "texKey=", sprite.texture && sprite.texture.key,
-            "name=", sprite.getData("name"),
-            "rawPhase=", sprite.getData("phase"),
-            "rawDir=", sprite.getData("dir")
+            animSet.id,
+            "phase=",
+            phase,
+            "dir=",
+            dir,
+            "perPhase=",
+            perPhase
         );
-
         return;
     }
 
-    const monsterId = animSet.id; // canonical id from atlas ("imp blue")
-    const animKey = `${monsterId}_${phase}_${dir}`;
+    // -----------------------------------------------------------------
+    // Build / play Phaser animation
+    // -----------------------------------------------------------------
+    const safeMonsterId = monsterIdRaw.replace(/\s+/g, "_").toLowerCase();
+    const EXTRAsafeMonsterID = safeMonsterId.replace(/ /g, "_")
+    const phaseKey = phase.toString().toLowerCase() as Phase;
+    const dirKey   = dir.toString().toLowerCase() as Dir;
+    const animKey  = `${EXTRAsafeMonsterID}_${phaseKey}_${dirKey}`;
+
+//    const animKey = `${}_${phase}_${dir}`;
+
     const mgr = scene.anims;
 
 
-    // Lazily create the animation on first use
+    
     if (!mgr.exists(animKey)) {
+        const textureKey: string = animSet.textureKeys
+            ? animSet.textureKeys[0]
+            : animSet.textureKey || animSet.id;
 
-        const phaseKey = Phaser.Utils.String.Trim(phase).toLowerCase() as SimplePhase;
-        const dirKey = Phaser.Utils.String.Trim(dir).toLowerCase() as MonsterAnimDirKey;
-
-        const perPhase = animSet.phases[phaseKey];
-        if (!perPhase) {
-            console.warn(`[MonsterAnimGlue] no phase data for id= ${monsterId} phase= ${phaseKey}`);
-            return;
-        }
-
-        const frames = perPhase[dirKey];
-        if (!frames || frames.length === 0) {
-            console.warn(`[MonsterAnimGlue] no frames for id= ${monsterId} phase= ${phaseKey} dir= ${dirKey}`);
-            return;
-        }
-
-        // --- Choose a texture key that matches this phase ---
-        // Many LPC monsters use separate sheets (1Walk / 1Attack / 1Death),
-        // so we try to pick the sheet whose name actually contains the phase.
-        const tryMatch = (needle: string): string | undefined => {
-            const n = needle.toLowerCase();
-            for (const k of animSet.textureKeys) {
-                if (k.toLowerCase().includes(n)) return k;
-            }
-            return undefined;
-        };
-
-        let texKey: string | undefined;
-
-        // Direct phase match
-        texKey = tryMatch(phaseKey);
-
-        // Common aliases / fallbacks
-        if (!texKey && phaseKey === "idle") {
-            texKey = tryMatch("walk");
-        }
-        if (!texKey && phaseKey === "walk") {
-            // Some sheets call it "move" instead of "walk"
-            texKey = tryMatch("walk") || tryMatch("move");
-        }
-        if (!texKey && phaseKey === "attack") {
-            texKey = tryMatch("attack") || tryMatch("atk");
-        }
-        if (!texKey && phaseKey === "death") {
-            texKey = tryMatch("death");
-        }
-
-        // Ultimate fallback – if nothing matches, just use the first sheet
-        if (!texKey) {
-            texKey = animSet.textureKeys[0];
-        }
-
-        console.log("[MonsterAnimGlue] creating anim", animKey,
-            "texKey=", texKey,
-            "frames=", frames
+        console.log(
+            "[MonsterAnimGlue] creating anim",
+            animKey,
+            "for monster=",
+            animSet.id,
+            "using texture=",
+            textureKey,
+            "frames=",
+            frames
         );
 
         mgr.create({
             key: animKey,
-            frames: frames.map(f => ({ key: texKey!, frame: f })),
+            frames: frames.map((frameIndex: number) => ({
+                key: textureKey,
+                frame: frameIndex
+            })),
             frameRate: 8,
             repeat: -1
         });
     }
 
+    const isNewAnim = lastAnimKey !== animKey;
 
+    sprite.anims.play(animKey, true);
 
-
-    // Avoid restarting the same animation every frame
-    const currentKey = sprite.anims.currentAnim?.key;
-    if (currentKey !== animKey) {
-        sprite.play(animKey, true);
+    // Randomize starting phase so large groups don't look like a marching band
+    if (isNewAnim) {
+        sprite.anims.setProgress(Math.random());
     }
+
+    // Remember last state so we can early-out next tick
+    data.set(LAST_ANIM_KEY,  animKey);
+    data.set(LAST_PHASE_KEY, phaseKey);
+    data.set(LAST_DIR_KEY,   dirKey);
+
+
+    sprite.anims.play(animKey, true);
 }
 
-
+// Tiny helper if you want it from arcadeCompat (returns success/fail)
 export function tryAttachMonsterSprite(sprite: Phaser.GameObjects.Sprite): boolean {
-    // This will read name/phase/dir from sprite.getData()
     try {
-        return applyMonsterAnimationForSprite(sprite);
+        applyMonsterAnimationForSprite(sprite);
+        return true;
     } catch (e) {
         console.warn("[monsterAnimGlue.tryAttachMonsterSprite] failed", e);
         return false;
