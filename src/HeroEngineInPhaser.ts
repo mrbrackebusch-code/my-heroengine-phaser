@@ -2337,15 +2337,11 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
         showDamageNumber(enemy.x, enemy.y - 6, dmg)
     }
     if (isHeal && dmg > 0) applyHealToHeroIndex(heroIndex, dmg)
+    
     if (knockbackPct > 0) {
-        const dx = enemy.x - hero.x, dy = enemy.y - hero.y
-        let mag = Math.sqrt(dx * dx + dy * dy); if (mag == 0) mag = 1
-        const kbSpeed = 40
-        enemy.vx = Math.idiv(dx * kbSpeed, mag); enemy.vy = Math.idiv(dy * kbSpeed, mag)
-        const baseDuration = 150, extraPerPct = 5
-        const kbDuration = baseDuration + knockbackPct * extraPerPct
-        sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, now + kbDuration)
+    applyPctKnockbackToEnemy(enemy, hero.x, hero.y, knockbackPct)
     }
+
 })
 
 // NEW: HeroWeapon ↔ Player (HEAL detonates on allies)
@@ -5117,6 +5113,72 @@ const ENEMY_ATK_PHASE_ATTACK  = 2
 const ENEMY_ATK_PHASE_RECOVER = 3
 
 
+
+
+// Apply a short, snappy knockback away from (fromX, fromY)
+// but scale strength by enemy "weight" derived from ENEMY_DATA.SPEED.
+function applyPctKnockbackToEnemy(
+    enemy: Sprite,
+    fromX: number,
+    fromY: number,
+    knockbackPct: number
+) {
+    const now = game.runtime() | 0
+
+    // --- 1) Use ENEMY_DATA.SPEED as a proxy for weight ---
+    // From your ENEMY_KIND:
+    //   ELITE: 5, BRUTE: 15, GRUNT: 20, RUNNER: 42
+    const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
+
+    // Heavier (slow) → less knockback; lighter (fast) → more.
+    // These are just percentages on top of knockbackPct.
+    let weightPct = 100
+    if (baseSpeed <= 15) {
+        // ELITE / BRUTE: feel heavy
+        weightPct = 60      // 60% of normal knockback
+    } else if (baseSpeed >= 35) {
+        // RUNNER / very fast: feel light
+        weightPct = 130     // 130% of normal knockback
+    } else {
+        // GRUNT / mid-band
+        weightPct = 100     // normal
+    }
+
+    // Combine weapon knockbackPct with weight
+    let effectivePct = Math.idiv(knockbackPct * weightPct, 100)
+    if (effectivePct > 100) effectivePct = 100
+    if (effectivePct < 0) effectivePct = 0
+
+    // --- 2) Map effectivePct → distance ---
+    const minDistPx = 16   // tiny shove
+    const maxDistPx = 48   // big smash
+    const distPx = minDistPx + Math.idiv((maxDistPx - minDistPx) * effectivePct, 100)
+
+    // --- 3) Fixed, short knockback duration ---
+    const durationMs = 160 // ~0.16s
+
+    // Direction: from source → enemy (push enemy away)
+    const dx = enemy.x - fromX
+    const dy = enemy.y - fromY
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag === 0) mag = 1
+
+    // Velocity so we travel distPx in durationMs
+    const speedPxPerSec = Math.idiv(distPx * 1000, durationMs)
+
+    enemy.vx = Math.idiv(dx * speedPxPerSec, mag)
+    enemy.vy = Math.idiv(dy * speedPxPerSec, mag)
+
+    // AI is disabled while KNOCKBACK_UNTIL is active (updateEnemyHoming),
+    // and updateEnemyEffects will zero vx/vy when this expires.
+    sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, now + durationMs)
+}
+
+
+
+
+
+
 function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boolean): Sprite {
     const stats = enemyStatsForMonsterId(monsterId) // or pass elite if you later use it    const stats = enemyStatsForMonsterId(monsterId)  // see next section for stats fix
 
@@ -5488,6 +5550,7 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 
 let _lastEnemyHomingLogMs = 0
 
+
 function updateEnemyHoming(nowMs: number) {
     // Build a list of live heroes from the existing heroes[] array
     const heroTargets: Sprite[] = []
@@ -5528,13 +5591,30 @@ function updateEnemyHoming(nowMs: number) {
                 }
                 enemy.destroy()
                 enemies[ei] = null
+            } else {
+                // Freeze while death animation is playing
+                enemy.vx = 0
+                enemy.vy = 0
             }
+            continue
+        }
+
+        // --- Phase for animation: "walk" / "attack" / "death" ---
+        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+
+        // Belt & suspenders:
+        // If we're flagged as "death" but somehow have no DEATH_UNTIL,
+        // freeze and skip steering so they don't glide.
+        if (phaseStr === "death") {
+            enemy.vx = 0
+            enemy.vy = 0
             continue
         }
 
         // --- Knockback: if still in knockback window, skip AI steering ---
         const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
         if (kbUntil > 0 && nowMs < kbUntil) {
+            // Knockback helper owns vx/vy; just don't fight it.
             continue
         }
 
@@ -5547,9 +5627,6 @@ function updateEnemyHoming(nowMs: number) {
             sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
             sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
         }
-
-        // --- Phase for animation: "walk" / "attack" / "death" ---
-        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
 
         // Attack book-keeping
         const atkPhase = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_PHASE) | 0
@@ -5753,191 +5830,6 @@ function updateEnemyHoming(nowMs: number) {
     }
 }
 
-function updateEnemyHomingOLD2(nowMs: number) {
-    // Build a list of live heroes from the existing heroes[] array
-    const heroTargets: Sprite[] = []
-    for (let hi = 0; hi < heroes.length; hi++) {
-        const h = heroes[hi]
-        if (h && !(h.flags & sprites.Flag.Destroyed)) {
-            heroTargets.push(h)
-        }
-    }
-
-    // If there are no heroes, zero out enemy velocities and bail
-    if (heroTargets.length == 0) {
-        for (let ei = 0; ei < enemies.length; ei++) {
-            const e = enemies[ei]
-            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
-            e.vx = 0
-            e.vy = 0
-        }
-        return
-    }
-
-    for (let ei = 0; ei < enemies.length; ei++) {
-        const enemy = enemies[ei]
-        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
-
-        const anyEnemy = enemy as any
-        if (!anyEnemy.data) continue // not fully initialized
-
-        // --- Death timing: we scheduled this in applyDamageToEnemyIndex ---
-        const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
-        if (deathUntil > 0) {
-            // While in death phase, don't move; once the timer expires, destroy and clear arrays.
-            if (nowMs >= deathUntil) {
-                const bar = enemyHPBars[ei]
-                if (bar) {
-                    bar.destroy()
-                    enemyHPBars[ei] = null
-                }
-                enemy.destroy()
-                enemies[ei] = null
-            }
-            continue
-        }
-
-        // --- Knockback: if still in knockback window, skip AI steering ---
-        const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
-        if (kbUntil > 0 && nowMs < kbUntil) {
-            continue
-        }
-
-        // --- Home position (for RETURNING_HOME) ---
-        let homeX = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_X)
-        let homeY = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_Y)
-        if (!homeX && !homeY) {
-            homeX = enemy.x
-            homeY = enemy.y
-            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
-            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
-        }
-
-        // --- Phase for animation: "walk" / "attack" / "death" ---
-        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
-
-        // Attack cooldown (prevents spam)
-        const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
-
-
-        // Attack timing / cooldown
-        if (phaseStr === "attack") {
-            const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
-            if (nowMs >= atkUntil) {
-                // Attack finished → go back to walking and start a cooldown
-                sprites.setDataString(enemy, "phase", "walk")
-                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
-                phaseStr = "walk"
-            }
-        }
-
-        // If we’re in attack phase, don’t move (stand in place and swing)
-        if (phaseStr === "attack") {
-            enemy.vx = 0
-            enemy.vy = 0
-            continue
-        }
-
-        // --- Movement speed (base, before slow/weak, etc.) ---
-        const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
-        const slowPct = sprites.readDataNumber(enemy, ENEMY_DATA.SLOW_PCT) || 0
-        let speed = baseSpeed
-        if (slowPct > 0) {
-            speed = Math.idiv(baseSpeed * (100 - slowPct), 100)
-            if (speed <= 0) speed = 1
-        }
-
-        // --- Choose target: nearest hero using the heroes[] array ---
-        let target = heroTargets[0]
-        let bestD2 = 1e9
-        for (let hi = 0; hi < heroTargets.length; hi++) {
-            const h = heroTargets[hi]
-            const dxH = h.x - enemy.x
-            const dyH = h.y - enemy.y
-            const d2 = dxH * dxH + dyH * dyH
-            if (d2 < bestD2) {
-                bestD2 = d2
-                target = h
-            }
-        }
-
-
-
-        // --- Attack decision: close enough + off cooldown → start attack ---
-        const atkRange = ENEMY_MELEE_RANGE_PX
-        const atkRange2 = atkRange * atkRange
-
-        if (bestD2 <= atkRange2 && nowMs >= atkCooldownUntil) {
-            // Scale attack duration by atkRatePct if you want snappier/faster enemies
-            const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
-            const baseAttackMs = 350
-            let attackDurationMs = Math.idiv(baseAttackMs * 100, atkRatePct)
-            if (attackDurationMs < 150) attackDurationMs = 150
-
-            // Enter attack phase: this is what drives the LPC attack animation
-            sprites.setDataString(enemy, "phase", "attack")
-            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackDurationMs)
-
-            // Let the "attack in progress" block handle cooldown once it's done
-
-            // Freeze movement during the swing; attack phase branch will keep it frozen
-            enemy.vx = 0
-            enemy.vy = 0
-            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
-
-            if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
-                console.log(
-                    "[enemyHoming] START ATTACK",
-                    "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                    "phase=", "attack",
-                    "d2=", bestD2,
-                    "attackMs=", attackDurationMs
-                )
-                _lastEnemyHomingLogMs = nowMs
-            }
-            continue
-        }
-
-        // If we're basically on top of the hero but still on cooldown, just stop
-        if (bestD2 < 1) {
-            enemy.vx = 0
-            enemy.vy = 0
-            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
-            continue
-        }
-
-
-
-
-
-        // --- Steering: use your tile-aware BFS helper ---
-        _enemySteerTowardHero(enemy, target, speed)
-
-        // --- Direction string for animation ("up"/"down"/"left"/"right") ---
-        let dir = "down"
-        if (Math.abs(enemy.vx) > Math.abs(enemy.vy)) {
-            dir = enemy.vx >= 0 ? "right" : "left"
-        } else {
-            dir = enemy.vy >= 0 ? "down" : "up"
-        }
-        sprites.setDataString(enemy, "dir", dir)
-
-        // --- DEBUG log (throttled, first enemy only) ---
-        if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
-            console.log(
-                "[enemyHoming] tick",
-                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                "phase=", phaseStr,
-                "x=", enemy.x, "y=", enemy.y,
-                "vx=", enemy.vx, "vy=", enemy.vy,
-                "t=", nowMs
-            )
-            _lastEnemyHomingLogMs = nowMs
-        }
-    }
-}
-
-
 
 
 function spawnDummyEnemy(x: number, y: number) {
@@ -6000,12 +5892,15 @@ function updateEnemyHPBar(enemyIndex: number) {
 
 function applyDamageToEnemyIndex(eIndex: number, amount: number) {
     if (eIndex < 0 || eIndex >= enemies.length) return
-    const enemy = enemies[eIndex]; if (!enemy) return
+    const enemy = enemies[eIndex]
+    if (!enemy) return
 
     let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
     hp = Math.max(0, hp - amount)
 
+    // Damage number (comment out if you prefer the caller to own this)
     showDamageNumber(enemy.x, enemy.y - 6, amount, "damage")
+
     sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
     updateEnemyHPBar(eIndex)
     flashEnemyOnDamage(enemy)
@@ -6016,24 +5911,28 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number) {
         if (existing > 0) return
 
         const now = game.runtime()
-        const deathDurationMs = 900  // try 1500–2000ms temporarily if you want to *see* it
+        const deathDurationMs = 900  // tweak if you want longer-visible deaths
 
-        // Tell Phaser: switch to death anim
+        // Tell Phaser / monsterAnimGlue: switch to death anim
         sprites.setDataString(enemy, "phase", "death")
 
-        // Clear attack state
+        // Clear attack state completely
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
 
-        // Freeze motion
+        // Stop any motion
         enemy.vx = 0
         enemy.vy = 0
+
+        // Belt & suspenders: also clear knockback so they don't glide while dead
+        sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
 
         // Let updateEnemyHoming own the actual destroy timing
         sprites.setDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL, now + deathDurationMs)
     }
 }
+
 
 
 

@@ -1,0 +1,76 @@
+{
+  "frameSize": [64, 64],
+  "scaleTo": [64, 64],
+  "rows": 54,
+  "cols": 13,
+  "animations": {
+    "castNorth":  { "row": 0, "cols": [0,1,2,3,4,5,6] },
+    "castWest":   { "row": 1, "cols": [0,1,2,3,4,5,6] },
+    "castSouth":  { "row": 2, "cols": [0,1,2,3,4,5,6] },
+    "castEast":   { "row": 3, "cols": [0,1,2,3,4,5,6] },
+
+    "thrustNorth": { "row": 4, "cols": [0,1,2,3,4,5,6,7] },
+    "thrustWest":  { "row": 5, "cols": [0,1,2,3,4,5,6,7] },
+    "thrustSouth": { "row": 6, "cols": [0,1,2,3,4,5,6,7] },
+    "thrustEast":  { "row": 7, "cols": [0,1,2,3,4,5,6,7] },
+
+    "walkNorth": { "row": 8, "cols": [0,1,2,3,4,5,6,7,8] },
+    "walkWest":  { "row": 9, "cols": [0,1,2,3,4,5,6,7,8] },
+    "walkSouth": { "row": 10, "cols": [0,1,2,3,4,5,6,7,8] },
+    "walkEast":  { "row": 11, "cols": [0,1,2,3,4,5,6,7,8] },
+
+    "slashNorth": { "row": 12, "cols": [0,1,2,3,4,5] },
+    "slashWest":  { "row": 13, "cols": [0,1,2,3,4,5] },
+    "slashSouth": { "row": 14, "cols": [0,1,2,3,4,5] },
+    "slashEast":  { "row": 15, "cols": [0,1,2,3,4,5] },
+
+    "shootNorth": { "row": 16, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "shootWest":  { "row": 17, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "shootSouth": { "row": 18, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "shootEast":  { "row": 19, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+
+    "hurtSouth": { "row": 20, "cols": [0,1,2,3,4,5] },
+
+    "climbNorth": { "row": 21, "cols": [0,1,2,3,4,5] },
+
+    "idleNorth": { "row": 22, "cols": [0,1] },
+    "idleWest":  { "row": 23, "cols": [0,1] },
+    "idleSouth": { "row": 24, "cols": [0,1] },
+    "idleEast":  { "row": 25, "cols": [0,1] },
+
+    "jumpNorth": { "row": 26, "cols": [0,1,2,3,4] },
+    "jumpWest":  { "row": 27, "cols": [0,1,2,3,4] },
+    "jumpSouth": { "row": 28, "cols": [0,1,2,3,4] },
+    "jumpEast":  { "row": 29, "cols": [0,1,2,3,4] },
+
+    "sitNorth": { "row": 30, "cols": [0,1,2] },
+    "sitWest":  { "row": 31, "cols": [0,1,2] },
+    "sitSouth": { "row": 32, "cols": [0,1,2] },
+    "sitEast":  { "row": 33, "cols": [0,1,2] },
+
+    "emoteNorth": { "row": 34, "cols": [0,1,2] },
+    "emoteWest":  { "row": 35, "cols": [0,1,2] },
+    "emoteSouth": { "row": 36, "cols": [0,1,2] },
+    "emoteEast":  { "row": 37, "cols": [0,1,2] },
+
+    "runNorth": { "row": 38, "cols": [0,1,2,3,4,5,6,7] },
+    "runWest":  { "row": 39, "cols": [0,1,2,3,4,5,6,7] },
+    "runSouth": { "row": 40, "cols": [0,1,2,3,4,5,6,7] },
+    "runEast":  { "row": 41, "cols": [0,1,2,3,4,5,6,7] },
+
+    "combatIdleNorth": { "row": 42, "cols": [0,1] },
+    "combatIdleWest":  { "row": 43, "cols": [0,1] },
+    "combatIdleSouth": { "row": 44, "cols": [0,1] },
+    "combatIdleEast":  { "row": 45, "cols": [0,1] },
+
+    "backslashNorth": { "row": 46, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "backslashWest":  { "row": 47, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "backslashSouth": { "row": 48, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+    "backslashEast":  { "row": 49, "cols": [0,1,2,3,4,5,6,7,8,9,10,11,12] },
+
+    "halfslashNorth": { "row": 50, "cols": [0,1,2,3,4,5] },
+    "halfslashWest":  { "row": 51, "cols": [0,1,2,3,4,5] },
+    "halfslashSouth": { "row": 52, "cols": [0,1,2,3,4,5] },
+    "halfslashEast":  { "row": 53, "cols": [0,1,2,3,4,5] }
+  }
+}
