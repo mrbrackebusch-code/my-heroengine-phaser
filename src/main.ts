@@ -12,6 +12,10 @@ import { debugSpawnHeroWithAnim } from "./heroAnimGlue";
 
 import { installHeroAnimTester } from "./heroAnimGlue";
 
+// NEW:
+import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
+import { WorldTileRenderer } from "./tileMapGlue";
+
 // Somewhere near the top of main.ts:
 declare const globalThis: any;
 
@@ -59,6 +63,10 @@ class HeroScene extends Phaser.Scene {
 
     private monsterAtlas?: MonsterAtlas;
 
+    // NEW:
+    private tileAtlas?: TileAtlas;
+    private tileRenderer?: WorldTileRenderer;
+
     constructor() {
         super("hero");
     }
@@ -66,8 +74,13 @@ class HeroScene extends Phaser.Scene {
     preload() {
         console.log(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
-        console.log("preloading the hero spritesheets too");
+
+        console.log(">>> [HeroScene.preload] loading hero spritesheets");
         preloadHeroSheets(this);
+
+        console.log(">>> [HeroScene.preload] loading tile sheets");
+        preloadTileSheets(this);
+        // I included our preemptive logging here: [HeroScene.preload – tiles]
     }
 
     
@@ -85,10 +98,12 @@ class HeroScene extends Phaser.Scene {
         // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
         applyUrlProfileToGlobals();
 
-
         this.registry.set("heroAnimDebug", true);   // turn on logs
 
         buildHeroAtlas(this);                       // or rely on lazy build
+
+        console.log(">>> [HeroScene.create] building tile atlas");
+        this.tileAtlas = buildTileAtlas(this);
 
         debugSpawnHeroWithAnim(this, {
             heroName: "Jason",
@@ -96,6 +111,9 @@ class HeroScene extends Phaser.Scene {
             phase: "walk",
             dir: "down"
         });
+
+        // I included our preemptive logging here: [HeroScene.create – tileAtlas]
+
 
 
 
