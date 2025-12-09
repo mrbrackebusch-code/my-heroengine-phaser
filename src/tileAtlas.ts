@@ -1,9 +1,13 @@
 // tileAtlas.ts
 import type Phaser from "phaser";
 
+
 export type TileFamily =
+    | "dirtPlain"
     | "dirtCrater"
     | "decor";
+
+
 
 export type AutoShape =
     | "center"
@@ -104,7 +108,21 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         throw new Error("[tileAtlas.build] no TILE_SHEETS defined – did preloadTileSheets run?");
     }
 
-    const mainSheet = TILE_SHEETS[0];
+    // Prefer the terrain sheet, fall back to anything with "terrain" in the key,
+    // and finally fall back to the first sheet if nothing matches.
+    let mainSheet =
+        TILE_SHEETS.find(s => s.textureKey === "tiles.terrain") ||
+        TILE_SHEETS.find(s => s.textureKey.includes("terrain")) ||
+        TILE_SHEETS[0];
+
+    if (!mainSheet) {
+        throw new Error("[tileAtlas.build] no tilesheets available");
+    }
+
+    logTiles(
+        "[tileAtlas.build] using main sheet for autotiles:",
+        `${mainSheet.textureKey} (${mainSheet.cols}x${mainSheet.rows} tiles)`
+    );
 
     // Local helpers to compute frame indices on the main sheet.
     const cols = mainSheet.cols;
@@ -134,6 +152,19 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         arr.push(def);
     }
 
+
+    const tex = mainSheet.textureKey;
+
+    // ---------------------------------------------------------------------
+    // Family: "dirtPlain" – the 3 plain base tiles at [4,0], [4,1], [4,2]
+    // (all 3 as "center" variants; we'll randomize between them)
+    // ---------------------------------------------------------------------
+
+    
+    addAuto({ family: "dirtPlain", shape: "center", textureKey: tex, frameIndex: idx(4, 0) });
+    addAuto({ family: "dirtPlain", shape: "center", textureKey: tex, frameIndex: idx(4, 1) });
+    addAuto({ family: "dirtPlain", shape: "center", textureKey: tex, frameIndex: idx(4, 2) });
+
     // ---------------------------------------------------------------------
     // Family: "dirtCrater" – use the 3x3 block at columns 2–4, rows 0–2.
     //
@@ -145,7 +176,6 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     // We'll treat [3][1] as the "center" tile and the others as edges/corners.
     // ---------------------------------------------------------------------
 
-    const tex = mainSheet.textureKey;
 
     addAuto({ family: "dirtCrater", shape: "center",   textureKey: tex, frameIndex: idx(3, 1) });
     addAuto({ family: "dirtCrater", shape: "edgeN",    textureKey: tex, frameIndex: idx(3, 0) });

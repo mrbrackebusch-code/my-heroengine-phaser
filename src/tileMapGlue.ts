@@ -10,10 +10,15 @@ function logTiles(localDebug: boolean, ...args: any[]) {
 }
 
 function defaultTileValueToFamily(v: number): TileFamily {
-    // For now, treat any tile as part of the dirt crater family.
-    // Swap this out later for real engine TILE_* constants.
-    return "dirtCrater";
+    // In HeroEngineInPhaser.ts:
+    // const TILE_EMPTY = 0
+    // const TILE_WALL  = 1
+    if (v === 1) {
+        return "dirtCrater";  // walls: use crater edges/corners
+    }
+    return "dirtPlain";       // everything else: flat dirt base
 }
+
 
 /**
  * Compute which AutoShape a tile should use based on its neighbors.

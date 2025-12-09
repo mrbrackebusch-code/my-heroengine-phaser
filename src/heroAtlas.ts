@@ -352,13 +352,18 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
 // 2. Helpers for frame indexing / normalization
 // ----------------------------------------------------------
 
-function buildFrames(row: number, cols: number[]): number[] {
+function buildFrames(
+    row: number,
+    cols: number[],
+    sheetCols: number
+): number[] {
     const frames: number[] = [];
     for (const c of cols) {
-        frames.push(row * HERO_SHEET_COLS + c);
+        frames.push(row * sheetCols + c);
     }
     return frames;
 }
+
 
 function buildOversizeFrames(
     rowBig: number,
@@ -464,6 +469,9 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
 
         const phases = animSet.phases;
 
+
+
+
         const addPhaseDir = (
             phase: HeroPhase,
             dir: HeroDir,
@@ -474,7 +482,8 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             yoyo: boolean
         ) => {
             if (row64 >= totalRows64) return;
-            const frameIndices = buildFrames(row64, usedCols64);
+            // Use the real per-sheet column count (cols64), NOT a global 13.
+            const frameIndices = buildFrames(row64, usedCols64, cols64);
             if (frameIndices.length === 0) return;
 
             if (!phases[phase]) phases[phase] = {};
@@ -491,6 +500,10 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
                 yoyo
             };
         };
+
+
+
+
 
         const addOversizePhaseDir = (
             phase: HeroPhase,
@@ -615,6 +628,49 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             addOversizePhaseDir("slashOversize", "right", slashOversizeRowBaseBig + 3, slashOversizeColsBig, 12, 0, true);
         }
 
+
+        // --------------------------------------------------
+        // Phase aliases: wire secondary names onto core bands
+        // so every tester phase has *something* to play.
+        // If we later add real rows for a phase, this will
+        // NOT overwrite them.
+        // --------------------------------------------------
+        const aliasPhase = (target: HeroPhase, source: HeroPhase) => {
+            const src = phases[source];
+            if (!src) return;
+            if (phases[target]) return; // don't clobber real data
+            phases[target] = { ...src };
+        };
+
+        // Movement / stance variants
+        aliasPhase("run", "walk");         // run uses walk rows for now
+        aliasPhase("combatIdle", "idle");  // combat idle → normal idle
+
+        // Spell / bow / utility
+        aliasPhase("shoot", "cast");       // bow shoot → reuse cast band
+        aliasPhase("watering", "cast");    // watering can → spellcast-ish
+
+        // Damage / recovery
+        aliasPhase("hurt", "idle");        // no distinct hurt rows yet
+
+        // Misc poses
+        aliasPhase("climb", "walk");
+        aliasPhase("jump", "walk");
+        aliasPhase("sit", "idle");
+        aliasPhase("emote", "idle");
+
+        // One-hand sword variants – all share the slash band.
+        // Note: we already favor halfslash rows (50–53) for "slash"
+        // when they exist, so these inherit the nicer guard-return.
+        aliasPhase("oneHandSlash", "slash");
+        aliasPhase("oneHandBackslash", "slash");
+        aliasPhase("oneHandHalfslash", "slash");
+
+
+
+
+
+
         // --------------------------------------------------
         // Debug: summarize LEFT-only frame ranges in 64×64
         // (and oversize 192×192 if available).
@@ -632,18 +688,20 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         // which texture + frame indices are being used.
         debugLogHeroAnimSet(scene, animSet, cols64, oversizeCols);
 
-
         const summarize64 = (label: string, def?: HeroAnimDef): string => {
             if (!def || def.frameIndices.length === 0) return "";
-            // We only log as [row][firstCol]..[row][lastCol] for 64×64
             const first = def.frameIndices[0];
             const last = def.frameIndices[def.frameIndices.length - 1];
-            const rowFirst = Math.floor(first / HERO_SHEET_COLS);
-            const colFirst = first % HERO_SHEET_COLS;
-            const rowLast = Math.floor(last / HERO_SHEET_COLS);
-            const colLast = last % HERO_SHEET_COLS;
+
+            // Use the real per-sheet cols for 64×64.
+            const rowFirst = Math.floor(first / cols64);
+            const colFirst = first % cols64;
+            const rowLast = Math.floor(last / cols64);
+            const colLast = last % cols64;
+
             return ` | ${label} [${rowFirst}][${colFirst}]..[${rowLast}][${colLast}] (${def.frameIndices.length} frames)`;
         };
+
 
         const summarize192 = (label: string, def?: HeroAnimDef): string => {
             if (!def || def.frameIndices.length === 0 || !oversizeTextureKey) return "";

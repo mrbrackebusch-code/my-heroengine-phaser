@@ -421,6 +421,14 @@ export function debugSpawnHeroWithAnim(
 
     const sprite = scene.add.sprite(x, y, set.textureKey, 0);
 
+
+    // Force the debug hero to render on top of everything.
+    sprite.setDepth(9999);
+    sprite.setVisible(true);
+    (sprite as any).alpha = 1;
+
+
+
     const anySprite = sprite as any;
     if (anySprite.setData) {
         anySprite.setData(HERO_NAME_KEY, heroName);
@@ -429,6 +437,18 @@ export function debugSpawnHeroWithAnim(
         anySprite.setData(HERO_DIR_KEY, dir);
         anySprite.setData(HERO_REST_PHASE_KEY, "idle");
     }
+
+
+    logGlue(scene, "debugSpawnHeroWithAnim: spriteState", {
+        textureKey: sprite.texture.key,
+        frameIndex: (sprite.frame as any)?.index,
+        x: sprite.x,
+        y: sprite.y,
+        depth: sprite.depth,
+        visible: sprite.visible,
+        alpha: (sprite as any).alpha
+    });
+
 
     logGlue(scene, "debugSpawnHeroWithAnim: created sprite", {
         heroName,
