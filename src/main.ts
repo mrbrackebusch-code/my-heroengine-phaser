@@ -4,15 +4,13 @@ import Phaser from "phaser";
 
 console.log(">>> [main.ts] dynamic-import version loaded");
 
-import {
-    preloadMonsterSheets,
-    buildMonsterAtlas,
-    type MonsterAtlas
-} from "./monsterAtlas";
-
+import { preloadMonsterSheets, buildMonsterAtlas, type MonsterAtlas } from "./monsterAtlas";
 import { applyMonsterAnimationForSprite } from "./monsterAnimGlue";
 
+import { preloadHeroSheets, buildHeroAtlas } from "./heroAtlas";
+import { debugSpawnHeroWithAnim } from "./heroAnimGlue";
 
+import { installHeroAnimTester } from "./heroAnimGlue";
 
 // Somewhere near the top of main.ts:
 declare const globalThis: any;
@@ -68,9 +66,11 @@ class HeroScene extends Phaser.Scene {
     preload() {
         console.log(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
+        console.log("preloading the hero spritesheets too");
+        preloadHeroSheets(this);
     }
 
-
+    
     async create() {
         const g = globalThis as any;
         console.log(">>> [HeroScene.create] running");
@@ -86,6 +86,16 @@ class HeroScene extends Phaser.Scene {
         applyUrlProfileToGlobals();
 
 
+        this.registry.set("heroAnimDebug", true);   // turn on logs
+
+        buildHeroAtlas(this);                       // or rely on lazy build
+
+        debugSpawnHeroWithAnim(this, {
+            heroName: "Jason",
+            family: "strength",
+            phase: "walk",
+            dir: "down"
+        });
 
 
 
@@ -93,11 +103,28 @@ class HeroScene extends Phaser.Scene {
         // HOST vs NON-HOST
         // ---------------------------
 
+//        const g = globalThis as any;
 
-        const params = new URLSearchParams(window.location.search);
-        const isHostParam = params.get("host") === "1";
-        (globalThis as any).__isHost = isHostParam;
-        console.log(">>> [HeroScene.create] isHost (URL guess) =", isHostParam);
+        if (typeof g.__isHost === "boolean") {
+            console.log(">>> [HeroScene.create] host flag from network =", g.__isHost);
+        } else {
+            console.log(">>> [HeroScene.create] no host flag yet; defaulting to follower");
+            g.__isHost = false;
+        }
+
+        // ---------------------------
+        // HOST vs NON-HOST
+        // ---------------------------
+
+
+//        const params = new URLSearchParams(window.location.search);
+//        const isHostParam = params.get("host") === "1";
+//        (globalThis as any).__isHost = isHostParam;
+//        console.log(">>> [HeroScene.create] isHost (URL guess) =", isHostParam);
+
+
+
+
 
         console.log(">>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)");
 
@@ -230,9 +257,10 @@ class HeroScene extends Phaser.Scene {
         // was set before networking, we can start immediately. In the
         // multiplayer case, the network assign handler will also call this
         // once it knows who player 1 really is.
-        if (g.__isHost) {
-            g.__startHeroEngineHost();
-        }
+        
+        //if (g.__isHost) {
+        //    g.__startHeroEngineHost();
+        //}
 
 
 
@@ -257,7 +285,12 @@ class HeroScene extends Phaser.Scene {
             console.error(">>> [HeroScene.create] FAILED to build monster atlas", e);
         }
 
-
+        // 🔹 HERO ANIM TESTER: call this behind a simple flag if you like
+        const paramsHero = new URLSearchParams(window.location.search);
+        const heroAnimTest = paramsHero.get("heroAnimTest") === "1";
+        if (heroAnimTest) {
+            installHeroAnimTester(this);
+        }
 
     }
 
@@ -294,16 +327,25 @@ class HeroScene extends Phaser.Scene {
 
 
 
-
 // -------------------------------------
 // PHASER GAME CONFIG
 // -------------------------------------
 
-new Phaser.Game({
+function shouldStartGameFromUrl(): boolean {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        // Require at least a profile; host defaults are handled elsewhere
+        return !!params.get("profile");
+    } catch {
+        return false;
+    }
+}
+
+const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
 
-    // Keep your actual game world at 320×240
-    width: 640, //320,
+    // Keep your actual game world at 320×240, but scale canvas up
+    width: 640, // 320,
     height: 480, // 240,
 
     parent: "app",
@@ -313,18 +355,10 @@ new Phaser.Game({
     pixelArt: true,
     roundPixels: true,
 
-    // Controls the on-screen enlargement
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        zoom: 3
-    },
-
     physics: {
         default: "arcade",
         arcade: { debug: false }
     },
-
 
     fps: {
         target: 60,
@@ -333,4 +367,13 @@ new Phaser.Game({
     },
 
     scene: [HeroScene]
-});
+};
+
+if (shouldStartGameFromUrl()) {
+    console.log("[main] profile found in URL; starting Phaser game.");
+    new Phaser.Game(gameConfig);
+} else {
+    console.log("[main] no ?profile= URL param; waiting for landing page redirect.");
+}
+
+

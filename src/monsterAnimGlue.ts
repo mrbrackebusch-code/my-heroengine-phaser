@@ -208,6 +208,7 @@ export function applyMonsterAnimationForSprite(
         const fps = computePhaseFps(phase, frames.length, data);
         const repeat = (phase === "death") ? 0 : -1;
 
+        if (false) {
         console.log(
             "[MonsterAnimGlue] creating anim",
             animKey,
@@ -224,6 +225,8 @@ export function applyMonsterAnimationForSprite(
             "repeat=",
             repeat
         );
+
+        }
 
         mgr.create({
             key: animKey,

@@ -4,30 +4,157 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>my-heroengine-phaser</title>
+    <title>Hero Engine</title>
 
-    <!-- ADD THIS -->
     <style>
-      /* Ensure the Phaser canvas has a visible border */
+      /* Keep your existing Phaser canvas styling */
       #app canvas {
         border: 2px solid black;
         box-sizing: border-box;
-        image-rendering: pixelated; /* optional but ideal for your pixel art */
+        image-rendering: pixelated;
       }
 
-      /* Optional: center the game nicely */
       body {
         margin: 0;
+        min-height: 100vh;
         display: flex;
         justify-content: center;
-        align-items: flex-start;
-        background: white;
+        align-items: center;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #ffffff;
+      }
+
+      #landing {
+        padding: 1.5rem 2rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        max-width: 320px;
+        width: 100%;
+        text-align: center;
+      }
+
+      #landing h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.6rem;
+      }
+
+      #landing p {
+        margin: 0 0 1rem;
+        font-size: 0.95rem;
+      }
+
+      #landing form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      #landing input[type="text"] {
+        padding: 0.5rem 0.6rem;
+        font-size: 1rem;
+      }
+
+      #landing .role-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        justify-content: center;
+      }
+
+      #landing button {
+        padding: 0.55rem 0.8rem;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+
+      /* The Phaser container; hidden until we actually start the game */
+      #app {
+        width: 640px;
+        height: 480px;
       }
     </style>
   </head>
 
   <body>
+    <!-- LANDING PAGE -->
+    <div id="landing">
+      <h1>Hero Engine</h1>
+      <p>Please type your first name.</p>
+
+      <form id="join-form">
+        <input
+          id="player-name"
+          type="text"
+          placeholder="First name"
+          autocomplete="off"
+          required
+        />
+
+      <!--div class="role-row">
+          <input type="checkbox" id="is-host" />
+          <label for="is-host">I am the host (teacher)</label>
+        </div> -->
+
+        <button type="submit">Start</button>
+      </form>
+    </div>
+
+    <!-- Phaser will mount into this when we actually start the game -->
     <div id="app"></div>
+
+    <!-- Your Phaser entrypoint (unchanged path) -->
     <script type="module" src="/src/main.ts"></script>
+
+    <!-- Tiny helper script to manage the landing page + URL -->
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const landing = document.getElementById("landing");
+        const app = document.getElementById("app");
+
+        if (!landing || !app) return;
+
+        const hasProfile = !!params.get("profile");
+
+        // If a profile is already in the URL, skip the prompt and just show the game.
+        if (hasProfile) {
+          landing.style.display = "none";
+          app.style.display = "block";
+          return;
+        }
+
+        // First-time visit: hide the app container until the game is started
+        app.style.display = "none";
+
+        const form = document.getElementById("join-form");
+        const nameInput = document.getElementById("player-name");
+        //const hostCheckbox = document.getElementById("is-host");
+
+        if (!form || !nameInput) return;
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const name = nameInput.value.trim();
+          if (!name) return;
+
+          // Build ?profile=NAME&host=0/1 for main.ts to read
+          params.set("profile", name);
+          //params.set("host", hostCheckbox.checked ? "1" : "0");
+
+          const newUrl =
+            window.location.origin +
+            window.location.pathname +
+            "?" +
+            params.toString();
+
+          // Full reload so main.ts sees the URL params from a clean start
+          window.location.href = newUrl;
+        });
+      })();
+    </script>
   </body>
 </html>

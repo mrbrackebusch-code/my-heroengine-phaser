@@ -5593,7 +5593,7 @@ function updateEnemyHoming(nowMs: number) {
                 "x=", enemy.x, "y=", enemy.y,
                 "t=", nowMs
                 )
-                
+
                 _lastEnemyHomingLogMs = nowMs
 
                 const bar = enemyHPBars[ei]
@@ -5825,7 +5825,7 @@ function updateEnemyHoming(nowMs: number) {
         sprites.setDataString(enemy, "dir", dir)
 
         // --- DEBUG log (throttled, first enemy only) ---
-        if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+        if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 10000) {
             console.log(
                 "[enemyHoming] tick",
                 "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",

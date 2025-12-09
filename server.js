@@ -44,6 +44,35 @@ function allocatePlayerId() {
     return null;
 }
 
+
+// Recompute who is host and notify everyone
+function recomputeHost() {
+    const entries = Array.from(clients.entries()); // [ [ws, playerId], ... ]
+    if (entries.length === 0) return;
+
+    // "First in array" = host (insertion order of the Map)
+    const [hostWs, hostPlayerId] = entries[0];
+
+    for (const [ws, pid] of entries) {
+        const isHost = ws === hostWs;
+        const msg = {
+            type: "hostStatus",
+            isHost
+        };
+        try {
+            ws.send(JSON.stringify(msg));
+        } catch (e) {
+            console.warn("[server] failed to send hostStatus to playerId", pid, ":", e);
+        }
+    }
+
+    console.log("[server] host is now playerId =", hostPlayerId);
+}
+
+
+
+
+
 // Broadcast a message object (already in JSON-able form) to every client
 function broadcast(msg, exceptWs = null) {
     const json = JSON.stringify(msg);
@@ -67,6 +96,8 @@ wss.on("connection", (ws) => {
 
     clients.set(ws, playerId);
     dumpClients("after connect");
+    recomputeHost();
+
 
     const name = `Player${playerId}`;
 
@@ -155,11 +186,17 @@ wss.on("connection", (ws) => {
 
         } else if (msg.type === "state") {
 
-            //// NEW LOGGING ---- add server timestamp for state forwarding
             msg.serverSentAt = Date.now();
 
-            // Only the host (playerId 1) is allowed to send state snapshots.
-            if (playerId !== 1) {
+            // Only the current host (first in clients) is allowed to send snapshots.
+            const entries = Array.from(clients.entries());
+            if (entries.length === 0) {
+                console.warn("[server] got state but no clients?");
+                return;
+            }
+            const [hostWs, hostPid] = entries[0];
+
+            if (ws !== hostWs) {
                 console.warn("[server] non-host tried to send state; ignoring. playerId =", playerId);
                 return;
             }
@@ -169,8 +206,8 @@ wss.on("connection", (ws) => {
                 return;
             }
 
-            // console.log("[server] relaying state from host");
             broadcast(msg);
+            
         } else {
             console.warn("[server] unknown message type from playerId", playerId, ":", msg.type);
         }
@@ -180,6 +217,7 @@ wss.on("connection", (ws) => {
         console.log("[server] client disconnected, playerId =", playerId);
         clients.delete(ws);
         dumpClients("after disconnect");
+        recomputeHost();
     });
 
     ws.on("error", (err) => {

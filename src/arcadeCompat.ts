@@ -1748,7 +1748,7 @@ export function _syncNativeSprites(): void {
             }
 
             // Focused debug for imp blue so we can see what anim actually plays
-            if (monsterId === "imp blue") {
+            if (false) { //monsterId === "imp blue") {
                 console.log(
                     "[SYNC→Phaser] imp blue",
                     "phase=", phase,
@@ -3465,39 +3465,14 @@ class NetworkClient {
         if (msg.type === "assign") {
             this.playerId = msg.playerId;
 
+            const gAssign: any = (globalThis as any);
 
-
-
-        // store that on the global so game._tick and netWorld can use it.
-        const gAssign: any = (globalThis as any);
-
-        // Start with the network's idea of host: playerId === 1
-        let isHost = this.playerId === 1;
-
-        // If the page was explicitly launched with host=1 in the URL,
-        // main.ts will already have set __isHost = true. In that case,
-        // we respect that and force this client to be host.
-        if (gAssign && gAssign.__isHost === true) {
-            isHost = true;
-        }
-
-        gAssign.__isHost = isHost;
-
-        console.log(
-            "[net] assigned playerId =",
-            this.playerId,
-            "isHost=",
-            isHost,
-            "name=",
-            msg.name
-        );
-
-
-            // If this client is the true network host, kick off the HeroEngine
-            // via the hook that main.ts exposed.
-            if (isHost && typeof gAssign.__startHeroEngineHost === "function") {
-                gAssign.__startHeroEngineHost();
-            }
+            console.log(
+                "[net] assigned playerId =",
+                this.playerId,
+                "name=",
+                msg.name
+            );
 
             // Tie this client to that global player slot
             const ctrlNS: any = gAssign.controller;
@@ -3505,17 +3480,9 @@ class NetworkClient {
                 ctrlNS.setLocalPlayerSlot(this.playerId);
             }
 
-
-
-
-
-
             // Register profile / name for HeroEngine hook
             const slotIndex = this.playerId - 1;
             const name = msg.name || null;
-
-
-
 
             if (!gAssign.__heroProfiles) {
                 gAssign.__heroProfiles = ["Default", "Default", "Default", "Default"];
@@ -3526,9 +3493,6 @@ class NetworkClient {
 
             gAssign.__playerNames[slotIndex] = name;
 
-            // Only overwrite hero profile if:
-            //  - we actually have a name AND
-            //  - there is no existing profile, or it's still "Default"
             if (name) {
                 const existing = gAssign.__heroProfiles[slotIndex];
                 if (!existing || existing === "Default") {
@@ -3537,16 +3501,24 @@ class NetworkClient {
             }
 
             return;
-
-
-
-
-
         }
 
 
+        if (msg.type === "hostStatus") {
+            const gAssign: any = (globalThis as any);
+            const isHost = !!msg.isHost;
 
+            gAssign.__isHost = isHost;
 
+            console.log("[net] hostStatus =", isHost);
+
+            // If this client is host, kick off the HeroEngine host loop
+            if (isHost && typeof gAssign.__startHeroEngineHost === "function") {
+                gAssign.__startHeroEngineHost();
+            }
+
+            return;
+        }
 
 
         if (msg.type === "state") {
