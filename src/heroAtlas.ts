@@ -115,6 +115,44 @@ function isHeroAnimDebugEnabled(scene: Phaser.Scene): boolean {
     return !!scene.registry.get("heroAnimDebug");
 }
 
+
+const HERO_ATLAS_DEBUG = {
+    enabled: true
+};
+
+function heroAtlasDebug(scene: Phaser.Scene): boolean {
+    return !!scene.registry.get("heroAnimDebug") && HERO_ATLAS_DEBUG.enabled;
+}
+
+function logHeroAtlas(scene: Phaser.Scene, msg: string): void {
+    if (!heroAtlasDebug(scene)) return;
+    // eslint-disable-next-line no-console
+    console.log("[HeroAnim]", msg);
+}
+
+function formatHeroFrameDebug(
+    frameIndices: number[],
+    frameW: number,
+    frameH: number,
+    cols: number
+): string {
+    if (!frameIndices || frameIndices.length === 0) return "none";
+
+    const parts: string[] = [];
+    for (const idx of frameIndices) {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        const pxX = col * frameW;
+        const pxY = row * frameH;
+        parts.push(`#${idx}->r${row},c${col}@(${pxX},${pxY})`);
+    }
+    return parts.join(", ");
+}
+
+
+
+
+
 function heroLog(
     scene: Phaser.Scene,
     section: keyof typeof HERO_DEBUG_SECTION_FLAGS,
@@ -125,6 +163,64 @@ function heroLog(
     // eslint-disable-next-line no-console
     console.log("[HeroAnim]", message);
 }
+
+
+
+// Deep dump of a single HeroAnimSet – all phases/dirs + frame indices.
+// cols64 = number of 64×64 columns (e.g. 13), oversizeCols = number of 192×192 columns (e.g. 8).
+function debugLogHeroAnimSet(
+    scene: Phaser.Scene,
+    set: HeroAnimSet,
+    cols64: number,
+    oversizeCols: number
+): void {
+    if (!heroAtlasDebug(scene)) return;
+
+    const dirs: HeroDir[] = ["up", "left", "down", "right"];
+    const phaseBits: string[] = [];
+
+    for (const phaseKey of Object.keys(set.phases) as HeroPhase[]) {
+        const dirMap = set.phases[phaseKey];
+        if (!dirMap) continue;
+
+        for (const dir of dirs) {
+            const def = dirMap[dir];
+            if (!def) continue;
+
+            // Decide which grid this anim is using: 64×64 or 192×192
+            let frameW = HERO_FRAME_W;
+            let frameH = HERO_FRAME_H;
+            let cols = cols64;
+
+            if (set.oversizeTextureKey &&
+                def.textureKey === set.oversizeTextureKey &&
+                oversizeCols > 0) {
+
+                // Oversize 192×192 grid
+                frameW = HERO_OVERSIZE_FRAME_W;
+                frameH = HERO_OVERSIZE_FRAME_H;
+                cols = oversizeCols;
+            }
+
+            const framesDebug = formatHeroFrameDebug(def.frameIndices, frameW, frameH, cols);
+
+            phaseBits.push(
+                `${phaseKey}/${dir} tex=${def.textureKey}` +
+                ` fps=${def.frameRate} repeat=${def.repeat} yoyo=${def.yoyo}` +
+                ` frames=[${framesDebug}]`
+            );
+        }
+    }
+
+    heroLog(
+        scene,
+        "buildSet",
+        `[heroAtlas.deepDump] id=${set.id} hero=${set.heroName} family=${set.family} | ` +
+            phaseBits.join(" | ")
+    );
+}
+
+
 
 // Optional runtime switch if we ever need fine-grained control
 export function setHeroAnimDebugSectionFlag(
@@ -531,6 +627,12 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         const leftThrustOver = phases.thrustOversize?.left;
         const leftSlashOver = phases.slashOversize?.left;
 
+
+        // Deep dump all phases/dirs for this hero so we can see exactly
+        // which texture + frame indices are being used.
+        debugLogHeroAnimSet(scene, animSet, cols64, oversizeCols);
+
+
         const summarize64 = (label: string, def?: HeroAnimDef): string => {
             if (!def || def.frameIndices.length === 0) return "";
             // We only log as [row][firstCol]..[row][lastCol] for 64×64
@@ -556,6 +658,8 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             return ` | ${label}192 [Rbig=${rowFirstBig},C=${colFirstBig}]..[Rbig=${rowLastBig},C=${colLastBig}] (${def.frameIndices.length} frames, rows64≈${smallRowStart}..${smallRowEnd})`;
         };
 
+
+        
         let summary = `sheet=${sheet.id} hero=${sheet.heroName} family=${sheet.family}`;
         summary += summarize64("cast", leftCast);
         summary += summarize64("thrust", leftThrust);

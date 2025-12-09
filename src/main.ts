@@ -204,13 +204,79 @@ class HeroScene extends Phaser.Scene {
     }
 
     // 5) Start the HeroEngine world (from the module first, then global fallback)
+   // const HE: any = engineMod.HeroEngine || (globalThis as any).HeroEngine;
+   // if (HE && typeof HE.start === "function") {
+   //     console.log(">>> [HeroScene.create] starting HeroEngine from host");
+   //     HE.start();
+   // } else {
+   //     console.warn(">>> [HeroScene.create] HeroEngine.start not found on engine module or globalThis");
+   // }
+
+    // 5) Start the HeroEngine world (from the module first, then global fallback)
     const HE: any = engineMod.HeroEngine || (globalThis as any).HeroEngine;
     if (HE && typeof HE.start === "function") {
         console.log(">>> [HeroScene.create] starting HeroEngine from host");
         HE.start();
+
+        // ---------------------------
+        // TILES: sync from HeroEngine
+        // ---------------------------
+        try {
+            const g: any = globalThis as any;
+            const internals = g.__HeroEnginePhaserInternals;
+
+            const hasInternals =
+                internals &&
+                typeof internals.getWorldTileMap === "function" &&
+                typeof internals.getWorldTileSize === "function";
+
+            if (!hasInternals) {
+                console.warn(
+                    ">>> [HeroScene.create] __HeroEnginePhaserInternals missing or incomplete – cannot sync tiles yet"
+                );
+            } else {
+                const grid: number[][] = internals.getWorldTileMap();
+                const tileSize: number = internals.getWorldTileSize();
+
+                const scene: any = g.__phaserScene;
+                const atlas: TileAtlas | undefined = scene?.tileAtlas;
+
+                if (!scene || !atlas) {
+                    console.warn(
+                        ">>> [HeroScene.create] no scene/tileAtlas when trying to sync tiles"
+                    );
+                } else {
+                    if (!scene.tileRenderer) {
+                        console.log(
+                            ">>> [HeroScene.create] creating WorldTileRenderer (host)"
+                        );
+                        scene.tileRenderer = new WorldTileRenderer(scene, atlas, {
+                            debugLocal: true
+                            // For now use default tileValueToFamily mapper inside WorldTileRenderer.
+                        });
+                    }
+
+                    console.log(
+                        ">>> [HeroScene.create] syncing WorldTileRenderer from HeroEngine grid",
+                        { rows: grid.length, cols: grid[0]?.length, tileSize }
+                    );
+                    scene.tileRenderer.syncFromEngineGrid(grid);
+                }
+            }
+        } catch (e) {
+            console.error(
+                ">>> [HeroScene.create] ERROR while syncing tiles from HeroEngine:",
+                e
+            );
+        }
+        // I included our preemptive logging here: [HeroScene.__startHeroEngineHost – tile sync]
+
     } else {
-        console.warn(">>> [HeroScene.create] HeroEngine.start not found on engine module or globalThis");
+        console.warn(
+            ">>> [HeroScene.create] HeroEngine.start not found on engine module or globalThis"
+        );
     }
+
 
     
     // 6) Schedule a sprite dump to verify everything

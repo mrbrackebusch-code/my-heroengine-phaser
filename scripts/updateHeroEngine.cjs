@@ -40,7 +40,11 @@ async function run() {
   try {
     console.log("[updateHeroEngine] Fetching core from:", RAW_URL);
     const coreSource = await fetchText(RAW_URL);
-    console.log("[updateHeroEngine] Downloaded core HeroEngine.ts (" + coreSource.length + " bytes)");
+    console.log(
+      "[updateHeroEngine] Downloaded core HeroEngine.ts (" +
+        coreSource.length +
+        " bytes)"
+    );
 
     // 1) Optional: keep a plain copy under codeFromMakeCodeArcade/
     const coreDir = path.join(__dirname, "..", "codeFromMakeCodeArcade");
@@ -103,7 +107,7 @@ namespace SpriteKind {
 
 `;
 
-    // 3) Phaser-only BOTTOM glue
+    // 3) Phaser-only BOTTOM glue (includes our new tile internals side channel)
     const BOTTOM = `
 
 // --------------------------------------------------------------
@@ -113,6 +117,30 @@ namespace SpriteKind {
 if (typeof globalThis !== "undefined") {
     (globalThis as any).HeroEngine = HeroEngine;
 }
+
+// ----------------------------------------------------------
+// Phaser-only side channel: expose tile internals via global
+// WITHOUT changing namespace HeroEngine.
+// ----------------------------------------------------------
+(() => {
+    try {
+        const g: any = globalThis as any;
+        g.__HeroEnginePhaserInternals = g.__HeroEnginePhaserInternals || {};
+
+        g.__HeroEnginePhaserInternals.getWorldTileMap = function (): number[][] {
+            return _engineWorldTileMap;
+        };
+
+        g.__HeroEnginePhaserInternals.getWorldTileSize = function (): number {
+            return WORLD_TILE_SIZE;
+        };
+
+        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size)");
+    } catch {
+        // If globalThis isn't available (e.g., PXT runtime), just silently skip.
+    }
+})();
+
 `;
 
     // 4) Build combined content
@@ -121,7 +149,10 @@ if (typeof globalThis !== "undefined") {
     // 5) Write combined file into src/HeroEngineInPhaser.ts
     const outPath = path.join(__dirname, "..", "src", "HeroEngineInPhaser.ts");
     fs.writeFileSync(outPath, combined, "utf8");
-    console.log("[updateHeroEngine] Wrote combined Phaser wrapper to:", outPath);
+    console.log(
+      "[updateHeroEngine] Wrote combined Phaser wrapper to:",
+      outPath
+    );
 
     console.log("[updateHeroEngine] Done.");
   } catch (err) {
@@ -131,3 +162,15 @@ if (typeof globalThis !== "undefined") {
 }
 
 run();
+`;
+
+This way, every time you run `node scripts/updateHeroEngine.js`:
+
+- It pulls the latest `HeroEngine.ts`.
+- Wraps it with the TOP shim.
+- Appends **both**:
+
+  - `globalThis.HeroEngine = HeroEngine;`
+  - The `__HeroEnginePhaserInternals` IIFE.
+
+So your “end” block is always preserved and you never have to re-hand-edit `HeroEngineInPhaser.ts` after updating the engine.

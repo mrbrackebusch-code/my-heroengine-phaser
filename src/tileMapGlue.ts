@@ -68,6 +68,7 @@ export interface WorldTileRendererOptions {
     tileValueToFamily?: (v: number) => TileFamily;
 }
 
+
 export class WorldTileRenderer {
     private scene: Phaser.Scene;
     private atlas: TileAtlas;
@@ -91,84 +92,98 @@ export class WorldTileRenderer {
      * Rebuild the Phaser tilemap from a simple engine grid of numbers.
      */
     syncFromEngineGrid(grid: number[][]): void {
-        const rows = grid.length;
-        const cols = rows > 0 ? grid[0].length : 0;
+    const rows = grid.length;
+    const cols = rows > 0 ? grid[0].length : 0;
 
-        if (rows === 0 || cols === 0) {
-            logTiles(this.debugLocal, "[tileMapGlue.sync] empty grid – nothing to render");
-            return;
+    if (rows === 0 || cols === 0) {
+        logTiles(this.debugLocal, "[tileMapGlue.sync] empty grid – nothing to render");
+        return;
+    }
+
+    const tileSize = this.atlas.tileSize;
+
+    // --------------------------------------------------------------
+    // Create tilemap + tileset + layer ONE TIME
+    // --------------------------------------------------------------
+    if (!this.map) {
+        this.map = this.scene.make.tilemap({
+            width: cols,
+            height: rows,
+            tileWidth: tileSize,
+            tileHeight: tileSize
+        });
+
+        this.tileset = this.map.addTilesetImage(
+            this.atlas.primaryTextureKey,
+            this.atlas.primaryTextureKey,
+            tileSize,
+            tileSize,
+            0,
+            0
+        );
+
+        if (!this.tileset) {
+            throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
         }
 
-        const tileSize = this.atlas.tileSize;
-
-        if (!this.map) {
-            this.map = this.scene.make.tilemap({
-                width: cols,
-                height: rows,
-                tileWidth: tileSize,
-                tileHeight: tileSize
-            });
-
-            this.tileset = this.map.addTilesetImage(
-                this.atlas.primaryTextureKey,
-                this.atlas.primaryTextureKey,
-                tileSize,
-                tileSize,
-                0,
-                0
-            );
-
-            if (!this.tileset) {
-                throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
-            }
-
-            this.layer = this.map.createBlankLayer("world", this.tileset, 0, 0) || undefined;
-
-            logTiles(
-                this.debugLocal,
-                "[tileMapGlue.sync] created new Phaser.Tilemap",
-                { rows, cols, tileSize }
-            );
-        }
-
+        // Create ONE layer and store it
+        this.layer = this.map.createBlankLayer("world", this.tileset, 0, 0) || undefined;
         if (!this.layer) {
-            throw new Error("[tileMapGlue.sync] tilemap layer missing");
+            throw new Error("[tileMapGlue.sync] tilemap layer missing after createBlankLayer");
         }
 
-        const familyCounts = new Map<TileFamily, number>();
-
-        for (let r = 0; r < rows; r++) {
-            const row = grid[r];
-            for (let c = 0; c < cols; c++) {
-                const v = row[c];
-                const family = this.tileValueToFamily(v);
-                const shape = computeAutoShape(grid, r, c, family, this.tileValueToFamily);
-
-                let tileDef = this.atlas.getRandomVariant(family, shape);
-                if (!tileDef) {
-                    tileDef = this.atlas.getAutoTile(family, "center");
-                }
-
-                const frameIndex = tileDef ? tileDef.frameIndex : 0;
-
-                this.layer.putTileAt(frameIndex, c, r);
-
-                const current = familyCounts.get(family) || 0;
-                familyCounts.set(family, current + 1);
-            }
-        }
-
-        const countsSummary: Record<string, number> = {};
-        for (const [fam, count] of familyCounts.entries()) {
-            countsSummary[fam] = count;
-        }
+        // Lower depth → background
+        this.layer.setDepth(-1000);
 
         logTiles(
             this.debugLocal,
-            "[tileMapGlue.sync] finished building tile layer – tile counts by family:",
-            countsSummary
+            "[tileMapGlue.sync] created new Phaser.Tilemap",
+            { rows, cols, tileSize }
         );
-
-        // I included our preemptive logging here: [tileMapGlue.WorldTileRenderer.syncFromEngineGrid]
     }
+
+    if (!this.layer) {
+        throw new Error("[tileMapGlue.sync] tilemap layer missing");
+    }
+
+    // --------------------------------------------------------------
+    // Fill the tilemap layer with frames
+    // --------------------------------------------------------------
+    const familyCounts = new Map<TileFamily, number>();
+
+    for (let r = 0; r < rows; r++) {
+        const row = grid[r];
+        for (let c = 0; c < cols; c++) {
+            const v = row[c];
+            const family = this.tileValueToFamily(v);
+            const shape = computeAutoShape(grid, r, c, family, this.tileValueToFamily);
+
+            let tileDef = this.atlas.getRandomVariant(family, shape);
+            if (!tileDef) {
+                tileDef = this.atlas.getAutoTile(family, "center");
+            }
+
+            const frameIndex = tileDef ? tileDef.frameIndex : 0;
+
+            this.layer.putTileAt(frameIndex, c, r);
+
+            const current = familyCounts.get(family) || 0;
+            familyCounts.set(family, current + 1);
+        }
+    }
+
+    const countsSummary: Record<string, number> = {};
+    for (const [fam, count] of familyCounts.entries()) {
+        countsSummary[fam] = count;
+    }
+
+    logTiles(
+        this.debugLocal,
+        "[tileMapGlue.sync] finished building tile layer – tile counts by family:",
+        countsSummary
+    );
+
+    // I included our preemptive logging here: [tileMapGlue.WorldTileRenderer.syncFromEngineGrid]
+}
+
 }

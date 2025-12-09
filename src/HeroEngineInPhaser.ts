@@ -6493,3 +6493,25 @@ if (typeof globalThis !== "undefined") {
     (globalThis as any).HeroEngine = HeroEngine;
 }
 
+// ----------------------------------------------------------
+// Phaser-only side channel: expose tile internals via global
+// WITHOUT changing namespace HeroEngine.
+// ----------------------------------------------------------
+(() => {
+    try {
+        const g: any = globalThis as any;
+        g.__HeroEnginePhaserInternals = g.__HeroEnginePhaserInternals || {};
+
+        g.__HeroEnginePhaserInternals.getWorldTileMap = function (): number[][] {
+            return _engineWorldTileMap;
+        };
+
+        g.__HeroEnginePhaserInternals.getWorldTileSize = function (): number {
+            return WORLD_TILE_SIZE;
+        };
+
+        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size)");
+    } catch {
+        // If globalThis isn't available (e.g., PXT runtime), just silently skip.
+    }
+})();
