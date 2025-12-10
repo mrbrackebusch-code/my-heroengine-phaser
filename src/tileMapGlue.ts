@@ -10,20 +10,16 @@ function logTiles(localDebug: boolean, ...args: any[]) {
 }
 
 
+
 function defaultTileValueToFamily(v: number): TileFamily {
     // In HeroEngineInPhaser.ts:
     // const TILE_EMPTY = 0
     // const TILE_WALL  = 1
     //
-    // Pick the default look for your procedural map here by choosing the
-    // family IDs from TERRAIN_FAMILIES.
-    if (v === 1) {
-        // Walls → chasm with light rim
-        return "chasm_light";
-    }
-
-    // Everything else → dense light grass
-    return "grass_dense_light";
+    // For now, map everything to the light-brown ground family so we
+    // can focus on getting the autotile pipeline correct.
+    // Later, we can branch here by tile value (chasm, water, etc.).
+    return "ground_light";
 }
 
 
@@ -71,6 +67,10 @@ function computeAutoShape(
     // Fallback.
     return "center";
 }
+
+
+
+
 
 export interface WorldTileRendererOptions {
     /** If true, enable detailed tile logging for this renderer instance. */

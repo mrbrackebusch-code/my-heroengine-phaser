@@ -665,7 +665,13 @@ const HERO_DATA = {
 
     // NEW: for tile-collision rollback
     PREV_X: "prevX",
-    PREV_Y: "prevY"
+    PREV_Y: "prevY",
+
+    // NEW: hero death state (for LPC death animation timing)
+    IS_DEAD: "isDead",
+    DEATH_UNTIL: "deathUntil"
+}
+
 }
 
 
@@ -719,7 +725,11 @@ const ENEMY_DATA = {
 }
 
 
-const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT
+const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
+
+// How long to keep a dying hero around so LPC "death" anim can play (ms)
+const HERO_DEATH_ANIM_MS = 600;
+
 
 // --------------------------------------------------------------
 // PROJ_DATA – sprite data schema for hero projectiles
@@ -2133,9 +2143,14 @@ function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before
     `
 }
 
+
+
 function createHeroForPlayer(playerId: number, startX: number, startY: number) {
-    // Start with a blank placeholder; student animation will set the real image
-    const hero = sprites.create(image.create(16, 16), SpriteKind.Player)
+    // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
+    // In Phaser, the native LPC sprite uses the same footprint; we skip pixel uploads.
+    // In pure Arcade, students will just see big, chunky heroes.
+    const hero = sprites.create(image.create(64, 64), SpriteKind.Player)
+
     hero.x = startX; hero.y = startY; hero.z = 20
 
     // NEW: seed previous position for collisions
@@ -2188,6 +2203,8 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     // "idle" here is your base/default state; 0 duration so it's just an image set
     callHeroAnim(heroIndex, "idle", 0)
 }
+
+
 
 
 function setupHeroes() {
@@ -2369,15 +2386,50 @@ function flashHeroManaBar(heroIndex: number) {
     bar.setColor(2, 1)
 }
 
+
+
+
 function applyDamageToHeroIndex(heroIndex: number, amount: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    let hp = sprites.readDataNumber(hero, HERO_DATA.HP)
-    hp = Math.max(0, hp - amount)
-    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
-    updateHeroHPBar(heroIndex)
-    flashHeroOnDamage(hero)
-    if (hp <= 0) hero.destroy(effects.disintegrate, 200)
+    const hero = heroes[heroIndex]; if (!hero) return;
+
+    let hp = sprites.readDataNumber(hero, HERO_DATA.HP);
+    hp = Math.max(0, hp - amount);
+    sprites.setDataNumber(hero, HERO_DATA.HP, hp);
+    updateHeroHPBar(heroIndex);
+    flashHeroOnDamage(hero);
+
+    if (hp > 0) return;
+
+    // Already processed death for this hero? Don't double-trigger.
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+        return;
+    }
+
+    const now = game.runtime() | 0;
+
+    // Mark hero as dead and set a "death animation" window
+    sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, true);
+    const deathUntil = now + HERO_DEATH_ANIM_MS;
+    sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, deathUntil);
+
+    // Lock controls and stop movement while dying
+    hero.vx = 0;
+    hero.vy = 0;
+
+    heroBusyUntil[heroIndex] = deathUntil;
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, deathUntil);
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true);
+
+    // Fire a "death" animation request.
+    // In Arcade, defaultHeroAnim is a harmless stub.
+    // In Phaser, heroAnimGlue / phaser glue will interpret this as "play LPC death".
+    callHeroAnim(heroIndex, "death", HERO_DEATH_ANIM_MS);
 }
+
+
+
+
+
 
 function flashHeroOnDamage(hero: Sprite) {
     const flashDuration = 150, flashInterval = 50
@@ -2431,21 +2483,47 @@ function showDamageNumber(x: number, y: number, amount: number, kind?: string) {
 
 
 function createAuraImageFromHero(hero: Sprite, color: number): Image {
-    const base = hero.image
-    const w = base.width, h = base.height
-    const outline = image.create(w, h)
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const px = base.getPixel(x, y); if (px == 0) continue
-        let isBorder = false
-        for (let ny = -1; ny <= 1 && !isBorder; ny++) for (let nx = -1; nx <= 1 && !isBorder; nx++) {
-            if (nx == 0 && ny == 0) continue
-            const xx = x + nx, yy = y + ny
-            if (xx < 0 || yy < 0 || xx >= w || yy >= h) isBorder = true
-            else if (base.getPixel(xx, yy) == 0) isBorder = true
+    const base = hero.image;
+    const w = base.width;
+    const h = base.height;
+
+    // Output is same size as hero image.
+    const aura = image.create(w, h);
+
+    // How far out the aura should extend from the sprite's solid pixels.
+    // 2 → roughly "2 pixels wider" halo.
+    const MAX_RADIUS = 2;
+
+    // For every transparent pixel, check if it's within MAX_RADIUS of any solid pixel.
+    // If so, draw aura there. This creates a halo around the hero's silhouette without
+    // filling inside the sprite.
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            // Only draw aura in originally transparent pixels
+            if (base.getPixel(x, y) != 0) continue;
+
+            let nearSolid = false;
+
+            for (let dy = -MAX_RADIUS; dy <= MAX_RADIUS && !nearSolid; dy++) {
+                for (let dx = -MAX_RADIUS; dx <= MAX_RADIUS && !nearSolid; dx++) {
+                    if (dx == 0 && dy == 0) continue;
+                    const xx = x + dx;
+                    const yy = y + dy;
+                    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+
+                    if (base.getPixel(xx, yy) != 0) {
+                        nearSolid = true;
+                    }
+                }
+            }
+
+            if (nearSolid) {
+                aura.setPixel(x, y, color);
+            }
         }
-        if (isBorder) outline.setPixel(x, y, color)
     }
-    return outline
+
+    return aura;
 }
 
 
@@ -2518,54 +2596,56 @@ function updateHeroAuras() {
 }
 
 
-//This function is a cop out and LAZY. It should actually do a real aura that is 2 pixels wider than the hero's outline, not just a stupid lazy circle that is spawned on top of the hero. ChatGPT--if you are reading this flag it for the user to address
+
+
+// Non-lazy support glow: real aura around hero sprite, pulsing a few times.
 function triggerSupportGlowPulse(heroIndex: number) {
-    const hero = heroes[heroIndex]
+    const hero = heroes[heroIndex];
     if (!hero) {
-        console.log("SUPPORT GLOW: no hero at index " + heroIndex)
-        return
+        console.log("SUPPORT GLOW: no hero at index " + heroIndex);
+        return;
     }
 
-    console.log("SUPPORT GLOW: creating aura for hero " + heroIndex)
+    console.log("SUPPORT GLOW: creating aura for hero " + heroIndex);
 
-    const auraImg = img`
-        . . 7 7 7 7 7 . .
-        . 7 7 . . . 7 7 .
-        7 7 . . . . . 7 7
-        7 . . . . . . . 7
-        7 . . . . . . . 7
-        7 . . . . . . . 7
-        7 7 . . . . . 7 7
-        . 7 7 . . . 7 7 .
-        . . 7 7 7 7 7 . .
-    `
+    // Use the same silhouette halo as the normal auras, but locked to HEAL color.
+    const auraImg = createAuraImageFromHero(hero, AURA_COLOR_HEAL);
 
-    const aura = sprites.create(auraImg, SpriteKind.HeroAura)
-    aura.setFlag(SpriteFlag.Ghost, true)
-    aura.setFlag(SpriteFlag.AutoDestroy, true)
+    const aura = sprites.create(auraImg, SpriteKind.HeroAura);
+    aura.setFlag(SpriteFlag.Ghost, true);
+    aura.setFlag(SpriteFlag.AutoDestroy, true);
 
     // Draw ABOVE hero so it's not hidden by the hero sprite
-    aura.z = hero.z + 1
-    aura.x = hero.x
-    aura.y = hero.y
+    aura.z = hero.z + 1;
+    aura.x = hero.x;
+    aura.y = hero.y;
 
-    let ticks = 0
-    const flashInterval = 60 // ms
+    let ticks = 0;
+    const flashInterval = 60; // ms
 
     game.onUpdateInterval(flashInterval, function () {
-        if (!HeroEngine._isStarted()) return
-        if (!aura || (aura.flags & sprites.Flag.Destroyed)) return
+        if (!HeroEngine._isStarted()) return;
+        if (!aura || (aura.flags & sprites.Flag.Destroyed)) return;
 
-        ticks++
+        // Follow the hero so the aura stays centered if they move
+        aura.x = hero.x;
+        aura.y = hero.y;
+
+        ticks++;
         // even ticks visible, odd ticks invisible
-        aura.setFlag(SpriteFlag.Invisible, (ticks % 2 != 0))
+        aura.setFlag(SpriteFlag.Invisible, (ticks % 2 != 0));
 
         if (ticks >= 8) {
-            console.log("SUPPORT GLOW: destroying aura for hero " + heroIndex)
-            aura.destroy()
+            console.log("SUPPORT GLOW: destroying aura for hero " + heroIndex);
+            aura.destroy();
         }
-    })
+    });
 }
+
+
+
+
+
 
 ensureHeroSpriteKinds();
 
@@ -5210,12 +5290,57 @@ const ENEMY_KIND = {
                 return ENEMY_KIND.GRUNT
             }
 
+
+
+            // Try to read LPC frame size for this monsterId from Phaser-side monsterAtlas.
+            // Returns {w,h} or null if not available (Arcade / unknown id).
+            function getLpcFrameSizeForMonster(monsterId: string): { w: number, h: number } {
+                try {
+                    const g: any = globalThis as any
+                    const atlas = g && g.monsterAtlas
+                    if (atlas && atlas[monsterId]) {
+                        const entry = atlas[monsterId] as any
+                        const fw = entry.frameWidth | 0
+                        const fh = entry.frameHeight | 0
+                        if (fw > 0 && fh > 0) {
+                            return { w: fw, h: fh }
+                        }
+                    }
+                } catch {
+                    // In pure MakeCode Arcade, globalThis / monsterAtlas may not exist
+                }
+                return null
+            }
+
             // Placeholder MakeCode image for a monster id.
-            // Phaser ignores this and uses full LPC art based on sprite.data["name"].
+            // In Phaser builds with monsterAtlas, we size this to match the LPC frame
+            // so HP bars + collisions line up with the pretty art.
+            // In plain Arcade (no monsterAtlas), we fall back to archetype art.
             function enemyPlaceholderImageForMonster(monsterId: string): Image {
+                // 1) Try LPC-aligned size (Phaser)
+                const size = getLpcFrameSizeForMonster(monsterId)
+                if (size) {
+                    const { w, h } = size
+                    const img = image.create(w, h)
+
+                    // Simple solid color so you can still see something in pure Arcade
+                    // if the Phaser glue ever calls this path.
+                    const baseColor = 6
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < w; x++) {
+                            img.setPixel(x, y, baseColor)
+                        }
+                    }
+                    return img
+                }
+
+                // 2) Fallback: old behavior (nice archetype-specific pixel art)
                 const kindKey = pickEnemyKindForMonster(monsterId)
                 return enemyImageForKind(kindKey)
             }
+
+
+
 
 
 
@@ -5390,6 +5515,8 @@ function enemyImageForKind(kind: string): Image {
     }
     return imgBase
 }
+
+
 
 // --------------------------------------------------------------
 // Enemy attack phase constants (copied from Arcade engine)
@@ -6390,6 +6517,27 @@ function updateMeleeProjectilesMotion() {
 }
 
 
+
+// New helper: clean up heroes after their death animation finishes
+function updateHeroDeaths(now: number) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i];
+        if (!hero) continue;
+
+        if (!sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
+
+        const deathUntil = sprites.readDataNumber(hero, HERO_DATA.DEATH_UNTIL) | 0;
+        if (deathUntil > 0 && now >= deathUntil) {
+            // Final destroy – same effect as before, just delayed so LPC death can play.
+            hero.destroy(effects.disintegrate, 200);
+
+            // Optional: clear the timer so we don't re-evaluate
+            sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0);
+        }
+    }
+}
+
+
 // New helper: maintain locked heroes unless controlling a spell
 function updateHeroControlLocks(now: number) {
     for (let i = 0; i < heroes.length; i++) {
@@ -6476,6 +6624,10 @@ game.onUpdate(function () {
     updateSupportPuzzles(now)     // NEW
     updateHeroControlLocks(now)
     updateHeroBuffs(now)          // NEW
+
+
+    // NEW: handle post-death cleanup (LPC death anim window)
+    updateHeroDeaths(now);
 
     //updateHeroControlLocks(now)
 
