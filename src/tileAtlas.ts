@@ -395,323 +395,543 @@ interface TerrainFamily {
 }
 
 
+export const TERRAIN_AUTOTILES: TerrainAutoTileDef[] = [
 
+    // ----------------------------------------------------------
+    // 1. ground_light
+    // ----------------------------------------------------------
+    {
+        id: "ground_light",
+        kind: "ground",
 
-const TERRAIN_FAMILIESRAW: TerrainFamily[] = [
-  // ------------------------------------------------------------
-  // 0 — Light brown ground
-  // ------------------------------------------------------------
-  {
-    id: "ground_light",
-    type: "ground",
-    cols: [0, 2],
-    rows: [0, 5],
-    tiles: {
-      decor: [
-        [0,0], [1,0],   // small rock piles
-        // extra light-grass overlays you said should belong to this color family
-        [11,15], [11,16], [11,17],
-      ],
-      concave2x2: { topLeft: [0,1] },
-      convex9: [
-        [2,0],[2,1],[2,2],
-        [3,0],[3,1],[3,2],
-        [4,0],[4,1],[4,2]
-      ],
-      groundVariants: [
-        [5,0],[5,1],[5,2],
-        // extra light-green grass variants you called out
-        [11,9],[11,10],[11,12],[11,13],[11,14]
-      ]
-    }
-  },
+        atlasBounds: { cols: [0, 2], rows: [0, 5] },
 
-  // ------------------------------------------------------------
-  // 1 — Medium brown ground
-  // ------------------------------------------------------------
-  {
-    id: "ground_medium",
-    type: "ground",
-    cols: [3, 5],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,3],[1,3]],
-      concave2x2: { topLeft: [0,4] },
-      convex9: [
-        [2,3],[2,4],[2,5],
-        [3,3],[3,4],[3,5],
-        [4,3],[4,4],[4,5]
-      ],
-      groundVariants: [[5,3],[5,4],[5,5]]
-    }
-  },
+        interior: [
+            { row: 5, col: 0 },
+            { row: 5, col: 1 },
+            { row: 5, col: 2 },
+        ],
 
-  // ------------------------------------------------------------
-  // 2 — Red-brown ground
-  // ------------------------------------------------------------
-  {
-    id: "ground_redbrown",
-    type: "ground",
-    cols: [6, 8],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,6],[1,6]],
-      concave2x2: { topLeft: [0,7] },
-      convex9: [
-        [2,6],[2,7],[2,8],
-        [3,6],[3,7],[3,8],
-        [4,6],[4,7],[4,8]
-      ],
-      groundVariants: [[5,6],[5,7],[5,8]]
-    }
-  },
+        edgeN: { row: 2, col: 1 },
+        edgeS: { row: 4, col: 1 },
+        edgeW: { row: 3, col: 0 },
+        edgeE: { row: 3, col: 2 },
 
-  // ------------------------------------------------------------
-  // 3 — Light-rim chasm (dark floor)
-  // ------------------------------------------------------------
-  {
-    id: "chasm_light",
-    type: "chasm",
-    cols: [9, 11],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,9],[1,9]],
-      concave2x2: { topLeft: [0,10] },
-      convex9: [
-        [2,9],[2,10],[2,11],
-        [3,9],[3,10],[3,11],
-        [4,9],[4,10],[4,11]
-      ],
-      interior: [[5,9],[5,10],[5,11]]
-    }
-  },
+        cornerNW: { row: 2, col: 0 },
+        cornerNE: { row: 2, col: 2 },
+        cornerSE: { row: 4, col: 2 },
+        cornerSW: { row: 4, col: 0 },
 
-  // ------------------------------------------------------------
-  // 4 — Medium-rim chasm (dark floor)
-  // ------------------------------------------------------------
-  {
-    id: "chasm_medium",
-    type: "chasm",
-    cols: [12, 14],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,12],[1,12]],
-      concave2x2: { topLeft: [0,13] },
-      convex9: [
-        [2,12],[2,13],[2,14],
-        [3,12],[3,13],[3,14],
-        [4,12],[4,13],[4,14]
-      ],
-      interior: [[5,12],[5,13],[5,14]]
-    }
-  },
+        innerNW: { row: 0, col: 1 },
+        innerNE: { row: 0, col: 2 },
+        innerSE: { row: 1, col: 2 },
+        innerSW: { row: 1, col: 1 },
 
-  // ------------------------------------------------------------
-  // 5 — Void chasm (black floor)
-  // ------------------------------------------------------------
-  {
-    id: "chasm_void",
-    type: "chasm",
-    cols: [15, 17],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,15],[1,15]],
-      concave2x2: { topLeft: [0,16] },
-      convex9: [
-        [2,15],[2,16],[2,17],
-        [3,15],[3,16],[3,17],
-        [4,15],[4,16],[4,17]
-      ],
-      interior: [[5,15],[5,16],[5,17]]
-    }
-  },
+        decor: [
+            { row: 0, col: 0 },
+            { row: 1, col: 0 },
+        ],
 
-  // ------------------------------------------------------------
-  // 6 — Water chasm (rock rim + water floor)
-  // ------------------------------------------------------------
-  {
-    id: "water_chasm",
-    type: "water",
-    cols: [18, 20],
-    rows: [0, 5],
-    tiles: {
-      decor: [[0,18],[1,18]],
-      concave2x2: { topLeft: [0,19] },
-      convex9: [
-        [2,18],[2,19],[2,20],
-        [3,18],[3,19],[3,20],
-        [4,18],[4,19],[4,20]
-      ],
-      interior: [
-        [5,18],[5,19],[5,20]  // three distinct water textures
-      ]
-    }
-  },
+        convex9BlockOrigin: { topLeft: { row: 2, col: 0 } },
+        concave2x2BlockOrigin: { topLeft: { row: 0, col: 1 } },
+    },
 
-  // ==================================================================
-  // ROWS 6–11  (grass, hedges, dirt-in-grass)
-  // ==================================================================
+    // ----------------------------------------------------------
+    // 2. ground_medium
+    // ----------------------------------------------------------
+    {
+        id: "ground_medium",
+        kind: "ground",
 
-  // ------------------------------------------------------------
-  // 7 — Grass: dense light green
-  // ------------------------------------------------------------
-  {
-    id: "grass_dense_light",
-    type: "ground",
-    cols: [0, 2],
-    rows: [6, 11],
-    tiles: {
-      decor: [
-        [6,0],[7,0],   // dense grass clumps
-      ],
-      concave2x2: { topLeft: [6,1] },
-      convex9: [
-        [8,0],[8,1],[8,2],
-        [9,0],[9,1],[9,2],
-        [10,0],[10,1],[10,2]
-      ],
-      groundVariants: [
-        [11,0],[11,1],[11,2]
-      ]
-    }
-  },
+        atlasBounds: { cols: [3, 5], rows: [0, 5] },
 
-  // ------------------------------------------------------------
-  // 8 — Grass: sparse light green (same hue, less coverage)
-  // ------------------------------------------------------------
-  {
-    id: "grass_sparse_light",
-    type: "ground",
-    cols: [3, 5],
-    rows: [6, 11],
-    tiles: {
-      decor: [],  // you explicitly said: no decor for this one
-      concave2x2: { topLeft: [6,4] },
-      convex9: [
-        [8,3],[8,4],[8,5],
-        [9,3],[9,4],[9,5],
-        [10,3],[10,4],[10,5]
-      ],
-      groundVariants: [
-        [11,3],[11,4],[11,5]  // same grass color, with tulips
-      ]
-    }
-  },
+        interior: [
+            { row: 5, col: 3 },
+            { row: 5, col: 4 },
+            { row: 5, col: 5 },
+        ],
 
-  // ------------------------------------------------------------
-  // 9 — Grass: dark green
-  // ------------------------------------------------------------
-  {
-    id: "grass_dark",
-    type: "ground",
-    cols: [6, 8],
-    rows: [6, 11],
-    tiles: {
-      decor: [
-        [6,6],[7,6]
-      ],
-      concave2x2: { topLeft: [6,7] },
-      convex9: [
-        [8,6],[8,7],[8,8],
-        [9,6],[9,7],[9,8],
-        [10,6],[10,7],[10,8]
-      ],
-      groundVariants: [
-        [11,6],[11,7],[11,8]
-      ]
-    }
-  },
+        edgeN: { row: 2, col: 4 },
+        edgeS: { row: 4, col: 4 },
+        edgeW: { row: 3, col: 3 },
+        edgeE: { row: 3, col: 5 },
 
-  // ------------------------------------------------------------
-  // 10 — Hedge: low green hedge
-  // ------------------------------------------------------------
-  {
-    id: "hedge_low",
-    type: "hedge",
-    cols: [9, 11],
-    rows: [6, 11],
-    tiles: {
-      decor: [
-        [6,9],[7,9],   // 1×2 bush object (treated as two tiles in data)
-        [11,11]        // single-tile hedge overlay (transparent)
-      ],
-      concave2x2: { topLeft: [6,10] },
-      convex9: [
-        [8,9],[8,10],[8,11],
-        [9,9],[9,10],[9,11],
-        [10,9],[10,10],[10,11]
-      ]
-      // no dedicated hedge groundVariants; bottom row here is grass extras
-    }
-  },
+        cornerNW: { row: 2, col: 3 },
+        cornerNE: { row: 2, col: 5 },
+        cornerSE: { row: 4, col: 5 },
+        cornerSW: { row: 4, col: 3 },
 
-  // ------------------------------------------------------------
-  // 11 — Hedge: taller / second color hedge
-  // (structure same as low hedge; art style differs)
-  // ------------------------------------------------------------
-  {
-    id: "hedge_tall",
-    type: "hedge",
-    cols: [12, 14],
-    rows: [6, 11],
-    tiles: {
-      // you noted this as a hedge family; decor in this band is grass, so leave empty
-      decor: [],
-      concave2x2: { topLeft: [6,13] },
-      convex9: [
-        [8,12],[8,13],[8,14],
-        [9,12],[9,13],[9,14],
-        [10,12],[10,13],[10,14]
-      ]
-      // row 11 here (12–14) we already attached to ground_light as variants
-    }
-  },
+        innerNW: { row: 0, col: 4 },
+        innerNE: { row: 0, col: 5 },
+        innerSE: { row: 1, col: 5 },
+        innerSW: { row: 1, col: 4 },
 
-  // ------------------------------------------------------------
-  // 12 — Hedge: straw / hay hedge
-  // ------------------------------------------------------------
-  {
-    id: "hedge_straw",
-    type: "hedge",
-    cols: [15, 17],
-    rows: [6, 11],
-    tiles: {
-      decor: [],  // you called out row 11,15–17 as general decor; those we
-                  // associated with light ground above so we don't double-own them
-      concave2x2: { topLeft: [6,16] },
-      convex9: [
-        [8,15],[8,16],[8,17],
-        [9,15],[9,16],[9,17],
-        [10,15],[10,16],[10,17]
-      ]
-    }
-  },
+        decor: [],
 
-  // ------------------------------------------------------------
-  // 13 — Dirt patches inside grass (fertile soil)
-  // ------------------------------------------------------------
-  {
-    id: "ground_dirtpatch",
-    type: "ground",
-    cols: [18, 20],
-    rows: [6, 11],
-    tiles: {
-      // these assume surrounding grass; visually they are dirt patches within grass
-      decor: [
-        [6,18],[7,18]
-      ],
-      concave2x2: { topLeft: [6,19] }, // tiles [6,19],[6,20],[7,19],[7,20]
-      convex9: [
-        [8,18],[8,19],[8,20],
-        [9,18],[9,19],[9,20],
-        [10,18],[10,19],[10,20]
-      ],
-      // special “edge continuation” tiles that align with the concave band
-      edgeExtensions: {
-        left:  [11,19],  // placed immediately left of the concave block
-        right: [11,20]   // placed immediately right of the concave block
-      }
-      // [11,18] is effectively unused/blank as you described
-    }
-  }
+        convex9BlockOrigin: { topLeft: { row: 2, col: 3 } },
+        concave2x2BlockOrigin: { topLeft: { row: 0, col: 4 } },
+    },
+
+    // ----------------------------------------------------------
+    // 3. ground_darkred
+    // ----------------------------------------------------------
+    {
+        id: "ground_darkred",
+        kind: "ground",
+
+        atlasBounds: { cols: [6, 8], rows: [0, 5] },
+
+        interior: [
+            { row: 5, col: 6 },
+            { row: 5, col: 7 },
+            { row: 5, col: 8 },
+        ],
+
+        edgeN: { row: 2, col: 7 },
+        edgeS: { row: 4, col: 7 },
+        edgeW: { row: 3, col: 6 },
+        edgeE: { row: 3, col: 8 },
+
+        cornerNW: { row: 2, col: 6 },
+        cornerNE: { row: 2, col: 8 },
+        cornerSE: { row: 4, col: 8 },
+        cornerSW: { row: 4, col: 6 },
+
+        innerNW: { row: 0, col: 7 },
+        innerNE: { row: 0, col: 8 },
+        innerSE: { row: 1, col: 8 },
+        innerSW: { row: 1, col: 7 },
+
+        decor: [],
+
+        convex9BlockOrigin: { topLeft: { row: 2, col: 6 } },
+        concave2x2BlockOrigin: { topLeft: { row: 0, col: 7 } },
+    },
+
+    // ----------------------------------------------------------
+    // 4. chasm_light
+    // ----------------------------------------------------------
+    {
+        id: "chasm_light",
+        kind: "chasm",
+
+        atlasBounds: { cols: [0, 2], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 0 },
+            { row: 10, col: 1 },
+            { row: 10, col: 2 },
+        ],
+
+        edgeN: { row: 8, col: 1 },
+        edgeS: { row: 10, col: 1 },
+        edgeW: { row: 9, col: 0 },
+        edgeE: { row: 9, col: 2 },
+
+        cornerNW: { row: 8, col: 0 },
+        cornerNE: { row: 8, col: 2 },
+        cornerSE: { row: 10, col: 2 },
+        cornerSW: { row: 10, col: 0 },
+
+        innerNW: { row: 6, col: 1 },
+        innerNE: { row: 6, col: 2 },
+        innerSE: { row: 7, col: 2 },
+        innerSW: { row: 7, col: 1 },
+
+        decor: [
+            { row: 6, col: 0 },
+            { row: 7, col: 0 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 0 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 1 } },
+    },
+
+    // ----------------------------------------------------------
+    // 5. chasm_medium
+    // ----------------------------------------------------------
+    {
+        id: "chasm_medium",
+        kind: "chasm",
+
+        atlasBounds: { cols: [3, 5], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 3 },
+            { row: 10, col: 4 },
+            { row: 10, col: 5 },
+        ],
+
+        edgeN: { row: 8, col: 4 },
+        edgeS: { row: 10, col: 4 },
+        edgeW: { row: 9, col: 3 },
+        edgeE: { row: 9, col: 5 },
+
+        cornerNW: { row: 8, col: 3 },
+        cornerNE: { row: 8, col: 5 },
+        cornerSE: { row: 10, col: 5 },
+        cornerSW: { row: 10, col: 3 },
+
+        innerNW: { row: 6, col: 4 },
+        innerNE: { row: 6, col: 5 },
+        innerSE: { row: 7, col: 5 },
+        innerSW: { row: 7, col: 4 },
+
+        decor: [],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 3 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 4 } },
+    },
+
+    // ----------------------------------------------------------
+    // 6. chasm_black
+    // ----------------------------------------------------------
+    {
+        id: "chasm_black",
+        kind: "chasm",
+
+        atlasBounds: { cols: [6, 8], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 6 },
+            { row: 10, col: 7 },
+            { row: 10, col: 8 },
+        ],
+
+        edgeN: { row: 8, col: 7 },
+        edgeS: { row: 10, col: 7 },
+        edgeW: { row: 9, col: 6 },
+        edgeE: { row: 9, col: 8 },
+
+        cornerNW: { row: 8, col: 6 },
+        cornerNE: { row: 8, col: 8 },
+        cornerSE: { row: 10, col: 8 },
+        cornerSW: { row: 10, col: 6 },
+
+        innerNW: { row: 6, col: 7 },
+        innerNE: { row: 6, col: 8 },
+        innerSE: { row: 7, col: 8 },
+        innerSW: { row: 7, col: 7 },
+
+        decor: [],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 6 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 7 } },
+    },
+
+    // ----------------------------------------------------------
+    // 7. water_light
+    // ----------------------------------------------------------
+    {
+        id: "water_light",
+        kind: "water",
+
+        atlasBounds: { cols: [9, 11], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 9 },
+            { row: 10, col: 10 },
+            { row: 10, col: 11 },
+
+            // water variants row 11
+            { row: 11, col: 9 },
+            { row: 11, col: 10 },
+            { row: 11, col: 11 },
+        ],
+
+        edgeN: { row: 8, col: 10 },
+        edgeS: { row: 10, col: 10 },
+        edgeW: { row: 9, col: 9 },
+        edgeE: { row: 9, col: 11 },
+
+        cornerNW: { row: 8, col: 9 },
+        cornerNE: { row: 8, col: 11 },
+        cornerSE: { row: 10, col: 11 },
+        cornerSW: { row: 10, col: 9 },
+
+        innerNW: { row: 6, col: 10 },
+        innerNE: { row: 6, col: 11 },
+        innerSE: { row: 7, col: 11 },
+        innerSW: { row: 7, col: 10 },
+
+        decor: [],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 9 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 10 } },
+    },
+
+    // ----------------------------------------------------------
+    // 8. grass_dense_light
+    // ----------------------------------------------------------
+    {
+        id: "grass_dense_light",
+        kind: "ground",
+
+        atlasBounds: { cols: [0, 2], rows: [6, 11] },
+
+        interior: [
+            { row: 11, col: 0 },
+            { row: 11, col: 1 },
+            { row: 11, col: 2 },
+        ],
+
+        edgeN: { row: 8, col: 1 },
+        edgeS: { row: 10, col: 1 },
+        edgeW: { row: 9, col: 0 },
+        edgeE: { row: 9, col: 2 },
+
+        cornerNW: { row: 8, col: 0 },
+        cornerNE: { row: 8, col: 2 },
+        cornerSE: { row: 10, col: 2 },
+        cornerSW: { row: 10, col: 0 },
+
+        innerNW: { row: 6, col: 1 },
+        innerNE: { row: 6, col: 2 },
+        innerSE: { row: 7, col: 2 },
+        innerSW: { row: 7, col: 1 },
+
+        decor: [
+            { row: 6, col: 0 },
+            { row: 7, col: 0 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 0 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 1 } },
+    },
+
+    // ----------------------------------------------------------
+    // 9. grass_sparse_light
+    // ----------------------------------------------------------
+    {
+        id: "grass_sparse_light",
+        kind: "ground",
+
+        atlasBounds: { cols: [3, 5], rows: [6, 11] },
+
+        interior: [
+            { row: 11, col: 3 },
+            { row: 11, col: 4 },
+            { row: 11, col: 5 },
+        ],
+
+        edgeN: { row: 8, col: 4 },
+        edgeS: { row: 10, col: 4 },
+        edgeW: { row: 9, col: 3 },
+        edgeE: { row: 9, col: 5 },
+
+        cornerNW: { row: 8, col: 3 },
+        cornerNE: { row: 8, col: 5 },
+        cornerSE: { row: 10, col: 5 },
+        cornerSW: { row: 10, col: 3 },
+
+        innerNW: { row: 6, col: 4 },
+        innerNE: { row: 6, col: 5 },
+        innerSE: { row: 7, col: 5 },
+        innerSW: { row: 7, col: 4 },
+
+        decor: [
+            { row: 11, col: 3 },
+            { row: 11, col: 4 },
+            { row: 11, col: 5 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 3 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 4 } },
+    },
+
+    // ----------------------------------------------------------
+    // 10. grass_dark
+    // ----------------------------------------------------------
+    {
+        id: "grass_dark",
+        kind: "ground",
+
+        atlasBounds: { cols: [6, 8], rows: [6, 11] },
+
+        interior: [
+            { row: 11, col: 6 },
+            { row: 11, col: 7 },
+            { row: 11, col: 8 },
+        ],
+
+        edgeN: { row: 8, col: 7 },
+        edgeS: { row: 10, col: 7 },
+        edgeW: { row: 9, col: 6 },
+        edgeE: { row: 9, col: 8 },
+
+        cornerNW: { row: 8, col: 6 },
+        cornerNE: { row: 8, col: 8 },
+        cornerSE: { row: 10, col: 8 },
+        cornerSW: { row: 10, col: 6 },
+
+        innerNW: { row: 6, col: 7 },
+        innerNE: { row: 6, col: 8 },
+        innerSE: { row: 7, col: 8 },
+        innerSW: { row: 7, col: 7 },
+
+        decor: [
+            { row: 6, col: 6 },
+            { row: 7, col: 6 }
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 6 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 7 } },
+    },
+
+    // ----------------------------------------------------------
+    // 11. hedge_green_low
+    // ----------------------------------------------------------
+    {
+        id: "hedge_green_low",
+        kind: "hedge",
+
+        atlasBounds: { cols: [9, 11], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 10 }
+        ],
+
+        edgeN: { row: 8, col: 10 },
+        edgeS: { row: 10, col: 10 },
+        edgeW: { row: 9, col: 9 },
+        edgeE: { row: 9, col: 11 },
+
+        cornerNW: { row: 8, col: 9 },
+        cornerNE: { row: 8, col: 11 },
+        cornerSE: { row: 10, col: 11 },
+        cornerSW: { row: 10, col: 9 },
+
+        innerNW: { row: 6, col: 10 },
+        innerNE: { row: 6, col: 11 },
+        innerSE: { row: 7, col: 11 },
+        innerSW: { row: 7, col: 10 },
+
+        decor: [
+            { row: 11, col: 11 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 9 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 10 } },
+    },
+
+    // ----------------------------------------------------------
+    // 12. hedge_green_high
+    // ----------------------------------------------------------
+    {
+        id: "hedge_green_high",
+        kind: "hedge",
+
+        atlasBounds: { cols: [12, 14], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 13 }
+        ],
+
+        edgeN: { row: 8, col: 13 },
+        edgeS: { row: 10, col: 13 },
+        edgeW: { row: 9, col: 12 },
+        edgeE: { row: 9, col: 14 },
+
+        cornerNW: { row: 8, col: 12 },
+        cornerNE: { row: 8, col: 14 },
+        cornerSE: { row: 10, col: 14 },
+        cornerSW: { row: 10, col: 12 },
+
+        innerNW: { row: 6, col: 13 },
+        innerNE: { row: 6, col: 14 },
+        innerSE: { row: 7, col: 14 },
+        innerSW: { row: 7, col: 13 },
+
+        decor: [
+            { row: 11, col: 12 },
+            { row: 11, col: 13 },
+            { row: 11, col: 14 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 12 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 13 } },
+    },
+
+    // ----------------------------------------------------------
+    // 13. hedge_straw
+    // ----------------------------------------------------------
+    {
+        id: "hedge_straw",
+        kind: "hedge",
+
+        atlasBounds: { cols: [15, 17], rows: [6, 11] },
+
+        interior: [
+            { row: 10, col: 16 }
+        ],
+
+        edgeN: { row: 8, col: 16 },
+        edgeS: { row: 10, col: 16 },
+        edgeW: { row: 9, col: 15 },
+        edgeE: { row: 9, col: 17 },
+
+        cornerNW: { row: 8, col: 15 },
+        cornerNE: { row: 8, col: 17 },
+        cornerSE: { row: 10, col: 17 },
+        cornerSW: { row: 10, col: 15 },
+
+        innerNW: { row: 6, col: 16 },
+        innerNE: { row: 6, col: 17 },
+        innerSE: { row: 7, col: 17 },
+        innerSW: { row: 7, col: 16 },
+
+        decor: [
+            { row: 11, col: 15 },
+            { row: 11, col: 16 },
+            { row: 11, col: 17 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 15 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 16 } },
+    },
+
+    // ----------------------------------------------------------
+    // 14. dirt_patch_lightgrass
+    // ----------------------------------------------------------
+    {
+        id: "dirt_patch_lightgrass",
+        kind: "ground",
+
+        atlasBounds: { cols: [18, 20], rows: [6, 11] },
+
+        interior: [
+            { row: 8, col: 18 }, { row: 9, col: 18 }, { row: 10, col: 18 },
+            { row: 8, col: 19 }, { row: 9, col: 19 }, { row: 10, col: 19 },
+            { row: 8, col: 20 }, { row: 9, col: 20 }, { row: 10, col: 20 },
+        ],
+
+        edgeN: { row: 8, col: 19 },
+        edgeS: { row: 10, col: 19 },
+        edgeW: { row: 9, col: 18 },
+        edgeE: { row: 9, col: 20 },
+
+        cornerNW: { row: 8, col: 18 },
+        cornerNE: { row: 8, col: 20 },
+        cornerSE: { row: 10, col: 20 },
+        cornerSW: { row: 10, col: 18 },
+
+        innerNW: { row: 6, col: 19 },
+        innerNE: { row: 6, col: 20 },
+        innerSE: { row: 7, col: 20 },
+        innerSW: { row: 7, col: 19 },
+
+        decor: [
+            { row: 6, col: 18 },
+            { row: 7, col: 18 },
+        ],
+
+        convex9BlockOrigin: { topLeft: { row: 8, col: 18 } },
+        concave2x2BlockOrigin: { topLeft: { row: 6, col: 19 } },
+
+        edgeExtensions: {
+            left:  { row: 11, col: 19 },
+            right: { row: 11, col: 20 },
+        }
+    },
+
 ];
