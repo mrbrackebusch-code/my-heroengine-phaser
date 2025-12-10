@@ -105,12 +105,12 @@ class HeroScene extends Phaser.Scene {
         console.log(">>> [HeroScene.create] building tile atlas");
         this.tileAtlas = buildTileAtlas(this);
 
-        debugSpawnHeroWithAnim(this, {
-            heroName: "Jason",
-            family: "strength",
-            phase: "walk",
-            dir: "down"
-        });
+//        debugSpawnHeroWithAnim(this, {
+//            heroName: "Jason",
+//            family: "strength",
+//            phase: "walk",
+//            dir: "down"
+//        });
 
         // I included our preemptive logging here: [HeroScene.create – tileAtlas]
 
@@ -261,6 +261,22 @@ class HeroScene extends Phaser.Scene {
                         { rows: grid.length, cols: grid[0]?.length, tileSize }
                     );
                     scene.tileRenderer.syncFromEngineGrid(grid);
+
+                    // NEW: update physics & camera bounds to match the full tilemap
+                    const rows = grid.length;
+                    const cols = grid[0]?.length || 0;
+
+                    const worldWidth = cols * tileSize;
+                    const worldHeight = rows * tileSize;
+
+                    scene.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+                    scene.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+                    console.log(
+                        ">>> [HeroScene.create] set physics/camera bounds from tilemap:",
+                        { worldWidth, worldHeight, rows, cols, tileSize }
+                    );
+
                 }
             }
         } catch (e) {
@@ -425,19 +441,41 @@ function shouldStartGameFromUrl(): boolean {
     }
 }
 
+
+// Choose a target max size and aspect ratio
+const MAX_WIDTH = 1536;
+const MAX_HEIGHT = 864;
+const TARGET_ASPECT = 16 / 9;
+
+// Compute a size that fits this browser window, but not bigger than your max
+let width = Math.min(window.innerWidth, MAX_WIDTH);
+let height = Math.min(window.innerHeight, MAX_HEIGHT);
+
+// Adjust to keep 16:9 without exceeding the window
+if (width / height > TARGET_ASPECT) {
+    // Too wide → clamp by height
+    width = Math.floor(height * TARGET_ASPECT);
+} else {
+    // Too tall → clamp by width
+    height = Math.floor(width / TARGET_ASPECT);
+}
+
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
 
-    // Keep your actual game world at 320×240, but scale canvas up
-    width: 640, // 320,
-    height: 480, // 240,
+    width,
+    height,
 
     parent: "app",
     backgroundColor: "#000000",
 
-    // Pixel art ON (crisp scaling, no smoothing)
     pixelArt: true,
     roundPixels: true,
+
+    scale: {
+        mode: Phaser.Scale.NONE,              // no extra scaling
+        autoCenter: Phaser.Scale.CENTER_BOTH  // center inside #app
+    },
 
     physics: {
         default: "arcade",
@@ -452,6 +490,9 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 
     scene: [HeroScene]
 };
+
+
+
 
 if (shouldStartGameFromUrl()) {
     console.log("[main] profile found in URL; starting Phaser game.");

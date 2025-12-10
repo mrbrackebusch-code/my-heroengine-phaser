@@ -507,6 +507,24 @@ const TILE_WALL = 1                 // private
 let _engineWorldTileMap: number[][] = []
 
 
+// ====================================================
+// WORLD SIZE CONFIG (MakeCode / HeroEngine side)
+// ====================================================
+
+// Tile size is whatever you're already using
+//const WORLD_TILE_SIZE = 16;   // or 32 or 64 — whatever you already have
+
+// Target world size in tiles.
+// Example: 1920x1080 with 64px tiles → 30 x 17 tiles.
+// Adjust these numbers, not the code, when you want a new world size.
+const WORLD_TILES_W = 48/2;     // columns
+const WORLD_TILES_H = 26/2;     // rows
+
+// Optional small safety floor
+const MIN_WORLD_TILES_W = 5;
+const MIN_WORLD_TILES_H = 5;
+
+
 
 // --------------------------------------------------------------
 // Sprite kinds (lazy init for extension safety)
@@ -891,6 +909,22 @@ const AURA_COLOR_HEAL = 7 // green-ish
 
 
 
+function worldPixelWidth(): number {
+    return WORLD_TILES_W * WORLD_TILE_SIZE;
+}
+
+function worldPixelHeight(): number {
+    return WORLD_TILES_H * WORLD_TILE_SIZE;
+}
+
+function worldCenter(): { x: number; y: number } {
+    return {
+        x: worldPixelWidth() / 2,
+        y: worldPixelHeight() / 2
+    };
+}
+
+
 
 
 
@@ -961,65 +995,289 @@ function r3(v: number) { return Math.round(v * 1000) / 1000 }
 
 
 
+// ================================================================
+// SECTION 2.5 - TILEMAP AND WORLD GENERATION (improved)
+// ================================================================
+// Uses cellular automata to make nice blobby walls, then carves
+// a central arena for the heroes.
+// ================================================================
 
-// ================================================================
-// ================================================================
-// ================================================================
-// SECTION 2.5 - TILEMAP AND WORLD GENERATION
-// ================================================================
-// Generates the tilemap 2D array and makes images for it
-// ================================================================
+
+// MCA-safe internal wrapper so advanced gen stub can call it.
+function _createBasicCaveMapInternal(cols: number, rows: number): number[][] {
+    const wallChance = 45
+    let map = _seedRandomMap(rows, cols, wallChance)
+
+    const smoothSteps = 5
+    for (let i = 0; i < smoothSteps; i++) {
+        map = _smoothMapStep(map)
+    }
+
+    // MCA-safe borders
+    for (let r = 0; r < rows; r++) {
+        map[r][0] = TILE_WALL
+        map[r][cols - 1] = TILE_WALL
+    }
+    for (let c = 0; c < cols; c++) {
+        map[0][c] = TILE_WALL
+        map[rows - 1][c] = TILE_WALL
+    }
+
+    return map
+}
+
+
+function isMakeCodeArcadeRuntime(): boolean {
+    return (typeof window === "undefined") ||
+           !(window as any).WebGLRenderingContext;
+}
+
 
 function _createTileMap2D(): number[][] {
-    const tile = WORLD_TILE_SIZE
+    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
+    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
 
-    let cols = Math.idiv(scene.screenWidth(), tile)
-    let rows = Math.idiv(scene.screenHeight(), tile)
+    // DETECT MCA / PHASER
+    if (isMakeCodeArcadeRuntime()) {
+        console.log("[worldgen] MCA runtime → using basic map")
+        return _createBasicCaveMapInternal(cols, rows)
+    }
 
-    // Make sure we have enough space for a box + gaps
-    if (cols < 5) cols = 5
-    if (rows < 5) rows = 5
+    console.log("[worldgen] Phaser runtime → using advanced biome generator")
+    return __advancedBiomeWorldgen(cols, rows)
+}
 
-    // Start all empty
+
+
+function _createBasicCaveMap(): number[][] {
+    // 1) Decide world dimensions in tiles
+    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
+    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
+
+    // Extra safety floor if you still want it
+    if (cols < 10) cols = 10
+    if (rows < 8) rows = 8
+
+    // 2) Seed random map (0 = empty, 1 = wall)
+    const wallChance = 45
+    let map = _seedRandomMap(rows, cols, wallChance)
+
+    // 3) Run a few smoothing steps (cellular automata)
+    const smoothSteps = 5
+    for (let i = 0; i < smoothSteps; i++) {
+        map = _smoothMapStep(map)
+    }
+
+    // 4) Make outer border solid walls (flying-island feel & clean edges)
+    for (let r = 0; r < rows; r++) {
+        map[r][0] = TILE_WALL
+        map[r][cols - 1] = TILE_WALL
+    }
+    for (let c = 0; c < cols; c++) {
+        map[0][c] = TILE_WALL
+        map[rows - 1][c] = TILE_WALL
+    }
+
+    // 5) Carve a central arena for the heroes (guaranteed open space)
+    const centerR = Math.idiv(rows, 2)
+    const centerC = Math.idiv(cols, 2)
+
+    // Size of arena scales with map size
+    const arenaHalfH = Math.max(2, Math.idiv(rows, 8))   // vertical half-size
+    const arenaHalfW = Math.max(2, Math.idiv(cols, 8))   // horizontal half-size
+
+    const topR = Math.max(1, centerR - arenaHalfH)
+    const bottomR = Math.min(rows - 2, centerR + arenaHalfH)
+    const leftC = Math.max(1, centerC - arenaHalfW)
+    const rightC = Math.min(cols - 2, centerC + arenaHalfW)
+
+    for (let r = topR; r <= bottomR; r++) {
+        for (let c = leftC; c <= rightC; c++) {
+            map[r][c] = TILE_EMPTY
+        }
+    }
+
+    // 6) Carve L-shaped corridors from each corner into the arena.
+    //
+    // Monsters spawning in the corners (near [1,1], [1, cols-2], [rows-2,1],
+    // [rows-2, cols-2]) now have guaranteed paths into the arena.
+    //
+    const corridorHalfWidth = 1 // 1 → corridors are 3 tiles wide
+
+    function carveRect(r0: number, c0: number, r1: number, c1: number) {
+        const rStart = Math.max(1, Math.min(r0, r1))
+        const rEnd   = Math.min(rows - 2, Math.max(r0, r1))
+        const cStart = Math.max(1, Math.min(c0, c1))
+        const cEnd   = Math.min(cols - 2, Math.max(c0, c1))
+
+        for (let r = rStart; r <= rEnd; r++) {
+            for (let c = cStart; c <= cEnd; c++) {
+                map[r][c] = TILE_EMPTY
+            }
+        }
+    }
+
+    function carveCornerToArena(cornerR: number, cornerC: number) {
+        // First segment: from corner toward the arena horizontally
+        const targetC = centerC
+        carveRect(
+            cornerR - corridorHalfWidth,
+            Math.min(cornerC, targetC),
+            cornerR + corridorHalfWidth,
+            Math.max(cornerC, targetC)
+        )
+
+        // Second segment: from that line down/up to the vertical center of arena
+        const targetR = centerR
+        carveRect(
+            Math.min(cornerR, targetR),
+            targetC - corridorHalfWidth,
+            Math.max(cornerR, targetR),
+            targetC + corridorHalfWidth
+        )
+    }
+
+    // Inner spawn corners (leave outermost border walls intact at 0 / rows-1 / cols-1)
+    const topRow = 1
+    const bottomRow = rows - 2
+    const leftCol = 1
+    const rightCol = cols - 2
+
+    // Top-left corner → arena
+    carveCornerToArena(topRow, leftCol)
+    // Top-right corner → arena
+    carveCornerToArena(topRow, rightCol)
+    // Bottom-left corner → arena
+    carveCornerToArena(bottomRow, leftCol)
+    // Bottom-right corner → arena
+    carveCornerToArena(bottomRow, rightCol)
+
+
+    // 7) Carve spawn pads that INCLUDE the actual outer corners.
+    //
+    // This clears a (2*radius+1)x(2*radius+1) block of floor centered
+    // near each corner. Because we allow r/c = 0 and rows-1/cols-1
+    // here, we punch holes in the border exactly where we want them.
+
+    const SPAWN_PAD_RADIUS = 2 // 2 → up to 5x5 pad; tune as needed
+
+    function carveSpawnPad(centerR: number, centerC: number) {
+        const rStart = Math.max(0, centerR - SPAWN_PAD_RADIUS)
+        const rEnd   = Math.min(rows - 1, centerR + SPAWN_PAD_RADIUS)
+        const cStart = Math.max(0, centerC - SPAWN_PAD_RADIUS)
+        const cEnd   = Math.min(cols - 1, centerC + SPAWN_PAD_RADIUS)
+
+        for (let r = rStart; r <= rEnd; r++) {
+            for (let c = cStart; c <= cEnd; c++) {
+                map[r][c] = TILE_EMPTY
+            }
+        }
+    }
+
+    // Pads centered on the REAL world corners
+    carveSpawnPad(0, 0)                 // top-left WORLD corner
+    carveSpawnPad(0, cols - 1)          // top-right WORLD corner
+    carveSpawnPad(rows - 1, 0)          // bottom-left WORLD corner
+    carveSpawnPad(rows - 1, cols - 1)   // bottom-right WORLD corner
+
+
+
+
+    console.log(
+        ">>> [HeroEngine.worldgen] map size",
+        rows,
+        "x",
+        cols,
+        "arena=",
+        { topR, bottomR, leftC, rightC }
+    )
+
+    return map
+
+}
+
+
+
+
+// ------------------------------------------------------------
+// Seed map with random walls / empty
+// ------------------------------------------------------------
+function _seedRandomMap(rows: number, cols: number, wallChancePercent: number): number[][] {
     const map: number[][] = []
     for (let r = 0; r < rows; r++) {
         const row: number[] = []
         for (let c = 0; c < cols; c++) {
-            row.push(TILE_EMPTY)
+            // Random wall vs empty
+            if (randint(0, 99) < wallChancePercent) {
+                row.push(TILE_WALL)
+            } else {
+                row.push(TILE_EMPTY)
+            }
         }
         map.push(row)
     }
-
-    // Inset the box by ~1/4 of the map size
-    const marginRows = Math.idiv(rows, 4)
-    const marginCols = Math.idiv(cols, 4)
-
-    const topR = marginRows
-    const bottomR = rows - 1 - marginRows
-    const leftC = marginCols
-    const rightC = cols - 1 - marginCols
-
-    // Center tile (for the gaps)
-    const centerR = Math.idiv(rows, 2)
-    const centerC = Math.idiv(cols, 2)
-
-    // Horizontal walls (top & bottom), leave gap at centerC
-    for (let c = leftC; c <= rightC; c++) {
-        if (c !== centerC) {
-            map[topR][c] = TILE_WALL
-            map[bottomR][c] = TILE_WALL
-        }
-    }
-
-    // Vertical walls (left & right), leave gap at centerR
-    for (let r = topR; r <= bottomR; r++) {
-        if (r !== centerR) {
-            map[r][leftC] = TILE_WALL
-            map[r][rightC] = TILE_WALL
-        }
-    }
-
     return map
+}
+
+// ------------------------------------------------------------
+// One cellular automata smoothing step
+// ------------------------------------------------------------
+function _smoothMapStep(oldMap: number[][]): number[][] {
+    const rows = oldMap.length
+    const cols = oldMap[0].length
+    const newMap: number[][] = []
+
+    for (let r = 0; r < rows; r++) {
+        const newRow: number[] = []
+        for (let c = 0; c < cols; c++) {
+            const wallCount = _countWallNeighbors(oldMap, r, c)
+
+            const current = oldMap[r][c]
+            let next = current
+
+            // Classic cave-style rules:
+            // - If many walls around, this cell tends to become wall
+            // - If few walls around, it tends to become empty
+            if (current === TILE_WALL) {
+                if (wallCount < 4) next = TILE_EMPTY
+                else next = TILE_WALL
+            } else { // TILE_EMPTY
+                if (wallCount > 4) next = TILE_WALL
+                else next = TILE_EMPTY
+            }
+
+            newRow.push(next)
+        }
+        newMap.push(newRow)
+    }
+    return newMap
+}
+
+// ------------------------------------------------------------
+// Count walls in the 8 neighbors around (r,c).
+// Out-of-bounds counts as wall to keep edges closed.
+// ------------------------------------------------------------
+function _countWallNeighbors(map: number[][], r: number, c: number): number {
+    const rows = map.length
+    const cols = map[0].length
+    let count = 0
+
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue
+            const nr = r + dr
+            const nc = c + dc
+
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) {
+                // Treat out-of-bounds as wall
+                count++
+            } else if (map[nr][nc] === TILE_WALL) {
+                count++
+            }
+        }
+    }
+
+    return count
 }
 
 
@@ -1045,6 +1303,7 @@ function _createWallTileImage(): Image {
     return img
 }
 
+
 function _buildTilesIntoSprites(map: number[][]): void {
     const tile = WORLD_TILE_SIZE
     const wallImg = _createWallTileImage()
@@ -1057,12 +1316,14 @@ function _buildTilesIntoSprites(map: number[][]): void {
             const s = sprites.create(wallImg, SpriteKind.Wall)
             s.left = c * tile
             s.top = r * tile
-            s.z = 5
 
-
+            // Phaser host: keep them for collisions, but NEVER draw over the tiles
+            s.z = -2000
+            s.setFlag(SpriteFlag.Invisible, true)
         }
     }
 }
+
 
 
 
@@ -1928,27 +2189,53 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     callHeroAnim(heroIndex, "idle", 0)
 }
 
+
 function setupHeroes() {
 
-    const W = userconfig.ARCADE_SCREEN_WIDTH
-    const H = userconfig.ARCADE_SCREEN_HEIGHT
-    const centerW = W / 2
-    const centerH = H / 2
-    const offset = 20
+    // 1) Start from ARCADE screen center as a safe default.
+    // In MakeCode Arcade, this gives you the 320×240-ish center.
+    // In Phaser compat, ARCADE_SCREEN_* mirrors screen.width/height from arcadeCompat.
+    let W = userconfig.ARCADE_SCREEN_WIDTH;
+    let H = userconfig.ARCADE_SCREEN_HEIGHT;
 
-    const coords = [
+    // 2) If we have a full world tilemap, override with WORLD size in pixels.
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+        const rows = _engineWorldTileMap.length;
+        const cols = _engineWorldTileMap[0].length;
+
+        W = cols * WORLD_TILE_SIZE;
+        H = rows * WORLD_TILE_SIZE;
+
+        console.log(
+            "[setupHeroes] using WORLD center from tilemap",
+            { rows, cols, tileSize: WORLD_TILE_SIZE, W, H }
+        );
+    } else {
+        console.log(
+            "[setupHeroes] using SCREEN center (no world tilemap yet)",
+            { W, H }
+        );
+    }
+
+    const centerW = W / 2;
+    const centerH = H / 2;
+
+    // You can nudge this however you like
+    const offset = 40;
+
+    const coords: number[][] = [
         [centerW + offset, centerH + offset],
         [centerW - offset, centerH + offset],
         [centerW + offset, centerH - offset],
         [centerW - offset, centerH - offset]
-    ]
+    ];
 
-
-    createHeroForPlayer(1, coords[0][0], coords[0][1])
-    createHeroForPlayer(2, coords[1][0], coords[1][1])
-    createHeroForPlayer(3, coords[2][0], coords[2][1])
-    createHeroForPlayer(4, coords[3][0], coords[3][1])
+    createHeroForPlayer(1, coords[0][0], coords[0][1]);
+    createHeroForPlayer(2, coords[1][0], coords[1][1]);
+    createHeroForPlayer(3, coords[2][0], coords[2][1]);
+    createHeroForPlayer(4, coords[3][0], coords[3][1]);
 }
+
 
 function lockHeroControls(heroIndex: number) {
     const hero = heroes[heroIndex]; if (!hero) return
@@ -5235,27 +5522,52 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
 
 
 
-
 // Corner spawners
 let enemySpawners: Sprite[] = []
-
-
 
 function setupEnemySpawners() {
     enemySpawners = []
 
-    const W = userconfig.ARCADE_SCREEN_WIDTH
-    const H = userconfig.ARCADE_SCREEN_HEIGHT
+    // 1) Start from the *visible screen* size (Arcade behavior).
+    //    In MakeCode Arcade this is the real 320x240-ish screen.
+    //    In Phaser, arcadeCompat.ts makes these match the Phaser game size.
+    let W = scene.screenWidth()
+    let H = scene.screenHeight()
+
+    const tileSize = WORLD_TILE_SIZE
+
+    // 2) If we have a real world tilemap, override W/H with WORLD size.
+    //    In Arcade, you can keep _engineWorldTileMap empty so this is false.
+    //    In Phaser, initWorldTileMap() fills _engineWorldTileMap → branch is true.
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+        const rows = _engineWorldTileMap.length
+        const cols = _engineWorldTileMap[0].length
+
+        W = cols * tileSize
+        H = rows * tileSize
+
+        console.log(
+            "[setupEnemySpawners] using WORLD size from _engineWorldTileMap:",
+            { rows, cols, tileSize, W, H }
+        )
+    } else {
+        console.log(
+            "[setupEnemySpawners] using SCREEN size (no world tilemap yet):",
+            { W, H }
+        )
+    }
+
+    // 3) Place spawners at corners (inset a bit so they aren't on the exact edge)
     const inset = 20
 
-    const coords = [
+    const coords: number[][] = [
         [inset, inset],
         [W - inset, inset],
         [inset, H - inset],
         [W - inset, H - inset]
     ]
 
-    // Big obvious "portal" – tweak later if you want prettier art
+    // Big obvious "portal" – same image you already had
     const spawnerImg = img`
         . . . . . 1 1 1 1 . . . . . .
         . . . 1 1 1 1 1 1 1 1 . . . .
@@ -5278,7 +5590,7 @@ function setupEnemySpawners() {
         const s = sprites.create(spawnerImg, SpriteKind.EnemySpawner)
         s.x = coords[i][0]
         s.y = coords[i][1]
-        s.z = 100  // draw on top of background / tiles / bars
+        s.z = 100  // draw above background / tiles / bars
         enemySpawners.push(s)
     }
 }

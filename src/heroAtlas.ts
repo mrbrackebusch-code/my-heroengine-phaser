@@ -117,7 +117,7 @@ function isHeroAnimDebugEnabled(scene: Phaser.Scene): boolean {
 
 
 const HERO_ATLAS_DEBUG = {
-    enabled: true
+    enabled: false //true
 };
 
 function heroAtlasDebug(scene: Phaser.Scene): boolean {
@@ -416,6 +416,9 @@ export function normalizeHeroPhase(phaseRaw: any): HeroPhase | null {
     return null;
 }
 
+
+
+
 // ----------------------------------------------------------
 // 3. Build HeroAtlas (once textures are loaded)
 // ----------------------------------------------------------
@@ -447,7 +450,10 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         heroLog(
             scene,
             "classifySheet",
-            `[heroAtlas.buildHeroAtlas] classify sheet id=${sheet.id} hero=${sheet.heroName} family=${sheet.family} texWidth=${texWidth} texHeight=${texHeight} totalRows=${totalRows64} cols64=${cols64} oversizeCols=${oversizeCols} hasThrustOversize=${hasThrustOversize} hasSlashOversize=${hasSlashOversize}`
+            `[heroAtlas.buildHeroAtlas] classify sheet id=${sheet.id} hero=${sheet.heroName} ` +
+            `family=${sheet.family} texWidth=${texWidth} texHeight=${texHeight} ` +
+            `totalRows=${totalRows64} cols64=${cols64} oversizeCols=${oversizeCols} ` +
+            `hasThrustOversize=${hasThrustOversize} hasSlashOversize=${hasSlashOversize}`
         );
 
         const oversizeTextureKey = hasThrustOversize || hasSlashOversize
@@ -469,9 +475,9 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
 
         const phases = animSet.phases;
 
-
-
-
+        // --------------------------------------------------
+        // Small helpers for this sheet
+        // --------------------------------------------------
         const addPhaseDir = (
             phase: HeroPhase,
             dir: HeroDir,
@@ -482,7 +488,8 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             yoyo: boolean
         ) => {
             if (row64 >= totalRows64) return;
-            // Use the real per-sheet column count (cols64), NOT a global 13.
+
+            // Use the real per-sheet column count (cols64).
             const frameIndices = buildFrames(row64, usedCols64, cols64);
             if (frameIndices.length === 0) return;
 
@@ -501,10 +508,6 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             };
         };
 
-
-
-
-
         const addOversizePhaseDir = (
             phase: HeroPhase,
             dir: HeroDir,
@@ -516,6 +519,7 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         ) => {
             if (!oversizeTextureKey) return;
             if (oversizeCols <= 0) return;
+
             const frameIndices = buildOversizeFrames(rowBig, usedColsBig, oversizeCols);
             if (frameIndices.length === 0) return;
 
@@ -534,70 +538,194 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             };
         };
 
+        // Convenience generators for column ranges on this sheet
+        const cols0to = (n: number) => {
+            const out: number[] = [];
+            for (let i = 0; i <= n && i < cols64; i++) out.push(i);
+            return out;
+        };
+
         // --------------------------------------------------
-        // Core ULPC rows (64×64 grid):
-        //   0–3   : cast (7 frames)
-        //   4–7   : thrust (8 frames)
-        //   8–11  : walk (9 frames)
-        //   12–15 : slash (6 frames)
-        //   22–25 : idle (2 frames)
+        // Core ULPC 64×64 rows (0-based indexing)
         //
-        // Oversize blocks (192×192 grid) conceptually:
-        //   thrustOversize: first 12 extra 64-rows → 4 big rows
-        //   slashOversize : next  12 extra 64-rows → 4 big rows
+        //  0–3   : cast (spell)
+        //  4–7   : thrust
+        //  8–11  : walk
+        // 12–15  : slash
+        // 16–19  : shoot (bow)
+        // 20     : hurt (single-row band, reused for all dirs)
+        // 21     : climb (single-row band, reused for all dirs)
+        // 22–25  : idle
+        // 26–29  : jump
+        // 30–33  : sit
+        // 34–37  : emote
+        // 38–41  : run
+        // 42–45  : combat idle
+        // 50–53  : one-hand slash/backslash
+        // 54–57  : one-hand halfslash
         //
-        // We do NOT let oversize override canonical thrust/slash here.
+        // Watering reuses the thrust band with a special pattern:
+        //   frames = [0,1,4,4,4,5] in the thrust row.
+        //
+        // Oversize 192×192 rows are derived from extra rows below BASE_ROWS_64.
         // --------------------------------------------------
 
-        // Spellcast (canonical, 64×64)
+        // Spellcast
         // ULDR = rows 0,1,2,3
-        const castCols = [0, 1, 2, 3, 4, 5, 6];
-        addPhaseDir("cast", "up", 0, castCols, 10, 0, false);
-        addPhaseDir("cast", "left", 1, castCols, 10, 0, false);
-        addPhaseDir("cast", "down", 2, castCols, 10, 0, false);
+        const castCols = cols0to(6); // 7 frames
+        addPhaseDir("cast", "up",    0, castCols, 10, 0, false);
+        addPhaseDir("cast", "left",  1, castCols, 10, 0, false);
+        addPhaseDir("cast", "down",  2, castCols, 10, 0, false);
         addPhaseDir("cast", "right", 3, castCols, 10, 0, false);
 
-        // Thrust (canonical, 64×64 only)
+        // Thrust (canonical, 64×64)
         // ULDR = rows 4,5,6,7
-        const thrustCols = [0, 1, 2, 3, 4, 5, 6, 7];
-        addPhaseDir("thrust", "up", 4, thrustCols, 10, 0, false);
-        addPhaseDir("thrust", "left", 5, thrustCols, 10, 0, false);
-        addPhaseDir("thrust", "down", 6, thrustCols, 10, 0, false);
+        const thrustCols = cols0to(7); // 8 frames
+        addPhaseDir("thrust", "up",    4, thrustCols, 10, 0, false);
+        addPhaseDir("thrust", "left",  5, thrustCols, 10, 0, false);
+        addPhaseDir("thrust", "down",  6, thrustCols, 10, 0, false);
         addPhaseDir("thrust", "right", 7, thrustCols, 10, 0, false);
+
+
+        // Watering – NOT its own rows.
+        // Reuses the thrust band with pattern [0,1,4,4,4,5].
+        const wateringCols = [0, 1, 4, 4, 4, 5];
+        addPhaseDir("watering", "up",    4, wateringCols, 10, 0, false);
+        addPhaseDir("watering", "left",  5, wateringCols, 10, 0, false);
+        addPhaseDir("watering", "down",  6, wateringCols, 10, 0, false);
+        addPhaseDir("watering", "right", 7, wateringCols, 10, 0, false);
+
 
         // Walk (canonical, 64×64)
         // ULDR = rows 8,9,10,11
-        const walkCols = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-        addPhaseDir("walk", "up", 8, walkCols, 8, -1, false);
-        addPhaseDir("walk", "left", 9, walkCols, 8, -1, false);
-        addPhaseDir("walk", "down", 10, walkCols, 8, -1, false);
+        const walkCols = cols0to(8); // 9 frames
+        addPhaseDir("walk", "up",    8,  walkCols, 8, -1, false);
+        addPhaseDir("walk", "left",  9,  walkCols, 8, -1, false);
+        addPhaseDir("walk", "down",  10, walkCols, 8, -1, false);
         addPhaseDir("walk", "right", 11, walkCols, 8, -1, false);
 
-        // Slash (canonical, 64×64)
-        // For guard-return behaviour we prefer one-hand halfslash rows
-        // (50–53) if present; otherwise classic slash rows (12–15).
-        let slashRowBase64 = 12;
-        let slashCols64: number[] = [0, 1, 2, 3, 4, 5];
-        let slashYoyo = true;
+        // Slash (two-handed classic, 64×64)
+        // ULDR = rows 12,13,14,15
+        const slashRowBase64 = 12;
+        const slashCols64 = cols0to(5); // 6 frames
+        const slashYoyo = true;
 
-        if (totalRows64 >= 54) {
-            // One-hand halfslash rows at 64×64: 50–53 (ULDR)
-            slashRowBase64 = 50;
-            slashCols64 = [0, 1, 2, 3, 4, 5];
-            slashYoyo = true;
-        }
-
-        addPhaseDir("slash", "up", slashRowBase64 + 0, slashCols64, 12, 0, slashYoyo);
-        addPhaseDir("slash", "left", slashRowBase64 + 1, slashCols64, 12, 0, slashYoyo);
-        addPhaseDir("slash", "down", slashRowBase64 + 2, slashCols64, 12, 0, slashYoyo);
+        addPhaseDir("slash", "up",    slashRowBase64 + 0, slashCols64, 12, 0, slashYoyo);
+        addPhaseDir("slash", "left",  slashRowBase64 + 1, slashCols64, 12, 0, slashYoyo);
+        addPhaseDir("slash", "down",  slashRowBase64 + 2, slashCols64, 12, 0, slashYoyo);
         addPhaseDir("slash", "right", slashRowBase64 + 3, slashCols64, 12, 0, slashYoyo);
 
-        // Idle (canonical, 64×64)
-        const idleCols = [0, 1];
-        addPhaseDir("idle", "up", 22, idleCols, 3, -1, false);
-        addPhaseDir("idle", "left", 23, idleCols, 3, -1, false);
-        addPhaseDir("idle", "down", 24, idleCols, 3, -1, false);
+        
+        // Shoot (bow) – rows 16–19, usually up to ~13 frames
+        const shootCols = cols0to(12); // 13 frames max
+        addPhaseDir("shoot", "up",    16, shootCols, 10, 0, false);
+        addPhaseDir("shoot", "left",  17, shootCols, 10, 0, false);
+        addPhaseDir("shoot", "down",  18, shootCols, 10, 0, false);
+        addPhaseDir("shoot", "right", 19, shootCols, 10, 0, false);
+
+        // Hurt – single-row band (generator only draws one facing;
+        // we just reuse it for all dirs). 6 frames.
+        const hurtCols = cols0to(5);
+        addPhaseDir("hurt", "up",    20, hurtCols, 8, 0, false);
+        addPhaseDir("hurt", "left",  20, hurtCols, 8, 0, false);
+        addPhaseDir("hurt", "down",  20, hurtCols, 8, 0, false);
+        addPhaseDir("hurt", "right", 20, hurtCols, 8, 0, false);
+
+        // Climb – single-row band, 6 frames
+        const climbCols = cols0to(5); // 6 frames (0–5)
+        addPhaseDir("climb", "up",    21, climbCols, 10, -1, false);
+        addPhaseDir("climb", "left",  21, climbCols, 10, -1, false);
+        addPhaseDir("climb", "down",  21, climbCols, 10, -1, false);
+        addPhaseDir("climb", "right", 21, climbCols, 10, -1, false);
+
+        // Idle – rows 22–25
+        const idleCols = cols0to(1); // 2 frames
+        addPhaseDir("idle", "up",    22, idleCols, 3, -1, false);
+        addPhaseDir("idle", "left",  23, idleCols, 3, -1, false);
+        addPhaseDir("idle", "down",  24, idleCols, 3, -1, false);
         addPhaseDir("idle", "right", 25, idleCols, 3, -1, false);
+
+        // Jump – rows 26–29, 5 frames
+        const jumpCols = cols0to(4); // 5 frames (0–4)
+        addPhaseDir("jump", "up",    26, jumpCols, 10, 0, false);
+        addPhaseDir("jump", "left",  27, jumpCols, 10, 0, false);
+        addPhaseDir("jump", "down",  28, jumpCols, 10, 0, false);
+        addPhaseDir("jump", "right", 29, jumpCols, 10, 0, false);
+
+        // Sit – rows 30–33, 3 frames
+        const sitCols = cols0to(2); // 3 frames (0–2)
+        addPhaseDir("sit", "up",    30, sitCols, 4, -1, false);
+        addPhaseDir("sit", "left",  31, sitCols, 4, -1, false);
+        addPhaseDir("sit", "down",  32, sitCols, 4, -1, false);
+        addPhaseDir("sit", "right", 33, sitCols, 4, -1, false);
+
+        // Emote – rows 34–37, 3 frames
+        const emoteCols = cols0to(2); // 3 frames (0–2)
+        addPhaseDir("emote", "up",    34, emoteCols, 6, 0, false);
+        addPhaseDir("emote", "left",  35, emoteCols, 6, 0, false);
+        addPhaseDir("emote", "down",  36, emoteCols, 6, 0, false);
+        addPhaseDir("emote", "right", 37, emoteCols, 6, 0, false);
+
+        // Run – rows 38–41, 8 frames
+        const runCols = cols0to(7); // 8 frames (0–7)
+        addPhaseDir("run", "up",    38, runCols, 12, -1, false);
+        addPhaseDir("run", "left",  39, runCols, 12, -1, false);
+        addPhaseDir("run", "down",  40, runCols, 12, -1, false);
+        addPhaseDir("run", "right", 41, runCols, 12, -1, false);
+
+
+
+
+        // Combat idle – rows 46–49
+        const combatIdleCols = idleCols.length > 1 ? idleCols : walkCols;
+        addPhaseDir("combatIdle", "up",    46, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "left",  47, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "down",  48, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "right", 49, combatIdleCols, 6, -1, false);
+
+        // --------------------------------------------------
+        // One-hand slash / backslash / halfslash
+        //
+        // For the wide Jason sheets that have oversize blocks:
+        //   - canonical 64×64 one-hand rows are ABOVE the oversize block:
+        //       46–49 : one-hand slash/backslash
+        //       50–53 : one-hand halfslash
+        //   - oversize rows start at 54.
+        //
+        // For classic 13-col LPC sheets (no oversize):
+        //   - 50–53 : one-hand slash/backslash
+        //   - 54–57 : one-hand halfslash.
+        //
+        // We detect this per-sheet using the oversize flags.
+        // --------------------------------------------------
+        const oneHandSlashRowBase = (hasThrustOversize || hasSlashOversize) ? 46 : 50;
+        const halfslashRowBase    = (hasThrustOversize || hasSlashOversize) ? 50 : 54;
+
+        const oneHandSlashCols     = cols0to(6);   // 7 frames: 0..6
+        const oneHandBackslashCols = cols0to(12);  // 13 frames: 0..12
+        const halfslashCols        = cols0to(5);   // 6 frames: 0..5
+
+        // One-hand slash: first 7 frames of the band
+        addPhaseDir("oneHandSlash", "up",    oneHandSlashRowBase + 0, oneHandSlashCols, 12, 0, false);
+        addPhaseDir("oneHandSlash", "left",  oneHandSlashRowBase + 1, oneHandSlashCols, 12, 0, false);
+        addPhaseDir("oneHandSlash", "down",  oneHandSlashRowBase + 2, oneHandSlashCols, 12, 0, false);
+        addPhaseDir("oneHandSlash", "right", oneHandSlashRowBase + 3, oneHandSlashCols, 12, 0, false);
+
+        // One-hand backslash: full 13-frame row
+        addPhaseDir("oneHandBackslash", "up",    oneHandSlashRowBase + 0, oneHandBackslashCols, 12, 0, false);
+        addPhaseDir("oneHandBackslash", "left",  oneHandSlashRowBase + 1, oneHandBackslashCols, 12, 0, false);
+        addPhaseDir("oneHandBackslash", "down",  oneHandSlashRowBase + 2, oneHandBackslashCols, 12, 0, false);
+        addPhaseDir("oneHandBackslash", "right", oneHandSlashRowBase + 3, oneHandBackslashCols, 12, 0, false);
+
+        // One-hand halfslash: 6-frame band
+        addPhaseDir("oneHandHalfslash", "up",    halfslashRowBase + 0, halfslashCols, 12, 0, false);
+        addPhaseDir("oneHandHalfslash", "left",  halfslashRowBase + 1, halfslashCols, 12, 0, false);
+        addPhaseDir("oneHandHalfslash", "down",  halfslashRowBase + 2, halfslashCols, 12, 0, false);
+        addPhaseDir("oneHandHalfslash", "right", halfslashRowBase + 3, halfslashCols, 12, 0, false);
+
+
+
+
 
         // ----------------------------
         // Oversize phases (192×192)
@@ -608,11 +736,11 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             // First oversize block: thrustOversize
             // 12 extra 64-rows → 4 big rows → ULDR = big rows 18,19,20,21
             const thrustOversizeRowBaseBig = baseBigRow; // 18
-            const thrustOversizeColsBig = [0, 1, 2, 3, 4, 5, 6, 7];
+            const thrustOversizeColsBig = cols0to(7);    // up to 8 big frames
 
-            addOversizePhaseDir("thrustOversize", "up", thrustOversizeRowBaseBig + 0, thrustOversizeColsBig, 10, 0, false);
-            addOversizePhaseDir("thrustOversize", "left", thrustOversizeRowBaseBig + 1, thrustOversizeColsBig, 10, 0, false);
-            addOversizePhaseDir("thrustOversize", "down", thrustOversizeRowBaseBig + 2, thrustOversizeColsBig, 10, 0, false);
+            addOversizePhaseDir("thrustOversize", "up",    thrustOversizeRowBaseBig + 0, thrustOversizeColsBig, 10, 0, false);
+            addOversizePhaseDir("thrustOversize", "left",  thrustOversizeRowBaseBig + 1, thrustOversizeColsBig, 10, 0, false);
+            addOversizePhaseDir("thrustOversize", "down",  thrustOversizeRowBaseBig + 2, thrustOversizeColsBig, 10, 0, false);
             addOversizePhaseDir("thrustOversize", "right", thrustOversizeRowBaseBig + 3, thrustOversizeColsBig, 10, 0, false);
         }
 
@@ -620,20 +748,18 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
             // Second oversize block: slashOversize
             // Next 12 extra 64-rows → next 4 big rows → ULDR = big rows 22,23,24,25
             const slashOversizeRowBaseBig = baseBigRow + 4; // 22
-            const slashOversizeColsBig = [0, 1, 2, 3, 4, 5];
+            const slashOversizeColsBig = cols0to(5);        // 6 big frames
 
-            addOversizePhaseDir("slashOversize", "up", slashOversizeRowBaseBig + 0, slashOversizeColsBig, 12, 0, true);
-            addOversizePhaseDir("slashOversize", "left", slashOversizeRowBaseBig + 1, slashOversizeColsBig, 12, 0, true);
-            addOversizePhaseDir("slashOversize", "down", slashOversizeRowBaseBig + 2, slashOversizeColsBig, 12, 0, true);
-            addOversizePhaseDir("slashOversize", "right", slashOversizeRowBaseBig + 3, slashOversizeColsBig, 12, 0, true);
+            addOversizePhaseDir("slashOversize", "up",    slashOversizeRowBaseBig + 0, slashOversizeColsBig, 12, 0, false);
+            addOversizePhaseDir("slashOversize", "left",  slashOversizeRowBaseBig + 1, slashOversizeColsBig, 12, 0, false);
+            addOversizePhaseDir("slashOversize", "down",  slashOversizeRowBaseBig + 2, slashOversizeColsBig, 12, 0, false);
+            addOversizePhaseDir("slashOversize", "right", slashOversizeRowBaseBig + 3, slashOversizeColsBig, 12, 0, false);
         }
 
-
         // --------------------------------------------------
-        // Phase aliases: wire secondary names onto core bands
-        // so every tester phase has *something* to play.
-        // If we later add real rows for a phase, this will
-        // NOT overwrite them.
+        // Phase aliases: ONLY fill holes; don't overwrite
+        // real data. This way older / partial sheets still
+        // get something reasonable for every tester phase.
         // --------------------------------------------------
         const aliasPhase = (target: HeroPhase, source: HeroPhase) => {
             const src = phases[source];
@@ -643,15 +769,15 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         };
 
         // Movement / stance variants
-        aliasPhase("run", "walk");         // run uses walk rows for now
-        aliasPhase("combatIdle", "idle");  // combat idle → normal idle
+        aliasPhase("run", "walk");           // if run rows missing, reuse walk
+        aliasPhase("combatIdle", "idle");    // if combat idle missing, reuse idle
 
         // Spell / bow / utility
-        aliasPhase("shoot", "cast");       // bow shoot → reuse cast band
-        aliasPhase("watering", "cast");    // watering can → spellcast-ish
+        aliasPhase("shoot", "cast");         // if shoot rows missing, reuse cast band
+        aliasPhase("watering", "cast");      // if watering pattern missing, reuse cast
 
         // Damage / recovery
-        aliasPhase("hurt", "idle");        // no distinct hurt rows yet
+        aliasPhase("hurt", "idle");          // if hurt band missing, reuse idle
 
         // Misc poses
         aliasPhase("climb", "walk");
@@ -659,30 +785,22 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         aliasPhase("sit", "idle");
         aliasPhase("emote", "idle");
 
-        // One-hand sword variants – all share the slash band.
-        // Note: we already favor halfslash rows (50–53) for "slash"
-        // when they exist, so these inherit the nicer guard-return.
-        aliasPhase("oneHandSlash", "slash");
-        aliasPhase("oneHandBackslash", "slash");
-        aliasPhase("oneHandHalfslash", "slash");
-
-
-
-
-
+        // One-hand sword variants – fallbacks
+        aliasPhase("oneHandSlash", "slash");             // if dedicated band missing
+        aliasPhase("oneHandBackslash", "oneHandSlash");  // name alias if band missing
+        aliasPhase("oneHandHalfslash", "slash");         // if halfslash band missing
 
         // --------------------------------------------------
         // Debug: summarize LEFT-only frame ranges in 64×64
         // (and oversize 192×192 if available).
         // --------------------------------------------------
-        const leftCast = phases.cast?.left;
-        const leftThrust = phases.thrust?.left;
-        const leftWalk = phases.walk?.left;
-        const leftSlash = phases.slash?.left;
-        const leftIdle = phases.idle?.left;
-        const leftThrustOver = phases.thrustOversize?.left;
-        const leftSlashOver = phases.slashOversize?.left;
-
+        const leftCast        = phases.cast?.left;
+        const leftThrust      = phases.thrust?.left;
+        const leftWalk        = phases.walk?.left;
+        const leftSlash       = phases.slash?.left;
+        const leftIdle        = phases.idle?.left;
+        const leftThrustOver  = phases.thrustOversize?.left;
+        const leftSlashOver   = phases.slashOversize?.left;
 
         // Deep dump all phases/dirs for this hero so we can see exactly
         // which texture + frame indices are being used.
@@ -691,41 +809,38 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         const summarize64 = (label: string, def?: HeroAnimDef): string => {
             if (!def || def.frameIndices.length === 0) return "";
             const first = def.frameIndices[0];
-            const last = def.frameIndices[def.frameIndices.length - 1];
+            const last  = def.frameIndices[def.frameIndices.length - 1];
 
-            // Use the real per-sheet cols for 64×64.
             const rowFirst = Math.floor(first / cols64);
             const colFirst = first % cols64;
-            const rowLast = Math.floor(last / cols64);
-            const colLast = last % cols64;
+            const rowLast  = Math.floor(last / cols64);
+            const colLast  = last % cols64;
 
             return ` | ${label} [${rowFirst}][${colFirst}]..[${rowLast}][${colLast}] (${def.frameIndices.length} frames)`;
         };
 
-
         const summarize192 = (label: string, def?: HeroAnimDef): string => {
             if (!def || def.frameIndices.length === 0 || !oversizeTextureKey) return "";
             const first = def.frameIndices[0];
-            const last = def.frameIndices[def.frameIndices.length - 1];
+            const last  = def.frameIndices[def.frameIndices.length - 1];
             const rowFirstBig = Math.floor(first / oversizeCols);
             const colFirstBig = first % oversizeCols;
-            const rowLastBig = Math.floor(last / oversizeCols);
-            const colLastBig = last % oversizeCols;
+            const rowLastBig  = Math.floor(last / oversizeCols);
+            const colLastBig  = last % oversizeCols;
             const smallRowStart = rowFirstBig * HERO_OVERSIZE_SCALE;
-            const smallRowEnd = smallRowStart + (HERO_OVERSIZE_SCALE - 1);
-            return ` | ${label}192 [Rbig=${rowFirstBig},C=${colFirstBig}]..[Rbig=${rowLastBig},C=${colLastBig}] (${def.frameIndices.length} frames, rows64≈${smallRowStart}..${smallRowEnd})`;
+            const smallRowEnd   = smallRowStart + (HERO_OVERSIZE_SCALE - 1);
+            return ` | ${label}192 [Rbig=${rowFirstBig},C=${colFirstBig}]..[Rbig=${rowLastBig},C=${colLastBig}] ` +
+                   `(${def.frameIndices.length} frames, rows64≈${smallRowStart}..${smallRowEnd})`;
         };
 
-
-        
         let summary = `sheet=${sheet.id} hero=${sheet.heroName} family=${sheet.family}`;
-        summary += summarize64("cast", leftCast);
-        summary += summarize64("thrust", leftThrust);
-        summary += summarize64("walk", leftWalk);
-        summary += summarize64("slash", leftSlash);
-        summary += summarize64("idle", leftIdle);
+        summary += summarize64("cast",         leftCast);
+        summary += summarize64("thrust",       leftThrust);
+        summary += summarize64("walk",         leftWalk);
+        summary += summarize64("slash",        leftSlash);
+        summary += summarize64("idle",         leftIdle);
         summary += summarize192("thrustOversize", leftThrustOver);
-        summary += summarize192("slashOversize", leftSlashOver);
+        summary += summarize192("slashOversize",  leftSlashOver);
 
         heroLog(scene, "buildSet", `[heroAtlas.buildHeroAtlas] frame ranges (LEFT only) ${summary}`);
 
@@ -740,7 +855,8 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         heroLog(
             scene,
             "firstSetDump",
-            `[heroAtlas.buildHeroAtlas] first hero anim set id=${first.id} hero=${first.heroName} family=${first.family} phases=[${phasesList}]`
+            `[heroAtlas.buildHeroAtlas] first hero anim set id=${first.id} ` +
+            `hero=${first.heroName} family=${first.family} phases=[${phasesList}]`
         );
     }
 
@@ -749,6 +865,11 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
 
     return atlas;
 }
+
+
+
+
+
 
 /**
  * Helper to get the hero atlas from a scene, building it on first use

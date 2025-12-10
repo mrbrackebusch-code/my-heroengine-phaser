@@ -9,15 +9,24 @@ function logTiles(localDebug: boolean, ...args: any[]) {
     console.log(...args);
 }
 
+
 function defaultTileValueToFamily(v: number): TileFamily {
     // In HeroEngineInPhaser.ts:
     // const TILE_EMPTY = 0
     // const TILE_WALL  = 1
+    //
+    // Pick the default look for your procedural map here by choosing the
+    // family IDs from TERRAIN_FAMILIES.
     if (v === 1) {
-        return "dirtCrater";  // walls: use crater edges/corners
+        // Walls → chasm with light rim
+        return "chasm_light";
     }
-    return "dirtPlain";       // everything else: flat dirt base
+
+    // Everything else → dense light grass
+    return "grass_dense_light";
 }
+
+
 
 
 /**

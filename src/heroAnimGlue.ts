@@ -513,14 +513,23 @@ export function installHeroAnimTester(scene: Phaser.Scene): void {
         return;
     }
 
+
     const allSets = Object.values(atlas);
     if (allSets.length === 0) {
         logGlue(scene, "installHeroAnimTester: atlas empty");
         return;
     }
 
-    // Start with the first hero we find
-    const first = allSets[0];
+    // Prefer a Strength hero (so we see both thrust+slash oversize),
+    // fall back to "first" if none.
+    let first = allSets[0];
+    const strengthSet = allSets.find(s => s.family === "strength");
+    if (strengthSet) first = strengthSet;
+
+
+
+
+
 
     // Spawn a debug hero in the middle, default idle/down
     const sprite = debugSpawnHeroWithAnim(scene, {
@@ -533,7 +542,7 @@ export function installHeroAnimTester(scene: Phaser.Scene): void {
 
     const anySprite = sprite as any;
 
-    let usingPrimary = true;
+    let usingPrimary = false;
     let phaseIndex = 7; // "idle" in PRIMARY_PHASES
     let dirIndex = 2;   // "down"
 
