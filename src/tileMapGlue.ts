@@ -14,32 +14,39 @@ function defaultTileValueToFamily(v: number): TileFamily {
     // In HeroEngineInPhaser.ts:
     // const TILE_EMPTY = 0
     // const TILE_WALL  = 1
-    //
-    // Pick the default look for your procedural map here by choosing the
-    // family IDs from TERRAIN_FAMILIES.
+
     if (v === 1) {
-        // Walls → chasm with light rim
+        // walls → chasm rim family
         return "chasm_light";
     }
 
-    // Everything else → dense light grass
-    return "grass_dense_light";
+    // everything else → light-brown dirt
+    return "ground_light";
 }
 
 
 
-
 /**
- * Compute which AutoShape a tile should use based on its neighbors.
- * This is a simple 4-neighbor autotile: we only look at N/E/S/W.
+ * Compute an 8-way neighbor bitmask for a tile and then collapse it
+ * down to one of our coarse AutoShape categories.
+ *
+ * Bit layout:
+ *   bit 0 = N
+ *   bit 1 = E
+ *   bit 2 = S
+ *   bit 3 = W
+ *   bit 4 = NE
+ *   bit 5 = SE
+ *   bit 6 = SW
+ *   bit 7 = NW
  */
-function computeAutoShape(
+function computeNeighborMask(
     grid: number[][],
     r: number,
     c: number,
     family: TileFamily,
     valueToFamily: (v: number) => TileFamily
-): AutoShape {
+): number {
     const rows = grid.length;
     const cols = rows > 0 ? grid[0].length : 0;
 
@@ -48,29 +55,70 @@ function computeAutoShape(
         return valueToFamily(grid[rr][cc]) === family;
     };
 
-    const n = same(r - 1, c);
-    const s = same(r + 1, c);
-    const w = same(r, c - 1);
-    const e = same(r, c + 1);
+    let mask = 0;
 
-    // All neighbors match → center.
-    if (n && s && w && e) return "center";
+    if (same(r - 1, c))     mask |= 1 << 0; // N
+    if (same(r,     c + 1)) mask |= 1 << 1; // E
+    if (same(r + 1, c))     mask |= 1 << 2; // S
+    if (same(r,     c - 1)) mask |= 1 << 3; // W
 
-    // Edges: missing exactly one neighbor.
-    if (!n && s && w && e) return "edgeN";
-    if (!s && n && w && e) return "edgeS";
-    if (!w && n && s && e) return "edgeW";
+    if (same(r - 1, c + 1)) mask |= 1 << 4; // NE
+    if (same(r + 1, c + 1)) mask |= 1 << 5; // SE
+    if (same(r + 1, c - 1)) mask |= 1 << 6; // SW
+    if (same(r - 1, c - 1)) mask |= 1 << 7; // NW
+
+    return mask;
+}
+
+/**
+ * First-pass mapping from neighbor mask → AutoShape.
+ * For now we only use the 4 cardinal bits to decide center/edges/corners.
+ * Diagonals are stored and ready for the richer 47-tile mapping.
+ */
+function autoShapeFromMask(mask: number): AutoShape {
+    const n = (mask & (1 << 0)) !== 0;
+    const e = (mask & (1 << 1)) !== 0;
+    const s = (mask & (1 << 2)) !== 0;
+    const w = (mask & (1 << 3)) !== 0;
+
+    // All four neighbors present → interior
+    if (n && e && s && w) return "center";
+
+    // Single-missing neighbor → edge
+    if (!n && e && s && w) return "edgeN";
+    if (!s && e && n && w) return "edgeS";
+    if (!w && n && e && s) return "edgeW";
     if (!e && n && s && w) return "edgeE";
 
-    // Corners: missing two adjacent neighbors.
-    if (!n && !e) return "cornerNE";
-    if (!n && !w) return "cornerNW";
-    if (!s && !e) return "cornerSE";
-    if (!s && !w) return "cornerSW";
+    // Two adjacent neighbors missing → corner
+    if (!n && !e && s && w) return "cornerNE";
+    if (!n && !w && s && e) return "cornerNW";
+    if (!s && !e && n && w) return "cornerSE";
+    if (!s && !w && n && e) return "cornerSW";
 
-    // Fallback.
+    // Everything else (T-junctions, isolated, etc.) → treat as interior for now.
+    // The important part is that the full mask is computed; we can refine this
+    // mapping later to differentiate more of the 47 shapes.
     return "center";
 }
+
+/**
+ * Wrapper used by the renderer: compute mask, then pick a coarse shape.
+ */
+function computeAutoShape(
+    grid: number[][],
+    r: number,
+    c: number,
+    family: TileFamily,
+    valueToFamily: (v: number) => TileFamily
+): AutoShape {
+    const mask = computeNeighborMask(grid, r, c, family, valueToFamily);
+    return autoShapeFromMask(mask);
+}
+
+
+
+
 
 export interface WorldTileRendererOptions {
     /** If true, enable detailed tile logging for this renderer instance. */
