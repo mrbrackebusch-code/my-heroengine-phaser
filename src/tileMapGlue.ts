@@ -71,37 +71,116 @@ function computeNeighborMask(
     return mask;
 }
 
-/**
- * First-pass mapping from neighbor mask → AutoShape.
- * For now we only use the 4 cardinal bits to decide center/edges/corners.
- * Diagonals are stored and ready for the richer 47-tile mapping.
- */
-function autoShapeFromMask(mask: number): AutoShape {
-    const n = (mask & (1 << 0)) !== 0;
-    const e = (mask & (1 << 1)) !== 0;
-    const s = (mask & (1 << 2)) !== 0;
-    const w = (mask & (1 << 3)) !== 0;
 
-    // All four neighbors present → interior
-    if (n && e && s && w) return "center";
 
-    // Single-missing neighbor → edge
+export function autoShapeFromMask(mask: number): AutoShape {
+    const n  = (mask & (1 << 0)) !== 0;
+    const e  = (mask & (1 << 1)) !== 0;
+    const s  = (mask & (1 << 2)) !== 0;
+    const w  = (mask & (1 << 3)) !== 0;
+
+    const ne = (mask & (1 << 4)) !== 0;
+    const se = (mask & (1 << 5)) !== 0;
+    const sw = (mask & (1 << 6)) !== 0;
+    const nw = (mask & (1 << 7)) !== 0;
+
+    const cardCount =
+        (n ? 1 : 0) +
+        (e ? 1 : 0) +
+        (s ? 1 : 0) +
+        (w ? 1 : 0);
+
+    const diagCount =
+        (ne ? 1 : 0) +
+        (se ? 1 : 0) +
+        (sw ? 1 : 0) +
+        (nw ? 1 : 0);
+
+    // ------------------------------------------------------
+    // 1. Single-tile island: no neighbors at all → "single"
+    // ------------------------------------------------------
+    if (cardCount === 0 && diagCount === 0) {
+        return "single";
+    }
+
+    // ------------------------------------------------------
+    // 2. Fully surrounded 3×3 blob:
+    //    All 8 neighbors present → true interior center
+    // ------------------------------------------------------
+    if (n && e && s && w && ne && se && sw && nw) {
+        return "center";
+    }
+
+    // ------------------------------------------------------
+    // 3. Concave corners:
+    //    All 4 cardinals present, but one diagonal missing
+    //    → use innerNW / innerNE / innerSE / innerSW
+    // ------------------------------------------------------
+    if (n && e && s && w) {
+        // exact single missing diagonal → concave corner
+        if (!nw && ne && se && sw) return "innerNW";
+        if (!ne && nw && se && sw) return "innerNE";
+        if (!se && ne && nw && sw) return "innerSE";
+        if (!sw && ne && se && nw) return "innerSW";
+
+        // Other weird diagonal combos: just treat as center-ish interior.
+        return "center";
+    }
+
+    // ------------------------------------------------------
+    // 4. Classic edges (one cardinal missing, three present)
+    // ------------------------------------------------------
     if (!n && e && s && w) return "edgeN";
     if (!s && e && n && w) return "edgeS";
     if (!w && n && e && s) return "edgeW";
     if (!e && n && s && w) return "edgeE";
 
-    // Two adjacent neighbors missing → corner
-    if (!n && !e && s && w) return "cornerNE";
-    if (!n && !w && s && e) return "cornerNW";
-    if (!s && !e && n && w) return "cornerSE";
-    if (!s && !w && n && e) return "cornerSW";
+    // ------------------------------------------------------
+    // 5. Classic convex corners (two adjacent cardinals present)
+    // ------------------------------------------------------
+    // NE corner: have N+E, missing S+W
+    if (n && e && !s && !w) return "cornerNE";
+    // NW corner: have N+W, missing S+E
+    if (n && w && !s && !e) return "cornerNW";
+    // SE corner: have S+E, missing N+W
+    if (s && e && !n && !w) return "cornerSE";
+    // SW corner: have S+W, missing N+E
+    if (s && w && !n && !e) return "cornerSW";
 
-    // Everything else (T-junctions, isolated, etc.) → treat as interior for now.
-    // The important part is that the full mask is computed; we can refine this
-    // mapping later to differentiate more of the 47 shapes.
+    // ------------------------------------------------------
+    // 6. Strips / lines & sparse cases:
+    //    Never fall back to "center" here; pick an edge.
+    // ------------------------------------------------------
+
+    // Horizontal strip (only E+W)
+    if (e && w && !n && !s) {
+        // Heuristic: treat as "edgeS" so it renders like a top-of-cliff line.
+        return "edgeS";
+    }
+
+    // Vertical strip (only N+S)
+    if (n && s && !e && !w) {
+        // Heuristic: treat as "edgeE" (pick one consistently).
+        return "edgeE";
+    }
+
+    // Single neighbor cases:
+    if (n && !e && !s && !w) return "edgeS";
+    if (s && !e && !n && !w) return "edgeN";
+    if (e && !n && !s && !w) return "edgeW";
+    if (w && !n && !e && !s) return "edgeE";
+
+    // Mixed weird patterns: default to an edge instead of center
+    // Prefer an edge in the direction of "missing outside".
+    if (!n) return "edgeN";
+    if (!s) return "edgeS";
+    if (!w) return "edgeW";
+    if (!e) return "edgeE";
+
+    // Absolute last resort (should be unreachable with logic above)
     return "center";
 }
+
 
 
 function computeAutoShape(grid, r, c, family, valueToFamily): AutoShape {

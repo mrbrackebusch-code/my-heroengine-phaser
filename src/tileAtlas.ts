@@ -83,12 +83,13 @@ export interface AutoTileConfig {
 export type TileFamily = TerrainAutoTileDef["id"];
 
 
-
-
 export type AutoShape =
     | "center"
     | "edgeN" | "edgeE" | "edgeS" | "edgeW"
-    | "cornerNE" | "cornerNW" | "cornerSE" | "cornerSW";
+    | "cornerNE" | "cornerNW" | "cornerSE" | "cornerSW"
+    | "innerNW" | "innerNE" | "innerSE" | "innerSW"
+    | "single";
+
 
 export interface AutoTileDef {
     family: TileFamily;
@@ -310,6 +311,31 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         shape: "cornerSW",
         textureKey: tex,
         frameIndex: frameFromRef(tf.cornerSW)
+    });
+    // Concave 2×2 tiles if present
+    if (tf.innerNW) addAuto({
+        family,
+        shape: "innerNW",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.innerNW)
+    });
+    if (tf.innerNE) addAuto({
+        family,
+        shape: "innerNE",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.innerNE)
+    });
+    if (tf.innerSE) addAuto({
+        family,
+        shape: "innerSE",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.innerSE)
+    });
+    if (tf.innerSW) addAuto({
+        family,
+        shape: "innerSW",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.innerSW)
     });
 
     // 3) Optional decor tiles.
