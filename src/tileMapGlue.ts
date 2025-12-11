@@ -2,6 +2,10 @@
 import type Phaser from "phaser";
 import type { TileAtlas, TileFamily, AutoShape } from "./tileAtlas";
 
+// ----------------------------------------------------------
+// Debug
+// ----------------------------------------------------------
+
 const DEBUG_TILES_GLOBAL = true;
 
 function logTiles(localDebug: boolean, ...args: any[]) {
@@ -9,9 +13,11 @@ function logTiles(localDebug: boolean, ...args: any[]) {
     console.log(...args);
 }
 
+// ----------------------------------------------------------
+// Family mapping from engine grid values
+// ----------------------------------------------------------
 
-
-function defaultTileValueToFamily(v: number): TileFamily {
+function defaultTileValueToFamily(v: number): TileFamily | "" {
     // In HeroEngineInPhaser.ts:
     // const TILE_EMPTY = 0
     // const TILE_WALL  = 1
@@ -25,13 +31,14 @@ function defaultTileValueToFamily(v: number): TileFamily {
     return "ground_light";
 }
 
-
+// ----------------------------------------------------------
+// Neighbor mask + AutoShape (Wang 9+4)
+// ----------------------------------------------------------
 
 /**
- * Compute an 8-way neighbor bitmask for a tile and then collapse it
- * down to one of our coarse AutoShape categories.
+ * Compute an 8-way neighbor bitmask for a tile.
  *
- * Bit layout:
+ * Bits:
  *   bit 0 = N
  *   bit 1 = E
  *   bit 2 = S
@@ -46,15 +53,22 @@ function computeNeighborMask(
     r: number,
     c: number,
     family: TileFamily,
-    valueToFamily: (v: number) => TileFamily
+    valueToFamily: (v: number) => TileFamily | ""
 ): number {
     const rows = grid.length;
     const cols = rows > 0 ? grid[0].length : 0;
 
     const same = (rr: number, cc: number): boolean => {
-        if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) return false;
+        // Clamp to the nearest valid cell (duplicate border values)
+        if (rr < 0) rr = 0;
+        else if (rr >= rows) rr = rows - 1;
+
+        if (cc < 0) cc = 0;
+        else if (cc >= cols) cc = cols - 1;
+
         return valueToFamily(grid[rr][cc]) === family;
     };
+
 
     let mask = 0;
 
@@ -73,7 +87,25 @@ function computeNeighborMask(
 
 
 
-export function autoShapeFromMask(mask: number): AutoShape {
+
+export type InnerCornerShape =
+    | "none"
+    | "innerNE"
+    | "innerNW"
+    | "innerSE"
+    | "innerSW";
+
+/**
+ * Decide if this tile should get an inner-corner overlay.
+ * This assumes the base tile is already "center" (all N/E/S/W are true).
+ *
+ * We look at diagonals like:
+ *   N && W && !NW => innerNW
+ *   N && E && !NE => innerNE
+ *   S && W && !SW => innerSW
+ *   S && E && !SE => innerSE
+ */
+export function innerCornerFromMask(mask: number): InnerCornerShape {
     const n  = (mask & (1 << 0)) !== 0;
     const e  = (mask & (1 << 1)) !== 0;
     const s  = (mask & (1 << 2)) !== 0;
@@ -84,147 +116,107 @@ export function autoShapeFromMask(mask: number): AutoShape {
     const sw = (mask & (1 << 6)) !== 0;
     const nw = (mask & (1 << 7)) !== 0;
 
-    const cardCount =
-        (n ? 1 : 0) +
-        (e ? 1 : 0) +
-        (s ? 1 : 0) +
-        (w ? 1 : 0);
-
-    const diagCount =
-        (ne ? 1 : 0) +
-        (se ? 1 : 0) +
-        (sw ? 1 : 0) +
-        (nw ? 1 : 0);
-
-    // ------------------------------------------------------
-    // 1. Single-tile island: no neighbors at all → "single"
-    // ------------------------------------------------------
-    if (cardCount === 0 && diagCount === 0) {
-        return "single";
+    // Only meaningful for "full" cardinals – interior-ish
+    if (!(n && e && s && w)) {
+        return "none";
     }
 
-    // ------------------------------------------------------
-    // 2. Fully surrounded 3×3 blob:
-    //    All 8 neighbors present → true interior center
-    // ------------------------------------------------------
-    if (n && e && s && w && ne && se && sw && nw) {
-        return "center";
-    }
+    // Check each concave corner: cardinal neighbors present, diagonal missing
+    if (n && w && !nw) return "innerNW";
+    if (n && e && !ne) return "innerNE";
+    if (s && w && !sw) return "innerSW";
+    if (s && e && !se) return "innerSE";
 
-    // ------------------------------------------------------
-    // 3. Concave corners:
-    //    All 4 cardinals present, but one diagonal missing
-    //    → use innerNW / innerNE / innerSE / innerSW
-    // ------------------------------------------------------
-    if (n && e && s && w) {
-        // exact single missing diagonal → concave corner
-        if (!nw && ne && se && sw) return "innerNW";
-        if (!ne && nw && se && sw) return "innerNE";
-        if (!se && ne && nw && sw) return "innerSE";
-        if (!sw && ne && se && nw) return "innerSW";
-
-        // Other weird diagonal combos: just treat as center-ish interior.
-        return "center";
-    }
-
-    // ------------------------------------------------------
-    // 4. Classic edges (one cardinal missing, three present)
-    // ------------------------------------------------------
-    if (!n && e && s && w) return "edgeN";
-    if (!s && e && n && w) return "edgeS";
-    if (!w && n && e && s) return "edgeW";
-    if (!e && n && s && w) return "edgeE";
-
-    // ------------------------------------------------------
-    // 5. Classic convex corners (two adjacent cardinals present)
-    // ------------------------------------------------------
-    // NE corner: have N+E, missing S+W
-    if (n && e && !s && !w) return "cornerNE";
-    // NW corner: have N+W, missing S+E
-    if (n && w && !s && !e) return "cornerNW";
-    // SE corner: have S+E, missing N+W
-    if (s && e && !n && !w) return "cornerSE";
-    // SW corner: have S+W, missing N+E
-    if (s && w && !n && !e) return "cornerSW";
-
-    // ------------------------------------------------------
-    // 6. Strips / lines & sparse cases:
-    //    Never fall back to "center" here; pick an edge.
-    // ------------------------------------------------------
-
-    // Horizontal strip (only E+W)
-    if (e && w && !n && !s) {
-        // Heuristic: treat as "edgeS" so it renders like a top-of-cliff line.
-        return "edgeS";
-    }
-
-    // Vertical strip (only N+S)
-    if (n && s && !e && !w) {
-        // Heuristic: treat as "edgeE" (pick one consistently).
-        return "edgeE";
-    }
-
-    // Single neighbor cases:
-    if (n && !e && !s && !w) return "edgeS";
-    if (s && !e && !n && !w) return "edgeN";
-    if (e && !n && !s && !w) return "edgeW";
-    if (w && !n && !e && !s) return "edgeE";
-
-    // Mixed weird patterns: default to an edge instead of center
-    // Prefer an edge in the direction of "missing outside".
-    if (!n) return "edgeN";
-    if (!s) return "edgeS";
-    if (!w) return "edgeW";
-    if (!e) return "edgeE";
-
-    // Absolute last resort (should be unreachable with logic above)
-    return "center";
+    return "none";
 }
 
 
 
-function computeAutoShape(grid, r, c, family, valueToFamily): AutoShape {
-    const mask = computeNeighborMask(grid, r, c, family, valueToFamily);
+export function autoShapeFromMask(mask: number): AutoShape {
+    const n  = (mask & (1 << 0)) !== 0;
+    const e  = (mask & (1 << 1)) !== 0;
+    const s  = (mask & (1 << 2)) !== 0;
+    const w  = (mask & (1 << 3)) !== 0;
 
-    const nSame = (mask & 1) !== 0;
-    const eSame = (mask & 2) !== 0;
-    const sSame = (mask & 4) !== 0;
-    const wSame = (mask & 8) !== 0;
+    // Collapse cardinals into a 4-bit mask:
+    // bit0 = N, bit1 = E, bit2 = S, bit3 = W
+    const m4 =
+        (n ? 1 : 0) |
+        (e ? 2 : 0) |
+        (s ? 4 : 0) |
+        (w ? 8 : 0);
 
-    // --- NEW: if this is ground and a neighbor is chasm → inner shapes
-    if (family === "ground_light") {
+    switch (m4) {
+        // 0 neighbors: isolated tile
+        case 0:
+            return "single";
 
-        const nChasm = valueToFamily(grid[r-1]?.[c]) === "chasm_light";
-        const sChasm = valueToFamily(grid[r+1]?.[c]) === "chasm_light";
-        const wChasm = valueToFamily(grid[r]?.[c-1]) === "chasm_light";
-        const eChasm = valueToFamily(grid[r]?.[c+1]) === "chasm_light";
+        // Single neighbor – treat as a simple edge facing that neighbor
+        case 1: // N only
+            return "edgeS";
+        case 2: // E only
+            return "edgeW";
+        case 4: // S only
+            return "edgeN";
+        case 8: // W only
+            return "edgeE";
 
-        // Single-direction transitions
-        if (nChasm) return "innerN";
-        if (sChasm) return "innerS";
-        if (wChasm) return "innerW";
-        if (eChasm) return "innerE";
 
-        // Corners
-        const nwChasm = valueToFamily(grid[r-1]?.[c-1]) === "chasm_light";
-        const neChasm = valueToFamily(grid[r-1]?.[c+1]) === "chasm_light";
-        const swChasm = valueToFamily(grid[r+1]?.[c-1]) === "chasm_light";
-        const seChasm = valueToFamily(grid[r+1]?.[c+1]) === "chasm_light";
 
-        if (nwChasm) return "innerNW";
-        if (neChasm) return "innerNE";
-        if (swChasm) return "innerSW";
-        if (seChasm) return "innerSE";
+        // HACK for two adjacent neighbors – convex corners
+        // Flip all corners 180°: NE↔SW, NW↔SE
+        case 1 | 2:   // N + E
+            return "cornerSW";
+        case 1 | 8:   // N + W
+            return "cornerSE";
+        case 2 | 4:   // E + S
+            return "cornerNW";
+        case 4 | 8:   // S + W
+            return "cornerNE";
+
+
+        // Two adjacent neighbors – convex corners
+        case 1 | 2:   // N + E
+            return "cornerNE";
+        case 1 | 8:   // N + W
+            return "cornerNW";
+        case 2 | 4:   // E + S
+            return "cornerSE";
+        case 4 | 8:   // S + W
+            return "cornerSW";
+
+
+
+        // Two opposite neighbors – straight strips
+        case 1 | 4:   // N + S  (vertical)
+            // choose a vertical-ish edge – either is fine visually
+            return "edgeW";
+        case 2 | 8:   // E + W  (horizontal)
+            return "edgeN";
+
+        // Three neighbors – classic edges (one side open)
+        case 2 | 4 | 8:   // no N
+            return "edgeN";
+        case 1 | 2 | 8:   // no S
+            return "edgeS";
+        case 1 | 4 | 8:   // no E
+            return "edgeE";
+        case 1 | 2 | 4:   // no W
+            return "edgeW";
+
+        // All four neighbors – true interior
+        case 1 | 2 | 4 | 8:
+            return "center";
+
+        // Anything weird we didn't explicitly handle – fall back to center
+        default:
+            return "center";
     }
-
-    // Default: classic 47-tile logic
-    return autoShapeFromMask(mask);
 }
 
-
-
-
-
+// ----------------------------------------------------------
+// WorldTileRenderer
+// ----------------------------------------------------------
 
 export interface WorldTileRendererOptions {
     /** If true, enable detailed tile logging for this renderer instance. */
@@ -233,19 +225,24 @@ export interface WorldTileRendererOptions {
      * Optional mapper from engine tile values → TileFamily.
      * If omitted, a simple default implementation is used.
      */
-    tileValueToFamily?: (v: number) => TileFamily;
+    tileValueToFamily?: (v: number) => TileFamily | "";
 }
-
 
 export class WorldTileRenderer {
     private scene: Phaser.Scene;
     private atlas: TileAtlas;
     private debugLocal: boolean;
-    private tileValueToFamily: (v: number) => TileFamily;
+    private tileValueToFamily: (v: number) => TileFamily | "";
 
     private map?: Phaser.Tilemaps.Tilemap;
     private tileset?: Phaser.Tilemaps.Tileset;
-    private layer?: Phaser.Tilemaps.TilemapLayer;
+
+    // NEW: separate layers
+    private groundLayer?: Phaser.Tilemaps.TilemapLayer;
+    private chasmLayer?: Phaser.Tilemaps.TilemapLayer;
+
+    // NEW:
+    private chasmOverlayLayer?: Phaser.Tilemaps.TilemapLayer;
 
     constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions = {}) {
         this.scene = scene;
@@ -260,98 +257,207 @@ export class WorldTileRenderer {
      * Rebuild the Phaser tilemap from a simple engine grid of numbers.
      */
     syncFromEngineGrid(grid: number[][]): void {
-    const rows = grid.length;
-    const cols = rows > 0 ? grid[0].length : 0;
+        const rows = grid.length;
+        const cols = rows > 0 ? grid[0].length : 0;
 
-    if (rows === 0 || cols === 0) {
-        logTiles(this.debugLocal, "[tileMapGlue.sync] empty grid – nothing to render");
-        return;
-    }
-
-    const tileSize = this.atlas.tileSize;
-
-    // --------------------------------------------------------------
-    // Create tilemap + tileset + layer ONE TIME
-    // --------------------------------------------------------------
-    if (!this.map) {
-        this.map = this.scene.make.tilemap({
-            width: cols,
-            height: rows,
-            tileWidth: tileSize,
-            tileHeight: tileSize
-        });
-
-        this.tileset = this.map.addTilesetImage(
-            this.atlas.primaryTextureKey,
-            this.atlas.primaryTextureKey,
-            tileSize,
-            tileSize,
-            0,
-            0
-        );
-
-        if (!this.tileset) {
-            throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
+        if (rows === 0 || cols === 0) {
+            logTiles(this.debugLocal, "[tileMapGlue.sync] empty grid – nothing to render");
+            return;
         }
 
-        // Create ONE layer and store it
-        this.layer = this.map.createBlankLayer("world", this.tileset, 0, 0) || undefined;
-        if (!this.layer) {
-            throw new Error("[tileMapGlue.sync] tilemap layer missing after createBlankLayer");
+        const tileSize = this.atlas.tileSize;
+
+        // --------------------------------------------------------------
+        // Create tilemap + tileset + layer ONE TIME
+        // --------------------------------------------------------------
+        if (!this.map) {
+            this.map = this.scene.make.tilemap({
+                width: cols,
+                height: rows,
+                tileWidth: tileSize,
+                tileHeight: tileSize
+            });
+
+            this.tileset = this.map.addTilesetImage(
+                this.atlas.primaryTextureKey,
+                this.atlas.primaryTextureKey,
+                tileSize,
+                tileSize,
+                0,
+                0
+            );
+
+            if (!this.tileset) {
+                throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
+            }
+
+            // Ground (bottom), chasm (middle), inner-corner overlay (top)
+            this.groundLayer       = this.map.createBlankLayer("ground",       this.tileset, 0, 0) || undefined;
+            this.chasmLayer        = this.map.createBlankLayer("chasm",        this.tileset, 0, 0) || undefined;
+            this.chasmOverlayLayer = this.map.createBlankLayer("chasmOverlay", this.tileset, 0, 0) || undefined;
+
+            if (!this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
+                throw new Error("[tileMapGlue.sync] missing one of ground/chasm/chasmOverlay layers");
+            }
+
+            this.groundLayer.setDepth(-1000);
+            this.chasmLayer.setDepth(-900);
+            this.chasmOverlayLayer.setDepth(-800);
+
+            logTiles(
+                this.debugLocal,
+                "[tileMapGlue.sync] created new Phaser.Tilemap with ground/chasm/overlay layers",
+                { rows, cols, tileSize }
+            );
         }
 
-        // Lower depth → background
-        this.layer.setDepth(-1000);
+        if (!this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
+            throw new Error("[tileMapGlue.sync] ground/chasm/overlay layer missing");
+        }
+
+
+        this.groundLayer.fill(-1);
+        this.chasmLayer.fill(-1);
+        this.chasmOverlayLayer.fill(-1);
+
+
+        // --------------------------------------------------------------
+        // PASS 1: Fill with ground_light using center (and its variants)
+        // --------------------------------------------------------------
+        //const rows = grid.length;
+        //const cols = rows > 0 ? grid[0].length : 0;
+
+        const familyCounts = new Map<TileFamily, number>();
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // Always place ground_light as the base
+                const baseFamily: TileFamily = "ground_light";
+
+                let baseDef = this.atlas.getRandomVariant(baseFamily, "center")
+                    ?? this.atlas.getAutoTile(baseFamily, "center");
+
+                const baseFrame = baseDef ? baseDef.frameIndex : 0;
+                this.groundLayer.putTileAt(baseFrame, c, r);
+
+
+                const current = familyCounts.get(baseFamily) || 0;
+                familyCounts.set(baseFamily, current + 1);
+            }
+        }
+
+
+
+        // --------------------------------------------------------------
+        // PASS 2: Apply chasm/wall autotiles on top of ground
+        // --------------------------------------------------------------
+        for (let r = 0; r < rows; r++) {
+            const row = grid[r];
+            for (let c = 0; c < cols; c++) {
+                const v = row[c];
+
+                if (v !== 1) {
+                    // Not a wall/chasm cell – leave ground only
+                    continue;
+                }
+
+                const family: TileFamily = "chasm_light";
+
+                // Compute neighbor mask for this family at [r,c]
+                const mask = computeNeighborMask(
+                    grid,
+                    r,
+                    c,
+                    family,
+                    this.tileValueToFamily
+                );
+
+                // Base LPC 3x3 shape (center/edge/corner/single)
+                const shape: AutoShape = autoShapeFromMask(mask);
+
+                let def;
+
+                // For now: any isolated chasm tile ("single") uses a decorative chasm
+                if (family === "chasm_light" && shape === "single") {
+                    // assuming TileAtlas knows how to serve "decor" for this family
+                    def = this.atlas.getRandomVariant(family, "decor" as any)
+                        ?? this.atlas.getAutoTile(family, "decor" as any);
+                } else {
+                    def = this.atlas.getRandomVariant(family, shape)
+                        ?? this.atlas.getAutoTile(family, shape);
+                }
+
+                // Fallback: center chasm if we somehow still don't have a tile
+                if (!def) {
+                    def = this.atlas.getRandomVariant(family, "center")
+                        ?? this.atlas.getAutoTile(family, "center");
+                }
+
+
+
+                const frameIndex = def ? def.frameIndex : 0;
+                this.chasmLayer.putTileAt(frameIndex, c, r);
+
+                const current = familyCounts.get(family) || 0;
+                familyCounts.set(family, current + 1);
+
+                // (Optional, later) inner-corner overlay pass could go here,
+                // using innerCornerFromMask(mask).
+            }
+        }
+        
+
+        // --------------------------------------------------------------
+        // PASS 3: Chasm inner-corner overlays (2×2) on top
+        // --------------------------------------------------------------
+        for (let r = 0; r < rows; r++) {
+            const row = grid[r];
+            for (let c = 0; c < cols; c++) {
+                const v = row[c];
+                if (v !== 1) continue; // only chasm cells
+
+                const family: TileFamily = "chasm_light";
+
+                const mask = computeNeighborMask(
+                    grid,
+                    r,
+                    c,
+                    family,
+                    this.tileValueToFamily
+                );
+
+                const innerShape = innerCornerFromMask(mask);
+                if (innerShape === "none") continue;
+
+                // This relies on your TileAtlas having entries for innerNE/etc.
+                let innerDef =
+                    this.atlas.getRandomVariant(family, innerShape as AutoShape) ||
+                    this.atlas.getAutoTile(family, innerShape as AutoShape);
+
+                if (!innerDef) continue;
+
+                const innerFrame = innerDef.frameIndex;
+                this.chasmOverlayLayer.putTileAt(innerFrame, c, r);
+
+                const current = familyCounts.get(family) || 0;
+                familyCounts.set(family, current + 1);
+            }
+        }
+
+
+
+
+        const countsSummary: Record<string, number> = {};
+        for (const [fam, count] of familyCounts.entries()) {
+            countsSummary[fam] = count;
+        }
 
         logTiles(
             this.debugLocal,
-            "[tileMapGlue.sync] created new Phaser.Tilemap",
-            { rows, cols, tileSize }
+            "[tileMapGlue.sync] finished building tile layer – tile counts by family:",
+            countsSummary
         );
+
+        // [tileMapGlue.WorldTileRenderer.syncFromEngineGrid] logging included
     }
-
-    if (!this.layer) {
-        throw new Error("[tileMapGlue.sync] tilemap layer missing");
-    }
-
-    // --------------------------------------------------------------
-    // Fill the tilemap layer with frames
-    // --------------------------------------------------------------
-    const familyCounts = new Map<TileFamily, number>();
-
-    for (let r = 0; r < rows; r++) {
-        const row = grid[r];
-        for (let c = 0; c < cols; c++) {
-            const v = row[c];
-            const family = this.tileValueToFamily(v);
-            const shape = computeAutoShape(grid, r, c, family, this.tileValueToFamily);
-
-            let tileDef = this.atlas.getRandomVariant(family, shape);
-            if (!tileDef) {
-                tileDef = this.atlas.getAutoTile(family, "center");
-            }
-
-            const frameIndex = tileDef ? tileDef.frameIndex : 0;
-
-            this.layer.putTileAt(frameIndex, c, r);
-
-            const current = familyCounts.get(family) || 0;
-            familyCounts.set(family, current + 1);
-        }
-    }
-
-    const countsSummary: Record<string, number> = {};
-    for (const [fam, count] of familyCounts.entries()) {
-        countsSummary[fam] = count;
-    }
-
-    logTiles(
-        this.debugLocal,
-        "[tileMapGlue.sync] finished building tile layer – tile counts by family:",
-        countsSummary
-    );
-
-    // I included our preemptive logging here: [tileMapGlue.WorldTileRenderer.syncFromEngineGrid]
-}
-
 }

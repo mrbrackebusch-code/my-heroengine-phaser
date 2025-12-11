@@ -1,35 +1,24 @@
 // tileAtlas.ts
 import type Phaser from "phaser";
 
-
 // ---------------------------------------------------------------------------
-// TILE & TERRAIN DATA LAYER  (this is where your LPC classification lives)
+// Tile / terrain data
 // ---------------------------------------------------------------------------
 
 export type TerrainKind = "ground" | "chasm" | "water" | "hedge";
 
 export interface TileRef {
-    row: number;  // LPC tile row (0-based, 32x32 tiles)
-    col: number;  // LPC tile col
+    row: number; // LPC tile row (0-based, 32x32 tiles)
+    col: number; // LPC tile col
 }
 
+// Legacy types (kept so other code doesn't break, but we drive off TerrainAutoTileDef)
 export interface TerrainTiles {
-    // Transparent overlays that sit on top of a base ground tile.
     decor?: TileRef[];
-
-    // 2×2 inward-facing macro (concave block). Top-left tile of that 2x2.
     concave2x2?: { topLeft: TileRef };
-
-    // 3×3 outward-facing rim cluster (convex block). Exactly 9 tiles.
     convex9?: TileRef[];
-
-    // Opaque floor variants for “normal” ground-style families.
     groundVariants?: TileRef[];
-
-    // Opaque lower-elevation / liquid floor (for chasm / water).
     interior?: TileRef[];
-
-    // Special weird case for the dirt-in-grass family.
     edgeExtensions?: {
         left?: TileRef;
         right?: TileRef;
@@ -37,51 +26,60 @@ export interface TerrainTiles {
 }
 
 export interface TerrainFamily {
-    id: string;         // "ground_light", "chasm_void", "water_chasm", ...
+    id: string;
     kind: TerrainKind;
-
-    // Bounding rectangle of this family on the atlas, in tile coords.
-    cols: [number, number];  // inclusive [colStart, colEnd]
-    rows: [number, number];  // inclusive [rowStart, rowEnd]
-
+    cols: [number, number];
+    rows: [number, number];
     tiles: TerrainTiles;
 }
 
+// ---------------------------------------------------------------------------
+// Wang-style autotile defs (9 + 4 shapes per family)
+// ---------------------------------------------------------------------------
 
+export interface TerrainAutoTileDef {
+    id: string;
+    kind: TerrainKind;
 
+    atlasBounds?: {
+        cols: [number, number];
+        rows: [number, number];
+    };
 
-// High-level autotile behavior for one terrain family.
-export interface AutoTileConfig {
-    id: string;       // "ground_light"
-    familyId: string; // links to TerrainFamily.id
-
-    // Interior fill (one or more variants).
+    // 3+ interior variants
     interior: TileRef[];
 
-    // Outward edges from the convex9 cluster.
+    // Convex rim 3×3 block
     edgeN: TileRef;
     edgeS: TileRef;
     edgeE: TileRef;
     edgeW: TileRef;
 
-    // Outward corners from convex9.
     cornerNW: TileRef;
     cornerNE: TileRef;
     cornerSE: TileRef;
     cornerSW: TileRef;
 
-    // Inward corners from concave2x2.
+    // Concave 2×2 block
     innerNW: TileRef;
     innerNE: TileRef;
     innerSE: TileRef;
     innerSW: TileRef;
+
+    // Optional decorative tiles
+    decor?: TileRef[];
+
+    // Optional block origins (useful for tooling / debug)
+    convex9BlockOrigin?: { topLeft: TileRef };
+    concave2x2BlockOrigin?: { topLeft: TileRef };
+
+    edgeExtensions?: {
+        left?: TileRef;
+        right?: TileRef;
+    };
 }
 
-
-
-// Families are defined as TerrainAutoTileDef below.
 export type TileFamily = TerrainAutoTileDef["id"];
-
 
 export type AutoShape =
     | "center"
@@ -89,7 +87,6 @@ export type AutoShape =
     | "cornerNE" | "cornerNW" | "cornerSE" | "cornerSW"
     | "innerNW" | "innerNE" | "innerSE" | "innerSW"
     | "single";
-
 
 export interface AutoTileDef {
     family: TileFamily;
@@ -105,6 +102,7 @@ export interface SingleTileDef {
 }
 
 export interface TileAtlas {
+    textureKey: string;
     /** Size of each tile in pixels (expected 32). */
     tileSize: number;
     /** Primary texture key backing the main tileset spritesheet. */
@@ -116,6 +114,10 @@ export interface TileAtlas {
     /** Return a random decoration tile for the given family, if any. */
     getRandomDecorForFamily(family: TileFamily): SingleTileDef | undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
 
 const TILE_SIZE = 32;
 const DEBUG_TILES_GLOBAL = true;
@@ -140,7 +142,7 @@ interface TileSheetDef {
 
 /**
  * NOTE: for now we assume all tilesheets in ../assets/tiles are the same size
- * as the provided terrain.png: 672x736 → 21x23 tiles of 32x32. If you add other
+ * as terrain.png: 672x736 → 21x23 tiles of 32x32. If you add other
  * sheets with different dimensions later, this will need to grow up a bit.
  */
 const TILE_SHEETS: TileSheetDef[] = [];
@@ -176,9 +178,16 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             frameHeight: TILE_SIZE
         });
     }
-
-    // I included our preemptive logging here: [tileAtlas.preload]
+    // [tileAtlas.preload] logging included
 }
+
+
+
+
+
+// ---------------------------------------------------------------------------
+// Build TileAtlas from TERRAIN_AUTOTILES
+// ---------------------------------------------------------------------------
 
 export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     if (TILE_SHEETS.length === 0) {
@@ -201,7 +210,6 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         `${mainSheet.textureKey} (${mainSheet.cols}x${mainSheet.rows} tiles)`
     );
 
-    // Local helpers to compute frame indices on the main sheet.
     const cols = mainSheet.cols;
     const idx = (col: number, row: number): number => {
         return row * cols + col;
@@ -229,141 +237,117 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         arr.push(def);
     }
 
-
     const tex = mainSheet.textureKey;
 
-
-    // -----------------------------------------------------------------
-    // NEW: build autotiles for each TerrainFamily from TERRAIN_FAMILIES
-    // -----------------------------------------------------------------
-
-    const frameFromCoord = (coord: [number, number]) => {
-        const [col, row] = coord;
-        return idx(col, row);
-    };
-
-
-
-    function registerTerrainFamily(tf: TerrainAutoTileDef) {
-    const family = tf.id as TileFamily;
-    const tex = mainSheet.textureKey;
-
-    const frameFromRef = (ref: TileRef): number => {
+    function frameFromRef(ref: TileRef): number {
         return idx(ref.col, ref.row);
-    };
-
-    // 1) Center variants from the interior array.
-    for (const ref of tf.interior ?? []) {
-        addAuto({
-            family,
-            shape: "center",
-            textureKey: tex,
-            frameIndex: frameFromRef(ref)
-        });
     }
 
-    // 2) Explicit rim & corners for the convex 3×3 block.
-    addAuto({
-        family,
-        shape: "edgeN",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.edgeN)
-    });
-    addAuto({
-        family,
-        shape: "edgeS",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.edgeS)
-    });
-    addAuto({
-        family,
-        shape: "edgeW",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.edgeW)
-    });
-    addAuto({
-        family,
-        shape: "edgeE",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.edgeE)
-    });
+    function registerTerrainFamily(tf: TerrainAutoTileDef) {
+        const family = tf.id as TileFamily;
 
-    addAuto({
-        family,
-        shape: "cornerNW",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.cornerNW)
-    });
-    addAuto({
-        family,
-        shape: "cornerNE",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.cornerNE)
-    });
-    addAuto({
-        family,
-        shape: "cornerSE",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.cornerSE)
-    });
-    addAuto({
-        family,
-        shape: "cornerSW",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.cornerSW)
-    });
-    // Concave 2×2 tiles if present
-    if (tf.innerNW) addAuto({
-        family,
-        shape: "innerNW",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.innerNW)
-    });
-    if (tf.innerNE) addAuto({
-        family,
-        shape: "innerNE",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.innerNE)
-    });
-    if (tf.innerSE) addAuto({
-        family,
-        shape: "innerSE",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.innerSE)
-    });
-    if (tf.innerSW) addAuto({
-        family,
-        shape: "innerSW",
-        textureKey: tex,
-        frameIndex: frameFromRef(tf.innerSW)
-    });
-
-    // 3) Optional decor tiles.
-    if (tf.decor && tf.decor.length) {
-        let arr = decorByFamily.get(family);
-        if (!arr) {
-            arr = [];
-            decorByFamily.set(family, arr);
-        }
-
-        for (const ref of tf.decor) {
-            arr.push({
+        // 1) Center variants from the interior array.
+        for (const ref of tf.interior ?? []) {
+            addAuto({
                 family,
+                shape: "center",
                 textureKey: tex,
                 frameIndex: frameFromRef(ref)
             });
         }
+
+        // 2) Explicit rim & corners for the convex 3×3 block.
+        addAuto({
+            family,
+            shape: "edgeN",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.edgeN)
+        });
+        addAuto({
+            family,
+            shape: "edgeS",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.edgeS)
+        });
+        addAuto({
+            family,
+            shape: "edgeW",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.edgeW)
+        });
+        addAuto({
+            family,
+            shape: "edgeE",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.edgeE)
+        });
+
+        addAuto({
+            family,
+            shape: "cornerNW",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.cornerNW)
+        });
+        addAuto({
+            family,
+            shape: "cornerNE",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.cornerNE)
+        });
+        addAuto({
+            family,
+            shape: "cornerSE",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.cornerSE)
+        });
+        addAuto({
+            family,
+            shape: "cornerSW",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.cornerSW)
+        });
+
+        // 3) Concave 2×2 tiles.
+        addAuto({
+            family,
+            shape: "innerNW",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.innerNW)
+        });
+        addAuto({
+            family,
+            shape: "innerNE",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.innerNE)
+        });
+        addAuto({
+            family,
+            shape: "innerSE",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.innerSE)
+        });
+        addAuto({
+            family,
+            shape: "innerSW",
+            textureKey: tex,
+            frameIndex: frameFromRef(tf.innerSW)
+        });
+
+        // 4) Optional decor tiles.
+        if (tf.decor && tf.decor.length) {
+            for (const ref of tf.decor) {
+                addDecor({
+                    family,
+                    textureKey: tex,
+                    frameIndex: frameFromRef(ref)
+                });
+            }
+        }
     }
-}
 
-
-for (const tf of TERRAIN_AUTOTILES) {
-    registerTerrainFamily(tf);
-}
-
-
-
-
+    for (const tf of TERRAIN_AUTOTILES) {
+        registerTerrainFamily(tf);
+    }
 
     // Logging summary.
     const autoSummary: Record<string, number> = {};
@@ -379,6 +363,7 @@ for (const tf of TERRAIN_AUTOTILES) {
     logTiles("[tileAtlas.build] decor tiles (family → count):", decorSummary);
 
     const atlas: TileAtlas = {
+        textureKey: mainSheet.textureKey,
         tileSize: TILE_SIZE,
         primaryTextureKey: mainSheet.textureKey,
         getAutoTile(family: TileFamily, shape: AutoShape): AutoTileDef | undefined {
@@ -405,35 +390,10 @@ for (const tf of TERRAIN_AUTOTILES) {
     // Expose via the Phaser registry for convenience.
     scene.registry.set("tileAtlas", atlas);
 
-    // I included our preemptive logging here: [tileAtlas.build]
-
+    // [tileAtlas.build] logging included
     return atlas;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export type TerrainKind = "ground" | "chasm" | "water" | "hedge";
-
-export interface TileRef {
-    row: number;
-    col: number;
-}
 
 export interface TerrainAutoTileDef {
     id: string;
@@ -471,8 +431,6 @@ export interface TerrainAutoTileDef {
         right?: TileRef;
     };
 }
-
-
 
 
 
@@ -515,6 +473,47 @@ const ground_light: TerrainAutoTileDef = {
     convex9BlockOrigin: { topLeft: { row: 2, col: 0 } },
     concave2x2BlockOrigin: { topLeft: { row: 0, col: 1 } },
 };
+
+
+const chasm_light: TerrainAutoTileDef = {
+    id: "chasm_light",
+    kind: "chasm",
+
+    atlasBounds: { cols: [9, 11], rows: [0, 5] },
+
+    interior: [
+        { row: 5, col: 9 },
+        { row: 5, col: 10 },
+        { row: 5, col: 11 },
+    ],
+
+    // Convex chasm rim 3×3 at rows 2–4, cols 9–11
+    edgeN: { row: 2, col: 10 },
+    edgeS: { row: 4, col: 10 },
+    edgeW: { row: 3, col: 9 },
+    edgeE: { row: 3, col: 11 },
+
+    cornerNW: { row: 2, col: 9 },
+    cornerNE: { row: 2, col: 11 },
+    cornerSE: { row: 4, col: 11 },
+    cornerSW: { row: 4, col: 9 },
+
+    // Concave 2×2 “invert” block at rows 0–1, cols 10–11
+    innerNW: { row: 0, col: 10 },
+    innerNE: { row: 0, col: 11 },
+    innerSE: { row: 1, col: 11 },
+    innerSW: { row: 1, col: 10 },
+
+    decor: [
+        { row: 0, col: 9 },
+        { row: 1, col: 9 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 2, col: 9 } },
+    concave2x2BlockOrigin: { topLeft: { row: 0, col: 10 } },
+};
+
+
 
 
 const ground_medium: TerrainAutoTileDef = {
@@ -589,43 +588,6 @@ const ground_red: TerrainAutoTileDef = {
     concave2x2BlockOrigin: { topLeft: { row: 0, col: 7 } },
 };
 
-const chasm_light: TerrainAutoTileDef = {
-    id: "chasm_light",
-    kind: "chasm",
-
-    atlasBounds: { cols: [9, 11], rows: [0, 5] },
-
-    interior: [
-        { row: 5, col: 9 },
-        { row: 5, col: 10 },
-        { row: 5, col: 11 },
-    ],
-
-    // Convex chasm rim 3×3 at rows 2–4, cols 9–11
-    edgeN: { row: 2, col: 10 },
-    edgeS: { row: 4, col: 10 },
-    edgeW: { row: 3, col: 9 },
-    edgeE: { row: 3, col: 11 },
-
-    cornerNW: { row: 2, col: 9 },
-    cornerNE: { row: 2, col: 11 },
-    cornerSE: { row: 4, col: 11 },
-    cornerSW: { row: 4, col: 9 },
-
-    // Concave 2×2 “invert” block at rows 0–1, cols 10–11
-    innerNW: { row: 0, col: 10 },
-    innerNE: { row: 0, col: 11 },
-    innerSE: { row: 1, col: 11 },
-    innerSW: { row: 1, col: 10 },
-
-    decor: [
-        { row: 0, col: 9 },
-        { row: 1, col: 9 },
-    ],
-
-    convex9BlockOrigin: { topLeft: { row: 2, col: 9 } },
-    concave2x2BlockOrigin: { topLeft: { row: 0, col: 10 } },
-};
 
 const chasm_medium: TerrainAutoTileDef = {
     id: "chasm_medium",

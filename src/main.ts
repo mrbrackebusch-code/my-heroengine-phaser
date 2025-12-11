@@ -20,6 +20,8 @@ import { WorldTileRenderer } from "./tileMapGlue";
 declare const globalThis: any;
 
 
+const ENABLE_HERO_ANIM_DEBUG = true;
+
 function getProfileFromUrl(): string | null {
     try {
         const params = new URLSearchParams(window.location.search);
@@ -98,7 +100,16 @@ class HeroScene extends Phaser.Scene {
         // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
         applyUrlProfileToGlobals();
 
-        this.registry.set("heroAnimDebug", true);   // turn on logs
+        this.registry.set("heroAnimDebug", ENABLE_HERO_ANIM_DEBUG);
+
+        // NEW: runtime toggle from console or other code
+        (g as any).toggleHeroAnimDebug = (on?: boolean) => {
+            const cur = !!this.registry.get("heroAnimDebug");
+            const next = (on === undefined) ? !cur : !!on;
+            this.registry.set("heroAnimDebug", next);
+            console.log("[heroAnimDebug] set to", next);
+        };
+
 
         buildHeroAtlas(this);                       // or rely on lazy build
 

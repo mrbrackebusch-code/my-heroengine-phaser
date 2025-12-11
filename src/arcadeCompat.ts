@@ -10,10 +10,13 @@
 
 // ✅ create a module object called `monsterAnimGlue`
 import * as monsterAnimGlue from "./monsterAnimGlue";
+// ✅ create a module object called `heroAnimGlue`
+import * as heroAnimGlue from "./heroAnimGlue";
 
 
 // Put this near the top of arcadeCompat.ts with your other debug toggles
 const DEBUG_SETFLAG = false;
+
 let _setFlagLogCount = 0;
 
 // GLOBAL DEBUG FLAGS
@@ -21,6 +24,9 @@ const DEBUG_WRAP_TEX = false;   // 👈 disable spam
 
 // MASTER NETWORK DEBUG FLAG
 const DEBUG_NET = false;
+
+
+let _heroAnimNoAtlasLogged = false;
 
 
 const INPUT_LAG_WARN_MS = 120;          // already have this
@@ -857,6 +863,7 @@ namespace sprites {
         return _kindNameCache[String(kind)] || String(kind);
     }
 
+    
     // Classify a sprite into rough "roles" using kind + data flags
     function _classifySpriteRole(kind: number, dataKeys: string[]): string {
         const kindName = _getSpriteKindName(kind);
@@ -883,6 +890,50 @@ namespace sprites {
 
         return "OTHER";
     }
+
+
+function _classifySpriteRole(kind: number, dataKeys: string[]): string {
+    const kindName = _getSpriteKindName(kind);
+
+    // Direct kind-name checks first
+    if (kindName === "HeroAura" || kindName.indexOf("Aura") >= 0) return "AURA";
+    if (kindName === "HeroWeapon" || kindName.indexOf("Weapon") >= 0) return "PROJECTILE";
+    if (kindName === "Player" || kindName === "Hero") return "HERO";
+    if (kindName.indexOf("Enemy") >= 0) return "ENEMY";
+
+    // Use data flags as heuristics (engine-specific)
+    if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
+        // Could be hero or enemy – but definitely a combat actor
+        return "ACTOR";
+    }
+    if (
+        dataKeys.indexOf("MOVE_TYPE") >= 0 ||
+        dataKeys.indexOf("HERO_INDEX") >= 0 ||
+        dataKeys.indexOf("DAMAGE") >= 0 ||
+        dataKeys.indexOf("dashEndMs") >= 0
+    ) {
+        return "PROJECTILE";
+    }
+
+    return "OTHER";
+}
+
+
+    // NEW: tiny helper to recognize real heroes based on kind + data keys
+    function isHeroSprite(s: Sprite): boolean {
+        const kind = (s.kind as number) || 0;
+        const dataKeys = Object.keys((s as any).data || {});
+        const role = _classifySpriteRole(kind, dataKeys);
+
+        if (role === "HERO") return true;
+
+        // Belt-and-suspenders: hero-specific identity keys
+        if (dataKeys.indexOf("heroName") >= 0) return true;
+        if (dataKeys.indexOf("heroFamily") >= 0) return true;
+
+        return false;
+    }
+
 
     function _shouldLogSprite(kind: number, dataKeys: string[]): boolean {
         if (!DEBUG_SPRITE_PIXELS) return false;
@@ -970,8 +1021,115 @@ namespace sprites {
 
 
 
+// Mirror hero identity + phase/dir from the Arcade Sprite onto the Phaser native sprite.
+function _copyHeroIdentityToNative(
+    s: Sprite,
+    native: Phaser.GameObjects.Sprite
+): void {
+    const dataAny: any = (s as any).data || {};
 
-    
+    const heroName   = dataAny.heroName;
+    const heroFamily = dataAny.heroFamily;
+    const phase      = dataAny.phase;
+    const dir        = dataAny.dir;
+
+    if (typeof heroName === "string" && heroName) {
+        native.setData("heroName", heroName);
+    }
+    if (typeof heroFamily === "string" && heroFamily) {
+        native.setData("heroFamily", heroFamily);
+    }
+
+    // Ensure phase/dir always exist with safe defaults
+    native.setData(
+        "phase",
+        (typeof phase === "string" && phase) ? phase : "idle"
+    );
+    native.setData(
+        "dir",
+        (typeof dir === "string" && dir) ? dir : "down"
+    );
+}
+
+
+
+
+// Try to apply hero animation for a hero-native sprite.
+// - Only runs if heroAtlas is present in the scene registry.
+// - Only calls glue when phase/dir changed since last sync (or first time).
+function _tryApplyHeroAnimationForNative(
+    s: Sprite,
+    native: Phaser.GameObjects.Sprite
+): void {
+    const scene: any = native.scene;
+    if (!scene || !scene.registry) return;
+
+    const atlas = scene.registry.get("heroAtlas");
+    if (!atlas) {
+        if (!_heroAnimNoAtlasLogged) {
+            console.log("[heroAnim] heroAtlas not yet available; skipping hero animation for now");
+            _heroAnimNoAtlasLogged = true;
+        }
+        return;
+    }
+
+
+
+
+    const dataAny: any = (s as any).data || {};
+    const curPhase = (typeof dataAny.phase === "string" && dataAny.phase) ? dataAny.phase : "idle";
+    const curDir   = (typeof dataAny.dir   === "string" && dataAny.dir)   ? dataAny.dir   : "down";
+    const curFam   = (typeof dataAny.heroFamily === "string" && dataAny.heroFamily)
+        ? dataAny.heroFamily
+        : "";
+
+    const LAST_PHASE_SYNC_KEY  = "__heroLastPhaseSync";
+    const LAST_DIR_SYNC_KEY    = "__heroLastDirSync";
+    const LAST_FAMILY_SYNC_KEY = "__heroLastFamilySync";
+
+    const prevPhase = native.getData
+        ? (native.getData(LAST_PHASE_SYNC_KEY) as string | undefined)
+        : undefined;
+    const prevDir = native.getData
+        ? (native.getData(LAST_DIR_SYNC_KEY) as string | undefined)
+        : undefined;
+    const prevFam = native.getData
+        ? (native.getData(LAST_FAMILY_SYNC_KEY) as string | undefined)
+        : undefined;
+
+    const isFirst = prevPhase === undefined && prevDir === undefined && prevFam === undefined;
+    const changed = isFirst ||
+        curPhase !== prevPhase ||
+        curDir   !== prevDir   ||
+        curFam   !== prevFam;
+
+    if (!changed) return;
+
+    if (native.setData) {
+        native.setData(LAST_PHASE_SYNC_KEY,  curPhase);
+        native.setData(LAST_DIR_SYNC_KEY,    curDir);
+        native.setData(LAST_FAMILY_SYNC_KEY, curFam);
+    }
+
+
+
+
+
+
+    if (native.setData) {
+        native.setData(LAST_PHASE_SYNC_KEY, curPhase);
+        native.setData(LAST_DIR_SYNC_KEY,   curDir);
+    }
+
+    const glueAny: any = (globalThis as any).heroAnimGlue || heroAnimGlue;
+
+    if (glueAny && typeof glueAny.tryApplyHeroAnimation === "function") {
+        glueAny.tryApplyHeroAnimation(native);
+    } else if (glueAny && typeof glueAny.applyHeroAnimationForSprite === "function") {
+        glueAny.applyHeroAnimationForSprite(native);
+    }
+}
+
 
 
 
@@ -999,6 +1157,84 @@ function _attachNativeSprite(s: Sprite): void {
     const w = s.image.width | 0;
     const h = s.image.height | 0;
     const texKey = "sprite_" + s.id;
+
+    // --- HERO NATIVE SKIP PATH -------------------------------------------
+    // Real heroes skip the pixel-upload path entirely and use a shared
+    // 64x64 placeholder texture + Sprite, so heroAnimGlue can later
+    // take over visuals from heroAtlas.
+    const isHero = isHeroSprite(s);
+
+    if (isHero) {
+        const HERO_PLACEHOLDER_TEX_KEY = "__heroPlaceholder64";
+
+        // Ensure we have a shared 64x64 canvas texture for hero placeholders.
+        let heroTex = sc.textures.exists(HERO_PLACEHOLDER_TEX_KEY)
+            ? (sc.textures.get(HERO_PLACEHOLDER_TEX_KEY) as Phaser.Textures.CanvasTexture)
+            : null;
+
+        if (!heroTex) {
+            heroTex = sc.textures.createCanvas(HERO_PLACEHOLDER_TEX_KEY, 64, 64);
+            const ctxHero = heroTex.context;
+            if (ctxHero) {
+                ctxHero.clearRect(0, 0, 64, 64);
+
+                // Simple white outline so we can see something.
+                ctxHero.strokeStyle = "#ffffff";
+                ctxHero.lineWidth = 2;
+                ctxHero.strokeRect(1, 1, 62, 62);
+            }
+            heroTex.refresh();
+        }
+
+        let native: any = s.native;
+
+
+        if (!native) {
+            // Create a real Sprite (not Image) so animations will work later.
+            native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
+            native.setOrigin(0.5, 0.5);
+            native.setData("isHeroNative", true);
+
+            // NEW: mirror hero identity + phase/dir onto the native sprite
+            _copyHeroIdentityToNative(s, native);
+
+            // NEW: on first attach, try to apply hero animation
+            _tryApplyHeroAnimationForNative(s, native);
+
+            s.native = native;
+
+            if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+                console.log(
+                    "[WRAP-NATIVE] create hero-native sprite",
+                    "| id", s.id,
+                    "| kind", s.kind,
+                    "| texKey", HERO_PLACEHOLDER_TEX_KEY,
+                    "| native.width", native.width,
+                    "| native.height", native.height
+                );
+            }
+        } else {
+            // Keep native hero sprite in sync with Arcade sprite position.
+            native.setPosition(s.x, s.y);
+
+            // NEW: keep hero identity + phase/dir in sync on reuse
+            _copyHeroIdentityToNative(s, native);
+
+            // NEW: on first attach, try to apply hero animation
+            _tryApplyHeroAnimationForNative(s, native);
+        }
+
+
+
+        // For visibility logic that uses nonZero pixels, just mark as non-empty.
+        (s as any)._lastNonZeroPixels = 1;
+
+        const tA1 = _hostPerfNowMs();
+        _frameAttachMsAccum += (tA1 - tA0);
+        _frameAttachUpdateCount++; // treat as "update" for stats
+        return;
+    }
+    // ---------------------------------------------------------------------
 
 
     // If this sprite's native is already using a non-MakeCode texture
@@ -1039,38 +1275,6 @@ function _attachNativeSprite(s: Sprite): void {
             "w,h=", w, h,
             "pixelsLen=", w * h,
         );
-
-
-
-        // --- LPC DEBUG: inspect sprite data and existing texture ---
-//        const dataAny = (sprite as any).data;
-//        let dataDump: any = undefined;
-//        let dataKeys: string[] = [];
-
-//        try {
-//            if (dataAny) {
-//                if (typeof dataAny.getAllKeys === "function") {
-//                   dataKeys = dataAny.getAllKeys();
-//                } else if (typeof dataAny.keys === "function") {
-//                    dataKeys = dataAny.keys();
-//                }
-//
-//                dataDump = {};
-//                for (const k of dataKeys) {
-//                    try {
-//                       dataDump[k] = dataAny.get(k);
-//                    } catch { /* ignore */ }
-//                }
-//            }
- //       } catch { /* ignore */ }
-//
-//        console.log("[LPC DEBUG] _attachNativeSprite candidate", {
-//            spriteId,
-//            kind: (sprite as any).kind,
- //           texKey: (native as any).texture && (native as any).texture.key,
- //           dataKeys,
- //           dataDump,
- //       });
 
 
    }
@@ -1689,10 +1893,21 @@ export function _syncNativeSprites(): void {
 
 
 
-
-                // If this sprite is an enemy (or actor), drive LPC animations via MonsterAnimGlue.
         const dataKeys = Object.keys(s.data || {});
         const role = _classifySpriteRole(s.kind, dataKeys);
+
+        // --- HERO ANIM GLUE HOOK (phase/dir-change gated) -------------------
+        if (role === "HERO") {
+            const nativeAny: any = s.native;
+            if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
+                _tryApplyHeroAnimationForNative(s, nativeAny as Phaser.GameObjects.Sprite);
+            }
+        }
+        // --------------------------------------------------------------------
+
+
+
+        // --------------------------------------------------------------------
 
         if (role === "ENEMY" || role === "ACTOR") {
             // Engine-side data bag

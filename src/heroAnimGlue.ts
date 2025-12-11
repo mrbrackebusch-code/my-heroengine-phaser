@@ -139,6 +139,37 @@ function getRestPhase(_phase: HeroPhase): HeroPhase {
     return "idle";
 }
 
+
+/**
+ * Choose the best concrete phase for this hero set:
+ * - If run is requested but missing, fall back to walk if available.
+ * - If thrust/slash are requested and oversize variants exist, use those.
+ */
+function getEffectivePhaseForSet(set: HeroAnimSet, phase: HeroPhase): HeroPhase {
+    // 1) Map run → walk if run is not defined but walk is.
+    if (phase === "run") {
+        const runMap = set.phases["run"];
+        if (!runMap || Object.keys(runMap).length === 0) {
+            const walkMap = set.phases["walk"];
+            if (walkMap && Object.keys(walkMap).length > 0) {
+                return "walk";
+            }
+        }
+    }
+
+    // 2) Prefer oversize thrust/slash if defined
+    if (phase === "thrust" || phase === "slash") {
+        const oversizePhase: HeroPhase = (phase === "thrust" ? "thrustOversize" : "slashOversize");
+        const overMap = set.phases[oversizePhase];
+        if (overMap && Object.keys(overMap).length > 0) {
+            return oversizePhase;
+        }
+    }
+
+    return phase;
+}
+
+
 /**
  * Detailed frame-debug string:
  *   #idx->rROW,cCOL@(pxX,pxY)
@@ -192,7 +223,11 @@ function applyHeroAnimationForSpriteInternal(
     }
 
     const anySprite = sprite as any;
-    const dirMap = set.phases[phase];
+
+    // NEW: pick the best concrete phase (run→walk, thrust/slash→oversize if available)
+    const effectivePhase = getEffectivePhaseForSet(set, phase);
+
+    const dirMap = set.phases[effectivePhase];
 
     // If this phase is not present in the atlas, fall back to idle once.
     if (!dirMap) {
@@ -200,8 +235,10 @@ function applyHeroAnimationForSpriteInternal(
             heroName,
             family,
             requestedPhase: phase,
+            effectivePhase,
             setId: set.id
         });
+        
 
         if (allowFallback && phase !== "idle") {
             const restPhase = getRestPhase(phase);
@@ -219,31 +256,32 @@ function applyHeroAnimationForSpriteInternal(
         return;
     }
 
-    const def = dirMap[dir];
-    if (!def) {
-        logGlue(scene, "applyHeroAnimationForSprite: no dir for phase", {
-            heroName,
-            family,
-            requestedPhase: phase,
-            requestedDir: dir,
-            setId: set.id
-        });
+        const def = dirMap[dir];
+        if (!def) {
+            logGlue(scene, "applyHeroAnimationForSprite: no dir for phase", {
+                heroName,
+                family,
+                requestedPhase: phase,
+                effectivePhase,
+                requestedDir: dir,
+                setId: set.id
+            });
 
-        if (allowFallback && phase !== "idle") {
-            const restPhase = getRestPhase(phase);
-            if (anySprite.setData) {
-                anySprite.setData(HERO_PHASE_KEY, restPhase);
+            if (allowFallback && phase !== "idle") {
+                const restPhase = getRestPhase(phase);
+                if (anySprite.setData) {
+                    anySprite.setData(HERO_PHASE_KEY, restPhase);
+                }
+                logGlue(
+                    scene,
+                    "applyHeroAnimationForSprite: falling back (no dir) to rest phase",
+                    { heroName, family, requestedPhase: phase, effectivePhase, requestedDir: dir, restPhase }
+                );
+                applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
             }
-            logGlue(
-                scene,
-                "applyHeroAnimationForSprite: falling back (no dir) to rest phase",
-                { heroName, family, requestedPhase: phase, requestedDir: dir, restPhase }
-            );
-            applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
+            return;
         }
 
-        return;
-    }
 
     const lastPhase = anySprite.getData
         ? (anySprite.getData(LAST_PHASE_KEY) as HeroPhase | undefined)
@@ -640,3 +678,11 @@ export function installHeroAnimTester(scene: Phaser.Scene): void {
         controls: "1–0 phase, arrows dir, Q toggle primary/extra set"
     });
 }
+
+
+
+
+// Optional: global helper so you can flip the per-file debug without rebuild.
+(globalThis as any).setHeroAnimDebugEnabled = (on: boolean) => {
+    HERO_GLUE_DEBUG.enabled = !!on;
+};

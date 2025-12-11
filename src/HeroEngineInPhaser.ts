@@ -300,6 +300,17 @@ namespace HeroEngine {
         return [FAMILY.STRENGTH, 0, 0, 0, 0, ELEM.NONE, ANIM.ID.IDLE];
     }
 
+
+    // Helper: wrap a small hero idle sprite (e.g. 16x16) into a 64x64 image
+    function _wrapIdleInto64(src: any) {
+        const result = image.create(64, 64);
+        const offX = (result.width - src.width) >> 1;
+        const offY = (result.height - src.height) >> 1;
+        result.drawTransparentImage(src, offX, offY);
+        return result;
+    }
+
+
     function defaultHeroAnim(
         hero: Sprite,
         animKey: string,
@@ -313,7 +324,7 @@ namespace HeroEngine {
         // Hardcoded idle sprites for each hero
         // These NEVER appear in student project, so Blocks stays clean.
 
-        const idle1 = img`
+        const idle1 = _wrapIdleInto64(img`
         . . . . . . f f f f . . . . . .
         . . . . f f f 2 2 f f f . . . .
         . . . f f f 2 2 2 2 f f f . . .
@@ -330,9 +341,9 @@ namespace HeroEngine {
         . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
         . . . . . f f f f f f . . . . .
         . . . . . f f . . f f . . . . .
-    `;
+    `);
 
-        const idle2 = img`
+        const idle2 = _wrapIdleInto64(img`
         . . . . . . f f f f . . . . . .
         . . . . f f f a a f f f . . . .
         . . . f f f a a a a f f f . . .
@@ -349,9 +360,9 @@ namespace HeroEngine {
         . . 4 4 f a a a a a a f 4 4 . .
         . . . . . f f f f f f . . . . .
         . . . . . f f . . f f . . . . .
-    `;
+    `);
 
-        const idle3 = img`
+        const idle3 = _wrapIdleInto64(img`
         . . . . . . f f f f . . . . . .
         . . . . f f f 7 7 f f f . . . .
         . . . f f f 7 7 7 7 f f f . . .
@@ -368,9 +379,9 @@ namespace HeroEngine {
         . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
         . . . . . f f f f f f . . . . .
         . . . . . f f . . f f . . . . .
-    `;
+    `);
 
-        const idle4 = img`
+        const idle4 = _wrapIdleInto64(img`
         . . . . . . f f f f . . . . . .
         . . . . f f f 8 8 f f f . . . .
         . . . f f f 8 8 8 8 f f f . . .
@@ -387,7 +398,7 @@ namespace HeroEngine {
         . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
         . . . . . f f f f f f . . . . .
         . . . . . f f . . f f . . . . .
-    `;
+    `);
 
         if (owner === 1) hero.setImage(idle1);
         else if (owner === 2) hero.setImage(idle2);
@@ -562,8 +573,22 @@ ensureHeroSpriteKinds();
 // ELEM: damage type / flavor for future resistances
 // Used by: calculateXStats(), executeXMove(), damage logic
 // --------------------------------------------------------------
+
+
 // Families
 const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
+
+// Map numeric FAMILY to the HeroAtlas family strings
+function heroFamilyNumberToString(family: number): string {
+    switch (family | 0) {
+        case FAMILY.STRENGTH:   return "strength";
+        case FAMILY.AGILITY:    return "agility";
+        case FAMILY.INTELLECT:  return "intelligence";
+        case FAMILY.HEAL:       return "support";
+        default:                return "strength";
+    }
+}
+
 
 // Elements
 const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5 }
@@ -669,8 +694,13 @@ const HERO_DATA = {
 
     // NEW: hero death state (for LPC death animation timing)
     IS_DEAD: "isDead",
-    DEATH_UNTIL: "deathUntil"
+    DEATH_UNTIL: "deathUntil",
+
+    // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
+    DIR: "dir",
+    PHASE: "phase"
 }
+
 
 
 
@@ -1836,6 +1866,10 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     // Persist family + traits on hero (modules read these)
     sprites.setDataNumber(hero, HERO_DATA.FAMILY, family)
+
+    // NEW: mirror current move family as string for heroAnimGlue
+    sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(family));
+
     sprites.setDataString(hero, HERO_DATA.BUTTON, button)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT1, t1)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT2, t2)
@@ -1915,6 +1949,19 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const moveDuration = stats[STAT.MOVE_DURATION] | 0
     const L_exec = Math.idiv(lungeCapped * moveDuration, 1000)
     sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
+
+
+    // NEW: phase hint for animations based on family
+    if (family == FAMILY.STRENGTH) {
+        setHeroPhaseString(heroIndex, "slash")
+    } else if (family == FAMILY.AGILITY) {
+        setHeroPhaseString(heroIndex, "thrust")
+    } else if (family == FAMILY.INTELLECT) {
+        setHeroPhaseString(heroIndex, "cast")
+    } else if (family == FAMILY.HEAL) {
+        setHeroPhaseString(heroIndex, "cast")
+    }
+
 
     // -----------------------------
     // Control lock & agility extras
@@ -2128,6 +2175,10 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
     heroBusyUntil[heroIndex] = 0
 
+    // NEW: seed initial facing + phase for animations
+    syncHeroDirData(heroIndex)
+    setHeroPhaseString(heroIndex, "idle")
+
     sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
     sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
     sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
@@ -2142,6 +2193,16 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
     sprites.setDataNumber(hero, HERO_DATA.FAMILY, FAMILY.STRENGTH)
+    
+    // NEW: seed hero identity strings so Phaser can resolve LPC animations
+    const profileName = getHeroProfileForHeroIndex(heroIndex);
+    sprites.setDataString(hero, "heroName", profileName);
+    sprites.setDataString(
+        hero,
+        "heroFamily",
+        heroFamilyNumberToString(FAMILY.STRENGTH)
+    );
+
     sprites.setDataString(hero, HERO_DATA.BUTTON, "")
     sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT2, 25)
@@ -2276,6 +2337,21 @@ function getHeroDirectionName(heroIndex: number) {
     if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
 }
 
+// Mirror direction into hero data so Phaser can see it.
+function syncHeroDirData(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const dir = getHeroDirectionName(heroIndex)
+    sprites.setDataString(hero, "dir", dir)
+    sprites.setDataString(hero, HERO_DATA.DIR, dir)
+}
+
+// Mirror phase into hero data so Phaser can see it.
+function setHeroPhaseString(heroIndex: number, phase: string) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataString(hero, "phase", phase)
+    sprites.setDataString(hero, HERO_DATA.PHASE, phase)
+}
+
 function updateHeroFacingsFromVelocity() {
     for (let i = 0; i < heroes.length; i++) {
         const hero = heroes[i]; if (!hero) continue
@@ -2284,7 +2360,11 @@ function updateHeroFacingsFromVelocity() {
         let dx = 0, dy = 0
         if (vx > 0) dx = 1; else if (vx < 0) dx = -1
         if (vy > 0) dy = 1; else if (vy < 0) dy = -1
-        if (dx != 0 || dy != 0) { heroFacingX[i] = dx; heroFacingY[i] = dy }
+        if (dx != 0 || dy != 0) {
+            heroFacingX[i] = dx; heroFacingY[i] = dy
+            // NEW: keep dir string mirrored for heroAnimGlue
+            syncHeroDirData(i)
+        }
     }
 }
 
@@ -3397,6 +3477,7 @@ function getComboDamageMultPct(heroIndex: number) {
     return val > 0 ? val : 100
 }
 
+
 // AGILITY - thrust / skewer projectile
 function spawnAgilityThrustProjectile(
     heroIndex: number,
@@ -3845,6 +3926,10 @@ function executeIntellectMove(
     sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, now)
     sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, targetingTime)
 
+    // NEW: phase = cast while steering intellect spell
+    setHeroPhaseString(heroIndex, "cast")
+
+
     // Delegate all spell creation + damage math to the intellect module
     // (beginIntellectTargeting already re-reads traits and calculates its own stats)
     beginIntellectTargeting(heroIndex, targetingTime, button, FAMILY.INTELLECT)
@@ -4004,6 +4089,10 @@ function finishIntellectSpellForHero(heroIndex: number) {
     sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)   // NEW
     unlockHeroControls(heroIndex)
+
+    // NEW: spell finished → back to idle
+    setHeroPhaseString(heroIndex, "idle")
+
 }
 
 function updateIntellectSpellsControl() {
@@ -4977,6 +5066,10 @@ function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, now: numbe
     // Lock hero movement while puzzle is active
     lockHeroControls(heroIndex)
     supportPuzzleActive[heroIndex] = true
+
+    // NEW: treat support action as a cast phase
+    setHeroPhaseString(heroIndex, "cast")
+
 }
 
 
@@ -5053,7 +5146,13 @@ function clearSupportPuzzleForHero(heroIndex: number) {
     supportPuzzleActive[heroIndex] = false
     supportPuzzlePrevMask[heroIndex] = 0
     unlockHeroControls(heroIndex)
+
+    // NEW: support puzzle ended (success or fail) → back to idle
+    setHeroPhaseString(heroIndex, "idle")
 }
+
+
+
 
 function failSupportPuzzleForHero(heroIndex: number) {
     // (Optionally: flash icons red; for now just clear)
@@ -6502,6 +6601,31 @@ function updateHeroDeaths(now: number) {
 }
 
 
+function updateHeroMovementPhase(now: number) {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]; if (!hero) continue;
+
+        // Don't stomp special phases
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) continue;
+        if (supportPuzzleActive[hi]) continue;
+
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) || 0;
+        if (busyUntil > now) continue; // mid-attack / cast window → keep slash/thrust/cast
+
+        const vx = hero.vx, vy = hero.vy;
+        if (vx || vy) {
+            // Moving but not in a special move → run phase
+            setHeroPhaseString(hi, "run");
+        } else {
+            // Standing, not busy → idle
+            setHeroPhaseString(hi, "idle");
+        }
+    }
+}
+
+
+
 // New helper: maintain locked heroes unless controlling a spell
 function updateHeroControlLocks(now: number) {
     for (let i = 0; i < heroes.length; i++) {
@@ -6531,6 +6655,8 @@ function updateHeroControlLocks(now: number) {
                 // NEW: reflect that unlock into hero data
                 sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
 
+                // NEW: when control lock ends, hero returns to idle phase
+                setHeroPhaseString(i, "idle")
 
 
             }
@@ -6587,6 +6713,10 @@ game.onUpdate(function () {
 
     updateSupportPuzzles(now)     // NEW
     updateHeroControlLocks(now)
+
+    // NEW: if not in a special move, phase follows motion (idle/run)
+    updateHeroMovementPhase(now)
+
     updateHeroBuffs(now)          // NEW
 
 
