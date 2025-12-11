@@ -79,10 +79,8 @@ export interface AutoTileConfig {
 
 
 
-
-// Derive TileFamily from those ids so it's always in sync.
-export type TerrainFamilyDef = (typeof TERRAIN_FAMILIES)[number];
-export type TileFamily = TerrainFamilyDef["id"];
+// Families are defined as TerrainAutoTileDef below.
+export type TileFamily = TerrainAutoTileDef["id"];
 
 
 
@@ -243,67 +241,99 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         return idx(col, row);
     };
 
-    function registerTerrainFamily(tf: TerrainFamilyDef) {
-        const family = tf.id as TileFamily;
-        const tiles = tf.tiles;
 
-        // 1) Rim + corners from convex9 (3x3 block), if present.
-        //
-        // We assume convex9 is ordered row-major:
-        //   [0] [1] [2]
-        //   [3] [4] [5]
-        //   [6] [7] [8]
-        //
-        const cv = tiles.convex9;
-        if (cv && cv.length === 9) {
-            const [t0, t1, t2, t3, t4, t5, t6, t7, t8] = cv;
 
-            addAuto({ family, shape: "center",   textureKey: tex, frameIndex: frameFromCoord(t4) });
+    function registerTerrainFamily(tf: TerrainAutoTileDef) {
+    const family = tf.id as TileFamily;
+    const tex = mainSheet.textureKey;
 
-            addAuto({ family, shape: "edgeN",    textureKey: tex, frameIndex: frameFromCoord(t1) });
-            addAuto({ family, shape: "edgeS",    textureKey: tex, frameIndex: frameFromCoord(t7) });
-            addAuto({ family, shape: "edgeW",    textureKey: tex, frameIndex: frameFromCoord(t3) });
-            addAuto({ family, shape: "edgeE",    textureKey: tex, frameIndex: frameFromCoord(t5) });
+    const frameFromRef = (ref: TileRef): number => {
+        return idx(ref.col, ref.row);
+    };
 
-            addAuto({ family, shape: "cornerNW", textureKey: tex, frameIndex: frameFromCoord(t0) });
-            addAuto({ family, shape: "cornerNE", textureKey: tex, frameIndex: frameFromCoord(t2) });
-            addAuto({ family, shape: "cornerSW", textureKey: tex, frameIndex: frameFromCoord(t6) });
-            addAuto({ family, shape: "cornerSE", textureKey: tex, frameIndex: frameFromCoord(t8) });
-        }
-
-        // 2) Center variants from groundVariants / interior.
-        const centers: number[][] = [
-            ...(tiles.groundVariants ?? []),
-            ...(tiles.interior ?? [])
-        ];
-
-        for (const coord of centers) {
-            addAuto({
-                family,
-                shape: "center",
-                textureKey: tex,
-                frameIndex: frameFromCoord(coord as [number, number])
-            });
-        }
-
-        // 3) Per-family decor tiles.
-        for (const coord of tiles.decor ?? []) {
-            addDecor({
-                family,
-                textureKey: tex,
-                frameIndex: frameFromCoord(coord as [number, number])
-            });
-        }
-
-        // NOTE: concave2x2 and edgeExtensions are in the data, but we’re not
-        // wiring special shapes for them yet. We can extend AutoShape later
-        // if we want real concave autotiling / dirt-in-grass stitching.
+    // 1) Center variants from the interior array.
+    for (const ref of tf.interior ?? []) {
+        addAuto({
+            family,
+            shape: "center",
+            textureKey: tex,
+            frameIndex: frameFromRef(ref)
+        });
     }
 
-    // Register all terrain families into the atlas.
-    for (const tf of TERRAIN_FAMILIES) {
-        registerTerrainFamily(tf);
+    // 2) Explicit rim & corners for the convex 3×3 block.
+    addAuto({
+        family,
+        shape: "edgeN",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.edgeN)
+    });
+    addAuto({
+        family,
+        shape: "edgeS",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.edgeS)
+    });
+    addAuto({
+        family,
+        shape: "edgeW",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.edgeW)
+    });
+    addAuto({
+        family,
+        shape: "edgeE",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.edgeE)
+    });
+
+    addAuto({
+        family,
+        shape: "cornerNW",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.cornerNW)
+    });
+    addAuto({
+        family,
+        shape: "cornerNE",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.cornerNE)
+    });
+    addAuto({
+        family,
+        shape: "cornerSE",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.cornerSE)
+    });
+    addAuto({
+        family,
+        shape: "cornerSW",
+        textureKey: tex,
+        frameIndex: frameFromRef(tf.cornerSW)
+    });
+
+    // 3) Optional decor tiles.
+    if (tf.decor && tf.decor.length) {
+        let arr = decorByFamily.get(family);
+        if (!arr) {
+            arr = [];
+            decorByFamily.set(family, arr);
+        }
+
+        for (const ref of tf.decor) {
+            arr.push({
+                family,
+                textureKey: tex,
+                frameIndex: frameFromRef(ref)
+            });
+        }
     }
+}
+
+
+for (const tf of TERRAIN_AUTOTILES) {
+    registerTerrainFamily(tf);
+}
 
 
 
@@ -367,27 +397,6 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
 
 
 
-
-
-
-
-
-export const TERRAIN_AUTOTILES: TerrainAutoTileDef[] = [
-    ground_light,
-    ground_medium,
-    ground_red,
-    chasm_light,
-    chasm_medium,
-    chasm_black,
-    water_chasm,
-    grass_dense_light,
-    grass_sparse_light,
-    grass_dark,
-    hedge_green_low,
-    hedge_green_high,
-    hedge_straw,
-    dirt_patch_lightgrass,
-];
 
 
 
@@ -961,10 +970,34 @@ const dirt_patch_lightgrass: TerrainAutoTileDef = {
 
 
 
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+//
+//
+//This ends the tilemap family declarations
+//
+//
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
 
 
+
+export const TERRAIN_AUTOTILES: TerrainAutoTileDef[] = [
+    ground_light,
+    ground_medium,
+    ground_red,
+    chasm_light,
+    chasm_medium,
+    chasm_black,
+    water_chasm,
+    grass_dense_light,
+    grass_sparse_light,
+    grass_dark,
+    hedge_green_low,
+    hedge_green_high,
+    hedge_straw,
+    dirt_patch_lightgrass,
+];
 
 
 

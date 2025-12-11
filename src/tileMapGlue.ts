@@ -103,19 +103,45 @@ function autoShapeFromMask(mask: number): AutoShape {
     return "center";
 }
 
-/**
- * Wrapper used by the renderer: compute mask, then pick a coarse shape.
- */
-function computeAutoShape(
-    grid: number[][],
-    r: number,
-    c: number,
-    family: TileFamily,
-    valueToFamily: (v: number) => TileFamily
-): AutoShape {
+
+function computeAutoShape(grid, r, c, family, valueToFamily): AutoShape {
     const mask = computeNeighborMask(grid, r, c, family, valueToFamily);
+
+    const nSame = (mask & 1) !== 0;
+    const eSame = (mask & 2) !== 0;
+    const sSame = (mask & 4) !== 0;
+    const wSame = (mask & 8) !== 0;
+
+    // --- NEW: if this is ground and a neighbor is chasm → inner shapes
+    if (family === "ground_light") {
+
+        const nChasm = valueToFamily(grid[r-1]?.[c]) === "chasm_light";
+        const sChasm = valueToFamily(grid[r+1]?.[c]) === "chasm_light";
+        const wChasm = valueToFamily(grid[r]?.[c-1]) === "chasm_light";
+        const eChasm = valueToFamily(grid[r]?.[c+1]) === "chasm_light";
+
+        // Single-direction transitions
+        if (nChasm) return "innerN";
+        if (sChasm) return "innerS";
+        if (wChasm) return "innerW";
+        if (eChasm) return "innerE";
+
+        // Corners
+        const nwChasm = valueToFamily(grid[r-1]?.[c-1]) === "chasm_light";
+        const neChasm = valueToFamily(grid[r-1]?.[c+1]) === "chasm_light";
+        const swChasm = valueToFamily(grid[r+1]?.[c-1]) === "chasm_light";
+        const seChasm = valueToFamily(grid[r+1]?.[c+1]) === "chasm_light";
+
+        if (nwChasm) return "innerNW";
+        if (neChasm) return "innerNE";
+        if (swChasm) return "innerSW";
+        if (seChasm) return "innerSE";
+    }
+
+    // Default: classic 47-tile logic
     return autoShapeFromMask(mask);
 }
+
 
 
 

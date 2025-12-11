@@ -672,7 +672,7 @@ const HERO_DATA = {
     DEATH_UNTIL: "deathUntil"
 }
 
-}
+
 
 
 // --------------------------------------------------------------
@@ -1013,48 +1013,12 @@ function r3(v: number) { return Math.round(v * 1000) / 1000 }
 // ================================================================
 
 
-// MCA-safe internal wrapper so advanced gen stub can call it.
-function _createBasicCaveMapInternal(cols: number, rows: number): number[][] {
-    const wallChance = 45
-    let map = _seedRandomMap(rows, cols, wallChance)
-
-    const smoothSteps = 5
-    for (let i = 0; i < smoothSteps; i++) {
-        map = _smoothMapStep(map)
-    }
-
-    // MCA-safe borders
-    for (let r = 0; r < rows; r++) {
-        map[r][0] = TILE_WALL
-        map[r][cols - 1] = TILE_WALL
-    }
-    for (let c = 0; c < cols; c++) {
-        map[0][c] = TILE_WALL
-        map[rows - 1][c] = TILE_WALL
-    }
-
-    return map
-}
-
-
-function isMakeCodeArcadeRuntime(): boolean {
-    return (typeof window === "undefined") ||
-           !(window as any).WebGLRenderingContext;
-}
 
 
 function _createTileMap2D(): number[][] {
-    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
-    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
-
-    // DETECT MCA / PHASER
-    if (isMakeCodeArcadeRuntime()) {
-        console.log("[worldgen] MCA runtime → using basic map")
-        return _createBasicCaveMapInternal(cols, rows)
-    }
-
-    console.log("[worldgen] Phaser runtime → using advanced biome generator")
-    return __advancedBiomeWorldgen(cols, rows)
+    // Just use the basic cave generator in ALL runtimes.
+    // MakeCode and Phaser both see the same 0/1 logic grid.
+    return _createBasicCaveMap();
 }
 
 
