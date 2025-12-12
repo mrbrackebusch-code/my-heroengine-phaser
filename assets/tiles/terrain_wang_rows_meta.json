@@ -1,0 +1,14 @@
+{
+  "ground_light": {
+    "row": 0,
+    "startCol": 0,
+    "colForMask": "mask",
+    "bitOrder": "bit0=N, bit1=E, bit2=S, bit3=W"
+  },
+  "chasm_light": {
+    "row": 1,
+    "startCol": 0,
+    "colForMask": "mask",
+    "bitOrder": "bit0=N, bit1=E, bit2=S, bit3=W"
+  }
+}

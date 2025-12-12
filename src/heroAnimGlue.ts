@@ -398,6 +398,221 @@ export function tryApplyHeroAnimation(sprite: Phaser.GameObjects.Sprite): void {
     applyHeroAnimationForSprite(sprite);
 }
 
+
+
+// ================================================================
+// Hero Aura (Phaser-side) — true silhouette outline from LPC pixels
+// ================================================================
+
+/**
+ * Cache of generated outline textures:
+ * key = `${textureKey}::${frameName}::r${radius}`
+ */
+const __heroAuraOutlineCache = new Map<string, string>();
+
+/** Per-hero aura sprite (native Phaser object), keyed by the native hero sprite */
+const __heroAuraSpriteByHero = new WeakMap<Phaser.GameObjects.Sprite, Phaser.GameObjects.Image>();
+
+/**
+ * MakeCode Arcade 16-color palette (approx) → Phaser tint (0xRRGGBB).
+ * If your aura colors are custom, feel free to override this mapping.
+ */
+const __arcadePaletteTint: number[] = [
+    0x000000, // 0 black
+    0xffffff, // 1 white
+    0xff2121, // 2 red
+    0xff93c4, // 3 pink
+    0xff8135, // 4 orange
+    0xfff609, // 5 yellow
+    0x249ca3, // 6 teal
+    0x78dc52, // 7 green
+    0x003fad, // 8 blue
+    0x87f2ff, // 9 light blue
+    0x8e2ec4, // 10 purple
+    0xa4839f, // 11 lavender/gray
+    0x5c406c, // 12 dark purple
+    0xe5cdc4, // 13 tan
+    0x91463d, // 14 brown
+    0x000000, // 15 (unused-ish)
+];
+
+function __tintForArcadeColorIndex(idx: number): number {
+    idx = (idx | 0) & 0xf;
+    return __arcadePaletteTint[idx] ?? 0xffffff;
+}
+
+function __outlineKeyForFrame(textureKey: string, frameName: string | number, radius: number): string {
+    return textureKey + "::" + String(frameName) + "::r" + radius;
+}
+
+/**
+ * Generates (and caches) a white outline texture for a given hero frame.
+ * The returned value is the Phaser texture key to use for the outline.
+ *
+ * This is a TRUE silhouette outline: it is derived from the alpha of the LPC frame pixels.
+ */
+function __getOrBuildHeroOutlineTexture(
+    scene: Phaser.Scene,
+    textureKey: string,
+    frameName: string | number,
+    radius: number
+): string {
+    const cacheKey = __outlineKeyForFrame(textureKey, frameName, radius);
+    const existingTexKey = __heroAuraOutlineCache.get(cacheKey);
+    if (existingTexKey && scene.textures.exists(existingTexKey)) return existingTexKey;
+
+    const frame = scene.textures.getFrame(textureKey, frameName);
+    if (!frame) {
+        // Fallback: if the frame can't be found, just reuse the hero frame (won't be an outline).
+        return textureKey;
+    }
+
+    // Unique texture key for the outline canvas
+    const outTexKey = "__heroAuraOutline__" + cacheKey;
+
+    const cw = frame.width | 0;
+    const ch = frame.height | 0;
+
+    // If already created but missing from map, just return it.
+    if (scene.textures.exists(outTexKey)) {
+        __heroAuraOutlineCache.set(cacheKey, outTexKey);
+        return outTexKey;
+    }
+
+    const ctex = scene.textures.createCanvas(outTexKey, cw, ch);
+    const canvas = ctex.getSourceImage() as any;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+    if (!ctx) {
+        __heroAuraOutlineCache.set(cacheKey, outTexKey);
+        return outTexKey;
+    }
+
+    // Draw the source frame into the canvas so we can read its pixels.
+    ctx.clearRect(0, 0, cw, ch);
+    const src: any = (frame as any).source?.image;
+    const cutX = (frame as any).cutX | 0;
+    const cutY = (frame as any).cutY | 0;
+
+    try {
+        // Draw the frame region into (0,0)-(cw,ch)
+        ctx.drawImage(src, cutX, cutY, cw, ch, 0, 0, cw, ch);
+    } catch {
+        // If drawImage fails, leave blank.
+    }
+
+    const img = ctx.getImageData(0, 0, cw, ch);
+    const data = img.data;
+
+    // Build a binary mask of "solid" pixels from alpha (>0).
+    const solid = new Uint8Array(cw * ch);
+    for (let y = 0; y < ch; y++) {
+        for (let x = 0; x < cw; x++) {
+            const i = (y * cw + x) * 4;
+            solid[y * cw + x] = data[i + 3] > 0 ? 1 : 0;
+        }
+    }
+
+    // Outline pixel = NOT solid, but within 'radius' of a solid pixel.
+    const outline = new Uint8Array(cw * ch);
+    for (let y = 0; y < ch; y++) {
+        for (let x = 0; x < cw; x++) {
+            const idx = y * cw + x;
+            if (solid[idx]) continue;
+
+            let near = false;
+            for (let dy = -radius; dy <= radius && !near; dy++) {
+                const yy = y + dy;
+                if (yy < 0 || yy >= ch) continue;
+                for (let dx = -radius; dx <= radius && !near; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const xx = x + dx;
+                    if (xx < 0 || xx >= cw) continue;
+                    if (solid[yy * cw + xx]) near = true;
+                }
+            }
+            if (near) outline[idx] = 1;
+        }
+    }
+
+    // Write out a WHITE outline with alpha=255 (tint will color it).
+    for (let i = 0; i < outline.length; i++) {
+        const p = i * 4;
+        if (outline[i]) {
+            data[p + 0] = 255;
+            data[p + 1] = 255;
+            data[p + 2] = 255;
+            data[p + 3] = 255;
+        } else {
+            data[p + 0] = 0;
+            data[p + 1] = 0;
+            data[p + 2] = 0;
+            data[p + 3] = 0;
+        }
+    }
+
+    ctx.putImageData(img, 0, 0);
+    ctex.refresh();
+
+    __heroAuraOutlineCache.set(cacheKey, outTexKey);
+    return outTexKey;
+}
+
+/**
+ * Sync aura for a native Phaser hero sprite.
+ *
+ * - auraActive=false: hides aura if present
+ * - auraActive=true : ensures a TRUE outline exists, matches current hero frame, and follows the hero
+ */
+export function syncHeroAuraForNative(
+    native: Phaser.GameObjects.Sprite,
+    auraActive: boolean,
+    auraColorIndex: number
+): void {
+    const scene = native.scene;
+    const radius = 2;
+
+    let aura = __heroAuraSpriteByHero.get(native);
+
+    if (!auraActive) {
+        if (aura) aura.setVisible(false);
+        return;
+    }
+
+    // Ensure aura object exists
+    if (!aura) {
+        aura = scene.add.image(native.x, native.y, native.texture.key, native.frame.name);
+        aura.setOrigin(native.originX, native.originY);
+        // Put just behind the hero; bump this above if you want it in front.
+        aura.setDepth(native.depth - 0.01);
+        __heroAuraSpriteByHero.set(native, aura);
+    }
+
+    // Ensure aura uses a TRUE outline texture for the current frame
+    const outlineTexKey = __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
+
+    // If outlineTexKey == native.texture.key fallback, use frame name; otherwise outline texture is single-frame
+    if (outlineTexKey === native.texture.key) {
+        aura.setTexture(native.texture.key, native.frame.name);
+    } else {
+        aura.setTexture(outlineTexKey);
+    }
+
+    // Match transform
+    aura.setVisible(true);
+    aura.x = native.x;
+    aura.y = native.y;
+    aura.rotation = native.rotation;
+    aura.scaleX = native.scaleX;
+    aura.scaleY = native.scaleY;
+    aura.setFlipX(native.flipX);
+    aura.setFlipY(native.flipY);
+
+    // Color + translucency
+    aura.setTint(__tintForArcadeColorIndex(auraColorIndex));
+    aura.setAlpha(0.85);
+}
+
+
 // ----------------------------------------------------------
 //  Simple debug / smoke-test entry point
 // ----------------------------------------------------------

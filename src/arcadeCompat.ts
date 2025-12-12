@@ -143,6 +143,11 @@ const MAKECODE_PALETTE: number[][] = [
    Basic helpers
 ------------------------------------------------------- */
 
+export function syncHeroAuraForNative(
+  native: Phaser.GameObjects.Sprite,
+  auraActive: boolean,
+  auraColorIndex: number
+)
 
 
 function randint(min: number, max: number): number {
@@ -1901,6 +1906,20 @@ export function _syncNativeSprites(): void {
             const nativeAny: any = s.native;
             if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
                 _tryApplyHeroAnimationForNative(s, nativeAny as Phaser.GameObjects.Sprite);
+
+                // ------------------------------------------------------------
+                // HERO AURA (Phaser-side, true LPC silhouette)
+                // ------------------------------------------------------------
+                const auraActive = !!(s.data && (s.data as any)["auraActive"]);
+                const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
+
+
+                heroAnimGlue.syncHeroAuraForNative(
+                    s.native,
+                    auraActive,
+                    auraColor
+                );
+
             }
         }
         // --------------------------------------------------------------------

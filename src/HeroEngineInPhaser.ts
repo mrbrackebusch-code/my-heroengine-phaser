@@ -468,6 +468,16 @@ namespace HeroEngine {
 declare const globalThis: any;
 
 
+function isPhaserRuntime(): boolean {
+    // SAFE even if globalThis isn't actually present at runtime
+    if (typeof globalThis === "undefined") return false
+    return !!globalThis.__phaserScene
+}
+
+function isMakeCodeArcadeRuntime(): boolean {
+    return !isPhaserRuntime()
+}
+
 
 
 
@@ -738,7 +748,11 @@ const HERO_DATA = {
 
     // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
     DIR: "dir",
-    PHASE: "phase"
+    PHASE: "phase",
+
+    AURA_ACTIVE: "auraActive",
+    AURA_COLOR: "auraColor"
+
 }
 
 
@@ -2651,6 +2665,24 @@ function updateHeroAuras() {
         }
         if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_INTELLECT }
         if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_HEAL }
+
+
+        // ============================================================
+        // PHASER RUNTIME: publish aura state only, do NOT render here
+        // ============================================================
+        if (isPhaserRuntime()) {
+            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+
+            // Hide any Arcade aura sprite if it exists
+            const aura = heroAuras[i]
+            if (aura) aura.setFlag(SpriteFlag.Invisible, true)
+
+            // Skip Arcade aura rendering entirely
+            continue
+        }
+
+
 
         // Aura sprite
         const aura = heroAuras[i]
