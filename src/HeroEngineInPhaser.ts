@@ -514,6 +514,45 @@ const WORLD_TILE_SIZE = 32          // private
 const TILE_EMPTY = 0                // private
 const TILE_WALL = 1                 // private
 
+
+// --------------------------------------
+// Tile collision shapes (per tile "type")
+// --------------------------------------
+interface TileCollisionShape {
+    solid: boolean;
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+}
+
+// Index by tile type (0, 1, 2, ...)
+const TILE_COLLISION_DEFS: TileCollisionShape[] = [
+    // 0: empty
+    { solid: false, offsetX: 0, offsetY: 0, width: 0, height: 0 },
+
+    // 1: full solid tile (current behavior of TILE_WALL)
+    {
+        solid: true,
+        offsetX: 0,
+        offsetY: 0,
+        width: WORLD_TILE_SIZE,
+        height: WORLD_TILE_SIZE,
+    },
+
+    // 2+: reserved for later (half-height walls, ledges, etc.)
+    // Example (commented out for now):
+    // {
+    //     solid: true,
+    //     offsetX: 0,
+    //     offsetY: WORLD_TILE_SIZE - 12,
+    //     width: WORLD_TILE_SIZE,
+    //     height: 12,
+    // },
+];
+
+
+
 // 2D array of numbers for engine-internal use only
 let _engineWorldTileMap: number[][] = []
 
@@ -534,6 +573,7 @@ const WORLD_TILES_H = 26/2;     // rows
 // Optional small safety floor
 const MIN_WORLD_TILES_W = 5;
 const MIN_WORLD_TILES_H = 5;
+
 
 
 
@@ -1518,54 +1558,63 @@ function resolveHeroTilemapCollisions(): void {
             for (let r = minRow; r <= maxRow; r++) {
                 if (r < 0 || r >= rows) continue
                 const rowArr = map[r]
+
+
                 for (let c = minCol; c <= maxCol; c++) {
-                    if (c < 0 || c >= cols) continue
-                    if (rowArr[c] !== TILE_WALL) continue
+                    const type = rowArr[c] | 0; // force 0 if undefined
+                    const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0];
+                    if (!def.solid) continue;
 
-                    const tileLeft = c * tileSize
-                    const tileRight = tileLeft + tileSize
-                    const tileTop = r * tileSize
-                    const tileBottom = tileTop + tileSize
+                    // Build the tile's collision rect in WORLD space,
+                    // using per-type offsets and size.
+                    const shapeLeft   = c * tileSize + def.offsetX;
+                    const shapeRight  = shapeLeft + def.width;
+                    const shapeTop    = r * tileSize + def.offsetY;
+                    const shapeBottom = shapeTop + def.height;
 
-                    // Compute overlaps on each side
-                    const overlapLeft = right - tileLeft
-                    const overlapRight = tileRight - left
-                    const overlapTop = bottom - tileTop
-                    const overlapBottom = tileBottom - top
+                    // Compute overlaps on each side (sprite vs collision shape)
+                    const overlapLeft   = right  - shapeLeft;
+                    const overlapRight  = shapeRight - left;
+                    const overlapTop    = bottom - shapeTop;
+                    const overlapBottom = shapeBottom - top;
 
                     // If any are <= 0, AABBs don't overlap on that axis
                     if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
-                        continue
+                        continue;
                     }
 
                     // Minimal penetration on each axis
-                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
-                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight;
+                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom;
 
                     if (penX < penY) {
                         // Push in X
-                        const tileCenterX = tileLeft + tileSize / 2
-                        if (s.x < tileCenterX) {
-                            s.x -= penX
+                        const shapeCenterX = shapeLeft + def.width / 2;
+                        if (s.x < shapeCenterX) {
+                            s.x -= penX;
                         } else {
-                            s.x += penX
+                            s.x += penX;
                         }
                         // Soft slide: kill only X velocity
-                        s.vx = 0
+                        s.vx = 0;
                     } else {
                         // Push in Y
-                        const tileCenterY = tileTop + tileSize / 2
-                        if (s.y < tileCenterY) {
-                            s.y -= penY
+                        const shapeCenterY = shapeTop + def.height / 2;
+                        if (s.y < shapeCenterY) {
+                            s.y -= penY;
                         } else {
-                            s.y += penY
+                            s.y += penY;
                         }
                         // Soft slide: kill only Y velocity
-                        s.vy = 0
+                        s.vy = 0;
                     }
 
-                    moved = true
+                    moved = true;
+
                 }
+
+
+
             }
 
             // If we didn't adjust position this pass, we are out of walls
@@ -2955,6 +3004,7 @@ function executeStrengthMove(
 // - Computed lazily on first Strength use
 // - Based on a circular bound that fully contains the hero sprite
 // - Adds a small margin so the Strength arc will sit outside the aura/outline.
+
 function getStrengthInnerRadiusForHero(hero: Sprite): number {
     // Check cache first
     let cached = sprites.readDataNumber(hero, HERO_DATA.STR_INNER_RADIUS)
@@ -2970,8 +3020,31 @@ function getStrengthInnerRadiusForHero(hero: Sprite): number {
     const cx = w / 2
     const cy = h / 2
 
-    // Circumradius: smallest circle that contains the full sprite
-    const heroRadius = Math.sqrt(cx * cx + cy * cy)
+    // Find the furthest non-transparent pixel from the center.
+    // This gives us a silhouette-based radius that ignores blank padding.
+    let maxR = 0
+    let sawOpaque = false
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const p = img.getPixel(x, y)
+            if (p == 0) continue
+
+            sawOpaque = true
+            const dx = x - cx
+            const dy = y - cy
+            const r = Math.sqrt(dx * dx + dy * dy)
+            if (r > maxR) maxR = r
+        }
+    }
+
+    let heroRadius: number
+    if (sawOpaque) {
+        heroRadius = maxR
+    } else {
+        // Fallback: no pixels? fall back to old "full sprite" radius
+        heroRadius = Math.sqrt(cx * cx + cy * cy)
+    }
 
     // Aura thickness (~1px) plus a tiny spacing gap so the Strength arc
     // will appear just outside the aura outline.
@@ -3658,8 +3731,14 @@ function updateAgilityProjectilesMotionFor(
 
     // Distance from hero center to the FRONT EDGE in the dash direction:
     // use width for horizontal, height for vertical (and blend for diagonals)
-    const attachPx =
-        0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
+    // Distance from hero center to the FRONT EDGE in the dash direction.
+    // Prefer the real silhouette edge; fall back to size-based estimate.
+    let attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
+    if (attachPx <= 0) {
+        // Fallback: old rectangle-based heuristic
+        attachPx = 0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
+    }
+
 
     // Your segment drawer renders a 1px nose at (sf + 2). Stop the "head base" at L - 2,
     // so the visual nose lands at L.
