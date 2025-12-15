@@ -75,6 +75,146 @@ let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
 
 
 
+
+
+
+
+
+// --------------------------------------------------------------
+// Phaser-only: HeroEngine hook override (visual geometry)
+// --------------------------------------------------------------
+// Engine calls:
+//   (globalThis as any).__HeroEngineHooks.getHeroVisualInfo(hero, nx, ny)
+// returning:
+//   [innerR, leadEdge, wTipX, wTipY]
+// wTip offsets are relative to hero center (pixels).
+
+let __heroVisualHookInstalled = false;
+
+
+
+
+function __installHeroVisualInfoHookOnce(): void {
+    if (__heroVisualHookInstalled) return;
+    __heroVisualHookInstalled = true;
+
+    try {
+        const g: any = (globalThis as any);
+        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+
+        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
+            // 1) Try cached silhouette-derived values first
+            let innerR = 0;
+            let leadEdge = 0;
+
+            try {
+                innerR = sprites.readDataNumber(hero, HERO_DATA.VIS_INNER_R) | 0;
+                leadEdge = sprites.readDataNumber(hero, HERO_DATA.VIS_LEAD_EDGE) | 0;
+            } catch { /* ignore */ }
+
+            // 2) Fallback if not ready yet (still compile-safe)
+            if (innerR <= 0 || leadEdge <= 0) {
+                const native: any = hero && hero.native;
+                const w = native ? (native.displayWidth || native.width || 64) : 64;
+                const h = native ? (native.displayHeight || native.height || 64) : 64;
+                leadEdge = Math.min(w, h) / 2;
+                innerR = leadEdge + 3;
+            }
+
+            // 3) Weapon tip: start dumb, later replace with real offsets from heroAnimGlue
+            const tip = leadEdge + 6;
+            const wTipX = nx * tip;
+            const wTipY = ny * tip;
+
+            return [innerR, leadEdge, wTipX, wTipY];
+        };
+
+
+        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
+    } catch (e) {
+        console.warn("[arcadeCompat] failed to install hero visual hook", e);
+    }
+}
+
+
+(function installHeroVisualHook() {
+    try {
+        const g: any = globalThis as any;
+        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+
+        const AURA_RADIUS = 2;
+        const AURA_THICKNESS = 1;
+        const SPACING = 1;
+
+        function cardinalFrom(nx: number, ny: number): "up" | "down" | "left" | "right" {
+            if (Math.abs(nx) >= Math.abs(ny)) return nx >= 0 ? "right" : "left";
+            return ny >= 0 ? "down" : "up";
+        }
+
+        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
+            const native: any = hero && hero.native;
+
+            // 1) Try cached hero data first (fast path)
+            let innerR = 0;
+            let leadEdge = 0;
+            try {
+                innerR = (hero?.data?.visInnerR | 0) || 0;
+                leadEdge = (hero?.data?.visLeadEdge | 0) || 0;
+            } catch { /* ignore */ }
+
+            // 2) If missing, compute from aura silhouette cache (true pixels)
+            if ((innerR <= 0 || leadEdge <= 0) && native) {
+                const dir = cardinalFrom(nx, ny);
+
+                const baseInner = heroAnimGlue.getHeroAuraInnerRForNative(native, AURA_RADIUS);
+                const baseLead = heroAnimGlue.getHeroAuraLeadForNativeDir(native, AURA_RADIUS, dir);
+
+                if (baseInner > 0) {
+                    innerR = Math.ceil(baseInner + AURA_THICKNESS + SPACING);
+                    leadEdge = Math.ceil(baseLead);
+
+                    // store onto the Arcade hero (numbers only)
+                    try {
+                        hero.data = hero.data || {};
+                        hero.data.visInnerR = innerR;
+                        hero.data.visLeadEdge = leadEdge;
+                    } catch { /* ignore */ }
+                }
+            }
+
+            //console.log("[hook] getHeroVisualInfo called inner/lead=", innerR, leadEdge, "dir=", nx, ny)
+
+            // 3) Final fallback (still never breaks)
+            if (innerR <= 0) innerR = 35;
+            if (leadEdge <= 0) leadEdge = 32;
+
+            // 4) Weapon tip offset (dumb for now; we’ll replace with real weapon offsets later)
+            const tip = leadEdge + 6;
+            const wTipX = nx * tip;
+            const wTipY = ny * tip;
+
+            return [innerR, leadEdge, wTipX, wTipY];
+        };
+
+        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)");
+    } catch (e) {
+        console.warn("[arcadeCompat] hero visual hook install failed", e);
+    }
+})();
+
+
+
+// Install immediately on module load
+//__installHeroVisualInfoHookOnce();
+
+
+
+
+
+
+
+
+
 function _hostPerfNowMs(): number {
     if (typeof performance !== "undefined" && performance.now) {
         return performance.now()

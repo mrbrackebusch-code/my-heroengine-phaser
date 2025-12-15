@@ -119,14 +119,14 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         return "down";
     })();
 
-    logGlue(scene, "readHeroAnimRequest", {
-        heroName,
-        family,
-        phaseRaw,
-        normalizedPhase: phase,
-        dirRaw,
-        normalizedDir: dir
-    });
+//    logGlue(scene, "readHeroAnimRequest", {
+//        heroName,
+//        family,
+//        phaseRaw,
+//        normalizedPhase: phase,
+//        dirRaw,
+//        normalizedDir: dir
+//    });
 
     return { heroName, family, phase, dir };
 }
@@ -301,11 +301,11 @@ function applyHeroAnimationForSpriteInternal(
 
     // *** THIS IS THE BIG FRAME-LEVEL LOG YOU ASKED FOR ***
     const frameDebug = formatFrameDebug(def.frameIndices);
-    logGlue(
-        scene,
-        "resolved anim",
-        `sheet=${set.id} hero=${heroName} family=${family} phase=${def.phase} dir=${def.dir} key=${animKey} fps=${def.frameRate} repeat=${def.repeat} yoyo=${def.yoyo} frames=${frameDebug}`
-    );
+    //logGlue(
+    //    scene,
+    //    "resolved anim",
+    //    `sheet=${set.id} hero=${heroName} family=${family} phase=${def.phase} dir=${def.dir} key=${animKey} fps=${def.frameRate} repeat=${def.repeat} yoyo=${def.yoyo} frames=${frameDebug}`
+    //);
 
     // Create Phaser animation on demand.
     if (!scene.anims.exists(animKey)) {
@@ -410,6 +410,29 @@ export function tryApplyHeroAnimation(sprite: Phaser.GameObjects.Sprite): void {
  */
 const __heroAuraOutlineCache = new Map<string, string>();
 
+
+// ---- PERF: aura outline generation ----
+let __auraPerf_lastReportMs = 0;
+let __auraPerf_calls = 0;
+let __auraPerf_hits = 0;
+let __auraPerf_misses = 0;
+let __auraPerf_buildMs = 0;
+let __auraPerf_totalMs = 0;
+
+
+type HeroAuraMetrics = {
+    innerR: number;      // max radius from center to any solid pixel
+    leadUp: number;      // max distance toward up
+    leadDown: number;    // max distance toward down
+    leadLeft: number;    // max distance toward left
+    leadRight: number;   // max distance toward right
+    w: number;
+    h: number;
+};
+
+const __heroAuraMetricsCache = new Map<string, HeroAuraMetrics>();
+
+
 /** Per-hero aura sprite (native Phaser object), keyed by the native hero sprite */
 const __heroAuraSpriteByHero = new WeakMap<Phaser.GameObjects.Sprite, Phaser.GameObjects.Image>();
 
@@ -458,8 +481,22 @@ function __getOrBuildHeroOutlineTexture(
     radius: number
 ): string {
     const cacheKey = __outlineKeyForFrame(textureKey, frameName, radius);
+
+    const tPerf0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    __auraPerf_calls++;
+
+
     const existingTexKey = __heroAuraOutlineCache.get(cacheKey);
-    if (existingTexKey && scene.textures.exists(existingTexKey)) return existingTexKey;
+//    if (existingTexKey && scene.textures.exists(existingTexKey)) return existingTexKey;
+
+    if (existingTexKey && scene.textures.exists(existingTexKey)) {
+        __auraPerf_hits++;
+        const tPerf1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+        __auraPerf_totalMs += (tPerf1 - tPerf0);
+        return existingTexKey;
+    }
+    __auraPerf_misses++;
+
 
     const frame = scene.textures.getFrame(textureKey, frameName);
     if (!frame) {
@@ -505,12 +542,55 @@ function __getOrBuildHeroOutlineTexture(
 
     // Build a binary mask of "solid" pixels from alpha (>0).
     const solid = new Uint8Array(cw * ch);
+
+    // ------------------------------------------------------------
+    // Silhouette metrics (from `solid[]`) for Strength + other FX
+    // ------------------------------------------------------------
+    const cx = (cw - 1) / 2;
+    const cy = (ch - 1) / 2;
+
+    let maxR = 0;
+    let leadUp = 0, leadDown = 0, leadLeft = 0, leadRight = 0;
+
+
+
     for (let y = 0; y < ch; y++) {
         for (let x = 0; x < cw; x++) {
             const i = (y * cw + x) * 4;
             solid[y * cw + x] = data[i + 3] > 0 ? 1 : 0;
         }
     }
+
+
+    for (let y = 0; y < ch; y++) {
+        for (let x = 0; x < cw; x++) {
+            if (!solid[y * cw + x]) continue;
+
+            const dx = x - cx;
+            const dy = y - cy;
+
+            const r = Math.sqrt(dx * dx + dy * dy);
+            if (r > maxR) maxR = r;
+
+            // cardinal projections
+            if (dx > leadRight) leadRight = dx;
+            if (-dx > leadLeft) leadLeft = -dx;
+            if (dy > leadDown) leadDown = dy;
+            if (-dy > leadUp) leadUp = -dy;
+        }
+    }
+
+    __heroAuraMetricsCache.set(cacheKey, {
+        innerR: maxR,
+        leadUp,
+        leadDown,
+        leadLeft,
+        leadRight,
+        w: cw,
+        h: ch
+    });
+
+
 
     // Outline pixel = NOT solid, but within 'radius' of a solid pixel.
     const outline = new Uint8Array(cw * ch);
@@ -554,20 +634,394 @@ function __getOrBuildHeroOutlineTexture(
     ctex.refresh();
 
     __heroAuraOutlineCache.set(cacheKey, outTexKey);
+
+
+
+    const tPerf1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    __auraPerf_buildMs += (tPerf1 - tPerf0);
+    __auraPerf_totalMs += (tPerf1 - tPerf0);
+
+    // Report once/sec (keep it small)
+    if (!__auraPerf_lastReportMs) __auraPerf_lastReportMs = tPerf1;
+    if (tPerf1 - __auraPerf_lastReportMs >= 1000) {
+        console.log(
+            "[perf.auraOutline]",
+            "calls=", __auraPerf_calls,
+            "hit=", __auraPerf_hits,
+            "miss=", __auraPerf_misses,
+            "buildMs≈", __auraPerf_buildMs.toFixed(2),
+            "totalMs≈", __auraPerf_totalMs.toFixed(2)
+        );
+        __auraPerf_lastReportMs = tPerf1;
+        __auraPerf_calls = 0;
+        __auraPerf_hits = 0;
+        __auraPerf_misses = 0;
+        __auraPerf_buildMs = 0;
+        __auraPerf_totalMs = 0;
+    }
+
+
     return outTexKey;
 }
+
+
+
+
+// ------------------------------------------------------------
+// 1-bit outline mask caching (packed bitset)
+// Keyed by: texKey|frameName|r
+// ------------------------------------------------------------
+
+type MaskEntry = {
+    w: number;
+    h: number;
+    // Packed bits: bit i means pixel i is ON
+    bits: Uint32Array;
+};
+
+const __auraMaskCache = new Map<string, MaskEntry>();
+
+function __maskKey(texKey: string, frameName: string, r: number): string {
+    return `${texKey}|${frameName}|r=${r}`;
+}
+
+function __bitIndex(x: number, y: number, w: number): number {
+    return y * w + x;
+}
+
+function __getBit(bits: Uint32Array, i: number): boolean {
+    return (bits[i >>> 5] & (1 << (i & 31))) !== 0;
+}
+
+function __setBit(bits: Uint32Array, i: number): void {
+    bits[i >>> 5] |= (1 << (i & 31));
+}
+
+function __allocBits(w: number, h: number): Uint32Array {
+    const n = w * h;
+    const words = (n + 31) >>> 5;
+    return new Uint32Array(words);
+}
+
+// Draw a Phaser frame into a canvas and return ImageData
+function __readFrameImageData(scene: Phaser.Scene, texKey: string, frameName: string): ImageData {
+    const tex = scene.textures.get(texKey);
+    const frame = tex.get(frameName);
+
+    const w = frame.width;
+    const h = frame.height;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw the frame region from its source image
+    const src = (frame as any).source?.image as HTMLImageElement | HTMLCanvasElement | undefined;
+    if (!src) {
+        throw new Error(`[auraMask] no frame source image for ${texKey}:${frameName}`);
+    }
+
+    // Phaser Frame has cutX/cutY or x/y depending on build; support both
+    const sx = (frame as any).cutX ?? (frame as any).x ?? 0;
+    const sy = (frame as any).cutY ?? (frame as any).y ?? 0;
+
+    ctx.drawImage(src, sx, sy, w, h, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h);
+}
+
+// Build a 1-bit mask from alpha>0 pixels, then dilate by radius r
+function __buildDilatedMaskBitsFromImage(img: ImageData, r: number): MaskEntry {
+    const w = img.width;
+    const h = img.height;
+
+    // Base mask: alpha>0
+    const base = __allocBits(w, h);
+    const data = img.data;
+
+    // alpha channel index = 3
+    for (let y = 0; y < h; y++) {
+        const row = y * w;
+        for (let x = 0; x < w; x++) {
+            const a = data[(row + x) * 4 + 3];
+            if (a !== 0) __setBit(base, __bitIndex(x, y, w));
+        }
+    }
+
+    if (r <= 0) return { w, h, bits: base };
+
+    // Dilation: for each ON pixel, turn on neighbors in radius r
+    // (Simple square kernel; matches your r=2 use and is fast enough)
+    const out = __allocBits(w, h);
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const i = __bitIndex(x, y, w);
+            if (!__getBit(base, i)) continue;
+
+            const y0 = Math.max(0, y - r);
+            const y1 = Math.min(h - 1, y + r);
+            const x0 = Math.max(0, x - r);
+            const x1 = Math.min(w - 1, x + r);
+
+            for (let yy = y0; yy <= y1; yy++) {
+                const row = yy * w;
+                for (let xx = x0; xx <= x1; xx++) {
+                    __setBit(out, row + xx);
+                }
+            }
+        }
+    }
+
+    return { w, h, bits: out };
+}
+
+// Exported: get/build and cache 1-bit mask for a specific frame
+export function getOrBuildHeroAuraMaskBits(
+    scene: Phaser.Scene,
+    texKey: string,
+    frameName: string,
+    r: number
+): MaskEntry {
+    const key = __maskKey(texKey, frameName, r);
+    const hit = __auraMaskCache.get(key);
+    if (hit) return hit;
+
+    const img = __readFrameImageData(scene, texKey, frameName);
+    const entry = __buildDilatedMaskBitsFromImage(img, r);
+    __auraMaskCache.set(key, entry);
+    return entry;
+}
+
+
+
+
+
+// Exported: async prewarm all frames of a texture into 1-bit mask cache
+// AND pre-create the white aura textures that syncHeroAuraForNative() uses.
+export async function prewarmHeroAuraMasksAsync(
+    scene: Phaser.Scene,
+    texKey: string,
+    r: number,
+    onProgress?: (done: number, total: number) => void,
+    budgetMsPerTick = 6
+): Promise<void> {
+
+    console.log("[aura.prewarm] texKey=", texKey, "frames=", total, "radius=", r);
+
+    const tex = scene.textures.get(texKey);
+
+    // Prefer numeric spritesheet frames: 0..(frameTotal-1)
+    const base = tex.get("__BASE");
+    const total = (base && typeof (base as any).frameTotal === "number")
+    ? (base as any).frameTotal
+    : (tex.getFrameNames?.() ?? []).filter((n: any) => String(n) !== "__BASE").length;
+
+    const frameNames: string[] = [];
+    for (let fi = 0; fi < total; fi++) frameNames.push(String(fi));
+
+
+
+//    const tex = scene.textures.get(texKey);
+//    const frameNames = (tex.getFrameNames?.() ?? [])
+//        .filter((n: any) => String(n) !== "__BASE")
+//        .map(String);
+
+//    const total = frameNames.length;
+    let done = 0;
+
+    let i = 0;
+    while (i < frameNames.length) {
+        const t0 = performance.now();
+
+        while (i < frameNames.length) {
+            const frameName = frameNames[i++];
+
+            // 1) bits cache
+            const mask = getOrBuildHeroAuraMaskBits(scene, texKey, frameName, r);
+
+            // 2) texture cache (white base, tint at runtime)
+            const outTexKey = `__heroAuraBits__${texKey}::${frameName}::r${r}`;
+            if (!scene.textures.exists(outTexKey)) {
+                renderAuraTextureFromMaskBits(scene, outTexKey, mask, [255, 255, 255, 255]);
+            }
+
+            done++;
+            onProgress?.(done, total);
+
+            if (performance.now() - t0 > budgetMsPerTick) break;
+        }
+
+        // yield to keep UI responsive
+        await new Promise<void>((resolve) => scene.time.delayedCall(0, () => resolve()));
+    }
+}
+
+
+
+
+// Create (only once) a Phaser texture from a cached 1-bit mask
+export function renderAuraTextureFromMaskBits(
+    scene: Phaser.Scene,
+    outTexKey: string,
+    mask: MaskEntry,
+    rgba: [number, number, number, number] // alpha 0..255
+): void {
+    if (scene.textures.exists(outTexKey)) return; // IMPORTANT: don't recreate
+
+    const { w, h, bits } = mask;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+    const img = ctx.createImageData(w, h);
+    const data = img.data;
+
+    const [r, g, b, a] = rgba;
+
+    const n = w * h;
+    for (let i = 0; i < n; i++) {
+        if (!__getBit(bits, i)) continue;
+        const p = i * 4;
+        data[p + 0] = r;
+        data[p + 1] = g;
+        data[p + 2] = b;
+        data[p + 3] = a;
+    }
+
+    ctx.putImageData(img, 0, 0);
+    scene.textures.addCanvas(outTexKey, canvas);
+}
+
+
+
+
+
+
+
+
+export function prewarmHeroAuraOutlines(
+    scene: Phaser.Scene,
+    texKey: string,
+    radius: number,
+    budgetMsPerTick: number = 6
+): void {
+    const tex = scene.textures.get(texKey);
+    if (!tex) {
+        console.log("[aura.prewarm] missing texture:", texKey);
+        return;
+    }
+
+    // Phaser frame names include "__BASE" sometimes; skip it
+    const frames = (tex.getFrameNames ? tex.getFrameNames() : []) as (string | number)[];
+    const frameNames = frames.filter((f) => String(f) !== "__BASE");
+
+    console.log("[aura.prewarm] start tex=", texKey, "frames=", frameNames.length, "r=", radius);
+
+    let i = 0;
+    const step = () => {
+        const t0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+
+        while (i < frameNames.length) {
+            const frameName = frameNames[i++];
+            __getOrBuildHeroOutlineTexture(scene, texKey, frameName, radius);
+
+            const t1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+            if ((t1 - t0) >= budgetMsPerTick) break;
+        }
+
+        if (i < frameNames.length) {
+            // continue next tick
+            scene.time.delayedCall(0, step);
+        } else {
+            console.log("[aura.prewarm] done tex=", texKey, "frames=", frameNames.length, "r=", radius);
+        }
+    };
+
+    scene.time.delayedCall(0, step);
+}
+
+
+
+
+// heroAnimGlue.ts
+
+export function prewarmHeroAuraOutlinesAsync(
+    scene: Phaser.Scene,
+    texKey: string,
+    radius: number,
+    onProgress?: (done: number, total: number) => void,
+    budgetMsPerTick: number = 6
+): Promise<void> {
+    return new Promise((resolve) => {
+        const tex = scene.textures.get(texKey);
+        if (!tex) {
+            console.log("[aura.prewarm] missing texture:", texKey);
+            resolve();
+            return;
+        }
+
+        const frames = (tex.getFrameNames ? tex.getFrameNames() : []) as (string | number)[];
+        const frameNames = frames.filter((f) => String(f) !== "__BASE");
+        const total = frameNames.length;
+
+        let i = 0;
+
+        const step = () => {
+            const t0 =
+                (typeof performance !== "undefined" && performance.now)
+                    ? performance.now()
+                    : Date.now();
+
+            while (i < total) {
+                const frameName = frameNames[i++];
+                __getOrBuildHeroOutlineTexture(scene, texKey, frameName, radius);
+
+                if (onProgress) onProgress(i, total);
+
+                const t1 =
+                    (typeof performance !== "undefined" && performance.now)
+                        ? performance.now()
+                        : Date.now();
+
+                if ((t1 - t0) >= budgetMsPerTick) break;
+            }
+
+            if (i < total) {
+                scene.time.delayedCall(0, step);
+            } else {
+                console.log("[aura.prewarm] done tex=", texKey, "frames=", total, "r=", radius);
+                resolve();
+            }
+        };
+
+        console.log("[aura.prewarm] start tex=", texKey, "frames=", total, "r=", radius);
+        scene.time.delayedCall(0, step);
+    });
+}
+
+
+
 
 /**
  * Sync aura for a native Phaser hero sprite.
  *
  * - auraActive=false: hides aura if present
  * - auraActive=true : ensures a TRUE outline exists, matches current hero frame, and follows the hero
+ *
+ * Uses 1-bit mask cache + renders a white aura texture (then tint).
  */
 export function syncHeroAuraForNative(
     native: Phaser.GameObjects.Sprite,
     auraActive: boolean,
     auraColorIndex: number
 ): void {
+
+    const tAura0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+
     const scene = native.scene;
     const radius = 2;
 
@@ -587,14 +1041,26 @@ export function syncHeroAuraForNative(
         __heroAuraSpriteByHero.set(native, aura);
     }
 
-    // Ensure aura uses a TRUE outline texture for the current frame
-    const outlineTexKey = __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
+    // --- 1-bit mask path ---
+    const texKey = native.texture.key;
+    const frameName = String(native.frame.name);
 
-    // If outlineTexKey == native.texture.key fallback, use frame name; otherwise outline texture is single-frame
-    if (outlineTexKey === native.texture.key) {
-        aura.setTexture(native.texture.key, native.frame.name);
-    } else {
-        aura.setTexture(outlineTexKey);
+    // Build/get 1-bit dilated mask (cached)
+    const mask = getOrBuildHeroAuraMaskBits(scene, texKey, frameName, radius);
+
+    // One texture per (texKey, frame, radius). White pixels; tint handles color.
+    const outTexKey = `__heroAuraBits__${texKey}::${frameName}::r${radius}`;
+
+    // Only render once per outTexKey
+    if (!scene.textures.exists(outTexKey)) {
+        console.log("[aura.bits] MISS build", outTexKey);
+        renderAuraTextureFromMaskBits(scene, outTexKey, mask, [255, 255, 255, 255]);
+    }
+
+    // Ensure aura is using our generated texture (no frame needed; it's the whole canvas)
+    const curTexKey = aura.texture?.key || "";
+    if (curTexKey !== outTexKey) {
+        aura.setTexture(outTexKey);
     }
 
     // Match transform
@@ -610,7 +1076,42 @@ export function syncHeroAuraForNative(
     // Color + translucency
     aura.setTint(__tintForArcadeColorIndex(auraColorIndex));
     aura.setAlpha(0.85);
+
+    const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    const dt = tAura1 - tAura0;
+    if (dt > 2) console.log("[perf.auraSync] ms≈", dt.toFixed(2), "tex=", texKey, "frame=", frameName);
 }
+
+
+
+
+
+export function getHeroAuraLeadForNativeDir(
+    native: Phaser.GameObjects.Sprite,
+    radius: number,
+    dir: "up" | "down" | "left" | "right"
+): number {
+    const scene = native.scene;
+    const cacheKey = __outlineKeyForFrame(native.texture.key, native.frame.name, radius);
+    __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
+
+    const m = __heroAuraMetricsCache.get(cacheKey);
+    if (!m) return 0;
+
+    if (dir === "up") return m.leadUp;
+    if (dir === "down") return m.leadDown;
+    if (dir === "left") return m.leadLeft;
+    return m.leadRight;
+}
+
+export function getHeroAuraInnerRForNative(native: Phaser.GameObjects.Sprite, radius: number): number {
+    const scene = native.scene;
+    const cacheKey = __outlineKeyForFrame(native.texture.key, native.frame.name, radius);
+    __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
+    const m = __heroAuraMetricsCache.get(cacheKey);
+    return m ? m.innerR : 0;
+}
+
 
 
 // ----------------------------------------------------------

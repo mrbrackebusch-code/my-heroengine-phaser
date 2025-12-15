@@ -274,6 +274,15 @@ namespace SpriteKind {
 
 namespace HeroEngine {
 
+
+    export function __getHeroVisualInfo(hero: Sprite, nx: number, ny: number): number[] {
+        const innerR = getStrengthInnerRadiusForHero(hero)
+        const lead = findHeroLeadingEdgeDistance(hero, nx, ny)
+        return [innerR, lead, 0, 0]
+    }
+
+
+
     // Block-safe function type for student logic
     export type HeroLogicFn = (
         button: string,
@@ -496,7 +505,7 @@ function isMakeCodeArcadeRuntime(): boolean {
 // Debug flags
 // Used by: agility / integrator debug logging & probes
 // --------------------------------------------------------------
-const DEBUG_AGILITY = true
+const DEBUG_AGILITY = false
 const DBG_INTERVAL_MS = 50
 const DEBUG_INTEGRATOR = true
 const DBG_INT_INTERVAL_MS = 50
@@ -732,6 +741,19 @@ const HERO_DATA = {
     STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
     OWNER: "owner",                    // which player "owns" this hero
 
+
+
+    // STR charge (hold-to-charge) state
+    STR_CHARGING: "strChg",            // boolean
+    STR_CHARGE_BTN: "strChgBtn",       // number (button id)
+    STR_CHARGE_START_MS: "strChgS",    // number (ms)
+    STR_CHARGE_LAST_MS: "strChgL",     // number (ms)
+    STR_CHARGE_MAX_MS: "strChgMax",    // number (ms to full)
+    STR_CHARGE_ARC_DEG: "strChgDeg",   // number (0..360) current arc from charge
+    STR_CHARGE_MPD_X1000: "strChgMpd", // number (mana per degree * 1000)
+    STR_CHARGE_SPENT: "strChgSpent",   // number (debug/validation)
+
+
     // NEW: engine-side state we want exposed
     BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
     MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
@@ -751,7 +773,13 @@ const HERO_DATA = {
     PHASE: "phase",
 
     AURA_ACTIVE: "auraActive",
-    AURA_COLOR: "auraColor"
+    AURA_COLOR: "auraColor",
+
+    VIS_INNER_R: "visInnerR",
+    VIS_LEAD_EDGE: "visLeadEdge",
+    VIS_WTIP_X: "visWTipX",
+    VIS_WTIP_Y: "visWTipY"
+
 
 }
 
@@ -876,6 +904,17 @@ const PROJ_DATA = {
     SUPPORT_BUFF_DURATION: "supBuffDur"
 }
 
+
+
+
+// Strength charge button ids (matches updatePlayerInputs intent strings)
+const STR_BTN_NONE = 0
+const STR_BTN_A = 1
+const STR_BTN_B = 2
+const STR_BTN_AB = 3
+
+
+
 // --------------------------------------------------------------
 // Intellect spell sprite-data keys (non-enum string keys)
 // Used by: INT detonation & linger animation
@@ -918,6 +957,10 @@ let heroDamageAmpMult: number[] = [1, 1, 1, 1]   // damage amp from buffs (hooke
 
 let heroHPBars: StatusBarSprite[] = []
 let heroManaBars: StatusBarSprite[] = []
+
+let heroStrengthChargeBars: StatusBarSprite[] = []
+
+
 let enemyHPBars: StatusBarSprite[] = []
 let heroComboMeters: Sprite[] = []
 
@@ -2453,6 +2496,39 @@ function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
 // HP, Mana, Combo, Aura visuals. 
 // Owns bar creation + update per frame.
 
+const STATUS_KIND_STRENGTH_CHARGE = StatusBarKind.create()
+
+
+
+function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSprite {
+    let bar = heroStrengthChargeBars[heroIndex]
+    if (bar) return bar
+
+    bar = statusbars.create(20, 2, STATUS_KIND_STRENGTH_CHARGE)
+    bar.attachToSprite(hero); bar.setOffsetPadding(0, 0)
+
+    bar.max = 100
+    bar.value = 0
+    bar.setColor(2, 1, 3)
+
+    bar.setFlag(SpriteFlag.Invisible, true)
+    heroStrengthChargeBars[heroIndex] = bar
+    return bar
+}
+
+function setStrengthChargeBarPct(heroIndex: number, hero: Sprite, pct0to100: number): void {
+    const bar = ensureStrengthChargeBar(heroIndex, hero)
+    const pct = Math.max(0, Math.min(100, pct0to100 | 0))
+    bar.value = pct
+}
+
+function showStrengthChargeBar(heroIndex: number, hero: Sprite, show: boolean): void {
+    const bar = ensureStrengthChargeBar(heroIndex, hero)
+    bar.setFlag(SpriteFlag.Invisible, !show)
+}
+
+
+
 function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
     sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHPVal)
     sprites.setDataNumber(hero, HERO_DATA.HP, maxHPVal)
@@ -3108,8 +3184,8 @@ function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): numb
     const cx = w / 2
     const cy = h / 2
 
-    console.log("S-EDGE: img " + w + "x" + h + " cx=" + cx + " cy=" + cy +
-        " dir=(" + nx + "," + ny + ")")
+    //console.log("S-EDGE: img " + w + "x" + h + " cx=" + cx + " cy=" + cy +
+    //    " dir=(" + nx + "," + ny + ")")
 
     let lastOpaqueDist = 0
     let sawOpaque = false
@@ -3127,10 +3203,10 @@ function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): numb
         // Leaving the sprite bounds counts as "transparent"
         if (px < 0 || py < 0 || px >= w || py >= h) {
             if (sawOpaque) {
-                console.log("S-EDGE: out of bounds after opaque at d=" + d +
-                    " lastOpaque=" + lastOpaqueDist)
+                //console.log("S-EDGE: out of bounds after opaque at d=" + d +
+                //    " lastOpaque=" + lastOpaqueDist)
             } else {
-                console.log("S-EDGE: out of bounds before any opaque at d=" + d)
+                //console.log("S-EDGE: out of bounds before any opaque at d=" + d)
             }
             break
         }
@@ -3140,26 +3216,42 @@ function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): numb
         if (p != 0) {
             // Solid pixel – keep extending the edge
             if (!sawOpaque) {
-                console.log("S-EDGE: first opaque at d=" + d +
-                    " px=" + px + " py=" + py + " color=" + p)
+                //console.log("S-EDGE: first opaque at d=" + d +
+                //    " px=" + px + " py=" + py + " color=" + p)
             }
             lastOpaqueDist = d
             sawOpaque = true
         } else if (sawOpaque) {
             // First transparent after at least one solid pixel -> stop
-            console.log("S-EDGE: first transparent after opaque at d=" + d +
-                " lastOpaque=" + lastOpaqueDist)
+            //console.log("S-EDGE: first transparent after opaque at d=" + d +
+            //    " lastOpaque=" + lastOpaqueDist)
             break
         }
     }
 
-    console.log("S-EDGE: result sawOpaque=" + sawOpaque +
-        " lastOpaqueDist=" + lastOpaqueDist)
+    //console.log("S-EDGE: result sawOpaque=" + sawOpaque +
+    //    " lastOpaqueDist=" + lastOpaqueDist)
 
     if (!sawOpaque) return 0
     return lastOpaqueDist
 }
 
+
+
+function getHeroVisualInfoForStrength(hero: Sprite, nx: number, ny: number): number[] {
+    // Returns [innerR, leadEdge, wTipX, wTipY]
+    try {
+        const g: any = (globalThis as any)
+        const hook = g && g.__HeroEngineHooks && g.__HeroEngineHooks.getHeroVisualInfo
+        if (typeof hook === "function") return hook(hero, nx, ny)
+    } catch {
+        // ignore
+    }
+
+    // Fallback: engine-side default (Arcade pixel scan)
+    // You already added this in the HeroEngine namespace.
+    return (HeroEngine as any).__getHeroVisualInfo(hero, nx, ny)
+}
 
 
 function spawnStrengthSwingProjectile(
@@ -3188,8 +3280,27 @@ function spawnStrengthSwingProjectile(
     nx /= mag
     ny /= mag
 
-    // Inner radius: circle that fully contains hero sprite + aura + spacing
-    const inner0 = getStrengthInnerRadiusForHero(hero)
+
+    // Pull silhouette-derived geometry via hook (Phaser override) or fallback (Arcade scan)
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+    let inner0 = (vis[0] || 0)
+    let leadEdge = (vis[1] || 0)
+    let wTipX = (vis[2] || 0)
+    let wTipY = (vis[3] || 0)
+
+    // Safety fallback (should rarely hit if hook is installed)
+    if (inner0 <= 0) inner0 = 35
+    if (leadEdge <= 0) leadEdge = 32
+
+    // Where the thrust should START (leading edge, not max-radius circle)
+    // This keeps the “initiates from the front” feel you care about.
+    const AURA_THICKNESS = 1
+    const SPACING = 1
+    let frontStartR = leadEdge + AURA_THICKNESS + SPACING
+    if (frontStartR < 0) frontStartR = 0
+    if (frontStartR > inner0) frontStartR = inner0
+
+
 
     // ----------------------------------------------------
     // REACH: baseline just outside aura + trait-driven extra
@@ -3202,7 +3313,8 @@ function spawnStrengthSwingProjectile(
     const reachFromInner = baseExtraReach + tReach * extraPerPoint
 
     // Create initial image at progress = 0 (tiny nub / initial thrust)
-    const img0 = buildStrengthSmashBitmap(nx, ny, inner0, reachFromInner, totalArcDeg, 0)
+    const img0 = buildStrengthSmashBitmap(nx, ny, inner0, frontStartR, reachFromInner, totalArcDeg, 0)
+    //const img0 = buildStrengthSmashBitmap(nx, ny, inner0, reachFromInner, totalArcDeg, 0)
 
     const proj = sprites.create(img0, SpriteKind.HeroWeapon)
     proj.z = hero.z + 1
@@ -3224,6 +3336,11 @@ function spawnStrengthSwingProjectile(
     //  - "SS_REACH_FRONT" stores extra reach beyond inner0
     sprites.setDataNumber(proj, "SS_ATTACH", inner0)
     sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner)
+
+    sprites.setDataNumber(proj, "SS_FRONT_START", frontStartR)
+    sprites.setDataNumber(proj, "SS_WTIP_X", wTipX)
+    sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY)
+
 
     proj.lifespan = swingDuration
     heroProjectiles.push(proj)
@@ -3258,6 +3375,9 @@ function updateStrengthProjectilesMotionFor(
         return false
     }
 
+//    const frontStart = sprites.readDataNumber(proj, "SS_FRONT_START") || attachPx
+
+
     proj.vx = 0
     proj.vy = 0
 
@@ -3276,29 +3396,45 @@ function updateStrengthProjectilesMotionFor(
     const reachFromFront = (sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0)
     const t = Math.max(0, Math.min(1, age / Math.max(1, swingMs)))
 
-    console.log("S-UPDATE: heroIndex=" + heroIndex +
-        " age=" + age + "/" + swingMs +
-        " t=" + t +
-        " dir=(" + nx + "," + ny + ")" +
-        " attachPx=" + attachPx +
-        " reach=" + reachFromFront +
-        " heroPos=(" + hero.x + "," + hero.y + ")" +
-        " heroVel=(" + hero.vx + "," + hero.vy + ")" +
-        " projPos=(" + proj.x + "," + proj.y + ")" +
-        " projVel=(" + proj.vx + "," + proj.vy + ")")
+    //console.log("S-UPDATE: heroIndex=" + heroIndex +
+    //    " age=" + age + "/" + swingMs +
+    //    " t=" + t +
+    //    " dir=(" + nx + "," + ny + ")" +
+    //    " attachPx=" + attachPx +
+    //    " reach=" + reachFromFront +
+    //   " heroPos=(" + hero.x + "," + hero.y + ")" +
+    //    " heroVel=(" + hero.vx + "," + hero.vy + ")" +
+    //    " projPos=(" + proj.x + "," + proj.y + ")" +
+    //    " projVel=(" + proj.vx + "," + proj.vy + ")")
 
     const totalArcDeg = sprites.readDataNumber(proj, "SS_ARC_DEG") || 150
-    proj.setImage(buildStrengthSmashBitmap(nx, ny, attachPx, reachFromFront, totalArcDeg, t))
+    
+    const frontStart = sprites.readDataNumber(proj, "SS_FRONT_START") || attachPx
+
+    const lastT = sprites.readDataNumber(proj, "SS_LAST_T") || -1
+    if (lastT >= 0 && Math.abs(t - lastT) < 0.06) {
+        proj.setPosition(hero.x, hero.y)
+        return true
+    }
+    sprites.setDataNumber(proj, "SS_LAST_T", t)
+
+
+
+
+    proj.setImage(buildStrengthSmashBitmap(nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg, t))
     proj.setPosition(hero.x, hero.y)  // center-anchored
+
     return true
 }
 
 function buildStrengthSmashBitmap(
     nx: number, ny: number,
-    inner0: number, reachExtra: number,
+    inner0: number, frontStartR: number,
+    reachExtra: number,
     totalArcDeg: number,
     progress: number
 ): Image {
+
 
     // Clamp inputs
     if (progress < 0) progress = 0
@@ -3339,7 +3475,8 @@ function buildStrengthSmashBitmap(
         const tipR = inner0 + reachExtra * thrustT
 
         // Straight "spear" along forward direction, from inner0 → tipR.
-        for (let r = inner0; r <= tipR; r++) {
+        for (let r = frontStartR; r <= tipR; r++) {
+//        for (let r = inner0; r <= tipR; r++) {
             const px = nx * r
             const py = ny * r
             const ix = Math.round(px) + half
@@ -5809,13 +5946,13 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
 
-    console.log(
-        "[HE.spawned Enemy Of Kind]" +
-        "id=" + enemy.id +
-        " kind=" + enemy.kind +
-        " monsterId=" + monsterId +
-        " dataKeys=" + Object.keys((enemy as any).data || {})
-    )
+    //console.log(
+    //    "[HE.spawned Enemy Of Kind]" +
+    //    "id=" + enemy.id +
+    //    " kind=" + enemy.kind +
+    //    " monsterId=" + monsterId +
+    //    " dataKeys=" + Object.keys((enemy as any).data || {})
+    //)
 
     return enemy
 }
@@ -6199,13 +6336,13 @@ function updateEnemyHoming(nowMs: number) {
             // While in death phase, don't move; once the timer expires, destroy and clear arrays.
             if (nowMs >= deathUntil) {
 
-                console.log(
-                "[enemyHoming] DEATH HOLD",
-                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                "phase=", sprites.readDataString(enemy, "phase") || "(none)",
-                "x=", enemy.x, "y=", enemy.y,
-                "t=", nowMs
-                )
+                //console.log(
+                //"[enemyHoming] DEATH HOLD",
+                //"monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                //"phase=", sprites.readDataString(enemy, "phase") || "(none)",
+                //"x=", enemy.x, "y=", enemy.y,
+                //"t=", nowMs
+                //)
 
                 _lastEnemyHomingLogMs = nowMs
 
@@ -6270,14 +6407,14 @@ function updateEnemyHoming(nowMs: number) {
                 enemy.vy = 0
 
                 if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
-                    console.log(
-                        "[enemyHoming] ATTACK HOLD",
-                        "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                        "phase=", phaseStr,
-                        "x=", enemy.x, "y=", enemy.y,
-                        "vx=", enemy.vx, "vy=", enemy.vy,
-                        "t=", nowMs
-                    )
+                    //console.log(
+                    //    "[enemyHoming] ATTACK HOLD",
+                    //    "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                    //    "phase=", phaseStr,
+                    //    "x=", enemy.x, "y=", enemy.y,
+                    //    "vx=", enemy.vx, "vy=", enemy.vy,
+                    //    "t=", nowMs
+                    //)
                     _lastEnemyHomingLogMs = nowMs
                 }
                 continue
@@ -6389,13 +6526,13 @@ function updateEnemyHoming(nowMs: number) {
 
             const mid = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)"
             if (ei === 0) {
-                console.log(
-                    "[enemyHoming] START ATTACK",
-                    "monsterId=", mid,
-                    "phase=", "attack",
-                    "d2=", bestD2,
-                    "attackMs=", attackMs
-                )
+                //console.log(
+                //    "[enemyHoming] START ATTACK",
+                //    "monsterId=", mid,
+                //    "phase=", "attack",
+                //    "d2=", bestD2,
+                //    "attackMs=", attackMs
+                //)
             }
 
             // IMPORTANT: bail out of steering; _syncNativeSprites + monsterAnimGlue
@@ -6637,6 +6774,35 @@ function updateProjectilesCleanup() {
         if (destroyAt > 0 && now >= destroyAt) proj.destroy()
     }
 }
+
+
+
+
+function encodeIntentToStrBtnId(intent: string): number {
+    if (intent === "A") return STR_BTN_A
+    if (intent === "B") return STR_BTN_B
+    if (intent === "A+B") return STR_BTN_AB
+    return STR_BTN_NONE
+}
+
+function isStrBtnIdPressedForOwner(ownerId: number, btnId: number): boolean {
+    let ctrl: controller.Controller = null
+    if (ownerId === 1) ctrl = controller.player1
+    else if (ownerId === 2) ctrl = controller.player2
+    else if (ownerId === 3) ctrl = controller.player3
+    else if (ownerId === 4) ctrl = controller.player4
+    if (!ctrl) return false
+
+    const a = ctrl.A.isPressed()
+    const b = ctrl.B.isPressed()
+
+    if (btnId === STR_BTN_A) return a
+    if (btnId === STR_BTN_B) return b
+    if (btnId === STR_BTN_AB) return a && b
+    return false
+}
+
+
 
 function updatePlayerInputs() {
     const aNow1 = controller.player1.A.isPressed()
@@ -7143,7 +7309,7 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     const idx = randint(0, enemySpawners.length - 1)
     const s = enemySpawners[idx]
     const kind = pickEnemyKindForWave(currentWaveIndex)
-    console.log("Making a call to spawn enemy Of Kind")
+    //console.log("Making a call to spawn enemy Of Kind")
     spawnEnemyOfKind(kind, s.x, s.y)
 })
 
