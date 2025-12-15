@@ -16,6 +16,11 @@ import { installHeroAnimTester } from "./heroAnimGlue";
 import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
 import { WorldTileRenderer } from "./tileMapGlue";
 
+
+import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
+
+
+
 // Somewhere near the top of main.ts:
 declare const globalThis: any;
 
@@ -111,7 +116,91 @@ class HeroScene extends Phaser.Scene {
         };
 
 
-        buildHeroAtlas(this);                       // or rely on lazy build
+//        buildHeroAtlas(this);                       // or rely on lazy build
+
+        const loadingText = this.add.text(12, 12, "Loading…", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        }).setScrollFactor(0).setDepth(9999);
+
+
+        buildHeroAtlas(this);
+
+
+
+        // ------------------------------------------------------------
+        // PREWARM (awaitable) – blocks network join until caches ready
+        // Requires: import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
+        // Requires: const loadingText = this.add.text(...)
+        // Requires: buildHeroAtlas(this) already called
+        // ------------------------------------------------------------
+        const AURA_R = 2;
+        const parsedSheets = (this.registry.get("__heroParsedSheets") || []) as any[];
+
+
+
+        // Gather tex keys we want to warm (WARM BOTH base + _192 if they exist)
+        const texKeysToWarmSet = new Set<string>();
+
+        for (const sheet of parsedSheets) {
+            const baseKey = sheet.textureKey;
+            const key192 = baseKey + "_192";
+
+            if (this.textures.exists(baseKey)) texKeysToWarmSet.add(baseKey);
+            if (this.textures.exists(key192)) texKeysToWarmSet.add(key192);
+        }
+
+        const texKeysToWarm = Array.from(texKeysToWarmSet);
+
+
+
+
+
+        // Count total frames across all textures (for stable percent)
+        const frameCounts: Record<string, number> = {};
+        let grandTotal = 0;
+
+        for (const k of texKeysToWarm) {
+            const tex = this.textures.get(k);
+            const names = (tex?.getFrameNames ? tex.getFrameNames() : []) as any[];
+            const count = names.filter((f: any) => String(f) !== "__BASE").length;
+            frameCounts[k] = count;
+            grandTotal += count;
+        }
+        if (grandTotal <= 0) grandTotal = 1;
+
+        // Progress
+        let grandDone = 0;
+        loadingText.setText("Loading… 0%");
+
+        // Run all warmups (in parallel). Each warmup time-slices itself via delayedCall.
+        await Promise.all(
+            texKeysToWarm.map(async (k) => {
+                let lastDoneForThisTex = 0;
+
+                await prewarmHeroAuraOutlinesAsync(
+                    this,
+                    k,
+                    AURA_R,
+                    (done, _total) => {
+                        // Increment global progress by the delta for this texture
+                        const delta = done - lastDoneForThisTex;
+                        if (delta > 0) {
+                            lastDoneForThisTex = done;
+                            grandDone += delta;
+
+                            const pct = Math.min(100, Math.floor((grandDone / grandTotal) * 100));
+                            loadingText.setText(`Loading… ${pct}%`);
+                        }
+                    }
+                    // optional budgetMsPerTick as 5th arg if you want, e.g. , 6
+                );
+            })
+        );
+
+        loadingText.setText("Loading… 100%");
+        loadingText.destroy();
+        // ------------------------------------------------------------
 
         console.log(">>> [HeroScene.create] building tile atlas");
         this.tileAtlas = buildTileAtlas(this);

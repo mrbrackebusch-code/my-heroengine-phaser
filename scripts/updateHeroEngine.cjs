@@ -127,6 +127,32 @@ if (typeof globalThis !== "undefined") {
         const g: any = globalThis as any;
         g.__HeroEnginePhaserInternals = g.__HeroEnginePhaserInternals || {};
 
+        // ----------------------------------------------------------
+        // Phaser-only hook container: engine asks, Phaser answers
+        // ----------------------------------------------------------
+        (() => {
+            try {
+                const g: any = globalThis as any;
+                g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+
+                // Optional: provide a safe default that just calls the engine-side
+                // (Arcade) implementation. Phaser can overwrite this later.
+                if (typeof g.__HeroEngineHooks.getHeroVisualInfo !== "function") {
+                    g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
+                        // Call the engine’s own fallback implementation (pixel scan)
+                        // This exists because you added it in the HeroEngine namespace.
+                        return (HeroEngine as any).__getHeroVisualInfo(hero, nx, ny);
+                    };
+                }
+
+                console.log(">>> [HeroEngineInPhaser] ensured __HeroEngineHooks.getHeroVisualInfo (default)");
+            } catch {
+                // silent
+            }
+        })();
+
+
+        
         g.__HeroEnginePhaserInternals.getWorldTileMap = function (): number[][] {
             return _engineWorldTileMap;
         };
