@@ -234,6 +234,14 @@ export function setHeroAnimDebugSectionFlag(
 // 1. Discover hero spritesheets
 // ----------------------------------------------------------
 
+
+const heroAuraPngs = import.meta.glob(
+    "../assets/auras/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+
+
 // Mirrors monsterAtlas: we eagerly glob all hero PNGs in ../assets/heroes.
 const heroPngs = import.meta.glob(
     "../assets/heroes/*.png",
@@ -309,6 +317,7 @@ function parseHeroFilename(baseName: string, url: string): ParsedHeroSheet | nul
  * register the 192×192 variant; sheets without oversize will just
  * never use those frames in the atlas.
  */
+
 export function preloadHeroSheets(scene: Phaser.Scene): void {
     const parsedSheets: ParsedHeroSheet[] = [];
 
@@ -336,8 +345,8 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
             frameHeight: HERO_FRAME_H
         });
 
-        // Oversize 192×192 grid (3×3 over the same image).
-        // Atlas will only actually use this if we detect extra rows.
+        // Oversize 192×192 grid view (3×3 over the same image).
+        // Whether we USE it is decided later by buildHeroAtlas (oversize rows detection).
         scene.load.spritesheet(sheet.textureKey + "_192", sheet.url, {
             frameWidth: HERO_OVERSIZE_FRAME_W,
             frameHeight: HERO_OVERSIZE_FRAME_H
@@ -346,7 +355,51 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
 
     // Stash the parsed list so buildHeroAtlas can reuse without reparsing.
     (scene.registry as any).set("__heroParsedSheets", parsedSheets);
+
+    // Build aura url lookup by baseName (filename without .png)
+    const auraUrlById = new Map<string, string>();
+    for (const [p, url] of Object.entries(heroAuraPngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4); // no .png
+        auraUrlById.set(base, url);
+    }
+
+    for (const sheet of parsedSheets) {
+        // --------------------------
+        // REQUIRED 64×64 aura sheet
+        // --------------------------
+        const auraBase64 = `${sheet.id}_aura_r2`;
+        const auraUrl64 = auraUrlById.get(auraBase64);
+        if (!auraUrl64) {
+            throw new Error(
+                `[AURA-MISSING] Missing aura spritesheet for ${sheet.id}. ` +
+                `Expected assets/auras/${auraBase64}.png. ` +
+                `Run: npm run gen-auras`
+            );
+        }
+
+        scene.load.spritesheet(`${sheet.textureKey}_aura_r2`, auraUrl64, {
+            frameWidth: HERO_FRAME_W,
+            frameHeight: HERO_FRAME_H
+        });
+
+        // --------------------------
+        // OPTIONAL 192×192 aura sheet
+        // (only load if present on disk)
+        // --------------------------
+        const auraBase192 = `${sheet.id}_192_aura_r2`;
+        const auraUrl192 = auraUrlById.get(auraBase192);
+        if (auraUrl192) {
+            scene.load.spritesheet(`${sheet.textureKey}_192_aura_r2`, auraUrl192, {
+                frameWidth: HERO_OVERSIZE_FRAME_W,
+                frameHeight: HERO_OVERSIZE_FRAME_H
+            });
+        }
+    }
 }
+
+
 
 // ----------------------------------------------------------
 // 2. Helpers for frame indexing / normalization

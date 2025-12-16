@@ -77,6 +77,40 @@ let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
 
 
 
+// ======================================================
+// SYNC PERF BREAKDOWN (Heroes / Enemies / Extras)
+// ======================================================
+
+const PERF_GROUP_HERO = 0 as const;
+const PERF_GROUP_ENEMY = 1 as const;
+const PERF_GROUP_EXTRA = 2 as const;
+
+type PerfGroup = typeof PERF_GROUP_HERO | typeof PERF_GROUP_ENEMY | typeof PERF_GROUP_EXTRA;
+
+function _perfGroupName(g: PerfGroup): "H" | "E" | "X" {
+    return g === PERF_GROUP_HERO ? "H" : (g === PERF_GROUP_ENEMY ? "E" : "X");
+}
+
+function _perfGroupFromRole(role: string): PerfGroup {
+    // Your roles: HERO / ENEMY / ACTOR / PROJECTILE / OVERLAY / etc.
+    if (role === "HERO") return PERF_GROUP_HERO;
+    if (role === "ENEMY" || role === "ACTOR") return PERF_GROUP_ENEMY;
+    return PERF_GROUP_EXTRA;
+}
+
+// "current group" for the _attachNativeSprite call; set by _syncNativeSprites before calling attach
+let _syncAttachPerfGroup: PerfGroup = PERF_GROUP_EXTRA;
+
+// Per-frame accumulators (reset in _syncNativeSprites)
+let _frameGroupAttachMs = [0, 0, 0];       // total attach time
+let _frameGroupAttachTexMs = [0, 0, 0];    // texture create/recreate time
+let _frameGroupAttachPixelMs = [0, 0, 0];  // pixel upload time
+
+let _frameGroupAttachCalls = [0, 0, 0];
+let _frameGroupAttachCreates = [0, 0, 0];
+let _frameGroupAttachUpdates = [0, 0, 0];
+let _frameGroupAttachEarlyOuts = [0, 0, 0];
+
 
 
 
@@ -310,6 +344,10 @@ interface Math {
 
 
 
+
+
+
+
 // Debug helpers
 function dumpImagePixels(tag: string, img: Image) {
     if (!img) {
@@ -489,6 +527,40 @@ class Image {
 
 }
 
+
+
+// --------------------------------------------------------------
+// MakeCode Arcade compat: Image.drawRect
+// --------------------------------------------------------------
+
+interface Image {
+    drawRect(x: number, y: number, w: number, h: number, c: number): void
+}
+
+(Image as any).prototype.drawRect = function (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    c: number
+): void {
+    if (!this || w <= 0 || h <= 0) return
+
+    const x2 = x + w - 1
+    const y2 = y + h - 1
+
+    // Top + bottom
+    for (let px = x; px <= x2; px++) {
+        this.setPixel(px, y, c)
+        this.setPixel(px, y2, c)
+    }
+
+    // Left + right
+    for (let py = y; py <= y2; py++) {
+        this.setPixel(x, py, c)
+        this.setPixel(x2, py, c)
+    }
+}
 
 
 
@@ -1278,9 +1350,16 @@ function _tryApplyHeroAnimationForNative(
 
 
 
+
 function _attachNativeSprite(s: Sprite): void {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
+
+    // Defensive: ensure group index is valid (0..2)
+    let g = (_syncAttachPerfGroup as any) | 0;
+    if (g !== 0 && g !== 1 && g !== 2) g = 2;
+
+    _frameGroupAttachCalls[g]++;
 
     const tA0 = _hostPerfNowMs();
 
@@ -1288,6 +1367,8 @@ function _attachNativeSprite(s: Sprite): void {
         if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log("[_attachNativeSprite] NO SCENE — skipping for sprite", s.id);
         }
+        _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
         return;
     }
 
@@ -1296,6 +1377,7 @@ function _attachNativeSprite(s: Sprite): void {
             console.log("[_attachNativeSprite] sprite has NO image", s);
         }
         _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
         return;
     }
 
@@ -1304,15 +1386,11 @@ function _attachNativeSprite(s: Sprite): void {
     const texKey = "sprite_" + s.id;
 
     // --- HERO NATIVE SKIP PATH -------------------------------------------
-    // Real heroes skip the pixel-upload path entirely and use a shared
-    // 64x64 placeholder texture + Sprite, so heroAnimGlue can later
-    // take over visuals from heroAtlas.
     const isHero = isHeroSprite(s);
 
     if (isHero) {
         const HERO_PLACEHOLDER_TEX_KEY = "__heroPlaceholder64";
 
-        // Ensure we have a shared 64x64 canvas texture for hero placeholders.
         let heroTex = sc.textures.exists(HERO_PLACEHOLDER_TEX_KEY)
             ? (sc.textures.get(HERO_PLACEHOLDER_TEX_KEY) as Phaser.Textures.CanvasTexture)
             : null;
@@ -1322,8 +1400,6 @@ function _attachNativeSprite(s: Sprite): void {
             const ctxHero = heroTex.context;
             if (ctxHero) {
                 ctxHero.clearRect(0, 0, 64, 64);
-
-                // Simple white outline so we can see something.
                 ctxHero.strokeStyle = "#ffffff";
                 ctxHero.lineWidth = 2;
                 ctxHero.strokeRect(1, 1, 62, 62);
@@ -1333,17 +1409,12 @@ function _attachNativeSprite(s: Sprite): void {
 
         let native: any = s.native;
 
-
         if (!native) {
-            // Create a real Sprite (not Image) so animations will work later.
             native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
             native.setOrigin(0.5, 0.5);
             native.setData("isHeroNative", true);
 
-            // NEW: mirror hero identity + phase/dir onto the native sprite
             _copyHeroIdentityToNative(s, native);
-
-            // NEW: on first attach, try to apply hero animation
             _tryApplyHeroAnimationForNative(s, native);
 
             s.native = native;
@@ -1358,33 +1429,31 @@ function _attachNativeSprite(s: Sprite): void {
                     "| native.height", native.height
                 );
             }
+
+            _frameAttachCreateCount++;
+            _frameGroupAttachCreates[g]++;
         } else {
-            // Keep native hero sprite in sync with Arcade sprite position.
             native.setPosition(s.x, s.y);
-
-            // NEW: keep hero identity + phase/dir in sync on reuse
             _copyHeroIdentityToNative(s, native);
-
-            // NEW: on first attach, try to apply hero animation
             _tryApplyHeroAnimationForNative(s, native);
+
+            _frameAttachUpdateCount++;
+            _frameGroupAttachUpdates[g]++;
         }
-
-
 
         // For visibility logic that uses nonZero pixels, just mark as non-empty.
         (s as any)._lastNonZeroPixels = 1;
 
         const tA1 = _hostPerfNowMs();
-        _frameAttachMsAccum += (tA1 - tA0);
-        _frameAttachUpdateCount++; // treat as "update" for stats
+        const dA = (tA1 - tA0);
+
+        _frameAttachMsAccum += dA;
+        _frameGroupAttachMs[g] += dA;
+
         return;
     }
     // ---------------------------------------------------------------------
 
-
-    // If this sprite's native is already using a non-MakeCode texture
-    // (e.g., an LPC spritesheet like "bee" or "imp blue"),
-    // skip the pixel-upload path and just keep its position in sync elsewhere.
     const existingNative: any = s.native;
     if (
         existingNative &&
@@ -1392,13 +1461,27 @@ function _attachNativeSprite(s: Sprite): void {
         existingNative.texture.key &&
         existingNative.texture.key !== texKey
     ) {
+        // Native exists but is NOT our per-sprite texture key.
+        // This is your "prebuilt/native-managed" early-out path:
+        // - we still updated position (counts as an UPDATE)
+        // - we also mark as EARLY-OUT because we skipped pixel upload
         existingNative.x = s.x;
         existingNative.y = s.y;
+
+        _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
+
+        _frameAttachUpdateCount++;
+        _frameGroupAttachUpdates[g]++;
+
+        const tA1 = _hostPerfNowMs();
+        const dA = (tA1 - tA0);
+
+        _frameAttachMsAccum += dA;
+        _frameGroupAttachMs[g] += dA;
+
         return;
     }
-
-
-
 
     if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
         console.error(
@@ -1410,6 +1493,7 @@ function _attachNativeSprite(s: Sprite): void {
             "image=", s.image
         );
         _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
         return;
     }
 
@@ -1420,11 +1504,7 @@ function _attachNativeSprite(s: Sprite): void {
             "w,h=", w, h,
             "pixelsLen=", w * h,
         );
-
-
-   }
-
-
+    }
 
     // --- TEXTURE HANDLING -------------------------------------------------
     const tTex0 = _hostPerfNowMs();
@@ -1433,7 +1513,6 @@ function _attachNativeSprite(s: Sprite): void {
         ? (sc.textures.get(texKey) as Phaser.Textures.CanvasTexture)
         : null;
 
-    // If a texture exists but its size doesn't match the MakeCode image, destroy it
     if (tex) {
         const src = tex.source[0];
         const texW = src.width | 0;
@@ -1453,7 +1532,6 @@ function _attachNativeSprite(s: Sprite): void {
         }
     }
 
-    // (Re)create texture with the correct size
     if (!tex) {
         tex = sc.textures.createCanvas(texKey, w, h);
 
@@ -1468,19 +1546,17 @@ function _attachNativeSprite(s: Sprite): void {
     }
 
     const tTex1 = _hostPerfNowMs();
-    _frameAttachTexMs += (tTex1 - tTex0);
+    const dTex = (tTex1 - tTex0);
 
-
-
-
+    _frameAttachTexMs += dTex;
+    _frameGroupAttachTexMs[g] += dTex;
 
     // --- PIXEL UPLOAD -----------------------------------------------------
-
-    // Now tex is guaranteed to have width/height == image width/height
     const ctx = tex.context;
     if (!ctx) {
         console.error("[_attachNativeSprite] no 2D context for", texKey);
         _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
         return;
     }
 
@@ -1499,9 +1575,8 @@ function _attachNativeSprite(s: Sprite): void {
         const y = (i / w) | 0;
         const idx = i * 4;
 
-        const p = s.image.getPixel(x, y); // 0..15 palette index
+        const p = s.image.getPixel(x, y);
 
-        // Treat 0 as transparent, like Arcade
         if (p <= 0) {
             imgData.data[idx + 0] = 0;
             imgData.data[idx + 1] = 0;
@@ -1533,37 +1608,27 @@ function _attachNativeSprite(s: Sprite): void {
             continue;
         }
 
-        const [r, g, b] = color;
+        const [r, gg, b] = color;
         imgData.data[idx + 0] = r;
-        imgData.data[idx + 1] = g;
+        imgData.data[idx + 1] = gg;
         imgData.data[idx + 2] = b;
         imgData.data[idx + 3] = 255;
 
         nonZero++;
     }
 
-    // Cache for visibility logic (projectile/overlay auto-hide, etc.)
     (s as any)._lastNonZeroPixels = nonZero;
 
     ctx.putImageData(imgData, 0, 0);
     tex.refresh();
 
     const tPix1 = _hostPerfNowMs();
-    _frameAttachPixelMs += (tPix1 - tPix0);
+    const dPix = (tPix1 - tPix0);
 
+    _frameAttachPixelMs += dPix;
+    _frameGroupAttachPixelMs[g] += dPix;
 
-
-
-
-
-
-
-
-
-
-    // --- NATIVE IMAGE / SPRITE HANDLING --------------------------------------------
-
-    // If a native already exists but its size changed, destroy it so we can recreate.
+    // --- NATIVE IMAGE / SPRITE HANDLING -----------------------------------
     if (s.native) {
         const n: any = s.native;
         const nativeW = n.width | 0;
@@ -1587,11 +1652,9 @@ function _attachNativeSprite(s: Sprite): void {
     let didCreate = false;
 
     if (!native) {
-        // Decide whether this should be an animatable Sprite or a simple Image.
         const role = _classifySpriteRole((s.kind as number) || 0, Object.keys((s as any).data || {}));
         const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
 
-        // For enemies/actors, use Sprite so LPC animations can run.
         const n = isEnemyLike
             ? sc.add.sprite(s.x, s.y, texKey)
             : sc.add.image(s.x, s.y, texKey);
@@ -1612,11 +1675,9 @@ function _attachNativeSprite(s: Sprite): void {
             );
         }
     } else {
-        // Keep native in sync with Arcade sprite position.
         native.setPosition(s.x, s.y);
     }
 
-    // We already computed nonZero in the main upload loop.
     let nonZeroAttach = (s as any)._lastNonZeroPixels as number;
 
     if (DEBUG_SPRITE_PIXELS) {
@@ -1646,11 +1707,24 @@ function _attachNativeSprite(s: Sprite): void {
     }
 
     const tA1 = _hostPerfNowMs();
-    _frameAttachMsAccum += (tA1 - tA0);
+    const dA = (tA1 - tA0);
 
-    if (didCreate) _frameAttachCreateCount++;
-    else _frameAttachUpdateCount++;
+    _frameAttachMsAccum += dA;
+    _frameGroupAttachMs[g] += dA;
+
+    if (didCreate) {
+        _frameAttachCreateCount++;
+        _frameGroupAttachCreates[g]++;
+    } else {
+        _frameAttachUpdateCount++;
+        _frameGroupAttachUpdates[g]++;
+    }
 }
+
+
+
+
+
 
 
 //
@@ -1890,6 +1964,7 @@ let _syncPerfLastReportMs = 0;
 // ======================================================
 // PHASER NATIVE SPRITE SYNC
 // ======================================================
+
 export function _syncNativeSprites(): void {
     const t0 = _hostPerfNowMs()
     _syncCallCount++;
@@ -1899,16 +1974,11 @@ export function _syncNativeSprites(): void {
     // Decide whether to log this frame
     let shouldLog = false;
 
-    // 1) Early startup: log the first few frames
     if (_syncCallCount <= MAX_SYNC_VERBOSE) {
         shouldLog = true;
-    }
-    // 2) After that: log every SYNC_EVERY_N_AFTER frames
-    else if (_syncCallCount % SYNC_EVERY_N_AFTER === 0) {
+    } else if (_syncCallCount % SYNC_EVERY_N_AFTER === 0) {
         shouldLog = true;
-    }
-    // 3) Long-term: log every SPRITE_SYNC_LOG_MOD frames
-    else if (_syncCallCount % SPRITE_SYNC_LOG_MOD === 0) {
+    } else if (_syncCallCount % SPRITE_SYNC_LOG_MOD === 0) {
         shouldLog = true;
     }
 
@@ -1920,18 +1990,17 @@ export function _syncNativeSprites(): void {
             "spriteCount=", _allSprites.length
         );
     }
-    
 
     // --- per-frame perf counters + timers ---------------------
-    let removedHard = 0;       // Destroyed/engineDestroyed/imageGone
-    let removedByPixels = 0;   // autoHideByPixels -> PIXEL-DESTROY
-    let frameAttachCount = 0;  // how many times we call _attachNativeSprite
+    let removedHard = 0;
+    let removedByPixels = 0;
+    let frameAttachCount = 0;
 
-    let tSceneEnd = t0;        // after scene checks
-    let tLoopStart = 0;        // start of main sprite loop
-    let tLoopEnd = 0;          // end of main sprite loop
+    let tSceneEnd = t0;
+    let tLoopStart = 0;
+    let tLoopEnd = 0;
 
-    // Attach timing / counts (global accumulators for this frame)
+    // Reset global accumulators for this frame
     _frameAttachMsAccum = 0;
     _frameAttachCreateCount = 0;
     _frameAttachUpdateCount = 0;
@@ -1939,28 +2008,30 @@ export function _syncNativeSprites(): void {
     _frameAttachPixelMs = 0;
     _frameAttachEarlyOutCount = 0;
 
+    // Reset per-group accumulators for this frame
+    _frameGroupAttachMs[0] = 0; _frameGroupAttachMs[1] = 0; _frameGroupAttachMs[2] = 0;
+    _frameGroupAttachTexMs[0] = 0; _frameGroupAttachTexMs[1] = 0; _frameGroupAttachTexMs[2] = 0;
+    _frameGroupAttachPixelMs[0] = 0; _frameGroupAttachPixelMs[1] = 0; _frameGroupAttachPixelMs[2] = 0;
 
+    _frameGroupAttachCalls[0] = 0; _frameGroupAttachCalls[1] = 0; _frameGroupAttachCalls[2] = 0;
+    _frameGroupAttachCreates[0] = 0; _frameGroupAttachCreates[1] = 0; _frameGroupAttachCreates[2] = 0;
+    _frameGroupAttachUpdates[0] = 0; _frameGroupAttachUpdates[1] = 0; _frameGroupAttachUpdates[2] = 0;
+    _frameGroupAttachEarlyOuts[0] = 0; _frameGroupAttachEarlyOuts[1] = 0; _frameGroupAttachEarlyOuts[2] = 0;
 
+    // Group sprite counts (what is piling up)
+    let groupLiveCounts = [0, 0, 0] as number[];
 
-
-    // If Phaser scene isn’t ready yet, don’t touch textures / natives
     if (!sc) {
         if (shouldLog) console.log("[_syncNativeSprites] no scene yet");
         return;
     }
 
-    // mark end of scene-check step
     tSceneEnd = _hostPerfNowMs();
 
-    // Local alias so we can use this in perf + loops
     const all = _allSprites;
 
-
-    // mark start of main sprite loop
     tLoopStart = _hostPerfNowMs();
 
-
-    // Walk backwards so we can safely splice destroyed sprites
     for (let i = all.length - 1; i >= 0; i--) {
         const s = all[i];
         if (!s) {
@@ -1978,7 +2049,6 @@ export function _syncNativeSprites(): void {
         const hardDead = hasDestroyedFlag || engineDestroyed || imageGone;
 
         if (hardDead) {
-            
             removedHard++;
 
             if (shouldLog && (s.kind === 11 || s.kind === 12)) {
@@ -2004,9 +2074,6 @@ export function _syncNativeSprites(): void {
 
             const texKey = "sprite_" + s.id;
 
-
-
-
             if (sc.textures && sc.textures.exists(texKey)) {
                 sc.textures.remove(texKey);
             }
@@ -2016,8 +2083,22 @@ export function _syncNativeSprites(): void {
         }
 
         // --- LIVE SPRITE PATH ------------------------------------------------
+
+        // Pre-classify group BEFORE attach so attach time gets bucketed.
+        const dataKeysPre = Object.keys((s as any).data || {});
+        const rolePre = _classifySpriteRole(s.kind, dataKeysPre);
+        const group = _perfGroupFromRole(rolePre);
+
+        groupLiveCounts[group]++;
+
+        // Set group for _attachNativeSprite() to attribute time correctly.
+        _syncAttachPerfGroup = group;
+
         frameAttachCount++;
         _attachNativeSprite(s);
+
+        // Reset default (defensive)
+        _syncAttachPerfGroup = PERF_GROUP_EXTRA;
 
         const native = s.native as any;
         if (!native) {
@@ -2031,49 +2112,33 @@ export function _syncNativeSprites(): void {
             continue;
         }
 
-
-
         native.x = s.x;
         native.y = s.y;
-
-
 
         const dataKeys = Object.keys(s.data || {});
         const role = _classifySpriteRole(s.kind, dataKeys);
 
-        // --- HERO ANIM GLUE HOOK (phase/dir-change gated) -------------------
+        // --- HERO ANIM GLUE HOOK --------------------------------------------
         if (role === "HERO") {
             const nativeAny: any = s.native;
             if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
                 _tryApplyHeroAnimationForNative(s, nativeAny as Phaser.GameObjects.Sprite);
 
-                // ------------------------------------------------------------
-                // HERO AURA (Phaser-side, true LPC silhouette)
-                // ------------------------------------------------------------
                 const auraActive = !!(s.data && (s.data as any)["auraActive"]);
                 const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
-
 
                 heroAnimGlue.syncHeroAuraForNative(
                     s.native,
                     auraActive,
                     auraColor
                 );
-
             }
         }
-        // --------------------------------------------------------------------
-
-
-
-        // --------------------------------------------------------------------
 
         if (role === "ENEMY" || role === "ACTOR") {
-            // Engine-side data bag
             if (!(s as any).data) (s as any).data = {};
             const data: any = (s as any).data;
 
-            // Pull canonical fields from the engine data
             const monsterId =
                 sprites.readDataString(s, "monsterId") ||
                 sprites.readDataString(s, "enemyName") ||
@@ -2087,14 +2152,12 @@ export function _syncNativeSprites(): void {
 
             let dir = sprites.readDataString(s, "dir") as MonsterDirection | undefined;
             if (!dir) {
-                // Fallback: infer direction from velocity if dir isn't explicitly set
                 if (s.vx > 0)      dir = "right";
                 else if (s.vx < 0) dir = "left";
                 else if (s.vy > 0) dir = "down";
                 else               dir = "up";
             }
 
-            // Mirror back into the engine data bag for consistency
             if (monsterId) data["monsterId"] = monsterId;
             if (monsterId && !data["name"]) data["name"] = monsterId;
             data["phase"] = phase;
@@ -2105,13 +2168,11 @@ export function _syncNativeSprites(): void {
                 continue;
             }
 
-            // Push into Phaser DataManager so MonsterAnimGlue can read it
             nativeAny.setData("monsterId", monsterId);
             nativeAny.setData("name",      monsterId);
             nativeAny.setData("phase",     phase);
             nativeAny.setData("dir",       dir);
 
-            // --- Drive LPC animation every sync ---
             const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
             const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
 
@@ -2121,35 +2182,10 @@ export function _syncNativeSprites(): void {
                 glueAny.applyMonsterAnimationForSprite(enemySprite);
             }
 
-            // Focused debug for imp blue so we can see what anim actually plays
-            if (false) { //monsterId === "imp blue") {
-                console.log(
-                    "[SYNC→Phaser] imp blue",
-                    "phase=", phase,
-                    "dir=", dir,
-                    "texKey=", enemySprite.texture && enemySprite.texture.key,
-                    "currentAnim=",
-                        enemySprite.anims &&
-                        enemySprite.anims.currentAnim &&
-                        enemySprite.anims.currentAnim.key
-                );
-            }
-
             continue;
         }
 
-
-
-
-
-
-
-
-
-
-
-
-        // EXTRA DEBUG: raw projectile state before visibility logic
+        // EXTRA DEBUG: raw projectile state
         if (DEBUG_PROJECTILE_NATIVE && shouldLog && s.kind === 11) {
             console.log(
                 "[SYNC-PROJ-RAW]",
@@ -2173,19 +2209,15 @@ export function _syncNativeSprites(): void {
             );
         }
 
-
-
         const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
         const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
         const autoHideByPixels = lastNonZero === 0;
 
-        // For projectiles / overlays / small move FX, a fully blank image = done
         const deadByPixels =
             autoHideByPixels &&
             (s.kind === 11 || s.kind === 12 || s.kind === 9100);
 
         if (deadByPixels) {
-
             removedByPixels++;
 
             if (shouldLog) {
@@ -2209,8 +2241,6 @@ export function _syncNativeSprites(): void {
 
             const texKey = "sprite_" + s.id;
 
-
-
             if (sc.textures && sc.textures.exists(texKey)) {
                 sc.textures.remove(texKey);
             }
@@ -2223,7 +2253,6 @@ export function _syncNativeSprites(): void {
         native.visible = shouldBeVisible;
         native.alpha = shouldBeVisible ? 1 : 0;
 
-        // EXTRA DEBUG: projectile visibility outcome every frame
         if (DEBUG_PROJECTILE_NATIVE && shouldLog && s.kind === 11) {
             console.log(
                 "[SYNC-PROJ-VIS]",
@@ -2238,7 +2267,6 @@ export function _syncNativeSprites(): void {
             );
         }
 
-        // Focus logging ONLY on projectile + overlay kinds
         if (shouldLog && (s.kind === 11 || s.kind === 12)) {
             console.log(
                 "[SYNC] sprite",
@@ -2260,55 +2288,14 @@ export function _syncNativeSprites(): void {
         }
     }
 
-    // mark end of main sprite loop
     tLoopEnd = _hostPerfNowMs();
-
-
-    // ==== PERF / LEAK DEBUG (runs once per ~second) ====
-    const nowMs = performance.now();
-
-    if (!_syncPerfLastReportMs) {
-        _syncPerfLastReportMs = nowMs;
-        _syncPerfFrames = 1;
-    } else {
-        _syncPerfFrames++;
-        const elapsed = nowMs - _syncPerfLastReportMs;
-
-        if (elapsed >= 1000) {
-            // Histogram of kinds to see what's piling up
-            const kindHist: { [kind: number]: number } = {};
-            for (const s of all) {
-                if (!s) continue;
-                const k = (s.kind | 0);
-                kindHist[k] = (kindHist[k] || 0) + 1;
-            }
-
-            const fps = (_syncPerfFrames * 1000) / elapsed;
-            const spriteCount = all.length;
-
-            // Only log when we actually care
-            if (PERF_ALWAYS_LOG || fps < PERF_FPS_WARN) {
-                console.log(
-                    "[perf.sync]",
-                    "fps≈", fps.toFixed(1),
-                    "sprites=", spriteCount,
-                    "kindHist=", kindHist
-                );
-            }
-
-            _syncPerfFrames = 0;
-            _syncPerfLastReportMs = nowMs;
-        }
-
-    }
 
     const t1 = _hostPerfNowMs()
     _hostPerfAccumSyncMs += (t1 - t0)
-    
+
     const spriteCount = all.length;
     _hostPerfLastSpriteCount = spriteCount
 
-    
     if (shouldLog) {
         const totalMs = t1 - t0;
         const sceneMs = tSceneEnd - t0;
@@ -2319,6 +2306,48 @@ export function _syncNativeSprites(): void {
         const attachMs = _frameAttachMsAccum;
         const loopOtherMsRaw = loopMs - attachMs;
         const loopOtherMs = loopOtherMsRaw < 0 ? 0 : loopOtherMsRaw;
+
+        // group counts
+        const Hc = groupLiveCounts[PERF_GROUP_HERO] | 0;
+        const Ec = groupLiveCounts[PERF_GROUP_ENEMY] | 0;
+        const Xc = groupLiveCounts[PERF_GROUP_EXTRA] | 0;
+
+        // group time
+        const Ha = _frameGroupAttachMs[PERF_GROUP_HERO];
+        const Ea = _frameGroupAttachMs[PERF_GROUP_ENEMY];
+        const Xa = _frameGroupAttachMs[PERF_GROUP_EXTRA];
+
+        const Hpx = _frameGroupAttachPixelMs[PERF_GROUP_HERO];
+        const Epx = _frameGroupAttachPixelMs[PERF_GROUP_ENEMY];
+        const Xpx = _frameGroupAttachPixelMs[PERF_GROUP_EXTRA];
+
+        const Htx = _frameGroupAttachTexMs[PERF_GROUP_HERO];
+        const Etx = _frameGroupAttachTexMs[PERF_GROUP_ENEMY];
+        const Xtx = _frameGroupAttachTexMs[PERF_GROUP_EXTRA];
+
+        // group counts for attach ops
+        const Hcalls = _frameGroupAttachCalls[PERF_GROUP_HERO] | 0;
+        const Ecalls = _frameGroupAttachCalls[PERF_GROUP_ENEMY] | 0;
+        const Xcalls = _frameGroupAttachCalls[PERF_GROUP_EXTRA] | 0;
+
+        const Hcr = _frameGroupAttachCreates[PERF_GROUP_HERO] | 0;
+        const Ecr = _frameGroupAttachCreates[PERF_GROUP_ENEMY] | 0;
+        const Xcr = _frameGroupAttachCreates[PERF_GROUP_EXTRA] | 0;
+
+        const Hup = _frameGroupAttachUpdates[PERF_GROUP_HERO] | 0;
+        const Eup = _frameGroupAttachUpdates[PERF_GROUP_ENEMY] | 0;
+        const Xup = _frameGroupAttachUpdates[PERF_GROUP_EXTRA] | 0;
+
+        const Heo = _frameGroupAttachEarlyOuts[PERF_GROUP_HERO] | 0;
+        const Eeo = _frameGroupAttachEarlyOuts[PERF_GROUP_ENEMY] | 0;
+        const Xeo = _frameGroupAttachEarlyOuts[PERF_GROUP_EXTRA] | 0;
+
+        // AURA PERF (accumulated by heroAnimGlue.syncHeroAuraForNative)
+        const gAny: any = globalThis as any;
+        const auraMs = +(gAny.__perfAuraMs || 0);
+        const auraCalls = (gAny.__perfAuraCalls | 0) || 0;
+        const auraBuilds = (gAny.__perfAuraBuilds | 0) || 0;
+        const auraTexSets = (gAny.__perfAuraTexSets | 0) || 0;
 
         console.log(
             "[perf.syncSteps]",
@@ -2337,16 +2366,34 @@ export function _syncNativeSprites(): void {
             "attachCalls=", frameAttachCount,
             "attachCreates=", _frameAttachCreateCount,
             "attachUpdates=", _frameAttachUpdateCount,
-            "attachEarlyOuts=", _frameAttachEarlyOutCount
+            "attachEarlyOuts=", _frameAttachEarlyOutCount,
+            "| H/E/X=", `${Hc}/${Ec}/${Xc}`,
+            "| attachMs(H/E/X)=", `${Ha.toFixed(3)}/${Ea.toFixed(3)}/${Xa.toFixed(3)}`,
+            "| pixMs(H/E/X)=", `${Hpx.toFixed(3)}/${Epx.toFixed(3)}/${Xpx.toFixed(3)}`,
+            "| texMs(H/E/X)=", `${Htx.toFixed(3)}/${Etx.toFixed(3)}/${Xtx.toFixed(3)}`,
+            "| calls(H/E/X)=", `${Hcalls}/${Ecalls}/${Xcalls}`,
+            "| creates(H/E/X)=", `${Hcr}/${Ecr}/${Xcr}`,
+            "| updates(H/E/X)=", `${Hup}/${Eup}/${Xup}`,
+            "| early(H/E/X)=", `${Heo}/${Eeo}/${Xeo}`,
+            "| auraMs≈", auraMs.toFixed(3),
+            "auraCalls=", auraCalls,
+            "auraBuilds=", auraBuilds,
+            "auraTexSets=", auraTexSets
         );
 
+        // Reset aura accumulators so each log line is "since last perf.syncSteps"
+        gAny.__perfAuraMs = 0;
+        gAny.__perfAuraCalls = 0;
+        gAny.__perfAuraBuilds = 0;
+        gAny.__perfAuraTexSets = 0;
     }
-
-
-    // (rest of your existing host perf snapshot logic stays as-is)
-
-
 }
+
+
+
+
+
+
 
 
 

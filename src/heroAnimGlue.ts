@@ -948,7 +948,6 @@ export function prewarmHeroAuraOutlines(
 
 
 // heroAnimGlue.ts
-
 export function prewarmHeroAuraOutlinesAsync(
     scene: Phaser.Scene,
     texKey: string,
@@ -956,52 +955,34 @@ export function prewarmHeroAuraOutlinesAsync(
     onProgress?: (done: number, total: number) => void,
     budgetMsPerTick: number = 6
 ): Promise<void> {
-    return new Promise((resolve) => {
-        const tex = scene.textures.get(texKey);
-        if (!tex) {
-            console.log("[aura.prewarm] missing texture:", texKey);
-            resolve();
-            return;
-        }
+    // Spritesheet-only aura pipeline:
+    // Auras are NEVER computed at runtime. They must already exist as:
+    //   `${texKey}_aura_r${radius}`
+    //
+    // So "prewarm" becomes a cheap validation hook (optional) and then resolves immediately.
+    // This prevents intermittent stalls from any legacy outline/mask work.
 
-        const frames = (tex.getFrameNames ? tex.getFrameNames() : []) as (string | number)[];
-        const frameNames = frames.filter((f) => String(f) !== "__BASE");
-        const total = frameNames.length;
+    // Keep args referenced so TS doesn't complain in strict/noUnusedParameters setups.
+    void scene;
+    void budgetMsPerTick;
 
-        let i = 0;
+    const auraTexKey = `${texKey}_aura_r${radius}`;
 
-        const step = () => {
-            const t0 =
-                (typeof performance !== "undefined" && performance.now)
-                    ? performance.now()
-                    : Date.now();
+    // If missing, we fail FAST with the same instruction as syncHeroAuraForNative().
+    if (!scene.textures.exists(auraTexKey)) {
+        throw new Error(
+            `[AURA-MISSING] Texture not loaded: ${auraTexKey}. ` +
+            `Run: npm run gen-auras`
+        );
+    }
 
-            while (i < total) {
-                const frameName = frameNames[i++];
-                __getOrBuildHeroOutlineTexture(scene, texKey, frameName, radius);
+    // Optional progress callback: since we're not doing work, we report "done".
+    if (onProgress) onProgress(1, 1);
 
-                if (onProgress) onProgress(i, total);
-
-                const t1 =
-                    (typeof performance !== "undefined" && performance.now)
-                        ? performance.now()
-                        : Date.now();
-
-                if ((t1 - t0) >= budgetMsPerTick) break;
-            }
-
-            if (i < total) {
-                scene.time.delayedCall(0, step);
-            } else {
-                console.log("[aura.prewarm] done tex=", texKey, "frames=", total, "r=", radius);
-                resolve();
-            }
-        };
-
-        console.log("[aura.prewarm] start tex=", texKey, "frames=", total, "r=", radius);
-        scene.time.delayedCall(0, step);
-    });
+    return Promise.resolve();
 }
+
+
 
 
 
@@ -1014,7 +995,104 @@ export function prewarmHeroAuraOutlinesAsync(
  *
  * Uses 1-bit mask cache + renders a white aura texture (then tint).
  */
+
 export function syncHeroAuraForNative(
+    native: Phaser.GameObjects.Sprite,
+    auraActive: boolean,
+    auraColorIndex: number
+): void {
+
+    const tAura0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+
+    const scene = native.scene;
+    const radius = 2;
+
+    let aura = __heroAuraSpriteByHero.get(native);
+
+    // If aura is off, just hide it (still count the call, but it's basically free)
+    if (!auraActive) {
+        if (aura) aura.setVisible(false);
+
+        const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+        const dt = tAura1 - tAura0;
+
+        // PERF ACCUM (global, sampled by arcadeCompat perf.syncSteps)
+        const g: any = globalThis as any;
+        g.__perfAuraCalls = (g.__perfAuraCalls || 0) + 1;
+        g.__perfAuraMs = (g.__perfAuraMs || 0) + dt;
+        // no texture changes/builds in this path
+
+        return;
+    }
+
+    // Ensure aura object exists
+    if (!aura) {
+        aura = scene.add.image(native.x, native.y, native.texture.key, native.frame.name);
+        aura.setOrigin(native.originX, native.originY);
+        // Put just behind the hero; bump this above if you want it in front.
+        aura.setDepth(native.depth - 0.01);
+        __heroAuraSpriteByHero.set(native, aura);
+    }
+
+    // --- 1-bit mask path ---
+    const texKey = native.texture.key;
+    const frameName = String(native.frame.name);
+
+    // Build/get 1-bit dilated mask (cached)
+    const mask = getOrBuildHeroAuraMaskBits(scene, texKey, frameName, radius);
+
+    // One texture per (texKey, frame, radius). White pixels; tint handles color.
+    const outTexKey = `__heroAuraBits__${texKey}::${frameName}::r${radius}`;
+
+    let didBuild = false;
+
+    // Only render once per outTexKey
+    if (!scene.textures.exists(outTexKey)) {
+        didBuild = true;
+        console.log("[aura.bits] MISS build", outTexKey);
+        renderAuraTextureFromMaskBits(scene, outTexKey, mask, [255, 255, 255, 255]);
+    }
+
+    // Ensure aura is using our generated texture (no frame needed; it's the whole canvas)
+    const curTexKey = aura.texture?.key || "";
+    let didSetTexture = false;
+    if (curTexKey !== outTexKey) {
+        didSetTexture = true;
+        aura.setTexture(outTexKey);
+    }
+
+    // Match transform
+    aura.setVisible(true);
+    aura.x = native.x;
+    aura.y = native.y;
+    aura.rotation = native.rotation;
+    aura.scaleX = native.scaleX;
+    aura.scaleY = native.scaleY;
+    aura.setFlipX(native.flipX);
+    aura.setFlipY(native.flipY);
+
+    // Color + translucency
+    aura.setTint(__tintForArcadeColorIndex(auraColorIndex));
+    aura.setAlpha(0.85);
+
+    const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    const dt = tAura1 - tAura0;
+
+    // Keep your old “slow call” log if you still want it
+    if (dt > 2) console.log("[perf.auraSync] ms≈", dt.toFixed(2), "tex=", texKey, "frame=", frameName);
+
+    // PERF ACCUM (global, sampled by arcadeCompat perf.syncSteps)
+    const g: any = globalThis as any;
+    g.__perfAuraCalls = (g.__perfAuraCalls || 0) + 1;
+    g.__perfAuraMs = (g.__perfAuraMs || 0) + dt;
+    if (didBuild) g.__perfAuraBuilds = (g.__perfAuraBuilds || 0) + 1;
+    if (didSetTexture) g.__perfAuraTexSets = (g.__perfAuraTexSets || 0) + 1;
+}
+
+
+
+
+export function syncHeroAuraForNativeOLDBADCODE(
     native: Phaser.GameObjects.Sprite,
     auraActive: boolean,
     auraColorIndex: number
