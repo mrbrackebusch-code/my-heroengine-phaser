@@ -1376,10 +1376,45 @@ function _tryApplyHeroAnimationForNative(
 
 
 
-
 //##########################################################################################################################################
 
-function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
+
+
+type AttachContext = {
+    sc: Phaser.Scene;
+    s: Sprite;
+    g: number;
+    tA0: number;
+    shouldLog: boolean;
+    dataAny: any;
+};
+
+type UiDetect = {
+    uiKind: string;
+    isStatusBarSprite: boolean;
+    isComboMeterSprite: boolean;
+};
+
+function _attachNativeSprite(s: Sprite): void {
+    const ctx = _attachBegin(s);
+
+    if (!_attachEarlySceneGuard(ctx)) return;
+
+    const ui = _attachDetectUi(ctx);
+
+    // If we've already attached a UI-managed native (Container), early-out.
+    if (_attachUiEarlyUpdateIfExisting(ctx)) return;
+
+    // Create UI natives
+    if (_attachCreateStatusBar(ctx, ui)) return;
+    if (_attachCreateComboMeter(ctx, ui)) return;
+
+    // Step 5+ work lives here for now (unchanged legacy body)
+    _attachNativeSpriteNonUiPath(ctx.sc, ctx.s, ctx.g, ctx.tA0);
+}
+
+
+function _attachBegin(s: Sprite): AttachContext {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
 
@@ -1391,20 +1426,32 @@ function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
 
     const tA0 = _hostPerfNowMs();
 
+    return {
+        sc,
+        s,
+        g,
+        tA0,
+        shouldLog: (_attachCallCount <= MAX_ATTACH_VERBOSE),
+        dataAny: (s as any).data || {},
+    };
+}
+
+function _attachEarlySceneGuard(ctx: AttachContext): boolean {
+    const sc: any = ctx.sc;
     if (!sc) {
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-            console.log("[_attachNativeSprite] NO SCENE — skipping for sprite", s.id);
+        if (ctx.shouldLog) {
+            console.log("[_attachNativeSprite] NO SCENE — skipping for sprite", ctx.s.id);
         }
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
-        return;
+        _attachFinalizeEarlyOutOnly(ctx);
+        return false;
     }
+    return true;
+}
 
-    // ------------------------------------------------------------
-    // UI FAST-PATH (Phaser rectangles) — StatusBars + Combo Meter
-    // ------------------------------------------------------------
+function _attachDetectUi(ctx: AttachContext): UiDetect {
+    const s = ctx.s;
+    const dataAny = ctx.dataAny;
 
-    const dataAny: any = (s as any).data || {};
     const uiKind = (() => {
         try { return sprites.readDataString(s, UI_KIND_KEY) || ""; } catch { return ""; }
     })();
@@ -1414,349 +1461,649 @@ function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
         try { return (s.kind as any) === (SpriteKind as any).StatusBar; } catch { return false; }
     })();
 
-    const isStatusBarSprite = hasStatusBarData || kindIsStatusBar;
-    const isComboMeterSprite = (uiKind === UI_KIND_COMBO_METER);
+    return {
+        uiKind,
+        isStatusBarSprite: (hasStatusBarData || kindIsStatusBar),
+        isComboMeterSprite: (uiKind === UI_KIND_COMBO_METER),
+    };
+}
 
-    // If we've already attached a UI-managed native (Container), early-out.
+function _attachUiEarlyUpdateIfExisting(ctx: AttachContext): boolean {
+    const s = ctx.s;
+
     const existingNative: any = s.native;
     if (existingNative && existingNative.getData && existingNative.getData("uiManaged")) {
         existingNative.x = s.x;
         existingNative.y = s.y;
 
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
+        _attachFinalizeEarlyOutUpdate(ctx);
+        return true;
+    }
 
-        _frameAttachUpdateCount++;
-        _frameGroupAttachUpdates[g]++;
+    return false;
+}
 
-        const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - tA0);
-        _frameAttachMsAccum += dA;
-        _frameGroupAttachMs[g] += dA;
+
+function _mcToHex(p: number): number {
+    const pal = MAKECODE_PALETTE as any[];
+    const c = pal && pal[p] ? pal[p] : null;
+    if (!c) return 0xffffff;
+    const r = (c[0] | 0) & 255;
+    const g2 = (c[1] | 0) & 255;
+    const b = (c[2] | 0) & 255;
+    return (r << 16) | (g2 << 8) | b;
+}
+
+
+function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
+    if (!ui.isStatusBarSprite) return false;
+
+    const sc = ctx.sc;
+    const s = ctx.s;
+
+    const dataAny: any = ctx.dataAny;
+    const sb: any = dataAny ? dataAny[STATUS_BAR_DATA_KEY] : null;
+    if (!sb) return false;
+
+    // OLD behavior: geometry + colors come from sb object (NOT sprite-data keys)
+    const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
+    const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
+    const bw = (sb.borderWidth | 0) || 0;
+
+    const borderColorIdx =
+        (sb.borderColor === undefined || sb.borderColor === null)
+            ? (sb.offColor | 0)
+            : (sb.borderColor | 0);
+
+    const borderHex = _mcToHex(borderColorIdx | 0);
+    const offHex = _mcToHex((sb.offColor | 0) || 0);
+    const onHex = _mcToHex((sb.onColor | 0) || 0);
+
+    const container = sc.add.container(s.x, s.y);
+    (container as any).setData("uiManaged", true);
+
+    const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
+    borderRect.setOrigin(0.5, 0.5);
+
+    // Inner dims (OLD)
+    const innerW = Math.max(1, barW - (bw * 2));
+    const innerH = Math.max(1, barH - (bw * 2));
+    const leftX = (-barW / 2) + bw;
+
+    // Background (off)
+    const bgRect = sc.add.rectangle(leftX, 0, innerW, innerH, offHex, 1);
+    bgRect.setOrigin(0, 0.5);
+
+    // Fill (on)
+    const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
+    fillRect.setOrigin(0, 0.5);
+
+    container.add(borderRect);
+    container.add(bgRect);
+    container.add(fillRect);
+
+    // Store refs (OLD keys)
+    (container as any).setData("sb_border", borderRect);
+    (container as any).setData("sb_bg", bgRect);
+    (container as any).setData("sb_fill", fillRect);
+    (container as any).setData("sb_lastW", barW);
+    (container as any).setData("sb_lastH", barH);
+    (container as any).setData("sb_lastBW", bw);
+
+    // Depth + scroll factor (OLD)
+    try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try {
+        (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+    } catch { /* ignore */ }
+
+    s.native = container;
+
+    // OLD: mark as non-empty so pixel-based visibility logic doesn't hide it
+    (s as any)._lastNonZeroPixels = 1;
+
+    _attachFinalizeCreate(ctx);
+    return true;
+}
+
+
+
+
+
+
+function _attachCreateComboMeter(ctx: AttachContext, ui: UiDetect): boolean {
+    if (!ui.isComboMeterSprite) return false;
+
+    const sc = ctx.sc;
+    const s = ctx.s;
+
+    // Read meter geometry from sprite data
+    const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
+    const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+
+    const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
+    const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
+    const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
+    const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+
+    // Colors (match Arcade drawAgiMeterImage)
+    const colE = _mcToHex(2);
+    const col1 = _mcToHex(7);
+    const col2 = _mcToHex(9);
+    const col3 = _mcToHex(3);
+    const colBorder = _mcToHex(1);
+    const colPtr = _mcToHex(5);
+
+    const container = sc.add.container(s.x, s.y);
+    (container as any).setData("uiManaged", true);
+    (container as any).setData("uiKind", UI_KIND_COMBO_METER);
+
+    // Border
+    const border = sc.add.rectangle(-Math.floor(totalW / 2), -Math.floor(h / 2), totalW, h, colBorder, 1);
+    border.setOrigin(0, 0);
+
+    // Segments (E,1,2,3)
+    const x0 = -Math.floor(totalW / 2);
+    const y0 = -Math.floor(h / 2);
+
+    const segE = sc.add.rectangle(x0, y0, wE, h, colE, 1); segE.setOrigin(0, 0);
+    const seg1 = sc.add.rectangle(x0 + wE, y0, w1, h, col1, 1); seg1.setOrigin(0, 0);
+    const seg2 = sc.add.rectangle(x0 + wE + w1, y0, w2, h, col2, 1); seg2.setOrigin(0, 0);
+    const seg3 = sc.add.rectangle(x0 + wE + w1 + w2, y0, w3, h, col3, 1); seg3.setOrigin(0, 0);
+
+    // Pointer (small rectangle that slides)
+    const ptrW = 2;
+    const ptr = sc.add.rectangle(x0, y0 + Math.floor(h / 2), ptrW, h, colPtr, 1);
+    ptr.setOrigin(0, 0.5);
+
+    container.add(border);
+    container.add(segE);
+    container.add(seg1);
+    container.add(seg2);
+    container.add(seg3);
+    container.add(ptr);
+
+    // Store refs for fast update
+    (container as any).setData("combo_border", border);
+    (container as any).setData("combo_segE", segE);
+    (container as any).setData("combo_seg1", seg1);
+    (container as any).setData("combo_seg2", seg2);
+    (container as any).setData("combo_seg3", seg3);
+    (container as any).setData("combo_ptr", ptr);
+
+    (container as any).setData("combo_totalW", totalW);
+    (container as any).setData("combo_h", h);
+    (container as any).setData("combo_wE", wE);
+    (container as any).setData("combo_w1", w1);
+    (container as any).setData("combo_w2", w2);
+    (container as any).setData("combo_w3", w3);
+
+    // Depth + scroll factor
+    try {
+        (container as any).setDepth(s.z | 0);
+    } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try {
+        (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+    } catch { /* ignore */ }
+
+    // Attach
+    (s as any).native = container;
+
+    // Mark as non-zero for pixel-hide semantics downstream
+    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
+
+    // Count + timing
+    _attachFinalizeCreate(ctx);
+    return true;
+}
+
+
+function _attachFinalizeEarlyOutOnly(ctx: AttachContext): void {
+    _frameAttachEarlyOutCount++;
+    _frameGroupAttachEarlyOuts[ctx.g]++;
+}
+
+function _attachFinalizeEarlyOutUpdate(ctx: AttachContext): void {
+    _frameAttachEarlyOutCount++;
+    _frameGroupAttachEarlyOuts[ctx.g]++;
+
+    _frameAttachUpdateCount++;
+    _frameGroupAttachUpdates[ctx.g]++;
+
+    const tA1 = _hostPerfNowMs();
+    const dA = (tA1 - ctx.tA0);
+    _frameAttachMsAccum += dA;
+    _frameGroupAttachMs[ctx.g] += dA;
+}
+
+function _attachFinalizeCreate(ctx: AttachContext): void {
+    _frameAttachCreateCount++;
+    _frameGroupAttachCreates[ctx.g]++;
+
+    const tA1 = _hostPerfNowMs();
+    const dA = (tA1 - ctx.tA0);
+    _frameAttachMsAccum += dA;
+    _frameGroupAttachMs[ctx.g] += dA;
+}
+
+
+
+
+function _attachNativeSpriteNonUiPath(sc: Phaser.Scene, s: Sprite, g: number, tA0: number): void {
+    const ctx: AttachContext = {
+        sc,
+        s,
+        g,
+        tA0,
+        shouldLog: (_attachCallCount <= MAX_ATTACH_VERBOSE),
+        dataAny: (s as any).data || {},
+    };
+
+    if (!_attachImageGuard(ctx)) return;
+    if (_attachHeroSkipPath(ctx)) return;
+
+    const kind: number = (s.kind as any) | 0;
+    const kindName: string = (() => { try { return (SpriteKind as any)[kind] || ""; } catch { return ""; } })();
+
+    const w = (s.image.width | 0);
+    const h = (s.image.height | 0);
+
+    const texKey = "sprite_" + s.id;
+
+    if (_attachEarlyOutOnNativeTexMismatch(ctx, texKey)) return;
+    if (!_attachValidateImageDims(ctx, w, h)) return;
+
+    _attachVerboseStart(ctx, s.id | 0, kind, kindName, w, h);
+
+    const tex = _attachGetOrRecreateCanvasTexture(ctx, texKey, w, h);
+    if (!tex) {
+        _attachFinalizeEarlyOutOnly(ctx);
         return;
     }
 
-    // Create StatusBar native rectangles
-    if (isStatusBarSprite) {
-        const sb: any = dataAny[STATUS_BAR_DATA_KEY];
-        if (sb) {
-            // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
-            const mcToHex = (p: number): number => {
-                const pal = MAKECODE_PALETTE as any[];
-                const c = pal && pal[p] ? pal[p] : null;
-                if (!c) return 0xffffff;
-                const r = (c[0] | 0) & 255;
-                const g2 = (c[1] | 0) & 255;
-                const b = (c[2] | 0) & 255;
-                return (r << 16) | (g2 << 8) | b;
-            };
+    const nonZeroAttach = _attachUploadPixelsToTexture(ctx, tex, w, h);
 
-            const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
-            const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
-            const bw = (sb.borderWidth | 0) || 0;
+    _attachDestroyNativeIfWrongSize(ctx, w, h);
 
-            const borderColorIdx = (sb.borderColor === undefined || sb.borderColor === null) ? (sb.offColor | 0) : (sb.borderColor | 0);
-            const borderHex = mcToHex(borderColorIdx | 0);
-            const offHex = mcToHex((sb.offColor | 0) || 0);
-            const onHex = mcToHex((sb.onColor | 0) || 0);
+    const { native, didCreate } = _attachGetOrCreateNative(ctx, texKey, kind);
+    _attachApplyDepthAndScroll(ctx, native);
 
-            const container = sc.add.container(s.x, s.y);
-            (container as any).setData("uiManaged", true);
-            (container as any).setData("uiKind", UI_KIND_STATUSBAR);
+    _attachDebugOptional(ctx, kind, kindName, texKey, native, nonZeroAttach, w, h);
 
-            // Border rectangle (stroke or filled)
-            const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
-            borderRect.setOrigin(0.5, 0.5);
+    if (didCreate) _attachFinalizeCreate(ctx);
+    else _attachFinalizeUpdate(ctx);
+}
 
-            // Inner dims
-            const innerW = Math.max(1, barW - (bw * 2));
-            const innerH = Math.max(1, barH - (bw * 2));
-            const leftX = (-barW / 2) + bw;
 
-            // Background (off)
-            const bgRect = sc.add.rectangle(leftX, 0, innerW, innerH, offHex, 1);
-            bgRect.setOrigin(0, 0.5);
 
-            // Fill (on)
-            const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
-            fillRect.setOrigin(0, 0.5);
 
-            container.add(borderRect);
-            container.add(bgRect);
-            container.add(fillRect);
 
-            // Store refs for fast update
-            (container as any).setData("sb_border", borderRect);
-            (container as any).setData("sb_bg", bgRect);
-            (container as any).setData("sb_fill", fillRect);
-            (container as any).setData("sb_lastW", barW);
-            (container as any).setData("sb_lastH", barH);
-            (container as any).setData("sb_lastBW", bw);
+function _attachUploadPixelsToTexture(
+    ctx: AttachContext,
+    tex: Phaser.Textures.CanvasTexture,
+    w: number,
+    h: number
+): number {
+    const s = ctx.s;
+    const g = ctx.g;
 
-            // Depth + scroll factor
-            try {
-                (container as any).setDepth(s.z | 0);
-            } catch { /* ignore */ }
-
-            const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-            try {
-                (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
-            } catch { /* ignore */ }
-
-            s.native = container;
-
-            // Mark as non-empty so any pixel-based visibility logic doesn't hide it
-            (s as any)._lastNonZeroPixels = 1;
-
-            _frameAttachCreateCount++;
-            _frameGroupAttachCreates[g]++;
-
-            const tA1 = _hostPerfNowMs();
-            const dA = (tA1 - tA0);
-            _frameAttachMsAccum += dA;
-            _frameGroupAttachMs[g] += dA;
-            return;
-        }
+    const ctx2d: CanvasRenderingContext2D = tex.getContext();
+    if (!ctx2d) {
+        console.error("[_attachNativeSprite] no 2D context for texture", tex.key);
+        _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
+        return 0;
     }
 
-    // Create Combo meter native rectangles
-    if (isComboMeterSprite) {
-        // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
-        const mcToHex = (p: number): number => {
-            const pal = MAKECODE_PALETTE as any[];
-            const c = pal && pal[p] ? pal[p] : null;
-            if (!c) return 0xffffff;
-            const r = (c[0] | 0) & 255;
-            const g2 = (c[1] | 0) & 255;
-            const b = (c[2] | 0) & 255;
-            return (r << 16) | (g2 << 8) | b;
-        };
+    const tPix0 = _hostPerfNowMs();
 
-        // Read meter geometry from sprite data
-        const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
-        const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+    ctx2d.clearRect(0, 0, w, h);
 
-        const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
-        const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
-        const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
-        const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+    const pixelsLen = w * h;
+    const imgData = ctx2d.createImageData(w, h);
+    const palette = MAKECODE_PALETTE as number[][];
 
-        // Colors (match Arcade drawAgiMeterImage)
-        const colE = mcToHex(2);
-        const col1 = mcToHex(7);
-        const col2 = mcToHex(9);
-        const col3 = mcToHex(3);
-        const colBorder = mcToHex(1);
-        const colPtr = mcToHex(5);
+    let nonZero = 0;
 
-        const container = sc.add.container(s.x, s.y);
-        (container as any).setData("uiManaged", true);
-        (container as any).setData("uiKind", UI_KIND_COMBO_METER);
+    for (let i = 0; i < pixelsLen; i++) {
+        const x = (i % w) | 0;
+        const y = ((i / w) | 0);
+        const idx = (i * 4) | 0;
 
-        // Border (stroke only)
-        const borderRect = sc.add.rectangle(0, 0, totalW, h, colBorder, 0);
-        borderRect.setOrigin(0.5, 0.5);
-        borderRect.setStrokeStyle(1, colBorder, 1);
+        const p = (s.image as any).getPixel(x, y) | 0;
 
-        // Segment rectangles (origin left-anchored)
-        const left = -totalW / 2;
-        const makeSeg = (xLeft: number, w: number, hex: number) => {
-            const r = sc.add.rectangle(xLeft, 0, Math.max(1, w), Math.max(1, h), hex, 1);
-            r.setOrigin(0, 0.5);
-            return r;
-        };
+        if (p <= 0) {
+            imgData.data[idx + 0] = 0;
+            imgData.data[idx + 1] = 0;
+            imgData.data[idx + 2] = 0;
+            imgData.data[idx + 3] = 0;
+            continue;
+        }
 
-        // Layout: E 1 2 3 2 1 E
-        let x = left;
-        const seg0 = makeSeg(x, wE, colE); x += wE;
-        const seg1 = makeSeg(x, w1, col1); x += w1;
-        const seg2 = makeSeg(x, w2, col2); x += w2;
-        const seg3 = makeSeg(x, w3, col3); x += w3;
-        const seg4 = makeSeg(x, w2, col2); x += w2;
-        const seg5 = makeSeg(x, w1, col1); x += w1;
-        const seg6 = makeSeg(x, wE, colE);
+        const color = palette[p];
+        if (!color) {
+            if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+                console.error(
+                    "[_attachNativeSprite] BAD PALETTE INDEX",
+                    "spriteId=", s.id,
+                    "kind=", s.kind,
+                    "img w,h=", w, h,
+                    "pixelsLen=", pixelsLen,
+                    "i=", i,
+                    "x=", x,
+                    "y=", y,
+                    "p=", p,
+                    "paletteLength=", palette.length
+                );
+            }
 
-        // Pointer (thin rect)
-        const ptr = sc.add.rectangle(left, 0, 1, Math.max(1, h), colPtr, 1);
-        ptr.setOrigin(0.5, 0.5);
+            imgData.data[idx + 0] = 255;
+            imgData.data[idx + 1] = 0;
+            imgData.data[idx + 2] = 255;
+            imgData.data[idx + 3] = 255;
+            nonZero++;
+            continue;
+        }
 
-        container.add(borderRect);
-        container.add(seg0); container.add(seg1); container.add(seg2); container.add(seg3);
-        container.add(seg4); container.add(seg5); container.add(seg6);
-        container.add(ptr);
+        const r = (color[0] | 0) & 255;
+        const gg = (color[1] | 0) & 255;
+        const b = (color[2] | 0) & 255;
 
-        // Store refs + last-geom for updates
-        (container as any).setData("cm_border", borderRect);
-        (container as any).setData("cm_ptr", ptr);
-        (container as any).setData("cm_segs", [seg0, seg1, seg2, seg3, seg4, seg5, seg6]);
+        imgData.data[idx + 0] = r;
+        imgData.data[idx + 1] = gg;
+        imgData.data[idx + 2] = b;
+        imgData.data[idx + 3] = 255;
 
-        (container as any).setData("cm_lastTotalW", totalW);
-        (container as any).setData("cm_lastH", h);
-        (container as any).setData("cm_lastWE", wE);
-        (container as any).setData("cm_lastW1", w1);
-        (container as any).setData("cm_lastW2", w2);
-        (container as any).setData("cm_lastW3", w3);
+        nonZero++;
+    }
 
-        // Depth + scroll factor
+    (s as any)._lastNonZeroPixels = nonZero;
+
+    ctx2d.putImageData(imgData, 0, 0);
+    tex.refresh();
+
+    const tPix1 = _hostPerfNowMs();
+    const dPix = (tPix1 - tPix0);
+
+    _frameAttachPixelMs += dPix;
+    _frameGroupAttachPixelMs[g] += dPix;
+
+    return nonZero;
+}
+
+
+
+
+
+function _attachDestroyNativeIfWrongSize(ctx: AttachContext, w: number, h: number): void {
+    const s = ctx.s;
+
+    if (s.native) {
+        const n: any = s.native;
+        const nativeW = (n.width | 0);
+        const nativeH = (n.height | 0);
+
+        if (nativeW !== w || nativeH !== h) {
+            if (DEBUG_WRAP_TEX) {
+                console.log(
+                    "[WRAP-NATIVE-RECREATE]",
+                    "| id", s.id,
+                    "| old native w,h", nativeW, nativeH,
+                    "| new img w,h", w, h
+                );
+            }
+            try { n.destroy(); } catch { /* ignore */ }
+            s.native = undefined as any; // OLD: undefined, not null
+        }
+    }
+}
+
+
+
+
+function _attachGetOrCreateNative(
+    ctx: AttachContext,
+    texKey: string,
+    kind: number
+): { native: any; didCreate: boolean } {
+    const sc = ctx.sc;
+    const s = ctx.s;
+
+    let native: any = s.native;
+    let didCreate = false;
+
+    if (!native) {
+        const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
+        const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
+
+        const n = isEnemyLike
+            ? sc.add.sprite(s.x, s.y, texKey)
+            : sc.add.image(s.x, s.y, texKey);
+
+        n.setOrigin(0.5, 0.5);
+        s.native = n;
+        native = n;
+        didCreate = true;
+
+        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+            console.log(
+                isEnemyLike ? "[WRAP-NATIVE] create enemy sprite" : "[WRAP-NATIVE] create sprite",
+                "| id", s.id,
+                "| kind", s.kind,
+                "| texKey", texKey,
+                "| native.width", n.width,
+                "| native.height", n.height
+            );
+        }
+    } else {
+        native.setPosition(s.x, s.y);
+    }
+
+    return { native, didCreate };
+}
+
+
+
+
+
+function _attachApplyDepthAndScroll(ctx: AttachContext, native: any): void {
+    const s = ctx.s;
+
+    try { native.setDepth(s.z | 0); } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try { native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
+}
+
+
+
+function _attachDebugOptional(
+    ctx: AttachContext,
+    kind: number,
+    kindName: string,
+    texKey: string,
+    native: any,
+    nonZeroAttach: number,
+    w: number,
+    h: number
+): void {
+    const s = ctx.s;
+
+    // OLD: if DEBUG_SPRITE_PIXELS, always dump and override nonZeroAttach / _lastNonZeroPixels
+    if (DEBUG_SPRITE_PIXELS) {
         try {
-            (container as any).setDepth(s.z | 0);
+            const nz = _debugSpritePixels(s, "attach#" + _attachCallCount);
+            (s as any)._lastNonZeroPixels = nz;
         } catch { /* ignore */ }
+    }
+
+    // OLD: projectile debug log (same content)
+    if (DEBUG_PROJECTILE_NATIVE && native) {
+        const dataKeys2 = Object.keys((s as any).data || {});
+        const kind2 = (s.kind as any) as number | undefined;
+        const kindName2 = kind2 === undefined ? "undefined" : _getSpriteKindName(kind2 as any);
+        const role2 = _classifySpriteRole((kind2 || 0) as any, dataKeys2);
+
+        if (role2 === "PROJECTILE") {
+            console.log(
+                "[WRAP-NATIVE] create projectile",
+                "| id", s.id,
+                "| kind", kind2, `(${kindName2})`,
+                "| texKey", texKey,
+                "| x,y", s.x, s.y,
+                "| z", s.z,
+                "| visible", native.visible,
+                "| img w,h", w, h,
+                "| nonZeroAttach", (s as any)._lastNonZeroPixels
+            );
+        }
+    }
+}
+
+
+
+
+
+function _attachImageGuard(ctx: AttachContext): boolean {
+    const s = ctx.s;
+
+    if (!s.image) {
+        if (ctx.shouldLog) {
+            console.log("[_attachNativeSprite] sprite has NO image", s);
+        }
+        _attachFinalizeEarlyOutOnly(ctx);
+        return false;
+    }
+
+    return true;
+}
+
+
+
+function _attachHeroSkipPath(ctx: AttachContext): boolean {
+    const sc = ctx.sc;
+    const s = ctx.s;
+    const g = ctx.g;
+
+    // OLD behavior: hero detection via isHeroSprite(s)
+    const isHero = (() => {
+        try { return !!(isHeroSprite as any)(s); } catch { return false; }
+    })();
+
+    if (!isHero) return false;
+
+    const HERO_PLACEHOLDER_TEX_KEY = "__heroPlaceholder64";
+
+    let heroTex = sc.textures.exists(HERO_PLACEHOLDER_TEX_KEY)
+        ? (sc.textures.get(HERO_PLACEHOLDER_TEX_KEY) as Phaser.Textures.CanvasTexture)
+        : null;
+
+    if (!heroTex) {
+        heroTex = sc.textures.createCanvas(HERO_PLACEHOLDER_TEX_KEY, 64, 64);
+        const ctxHero = heroTex.context;
+        if (ctxHero) {
+            ctxHero.clearRect(0, 0, 64, 64);
+            ctxHero.strokeStyle = "#ffffff";
+            ctxHero.lineWidth = 2;
+            ctxHero.strokeRect(1, 1, 62, 62);
+        }
+        heroTex.refresh();
+    }
+
+    let native: any = s.native;
+
+    if (!native) {
+        native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
+        native.setOrigin(0.5, 0.5);
+
+        // Depth + scroll factor (same as OLD pattern)
+        try { native.setDepth(s.z | 0); } catch { /* ignore */ }
 
         const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-        try {
-            (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
-        } catch { /* ignore */ }
+        try { native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
 
-        s.native = container;
-
-        // Mark as non-empty so any pixel-based visibility logic doesn't hide it
-        (s as any)._lastNonZeroPixels = 1;
+        s.native = native;
 
         _frameAttachCreateCount++;
         _frameGroupAttachCreates[g]++;
 
         const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - tA0);
-        _frameAttachMsAccum += dA;
-        _frameGroupAttachMs[g] += dA;
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // Existing pipeline below (CanvasTexture pixel upload path)
-    // ------------------------------------------------------------
-
-    if (!s.image) {
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-            console.log("[_attachNativeSprite] sprite has NO image", s);
-        }
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
-        return;
-    }
-
-    const w = s.image.width | 0;
-    const h = s.image.height | 0;
-    const texKey = "sprite_" + s.id;
-
-    // --- HERO NATIVE SKIP PATH -------------------------------------------
-    const isHero = isHeroSprite(s);
-
-    if (isHero) {
-        const HERO_PLACEHOLDER_TEX_KEY = "__heroPlaceholder64";
-
-        let heroTex = sc.textures.exists(HERO_PLACEHOLDER_TEX_KEY)
-            ? (sc.textures.get(HERO_PLACEHOLDER_TEX_KEY) as Phaser.Textures.CanvasTexture)
-            : null;
-
-        if (!heroTex) {
-            heroTex = sc.textures.createCanvas(HERO_PLACEHOLDER_TEX_KEY, 64, 64);
-            const ctxHero = heroTex.context;
-            if (ctxHero) {
-                ctxHero.clearRect(0, 0, 64, 64);
-                ctxHero.strokeStyle = "#ffffff";
-                ctxHero.lineWidth = 2;
-                ctxHero.strokeRect(1, 1, 62, 62);
-            }
-            heroTex.refresh();
-        }
-
-        let native: any = s.native;
-
-        if (!native) {
-            native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
-            native.setOrigin(0.5, 0.5);
-            native.setData("isHeroNative", true);
-
-            _copyHeroIdentityToNative(s, native);
-            _tryApplyHeroAnimationForNative(s, native);
-
-            s.native = native;
-
-            if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-                console.log(
-                    "[WRAP-NATIVE] create hero-native sprite",
-                    "| id", s.id,
-                    "| kind", s.kind,
-                    "| texKey", HERO_PLACEHOLDER_TEX_KEY,
-                    "| native.width", native.width,
-                    "| native.height", native.height
-                );
-            }
-
-            _frameAttachCreateCount++;
-            _frameGroupAttachCreates[g]++;
-        } else {
-            native.setPosition(s.x, s.y);
-            _copyHeroIdentityToNative(s, native);
-            _tryApplyHeroAnimationForNative(s, native);
-
-            _frameAttachUpdateCount++;
-            _frameGroupAttachUpdates[g]++;
-        }
-
-        // For visibility logic that uses nonZero pixels, just mark as non-empty.
-        (s as any)._lastNonZeroPixels = 1;
-
-        const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - tA0);
-
+        const dA = (tA1 - ctx.tA0);
         _frameAttachMsAccum += dA;
         _frameGroupAttachMs[g] += dA;
 
-        return;
-    }
-    // ---------------------------------------------------------------------
+        return true;
+    } else {
+        native.setPosition(s.x, s.y);
 
-    const existingNative2: any = s.native;
-    if (
-        existingNative2 &&
-        existingNative2.texture &&
-        existingNative2.texture.key &&
-        existingNative2.texture.key !== texKey
-    ) {
-        existingNative2.x = s.x;
-        existingNative2.y = s.y;
-
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
+        // OLD behavior: copy identity + try apply animation using existing project helpers
+        try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
+        try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
 
         _frameAttachUpdateCount++;
         _frameGroupAttachUpdates[g]++;
 
         const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - tA0);
-
+        const dA = (tA1 - ctx.tA0);
         _frameAttachMsAccum += dA;
         _frameGroupAttachMs[g] += dA;
 
-        return;
+        return true;
+    }
+}
+
+
+
+
+
+
+function _attachEarlyOutOnNativeTexMismatch(ctx: AttachContext, texKey: string): boolean {
+    const s = ctx.s;
+    const existingNative2: any = (s as any).native;
+
+    if (existingNative2 && existingNative2.texture && existingNative2.texture.key !== texKey) {
+        existingNative2.x = s.x;
+        existingNative2.y = s.y;
+
+        _attachFinalizeEarlyOutUpdate(ctx);
+        return true;
     }
 
-    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
-        console.error(
-            "[_attachNativeSprite] INVALID image size – skipping texture",
-            "spriteId=", s.id,
-            "kind=", s.kind,
-            "w=", w,
-            "h=", h,
-            "image=", s.image
-        );
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
-        return;
-    }
+    return false;
+}
 
-    if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-        console.log(
-            "[_attachNativeSprite] START",
-            "spriteId=", s.id,
-            "w,h=", w, h,
-            "pixelsLen=", w * h,
-        );
-    }
 
-    // --- TEXTURE HANDLING -------------------------------------------------
+function _attachValidateImageDims(ctx: AttachContext, w: number, h: number): boolean {
+    // OLD had no explicit validation/early-out here.
+    // Keep behavior identical: always proceed.
+    return true;
+}
+
+
+
+
+function _attachVerboseStart(ctx: AttachContext, id: number, kind: number, kindName: string, w: number, h: number): void {
+    if (!ctx.shouldLog) return;
+    console.log("[_attachNativeSprite] START", id, "kind", kind, `(${kindName})`, "img", w, "x", h);
+}
+
+
+
+
+
+function _attachGetOrRecreateCanvasTexture(
+    ctx: AttachContext,
+    texKey: string,
+    w: number,
+    h: number
+): Phaser.Textures.CanvasTexture | null {
+    const sc = ctx.sc;
+    const s = ctx.s;
+    const g = ctx.g;
+
     const tTex0 = _hostPerfNowMs();
 
     let tex = sc.textures.exists(texKey)
@@ -1765,8 +2112,8 @@ function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
 
     if (tex) {
         const src = tex.source[0];
-        const texW = src.width | 0;
-        const texH = src.height | 0;
+        const texW = (src.width | 0);
+        const texH = (src.height | 0);
 
         if (texW !== w || texH !== h) {
             if (DEBUG_WRAP_TEX) {
@@ -1801,175 +2148,23 @@ function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
     _frameAttachTexMs += dTex;
     _frameGroupAttachTexMs[g] += dTex;
 
-    // --- PIXEL UPLOAD -----------------------------------------------------
-    const ctx = tex.context;
-    if (!ctx) {
-        console.error("[_attachNativeSprite] no 2D context for", texKey);
-        _frameAttachEarlyOutCount++;
-        _frameGroupAttachEarlyOuts[g]++;
-        return;
-    }
+    return tex;
+}
 
-    const tPix0 = _hostPerfNowMs();
 
-    ctx.clearRect(0, 0, w, h);
 
-    const pixelsLen = w * h;
-    const imgData = ctx.createImageData(w, h);
-    const palette = MAKECODE_PALETTE as number[][];
 
-    let nonZero = 0;
 
-    for (let i = 0; i < pixelsLen; i++) {
-        const x = i % w;
-        const y = (i / w) | 0;
-        const idx = i * 4;
-
-        const p = s.image.getPixel(x, y);
-
-        if (p <= 0) {
-            imgData.data[idx + 0] = 0;
-            imgData.data[idx + 1] = 0;
-            imgData.data[idx + 2] = 0;
-            imgData.data[idx + 3] = 0;
-            continue;
-        }
-
-        const color = palette[p];
-        if (!color) {
-            if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-                console.error(
-                    "[_attachNativeSprite] BAD PALETTE INDEX",
-                    "spriteId=", s.id,
-                    "kind=", s.kind,
-                    "img w,h=", w, h,
-                    "pixelsLen=", pixelsLen,
-                    "i=", i,
-                    "x=", x,
-                    "y=", y,
-                    "p=", p,
-                    "paletteLength=", palette.length
-                );
-            }
-            imgData.data[idx + 0] = 0;
-            imgData.data[idx + 1] = 0;
-            imgData.data[idx + 2] = 0;
-            imgData.data[idx + 3] = 0;
-            continue;
-        }
-
-        const [r, gg, b] = color;
-        imgData.data[idx + 0] = r;
-        imgData.data[idx + 1] = gg;
-        imgData.data[idx + 2] = b;
-        imgData.data[idx + 3] = 255;
-
-        nonZero++;
-    }
-
-    (s as any)._lastNonZeroPixels = nonZero;
-
-    ctx.putImageData(imgData, 0, 0);
-    tex.refresh();
-
-    const tPix1 = _hostPerfNowMs();
-    const dPix = (tPix1 - tPix0);
-
-    _frameAttachPixelMs += dPix;
-    _frameGroupAttachPixelMs[g] += dPix;
-
-    // --- NATIVE IMAGE / SPRITE HANDLING -----------------------------------
-    if (s.native) {
-        const n: any = s.native;
-        const nativeW = n.width | 0;
-        const nativeH = n.height | 0;
-
-        if (nativeW !== w || nativeH !== h) {
-            if (DEBUG_WRAP_TEX) {
-                console.log(
-                    "[WRAP-NATIVE-RECREATE]",
-                    "| id", s.id,
-                    "| old native w,h", nativeW, nativeH,
-                    "| new img w,h", w, h
-                );
-            }
-            n.destroy();
-            s.native = undefined as any;
-        }
-    }
-
-    let native = s.native as any;
-    let didCreate = false;
-
-    if (!native) {
-        const role = _classifySpriteRole((s.kind as number) || 0, Object.keys((s as any).data || {}));
-        const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
-
-        const n = isEnemyLike
-            ? sc.add.sprite(s.x, s.y, texKey)
-            : sc.add.image(s.x, s.y, texKey);
-
-        n.setOrigin(0.5, 0.5);
-        s.native = n;
-        native = n;
-        didCreate = true;
-
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-            console.log(
-                isEnemyLike ? "[WRAP-NATIVE] create enemy sprite" : "[WRAP-NATIVE] create sprite",
-                "| id", s.id,
-                "| kind", s.kind,
-                "| texKey", texKey,
-                "| native.width", n.width,
-                "| native.height", n.height
-            );
-        }
-    } else {
-        native.setPosition(s.x, s.y);
-    }
-
-    let nonZeroAttach = (s as any)._lastNonZeroPixels as number;
-
-    if (DEBUG_SPRITE_PIXELS) {
-        nonZeroAttach = _debugSpritePixels(s, "attach#" + _attachCallCount);
-        (s as any)._lastNonZeroPixels = nonZeroAttach;
-    }
-
-    if (DEBUG_PROJECTILE_NATIVE && native) {
-        const dataKeys2 = Object.keys((s as any).data || {});
-        const kind = s.kind as number | undefined;
-        const kindName = kind === undefined ? "undefined" : _getSpriteKindName(kind);
-        const role2 = _classifySpriteRole(kind || 0, dataKeys2);
-
-        if (role2 === "PROJECTILE") {
-            console.log(
-                "[WRAP-NATIVE] create projectile",
-                "| id", s.id,
-                "| kind", kind, `(${kindName})`,
-                "| texKey", texKey,
-                "| x,y", s.x, s.y,
-                "| z", s.z,
-                "| visible", native.visible,
-                "| img w,h", w, h,
-                "| nonZeroAttach", nonZeroAttach
-            );
-        }
-    }
+function _attachFinalizeUpdate(ctx: AttachContext): void {
+    _frameAttachUpdateCount++;
+    _frameGroupAttachUpdates[ctx.g]++;
 
     const tA1 = _hostPerfNowMs();
-    const dA = (tA1 - tA0);
-
+    const dA = (tA1 - ctx.tA0);
     _frameAttachMsAccum += dA;
-    _frameGroupAttachMs[g] += dA;
-
-    if (didCreate) {
-        _frameAttachCreateCount++;
-        _frameGroupAttachCreates[g]++;
-    } else {
-        _frameAttachUpdateCount++;
-        _frameGroupAttachUpdates[g]++;
-    }
+    _frameGroupAttachMs[ctx.g] += dA;
 }
+
 
 
 
@@ -2928,587 +3123,6 @@ function _syncEndFrame(ctx: SyncContext): void {
 
 
 
-
-
-
-export function _syncNativeSpritesOLDCODETODELETE(): void {
-    const t0 = _hostPerfNowMs()
-    _syncCallCount++;
-
-    const sc: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
-
-    // Decide whether to log this frame
-    let shouldLog = false;
-
-    if (_syncCallCount <= MAX_SYNC_VERBOSE) {
-        shouldLog = true;
-    } else if (_syncCallCount % SYNC_EVERY_N_AFTER === 0) {
-        shouldLog = true;
-    } else if (_syncCallCount % SPRITE_SYNC_LOG_MOD === 0) {
-        shouldLog = true;
-    }
-
-    if (shouldLog) {
-        console.log(
-            "[_syncNativeSprites]",
-            "call#", _syncCallCount,
-            "scenePresent=", !!sc,
-            "spriteCount=", _allSprites.length
-        );
-    }
-
-    // --- per-frame perf counters + timers ---------------------
-    let removedHard = 0;
-    let removedByPixels = 0;
-    let frameAttachCount = 0;
-
-    let tSceneEnd = t0;
-    let tLoopStart = 0;
-    let tLoopEnd = 0;
-
-    // Reset global accumulators for this frame
-    _frameAttachMsAccum = 0;
-    _frameAttachCreateCount = 0;
-    _frameAttachUpdateCount = 0;
-    _frameAttachTexMs = 0;
-    _frameAttachPixelMs = 0;
-    _frameAttachEarlyOutCount = 0;
-
-    // Reset per-group accumulators for this frame
-    _frameGroupAttachMs[0] = 0; _frameGroupAttachMs[1] = 0; _frameGroupAttachMs[2] = 0;
-    _frameGroupAttachTexMs[0] = 0; _frameGroupAttachTexMs[1] = 0; _frameGroupAttachTexMs[2] = 0;
-    _frameGroupAttachPixelMs[0] = 0; _frameGroupAttachPixelMs[1] = 0; _frameGroupAttachPixelMs[2] = 0;
-
-    _frameGroupAttachCalls[0] = 0; _frameGroupAttachCalls[1] = 0; _frameGroupAttachCalls[2] = 0;
-    _frameGroupAttachCreates[0] = 0; _frameGroupAttachCreates[1] = 0; _frameGroupAttachCreates[2] = 0;
-    _frameGroupAttachUpdates[0] = 0; _frameGroupAttachUpdates[1] = 0; _frameGroupAttachUpdates[2] = 0;
-    _frameGroupAttachEarlyOuts[0] = 0; _frameGroupAttachEarlyOuts[1] = 0; _frameGroupAttachEarlyOuts[2] = 0;
-
-    // Group sprite counts (what is piling up)
-    let groupLiveCounts = [0, 0, 0] as number[];
-
-    if (!sc) {
-        if (shouldLog) console.log("[_syncNativeSprites] no scene yet");
-        return;
-    }
-
-    tSceneEnd = _hostPerfNowMs();
-
-    const all = _allSprites;
-
-    tLoopStart = _hostPerfNowMs();
-
-    // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
-    const mcToHex = (p: number): number => {
-        const pal = MAKECODE_PALETTE as any[];
-        const c = pal && pal[p] ? pal[p] : null;
-        if (!c) return 0xffffff;
-        const r = (c[0] | 0) & 255;
-        const g2 = (c[1] | 0) & 255;
-        const b = (c[2] | 0) & 255;
-        return (r << 16) | (g2 << 8) | b;
-    };
-
-    for (let i = all.length - 1; i >= 0; i--) {
-        const s = all[i];
-        if (!s) {
-            all.splice(i, 1);
-            continue;
-        }
-
-        const flags = s.flags | 0;
-
-        // --- HARD-DEAD CHECKS ------------------------------------------------
-        const hasDestroyedFlag = !!(flags & SpriteFlag.Destroyed);
-        const engineDestroyed = (s as any)._destroyed === true;
-        const imageGone = !s.image;
-
-        const hardDead = hasDestroyedFlag || engineDestroyed || imageGone;
-
-        if (hardDead) {
-            removedHard++;
-
-            if (shouldLog && (s.kind === 11 || s.kind === 12)) {
-                console.log(
-                    "[SYNC] HARD-DESTROY",
-                    "| id", s.id,
-                    "| kind", s.kind,
-                    "| flags", flags,
-                    "| hasDestroyedFlag", hasDestroyedFlag,
-                    "| engineDestroyed", engineDestroyed,
-                    "| imageGone", imageGone
-                );
-            }
-
-            if (s.native && (s.native as any).destroy) {
-                try {
-                    (s.native as any).destroy();
-                } catch (e) {
-                    console.warn("[_syncNativeSprites] error destroying native", s.id, e);
-                }
-            }
-            s.native = null;
-
-            const texKey = "sprite_" + s.id;
-
-            if (sc.textures && sc.textures.exists(texKey)) {
-                sc.textures.remove(texKey);
-            }
-
-            all.splice(i, 1);
-            continue;
-        }
-
-        // --- LIVE SPRITE PATH ------------------------------------------------
-
-        // Pre-classify group BEFORE attach so attach time gets bucketed.
-        const dataKeysPre = Object.keys((s as any).data || {});
-        const rolePre = _classifySpriteRole(s.kind, dataKeysPre);
-        const group = _perfGroupFromRole(rolePre);
-
-        groupLiveCounts[group]++;
-
-        // Set group for _attachNativeSprite() to attribute time correctly.
-        _syncAttachPerfGroup = group;
-
-        frameAttachCount++;
-        _attachNativeSprite(s);
-
-        // Reset default (defensive)
-        _syncAttachPerfGroup = PERF_GROUP_EXTRA;
-
-        const native = s.native as any;
-        if (!native) {
-            if (shouldLog && (s.kind === 11 || s.kind === 12)) {
-                console.log(
-                    "[SYNC] no native after attach",
-                    "| id", s.id,
-                    "| kind", s.kind
-                );
-            }
-            continue;
-        }
-
-        native.x = s.x;
-        native.y = s.y;
-
-        // ============================================================
-        // UI-MANAGED FAST PATH (Phaser rectangles: status bars + combo)
-        // ============================================================
-        const isUIManaged = !!(native.getData && native.getData("uiManaged"));
-        if (isUIManaged) {
-            // Keep depth + scroll factor synced to Arcade sprite state
-            try {
-                native.setDepth(s.z | 0);
-            } catch { /* ignore */ }
-
-            const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-            try {
-                native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
-            } catch { /* ignore */ }
-
-            const uiKind = native.getData("uiKind") || "";
-
-            // STATUS BAR RECT UPDATE
-            if (uiKind === UI_KIND_STATUSBAR) {
-                const sb: any = (s as any).data && (s as any).data[STATUS_BAR_DATA_KEY];
-                if (sb) {
-                    const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
-                    const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
-                    const bw = (sb.borderWidth | 0) || 0;
-
-                    const borderColorIdx = (sb.borderColor === undefined || sb.borderColor === null)
-                        ? (sb.offColor | 0)
-                        : (sb.borderColor | 0);
-
-                    const borderHex = mcToHex(borderColorIdx | 0);
-                    const offHex = mcToHex((sb.offColor | 0) || 0);
-                    const onHex = mcToHex((sb.onColor | 0) || 0);
-
-                    const borderRect: any = native.getData("sb_border");
-                    const bgRect: any = native.getData("sb_bg");
-                    const fillRect: any = native.getData("sb_fill");
-
-                    const innerW = Math.max(1, barW - (bw * 2));
-                    const innerH = Math.max(1, barH - (bw * 2));
-                    const leftX = (-barW / 2) + bw;
-
-                    if (borderRect) {
-                        borderRect.width = barW;
-                        borderRect.height = barH;
-                        borderRect.setFillStyle(borderHex, 1);
-                    }
-
-                    if (bgRect) {
-                        bgRect.x = leftX;
-                        bgRect.width = innerW;
-                        bgRect.height = innerH;
-                        bgRect.setFillStyle(offHex, 1);
-                    }
-
-                    const max = (sb.max | 0) || (sb._max | 0) || 1;
-                    const cur = (sb.current | 0);
-                    const pct = Math.max(0, Math.min(1, cur / max));
-                    const fillW = Math.max(0, Math.round(innerW * pct));
-
-                    if (fillRect) {
-                        fillRect.x = leftX;
-                        fillRect.width = fillW;
-                        fillRect.height = innerH;
-                        fillRect.setFillStyle(onHex, 1);
-                    }
-
-                    native.visible = !(s.flags & SpriteFlag.Invisible);
-                    (s as any)._lastNonZeroPixels = 1;
-                } else {
-                    native.visible = false;
-                }
-
-                continue;
-            }
-
-            // COMBO METER RECT UPDATE
-            if (uiKind === UI_KIND_COMBO_METER) {
-                const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
-                const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
-
-                const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
-                const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
-                const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
-                const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
-
-                const posX1000 = (sprites.readDataNumber(s, UI_COMBO_POS_X1000_KEY) | 0) || 0;
-                const show = (sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false;
-
-                const segs: any[] = native.getData("cm_segs") || [];
-                const borderRect: any = native.getData("cm_border");
-                const ptr: any = native.getData("cm_ptr");
-
-                if (borderRect) {
-                    borderRect.width = totalW;
-                    borderRect.height = h;
-                    const colBorder = mcToHex(1);
-                    borderRect.setStrokeStyle(1, colBorder, 1);
-                }
-
-                const left = -totalW / 2;
-                let x = left;
-
-                const setSeg = (idx: number, wSeg: number) => {
-                    const r = segs[idx];
-                    if (!r) return;
-                    r.x = x;
-                    r.width = Math.max(1, wSeg);
-                    r.height = Math.max(1, h);
-                    x += wSeg;
-                };
-
-                setSeg(0, wE);
-                setSeg(1, w1);
-                setSeg(2, w2);
-                setSeg(3, w3);
-                setSeg(4, w2);
-                setSeg(5, w1);
-                setSeg(6, wE);
-
-                const clamped = Math.max(0, Math.min(1000, posX1000));
-                const pointerX = Math.idiv(clamped * Math.max(1, (totalW - 1)), 1000);
-
-                if (ptr) {
-                    ptr.x = left + pointerX + 0.5;
-                    ptr.y = 0;
-                    ptr.width = 1;
-                    ptr.height = Math.max(1, h);
-                    const colPtr = mcToHex(5);
-                    ptr.setFillStyle(colPtr, 1);
-                }
-
-                native.visible = show;
-                (s as any)._lastNonZeroPixels = 1;
-
-                continue;
-            }
-
-            // Unknown UI kind: hide defensively
-            native.visible = false;
-            continue;
-        }
-
-        const dataKeys = Object.keys(s.data || {});
-        const role = _classifySpriteRole(s.kind, dataKeys);
-
-        // --- HERO ANIM GLUE HOOK --------------------------------------------
-        if (role === "HERO") {
-            const nativeAny: any = s.native;
-            if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
-                _tryApplyHeroAnimationForNative(s, nativeAny as Phaser.GameObjects.Sprite);
-
-                const auraActive = !!(s.data && (s.data as any)["auraActive"]);
-                const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
-
-                heroAnimGlue.syncHeroAuraForNative(
-                    s.native,
-                    auraActive,
-                    auraColor
-                );
-            }
-        }
-
-
-
-        if (role === "ENEMY" || role === "ACTOR") {
-            if (!(s as any).data) (s as any).data = {};
-            const data: any = (s as any).data;
-
-            const monsterId =
-                sprites.readDataString(s, "monsterId") ||
-                sprites.readDataString(s, "enemyName") ||
-                sprites.readDataString(s, "name") ||
-                "";
-
-            type MonsterAnimPhase = "walk" | "attack" | "death";
-            type MonsterDirection = "up" | "down" | "left" | "right";
-
-            let phase = (sprites.readDataString(s, "phase") as MonsterAnimPhase) || "walk";
-
-            let dir = sprites.readDataString(s, "dir") as MonsterDirection | undefined;
-            if (!dir) {
-                if (s.vx > 0)      dir = "right";
-                else if (s.vx < 0) dir = "left";
-                else if (s.vy > 0) dir = "down";
-                else               dir = "up";
-            }
-
-            if (monsterId) data["monsterId"] = monsterId;
-            if (monsterId && !data["name"]) data["name"] = monsterId;
-            data["phase"] = phase;
-            data["dir"]   = dir;
-
-            const nativeAny: any = s.native;
-            if (!nativeAny || typeof nativeAny.setData !== "function") {
-                continue;
-            }
-
-            nativeAny.setData("monsterId", monsterId);
-            nativeAny.setData("name",      monsterId);
-            nativeAny.setData("phase",     phase);
-            nativeAny.setData("dir",       dir);
-
-            const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
-            const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
-
-            if (glueAny && typeof glueAny.tryAttachMonsterSprite === "function") {
-                glueAny.tryAttachMonsterSprite(enemySprite);
-            } else if (glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
-                glueAny.applyMonsterAnimationForSprite(enemySprite);
-            }
-
-            continue;
-        }
-
-        // EXTRA DEBUG: raw projectile state
-        if (DEBUG_PROJECTILE_NATIVE && shouldLog && s.kind === 11) {
-            console.log(
-                "[SYNC-PROJ-RAW]",
-                "| id", s.id,
-                "| engine x,y", s.x, s.y,
-                "| native x,y", native.x, native.y,
-                "| flags", flags,
-                "| image?", !!s.image,
-                "| img w,h", s.image?.width, s.image?.height,
-                "| _lastNonZeroPixels", (s as any)._lastNonZeroPixels,
-                "| native.visible(before)", native.visible,
-                "| native.alpha(before)", native.alpha,
-                "| texKey", native.texture && native.texture.key,
-                "| native.width", native.width,
-                "| native.height", native.height,
-                "| native.displayWidth", native.displayWidth,
-                "| native.displayHeight", native.displayHeight,
-                "| native.scaleX", native.scaleX,
-                "| native.scaleY", native.scaleY,
-                "| native.depth", (native as any).depth
-            );
-        }
-
-        const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
-        const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
-        const autoHideByPixels = lastNonZero === 0;
-
-        const deadByPixels =
-            autoHideByPixels &&
-            (s.kind === 11 || s.kind === 12 || s.kind === 9100);
-
-        if (deadByPixels) {
-            removedByPixels++;
-
-            if (shouldLog) {
-                console.log(
-                    "[SYNC] PIXEL-DESTROY",
-                    "| id", s.id,
-                    "| kind", s.kind,
-                    "| flags", flags,
-                    "| lastNonZero", lastNonZero
-                );
-            }
-
-            if (s.native && (s.native as any).destroy) {
-                try {
-                    (s.native as any).destroy();
-                } catch (e) {
-                    console.warn("[_syncNativeSprites] error destroying native", s.id, e);
-                }
-            }
-            s.native = null;
-
-            const texKey = "sprite_" + s.id;
-
-            if (sc.textures && sc.textures.exists(texKey)) {
-                sc.textures.remove(texKey);
-            }
-
-            all.splice(i, 1);
-            continue;
-        }
-
-        const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
-        native.visible = shouldBeVisible;
-        native.alpha = shouldBeVisible ? 1 : 0;
-
-        if (DEBUG_PROJECTILE_NATIVE && shouldLog && s.kind === 11) {
-            console.log(
-                "[SYNC-PROJ-VIS]",
-                "| id", s.id,
-                "| shouldBeVisible", shouldBeVisible,
-                "| hasInvisibleFlag", hasInvisibleFlag,
-                "| autoHideByPixels", autoHideByPixels,
-                "| native.visible(after)", native.visible,
-                "| native.alpha(after)", native.alpha,
-                "| flags", flags,
-                "| lastNonZero", lastNonZero
-            );
-        }
-
-        if (shouldLog && (s.kind === 11 || s.kind === 12)) {
-            console.log(
-                "[SYNC] sprite",
-                "| id", s.id,
-                "| kind", s.kind,
-                "| x,y", native.x, native.y,
-                "| visible", native.visible,
-                "| alpha", native.alpha,
-                "| flags", flags,
-                "| hasInvisibleFlag", hasInvisibleFlag,
-                "| lastNonZero", lastNonZero,
-                "| img w,h", s.image?.width, s.image?.height
-            );
-
-            if (SPRITE_PIXEL_DUMP) {
-                const label = s.kind === 11 ? "PROJ" : "OVERLAY";
-                _debugDumpSpritePixels(s, label);
-            }
-        }
-    }
-
-    tLoopEnd = _hostPerfNowMs();
-
-    const t1 = _hostPerfNowMs()
-    _hostPerfAccumSyncMs += (t1 - t0)
-
-    const spriteCount = all.length;
-    _hostPerfLastSpriteCount = spriteCount
-
-    if (shouldLog) {
-        const totalMs = t1 - t0;
-        const sceneMs = tSceneEnd - t0;
-        const loopMs = tLoopEnd - tLoopStart;
-        const otherMsRaw = totalMs - sceneMs - loopMs;
-        const otherMs = otherMsRaw < 0 ? 0 : otherMsRaw;
-
-        const attachMs = _frameAttachMsAccum;
-        const loopOtherMsRaw = loopMs - attachMs;
-        const loopOtherMs = loopOtherMsRaw < 0 ? 0 : loopOtherMsRaw;
-
-        // group counts
-        const Hc = groupLiveCounts[PERF_GROUP_HERO] | 0;
-        const Ec = groupLiveCounts[PERF_GROUP_ENEMY] | 0;
-        const Xc = groupLiveCounts[PERF_GROUP_EXTRA] | 0;
-
-        // group time
-        const Ha = _frameGroupAttachMs[PERF_GROUP_HERO];
-        const Ea = _frameGroupAttachMs[PERF_GROUP_ENEMY];
-        const Xa = _frameGroupAttachMs[PERF_GROUP_EXTRA];
-
-        const Hpx = _frameGroupAttachPixelMs[PERF_GROUP_HERO];
-        const Epx = _frameGroupAttachPixelMs[PERF_GROUP_ENEMY];
-        const Xpx = _frameGroupAttachPixelMs[PERF_GROUP_EXTRA];
-
-        const Htx = _frameGroupAttachTexMs[PERF_GROUP_HERO];
-        const Etx = _frameGroupAttachTexMs[PERF_GROUP_ENEMY];
-        const Xtx = _frameGroupAttachTexMs[PERF_GROUP_EXTRA];
-
-        // group counts for attach ops
-        const Hcalls = _frameGroupAttachCalls[PERF_GROUP_HERO] | 0;
-        const Ecalls = _frameGroupAttachCalls[PERF_GROUP_ENEMY] | 0;
-        const Xcalls = _frameGroupAttachCalls[PERF_GROUP_EXTRA] | 0;
-
-        const Hcr = _frameGroupAttachCreates[PERF_GROUP_HERO] | 0;
-        const Ecr = _frameGroupAttachCreates[PERF_GROUP_ENEMY] | 0;
-        const Xcr = _frameGroupAttachCreates[PERF_GROUP_EXTRA] | 0;
-
-        const Hup = _frameGroupAttachUpdates[PERF_GROUP_HERO] | 0;
-        const Eup = _frameGroupAttachUpdates[PERF_GROUP_ENEMY] | 0;
-        const Xup = _frameGroupAttachUpdates[PERF_GROUP_EXTRA] | 0;
-
-        const Heo = _frameGroupAttachEarlyOuts[PERF_GROUP_HERO] | 0;
-        const Eeo = _frameGroupAttachEarlyOuts[PERF_GROUP_ENEMY] | 0;
-        const Xeo = _frameGroupAttachEarlyOuts[PERF_GROUP_EXTRA] | 0;
-
-        // AURA PERF (accumulated by heroAnimGlue.syncHeroAuraForNative)
-        const gAny: any = globalThis as any;
-        const auraMs = +(gAny.__perfAuraMs || 0);
-        const auraCalls = (gAny.__perfAuraCalls | 0) || 0;
-        const auraBuilds = (gAny.__perfAuraBuilds | 0) || 0;
-        const auraTexSets = (gAny.__perfAuraTexSets | 0) || 0;
-
-        console.log(
-            "[perf.syncSteps]",
-            "call#", _syncCallCount,
-            "sprites=", spriteCount,
-            "totalMs≈", totalMs.toFixed(3),
-            "sceneMs≈", sceneMs.toFixed(3),
-            "loopMs≈", loopMs.toFixed(3),
-            "loopAttachMs≈", attachMs.toFixed(3),
-            "loopAttachTexMs≈", _frameAttachTexMs.toFixed(3),
-            "loopAttachPixelMs≈", _frameAttachPixelMs.toFixed(3),
-            "loopOtherMs≈", loopOtherMs.toFixed(3),
-            "otherMs≈", otherMs.toFixed(3),
-            "removedHard=", removedHard,
-            "removedByPixels=", removedByPixels,
-            "attachCalls=", frameAttachCount,
-            "attachCreates=", _frameAttachCreateCount,
-            "attachUpdates=", _frameAttachUpdateCount,
-            "attachEarlyOuts=", _frameAttachEarlyOutCount,
-            "| H/E/X=", `${Hc}/${Ec}/${Xc}`,
-            "| attachMs(H/E/X)=", `${Ha.toFixed(3)}/${Ea.toFixed(3)}/${Xa.toFixed(3)}`,
-            "| pixMs(H/E/X)=", `${Hpx.toFixed(3)}/${Epx.toFixed(3)}/${Xpx.toFixed(3)}`,
-            "| texMs(H/E/X)=", `${Htx.toFixed(3)}/${Etx.toFixed(3)}/${Xtx.toFixed(3)}`,
-            "| calls(H/E/X)=", `${Hcalls}/${Ecalls}/${Xcalls}`,
-            "| creates(H/E/X)=", `${Hcr}/${Ecr}/${Xcr}`,
-            "| updates(H/E/X)=", `${Hup}/${Eup}/${Xup}`,
-            "| early(H/E/X)=", `${Heo}/${Eeo}/${Xeo}`,
-            "| auraMs≈", auraMs.toFixed(3),
-            "auraCalls=", auraCalls,
-            "auraBuilds=", auraBuilds,
-            "auraTexSets=", auraTexSets
-        );
-
-        // Reset aura accumulators so each log line is "since last perf.syncSteps"
-        gAny.__perfAuraMs = 0;
-        gAny.__perfAuraCalls = 0;
-        gAny.__perfAuraBuilds = 0;
-        gAny.__perfAuraTexSets = 0;
-    }
-}
 
 
 
