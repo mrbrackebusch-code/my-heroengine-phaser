@@ -53,6 +53,32 @@ const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
 
 
 
+
+// === UI marker keys (shared) ===
+const UI_KIND_KEY = "__uiKind";
+const UI_KIND_STATUSBAR = "statusbar";
+const UI_KIND_COMBO_METER = "comboMeter";
+
+// === Combo meter sprite data keys ===
+const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
+const UI_COMBO_H_KEY = "__comboH";
+
+const UI_COMBO_W_E_KEY = "__comboWE";
+const UI_COMBO_W_1_KEY = "__comboW1";
+const UI_COMBO_W_2_KEY = "__comboW2";
+const UI_COMBO_W_3_KEY = "__comboW3";
+
+const UI_COMBO_POS_X1000_KEY = "__comboPosX1000";
+const UI_COMBO_VISIBLE_KEY = "__comboVisible";
+const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional (only if you decide to render count in Phaser)
+
+// === Status bar data key (must match status-bars.ts exactly) ===
+const STATUS_BAR_DATA_KEY = "STATUS_BAR_DATA_KEY";
+
+
+
+
+
 // ---------------------------------------
 // Host perf buckets (arcadeCompat.ts)
 // ---------------------------------------
@@ -1351,7 +1377,9 @@ function _tryApplyHeroAnimationForNative(
 
 
 
-function _attachNativeSprite(s: Sprite): void {
+//##########################################################################################################################################
+
+function _attachNativeSpriteOLDCODETODELETE(s: Sprite): void {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
 
@@ -1371,6 +1399,232 @@ function _attachNativeSprite(s: Sprite): void {
         _frameGroupAttachEarlyOuts[g]++;
         return;
     }
+
+    // ------------------------------------------------------------
+    // UI FAST-PATH (Phaser rectangles) — StatusBars + Combo Meter
+    // ------------------------------------------------------------
+
+    const dataAny: any = (s as any).data || {};
+    const uiKind = (() => {
+        try { return sprites.readDataString(s, UI_KIND_KEY) || ""; } catch { return ""; }
+    })();
+
+    const hasStatusBarData = !!(dataAny && dataAny[STATUS_BAR_DATA_KEY]);
+    const kindIsStatusBar = (() => {
+        try { return (s.kind as any) === (SpriteKind as any).StatusBar; } catch { return false; }
+    })();
+
+    const isStatusBarSprite = hasStatusBarData || kindIsStatusBar;
+    const isComboMeterSprite = (uiKind === UI_KIND_COMBO_METER);
+
+    // If we've already attached a UI-managed native (Container), early-out.
+    const existingNative: any = s.native;
+    if (existingNative && existingNative.getData && existingNative.getData("uiManaged")) {
+        existingNative.x = s.x;
+        existingNative.y = s.y;
+
+        _frameAttachEarlyOutCount++;
+        _frameGroupAttachEarlyOuts[g]++;
+
+        _frameAttachUpdateCount++;
+        _frameGroupAttachUpdates[g]++;
+
+        const tA1 = _hostPerfNowMs();
+        const dA = (tA1 - tA0);
+        _frameAttachMsAccum += dA;
+        _frameGroupAttachMs[g] += dA;
+        return;
+    }
+
+    // Create StatusBar native rectangles
+    if (isStatusBarSprite) {
+        const sb: any = dataAny[STATUS_BAR_DATA_KEY];
+        if (sb) {
+            // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
+            const mcToHex = (p: number): number => {
+                const pal = MAKECODE_PALETTE as any[];
+                const c = pal && pal[p] ? pal[p] : null;
+                if (!c) return 0xffffff;
+                const r = (c[0] | 0) & 255;
+                const g2 = (c[1] | 0) & 255;
+                const b = (c[2] | 0) & 255;
+                return (r << 16) | (g2 << 8) | b;
+            };
+
+            const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
+            const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
+            const bw = (sb.borderWidth | 0) || 0;
+
+            const borderColorIdx = (sb.borderColor === undefined || sb.borderColor === null) ? (sb.offColor | 0) : (sb.borderColor | 0);
+            const borderHex = mcToHex(borderColorIdx | 0);
+            const offHex = mcToHex((sb.offColor | 0) || 0);
+            const onHex = mcToHex((sb.onColor | 0) || 0);
+
+            const container = sc.add.container(s.x, s.y);
+            (container as any).setData("uiManaged", true);
+            (container as any).setData("uiKind", UI_KIND_STATUSBAR);
+
+            // Border rectangle (stroke or filled)
+            const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
+            borderRect.setOrigin(0.5, 0.5);
+
+            // Inner dims
+            const innerW = Math.max(1, barW - (bw * 2));
+            const innerH = Math.max(1, barH - (bw * 2));
+            const leftX = (-barW / 2) + bw;
+
+            // Background (off)
+            const bgRect = sc.add.rectangle(leftX, 0, innerW, innerH, offHex, 1);
+            bgRect.setOrigin(0, 0.5);
+
+            // Fill (on)
+            const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
+            fillRect.setOrigin(0, 0.5);
+
+            container.add(borderRect);
+            container.add(bgRect);
+            container.add(fillRect);
+
+            // Store refs for fast update
+            (container as any).setData("sb_border", borderRect);
+            (container as any).setData("sb_bg", bgRect);
+            (container as any).setData("sb_fill", fillRect);
+            (container as any).setData("sb_lastW", barW);
+            (container as any).setData("sb_lastH", barH);
+            (container as any).setData("sb_lastBW", bw);
+
+            // Depth + scroll factor
+            try {
+                (container as any).setDepth(s.z | 0);
+            } catch { /* ignore */ }
+
+            const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+            try {
+                (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+            } catch { /* ignore */ }
+
+            s.native = container;
+
+            // Mark as non-empty so any pixel-based visibility logic doesn't hide it
+            (s as any)._lastNonZeroPixels = 1;
+
+            _frameAttachCreateCount++;
+            _frameGroupAttachCreates[g]++;
+
+            const tA1 = _hostPerfNowMs();
+            const dA = (tA1 - tA0);
+            _frameAttachMsAccum += dA;
+            _frameGroupAttachMs[g] += dA;
+            return;
+        }
+    }
+
+    // Create Combo meter native rectangles
+    if (isComboMeterSprite) {
+        // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
+        const mcToHex = (p: number): number => {
+            const pal = MAKECODE_PALETTE as any[];
+            const c = pal && pal[p] ? pal[p] : null;
+            if (!c) return 0xffffff;
+            const r = (c[0] | 0) & 255;
+            const g2 = (c[1] | 0) & 255;
+            const b = (c[2] | 0) & 255;
+            return (r << 16) | (g2 << 8) | b;
+        };
+
+        // Read meter geometry from sprite data
+        const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
+        const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+
+        const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
+        const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
+        const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
+        const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+
+        // Colors (match Arcade drawAgiMeterImage)
+        const colE = mcToHex(2);
+        const col1 = mcToHex(7);
+        const col2 = mcToHex(9);
+        const col3 = mcToHex(3);
+        const colBorder = mcToHex(1);
+        const colPtr = mcToHex(5);
+
+        const container = sc.add.container(s.x, s.y);
+        (container as any).setData("uiManaged", true);
+        (container as any).setData("uiKind", UI_KIND_COMBO_METER);
+
+        // Border (stroke only)
+        const borderRect = sc.add.rectangle(0, 0, totalW, h, colBorder, 0);
+        borderRect.setOrigin(0.5, 0.5);
+        borderRect.setStrokeStyle(1, colBorder, 1);
+
+        // Segment rectangles (origin left-anchored)
+        const left = -totalW / 2;
+        const makeSeg = (xLeft: number, w: number, hex: number) => {
+            const r = sc.add.rectangle(xLeft, 0, Math.max(1, w), Math.max(1, h), hex, 1);
+            r.setOrigin(0, 0.5);
+            return r;
+        };
+
+        // Layout: E 1 2 3 2 1 E
+        let x = left;
+        const seg0 = makeSeg(x, wE, colE); x += wE;
+        const seg1 = makeSeg(x, w1, col1); x += w1;
+        const seg2 = makeSeg(x, w2, col2); x += w2;
+        const seg3 = makeSeg(x, w3, col3); x += w3;
+        const seg4 = makeSeg(x, w2, col2); x += w2;
+        const seg5 = makeSeg(x, w1, col1); x += w1;
+        const seg6 = makeSeg(x, wE, colE);
+
+        // Pointer (thin rect)
+        const ptr = sc.add.rectangle(left, 0, 1, Math.max(1, h), colPtr, 1);
+        ptr.setOrigin(0.5, 0.5);
+
+        container.add(borderRect);
+        container.add(seg0); container.add(seg1); container.add(seg2); container.add(seg3);
+        container.add(seg4); container.add(seg5); container.add(seg6);
+        container.add(ptr);
+
+        // Store refs + last-geom for updates
+        (container as any).setData("cm_border", borderRect);
+        (container as any).setData("cm_ptr", ptr);
+        (container as any).setData("cm_segs", [seg0, seg1, seg2, seg3, seg4, seg5, seg6]);
+
+        (container as any).setData("cm_lastTotalW", totalW);
+        (container as any).setData("cm_lastH", h);
+        (container as any).setData("cm_lastWE", wE);
+        (container as any).setData("cm_lastW1", w1);
+        (container as any).setData("cm_lastW2", w2);
+        (container as any).setData("cm_lastW3", w3);
+
+        // Depth + scroll factor
+        try {
+            (container as any).setDepth(s.z | 0);
+        } catch { /* ignore */ }
+
+        const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+        try {
+            (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+        } catch { /* ignore */ }
+
+        s.native = container;
+
+        // Mark as non-empty so any pixel-based visibility logic doesn't hide it
+        (s as any)._lastNonZeroPixels = 1;
+
+        _frameAttachCreateCount++;
+        _frameGroupAttachCreates[g]++;
+
+        const tA1 = _hostPerfNowMs();
+        const dA = (tA1 - tA0);
+        _frameAttachMsAccum += dA;
+        _frameGroupAttachMs[g] += dA;
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // Existing pipeline below (CanvasTexture pixel upload path)
+    // ------------------------------------------------------------
 
     if (!s.image) {
         if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
@@ -1454,19 +1708,15 @@ function _attachNativeSprite(s: Sprite): void {
     }
     // ---------------------------------------------------------------------
 
-    const existingNative: any = s.native;
+    const existingNative2: any = s.native;
     if (
-        existingNative &&
-        existingNative.texture &&
-        existingNative.texture.key &&
-        existingNative.texture.key !== texKey
+        existingNative2 &&
+        existingNative2.texture &&
+        existingNative2.texture.key &&
+        existingNative2.texture.key !== texKey
     ) {
-        // Native exists but is NOT our per-sprite texture key.
-        // This is your "prebuilt/native-managed" early-out path:
-        // - we still updated position (counts as an UPDATE)
-        // - we also mark as EARLY-OUT because we skipped pixel upload
-        existingNative.x = s.x;
-        existingNative.y = s.y;
+        existingNative2.x = s.x;
+        existingNative2.y = s.y;
 
         _frameAttachEarlyOutCount++;
         _frameGroupAttachEarlyOuts[g]++;
@@ -1725,6 +1975,11 @@ function _attachNativeSprite(s: Sprite): void {
 
 
 
+//##########################################################################################################################################
+
+
+
+
 
 
 //
@@ -1964,8 +2219,719 @@ let _syncPerfLastReportMs = 0;
 // ======================================================
 // PHASER NATIVE SPRITE SYNC
 // ======================================================
+type SyncContext = {
+    t0: number;
+    sc?: Phaser.Scene;
+    shouldLog: boolean;
+
+    removedHard: number;
+    removedByPixels: number;
+    frameAttachCount: number;
+
+    tSceneEnd: number;
+    tLoopStart: number;
+    tLoopEnd: number;
+
+    groupLiveCounts: number[];
+};
+
 
 export function _syncNativeSprites(): void {
+    const ctx = _syncBeginFrame();
+    if (!_syncEarlySceneGuard(ctx)) return;
+
+    _syncSpriteLoop(ctx);
+
+    _syncEndFrame(ctx);
+}
+
+
+function _syncBeginFrame(): SyncContext {
+    const t0 = _hostPerfNowMs()
+    _syncCallCount++;
+
+    const sc: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+
+    let shouldLog = false;
+
+    if (_syncCallCount <= MAX_SYNC_VERBOSE) {
+        shouldLog = true;
+    } else if (_syncCallCount % SYNC_EVERY_N_AFTER === 0) {
+        shouldLog = true;
+    } else if (_syncCallCount % SPRITE_SYNC_LOG_MOD === 0) {
+        shouldLog = true;
+    }
+
+    if (shouldLog) {
+        console.log(
+            "[_syncNativeSprites]",
+            "call#", _syncCallCount,
+            "scenePresent=", !!sc,
+            "spriteCount=", _allSprites.length
+        );
+    }
+
+    let removedHard = 0;
+    let removedByPixels = 0;
+    let frameAttachCount = 0;
+
+    let tSceneEnd = t0;
+    let tLoopStart = 0;
+    let tLoopEnd = 0;
+
+    _frameAttachMsAccum = 0;
+    _frameAttachCreateCount = 0;
+    _frameAttachUpdateCount = 0;
+    _frameAttachTexMs = 0;
+    _frameAttachPixelMs = 0;
+    _frameAttachEarlyOutCount = 0;
+
+    _frameGroupAttachMs[0] = 0; _frameGroupAttachMs[1] = 0; _frameGroupAttachMs[2] = 0;
+    _frameGroupAttachTexMs[0] = 0; _frameGroupAttachTexMs[1] = 0; _frameGroupAttachTexMs[2] = 0;
+    _frameGroupAttachPixelMs[0] = 0; _frameGroupAttachPixelMs[1] = 0; _frameGroupAttachPixelMs[2] = 0;
+
+    _frameGroupAttachCalls[0] = 0; _frameGroupAttachCalls[1] = 0; _frameGroupAttachCalls[2] = 0;
+    _frameGroupAttachCreates[0] = 0; _frameGroupAttachCreates[1] = 0; _frameGroupAttachCreates[2] = 0;
+    _frameGroupAttachUpdates[0] = 0; _frameGroupAttachUpdates[1] = 0; _frameGroupAttachUpdates[2] = 0;
+    _frameGroupAttachEarlyOuts[0] = 0; _frameGroupAttachEarlyOuts[1] = 0; _frameGroupAttachEarlyOuts[2] = 0;
+
+    let groupLiveCounts = [0, 0, 0] as number[];
+
+    return {
+        t0,
+        sc,
+        shouldLog,
+        removedHard,
+        removedByPixels,
+        frameAttachCount,
+        tSceneEnd,
+        tLoopStart,
+        tLoopEnd,
+        groupLiveCounts,
+    };
+}
+
+
+function _syncEarlySceneGuard(ctx: SyncContext): boolean {
+    if (!ctx.sc) {
+        if (ctx.shouldLog) console.log("[_syncNativeSprites] no scene yet");
+        return false;
+    }
+    return true;
+}
+
+
+
+function _syncSpriteLoop(ctx: SyncContext): void {
+    const sc = ctx.sc!;
+    const all = _allSprites;
+
+    ctx.tSceneEnd = _hostPerfNowMs();
+    ctx.tLoopStart = _hostPerfNowMs();
+
+    // Helper: MakeCode palette index -> Phaser fill color
+    const mcToHex = (p: number): number => {
+        const pal = MAKECODE_PALETTE as any[];
+        const c = pal && pal[p] ? pal[p] : null;
+        if (!c) return 0xffffff;
+        const r = (c[0] | 0) & 255;
+        const g2 = (c[1] | 0) & 255;
+        const b = (c[2] | 0) & 255;
+        return (r << 16) | (g2 << 8) | b;
+    };
+
+    for (let i = all.length - 1; i >= 0; i--) {
+        const s = all[i];
+        if (!s) {
+            all.splice(i, 1);
+            continue;
+        }
+
+        const flags = s.flags | 0;
+
+        // --------------------------------------------------
+        // HARD-DEAD CHECK (still inline for now)
+        // --------------------------------------------------
+        const hasDestroyedFlag = !!(flags & SpriteFlag.Destroyed);
+        const engineDestroyed = (s as any)._destroyed === true;
+        const imageGone = !s.image;
+
+        if (hasDestroyedFlag || engineDestroyed || imageGone) {
+            ctx.removedHard++;
+
+            if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
+                console.log(
+                    "[SYNC] HARD-DESTROY",
+                    "| id", s.id,
+                    "| kind", s.kind,
+                    "| flags", flags,
+                    "| hasDestroyedFlag", hasDestroyedFlag,
+                    "| engineDestroyed", engineDestroyed,
+                    "| imageGone", imageGone
+                );
+            }
+
+            if (s.native && (s.native as any).destroy) {
+                try {
+                    (s.native as any).destroy();
+                } catch (e) {
+                    console.warn("[_syncNativeSprites] error destroying native", s.id, e);
+                }
+            }
+            s.native = null;
+
+            const texKey = "sprite_" + s.id;
+            if (sc.textures && sc.textures.exists(texKey)) {
+                sc.textures.remove(texKey);
+            }
+
+            all.splice(i, 1);
+            continue;
+        }
+
+        // --------------------------------------------------
+        // ATTACH + POSITION
+        // --------------------------------------------------
+        const dataKeysPre = Object.keys((s as any).data || {});
+        const rolePre = _classifySpriteRole(s.kind, dataKeysPre);
+        const group = _perfGroupFromRole(rolePre);
+
+        ctx.groupLiveCounts[group]++;
+        _syncAttachPerfGroup = group;
+
+        ctx.frameAttachCount++;
+        _attachNativeSprite(s);
+
+        _syncAttachPerfGroup = PERF_GROUP_EXTRA;
+
+        const native = s.native as any;
+        if (!native) {
+            if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
+                console.log(
+                    "[SYNC] no native after attach",
+                    "| id", s.id,
+                    "| kind", s.kind
+                );
+            }
+            continue;
+        }
+
+        native.x = s.x;
+        native.y = s.y;
+
+        // --------------------------------------------------
+        // UI FAST PATH
+        // --------------------------------------------------
+        //if (_syncUiManagedFastPath(ctx, s, native)) continue;
+        if (_syncUiManagedFastPath(ctx, s, native, mcToHex)) continue;
+        // --------------------------------------------------
+        // HERO PATH
+        // --------------------------------------------------
+        _syncHeroPath(ctx, s, native);
+
+        // --------------------------------------------------
+        // ENEMY / ACTOR PATH
+        // --------------------------------------------------
+        if (_syncEnemyActorPath(ctx, s, native)) continue;
+
+        // --------------------------------------------------
+        // PIXEL-DEATH REMOVAL
+        // --------------------------------------------------
+        if (_syncPixelDeathRemoval(ctx, sc, all, i, s, native, flags)) continue;
+
+        // --------------------------------------------------
+        // VISIBILITY + DEBUG
+        // --------------------------------------------------
+        _syncVisibilityAndDebugTail(ctx, s, native, flags);
+    }
+
+    ctx.tLoopEnd = _hostPerfNowMs();
+}
+
+
+
+function _syncUiManagedFastPath(
+    ctx: SyncContext,
+    s: any,
+    native: any,
+    mcToHex: (p: number) => number
+): boolean {
+
+    const isUIManaged = !!(native.getData && native.getData("uiManaged"));
+    if (!isUIManaged) return false;
+
+    // Keep depth + scroll factor synced to Arcade sprite state
+    try {
+        native.setDepth(s.z | 0);
+    } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try {
+        native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+    } catch { /* ignore */ }
+
+    const uiKind = native.getData("uiKind") || "";
+
+    // ============================================================
+    // STATUS BAR RECT UPDATE
+    // ============================================================
+    if (uiKind === UI_KIND_STATUSBAR) {
+        const sb: any = (s as any).data && (s as any).data[STATUS_BAR_DATA_KEY];
+        if (sb) {
+            const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
+            const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
+            const bw = (sb.borderWidth | 0) || 0;
+
+            const borderColorIdx =
+                (sb.borderColor === undefined || sb.borderColor === null)
+                    ? (sb.offColor | 0)
+                    : (sb.borderColor | 0);
+
+            const borderHex = mcToHex(borderColorIdx | 0);
+            const offHex = mcToHex((sb.offColor | 0) || 0);
+            const onHex = mcToHex((sb.onColor | 0) || 0);
+
+            const borderRect: any = native.getData("sb_border");
+            const bgRect: any = native.getData("sb_bg");
+            const fillRect: any = native.getData("sb_fill");
+
+            const innerW = Math.max(1, barW - (bw * 2));
+            const innerH = Math.max(1, barH - (bw * 2));
+            const leftX = (-barW / 2) + bw;
+
+            if (borderRect) {
+                borderRect.width = barW;
+                borderRect.height = barH;
+                borderRect.setFillStyle(borderHex, 1);
+            }
+
+            if (bgRect) {
+                bgRect.x = leftX;
+                bgRect.width = innerW;
+                bgRect.height = innerH;
+                bgRect.setFillStyle(offHex, 1);
+            }
+
+            const max = (sb.max | 0) || (sb._max | 0) || 1;
+            const cur = (sb.current | 0);
+            const pct = Math.max(0, Math.min(1, cur / max));
+            const fillW = Math.max(0, Math.round(innerW * pct));
+
+            if (fillRect) {
+                fillRect.x = leftX;
+                fillRect.width = fillW;
+                fillRect.height = innerH;
+                fillRect.setFillStyle(onHex, 1);
+            }
+
+            native.visible = !(s.flags & SpriteFlag.Invisible);
+            (s as any)._lastNonZeroPixels = 1;
+        } else {
+            native.visible = false;
+        }
+
+        return true;
+    }
+
+    // ============================================================
+    // COMBO METER RECT UPDATE
+    // ============================================================
+    if (uiKind === UI_KIND_COMBO_METER) {
+        const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
+        const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+
+        const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
+        const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
+        const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
+        const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+
+        const posX1000 =
+            (sprites.readDataNumber(s, UI_COMBO_POS_X1000_KEY) | 0) || 0;
+        const show =
+            (sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false;
+
+        const segs: any[] = native.getData("cm_segs") || [];
+        const borderRect: any = native.getData("cm_border");
+        const ptr: any = native.getData("cm_ptr");
+
+        if (borderRect) {
+            borderRect.width = totalW;
+            borderRect.height = h;
+            const colBorder = mcToHex(1);
+            borderRect.setStrokeStyle(1, colBorder, 1);
+        }
+
+        const left = -totalW / 2;
+        let x = left;
+
+        const setSeg = (idx: number, wSeg: number) => {
+            const r = segs[idx];
+            if (!r) return;
+            r.x = x;
+            r.width = Math.max(1, wSeg);
+            r.height = Math.max(1, h);
+            x += wSeg;
+        };
+
+        setSeg(0, wE);
+        setSeg(1, w1);
+        setSeg(2, w2);
+        setSeg(3, w3);
+        setSeg(4, w2);
+        setSeg(5, w1);
+        setSeg(6, wE);
+
+        const clamped = Math.max(0, Math.min(1000, posX1000));
+        const pointerX =
+            Math.idiv(clamped * Math.max(1, (totalW - 1)), 1000);
+
+        if (ptr) {
+            ptr.x = left + pointerX + 0.5;
+            ptr.y = 0;
+            ptr.width = 1;
+            ptr.height = Math.max(1, h);
+            const colPtr = mcToHex(5);
+            ptr.setFillStyle(colPtr, 1);
+        }
+
+        native.visible = show;
+        (s as any)._lastNonZeroPixels = 1;
+
+        return true;
+    }
+
+    // Unknown UI kind: hide defensively
+    native.visible = false;
+    return true;
+}
+
+
+function _syncHeroPath(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): void {
+    const dataKeys = Object.keys(s.data || {});
+    const role = _classifySpriteRole(s.kind, dataKeys);
+
+    // --- HERO ANIM GLUE HOOK --------------------------------------------
+    if (role === "HERO") {
+        const nativeAny: any = s.native;
+        if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
+            _tryApplyHeroAnimationForNative(
+                s,
+                nativeAny as Phaser.GameObjects.Sprite
+            );
+
+            const auraActive = !!(s.data && (s.data as any)["auraActive"]);
+            const auraColor =
+                ((s.data && (s.data as any)["auraColor"]) as any | 0);
+
+            heroAnimGlue.syncHeroAuraForNative(
+                s.native,
+                auraActive,
+                auraColor
+            );
+        }
+    }
+}
+
+
+function _syncEnemyActorPath(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): boolean {
+    const dataKeys = Object.keys(s.data || {});
+    const role = _classifySpriteRole(s.kind, dataKeys);
+
+    if (role !== "ENEMY" && role !== "ACTOR") return false;
+
+    if (!(s as any).data) (s as any).data = {};
+    const data: any = (s as any).data;
+
+    const monsterId =
+        sprites.readDataString(s, "monsterId") ||
+        sprites.readDataString(s, "enemyName") ||
+        sprites.readDataString(s, "name") ||
+        "";
+
+    type MonsterAnimPhase = "walk" | "attack" | "death";
+    type MonsterDirection = "up" | "down" | "left" | "right";
+
+    let phase =
+        (sprites.readDataString(s, "phase") as MonsterAnimPhase) || "walk";
+
+    let dir = sprites.readDataString(s, "dir") as MonsterDirection | undefined;
+    if (!dir) {
+        if (s.vx > 0)      dir = "right";
+        else if (s.vx < 0) dir = "left";
+        else if (s.vy > 0) dir = "down";
+        else               dir = "up";
+    }
+
+    if (monsterId) data["monsterId"] = monsterId;
+    if (monsterId && !data["name"]) data["name"] = monsterId;
+    data["phase"] = phase;
+    data["dir"]   = dir;
+
+    const nativeAny: any = s.native;
+    if (!nativeAny || typeof nativeAny.setData !== "function") {
+        return true;
+    }
+
+    nativeAny.setData("monsterId", monsterId);
+    nativeAny.setData("name",      monsterId);
+    nativeAny.setData("phase",     phase);
+    nativeAny.setData("dir",       dir);
+
+    const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
+    const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
+
+    if (glueAny && typeof glueAny.tryAttachMonsterSprite === "function") {
+        glueAny.tryAttachMonsterSprite(enemySprite);
+    } else if (glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
+        glueAny.applyMonsterAnimationForSprite(enemySprite);
+    }
+
+    return true;
+}
+
+
+
+function _syncPixelDeathRemoval(
+    ctx: SyncContext,
+    sc: Phaser.Scene,
+    all: any[],
+    i: number,
+    s: any,
+    native: any,
+    flags: number
+): boolean {
+    const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
+    const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
+    const autoHideByPixels = lastNonZero === 0;
+
+    const deadByPixels =
+        autoHideByPixels &&
+        (s.kind === 11 || s.kind === 12 || s.kind === 9100);
+
+    if (!deadByPixels) return false;
+
+    ctx.removedByPixels++;
+
+    if (ctx.shouldLog) {
+        console.log(
+            "[SYNC] PIXEL-DESTROY",
+            "| id", s.id,
+            "| kind", s.kind,
+            "| flags", flags,
+            "| lastNonZero", lastNonZero
+        );
+    }
+
+    if (s.native && (s.native as any).destroy) {
+        try {
+            (s.native as any).destroy();
+        } catch (e) {
+            console.warn("[_syncNativeSprites] error destroying native", s.id, e);
+        }
+    }
+    s.native = null;
+
+    const texKey = "sprite_" + s.id;
+
+    if (sc.textures && sc.textures.exists(texKey)) {
+        sc.textures.remove(texKey);
+    }
+
+    all.splice(i, 1);
+    return true;
+}
+
+
+function _syncVisibilityAndDebugTail(
+    ctx: SyncContext,
+    s: any,
+    native: any,
+    flags: number
+): void {
+    // EXTRA DEBUG: raw projectile state
+    if (DEBUG_PROJECTILE_NATIVE && ctx.shouldLog && s.kind === 11) {
+        console.log(
+            "[SYNC-PROJ-RAW]",
+            "| id", s.id,
+            "| engine x,y", s.x, s.y,
+            "| native x,y", native.x, native.y,
+            "| flags", flags,
+            "| image?", !!s.image,
+            "| img w,h", s.image?.width, s.image?.height,
+            "| _lastNonZeroPixels", (s as any)._lastNonZeroPixels,
+            "| native.visible(before)", native.visible,
+            "| native.alpha(before)", native.alpha,
+            "| texKey", native.texture && native.texture.key,
+            "| native.width", native.width,
+            "| native.height", native.height,
+            "| native.displayWidth", native.displayWidth,
+            "| native.displayHeight", native.displayHeight,
+            "| native.scaleX", native.scaleX,
+            "| native.scaleY", native.scaleY,
+            "| native.depth", (native as any).depth
+        );
+    }
+
+    const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
+    const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
+    const autoHideByPixels = lastNonZero === 0;
+
+    const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
+    native.visible = shouldBeVisible;
+    native.alpha = shouldBeVisible ? 1 : 0;
+
+    if (DEBUG_PROJECTILE_NATIVE && ctx.shouldLog && s.kind === 11) {
+        console.log(
+            "[SYNC-PROJ-VIS]",
+            "| id", s.id,
+            "| shouldBeVisible", shouldBeVisible,
+            "| hasInvisibleFlag", hasInvisibleFlag,
+            "| autoHideByPixels", autoHideByPixels,
+            "| native.visible(after)", native.visible,
+            "| native.alpha(after)", native.alpha,
+            "| flags", flags,
+            "| lastNonZero", lastNonZero
+        );
+    }
+
+    if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
+        console.log(
+            "[SYNC] sprite",
+            "| id", s.id,
+            "| kind", s.kind,
+            "| x,y", native.x, native.y,
+            "| visible", native.visible,
+            "| alpha", native.alpha,
+            "| flags", flags,
+            "| hasInvisibleFlag", hasInvisibleFlag,
+            "| lastNonZero", lastNonZero,
+            "| img w,h", s.image?.width, s.image?.height
+        );
+
+        if (SPRITE_PIXEL_DUMP) {
+            const label = s.kind === 11 ? "PROJ" : "OVERLAY";
+            _debugDumpSpritePixels(s, label);
+        }
+    }
+}
+
+
+function _syncEndFrame(ctx: SyncContext): void {
+    const t1 = _hostPerfNowMs();
+    _hostPerfAccumSyncMs += (t1 - ctx.t0);
+
+    const all = _allSprites;
+    const spriteCount = all.length;
+    _hostPerfLastSpriteCount = spriteCount;
+
+    if (!ctx.shouldLog) return;
+
+    const totalMs = t1 - ctx.t0;
+    const sceneMs = ctx.tSceneEnd - ctx.t0;
+    const loopMs = ctx.tLoopEnd - ctx.tLoopStart;
+    const otherMsRaw = totalMs - sceneMs - loopMs;
+    const otherMs = otherMsRaw < 0 ? 0 : otherMsRaw;
+
+    const attachMs = _frameAttachMsAccum;
+    const loopOtherMsRaw = loopMs - attachMs;
+    const loopOtherMs = loopOtherMsRaw < 0 ? 0 : loopOtherMsRaw;
+
+    // group counts
+    const Hc = ctx.groupLiveCounts[PERF_GROUP_HERO] | 0;
+    const Ec = ctx.groupLiveCounts[PERF_GROUP_ENEMY] | 0;
+    const Xc = ctx.groupLiveCounts[PERF_GROUP_EXTRA] | 0;
+
+    // group time
+    const Ha = _frameGroupAttachMs[PERF_GROUP_HERO];
+    const Ea = _frameGroupAttachMs[PERF_GROUP_ENEMY];
+    const Xa = _frameGroupAttachMs[PERF_GROUP_EXTRA];
+
+    const Hpx = _frameGroupAttachPixelMs[PERF_GROUP_HERO];
+    const Epx = _frameGroupAttachPixelMs[PERF_GROUP_ENEMY];
+    const Xpx = _frameGroupAttachPixelMs[PERF_GROUP_EXTRA];
+
+    const Htx = _frameGroupAttachTexMs[PERF_GROUP_HERO];
+    const Etx = _frameGroupAttachTexMs[PERF_GROUP_ENEMY];
+    const Xtx = _frameGroupAttachTexMs[PERF_GROUP_EXTRA];
+
+    // group counts for attach ops
+    const Hcalls = _frameGroupAttachCalls[PERF_GROUP_HERO] | 0;
+    const Ecalls = _frameGroupAttachCalls[PERF_GROUP_ENEMY] | 0;
+    const Xcalls = _frameGroupAttachCalls[PERF_GROUP_EXTRA] | 0;
+
+    const Hcr = _frameGroupAttachCreates[PERF_GROUP_HERO] | 0;
+    const Ecr = _frameGroupAttachCreates[PERF_GROUP_ENEMY] | 0;
+    const Xcr = _frameGroupAttachCreates[PERF_GROUP_EXTRA] | 0;
+
+    const Hup = _frameGroupAttachUpdates[PERF_GROUP_HERO] | 0;
+    const Eup = _frameGroupAttachUpdates[PERF_GROUP_ENEMY] | 0;
+    const Xup = _frameGroupAttachUpdates[PERF_GROUP_EXTRA] | 0;
+
+    const Heo = _frameGroupAttachEarlyOuts[PERF_GROUP_HERO] | 0;
+    const Eeo = _frameGroupAttachEarlyOuts[PERF_GROUP_ENEMY] | 0;
+    const Xeo = _frameGroupAttachEarlyOuts[PERF_GROUP_EXTRA] | 0;
+
+    // AURA PERF (accumulated by heroAnimGlue.syncHeroAuraForNative)
+    const gAny: any = globalThis as any;
+    const auraMs = +(gAny.__perfAuraMs || 0);
+    const auraCalls = (gAny.__perfAuraCalls | 0) || 0;
+    const auraBuilds = (gAny.__perfAuraBuilds | 0) || 0;
+    const auraTexSets = (gAny.__perfAuraTexSets | 0) || 0;
+
+    console.log(
+        "[perf.syncSteps]",
+        "call#", _syncCallCount,
+        "sprites=", spriteCount,
+        "totalMs≈", totalMs.toFixed(3),
+        "sceneMs≈", sceneMs.toFixed(3),
+        "loopMs≈", loopMs.toFixed(3),
+        "loopAttachMs≈", attachMs.toFixed(3),
+        "loopAttachTexMs≈", _frameAttachTexMs.toFixed(3),
+        "loopAttachPixelMs≈", _frameAttachPixelMs.toFixed(3),
+        "loopOtherMs≈", loopOtherMs.toFixed(3),
+        "otherMs≈", otherMs.toFixed(3),
+        "removedHard=", ctx.removedHard,
+        "removedByPixels=", ctx.removedByPixels,
+        "attachCalls=", ctx.frameAttachCount,
+        "attachCreates=", _frameAttachCreateCount,
+        "attachUpdates=", _frameAttachUpdateCount,
+        "attachEarlyOuts=", _frameAttachEarlyOutCount,
+        "| H/E/X=", `${Hc}/${Ec}/${Xc}`,
+        "| attachMs(H/E/X)=", `${Ha.toFixed(3)}/${Ea.toFixed(3)}/${Xa.toFixed(3)}`,
+        "| pixMs(H/E/X)=", `${Hpx.toFixed(3)}/${Epx.toFixed(3)}/${Xpx.toFixed(3)}`,
+        "| texMs(H/E/X)=", `${Htx.toFixed(3)}/${Etx.toFixed(3)}/${Xtx.toFixed(3)}`,
+        "| calls(H/E/X)=", `${Hcalls}/${Ecalls}/${Xcalls}`,
+        "| creates(H/E/X)=", `${Hcr}/${Ecr}/${Xcr}`,
+        "| updates(H/E/X)=", `${Hup}/${Eup}/${Xup}`,
+        "| early(H/E/X)=", `${Heo}/${Eeo}/${Xeo}`,
+        "| auraMs≈", auraMs.toFixed(3),
+        "auraCalls=", auraCalls,
+        "auraBuilds=", auraBuilds,
+        "auraTexSets=", auraTexSets
+    );
+
+    // Reset aura accumulators so each log line is "since last perf.syncSteps"
+    gAny.__perfAuraMs = 0;
+    gAny.__perfAuraCalls = 0;
+    gAny.__perfAuraBuilds = 0;
+    gAny.__perfAuraTexSets = 0;
+}
+
+
+
+
+
+
+
+export function _syncNativeSpritesOLDCODETODELETE(): void {
     const t0 = _hostPerfNowMs()
     _syncCallCount++;
 
@@ -2031,6 +2997,17 @@ export function _syncNativeSprites(): void {
     const all = _allSprites;
 
     tLoopStart = _hostPerfNowMs();
+
+    // Helper: MakeCode palette index -> Phaser fill color (0xRRGGBB)
+    const mcToHex = (p: number): number => {
+        const pal = MAKECODE_PALETTE as any[];
+        const c = pal && pal[p] ? pal[p] : null;
+        if (!c) return 0xffffff;
+        const r = (c[0] | 0) & 255;
+        const g2 = (c[1] | 0) & 255;
+        const b = (c[2] | 0) & 255;
+        return (r << 16) | (g2 << 8) | b;
+    };
 
     for (let i = all.length - 1; i >= 0; i--) {
         const s = all[i];
@@ -2115,6 +3092,148 @@ export function _syncNativeSprites(): void {
         native.x = s.x;
         native.y = s.y;
 
+        // ============================================================
+        // UI-MANAGED FAST PATH (Phaser rectangles: status bars + combo)
+        // ============================================================
+        const isUIManaged = !!(native.getData && native.getData("uiManaged"));
+        if (isUIManaged) {
+            // Keep depth + scroll factor synced to Arcade sprite state
+            try {
+                native.setDepth(s.z | 0);
+            } catch { /* ignore */ }
+
+            const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+            try {
+                native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
+            } catch { /* ignore */ }
+
+            const uiKind = native.getData("uiKind") || "";
+
+            // STATUS BAR RECT UPDATE
+            if (uiKind === UI_KIND_STATUSBAR) {
+                const sb: any = (s as any).data && (s as any).data[STATUS_BAR_DATA_KEY];
+                if (sb) {
+                    const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
+                    const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
+                    const bw = (sb.borderWidth | 0) || 0;
+
+                    const borderColorIdx = (sb.borderColor === undefined || sb.borderColor === null)
+                        ? (sb.offColor | 0)
+                        : (sb.borderColor | 0);
+
+                    const borderHex = mcToHex(borderColorIdx | 0);
+                    const offHex = mcToHex((sb.offColor | 0) || 0);
+                    const onHex = mcToHex((sb.onColor | 0) || 0);
+
+                    const borderRect: any = native.getData("sb_border");
+                    const bgRect: any = native.getData("sb_bg");
+                    const fillRect: any = native.getData("sb_fill");
+
+                    const innerW = Math.max(1, barW - (bw * 2));
+                    const innerH = Math.max(1, barH - (bw * 2));
+                    const leftX = (-barW / 2) + bw;
+
+                    if (borderRect) {
+                        borderRect.width = barW;
+                        borderRect.height = barH;
+                        borderRect.setFillStyle(borderHex, 1);
+                    }
+
+                    if (bgRect) {
+                        bgRect.x = leftX;
+                        bgRect.width = innerW;
+                        bgRect.height = innerH;
+                        bgRect.setFillStyle(offHex, 1);
+                    }
+
+                    const max = (sb.max | 0) || (sb._max | 0) || 1;
+                    const cur = (sb.current | 0);
+                    const pct = Math.max(0, Math.min(1, cur / max));
+                    const fillW = Math.max(0, Math.round(innerW * pct));
+
+                    if (fillRect) {
+                        fillRect.x = leftX;
+                        fillRect.width = fillW;
+                        fillRect.height = innerH;
+                        fillRect.setFillStyle(onHex, 1);
+                    }
+
+                    native.visible = !(s.flags & SpriteFlag.Invisible);
+                    (s as any)._lastNonZeroPixels = 1;
+                } else {
+                    native.visible = false;
+                }
+
+                continue;
+            }
+
+            // COMBO METER RECT UPDATE
+            if (uiKind === UI_KIND_COMBO_METER) {
+                const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
+                const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+
+                const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
+                const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
+                const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
+                const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+
+                const posX1000 = (sprites.readDataNumber(s, UI_COMBO_POS_X1000_KEY) | 0) || 0;
+                const show = (sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false;
+
+                const segs: any[] = native.getData("cm_segs") || [];
+                const borderRect: any = native.getData("cm_border");
+                const ptr: any = native.getData("cm_ptr");
+
+                if (borderRect) {
+                    borderRect.width = totalW;
+                    borderRect.height = h;
+                    const colBorder = mcToHex(1);
+                    borderRect.setStrokeStyle(1, colBorder, 1);
+                }
+
+                const left = -totalW / 2;
+                let x = left;
+
+                const setSeg = (idx: number, wSeg: number) => {
+                    const r = segs[idx];
+                    if (!r) return;
+                    r.x = x;
+                    r.width = Math.max(1, wSeg);
+                    r.height = Math.max(1, h);
+                    x += wSeg;
+                };
+
+                setSeg(0, wE);
+                setSeg(1, w1);
+                setSeg(2, w2);
+                setSeg(3, w3);
+                setSeg(4, w2);
+                setSeg(5, w1);
+                setSeg(6, wE);
+
+                const clamped = Math.max(0, Math.min(1000, posX1000));
+                const pointerX = Math.idiv(clamped * Math.max(1, (totalW - 1)), 1000);
+
+                if (ptr) {
+                    ptr.x = left + pointerX + 0.5;
+                    ptr.y = 0;
+                    ptr.width = 1;
+                    ptr.height = Math.max(1, h);
+                    const colPtr = mcToHex(5);
+                    ptr.setFillStyle(colPtr, 1);
+                }
+
+                native.visible = show;
+                (s as any)._lastNonZeroPixels = 1;
+
+                continue;
+            }
+
+            // Unknown UI kind: hide defensively
+            native.visible = false;
+            continue;
+        }
+
         const dataKeys = Object.keys(s.data || {});
         const role = _classifySpriteRole(s.kind, dataKeys);
 
@@ -2134,6 +3253,8 @@ export function _syncNativeSprites(): void {
                 );
             }
         }
+
+
 
         if (role === "ENEMY" || role === "ACTOR") {
             if (!(s as any).data) (s as any).data = {};

@@ -946,40 +946,67 @@ export function prewarmHeroAuraOutlines(
 
 
 
-
-// heroAnimGlue.ts
-export function prewarmHeroAuraOutlinesAsync(
+export async function prewarmHeroAuraOutlinesAsync(
     scene: Phaser.Scene,
-    texKey: string,
+    heroTexKey: string,
     radius: number,
     onProgress?: (done: number, total: number) => void,
     budgetMsPerTick: number = 6
 ): Promise<void> {
-    // Spritesheet-only aura pipeline:
-    // Auras are NEVER computed at runtime. They must already exist as:
-    //   `${texKey}_aura_r${radius}`
-    //
-    // So "prewarm" becomes a cheap validation hook (optional) and then resolves immediately.
-    // This prevents intermittent stalls from any legacy outline/mask work.
+    if (!scene) throw new Error("[prewarmHeroAuraOutlinesAsync] missing scene");
+    if (!heroTexKey) return;
 
-    // Keep args referenced so TS doesn't complain in strict/noUnusedParameters setups.
-    void scene;
-    void budgetMsPerTick;
+    const auraTexKey = `${heroTexKey}_aura_r${radius}`;
 
-    const auraTexKey = `${texKey}_aura_r${radius}`;
-
-    // If missing, we fail FAST with the same instruction as syncHeroAuraForNative().
+    if (!scene.textures.exists(heroTexKey)) {
+        throw new Error(`[AURA-PREWARM] Hero texture missing: ${heroTexKey}`);
+    }
     if (!scene.textures.exists(auraTexKey)) {
         throw new Error(
-            `[AURA-MISSING] Texture not loaded: ${auraTexKey}. ` +
-            `Run: npm run gen-auras`
+            `[AURA-MISSING] Texture not loaded: ${auraTexKey}. Run: npm run gen-auras`
         );
     }
 
-    // Optional progress callback: since we're not doing work, we report "done".
-    if (onProgress) onProgress(1, 1);
+    const heroTex = scene.textures.get(heroTexKey);
+    const auraTex = scene.textures.get(auraTexKey);
 
-    return Promise.resolve();
+    const heroFrames = (heroTex.getFrameNames ? heroTex.getFrameNames() : []) as any[];
+    const frameNames = heroFrames.filter((f: any) => String(f) !== "__BASE");
+
+    const total = frameNames.length || 1;
+    let done = 0;
+
+    const tick = async (): Promise<void> => {
+        const tStart = performance.now();
+
+        while (done < frameNames.length) {
+            const fn = frameNames[done];
+
+            // Validate aura has matching frame
+            const af = auraTex.get(fn);
+            if (!af) {
+                throw new Error(
+                    `[AURA-FRAME-MISSING] ${auraTexKey} missing frame=${String(fn)} (heroTex=${heroTexKey})`
+                );
+            }
+
+            // Touch the frame so Phaser caches internals
+            // (no pixels, just frame lookup)
+            done++;
+            if (onProgress) onProgress(done, total);
+
+            if ((performance.now() - tStart) >= budgetMsPerTick) break;
+        }
+
+        if (done < frameNames.length) {
+            await new Promise<void>((resolve) => {
+                scene.time.delayedCall(0, () => resolve());
+            });
+            return tick();
+        }
+    };
+
+    await tick();
 }
 
 
@@ -997,167 +1024,105 @@ export function prewarmHeroAuraOutlinesAsync(
  */
 
 export function syncHeroAuraForNative(
-    native: Phaser.GameObjects.Sprite,
+    native: any,
     auraActive: boolean,
     auraColorIndex: number
 ): void {
+    const t0 = performance.now();
 
-    const tAura0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    try {
+        if (!native) return;
 
-    const scene = native.scene;
-    const radius = 2;
+        const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+        if (!scene) return;
 
-    let aura = __heroAuraSpriteByHero.get(native);
+        // If aura is off, hide and bail.
+        const auraAny: any = (native as any).__heroAuraImage;
+        if (!auraActive) {
+            if (auraAny) auraAny.setVisible(false);
+            return;
+        }
 
-    // If aura is off, just hide it (still count the call, but it's basically free)
-    if (!auraActive) {
-        if (aura) aura.setVisible(false);
+        // We are now STRICT spritesheet-only.
+        const heroTexKey = native.texture?.key ? String(native.texture.key) : "";
+        if (!heroTexKey) return;
 
-        const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-        const dt = tAura1 - tAura0;
+        const radius = 2; // hard-locked to r2 in this pipeline
+        const auraTexKey = `${heroTexKey}_aura_r${radius}`;
 
-        // PERF ACCUM (global, sampled by arcadeCompat perf.syncSteps)
-        const g: any = globalThis as any;
-        g.__perfAuraCalls = (g.__perfAuraCalls || 0) + 1;
-        g.__perfAuraMs = (g.__perfAuraMs || 0) + dt;
-        // no texture changes/builds in this path
+        if (!scene.textures.exists(auraTexKey)) {
+            throw new Error(
+                `[AURA-MISSING] Texture not loaded: ${auraTexKey}. Run: npm run gen-auras`
+            );
+        }
 
-        return;
+        // Use the SAME frame name/index as the hero.
+        const heroFrameName = (native.frame && (native.frame.name !== undefined))
+            ? native.frame.name
+            : undefined;
+
+        const auraTex = scene.textures.get(auraTexKey);
+        const auraFrame =
+            (heroFrameName !== undefined)
+                ? auraTex.get(heroFrameName as any)
+                : null;
+
+        if (!auraFrame) {
+            // If this happens, your generator and hero atlas frame naming are mismatched.
+            throw new Error(
+                `[AURA-FRAME-MISSING] ${auraTexKey} missing frame=${String(heroFrameName)} (heroTex=${heroTexKey})`
+            );
+        }
+
+        // Create aura image once.
+        let auraImg: Phaser.GameObjects.Image;
+        if (!auraAny || !(auraAny as any).scene) {
+            auraImg = scene.add.image(native.x, native.y, auraTexKey, heroFrameName as any);
+            (native as any).__heroAuraImage = auraImg;
+
+            // Depth: behind hero by default (tweak if you already have conventions)
+            const heroDepth = (native as any).depth ?? 0;
+            auraImg.setDepth(heroDepth - 1);
+
+            // Match origin if present (Sprite has origin; Image too)
+            if (typeof native.originX === "number" && typeof native.originY === "number") {
+                auraImg.setOrigin(native.originX, native.originY);
+            }
+        } else {
+            auraImg = auraAny as Phaser.GameObjects.Image;
+            // Ensure correct texture + frame every tick (cheap, no pixels)
+            auraImg.setTexture(auraTexKey, heroFrameName as any);
+        }
+
+        // Follow transforms
+        auraImg.x = native.x;
+        auraImg.y = native.y;
+
+        auraImg.setVisible(true);
+        auraImg.alpha = 1;
+
+        // Match scale/flip/rotation (if you use them)
+        auraImg.scaleX = native.scaleX ?? 1;
+        auraImg.scaleY = native.scaleY ?? 1;
+        auraImg.rotation = native.rotation ?? 0;
+
+        if (typeof (auraImg as any).setFlipX === "function") {
+            (auraImg as any).setFlipX(!!native.flipX);
+        }
+        if (typeof (auraImg as any).setFlipY === "function") {
+            (auraImg as any).setFlipY(!!native.flipY);
+        }
+
+        // Tint
+        if (typeof auraImg.setTint === "function") {
+            const tintHex = __tintForArcadeColorIndex(auraColorIndex | 0);
+            if (tintHex !== 0) auraImg.setTint(tintHex);
+            else auraImg.clearTint();
+        }
+    } finally {
+        (globalThis as any).__perfAuraMs += (performance.now() - t0);
+        (globalThis as any).__perfAuraCalls++;
     }
-
-    // Ensure aura object exists
-    if (!aura) {
-        aura = scene.add.image(native.x, native.y, native.texture.key, native.frame.name);
-        aura.setOrigin(native.originX, native.originY);
-        // Put just behind the hero; bump this above if you want it in front.
-        aura.setDepth(native.depth - 0.01);
-        __heroAuraSpriteByHero.set(native, aura);
-    }
-
-    // --- 1-bit mask path ---
-    const texKey = native.texture.key;
-    const frameName = String(native.frame.name);
-
-    // Build/get 1-bit dilated mask (cached)
-    const mask = getOrBuildHeroAuraMaskBits(scene, texKey, frameName, radius);
-
-    // One texture per (texKey, frame, radius). White pixels; tint handles color.
-    const outTexKey = `__heroAuraBits__${texKey}::${frameName}::r${radius}`;
-
-    let didBuild = false;
-
-    // Only render once per outTexKey
-    if (!scene.textures.exists(outTexKey)) {
-        didBuild = true;
-        console.log("[aura.bits] MISS build", outTexKey);
-        renderAuraTextureFromMaskBits(scene, outTexKey, mask, [255, 255, 255, 255]);
-    }
-
-    // Ensure aura is using our generated texture (no frame needed; it's the whole canvas)
-    const curTexKey = aura.texture?.key || "";
-    let didSetTexture = false;
-    if (curTexKey !== outTexKey) {
-        didSetTexture = true;
-        aura.setTexture(outTexKey);
-    }
-
-    // Match transform
-    aura.setVisible(true);
-    aura.x = native.x;
-    aura.y = native.y;
-    aura.rotation = native.rotation;
-    aura.scaleX = native.scaleX;
-    aura.scaleY = native.scaleY;
-    aura.setFlipX(native.flipX);
-    aura.setFlipY(native.flipY);
-
-    // Color + translucency
-    aura.setTint(__tintForArcadeColorIndex(auraColorIndex));
-    aura.setAlpha(0.85);
-
-    const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-    const dt = tAura1 - tAura0;
-
-    // Keep your old “slow call” log if you still want it
-    if (dt > 2) console.log("[perf.auraSync] ms≈", dt.toFixed(2), "tex=", texKey, "frame=", frameName);
-
-    // PERF ACCUM (global, sampled by arcadeCompat perf.syncSteps)
-    const g: any = globalThis as any;
-    g.__perfAuraCalls = (g.__perfAuraCalls || 0) + 1;
-    g.__perfAuraMs = (g.__perfAuraMs || 0) + dt;
-    if (didBuild) g.__perfAuraBuilds = (g.__perfAuraBuilds || 0) + 1;
-    if (didSetTexture) g.__perfAuraTexSets = (g.__perfAuraTexSets || 0) + 1;
-}
-
-
-
-
-export function syncHeroAuraForNativeOLDBADCODE(
-    native: Phaser.GameObjects.Sprite,
-    auraActive: boolean,
-    auraColorIndex: number
-): void {
-
-    const tAura0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-
-    const scene = native.scene;
-    const radius = 2;
-
-    let aura = __heroAuraSpriteByHero.get(native);
-
-    if (!auraActive) {
-        if (aura) aura.setVisible(false);
-        return;
-    }
-
-    // Ensure aura object exists
-    if (!aura) {
-        aura = scene.add.image(native.x, native.y, native.texture.key, native.frame.name);
-        aura.setOrigin(native.originX, native.originY);
-        // Put just behind the hero; bump this above if you want it in front.
-        aura.setDepth(native.depth - 0.01);
-        __heroAuraSpriteByHero.set(native, aura);
-    }
-
-    // --- 1-bit mask path ---
-    const texKey = native.texture.key;
-    const frameName = String(native.frame.name);
-
-    // Build/get 1-bit dilated mask (cached)
-    const mask = getOrBuildHeroAuraMaskBits(scene, texKey, frameName, radius);
-
-    // One texture per (texKey, frame, radius). White pixels; tint handles color.
-    const outTexKey = `__heroAuraBits__${texKey}::${frameName}::r${radius}`;
-
-    // Only render once per outTexKey
-    if (!scene.textures.exists(outTexKey)) {
-        console.log("[aura.bits] MISS build", outTexKey);
-        renderAuraTextureFromMaskBits(scene, outTexKey, mask, [255, 255, 255, 255]);
-    }
-
-    // Ensure aura is using our generated texture (no frame needed; it's the whole canvas)
-    const curTexKey = aura.texture?.key || "";
-    if (curTexKey !== outTexKey) {
-        aura.setTexture(outTexKey);
-    }
-
-    // Match transform
-    aura.setVisible(true);
-    aura.x = native.x;
-    aura.y = native.y;
-    aura.rotation = native.rotation;
-    aura.scaleX = native.scaleX;
-    aura.scaleY = native.scaleY;
-    aura.setFlipX(native.flipX);
-    aura.setFlipY(native.flipY);
-
-    // Color + translucency
-    aura.setTint(__tintForArcadeColorIndex(auraColorIndex));
-    aura.setAlpha(0.85);
-
-    const tAura1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-    const dt = tAura1 - tAura0;
-    if (dt > 2) console.log("[perf.auraSync] ms≈", dt.toFixed(2), "tex=", texKey, "frame=", frameName);
 }
 
 
@@ -1166,28 +1131,46 @@ export function syncHeroAuraForNativeOLDBADCODE(
 
 export function getHeroAuraLeadForNativeDir(
     native: Phaser.GameObjects.Sprite,
-    radius: number,
-    dir: "up" | "down" | "left" | "right"
+    dir: "up" | "down" | "left" | "right",
+    radius: number
 ): number {
-    const scene = native.scene;
-    const cacheKey = __outlineKeyForFrame(native.texture.key, native.frame.name, radius);
-    __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
+    // In spritesheet-only mode we do NOT do directional pixel lead scans.
+    // We approximate lead as (innerR + radius) from the aura frame size.
+    const innerR = getHeroAuraInnerRForNative(native, radius);
+    if (innerR > 0) return innerR + (radius | 0);
 
-    const m = __heroAuraMetricsCache.get(cacheKey);
-    if (!m) return 0;
-
-    if (dir === "up") return m.leadUp;
-    if (dir === "down") return m.leadDown;
-    if (dir === "left") return m.leadLeft;
-    return m.leadRight;
+    // Fallback: half of native display size
+    const w = (native.displayWidth || native.width || 0);
+    const h = (native.displayHeight || native.height || 0);
+    const half = Math.floor(Math.min(w, h) / 2);
+    return half > 0 ? half : 0;
 }
 
-export function getHeroAuraInnerRForNative(native: Phaser.GameObjects.Sprite, radius: number): number {
-    const scene = native.scene;
-    const cacheKey = __outlineKeyForFrame(native.texture.key, native.frame.name, radius);
-    __getOrBuildHeroOutlineTexture(scene, native.texture.key, native.frame.name, radius);
-    const m = __heroAuraMetricsCache.get(cacheKey);
-    return m ? m.innerR : 0;
+
+export function getHeroAuraInnerRForNative(
+    native: Phaser.GameObjects.Sprite,
+    radius: number
+): number {
+    const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+    if (!scene || !native) return 0;
+
+    const heroTexKey = native.texture?.key ? String(native.texture.key) : "";
+    if (!heroTexKey) return 0;
+
+    const auraTexKey = `${heroTexKey}_aura_r${radius}`;
+    if (!scene.textures.exists(auraTexKey)) return 0;
+
+    const frameName = (native.frame && (native.frame.name !== undefined)) ? native.frame.name : undefined;
+    const auraTex = scene.textures.get(auraTexKey);
+    const af = (frameName !== undefined) ? auraTex.get(frameName as any) : null;
+    if (!af) return 0;
+
+    const w = af.width | 0;
+    const h = af.height | 0;
+
+    // Inner radius ≈ half of aura frame minus the halo thickness
+    const inner = Math.floor(Math.min(w, h) / 2) - (radius | 0);
+    return inner > 0 ? inner : 0;
 }
 
 

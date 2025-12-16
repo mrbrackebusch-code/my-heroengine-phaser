@@ -327,12 +327,27 @@ class StatusBarSprite extends Sprite {
         if (sb) {
             const output = action(sb);
             sb.updateDisplay();
+
+            // If we're running under Phaser, the bar is rendered by Phaser rectangles
+            // (arcadeCompat.ts UI path), so DON'T keep swapping the MakeCode image.
+            // That image swap is what triggers per-frame pixel upload cost.
+            const inPhaser = !!(globalThis as any).__phaserScene;
+            if (inPhaser) {
+                // Optional but helpful: give arcadeCompat an additional marker key
+                // so detection works even if something weird happens with the sb key.
+                (this as any).data = (this as any).data || {};
+                (this as any).data["__uiKind"] = "statusbar";
+                return output;
+            }
+
+            // Arcade / non-Phaser behavior stays identical
             this.setImage(sb.image);
             return output;
         }
 
         return undefined;
     }
+
 }
 
 //% color=#38364d

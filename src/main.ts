@@ -17,7 +17,7 @@ import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
 import { WorldTileRenderer } from "./tileMapGlue";
 
 
-import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
+//import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 
 
 
@@ -126,75 +126,70 @@ async create() {
     buildHeroAtlas(this);
 
     // ------------------------------------------------------------
-    // PREWARM (awaitable) – blocks network join until caches ready
-    // Spritesheet-only aura pipeline: this is now basically a validation pass
-    // that checks `${texKey}_aura_r2` exists for chosen texKey(s).
+    // AURA PIPELINE (spritesheet-only)
+    // No runtime generation. We only validate required aura textures exist.
     // ------------------------------------------------------------
     const AURA_R = 2;
     const parsedSheets = (this.registry.get("__heroParsedSheets") || []) as any[];
 
-    // Gather tex keys we want to warm:
-    // - Always include baseKey if it exists
-    // - Include key192 ONLY if BOTH key192 AND key192_aura_r2 exist
-    const texKeysToWarmSet = new Set<string>();
+    // Helper: only treat *_192 as valid if its source image is divisible by 192
+    const isValid192Sheet = (texKey192: string): boolean => {
+        if (!this.textures.exists(texKey192)) return false;
+
+        try {
+            const tex = this.textures.get(texKey192);
+            const src: any = (tex as any)?.getSourceImage?.();
+            const w = (src && (src.width | 0)) || 0;
+            const h = (src && (src.height | 0)) || 0;
+            if (w <= 0 || h <= 0) return false;
+
+            // must be a clean 192 grid
+            return (w % 192) === 0 && (h % 192) === 0;
+        } catch (_e) {
+            return false;
+        }
+    };
+
+    // Choose which hero textures we will actually use:
+    // - Always include baseKey if it exists (but REQUIRE base aura sheet exists)
+    // - Include key192 ONLY if it is a VALID 192 grid AND its aura exists
+    const texKeysToUseSet = new Set<string>();
+
+    loadingText.setText("Loading… validating auras");
 
     for (const sheet of parsedSheets) {
         const baseKey = sheet.textureKey;
+        const auraBaseKey = `${baseKey}_aura_r${AURA_R}`;
+
         const key192 = baseKey + "_192";
-        const auraKey192 = key192 + "_aura_r2";
+        const auraKey192 = `${key192}_aura_r${AURA_R}`;
 
+        // Base always allowed IF present, but aura is REQUIRED (no misses allowed)
         if (this.textures.exists(baseKey)) {
-            texKeysToWarmSet.add(baseKey);
+            if (!this.textures.exists(auraBaseKey)) {
+                throw new Error(
+                    `[AURA-MISSING] Texture not loaded: ${auraBaseKey}. Run: npm run gen-auras`
+                );
+            }
+            texKeysToUseSet.add(baseKey);
         }
 
-        if (this.textures.exists(key192) && this.textures.exists(auraKey192)) {
-            texKeysToWarmSet.add(key192);
+        // 192 only if it's truly a 192-grid sheet
+        const hasReal192 = isValid192Sheet(key192);
+        if (hasReal192) {
+            if (!this.textures.exists(auraKey192)) {
+                throw new Error(
+                    `[AURA-MISSING] Texture not loaded: ${auraKey192}. Run: npm run gen-auras`
+                );
+            }
+            texKeysToUseSet.add(key192);
         }
     }
 
-    const texKeysToWarm = Array.from(texKeysToWarmSet);
-
-    // Count total frames across all textures (for stable percent)
-    const frameCounts: Record<string, number> = {};
-    let grandTotal = 0;
-
-    for (const k of texKeysToWarm) {
-        const tex = this.textures.get(k);
-        const names = (tex?.getFrameNames ? tex.getFrameNames() : []) as any[];
-        const count = names.filter((f: any) => String(f) !== "__BASE").length;
-        frameCounts[k] = count;
-        grandTotal += count;
+    const texKeysToUse = Array.from(texKeysToUseSet);
+    if (texKeysToUse.length === 0) {
+        console.warn(">>> [HeroScene.create] no hero textures found to validate for auras");
     }
-    if (grandTotal <= 0) grandTotal = 1;
-
-    // Progress
-    let grandDone = 0;
-    loadingText.setText("Loading… 0%");
-
-    // Run all warmups (in parallel). Each warmup time-slices itself via delayedCall.
-    await Promise.all(
-        texKeysToWarm.map(async (k) => {
-            let lastDoneForThisTex = 0;
-
-            await prewarmHeroAuraOutlinesAsync(
-                this,
-                k,
-                AURA_R,
-                (done, _total) => {
-                    // Increment global progress by the delta for this texture
-                    const delta = done - lastDoneForThisTex;
-                    if (delta > 0) {
-                        lastDoneForThisTex = done;
-                        grandDone += delta;
-
-                        const pct = Math.min(100, Math.floor((grandDone / grandTotal) * 100));
-                        loadingText.setText(`Loading… ${pct}%`);
-                    }
-                }
-                // optional budgetMsPerTick as 5th arg if you want, e.g. , 6
-            );
-        })
-    );
 
     loadingText.setText("Loading… 100%");
     loadingText.destroy();
@@ -202,6 +197,8 @@ async create() {
 
     console.log(">>> [HeroScene.create] building tile atlas");
     this.tileAtlas = buildTileAtlas(this);
+
+    
 
     // ---------------------------
     // HOST vs NON-HOST

@@ -1137,13 +1137,31 @@ const AURA_COLOR_HEAL = 7 // green-ish
 // ================================================================
 // ================================================================
 // ================================================================
-// SECTION 2 - HELPER FUNCTIONS
+// SECTION 2 - HELPER FUNCTIONS and Phaser Helper Constants
 // ================================================================
 // Utility helpers used across the engine. Stateless. No side effects.
 // ================================================================
 // ================================================================
 // ================================================================
 // ================================================================
+
+// === UI marker keys (shared) ===
+const UI_KIND_KEY = "__uiKind";
+const UI_KIND_COMBO_METER = "comboMeter";
+
+// === Combo meter sprite data keys ===
+const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
+const UI_COMBO_H_KEY = "__comboH";
+
+const UI_COMBO_W_E_KEY = "__comboWE";
+const UI_COMBO_W_1_KEY = "__comboW1";
+const UI_COMBO_W_2_KEY = "__comboW2";
+const UI_COMBO_W_3_KEY = "__comboW3";
+
+const UI_COMBO_POS_X1000_KEY = "__comboPosX1000";
+const UI_COMBO_VISIBLE_KEY = "__comboVisible";
+const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional
+
 
 
 
@@ -2834,11 +2852,13 @@ function ensureHeroAuraSprite(heroIndex: number): Sprite {
 
 
 
+
+
 function updateHeroAuras() {
     const now = game.runtime() | 0
     const phaser = isPhaserRuntime()
 
-    // Local helper: draw the segmented pendulum meter.
+    // Local helper: draw the segmented pendulum meter (Arcade only).
     function drawAgiMeterImage(
         wE: number,
         w1: number,
@@ -2921,7 +2941,10 @@ function updateHeroAuras() {
         const counter = heroAgiStoredCounters[i]
 
         if (!showMeter) {
-            if (meter) meter.setFlag(SpriteFlag.Invisible, true)
+            if (meter) {
+                meter.setFlag(SpriteFlag.Invisible, true)
+                if (phaser) sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
+            }
             if (counter) counter.setFlag(SpriteFlag.Invisible, true)
             continue
         }
@@ -2939,39 +2962,43 @@ function updateHeroAuras() {
 
         const totalW = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
 
-        // Start meter timing only AFTER landing
-        let meterStart = sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0
-        if (meterStart <= 0) {
-            meterStart = now
-            sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, meterStart)
-        }
-
-        // Triangle-wave pendulum: 0..1000..0 over AGI_METER_PERIOD_MS
-        const period = AGI_METER_PERIOD_MS | 0
-        let t = (now - meterStart) % period
-        if (t < 0) t += period
-        const half = (period >> 1) || 1
-        let posX1000: number
-        if (t <= half) {
-            posX1000 = Math.idiv(t * 1000, half)
-        } else {
-            posX1000 = Math.idiv((period - t) * 1000, half)
-        }
-        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, posX1000)
-
+        // Use the canonical pendulum logic so UI matches gameplay (including optional Trait3 effects).
+        const posX1000 = agiMeterPosX1000(hero, now)
         const pointerX = Math.idiv(posX1000 * (totalW - 1), 1000)
 
-        const img = drawAgiMeterImage(wE, w1, w2, w3, pointerX)
-        m.setImage(img)
-        m.setFlag(SpriteFlag.Invisible, false)
+        // Position the logical sprite (both runtimes); Phaser will draw native rectangles.
         m.z = hero.z + 2
         m.x = hero.x
         m.y = hero.y + (hero.height >> 1) + 5
 
-        // Stored-hit counter: C2 still shows 0 (packets not implemented yet)
+        // Stored-hit counter
+        const count = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
+
+        if (phaser) {
+            // Publish numeric state for Phaser-native renderer
+            sprites.setDataString(m, UI_KIND_KEY, UI_KIND_COMBO_METER)
+            sprites.setDataNumber(m, UI_COMBO_TOTAL_W_KEY, totalW)
+            sprites.setDataNumber(m, UI_COMBO_H_KEY, AGI_METER_H)
+            sprites.setDataNumber(m, UI_COMBO_W_E_KEY, wE)
+            sprites.setDataNumber(m, UI_COMBO_W_1_KEY, w1)
+            sprites.setDataNumber(m, UI_COMBO_W_2_KEY, w2)
+            sprites.setDataNumber(m, UI_COMBO_W_3_KEY, w3)
+            sprites.setDataNumber(m, UI_COMBO_POS_X1000_KEY, posX1000)
+            sprites.setDataNumber(m, UI_COMBO_VISIBLE_KEY, 1)
+            sprites.setDataNumber(m, UI_COMBO_PKT_COUNT_KEY, count)
+
+            // Hide the Arcade sprite; Phaser will render the meter as rectangles
+            m.setFlag(SpriteFlag.Invisible, true)
+        } else {
+            // Arcade: draw pixels
+            const img = drawAgiMeterImage(wE, w1, w2, w3, pointerX)
+            m.setImage(img)
+            m.setFlag(SpriteFlag.Invisible, false)
+        }
+
+        // Stored-hit counter text sprite (kept as-is for now)
         const tSprite = ensureAgiStoredCounter(i)
         if (tSprite) {
-            const count = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
             ;(tSprite as any).setText("" + count)
             tSprite.setFlag(SpriteFlag.Invisible, false)
             tSprite.z = hero.z + 3
@@ -4311,21 +4338,44 @@ function ensureAgiStoredCounter(heroIndex: number): Sprite {
 
 
 
-
 function ensureComboMeter(heroIndex: number): Sprite {
     let m = heroComboMeters[heroIndex]
     const hero = heroes[heroIndex]; if (!hero) return null
+
     if (!m) {
-        // C1: this meter must be visible in BOTH Arcade and Phaser.
-        // It is just a normal sprite with an Image, so Phaser can mirror it.
+        const phaser = isPhaserRuntime()
+
+        // In Arcade: meter is a real pixel image sprite.
+        // In Phaser: meter is drawn as native rectangles; this sprite is just a logical anchor + data carrier.
         const w = (AGI_METER_W_E * 2) + (AGI_METER_W_1 * 2) + (AGI_METER_W_2 * 2) + AGI_METER_W_3
         const h = AGI_METER_H
-        m = sprites.create(image.create(w, h), SpriteKind.HeroAura)
+
+        const img = phaser
+            ? image.create(2, 2)      // tiny dummy; Phaser uses rectangles
+            : image.create(w, h)      // full size; Arcade uses pixels
+
+        m = sprites.create(img, SpriteKind.HeroAura)
         m.z = hero.z + 2
         heroComboMeters[heroIndex] = m
+
+        // Robust ID: do NOT rely on SpriteKind (combo meter is HeroAura).
+        sprites.setDataString(m, UI_KIND_KEY, UI_KIND_COMBO_METER)
+
+        // Seed defaults so Phaser renderer has something even before first update tick.
+        sprites.setDataNumber(m, UI_COMBO_TOTAL_W_KEY, w)
+        sprites.setDataNumber(m, UI_COMBO_H_KEY, h)
+        sprites.setDataNumber(m, UI_COMBO_W_E_KEY, AGI_METER_W_E)
+        sprites.setDataNumber(m, UI_COMBO_W_1_KEY, AGI_METER_W_1)
+        sprites.setDataNumber(m, UI_COMBO_W_2_KEY, AGI_METER_W_2)
+        sprites.setDataNumber(m, UI_COMBO_W_3_KEY, AGI_METER_W_3)
+        sprites.setDataNumber(m, UI_COMBO_POS_X1000_KEY, 0)
+        sprites.setDataNumber(m, UI_COMBO_VISIBLE_KEY, 0)
+        sprites.setDataNumber(m, UI_COMBO_PKT_COUNT_KEY, 0)
     }
+
     return m
 }
+
 
 
 
