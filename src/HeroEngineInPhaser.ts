@@ -752,6 +752,18 @@ const HERO_DATA = {
     STR_CHARGE_ARC_DEG: "strChgDeg",   // number (0..360) current arc from charge
     STR_CHARGE_MPD_X1000: "strChgMpd", // number (mana per degree * 1000)
     STR_CHARGE_SPENT: "strChgSpent",   // number (debug/validation)
+    STR_CHARGE_REM_X1000: "strChgRem", // number (fixed-point remainder for incremental mana drain)
+
+
+    // STR cached payload (snapshotted at charge start; immune to mid-hold changes)
+    STR_PAYLOAD_FAMILY: "strPayFam",   // number
+    STR_PAYLOAD_BTNSTR: "strPayBtn",   // string ("A" | "B" | "A+B")
+    STR_PAYLOAD_T1: "strPay1",         // number
+    STR_PAYLOAD_T2: "strPay2",         // number
+    STR_PAYLOAD_T3: "strPay3",         // number
+    STR_PAYLOAD_T4: "strPay4",         // number
+    STR_PAYLOAD_EL: "strPayEl",        // number
+    STR_PAYLOAD_ANIM: "strPayAnim",    // string
 
 
     // NEW: engine-side state we want exposed
@@ -1867,7 +1879,6 @@ function calculateMoveStatsForFamily(family: number, button: string, traits: num
 
 
 
-
 function doHeroMoveForPlayer(playerId: number, button: string) {
     const heroIndex = playerToHeroIndex[playerId]
     if (heroIndex < 0 || heroIndex >= heroes.length) return
@@ -1892,10 +1903,8 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     // If in the middle of a support puzzle, ignore new move inputs
     if (supportPuzzleActive[heroIndex]) return
 
-
-
-
-
+    // NEW: If Strength is charging, ignore ALL new inputs (release is handled by onUpdate)
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
     // -----------------------------
     // Student logic (OUT array)
@@ -1911,8 +1920,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         );
     }
 
-    //let out: number[];
-    let out: any[]; //So we can get strings for the names from students
+    let out: any[];
     try {
         out = hook(heroIndex, button);
     } catch (e) {
@@ -1933,7 +1941,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     }
 
     // Guard against bad / missing logic output
-    // We expect at least 7 entries: 0..6
     if (!out || out.length < 7) {
         console.log(
             "[MOVE] heroIndex=" + heroIndex +
@@ -1943,7 +1950,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return;
     }
 
-
     const family = coerceFamily(out[0])      // FAMILY
     const t1 = out[1] | 0                    // TRAIT1
     const t2 = out[2] | 0                    // TRAIT2
@@ -1951,29 +1957,12 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const t4 = out[4] | 0                    // TRAIT4
     const element = coerceElement(out[5])    // ELEMENT
 
-
-
-    // Positional unpack (avoid OUT.* at runtime in Arcade)
-    //    const family = out[0] | 0;  // FAMILY
-    //    const t1 = out[1] | 0;      // TRAIT1
-    //    const t2 = out[2] | 0;      // TRAIT2
-    //    const t3 = out[3] | 0;      // TRAIT3
-    //    const t4 = out[4] | 0;      // TRAIT4
-    //    const element = out[5] | 0; // ELEMENT
-    //    const animId = out[6] | 0;  // ANIM_ID
-
-
-
-
-
-
-    // traits[1..4] are the same pools as before; traits[5] holds element for future use
     const traits = [0, t1, t2, t3, t4, element]
 
     // Persist family + traits on hero (modules read these)
     sprites.setDataNumber(hero, HERO_DATA.FAMILY, family)
 
-    // NEW: mirror current move family as string for heroAnimGlue
+    // mirror current move family as string for heroAnimGlue
     sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(family));
 
     sprites.setDataString(hero, HERO_DATA.BUTTON, button)
@@ -1982,55 +1971,45 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
 
-    //const animKey = animIdToKey(animId)
     // Animation ID: allow either a free-form string from Blocks or a numeric ID
     let animKey: string
     const rawAnim = out[6]
     if (typeof rawAnim === "string") {
-        // Students can return any animation key they like, e.g. "idle", "FireSlash", "MyWeirdAnim"
         animKey = rawAnim
     } else {
         const animId = (rawAnim | 0)
         animKey = animIdToKey(animId)
     }
 
-
-
     // Trait-driven move stats (per family)
     const stats = calculateMoveStatsForFamily(family, button, traits)
 
-
-
-
-
-
-
-    // -----------------------------
     // -----------------------------
     // Mana cost & check
     // -----------------------------
-    // Simple sum of the four trait values
-    let manaCost = t1 + t2 + t3 + t4
-    if (manaCost < 0) manaCost = 0
+    // NEW: Strength charging owns mana (base immediately + incremental during charge).
+    // So: skip the old "sum all traits and charge now" path for Strength.
+    if (family != FAMILY.STRENGTH) {
+        let manaCost = t1 + t2 + t3 + t4
+        if (manaCost < 0) manaCost = 0
 
-    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
-    if (mana < manaCost) {
-        flashHeroManaBar(heroIndex)
-        return
+        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+        if (mana < manaCost) {
+            flashHeroManaBar(heroIndex)
+            return
+        }
+        mana -= manaCost
+        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+        updateHeroManaBar(heroIndex)
+
+        if (manaCost > 0) {
+            showDamageNumber(hero.x, hero.y - 10, -manaCost, "mana")
+        }
     }
-    mana -= manaCost
-    sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
-    updateHeroManaBar(heroIndex)
-
-    // Floating negative blue mana number
-    if (manaCost > 0) {
-        showDamageNumber(hero.x, hero.y - 10, -manaCost, "mana")
-    }
-
 
     // -----------------------------
     // Aim / movement setup
-    // Shared for STR/AGI; INT/HEAL get zero lunge
+    // Shared for AGI; STR charging should not move the hero.
     // -----------------------------
     const aim = getAimVectorForHero(heroIndex)
     let ax = aim[0], ay = aim[1]
@@ -2038,16 +2017,16 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const mag = Math.sqrt(ax * ax + ay * ay) || 1
     ax /= mag; ay /= mag
 
-    // Apply haste multiplier to lunge speed
     const hasteMult = heroMoveSpeedMult[heroIndex] || 1
     const baseLunge = stats[STAT.LUNGE_SPEED] | 0
     const rawLunge = baseLunge * hasteMult
     const lungeCapped = Math.max(0, Math.min(rawLunge, 500))
 
-    if (family == FAMILY.STRENGTH || family == FAMILY.AGILITY) {
+    if (family == FAMILY.AGILITY) {
         hero.vx = ax * lungeCapped
         hero.vy = ay * lungeCapped
     } else {
+        // Strength charge + all other families: no movement lunge here
         hero.vx = 0
         hero.vy = 0
     }
@@ -2056,8 +2035,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const L_exec = Math.idiv(lungeCapped * moveDuration, 1000)
     sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
 
-
-    // NEW: phase hint for animations based on family
+    // Phase hint for animations based on family
     if (family == FAMILY.STRENGTH) {
         setHeroPhaseString(heroIndex, "slash")
     } else if (family == FAMILY.AGILITY) {
@@ -2068,38 +2046,18 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         setHeroPhaseString(heroIndex, "cast")
     }
 
-
     // -----------------------------
-    // Control lock & agility extras
-    // (unchanged pattern from OLD version)
+    // Control lock
     // -----------------------------
-
-
-
-
-    // --- Control lock & agility extras ---
-
-    // STR / AGI / INT use timed lock via heroBusyUntil
-
-    if (family == FAMILY.STRENGTH || family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
+    // NEW: Strength charging locks inside beginStrengthCharge() (indefinitely until release).
+    // So: do NOT set heroBusyUntil for Strength here.
+    if (family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
         lockHeroControls(heroIndex)
 
         const unlockAt = now + moveDuration
         heroBusyUntil[heroIndex] = unlockAt
-
-        //heroBusyUntil[heroIndex] = now + moveDuration
-
-        // NEW: mirror onto hero sprite for save/sync
         sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, unlockAt)
-
-        // NEW: mirror control-lock timestamp onto the hero sprite
-        //sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, heroBusyUntil[heroIndex])
-
-
     } else if (family == FAMILY.HEAL) {
-        // SUPPORT/HEAL: no timed lock here.
-        // beginSupportPuzzleForHero() will call lockHeroControls()
-        // and the puzzle end will call unlockHeroControls().
         hero.vx = 0
         hero.vy = 0
     }
@@ -2123,20 +2081,16 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
     }
 
-
-
-
-
-
-
-
-
-
     // -----------------------------
     // Fire animation (students own the sprite art)
     // -----------------------------
-    callHeroAnim(heroIndex, animKey, moveDuration)
-
+    // NEW: For Strength, play the animation for the charge-to-full duration (trait3),
+    // since we’re not using moveDuration as a timed lock anymore during charge.
+    let animDuration = moveDuration
+    if (family == FAMILY.STRENGTH) {
+        animDuration = strengthChargeMaxMsFromTrait3(t3)
+    }
+    callHeroAnim(heroIndex, animKey, animDuration)
 
     if (DEBUG_INTEGRATOR) {
         console.log(
@@ -2150,15 +2104,11 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         )
     }
 
-
-
-
-
     // -----------------------------
     // Hand off to family-specific executors
     // -----------------------------
     if (family == FAMILY.STRENGTH) {
-        executeStrengthMove(heroIndex, hero, button, traits, stats)
+        executeStrengthMove(heroIndex, hero, button, traits, stats, animKey)
         return
     }
 
@@ -2176,10 +2126,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         executeHealMove(heroIndex, hero, button, traits, stats, now)
         return
     }
-
-    // Any future family types would fall through here.
 }
-
 
 
 
@@ -2504,8 +2451,19 @@ function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSpri
     let bar = heroStrengthChargeBars[heroIndex]
     if (bar) return bar
 
-    bar = statusbars.create(20, 2, STATUS_KIND_STRENGTH_CHARGE)
-    bar.attachToSprite(hero); bar.setOffsetPadding(0, 0)
+    bar = statusbars.create(20, 4, STATUS_KIND_STRENGTH_CHARGE)
+    bar.attachToSprite(hero)
+    bar.positionDirection(CollisionDirection.Bottom)
+
+    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
+    // So we push the bar DOWN much further in Phaser only.
+    if (isMakeCodeArcadeRuntime()) {
+        // Tuned for Arcade's fake 16x16 anchor
+        bar.setOffsetPadding(0, 2)
+    } else {
+        // Phaser: small, sane padding under the real sprite
+        bar.setOffsetPadding(0, 25)
+    }
 
     bar.max = 100
     bar.value = 0
@@ -2515,6 +2473,10 @@ function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSpri
     heroStrengthChargeBars[heroIndex] = bar
     return bar
 }
+
+
+
+
 
 function setStrengthChargeBarPct(heroIndex: number, hero: Sprite, pct0to100: number): void {
     const bar = ensureStrengthChargeBar(heroIndex, hero)
@@ -2532,8 +2494,21 @@ function showStrengthChargeBar(heroIndex: number, hero: Sprite, show: boolean): 
 function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
     sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHPVal)
     sprites.setDataNumber(hero, HERO_DATA.HP, maxHPVal)
-    const bar = statusbars.create(20, 3, StatusBarKind.Health)
-    bar.attachToSprite(hero); bar.setOffsetPadding(0, 2)
+    const bar = statusbars.create(20, 4, StatusBarKind.Health)
+    bar.attachToSprite(hero)
+    //bar.setOffsetPadding(0, 2)
+
+
+    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
+    // So we push the bar DOWN much further in Arcade only.
+    if (isMakeCodeArcadeRuntime()) {
+        // Tuned for Arcade's fake 16x16 anchor
+        bar.setOffsetPadding(0, 2)
+    } else {
+        // Phaser: LARGE padding to actually get above the real sprite
+        bar.setOffsetPadding(0, 20)
+    }
+
     bar.max = 100; bar.value = 100
     heroHPBars[heroIndex] = bar
 }
@@ -2549,8 +2524,21 @@ function updateHeroHPBar(heroIndex: number) {
 function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
     sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxManaVal)
     sprites.setDataNumber(hero, HERO_DATA.MANA, maxManaVal)
-    const bar = statusbars.create(20, 2, StatusBarKind.Energy)
-    bar.attachToSprite(hero); bar.setOffsetPadding(0, 1)
+    const bar = statusbars.create(20, 4, StatusBarKind.Energy)
+    bar.attachToSprite(hero)
+    //bar.setOffsetPadding(0, 1)
+
+
+    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
+    // So we push the bar DOWN much further in Arcade only.
+    if (isMakeCodeArcadeRuntime()) {
+        // Tuned for Arcade's fake 16x16 anchor
+        bar.setOffsetPadding(0, 1)
+    } else {
+        // Phaser: LARGE padding on top of the real sprite
+        bar.setOffsetPadding(0, 15)
+    }
+
     bar.max = 100; bar.value = 100; bar.setColor(9, 1)
     heroManaBars[heroIndex] = bar
 }
@@ -2723,7 +2711,6 @@ function ensureHeroAuraSprite(heroIndex: number): Sprite {
 }
 
 
-
 function updateHeroAuras() {
     const now = game.runtime()
     for (let i = 0; i < heroes.length; i++) {
@@ -2733,7 +2720,13 @@ function updateHeroAuras() {
         let color = 0
         const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
 
-        if (family == FAMILY.STRENGTH && (heroBusyUntil[i] || 0) > now) { showAura = true; color = AURA_COLOR_STRENGTH }
+        // Strength aura: show during CHARGE and during SWING (busy window)
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
+            showAura = true
+            color = AURA_COLOR_STRENGTH
+        }
+
         if (family == FAMILY.AGILITY) {
             const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
             const comboUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL)
@@ -2982,68 +2975,414 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
 // traits[3] = total arc degrees
 // traits[4] = knockback amount
 
+
+
+
+const STR_CHARGE_BASE_MAX_MS = 900          // t3=0 charge time to full (ms)
+const STR_CHARGE_MIN_MAX_MS = 160           // clamp so it never becomes instant
+const STR_CHARGE_MS_PER_T3 = 70             // each point of trait3 reduces time by this much
+
+const STR_CHARGE_EXTRA_MANA_PCT = 100       // extra mana over the baseCost when reaching full charge
+// Example: baseCost=10, EXTRA_MANA_PCT=100 => extraCost=10 => full charge total = 20
+
+
+
+function updateStrengthChargingAllHeroes(nowMs: number): void {
+    for (let heroIndex = 0; heroIndex < heroes.length; heroIndex++) {
+        const hero = heroes[heroIndex]
+        if (!hero) continue
+        if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue
+
+        // 1) Advance charge, drain mana, force-release if mana hits 0 (handled inside)
+        updateStrengthChargeForHero(heroIndex, hero, nowMs)
+
+        // If update forced a release, charging will already be false now.
+        if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue
+
+        // 2) Release if the initiating button is no longer pressed
+        const ownerId = (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0)
+        const btnId = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0)
+
+        if (!isStrBtnIdPressedForOwner(ownerId, btnId)) {
+            releaseStrengthCharge(heroIndex, hero, nowMs)
+        }
+    }
+}
+
+
+
+function strengthChargeMaxMsFromTrait3(t3: number): number {
+    let v = STR_CHARGE_BASE_MAX_MS - (t3 | 0) * STR_CHARGE_MS_PER_T3
+    if (v < STR_CHARGE_MIN_MAX_MS) v = STR_CHARGE_MIN_MAX_MS
+    return v
+}
+
+function strengthBaseManaCostFromTraits(t1: number, t2: number, t4: number): number {
+    // Base mana is paid immediately: traits 1,2,4 only
+    let cost = (t1 | 0) + (t2 | 0) + (t4 | 0)
+    if (cost < 0) cost = 0
+    return cost
+}
+
+function strengthExtraManaForFullCharge(baseCost: number): number {
+    // Extra mana is paid incrementally as arc grows (0..360)
+    const extra = Math.idiv((baseCost | 0) * STR_CHARGE_EXTRA_MANA_PCT, 100)
+    return extra < 0 ? 0 : extra
+}
+
+function clampInt(v: number, lo: number, hi: number): number {
+    if (v < lo) return lo
+    if (v > hi) return hi
+    return v
+}
+
+
+function beginStrengthCharge(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[],
+    animKey: string
+): void {
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    const now = game.runtime()
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+    const btnId = encodeIntentToStrBtnId(button)
+    if (btnId === 0) return
+
+    // Use SNAPSHOTTED traits from our passed-in array (already stored to payload by executeStrengthMove)
+    const t1 = traits[1] | 0
+    const t2 = traits[2] | 0
+    const t3 = traits[3] | 0 // time trait
+    const t4 = traits[4] | 0
+
+    // Base mana: traits 1,2,4 only (paid immediately)
+    const baseCost = strengthBaseManaCostFromTraits(t1, t2, t4)
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+    if (mana < baseCost) {
+        flashHeroManaBar(heroIndex)
+        return
+    }
+
+    if (baseCost > 0) {
+        mana -= baseCost
+        if (mana < 0) mana = 0
+        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+        updateHeroManaBar(heroIndex)
+        showDamageNumber(hero.x, hero.y - 10, -baseCost, "mana")
+    }
+
+    const maxMs = strengthChargeMaxMsFromTrait3(t3)
+    const extraCost = strengthExtraManaForFullCharge(baseCost)
+    const mpdX1000 = (extraCost <= 0) ? 0 : Math.idiv(extraCost * 1000, 360)
+
+    // Charge state
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, true)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, btnId)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, now)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, now)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, maxMs)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, mpdX1000)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, baseCost)
+
+    // Lock controls during charge
+    lockHeroControls(heroIndex)
+
+    // Charge bar
+    showStrengthChargeBar(heroIndex, hero, true)
+    setStrengthChargeBarPct(heroIndex, hero, 0)
+}
+
+
+
+
+
+function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: number): void {
+    if (!hero) return
+    if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    const startMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0
+    let lastMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS) | 0
+    const maxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0
+    let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    const mpdX1000 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000) | 0
+    let remX1000 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000) | 0
+
+    if (maxMs <= 0) {
+        // Safety fallback: if maxMs got clobbered, force release immediately
+        releaseStrengthCharge(heroIndex, hero, nowMs)
+        return
+    }
+
+    // Clamp dt so tab-switch / hitching doesn't instantly jump to full
+    let dt = (nowMs | 0) - (lastMs | 0)
+    if (dt < 0) dt = 0
+    if (dt > 80) dt = 80
+
+    // If already full, just keep bar full and wait for button release
+    if (arcDeg >= 360) {
+        arcDeg = 360
+        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 360)
+        setStrengthChargeBarPct(heroIndex, hero, 100)
+        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
+        return
+    }
+
+    // Advance arc based on time progress (trait3 affects maxMs)
+    // dDeg = 360 * dt / maxMs
+    const dDeg = (dt <= 0) ? 0 : Math.idiv(360 * dt, maxMs)
+    if (dDeg <= 0) {
+        // Still update the last time + bar from absolute progress to avoid “stalls”
+        const elapsed = (nowMs | 0) - (startMs | 0)
+        const pct = clampInt(Math.idiv(100 * clampInt(elapsed, 0, maxMs), maxMs), 0, 100)
+        setStrengthChargeBarPct(heroIndex, hero, pct)
+        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
+        return
+    }
+
+    // Incremental mana drain tied to degrees gained (not seconds)
+    // costX1000 = dDeg * mpdX1000 + rem
+    let manaToSpend = 0
+    if (mpdX1000 > 0) {
+        let costX1000 = dDeg * mpdX1000 + remX1000
+        manaToSpend = Math.idiv(costX1000, 1000)
+        remX1000 = costX1000 - manaToSpend * 1000
+    }
+
+    // Spend mana; if mana hits 0, force-release at the last affordable arc
+    if (manaToSpend > 0) {
+        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+        if (mana <= 0) {
+            // Already empty -> force release immediately
+            releaseStrengthCharge(heroIndex, hero, nowMs)
+            return
+        }
+
+        if (mana < manaToSpend) {
+            // Can’t afford full dDeg. Spend what we have and compute affordable degrees.
+            const affordableMana = mana
+            mana = 0
+            sprites.setDataNumber(hero, HERO_DATA.MANA, 0)
+            updateHeroManaBar(heroIndex)
+
+            // Convert affordableMana back to degrees (fixed-point)
+            // degAff ≈ affordableMana / (manaPerDeg)
+            let degAff = 0
+            if (mpdX1000 > 0) {
+                // degAff = affordableMana*1000 / mpdX1000
+                degAff = Math.idiv(affordableMana * 1000, mpdX1000)
+            } else {
+                degAff = dDeg
+            }
+
+            arcDeg += degAff
+            if (arcDeg > 360) arcDeg = 360
+            sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
+
+            // Update debug spent
+            const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + affordableMana
+            sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
+
+            // Bar update
+            const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
+            setStrengthChargeBarPct(heroIndex, hero, pct)
+
+            // Force release now (mana is 0)
+            releaseStrengthCharge(heroIndex, hero, nowMs)
+            return
+        }
+
+        // Normal spend
+        mana -= manaToSpend
+        if (mana < 0) mana = 0
+        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+        updateHeroManaBar(heroIndex)
+
+        const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + manaToSpend
+        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
+    }
+
+    // Advance arc degrees
+    arcDeg += dDeg
+    if (arcDeg > 360) arcDeg = 360
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, remX1000)
+
+    // Update bar (% of 360)
+    const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
+    setStrengthChargeBarPct(heroIndex, hero, pct)
+
+    // If we hit 360 naturally, we keep charging state until player releases the initiating button.
+}
+
+
+
+function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): void {
+    if (!hero) return
+    if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    arcDeg = clampInt(arcDeg, 0, 360)
+
+    // Clear charging state first (prevents re-entrancy)
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
+
+    // Hide bar
+    showStrengthChargeBar(heroIndex, hero, false)
+    setStrengthChargeBarPct(heroIndex, hero, 0)
+
+    // Minimal swing even for tiny charge (no free cancel after paying base mana)
+    if (arcDeg < 10) arcDeg = 10
+
+    // --- USE SNAPSHOTTED PAYLOAD (immune to mid-hold changes) ---
+    const family = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0
+    const button = sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR) || "A"
+    const t1 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1) | 0
+    const t2 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2) | 0
+    const t3 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3) | 0
+    const t4 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4) | 0
+    const el = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
+    const traits = [0, t1, t2, t3, t4, el]
+
+    // (animKey is snapshotted for correctness/debug, but not required for projectile fire)
+    // const animKey = sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM) || ""
+
+    // Recompute stats from the snapshotted traits/button
+    const stats = calculateMoveStatsForFamily(family, button, traits)
+
+    // Damage calc (matches your existing Strength flow)
+    const baseDamage = getBasePower(FAMILY.STRENGTH)
+    const damageMult = stats[STAT.DAMAGE_MULT] | 0
+    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
+    if (dmg < 1) dmg = 1
+
+    const slowPct = stats[STAT.SLOW_PCT] | 0
+    const slowDurationMs = stats[STAT.SLOW_DURATION] | 0
+    const weakenPct = stats[STAT.WEAKEN_PCT] | 0
+    const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
+    const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
+
+    const swingDurationMs = stats[STAT.STRENGTH_SWING_MS] || 220
+    const isHeal = false
+
+    // Keep controls locked during the swing; unlock handled by your busy-until system
+    const unlockAt = nowMs + swingDurationMs
+    heroBusyUntil[heroIndex] = unlockAt
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, unlockAt)
+
+    spawnStrengthSwingProjectile(
+        heroIndex, hero,
+        dmg, isHeal, button,
+        slowPct, slowDurationMs,
+        weakenPct, weakenDurationMs,
+        knockbackPct,
+        swingDurationMs,
+        arcDeg
+    )
+
+    // Clear cached payload after firing (optional but cleaner)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY, 0)
+    sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR, "")
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL, 0)
+    sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM, "")
+}
+
+
+function cancelStrengthCharge(heroIndex: number, hero: Sprite): void {
+    if (!hero) return
+    if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    // Cancel means: stop charging + hide bar.
+    // NOTE: This does NOT refund mana (per your “no cheese” rule).
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
+
+    showStrengthChargeBar(heroIndex, hero, false)
+    setStrengthChargeBarPct(heroIndex, hero, 0)
+
+    // Unlock immediately on cancel (if you want cancel to still “swing”, don’t call this function)
+    unlockHeroControls(heroIndex)
+    heroBusyUntil[heroIndex] = 0
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+}
+
+
+
+
 function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     const stats = makeBaseStats(baseTimeMs)
 
-    // Pull raw trait values, floor at 0, NO upper cap
-    let tWind = (traits[1] | 0) // windup & damage
-    let tReach = (traits[2] | 0) // reach distance
-    let tArc = (traits[3] | 0)   // total arc degrees
-    let tKnock = (traits[4] | 0) // knockback amount
+    // New Strength trait mapping:
+    // traits[1] = Damage
+    // traits[2] = Reach (handled in spawnStrengthSwingProjectile via HERO_DATA.TRAIT2)
+    // traits[3] = Time (charge-to-full time; handled by the charging system, not stats[])
+    // traits[4] = Status (knockback, and any future STR status knobs)
 
-    if (tWind < 0) tWind = 0
+    let tDmg = (traits[1] | 0)
+    let tReach = (traits[2] | 0) // not used here; documented for clarity
+    let tTime = (traits[3] | 0)  // not used here; charging system uses this
+    let tStatus = (traits[4] | 0)
+
+    if (tDmg < 0) tDmg = 0
     if (tReach < 0) tReach = 0
-    if (tArc < 0) tArc = 0
-    if (tKnock < 0) tKnock = 0
+    if (tTime < 0) tTime = 0
+    if (tStatus < 0) tStatus = 0
 
     // ----------------------------------------------------
     // DAMAGE (traits[1])
     // ----------------------------------------------------
-    // Damage starts at 80%, then +2% per point of tWind
-    stats[STAT.DAMAGE_MULT] = 80 + tWind * 2
+    // Keep your existing feel: starts at 80%, +2% per point
+    stats[STAT.DAMAGE_MULT] = 80 + tDmg * 2
 
     // ----------------------------------------------------
-    // TIMING: windup (pre-cast) + swing (actual arc)
+    // TIMING (post-release swing only)
     // ----------------------------------------------------
-    // We treat baseTimeMs as the *total* lock at tWind=0, then:
-    //   moveDuration = windupBase + tWind*10 + SWING_MS
-    //   windupMs    = moveDuration - SWING_MS
+    // Charging time is handled outside stats[] now.
+    // After release, we only lock for the swing animation.
     const BASE_SWING_MS = 220
-
-    let windupBase = baseTimeMs - BASE_SWING_MS
-    if (windupBase < 80) windupBase = 80 // always some visible windup
-
-    const windupMs = windupBase + tWind * 10
-    const totalMoveMs = windupMs + BASE_SWING_MS
-
-    // Constant swing, trait-driven windup
     stats[STAT.STRENGTH_SWING_MS] = BASE_SWING_MS
-    stats[STAT.MOVE_DURATION] = totalMoveMs
+    stats[STAT.MOVE_DURATION] = BASE_SWING_MS
 
     // ----------------------------------------------------
-    // LUNGE: Strength = tiny crawl forward during lock
+    // LUNGE: tiny crawl forward during the swing
     // ----------------------------------------------------
-    // This feeds the generic lunge block:
-    //   hero.vx = aimX * LUNGE_SPEED; hero.vy = aimY * LUNGE_SPEED
-    // We ignore tReach here; reach is handled in the hitbox shape.
-    const STRENGTH_CRAWL_SPEED = 5 // px/s-ish velocity; feels like a slow lean
+    const STRENGTH_CRAWL_SPEED = 5
     stats[STAT.LUNGE_SPEED] = STRENGTH_CRAWL_SPEED
 
     // ----------------------------------------------------
-    // ARC (traits[3]) → total swing arc degrees
+    // ARC: no longer trait-driven here (charge drives arc 0..360)
+    // Keep a safe default for any legacy reads.
     // ----------------------------------------------------
-    let arcDeg = 1 + tArc
-    if (arcDeg > 360) arcDeg = 360
-    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = arcDeg
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 360
 
     // ----------------------------------------------------
-    // KNOCKBACK (traits[4]) → knockback percentage
+    // STATUS (traits[4]) → knockback percentage
     // ----------------------------------------------------
-    stats[STAT.KNOCKBACK_PCT] = 10 + tKnock * 10
+    stats[STAT.KNOCKBACK_PCT] = 10 + tStatus * 10
 
     return stats
 }
-
 
 
 
@@ -3052,60 +3391,25 @@ function executeStrengthMove(
     hero: Sprite,
     button: string,
     traits: number[],
-    stats: number[]
+    stats: number[],
+    animKey: string
 ) {
-    // Base damage from family + trait-driven multiplier
-    const baseDamage = getBasePower(FAMILY.STRENGTH)
-    const damageMult = stats[STAT.DAMAGE_MULT] | 0
-    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
-    if (dmg < 1) dmg = 1
+    // Ignore retriggers while charging
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
-    // Debuff / knockback knobs – all trait-driven via stats
-    const slowPct = stats[STAT.SLOW_PCT] | 0
-    const slowDurationMs = stats[STAT.SLOW_DURATION] | 0
-    const weakenPct = stats[STAT.WEAKEN_PCT] | 0
-    const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
-    const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
+    // Snapshot payload (immune to any later changes while holding)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY, FAMILY.STRENGTH)
+    sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR, button)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, traits[1] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2, traits[2] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3, traits[3] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4, traits[4] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL, traits[5] | 0)
+    sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM, animKey || "")
 
-    // Strength-specific animation knobs (centralized in calculateStrengthStats)
-    const swingDurationMsStat = stats[STAT.STRENGTH_SWING_MS] || 220
-    let moveDuration = stats[STAT.MOVE_DURATION] | 0
-    if (moveDuration <= swingDurationMsStat) moveDuration = swingDurationMsStat
-
-    // Windup is the pre-cast delay; swing is the actual arc duration
-    const windupMs = moveDuration - swingDurationMsStat
-    const totalArcDeg = stats[STAT.STRENGTH_TOTAL_ARC_DEG] || 150
-    const isHeal = false // Strength move never heals
-
-    const startMs = game.runtime()
-    let fired = false
-
-    // Delay the *actual* smash until after windupMs
-    game.onUpdate(function () {
-        if (fired) return
-
-        const now = game.runtime()
-        if (now - startMs < windupMs) return
-
-        const h = heroes[heroIndex]
-        if (!h || (h.flags & sprites.Flag.Destroyed)) {
-            fired = true
-            return
-        }
-
-        fired = true
-
-        spawnStrengthSwingProjectile(
-            heroIndex, h,
-            dmg, isHeal, button,
-            slowPct, slowDurationMs,
-            weakenPct, weakenDurationMs,
-            knockbackPct,
-            swingDurationMsStat,
-            totalArcDeg
-        )
-    })
+    beginStrengthCharge(heroIndex, hero, button, traits, stats, animKey)
 }
+
 
 
 // Cached strength inner radius for this hero.
@@ -6576,14 +6880,14 @@ function updateEnemyHoming(nowMs: number) {
 
         // --- DEBUG log (throttled, first enemy only) ---
         if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 10000) {
-            console.log(
-                "[enemyHoming] tick",
-                "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                "phase=", phaseStr,
-                "x=", enemy.x, "y=", enemy.y,
-                "vx=", enemy.vx, "vy=", enemy.vy,
-                "t=", nowMs
-            )
+            //console.log(
+                //"[enemyHoming] tick",
+                //"monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
+                //"phase=", phaseStr,
+                //"x=", enemy.x, "y=", enemy.y,
+                //"vx=", enemy.vx, "vy=", enemy.vy,
+                //"t=", nowMs
+            //)
             _lastEnemyHomingLogMs = nowMs
         }
     }
@@ -6987,6 +7291,8 @@ game.onUpdate(function () {
 
     // Debug integrator logs
     for (let i = 0; i < heroes.length; i++) { const hero = heroes[i]; if (hero) debugDashIntegratorTick(hero) }
+
+    updateStrengthChargingAllHeroes(now)
 
     updateSupportPuzzles(now)     // NEW
     updateHeroControlLocks(now)
