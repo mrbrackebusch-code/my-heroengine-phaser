@@ -1,12 +1,48 @@
-/* 
-  arcadeCompat.ts
-  Minimal MakeCode Arcade-style compat layer to let HeroEngine + extensions compile.
-  Step 1: get things compiling.
-  Step 2: wire these stubs to Phaser / real game loop.
-*/
+// =====================================================================
+// arcadeCompat.ts — PHASER COMPAT + GLUE LAYER (MakeCode Arcade semantics)
+// =====================================================================
+//
+// FILE ROLE (single responsibility):
+//   - Bridge MakeCode Arcade runtime semantics to Phaser runtime objects.
+//   - Owns the lifecycle of "native sprites" that mirror Arcade Sprites.
+//   - Owns network message ingest + dispatch into Arcade-style callbacks.
+//   - Must NOT contain gameplay logic (HeroEngine + student code owns that).
+//
+// PRIMARY FLOW (call graph — keep masters logic-free):
+//   Per Phaser frame (host):
+//     _syncNativeSprites()
+//       -> _syncBeginFrame()
+//       -> _syncEarlySceneGuard()
+//       -> _syncSpriteLoop()  // per-sprite attach/update/remove
+//       -> _syncEndFrame()
+//
+//   Native sprite attach (on demand, per sprite):
+//     _attachNativeSprite(sprite)
+//       -> _attachBegin / _attachEarlySceneGuard
+//       -> UI: status bars / combo meter (NO pixel upload)
+//       -> Non-UI: _attachNativeSpriteNonUiPath(...) (may upload pixels)
+//
+// OWNERSHIP BOUNDARIES:
+//   - Reads Arcade sprite state via Sprite + sprite.data keys.
+//   - Writes Phaser state ONLY through nativeSprite creation/update + textures.
+//   - Must treat Sprite.data as the source of truth for UI marker keys.
+//
+// PERFORMANCE INVARIANTS (do not violate without adding perf instrumentation):
+//   - Any function called per-frame must not allocate textures unless required.
+//   - UI sprites must never trigger pixel upload paths.
+//   - Pixel uploads/logging must be gated behind a constant flag.
+//   - Heavy debug (per-pixel / per-row logs) MUST remain OFF by default.
+//
+// KEY REGISTRY (stable contracts; helpers must not invent new keys ad hoc):
+//   - UI_KIND_KEY / UI_KIND_STATUSBAR / UI_KIND_COMBO_METER
+//   - STATUS_BAR_DATA_KEY (must match status-bars.ts)
+//   - UI_COMBO_* keys
+//
+// PHASER-ONLY NOTES:
+//   - Depends on (globalThis as any).__phaserScene being present.
+//   - Safe no-op if scene missing (Arcade can run headless).
+// =====================================================================
 
-// arcadeCompat.ts
-//import { tryAttachMonsterSprite } from "./monsterAnimGlue";
 
 // ✅ create a module object called `monsterAnimGlue`
 import * as monsterAnimGlue from "./monsterAnimGlue";
@@ -25,6 +61,8 @@ const DEBUG_WRAP_TEX = false;   // 👈 disable spam
 // MASTER NETWORK DEBUG FLAG
 const DEBUG_NET = false;
 
+// Debug the "Extra" category
+const DEBUG_CATEGORY_X = true;
 
 let _heroAnimNoAtlasLogged = false;
 
@@ -101,26 +139,34 @@ let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
 
 
 
-
-
 // ======================================================
-// SYNC PERF BREAKDOWN (Heroes / Enemies / Extras)
+// SYNC PERF BREAKDOWN (Heroes / Enemies / Bars / Extras)
 // ======================================================
 
 const PERF_GROUP_HERO = 0 as const;
 const PERF_GROUP_ENEMY = 1 as const;
-const PERF_GROUP_EXTRA = 2 as const;
+const PERF_GROUP_BARS = 2 as const;
+const PERF_GROUP_EXTRA = 3 as const;
 
-type PerfGroup = typeof PERF_GROUP_HERO | typeof PERF_GROUP_ENEMY | typeof PERF_GROUP_EXTRA;
+type PerfGroup =
+    | typeof PERF_GROUP_HERO
+    | typeof PERF_GROUP_ENEMY
+    | typeof PERF_GROUP_BARS
+    | typeof PERF_GROUP_EXTRA;
 
-function _perfGroupName(g: PerfGroup): "H" | "E" | "X" {
-    return g === PERF_GROUP_HERO ? "H" : (g === PERF_GROUP_ENEMY ? "E" : "X");
+function _perfGroupName(g: PerfGroup): "H" | "E" | "B" | "X" {
+    return g === PERF_GROUP_HERO
+        ? "H"
+        : (g === PERF_GROUP_ENEMY
+            ? "E"
+            : (g === PERF_GROUP_BARS ? "B" : "X"));
 }
 
 function _perfGroupFromRole(role: string): PerfGroup {
-    // Your roles: HERO / ENEMY / ACTOR / PROJECTILE / OVERLAY / etc.
+    // Roles: HERO / ENEMY / ACTOR / PROJECTILE / OVERLAY / BAR / etc.
     if (role === "HERO") return PERF_GROUP_HERO;
     if (role === "ENEMY" || role === "ACTOR") return PERF_GROUP_ENEMY;
+    if (role === "BAR") return PERF_GROUP_BARS;
     return PERF_GROUP_EXTRA;
 }
 
@@ -128,14 +174,14 @@ function _perfGroupFromRole(role: string): PerfGroup {
 let _syncAttachPerfGroup: PerfGroup = PERF_GROUP_EXTRA;
 
 // Per-frame accumulators (reset in _syncNativeSprites)
-let _frameGroupAttachMs = [0, 0, 0];       // total attach time
-let _frameGroupAttachTexMs = [0, 0, 0];    // texture create/recreate time
-let _frameGroupAttachPixelMs = [0, 0, 0];  // pixel upload time
+let _frameGroupAttachMs = [0, 0, 0, 0];       // total attach time
+let _frameGroupAttachTexMs = [0, 0, 0, 0];    // texture create/recreate time
+let _frameGroupAttachPixelMs = [0, 0, 0, 0];  // pixel upload time
 
-let _frameGroupAttachCalls = [0, 0, 0];
-let _frameGroupAttachCreates = [0, 0, 0];
-let _frameGroupAttachUpdates = [0, 0, 0];
-let _frameGroupAttachEarlyOuts = [0, 0, 0];
+let _frameGroupAttachCalls = [0, 0, 0, 0];
+let _frameGroupAttachCreates = [0, 0, 0, 0];
+let _frameGroupAttachUpdates = [0, 0, 0, 0];
+let _frameGroupAttachEarlyOuts = [0, 0, 0, 0];
 
 
 
@@ -396,6 +442,148 @@ function dumpImagePixels(tag: string, img: Image) {
     }
 }
 
+
+function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
+    const DEBUG_CATEGORY_X = true;
+    const DEBUG_CATEGORY_X_SAMPLES = true;
+
+    if (!DEBUG_CATEGORY_X || !ctx.shouldLog) return;
+
+    // ---- helpers (NO external UI constants) ----
+    const isHero = (s: any) => { try { return !!(isHeroSprite as any)(s); } catch { return false; } };
+
+    const readData = (s: any, k: string): any => {
+        try {
+            const d = s?.data;
+            if (!d) return undefined;
+            if (typeof d.get === "function") return d.get(k);
+            return (d as any)[k];
+        } catch { return undefined; }
+    };
+
+    const hasDataKey = (s: any, k: string): boolean => {
+        try {
+            const d = s?.data;
+            if (!d) return false;
+            if (typeof d.has === "function") return !!d.has(k);
+            return Object.prototype.hasOwnProperty.call(d, k);
+        } catch { return false; }
+    };
+
+    // Local category classifier that matches *your* project reality.
+    // Returns: "H" | "E" | "B" | "X"
+    const catOf = (s: any): "H" | "E" | "B" | "X" => {
+        if (!s) return "X";
+        if (isHero(s)) return "H";
+
+        // Bars: your samples show STATUS_BAR_DATA_KEY and __uiKind.
+        if (hasDataKey(s, "STATUS_BAR_DATA_KEY")) return "B";
+        if (hasDataKey(s, "__uiKind")) return "B";
+
+        // Also treat kind 11000 as bar (matches your dump).
+        if (((s.kind | 0) === 11000)) return "B";
+
+        // Enemies: your enemy sample has monsterId.
+        if (hasDataKey(s, "monsterId")) return "E";
+
+        return "X";
+    };
+
+    const getDataKeys = (s: any): string[] => {
+        try {
+            const d = s?.data;
+            if (!d) return [];
+            if (typeof d.keys === "function") {
+                const out: string[] = [];
+                for (const k of d.keys()) out.push(String(k));
+                return out;
+            }
+            return Object.keys(d);
+        } catch { return []; }
+    };
+
+    // ---- pass 1: counts for TRUE-X only, plus sanity counts for H/E/B ----
+    const countsX: Record<number, number> = {};
+    const samplesByKindX: Record<number, any[]> = {};
+    let totalX = 0;
+
+    let sanityH = 0, sanityE = 0, sanityB = 0;
+
+    for (const s of allSprites as any[]) {
+        const c = catOf(s);
+        if (c === "H") { sanityH++; continue; }
+        if (c === "E") { sanityE++; continue; }
+        if (c === "B") { sanityB++; continue; }
+
+        // X
+        totalX++;
+        const kind = (s.kind | 0);
+        countsX[kind] = (countsX[kind] || 0) + 1;
+
+        if (DEBUG_CATEGORY_X_SAMPLES) {
+            const arr = (samplesByKindX[kind] ||= []);
+            if (arr.length < 8) arr.push({ s, keys: getDataKeys(s) });
+        }
+    }
+
+    const entries = Object.entries(countsX)
+        .map(([k, v]) => [Number(k), v] as [number, number])
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 30)
+        .map(([kind, n]) => `kind${kind}:${n}`);
+
+    console.log(
+        "[DEBUG X]",
+        `trueX=${totalX}`,
+        `| sanity(H/E/B)= ${sanityH}/${sanityE}/${sanityB}`,
+        "|", entries.join(" ")
+    );
+
+    if (!DEBUG_CATEGORY_X_SAMPLES) return;
+
+    // ---- choose kinds to sample (always include 56 if it’s in TRUE-X) ----
+    const sortedKindsX = Object.entries(countsX)
+        .map(([k, v]) => [Number(k), v] as [number, number])
+        .sort((a, b) => b[1] - a[1])
+        .map(([k]) => k);
+
+    const chosen: number[] = [];
+    const push = (k: number) => { if (!chosen.includes(k)) chosen.push(k); };
+
+    if (countsX[56]) push(56);
+    for (const k of sortedKindsX) {
+        if (chosen.length >= 3) break;
+        push(k);
+    }
+
+    const MAX = 5;
+
+    for (const kind of chosen) {
+        const arr = samplesByKindX[kind];
+        if (!arr?.length) continue;
+
+        const lines: string[] = [];
+        lines.push(`[DEBUG X:SAMPLES] TRUE-X kind${kind} count=${countsX[kind]} showing<=${MAX}`);
+
+        for (let i = 0; i < Math.min(MAX, arr.length); i++) {
+            const s: any = arr[i].s;
+            const keys: string[] = arr[i].keys;
+
+            const img = s?.image;
+            const flags = (s?.flags | 0);
+
+            lines.push(
+                `  - id=${s?.id ?? "?"} kind=${kind} ` +
+                `pos=(${s?.x},${s?.y}) z=${s?.z} ` +
+                `img=${img?.width}x${img?.height} ` +
+                `flags=0x${(flags >>> 0).toString(16)} ` +
+                `keys=[${keys.slice(0, 12).join(",")}]`
+            );
+        }
+
+        console.log(lines.join("\n"));
+    }
+}
 
 
 
@@ -1072,7 +1260,7 @@ namespace sprites {
     const DEBUG_ROLE_AURA        = false;
     const DEBUG_ROLE_ACTOR       = false;  // generic combat actors (if not clearly hero/enemy)
     const DEBUG_ROLE_OTHER       = false;
-
+    
     // Per-role log limits (so even when enabled, they don't spam forever)
     const ROLE_LOG_LIMITS: { [role: string]: number } = {
         HERO:       10,
@@ -1111,7 +1299,10 @@ namespace sprites {
     function _classifySpriteRole(kind: number, dataKeys: string[]): string {
         const kindName = _getSpriteKindName(kind);
 
-        // Direct kind-name checks first
+        // STATUS BARS FIRST (your desired "B" group)
+        if (kindName === "StatusBar" || dataKeys.indexOf(STATUS_BAR_DATA_KEY) >= 0) return "BAR";
+
+        // Direct kind-name checks
         if (kindName === "HeroAura" || kindName.indexOf("Aura") >= 0) return "AURA";
         if (kindName === "HeroWeapon" || kindName.indexOf("Weapon") >= 0) return "PROJECTILE";
         if (kindName === "Player" || kindName === "Hero") return "HERO";
@@ -1119,7 +1310,6 @@ namespace sprites {
 
         // Use data flags as heuristics (engine-specific)
         if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
-            // Could be hero or enemy – but definitely a combat actor
             return "ACTOR";
         }
         if (
@@ -1133,33 +1323,6 @@ namespace sprites {
 
         return "OTHER";
     }
-
-
-function _classifySpriteRole(kind: number, dataKeys: string[]): string {
-    const kindName = _getSpriteKindName(kind);
-
-    // Direct kind-name checks first
-    if (kindName === "HeroAura" || kindName.indexOf("Aura") >= 0) return "AURA";
-    if (kindName === "HeroWeapon" || kindName.indexOf("Weapon") >= 0) return "PROJECTILE";
-    if (kindName === "Player" || kindName === "Hero") return "HERO";
-    if (kindName.indexOf("Enemy") >= 0) return "ENEMY";
-
-    // Use data flags as heuristics (engine-specific)
-    if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
-        // Could be hero or enemy – but definitely a combat actor
-        return "ACTOR";
-    }
-    if (
-        dataKeys.indexOf("MOVE_TYPE") >= 0 ||
-        dataKeys.indexOf("HERO_INDEX") >= 0 ||
-        dataKeys.indexOf("DAMAGE") >= 0 ||
-        dataKeys.indexOf("dashEndMs") >= 0
-    ) {
-        return "PROJECTILE";
-    }
-
-    return "OTHER";
-}
 
 
     // NEW: tiny helper to recognize real heroes based on kind + data keys
@@ -1389,12 +1552,33 @@ type AttachContext = {
     dataAny: any;
 };
 
+
 type UiDetect = {
     uiKind: string;
     isStatusBarSprite: boolean;
     isComboMeterSprite: boolean;
 };
 
+
+// ---------------------------------------------------------------------
+// MASTER: _attachNativeSprite (on-demand per-sprite attach/update)
+// PURPOSE: Ensure Arcade sprite has Phaser native; route UI vs non-UI attach.
+// READS:  globalThis.__phaserScene, sprite.kind, sprite.data (UI markers), sprite.image
+// WRITES: sprite.native lifecycle via helpers; native data uiManaged/uiKind for UI
+// PERF:
+//   - Called: during sync loop (can be many times/frame) but should early-out fast
+//   - Must remain call-graph only (no inline logic)
+// SAFETY:
+//   - Must early-return safely when scene missing
+// CALL GRAPH:
+//   _attachBegin
+//   _attachEarlySceneGuard
+//   _attachDetectUi
+//   _attachUiEarlyUpdateIfExisting
+//     ├─ _attachCreateStatusBar
+//     └─ _attachCreateComboMeter
+//   _attachNativeSpriteNonUiPath
+// ---------------------------------------------------------------------
 function _attachNativeSprite(s: Sprite): void {
     const ctx = _attachBegin(s);
 
@@ -1414,17 +1598,20 @@ function _attachNativeSprite(s: Sprite): void {
 }
 
 
+
 function _attachBegin(s: Sprite): AttachContext {
     const sc: Phaser.Scene = (globalThis as any).__phaserScene;
     _attachCallCount++;
 
-    // Defensive: ensure group index is valid (0..2)
+    // Defensive: ensure group index is valid (0..3)
     let g = (_syncAttachPerfGroup as any) | 0;
-    if (g !== 0 && g !== 1 && g !== 2) g = 2;
+    if (g !== 0 && g !== 1 && g !== 2 && g !== 3) g = PERF_GROUP_EXTRA;
 
     _frameGroupAttachCalls[g]++;
 
     const tA0 = _hostPerfNowMs();
+
+    const dataAny = (s as any).data || {};
 
     return {
         sc,
@@ -1432,9 +1619,10 @@ function _attachBegin(s: Sprite): AttachContext {
         g,
         tA0,
         shouldLog: (_attachCallCount <= MAX_ATTACH_VERBOSE),
-        dataAny: (s as any).data || {},
+        dataAny,
     };
 }
+
 
 function _attachEarlySceneGuard(ctx: AttachContext): boolean {
     const sc: any = ctx.sc;
@@ -1448,6 +1636,19 @@ function _attachEarlySceneGuard(ctx: AttachContext): boolean {
     return true;
 }
 
+
+
+// PURPOSE: Classify sprite as UI-managed (status bar / combo meter) vs non-UI.
+// READS:
+//   - sprite.data[STATUS_BAR_DATA_KEY] (status bar marker)
+//   - sprite.data["uiKind"] (if present) and/or native.getData("uiKind")
+// WRITES: returns UiDetect (no side effects)
+// PERF:
+//   - Called: per attach decision
+//   - Must not: allocate textures, upload pixels
+// SAFETY:
+//   - Must tolerate sprite.data missing / malformed
+// ---------------------------------------------------------------------
 function _attachDetectUi(ctx: AttachContext): UiDetect {
     const s = ctx.s;
     const dataAny = ctx.dataAny;
@@ -1495,6 +1696,24 @@ function _mcToHex(p: number): number {
 }
 
 
+
+
+
+
+// PURPOSE: Create Phaser-native rectangles for a status bar UI sprite (no pixels).
+// READS:
+//   - sprite.data[STATUS_BAR_DATA_KEY] (dimensions/colors/max/current)
+//   - sprite.flags (RelativeToCamera/Invisible), sprite.z
+// WRITES:
+//   - native.setData("uiManaged", true), native.setData("uiKind", UI_KIND_STATUSBAR)
+//   - native.setData("sb_bg"|"sb_border"|"sb_fill", rect refs)
+//   - native depth/scrollFactor/visible
+// PERF:
+//   - Called: on attach (and possibly recreate)
+//   - Must never: upload pixels or create canvas textures
+// SAFETY:
+//   - Must tolerate missing sb fields; choose defaults safely
+// ---------------------------------------------------------------------
 function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     if (!ui.isStatusBarSprite) return false;
 
@@ -1502,10 +1721,10 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     const s = ctx.s;
 
     const dataAny: any = ctx.dataAny;
-    const sb: any = dataAny ? dataAny[STATUS_BAR_DATA_KEY] : null;
+    const sb: any = dataAny[STATUS_BAR_DATA_KEY];
     if (!sb) return false;
 
-    // OLD behavior: geometry + colors come from sb object (NOT sprite-data keys)
+    // Mirror OLD: read geometry + colors from sb object (not sprite-data keys)
     const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
     const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
     const bw = (sb.borderWidth | 0) || 0;
@@ -1515,26 +1734,27 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
             ? (sb.offColor | 0)
             : (sb.borderColor | 0);
 
-    const borderHex = _mcToHex(borderColorIdx | 0);
-    const offHex = _mcToHex((sb.offColor | 0) || 0);
     const onHex = _mcToHex((sb.onColor | 0) || 0);
+    const offHex = _mcToHex((sb.offColor | 0) || 0);
+    const borderHex = _mcToHex(borderColorIdx | 0);
 
     const container = sc.add.container(s.x, s.y);
     (container as any).setData("uiManaged", true);
+    (container as any).setData("uiKind", UI_KIND_STATUSBAR);
 
-    const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
-    borderRect.setOrigin(0.5, 0.5);
-
-    // Inner dims (OLD)
+    // OLD layout math (no floor snapping)
     const innerW = Math.max(1, barW - (bw * 2));
     const innerH = Math.max(1, barH - (bw * 2));
     const leftX = (-barW / 2) + bw;
 
-    // Background (off)
+    // OLD: border rect centered at (0,0), origin 0.5,0.5
+    const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
+    borderRect.setOrigin(0.5, 0.5);
+
+    // OLD: bg/fill centered vertically, origin left-anchored
     const bgRect = sc.add.rectangle(leftX, 0, innerW, innerH, offHex, 1);
     bgRect.setOrigin(0, 0.5);
 
-    // Fill (on)
     const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
     fillRect.setOrigin(0, 0.5);
 
@@ -1542,26 +1762,21 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     container.add(bgRect);
     container.add(fillRect);
 
-    // Store refs (OLD keys)
+    // Store refs for sync updates (matches what syncNativeSprites expects)
     (container as any).setData("sb_border", borderRect);
     (container as any).setData("sb_bg", bgRect);
     (container as any).setData("sb_fill", fillRect);
-    (container as any).setData("sb_lastW", barW);
-    (container as any).setData("sb_lastH", barH);
-    (container as any).setData("sb_lastBW", bw);
 
-    // Depth + scroll factor (OLD)
+    // Depth + scroll factor (same pattern as your refactor)
     try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
 
     const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-    try {
-        (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
-    } catch { /* ignore */ }
+    try { (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
 
-    s.native = container;
+    (s as any).native = container;
 
-    // OLD: mark as non-empty so pixel-based visibility logic doesn't hide it
-    (s as any)._lastNonZeroPixels = 1;
+    // OLD semantics: prevent pixel-based hide
+    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
 
     _attachFinalizeCreate(ctx);
     return true;
@@ -1570,8 +1785,20 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
 
 
 
-
-
+// PURPOSE: Create Phaser-native rectangles for combo meter UI sprite (no pixels).
+// READS:
+//   - sprites.readDataNumber(s, UI_COMBO_*_KEY) for geometry thresholds
+//   - sprite.flags (RelativeToCamera/Invisible), sprite.z
+// WRITES:
+//   - native.setData("uiManaged", true), native.setData("uiKind", UI_KIND_COMBO_METER)
+//   - native.setData("cm_segs"|"cm_border"|"cm_ptr", rect refs)
+//   - native depth/scrollFactor/visible
+// PERF:
+//   - Called: on attach (and possibly recreate)
+//   - Must never: upload pixels or create canvas textures
+// SAFETY:
+//   - Must tolerate missing combo keys; default geometry safely
+// ---------------------------------------------------------------------
 function _attachCreateComboMeter(ctx: AttachContext, ui: UiDetect): boolean {
     if (!ui.isComboMeterSprite) return false;
 
@@ -1599,45 +1826,50 @@ function _attachCreateComboMeter(ctx: AttachContext, ui: UiDetect): boolean {
     (container as any).setData("uiManaged", true);
     (container as any).setData("uiKind", UI_KIND_COMBO_METER);
 
-    // Border
-    const border = sc.add.rectangle(-Math.floor(totalW / 2), -Math.floor(h / 2), totalW, h, colBorder, 1);
-    border.setOrigin(0, 0);
+    // Border (stroke only)
+    const borderRect = sc.add.rectangle(0, 0, totalW, h, colBorder, 0);
+    borderRect.setOrigin(0.5, 0.5);
+    borderRect.setStrokeStyle(1, colBorder, 1);
 
-    // Segments (E,1,2,3)
-    const x0 = -Math.floor(totalW / 2);
-    const y0 = -Math.floor(h / 2);
+    // Segment rectangles (origin left-anchored)
+    const left = -totalW / 2;
+    const makeSeg = (xLeft: number, w: number, hex: number) => {
+        const r = sc.add.rectangle(xLeft, 0, Math.max(1, w), Math.max(1, h), hex, 1);
+        r.setOrigin(0, 0.5);
+        return r;
+    };
 
-    const segE = sc.add.rectangle(x0, y0, wE, h, colE, 1); segE.setOrigin(0, 0);
-    const seg1 = sc.add.rectangle(x0 + wE, y0, w1, h, col1, 1); seg1.setOrigin(0, 0);
-    const seg2 = sc.add.rectangle(x0 + wE + w1, y0, w2, h, col2, 1); seg2.setOrigin(0, 0);
-    const seg3 = sc.add.rectangle(x0 + wE + w1 + w2, y0, w3, h, col3, 1); seg3.setOrigin(0, 0);
+    // Layout: E 1 2 3 2 1 E
+    let x = left;
+    const seg0 = makeSeg(x, wE, colE); x += wE;
+    const seg1 = makeSeg(x, w1, col1); x += w1;
+    const seg2 = makeSeg(x, w2, col2); x += w2;
+    const seg3 = makeSeg(x, w3, col3); x += w3;
+    const seg4 = makeSeg(x, w2, col2); x += w2;
+    const seg5 = makeSeg(x, w1, col1); x += w1;
+    const seg6 = makeSeg(x, wE, colE);
 
-    // Pointer (small rectangle that slides)
-    const ptrW = 2;
-    const ptr = sc.add.rectangle(x0, y0 + Math.floor(h / 2), ptrW, h, colPtr, 1);
-    ptr.setOrigin(0, 0.5);
+    // Pointer (thin rect) — exact mirror of old behavior
+    const ptr = sc.add.rectangle(left + 0.5, 0, 1, Math.max(1, h), colPtr, 1);
+    ptr.setOrigin(0.5, 0.5);
 
-    container.add(border);
-    container.add(segE);
-    container.add(seg1);
-    container.add(seg2);
-    container.add(seg3);
+
+    container.add(borderRect);
+    container.add(seg0); container.add(seg1); container.add(seg2); container.add(seg3);
+    container.add(seg4); container.add(seg5); container.add(seg6);
     container.add(ptr);
 
-    // Store refs for fast update
-    (container as any).setData("combo_border", border);
-    (container as any).setData("combo_segE", segE);
-    (container as any).setData("combo_seg1", seg1);
-    (container as any).setData("combo_seg2", seg2);
-    (container as any).setData("combo_seg3", seg3);
-    (container as any).setData("combo_ptr", ptr);
+    // Store refs + last-geom for updates
+    (container as any).setData("cm_border", borderRect);
+    (container as any).setData("cm_ptr", ptr);
+    (container as any).setData("cm_segs", [seg0, seg1, seg2, seg3, seg4, seg5, seg6]);
 
-    (container as any).setData("combo_totalW", totalW);
-    (container as any).setData("combo_h", h);
-    (container as any).setData("combo_wE", wE);
-    (container as any).setData("combo_w1", w1);
-    (container as any).setData("combo_w2", w2);
-    (container as any).setData("combo_w3", w3);
+    (container as any).setData("cm_lastTotalW", totalW);
+    (container as any).setData("cm_lastH", h);
+    (container as any).setData("cm_lastWE", wE);
+    (container as any).setData("cm_lastW1", w1);
+    (container as any).setData("cm_lastW2", w2);
+    (container as any).setData("cm_lastW3", w3);
 
     // Depth + scroll factor
     try {
@@ -1649,16 +1881,16 @@ function _attachCreateComboMeter(ctx: AttachContext, ui: UiDetect): boolean {
         (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
     } catch { /* ignore */ }
 
-    // Attach
-    (s as any).native = container;
+    s.native = container;
 
-    // Mark as non-zero for pixel-hide semantics downstream
-    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
+    // Mark as non-empty so any pixel-based visibility logic doesn't hide it
+    (s as any)._lastNonZeroPixels = 1;
 
-    // Count + timing
     _attachFinalizeCreate(ctx);
     return true;
 }
+
+
 
 
 function _attachFinalizeEarlyOutOnly(ctx: AttachContext): void {
@@ -1666,32 +1898,51 @@ function _attachFinalizeEarlyOutOnly(ctx: AttachContext): void {
     _frameGroupAttachEarlyOuts[ctx.g]++;
 }
 
+
 function _attachFinalizeEarlyOutUpdate(ctx: AttachContext): void {
+    const dtA = _hostPerfNowMs() - ctx.tA0;
+
+    _frameAttachMsAccum += dtA;
     _frameAttachEarlyOutCount++;
+
+    _frameGroupAttachMs[ctx.g] += dtA;
     _frameGroupAttachEarlyOuts[ctx.g]++;
 
-    _frameAttachUpdateCount++;
-    _frameGroupAttachUpdates[ctx.g]++;
-
-    const tA1 = _hostPerfNowMs();
-    const dA = (tA1 - ctx.tA0);
-    _frameAttachMsAccum += dA;
-    _frameGroupAttachMs[ctx.g] += dA;
+    if (ctx.shouldLog) {
+        console.log("[attach] early-out update", { g: ctx.g, dtA });
+    }
 }
+
 
 function _attachFinalizeCreate(ctx: AttachContext): void {
+    const dtA = _hostPerfNowMs() - ctx.tA0;
+
+    _frameAttachMsAccum += dtA;
     _frameAttachCreateCount++;
+
+    _frameGroupAttachMs[ctx.g] += dtA;
     _frameGroupAttachCreates[ctx.g]++;
 
-    const tA1 = _hostPerfNowMs();
-    const dA = (tA1 - ctx.tA0);
-    _frameAttachMsAccum += dA;
-    _frameGroupAttachMs[ctx.g] += dA;
+    if (ctx.shouldLog) {
+        console.log("[attach] created", { g: ctx.g, dtA });
+    }
 }
 
 
 
-
+// PURPOSE: Attach/update a non-UI sprite using canvas texture + pixel upload.
+// READS:  sprite.image pixels (via upload helper), sprite.kind, sprite.flags, sprite.z
+// WRITES:
+//   - (re)creates Phaser CanvasTexture "sprite_<id>"
+//   - uploads pixels into texture (expensive path)
+//   - ensures Phaser native sprite exists + is sized correctly
+// PERF:
+//   - Called: on attach/update for non-UI sprites (can be frequent)
+//   - This is the ONLY place pixel upload is allowed
+// SAFETY:
+//   - Must guard against missing image / invalid dimensions
+//   - Must contain exceptions from Phaser texture/native ops
+// ---------------------------------------------------------------------
 function _attachNativeSpriteNonUiPath(sc: Phaser.Scene, s: Sprite, g: number, tA0: number): void {
     const ctx: AttachContext = {
         sc,
@@ -1740,7 +1991,15 @@ function _attachNativeSpriteNonUiPath(sc: Phaser.Scene, s: Sprite, g: number, tA
 
 
 
-
+// PURPOSE: Copy MakeCode image pixels into Phaser CanvasTexture (palette->RGBA).
+// READS:  sprite.image.getPixel(x,y), MAKECODE_PALETTE, w/h
+// WRITES: writes into CanvasTexture pixel buffer + refreshes texture
+// PERF:
+//   - EXPENSIVE: O(w*h). Must remain isolated here.
+//   - Must be callable with perf bucket instrumentation.
+// SAFETY:
+//   - Must handle missing image gracefully (return 0 nonZero pixels)
+// ---------------------------------------------------------------------
 function _attachUploadPixelsToTexture(
     ctx: AttachContext,
     tex: Phaser.Textures.CanvasTexture,
@@ -1784,6 +2043,7 @@ function _attachUploadPixelsToTexture(
         }
 
         const color = palette[p];
+
         if (!color) {
             if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
                 console.error(
@@ -1800,13 +2060,14 @@ function _attachUploadPixelsToTexture(
                 );
             }
 
-            imgData.data[idx + 0] = 255;
+            // OLD: invisible pixel (do NOT increment nonZero)
+            imgData.data[idx + 0] = 0;
             imgData.data[idx + 1] = 0;
-            imgData.data[idx + 2] = 255;
-            imgData.data[idx + 3] = 255;
-            nonZero++;
+            imgData.data[idx + 2] = 0;
+            imgData.data[idx + 3] = 0;
             continue;
         }
+
 
         const r = (color[0] | 0) & 255;
         const gg = (color[1] | 0) & 255;
@@ -1863,7 +2124,16 @@ function _attachDestroyNativeIfWrongSize(ctx: AttachContext, w: number, h: numbe
 
 
 
-
+// PURPOSE: Ensure Phaser native sprite exists for this Arcade sprite + texture.
+// READS:  sprite.native, texKey, sprite.kind, Phaser scene
+// WRITES:
+//   - creates Phaser.GameObjects.Sprite when missing
+//   - sets native texture/frame; returns {native, didCreate}
+// PERF:
+//   - Called: on non-UI attach; should early-out if native already valid
+// SAFETY:
+//   - Must tolerate native existing but invalid/destroyed; recreate safely
+// ---------------------------------------------------------------------
 function _attachGetOrCreateNative(
     ctx: AttachContext,
     texKey: string,
@@ -1910,12 +2180,9 @@ function _attachGetOrCreateNative(
 
 
 function _attachApplyDepthAndScroll(ctx: AttachContext, native: any): void {
-    const s = ctx.s;
-
-    try { native.setDepth(s.z | 0); } catch { /* ignore */ }
-
-    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-    try { native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
+    // OLD non-UI pipeline does NOT set depth or scrollFactor here.
+    void ctx;
+    void native;
 }
 
 
@@ -1983,6 +2250,17 @@ function _attachImageGuard(ctx: AttachContext): boolean {
 
 
 
+
+
+// PURPOSE: Optional policy: skip non-UI pixel attach for hero-native sprites handled elsewhere.
+// READS:  sprite/native data markers (hero-native), sprite.kind/role signals
+// WRITES: none (returns boolean decision)
+// PERF:
+//   - Called: on non-UI attach entry
+//   - Must avoid pixel upload for hero path when heroAnimGlue owns visuals
+// SAFETY:
+//   - Must be conservative: only skip when we are sure another pipeline owns it
+// ---------------------------------------------------------------------
 function _attachHeroSkipPath(ctx: AttachContext): boolean {
     const sc = ctx.sc;
     const s = ctx.s;
@@ -2003,7 +2281,7 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
 
     if (!heroTex) {
         heroTex = sc.textures.createCanvas(HERO_PLACEHOLDER_TEX_KEY, 64, 64);
-        const ctxHero = heroTex.context;
+        const ctxHero = (heroTex as any).context as CanvasRenderingContext2D | undefined;
         if (ctxHero) {
             ctxHero.clearRect(0, 0, 64, 64);
             ctxHero.strokeStyle = "#ffffff";
@@ -2013,29 +2291,34 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
         heroTex.refresh();
     }
 
-    let native: any = s.native;
+    let native: any = (s as any).native;
 
     if (!native) {
         native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
-        native.setOrigin(0.5, 0.5);
+        try { native.setOrigin(0.5, 0.5); } catch { /* ignore */ }
+        try { native.setData("isHeroNative", true); } catch { /* ignore */ }
 
-        // Depth + scroll factor (same as OLD pattern)
-        try { native.setDepth(s.z | 0); } catch { /* ignore */ }
+        // OLD behavior: copy identity + try apply animation using existing project helpers
+        try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
+        try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
 
-        const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-        try { native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
+        (s as any).native = native;
 
-        s.native = native;
+        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+            try {
+                console.log(
+                    "[WRAP-NATIVE] create hero-native sprite",
+                    "| id", s.id,
+                    "| kind", s.kind,
+                    "| texKey", HERO_PLACEHOLDER_TEX_KEY,
+                    "| native.width", native.width,
+                    "| native.height", native.height
+                );
+            } catch { /* ignore */ }
+        }
 
         _frameAttachCreateCount++;
         _frameGroupAttachCreates[g]++;
-
-        const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - ctx.tA0);
-        _frameAttachMsAccum += dA;
-        _frameGroupAttachMs[g] += dA;
-
-        return true;
     } else {
         native.setPosition(s.x, s.y);
 
@@ -2045,14 +2328,17 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
 
         _frameAttachUpdateCount++;
         _frameGroupAttachUpdates[g]++;
-
-        const tA1 = _hostPerfNowMs();
-        const dA = (tA1 - ctx.tA0);
-        _frameAttachMsAccum += dA;
-        _frameGroupAttachMs[g] += dA;
-
-        return true;
     }
+
+    // For visibility logic that uses nonZero pixels, just mark as non-empty.
+    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
+
+    const tA1 = _hostPerfNowMs();
+    const dA = (tA1 - ctx.tA0);
+    _frameAttachMsAccum += dA;
+    _frameGroupAttachMs[g] += dA;
+
+    return true;
 }
 
 
@@ -2086,14 +2372,28 @@ function _attachValidateImageDims(ctx: AttachContext, w: number, h: number): boo
 
 
 function _attachVerboseStart(ctx: AttachContext, id: number, kind: number, kindName: string, w: number, h: number): void {
-    if (!ctx.shouldLog) return;
-    console.log("[_attachNativeSprite] START", id, "kind", kind, `(${kindName})`, "img", w, "x", h);
+    void id; void kind; void kindName;
+    if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+        console.log(
+            "[_attachNativeSprite] START",
+            "spriteId=", ctx.s.id,
+            "w,h=", w, h,
+            "pixelsLen=", w * h,
+        );
+    }
 }
 
 
 
 
-
+// PURPOSE: Ensure a Phaser CanvasTexture exists for texKey with correct dimensions.
+// READS:  Phaser texture manager (sc.textures), texKey, w/h
+// WRITES: creates/destroys/recreates CanvasTexture as needed
+// PERF:
+//   - Called: on non-UI attach; must early-out if correct texture already exists
+// SAFETY:
+//   - Must tolerate Phaser texture lookups failing
+// ---------------------------------------------------------------------
 function _attachGetOrRecreateCanvasTexture(
     ctx: AttachContext,
     texKey: string,
@@ -2154,16 +2454,20 @@ function _attachGetOrRecreateCanvasTexture(
 
 
 
-
 function _attachFinalizeUpdate(ctx: AttachContext): void {
+    const dtA = _hostPerfNowMs() - ctx.tA0;
+
+    _frameAttachMsAccum += dtA;
     _frameAttachUpdateCount++;
+
+    _frameGroupAttachMs[ctx.g] += dtA;
     _frameGroupAttachUpdates[ctx.g]++;
 
-    const tA1 = _hostPerfNowMs();
-    const dA = (tA1 - ctx.tA0);
-    _frameAttachMsAccum += dA;
-    _frameGroupAttachMs[ctx.g] += dA;
+    if (ctx.shouldLog) {
+        console.log("[attach] updated", { g: ctx.g, dtA });
+    }
 }
+
 
 
 
@@ -2204,6 +2508,12 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
     }
 
 
+    // ======================================================
+    // KIND56 CREATION TRACE (debug)
+    // ======================================================
+    const DEBUG_KIND56_CREATE_TRACE = true;
+    const KIND56_CREATE_TRACE_MAX = 10;
+    let _kind56CreateTraceRemaining = KIND56_CREATE_TRACE_MAX;
 
 
     export function create(img: Image, kind?: number): Sprite {
@@ -2231,24 +2541,32 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
             );
         }
 
+        // Debug: trace who is creating kind56 sprites (first N only)
+        if (DEBUG_KIND56_CREATE_TRACE && finalKind === 56 && _kind56CreateTraceRemaining > 0) {
+            _kind56CreateTraceRemaining--;
+            console.log(
+                "[KIND56 CREATE]",
+                "id", s.id,
+                "| argKind", kind,
+                "| finalKind", finalKind, "(" + _getSpriteKindName(finalKind) + ")",
+                "| w,h", img?.width, img?.height
+            );
+            const st = (new Error("[KIND56 CREATE] stack")).stack;
+            if (st) console.log(st);
+        }
 
-        
-    // Optional extra pixel-debug scan (second full pass) – gated.
-    if (DEBUG_SPRITE_PIXELS) {
-        const nonZeroCreate = _debugSpritePixels(s, "create");
-        (s as any)._lastNonZeroPixels = nonZeroCreate;
-    }
+        // Optional extra pixel-debug scan (second full pass) – gated.
+        if (DEBUG_SPRITE_PIXELS) {
+            const nonZeroCreate = _debugSpritePixels(s, "create");
+            (s as any)._lastNonZeroPixels = nonZeroCreate;
+        }
 
-
-        
         // AFTER you've counted nonZero pixels for s.image
         if (s.kind === 12 && nonZeroCreate === 0 && s.native) {
             console.log(`[AURA] id=${s.id} image went fully blank -> hiding native sprite`);
             s.native.visible = false;
             return; // don't reattach a texture for an empty image
         }
-
-
 
         _attachNativeSprite(s);
         return s;
@@ -2266,15 +2584,28 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
         s.vx = vx;
         s.vy = vy;
         _allSprites.push(s);
-        
+
         console.log(
-        "[createProjectileFromSprite] from kind=",
-        source.kind,
-        "proj w=",
-        img?.width,
-        "h=",
-        img?.height
+            "[createProjectileFromSprite] from kind=",
+            source.kind,
+            "proj w=",
+            img?.width,
+            "h=",
+            img?.height
         );
+
+        // Debug: if this path ever creates kind56, trace it too (first N only)
+        if (DEBUG_KIND56_CREATE_TRACE && s.kind === 56 && _kind56CreateTraceRemaining > 0) {
+            _kind56CreateTraceRemaining--;
+            console.log(
+                "[KIND56 CREATE][projectile]",
+                "id", s.id,
+                "| fromKind", source.kind,
+                "| w,h", img?.width, img?.height
+            );
+            const st = (new Error("[KIND56 CREATE] stack")).stack;
+            if (st) console.log(st);
+        }
 
         _attachNativeSprite(s);
         return s;
@@ -2297,43 +2628,6 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
 
 
 
-
-
-
-
-
-
-// NEW: helper to dump a sprite's pixel data row-by-row
-function _debugDumpSpritePixels(s: Sprite, label: string) {
-    const img = s.image as any;
-    if (!img) {
-        console.log(`[PIXELS] ${label} id=${s.id} kind=${s.kind} has NO image`);
-        return;
-    }
-
-    const w = img.width | 0;
-    const h = img.height | 0;
-    console.log(`[PIXELS] ${label} id=${s.id} kind=${s.kind} w=${w} h=${h}`);
-
-    for (let y = 0; y < h; y++) {
-        let row = "";
-        for (let x = 0; x < w; x++) {
-            const p = img.getPixel(x, y); // 0..15 palette index in Arcade
-            // Simple visualization:
-            //  '.' = 0 (transparent)
-            //  hex digit for non-zero palette
-            row += p === 0 ? "." : p.toString(16);
-        }
-        console.log(`[PIXELS] ${label} id=${s.id} y=${y}: ${row}`);
-    }
-}
-
-
-
-
-
-// Optional: set this low while debugging, raise it later.
-//const SPRITE_SYNC_LOG_MOD = 30;
 
 // OPTIONAL: set to true if you want per-row pixel dumps for proj/overlays.
 const SPRITE_PIXEL_DUMP = false;
@@ -2360,6 +2654,7 @@ function _debugDumpSpritePixels(s: Sprite, label: string) {
         console.log(`[PIXELS] ${label} id=${s.id} y=${y}: ${row}`);
     }
 }
+
 
 
 
@@ -2431,6 +2726,24 @@ type SyncContext = {
 };
 
 
+
+
+// ---------------------------------------------------------------------
+// MASTER: _syncNativeSprites (per-frame host entry)
+// PURPOSE: Mirror Arcade sprites into Phaser native sprites each frame.
+// READS:  globalThis.__phaserScene, _allSprites
+// WRITES: per-sprite native lifecycle via helpers; perf counters/log buckets
+// PERF:
+//   - Called: per-frame
+//   - Must not: inline logic (keep call-graph only)
+// SAFETY:
+//   - Early-return when scene missing / not ready
+// CALL GRAPH:
+//   _syncBeginFrame
+//   _syncEarlySceneGuard
+//   _syncSpriteLoop
+//   _syncEndFrame
+// ---------------------------------------------------------------------
 export function _syncNativeSprites(): void {
     const ctx = _syncBeginFrame();
     if (!_syncEarlySceneGuard(ctx)) return;
@@ -2441,8 +2754,17 @@ export function _syncNativeSprites(): void {
 }
 
 
+// PURPOSE: Initialize per-frame sync context + perf timing counters.
+// READS:  global perf clock / debug flags
+// WRITES: ctx.{t* timestamps, counters, groupLiveCounts}, any frame-global scratch
+// PERF:
+//   - Called: per-frame
+//   - Must not: touch sprite textures / per-sprite work
+// SAFETY:
+//   - No-op safe if called without scene (guarded upstream)
+// ---------------------------------------------------------------------
 function _syncBeginFrame(): SyncContext {
-    const t0 = _hostPerfNowMs()
+    const t0 = _hostPerfNowMs();
     _syncCallCount++;
 
     const sc: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
@@ -2481,16 +2803,17 @@ function _syncBeginFrame(): SyncContext {
     _frameAttachPixelMs = 0;
     _frameAttachEarlyOutCount = 0;
 
-    _frameGroupAttachMs[0] = 0; _frameGroupAttachMs[1] = 0; _frameGroupAttachMs[2] = 0;
-    _frameGroupAttachTexMs[0] = 0; _frameGroupAttachTexMs[1] = 0; _frameGroupAttachTexMs[2] = 0;
-    _frameGroupAttachPixelMs[0] = 0; _frameGroupAttachPixelMs[1] = 0; _frameGroupAttachPixelMs[2] = 0;
+    // Reset 4-group accumulators: H/E/B/X
+    _frameGroupAttachMs[0] = 0; _frameGroupAttachMs[1] = 0; _frameGroupAttachMs[2] = 0; _frameGroupAttachMs[3] = 0;
+    _frameGroupAttachTexMs[0] = 0; _frameGroupAttachTexMs[1] = 0; _frameGroupAttachTexMs[2] = 0; _frameGroupAttachTexMs[3] = 0;
+    _frameGroupAttachPixelMs[0] = 0; _frameGroupAttachPixelMs[1] = 0; _frameGroupAttachPixelMs[2] = 0; _frameGroupAttachPixelMs[3] = 0;
 
-    _frameGroupAttachCalls[0] = 0; _frameGroupAttachCalls[1] = 0; _frameGroupAttachCalls[2] = 0;
-    _frameGroupAttachCreates[0] = 0; _frameGroupAttachCreates[1] = 0; _frameGroupAttachCreates[2] = 0;
-    _frameGroupAttachUpdates[0] = 0; _frameGroupAttachUpdates[1] = 0; _frameGroupAttachUpdates[2] = 0;
-    _frameGroupAttachEarlyOuts[0] = 0; _frameGroupAttachEarlyOuts[1] = 0; _frameGroupAttachEarlyOuts[2] = 0;
+    _frameGroupAttachCalls[0] = 0; _frameGroupAttachCalls[1] = 0; _frameGroupAttachCalls[2] = 0; _frameGroupAttachCalls[3] = 0;
+    _frameGroupAttachCreates[0] = 0; _frameGroupAttachCreates[1] = 0; _frameGroupAttachCreates[2] = 0; _frameGroupAttachCreates[3] = 0;
+    _frameGroupAttachUpdates[0] = 0; _frameGroupAttachUpdates[1] = 0; _frameGroupAttachUpdates[2] = 0; _frameGroupAttachUpdates[3] = 0;
+    _frameGroupAttachEarlyOuts[0] = 0; _frameGroupAttachEarlyOuts[1] = 0; _frameGroupAttachEarlyOuts[2] = 0; _frameGroupAttachEarlyOuts[3] = 0;
 
-    let groupLiveCounts = [0, 0, 0] as number[];
+    let groupLiveCounts = [0, 0, 0, 0] as number[];
 
     return {
         t0,
@@ -2507,6 +2830,19 @@ function _syncBeginFrame(): SyncContext {
 }
 
 
+
+
+
+
+// PURPOSE: Validate Phaser Scene + prerequisites for sync.
+// READS:  globalThis.__phaserScene
+// WRITES: ctx.sc and any "skip sync" decisions
+// PERF:
+//   - Called: per-frame
+//   - Must not: allocate or iterate sprites
+// SAFETY:
+//   - Must early-return false if scene missing / shutting down
+// ---------------------------------------------------------------------
 function _syncEarlySceneGuard(ctx: SyncContext): boolean {
     if (!ctx.sc) {
         if (ctx.shouldLog) console.log("[_syncNativeSprites] no scene yet");
@@ -2516,7 +2852,19 @@ function _syncEarlySceneGuard(ctx: SyncContext): boolean {
 }
 
 
-
+// PURPOSE: Iterate _allSprites; attach/update/remove native sprites.
+// READS:  _allSprites, sprite.flags, sprite.image, sprite.kind, sprite.data keys (via role classifier)
+// WRITES:
+//   - may destroy native (hard-dead / pixel-death)
+//   - may remove from _allSprites
+//   - may mutate sprite._lastNonZeroPixels / sprite.native visibility
+// PERF:
+//   - Called: per-frame; O(numSprites)
+//   - Must not: do per-pixel work here (pixel upload is attach-only)
+// SAFETY:
+//   - Must tolerate sprites with missing image/native/data
+//   - Must not throw; exceptions must be contained
+// ---------------------------------------------------------------------
 function _syncSpriteLoop(ctx: SyncContext): void {
     const sc = ctx.sc!;
     const all = _allSprites;
@@ -2645,162 +2993,214 @@ function _syncSpriteLoop(ctx: SyncContext): void {
 
 
 
+// PURPOSE: Update UI-managed natives (status bars + combo meter) without pixel upload.
+// READS:
+//   - native.getData("uiManaged"), native.getData("uiKind")
+//   - StatusBar: (s as any).data[STATUS_BAR_DATA_KEY], sprite.flags (Invisible / RelativeToCamera), s.z
+//   - Combo: sprites.readDataNumber(s, UI_COMBO_*_KEY)
+// WRITES:
+//   - Phaser rect geometry + fill/stroke on native-owned rects (sb_* / cm_*)
+//   - native.visible, native depth/scrollFactor
+//   - (s as any)._lastNonZeroPixels = 1 (to prevent pixel-death removal)
+// PERF:
+//   - Called: per-frame for UI sprites
+//   - Must never: upload pixels / create textures / log spam
+// SAFETY:
+//   - If expected rect refs missing (sb_* / cm_*), must degrade safely
+// ---------------------------------------------------------------------
 function _syncUiManagedFastPath(
     ctx: SyncContext,
-    s: any,
-    native: any,
+    s: Sprite,
+    native: Phaser.GameObjects.GameObject,
     mcToHex: (p: number) => number
 ): boolean {
+    const uiKind = (native as any).getData?.("uiKind") as string | undefined;
+    if (!uiKind) return false;
 
-    const isUIManaged = !!(native.getData && native.getData("uiManaged"));
-    if (!isUIManaged) return false;
-
-    // Keep depth + scroll factor synced to Arcade sprite state
-    try {
-        native.setDepth(s.z | 0);
-    } catch { /* ignore */ }
+    // (Optional) keep these small “common” tweaks; no branching logic beyond calls.
+    try { (native as any).setDepth?.(s.z | 0); } catch { /* ignore */ }
 
     const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
-    try {
-        native.setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1);
-    } catch { /* ignore */ }
+    try { (native as any).setScrollFactor?.(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
 
-    const uiKind = native.getData("uiKind") || "";
-
-    // ============================================================
-    // STATUS BAR RECT UPDATE
-    // ============================================================
     if (uiKind === UI_KIND_STATUSBAR) {
-        const sb: any = (s as any).data && (s as any).data[STATUS_BAR_DATA_KEY];
-        if (sb) {
-            const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
-            const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
-            const bw = (sb.borderWidth | 0) || 0;
-
-            const borderColorIdx =
-                (sb.borderColor === undefined || sb.borderColor === null)
-                    ? (sb.offColor | 0)
-                    : (sb.borderColor | 0);
-
-            const borderHex = mcToHex(borderColorIdx | 0);
-            const offHex = mcToHex((sb.offColor | 0) || 0);
-            const onHex = mcToHex((sb.onColor | 0) || 0);
-
-            const borderRect: any = native.getData("sb_border");
-            const bgRect: any = native.getData("sb_bg");
-            const fillRect: any = native.getData("sb_fill");
-
-            const innerW = Math.max(1, barW - (bw * 2));
-            const innerH = Math.max(1, barH - (bw * 2));
-            const leftX = (-barW / 2) + bw;
-
-            if (borderRect) {
-                borderRect.width = barW;
-                borderRect.height = barH;
-                borderRect.setFillStyle(borderHex, 1);
-            }
-
-            if (bgRect) {
-                bgRect.x = leftX;
-                bgRect.width = innerW;
-                bgRect.height = innerH;
-                bgRect.setFillStyle(offHex, 1);
-            }
-
-            const max = (sb.max | 0) || (sb._max | 0) || 1;
-            const cur = (sb.current | 0);
-            const pct = Math.max(0, Math.min(1, cur / max));
-            const fillW = Math.max(0, Math.round(innerW * pct));
-
-            if (fillRect) {
-                fillRect.x = leftX;
-                fillRect.width = fillW;
-                fillRect.height = innerH;
-                fillRect.setFillStyle(onHex, 1);
-            }
-
-            native.visible = !(s.flags & SpriteFlag.Invisible);
-            (s as any)._lastNonZeroPixels = 1;
-        } else {
-            native.visible = false;
-        }
-
-        return true;
+        return _syncUiManagedStatusBar(ctx, s, native);
     }
 
-    // ============================================================
-    // COMBO METER RECT UPDATE
-    // ============================================================
     if (uiKind === UI_KIND_COMBO_METER) {
-        const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
-        const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
-
-        const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
-        const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
-        const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
-        const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
-
-        const posX1000 =
-            (sprites.readDataNumber(s, UI_COMBO_POS_X1000_KEY) | 0) || 0;
-        const show =
-            (sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false;
-
-        const segs: any[] = native.getData("cm_segs") || [];
-        const borderRect: any = native.getData("cm_border");
-        const ptr: any = native.getData("cm_ptr");
-
-        if (borderRect) {
-            borderRect.width = totalW;
-            borderRect.height = h;
-            const colBorder = mcToHex(1);
-            borderRect.setStrokeStyle(1, colBorder, 1);
-        }
-
-        const left = -totalW / 2;
-        let x = left;
-
-        const setSeg = (idx: number, wSeg: number) => {
-            const r = segs[idx];
-            if (!r) return;
-            r.x = x;
-            r.width = Math.max(1, wSeg);
-            r.height = Math.max(1, h);
-            x += wSeg;
-        };
-
-        setSeg(0, wE);
-        setSeg(1, w1);
-        setSeg(2, w2);
-        setSeg(3, w3);
-        setSeg(4, w2);
-        setSeg(5, w1);
-        setSeg(6, wE);
-
-        const clamped = Math.max(0, Math.min(1000, posX1000));
-        const pointerX =
-            Math.idiv(clamped * Math.max(1, (totalW - 1)), 1000);
-
-        if (ptr) {
-            ptr.x = left + pointerX + 0.5;
-            ptr.y = 0;
-            ptr.width = 1;
-            ptr.height = Math.max(1, h);
-            const colPtr = mcToHex(5);
-            ptr.setFillStyle(colPtr, 1);
-        }
-
-        native.visible = show;
-        (s as any)._lastNonZeroPixels = 1;
-
-        return true;
+        return _syncUiManagedComboMeter(ctx, s, native, mcToHex);
     }
 
-    // Unknown UI kind: hide defensively
-    native.visible = false;
+    // Unknown UI kind: treat as handled so it doesn't fall into pixel upload.
+    try { (native as any).setVisible?.(false); } catch { /* ignore */ }
+    (s as any)._lastNonZeroPixels = 1;
     return true;
 }
 
 
+
+function _syncUiManagedStatusBar(
+    ctx: SyncContext,
+    s: Sprite,
+    native: Phaser.GameObjects.GameObject
+): boolean {
+    // Read statusbar geometry that _attachCreateStatusBar stored on the native
+    const sbW = (native as any).getData?.("sb_w") as number | undefined;
+    const sbH = (native as any).getData?.("sb_h") as number | undefined;
+    const sbPxX = (native as any).getData?.("sb_pxX") as number | undefined;
+    const sbPxY = (native as any).getData?.("sb_pxY") as number | undefined;
+
+    // If we have a UI-managed statusbar but missing metadata, we still treat as handled
+    // (so it doesn't fall back into pixel upload path).
+    if (sbW == null || sbH == null || sbPxX == null || sbPxY == null) {
+        (s as any)._lastNonZeroPixels = 1;
+        return true;
+    }
+
+    const wx = (native as any).getData?.("followWorldX") as number | undefined;
+    const wy = (native as any).getData?.("followWorldY") as number | undefined;
+    const isRTC = (native as any).getData?.("followRTC") as boolean | undefined;
+
+    const xWorld = (isRTC ? 0 : (wx || 0)) + (sbPxX || 0);
+    const yWorld = (isRTC ? 0 : (wy || 0)) + (sbPxY || 0);
+
+    const sb = (s as any)._statusBar;
+    if (!sb) {
+        (s as any)._lastNonZeroPixels = 1;
+        return true;
+    }
+
+    const outerW = sbW | 0;
+    const outerH = sbH | 0;
+
+    const borderRect = (native as any).getData?.("sb_border") as Phaser.GameObjects.Rectangle | undefined;
+    const bgRect = (native as any).getData?.("sb_bg") as Phaser.GameObjects.Rectangle | undefined;
+    const fillRect = (native as any).getData?.("sb_fill") as Phaser.GameObjects.Rectangle | undefined;
+
+    if (!borderRect || !bgRect || !fillRect) {
+        (s as any)._lastNonZeroPixels = 1;
+        return true;
+    }
+
+    borderRect.x = xWorld;
+    borderRect.y = yWorld;
+    borderRect.width = outerW;
+    borderRect.height = outerH;
+
+    const border = (sb.borderWidth | 0);
+    const innerW = Math.max(0, outerW - border * 2);
+    const innerH = Math.max(0, outerH - border * 2);
+    const leftX = xWorld - outerW / 2 + border + innerW / 2;
+    const topY = yWorld - outerH / 2 + border + innerH / 2;
+
+    bgRect.x = leftX;
+    bgRect.y = topY;
+    bgRect.width = innerW;
+    bgRect.height = innerH;
+
+    const cur = (sb.current | 0);
+    const max = Math.max(1, (sb.max | 0));
+    const pct = Math.max(0, Math.min(1, cur / max));
+
+    fillRect.x = leftX - innerW / 2 + (innerW * pct) / 2;
+    fillRect.y = topY;
+    fillRect.width = Math.floor(innerW * pct);
+    fillRect.height = innerH;
+
+    // Prevent pixel-death logic from hiding/removing it
+    (s as any)._lastNonZeroPixels = 1;
+
+    return true;
+}
+
+function _syncUiManagedComboMeter(
+    ctx: SyncContext,
+    s: Sprite,
+    native: Phaser.GameObjects.GameObject,
+    mcToHex: (p: number) => number
+): boolean {
+    const totalW = (sprites.readDataNumber(s, UI_COMBO_TOTAL_W_KEY) | 0) || 30;
+    const h = (sprites.readDataNumber(s, UI_COMBO_H_KEY) | 0) || 5;
+
+    const wE = (sprites.readDataNumber(s, UI_COMBO_W_E_KEY) | 0) || 3;
+    const w1 = (sprites.readDataNumber(s, UI_COMBO_W_1_KEY) | 0) || 4;
+    const w2 = (sprites.readDataNumber(s, UI_COMBO_W_2_KEY) | 0) || 5;
+    const w3 = (sprites.readDataNumber(s, UI_COMBO_W_3_KEY) | 0) || 6;
+
+    const posX1000 = (sprites.readDataNumber(s, UI_COMBO_POS_X1000_KEY) | 0) || 0;
+    const show = (sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false;
+
+    const segs: any[] = (native as any).getData?.("cm_segs") || [];
+    const borderRect: any = (native as any).getData?.("cm_border");
+    const ptr: any = (native as any).getData?.("cm_ptr");
+
+    if (borderRect) {
+        borderRect.width = totalW;
+        borderRect.height = h;
+        const colBorder = mcToHex(1);
+        borderRect.setStrokeStyle(1, colBorder, 1);
+    }
+
+    const left = -totalW / 2;
+    let x = left;
+
+    const setSeg = (idx: number, wSeg: number) => {
+        const r = segs[idx];
+        if (!r) return;
+        r.x = x;
+        r.width = Math.max(1, wSeg);
+        r.height = Math.max(1, h);
+        x += wSeg;
+    };
+
+    setSeg(0, wE);
+    setSeg(1, w1);
+    setSeg(2, w2);
+    setSeg(3, w3);
+    setSeg(4, w2);
+    setSeg(5, w1);
+    setSeg(6, wE);
+
+    const clamped = Math.max(0, Math.min(1000, posX1000));
+    const span = Math.max(1, (totalW - 1));
+    const pointerX = Math.floor((clamped * span) / 1000);
+
+    if (ptr) {
+        ptr.x = left + pointerX + 0.5;
+        ptr.y = 0;
+        ptr.width = 1;
+        ptr.height = Math.max(1, h);
+
+        // Defensive: ensure it actually draws
+        const colPtr = mcToHex(5);
+        ptr.setFillStyle(colPtr, 1);
+        ptr.visible = true;
+    }
+
+    try { (native as any).setVisible?.(show); } catch { /* ignore */ }
+
+    // Prevent pixel-death logic from hiding/removing it
+    (s as any)._lastNonZeroPixels = 1;
+
+    return true;
+}
+
+
+
+
+// PURPOSE: Apply hero animation + hero aura glue onto hero native sprites.
+// READS:
+//   - role classification via _classifySpriteRole(kind, dataKeys)
+//   - native.getData("isHeroNative")
+//   - (s as any).data["auraActive"], (s as any).data["auraColor"]
+// WRITES:
+//   - native animation + aura visuals via heroAnimGlue (side effects)
+// PERF:
+//   - Called: per-frame for HERO sprites
+//   - Must not: upload pixels or allocate textures
+// SAFETY:
+//   - Must no-op safely if native missing / not hero-native / glue unavailable
+// ---------------------------------------------------------------------
 function _syncHeroPath(
     ctx: SyncContext,
     s: any,
@@ -2832,6 +3232,22 @@ function _syncHeroPath(
 }
 
 
+
+// PURPOSE: Apply monster/actor animation data onto native sprites (Phaser-side anim glue).
+// READS:
+//   - sprites.readDataString(s, "monsterId" | "enemyName" | "name")
+//   - sprites.readDataString(s, "phase"), sprites.readDataString(s, "dir")
+//   - role classification via _classifySpriteRole(kind, dataKeys)
+// WRITES:
+//   - (s as any).data["monsterId"|"name"|"phase"|"dir"] (normalizes keys)
+//   - nativeAny.setData("monsterId"|"name"|"phase"|"dir")
+//   - triggers monsterAnimGlue hook (side effect on native anim)
+// PERF:
+//   - Called: per-frame for ENEMY/ACTOR sprites
+//   - Must not: upload pixels or allocate textures
+// SAFETY:
+//   - Must tolerate missing native.setData / missing glue hook
+// ---------------------------------------------------------------------
 function _syncEnemyActorPath(
     ctx: SyncContext,
     s: any,
@@ -2894,6 +3310,14 @@ function _syncEnemyActorPath(
 
 
 
+// PURPOSE: Remove/destroy natives when sprite becomes "dead by pixels" (autoHideByPixels).
+// READS:  (s as any)._lastNonZeroPixels, sprite.flags, sprite.kind
+// WRITES: destroys s.native (if present), may splice _allSprites (caller controls index)
+// PERF:
+//   - Called: per-frame; only triggers work when lastNonZeroPixels==0
+// SAFETY:
+//   - Must tolerate native.destroy throwing; contain exceptions
+// ---------------------------------------------------------------------
 function _syncPixelDeathRemoval(
     ctx: SyncContext,
     sc: Phaser.Scene,
@@ -2945,6 +3369,15 @@ function _syncPixelDeathRemoval(
 }
 
 
+// PURPOSE: Final visibility + debug logging tail for a sprite after main sync paths.
+// READS:  debug flags, sprite.flags, sprite/image/native state
+// WRITES: native.visible / alpha / debug-only logs (if enabled)
+// PERF:
+//   - Called: per-frame
+//   - Debug logging must remain gated and OFF by default
+// SAFETY:
+//   - Must not throw even if native fields missing
+// ---------------------------------------------------------------------
 function _syncVisibilityAndDebugTail(
     ctx: SyncContext,
     s: any,
@@ -2979,6 +3412,36 @@ function _syncVisibilityAndDebugTail(
     const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
     const autoHideByPixels = lastNonZero === 0;
 
+    // ============================================================
+    // UI-MANAGED VISIBILITY OVERRIDE
+    //
+    // Combo meter is intentionally SpriteFlag.Invisible in Phaser mode
+    // (Arcade pixels hidden), but the Phaser-native container MUST remain visible.
+    // ============================================================
+    const isUiManaged = !!(native && typeof native.getData === "function" && native.getData("uiManaged"));
+    if (isUiManaged) {
+        const uiKind = (native.getData("uiKind") as string | undefined) || "";
+
+        let shouldBeVisible = true;
+
+        if (uiKind === UI_KIND_COMBO_METER) {
+            // Visibility is driven by the published data key, NOT SpriteFlag.Invisible
+            const show = ((sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false);
+            shouldBeVisible = show && !autoHideByPixels;
+        } else {
+            // Status bars (and other UI) can still respect Invisible flag if you use it
+            shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
+        }
+
+        native.visible = shouldBeVisible;
+        native.alpha = shouldBeVisible ? 1 : 0;
+
+        return;
+    }
+
+    // ============================================================
+    // DEFAULT (NON-UI) VISIBILITY
+    // ============================================================
     const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
     native.visible = shouldBeVisible;
     native.alpha = shouldBeVisible ? 1 : 0;
@@ -3019,6 +3482,16 @@ function _syncVisibilityAndDebugTail(
 }
 
 
+
+// PURPOSE: Finalize per-frame timings + counters; emit perf logs if enabled.
+// READS:  ctx counters/timestamps, debug flags
+// WRITES: perf log output / accumulated metrics
+// PERF:
+//   - Called: per-frame
+//   - Must not: touch per-sprite state
+// SAFETY:
+//   - Must no-op safely if ctx incomplete
+// ---------------------------------------------------------------------
 function _syncEndFrame(ctx: SyncContext): void {
     const t1 = _hostPerfNowMs();
     _hostPerfAccumSyncMs += (t1 - ctx.t0);
@@ -3042,36 +3515,44 @@ function _syncEndFrame(ctx: SyncContext): void {
     // group counts
     const Hc = ctx.groupLiveCounts[PERF_GROUP_HERO] | 0;
     const Ec = ctx.groupLiveCounts[PERF_GROUP_ENEMY] | 0;
+    const Bc = ctx.groupLiveCounts[PERF_GROUP_BARS] | 0;
     const Xc = ctx.groupLiveCounts[PERF_GROUP_EXTRA] | 0;
 
     // group time
     const Ha = _frameGroupAttachMs[PERF_GROUP_HERO];
     const Ea = _frameGroupAttachMs[PERF_GROUP_ENEMY];
+    const Ba = _frameGroupAttachMs[PERF_GROUP_BARS];
     const Xa = _frameGroupAttachMs[PERF_GROUP_EXTRA];
 
     const Hpx = _frameGroupAttachPixelMs[PERF_GROUP_HERO];
     const Epx = _frameGroupAttachPixelMs[PERF_GROUP_ENEMY];
+    const Bpx = _frameGroupAttachPixelMs[PERF_GROUP_BARS];
     const Xpx = _frameGroupAttachPixelMs[PERF_GROUP_EXTRA];
 
     const Htx = _frameGroupAttachTexMs[PERF_GROUP_HERO];
     const Etx = _frameGroupAttachTexMs[PERF_GROUP_ENEMY];
+    const Btx = _frameGroupAttachTexMs[PERF_GROUP_BARS];
     const Xtx = _frameGroupAttachTexMs[PERF_GROUP_EXTRA];
 
     // group counts for attach ops
     const Hcalls = _frameGroupAttachCalls[PERF_GROUP_HERO] | 0;
     const Ecalls = _frameGroupAttachCalls[PERF_GROUP_ENEMY] | 0;
+    const Bcalls = _frameGroupAttachCalls[PERF_GROUP_BARS] | 0;
     const Xcalls = _frameGroupAttachCalls[PERF_GROUP_EXTRA] | 0;
 
     const Hcr = _frameGroupAttachCreates[PERF_GROUP_HERO] | 0;
     const Ecr = _frameGroupAttachCreates[PERF_GROUP_ENEMY] | 0;
+    const Bcr = _frameGroupAttachCreates[PERF_GROUP_BARS] | 0;
     const Xcr = _frameGroupAttachCreates[PERF_GROUP_EXTRA] | 0;
 
     const Hup = _frameGroupAttachUpdates[PERF_GROUP_HERO] | 0;
     const Eup = _frameGroupAttachUpdates[PERF_GROUP_ENEMY] | 0;
+    const Bup = _frameGroupAttachUpdates[PERF_GROUP_BARS] | 0;
     const Xup = _frameGroupAttachUpdates[PERF_GROUP_EXTRA] | 0;
 
     const Heo = _frameGroupAttachEarlyOuts[PERF_GROUP_HERO] | 0;
     const Eeo = _frameGroupAttachEarlyOuts[PERF_GROUP_ENEMY] | 0;
+    const Beo = _frameGroupAttachEarlyOuts[PERF_GROUP_BARS] | 0;
     const Xeo = _frameGroupAttachEarlyOuts[PERF_GROUP_EXTRA] | 0;
 
     // AURA PERF (accumulated by heroAnimGlue.syncHeroAuraForNative)
@@ -3099,14 +3580,14 @@ function _syncEndFrame(ctx: SyncContext): void {
         "attachCreates=", _frameAttachCreateCount,
         "attachUpdates=", _frameAttachUpdateCount,
         "attachEarlyOuts=", _frameAttachEarlyOutCount,
-        "| H/E/X=", `${Hc}/${Ec}/${Xc}`,
-        "| attachMs(H/E/X)=", `${Ha.toFixed(3)}/${Ea.toFixed(3)}/${Xa.toFixed(3)}`,
-        "| pixMs(H/E/X)=", `${Hpx.toFixed(3)}/${Epx.toFixed(3)}/${Xpx.toFixed(3)}`,
-        "| texMs(H/E/X)=", `${Htx.toFixed(3)}/${Etx.toFixed(3)}/${Xtx.toFixed(3)}`,
-        "| calls(H/E/X)=", `${Hcalls}/${Ecalls}/${Xcalls}`,
-        "| creates(H/E/X)=", `${Hcr}/${Ecr}/${Xcr}`,
-        "| updates(H/E/X)=", `${Hup}/${Eup}/${Xup}`,
-        "| early(H/E/X)=", `${Heo}/${Eeo}/${Xeo}`,
+        "| H/E/B/X=", `${Hc}/${Ec}/${Bc}/${Xc}`,
+        "| attachMs(H/E/B/X)=", `${Ha.toFixed(3)}/${Ea.toFixed(3)}/${Ba.toFixed(3)}/${Xa.toFixed(3)}`,
+        "| pixMs(H/E/B/X)=", `${Hpx.toFixed(3)}/${Epx.toFixed(3)}/${Bpx.toFixed(3)}/${Xpx.toFixed(3)}`,
+        "| texMs(H/E/B/X)=", `${Htx.toFixed(3)}/${Etx.toFixed(3)}/${Btx.toFixed(3)}/${Xtx.toFixed(3)}`,
+        "| calls(H/E/B/X)=", `${Hcalls}/${Ecalls}/${Bcalls}/${Xcalls}`,
+        "| creates(H/E/B/X)=", `${Hcr}/${Ecr}/${Bcr}/${Xcr}`,
+        "| updates(H/E/B/X)=", `${Hup}/${Eup}/${Bup}/${Xup}`,
+        "| early(H/E/B/X)=", `${Heo}/${Eeo}/${Beo}/${Xeo}`,
         "| auraMs≈", auraMs.toFixed(3),
         "auraCalls=", auraCalls,
         "auraBuilds=", auraBuilds,
@@ -3118,9 +3599,9 @@ function _syncEndFrame(ctx: SyncContext): void {
     gAny.__perfAuraCalls = 0;
     gAny.__perfAuraBuilds = 0;
     gAny.__perfAuraTexSets = 0;
+
+    _debugDumpCategoryX(ctx, _allSprites);
 }
-
-
 
 
 
@@ -3320,7 +3801,15 @@ let _checkHandlerLogCount = 0;
 
 
 
-        // Called from game loop to process overlaps/destroys.
+// PURPOSE: Run Arcade-style sprite event handlers (overlaps/destroys/etc).
+// READS:  _overlapHandlers, _destroyHandlers, _allSprites, debug flags
+// WRITES: invokes registered callbacks; may mutate sprite state via handlers
+// PERF:
+//   - Called: per-frame (or per tick)
+//   - Must keep logging gated; handlers can be expensive so avoid extra passes
+// SAFETY:
+//   - Must isolate handler exceptions (never crash host loop)
+// ---------------------------------------------------------------------
         export function _processEvents(): void {
             _processEventsCallCount++;
 
@@ -3653,6 +4142,18 @@ namespace game {
     //   - Followers only animate (physics + syncNativeSprites); they do NOT
     //     run game.onUpdate / onUpdateInterval handlers. World state for
     //     followers is driven by netWorld.apply(...) from host snapshots.
+
+
+
+// PURPOSE: Drive Arcade compat tick (input/events/time progression).
+// READS:  engine queues/state, time deltas, debug flags
+// WRITES: advances runtime; triggers _processEvents; updates bookkeeping
+// PERF:
+//   - Called: per-frame
+//   - Must not allocate heavy objects per tick
+// SAFETY:
+//   - Must not throw; isolate downstream exceptions
+// ---------------------------------------------------------------------
     export function _tick(): void {
         const t0 = _hostPerfNowMs()
 
@@ -4057,6 +4558,15 @@ namespace netWorld {
     // APPLY SNAPSHOT
     // ====================================================
 
+
+// PURPOSE: Apply inbound network/state payload into local Arcade compat runtime.
+// READS:  inbound message/payload shape, player registry, sprite registry
+// WRITES: sprite state, player state, queues for later processing
+// PERF:
+//   - Called: per message (can spike). Avoid per-pixel work.
+// SAFETY:
+//   - Must validate payload fields; tolerate partial/old clients
+// ---------------------------------------------------------------------
 export function apply(snap: WorldSnapshot): void {
     if (!snap) return;
 
@@ -4469,7 +4979,16 @@ function startSpriteSyncLoop() {
     }
 })();
 
-// slotIndex is 0..3 (Player 1..4); name can be null/undefined for default.
+
+
+// PURPOSE: Register a local player/controller and bind to networking + runtime hooks.
+// READS:  player id/config, socket/server state, runtime registries
+// WRITES: player registry entries, input bindings, network handlers
+// PERF:
+//   - Called: at player join; not per-frame, but complexity is high (boundary function)
+// SAFETY:
+//   - Must remain idempotent / avoid duplicate registrations
+// ---------------------------------------------------------------------
 export function registerLocalPlayer(slotIndex: number, name: string | null) {
     const g: any = (globalThis as any);
     if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
