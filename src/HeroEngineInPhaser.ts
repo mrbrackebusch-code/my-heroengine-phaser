@@ -149,7 +149,7 @@ namespace SpriteKind {
 //   showDamageNumber() – Spawn a floating text sprite showing damage dealt at a position.
 //   createAuraImageFromHero() – Generate an aura outline image based on a hero's sprite bitmap.
 //   ensureHeroAuraSprite() – Ensure a hero has an attached aura sprite and create it if missing.
-//   updateHeroAuras() – Update aura sprites (position, visibility, style) for all heroes.
+//   updateHeroOverlays() – Update aura and combo meter and agility indicator sprites (position, visibility, style) for all heroes.
 //
 // SECTION 6 - ON OVERLAP - COLLISIONS AND INTERACTIONS BETWEEN KINDS
 //   hasSignificantOverlap() – Return true if two sprites overlap enough to count as a hit/collision.
@@ -511,6 +511,20 @@ const DEBUG_INTEGRATOR = true
 const DBG_INT_INTERVAL_MS = 50
 
 const DEBUG_HERO_LOGIC = true
+
+// --------------------------------------------------------------
+// Debug filter (input/move gating probes)
+// --------------------------------------------------------------
+const DEBUG_FILTER_LOGS = true
+
+// Change this string to whatever you want to grep for.
+// Must contain "P1 intent" per your filtering workflow.
+const DEBUG_FILTER_PHRASE = "[P1 intent]"
+
+// Internal: lets helper functions know which player is currently being processed.
+// Debug-only; do not use for gameplay logic.
+let _dbgMoveCurrentPlayerId = 0
+
 
 // --------------------------------------------------------------
 // Screen config
@@ -971,6 +985,8 @@ const AGI_METER_W_2 = 24
 const AGI_METER_W_3 = 32
 const AGI_METER_H = 14
 
+// Alias for older name used by agiMeterZoneMultiplier
+const AGI_METER_W_EXEC = AGI_METER_W_E
 
 
 // Back-compat: the old combo-window baseline used 300ms. For C1 visibility we
@@ -1002,6 +1018,18 @@ const AGI_BUILD_HITS_ENEMIES = false          // build dashes do 0 damage for no
 const AGI_TIME_AFFECTS_VULN = true           // Trait3 affects vulnerability window
 const AGI_TIME_AFFECTS_PENDULUM = true       // Trait3 affects pendulum speed
 
+// NEW (C5.1): allow rapid combo presses even while a dash lock is active.
+// This is the minimum time between accepted combo presses.
+// NOTE: since doHeroMovesFromIntents runs at 80ms intervals, values below ~80ms won't matter.
+const AGI_MIN_COMBO_REPRESS_MS = 80
+
+// NEW (C7): aim indicator tuning
+const AGI_AIM_SIDE_EDGE_SHRINK_PX = 7
+const AGI_AIM_SIDE_INSET_PX = 8
+
+// NEW (C6): \"break\" visual feedback
+const AGI_BREAK_STRETCH_PX = 16
+const AGI_BREAK_SHAKE_PX = 2
 
 
 
@@ -1064,6 +1092,9 @@ let heroStrengthChargeBars: StatusBarSprite[] = []
 
 let enemyHPBars: StatusBarSprite[] = []
 let heroComboMeters: Sprite[] = []
+let heroAgiAimIndicators: Sprite[] = []
+
+
 
 let playerToHeroIndex: number[] = [-1, -1, -1, -1, -1]
 
@@ -1073,6 +1104,15 @@ let heroFacingY: number[] = []
 let heroTargetCircles: Sprite[] = []
 let heroControlledSpells: Sprite[] = []
 let heroAuras: Sprite[] = []
+
+
+// DEBUG: track intent edges + durations for Player 1
+let _dbg_prevP1Intent = ""
+let _dbg_prevP1IntentMs = 0
+let _dbg_prevP1A = false
+let _dbg_prevP1B = false
+
+
 
 // Simple "intent" placeholder for P1 (used by input logic)
 let p1Intent = ""
@@ -1085,6 +1125,26 @@ let p3Intent = ""
 
 // Simple "intent" placeholder for P4 (used by input logic)
 let p4Intent = ""
+
+
+// Edge-queued intents (consumed by TIMER80)
+let p1IntentPending = ""
+let p2IntentPending = ""
+let p3IntentPending = ""
+let p4IntentPending = ""
+
+// NEW: tiny 2-deep FIFO so fast taps between TIMER80 ticks don’t get dropped
+let p1IntentPending2 = ""
+let p2IntentPending2 = ""
+let p3IntentPending2 = ""
+let p4IntentPending2 = ""
+
+// Previous raw button states (for edge detection)
+let _p1PrevA = false, _p1PrevB = false
+let _p2PrevA = false, _p2PrevB = false
+let _p3PrevA = false, _p3PrevB = false
+let _p4PrevA = false, _p4PrevB = false
+
 
 // Control-lock timestamps: when each hero's inputs should unlock
 let heroBusyUntil: number[] = []
@@ -1161,6 +1221,24 @@ const UI_COMBO_W_3_KEY = "__comboW3";
 const UI_COMBO_POS_X1000_KEY = "__comboPosX1000";
 const UI_COMBO_VISIBLE_KEY = "__comboVisible";
 const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional
+
+// === Agility aim indicator (UI-managed sprite) ===
+// Arcade runtime: render a simple procedural arrow image for the indicator.
+// Phaser runtime: hide sprite pixels and publish aim params via data keys; Phaser draws natively.
+const UI_KIND_AGI_AIM_INDICATOR = "agiAimIndicator";
+
+// Indicator sprite data keys
+const UI_AIM_VISIBLE_KEY = "__aimVis";          // 0/1
+const UI_AIM_DIR_X1000_KEY = "__aimDx1000";     // -1000..1000
+const UI_AIM_DIR_Y1000_KEY = "__aimDy1000";     // -1000..1000
+const UI_AIM_ANGLE_MDEG_KEY = "__aimAngleMdeg"; // future 360 hook (milli-degrees)
+const UI_AIM_LEN_KEY = "__aimLen";              // optional (pixels)
+
+// Arcade-only indicator render constants (pixels). Phaser uses native rendering.
+const AGI_AIM_INDICATOR_LEN = 14;
+const AGI_AIM_INDICATOR_OX = 0;
+const AGI_AIM_INDICATOR_OY = 0;
+
 
 
 
@@ -1524,7 +1602,29 @@ function _createWallTileImage(): Image {
 }
 
 
+
 function _buildTilesIntoSprites(map: number[][]): void {
+    // Phaser runtime: NEVER represent wall tiles as Arcade sprites.
+    // Rendering is handled by tileMapGlue/WorldTileRenderer using Phaser tilemap layers,
+    // and collisions are handled by the engine's grid-based solver.
+    if (isPhaserRuntime()) return
+
+    const tile = WORLD_TILE_SIZE
+    const wallImg = _createWallTileImage()
+
+    for (let r = 0; r < map.length; r++) {
+        const row = map[r]
+        for (let c = 0; c < row.length; c++) {
+            if (row[c] !== TILE_WALL) continue
+
+            const s = sprites.create(wallImg, SpriteKind.Wall)
+            s.left = c * tile
+            s.top = r * tile
+        }
+    }
+}
+
+function _buildTilesIntoSpritesOLDCODETODELETE(map: number[][]): void {
     const tile = WORLD_TILE_SIZE
     const wallImg = _createWallTileImage()
 
@@ -1550,6 +1650,19 @@ function _buildTilesIntoSprites(map: number[][]): void {
 
 // This is called ONLY by HeroEngine.start()
 function initWorldTileMap(): void {
+    // Always build the numeric world grid (used by Phaser renderer + collision).
+    _engineWorldTileMap = _createTileMap2D()
+
+    // Only the MakeCode Arcade runtime needs "walls as sprites".
+    // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
+    if (isMakeCodeArcadeRuntime()) {
+        _buildTilesIntoSprites(_engineWorldTileMap)
+    }
+}
+
+
+// This is called ONLY by HeroEngine.start()
+function initWorldTileMapOLDCODETODELETE(): void {
     _engineWorldTileMap = _createTileMap2D()
     _buildTilesIntoSprites(_engineWorldTileMap)
 }
@@ -1987,8 +2100,699 @@ function calculateMoveStatsForFamily(family: number, button: string, traits: num
 
 
 
+type AgilityPressResult = {
+    agiZoneMult: number
+    agiStateBefore: number
+    agiChainAfter: number
+    agiIsArmedThisPress: boolean
+    agiDoExecuteThisPress: boolean
+}
+
+
+
+function _doHeroMoveShouldIgnoreDueToBusy(heroIndex: number, hero: Sprite, now: number): boolean {
+    // --------------------------------------------------------------------
+    // IMPORTANT: busyUntil gating must NOT block ARMED build presses after landing,
+    // otherwise the meter is visible but presses are ignored.
+    // We can only know "meter is active" from hero state + dashUntil.
+    // --------------------------------------------------------------------
+    const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+    const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+    const inAgiBuildAfterLanding0 =
+        (state0 === AGI_STATE.ARMED) && (dashUntil0 <= 0 || now >= dashUntil0)
+
+    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+
+    if (!inAgiBuildAfterLanding0 && busyUntil0 > 0 && now < busyUntil0) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && _dbgMoveCurrentPlayerId === 1) {
+            const chain0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0)
+            const lastPress0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS) | 0)
+            const meterStart0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0)
+            const dtBusy = busyUntil0 - now
+            const dtDash = dashUntil0 - now
+            console.log(
+                DEBUG_FILTER_PHRASE +
+                " BUSY_BLOCK timeMs=" + now +
+                " heroIndex=" + heroIndex +
+                " busyUntil=" + busyUntil0 +
+                " dtBusy=" + dtBusy +
+                " agiState=" + state0 +
+                " agiChain=" + chain0 +
+                " lastPressMs=" + lastPress0 +
+                " meterStartMs=" + meterStart0 +
+                " dashUntil=" + dashUntil0 +
+                " dtDash=" + dtDash +
+                " inBuildAfterLanding=" + (inAgiBuildAfterLanding0 ? 1 : 0)
+            )
+        }
+        return true
+    }
+
+    return false
+}
+
+
+
+function _doHeroMoveCallLogicHook(heroIndex: number, button: string): any[] | null {
+    const hook = HeroEngine.runHeroLogicForHeroHook || runHeroLogicForHero
+
+    try {
+        const out = hook(heroIndex, button)
+        return out
+    } catch (e) {
+        console.log(
+            "[doHeroMoveForPlayer] ERROR calling hook heroIndex=" + heroIndex +
+            " button=" + button +
+            " error=" + e
+        )
+        return null
+    }
+}
+
+function _doHeroMoveValidateHookOut(heroIndex: number, button: string, out: any[] | null): out is any[] {
+    if (!out || out.length < 7) {
+        console.log(
+            "[MOVE] heroIndex=" + heroIndex +
+            " button=" + button +
+            " INVALID OUT=" + (out ? "[" + out.join(",") + "]" : "null")
+        )
+        return false
+    }
+    return true
+}
+
+function _doHeroMoveParseHookOut(out: any[]): {
+    family: number
+    t1: number
+    t2: number
+    t3: number
+    t4: number
+    element: number
+    traits: number[]
+    animKey: string
+} {
+    const family = coerceFamily(out[0])
+    const t1 = out[1] | 0
+    const t2 = out[2] | 0
+    const t3 = out[3] | 0
+    const t4 = out[4] | 0
+    const element = coerceElement(out[5])
+
+    const traits = [0, t1, t2, t3, t4, element]
+
+    let animKey: string
+    const rawAnim = out[6]
+    if (typeof rawAnim === "string") animKey = rawAnim
+    else animKey = animIdToKey(rawAnim | 0)
+
+    return { family, t1, t2, t3, t4, element, traits, animKey }
+}
+
+function _doHeroMoveApplyBaseHeroMoveData(
+    hero: Sprite,
+    family: number,
+    button: string,
+    t1: number,
+    t2: number,
+    t3: number,
+    t4: number
+): void {
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, family)
+    sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(family))
+
+    sprites.setDataString(hero, HERO_DATA.BUTTON, button)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT1, t1)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT2, t2)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
+}
+
+function _doHeroMoveUpdateAgilityComboState(
+    heroIndex: number,
+    hero: Sprite,
+    now: number,
+    family: number
+): AgilityPressResult {
+    // ------------------------------------------------------------
+    // Determine if this press should EXECUTE (E zone) while ARMED
+    // ------------------------------------------------------------
+    let agiZoneMult = -1
+    let agiStateBefore = 0
+    let agiChainAfter = 0
+    let agiIsArmedThisPress = false
+    let agiDoExecuteThisPress = false
+
+    if (family != FAMILY.AGILITY) {
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
+        agiPacketsClear(heroIndex, hero)
+
+        return {
+            agiZoneMult,
+            agiStateBefore,
+            agiChainAfter,
+            agiIsArmedThisPress,
+            agiDoExecuteThisPress
+        }
+    }
+
+    agiStateBefore = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+
+    const lastMs = sprites.readDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS) | 0
+    const gap = (lastMs > 0) ? (now - lastMs) : 0
+    let chain = sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0
+
+    if (lastMs > 0 && gap > AGI_CHAIN_MAX_GAP_MS) {
+        chain = 0
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
+        agiPacketsClear(heroIndex, hero)
+    }
+
+    if (agiStateBefore === AGI_STATE.ARMED) {
+        agiZoneMult = agiMeterZoneMultiplier(hero, now) | 0
+        if (agiZoneMult === 0) agiDoExecuteThisPress = true
+    }
+
+    chain += 1
+    agiChainAfter = chain
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, chain)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS, now)
+
+    if (chain >= 2) {
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.ARMED)
+        agiIsArmedThisPress = true
+
+        // Ensure meter start exists (so UI + gameplay are in sync immediately)
+        const ms0 = sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0
+        if (ms0 <= 0) sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, now | 0)
+
+    } else {
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
+        agiIsArmedThisPress = false
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
+        agiPacketsClear(heroIndex, hero)
+    }
+
+    return {
+        agiZoneMult,
+        agiStateBefore,
+        agiChainAfter,
+        agiIsArmedThisPress,
+        agiDoExecuteThisPress
+    }
+}
+
+function _doHeroMoveTrySpendMana(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    t1: number,
+    t2: number,
+    t3: number,
+    t4: number
+): boolean {
+    // Mana (skip Strength)
+    if (family == FAMILY.STRENGTH) return true
+
+    let manaCost = t1 + t2 + t3 + t4
+    if (manaCost < 0) manaCost = 0
+
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+    if (mana < manaCost) {
+        flashHeroManaBar(heroIndex)
+        return false
+    }
+
+    mana -= manaCost
+    sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+    updateHeroManaBar(heroIndex)
+    if (manaCost > 0) showDamageNumber(hero.x, hero.y - 10, -manaCost, "mana")
+
+    return true
+}
+
+function _doHeroMoveTryAgilityExecuteThisPress(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    t2: number,
+    stats: number[],
+    animKey: string,
+    agiDoExecuteThisPress: boolean
+): boolean {
+    // ------------------------------------------------------------
+    // C6: Execute radius comes from Trait2 (Reach)
+    // ------------------------------------------------------------
+    if (family != FAMILY.AGILITY) return false
+    if (!agiDoExecuteThisPress) return false
+
+    const reach = Math.max(0, t2 | 0)
+    let execRadius = 40 + reach * 2
+    if (execRadius < 40) execRadius = 40
+    if (execRadius > 220) execRadius = 220
+
+    const slowPct = stats[STAT.SLOW_PCT] | 0
+    const slowDurMs = stats[STAT.SLOW_DURATION] | 0
+
+    destroyAgiAimIndicator(heroIndex)
+    agiBeginExecute(heroIndex, hero, execRadius, slowPct, slowDurMs)
+
+    setHeroPhaseString(heroIndex, "thrust")
+    callHeroAnim(heroIndex, animKey, 250)
+
+    return true
+}
+
+
+
+function _doHeroMoveTryAgilityBuildAfterLanding(
+    heroIndex: number,
+    hero: Sprite,
+    now: number,
+    family: number,
+    t1: number,
+    animKey: string,
+    agiChainAfter: number,
+    agiZoneMult: number,
+    agiIsArmedThisPress: boolean
+): boolean {
+    // ------------------------------------------------------------
+    // If we're ARMED and have landed:
+    // - chainAfter === 2 : meter START press (seed + stay still, no dash)
+    // - chainAfter >  2 : meter COMMIT press (bank zone hits, END meter, then dash)
+    // ------------------------------------------------------------
+    if (family != FAMILY.AGILITY) return false
+    if (!agiIsArmedThisPress) return false
+
+    const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+    const landed = (dashUntil <= 0 || now >= dashUntil)
+    if (!landed) return false
+
+    const packetDamage = t1 | 0
+
+    // ----------------------------
+    // Meter START (no dash)
+    // ----------------------------
+    if (agiChainAfter === 2) {
+        // Seed the bank (existing behavior)
+        agiPacketsClear(heroIndex, hero)
+        agiPacketsAppend(heroIndex, hero, packetDamage, 1)
+
+        // Stay still + locked
+        lockHeroControls(heroIndex)
+        hero.vx = 0
+        hero.vy = 0
+
+        // Do not create a new busy window during meter/start
+        heroBusyUntil[heroIndex] = 0
+        sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+
+        // Visual: build is combat idle
+        setHeroPhaseString(heroIndex, "combatIdle")
+        callHeroAnim(heroIndex, animKey, 120)
+
+        return true
+    }
+
+    // ----------------------------
+    // Meter COMMIT (dash next)
+    // ----------------------------
+    if (agiChainAfter > 2) {
+        // Bank based on current zone (1/2/3). If zoneMult < 0, compute it.
+        if (agiZoneMult < 0) agiZoneMult = agiMeterZoneMultiplier(hero, now) | 0
+        if (agiZoneMult > 0) {
+            agiPacketsAppend(heroIndex, hero, packetDamage, agiZoneMult)
+        }
+
+        // END the meter cycle now (so you can't keep adding while standing still)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
+
+        // Reset chain so the next press can START a fresh meter cycle again
+        // (otherwise every future press would be treated as "commit" forever).
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, 1)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
+
+        // IMPORTANT: return false so doHeroMoveForPlayer continues into the DASH path.
+        return false
+    }
+
+    return false
+}
+
+
+
+function _doHeroMoveComputeAimUnit(heroIndex: number): [number, number] {
+    const aim = getAimVectorForHero(heroIndex)
+    let ax = aim[0], ay = aim[1]
+    if (ax == 0 && ay == 0) { ax = 1; ay = 0 }
+    const mag = Math.sqrt(ax * ax + ay * ay) || 1
+    ax /= mag; ay /= mag
+    return [ax, ay]
+}
+
+function _doHeroMoveComputeLungeSpeedCapped(heroIndex: number, stats: number[]): number {
+    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const baseLunge = stats[STAT.LUNGE_SPEED] | 0
+    const rawLunge = baseLunge * hasteMult
+    const lungeCapped = Math.max(0, Math.min(rawLunge, 500))
+    return lungeCapped
+}
+
+function _doHeroMoveApplyDashVelocity(hero: Sprite, family: number, ax: number, ay: number, lungeCapped: number): void {
+    if (family == FAMILY.AGILITY) {
+        hero.vx = ax * lungeCapped
+        hero.vy = ay * lungeCapped
+    } else {
+        hero.vx = 0
+        hero.vy = 0
+    }
+}
+
+function _doHeroMoveSetPhaseFromFamily(heroIndex: number, family: number): void {
+    if (family == FAMILY.STRENGTH) setHeroPhaseString(heroIndex, "slash")
+    else if (family == FAMILY.AGILITY) setHeroPhaseString(heroIndex, "thrust")
+    else if (family == FAMILY.INTELLECT) setHeroPhaseString(heroIndex, "cast")
+    else if (family == FAMILY.HEAL) setHeroPhaseString(heroIndex, "cast")
+}
+
+function _doHeroMoveApplyControlLockAndBusy(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    now: number,
+    moveDuration: number
+): void {
+    if (family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
+        lockHeroControls(heroIndex)
+        const unlockAt = now + moveDuration
+        heroBusyUntil[heroIndex] = unlockAt
+        sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, unlockAt)
+    } else if (family == FAMILY.HEAL) {
+        hero.vx = 0
+        hero.vy = 0
+    }
+}
+
+function _doHeroMoveApplyAgilityDashTimers(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    now: number,
+    moveDuration: number,
+    stats: number[]
+): void {
+    if (family == FAMILY.AGILITY) {
+        const landBufferMs = stats[STAT.AGILITY_LAND_BUFFER_MS] || AGI_LANDING_BUFFER_MS
+        sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, now + moveDuration + landBufferMs)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+    } else {
+        sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+    }
+}
+
+function _doHeroMovePlayAnimAndDispatch(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    button: string,
+    traits: number[],
+    stats: number[],
+    animKey: string,
+    now: number,
+    t3: number
+): void {
+    let animDuration = stats[STAT.MOVE_DURATION] | 0
+    if (family == FAMILY.STRENGTH) animDuration = strengthChargeMaxMsFromTrait3(t3)
+    callHeroAnim(heroIndex, animKey, animDuration)
+
+    if (family == FAMILY.STRENGTH) { executeStrengthMove(heroIndex, hero, button, traits, stats, animKey); return }
+    if (family == FAMILY.AGILITY)  { executeAgilityMove(heroIndex, hero, button, traits, stats); return }
+    if (family == FAMILY.INTELLECT){ executeIntellectMove(heroIndex, hero, button, traits, stats, now); return }
+    if (family == FAMILY.HEAL)     { executeHealMove(heroIndex, hero, button, traits, stats, now); return }
+}
+
+
+
 
 function doHeroMoveForPlayer(playerId: number, button: string) {
+    const heroIndex = playerToHeroIndex[playerId]
+    if (heroIndex < 0 || heroIndex >= heroes.length) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE badHeroIndex playerId=" + playerId + " heroIndex=" + heroIndex + " button=" + button)
+        }
+        return
+    }
+
+    const hero = heroes[heroIndex]
+    if (!hero) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE heroNull playerId=" + playerId + " heroIndex=" + heroIndex + " button=" + button)
+        }
+        return
+    }
+
+    const now = game.runtime()
+    worldRuntimeMs = now
+
+    // Debug context for helper functions (P1 only)
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+        _dbgMoveCurrentPlayerId = playerId
+
+        const busyUntil0 = heroBusyUntil[heroIndex] || 0
+        const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+        const chain0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0)
+        const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+        const lastPress0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS) | 0)
+        const meterStart0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0)
+        const dtBusy0 = busyUntil0 - (now | 0)
+        const dtDash0 = dashUntil0 - (now | 0)
+
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " ENTER doHeroMove timeMs=" + now +
+            " button=" + button +
+            " heroIndex=" + heroIndex +
+            " busyUntil=" + busyUntil0 +
+            " dtBusy=" + dtBusy0 +
+            " agiState=" + state0 +
+            " agiChain=" + chain0 +
+            " dashUntil=" + dashUntil0 +
+            " dtDash=" + dtDash0 +
+            " lastPressMs=" + lastPress0 +
+            " meterStartMs=" + meterStart0 +
+            " vx=" + hero.vx +
+            " vy=" + hero.vy
+        )
+    }
+
+    // Busy gating (special-case AGI ARMED build-after-landing)
+    if (_doHeroMoveShouldIgnoreDueToBusy(heroIndex, hero, now)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            const busyUntil0 = heroBusyUntil[heroIndex] || 0
+            const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+            const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+            console.log(
+                DEBUG_FILTER_PHRASE +
+                " IGNORE busyGate timeMs=" + now +
+                " button=" + button +
+                " heroIndex=" + heroIndex +
+                " busyUntil=" + busyUntil0 +
+                " agiState=" + state0 +
+                " dashUntil=" + dashUntil0
+            )
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Hard gates
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE controllingSpell timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+    if (supportPuzzleActive[heroIndex]) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE supportPuzzleActive timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE strCharging timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Call student logic / hook
+    const out = _doHeroMoveCallLogicHook(heroIndex, button)
+    if (!out) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE hookNull timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+    if (!_doHeroMoveValidateHookOut(heroIndex, button, out)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE invalidOut timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Parse result
+    const parsed = _doHeroMoveParseHookOut(out)
+    const family = parsed.family
+    const t1 = parsed.t1
+    const t2 = parsed.t2
+    const t3 = parsed.t3
+    const t4 = parsed.t4
+    const traits = parsed.traits
+    const animKey = parsed.animKey
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " OUT timeMs=" + now +
+            " button=" + button +
+            " family=" + family +
+            " t1=" + t1 +
+            " t2=" + t2 +
+            " t3=" + t3 +
+            " t4=" + t4 +
+            " animKey=" + animKey
+        )
+    }
+
+    // Write base move data onto hero
+    _doHeroMoveApplyBaseHeroMoveData(hero, family, button, t1, t2, t3, t4)
+
+    // Agility combo/meter state machine
+    const agi = _doHeroMoveUpdateAgilityComboState(heroIndex, hero, now, family)
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+        const state1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+        const chain1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0)
+        const dashUntil1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " AGI_STATE timeMs=" + now +
+            " stateNow=" + state1 +
+            " chainNow=" + chain1 +
+            " dashUntil=" + dashUntil1 +
+            " zoneMult=" + agi.agiZoneMult +
+            " stateBefore=" + agi.agiStateBefore +
+            " chainAfter=" + agi.agiChainAfter +
+            " armedThisPress=" + (agi.agiIsArmedThisPress ? 1 : 0) +
+            " doExecuteThisPress=" + (agi.agiDoExecuteThisPress ? 1 : 0)
+        )
+    }
+
+    // Trait-driven move stats
+    const stats = calculateMoveStatsForFamily(family, button, traits)
+
+    // Mana (skip Strength)
+    if (!_doHeroMoveTrySpendMana(heroIndex, hero, family, t1, t2, t3, t4)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE noMana timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex + " family=" + family)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Agility: execute on E-zone press (while ARMED)
+    if (_doHeroMoveTryAgilityExecuteThisPress(heroIndex, hero, family, t2, stats, animKey, agi.agiDoExecuteThisPress)) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " PATH execute timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Agility: build packets after landing (while ARMED)
+    if (_doHeroMoveTryAgilityBuildAfterLanding(
+        heroIndex,
+        hero,
+        now,
+        family,
+        t1,
+        animKey,
+        agi.agiChainAfter,
+        agi.agiZoneMult,
+        agi.agiIsArmedThisPress
+    )) {
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            console.log(DEBUG_FILTER_PHRASE + " PATH build timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
+    // Dash path setup
+    const [ax, ay] = _doHeroMoveComputeAimUnit(heroIndex)
+    const lungeCapped = _doHeroMoveComputeLungeSpeedCapped(heroIndex, stats)
+    _doHeroMoveApplyDashVelocity(hero, family, ax, ay, lungeCapped)
+
+    const moveDuration = stats[STAT.MOVE_DURATION] | 0
+    const L_exec = Math.idiv(lungeCapped * moveDuration, 1000)
+    sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
+
+    // Phase + busy/lock + timers
+    _doHeroMoveSetPhaseFromFamily(heroIndex, family)
+    _doHeroMoveApplyControlLockAndBusy(heroIndex, hero, family, now, moveDuration)
+    _doHeroMoveApplyAgilityDashTimers(heroIndex, hero, family, now, moveDuration, stats)
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+        const busyUntil1 = heroBusyUntil[heroIndex] || 0
+        const dashUntil1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " PATH dash timeMs=" + now +
+            " button=" + button +
+            " heroIndex=" + heroIndex +
+            " family=" + family +
+            " moveDuration=" + moveDuration +
+            " lunge=" + lungeCapped +
+            " busyUntil=" + busyUntil1 +
+            " dashUntil=" + dashUntil1 +
+            " vx=" + hero.vx +
+            " vy=" + hero.vy
+        )
+    }
+
+    // Play anim and dispatch to family executor
+    _doHeroMovePlayAnimAndDispatch(heroIndex, hero, family, button, traits, stats, animKey, now, t3)
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+        _dbgMoveCurrentPlayerId = 0
+    }
+}
+
+
+
+
+function doHeroMoveForPlayerOLDCODETODELETE(playerId: number, button: string) {
     const heroIndex = playerToHeroIndex[playerId]
     if (heroIndex < 0 || heroIndex >= heroes.length) return
     const hero = heroes[heroIndex]
@@ -1997,8 +2801,18 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     worldRuntimeMs = now
 
-    const busyUntil = heroBusyUntil[heroIndex] || 0
-    if (busyUntil > 0 && now < busyUntil) return
+    // --------------------------------------------------------------------
+    // IMPORTANT: busyUntil gating must NOT block ARMED build presses after landing,
+    // otherwise the meter is visible but presses are ignored.
+    // We can only know "meter is active" from hero state + dashUntil.
+    // --------------------------------------------------------------------
+    const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+    const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+    const inAgiBuildAfterLanding0 =
+        (state0 === AGI_STATE.ARMED) && (dashUntil0 <= 0 || now >= dashUntil0)
+
+    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    if (!inAgiBuildAfterLanding0 && busyUntil0 > 0 && now < busyUntil0) return
 
     if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) return
     if (supportPuzzleActive[heroIndex]) return
@@ -2098,6 +2912,11 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         if (chain >= 2) {
             sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.ARMED)
             agiIsArmedThisPress = true
+
+            // Ensure meter start exists (so UI + gameplay are in sync immediately)
+            const ms0 = sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0
+            if (ms0 <= 0) sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, now | 0)
+
         } else {
             sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
             agiIsArmedThisPress = false
@@ -2132,7 +2951,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     // C6: Execute radius comes from Trait2 (Reach)
     // ------------------------------------------------------------
     if (family == FAMILY.AGILITY && agiDoExecuteThisPress) {
-        // Reach -> radius mapping (tunable). Clamp keeps it sane.
         const reach = Math.max(0, t2 | 0)
         let execRadius = 40 + reach * 2
         if (execRadius < 40) execRadius = 40
@@ -2141,12 +2959,52 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         const slowPct = stats[STAT.SLOW_PCT] | 0
         const slowDurMs = stats[STAT.SLOW_DURATION] | 0
 
+        destroyAgiAimIndicator(heroIndex)
+
         agiBeginExecute(heroIndex, hero, execRadius, slowPct, slowDurMs)
 
         setHeroPhaseString(heroIndex, "thrust")
         callHeroAnim(heroIndex, animKey, 250)
 
         return
+    }
+
+    // ------------------------------------------------------------
+    // NEW: If we're ARMED and have landed, treat presses as BUILD presses.
+    // That means: bank packets and RETURN.
+    // Critical: do NOT set busyUntil / do NOT run dash path here.
+    // ------------------------------------------------------------
+    if (family == FAMILY.AGILITY && agiIsArmedThisPress) {
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+        const landed = (dashUntil <= 0 || now >= dashUntil)
+
+        if (landed) {
+            const packetDamage = t1 | 0
+
+            if (agiChainAfter === 2) {
+                agiPacketsClear(heroIndex, hero)
+                agiPacketsAppend(heroIndex, hero, packetDamage, 1)
+            } else if (agiChainAfter > 2) {
+                if (agiZoneMult < 0) agiZoneMult = agiMeterZoneMultiplier(hero, now) | 0
+                if (agiZoneMult > 0) agiPacketsAppend(heroIndex, hero, packetDamage, agiZoneMult)
+            }
+
+            // Ensure we stay still + locked (aim can still change via facing)
+            lockHeroControls(heroIndex)
+            hero.vx = 0
+            hero.vy = 0
+
+            // IMPORTANT: do not create a new busy window during build
+            heroBusyUntil[heroIndex] = 0
+            sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+
+            // Visual: build is combat idle
+            setHeroPhaseString(heroIndex, "combatIdle")
+            callHeroAnim(heroIndex, animKey, 120)
+
+            // No executeAgilityMove() here.
+            return
+        }
     }
 
     // Aim / movement setup (dash path)
@@ -2200,19 +3058,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     let animDuration = moveDuration
     if (family == FAMILY.STRENGTH) animDuration = strengthChargeMaxMsFromTrait3(t3)
     callHeroAnim(heroIndex, animKey, animDuration)
-
-    // Seed/append packets (dash/build path only)
-    if (family == FAMILY.AGILITY && agiIsArmedThisPress) {
-        const packetDamage = t1 | 0
-
-        if (agiChainAfter === 2) {
-            agiPacketsClear(heroIndex, hero)
-            agiPacketsAppend(heroIndex, hero, packetDamage, 1)
-        } else if (agiChainAfter > 2) {
-            if (agiZoneMult < 0) agiZoneMult = agiMeterZoneMultiplier(hero, now) | 0
-            if (agiZoneMult > 0) agiPacketsAppend(heroIndex, hero, packetDamage, agiZoneMult)
-        }
-    }
 
     if (family == FAMILY.STRENGTH) { executeStrengthMove(heroIndex, hero, button, traits, stats, animKey); return }
     if (family == FAMILY.AGILITY)  { executeAgilityMove(heroIndex, hero, button, traits, stats); return }
@@ -2853,11 +3698,182 @@ function ensureHeroAuraSprite(heroIndex: number): Sprite {
 
 
 
-
-function updateHeroAuras() {
+function updateHeroOverlays() {
     const now = game.runtime() | 0
     const phaser = isPhaserRuntime()
 
+    updateHeroAuras(now, phaser)
+    updateHeroAimIndicators(now, phaser)
+    updateHeroMeters(now, phaser)
+}
+
+
+
+
+function updateHeroAimIndicators(now: number, phaser: boolean) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        // ============================================================
+        // C2: Agility meter visibility driven by AGI_STATE + landing time
+        // ============================================================
+        const ind = ensureAgiAimIndicator(i)
+        if (!ind) continue
+
+        // Show only in Agility ARMED state after landing (not during dash)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+
+        // FIX: correct key (was AGI_DASH_UNTIL_MS, which doesn't exist in HERO_DATA)
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+
+        const show = (agiState === AGI_STATE.ARMED) && (dashUntil === 0 || now >= dashUntil)
+
+        // Centralize visibility semantics (Arcade pixels vs Phaser-native render)
+        setAgiAimIndicatorVisible(i, show)
+        if (!show) continue
+
+        // Base direction
+        const aim = computeHeroAimForIndicator(i, hero)
+        sprites.setDataNumber(ind, UI_AIM_DIR_X1000_KEY, aim.dx1000 | 0)
+        sprites.setDataNumber(ind, UI_AIM_DIR_Y1000_KEY, aim.dy1000 | 0)
+
+        // Leading edge distance from hero visual (provided by host hook)
+        let edgeDist = 0
+        {
+            let heroData: any = null
+            try { heroData = (hero as any).data } catch { heroData = null }
+            if (heroData && heroData[HERO_DATA.HERO_VIS_LEADING_EDGE_DIST] != null) {
+                edgeDist = heroData[HERO_DATA.HERO_VIS_LEADING_EDGE_DIST] | 0
+            }
+        }
+
+        // C7: Horizontal directions were too far: shrink edgeDist when |nx| is high
+        const absNx = Math.abs(aim.nx)
+        const sideWeight = absNx * absNx // diagonal ~0.5, horizontal ~1
+        edgeDist = Math.max(0, edgeDist - Math.round(AGI_AIM_SIDE_EDGE_SHRINK_PX * sideWeight))
+
+        // C7: optional extra inset for sides (gentle; diagonal mostly unaffected)
+        const inset = Math.round(AGI_AIM_SIDE_INSET_PX * sideWeight)
+
+        const tailDx = Math.round(aim.nx * Math.max(0, edgeDist - inset))
+        const tailDy = Math.round(aim.ny * Math.max(0, edgeDist))
+
+        // C6: stretch + shake while holding direction to break
+        let len = AGI_AIM_INDICATOR_LEN
+        const cancelHoldMs = sprites.readDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS) | 0
+        if (cancelHoldMs > 0) {
+            const t = Math.max(0, Math.min(1, cancelHoldMs / AGI_CANCEL_HOLD_THRESHOLD_MS))
+            len += Math.round(AGI_BREAK_STRETCH_PX * t)
+
+            const amp = Math.round(AGI_BREAK_SHAKE_PX * t)
+            if (amp > 0) {
+                // Perp jitter to direction
+                const phase = now * 0.05
+                const j = Math.round(Math.sin(phase) * amp)
+                const px = -aim.ny
+                const py = aim.nx
+                ind.x = hero.x + tailDx + AGI_AIM_INDICATOR_OX + Math.round(px * j)
+                ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY + Math.round(py * j)
+            } else {
+                ind.x = hero.x + tailDx + AGI_AIM_INDICATOR_OX
+                ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY
+            }
+        } else {
+            ind.x = hero.x + tailDx + AGI_AIM_INDICATOR_OX
+            ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY
+        }
+
+        sprites.setDataNumber(ind, UI_AIM_LEN_KEY, len | 0)
+
+        // Angle for phaser arrow if needed
+        const ang = Math.atan2(aim.ny, aim.nx)
+        sprites.setDataNumber(ind, UI_AIM_ANGLE_MDEG_KEY, Math.round(ang * 180000 / Math.PI))
+    }
+}
+
+
+function updateHeroAimIndicatorsOLDCODETODELETE(now: number, phaser: boolean) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        // ============================================================
+        // C2: Agility meter visibility driven by AGI_STATE + landing time
+        // ============================================================
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+
+        // Show aim indicator only if ARMED AND we've landed (now >= dashUntil)
+        const showMeter = (agiState === AGI_STATE.ARMED) && (dashUntil === 0 || now >= dashUntil)
+
+        // ------------------------------------------------------------
+        // Agility aim indicator visibility + data publish
+        // Tail should originate on the hero perimeter along aim direction.
+        // ------------------------------------------------------------
+        if (!showMeter) {
+            const indExisting = heroAgiAimIndicators[i]
+            if (indExisting) {
+                sprites.setDataNumber(indExisting, UI_AIM_VISIBLE_KEY, 0)
+                // Always keep pixels hidden; Phaser draws native, Arcade fallback hides while not ARMED.
+                indExisting.setFlag(SpriteFlag.Invisible, true)
+            }
+            continue
+        }
+
+        const ind = ensureAgiAimIndicator(i)
+        if (!ind) continue
+
+        ind.z = hero.z + 2
+
+        const aim = computeHeroAimForIndicator(i, hero)
+        const nx = aim.dx1000 / 1000
+        const ny = aim.dy1000 / 1000
+
+        // IMPORTANT:
+        // In Phaser host, hero.image isn't the real silhouette => pixel-scan edgeDist becomes 0.
+        // Use the same hook-backed visual info pipeline as Strength.
+        let edgeDist = 0
+
+        if (phaser) {
+            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+            edgeDist = (vis && vis.length > 1) ? (vis[1] | 0) : 0
+        }
+
+        // Arcade fallback (or safety fallback if hook fails)
+        if (edgeDist <= 0) {
+            edgeDist = findHeroLeadingEdgeDistance(hero, nx, ny) | 0
+        }
+
+        // Final safety fallback (should be rare): push to ~half-width
+        if (edgeDist <= 0) {
+            edgeDist = ((hero.width | 0) > 0) ? ((hero.width | 0) >> 1) : 16
+        }
+
+        const tailDx = Math.round(nx * edgeDist)
+        const tailDy = Math.round(ny * edgeDist)
+
+        ind.x = hero.x + tailDx + AGI_AIM_INDICATOR_OX
+        ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY
+
+        sprites.setDataNumber(ind, UI_AIM_DIR_X1000_KEY, aim.dx1000)
+        sprites.setDataNumber(ind, UI_AIM_DIR_Y1000_KEY, aim.dy1000)
+        sprites.setDataNumber(ind, UI_AIM_ANGLE_MDEG_KEY, aim.angleMdeg)
+        sprites.setDataNumber(ind, UI_AIM_LEN_KEY, AGI_AIM_INDICATOR_LEN)
+        sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 1)
+
+        if (phaser) {
+            // Never show Arcade pixels in Phaser; host renders native arrow.
+            ind.setFlag(SpriteFlag.Invisible, true)
+        } else {
+            // Arcade fallback: procedural indicator arrow segment.
+            ind.setImage(createAgilityArrowSegmentImage(0, AGI_AIM_INDICATOR_LEN, nx, ny))
+            ind.setFlag(SpriteFlag.Invisible, false)
+        }
+    }
+}
+
+
+
+function updateHeroMeters(now: number, phaser: boolean) {
     // Local helper: draw the segmented pendulum meter (Arcade only).
     function drawAgiMeterImage(
         wE: number,
@@ -2891,42 +3907,6 @@ function updateHeroAuras() {
 
     for (let i = 0; i < heroes.length; i++) {
         const hero = heroes[i]; if (!hero) continue
-
-        let showAura = false
-        let color = 0
-        const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
-
-        // Strength aura
-        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
-        if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
-            showAura = true
-            color = AURA_COLOR_STRENGTH
-        }
-
-        if (family == FAMILY.AGILITY) {
-            const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
-            if (dashUntil > now) { showAura = true; color = AURA_COLOR_AGILITY }
-        }
-        if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_INTELLECT }
-        if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_HEAL }
-
-        // Phaser: publish aura state; hide Arcade aura sprite
-        if (phaser) {
-            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
-            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
-            const aura = heroAuras[i]
-            if (aura) aura.setFlag(SpriteFlag.Invisible, true)
-        } else {
-            const aura = heroAuras[i]
-            if (!showAura) { if (aura) aura.setFlag(SpriteFlag.Invisible, true) }
-            else {
-                const active = ensureHeroAuraSprite(i); if (active) {
-                    active.setImage(createAuraImageFromHero(hero, color))
-                    active.setFlag(SpriteFlag.Invisible, false)
-                    active.x = hero.x; active.y = hero.y; active.z = hero.z + 1
-                }
-            }
-        }
 
         // ============================================================
         // C2: Agility meter visibility driven by AGI_STATE + landing time
@@ -3008,6 +3988,279 @@ function updateHeroAuras() {
     }
 }
 
+
+
+function updateHeroAuras(now: number, phaser: boolean) {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        let showAura = false
+        let color = 0
+        const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+
+        // Strength aura
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
+            showAura = true
+            color = AURA_COLOR_STRENGTH
+        }
+
+        // Agility aura
+        if (family == FAMILY.AGILITY) {
+            const dashUntil0 = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
+            if (dashUntil0 > now) { showAura = true; color = AURA_COLOR_AGILITY }
+        }
+
+        // Intellect / Heal aura
+        if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+            showAura = true
+            color = AURA_COLOR_INTELLECT
+        }
+        if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+            showAura = true
+            color = AURA_COLOR_HEAL
+        }
+
+        // Phaser: publish aura state; hide Arcade aura sprite
+        if (phaser) {
+            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+            const aura = heroAuras[i]
+            if (aura) aura.setFlag(SpriteFlag.Invisible, true)
+        } else {
+            const aura = heroAuras[i]
+            if (!showAura) {
+                if (aura) aura.setFlag(SpriteFlag.Invisible, true)
+            } else {
+                const active = ensureHeroAuraSprite(i)
+                if (active) {
+                    active.setImage(createAuraImageFromHero(hero, color))
+                    active.setFlag(SpriteFlag.Invisible, false)
+                    active.x = hero.x; active.y = hero.y; active.z = hero.z + 1
+                }
+            }
+        }
+    }
+}
+
+
+
+function updateHeroOverlaysOLDCODETODELETE() {
+    const now = game.runtime() | 0
+    const phaser = isPhaserRuntime()
+
+    // Local helper: draw the segmented pendulum meter (Arcade only).
+    function drawAgiMeterImage(
+        wE: number,
+        w1: number,
+        w2: number,
+        w3: number,
+        pointerX: number
+    ): Image {
+        const w = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
+        const h = AGI_METER_H
+        const img = image.create(w, h)
+        img.fill(0)
+
+        let x = 0
+        img.fillRect(x, 0, wE, h, 2); x += wE
+        img.fillRect(x, 0, w1, h, 7); x += w1
+        img.fillRect(x, 0, w2, h, 9); x += w2
+        img.fillRect(x, 0, w3, h, 3); x += w3
+        img.fillRect(x, 0, w2, h, 9); x += w2
+        img.fillRect(x, 0, w1, h, 7); x += w1
+        img.fillRect(x, 0, wE, h, 2)
+
+        img.drawRect(0, 0, w, h, 1)
+
+        if (pointerX < 0) pointerX = 0
+        if (pointerX > w - 1) pointerX = w - 1
+        for (let py = 0; py < h; py++) img.setPixel(pointerX, py, 5)
+
+        return img
+    }
+
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        let showAura = false
+        let color = 0
+        const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+
+        // Strength aura
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
+            showAura = true
+            color = AURA_COLOR_STRENGTH
+        }
+
+        if (family == FAMILY.AGILITY) {
+            const dashUntil0 = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
+            if (dashUntil0 > now) { showAura = true; color = AURA_COLOR_AGILITY }
+        }
+        if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_INTELLECT }
+        if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) { showAura = true; color = AURA_COLOR_HEAL }
+
+        // Phaser: publish aura state; hide Arcade aura sprite
+        if (phaser) {
+            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+            const aura = heroAuras[i]
+            if (aura) aura.setFlag(SpriteFlag.Invisible, true)
+        } else {
+            const aura = heroAuras[i]
+            if (!showAura) { if (aura) aura.setFlag(SpriteFlag.Invisible, true) }
+            else {
+                const active = ensureHeroAuraSprite(i); if (active) {
+                    active.setImage(createAuraImageFromHero(hero, color))
+                    active.setFlag(SpriteFlag.Invisible, false)
+                    active.x = hero.x; active.y = hero.y; active.z = hero.z + 1
+                }
+            }
+        }
+
+        // ============================================================
+        // C2: Agility meter visibility driven by AGI_STATE + landing time
+        // ============================================================
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+
+        // Show meter only if ARMED AND we've landed (now >= dashUntil)
+        const showMeter = (agiState === AGI_STATE.ARMED) && (dashUntil === 0 || now >= dashUntil)
+
+        const meter = heroComboMeters[i]
+        const counter = heroAgiStoredCounters[i]
+
+        // ------------------------------------------------------------
+        // Agility aim indicator visibility + data publish
+        // Tail should originate on the hero perimeter along aim direction.
+        // ------------------------------------------------------------
+        if (!showMeter) {
+            const indExisting = heroAgiAimIndicators[i]
+            if (indExisting) {
+                sprites.setDataNumber(indExisting, UI_AIM_VISIBLE_KEY, 0)
+                // Always keep pixels hidden; Phaser draws native, Arcade fallback hides while not ARMED.
+                indExisting.setFlag(SpriteFlag.Invisible, true)
+            }
+        } else {
+            const ind = ensureAgiAimIndicator(i)
+            if (ind) {
+                ind.z = hero.z + 2
+
+                const aim = computeHeroAimForIndicator(i, hero)
+                const nx = aim.dx1000 / 1000
+                const ny = aim.dy1000 / 1000
+
+                // IMPORTANT:
+                // In Phaser host, hero.image isn't the real silhouette => pixel-scan edgeDist becomes 0.
+                // Use the same hook-backed visual info pipeline as Strength.
+                let edgeDist = 0
+
+                if (phaser) {
+                    const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+                    edgeDist = (vis && vis.length > 1) ? (vis[1] | 0) : 0
+                }
+
+                // Arcade fallback (or safety fallback if hook fails)
+                if (edgeDist <= 0) {
+                    edgeDist = findHeroLeadingEdgeDistance(hero, nx, ny) | 0
+                }
+
+                // Final safety fallback (should be rare): push to ~half-width
+                if (edgeDist <= 0) {
+                    edgeDist = ((hero.width | 0) > 0) ? ((hero.width | 0) >> 1) : 16
+                }
+
+                const tailDx = Math.round(nx * edgeDist)
+                const tailDy = Math.round(ny * edgeDist)
+
+                ind.x = hero.x + tailDx + AGI_AIM_INDICATOR_OX
+                ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY
+
+                sprites.setDataNumber(ind, UI_AIM_DIR_X1000_KEY, aim.dx1000)
+                sprites.setDataNumber(ind, UI_AIM_DIR_Y1000_KEY, aim.dy1000)
+                sprites.setDataNumber(ind, UI_AIM_ANGLE_MDEG_KEY, aim.angleMdeg)
+                sprites.setDataNumber(ind, UI_AIM_LEN_KEY, AGI_AIM_INDICATOR_LEN)
+                sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 1)
+
+                if (phaser) {
+                    // Never show Arcade pixels in Phaser; host renders native arrow.
+                    ind.setFlag(SpriteFlag.Invisible, true)
+                } else {
+                    // Arcade fallback: procedural indicator arrow segment.
+                    ind.setImage(createAgilityArrowSegmentImage(0, AGI_AIM_INDICATOR_LEN, nx, ny))
+                    ind.setFlag(SpriteFlag.Invisible, false)
+                }
+            }
+        }
+
+        if (!showMeter) {
+            if (meter) {
+                meter.setFlag(SpriteFlag.Invisible, true)
+                if (phaser) sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
+            }
+            if (counter) counter.setFlag(SpriteFlag.Invisible, true)
+            continue
+        }
+
+        const m = ensureComboMeter(i); if (!m) continue
+
+        let wE = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_E_W) | 0
+        let w1 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_1_W) | 0
+        let w2 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_2_W) | 0
+        let w3 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_3_W) | 0
+        if (wE <= 0) wE = AGI_METER_W_E
+        if (w1 <= 0) w1 = AGI_METER_W_1
+        if (w2 <= 0) w2 = AGI_METER_W_2
+        if (w3 <= 0) w3 = AGI_METER_W_3
+
+        const totalW = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
+
+        // Use the canonical pendulum logic so UI matches gameplay (including optional Trait3 effects).
+        const posX1000 = agiMeterPosX1000(hero, now)
+        const pointerX = Math.idiv(posX1000 * (totalW - 1), 1000)
+
+        // Position the logical sprite (both runtimes); Phaser will draw native rectangles.
+        m.z = hero.z + 2
+        m.x = hero.x
+        m.y = hero.y + (hero.height >> 1) + 5
+
+        // Stored-hit counter
+        const count = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
+
+        if (phaser) {
+            // Publish numeric state for Phaser-native renderer
+            sprites.setDataString(m, UI_KIND_KEY, UI_KIND_COMBO_METER)
+            sprites.setDataNumber(m, UI_COMBO_TOTAL_W_KEY, totalW)
+            sprites.setDataNumber(m, UI_COMBO_H_KEY, AGI_METER_H)
+            sprites.setDataNumber(m, UI_COMBO_W_E_KEY, wE)
+            sprites.setDataNumber(m, UI_COMBO_W_1_KEY, w1)
+            sprites.setDataNumber(m, UI_COMBO_W_2_KEY, w2)
+            sprites.setDataNumber(m, UI_COMBO_W_3_KEY, w3)
+            sprites.setDataNumber(m, UI_COMBO_POS_X1000_KEY, posX1000)
+            sprites.setDataNumber(m, UI_COMBO_VISIBLE_KEY, 1)
+            sprites.setDataNumber(m, UI_COMBO_PKT_COUNT_KEY, count)
+
+            // Hide the Arcade sprite; Phaser will render the meter as rectangles
+            m.setFlag(SpriteFlag.Invisible, true)
+        } else {
+            // Arcade: draw pixels
+            const img = drawAgiMeterImage(wE, w1, w2, w3, pointerX)
+            m.setImage(img)
+            m.setFlag(SpriteFlag.Invisible, false)
+        }
+
+        // Stored-hit counter text sprite (kept as-is for now)
+        const tSprite = ensureAgiStoredCounter(i)
+        if (tSprite) {
+            ;(tSprite as any).setText("" + count)
+            tSprite.setFlag(SpriteFlag.Invisible, false)
+            tSprite.z = hero.z + 3
+            tSprite.x = hero.x + (totalW >> 1) + 10
+            tSprite.y = m.y - 1
+        }
+    }
+}
 
 
 
@@ -4125,6 +5378,52 @@ function buildStrengthSmashBitmap(
 // traits[4] = slow / cripple amount
 
 
+
+
+
+// ------------------------------------------------------------
+// Agility combo meter helper
+// Returns:
+//   0 => execute window ("E")
+//   1/2/3 => build window multiplier (how many hits to bank)
+//  -1 => meter not active / unknown
+// Layout: [E][1][2][3][2][1][E]
+// ------------------------------------------------------------
+function agiMeterZoneMultiplier(hero: Sprite, nowMs: number): number {
+    const meterStart = sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0
+    if (meterStart <= 0) return -1
+
+    const wE = AGI_METER_W_EXEC
+    const w1 = AGI_METER_W_1
+    const w2 = AGI_METER_W_2
+    const w3 = AGI_METER_W_3
+
+    const totalW = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
+    const posX1000 = Math.max(0, Math.min(1000, sprites.readDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000) | 0))
+    const pointerX = Math.idiv(posX1000 * Math.max(1, totalW - 1), 1000)
+
+    let x = pointerX
+
+    if (x < wE) return 0
+    x -= wE
+
+    if (x < w1) return 1
+    x -= w1
+
+    if (x < w2) return 2
+    x -= w2
+
+    if (x < w3) return 3
+    x -= w3
+
+    if (x < w2) return 2
+    x -= w2
+
+    if (x < w1) return 1
+    return 0
+}
+
+
 // --------------------------------------------------------------
 // C4: Agility execute (consume packets → teleport slashes)
 // --------------------------------------------------------------
@@ -4216,6 +5515,8 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
     lockHeroControls(heroIndex)
 }
 
+
+
 function agiFinishExecute(heroIndex: number, hero: Sprite): void {
     const ox = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_ORIG_X) | 0
     const oy = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_ORIG_Y) | 0
@@ -4237,7 +5538,12 @@ function agiFinishExecute(heroIndex: number, hero: Sprite): void {
     agiPacketsClear(heroIndex, hero)
 
     unlockHeroControls(heroIndex)
+
+    // NEW: cleanup indicator sprite
+    destroyAgiAimIndicator(heroIndex)
 }
+
+
 
 function updateAgilityExecuteAll(nowMs: number): void {
     for (let heroIndex = 0; heroIndex < heroes.length; heroIndex++) {
@@ -4377,6 +5683,100 @@ function ensureComboMeter(heroIndex: number): Sprite {
 }
 
 
+function ensureAgiAimIndicator(heroIndex: number): Sprite {
+    let ind = heroAgiAimIndicators[heroIndex]
+    const hero = heroes[heroIndex]; if (!hero) return null
+
+    if (!ind) {
+        // In Arcade: we will setImage() during the ARMED tick.
+        // In Phaser: this is only a logical anchor + data carrier; Phaser renders natively.
+        const img = image.create(2, 2)
+
+        ind = sprites.create(img, SpriteKind.HeroAura)
+        ind.z = hero.z + 2
+        heroAgiAimIndicators[heroIndex] = ind
+
+        // Robust ID: do NOT rely on SpriteKind.
+        sprites.setDataString(ind, UI_KIND_KEY, UI_KIND_AGI_AIM_INDICATOR)
+
+        // Seed defaults so host-side has sane values even before first tick update.
+        sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 0)
+        sprites.setDataNumber(ind, UI_AIM_DIR_X1000_KEY, 1000)
+        sprites.setDataNumber(ind, UI_AIM_DIR_Y1000_KEY, 0)
+        sprites.setDataNumber(ind, UI_AIM_ANGLE_MDEG_KEY, 0)
+        sprites.setDataNumber(ind, UI_AIM_LEN_KEY, AGI_AIM_INDICATOR_LEN)
+
+        // Default hidden everywhere. (Phaser always stays invisible for pixels.)
+        ind.setFlag(SpriteFlag.Invisible, true)
+    }
+
+    return ind
+}
+
+
+function setAgiAimIndicatorVisible(heroIndex: number, vis: boolean): void {
+    const ind = ensureAgiAimIndicator(heroIndex); if (!ind) return
+
+    sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, vis ? 1 : 0)
+
+    if (isPhaserRuntime()) {
+        // Never allow Arcade pixels for this in Phaser; host draws natively.
+        ind.setFlag(SpriteFlag.Invisible, true)
+    } else {
+        // Arcade fallback: show/hide pixels normally.
+        ind.setFlag(SpriteFlag.Invisible, !vis)
+    }
+}
+
+
+function destroyAgiAimIndicator(heroIndex: number): void {
+    const ind = heroAgiAimIndicators[heroIndex]
+    if (!ind) return
+
+    // In Phaser, UI sprites are represented by native Containers/Graphics.
+    // Hard-destroying them can race the renderer and produce glTexture-null
+    // if a texture/frame is removed mid-batch. So: soft-hide instead.
+    if (isPhaserRuntime()) {
+        sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 0) //UI_VIS_KEY reference error
+        ind.setFlag(SpriteFlag.Invisible, true)
+        return
+    }
+
+    ind.destroy()
+    heroAgiAimIndicators[heroIndex] = null
+}
+
+
+function computeHeroAimForIndicator(
+    heroIndex: number,
+    hero: Sprite
+): { dx1000: number; dy1000: number; angleMdeg: number } {
+    // For now, aim comes from facing (which already updates during AGI_STATE.ARMED while locked).
+    let v = getAimVectorForHero(heroIndex)
+    let dx = v[0], dy = v[1]
+
+    // Normalize so diagonals become ~707/707 instead of 1000/1000.
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len > 0) {
+        dx = dx / len
+        dy = dy / len
+    } else {
+        dx = 1
+        dy = 0
+    }
+
+    const dx1000 = Math.round(dx * 1000)
+    const dy1000 = Math.round(dy * 1000)
+
+    // milli-degrees for future 360 support
+    const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
+    const angleMdeg = Math.round(angleDeg * 1000)
+
+    return { dx1000, dy1000, angleMdeg }
+}
+
+
+
 
 
 
@@ -4384,6 +5784,8 @@ function ensureComboMeter(heroIndex: number): Sprite {
 // --------------------------------------------------------------
 // C3: Agility packets + meter snapshot helpers (NO execute yet)
 // --------------------------------------------------------------
+
+
 
 function agiPacketsEnsure(heroIndex: number): number[] {
     let arr = agiPacketBankByHeroIndex.get(heroIndex)
@@ -4483,6 +5885,9 @@ function cancelAgilityComboNow(heroIndex: number, hero: Sprite): void {
 
     // Visual reset
     setHeroPhaseString(heroIndex, "idle")
+
+    // NEW: cleanup indicator sprite
+    destroyAgiAimIndicator(heroIndex)
 }
 
 
@@ -4674,6 +6079,13 @@ function executeAgilityMove(
     traits: number[],
     stats: number[]
 ) {
+    // ✅ NEW: When agility combo v2 is active (ARMED/EXECUTING), do NOT spawn the legacy thrust projectile.
+    // The combo system uses the aim-indicator + execute sequence; spawning thrust here creates the "extra arrow".
+    const state = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+    if (state === AGI_STATE.ARMED || state === AGI_STATE.EXECUTING) {
+        return
+    }
+
     // Base damage from family + trait-driven multiplier (legacy)
     const baseDamage = getBasePower(FAMILY.AGILITY)
     const damageMult = stats[STAT.DAMAGE_MULT] | 0
@@ -4702,6 +6114,7 @@ function executeAgilityMove(
         knockbackPct
     )
 }
+
 
 
 // Agility combo system + UI meter support
@@ -7792,7 +9205,192 @@ function isStrBtnIdPressedForOwner(ownerId: number, btnId: number): boolean {
 
 
 
+function consumePlayerIntent(playerId: number): string {
+    // 2-deep FIFO pop: return pending1, shift pending2 up.
+    if (playerId === 1) {
+        if (p1IntentPending !== "") {
+            const s = p1IntentPending
+            p1IntentPending = p1IntentPending2
+            p1IntentPending2 = ""
+            return s
+        }
+        if (p1IntentPending2 !== "") {
+            const s = p1IntentPending2
+            p1IntentPending2 = ""
+            return s
+        }
+        return ""
+    } else if (playerId === 2) {
+        if (p2IntentPending !== "") {
+            const s = p2IntentPending
+            p2IntentPending = p2IntentPending2
+            p2IntentPending2 = ""
+            return s
+        }
+        if (p2IntentPending2 !== "") {
+            const s = p2IntentPending2
+            p2IntentPending2 = ""
+            return s
+        }
+        return ""
+    } else if (playerId === 3) {
+        if (p3IntentPending !== "") {
+            const s = p3IntentPending
+            p3IntentPending = p3IntentPending2
+            p3IntentPending2 = ""
+            return s
+        }
+        if (p3IntentPending2 !== "") {
+            const s = p3IntentPending2
+            p3IntentPending2 = ""
+            return s
+        }
+        return ""
+    } else if (playerId === 4) {
+        if (p4IntentPending !== "") {
+            const s = p4IntentPending
+            p4IntentPending = p4IntentPending2
+            p4IntentPending2 = ""
+            return s
+        }
+        if (p4IntentPending2 !== "") {
+            const s = p4IntentPending2
+            p4IntentPending2 = ""
+            return s
+        }
+        return ""
+    }
+    return ""
+}
+
+
+
+
 function updatePlayerInputs() {
+    const nowMs = game.runtime() | 0
+
+    // --------------------------
+    // Player 1
+    // --------------------------
+    const a1 = controller.player1.A.isPressed()
+    const b1 = controller.player1.B.isPressed()
+
+    // Held intent (kept for debug visibility)
+    if (a1 && b1) p1Intent = "A+B"
+    else if (a1) p1Intent = "A"
+    else if (b1) p1Intent = "B"
+    else p1Intent = ""
+
+    // Edge intent: enqueue on rising edge, require release before another edge
+    const a1Edge = a1 && !_p1PrevA
+    const b1Edge = b1 && !_p1PrevB
+    if (a1Edge || b1Edge) {
+        const ev1 = (a1Edge && b1Edge) ? "A+B" : (a1Edge ? "A" : "B")
+        if (p1IntentPending === "") p1IntentPending = ev1
+        else if (p1IntentPending2 === "") p1IntentPending2 = ev1
+        else p1IntentPending2 = ev1 // overwrite newest if spammed
+    }
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS) {
+        const changed = (p1Intent !== _dbg_prevP1Intent)
+        const abChanged = (a1 !== _dbg_prevP1A) || (b1 !== _dbg_prevP1B)
+        if (changed || abChanged || a1Edge || b1Edge) {
+            const dur = (_dbg_prevP1IntentMs > 0) ? (nowMs - _dbg_prevP1IntentMs) : 0
+            console.log(
+                DEBUG_FILTER_PHRASE +
+                " EDGE timeMs=" + nowMs +
+                " intent=" + p1Intent +
+                " (prev=" + _dbg_prevP1Intent + " prevDurMs=" + dur + ")" +
+                " aNow=" + (a1 ? 1 : 0) +
+                " bNow=" + (b1 ? 1 : 0) +
+                " aEdge=" + (a1Edge ? 1 : 0) +
+                " bEdge=" + (b1Edge ? 1 : 0) +
+                " pending=" + p1IntentPending +
+                " pending2=" + p1IntentPending2
+            )
+
+            if (_dbg_prevP1Intent === "" && p1Intent !== "") _dbg_prevP1IntentMs = nowMs
+            if (_dbg_prevP1Intent !== "" && p1Intent === "") _dbg_prevP1IntentMs = 0
+
+            _dbg_prevP1Intent = p1Intent
+            _dbg_prevP1A = a1
+            _dbg_prevP1B = b1
+        }
+    }
+
+    _p1PrevA = a1
+    _p1PrevB = b1
+
+    // --------------------------
+    // Player 2
+    // --------------------------
+    const a2 = controller.player2.A.isPressed()
+    const b2 = controller.player2.B.isPressed()
+
+    if (a2 && b2) p2Intent = "A+B"
+    else if (a2) p2Intent = "A"
+    else if (b2) p2Intent = "B"
+    else p2Intent = ""
+
+    const a2Edge = a2 && !_p2PrevA
+    const b2Edge = b2 && !_p2PrevB
+    if (a2Edge || b2Edge) {
+        const ev2 = (a2Edge && b2Edge) ? "A+B" : (a2Edge ? "A" : "B")
+        if (p2IntentPending === "") p2IntentPending = ev2
+        else if (p2IntentPending2 === "") p2IntentPending2 = ev2
+        else p2IntentPending2 = ev2
+    }
+    _p2PrevA = a2
+    _p2PrevB = b2
+
+    // --------------------------
+    // Player 3
+    // --------------------------
+    const a3 = controller.player3.A.isPressed()
+    const b3 = controller.player3.B.isPressed()
+
+    if (a3 && b3) p3Intent = "A+B"
+    else if (a3) p3Intent = "A"
+    else if (b3) p3Intent = "B"
+    else p3Intent = ""
+
+    const a3Edge = a3 && !_p3PrevA
+    const b3Edge = b3 && !_p3PrevB
+    if (a3Edge || b3Edge) {
+        const ev3 = (a3Edge && b3Edge) ? "A+B" : (a3Edge ? "A" : "B")
+        if (p3IntentPending === "") p3IntentPending = ev3
+        else if (p3IntentPending2 === "") p3IntentPending2 = ev3
+        else p3IntentPending2 = ev3
+    }
+    _p3PrevA = a3
+    _p3PrevB = b3
+
+    // --------------------------
+    // Player 4
+    // --------------------------
+    const a4 = controller.player4.A.isPressed()
+    const b4 = controller.player4.B.isPressed()
+
+    if (a4 && b4) p4Intent = "A+B"
+    else if (a4) p4Intent = "A"
+    else if (b4) p4Intent = "B"
+    else p4Intent = ""
+
+    const a4Edge = a4 && !_p4PrevA
+    const b4Edge = b4 && !_p4PrevB
+    if (a4Edge || b4Edge) {
+        const ev4 = (a4Edge && b4Edge) ? "A+B" : (a4Edge ? "A" : "B")
+        if (p4IntentPending === "") p4IntentPending = ev4
+        else if (p4IntentPending2 === "") p4IntentPending2 = ev4
+        else p4IntentPending2 = ev4
+    }
+    _p4PrevA = a4
+    _p4PrevB = b4
+}
+
+
+
+function updatePlayerInputsOLDCODETODELETE() {
     const aNow1 = controller.player1.A.isPressed()
     const bNow1 = controller.player1.B.isPressed()
     if (aNow1 && bNow1) p1Intent = "A+B"
@@ -7870,20 +9468,24 @@ function updateHeroMovementPhase(now: number) {
     for (let hi = 0; hi < heroes.length; hi++) {
         const hero = heroes[hi]; if (!hero) continue;
 
-        // Don't stomp special phases
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) continue;
-        if (supportPuzzleActive[hi]) continue;
+        // Agility combo build should use combat idle, and we should avoid
+        // stomping on execute phases.
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
+        if (agiState === AGI_STATE.EXECUTING) continue;
 
         const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) || 0;
         if (busyUntil > now) continue; // mid-attack / cast window → keep slash/thrust/cast
 
-        const vx = hero.vx, vy = hero.vy;
-        if (vx || vy) {
-            // Moving but not in a special move → run phase
+        if (agiState === AGI_STATE.ARMED) {
+            setHeroPhaseString(hi, "combatIdle");
+            continue;
+        }
+
+        // default movement-based phase
+        const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy);
+        if (speedSq > 25) {
             setHeroPhaseString(hi, "run");
         } else {
-            // Standing, not busy → idle
             setHeroPhaseString(hi, "idle");
         }
     }
@@ -8021,7 +9623,7 @@ game.onUpdate(function () {
 
     updateHeroProjectiles()     // <— this replaces the messy cluster
 
-    updateHeroAuras()                  // aura + combo meter
+    updateHeroOverlays()        // aura + combo meter
 
     // NEW: enforce collisions with logical wall tiles
     resolveTilemapCollisions()
@@ -8034,59 +9636,46 @@ game.onUpdate(function () {
 })
 
 
-
-// Timers
-
 game.onUpdateInterval(80, function () {
     if (!HeroEngine._isStarted()) return;
 
     try {
         const nowMs = game.runtime() | 0;
 
-        if (p1Intent != "") {
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] BEFORE P1 intent=" + p1Intent + " timeMs=" + nowMs);
-            }
-            doHeroMoveForPlayer(1, p1Intent);
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] AFTER P1 intent=" + p1Intent + " timeMs=" + nowMs);
-            }
+        const i1 = consumePlayerIntent(1)
+        if (i1 !== "") {
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P1 intent=" + i1 + " timeMs=" + nowMs)
+            doHeroMoveForPlayer(1, i1)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P1 intent=" + i1 + " timeMs=" + nowMs)
         }
 
-        if (p2Intent != "") {
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] BEFORE P2 intent=" + p2Intent + " timeMs=" + nowMs);
-            }
-            doHeroMoveForPlayer(2, p2Intent);
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] AFTER P2 intent=" + p2Intent + " timeMs=" + nowMs);
-            }
+        const i2 = consumePlayerIntent(2)
+        if (i2 !== "") {
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P2 intent=" + i2 + " timeMs=" + nowMs)
+            doHeroMoveForPlayer(2, i2)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P2 intent=" + i2 + " timeMs=" + nowMs)
         }
 
-        if (p3Intent != "") {
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] BEFORE P3 intent=" + p3Intent + " timeMs=" + nowMs);
-            }
-            doHeroMoveForPlayer(3, p3Intent);
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] AFTER P3 intent=" + p3Intent + " timeMs=" + nowMs);
-            }
+        const i3 = consumePlayerIntent(3)
+        if (i3 !== "") {
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P3 intent=" + i3 + " timeMs=" + nowMs)
+            doHeroMoveForPlayer(3, i3)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P3 intent=" + i3 + " timeMs=" + nowMs)
         }
 
-        if (p4Intent != "") {
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] BEFORE P4 intent=" + p4Intent + " timeMs=" + nowMs);
-            }
-            doHeroMoveForPlayer(4, p4Intent);
-            if (DEBUG_HERO_LOGIC) {
-                console.log("[TIMER80] AFTER P4 intent=" + p4Intent + " timeMs=" + nowMs);
-            }
+        const i4 = consumePlayerIntent(4)
+        if (i4 !== "") {
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P4 intent=" + i4 + " timeMs=" + nowMs)
+            doHeroMoveForPlayer(4, i4)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P4 intent=" + i4 + " timeMs=" + nowMs)
         }
     } catch (e) {
         console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e);
     }
 });
 
+
+// Timers
 
 game.onUpdateInterval(500, function () {
     if (!HeroEngine._isStarted()) return

@@ -9,24 +9,85 @@ namespace SpriteKind {
 //% blockGap=8
 class TextSprite extends Sprite {
     constructor(
-        public text: string,
-        public bg: number,
-        public fg: number,
-        public maxFontHeight: number,
-        public borderWidth: number,
-        public borderColor: number,
-        public padding: number,
-        public outlineWidth: number,
-        public outlineColor: number,
-        public icon: Image = null,
-    ) {
-        super(image.create(0,0));
-        this.setKind(SpriteKind.Text);
-        this.setFlag(SpriteFlag.Ghost, true);
-        this.update()
-    }
+    public text: string,
+    public bg: number,
+    public fg: number,
+    public maxFontHeight: number,
+    public borderWidth: number,
+    public borderColor: number,
+    public padding: number,
+    public outlineWidth: number,
+    public outlineColor: number,
+    public icon: Image = null,
+) {
+    // Keep a tiny placeholder image so the sprite is “real” to the engine/net code,
+    // but never use pixels for rendering in Phaser.
+    super(image.create(2, 2));
+
+    this.setKind(SpriteKind.Text);
+    this.setFlag(SpriteFlag.Ghost, true);
+
+    this.update();
+}
 
     public update() {
+        // Ensure the placeholder image remains non-zero.
+        // (We never resize it; Phaser renders from metadata.)
+        const img = this.image;
+        if (!img || img.width <= 0 || img.height <= 0) {
+            this.setImage(image.create(2, 2));
+        }
+
+        const t = this.text || "";
+
+        // Clamp values defensively (even though setters also clamp)
+        const fg = (this.fg | 0) & 0xff;
+        const bg = (this.bg | 0);
+
+        const maxH = Math.max(1, this.maxFontHeight | 0);
+
+        const bw = Math.max(0, this.borderWidth | 0);
+        const bc = (this.borderColor | 0) & 0xff;
+
+        const pad = Math.max(0, this.padding | 0);
+
+        const ow = Math.max(0, this.outlineWidth | 0);
+        const oc = (this.outlineColor | 0) & 0xff;
+
+        // Bump a local version so Phaser can skip re-applying text/style if unchanged
+        const nextVer = (((this as any).__txtLocalVer as number) | 0) + 1;
+        (this as any).__txtLocalVer = nextVer;
+
+        // === UI marker ===
+        sprites.setDataString(this, "__uiKind", "text");
+
+        // === Core text ===
+        sprites.setDataString(this, "__txt", t);
+        sprites.setDataNumber(this, "__txtVer", nextVer);
+
+        // === Style ===
+        sprites.setDataNumber(this, "__txtFg", fg);
+        sprites.setDataNumber(this, "__txtBg", bg);
+
+        sprites.setDataNumber(this, "__txtMaxH", maxH);
+        sprites.setDataNumber(this, "__txtMaxW", 0); // reserved; no wrap/fixed width yet
+
+        sprites.setDataNumber(this, "__txtPad", pad);
+
+        sprites.setDataNumber(this, "__txtBW", bw);
+        sprites.setDataNumber(this, "__txtBC", bc);
+
+        sprites.setDataNumber(this, "__txtOW", ow);
+        sprites.setDataNumber(this, "__txtOC", oc);
+
+        sprites.setDataNumber(this, "__txtAlign", 0); // 0=left (reserved)
+
+        // Reserved for later; we are not syncing icon pixels in Phaser text pipeline yet
+        sprites.setDataNumber(this, "__txtIconKind", 0);
+    }
+
+
+    public updateOLDCODETODELETE() {
         const borderAndPadding = this.borderWidth + this.padding + this.outlineWidth;
         const iconWidth = this.icon ? this.icon.width + this.padding + this.outlineWidth : 0;
         const iconHeight = this.icon ? this.icon.height : 0;

@@ -62,7 +62,7 @@ const DEBUG_WRAP_TEX = false;   // 👈 disable spam
 const DEBUG_NET = false;
 
 // Debug the "Extra" category
-const DEBUG_CATEGORY_X = true;
+const DEBUG_CATEGORY_X = false;
 
 let _heroAnimNoAtlasLogged = false;
 
@@ -89,6 +89,8 @@ let _lastPerfLogMs = 0;
 
 const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
 
+// PERF: how many sprites were destroyed due to lifespan expiry since last perf.syncSteps dump
+const PERF_LIFE_DESTROY_CALLS_KEY = "__perfLifeDestroyCalls";
 
 
 
@@ -96,6 +98,19 @@ const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
 const UI_KIND_KEY = "__uiKind";
 const UI_KIND_STATUSBAR = "statusbar";
 const UI_KIND_COMBO_METER = "comboMeter";
+const UI_KIND_AGI_AIM_INDICATOR = "agiAimIndicator";
+// === Text sprite UI marker ===
+const UI_KIND_TEXT = "text";
+
+
+// === Agility aim indicator sprite data keys ===
+const UI_AIM_VISIBLE_KEY = "__aimVis";       // 0/1
+const UI_AIM_DIR_X1000_KEY = "__aimDx1000";  // -1000..1000
+const UI_AIM_DIR_Y1000_KEY = "__aimDy1000";  // -1000..1000
+const UI_AIM_ANGLE_MDEG_KEY = "__aimAngleMdeg"; // milli-deg (future 360)
+const UI_AIM_LEN_KEY = "__aimLen";           // optional length
+
+
 
 // === Combo meter sprite data keys ===
 const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
@@ -113,6 +128,29 @@ const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional (only if you decid
 // === Status bar data key (must match status-bars.ts exactly) ===
 const STATUS_BAR_DATA_KEY = "STATUS_BAR_DATA_KEY";
 
+
+// === Text sprite data keys (written by text.ts; read by Phaser UI attach/sync) ===
+const UI_TEXT_STR_KEY = "__txt";          // string
+const UI_TEXT_VER_KEY = "__txtVer";       // number; bump to mark dirty
+
+const UI_TEXT_FG_KEY = "__txtFg";         // number; MakeCode palette index (0-15)
+const UI_TEXT_BG_KEY = "__txtBg";         // number; palette index (0-15) or -1 for "none"
+
+const UI_TEXT_MAX_H_KEY = "__txtMaxH";    // number; "maxFontHeight" from textsprite
+const UI_TEXT_MAX_W_KEY = "__txtMaxW";    // number; optional (0 = no wrap/fixed width)
+
+const UI_TEXT_PAD_KEY = "__txtPad";       // number; padding px
+
+const UI_TEXT_BORDER_W_KEY = "__txtBW";   // number; border width px (0 = none)
+const UI_TEXT_BORDER_C_KEY = "__txtBC";   // number; border color palette index (0-15)
+
+const UI_TEXT_OUTLINE_W_KEY = "__txtOW";  // number; outline/stroke width px (0 = none)
+const UI_TEXT_OUTLINE_C_KEY = "__txtOC";  // number; outline/stroke color palette index (0-15)
+
+const UI_TEXT_ALIGN_KEY = "__txtAlign";   // number; 0=left, 1=center, 2=right
+
+// (Reserved for later if we decide to support icon sprites in Phaser text containers)
+const UI_TEXT_ICON_KIND_KEY = "__txtIconKind";
 
 
 
@@ -444,8 +482,8 @@ function dumpImagePixels(tag: string, img: Image) {
 
 
 function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
-    const DEBUG_CATEGORY_X = true;
-    const DEBUG_CATEGORY_X_SAMPLES = true;
+    const DEBUG_CATEGORY_X = false;
+    const DEBUG_CATEGORY_X_SAMPLES = false;
 
     if (!DEBUG_CATEGORY_X || !ctx.shouldLog) return;
 
@@ -1557,7 +1595,10 @@ type UiDetect = {
     uiKind: string;
     isStatusBarSprite: boolean;
     isComboMeterSprite: boolean;
+    isAgiAimIndicatorSprite: boolean;
+    isTextSprite: boolean;
 };
+
 
 
 // ---------------------------------------------------------------------
@@ -1589,9 +1630,11 @@ function _attachNativeSprite(s: Sprite): void {
     // If we've already attached a UI-managed native (Container), early-out.
     if (_attachUiEarlyUpdateIfExisting(ctx)) return;
 
-    // Create UI natives
+    // Create UI natives (NO pixel upload)
     if (_attachCreateStatusBar(ctx, ui)) return;
     if (_attachCreateComboMeter(ctx, ui)) return;
+    if (_attachCreateAgiAimIndicator(ctx, ui)) return;
+    if (_attachCreateText(ctx, ui)) return;
 
     // Step 5+ work lives here for now (unchanged legacy body)
     _attachNativeSpriteNonUiPath(ctx.sc, ctx.s, ctx.g, ctx.tA0);
@@ -1662,12 +1705,20 @@ function _attachDetectUi(ctx: AttachContext): UiDetect {
         try { return (s.kind as any) === (SpriteKind as any).StatusBar; } catch { return false; }
     })();
 
+    const kindIsText = (() => {
+        try { return (s.kind as any) === (SpriteKind as any).Text; } catch { return false; }
+    })();
+
     return {
         uiKind,
         isStatusBarSprite: (hasStatusBarData || kindIsStatusBar),
         isComboMeterSprite: (uiKind === UI_KIND_COMBO_METER),
+        isAgiAimIndicatorSprite: (uiKind === UI_KIND_AGI_AIM_INDICATOR),
+        isTextSprite: (uiKind === UI_KIND_TEXT || kindIsText),
     };
 }
+
+
 
 function _attachUiEarlyUpdateIfExisting(ctx: AttachContext): boolean {
     const s = ctx.s;
@@ -1695,6 +1746,29 @@ function _mcToHex(p: number): number {
     return (r << 16) | (g2 << 8) | b;
 }
 
+
+function _hexToCss(hex: number): string {
+    const h = (hex >>> 0) & 0xffffff;
+    return "#" + h.toString(16).padStart(6, "0");
+}
+
+function _readDataString0(s: Sprite, key: string, dflt: string): string {
+    try {
+        const v = sprites.readDataString(s, key);
+        return (v === undefined || v === null) ? dflt : ("" + v);
+    } catch {
+        return dflt;
+    }
+}
+
+function _readDataNumber0(s: Sprite, key: string, dflt: number): number {
+    try {
+        const v = sprites.readDataNumber(s, key);
+        return (v === undefined || v === null) ? dflt : (v as any as number);
+    } catch {
+        return dflt;
+    }
+}
 
 
 
@@ -1724,7 +1798,7 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     const sb: any = dataAny[STATUS_BAR_DATA_KEY];
     if (!sb) return false;
 
-    // Mirror OLD: read geometry + colors from sb object (not sprite-data keys)
+    // Read geometry + colors from sb object
     const barW = (sb.barWidth | 0) || ((sb._barWidth | 0) || 20);
     const barH = (sb.barHeight | 0) || ((sb._barHeight | 0) || 4);
     const bw = (sb.borderWidth | 0) || 0;
@@ -1742,40 +1816,51 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     (container as any).setData("uiManaged", true);
     (container as any).setData("uiKind", UI_KIND_STATUSBAR);
 
-    // OLD layout math (no floor snapping)
+    // Store geometry so sync can be consistent and cheap (container-local model)
+    (container as any).setData("sb_w", barW);
+    (container as any).setData("sb_h", barH);
+    (container as any).setData("sb_bw", bw);
+
     const innerW = Math.max(1, barW - (bw * 2));
     const innerH = Math.max(1, barH - (bw * 2));
     const leftX = (-barW / 2) + bw;
 
-    // OLD: border rect centered at (0,0), origin 0.5,0.5
     const borderRect = sc.add.rectangle(0, 0, barW, barH, borderHex, 1);
     borderRect.setOrigin(0.5, 0.5);
 
-    // OLD: bg/fill centered vertically, origin left-anchored
     const bgRect = sc.add.rectangle(leftX, 0, innerW, innerH, offHex, 1);
     bgRect.setOrigin(0, 0.5);
 
     const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
     fillRect.setOrigin(0, 0.5);
 
+    // IMPORTANT: initialize fill width based on current/max (prevents “full red forever”)
+    const cur = (sb.current | 0);
+    const max = Math.max(1, (sb.max | 0));
+    const pct = Math.max(0, Math.min(1, cur / max));
+    fillRect.width = Math.floor(innerW * pct);
+
     container.add(borderRect);
     container.add(bgRect);
     container.add(fillRect);
 
-    // Store refs for sync updates (matches what syncNativeSprites expects)
     (container as any).setData("sb_border", borderRect);
     (container as any).setData("sb_bg", bgRect);
     (container as any).setData("sb_fill", fillRect);
 
-    // Depth + scroll factor (same pattern as your refactor)
+    // Depth + scroll factor
     try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
 
     const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
     try { (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
 
+    // Respect Invisible at creation time
+    const isInvisible = !!(s.flags & SpriteFlag.Invisible);
+    try { (container as any).setVisible(!isInvisible); } catch { /* ignore */ }
+
     (s as any).native = container;
 
-    // OLD semantics: prevent pixel-based hide
+    // Prevent pixel-based hide/removal
     try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
 
     _attachFinalizeCreate(ctx);
@@ -1884,6 +1969,192 @@ function _attachCreateComboMeter(ctx: AttachContext, ui: UiDetect): boolean {
     s.native = container;
 
     // Mark as non-empty so any pixel-based visibility logic doesn't hide it
+    (s as any)._lastNonZeroPixels = 1;
+
+    _attachFinalizeCreate(ctx);
+    return true;
+}
+
+
+
+// PURPOSE: Create Phaser-native arrow for Agility aim indicator UI sprite (no pixels).
+// READS:
+//   - sprites.readDataNumber(s, UI_AIM_*_KEY) for visible/length (optional)
+//   - sprite.flags (RelativeToCamera), sprite.z
+// WRITES:
+//   - native.setData("uiManaged", true), native.setData("uiKind", UI_KIND_AGI_AIM_INDICATOR)
+//   - native.setData("ai_*", refs + geometry)
+//   - native depth/scrollFactor/visible
+// PERF:
+//   - Called: on attach (and possibly recreate)
+//   - Must never: upload pixels or create canvas textures
+// SAFETY:
+//   - Must tolerate missing keys; default geometry safely
+// ---------------------------------------------------------------------
+function _attachCreateAgiAimIndicator(ctx: AttachContext, ui: UiDetect): boolean {
+    if (!ui.isAgiAimIndicatorSprite) return false;
+
+    const sc = ctx.sc;
+    const s = ctx.s;
+
+    const len = (sprites.readDataNumber(s, UI_AIM_LEN_KEY) | 0) || 14;
+
+    // Use Graphics so head + shaft are guaranteed aligned.
+    const thickness = 4;
+    const headL = 6;
+    const headW = 10; // wider head looks nicer and avoids “thin triangle” artifacts
+
+    const col = _mcToHex(5);
+
+    const container = sc.add.container(s.x, s.y);
+    (container as any).setData("uiManaged", true);
+    (container as any).setData("uiKind", UI_KIND_AGI_AIM_INDICATOR);
+
+    const gfx = sc.add.graphics();
+    container.add(gfx);
+
+    function _drawArrow(g: Phaser.GameObjects.Graphics, L: number) {
+        const shaftW = Math.max(1, L - headL);
+
+        g.clear();
+        g.fillStyle(col, 1);
+
+        // Shaft: centered on y=0, starts at x=0 (tail)
+        g.fillRect(0, -thickness / 2, shaftW, thickness);
+
+        // Head triangle: base is at x=shaftW, tip at x=shaftW+headL
+        g.beginPath();
+        g.moveTo(shaftW, -headW / 2);
+        g.lineTo(shaftW, +headW / 2);
+        g.lineTo(shaftW + headL, 0);
+        g.closePath();
+        g.fillPath();
+    }
+
+    _drawArrow(gfx, len);
+
+    (container as any).setData("ai_gfx", gfx);
+    (container as any).setData("ai_lastLen", len);
+    (container as any).setData("ai_thickness", thickness);
+    (container as any).setData("ai_headL", headL);
+    (container as any).setData("ai_headW", headW);
+    (container as any).setData("ai_color", col);
+
+    try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try { (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
+
+    const vis = ((sprites.readDataNumber(s, UI_AIM_VISIBLE_KEY) | 0) !== 0);
+    try { (container as any).setVisible(vis); } catch { /* ignore */ }
+
+    (s as any).native = container;
+
+    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
+
+    _attachFinalizeCreate(ctx);
+    return true;
+}
+
+
+
+function _attachCreateText(ctx: AttachContext, ui: UiDetect): boolean {
+    if (!ui.isTextSprite) return false;
+
+    const sc = ctx.sc;
+    const s = ctx.s;
+
+    const txt = _readDataString0(s, UI_TEXT_STR_KEY, "");
+
+    const fgIdx = (_readDataNumber0(s, UI_TEXT_FG_KEY, 1) | 0) & 15;
+    const bgIdxRaw = (_readDataNumber0(s, UI_TEXT_BG_KEY, 0) | 0);
+    const bgIdx = bgIdxRaw & 15;
+
+    const maxH = Math.max(1, _readDataNumber0(s, UI_TEXT_MAX_H_KEY, 8) | 0);
+    const pad = Math.max(0, _readDataNumber0(s, UI_TEXT_PAD_KEY, 0) | 0);
+
+    const bw = Math.max(0, _readDataNumber0(s, UI_TEXT_BORDER_W_KEY, 0) | 0);
+    const bcIdx = (_readDataNumber0(s, UI_TEXT_BORDER_C_KEY, 1) | 0) & 15;
+
+    const ow = Math.max(0, _readDataNumber0(s, UI_TEXT_OUTLINE_W_KEY, 0) | 0);
+    const ocIdx = (_readDataNumber0(s, UI_TEXT_OUTLINE_C_KEY, 0) | 0) & 15;
+
+    const ver = (_readDataNumber0(s, UI_TEXT_VER_KEY, 0) | 0);
+
+    // PERF: Never tie text raster resolution to camera zoom. That explodes work under zoom.
+    const renderScale = 1;
+
+    const fgCss = _hexToCss(_mcToHex(fgIdx));
+    const ocCss = _hexToCss(_mcToHex(ocIdx));
+
+    const fontPx = Math.max(1, maxH | 0);
+    const strokePx = Math.max(0, ow | 0);
+
+    const container = sc.add.container(s.x, s.y);
+    (container as any).setData("uiManaged", true);
+    (container as any).setData("uiKind", UI_KIND_TEXT);
+
+    // Phaser text object
+    const txtObj = sc.add.text(0, 0, txt, {
+        fontFamily: "Arial",
+        fontSize: `${fontPx}px`,
+        color: fgCss,
+        stroke: (ow > 0) ? ocCss : undefined as any,
+        strokeThickness: (ow > 0) ? strokePx : 0,
+    } as any);
+
+    txtObj.setOrigin(0.5, 0.5);
+
+    // Compute box size in display units
+    const tw = Math.max(1, (txtObj as any).displayWidth || (txtObj as any).width || 1);
+    const th = Math.max(1, (txtObj as any).displayHeight || (txtObj as any).height || 1);
+
+    const boxW = Math.max(1, tw + pad * 2);
+    const boxH = Math.max(1, th + pad * 2);
+
+    // Optional background (MakeCode bg=0 is transparent)
+    let bgRect: Phaser.GameObjects.Rectangle | null = null;
+    if ((bgIdxRaw | 0) !== 0) {
+        const bgHex = _mcToHex(bgIdx);
+        bgRect = sc.add.rectangle(0, 0, boxW, boxH, bgHex, 1);
+        bgRect.setOrigin(0.5, 0.5);
+        container.add(bgRect);
+    }
+
+    // Optional border rectangle (stroke only)
+    let borderRect: Phaser.GameObjects.Rectangle | null = null;
+    if (bw > 0) {
+        const bcHex = _mcToHex(bcIdx);
+        borderRect = sc.add.rectangle(0, 0, boxW, boxH, 0, 0);
+        borderRect.setOrigin(0.5, 0.5);
+        borderRect.setStrokeStyle(bw, bcHex, 1);
+        container.add(borderRect);
+    }
+
+    // Text on top
+    container.add(txtObj);
+
+    // Store refs + last-style for sync step
+    (container as any).setData("tx_text", txtObj);
+    (container as any).setData("tx_bg", bgRect);
+    (container as any).setData("tx_border", borderRect);
+
+    (container as any).setData("tx_lastVer", ver);
+    (container as any).setData("tx_renderScale", renderScale);
+
+    // Depth + scroll factor
+    try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
+
+    const relToCam = !!(s.flags & SpriteFlag.RelativeToCamera);
+    try { (container as any).setScrollFactor(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
+
+    // Initial visibility
+    const invisible = !!(s.flags & SpriteFlag.Invisible);
+    try { (container as any).setVisible(!invisible); } catch { /* ignore */ }
+
+    s.native = container;
+
+    // Prevent any pixel-based "empty image" cleanup from nuking it
     (s as any)._lastNonZeroPixels = 1;
 
     _attachFinalizeCreate(ctx);
@@ -3031,6 +3302,14 @@ function _syncUiManagedFastPath(
         return _syncUiManagedComboMeter(ctx, s, native, mcToHex);
     }
 
+    if (uiKind === UI_KIND_AGI_AIM_INDICATOR) {
+        return _syncUiManagedAgiAimIndicator(ctx, s, native);
+    }
+
+    if (uiKind === UI_KIND_TEXT) {
+        return _syncUiManagedText(ctx, s, native, mcToHex);
+    }
+
     // Unknown UI kind: treat as handled so it doesn't fall into pixel upload.
     try { (native as any).setVisible?.(false); } catch { /* ignore */ }
     (s as any)._lastNonZeroPixels = 1;
@@ -3039,30 +3318,31 @@ function _syncUiManagedFastPath(
 
 
 
+
+
+
+
+
+
+
+
 function _syncUiManagedStatusBar(
     ctx: SyncContext,
     s: Sprite,
     native: Phaser.GameObjects.GameObject
 ): boolean {
-    // Read statusbar geometry that _attachCreateStatusBar stored on the native
-    const sbW = (native as any).getData?.("sb_w") as number | undefined;
-    const sbH = (native as any).getData?.("sb_h") as number | undefined;
-    const sbPxX = (native as any).getData?.("sb_pxX") as number | undefined;
-    const sbPxY = (native as any).getData?.("sb_pxY") as number | undefined;
+    const anyNative: any = native;
 
-    // If we have a UI-managed statusbar but missing metadata, we still treat as handled
-    // (so it doesn't fall back into pixel upload path).
-    if (sbW == null || sbH == null || sbPxX == null || sbPxY == null) {
-        (s as any)._lastNonZeroPixels = 1;
-        return true;
-    }
+    // We expect a Container created by _attachCreateStatusBar
+    // Position is handled elsewhere (native.x/y = s.x/y), but be robust:
+    try {
+        anyNative.x = s.x;
+        anyNative.y = s.y;
+    } catch { /* ignore */ }
 
-    const wx = (native as any).getData?.("followWorldX") as number | undefined;
-    const wy = (native as any).getData?.("followWorldY") as number | undefined;
-    const isRTC = (native as any).getData?.("followRTC") as boolean | undefined;
-
-    const xWorld = (isRTC ? 0 : (wx || 0)) + (sbPxX || 0);
-    const yWorld = (isRTC ? 0 : (wy || 0)) + (sbPxY || 0);
+    // Respect Invisible every frame (critical for charge meter show/hide)
+    const isInvisible = !!(s.flags & SpriteFlag.Invisible);
+    try { anyNative.setVisible?.(!isInvisible); } catch { /* ignore */ }
 
     const sb = (s as any)._statusBar;
     if (!sb) {
@@ -3070,31 +3350,32 @@ function _syncUiManagedStatusBar(
         return true;
     }
 
-    const outerW = sbW | 0;
-    const outerH = sbH | 0;
-
-    const borderRect = (native as any).getData?.("sb_border") as Phaser.GameObjects.Rectangle | undefined;
-    const bgRect = (native as any).getData?.("sb_bg") as Phaser.GameObjects.Rectangle | undefined;
-    const fillRect = (native as any).getData?.("sb_fill") as Phaser.GameObjects.Rectangle | undefined;
+    const borderRect = anyNative.getData?.("sb_border") as Phaser.GameObjects.Rectangle | undefined;
+    const bgRect = anyNative.getData?.("sb_bg") as Phaser.GameObjects.Rectangle | undefined;
+    const fillRect = anyNative.getData?.("sb_fill") as Phaser.GameObjects.Rectangle | undefined;
 
     if (!borderRect || !bgRect || !fillRect) {
         (s as any)._lastNonZeroPixels = 1;
         return true;
     }
 
-    borderRect.x = xWorld;
-    borderRect.y = yWorld;
-    borderRect.width = outerW;
-    borderRect.height = outerH;
+    // Use stored geometry (set at attach). Fall back to sb if missing.
+    const barW = ((anyNative.getData?.("sb_w") as number | undefined) ?? ((sb.barWidth | 0) || (sb._barWidth | 0) || 20)) | 0;
+    const barH = ((anyNative.getData?.("sb_h") as number | undefined) ?? ((sb.barHeight | 0) || (sb._barHeight | 0) || 4)) | 0;
+    const bw = ((anyNative.getData?.("sb_bw") as number | undefined) ?? (sb.borderWidth | 0) ?? 0) | 0;
 
-    const border = (sb.borderWidth | 0);
-    const innerW = Math.max(0, outerW - border * 2);
-    const innerH = Math.max(0, outerH - border * 2);
-    const leftX = xWorld - outerW / 2 + border + innerW / 2;
-    const topY = yWorld - outerH / 2 + border + innerH / 2;
+    const innerW = Math.max(1, barW - (bw * 2));
+    const innerH = Math.max(1, barH - (bw * 2));
+    const leftX = (-barW / 2) + bw;
+
+    // Container-local geometry (this is the consistent model)
+    borderRect.x = 0;
+    borderRect.y = 0;
+    borderRect.width = barW;
+    borderRect.height = barH;
 
     bgRect.x = leftX;
-    bgRect.y = topY;
+    bgRect.y = 0;
     bgRect.width = innerW;
     bgRect.height = innerH;
 
@@ -3102,16 +3383,32 @@ function _syncUiManagedStatusBar(
     const max = Math.max(1, (sb.max | 0));
     const pct = Math.max(0, Math.min(1, cur / max));
 
-    fillRect.x = leftX - innerW / 2 + (innerW * pct) / 2;
-    fillRect.y = topY;
+    fillRect.x = leftX;
+    fillRect.y = 0;
     fillRect.width = Math.floor(innerW * pct);
     fillRect.height = innerH;
 
     // Prevent pixel-death logic from hiding/removing it
     (s as any)._lastNonZeroPixels = 1;
-
     return true;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function _syncUiManagedComboMeter(
     ctx: SyncContext,
@@ -3161,6 +3458,49 @@ function _syncUiManagedComboMeter(
     setSeg(5, w1);
     setSeg(6, wE);
 
+    // ---------------------------------------------------------------------
+    // C5: Combo meter labels (numbers on rectangles)
+    // Layout: [E][1][2][3][2][1][E]
+    // We render Phaser-native text objects inside the same UI container so we
+    // don't need additional Arcade sprites (and we avoid pixel/texture churn).
+    // ---------------------------------------------------------------------
+    const sc: Phaser.Scene | undefined = ctx.sc || ((native as any).scene as any);
+    if (sc) {
+        let labels: Phaser.GameObjects.Text[] | null = (native as any).getData?.("cm_labels") as any;
+        if (!labels || !Array.isArray(labels) || labels.length !== 7) {
+            labels = [];
+            const style: any = { fontFamily: "monospace", fontSize: "10px" };
+
+            for (let i = 0; i < 7; i++) {
+                const t = sc.add.text(0, 0, "", style);
+                try { (t as any).setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
+                try { (t as any).setDepth?.(999999); } catch { /* ignore */ }
+                try { (native as any).add?.(t); } catch { /* ignore */ }
+                labels.push(t);
+            }
+
+            try { (native as any).setData?.("cm_labels", labels); } catch { /* ignore */ }
+        }
+
+        const segW = [wE, w1, w2, w3, w2, w1, wE];
+        const segTxt = ["E", "1", "2", "3", "2", "1", "E"];
+
+        let lx = left;
+        for (let i = 0; i < 7; i++) {
+            const t = labels[i];
+            if (!t) continue;
+            const wSeg = Math.max(1, segW[i]);
+            const cx = lx + (wSeg / 2);
+            const cy = 0; // centered vertically within the container
+
+            try { (t as any).setPosition?.(cx, cy); } catch { /* ignore */ }
+            try { (t as any).setText?.(segTxt[i]); } catch { /* ignore */ }
+            try { (t as any).setVisible?.(show); } catch { /* ignore */ }
+
+            lx += wSeg;
+        }
+    }
+
     const clamped = Math.max(0, Math.min(1000, posX1000));
     const span = Math.max(1, (totalW - 1));
     const pointerX = Math.floor((clamped * span) / 1000);
@@ -3186,6 +3526,220 @@ function _syncUiManagedComboMeter(
 }
 
 
+
+
+
+function _syncUiManagedAgiAimIndicator(
+    ctx: SyncContext,
+    s: Sprite,
+    native: Phaser.GameObjects.GameObject
+): boolean {
+    const anyNative: any = native;
+
+    // Position
+    try {
+        anyNative.x = s.x;
+        anyNative.y = s.y;
+    } catch { /* ignore */ }
+
+    // Visibility: DO NOT use SpriteFlag.Invisible (engine keeps it Invisible in Phaser).
+    const show = ((sprites.readDataNumber(s, UI_AIM_VISIBLE_KEY) | 0) !== 0);
+    try { anyNative.setVisible?.(show); } catch { /* ignore */ }
+
+    // Direction / angle
+    const dx1000 = (sprites.readDataNumber(s, UI_AIM_DIR_X1000_KEY) | 0);
+    const dy1000 = (sprites.readDataNumber(s, UI_AIM_DIR_Y1000_KEY) | 0);
+
+    let dx = dx1000 / 1000;
+    let dy = dy1000 / 1000;
+    if ((dx === 0 && dy === 0) || !isFinite(dx) || !isFinite(dy)) { dx = 1; dy = 0; }
+
+    // Prefer angleMdeg if the key exists
+    let angleRad = 0;
+    const dataAny: any = (s as any).data;
+    const hasAngleKey =
+        !!dataAny && Object.prototype.hasOwnProperty.call(dataAny, UI_AIM_ANGLE_MDEG_KEY);
+
+    if (hasAngleKey) {
+        const angleMdeg = (sprites.readDataNumber(s, UI_AIM_ANGLE_MDEG_KEY) | 0);
+        const angleDeg = angleMdeg / 1000;
+        angleRad = (angleDeg * Math.PI) / 180;
+    } else {
+        angleRad = Math.atan2(dy, dx);
+    }
+
+    try { (anyNative as any).rotation = angleRad; } catch { /* ignore */ }
+
+    // Length-driven redraw (Graphics-based arrow)
+    const len = (sprites.readDataNumber(s, UI_AIM_LEN_KEY) | 0) || 14;
+    const lastLen = (anyNative.getData?.("ai_lastLen") as number | undefined) ?? 0;
+
+    if (len !== lastLen) {
+        const gfx: any = anyNative.getData?.("ai_gfx");
+        const thickness = ((anyNative.getData?.("ai_thickness") as number | undefined) ?? 4);
+        const headL = ((anyNative.getData?.("ai_headL") as number | undefined) ?? 6);
+        const headW = ((anyNative.getData?.("ai_headW") as number | undefined) ?? 10);
+        const col = ((anyNative.getData?.("ai_color") as number | undefined) ?? _mcToHex(5));
+
+        if (gfx && gfx.clear) {
+            const shaftW = Math.max(1, len - headL);
+
+            gfx.clear();
+            gfx.fillStyle(col, 1);
+
+            gfx.fillRect(0, -thickness / 2, shaftW, thickness);
+
+            gfx.beginPath();
+            gfx.moveTo(shaftW, -headW / 2);
+            gfx.lineTo(shaftW, +headW / 2);
+            gfx.lineTo(shaftW + headL, 0);
+            gfx.closePath();
+            gfx.fillPath();
+        }
+
+        try { anyNative.setData?.("ai_lastLen", len); } catch { /* ignore */ }
+    }
+
+    (s as any)._lastNonZeroPixels = 1;
+    return true;
+}
+
+
+
+
+function _syncUiManagedText(
+    ctx: SyncContext,
+    s: Sprite,
+    native: Phaser.GameObjects.GameObject,
+    mcToHex: (p: number) => number
+): boolean {
+    const anyNative: any = native;
+
+    // Keep container positioned
+    try {
+        anyNative.x = s.x;
+        anyNative.y = s.y;
+    } catch { /* ignore */ }
+
+    // Respect Invisible every frame
+    const isInvisible = !!(s.flags & SpriteFlag.Invisible);
+    try { anyNative.setVisible?.(!isInvisible); } catch { /* ignore */ }
+
+    const sc: Phaser.Scene | undefined = ctx.sc || (anyNative.scene as any);
+    if (!sc) {
+        (s as any)._lastNonZeroPixels = 1;
+        return true;
+    }
+
+    const txtObj: Phaser.GameObjects.Text | undefined = anyNative.getData?.("tx_text");
+    if (!txtObj) {
+        (s as any)._lastNonZeroPixels = 1;
+        return true;
+    }
+
+    // Dirty/version gate
+    const ver = (_readDataNumber0(s, UI_TEXT_VER_KEY, 0) | 0);
+    const lastVer = ((anyNative.getData?.("tx_lastVer") as number | undefined) ?? 0) | 0;
+
+    if (ver !== lastVer) {
+        const txt = _readDataString0(s, UI_TEXT_STR_KEY, "");
+
+        const fgIdx = (_readDataNumber0(s, UI_TEXT_FG_KEY, 1) | 0) & 15;
+        const bgIdxRaw = (_readDataNumber0(s, UI_TEXT_BG_KEY, 0) | 0);
+        const bgIdx = bgIdxRaw & 15;
+
+        const maxH = Math.max(1, _readDataNumber0(s, UI_TEXT_MAX_H_KEY, 8) | 0);
+        const pad = Math.max(0, _readDataNumber0(s, UI_TEXT_PAD_KEY, 0) | 0);
+
+        const bw = Math.max(0, _readDataNumber0(s, UI_TEXT_BORDER_W_KEY, 0) | 0);
+        const bcIdx = (_readDataNumber0(s, UI_TEXT_BORDER_C_KEY, 1) | 0) & 15;
+
+        const ow = Math.max(0, _readDataNumber0(s, UI_TEXT_OUTLINE_W_KEY, 0) | 0);
+        const ocIdx = (_readDataNumber0(s, UI_TEXT_OUTLINE_C_KEY, 0) | 0) & 15;
+
+        const fontPx = Math.max(1, (maxH | 0));
+        const strokePx = Math.max(0, (ow | 0));
+
+        // Apply text + style (Phaser-native)
+        try { (txtObj as any).setText?.(txt); } catch { /* ignore */ }
+        try { (txtObj as any).setFontSize?.(fontPx); } catch { /* ignore */ }
+
+        const fgCss = _hexToCss(mcToHex(fgIdx));
+        try { (txtObj as any).setColor?.(fgCss); } catch { /* ignore */ }
+
+        if (ow > 0) {
+            const ocCss = _hexToCss(mcToHex(ocIdx));
+            try { (txtObj as any).setStroke?.(ocCss, strokePx); } catch { /* ignore */ }
+        } else {
+            try { (txtObj as any).setStroke?.("#000000", 0); } catch { /* ignore */ }
+        }
+
+        // Ensure origin stays centered
+        try { (txtObj as any).setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
+
+        // Recompute box size in display units
+        const tw = Math.max(1, (txtObj as any).displayWidth || (txtObj as any).width || 1);
+        const th = Math.max(1, (txtObj as any).displayHeight || (txtObj as any).height || 1);
+
+        const boxW = Math.max(1, tw + pad * 2);
+        const boxH = Math.max(1, th + pad * 2);
+
+        // Background rect (optional)
+        let bgRect: Phaser.GameObjects.Rectangle | null = (anyNative.getData?.("tx_bg") as any) || null;
+        const wantBg = ((bgIdxRaw | 0) !== 0);
+
+        if (wantBg) {
+            const bgHex = mcToHex(bgIdx);
+            if (!bgRect) {
+                bgRect = sc.add.rectangle(0, 0, boxW, boxH, bgHex, 1);
+                bgRect.setOrigin(0.5, 0.5);
+                try { (anyNative as any).addAt?.(bgRect, 0); } catch { try { (anyNative as any).add?.(bgRect); } catch { } }
+                anyNative.setData?.("tx_bg", bgRect);
+            } else {
+                bgRect.width = boxW;
+                bgRect.height = boxH;
+                try { bgRect.setFillStyle(bgHex, 1); } catch { /* ignore */ }
+            }
+        } else if (bgRect) {
+            try { (anyNative as any).remove?.(bgRect, true); } catch { /* ignore */ }
+            try { (bgRect as any).destroy?.(); } catch { /* ignore */ }
+            anyNative.setData?.("tx_bg", null);
+            bgRect = null;
+        }
+
+        // Border rect (optional)
+        let borderRect: Phaser.GameObjects.Rectangle | null = (anyNative.getData?.("tx_border") as any) || null;
+        const wantBorder = (bw > 0);
+
+        if (wantBorder) {
+            const bcHex = mcToHex(bcIdx);
+            if (!borderRect) {
+                borderRect = sc.add.rectangle(0, 0, boxW, boxH, 0, 0);
+                borderRect.setOrigin(0.5, 0.5);
+                borderRect.setStrokeStyle(bw, bcHex, 1);
+
+                const idx = bgRect ? 1 : 0;
+                try { (anyNative as any).addAt?.(borderRect, idx); } catch { try { (anyNative as any).add?.(borderRect); } catch { } }
+
+                anyNative.setData?.("tx_border", borderRect);
+            } else {
+                borderRect.width = boxW;
+                borderRect.height = boxH;
+                try { borderRect.setStrokeStyle(bw, bcHex, 1); } catch { /* ignore */ }
+            }
+        } else if (borderRect) {
+            try { (anyNative as any).remove?.(borderRect, true); } catch { /* ignore */ }
+            try { (borderRect as any).destroy?.(); } catch { /* ignore */ }
+            anyNative.setData?.("tx_border", null);
+            borderRect = null;
+        }
+
+        anyNative.setData?.("tx_lastVer", ver);
+    }
+
+    (s as any)._lastNonZeroPixels = 1;
+    return true;
+}
 
 
 // PURPOSE: Apply hero animation + hero aura glue onto hero native sprites.
@@ -3492,6 +4046,9 @@ function _syncVisibilityAndDebugTail(
 // SAFETY:
 //   - Must no-op safely if ctx incomplete
 // ---------------------------------------------------------------------
+// arcadeCompat.ts
+// FULL FUNCTION REPLACEMENT
+
 function _syncEndFrame(ctx: SyncContext): void {
     const t1 = _hostPerfNowMs();
     _hostPerfAccumSyncMs += (t1 - ctx.t0);
@@ -3562,6 +4119,9 @@ function _syncEndFrame(ctx: SyncContext): void {
     const auraBuilds = (gAny.__perfAuraBuilds | 0) || 0;
     const auraTexSets = (gAny.__perfAuraTexSets | 0) || 0;
 
+    // LIFESPAN PERF (accumulated by _advanceLifespans in game._tick)
+    const lifeDestroyCalls = (gAny[PERF_LIFE_DESTROY_CALLS_KEY] | 0) || 0;
+
     console.log(
         "[perf.syncSteps]",
         "call#", _syncCallCount,
@@ -3591,7 +4151,8 @@ function _syncEndFrame(ctx: SyncContext): void {
         "| auraMs≈", auraMs.toFixed(3),
         "auraCalls=", auraCalls,
         "auraBuilds=", auraBuilds,
-        "auraTexSets=", auraTexSets
+        "auraTexSets=", auraTexSets,
+        "| lifeDestroy=", lifeDestroyCalls
     );
 
     // Reset aura accumulators so each log line is "since last perf.syncSteps"
@@ -3599,6 +4160,9 @@ function _syncEndFrame(ctx: SyncContext): void {
     gAny.__perfAuraCalls = 0;
     gAny.__perfAuraBuilds = 0;
     gAny.__perfAuraTexSets = 0;
+
+    // Reset lifespan accumulator so each log line is "since last perf.syncSteps"
+    gAny[PERF_LIFE_DESTROY_CALLS_KEY] = 0;
 
     _debugDumpCategoryX(ctx, _allSprites);
 }
@@ -4100,6 +4664,53 @@ class BasicEventContext {
 }
 
 
+
+// Add this as a new top-level helper (NOT inside a namespace), somewhere above `namespace game {`
+function _advanceLifespans(dtMs: number): void {
+    if (!(dtMs > 0)) return;
+
+    // Read the authoritative sprite list
+    const all: Sprite[] =
+        (sprites as any)._getAllSprites ? (sprites as any)._getAllSprites() : [];
+
+    if (!all || all.length === 0) return;
+
+    const gAny: any = globalThis as any;
+
+    for (let i = 0; i < all.length; i++) {
+        const s: any = all[i];
+        if (!s) continue;
+
+        const life = s.lifespan;
+        if (typeof life !== "number" || life <= 0) continue;
+
+        const next = life - dtMs;
+
+        if (next <= 0) {
+            s.lifespan = 0;
+
+            // Arcade semantics: expire => destroy
+            try {
+                if (typeof s.destroy === "function") s.destroy();
+                else {
+                    // ultra-fallback: mark destroyed like Sprite.destroy()
+                    s.flags |= SpriteFlag.Destroyed;
+                    s._destroyed = true;
+                }
+            } catch {
+                // fail-safe: never throw from tick
+            }
+
+            gAny[PERF_LIFE_DESTROY_CALLS_KEY] = ((gAny[PERF_LIFE_DESTROY_CALLS_KEY] | 0) + 1);
+        } else {
+            s.lifespan = next;
+        }
+    }
+}
+
+
+
+
 namespace game {
     const _startTime = Date.now();
     const _scene = new BasicGameScene();
@@ -4154,6 +4765,9 @@ namespace game {
 // SAFETY:
 //   - Must not throw; isolate downstream exceptions
 // ---------------------------------------------------------------------
+    // arcadeCompat.ts
+// FULL FUNCTION REPLACEMENT (namespace game)
+
     export function _tick(): void {
         const t0 = _hostPerfNowMs()
 
@@ -4181,9 +4795,6 @@ namespace game {
         // 2) Run game.onUpdate + game.onUpdateInterval + event handlers
         //    ONLY on the host. Followers will get their "truth" from the
         //    host via netWorld snapshots (applied in the network layer).
-
-
-
         if (isHost) {
             for (const h of _updateHandlers) h();
             for (const ih of _intervalHandlers) {
@@ -4201,6 +4812,10 @@ namespace game {
             }
         }
 
+        // 2.5) Lifespan expiry (Arcade semantics)
+        // Run AFTER user logic, BEFORE native sync, so expirations are visible immediately.
+        _advanceLifespans(dtMs);
+
         // 3) Keep compat sprites and Phaser visuals aligned
         sprites._syncNativeSprites();
 
@@ -4209,7 +4824,6 @@ namespace game {
         _hostPerfAccumTickMs += (t1 - t0)
 
         _hostPerfMaybeDump(t1)
-
     }
 
 
@@ -4494,61 +5108,102 @@ namespace netWorld {
     // ====================================================
 
 
-    
     export function capture(): WorldSnapshot {
         const g: any = (globalThis as any);
         const runtimeMs = (g.__heroEngineWorldRuntimeMs ?? 0) | 0;
         const bgIndex = (g.__net_bgColorIndex ?? 0) | 0;
-        // ...
 
+        // Pull ALL sprites from compat layer
+        const allFn = (sprites as any)._getAllSprites;
+        const all = typeof allFn === "function" ? (allFn.call(sprites) as any[]) : [];
 
+        const snapSprites: SpriteSnapshot[] = [];
 
+        for (const s of all) {
+            if (!s) continue;
 
+            // Clone data first (primitive-only). This includes __uiKind + text keys.
+            const data = cloneData(s.data);
 
-    // Pull ALL sprites from compat layer
-    const allFn = (sprites as any)._getAllSprites;
-    const all = typeof allFn === "function" ? allFn.call(sprites) as any[] : [];
+            // Skip pixel payloads for Phaser-native text sprites (metadata-only).
+            const uiKind = (data && typeof (data as any)[UI_KIND_KEY] === "string")
+                ? (data as any)[UI_KIND_KEY]
+                : "";
 
-    const snapSprites: SpriteSnapshot[] = [];
+            const isTextSprite =
+                uiKind === UI_KIND_TEXT ||
+                ((s.kind | 0) === 9100); // SpriteKind.Text from extension
 
-    for (const s of all) {
-        if (!s) continue;
+            let pixels: number[] | undefined = undefined;
 
-        let pixels: number[] | undefined = undefined;
-        if (s.image && (s.image as any).toJSONPixels) {
-            pixels = (s.image as any).toJSONPixels();
+            if (!isTextSprite) {
+                if (s.image && (s.image as any).toJSONPixels) {
+                    pixels = (s.image as any).toJSONPixels();
+                }
+            }
+
+            snapSprites.push({
+                id: s.id | 0,
+                kind: s.kind | 0,
+                x: s.x || 0,
+                y: s.y || 0,
+                vx: s.vx || 0,
+                vy: s.vy || 0,
+                width: (s.width || (s.image?.width ?? 16)) | 0,
+                height: (s.height || (s.image?.height ?? 16)) | 0,
+                data,
+                flags: s.flags | 0,
+                pixels
+            });
         }
 
-        snapSprites.push({
-            id: s.id | 0,
-            kind: s.kind | 0,
-            x: s.x || 0,
-            y: s.y || 0,
-            vx: s.vx || 0,
-            vy: s.vy || 0,
-            width: (s.width || (s.image?.width ?? 16)) | 0,
-            height: (s.height || (s.image?.height ?? 16)) | 0,
-            data: cloneData(s.data),
-            flags: s.flags | 0,   // 🔴 NEW
-            pixels
-            
-        });
+        return {
+            timeMs: game.runtime() | 0,
+            runtimeMs: runtimeMs,
+            bgIndex: bgIndex,
+            sprites: snapSprites
+        };
     }
 
 
+    
+    export function captureOLDCODETODELETE(): WorldSnapshotOLDCODETODELETE {
+        const g: any = (globalThis as any);
+        const runtimeMs = (g.__heroEngineWorldRuntimeMs ?? 0) | 0;
+        const bgIndex = (g.__net_bgColorIndex ?? 0) | 0;
+        const allFn = (sprites as any)._getAllSprites;
+        const all = typeof allFn === "function" ? allFn.call(sprites) as any[] : [];
+        const snapSprites: SpriteSnapshot[] = [];
+        for (const s of all) {
+            if (!s) continue;
 
-    return {
-        timeMs: game.runtime() | 0,
-        runtimeMs: runtimeMs,
-        bgIndex: bgIndex,
-        sprites: snapSprites
-    };
+            let pixels: number[] | undefined = undefined;
+            if (s.image && (s.image as any).toJSONPixels) {
+                pixels = (s.image as any).toJSONPixels();
+            }
 
-
-
-
-
-}
+            snapSprites.push({
+                id: s.id | 0,
+                kind: s.kind | 0,
+                x: s.x || 0,
+                y: s.y || 0,
+                vx: s.vx || 0,
+                vy: s.vy || 0,
+                width: (s.width || (s.image?.width ?? 16)) | 0,
+                height: (s.height || (s.image?.height ?? 16)) | 0,
+                data: cloneData(s.data),
+                flags: s.flags | 0,   // 🔴 NEW
+                pixels
+                
+            });
+        }
+        return {
+            timeMs: game.runtime() | 0,
+            runtimeMs: runtimeMs,
+            bgIndex: bgIndex,
+            sprites: snapSprites
+        };
+    }
 
 
 
