@@ -18,6 +18,8 @@ import { WorldTileRenderer } from "./tileMapGlue";
 
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
+//import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
+import { loadWeaponAtlases } from "./weaponAtlas";
 
 
 
@@ -87,7 +89,10 @@ class HeroScene extends Phaser.Scene {
 
         console.log(">>> [HeroScene.preload] loading tile sheets");
         preloadTileSheets(this);
-        // I included our preemptive logging here: [HeroScene.preload – tiles]
+
+        console.log(">>> [HeroScene.preload] loading weapon sheets");
+        loadWeaponAtlases(this);
+
     }
 
 

@@ -5167,43 +5167,6 @@ namespace netWorld {
 
 
     
-    export function captureOLDCODETODELETE(): WorldSnapshotOLDCODETODELETE {
-        const g: any = (globalThis as any);
-        const runtimeMs = (g.__heroEngineWorldRuntimeMs ?? 0) | 0;
-        const bgIndex = (g.__net_bgColorIndex ?? 0) | 0;
-        const allFn = (sprites as any)._getAllSprites;
-        const all = typeof allFn === "function" ? allFn.call(sprites) as any[] : [];
-        const snapSprites: SpriteSnapshot[] = [];
-        for (const s of all) {
-            if (!s) continue;
-
-            let pixels: number[] | undefined = undefined;
-            if (s.image && (s.image as any).toJSONPixels) {
-                pixels = (s.image as any).toJSONPixels();
-            }
-
-            snapSprites.push({
-                id: s.id | 0,
-                kind: s.kind | 0,
-                x: s.x || 0,
-                y: s.y || 0,
-                vx: s.vx || 0,
-                vy: s.vy || 0,
-                width: (s.width || (s.image?.width ?? 16)) | 0,
-                height: (s.height || (s.image?.height ?? 16)) | 0,
-                data: cloneData(s.data),
-                flags: s.flags | 0,   // 🔴 NEW
-                pixels
-                
-            });
-        }
-        return {
-            timeMs: game.runtime() | 0,
-            runtimeMs: runtimeMs,
-            bgIndex: bgIndex,
-            sprites: snapSprites
-        };
-    }
 
 
 
