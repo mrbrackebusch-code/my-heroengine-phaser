@@ -49,6 +49,12 @@ import * as monsterAnimGlue from "./monsterAnimGlue";
 // ✅ create a module object called `heroAnimGlue`
 import * as heroAnimGlue from "./heroAnimGlue";
 
+// ✅ create a module object called `weaponAnimGlue`
+import * as weaponAnimGlue from "./weaponAnimGlue";
+
+
+
+
 
 // Put this near the top of arcadeCompat.ts with your other debug toggles
 const DEBUG_SETFLAG = false;
@@ -60,6 +66,9 @@ const DEBUG_WRAP_TEX = false;   // 👈 disable spam
 
 // MASTER NETWORK DEBUG FLAG
 const DEBUG_NET = false;
+
+const DEBUG_TILEMAP = true;
+
 
 // Debug the "Extra" category
 const DEBUG_CATEGORY_X = false;
@@ -101,6 +110,28 @@ const UI_KIND_COMBO_METER = "comboMeter";
 const UI_KIND_AGI_AIM_INDICATOR = "agiAimIndicator";
 // === Text sprite UI marker ===
 const UI_KIND_TEXT = "text";
+
+
+
+
+// ------------------------------------------------------------
+// Weapon loadout keys (must match HeroEngineInPhaser.ts HERO_DATA)
+// ------------------------------------------------------------
+const HERO_WPN_VER_KEY = "wVer";
+const HERO_WPN_SLASH_KEY = "wSl";
+const HERO_WPN_THRUST_KEY = "wTh";
+const HERO_WPN_CAST_KEY = "wCa";
+const HERO_WPN_EXEC_KEY = "wEx";
+
+// Agility state key + enum values (must match HeroEngineInPhaser.ts)
+const HERO_AGI_STATE_KEY = "aState";
+const AGI_STATE_EXECUTING = 2;
+
+const DEFAULT_WEAPON_VARIANT = "base";
+
+// Optional debug (leave false)
+const DEBUG_WEAPON_SYNC = false;
+
 
 
 // === Agility aim indicator sprite data keys ===
@@ -2544,32 +2575,57 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
 
     if (!isHero) return false;
 
-    const HERO_PLACEHOLDER_TEX_KEY = "__heroPlaceholder64";
+    // Pick a REAL, preloaded hero spritesheet texture key to use for the native sprite.
+    // Priority:
+    //   1) If we already have heroAtlas + heroName+family, use that set.textureKey (correct hero immediately).
+    //   2) Else, use the first parsed hero sheet textureKey (deterministic fallback).
+    // If neither exists, we hard-fail because the pipeline invariant was broken (preloadHeroSheets not run).
+    const pickBootHeroTexKey = (): string => {
+        const dataAny: any = (s as any).data || {};
+        const heroName = (typeof dataAny.heroName === "string") ? dataAny.heroName : "";
+        const heroFamily = (typeof dataAny.heroFamily === "string") ? dataAny.heroFamily : "";
 
-    let heroTex = sc.textures.exists(HERO_PLACEHOLDER_TEX_KEY)
-        ? (sc.textures.get(HERO_PLACEHOLDER_TEX_KEY) as Phaser.Textures.CanvasTexture)
-        : null;
+        // 1) Try to resolve the correct hero texture from the heroAtlas
+        try {
+            const atlas: any = sc.registry ? sc.registry.get("heroAtlas") : null;
+            if (atlas && heroName && heroFamily) {
+                const famLower = String(heroFamily).toLowerCase();
+                for (const set of Object.values(atlas) as any[]) {
+                    if (!set) continue;
+                    if (set.heroName === heroName && String(set.family).toLowerCase() === famLower) {
+                        if (set.textureKey && sc.textures.exists(set.textureKey)) {
+                            return String(set.textureKey);
+                        }
+                    }
+                }
+            }
+        } catch { /* ignore */ }
 
-    if (!heroTex) {
-        heroTex = sc.textures.createCanvas(HERO_PLACEHOLDER_TEX_KEY, 64, 64);
-        const ctxHero = (heroTex as any).context as CanvasRenderingContext2D | undefined;
-        if (ctxHero) {
-            ctxHero.clearRect(0, 0, 64, 64);
-            ctxHero.strokeStyle = "#ffffff";
-            ctxHero.lineWidth = 2;
-            ctxHero.strokeRect(1, 1, 62, 62);
-        }
-        heroTex.refresh();
-    }
+        // 2) Deterministic fallback: first parsed hero sheet from preloadHeroSheets
+        try {
+            const parsed = (sc.registry ? sc.registry.get("__heroParsedSheets") : null) as any[] | null;
+            if (parsed && parsed.length > 0) {
+                const tk = parsed[0] && parsed[0].textureKey ? String(parsed[0].textureKey) : "";
+                if (tk && sc.textures.exists(tk)) return tk;
+            }
+        } catch { /* ignore */ }
+
+        throw new Error(
+            "[HERO-NATIVE-BOOT] No preloaded hero spritesheet texture available. " +
+            "Did you call preloadHeroSheets(scene) in preload() and let Phaser finish loading before tick?"
+        );
+    };
 
     let native: any = (s as any).native;
 
     if (!native) {
-        native = sc.add.sprite(s.x, s.y, HERO_PLACEHOLDER_TEX_KEY);
+        const bootTexKey = pickBootHeroTexKey();
+
+        native = sc.add.sprite(s.x, s.y, bootTexKey, 0);
         try { native.setOrigin(0.5, 0.5); } catch { /* ignore */ }
         try { native.setData("isHeroNative", true); } catch { /* ignore */ }
 
-        // OLD behavior: copy identity + try apply animation using existing project helpers
+        // Copy identity + attempt to apply correct hero animation immediately.
         try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
         try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
 
@@ -2581,7 +2637,7 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
                     "[WRAP-NATIVE] create hero-native sprite",
                     "| id", s.id,
                     "| kind", s.kind,
-                    "| texKey", HERO_PLACEHOLDER_TEX_KEY,
+                    "| bootTexKey", bootTexKey,
                     "| native.width", native.width,
                     "| native.height", native.height
                 );
@@ -2593,7 +2649,7 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     } else {
         native.setPosition(s.x, s.y);
 
-        // OLD behavior: copy identity + try apply animation using existing project helpers
+        // Keep identity in sync + re-apply animation if phase/dir/family changed.
         try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
         try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
 
@@ -2604,13 +2660,11 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     // For visibility logic that uses nonZero pixels, just mark as non-empty.
     try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
 
-    const tA1 = _hostPerfNowMs();
-    const dA = (tA1 - ctx.tA0);
-    _frameAttachMsAccum += dA;
-    _frameGroupAttachMs[g] += dA;
-
     return true;
 }
+
+
+
 
 
 
@@ -3186,6 +3240,9 @@ function _syncSpriteLoop(ctx: SyncContext): void {
             }
 
             if (s.native && (s.native as any).destroy) {
+                // Step 8: ensure weapon overlays are destroyed too
+                _destroyWeaponOverlaysForHeroNative(s.native);
+
                 try {
                     (s.native as any).destroy();
                 } catch (e) {
@@ -3193,6 +3250,7 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 }
             }
             s.native = null;
+
 
             const texKey = "sprite_" + s.id;
             if (sc.textures && sc.textures.exists(texKey)) {
@@ -3742,6 +3800,186 @@ function _syncUiManagedText(
 }
 
 
+
+function _destroyWeaponOverlaysForHeroNative(nativeHero: any): void {
+    if (!nativeHero) return;
+
+    const n: any = nativeHero as any;
+
+    const bg: any = n.__weaponBg;
+    const fg: any = n.__weaponFg;
+
+    n.__weaponBg = null;
+    n.__weaponFg = null;
+
+    // Visibility marker used by Step 6
+    n.__weaponVis = 0;
+
+    try { bg?.destroy?.(); } catch { /* ignore */ }
+    try { fg?.destroy?.(); } catch { /* ignore */ }
+}
+
+
+
+function _ensureWeaponOverlaysForHeroNative(
+    ctx: SyncContext,
+    nativeHero: Phaser.GameObjects.Sprite
+): { weaponBg: Phaser.GameObjects.Sprite; weaponFg: Phaser.GameObjects.Sprite } | null {
+    const sc = ctx.sc as any;
+    if (!sc) return null;
+
+    const nativeAny: any = nativeHero as any;
+
+    // If overlays already exist and are alive, reuse.
+    const bgExisting: any = nativeAny.__weaponBg;
+    const fgExisting: any = nativeAny.__weaponFg;
+    if (bgExisting && fgExisting) {
+        const bgOk = !!bgExisting.scene && !(bgExisting as any).destroyed;
+        const fgOk = !!fgExisting.scene && !(fgExisting as any).destroyed;
+        if (bgOk && fgOk) {
+            // Ensure cleanup is wired once.
+            if (!nativeAny.__weaponCleanupWired && typeof (nativeHero as any).once === "function") {
+                nativeAny.__weaponCleanupWired = true;
+                try {
+                    (nativeHero as any).once("destroy", () => {
+                        _destroyWeaponOverlaysForHeroNative(nativeHero);
+                    });
+                } catch { /* ignore */ }
+            }
+            return { weaponBg: bgExisting, weaponFg: fgExisting };
+        }
+
+        // Something was destroyed; cleanup and recreate.
+        _destroyWeaponOverlaysForHeroNative(nativeHero);
+        nativeAny.__weaponCleanupWired = false;
+    }
+
+    const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
+    if (!glueAny || typeof glueAny.createWeaponOverlaySprites !== "function") return null;
+
+    const created = glueAny.createWeaponOverlaySprites({ scene: sc, maxGhosts: 0 });
+    const weaponBg: Phaser.GameObjects.Sprite = created.weaponBg;
+    const weaponFg: Phaser.GameObjects.Sprite = created.weaponFg;
+
+    // Match hero scroll factors if possible.
+    try {
+        const sfx = (nativeHero as any).scrollFactorX;
+        const sfy = (nativeHero as any).scrollFactorY;
+        if (typeof weaponBg.setScrollFactor === "function") weaponBg.setScrollFactor(sfx, sfy);
+        if (typeof weaponFg.setScrollFactor === "function") weaponFg.setScrollFactor(sfx, sfy);
+    } catch { /* ignore */ }
+
+    // Hidden until Step 6 chooses to show them.
+    try { weaponBg.setVisible(false); } catch { /* ignore */ }
+    try { weaponFg.setVisible(false); } catch { /* ignore */ }
+
+    nativeAny.__weaponBg = weaponBg;
+    nativeAny.__weaponFg = weaponFg;
+
+    // Wire cleanup once per hero-native
+    if (!nativeAny.__weaponCleanupWired && typeof (nativeHero as any).once === "function") {
+        nativeAny.__weaponCleanupWired = true;
+        try {
+            (nativeHero as any).once("destroy", () => {
+                _destroyWeaponOverlaysForHeroNative(nativeHero);
+            });
+        } catch { /* ignore */ }
+    }
+
+    return { weaponBg, weaponFg };
+}
+
+
+
+
+function _syncWeaponOverlaysForHeroNative(
+    ctx: SyncContext,
+    s: any,
+    nativeHero: Phaser.GameObjects.Sprite
+): void {
+    const sc = ctx.sc as any;
+    if (!sc) return;
+
+    const overlays = _ensureWeaponOverlaysForHeroNative(ctx, nativeHero);
+    if (!overlays) return;
+
+    const dataAny: any = (s as any).data || {};
+
+    const phaseRaw = (typeof dataAny.phase === "string" && dataAny.phase) ? dataAny.phase : "idle";
+    const dirRaw = (typeof dataAny.dir === "string" && dataAny.dir) ? dataAny.dir : "down";
+    const dir =
+        (dirRaw === "up" || dirRaw === "down" || dirRaw === "left" || dirRaw === "right")
+            ? dirRaw
+            : "down";
+
+    const aState = (dataAny[HERO_AGI_STATE_KEY] as any | 0);
+
+    const wSlash = (typeof dataAny[HERO_WPN_SLASH_KEY] === "string") ? String(dataAny[HERO_WPN_SLASH_KEY]) : "";
+    const wThrust = (typeof dataAny[HERO_WPN_THRUST_KEY] === "string") ? String(dataAny[HERO_WPN_THRUST_KEY]) : "";
+    const wCast = (typeof dataAny[HERO_WPN_CAST_KEY] === "string") ? String(dataAny[HERO_WPN_CAST_KEY]) : "";
+    const wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
+
+    // Choose active weapon slot:
+    // - Exec wins (Agility assassinate/execute), else follow phase.
+    let weaponId = "";
+    let weaponPhase = phaseRaw;
+
+    if (aState === AGI_STATE_EXECUTING) {
+        weaponId = wExec || wSlash; // exec fallback to slash
+        // keep weaponPhase as current phase; weapon sheet resolution still keys off heroPhase tokens
+        // (this is fine because exec usually happens during slash/thrust frames; if you later add a dedicated
+        //  phase token, update weaponPhase here.)
+    } else if (phaseRaw === "slash") {
+        weaponId = wSlash;
+    } else if (phaseRaw === "thrust") {
+        weaponId = wThrust;
+    } else if (phaseRaw === "cast") {
+        weaponId = wCast;
+    } else {
+        weaponId = "";
+    }
+
+    if (!weaponId) {
+        // Hide (avoid spamming setVisible if already hidden)
+        const anyHero: any = nativeHero as any;
+        if (anyHero.__weaponVis !== 0) {
+            try { overlays.weaponBg.setVisible(false); } catch { }
+            try { overlays.weaponFg.setVisible(false); } catch { }
+            anyHero.__weaponVis = 0;
+        }
+        return;
+    }
+
+    const heroFrameIndex = ((nativeHero as any).frame?.index ?? 0) | 0;
+
+    if (DEBUG_WEAPON_SYNC) {
+        const anyHero: any = nativeHero as any;
+        const last = anyHero.__weaponDbgLast;
+        const cur = `${weaponId}|${weaponPhase}|${dir}|${heroFrameIndex}|${aState}`;
+        if (cur !== last) {
+            console.log("[WPN]", { weaponId, weaponPhase, dir, heroFrameIndex, aState });
+            anyHero.__weaponDbgLast = cur;
+        }
+    }
+
+    weaponAnimGlue.syncWeaponLayersToHero({
+        scene: sc,
+        heroSprite: nativeHero,
+        weaponBg: overlays.weaponBg,
+        weaponFg: overlays.weaponFg,
+        weaponId,
+        heroPhase: weaponPhase,
+        dir: dir as any,
+        heroFrameIndex,
+        variant: DEFAULT_WEAPON_VARIANT
+    });
+
+    // Mark visible
+    (nativeHero as any).__weaponVis = 1;
+}
+
+
+
 // PURPOSE: Apply hero animation + hero aura glue onto hero native sprites.
 // READS:
 //   - role classification via _classifySpriteRole(kind, dataKeys)
@@ -3763,26 +4001,31 @@ function _syncHeroPath(
     const dataKeys = Object.keys(s.data || {});
     const role = _classifySpriteRole(s.kind, dataKeys);
 
-    // --- HERO ANIM GLUE HOOK --------------------------------------------
-    if (role === "HERO") {
-        const nativeAny: any = s.native;
-        if (nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative")) {
-            _tryApplyHeroAnimationForNative(
-                s,
-                nativeAny as Phaser.GameObjects.Sprite
-            );
+    if (role !== "HERO") return;
 
-            const auraActive = !!(s.data && (s.data as any)["auraActive"]);
-            const auraColor =
-                ((s.data && (s.data as any)["auraColor"]) as any | 0);
+    const nativeAny: any = s.native;
+    if (!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"))) return;
 
-            heroAnimGlue.syncHeroAuraForNative(
-                s.native,
-                auraActive,
-                auraColor
-            );
-        }
-    }
+    _tryApplyHeroAnimationForNative(
+        s,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
+
+    const auraActive = !!(s.data && (s.data as any)["auraActive"]);
+    const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
+
+    heroAnimGlue.syncHeroAuraForNative(
+        s.native,
+        auraActive,
+        auraColor
+    );
+
+    // Step 6: per-frame weapon sync (creates overlays once via Step 5 helper)
+    _syncWeaponOverlaysForHeroNative(
+        ctx,
+        s,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
 }
 
 
@@ -3904,6 +4147,9 @@ function _syncPixelDeathRemoval(
     }
 
     if (s.native && (s.native as any).destroy) {
+        // Step 8: ensure weapon overlays are destroyed too
+        _destroyWeaponOverlaysForHeroNative(s.native);
+
         try {
             (s.native as any).destroy();
         } catch (e) {
@@ -5640,10 +5886,42 @@ type NetMessage =
           playerId: number;
           button: string;
           pressed: boolean;
-          // Timestamp (ms) when the client sent this input
+
+          // performance.now()-style timestamp (ms) captured on sender
           sentAtMs?: number;
+
+          // Date.now()-style timestamp (ms) captured on sender (helps correlate clocks)
+          sentWallMs?: number;
+
+          // Monotonic per-client sequence number (debugging / ordering)
+          inputSeq?: number;
+
+          // Optional server timestamps (server may attach these)
+          serverRecvAt?: number;
+          serverSentAt?: number;
       }
-    | { type: "state"; playerId: number; snapshot: netWorld.WorldSnapshot };
+    | { type: "state"; playerId: number; snapshot: netWorld.WorldSnapshot; serverSentAt?: number }
+    | { type: "hostStatus"; isHost: boolean }
+    | {
+          // Full tilemap broadcast (static-first). Encoding is future-proofed.
+          type: "tilemap";
+          rev: number;
+          tileSize: number;
+          rows: number;
+          cols: number;
+          encoding: "raw";
+          data: number[][];
+      }
+    | {
+          // Reserved for future encodings (we won’t use these yet, but types are ready).
+          type: "tilemap";
+          rev: number;
+          tileSize: number;
+          rows: number;
+          cols: number;
+          encoding: "rle" | "u8b64";
+          data: string;
+      };
 
     
 
@@ -5655,6 +5933,13 @@ class NetworkClient {
 
     // NEW: per-client monotonically increasing input sequence
     private inputSeq: number = 0;
+
+    // Host flag as reported by the server (authoritative)
+    private _isHostFromServer: boolean = false;
+
+    // Latest tilemap revision we've accepted (monotonic)
+    private _tilemapRev: number = 0;
+
 
     constructor(url: string) {
         this.url = url;
@@ -5737,235 +6022,312 @@ class NetworkClient {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             return;
         }
-        if (this.playerId == null || this.playerId !== 1) {
-            // Only player 1 is allowed to send world snapshots (host)
+
+        // Authority is based on server-reported hostStatus, NOT playerId === 1
+        if (!this.isHostNow()) {
             return;
         }
+
+        if (this.playerId == null) {
+            // Shouldn't happen if we're host, but keep it safe
+            return;
+        }
+
         const payload: NetMessage = {
             type: "state",
             playerId: this.playerId,
             snapshot: snap
         };
+
         this.ws.send(JSON.stringify(payload));
     }
 
-    private handleMessage(msg: NetMessage) {
 
-
-
-
-
-        if (msg.type === "assign") {
-            this.playerId = msg.playerId;
-
-            const gAssign: any = (globalThis as any);
-
-            console.log(
-                "[net] assigned playerId =",
-                this.playerId,
-                "name=",
-                msg.name
-            );
-
-            // Tie this client to that global player slot
-            const ctrlNS: any = gAssign.controller;
-            if (ctrlNS && typeof ctrlNS.setLocalPlayerSlot === "function") {
-                ctrlNS.setLocalPlayerSlot(this.playerId);
-            }
-
-            // Register profile / name for HeroEngine hook
-            const slotIndex = this.playerId - 1;
-            const name = msg.name || null;
-
-            if (!gAssign.__heroProfiles) {
-                gAssign.__heroProfiles = ["Default", "Default", "Default", "Default"];
-            }
-            if (!gAssign.__playerNames) {
-                gAssign.__playerNames = [null, null, null, null];
-            }
-
-            gAssign.__playerNames[slotIndex] = name;
-
-            if (name) {
-                const existing = gAssign.__heroProfiles[slotIndex];
-                if (!existing || existing === "Default") {
-                    gAssign.__heroProfiles[slotIndex] = name;
-                }
-            }
-
-            return;
+        private isHostNow(): boolean {
+        // Central source of truth for "hostness" inside NetworkClient.
+        // Keep globalThis.__isHost in sync because other non-network code already reads it.
+        const g: any = (globalThis as any);
+        if (g.__isHost !== this._isHostFromServer) {
+            g.__isHost = this._isHostFromServer;
+        }
+        return this._isHostFromServer;
         }
 
-
-        if (msg.type === "hostStatus") {
-            const gAssign: any = (globalThis as any);
-            const isHost = !!msg.isHost;
-
-            gAssign.__isHost = isHost;
-
-            console.log("[net] hostStatus =", isHost);
-
-            // If this client is host, kick off the HeroEngine host loop
-            if (isHost && typeof gAssign.__startHeroEngineHost === "function") {
-                gAssign.__startHeroEngineHost();
-            }
-
-            return;
-        }
-
-
-        if (msg.type === "state") {
-            const gState: any = (globalThis as any);
-            const isHost = !!(gState && gState.__isHost);
-
-            // Host already has authoritative world state.
-            // Ignore echoed snapshots to avoid duplicating sprites / state.
-            if (isHost) {
-                // console.log("[net] host ignoring echoed state snapshot");
+    
+        private handleMessage(msg: NetMessage) {
+        switch (msg.type) {
+            case "assign":
+                this.onAssign(msg);
                 return;
-            }
 
-            // Followers mirror the host via snapshots.
-            netWorld.apply(msg.snapshot);
+            case "hostStatus":
+                this.onHostStatus(msg);
+                return;
+
+            case "state":
+                this.onState(msg);
+                return;
+
+            case "input":
+                this.onInput(msg as any);
+                return;
+
+            case "tilemap":
+                this.onTilemap(msg);
+                return;
+
+            default:
+                // Unknown / unhandled message type: ignore.
+                return;
+        }
+    }
+
+
+
+    private onAssign(msg: Extract<NetMessage, { type: "assign" }>) {
+        this.playerId = msg.playerId;
+
+        const gAssign: any = (globalThis as any);
+
+        console.log(
+            "[net] assigned playerId =",
+            this.playerId,
+            "name=",
+            msg.name
+        );
+
+        // Tie this client to that global player slot
+        const ctrlNS: any = gAssign.controller;
+        if (ctrlNS && typeof ctrlNS.setLocalPlayerSlot === "function") {
+            ctrlNS.setLocalPlayerSlot(this.playerId);
+        }
+
+        // Register profile / name for HeroEngine hook
+        const slotIndex = this.playerId - 1;
+        const name = msg.name || null;
+
+        if (!gAssign.__heroProfiles) {
+            gAssign.__heroProfiles = ["Default", "Default", "Default", "Default"];
+        }
+        if (!gAssign.__playerNames) {
+            gAssign.__playerNames = [null, null, null, null];
+        }
+
+        gAssign.__playerNames[slotIndex] = name;
+
+        if (name) {
+            const existing = gAssign.__heroProfiles[slotIndex];
+            if (!existing || existing === "Default") {
+                gAssign.__heroProfiles[slotIndex] = name;
+            }
+        }
+    }
+
+
+    private onHostStatus(msg: any) {
+        const gAssign: any = (globalThis as any);
+        const isHost = !!msg.isHost;
+
+        // Centralized host flag
+        this._isHostFromServer = isHost;
+
+        // Keep legacy global in sync (other files read it)
+        gAssign.__isHost = isHost;
+
+        console.log("[net] hostStatus =", isHost);
+
+        // If this client is host, kick off the HeroEngine host loop
+        if (isHost && typeof gAssign.__startHeroEngineHost === "function") {
+            gAssign.__startHeroEngineHost();
+        }
+    }
+
+
+
+    private onState(msg: Extract<NetMessage, { type: "state" }>) {
+        const isHost = this.isHostNow();
+
+        // Host already has authoritative world state.
+        // Ignore echoed snapshots to avoid duplicating sprites / state.
+        if (isHost) {
+            // console.log("[net] host ignoring echoed state snapshot");
             return;
         }
 
+        // Followers mirror the host via snapshots.
+        netWorld.apply(msg.snapshot);
+    }
+
+    private onTilemap(msg: Extract<NetMessage, { type: "tilemap" }>) {
+        const rev = msg.rev;
+
+        // Monotonic revision guard
+        if (typeof rev !== "number") return;
+        if (rev <= this._tilemapRev) return;
+
+        this._tilemapRev = rev;
+
+        const g: any = (globalThis as any);
+        g.__netTilemapRev = rev;
+        g.__lastTilemapMsg = msg; // helpful for debugging / late hook install
+
+        const info = {
+            rev: msg.rev,
+            rows: msg.rows,
+            cols: msg.cols,
+            tileSize: msg.tileSize,
+            encoding: msg.encoding,
+        };
+
+        const hook = g.__onNetTilemap;
+        if (typeof hook === "function") {
+            try {
+                if (DEBUG_TILEMAP) {
+                    console.log(">>> [net.tilemap] received; forwarding to Phaser hook", info);
+                }
+                hook(msg);
+            } catch (e) {
+                console.error(">>> [net.tilemap] __onNetTilemap ERROR:", e);
+            }
+        } else {
+            if (DEBUG_TILEMAP) {
+                console.warn(
+                    ">>> [net.tilemap] received but __onNetTilemap not installed yet; cached in globalThis.__lastTilemapMsg",
+                    info
+                );
+            }
+        }
+    }
 
 
 
+    private onInput(msg: any) {
+        const g: any = (globalThis as any);
+        const isHost = this.isHostNow();
 
+        // Only the host should apply inputs to controllers.
+        if (!isHost) {
+            // console.log("[net] non-host ignoring input message", msg);
+            return;
+        }
 
-        if (msg.type === "input") {
-            const g: any = (globalThis as any);
-            const isHost = !!g.__isHost;
+        const ctrlNS: any = g.controller;
+        if (!ctrlNS) return;
 
-            // Only the host should apply inputs to controllers.
-            if (!isHost) {
-                // console.log("[net] non-host ignoring input message", msg);
-                return;
+        const playerId = msg.playerId;
+        let ctrl: any = null;
+        if (playerId === 1) ctrl = ctrlNS.player1;
+        else if (playerId === 2) ctrl = ctrlNS.player2;
+        else if (playerId === 3) ctrl = ctrlNS.player3;
+        else if (playerId === 4) ctrl = ctrlNS.player4;
+
+        if (!ctrl) return;
+
+        const btnName = msg.button;       // "left" | "right" | "up" | "down" | "A" | "B"
+        const pressed = !!msg.pressed;
+
+        // ---------------------------------------------------------
+        // 1) Measure input *arrival* lag (client -> host)
+        // ---------------------------------------------------------
+        let lagMs = -1;
+        if (typeof msg.sentAtMs === "number") {
+            const nowMs =
+                typeof performance !== "undefined" ? performance.now() : Date.now();
+            lagMs = nowMs - msg.sentAtMs;
+
+            // Establish a baseline to account for clock offset + normal latency
+            if (_inputLagBaselineSamples < 20) {
+                if (_inputLagBaselineSamples === 0 || lagMs < _inputLagBaselineMs) {
+                    _inputLagBaselineMs = lagMs;
+                }
+                _inputLagBaselineSamples++;
             }
 
-            const ctrlNS: any = g.controller;
-            if (!ctrlNS) return;
-
-            const playerId = msg.playerId;
-            let ctrl: any = null;
-            if (playerId === 1) ctrl = ctrlNS.player1;
-            else if (playerId === 2) ctrl = ctrlNS.player2;
-            else if (playerId === 3) ctrl = ctrlNS.player3;
-            else if (playerId === 4) ctrl = ctrlNS.player4;
-
-            if (!ctrl) return;
-
-            const btnName = msg.button;       // "left" | "right" | "up" | "down" | "A" | "B"
-            const pressed = !!msg.pressed;
-
-            // ---------------------------------------------------------
-            // 1) Measure input *arrival* lag (client -> host)
-            // ---------------------------------------------------------
-            let lagMs = -1;
-            if (typeof msg.sentAtMs === "number") {
-                const nowMs =
-                    typeof performance !== "undefined" ? performance.now() : Date.now();
-                lagMs = nowMs - msg.sentAtMs;
-
-                // Establish a baseline to account for clock offset + normal latency
-                if (_inputLagBaselineSamples < 20) {
-                    if (_inputLagBaselineSamples === 0 || lagMs < _inputLagBaselineMs) {
-                        _inputLagBaselineMs = lagMs;
-                    }
-                    _inputLagBaselineSamples++;
-                }
-
-                // If we have a baseline, look at *extra* lag beyond that
-                let excessMs = lagMs;
-                if (_inputLagBaselineSamples > 0) {
-                    excessMs = lagMs - _inputLagBaselineMs;
-                }
-
-                let spriteCount = 0;
-                try {
-                    spriteCount = sprites.allSprites().length;
-                } catch (e) {
-                    // ignore; non-fatal
-                }
-
-
-
-                
-                const shouldWarn =
-                    excessMs > INPUT_LAG_WARN_EXCESS_MS &&
-                    lagMs > INPUT_LAG_WARN_MS &&
-                    Math.abs(lagMs - _lastInputLagWarnMs) > 50;
-
-                if (DEBUG_NET && shouldWarn) {
-                    _lastInputLagWarnMs = lagMs;
-
-                    const hostWallNow = Date.now();
-                    const seq = (msg as any).inputSeq ?? -1;
-                    const sentWall = (msg as any).sentWallMs ?? null;
-
-                    console.warn(
-                        "[inputLag.net]",
-                        "seq=", seq,
-                        "playerId=", playerId,
-                        "button=", btnName,
-                        "pressed=", pressed,
-                        "lagMs≈", lagMs.toFixed(1),
-                        "baseline≈", _inputLagBaselineMs.toFixed(1),
-                        "excessMs≈", excessMs.toFixed(1),
-                        "sprites=", spriteCount,
-                        "sentWallMs=", sentWall,
-                        "hostWallMs=", hostWallNow
-                    );
-                }
+            // If we have a baseline, look at *extra* lag beyond that
+            let excessMs = lagMs;
+            if (_inputLagBaselineSamples > 0) {
+                excessMs = lagMs - _inputLagBaselineMs;
             }
 
-            // ---------------------------------------------------------
-            // 2) Measure *host processing* time for this input
-            // ---------------------------------------------------------
-            const btn: any = ctrl[btnName];
-            if (!btn || typeof btn._setPressed !== "function") return;
+            let spriteCount = 0;
+            try {
+                spriteCount = sprites.allSprites().length;
+            } catch (e) {
+                // ignore; non-fatal
+            }
 
-            const procStartMs =
-                typeof performance !== "undefined" ? performance.now() : Date.now();
+            const shouldWarn =
+                excessMs > INPUT_LAG_WARN_EXCESS_MS &&
+                lagMs > INPUT_LAG_WARN_MS &&
+                Math.abs(lagMs - _lastInputLagWarnMs) > 50;
 
-            btn._setPressed(pressed);    // <-- actual host-side work for this input
+            if (DEBUG_NET && shouldWarn) {
+                _lastInputLagWarnMs = lagMs;
 
-            const procEndMs =
-                typeof performance !== "undefined" ? performance.now() : Date.now();
-            const procMs = procEndMs - procStartMs;
-
-            // Only log if host processing is unusually slow
-            if (
-                procMs > INPUT_PROC_WARN_MS &&
-                Math.abs(procMs - _lastInputProcWarnMs) > INPUT_PROC_SPAM_GAP_MS
-            ) {
-                _lastInputProcWarnMs = procMs;
-
-                let spriteCountForProc = 0;
-                try {
-                    spriteCountForProc = sprites.allSprites().length;
-                } catch (e) {
-                    // ignore
-                }
+                const hostWallNow = Date.now();
+                const seq = (msg as any).inputSeq ?? -1;
+                const sentWall = (msg as any).sentWallMs ?? null;
 
                 console.warn(
-                    "[inputProc.net]",
+                    "[inputLag.net]",
+                    "seq=", seq,
                     "playerId=", playerId,
                     "button=", btnName,
                     "pressed=", pressed,
-                    "procMs≈", procMs.toFixed(3),
-                    lagMs >= 0 ? "lagMs≈ " + lagMs.toFixed(1) : "lagMs≈ n/a",
-                    "sprites=", spriteCountForProc
+                    "lagMs≈", lagMs.toFixed(1),
+                    "baseline≈", _inputLagBaselineMs.toFixed(1),
+                    "excessMs≈", excessMs.toFixed(1),
+                    "sprites=", spriteCount,
+                    "sentWallMs=", sentWall,
+                    "hostWallMs=", hostWallNow
                 );
             }
-
-            // (no extra return; we're done)
         }
 
+        // ---------------------------------------------------------
+        // 2) Measure *host processing* time for this input
+        // ---------------------------------------------------------
+        const btn: any = ctrl[btnName];
+        if (!btn || typeof btn._setPressed !== "function") return;
 
+        const procStartMs =
+            typeof performance !== "undefined" ? performance.now() : Date.now();
+
+        btn._setPressed(pressed);    // <-- actual host-side work for this input
+
+        const procEndMs =
+            typeof performance !== "undefined" ? performance.now() : Date.now();
+        const procMs = procEndMs - procStartMs;
+
+        // Only log if host processing is unusually slow
+        if (
+            procMs > INPUT_PROC_WARN_MS &&
+            Math.abs(procMs - _lastInputProcWarnMs) > INPUT_PROC_SPAM_GAP_MS
+        ) {
+            _lastInputProcWarnMs = procMs;
+
+            let spriteCountForProc = 0;
+            try {
+                spriteCountForProc = sprites.allSprites().length;
+            } catch (e) {
+                // ignore
+            }
+
+            console.warn(
+                "[inputProc.net]",
+                "playerId=", playerId,
+                "button=", btnName,
+                "pressed=", pressed,
+                "procMs≈", procMs.toFixed(3),
+                lagMs >= 0 ? "lagMs≈ " + lagMs.toFixed(1) : "lagMs≈ n/a",
+                "sprites=", spriteCountForProc
+            );
+        }
     }
+
+
+
+
 }
 
 

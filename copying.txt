@@ -1,0 +1,31 @@
+COPYING / LICENSING NOTICE
+
+This repository contains:
+  (A) original source code, and
+  (B) third-party art/assets.
+
+A) CODE
+The license for ORIGINAL CODE in this repository is in the top-level file: LICENSE
+
+B) THIRD-PARTY ART / ASSETS
+Third-party art/assets are NOT covered by the code license. Copyright remains with the
+original creators. This repo redistributes those assets under the licenses stated by their
+authors/sources, and attribution is provided in the files under:
+
+  licensing/
+
+Key attribution / credit sources (included in licensing/):
+  - Weapons (per-file credits): licensing/CREDITSFromLPCSpritesheetGenerator.csv
+  - LPC base assets credits:  licensing/CREDITSLPCBaseAssets.txt
+  - LPC sprite author lists:  licensing/spriteAuthors.md
+  - LPC tileset author lists: licensing/tilesetAuthors.md
+  - Monsters and other OGA assets: licensing/MonsterCreditsLicensing.txt
+
+License texts included (for convenience):
+  - licensing/LICENSE GPL
+  - licensing/LICENSE-CC-BY-SA-3.0
+
+LPC note:
+The OpenGameArt “LiberatedPixelCup” asset repository states its assets are dual-licensed
+under CC BY-SA 3.0 and GPLv3. See the author lists and license texts in licensing/. 
+

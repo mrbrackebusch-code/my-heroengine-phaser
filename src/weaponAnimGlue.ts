@@ -1,40 +1,27 @@
 // src/weaponAnimGlue.ts
-// Phaser-side weapon overlay sprites (weapon + ghost trails) and deterministic
-// pose/frame resolution utilities.
+// Phaser-side weapon overlay sprites (BG/FG sandwich + optional ghost trails)
+// and deterministic frame resolution utilities.
 
 import type Phaser from "phaser";
 
 import {
   type Dir4,
   type WeaponId,
-  type WeaponKind,
   type WeaponMode,
-  WEAPONS,
-  weaponModeForHeroPhase,
-  resolveWeaponSheet
+  type WeaponSheetRef,
+  resolveWeaponLayerPair,
+  resolveWeaponSheet,
+  tileForWeaponMode,
+  weaponModeForHeroPhase
 } from "./weaponAtlas";
 
 // ----------------------------------------------------------
-// Constants / knobs (tweak freely)
+// Constants / knobs
 // ----------------------------------------------------------
 
-const DIR_ORDER: Dir4[] = ["up", "left", "down", "right"]; // matches hero tester ordering
+const DIR_ORDER: Dir4[] = ["up", "left", "down", "right"]; // matches heroAtlas conventions
 
-// If a WeaponSheetRef.totalFrames is not supplied, we assume an LPC-ish row length.
-// (This is only used to keep deterministic pose defaults from exploding.)
-const DEFAULT_ROW_LEN = 13;
-
-// Depth policy: where weapon should sit relative to hero.
-// You can override later by moving this policy into per-weapon offsets.
-const WEAPON_DEPTH_DELTA_BY_DIR: Record<Dir4, number> = {
-  up: -1,
-  down: +1,
-  left: +1,
-  right: +1
-};
-
-// Optional positional nudges (in pixels), in case you later want slight hand offsets.
-// Leave at 0 for now so the overlay is perfectly centered.
+// Optional positional nudges (in pixels), if you later want slight hand offsets.
 const WEAPON_OFFSET_BY_DIR: Record<Dir4, { x: number; y: number }> = {
   up: { x: 0, y: 0 },
   down: { x: 0, y: 0 },
@@ -42,53 +29,90 @@ const WEAPON_OFFSET_BY_DIR: Record<Dir4, { x: number; y: number }> = {
   right: { x: 0, y: 0 }
 };
 
+
 // ----------------------------------------------------------
-// 5) Create overlay sprites (weapon + ghosts)
+// Debug: gated, once-per-key logging for resolve failures/success
+// Enable with: ?weaponDebug=1 (and optionally &weaponDebugVerbose=1)
+// main.ts sets globalThis.__weaponDebug / __weaponDebugVerbose.
+// ----------------------------------------------------------
+
+const _WEAPON_RESOLVE_MISS_ONCE = new Set<string>();
+const _WEAPON_RESOLVE_HIT_ONCE = new Set<string>();
+
+function _weaponDebugEnabled(): boolean {
+  return !!(globalThis as any).__weaponDebug;
+}
+function _weaponDebugVerbose(): boolean {
+  return !!(globalThis as any).__weaponDebugVerbose;
+}
+function _logWeaponResolveMissOnce(key: string, payload: any): void {
+  if (_WEAPON_RESOLVE_MISS_ONCE.has(key)) return;
+  _WEAPON_RESOLVE_MISS_ONCE.add(key);
+  console.warn("[WPN-RESOLVE-MISS]", payload);
+}
+function _logWeaponResolveHitOnce(key: string, payload: any): void {
+  if (_WEAPON_RESOLVE_HIT_ONCE.has(key)) return;
+  _WEAPON_RESOLVE_HIT_ONCE.add(key);
+  console.log("[WPN-RESOLVE-HIT]", payload);
+}
+
+
+
+// ----------------------------------------------------------
+// Sprite factory
 // ----------------------------------------------------------
 
 export function createWeaponOverlaySprites(args: {
   scene: Phaser.Scene;
   maxGhosts: number;
 }): {
+  weaponBg: Phaser.GameObjects.Sprite;
+  weaponFg: Phaser.GameObjects.Sprite;
+  // Back-compat aliases (older glue expected a single weapon sprite)
   weapon: Phaser.GameObjects.Sprite;
+  ghostsBg: Phaser.GameObjects.Sprite[];
+  ghostsFg: Phaser.GameObjects.Sprite[];
   ghosts: Phaser.GameObjects.Sprite[];
 } {
   const { scene } = args;
 
   // Create with a dummy texture; we'll swap texture+frame on first sync.
-  // Phaser requires a valid texture key; "__MISSING" is always available.
-  const weapon = scene.add.sprite(0, 0, "__MISSING", 0);
-  weapon.setVisible(false);
+  const weaponBg = scene.add.sprite(0, 0, "__MISSING", 0);
+  const weaponFg = scene.add.sprite(0, 0, "__MISSING", 0);
+  weaponBg.setVisible(false);
+  weaponFg.setVisible(false);
 
-  const ghosts: Phaser.GameObjects.Sprite[] = [];
+  const ghostsBg: Phaser.GameObjects.Sprite[] = [];
+  const ghostsFg: Phaser.GameObjects.Sprite[] = [];
   const n = Math.max(0, args.maxGhosts | 0);
   for (let i = 0; i < n; i++) {
-    const g = scene.add.sprite(0, 0, "__MISSING", 0);
-    g.setVisible(false);
-    g.setAlpha(0.35);
-    ghosts.push(g);
+    const gb = scene.add.sprite(0, 0, "__MISSING", 0);
+    const gf = scene.add.sprite(0, 0, "__MISSING", 0);
+    gb.setVisible(false);
+    gf.setVisible(false);
+    gb.setAlpha(0.25);
+    gf.setAlpha(0.35);
+    ghostsBg.push(gb);
+    ghostsFg.push(gf);
   }
 
-  return { weapon, ghosts };
+  return {
+    weaponBg,
+    weaponFg,
+    weapon: weaponFg,
+    ghostsBg,
+    ghostsFg,
+    ghosts: ghostsFg
+  };
 }
 
 // ----------------------------------------------------------
-// 6) Pose frames resolver (1–N frames)
+// Frame/grid helpers
 // ----------------------------------------------------------
 
 function dirIndex(dir: Dir4): number {
   const i = DIR_ORDER.indexOf(dir);
   return i >= 0 ? i : 0;
-}
-
-function stableHash32(s: string): number {
-  // FNV-1a-ish, tiny and stable.
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  return h >>> 0;
 }
 
 function clampInt(v: number, lo: number, hi: number): number {
@@ -98,145 +122,155 @@ function clampInt(v: number, lo: number, hi: number): number {
   return v;
 }
 
-function computeDefaultRowLen(totalFrames: number | undefined): number {
-  const t = (totalFrames ?? 0) | 0;
-  if (t > 0 && t % 4 === 0) {
-    const row = (t / 4) | 0;
-    if (row > 0) return row;
-  }
-  return DEFAULT_ROW_LEN;
+type SheetGrid = { cols: number; rows: number; total: number };
+const GRID_CACHE = new Map<string, SheetGrid>();
+
+function getSheetGrid(scene: Phaser.Scene, ref: WeaponSheetRef): SheetGrid {
+  const key = ref.key;
+  const cached = GRID_CACHE.get(key);
+  if (cached) return cached;
+
+  const tex = scene.textures.get(key);
+  const src: any = tex?.getSourceImage?.();
+  const w = (src?.width ?? 0) | 0;
+  const h = (src?.height ?? 0) | 0;
+  const tile = ref.frameW | 0;
+
+  const cols = tile > 0 ? Math.max(1, Math.floor(w / tile)) : 1;
+  const rows = tile > 0 ? Math.max(1, Math.floor(h / tile)) : 1;
+  const total = cols * rows;
+
+  const grid = { cols, rows, total };
+  GRID_CACHE.set(key, grid);
+  return grid;
 }
 
-function computeRowStart(totalFrames: number | undefined, dir: Dir4): number {
-  const rowLen = computeDefaultRowLen(totalFrames);
-  return dirIndex(dir) * rowLen;
-}
 
-function poseToWithinRowFrames(pose: string, rowLen: number): number[] {
-  const p = String(pose || "").trim();
-  const rl = Math.max(1, rowLen | 0);
-
-  // Stable defaults (cheap + deterministic).
-  // The idea: you can author 1–2 frame idles and 2–4 frame accents.
-  // Adjust these later once weapon sheets exist.
-  switch (p) {
-    case "held":
-      return [0];
-    case "idle2":
-      return [0, Math.min(1, rl - 1)];
-    case "slashA":
-      return [Math.min(2, rl - 1), Math.min(3, rl - 1)];
-    case "slashB":
-      return [Math.min(4, rl - 1), Math.min(5, rl - 1)];
-    default: {
-      // Unknown pose: pick 1 deterministic frame within the row.
-      const h = stableHash32(p);
-      return [h % rl];
-    }
-  }
-}
-
-export function resolveWeaponPoseFrames(args: {
-  weaponId: WeaponId;
-  kind?: WeaponKind;
-  mode: WeaponMode;
-  dir: Dir4;
-  pose: string; // e.g. "held", "idle2", "slashA", "slashB"
-}): number[] {
-  const def = WEAPONS[args.weaponId];
-  const pose = String(args.pose || "held");
-
-  // 1) Explicit override mapping if provided.
-  const override =
-    def?.posesByDir?.[args.dir]?.[pose] ??
-    def?.posesByDir?.[args.dir]?.[String(pose).toLowerCase()];
-
-  if (override && override.length > 0) {
-    return override.slice();
-  }
-
-  // 2) Deterministic defaults.
-  const sheet = resolveWeaponSheet({
-    weaponId: args.weaponId,
-    kind: args.kind,
-    mode: args.mode
-  });
-
-  // Even if the sheet is missing, we must return at least 1 frame.
-  const totalFrames = sheet?.totalFrames;
-  const rowLen = computeDefaultRowLen(totalFrames);
-  const rowStart = computeRowStart(totalFrames, args.dir);
-  const within = poseToWithinRowFrames(pose, rowLen);
-
-  const out: number[] = [];
-  for (const w of within) {
-    const idx = rowStart + (w | 0);
-    if (typeof totalFrames === "number" && totalFrames > 0) {
-      out.push(clampInt(idx, 0, totalFrames - 1));
-    } else {
-      out.push(Math.max(0, idx | 0));
-    }
-  }
-
-  return out.length > 0 ? out : [0];
-}
 
 // ----------------------------------------------------------
-// 7) Frame index resolver for “sync to hero” cases
+// Core “sync to hero” frame mapping
 // ----------------------------------------------------------
 
-export function resolveWeaponFrameIndex(args: {
+// Returned by syncWeaponLayersToHero / syncWeaponToHero.
+// Useful later for single-frame poses, ghost copies, and free-floating weapon effects.
+export type WeaponResolvedLayer = {
+  key: string;
+  frameIndex: number;
+};
+
+export type WeaponRenderResolve = {
   weaponId: WeaponId;
-  kind?: WeaponKind;
-  mode: WeaponMode;
-  dir: Dir4;
   heroPhase: string;
-  heroFrameIndex: number;
+  dir: Dir4;
+  variant: string;
+  // We keep mode for observability/debug, but tile selection is handled by weaponAtlas.
+  mode: WeaponMode;
+  // The resolved anim token inside the atlas (e.g. "slash" or "thrust_oversize" normalized).
+  resolvedAnim: string;
+  // Tile size that the atlas resolved (64/128/192).
+  resolvedTile: number;
+  // Final draw position used.
+  x: number;
+  y: number;
+  // Depth plan.
+  heroDepth: number;
+  bgDepth: number;
+  fgDepth: number;
+  // Layers (if present in the pack)
+  bg?: WeaponResolvedLayer;
+  fg?: WeaponResolvedLayer;
+};
+
+// If you want a fixed *column* (single frame) independent of hero animation progress,
+// use this helper and then set sprite.setFrame(result).
+export function resolveWeaponFrameIndexForDirAndCol(args: {
+  scene: Phaser.Scene;
+  sheet: WeaponSheetRef;
+  dir: Dir4;
+  colIndex: number; // 0..(cols-1)
 }): number {
-  const sheet = resolveWeaponSheet({
-    weaponId: args.weaponId,
-    kind: args.kind,
-    mode: args.mode
-  });
-
-  const total = sheet?.totalFrames;
-  const heroIdx = args.heroFrameIndex | 0;
-
-  // If weapon sheet layout matches hero phase layout, return heroFrameIndex.
-  // Our concrete test is simply: is heroFrameIndex in bounds (when totalFrames is known)?
-  if (typeof total === "number" && total > 0) {
-    if (heroIdx >= 0 && heroIdx < total) return heroIdx;
-  }
-
-  // Otherwise, deterministic fallback: held[0] for this dir.
-  const held = resolveWeaponPoseFrames({
-    weaponId: args.weaponId,
-    kind: args.kind,
-    mode: args.mode,
-    dir: args.dir,
-    pose: "held"
-  });
-  return (held[0] ?? 0) | 0;
+  const grid = getSheetGrid(args.scene, args.sheet);
+  const weaponCols = grid.cols;
+  const weaponRows = grid.rows;
+  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
+  const col = clampInt(args.colIndex | 0, 0, Math.max(0, weaponCols - 1));
+  const idx = row * weaponCols + col;
+  return clampInt(idx, 0, Math.max(0, grid.total - 1));
 }
 
+export function resolveWeaponFrameIndexForLayer(args: {
+  scene: Phaser.Scene;
+  sheet: WeaponSheetRef;
+  dir: Dir4;
+  heroSprite: Phaser.GameObjects.Sprite;
+  heroFrameIndex: number;
+  // Optional explicit override ("single frame" support). If provided, it is treated as
+  // a *column index* in the weapon sheet grid (0..cols-1), and ignores hero progress.
+  frameColOverride?: number;
+}): number {
+  const grid = getSheetGrid(args.scene, args.sheet);
+  const weaponCols = grid.cols;
+  const weaponRows = grid.rows;
+
+  // Row selection: most sheets are 4 rows; hurt is 1 row.
+  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
+
+  // Optional single-frame override: treat as a column index in the weapon sheet.
+  // This is the knob used for charge poses and future ghost copies.
+  let col = 0;
+  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
+    col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
+  } else {
+    // Preferred mapping: use animation progress, not raw frame index.
+    // This makes 9-frame hero walks map cleanly onto 8-frame weapon walks.
+    const animState: any = (args.heroSprite as any).anims;
+    if (animState && typeof animState.getProgress === "function") {
+      const p = Number(animState.getProgress()) || 0;
+      col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
+    } else {
+      // Fallback: attempt to mirror within-row column index from absolute frame index.
+      // Compute hero cols from hero texture source dimensions.
+      const hf = (args.heroSprite as any).frame;
+      const heroTile = (hf?.width ?? 0) | 0;
+      const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
+      const heroSrc: any = heroTex?.getSourceImage?.();
+      const heroW = (heroSrc?.width ?? 0) | 0;
+      const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
+      col = clampInt((args.heroFrameIndex | 0) % heroCols, 0, weaponCols - 1);
+    }
+  }
+
+  const idx = row * weaponCols + col;
+  return clampInt(idx, 0, Math.max(0, grid.total - 1));
+}
+
+
+
+
 // ----------------------------------------------------------
-// 8) Sync weapon sprite to hero sprite (position/depth/frame)
+// Sync BG/FG sandwich to hero
 // ----------------------------------------------------------
 
 export function syncWeaponToHero(args: {
+  scene: Phaser.Scene;
   heroSprite: Phaser.GameObjects.Sprite;
   weaponSprite: Phaser.GameObjects.Sprite;
   weaponId: WeaponId;
-  kind?: WeaponKind;
   heroPhase: string;
   dir: Dir4;
   heroFrameIndex: number;
+  variant?: string;
+  // Optional explicit override for "single frame" poses.
+  // This is a *column index* (0..cols-1) in the weapon sheet.
+  frameColOverride?: number;
 }): void {
-  const mode = weaponModeForHeroPhase(args.heroPhase);
+  const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
+  const tile = tileForWeaponMode(mode);
   const sheet = resolveWeaponSheet({
     weaponId: args.weaponId,
-    kind: args.kind,
-    mode
+    mode,
+    heroPhase: args.heroPhase,
+    variant: args.variant
   });
 
   if (!sheet) {
@@ -244,81 +278,59 @@ export function syncWeaponToHero(args: {
     return;
   }
 
-  // Texture + frame
-  if (args.weaponSprite.texture?.key !== sheet.key) {
-    args.weaponSprite.setTexture(sheet.key);
-  }
+  // Defensive: if someone passes a WeaponSheetRef with mismatched tile, fix frameW/H.
+  const fixedSheet: WeaponSheetRef = {
+    key: sheet.key,
+    frameW: tile,
+    frameH: tile,
+    totalFrames: sheet.totalFrames
+  };
 
-  const frameIndex = resolveWeaponFrameIndex({
-    weaponId: args.weaponId,
-    kind: args.kind,
-    mode,
+  if (args.weaponSprite.texture?.key !== fixedSheet.key) args.weaponSprite.setTexture(fixedSheet.key);
+
+  const frameIndex = resolveWeaponFrameIndexForLayer({
+    scene: args.scene,
+    sheet: fixedSheet,
     dir: args.dir,
-    heroPhase: args.heroPhase,
-    heroFrameIndex: args.heroFrameIndex
+    heroSprite: args.heroSprite,
+    heroFrameIndex: args.heroFrameIndex,
+    frameColOverride: args.frameColOverride
   });
   args.weaponSprite.setFrame(frameIndex);
 
-  // Position (centered + optional offsets)
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
   args.weaponSprite.x = args.heroSprite.x + off.x;
   args.weaponSprite.y = args.heroSprite.y + off.y;
 
-  // Match hero origin/scale/flip/rotation so overlay stays glued.
-  if (typeof (args.weaponSprite as any).setOrigin === "function") {
-    const hx = (args.heroSprite as any).originX;
-    const hy = (args.heroSprite as any).originY;
-    if (typeof hx === "number" && typeof hy === "number") {
-      args.weaponSprite.setOrigin(hx, hy);
-    }
-  }
-
-  args.weaponSprite.scaleX = (args.heroSprite as any).scaleX ?? 1;
-  args.weaponSprite.scaleY = (args.heroSprite as any).scaleY ?? 1;
-  (args.weaponSprite as any).rotation = (args.heroSprite as any).rotation ?? 0;
-
-  if (typeof (args.weaponSprite as any).setFlipX === "function") {
-    (args.weaponSprite as any).setFlipX(!!(args.heroSprite as any).flipX);
-  }
-  if (typeof (args.weaponSprite as any).setFlipY === "function") {
-    (args.weaponSprite as any).setFlipY(!!(args.heroSprite as any).flipY);
-  }
-
-  // Depth policy (lives here)
   const heroDepth = (args.heroSprite as any).depth ?? 0;
-  const dd = WEAPON_DEPTH_DELTA_BY_DIR[args.dir] ?? 1;
-  args.weaponSprite.setDepth(heroDepth + dd);
-
+  args.weaponSprite.setDepth(heroDepth + 1);
   args.weaponSprite.setVisible(true);
 }
 
+
+
+
 // ----------------------------------------------------------
-// 9) Apply ghost trails with pendulum (pending add amount only)
+// Back-compat: single-layer sync (FG preferred)
+// ----------------------------------------------------------
+
+
+// ----------------------------------------------------------
+// Ghost trails (simple: show pending-add amount, uses one layer sprite)
 // ----------------------------------------------------------
 
 export function applyWeaponGhostTrails(args: {
   weaponSprite: Phaser.GameObjects.Sprite;
   ghosts: Phaser.GameObjects.Sprite[];
-  // pendulum inputs
   phase01: number; // 0..1
   maxGhostsVisible: number;
-  // pose selection for trails
-  weaponId: WeaponId;
-  kind?: WeaponKind;
-  heroPhase: string;
-  dir: Dir4;
-  heroFrameIndex: number;
-  trailsPose?: string; // default "held"
 }): { ghostCount: number } {
   const maxGhosts = Math.max(0, args.ghosts.length | 0);
   const wantMax = clampInt(args.maxGhostsVisible | 0, 0, maxGhosts);
 
-  // "phase01" is assumed to already be the pendulum-like 0..1 value.
-  // We map it directly to a count (pending add amount visualization).
   const t = Math.max(0, Math.min(1, Number(args.phase01) || 0));
   const ghostCount = clampInt(Math.round(t * wantMax), 0, wantMax);
 
-  // If weapon sprite isn't visible / has no valid texture, hide ghosts.
   const weaponVisible = !!args.weaponSprite.visible;
   const weaponKey = args.weaponSprite.texture?.key ? String(args.weaponSprite.texture.key) : "";
   if (!weaponVisible || !weaponKey || weaponKey === "__MISSING") {
@@ -326,18 +338,8 @@ export function applyWeaponGhostTrails(args: {
     return { ghostCount: 0 };
   }
 
-  const mode = weaponModeForHeroPhase(args.heroPhase);
-  const pose = args.trailsPose ?? "held";
-  const frames = resolveWeaponPoseFrames({
-    weaponId: args.weaponId,
-    kind: args.kind,
-    mode,
-    dir: args.dir,
-    pose
-  });
-  const f0 = (frames[0] ?? 0) | 0;
+  const f0 = ((args.weaponSprite as any).frame?.name ?? (args.weaponSprite as any).frame?.index ?? 0) as any;
 
-  // Visible ghosts
   for (let i = 0; i < args.ghosts.length; i++) {
     const g = args.ghosts[i];
     if (i < ghostCount) {
@@ -347,18 +349,15 @@ export function applyWeaponGhostTrails(args: {
       g.x = args.weaponSprite.x;
       g.y = args.weaponSprite.y;
 
-      // Keep transform glue
       g.scaleX = (args.weaponSprite as any).scaleX ?? 1;
       g.scaleY = (args.weaponSprite as any).scaleY ?? 1;
       (g as any).rotation = (args.weaponSprite as any).rotation ?? 0;
       if (typeof (g as any).setFlipX === "function") (g as any).setFlipX(!!(args.weaponSprite as any).flipX);
       if (typeof (g as any).setFlipY === "function") (g as any).setFlipY(!!(args.weaponSprite as any).flipY);
 
-      // Depth just behind weapon
       const wDepth = (args.weaponSprite as any).depth ?? 0;
       g.setDepth(wDepth - 1);
 
-      // Alpha falloff (deterministic)
       const a = 0.35 * (1 - i / Math.max(1, ghostCount));
       g.setAlpha(a);
       g.setVisible(true);

@@ -862,6 +862,17 @@ const HERO_DATA = {
     IS_DEAD: "isDead",
     DEATH_UNTIL: "deathUntil",
 
+    // -------------------------------------------------
+    // Weapons (net-safe: primitives only)
+    // -------------------------------------------------
+    WEAPON_LOADOUT_VER: "wVer",     // number (start at 1)
+    WEAPON_SLASH_ID: "wSl",         // string (weapon model id)
+    WEAPON_THRUST_ID: "wTh",        // string (weapon model id)
+    WEAPON_CAST_ID: "wCa",          // string (weapon model id)
+    WEAPON_EXEC_ID: "wEx",          // string (weapon model id; optional)
+
+
+
     // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
     DIR: "dir",
     PHASE: "phase",
@@ -1111,6 +1122,63 @@ const INT_DETONATE_END_KEY = "INT_DE"     // detonation end time (ms)
 
 // NEW: control window (when the player must finish aiming)
 const INT_CTRL_UNTIL_KEY = "INT_CTRL_UNTIL"
+
+
+
+
+// --------------------------------------------------------------
+// Weapon defaults (Step 2)
+// NOTE: weapon IDs must match weaponAtlas "model" ids.
+// --------------------------------------------------------------
+
+const DEFAULT_WEAPON_LOADOUT_VER = 1
+
+// Your current picked defaults:
+const DEFAULT_WEAPON_SLASH_ID = "katana"
+const DEFAULT_WEAPON_THRUST_ID = "spear"
+const DEFAULT_WEAPON_EXEC_ID = "dagger"
+
+// Engine phase is "cast" but your sheet token is "spellcast".
+// We will resolve "cast" -> ["cast","spellcast"] in weaponAtlas.ts (see below).
+const DEFAULT_WEAPON_CAST_ID = "simple"
+
+// Optional (future):
+const DEFAULT_WEAPON_VARIANT = "base"
+
+// --------------------------------------------------------------
+// Hardcoded weapon loadout source (Step 3)
+// (Internal-only object; Step 4 will write primitive strings to sprite.data)
+// --------------------------------------------------------------
+
+interface HardcodedWeaponLoadout {
+    slashId: string
+    thrustId: string
+    castId: string
+    execId: string
+}
+
+function getHardcodedWeaponLoadoutForHero(profileName: string, familyNumber: number): HardcodedWeaponLoadout {
+    // profileName is a stable string you already seed as "heroName"
+    // familyNumber is included for future theming (currently unused in default case)
+    const key = String(profileName || "").trim().toLowerCase()
+
+    // Future hook: per-profile loadouts (drops/equip can later override sprite.data)
+    switch (key) {
+
+        // Example (disabled until you want it):
+        // case "hennessy":
+        //     return { slashId: "sword", thrustId: "spear", castId: "staff", execId: "dagger" }
+
+        default:
+            return {
+                slashId: DEFAULT_WEAPON_SLASH_ID,   // "sword"
+                thrustId: DEFAULT_WEAPON_THRUST_ID, // "spear"
+                castId: DEFAULT_WEAPON_CAST_ID,     // "staff"
+                execId: DEFAULT_WEAPON_EXEC_ID,     // "dagger"
+            }
+    }
+}
+
 
 
 
@@ -2925,6 +2993,20 @@ function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before
 
 
 
+function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, familyNumber: number) {
+    const existingVer = sprites.readDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER) | 0
+    if (existingVer === DEFAULT_WEAPON_LOADOUT_VER) return
+
+    const lo = getHardcodedWeaponLoadoutForHero(profileName, familyNumber)
+
+    sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, lo.slashId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, lo.thrustId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, lo.castId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, lo.execId)
+    sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
+}
+
+
 
 function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
@@ -2999,6 +3081,10 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
         "heroFamily",
         heroFamilyNumberToString(FAMILY.STRENGTH)
     );
+
+    // NEW (Step 4): seed weapon loadout onto sprite.data (primitives only; net-safe)
+    // This runs once per hero and will not overwrite later drops/equips.
+    ensureHeroWeaponLoadoutSeeded(hero, profileName, FAMILY.STRENGTH)
 
     sprites.setDataString(hero, HERO_DATA.BUTTON, "")
     sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
@@ -4091,6 +4177,9 @@ function beginStrengthCharge(
 
     // Lock controls during charge
     lockHeroControls(heroIndex)
+
+    // ✅ Ensure the charging pose stays on the strength slash animation
+    setHeroPhaseString(heroIndex, "slash")
 
     // Charge bar
     showStrengthChargeBar(heroIndex, hero, true)
@@ -9195,14 +9284,25 @@ function updateHeroMovementPhase(now: number) {
     for (let hi = 0; hi < heroes.length; hi++) {
         const hero = heroes[hi]; if (!hero) continue;
 
-        // Agility combo build should use combat idle, and we should avoid
-        // stomping on execute phases.
+        // Don't stomp death anims
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
+
+        // Agility execute should own the phase entirely.
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
         if (agiState === AGI_STATE.EXECUTING) continue;
 
-        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) || 0;
-        if (busyUntil > now) continue; // mid-attack / cast window → keep slash/thrust/cast
+        // Strength charge should own the phase (we want "slash pose" during charge)
+        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue;
 
+        // IMPORTANT: treat busy as the max of BOTH representations.
+        const busyData = (sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0);
+        const busyArr = (heroBusyUntil[hi] | 0);
+        const busyUntil = busyData > busyArr ? busyData : busyArr;
+
+        // Mid-attack / cast window → keep slash/thrust/cast
+        if (busyUntil > 0 && busyUntil > (now | 0)) continue;
+
+        // Agility combo build mode: use combatIdle
         if (agiState === AGI_STATE.ARMED) {
             setHeroPhaseString(hi, "combatIdle");
             continue;
@@ -9210,11 +9310,8 @@ function updateHeroMovementPhase(now: number) {
 
         // default movement-based phase
         const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy);
-        if (speedSq > 25) {
-            setHeroPhaseString(hi, "run");
-        } else {
-            setHeroPhaseString(hi, "idle");
-        }
+        if (speedSq > 25) setHeroPhaseString(hi, "run");
+        else setHeroPhaseString(hi, "idle");
     }
 }
 
@@ -9503,15 +9600,15 @@ const ENEMY_SPAWN_INTERVAL_MS = 1200
         breakMs: 4000,
         spawnChance: 0.5,
         // TODO: use your real monster ids here
-        kinds: ["imp blue", "bat"],
-        weights: [1]
+        kinds: ["eyeball", "bat", "pumpking"],
+        weights: [1,1,1]
     },
     {
         label: "Wave 2 – More Grunts",
         durationMs: 2400,
         breakMs: 4000,
         spawnChance: 0.75,
-        kinds: ["imp blue"],
+        kinds: ["eyeball"],
         weights: [1]
     },
     {
@@ -9535,7 +9632,7 @@ const ENEMY_SPAWN_INTERVAL_MS = 1200
         durationMs: 2400,
         breakMs: 5000,
         spawnChance: 1.0,
-        kinds: ["imp blue", "spider green", "big worm", "dragon red"],
+        kinds: ["imp blue", "spider green", "big worm"],//, "dragon red"],
         weights: [3, 3, 2, 2]
     }
 ]

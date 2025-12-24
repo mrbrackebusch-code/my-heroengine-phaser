@@ -19,7 +19,7 @@ import { WorldTileRenderer } from "./tileMapGlue";
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
-import { loadWeaponAtlases } from "./weaponAtlas";
+import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
 
 
 
@@ -28,6 +28,20 @@ declare const globalThis: any;
 
 
 const ENABLE_HERO_ANIM_DEBUG = true;
+
+const DEBUG_TILEMAP = true;
+
+
+
+// ------------------------------------------------------------
+// Weapon debug flags (no URL params / no console commands needed)
+// ------------------------------------------------------------
+const ENABLE_WEAPON_DEBUG = true;          // logs missing weapon resolves (once per key)
+const ENABLE_WEAPON_DEBUG_VERBOSE = true; // also logs first successful resolve (once per key)
+const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup
+const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false
+
+
 
 function getProfileFromUrl(): string | null {
     try {
@@ -76,6 +90,10 @@ class HeroScene extends Phaser.Scene {
     private tileAtlas?: TileAtlas;
     private tileRenderer?: WorldTileRenderer;
 
+    // Latest tilemap rev actually applied to the Phaser scene
+    private _tilemapAppliedRev: number = 0;
+
+
     constructor() {
         super("hero");
     }
@@ -97,10 +115,94 @@ class HeroScene extends Phaser.Scene {
 
 
 
+    async create() {
+        this.setupGlobalsAndDebug();
+
+        const loadingText = this.createLoadingText();
+
+        buildHeroAtlas(this);
+        this.validateHeroAuras(loadingText);
+
+        loadingText.destroy();
+
+        this.initTileAtlasAndInstallTilemapHook();
+        this.ensureHostFlagInitialized();
+
+        const compatMod = await this.importMakeCodeModules();
+        this.installStartHeroEngineHostHook();
+
+        this.initNetwork(compatMod);
+        this.wireKeyboardToController();
+
+        console.log(">>> [HeroScene.create] imports finished");
+
+        this.buildMonsterAtlasAndRegistry();
+        this.maybeInstallHeroAnimTester();
+    }
+
+
 
     
-async create() {
+
+
+
+
+    private ensureWorldTileRenderer(atlas: TileAtlas): WorldTileRenderer {
+        if (!this.tileRenderer) {
+            if (DEBUG_TILEMAP) {
+                console.log(">>> [HeroScene.tilemap] creating WorldTileRenderer");
+            }
+            this.tileRenderer = new WorldTileRenderer(this, atlas, {
+                debugLocal: true
+            });
+        }
+        return this.tileRenderer;
+    }
+
+
+
+    private applyTilemapToScene(grid: number[][], tileSize: number) {
+        const atlas = this.tileAtlas;
+        if (!atlas) {
+            if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] applyTilemapToScene: missing tileAtlas");
+            return;
+        }
+
+        const renderer = this.ensureWorldTileRenderer(atlas);
+
+        if (DEBUG_TILEMAP) {
+            console.log(">>> [HeroScene.tilemap] syncing from grid", {
+                rows: grid.length,
+                cols: grid[0]?.length,
+                tileSize
+            });
+        }
+        renderer.syncFromEngineGrid(grid);
+
+        const rows = grid.length;
+        const cols = grid[0]?.length || 0;
+
+        const worldWidth = cols * tileSize;
+        const worldHeight = rows * tileSize;
+
+        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+        if (DEBUG_TILEMAP) {
+            console.log(">>> [HeroScene.tilemap] bounds set", {
+                worldWidth,
+                worldHeight,
+                rows,
+                cols,
+                tileSize
+            });
+        }
+    }
+
+
+private setupGlobalsAndDebug() {
     const g = globalThis as any;
+
     console.log(">>> [HeroScene.create] running");
 
     // Make this scene globally accessible to arcadeCompat
@@ -111,33 +213,54 @@ async create() {
     );
 
     // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
+    // (kept as-is; profile selection is not "debug")
     applyUrlProfileToGlobals();
 
+    // Existing hero anim debug registry flag
     this.registry.set("heroAnimDebug", ENABLE_HERO_ANIM_DEBUG);
 
-    // NEW: runtime toggle from console or other code
+    // ------------------------------------------------------------
+    // WEAPON DEBUG (flag-driven; no URL params / no console toggles)
+    // These globals are consumed by weaponAnimGlue.ts
+    // ------------------------------------------------------------
+    (g as any).__weaponDebug = ENABLE_WEAPON_DEBUG;
+    (g as any).__weaponDebugVerbose = ENABLE_WEAPON_DEBUG_VERBOSE;
+
+    // Optional: expose audit runner (you never have to call it)
+    (g as any).runWeaponAudit = (opts?: any) => runWeaponAudit(opts);
+
+    // Optional: run audit at startup (prints counts + examples)
+    if (ENABLE_WEAPON_AUDIT_ON_START) {
+        runWeaponAudit({
+            logAllModels: ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS,
+            //phases: ["slash", "thrust", "cast"],
+            variant: "base",
+        });
+    }
+
+    // runtime toggle from console or other code (kept as-is)
     (g as any).toggleHeroAnimDebug = (on?: boolean) => {
         const cur = !!this.registry.get("heroAnimDebug");
         const next = (on === undefined) ? !cur : !!on;
         this.registry.set("heroAnimDebug", next);
         console.log("[heroAnimDebug] set to", next);
     };
+}
 
-    const loadingText = this.add.text(12, 12, "Loading…", {
+
+private createLoadingText(): Phaser.GameObjects.Text {
+    return this.add.text(12, 12, "Loading…", {
         fontFamily: "monospace",
         fontSize: "18px",
     }).setScrollFactor(0).setDepth(9999);
+}
 
-    buildHeroAtlas(this);
-
-    // ------------------------------------------------------------
+private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
     // AURA PIPELINE (spritesheet-only)
     // No runtime generation. We only validate required aura textures exist.
-    // ------------------------------------------------------------
     const AURA_R = 2;
     const parsedSheets = (this.registry.get("__heroParsedSheets") || []) as any[];
 
-    // Helper: only treat *_192 as valid if its source image is divisible by 192
     const isValid192Sheet = (texKey192: string): boolean => {
         if (!this.textures.exists(texKey192)) return false;
 
@@ -155,9 +278,6 @@ async create() {
         }
     };
 
-    // Choose which hero textures we will actually use:
-    // - Always include baseKey if it exists (but REQUIRE base aura sheet exists)
-    // - Include key192 ONLY if it is a VALID 192 grid AND its aura exists
     const texKeysToUseSet = new Set<string>();
 
     loadingText.setText("Loading… validating auras");
@@ -169,7 +289,6 @@ async create() {
         const key192 = baseKey + "_192";
         const auraKey192 = `${key192}_aura_r${AURA_R}`;
 
-        // Base always allowed IF present, but aura is REQUIRED (no misses allowed)
         if (this.textures.exists(baseKey)) {
             if (!this.textures.exists(auraBaseKey)) {
                 throw new Error(
@@ -179,7 +298,6 @@ async create() {
             texKeysToUseSet.add(baseKey);
         }
 
-        // 192 only if it's truly a 192-grid sheet
         const hasReal192 = isValid192Sheet(key192);
         if (hasReal192) {
             if (!this.textures.exists(auraKey192)) {
@@ -197,25 +315,79 @@ async create() {
     }
 
     loadingText.setText("Loading… 100%");
-    loadingText.destroy();
-    // ------------------------------------------------------------
+}
 
+private initTileAtlasAndInstallTilemapHook() {
     console.log(">>> [HeroScene.create] building tile atlas");
     this.tileAtlas = buildTileAtlas(this);
 
-    
+    // TILEMAP NETWORK HOOK (followers + host)
+    (globalThis as any).__onNetTilemap = (msg: any) => {
+        try {
+            if (!msg || msg.type !== "tilemap") return;
 
-    // ---------------------------
-    // HOST vs NON-HOST
-    // ---------------------------
+            const rev = typeof msg.rev === "number" ? msg.rev : 0;
+            if (rev <= this._tilemapAppliedRev) return;
+            this._tilemapAppliedRev = rev;
+
+            const tileSize = msg.tileSize | 0;
+
+            if (msg.encoding !== "raw") {
+                console.warn(
+                    ">>> [HeroScene] __onNetTilemap: unsupported encoding (for now):",
+                    msg.encoding,
+                    "rev=",
+                    rev
+                );
+                return;
+            }
+
+            const grid: number[][] = msg.data;
+            if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
+                console.warn(">>> [HeroScene] __onNetTilemap: malformed raw grid", {
+                    rev,
+                    tileSize,
+                });
+                return;
+            }
+
+            if (DEBUG_TILEMAP) {
+                console.log(">>> [HeroScene.tilemap] applying network tilemap", {
+                    rev,
+                    rows: msg.rows,
+                    cols: msg.cols,
+                    tileSize,
+                });
+            }
+
+            this.applyTilemapToScene(grid, tileSize);
+        } catch (e) {
+            console.error(">>> [HeroScene] __onNetTilemap ERROR:", e);
+        }
+    };
+
+    // If a tilemap arrived before the hook was installed, apply it now.
+    const pending = (globalThis as any).__lastTilemapMsg;
+    if (pending && pending.type === "tilemap") {
+        if (DEBUG_TILEMAP) {
+            console.log(">>> [HeroScene.tilemap] applying pending cached tilemap on create()");
+        }
+        (globalThis as any).__onNetTilemap(pending);
+    }
+}
+
+private ensureHostFlagInitialized() {
+    const g: any = globalThis as any;
+
     if (typeof g.__isHost === "boolean") {
         console.log(">>> [HeroScene.create] host flag from network =", g.__isHost);
     } else {
         console.log(">>> [HeroScene.create] no host flag yet; defaulting to follower");
         g.__isHost = false;
     }
-    // ---------------------------
+}
 
+private async importMakeCodeModules(): Promise<any> {
     console.log(">>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)");
 
     // IMPORTANT: load modules in MakeCode-like order
@@ -225,6 +397,10 @@ async create() {
     await import("./sprite-data");
     await import("./heroEnginePhaserGlue");
 
+    return compatMod;
+}
+
+private installStartHeroEngineHostHook() {
     (globalThis as any).__startHeroEngineHost = async () => {
         const g: any = globalThis as any;
         if (g.__heroEngineHostStarted) return;
@@ -271,15 +447,13 @@ async create() {
             (globalThis as any).SpriteKind = sk;
         }
 
-        // 5) Start the HeroEngine world (from the module first, then global fallback)
+        // 5) Start the HeroEngine world
         const HE: any = engineMod.HeroEngine || (globalThis as any).HeroEngine;
         if (HE && typeof HE.start === "function") {
             console.log(">>> [HeroScene.create] starting HeroEngine from host");
             HE.start();
 
-            // ---------------------------
-            // TILES: sync from HeroEngine
-            // ---------------------------
+            // TILES: sync from HeroEngine and publish to server once
             try {
                 const g: any = globalThis as any;
                 const internals = g.__HeroEnginePhaserInternals;
@@ -298,44 +472,54 @@ async create() {
                     const tileSize: number = internals.getWorldTileSize();
 
                     const scene: any = g.__phaserScene;
-                    const atlas: TileAtlas | undefined = scene?.tileAtlas;
 
-                    if (!scene || !atlas) {
+                    if (!scene || typeof scene.applyTilemapToScene !== "function") {
                         console.warn(
-                            ">>> [HeroScene.create] no scene/tileAtlas when trying to sync tiles"
+                            ">>> [HeroScene.create] no scene/applyTilemapToScene when trying to sync tiles"
                         );
                     } else {
-                        if (!scene.tileRenderer) {
-                            console.log(
-                                ">>> [HeroScene.create] creating WorldTileRenderer (host)"
-                            );
-                            scene.tileRenderer = new WorldTileRenderer(scene, atlas, {
-                                debugLocal: true
-                                // For now use default tileValueToFamily mapper inside WorldTileRenderer.
-                            });
+                        scene.applyTilemapToScene(grid, tileSize);
+
+                        // NETWORK: publish tilemap once (host authoritative)
+                        const gAny: any = globalThis as any;
+
+                        if (!gAny.__tilemapSentOnce) {
+                            gAny.__tilemapSentOnce = true;
+
+                            const netAny: any = gAny.__net;
+                            const wsAny: any = netAny && netAny.ws;
+
+                            const rows = grid.length;
+                            const cols = grid[0]?.length || 0;
+
+                            const tilemapMsg = {
+                                type: "tilemap",
+                                rev: 1,
+                                tileSize,
+                                rows,
+                                cols,
+                                encoding: "raw",
+                                data: grid
+                            };
+
+                            try {
+                                if (wsAny && wsAny.readyState === WebSocket.OPEN) {
+                                    wsAny.send(JSON.stringify(tilemapMsg));
+                                    if (DEBUG_TILEMAP) {
+                                        console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
+                                            rev: tilemapMsg.rev,
+                                            rows,
+                                            cols,
+                                            tileSize
+                                        });
+                                    }
+                                } else {
+                                    console.warn(">>> [HeroScene.create] could not send tilemap (no ws / not open)");
+                                }
+                            } catch (e) {
+                                console.error(">>> [HeroScene.create] ERROR sending tilemap:", e);
+                            }
                         }
-
-                        console.log(
-                            ">>> [HeroScene.create] syncing WorldTileRenderer from HeroEngine grid",
-                            { rows: grid.length, cols: grid[0]?.length, tileSize }
-                        );
-                        scene.tileRenderer.syncFromEngineGrid(grid);
-
-                        // NEW: update physics & camera bounds to match the full tilemap
-                        const rows = grid.length;
-                        const cols = grid[0]?.length || 0;
-
-                        const worldWidth = cols * tileSize;
-                        const worldHeight = rows * tileSize;
-
-                        scene.physics.world.setBounds(0, 0, worldWidth, worldHeight);
-                        scene.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-
-                        console.log(
-                            ">>> [HeroScene.create] set physics/camera bounds from tilemap:",
-                            { worldWidth, worldHeight, rows, cols, tileSize }
-                        );
-
                     }
                 }
             } catch (e) {
@@ -368,46 +552,34 @@ async create() {
                 });
         }, 1000);
     };
+}
 
-    // ---------------------------
-    // NETWORK INITIALIZATION
-    // (all clients: host + non-hosts)
-    // ---------------------------
+private initNetwork(compatMod: any) {
     if (typeof (compatMod as any).initNetwork === "function") {
         console.log(">>> [HeroScene.create] initNetwork()");
         (compatMod as any).initNetwork();
     } else {
         console.warn(">>> [HeroScene.create] compat.initNetwork missing");
     }
+}
 
-    // ---------------------------
-    // KEYBOARD → CONTROLLER
-    // (all clients send input; host will *apply* it)
-    // ---------------------------
+private wireKeyboardToController() {
     const controllerNS: any = (globalThis as any).controller;
     if (controllerNS && typeof controllerNS._wireKeyboard === "function") {
-        console.log(
-            ">>> [HeroScene.create] wiring keyboard to controller (network-aware)"
-        );
+        console.log(">>> [HeroScene.create] wiring keyboard to controller (network-aware)");
         controllerNS._wireKeyboard(this);
     } else {
-        console.warn(
-            ">>> [HeroScene.create] controller._wireKeyboard missing",
-            controllerNS
-        );
+        console.warn(">>> [HeroScene.create] controller._wireKeyboard missing", controllerNS);
     }
+}
 
-    console.log(">>> [HeroScene.create] imports finished");
-
-    // --- Build LPC monster atlas after assets + HeroEngine are ready ---
+private buildMonsterAtlasAndRegistry() {
     try {
         this.monsterAtlas = buildMonsterAtlas(this);
 
-        // keep these if you want the extra access points:
         (this as any).__monsterAtlas = this.monsterAtlas;
         (globalThis as any).__monsterAtlas = this.monsterAtlas;
 
-        // *** KEY LINE: make it visible via scene.registry ***
         this.registry.set("monsterAtlas", this.monsterAtlas);
 
         console.log(
@@ -417,8 +589,9 @@ async create() {
     } catch (e) {
         console.error(">>> [HeroScene.create] FAILED to build monster atlas", e);
     }
+}
 
-    // 🔹 HERO ANIM TESTER: call this behind a simple flag if you like
+private maybeInstallHeroAnimTester() {
     const paramsHero = new URLSearchParams(window.location.search);
     const heroAnimTest = paramsHero.get("heroAnimTest") === "1";
     if (heroAnimTest) {

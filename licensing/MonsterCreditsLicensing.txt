@@ -1,0 +1,398 @@
+# Third-Party Art / Asset Licensing (Read This First)
+
+This repository includes third-party art assets credited below. Each entry is copied/preserved from the original source page so the original author notes and all offered license options remain visible.
+
+**Important: when an asset is “multi-licensed,” that means the author is offering a choice of licenses (a menu), not that all licenses apply at once.** For this repository, the license we are using for each asset is determined as follows:
+
+1) **If CC-BY 4.0 is listed, we use the asset under CC-BY 4.0.**
+2) Else, **if CC-BY 3.0 is listed, we use the asset under CC-BY 3.0.**
+3) Else, **if OGA-BY 3.0 is listed, we use the asset under OGA-BY 3.0.**
+4) Else, if only **CC-BY-SA** and/or **GPL** are listed, we use the asset under the listed ShareAlike license (or GPL where explicitly stated in the entry).
+
+We comply with the chosen license for each asset, including:
+- attribution (author/artist), and a link back to the source page when reasonable
+- a link to the license text
+- noting changes when we have modified an asset
+
+**Code vs. art:** The license for this repository’s *code* is stated in the repo’s LICENSE file and does not override the licenses of third-party assets listed here.
+
+
+
+
+----------------------------------------
+
+Title:
+    [LPC] Golem
+
+Author:
+    William.Thompsonj
+
+Collaborators:
+    Redshrike
+
+URL:
+    https://opengameart.org/content/lpc-golem
+
+License(s):
+    * CC-BY 4.0 ( https://creativecommons.org/licenses/by/4.0/legalcode )
+    * CC-BY 3.0 ( http://creativecommons.org/licenses/by/3.0/legalcode )
+    * GPL 3.0 ( http://www.gnu.org/licenses/gpl-3.0.html )
+    * GPL 2.0 ( http://www.gnu.org/licenses/old-licenses/gpl-2.0.html )
+    * OGA-BY 3.0 ( http://static.opengameart.org/OGA-BY-3.0.txt )
+
+Copyright/Attribution Notice:
+    Attribute Stephen "Redshrike" Challener as graphic artist and William.Thompsonj as contributor. If reasonable link to this page or the OGA homepage.
+
+File(s):
+    * golem-walk.png
+    * golem-atk.png
+    * golem-die.png
+
+----------------------------------------
+
+Title: [LPC] Wolf Animation
+
+https://opengameart.org/content/lpc-wolf-animation
+
+This is a commissioned work made by Redshrike. This is an LPC style wolf animation. It includes walking, running, biting, howling, and dying animations. There are a total of 6 colors to choose from, all the same setup.
+
+Adobe Photoshop PSD file by Redshrike added in case anyone wants to mess with making a modified version.
+
+Attribution Instructions: 
+Attribute Stephen "Redshrike" Challener as graphic artist and William.Thompsonj as contributor. If reasonable link back to this page or the OGA homepage.
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+GPL 3.0
+
+GPL 2.0
+
+OGA-BY 3.0
+
+
+File(s): 
+howl.png howl.png 1.9 Kb [11635 download(s)]
+wolfsheet1.png wolfsheet1.png 85.8 Kb [14630 download(s)]
+wolfsheet2.png wolfsheet2.png 84.9 Kb [8535 download(s)]
+wolfsheet3.png wolfsheet3.png 86.2 Kb [7295 download(s)]
+wolfsheet4.png wolfsheet4.png 86.4 Kb [6932 download(s)]
+wolfsheet5.png wolfsheet5.png 86.3 Kb [7418 download(s)]
+wolfsheet6.png wolfsheet6.png 86.5 Kb [7912 download(s)]
+wolfsheetsSource.psd wolfsheetsSource.psd 4.3 Mb [7212 download(s)]
+
+----------------------------------------
+
+Title: [LPC] Imp 2
+
+https://opengameart.org/content/lpc-imp-2
+
+I forgot the death animation for the original imp I posted so I've included the full red imp set along with the newly recolored green and blue imps. I arranged all the frames in the same order as the other LPC assets (top, left, bottom, right) for all the sprite sheets and I've tried to normalize all the outlines so everything has consistent color claws, weapons, and shields.
+
+Included are 3 full sets of imp animations (walking, attacking, and dying for red, green, and blue). I don't know why I didn't think to do this earlier but better late than never!
+
+Please leave a comment if you have one.
+
+Attribution Instructions: 
+Attribute Stephen "Redshrike" Challener as graphic artist and William.Thompsonj as contributor. If reasonable link to this page or the OGA homepage.
+File(s): 
+LPC Imp 2.zip LPC Imp 2.zip 457 Kb [5444 download(s)]
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+GPL 3.0
+
+GPL 2.0
+
+OGA-BY 3.0
+
+Author: 
+William.Thompsonj
+Wednesday, January 8, 2014 - 14:55
+Collaborators: 
+Redshrike
+
+----------------------------------------
+
+Title: [LPC] Goblin
+
+https://opengameart.org/content/lpc-goblin
+
+A goblin made in LPC style by Redshrike. More parts (shield, helmet, etc.) coming soon.
+
+Copyright/Attribution Notice: 
+Attribute Stephen "Redshrike" Challener as graphic artist and William.Thompsonj as contributor. If reasonable link to this page or the OGA homepage.
+File(s): 
+goblin.png goblin.png 35.5 Kb [14931 download(s)]
+sword.png sword.png 6.3 Kb [8939 download(s)]
+goblinsword.png goblinsword.png 40 Kb [10597 download(s)]
+goblin sheeting.psd goblin sheeting.psd 439.2 Kb [8379 download(s)]
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+GPL 3.0
+
+GPL 2.0
+
+OGA-BY 3.0
+
+Author: William.Thompsonj
+
+
+----------------------------------------
+
+Title: [LPC] Spider
+
+https://opengameart.org/content/lpc-spider
+
+Author: William.thompsonj
+
+This is a commissioned work by Redshrike. Included are 11 sprite sheets setup similar to the other LPC assets (up, left, bottm, right). All variations are of the same spider with different markings and color coats. There are 3 animations included, walking, attacking, and dying (only 1 direction dying).
+
+Frame 1: Standing
+
+Frames 1-4: Attacking
+
+Frames 5-10: Walking
+
+Bottom Row: Dying
+
+Attribution Instructions: 
+Attribute Stephen "Redshrike" Challener as graphic artist and William.Thompsonj as contributor. If reasonable link to this page or the OGA homepage.
+File(s): 
+LPC_Spiders.zip LPC_Spiders.zip 1 Mb [11350 download(s)]
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+GPL 3.0
+
+GPL 2.0
+
+OGA-BY 3.0
+
+
+----------------------------------------
+
+Title: [LPC] Monster Death Animations
+
+https://opengameart.org/content/lpc-monster-death-animations
+
+I added death animations to the original LPC monsters.
+
+The animations are procedurally generated using a script available on GitHub.
+
+If you want to know more about the technique used, you can read this article on my blog.
+
+Copyright/Attribution Notice: 
+"[LPC] Monster Death Animations" by Pierre Vigier and Charles Sanchez (AKA CharlesGabriel)
+File(s): 
+lpc_monster_death_animations.zip lpc_monster_death_animations.zip 76.2 Kb [262 download(s)]
+
+License(s): 
+
+CC-BY-SA 3.0
+
+GPL 3.0
+
+
+----------------------------------------
+
+Title: LPC Beetle
+
+https://opengameart.org/content/lpc-beetle
+
+Just a little beetle for the LPC.  It's all ready for formatting, but I honestly didn't want to finish it.  So yeah!  Enjoy.  There might be more monsters coming.  Note that it has walking animations plus attacking (two rightmost frames on each row).
+
+ 
+
+edit: added a hole from which they might spawn per request.
+
+Attribution Instructions: 
+Stephen "Redshrike" Challener, plus a link back to opengameart.org
+Copyright/Attribution Notice: 
+Stephen Challener (Redshrike), hosted by OpenGameArt.org
+File(s): 
+beetle5.PNG beetle5.PNG 6.4 Kb [6793 download(s)]
+mace.PNG mace.PNG 615 b [3914 download(s)]
+
+License(s): 
+
+CC-BY 3.0
+
+CC-BY-SA 3.0
+
+GPL 2.0
+
+OGA-BY 3.0
+
+----------------------------------------
+
+
+Title: Pumpkin Monster
+
+https://opengameart.org/content/pumpkin-monster
+
+Author: Reemax
+
+I saw the Spooky contest( https://opengameart.org/forumtopic/spooky-due-october-29 ) and I decided to participate.
+
+Monster is taken from my very old platformer. Original monster was size of 16x16 pixel in VGA graphics. Now it is redone in size 32x64 LPC style to fit RPGs. It has all four directons, standing and two walking animations.
+
+Copyright/Attribution Notice: 
+Pumpkin monster by Tuomo Untinen
+File(s): 
+pumpkin_monster.png pumpkin_monster.png 5.2 Kb [1085 download(s)]
+
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+CC-BY-SA 4.0
+
+CC-BY-SA 3.0
+
+
+----------------------------------------
+
+Title: LPC Frogman
+
+https://opengameart.org/content/lpc-frogman
+
+Author: Evert
+
+Based on the frog man from Redshrike's tower defence prototype (https://opengameart.org/content/tower-defense-prototyping-assets-4-monst...).
+
+The sideways attack and hopping frames are Redshrike's unmodified originals, the north and south frames and death animation are my own adaptations based on his work.
+I plan to add a version without the trident and with an attack where he opens his mouth and attacks with his tongue, but that's a little more work.
+
+Should work ok with LPC assets, although the palette does not match the LPC assets. I tried recolouring it, but none of the green ramps in the LPC palette work with this guy. Suggestions for that are welcome.
+
+CHANGES:
+* Added a variation with a crown by Stephen Challener (Redshrike)
+* Used Puffolotti's alternate animation for the legs.
+
+Copyright/Attribution Notice: 
+Stephen Challener (Redshrike) and Evert, hosted by OpenGameArt.org. If you use the revised leg animations for the sideward hop, credit Puffolotti. Include a link to this page, as well as the original work by Redshrike.
+File(s): 
+frogman.png frogman.png 20.1 Kb [660 download(s)]
+frogman.png frogman.png 20.4 Kb [448 download(s)]
+frogman_crown.png frogman_crown.png 25.7 Kb [435 download(s)]
+
+
+License(s): 
+
+CC-BY 3.0
+
+OGA-BY 3.0
+Collections: 
+
+
+----------------------------------------
+
+
+Title: Minotaur
+
+https://opengameart.org/content/minotaur-2
+
+Author: AntumDeluge
+
+
+UPDATES:
+
+2019-05-14: added S/W/E/N versions
+Description:
+
+A minotaur sprite created for Stendhal.
+
+Details:
+
+Orientation: orthogonal
+N/E/S/W format for Stendhal.
+S/W/E/N format for RPG Maker & RPG Boss.
+Dimensions: 48x64
+Animation:
+idle (center frames)
+walking: 12 frames (3 per direction)
+Animated preview @ 150ms delay.
+PNG images optimized with indexed color (smaller files).
+GIMP sources (.xcf) use RGB color.
+Licensing:
+
+OpenGameArt.org Attribution (OGA BY) version 3.0 or later
+Creative Commons Attribution (CC BY) version 3.0 or later
+TODO:
+
+Add crown or other detail for minotaur king.
+Original link: https://opengameart.org/node/76913
+
+Copyright/Attribution Notice: 
+Created by Jordan Irwin (AntumDeluge)
+File(s): 
+minotaur-1.3.zip minotaur-1.3.zip 121.8 Kb [994 download(s)]
+
+
+
+License(s): 
+
+CC-BY 4.0
+
+CC-BY 3.0
+
+OGA-BY 3.0
+
+
+
+
+----------------------------------------
+
+Title: LPC Monsters
+
+Attack animations for monsters from the Liberated Pixel Cup base assets by Charles Sanchez (CharlesGabriel). Kindly commissioned by Pierre Vigier (pvigier) for Vagabond. 
+
+Buy Me a Coffee at ko-fi.com
+
+If you appreciate my work, please consider supporting me and me art on my Ko-fi page! https://ko-fi.com/bluecarrot16 . I am also open for commissions; send me a direct message to discuss!
+
+Different monsters use a variety of attacks---lunging, biting, shooting up from the ground, spitting fire, firing a laser projectile, etc. In general, attack animations should smoothly transition from/to the original idle animations.  
+
+Bat sprite used and animated is by bagzie instead, because I liked it better than the one from the base assets. .
+
+My contributions are licensed OGA-BY 3.0 (i.e., I waive the requirement that you must share modifications of my work under the same license, and I also specifically waive clauses in the CC-BY-* license that prohibit use of the work in a piece of software which contains DRM). However, since the original work is CC-BY-SA 3.0, and this pack is derived from those original sprites, this submission is licensed CC-BY-SA 3.0 as well. The entire bat sprite is OGA-BY 3.0. 
+
+Copyright/Attribution Notice: 
+"[LPC] Monsters" by Charles Sanchez (CharlesGabriel), bagzie, and bluecarrot16. License: CC-BY-SA 3.0+ or GPL 3.0+. https://opengameart.org/content/lpc-monsters https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles https://opengameart.org/content/bat-sprite
+File(s): 
+lpc-monsters.zip lpc-monsters.zip 78.1 Kb [2112 download(s)]
+
+
+License(s): 
+
+CC-BY-SA 3.0
+
+GPL 3.0
+
+Author: bluecarrot16
+
+----------------------------------------
+
+
+
+

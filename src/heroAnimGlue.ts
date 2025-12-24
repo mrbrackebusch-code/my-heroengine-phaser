@@ -1028,8 +1028,6 @@ export function syncHeroAuraForNative(
     auraActive: boolean,
     auraColorIndex: number
 ): void {
-    const t0 = performance.now();
-
     try {
         if (!native) return;
 
@@ -1043,7 +1041,7 @@ export function syncHeroAuraForNative(
             return;
         }
 
-        // We are now STRICT spritesheet-only.
+        // Spritesheet-only mode: aura texture must already be generated + loaded.
         const heroTexKey = native.texture?.key ? String(native.texture.key) : "";
         if (!heroTexKey) return;
 
@@ -1057,9 +1055,10 @@ export function syncHeroAuraForNative(
         }
 
         // Use the SAME frame name/index as the hero.
-        const heroFrameName = (native.frame && (native.frame.name !== undefined))
-            ? native.frame.name
-            : undefined;
+        const heroFrameName =
+            (native.frame && (native.frame.name !== undefined))
+                ? native.frame.name
+                : undefined;
 
         const auraTex = scene.textures.get(auraTexKey);
         const auraFrame =
@@ -1068,7 +1067,6 @@ export function syncHeroAuraForNative(
                 : null;
 
         if (!auraFrame) {
-            // If this happens, your generator and hero atlas frame naming are mismatched.
             throw new Error(
                 `[AURA-FRAME-MISSING] ${auraTexKey} missing frame=${String(heroFrameName)} (heroTex=${heroTexKey})`
             );
@@ -1080,17 +1078,12 @@ export function syncHeroAuraForNative(
             auraImg = scene.add.image(native.x, native.y, auraTexKey, heroFrameName as any);
             (native as any).__heroAuraImage = auraImg;
 
-            // Depth: behind hero by default (tweak if you already have conventions)
-            const heroDepth = (native as any).depth ?? 0;
-            auraImg.setDepth(heroDepth - 1);
-
             // Match origin if present (Sprite has origin; Image too)
             if (typeof native.originX === "number" && typeof native.originY === "number") {
                 auraImg.setOrigin(native.originX, native.originY);
             }
         } else {
             auraImg = auraAny as Phaser.GameObjects.Image;
-            // Ensure correct texture + frame every tick (cheap, no pixels)
             auraImg.setTexture(auraTexKey, heroFrameName as any);
         }
 
@@ -1098,10 +1091,14 @@ export function syncHeroAuraForNative(
         auraImg.x = native.x;
         auraImg.y = native.y;
 
+        // Depth policy (Step 7): aura behind weapon BG (heroDepth - 1)
+        const heroDepth = (native as any).depth ?? 0;
+        auraImg.setDepth(heroDepth - 2);
+
         auraImg.setVisible(true);
         auraImg.alpha = 1;
 
-        // Match scale/flip/rotation (if you use them)
+        // Match scale/flip/rotation
         auraImg.scaleX = native.scaleX ?? 1;
         auraImg.scaleY = native.scaleY ?? 1;
         auraImg.rotation = native.rotation ?? 0;
@@ -1119,9 +1116,10 @@ export function syncHeroAuraForNative(
             if (tintHex !== 0) auraImg.setTint(tintHex);
             else auraImg.clearTint();
         }
-    } finally {
-        (globalThis as any).__perfAuraMs += (performance.now() - t0);
-        (globalThis as any).__perfAuraCalls++;
+    } catch (e) {
+        // Preserve your existing “fail loudly” behavior for missing textures,
+        // but don’t hard-crash the whole game loop for non-critical issues.
+        throw e;
     }
 }
 
