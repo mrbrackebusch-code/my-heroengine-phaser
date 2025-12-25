@@ -759,6 +759,12 @@ const AGI_LANDING_BUFFER_MS = 80
 const HERO_DAMAGE_FLASH_MS = 150
 const AGI_MIN_VISUAL_LEN = 3
 
+
+const HERO_FRAME_COL_OVERRIDE_NONE = -1
+
+
+
+
 // --------------------------------------------------------------
 // HERO_DATA – sprite data schema for hero sprites
 // Ownership:
@@ -767,8 +773,142 @@ const AGI_MIN_VISUAL_LEN = 3
 //   • Read by:    applyDamageToHeroIndex(), control-lock logic,
 //                 combo handling, AGI/STR/INT modules, auras
 // --------------------------------------------------------------
-
 const HERO_DATA = {
+    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
+    FAMILY: "family", BUTTON: "btn",
+    TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
+    INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
+    TARGET_START_MS: "tStart", TARGET_LOCK_MS: "tLock",
+    IS_CONTROLLING_SPELL: "isCtrlSpell",
+    COMBO_COUNT: "comboCount", COMBO_MULT: "comboMult",
+    LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
+    IFRAME_UNTIL: "iUntil",
+    AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
+    AGI_COMBO_UNTIL: "aComboUntil",    // when AGI combo window ends (ms)
+
+    // NEW (Agility combo v2): Phaser-visible state + UI-driving fields
+    AGI_STATE: "aState",               // number enum (see AGI_STATE below)
+    AGI_CHAIN: "aChain",               // consecutive AGI presses counter
+    AGI_LAST_PRESS_MS: "aLastMs",      // sanity gate for "in a row" detection
+    AGI_METER_START_MS: "aMetS",       // pendulum start (ms)
+    AGI_METER_POS_X1000: "aMetP",      // current pendulum position 0..1000 (optional)
+    AGI_ZONE_E_W: "aZE",               // execute zone width (pixels)
+    AGI_ZONE_1_W: "aZ1",               // 1x zone width (pixels)
+    AGI_ZONE_2_W: "aZ2",               // 2x zone width (pixels)
+    AGI_ZONE_3_W: "aZ3",               // 3x zone width (pixels)
+    AGI_PKT_COUNT: "aPkC",             // packet count (stored hits)
+    AGI_PKT_SUM: "aPkS",               // optional: sum of packet damages
+    AGI_CANCEL_HOLD_MS: "aCanH",       // how long player has held movement to cancel
+
+    // NEW (Agility combo v3): persistent combo mode + landing/entry bookkeeping
+    AGI_COMBO_MODE: "aCMode",                  // 0/1 persistent combo-state flag
+    AGI_COMBO_ENTRY_BTN: "aCEntB",             // initiating button id (the one that must be held through landing)
+    AGI_COMBO_ENTRY_DASH_UNTIL: "aCEntDU",     // dashUntil of the entry-attempt dash
+    AGI_COMBO_LAND_ARMED_FOR_DU: "aCArmedDU",  // guard: last dashUntil we already armed meter for (prevents re-arming spam)
+    AGI_COMBO_LAST_AGI_BTN: "aCLastB",         // optional: last agility button pressed (debug / future use)
+
+    // NEW (Agility combo v4): weapon-as-meter charge contract (Phaser reads these)
+    AGI_CHARGE_ACTIVE: "aChg",          // 0/1
+    AGI_START_MS: "aChgS",              // ms
+    AGI_PERIOD_MS: "aChgPer",           // ms
+    AGI_TIER_A_ADD: "aTA",              // number
+    AGI_TIER_B_ADD: "aTB",              // number
+    AGI_TIER_C_ADD: "aTC",              // number
+    AGI_EXEC_FRAC_X1000: "aExF",        // half-cycle window fractions; sum to 500
+    AGI_A_FRAC_X1000: "aAF",
+    AGI_B_FRAC_X1000: "aBF",
+    AGI_C_FRAC_X1000: "aCF",
+    AGI_EXECUTE_SEQ: "aExSeq",          // increments per accepted execute
+    AGI_LAST_ADD_AMOUNT: "aLastAdd",    // captured on execute
+    AGI_STORED_HITS: "aStor",           // authoritative stored hits (separate from ghosts)
+    AGI_LAND_BUFFER_MS: "aLandB",       // optional (ms)
+
+    AGI_PENDING_ADD: "aPend",     // number: current pending add amount (ghost count)
+    AGI_IS_EXEC_WINDOW: "aExW",   // number: 1 if in EXEC window (sheen), else 0
+
+
+    // NEW (C4): Agility execute sequencing + teleport bookkeeping
+    AGI_EXEC_ORIG_X: "aExOX",
+    AGI_EXEC_ORIG_Y: "aExOY",
+    AGI_EXEC_RADIUS: "aExR",
+    AGI_EXEC_STEP: "aExI",
+    AGI_EXEC_NEXT_MS: "aExN",
+    AGI_EXEC_INTERVAL_MS: "aExDt",
+    AGI_EXEC_SLOW_PCT: "aExSl",
+    AGI_EXEC_SLOW_DUR_MS: "aExSd",
+
+    // NEW (C5): cancel bookkeeping
+    AGI_CANCEL_LAST_TICK_MS: "aCanT",
+
+    // NEW (Bug2 fix): cancel direction must be steady to cancel
+    AGI_CANCEL_DIR_X: "aCanDX",
+    AGI_CANCEL_DIR_Y: "aCanDY",
+
+    STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
+    OWNER: "owner",                    // which player "owns" this hero
+
+    // STR charge (hold-to-charge) state
+    STR_CHARGING: "strChg",            // boolean
+    STR_CHARGE_BTN: "strChgBtn",       // number (button id)
+    STR_CHARGE_START_MS: "strChgS",    // number (ms)
+    STR_CHARGE_LAST_MS: "strChgL",     // number (ms)
+    STR_CHARGE_MAX_MS: "strChgMax",    // number (ms to full)
+    STR_CHARGE_ARC_DEG: "strChgDeg",   // number (0..360) current arc from charge
+    STR_CHARGE_MPD_X1000: "strChgMpd", // number (mana per degree * 1000)
+    STR_CHARGE_SPENT: "strChgSpent",   // number (debug/validation)
+    STR_CHARGE_REM_X1000: "strChgRem", // number (fixed-point remainder for incremental mana drain)
+
+    // STR cached payload (snapshotted at charge start; immune to mid-hold changes)
+    STR_PAYLOAD_FAMILY: "strPayFam",   // number
+    STR_PAYLOAD_BTNSTR: "strPayBtn",   // string ("A" | "B" | "A+B")
+    STR_PAYLOAD_T1: "strPay1",         // number
+    STR_PAYLOAD_T2: "strPay2",         // number
+    STR_PAYLOAD_T3: "strPay3",         // number
+    STR_PAYLOAD_T4: "strPay4",         // number
+    STR_PAYLOAD_EL: "strPayEl",        // number
+    STR_PAYLOAD_ANIM: "strPayAnim",    // string
+
+    // NEW: engine-side state we want exposed
+    BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
+    MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
+    DAMAGE_AMP_MULT: "dmgMult",        // heroDamageAmpMult[heroIndex]
+    BUFF_JSON: "buffsJson",            // JSON snapshot of heroBuffs[heroIndex]
+
+    // NEW: for tile-collision rollback
+    PREV_X: "prevX",
+    PREV_Y: "prevY",
+
+    // NEW: hero death state (for LPC death animation timing)
+    IS_DEAD: "isDead",
+    DEATH_UNTIL: "deathUntil",
+
+    // -------------------------------------------------
+    // Weapons (net-safe: primitives only)
+    // -------------------------------------------------
+    WEAPON_LOADOUT_VER: "wVer",     // number (start at 1)
+    WEAPON_SLASH_ID: "wSl",         // string (weapon model id)
+    WEAPON_THRUST_ID: "wTh",        // string (weapon model id)
+    WEAPON_CAST_ID: "wCa",          // string (weapon model id)
+    WEAPON_EXEC_ID: "wEx",          // string (weapon model id; optional)
+    WEAPON_COMBO_ID: "wCo",         // string (weapon model id used during agility combo/charge visuals)
+
+    // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
+    DIR: "dir",
+    PHASE: "phase",
+    FRAME_COL_OVERRIDE: "frameColOverride",
+
+    AURA_ACTIVE: "auraActive",
+    AURA_COLOR: "auraColor",
+
+    VIS_INNER_R: "visInnerR",
+    VIS_LEAD_EDGE: "visLeadEdge",
+    VIS_WTIP_X: "visWTipX",
+    VIS_WTIP_Y: "visWTipY"
+}
+
+
+
+const HERO_DATAOLDCODETODELETE = {
     HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
     FAMILY: "family", BUTTON: "btn",
     TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
@@ -876,6 +1016,8 @@ const HERO_DATA = {
     // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
     DIR: "dir",
     PHASE: "phase",
+    FRAME_COL_OVERRIDE: "frameColOverride",
+
 
     AURA_ACTIVE: "auraActive",
     AURA_COLOR: "auraColor",
@@ -1054,6 +1196,10 @@ let agiPacketBankByHeroIndex = new Map<number, number[]>()
 const AGI_EXEC_STEP_MS = 85
 const AGI_EXEC_STEP_MS_MIN = 150
 
+
+
+
+
 // ================================================================
 // Agility Execute: teleport positioning + facing knobs
 // ================================================================
@@ -1100,6 +1246,32 @@ const AGI_BREAK_SHAKE_PX = 2
 
 
 
+
+// --------------------------------------------------------------
+// C6: Agility trait wiring flags (tuning knobs)
+// --------------------------------------------------------------
+const AGI_TIME_AFFECTS_SCHEDULE = false      // NEW (v4): Trait3 reshapes tier set + schedule (not wired yet)
+
+// --------------------------------------------------------------
+// Agility combo v4 (weapon-as-meter) defaults
+// NOTE: Step 1 only seeds/publishes keys; behavior is wired later.
+// Contract: EXEC + A + B + C = 500 (X1000 units, half-cycle)
+// Full cycle implied: EXEC → A → B → C → B → A → EXEC
+// --------------------------------------------------------------
+const AGI_CHARGE_DEFAULT_TIER_A_ADD = 3
+const AGI_CHARGE_DEFAULT_TIER_B_ADD = 4
+const AGI_CHARGE_DEFAULT_TIER_C_ADD = 5
+
+const AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000 = 80
+const AGI_CHARGE_DEFAULT_A_FRAC_X1000 = 140
+const AGI_CHARGE_DEFAULT_B_FRAC_X1000 = 140
+const AGI_CHARGE_DEFAULT_C_FRAC_X1000 = 140
+
+// Default period used for the pendulum cycle while charging (ms)
+// (kept aligned with current pendulum constant for now)
+const AGI_CHARGE_DEFAULT_PERIOD_MS = AGI_METER_PERIOD_MS
+
+
 // Strength charge button ids (matches updatePlayerInputs intent strings)
 const STR_BTN_NONE = 0
 const STR_BTN_A = 1
@@ -1131,19 +1303,21 @@ const INT_CTRL_UNTIL_KEY = "INT_CTRL_UNTIL"
 // NOTE: weapon IDs must match weaponAtlas "model" ids.
 // --------------------------------------------------------------
 
-const DEFAULT_WEAPON_LOADOUT_VER = 1
+const DEFAULT_WEAPON_LOADOUT_VER = 2
 
 // Your current picked defaults:
-const DEFAULT_WEAPON_SLASH_ID = "katana"
+const DEFAULT_WEAPON_SLASH_ID = "glowsword"
 const DEFAULT_WEAPON_THRUST_ID = "spear"
 const DEFAULT_WEAPON_EXEC_ID = "dagger"
+const DEFAULT_WEAPON_COMBO_ID = "arming"
+
 
 // Engine phase is "cast" but your sheet token is "spellcast".
 // We will resolve "cast" -> ["cast","spellcast"] in weaponAtlas.ts (see below).
 const DEFAULT_WEAPON_CAST_ID = "simple"
 
 // Optional (future):
-const DEFAULT_WEAPON_VARIANT = "base"
+const DEFAULT_WEAPON_VARIANT = "blue" //"base"
 
 // --------------------------------------------------------------
 // Hardcoded weapon loadout source (Step 3)
@@ -1155,26 +1329,22 @@ interface HardcodedWeaponLoadout {
     thrustId: string
     castId: string
     execId: string
+    comboId: string
 }
 
 function getHardcodedWeaponLoadoutForHero(profileName: string, familyNumber: number): HardcodedWeaponLoadout {
-    // profileName is a stable string you already seed as "heroName"
-    // familyNumber is included for future theming (currently unused in default case)
     const key = String(profileName || "").trim().toLowerCase()
 
-    // Future hook: per-profile loadouts (drops/equip can later override sprite.data)
     switch (key) {
-
-        // Example (disabled until you want it):
-        // case "hennessy":
-        //     return { slashId: "sword", thrustId: "spear", castId: "staff", execId: "dagger" }
-
         default:
             return {
-                slashId: DEFAULT_WEAPON_SLASH_ID,   // "sword"
-                thrustId: DEFAULT_WEAPON_THRUST_ID, // "spear"
-                castId: DEFAULT_WEAPON_CAST_ID,     // "staff"
-                execId: DEFAULT_WEAPON_EXEC_ID,     // "dagger"
+                slashId: DEFAULT_WEAPON_SLASH_ID,
+                thrustId: DEFAULT_WEAPON_THRUST_ID,
+                castId: DEFAULT_WEAPON_CAST_ID,
+                execId: DEFAULT_WEAPON_EXEC_ID,
+
+                // NEW: combo weapon (used during agility charge / combo visuals)
+                comboId: DEFAULT_WEAPON_COMBO_ID,
             }
     }
 }
@@ -1332,6 +1502,9 @@ const AURA_COLOR_HEAL = 7 // green-ish
 // === UI marker keys (shared) ===
 const UI_KIND_KEY = "__uiKind";
 const UI_KIND_COMBO_METER = "comboMeter";
+
+const UI_KIND_AGI_STORED_COUNTER = "agiStoredCounter";
+
 
 // === Combo meter sprite data keys ===
 const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
@@ -2335,6 +2508,8 @@ function _doHeroMoveUpdateAgilityComboState(
     now: number,
     family: number
 ): AgilityPressResult {
+    // NOTE: "agiZoneMult" is now reused as "pendingAddAmount" for v4 wiring.
+    // We keep the variable name so we don't churn call signatures in this step.
     let agiZoneMult = -1
     let agiDoExecuteThisPress = false
 
@@ -2382,10 +2557,25 @@ function _doHeroMoveUpdateAgilityComboState(
 
     const agiIsArmedThisPress = (agiStateBefore === AGI_STATE.ARMED)
 
-    // Only sample the meter zone / execute selection while ARMED (meter is up).
+    // --------------------------------------------------------------------
+    // v4: While ARMED, use engine-published window state:
+    // - AGI_IS_EXEC_WINDOW determines execute selection (sheen window)
+    // - AGI_PENDING_ADD is the exact ghost count / pending add amount
+    // --------------------------------------------------------------------
     if (agiIsArmedThisPress) {
-        agiZoneMult = agiMeterZoneMultiplier(hero, now) | 0
-        if (agiZoneMult === 0) agiDoExecuteThisPress = true
+        const isExecW = (sprites.readDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW) | 0) ? 1 : 0
+        const pendingAdd = sprites.readDataNumber(hero, HERO_DATA.AGI_PENDING_ADD) | 0
+
+        agiZoneMult = pendingAdd | 0
+        if (isExecW) agiDoExecuteThisPress = true
+
+        // Defensive fallback (should not happen once v4 publisher is always running):
+        // If pendingAdd is 0 and we're not in EXEC, fall back to old zone multiplier.
+        if (!agiDoExecuteThisPress && agiZoneMult <= 0) {
+            const legacyZ = agiMeterZoneMultiplier(hero, now) | 0
+            agiZoneMult = legacyZ | 0
+            if (legacyZ === 0) agiDoExecuteThisPress = true
+        }
     }
 
     return {
@@ -2429,6 +2619,14 @@ function _doHeroMoveTrySpendMana(
     return true
 }
 
+
+function agiEmitExecuteEvent(hero: Sprite, lastAddAmount: number): void {
+    const seq0 = sprites.readDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ) | 0
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ, (seq0 + 1) | 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_ADD_AMOUNT, lastAddAmount | 0)
+}
+
+
 function _doHeroMoveTryAgilityExecuteThisPress(
     heroIndex: number,
     hero: Sprite,
@@ -2451,6 +2649,16 @@ function _doHeroMoveTryAgilityExecuteThisPress(
 
     const slowPct = stats[STAT.SLOW_PCT] | 0
     const slowDurMs = stats[STAT.SLOW_DURATION] | 0
+
+    // v4: Emit the execute event (for Phaser sheen/collapse logic).
+    // In EXEC window there are no ghosts; lastAddAmount is 0.
+    agiEmitExecuteEvent(hero, 0)
+
+    // Immediately disarm v4 charge keys so Phaser doesn't display stale charge state until next tick.
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
 
     destroyAgiAimIndicator(heroIndex)
     agiBeginExecute(heroIndex, hero, execRadius, slowPct, slowDurMs)
@@ -2489,21 +2697,22 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
     const landed = (dashUntil0 <= 0) || ((now | 0) >= dashUntil0)
     if (!landed) return false
 
-    // We should already have agiZoneMult from _doHeroMoveUpdateAgilityComboState while ARMED.
-    // But be defensive if it came through as "unknown".
-    let z = agiZoneMult | 0
-    if (z < 0) z = agiMeterZoneMultiplier(hero, now) | 0
-
-    // If the player somehow tapped while E-zone (execute), do NOT treat as a build commit.
-    // The execute path should have returned earlier.
-    if (z === 0) {
+    // v4: do not build while in EXEC window (sheen).
+    // Execute path should have returned earlier.
+    const isExecW0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW) | 0) ? 1 : 0
+    if (isExecW0) {
         if (DEBUG_AGI_COMBO_BUILD) {
-            console.log(`[agi.combo.build] UNEXPECTED z=0 (execute) hero=${heroIndex} now=${now} dashUntil=${dashUntil0}`)
+            console.log(`[agi.combo.build] UNEXPECTED execWindow=1 hero=${heroIndex} now=${now} dashUntil=${dashUntil0}`)
         }
         return true // consume so we don't accidentally dash with no selection
     }
 
-    // If the zone is invalid, do nothing but disarm (so the press still dashes).
+    // v4: pending add amount is authoritative. We reuse agiZoneMult as the carried pendingAdd,
+    // but allow a defensive read from HERO_DATA if it came through as "unknown".
+    let z = agiZoneMult | 0
+    if (z < 0) z = (sprites.readDataNumber(hero, HERO_DATA.AGI_PENDING_ADD) | 0)
+
+    // If invalid, do nothing but disarm (so the press still dashes).
     if (z <= 0) {
         if (DEBUG_AGI_COMBO_BUILD) {
             console.log(`[agi.combo.build] cancel z=${z} hero=${heroIndex} now=${now} dashUntil=${dashUntil0}`)
@@ -2513,6 +2722,12 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
         sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
         sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
         sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+
+        // v4: immediately disarm published charge keys (prevents 1-frame stale visuals in Phaser)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
 
         // Clear cancel bookkeeping
         sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
@@ -2527,10 +2742,17 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
 
     // ------------------------------------------------------------
     // Commit: append EXACTLY z hits into the stored-hits packet bank.
-    // Combo tier affects ONLY hit-count; traits are unchanged.
+    // v4: z is the pending add amount from the time schedule (A/B/C tier values).
     // ------------------------------------------------------------
     const dmg = t1 | 0
     agiPacketsAppend(heroIndex, hero, dmg, z)
+
+    // v4: Emit execute event so Phaser can collapse ghosts and streak z times into the counter.
+    agiEmitExecuteEvent(hero, z)
+
+    // v4: keep AGI_STORED_HITS authoritative + up-to-date immediately
+    const storedHitsNow = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
+    sprites.setDataNumber(hero, HERO_DATA.AGI_STORED_HITS, storedHitsNow)
 
     if (DEBUG_AGI_COMBO_BUILD) {
         console.log(`[agi.combo.build] commit hero=${heroIndex} z=${z} dmg=${dmg} now=${now} dashUntil=${dashUntil0}`)
@@ -2540,6 +2762,12 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
     sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+
+    // v4: immediately disarm published charge keys (prevents 1-frame stale visuals in Phaser)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
 
     // Clear cancel bookkeeping
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
@@ -3003,9 +3231,12 @@ function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, family
     sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, lo.thrustId)
     sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, lo.castId)
     sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, lo.execId)
+
+    // NEW
+    sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, lo.comboId)
+
     sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
 }
-
 
 
 function createHeroForPlayer(playerId: number, startX: number, startY: number) {
@@ -3030,6 +3261,7 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     // NEW: seed initial facing + phase for animations
     syncHeroDirData(heroIndex)
     setHeroPhaseString(heroIndex, "idle")
+    clearHeroFrameColOverride(heroIndex) // IMPORTANT: seed to -1 so run/idle logic works
 
     sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
     sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
@@ -3070,6 +3302,29 @@ function createHeroForPlayer(playerId: number, startX: number, startY: number) {
     sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAND_ARMED_FOR_DU, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, 0)
+
+    // NEW (Agility combo v4): weapon-as-meter charge contract (seed defaults)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PERIOD_MS, AGI_CHARGE_DEFAULT_PERIOD_MS)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD, AGI_CHARGE_DEFAULT_TIER_A_ADD)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD, AGI_CHARGE_DEFAULT_TIER_B_ADD)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD, AGI_CHARGE_DEFAULT_TIER_C_ADD)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000, AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000, AGI_CHARGE_DEFAULT_A_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000, AGI_CHARGE_DEFAULT_B_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, AGI_CHARGE_DEFAULT_C_FRAC_X1000)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_ADD_AMOUNT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_STORED_HITS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAND_BUFFER_MS, AGI_LANDING_BUFFER_MS)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
+
 
     sprites.setDataNumber(hero, HERO_DATA.FAMILY, FAMILY.STRENGTH)
 
@@ -3230,6 +3485,69 @@ function setHeroPhaseString(heroIndex: number, phase: string) {
     const hero = heroes[heroIndex]; if (!hero) return
     sprites.setDataString(hero, "phase", phase)
     sprites.setDataString(hero, HERO_DATA.PHASE, phase)
+}
+
+
+// Mirror frame-col override into hero data so Phaser can see it.
+// Sentinel: HERO_FRAME_COL_OVERRIDE_NONE (-1) means "no override"
+// Mirror frame-col override into hero data so Phaser can see it.
+// Sentinel: HERO_FRAME_COL_OVERRIDE_NONE (-1) means "no override"
+function setHeroFrameColOverride(heroIndex: number, col: number): void {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const v = col | 0
+
+    const prev = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+    if (prev === v) return
+
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, v)
+
+    if (DEBUG_INTEGRATOR) {
+        const phase = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
+        const dir = sprites.readDataString(hero, HERO_DATA.DIR) || ""
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        console.log("[WPN-FCO-SET]", { heroIndex, prev, v, phase, dir, strCharging, agiState, locked, busyUntil, t: (game.runtime() | 0) })
+    }
+}
+
+function clearHeroFrameColOverride(heroIndex: number): void {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const prev = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+    if (prev === HERO_FRAME_COL_OVERRIDE_NONE) return
+
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+
+    if (DEBUG_INTEGRATOR) {
+        const phase = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
+        const dir = sprites.readDataString(hero, HERO_DATA.DIR) || ""
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        console.log("[WPN-FCO-CLEAR]", { heroIndex, prev, v: HERO_FRAME_COL_OVERRIDE_NONE, phase, dir, strCharging, agiState, locked, busyUntil, t: (game.runtime() | 0) })
+    }
+}
+
+
+
+function getHeroBusyUntil(heroIndex: number): number {
+    const hero = heroes[heroIndex]; if (!hero) return 0
+    const v = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+    heroBusyUntil[heroIndex] = v
+    return v
+}
+
+function setHeroBusyUntil(heroIndex: number, untilMs: number): void {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const v = untilMs | 0
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, v)
+    heroBusyUntil[heroIndex] = v
+}
+
+function clearHeroBusyUntil(heroIndex: number): void {
+    setHeroBusyUntil(heroIndex, 0)
 }
 
 
@@ -3572,10 +3890,204 @@ function ensureHeroAuraSprite(heroIndex: number): Sprite {
 
 
 
+function agiPendulumPeriodMsForHero(hero: Sprite): number {
+    // Mirror the existing C6 pendulum-speed logic used by agiMeterPosX1000()
+    let period = AGI_METER_PERIOD_MS | 0
+
+    if (AGI_TIME_AFFECTS_PENDULUM) {
+        const tTime = sprites.readDataNumber(hero, HERO_DATA.TRAIT3) | 0
+        period = 1200 + Math.max(0, tTime) * 10
+        if (period < 400) period = 400
+        if (period > 4000) period = 4000
+    }
+
+    return period | 0
+}
+
+
+function agiResolveHalfCyclePosX1000(nowMs: number, startMs: number, periodMs: number): number {
+    const now = nowMs | 0
+    const start = startMs | 0
+    let per = periodMs | 0
+    if (per <= 0) per = 1
+
+    let dt = (now - start) | 0
+    if (dt < 0) dt = 0
+
+    // t in [0..per-1]
+    const t = (dt % per) | 0
+
+    // mirror into half-cycle
+    let halfPer = (per >> 1) | 0
+    if (halfPer <= 0) halfPer = 1
+
+    const halfT = (t >= halfPer) ? ((per - t) | 0) : t
+
+    // 0..1000 inclusive
+    const posX1000 = Math.idiv((halfT * 1000) | 0, halfPer) | 0
+    if (posX1000 < 0) return 0
+    if (posX1000 > 1000) return 1000
+    return posX1000
+}
+
+
+function agiResolveWindowAndPendingAdd(hero: Sprite, nowMs: number): { pendingAdd: number, isExec: number } {
+    const startMs = sprites.readDataNumber(hero, HERO_DATA.AGI_START_MS) | 0
+    const periodMs = sprites.readDataNumber(hero, HERO_DATA.AGI_PERIOD_MS) | 0
+
+    // Half-cycle position 0..1000
+    const halfPosX1000 = agiResolveHalfCyclePosX1000(nowMs, startMs, periodMs)
+
+    // Window lengths are expressed as "full-cycle X1000 fractions" whose half-cycle sum is 500.
+    // Convert to half-cycle X1000 by doubling (sum becomes 1000).
+    let exF = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000) | 0
+    let aF  = sprites.readDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000) | 0
+    let bF  = sprites.readDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000) | 0
+    let cF  = sprites.readDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000) | 0
+
+    const sum = (exF + aF + bF + cF) | 0
+    if (exF <= 0 || aF <= 0 || bF <= 0 || cF <= 0 || sum !== 500) {
+        // fall back to defaults (Step 2 already seeds, this is just belt+suspenders)
+        exF = AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000
+        aF  = AGI_CHARGE_DEFAULT_A_FRAC_X1000
+        bF  = AGI_CHARGE_DEFAULT_B_FRAC_X1000
+        cF  = AGI_CHARGE_DEFAULT_C_FRAC_X1000
+    }
+
+    const exLen = (exF << 1) | 0
+    const aLen  = (aF << 1) | 0
+    const bLen  = (bF << 1) | 0
+
+    // Boundaries cover [0..1000]; C is the remainder window.
+    let b0 = exLen
+    let b1 = (b0 + aLen) | 0
+    let b2 = (b1 + bLen) | 0
+
+    // Clamp boundaries defensively
+    if (b0 < 0) b0 = 0
+    if (b1 < b0) b1 = b0
+    if (b2 < b1) b2 = b1
+    if (b2 > 1000) b2 = 1000
+    if (b1 > 1000) b1 = 1000
+    if (b0 > 1000) b0 = 1000
+
+    // Tier values
+    const tA = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD) | 0
+    const tB = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD) | 0
+    const tC = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD) | 0
+
+    // Resolve window for this half-cycle position
+    if (halfPosX1000 < b0) {
+        return { pendingAdd: 0, isExec: 1 }
+    }
+    if (halfPosX1000 < b1) {
+        return { pendingAdd: (tA > 0 ? tA : 0), isExec: 0 }
+    }
+    if (halfPosX1000 < b2) {
+        return { pendingAdd: (tB > 0 ? tB : 0), isExec: 0 }
+    }
+    return { pendingAdd: (tC > 0 ? tC : 0), isExec: 0 }
+}
+
+
+
+function updateAgiChargeV4PublishedKeys(nowMs: number): void {
+    const now = nowMs | 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        // Charge is "relevant" in v2/v3 terms when ARMED and landed (same visibility rule as meter/aim)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+        const landed = (dashUntil === 0) || (now >= dashUntil)
+        const chargeActive = (agiState === AGI_STATE.ARMED) && landed
+
+        // Always publish period + defaults so Phaser has stable values even if it reads early
+        const periodMs = agiPendulumPeriodMsForHero(hero)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_PERIOD_MS, periodMs)
+
+        // Land buffer mirrors calculateAgilityStats() logic (Trait3 -> vuln window) for later use
+        let landBuf = AGI_LANDING_BUFFER_MS | 0
+        if (AGI_TIME_AFFECTS_VULN) {
+            const tTime = sprites.readDataNumber(hero, HERO_DATA.TRAIT3) | 0
+            landBuf = (AGI_LANDING_BUFFER_MS + Math.max(0, tTime) * 2) | 0
+        }
+        sprites.setDataNumber(hero, HERO_DATA.AGI_LAND_BUFFER_MS, landBuf)
+
+        // Seed tier values if missing/invalid
+        let tA = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD) | 0
+        let tB = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD) | 0
+        let tC = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD) | 0
+        if (tA <= 0 || tB <= 0 || tC <= 0) {
+            tA = AGI_CHARGE_DEFAULT_TIER_A_ADD
+            tB = AGI_CHARGE_DEFAULT_TIER_B_ADD
+            tC = AGI_CHARGE_DEFAULT_TIER_C_ADD
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD, tA)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD, tB)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD, tC)
+        }
+
+        // Seed schedule fractions if missing/invalid OR sum != 500
+        let exF = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000) | 0
+        let aF = sprites.readDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000) | 0
+        let bF = sprites.readDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000) | 0
+        let cF = sprites.readDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000) | 0
+
+        const sum = (exF + aF + bF + cF) | 0
+        if (exF <= 0 || aF <= 0 || bF <= 0 || cF <= 0 || sum !== 500) {
+            exF = AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000
+            aF = AGI_CHARGE_DEFAULT_A_FRAC_X1000
+            bF = AGI_CHARGE_DEFAULT_B_FRAC_X1000
+            cF = AGI_CHARGE_DEFAULT_C_FRAC_X1000
+            sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000, exF)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000, aF)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000, bF)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, cF)
+        }
+
+        // Stored hits contract: keep separate from ghosts; for now mirror existing packets count
+        const storedHits = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
+        sprites.setDataNumber(hero, HERO_DATA.AGI_STORED_HITS, storedHits)
+
+        if (!chargeActive) {
+            sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+
+            // v4 convenience publishes (inactive)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
+            continue
+        }
+
+        // Active charge: publish start time aligned with existing meter start
+        let startMs = sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0
+        if (startMs <= 0) {
+            startMs = now
+            sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, startMs)
+        }
+
+        sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 1)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, startMs)
+
+        // Resolve current window -> pending add amount + exec window flag (engine-authoritative)
+        const res = agiResolveWindowAndPendingAdd(hero, now)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, res.pendingAdd | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, res.isExec | 0)
+    }
+}
+
+
+
 
 function updateHeroOverlays() {
     const now = game.runtime() | 0
     const phaser = isPhaserRuntime()
+
+    // NEW (v4): publish weapon-as-meter contract keys (engine-side authoritative data)
+    updateAgiChargeV4PublishedKeys(now)
 
     updateHeroAuras(now, phaser)
     updateHeroAimIndicators(now, phaser)
@@ -3703,33 +4215,46 @@ function updateHeroAimIndicators(now: number, phaser: boolean) {
 
 
 function updateHeroMeters(now: number, phaser: boolean) {
-    // Local helper: draw the segmented pendulum meter (Arcade only).
-    function drawAgiMeterImage(
-        wE: number,
-        w1: number,
-        w2: number,
-        w3: number,
-        pointerX: number
-    ): Image {
-        const w = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
-        const h = AGI_METER_H
+    // Arcade-only fallback: compact pips (pending add amount) + optional EXEC sparkle.
+    function drawAgiPipsImage(pendingAdd: number, isExecWindow: boolean): Image {
+        const pipW = 2
+        const pipH = 2
+        const gap = 1
+        const pad = 1
+        const maxPips = 8
+
+        let n = pendingAdd | 0
+        if (n < 0) n = 0
+        if (n > maxPips) n = maxPips
+
+        const wInner = (n > 0) ? ((n * pipW) + ((n - 1) * gap)) : 4
+        const w = (wInner + pad * 2) | 0
+        const h = 6
+
         const img = image.create(w, h)
         img.fill(0)
 
-        let x = 0
-        img.fillRect(x, 0, wE, h, 2); x += wE
-        img.fillRect(x, 0, w1, h, 7); x += w1
-        img.fillRect(x, 0, w2, h, 9); x += w2
-        img.fillRect(x, 0, w3, h, 3); x += w3
-        img.fillRect(x, 0, w2, h, 9); x += w2
-        img.fillRect(x, 0, w1, h, 7); x += w1
-        img.fillRect(x, 0, wE, h, 2)
-
+        // Border
         img.drawRect(0, 0, w, h, 1)
 
-        if (pointerX < 0) pointerX = 0
-        if (pointerX > w - 1) pointerX = w - 1
-        for (let py = 0; py < h; py++) img.setPixel(pointerX, py, 5)
+        // Pips
+        let x = pad
+        const y = 2
+        for (let i = 0; i < n; i++) {
+            img.fillRect(x, y, pipW, pipH, 7)
+            x += pipW + gap
+        }
+
+        // EXEC sparkle (tiny cross)
+        if (isExecWindow) {
+            const cx = (w >> 1) | 0
+            const cy = (h >> 1) | 0
+            img.setPixel(cx, cy, 5)
+            if (cx - 1 >= 0) img.setPixel(cx - 1, cy, 5)
+            if (cx + 1 < w) img.setPixel(cx + 1, cy, 5)
+            if (cy - 1 >= 0) img.setPixel(cx, cy - 1, 5)
+            if (cy + 1 < h) img.setPixel(cx, cy + 1, 5)
+        }
 
         return img
     }
@@ -3737,82 +4262,72 @@ function updateHeroMeters(now: number, phaser: boolean) {
     for (let i = 0; i < heroes.length; i++) {
         const hero = heroes[i]; if (!hero) continue
 
-        // ============================================================
-        // C2: Agility meter visibility driven by AGI_STATE + landing time
-        // ============================================================
+        // Charge relevance (same rule as before: ARMED + landed)
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
         const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
-
-        // Show meter only if ARMED AND we've landed (now >= dashUntil)
-        const showMeter = (agiState === AGI_STATE.ARMED) && (dashUntil === 0 || now >= dashUntil)
+        const chargeRelevant = (agiState === AGI_STATE.ARMED) && (dashUntil === 0 || now >= dashUntil)
 
         const meter = heroComboMeters[i]
         const counter = heroAgiStoredCounters[i]
 
-        if (!showMeter) {
+        // Stored hits: prefer v4 key if present, fallback to packet count
+        let storedHits = sprites.readDataNumber(hero, HERO_DATA.AGI_STORED_HITS) | 0
+        if (!storedHits && storedHits !== 0) storedHits = 0
+        if ((storedHits | 0) === 0) {
+            storedHits = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
+        }
+
+        // ------------------------------------------------------------
+        // Phaser runtime: completely disable the old combo-bar path.
+        // (No ensureComboMeter, no UI_KIND_COMBO_METER publishing.)
+        // ------------------------------------------------------------
+        if (phaser) {
             if (meter) {
                 meter.setFlag(SpriteFlag.Invisible, true)
-                if (phaser) sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
+                sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
             }
+        } else {
+            // --------------------------------------------------------
+            // Arcade fallback: show compact pips while charge relevant.
+            // --------------------------------------------------------
+            if (!chargeRelevant) {
+                if (meter) meter.setFlag(SpriteFlag.Invisible, true)
+            } else {
+                const m = ensureComboMeter(i); if (!m) continue
+
+                const pendingAdd = sprites.readDataNumber(hero, HERO_DATA.AGI_PENDING_ADD) | 0
+                const isExecW = (sprites.readDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW) | 0) ? true : false
+
+                const img = drawAgiPipsImage(pendingAdd, isExecW)
+                m.setImage(img)
+
+                m.z = hero.z + 2
+                m.x = hero.x
+                m.y = hero.y + (hero.height >> 1) + 5
+                m.setFlag(SpriteFlag.Invisible, false)
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Stored-hits counter: separate, above the hero’s head.
+        // Show if there are stored hits OR charge is relevant.
+        // ------------------------------------------------------------
+        const showCounter = ((storedHits | 0) > 0) || chargeRelevant
+
+        if (!showCounter) {
             if (counter) counter.setFlag(SpriteFlag.Invisible, true)
             continue
         }
 
-        const m = ensureComboMeter(i); if (!m) continue
-
-        let wE = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_E_W) | 0
-        let w1 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_1_W) | 0
-        let w2 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_2_W) | 0
-        let w3 = sprites.readDataNumber(hero, HERO_DATA.AGI_ZONE_3_W) | 0
-        if (wE <= 0) wE = AGI_METER_W_E
-        if (w1 <= 0) w1 = AGI_METER_W_1
-        if (w2 <= 0) w2 = AGI_METER_W_2
-        if (w3 <= 0) w3 = AGI_METER_W_3
-
-        const totalW = (wE * 2) + (w1 * 2) + (w2 * 2) + w3
-
-        // Use the canonical pendulum logic so UI matches gameplay (including optional Trait3 effects).
-        const posX1000 = agiMeterPosX1000(hero, now)
-        const pointerX = Math.idiv(posX1000 * (totalW - 1), 1000)
-
-        // Position the logical sprite (both runtimes); Phaser will draw native rectangles.
-        m.z = hero.z + 2
-        m.x = hero.x
-        m.y = hero.y + (hero.height >> 1) + 5
-
-        // Stored-hit counter
-        const count = sprites.readDataNumber(hero, HERO_DATA.AGI_PKT_COUNT) | 0
-
-        if (phaser) {
-            // Publish numeric state for Phaser-native renderer
-            sprites.setDataString(m, UI_KIND_KEY, UI_KIND_COMBO_METER)
-            sprites.setDataNumber(m, UI_COMBO_TOTAL_W_KEY, totalW)
-            sprites.setDataNumber(m, UI_COMBO_H_KEY, AGI_METER_H)
-            sprites.setDataNumber(m, UI_COMBO_W_E_KEY, wE)
-            sprites.setDataNumber(m, UI_COMBO_W_1_KEY, w1)
-            sprites.setDataNumber(m, UI_COMBO_W_2_KEY, w2)
-            sprites.setDataNumber(m, UI_COMBO_W_3_KEY, w3)
-            sprites.setDataNumber(m, UI_COMBO_POS_X1000_KEY, posX1000)
-            sprites.setDataNumber(m, UI_COMBO_VISIBLE_KEY, 1)
-            sprites.setDataNumber(m, UI_COMBO_PKT_COUNT_KEY, count)
-
-            // Hide the Arcade sprite; Phaser will render the meter as rectangles
-            m.setFlag(SpriteFlag.Invisible, true)
-        } else {
-            // Arcade: draw pixels
-            const img = drawAgiMeterImage(wE, w1, w2, w3, pointerX)
-            m.setImage(img)
-            m.setFlag(SpriteFlag.Invisible, false)
-        }
-
-        // Stored-hit counter text sprite (kept as-is for now)
         const tSprite = ensureAgiStoredCounter(i)
         if (tSprite) {
-            ;(tSprite as any).setText("" + count)
+            ;(tSprite as any).setText("" + (storedHits | 0))
             tSprite.setFlag(SpriteFlag.Invisible, false)
-            tSprite.z = hero.z + 3
-            tSprite.x = hero.x + (totalW >> 1) + 10
-            tSprite.y = m.y - 1
+
+            // Above head (near HP/mana area)
+            tSprite.z = hero.z + 10
+            tSprite.x = hero.x + 18
+            tSprite.y = hero.y - (hero.height >> 1) - 10
         }
     }
 }
@@ -4178,8 +4693,11 @@ function beginStrengthCharge(
     // Lock controls during charge
     lockHeroControls(heroIndex)
 
-    // ✅ Ensure the charging pose stays on the strength slash animation
+    // Phase semantics unchanged: strength charge is still "slash"
     setHeroPhaseString(heroIndex, "slash")
+
+    // NEW: hold frame 0 while charging
+    setHeroFrameColOverride(heroIndex, 0)
 
     // Charge bar
     showStrengthChargeBar(heroIndex, hero, true)
@@ -4315,6 +4833,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (!hero) return
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
+    // We are no longer holding a single frame; allow normal slash playback on release
+    clearHeroFrameColOverride(heroIndex)
+
     let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
     arcDeg = clampInt(arcDeg, 0, 360)
 
@@ -4344,9 +4865,6 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const el = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
     const traits = [0, t1, t2, t3, t4, el]
 
-    // (animKey is snapshotted for correctness/debug, but not required for projectile fire)
-    // const animKey = sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM) || ""
-
     // Recompute stats from the snapshotted traits/button
     const stats = calculateMoveStatsForFamily(family, button, traits)
 
@@ -4365,10 +4883,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const swingDurationMs = stats[STAT.STRENGTH_SWING_MS] || 220
     const isHeal = false
 
-    // Keep controls locked during the swing; unlock handled by your busy-until system
-    const unlockAt = nowMs + swingDurationMs
-    heroBusyUntil[heroIndex] = unlockAt
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, unlockAt)
+    // Keep controls locked during the swing; unlock handled by canonical busy-until
+    setHeroBusyUntil(heroIndex, nowMs + swingDurationMs)
 
     spawnStrengthSwingProjectile(
         heroIndex, hero,
@@ -4392,12 +4908,17 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 }
 
 
+
+
+
 function cancelStrengthCharge(heroIndex: number, hero: Sprite): void {
     if (!hero) return
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
-    // Cancel means: stop charging + hide bar.
-    // NOTE: This does NOT refund mana (per your “no cheese” rule).
+    // Never leave the hero stuck in hold-frame mode after cancel
+    clearHeroFrameColOverride(heroIndex)
+
+    // Cancel means: stop charging + hide bar (no refund).
     sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
@@ -4410,12 +4931,10 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite): void {
     showStrengthChargeBar(heroIndex, hero, false)
     setStrengthChargeBarPct(heroIndex, hero, 0)
 
-    // Unlock immediately on cancel (if you want cancel to still “swing”, don’t call this function)
+    // Unlock immediately on cancel
     unlockHeroControls(heroIndex)
-    heroBusyUntil[heroIndex] = 0
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+    clearHeroBusyUntil(heroIndex)
 }
-
 
 
 
@@ -5337,12 +5856,21 @@ function showComboPop(hero: Sprite, multX: number) {
 function ensureAgiStoredCounter(heroIndex: number): Sprite {
     let t = heroAgiStoredCounters[heroIndex]
     const hero = heroes[heroIndex]; if (!hero) return null
+
     if (!t) {
         t = textsprite.create("0")
         t.setMaxFontHeight(6)
         t.z = hero.z + 3
         heroAgiStoredCounters[heroIndex] = t
+
+        // Tag for Phaser-native execute FX targeting
+        sprites.setDataString(t, UI_KIND_KEY, UI_KIND_AGI_STORED_COUNTER)
+
+        // Copy hero owner so Phaser can match counter ↔ hero deterministically
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        sprites.setDataNumber(t, HERO_DATA.OWNER, owner)
     }
+
     return t
 }
 
@@ -9281,56 +9809,62 @@ function updateHeroDeaths(now: number) {
 
 
 function updateHeroMovementPhase(now: number) {
+    const nowMs = now | 0
+
     for (let hi = 0; hi < heroes.length; hi++) {
-        const hero = heroes[hi]; if (!hero) continue;
+        const hero = heroes[hi]
+        if (!hero) continue
 
-        // Don't stomp death anims
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
+        // Don't stomp death visuals
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
 
-        // Agility execute should own the phase entirely.
-        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
-        if (agiState === AGI_STATE.EXECUTING) continue;
+        // Agility execute owns the phase entirely.
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        if (agiState === AGI_STATE.EXECUTING) continue
 
-        // Strength charge should own the phase (we want "slash pose" during charge)
-        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue;
+        // NEW: Strength charging owns the phase ("slash"), but renderer may hold frame 0.
+        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue
 
-        // IMPORTANT: treat busy as the max of BOTH representations.
-        const busyData = (sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0);
-        const busyArr = (heroBusyUntil[hi] | 0);
-        const busyUntil = busyData > busyArr ? busyData : busyArr;
+        // Optional: if a hold-frame override is active, don't stomp phase either.
+        const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        if (fco >= 0) continue
 
-        // Mid-attack / cast window → keep slash/thrust/cast
-        if (busyUntil > 0 && busyUntil > (now | 0)) continue;
+        // If we're busy (attack/cast window), do not override the phase.
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        if (busyUntil > 0 && nowMs < busyUntil) continue
 
-        // Agility combo build mode: use combatIdle
+        // Agility combo build mode: show combat idle pose
         if (agiState === AGI_STATE.ARMED) {
-            setHeroPhaseString(hi, "combatIdle");
-            continue;
+            setHeroPhaseString(hi, "combatIdle")
+            continue
         }
 
-        // default movement-based phase
-        const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy);
-        if (speedSq > 25) setHeroPhaseString(hi, "run");
-        else setHeroPhaseString(hi, "idle");
+        // Default movement-based phase
+        const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy)
+        if (speedSq > 25) setHeroPhaseString(hi, "run")
+        else setHeroPhaseString(hi, "idle")
     }
 }
 
 
 
-function updateHeroControlLocks(now: number) {
+
+function updateHeroControlLocks(now: number): void {
+    const nowMs = now | 0
+
     for (let i = 0; i < heroes.length; i++) {
         const hero = heroes[i]
         if (!hero) continue
 
-        const state = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
-        const isAgiBuildMode = (state === AGI_STATE.ARMED)
-        const isAgiExecuting = (state === AGI_STATE.EXECUTING)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const isAgiBuildMode = (agiState === AGI_STATE.ARMED)
+        const isAgiExecuting = (agiState === AGI_STATE.EXECUTING)
 
         const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
         const isCtrlSpell = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
 
         // If we are in Agility build mode but somehow not locked, lock now.
-        // This is the critical fix: combo build must stay locked after dash ends.
+        // Critical: combo build must stay locked after dash ends.
         if (!isCtrlSpell && isAgiBuildMode && !locked) {
             lockHeroControls(i)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
@@ -9339,42 +9873,65 @@ function updateHeroControlLocks(now: number) {
             hero.vy = 0
         }
 
-        if (sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) && !isCtrlSpell) {
-            // During ARMED/EXECUTING: allow aim changes, but DO NOT allow velocity changes.
-            if (isAgiBuildMode || isAgiExecuting) {
-                hero.vx = 0
-                hero.vy = 0
-                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        const lockedNow = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (!lockedNow) continue
 
-                // Do NOT auto-unlock at busyUntil while ARMED/EXECUTING
-                // (unlock is handled by cancel or execute finish)
-                continue
-            }
+        // ------------------------------------------------------------
+        // LOCK OWNERSHIP CASES (do NOT auto-unlock here)
+        // ------------------------------------------------------------
 
-            // Normal lock behavior (dash / cast / etc.)
-            hero.vx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX)
-            hero.vy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY)
+        // Intellect “controlling spell” owns the lock window (often not busyUntil-driven).
+        // Keep hero frozen and do NOT auto-unlock based on busyUntil.
+        if (isCtrlSpell) {
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            continue
+        }
 
-            const busyUntil = heroBusyUntil[i] || 0
-            if (busyUntil > 0 && now >= busyUntil) {
-                if (DEBUG_INTEGRATOR) {
-                    console.log("[LOCK-END] hero=" + i + " unlock at " + (now | 0))
-                }
+        // Strength charging owns the lock. Never auto-unlock, never force idle.
+        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            
+            continue
+        }
 
-                if (DEBUG_INTEGRATOR) {
-                    sprites.setDataNumber(hero, "INT_ID", 0)
-                }
+        // During ARMED/EXECUTING: allow aim changes, but DO NOT allow velocity changes.
+        // Unlock is handled by cancel or execute finish.
+        if (isAgiBuildMode || isAgiExecuting) {
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            continue
+        }
 
-                unlockHeroControls(i)
-                heroBusyUntil[i] = 0
+        // ------------------------------------------------------------
+        // NORMAL LOCK BEHAVIOR (dash / cast travel / etc.)
+        // Preserve stored velocity until busyUntil ends.
+        // ------------------------------------------------------------
+        hero.vx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX)
+        hero.vy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY)
 
-                sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+        // IMPORTANT: do NOT auto-unlock when busyUntil is 0.
+        // Only unlock when an actual busy window expires.
+        const busyUntil = getHeroBusyUntil(i) | 0
+        if (busyUntil > 0 && nowMs >= busyUntil) {
+            unlockHeroControls(i)
+            clearHeroBusyUntil(i)
+
+            if (!sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
                 setHeroPhaseString(i, "idle")
             }
         }
     }
 }
+
+
 
 
 

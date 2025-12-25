@@ -26,6 +26,9 @@ const HERO_REST_PHASE_KEY = "__heroRestPhase";
 // Store the animationcomplete handler so we can detach/replace it cleanly
 const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 
+const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
+
+
 // Global + per-file logging flag
 const HERO_GLUE_DEBUG = {
     enabled: true
@@ -66,14 +69,14 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     family: string | undefined;
     phase: HeroPhase | null;
     dir: HeroDir;
+    frameColOverride: number; // -1 means "no override"
 } {
     const anySprite = sprite as any;
-    const scene = sprite.scene;
 
-    const heroName = anySprite.getData
+    const heroNameRaw = anySprite.getData
         ? (anySprite.getData(HERO_NAME_KEY) as string | undefined)
         : undefined;
-    const family = anySprite.getData
+    const familyRaw = anySprite.getData
         ? (anySprite.getData(HERO_FAMILY_KEY) as string | undefined)
         : undefined;
     const phaseRaw = anySprite.getData
@@ -82,6 +85,26 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     const dirRaw = anySprite.getData
         ? (anySprite.getData(HERO_DIR_KEY) as string | undefined)
         : undefined;
+
+    // NEW: frameColOverride (sentinel -1 means "none")
+    const frameColOverrideRaw = anySprite.getData
+        ? (anySprite.getData(HERO_FRAME_COL_OVERRIDE_KEY) as any)
+        : undefined;
+
+    
+    const heroName = heroNameRaw ? String(heroNameRaw) : undefined;
+
+    // Family is OPTIONAL now. If present, normalize to a known token; otherwise undefined.
+    const family = ((): string | undefined => {
+        if (!familyRaw) return undefined;
+        const f = String(familyRaw).toLowerCase();
+        if (f === "base") return "base";
+        if (f === "strength") return "strength";
+        if (f === "agility") return "agility";
+        if (f === "intelligence") return "intelligence";
+        if (f === "support") return "support";
+        return undefined;
+    })();
 
     // Local normalization (mirrors heroAtlas.normalizeHeroPhase)
     const phase = ((): HeroPhase | null => {
@@ -119,17 +142,20 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         return "down";
     })();
 
-//    logGlue(scene, "readHeroAnimRequest", {
-//        heroName,
-//        family,
-//        phaseRaw,
-//        normalizedPhase: phase,
-//        dirRaw,
-//        normalizedDir: dir
-//    });
+    const frameColOverride = ((): number => {
+        if (frameColOverrideRaw === undefined || frameColOverrideRaw === null) return -1;
+        if (typeof frameColOverrideRaw === "number" && Number.isFinite(frameColOverrideRaw)) return frameColOverrideRaw | 0;
+        if (typeof frameColOverrideRaw === "string") {
+            const n = parseInt(frameColOverrideRaw, 10);
+            if (Number.isFinite(n)) return n | 0;
+        }
+        return -1;
+    })();
 
-    return { heroName, family, phase, dir };
+    return { heroName, family, phase, dir, frameColOverride };
 }
+
+
 
 /**
  * For now, every "active" animation returns to idle.
@@ -145,8 +171,13 @@ function getRestPhase(_phase: HeroPhase): HeroPhase {
  * - If run is requested but missing, fall back to walk if available.
  * - If thrust/slash are requested and oversize variants exist, use those.
  */
+/**
+ * Choose the best concrete phase for this hero set:
+ * - If run is requested but missing, fall back to walk if available.
+ * - (Oversize phase substitution is disabled; weapons own size now.)
+ */
 function getEffectivePhaseForSet(set: HeroAnimSet, phase: HeroPhase): HeroPhase {
-    // 1) Map run → walk if run is not defined but walk is.
+    // Map run → walk if run is not defined but walk is.
     if (phase === "run") {
         const runMap = set.phases["run"];
         if (!runMap || Object.keys(runMap).length === 0) {
@@ -157,17 +188,9 @@ function getEffectivePhaseForSet(set: HeroAnimSet, phase: HeroPhase): HeroPhase 
         }
     }
 
-    // 2) Prefer oversize thrust/slash if defined
-    if (phase === "thrust" || phase === "slash") {
-        const oversizePhase: HeroPhase = (phase === "thrust" ? "thrustOversize" : "slashOversize");
-        const overMap = set.phases[oversizePhase];
-        if (overMap && Object.keys(overMap).length > 0) {
-            return oversizePhase;
-        }
-    }
-
     return phase;
 }
+
 
 
 /**
@@ -203,19 +226,22 @@ function applyHeroAnimationForSpriteInternal(
         return;
     }
 
-    const { heroName, family, phase, dir } = readHeroAnimRequest(sprite);
-    if (!heroName || !family || !phase) {
-        logGlue(scene, "applyHeroAnimationForSprite: missing heroName/family/phase", {
+    const { heroName, family, phase, dir, frameColOverride } = readHeroAnimRequest(sprite);
+
+    // Family is OPTIONAL now. Phase + heroName are still required.
+    if (!heroName || !phase) {
+        logGlue(scene, "applyHeroAnimationForSprite: missing heroName/phase", {
             heroName,
             family,
-            phase
+            phase,
+            frameColOverride
         });
         return;
     }
 
     const set = findHeroAnimSet(atlas, heroName, family);
     if (!set) {
-        logGlue(scene, "applyHeroAnimationForSprite: no HeroAnimSet for hero + family", {
+        logGlue(scene, "applyHeroAnimationForSprite: no HeroAnimSet for hero (family optional)", {
             heroName,
             family
         });
@@ -224,7 +250,7 @@ function applyHeroAnimationForSpriteInternal(
 
     const anySprite = sprite as any;
 
-    // NEW: pick the best concrete phase (run→walk, thrust/slash→oversize if available)
+    // Pick the best concrete phase (run→walk; oversize selection disabled)
     const effectivePhase = getEffectivePhaseForSet(set, phase);
 
     const dirMap = set.phases[effectivePhase];
@@ -238,51 +264,97 @@ function applyHeroAnimationForSpriteInternal(
             effectivePhase,
             setId: set.id
         });
-        
 
         if (allowFallback && phase !== "idle") {
             const restPhase = getRestPhase(phase);
             if (anySprite.setData) {
                 anySprite.setData(HERO_PHASE_KEY, restPhase);
             }
-            logGlue(
-                scene,
-                "applyHeroAnimationForSprite: falling back to rest phase",
-                { heroName, family, requestedPhase: phase, restPhase }
-            );
+            logGlue(scene, "applyHeroAnimationForSprite: falling back to rest phase", {
+                heroName,
+                family,
+                requestedPhase: phase,
+                restPhase
+            });
             applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
         }
-
         return;
     }
 
-        const def = dirMap[dir];
-        if (!def) {
-            logGlue(scene, "applyHeroAnimationForSprite: no dir for phase", {
+    const def = dirMap[dir];
+    if (!def) {
+        logGlue(scene, "applyHeroAnimationForSprite: no dir for phase", {
+            heroName,
+            family,
+            requestedPhase: phase,
+            effectivePhase,
+            requestedDir: dir,
+            setId: set.id
+        });
+
+        if (allowFallback && phase !== "idle") {
+            const restPhase = getRestPhase(phase);
+            if (anySprite.setData) {
+                anySprite.setData(HERO_PHASE_KEY, restPhase);
+            }
+            logGlue(scene, "applyHeroAnimationForSprite: falling back (no dir) to rest phase", {
                 heroName,
                 family,
                 requestedPhase: phase,
                 effectivePhase,
                 requestedDir: dir,
-                setId: set.id
+                restPhase
             });
+            applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
+        }
+        return;
+    }
 
-            if (allowFallback && phase !== "idle") {
-                const restPhase = getRestPhase(phase);
-                if (anySprite.setData) {
-                    anySprite.setData(HERO_PHASE_KEY, restPhase);
-                }
-                logGlue(
-                    scene,
-                    "applyHeroAnimationForSprite: falling back (no dir) to rest phase",
-                    { heroName, family, requestedPhase: phase, effectivePhase, requestedDir: dir, restPhase }
-                );
-                applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
-            }
+    // Canonical single-frame hold behavior
+    if ((frameColOverride | 0) >= 0) {
+        const frames: number[] = (def.frameIndices || []) as any;
+        if (!frames.length) {
+            logGlue(scene, "applyHeroAnimationForSprite: HOLD requested but def has no frames", {
+                heroName,
+                family,
+                phase: def.phase,
+                dir: def.dir,
+                textureKey: def.textureKey
+            });
             return;
         }
 
+        const col = Math.max(0, Math.min(frameColOverride | 0, frames.length - 1));
+        const frameIndex = frames[col];
 
+        // Stop animation playback and force frame (do not play/restart, do not advance)
+        if (sprite.anims) sprite.anims.stop();
+        sprite.setTexture(def.textureKey, frameIndex);
+
+        // Remove any prior animationcomplete handler (hold should not auto-snap rest)
+        const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
+            | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
+            | undefined;
+        if (prevHandler) {
+            sprite.off("animationcomplete", prevHandler);
+            anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = undefined;
+        }
+
+        // Record last applied pose (optional but helps avoid churn)
+        if (anySprite.setData) {
+            anySprite.setData(LAST_ANIM_KEY, "");
+            anySprite.setData(LAST_PHASE_KEY, def.phase);
+            anySprite.setData(LAST_DIR_KEY, def.dir);
+            anySprite.setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
+        }
+
+        return;
+    }
+
+    const animKey = buildHeroAnimKey(set.heroName, def);
+
+    // If nothing changed and the anim is already playing, do nothing.
+    // (Only valid when NOT holding a frame.)
     const lastPhase = anySprite.getData
         ? (anySprite.getData(LAST_PHASE_KEY) as HeroPhase | undefined)
         : undefined;
@@ -290,22 +362,11 @@ function applyHeroAnimationForSpriteInternal(
         ? (anySprite.getData(LAST_DIR_KEY) as HeroDir | undefined)
         : undefined;
 
-    const animKey = `hero_${set.id}_${def.phase}_${def.dir}`;
-
-    // If nothing changed and the anim is already playing, do nothing.
     if (lastPhase === def.phase && lastDir === def.dir && sprite.anims && sprite.anims.currentAnim) {
-        if (sprite.anims.currentAnim.key === animKey) {
+        if (sprite.anims.currentAnim.key === animKey && sprite.anims.isPlaying) {
             return;
         }
     }
-
-    // *** THIS IS THE BIG FRAME-LEVEL LOG YOU ASKED FOR ***
-    const frameDebug = formatFrameDebug(def.frameIndices);
-    //logGlue(
-    //    scene,
-    //    "resolved anim",
-    //    `sheet=${set.id} hero=${heroName} family=${family} phase=${def.phase} dir=${def.dir} key=${animKey} fps=${def.frameRate} repeat=${def.repeat} yoyo=${def.yoyo} frames=${frameDebug}`
-    //);
 
     // Create Phaser animation on demand.
     if (!scene.anims.exists(animKey)) {
@@ -345,22 +406,21 @@ function applyHeroAnimationForSpriteInternal(
         sprite.off("animationcomplete", prevHandler);
     }
 
-    const handler = (anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
-        // Only care about this sprite's own animations
+    const handler = (anim: Phaser.Animations.Animation, _frame: Phaser.Animations.AnimationFrame) => {
         if (anim.key !== animKey) return;
 
-        const curPhase = anySprite.getData
-            ? (anySprite.getData(HERO_PHASE_KEY) as HeroPhase | undefined)
-            : undefined;
         const curDir = anySprite.getData
             ? (anySprite.getData(HERO_DIR_KEY) as HeroDir | undefined)
             : undefined;
-
         if (!curDir) return;
 
         const targetRestPhase =
             (anySprite.getData && (anySprite.getData(HERO_REST_PHASE_KEY) as HeroPhase | undefined)) ||
             restPhase;
+
+        const curPhase = anySprite.getData
+            ? (anySprite.getData(HERO_PHASE_KEY) as HeroPhase | undefined)
+            : undefined;
 
         if (!targetRestPhase || curPhase === targetRestPhase) return;
 
@@ -369,19 +429,14 @@ function applyHeroAnimationForSpriteInternal(
             anySprite.setData(HERO_DIR_KEY, curDir);
         }
 
-        logGlue(
-            scene,
-            "animationcomplete → rest",
-            { heroName, family, phase: def.phase, dir: def.dir, restPhase: targetRestPhase, restDir: curDir }
-        );
-
-        // Re-apply without allowing a second fallback loop
         applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
     };
 
     anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = handler;
     sprite.on("animationcomplete", handler);
 }
+
+
 
 /**
  * Public entry point – just calls the internal worker with fallback enabled.
@@ -398,6 +453,9 @@ export function tryApplyHeroAnimation(sprite: Phaser.GameObjects.Sprite): void {
     applyHeroAnimationForSprite(sprite);
 }
 
+function buildHeroAnimKey(heroName: string, def: { phase: string; dir: string }): string {
+    return `hero_${heroName}_${def.phase}_${def.dir}`;
+}
 
 
 // ================================================================

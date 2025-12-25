@@ -66,27 +66,39 @@ export function initHeroEngineHostOverrides() {
         return;
     }
 
-
-
-
     // Capture the default engine implementation so we can fall back to it.
     const defaultRun: any = engineNS.runHeroLogicForHeroHook;
 
-    // Helper: mirror getHeroProfileForHeroIndex logic without touching the engine file.
-    function hostGetHeroProfileForHeroIndex(heroIndex: number, heroesArr: Sprite[]): string {
-        let name = "Default";
+    function buildLiveViewsFromCompat(): { heroesArr: Sprite[]; enemiesArr: Sprite[] } {
+        // Build live views of the current heroes and enemies from the compat registry.
+        const allSprites = (sprites as any)._getAllSprites
+            ? ((sprites as any)._getAllSprites() as Sprite[])
+            : ([] as Sprite[]);
 
-        const hero = heroesArr[heroIndex];
-        if (!hero) return name;
+        const heroesArr: Sprite[] = [];
+        const enemiesArr: Sprite[] = [];
 
+        // NOTE: this is intentionally "push order" for now.
+        // Later, when we bridge to N-player properly, we'll replace this with stable slot ordering.
+        for (const s of allSprites) {
+            if (!s) continue;
+            if (s.kind === SpriteKind.Player) heroesArr.push(s);
+            else if (s.kind === SpriteKind.Enemy) enemiesArr.push(s);
+        }
+
+        return { heroesArr, enemiesArr };
+    }
+
+    function resolveProfileForHeroIndex(heroIndex: number, heroesArr: Sprite[]): string {
         // Mirror engine logic: prefer OWNER slot if present
         let slotIndex = heroIndex;
         try {
-            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
-            if (ownerId > 0) {
-                slotIndex = ownerId - 1;
+            const hero = heroesArr[heroIndex];
+            if (hero) {
+                const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+                if (ownerId > 0) slotIndex = ownerId - 1;
             }
-        } catch (e) {
+        } catch (_e) {
             // If HERO_DATA or sprites.readDataNumber are not available, just keep heroIndex
         }
 
@@ -94,46 +106,30 @@ export function initHeroEngineHostOverrides() {
         try {
             const gAny: any = globalThis as any;
             if (gAny && gAny.__heroProfiles && typeof gAny.__heroProfiles[slotIndex] === "string") {
-                name = gAny.__heroProfiles[slotIndex];
+                return gAny.__heroProfiles[slotIndex];
             }
-        } catch (e) {
-            // In Arcade builds, globalThis might not exist; keep default.
+        } catch (_e) {
+            // In Arcade builds, globalThis might not exist
         }
 
-        return name;
+        return "Default";
     }
 
-
-    
     // Override the engine's hook with a wrapper:
     //   1) Build Sprite[] arrays from the compat layer
     //   2) Ask host resolver for a move
     //   3) Fall back to engine default if needed
     engineNS.runHeroLogicForHeroHook = function (heroIndex: number, button: string) {
-        // Build live views of the current heroes and enemies from the compat registry.
-        const allSprites = (sprites as any)._getAllSprites
-            ? (sprites as any)._getAllSprites() as Sprite[]
-            : [] as Sprite[];
-
-        const heroesArr: Sprite[] = [];
-        const enemiesArr: Sprite[] = [];
-
-        for (const s of allSprites) {
-            if (!s) continue;
-            if (s.kind === SpriteKind.Player) heroesArr.push(s);
-            else if (s.kind === SpriteKind.Enemy) enemiesArr.push(s);
-        }
+        const { heroesArr, enemiesArr } = buildLiveViewsFromCompat();
 
         const hero = heroesArr[heroIndex];
         if (!hero) {
             // No sprite for this hero index → let the engine handle it.
-            if (typeof defaultRun === "function") {
-                return defaultRun(heroIndex, button);
-            }
+            if (typeof defaultRun === "function") return defaultRun(heroIndex, button);
             return null;
         }
 
-        const profile = hostGetHeroProfileForHeroIndex(heroIndex, heroesArr);
+        const profile = resolveProfileForHeroIndex(heroIndex, heroesArr);
 
         if (hostHeroLogicResolver) {
             try {
@@ -142,15 +138,16 @@ export function initHeroEngineHostOverrides() {
             } catch (e) {
                 console.log(
                     "[heroEnginePhaserGlue] ERROR in hostHeroLogicResolver heroIndex=" +
-                    heroIndex + " button=" + button + " error=" + e
+                        heroIndex +
+                        " button=" +
+                        button +
+                        " error=" +
+                        e
                 );
             }
         }
 
-        if (typeof defaultRun === "function") {
-            return defaultRun(heroIndex, button);
-        }
-
+        if (typeof defaultRun === "function") return defaultRun(heroIndex, button);
         return null;
     };
 }

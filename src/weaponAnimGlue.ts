@@ -11,6 +11,7 @@ import {
   type WeaponSheetRef,
   resolveWeaponLayerPair,
   resolveWeaponSheet,
+  resolveAnyWeaponLayerPair,
   tileForWeaponMode,
   weaponModeForHeroPhase
 } from "./weaponAtlas";
@@ -53,8 +54,9 @@ function _logWeaponResolveMissOnce(key: string, payload: any): void {
 function _logWeaponResolveHitOnce(key: string, payload: any): void {
   if (_WEAPON_RESOLVE_HIT_ONCE.has(key)) return;
   _WEAPON_RESOLVE_HIT_ONCE.add(key);
-  console.log("[WPN-RESOLVE-HIT]", payload);
+  console.log("[WPN-RESOLVE-HIT] " + _fmtWeaponResolveHitOneLine(payload));
 }
+
 
 
 
@@ -143,6 +145,27 @@ function getSheetGrid(scene: Phaser.Scene, ref: WeaponSheetRef): SheetGrid {
   const grid = { cols, rows, total };
   GRID_CACHE.set(key, grid);
   return grid;
+}
+
+
+
+function _fmtWeaponResolveHitOneLine(payload: any): string {
+  const weaponId = payload?.weaponId ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const mode = payload?.mode ?? "";
+  const variant = payload?.variant ?? "";
+  const bg = payload?.bg ?? "";
+  const fg = payload?.fg ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "weaponId=" + weaponId +
+    " heroPhase=" + heroPhase +
+    " mode=" + mode +
+    " variant=" + variant +
+    " bg=" + bg +
+    " fg=" + fg
+  );
 }
 
 
@@ -244,6 +267,176 @@ export function resolveWeaponFrameIndexForLayer(args: {
   return clampInt(idx, 0, Math.max(0, grid.total - 1));
 }
 
+
+
+
+export function syncWeaponLayersToHero(args: {
+  scene: Phaser.Scene;
+  heroSprite: Phaser.GameObjects.Sprite;
+  weaponBg: Phaser.GameObjects.Sprite;
+  weaponFg: Phaser.GameObjects.Sprite;
+  weaponId: WeaponId; // == MODEL
+  heroPhase: string;
+  dir: Dir4;
+  heroFrameIndex: number;
+  variant?: string; // without leading "v"
+  frameColOverride?: number;
+}): WeaponRenderResolve | null {
+  const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
+
+  const dbgOn = _weaponDebugEnabled();
+  const dbgVerbose = _weaponDebugVerbose();
+  const missKey = `${args.weaponId}|${args.heroPhase}|${mode}|${args.variant ?? ""}`;
+
+  const heroDepth = (args.heroSprite as any).depth ?? 0;
+  const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
+  const x = args.heroSprite.x + off.x;
+  const y = args.heroSprite.y + off.y;
+
+  const applyOne = (
+    spr: Phaser.GameObjects.Sprite,
+    layerRef: WeaponSheetRef | undefined,
+    depth: number
+  ): WeaponResolvedLayer | undefined => {
+    if (!layerRef) {
+      spr.setVisible(false);
+      return undefined;
+    }
+
+    if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
+
+    const frameIndex = resolveWeaponFrameIndexForLayer({
+      scene: args.scene,
+      sheet: layerRef,
+      dir: args.dir,
+      heroSprite: args.heroSprite,
+      heroFrameIndex: args.heroFrameIndex,
+      frameColOverride: args.frameColOverride
+    });
+    spr.setFrame(frameIndex);
+
+    spr.x = x;
+    spr.y = y;
+
+    if (typeof (spr as any).setOrigin === "function") {
+      const hx = (args.heroSprite as any).originX;
+      const hy = (args.heroSprite as any).originY;
+      if (typeof hx === "number" && typeof hy === "number") spr.setOrigin(hx, hy);
+    }
+
+    spr.scaleX = (args.heroSprite as any).scaleX ?? 1;
+    spr.scaleY = (args.heroSprite as any).scaleY ?? 1;
+    (spr as any).rotation = (args.heroSprite as any).rotation ?? 0;
+
+    if (typeof (spr as any).setFlipX === "function") (spr as any).setFlipX(!!(args.heroSprite as any).flipX);
+    if (typeof (spr as any).setFlipY === "function") (spr as any).setFlipY(!!(args.heroSprite as any).flipY);
+
+    spr.setDepth(depth);
+    spr.setVisible(true);
+
+    return { key: layerRef.key, frameIndex };
+  };
+
+  // -----------------------------
+  // NEW: phase fallback chain
+  // -----------------------------
+  const rawPhase = String(args.heroPhase || "").trim();
+  const snake = rawPhase
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_")
+    .replace(/_+/g, "_")
+    .toLowerCase();
+
+  const phaseTry: string[] = [args.heroPhase];
+
+  // If charge forces combatIdle, but pack doesn't have it, fall back to “something”
+  if (snake === "combat_idle" || snake === "combatidle") {
+    phaseTry.push("idle", "slash", "attack_slash", "thrust", "walk");
+  } else if (snake === "idle") {
+    phaseTry.push("combatIdle", "slash", "attack_slash", "thrust", "walk");
+  }
+
+  let pair: ReturnType<typeof resolveWeaponLayerPair> = null;
+  let usedPhase = args.heroPhase;
+
+  for (const p of phaseTry) {
+    const attempt = resolveWeaponLayerPair({
+      weaponId: args.weaponId,
+      heroPhase: p,
+      mode,
+      variant: args.variant
+    });
+    if (attempt) {
+      pair = attempt;
+      usedPhase = p;
+      break;
+    }
+  }
+
+  // Final fallback: if the specific phase(s) don't exist, pick ANY anim for this weapon.
+  if (!pair) {
+    const anyPair = resolveAnyWeaponLayerPair({
+      weaponId: args.weaponId,
+      variant: args.variant
+    });
+    if (anyPair) {
+      pair = anyPair as any;
+      usedPhase = "__any__";
+    }
+  }
+
+  if (!pair) {
+    args.weaponBg.setVisible(false);
+    args.weaponFg.setVisible(false);
+
+    if (dbgOn) {
+      _logWeaponResolveMissOnce(missKey, {
+        weaponId: args.weaponId,
+        heroPhase: args.heroPhase,
+        mode,
+        variant: args.variant ?? "base",
+        note: "resolve failed (phase candidates + any-anim fallback all missed)"
+      });
+    }
+    return null;
+  }
+
+  if (dbgOn && dbgVerbose) {
+    _logWeaponResolveHitOnce(missKey, {
+      weaponId: args.weaponId,
+      heroPhase: `${args.heroPhase}->${usedPhase}`,
+      mode,
+      variant: args.variant ?? "base",
+      bg: (pair as any).bg?.key ?? null,
+      fg: (pair as any).fg?.key ?? null,
+      anim: (pair as any).anim ?? null
+    });
+  }
+
+  // Sandwich: bg behind hero, fg in front
+  const bgDepth = heroDepth - 1;
+  const fgDepth = heroDepth + 1;
+  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
+  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
+
+  return {
+    weaponId: args.weaponId,
+    heroPhase: args.heroPhase,
+    dir: args.dir,
+    variant: args.variant ?? "base",
+    mode,
+    resolvedAnim: (pair as any).anim,
+    resolvedTile: (pair as any).tile,
+    x,
+    y,
+    heroDepth,
+    bgDepth,
+    fgDepth,
+    bg,
+    fg
+  };
+}
 
 
 
@@ -367,4 +560,113 @@ export function applyWeaponGhostTrails(args: {
   }
 
   return { ghostCount };
+}
+
+
+
+export function setWeaponGhostCountExact(args: {
+  weaponBg: Phaser.GameObjects.Sprite;
+  weaponFg: Phaser.GameObjects.Sprite;
+  ghostsBg: Phaser.GameObjects.Sprite[];
+  ghostsFg: Phaser.GameObjects.Sprite[];
+  ghostCount: number;
+  dir: "up" | "down" | "left" | "right";
+  spacingPx?: number;
+}): void {
+  const maxPairs = Math.min(args.ghostsBg.length | 0, args.ghostsFg.length | 0);
+  let want = args.ghostCount | 0;
+  if (want < 0) want = 0;
+  if (want > maxPairs) want = maxPairs;
+
+  const spacing = (args.spacingPx == null ? 10 : (args.spacingPx | 0));
+  const dir = args.dir;
+
+  let dx = 0, dy = 0;
+  if (dir === "right") dx = 1;
+  else if (dir === "left") dx = -1;
+  else if (dir === "down") dy = 1;
+  else dy = -1;
+
+  // ---- VISIBILITY / “SHINY” KNOBS ----
+  const BG_ALPHA_NEAR = 0.85;
+  const BG_ALPHA_FAR  = 0.55;
+  const FG_ALPHA_NEAR = 0.95;
+  const FG_ALPHA_FAR  = 0.65;
+  // -----------------------------------
+
+  const bgVisible = !!args.weaponBg.visible;
+  const fgVisible = !!args.weaponFg.visible;
+
+  const bgKey = args.weaponBg.texture?.key ? String(args.weaponBg.texture.key) : "";
+  const fgKey = args.weaponFg.texture?.key ? String(args.weaponFg.texture.key) : "";
+
+  const bgOk = bgVisible && bgKey && bgKey !== "__MISSING";
+  const fgOk = fgVisible && fgKey && fgKey !== "__MISSING";
+
+  const bgFrame = ((args.weaponBg as any).frame?.name ?? (args.weaponBg as any).frame?.index ?? 0) as any;
+  const fgFrame = ((args.weaponFg as any).frame?.name ?? (args.weaponFg as any).frame?.index ?? 0) as any;
+
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  // BG ghosts
+  for (let i = 0; i < args.ghostsBg.length; i++) {
+    const g = args.ghostsBg[i];
+    if (i < want && bgOk) {
+      g.setTexture(bgKey);
+      g.setFrame(bgFrame);
+
+      const step = (i + 1) * spacing;
+      g.x = args.weaponBg.x + dx * step;
+      g.y = args.weaponBg.y + dy * step;
+
+      g.scaleX = (args.weaponBg as any).scaleX ?? 1;
+      g.scaleY = (args.weaponBg as any).scaleY ?? 1;
+      (g as any).rotation = (args.weaponBg as any).rotation ?? 0;
+      if (typeof (g as any).setFlipX === "function") (g as any).setFlipX(!!(args.weaponBg as any).flipX);
+      if (typeof (g as any).setFlipY === "function") (g as any).setFlipY(!!(args.weaponBg as any).flipY);
+
+      const d = (args.weaponBg as any).depth ?? 0;
+      g.setDepth(d - 1);
+
+      // bright + shiny
+      try { (g as any).setBlendMode?.(Phaser.BlendModes.ADD); } catch { }
+      const t = (want <= 1) ? 0 : (i / Math.max(1, want - 1));
+      g.setAlpha(lerp(BG_ALPHA_NEAR, BG_ALPHA_FAR, t));
+
+      g.setVisible(true);
+    } else {
+      g.setVisible(false);
+    }
+  }
+
+  // FG ghosts
+  for (let i = 0; i < args.ghostsFg.length; i++) {
+    const g = args.ghostsFg[i];
+    if (i < want && fgOk) {
+      g.setTexture(fgKey);
+      g.setFrame(fgFrame);
+
+      const step = (i + 1) * spacing;
+      g.x = args.weaponFg.x + dx * step;
+      g.y = args.weaponFg.y + dy * step;
+
+      g.scaleX = (args.weaponFg as any).scaleX ?? 1;
+      g.scaleY = (args.weaponFg as any).scaleY ?? 1;
+      (g as any).rotation = (args.weaponFg as any).rotation ?? 0;
+      if (typeof (g as any).setFlipX === "function") (g as any).setFlipX(!!(args.weaponFg as any).flipX);
+      if (typeof (g as any).setFlipY === "function") (g as any).setFlipY(!!(args.weaponFg as any).flipY);
+
+      const d = (args.weaponFg as any).depth ?? 0;
+      g.setDepth(d - 1);
+
+      // brighter than BG
+      try { (g as any).setBlendMode?.(Phaser.BlendModes.ADD); } catch { }
+      const t = (want <= 1) ? 0 : (i / Math.max(1, want - 1));
+      g.setAlpha(lerp(FG_ALPHA_NEAR, FG_ALPHA_FAR, t));
+
+      g.setVisible(true);
+    } else {
+      g.setVisible(false);
+    }
+  }
 }

@@ -33,7 +33,8 @@ export type HeroPhase =
     | "thrustOversize"
     | "slashOversize";
 
-export type HeroFamily = "strength" | "agility" | "intelligence" | "support";
+
+export type HeroFamily = "base" | "strength" | "agility" | "intelligence" | "support";
 
 /**
  * One concrete animation clip for a single (phase, dir) pair
@@ -276,24 +277,30 @@ const HERO_OVERSIZE_FRAME_H = HERO_FRAME_H * HERO_OVERSIZE_SCALE; // 192;
  *   family   = "strength"
  */
 function parseHeroFilename(baseName: string, url: string): ParsedHeroSheet | null {
-    // Expect pattern "<Name>Hero<Family>"
+    // Expect pattern "<Name>Hero" OR "<Name>Hero<Family>"
     const heroIndex = baseName.indexOf("Hero");
-    if (heroIndex <= 0 || heroIndex + 4 >= baseName.length) {
-        return null;
-    }
+    if (heroIndex <= 0) return null;
 
     const heroName = baseName.slice(0, heroIndex);
-    const familyPart = baseName.slice(heroIndex + 4); // after "Hero"
+    if (!heroName) return null;
 
-    const famLower = familyPart.toLowerCase();
+    const familyPart = baseName.slice(heroIndex + 4); // after "Hero" (may be "")
+
     let family: HeroFamily | null = null;
 
-    if (famLower.startsWith("strength")) family = "strength";
-    else if (famLower.startsWith("agility")) family = "agility";
-    else if (famLower.startsWith("intelligence")) family = "intelligence";
-    else if (famLower.startsWith("support")) family = "support";
+    if (!familyPart) {
+        // New single-sheet naming: "JasonHero" => family="base"
+        family = "base";
+    } else {
+        const famLower = familyPart.toLowerCase();
 
-    if (!family) return null;
+        if (famLower.startsWith("base")) family = "base";
+        else if (famLower.startsWith("strength")) family = "strength";
+        else if (famLower.startsWith("agility")) family = "agility";
+        else if (famLower.startsWith("intelligence")) family = "intelligence";
+        else if (famLower.startsWith("support")) family = "support";
+        else return null;
+    }
 
     const textureKey = baseName;
 
@@ -731,10 +738,10 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
 
         // Combat idle – rows 46–49
         const combatIdleCols = idleCols.length > 1 ? idleCols : walkCols;
-        addPhaseDir("combatIdle", "up",    46, combatIdleCols, 6, -1, false);
-        addPhaseDir("combatIdle", "left",  47, combatIdleCols, 6, -1, false);
-        addPhaseDir("combatIdle", "down",  48, combatIdleCols, 6, -1, false);
-        addPhaseDir("combatIdle", "right", 49, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "up",    42, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "left",  43, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "down",  44, combatIdleCols, 6, -1, false);
+        addPhaseDir("combatIdle", "right", 45, combatIdleCols, 6, -1, false);
 
         // --------------------------------------------------
         // One-hand slash / backslash / halfslash
@@ -948,16 +955,34 @@ export function findHeroAnimSet(
     const heroName = String(heroNameRaw || "").trim();
     const famLower = String(familyRaw || "").toLowerCase();
 
+    if (!heroName) return undefined;
+
     let family: HeroFamily | null = null;
-    if (famLower === "strength") family = "strength";
+    if (famLower === "base") family = "base";
+    else if (famLower === "strength") family = "strength";
     else if (famLower === "agility") family = "agility";
     else if (famLower === "intelligence") family = "intelligence";
     else if (famLower === "support") family = "support";
 
-    if (!heroName || !family) return undefined;
+    // 1) Exact match (legacy behavior)
+    if (family) {
+        for (const set of Object.values(atlas)) {
+            if (set.heroName === heroName && set.family === family) {
+                return set;
+            }
+        }
+    }
 
+    // 2) Fallback to base sheet (new single-sheet world)
     for (const set of Object.values(atlas)) {
-        if (set.heroName === heroName && set.family === family) {
+        if (set.heroName === heroName && set.family === "base") {
+            return set;
+        }
+    }
+
+    // 3) Final fallback: first set with matching heroName
+    for (const set of Object.values(atlas)) {
+        if (set.heroName === heroName) {
             return set;
         }
     }

@@ -296,84 +296,60 @@ function camelToSnake(s: string): string {
 // We search all tile sizes and pick the first match by preference.
 const WEAPON_TILE_SEARCH_ORDER: WeaponTile[] = [64, 128, 192];
 
-
 function candidatesForHeroPhase(heroPhase: string): string[] {
   const raw = String(heroPhase || "").trim();
   const snake = camelToSnake(raw);
 
-  // Normalize oversize phase names -> base phase name,
-  // BUT we will still include oversize anim tokens as equivalents for slash/thrust.
+  // Normalize oversize phase names -> base phase name
   const base = snake.replace(/_oversize$/i, "");
 
-  // -------------------------------------------------
-  // Movement + idle rules for WEAPON packs
-  // - weapons often have WALK, not RUN
-  // - combatIdle should infer IDLE (weapon is "out" only in combat)
-  // -------------------------------------------------
-  if (base === "run") {
-    // hero phase is run, weapon pack uses walk
-    return ["walk", "move"];
-  }
-  if (base === "walk") {
-    return ["walk", "move"];
-  }
-  if (base === "idle") {
-    return ["idle"];
-  }
-  if (base === "combat_idle") {
-    // Infer idle for combat idle
-    return ["idle", "combat_idle", "combatidle"];
+  // Movement
+  if (base === "run") return ["walk", "move"];
+  if (base === "walk") return ["walk", "move"];
+
+  // Idle
+  if (base === "idle") return ["idle", "universal_idle"];
+
+  // NEW: combo is a *render token* for "weapon out / ready"
+  if (base === "combo") {
+    return [
+      "universal_combat_idle",
+      "combat_idle",
+      "combatidle",
+      "idle",
+      "universal_idle",
+    ];
   }
 
-  // -------------------------------------------------
-  // One-hand phases: semantically distinct (NOT slash)
-  // -------------------------------------------------
-  if (base === "one_hand_slash") {
-    return ["attack_slash", "one_hand_slash", "onehand_slash"];
-  }
-  if (base === "one_hand_backslash") {
-    return ["attack_backslash", "one_hand_backslash", "onehand_backslash", "backslash"];
-  }
-  if (base === "one_hand_halfslash") {
-    return ["attack_halfslash", "one_hand_halfslash", "onehand_halfslash", "halfslash"];
+  // Combat idle (your pack uses universal_combat_idle sometimes)
+  if (base === "combat_idle" || base === "combatidle") {
+    return [
+      "universal_combat_idle",
+      "combat_idle",
+      "combatidle",
+      "idle",
+      "universal_idle",
+    ];
   }
 
-  // -------------------------------------------------
-  // Cast mapping (engine uses cast, packs often use spellcast)
-  // -------------------------------------------------
-  if (base === "cast") {
-    return ["cast", "spellcast", "spell_cast"];
-  }
+  // One-hand phases
+  if (base === "one_hand_slash") return ["attack_slash", "one_hand_slash", "onehand_slash"];
+  if (base === "one_hand_backslash") return ["attack_backslash", "one_hand_backslash", "onehand_backslash", "backslash"];
+  if (base === "one_hand_halfslash") return ["attack_halfslash", "one_hand_halfslash", "onehand_halfslash", "halfslash"];
 
-  // -------------------------------------------------
-  // Canonical equivalences:
-  // slash == slashOversize == slash_oversize
-  // thrust == thrustOversize == thrust_oversize
-  // -------------------------------------------------
+  // Cast mapping
+  if (base === "cast") return ["cast", "spellcast", "spell_cast"];
+
+  // Slash / Thrust (attack_* variants exist)
   if (base === "slash") {
-    return [
-      "slash",
-      "attack_slash",
-      "slash_oversize",
-      "slashOversize",
-      "slashoversize",
-    ];
+    return ["slash", "attack_slash", "slash_oversize", "slashOversize", "slashoversize"];
   }
-
   if (base === "thrust") {
-    return [
-      "thrust",
-      "attack_thrust",
-      "thrust_oversize",
-      "thrustOversize",
-      "thrustoversize",
-    ];
+    return ["thrust", "attack_thrust", "thrust_oversize", "thrustOversize", "thrustoversize"];
   }
 
-  // Generic fallback order
   return [base, normalizeAnimToken(raw)];
 }
-
 
 
 
@@ -442,6 +418,60 @@ export function resolveWeaponLayerPair(args: {
 
   return null;
 }
+
+
+
+
+export function resolveAnyWeaponLayerPair(args: {
+  weaponId: WeaponId;
+  variant?: string; // without leading "v"
+}): WeaponLayerPair | null {
+  const model = String(args.weaponId || "").trim();
+  if (!model) return null;
+
+  const desiredVariant = String(args.variant || "base").trim() || "base";
+
+  const byVariant = INDEX.get(model);
+  if (!byVariant) return null;
+
+  // Try: desired variant, then base, then any available
+  const variantOrder = [desiredVariant, "base", ...Array.from(byVariant.keys())];
+  const tried = new Set<string>();
+
+  for (const v of variantOrder) {
+    const vv = String(v || "").trim();
+    if (!vv || tried.has(vv)) continue;
+    tried.add(vv);
+
+    const byTile = byVariant.get(vv);
+    if (!byTile) continue;
+
+    for (const tile of WEAPON_TILE_SEARCH_ORDER) {
+      const byAnim = byTile.get(tile);
+      if (!byAnim) continue;
+
+      const animKeys = Array.from(byAnim.keys()).sort(); // deterministic
+      for (const anim of animKeys) {
+        const leaf = byAnim.get(anim);
+        if (!leaf) continue;
+        if (!leaf.bg && !leaf.fg) continue;
+
+        return {
+          tile,
+          model,
+          variant: vv,
+          anim,
+          bg: leaf.bg ? toSheetRef(leaf.bg) : undefined,
+          fg: leaf.fg ? toSheetRef(leaf.fg) : undefined
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+
 
 // ----------------------------------------------------------
 // Compatibility shim (old API surface)

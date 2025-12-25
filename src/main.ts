@@ -115,31 +115,46 @@ class HeroScene extends Phaser.Scene {
 
 
 
-    async create() {
-        this.setupGlobalsAndDebug();
+async create() {
+    console.log(">>> [HeroScene.create] running (refactored)");
 
-        const loadingText = this.createLoadingText();
+    // 1) Globals + debug flags (weapon flags come from constants, not URL)
+    this.setupGlobalsAndDebug();
 
-        buildHeroAtlas(this);
-        this.validateHeroAuras(loadingText);
+    // 2) Loading indicator
+    const loadingText = this.createLoadingText();
 
-        loadingText.destroy();
+    // 3) Hero atlas + aura validation
+    buildHeroAtlas(this);
+    this.validateHeroAuras(loadingText);
+    loadingText.destroy();
 
-        this.initTileAtlasAndInstallTilemapHook();
-        this.ensureHostFlagInitialized();
+    // 4) Tile atlas + net tilemap hook (+ apply pending cached tilemap)
+    this.initTileAtlasAndInstallTilemapHook();
 
-        const compatMod = await this.importMakeCodeModules();
-        this.installStartHeroEngineHostHook();
+    // 5) Host flag / role
+    this.ensureHostFlagInitialized();
 
-        this.initNetwork(compatMod);
-        this.wireKeyboardToController();
+    // 6) Import MakeCode-ish modules (compat + extensions)
+    const compatMod = await this.importMakeCodeModules();
 
-        console.log(">>> [HeroScene.create] imports finished");
+    // 7) Hook: network will call this when we become host
+    this.installStartHeroEngineHostHook();
 
-        this.buildMonsterAtlasAndRegistry();
-        this.maybeInstallHeroAnimTester();
-    }
+    // 8) Network init (all clients)
+    this.initNetwork(compatMod);
 
+    // 9) Keyboard -> controller wiring (all clients)
+    this.wireKeyboardToController();
+
+    // 10) Monster atlas + registry exposure
+    this.buildMonsterAtlasAndRegistry();
+
+    // 11) Optional hero anim tester
+    this.maybeInstallHeroAnimTester();
+
+    console.log(">>> [HeroScene.create] complete (refactored)");
+}
 
 
     
@@ -161,43 +176,43 @@ class HeroScene extends Phaser.Scene {
 
 
 
-    private applyTilemapToScene(grid: number[][], tileSize: number) {
-        const atlas = this.tileAtlas;
-        if (!atlas) {
-            if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] applyTilemapToScene: missing tileAtlas");
-            return;
-        }
-
-        const renderer = this.ensureWorldTileRenderer(atlas);
-
-        if (DEBUG_TILEMAP) {
-            console.log(">>> [HeroScene.tilemap] syncing from grid", {
-                rows: grid.length,
-                cols: grid[0]?.length,
-                tileSize
-            });
-        }
-        renderer.syncFromEngineGrid(grid);
-
-        const rows = grid.length;
-        const cols = grid[0]?.length || 0;
-
-        const worldWidth = cols * tileSize;
-        const worldHeight = rows * tileSize;
-
-        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
-        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-
-        if (DEBUG_TILEMAP) {
-            console.log(">>> [HeroScene.tilemap] bounds set", {
-                worldWidth,
-                worldHeight,
-                rows,
-                cols,
-                tileSize
-            });
-        }
+public applyTilemapToScene(grid: number[][], tileSize: number) {
+    const atlas = this.tileAtlas;
+    if (!atlas) {
+        if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] applyTilemapToScene: missing tileAtlas");
+        return;
     }
+
+    const renderer = this.ensureWorldTileRenderer(atlas);
+
+    if (DEBUG_TILEMAP) {
+        console.log(">>> [HeroScene.tilemap] syncing from grid", {
+            rows: grid.length,
+            cols: grid[0]?.length,
+            tileSize
+        });
+    }
+    renderer.syncFromEngineGrid(grid);
+
+    const rows = grid.length;
+    const cols = grid[0]?.length || 0;
+
+    const worldWidth = cols * tileSize;
+    const worldHeight = rows * tileSize;
+
+    this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+    if (DEBUG_TILEMAP) {
+        console.log(">>> [HeroScene.tilemap] bounds set", {
+            worldWidth,
+            worldHeight,
+            rows,
+            cols,
+            tileSize
+        });
+    }
+}
 
 
 private setupGlobalsAndDebug() {

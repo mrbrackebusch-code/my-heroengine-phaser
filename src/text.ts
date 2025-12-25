@@ -87,26 +87,6 @@ class TextSprite extends Sprite {
     }
 
 
-    public updateOLDCODETODELETE() {
-        const borderAndPadding = this.borderWidth + this.padding + this.outlineWidth;
-        const iconWidth = this.icon ? this.icon.width + this.padding + this.outlineWidth : 0;
-        const iconHeight = this.icon ? this.icon.height : 0;
-        const font = textsprite.getFontForTextAndHeight(this.text, this.maxFontHeight);        
-        const width = iconWidth + font.charWidth * this.text.length + 2 * borderAndPadding;
-        const height = Math.max(iconHeight, font.charHeight) + 2 * borderAndPadding;
-        const img = image.create(width, height);
-        img.fill(this.borderColor);
-        img.fillRect(this.borderWidth, this.borderWidth, width - this.borderWidth * 2, height - this.borderWidth * 2, this.bg)
-        if (this.icon) {
-            const iconHeightOffset = (height - iconHeight) / 2
-            textsprite.renderScaledImage(this.icon, img, borderAndPadding, iconHeightOffset)
-        }
-        const textHeightOffset = (height - font.charHeight) / 2
-        img.print(this.text, iconWidth + borderAndPadding, textHeightOffset, this.fg, font);
-        if (this.outlineWidth > 0)
-            textsprite.outlineOtherColor(img, this.fg, this.outlineWidth, this.outlineColor)
-        this.setImage(img)        
-    }
 
     //% block="set $this(textSprite) max font height $height"
     //% group="Modify"
