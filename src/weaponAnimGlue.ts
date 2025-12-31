@@ -40,12 +40,74 @@ const WEAPON_OFFSET_BY_DIR: Record<Dir4, { x: number; y: number }> = {
 const _WEAPON_RESOLVE_MISS_ONCE = new Set<string>();
 const _WEAPON_RESOLVE_HIT_ONCE = new Set<string>();
 
+
+
+// Internal per-hero bookkeeping for weapon pacing (stored on the Phaser hero sprite).
+const WPN_LOCAL_PHASE_ACTIONSEQ_KEY = "__wpnLocalPhaseActionSequence";
+const WPN_LOCAL_PHASE_ENGINE_START_KEY = "__wpnLocalPhaseEngineStartMs";
+const WPN_LOCAL_PHASE_LOCAL_START_KEY = "__wpnLocalPhaseLocalStartMs";
+const WPN_LOCAL_PHASE_LOCAL_DUR_KEY = "__wpnLocalPhaseLocalDurMs";
+
+
+
+
+// Internal execute-beat bookkeeping (stored on Phaser hero sprite).
+const WPN_LOCAL_EXEC_BEAT_SEQ_KEY = "__agiExecSlashBeatSeq";
+const WPN_LOCAL_EXEC_BEAT_LOCAL_START_KEY = "__agiExecSlashBeatLocalStartMs";
+
+// How long the execute yo-yo should run after each beat (ms)
+const WPN_EXEC_YOYO_WINDOW_MS = 420;
+
+// How fast to flip between the two “pretty” cols during execute (ms)
+const WPN_EXEC_YOYO_STEP_MS = 90;
+
+
+const _WEAPON_PLACED_ONCE = new Set<string>();
+const _WEAPON_HIDDEN_ONCE = new Set<string>();
+
+
+// ------------------------------------------------------------
+// WEAPON DEBUG FLAGS (code switch — no browser console toggles)
+// ------------------------------------------------------------
+// Turn this on to print weapon placement logs.
+const WEAPON_DEBUG = false; 
+
+// Turn this on to log placement every time it changes (otherwise “once per signature”).
+const WEAPON_DEBUG_VERBOSE = false;
+
 function _weaponDebugEnabled(): boolean {
-  return !!(globalThis as any).__weaponDebug;
+  // Code flag wins (no console commands needed).
+  if (WEAPON_DEBUG) return true;
+
+  // Keep globalThis escape hatch (harmless if unused).
+  try {
+    return !!(globalThis as any).WEAPON_DEBUG;
+  } catch {
+    return false;
+  }
 }
+
 function _weaponDebugVerbose(): boolean {
-  return !!(globalThis as any).__weaponDebugVerbose;
+  if (WEAPON_DEBUG_VERBOSE) return true;
+
+  try {
+    return !!(globalThis as any).WEAPON_DEBUG_VERBOSE;
+  } catch {
+    return false;
+  }
 }
+
+const _WPN_PLACE_ONCE = new Set<string>();
+
+function _logWeaponPlace(dbgVerbose: boolean, sig: string, line: string): void {
+  if (!dbgVerbose) {
+    if (_WPN_PLACE_ONCE.has(sig)) return;
+    _WPN_PLACE_ONCE.add(sig);
+  }
+  console.log(line);
+}
+
+
 function _logWeaponResolveMissOnce(key: string, payload: any): void {
   if (_WEAPON_RESOLVE_MISS_ONCE.has(key)) return;
   _WEAPON_RESOLVE_MISS_ONCE.add(key);
@@ -55,6 +117,170 @@ function _logWeaponResolveHitOnce(key: string, payload: any): void {
   if (_WEAPON_RESOLVE_HIT_ONCE.has(key)) return;
   _WEAPON_RESOLVE_HIT_ONCE.add(key);
   console.log("[WPN-RESOLVE-HIT] " + _fmtWeaponResolveHitOneLine(payload));
+}
+
+function _logWeaponPlacedOnce(key: string, payload: any): void {
+  if (_WEAPON_PLACED_ONCE.has(key)) return;
+  _WEAPON_PLACED_ONCE.add(key);
+  console.log("[WPN-PLACED]", payload);
+}
+
+function _logWeaponHiddenOnce(key: string, payload: any): void {
+  if (_WEAPON_HIDDEN_ONCE.has(key)) return;
+  _WEAPON_HIDDEN_ONCE.add(key);
+  console.log("[WPN-HIDDEN]", payload);
+}
+
+
+
+export function syncStandaloneWeaponLayers(args: {
+  scene: Phaser.Scene;
+
+  weaponBg: Phaser.GameObjects.Sprite;
+  weaponFg: Phaser.GameObjects.Sprite;
+
+  weaponId: WeaponId;
+  sourcePhase: string;   // from shop ring source phase (or slot)
+  variant?: string;
+
+  dir: Dir4;
+  frameColOverride?: number; // fixed pose column (recommended for shop ring)
+  time01?: number;           // optional 0..1 phase progress (if you ever want it)
+
+  x: number;
+  y: number;
+
+  baseDepth: number;
+
+  highlight?: boolean;
+}): WeaponRenderResolve | null {
+  const mode: WeaponMode = weaponModeForHeroPhase(args.sourcePhase);
+
+  // Phase fallback chain (same idea as syncWeaponLayersToHero)
+  const rawPhase = String(args.sourcePhase || "").trim();
+  const snake = rawPhase
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_")
+    .replace(/_+/g, "_")
+    .toLowerCase();
+
+  const phaseTry: string[] = [args.sourcePhase];
+
+  if (snake === "combat_idle" || snake === "combatidle") {
+    phaseTry.push("idle", "slash", "attack_slash", "thrust", "walk");
+  } else if (snake === "idle") {
+    phaseTry.push("combatIdle", "slash", "attack_slash", "thrust", "walk");
+  }
+
+  let pair: ReturnType<typeof resolveWeaponLayerPair> = null;
+  let usedPhase = args.sourcePhase;
+
+  for (const p of phaseTry) {
+    const attempt = resolveWeaponLayerPair({
+      weaponId: args.weaponId,
+      heroPhase: p,
+      mode,
+      variant: args.variant
+    });
+    if (attempt) {
+      pair = attempt;
+      usedPhase = p;
+      break;
+    }
+  }
+
+  // Last resort: any anim for this weapon
+  if (!pair) {
+    const anyPair = resolveAnyWeaponLayerPair({
+      weaponId: args.weaponId,
+      variant: args.variant
+    });
+    if (anyPair) {
+      pair = anyPair as any;
+      usedPhase = "__any__";
+    }
+  }
+
+  if (!pair) {
+    try { args.weaponBg.setVisible(false); } catch { }
+    try { args.weaponFg.setVisible(false); } catch { }
+    return null;
+  }
+
+  const heroDepth = (args.baseDepth | 0);
+
+  const applyOne = (
+    spr: Phaser.GameObjects.Sprite,
+    layerRef: WeaponSheetRef | undefined,
+    depth: number
+  ): WeaponResolvedLayer | undefined => {
+    if (!layerRef) {
+      try { spr.setVisible(false); } catch { }
+      return undefined;
+    }
+
+    if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
+
+    // Choose a fixed column (recommended), else map time01 -> col, else 0.
+    let col = 0;
+    if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
+      col = (args.frameColOverride | 0);
+    } else if (args.time01 !== undefined && args.time01 !== null) {
+      const grid = getSheetGrid(args.scene, layerRef);
+      const weaponCols = Math.max(1, grid.cols | 0);
+      const t = Math.max(0, Math.min(1, Number(args.time01) || 0));
+      col = Math.round(t * Math.max(0, weaponCols - 1)) | 0;
+    } else {
+      col = 0;
+    }
+
+    const frameIndex = resolveWeaponFrameIndexForDirAndCol({
+      scene: args.scene,
+      sheet: layerRef,
+      dir: args.dir,
+      colIndex: col
+    });
+
+    spr.setFrame(frameIndex);
+    spr.x = args.x;
+    spr.y = args.y;
+
+    spr.setDepth(depth);
+    try { spr.setVisible(true); } catch { }
+
+    return { key: layerRef.key, frameIndex };
+  };
+
+  const bgDepth = heroDepth - 1;
+  const fgDepth = heroDepth + 1;
+
+  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
+  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
+
+  // Optional highlight knob (simple: alpha bump; keep your tint logic in arcadeCompat if you prefer)
+  if (args.highlight != null) {
+    const a = args.highlight ? 1.0 : 0.7;
+    try { args.weaponBg.setAlpha(a); } catch { }
+    try { args.weaponFg.setAlpha(a); } catch { }
+  }
+
+  return {
+    weaponId: args.weaponId,
+    heroPhase: args.sourcePhase,
+    dir: args.dir,
+    variant: args.variant ?? "base",
+    mode,
+    resolvedAnim: (pair as any).anim,
+    resolvedTile: (pair as any).tile,
+    x: args.x,
+    y: args.y,
+    heroDepth,
+    bgDepth,
+    fgDepth,
+    bg,
+    fg
+  };
 }
 
 
@@ -221,7 +447,121 @@ export function resolveWeaponFrameIndexForDirAndCol(args: {
   return clampInt(idx, 0, Math.max(0, grid.total - 1));
 }
 
+
+
+
+
+
 export function resolveWeaponFrameIndexForLayer(args: {
+  scene: Phaser.Scene;
+  sheet: WeaponSheetRef;
+  dir: Dir4;
+  heroSprite: Phaser.GameObjects.Sprite;
+  heroFrameIndex: number;
+  frameColOverride?: number;
+}): number {
+  const grid = getSheetGrid(args.scene, args.sheet);
+  const weaponCols = grid.cols;
+  const weaponRows = grid.rows;
+
+  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
+
+  // Explicit override
+  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
+    const col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
+
+  const anyHero: any = args.heroSprite as any;
+
+  const getData = (k: string): any => {
+    if (anyHero && typeof anyHero.getData === "function") return anyHero.getData(k);
+    return undefined;
+  };
+
+  const nowLocal =
+    (args.scene as any)?.time?.now ??
+    (args.scene as any)?.game?.loop?.time ??
+    Date.now();
+
+  // ------------------------------------------------------------
+  // Execute yo-yo override (3<->4) based on beat timestamp
+  // ------------------------------------------------------------
+  const actionKindRaw = getData("ActionKind");
+  const actionKind = (typeof actionKindRaw === "string") ? actionKindRaw : "";
+
+  if (actionKind === "agility_execute" && weaponCols > 1) {
+    const beatStartRaw = getData(WPN_LOCAL_EXEC_BEAT_LOCAL_START_KEY);
+    const beatStart = (typeof beatStartRaw === "number" && Number.isFinite(beatStartRaw)) ? beatStartRaw : 0;
+
+    if (beatStart > 0) {
+      const dt = Math.max(0, nowLocal - beatStart);
+      if (dt <= WPN_EXEC_YOYO_WINDOW_MS) {
+        let colA = 3;
+        let colB = 4;
+
+        if (weaponCols <= 4) {
+          colB = Math.max(0, weaponCols - 1);
+          colA = Math.max(0, weaponCols - 2);
+        }
+
+        colA = clampInt(colA, 0, weaponCols - 1);
+        colB = clampInt(colB, 0, weaponCols - 1);
+
+        const step = (Math.floor(dt / Math.max(1, WPN_EXEC_YOYO_STEP_MS)) | 0);
+        const flip = (step & 1) ? 1 : 0;
+
+        const col = flip ? colB : colA;
+        const idx = row * weaponCols + col;
+        return clampInt(idx, 0, Math.max(0, grid.total - 1));
+      }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // NEW: Prefer the hero’s *actual* current column (perfect sync with manual-seek)
+  // ------------------------------------------------------------
+  try {
+    const hf: any = (args.heroSprite as any).frame;
+    const heroTile = (hf?.width ?? 0) | 0;
+    const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
+    const heroSrc: any = heroTex?.getSourceImage?.();
+    const heroW = (heroSrc?.width ?? 0) | 0;
+    const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
+
+    const heroCol = clampInt((args.heroFrameIndex | 0) % heroCols, 0, heroCols - 1);
+
+    // Map heroCol -> weapon col range
+    const col = clampInt(heroCol, 0, Math.max(0, weaponCols - 1));
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  } catch {
+    // fall through
+  }
+
+  // Final fallback: time-based (if needed)
+  if (weaponCols > 1) {
+    const actionSeq = (Number(getData("ActionSequence")) || 0) | 0;
+    const phaseDurMs = (Number(getData("PhaseDurationMs")) || 0) | 0;
+
+    if (actionSeq && phaseDurMs > 0) {
+      const dt = Math.max(0, (nowLocal | 0) - (Number(getData(WPN_LOCAL_PHASE_LOCAL_START_KEY)) || nowLocal));
+      const p = Math.max(0, Math.min(1, dt / Math.max(1, phaseDurMs)));
+      const col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
+      const idx = row * weaponCols + col;
+      return clampInt(idx, 0, Math.max(0, grid.total - 1));
+    }
+  }
+
+  const idx = row * weaponCols + 0;
+  return clampInt(idx, 0, Math.max(0, grid.total - 1));
+}
+
+
+
+
+export function resolveWeaponFrameIndexForLayerOLDCODETODELETE(args: {
   scene: Phaser.Scene;
   sheet: WeaponSheetRef;
   dir: Dir4;
@@ -235,39 +575,135 @@ export function resolveWeaponFrameIndexForLayer(args: {
   const weaponCols = grid.cols;
   const weaponRows = grid.rows;
 
-  // Row selection: most sheets are 4 rows; hurt is 1 row.
+  // Row selection: most sheets are 4 rows; some are 1 row.
   const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
 
   // Optional single-frame override: treat as a column index in the weapon sheet.
-  // This is the knob used for charge poses and future ghost copies.
-  let col = 0;
   if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
-    col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
-  } else {
-    // Preferred mapping: use animation progress, not raw frame index.
-    // This makes 9-frame hero walks map cleanly onto 8-frame weapon walks.
-    const animState: any = (args.heroSprite as any).anims;
-    if (animState && typeof animState.getProgress === "function") {
-      const p = Number(animState.getProgress()) || 0;
-      col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
-    } else {
-      // Fallback: attempt to mirror within-row column index from absolute frame index.
-      // Compute hero cols from hero texture source dimensions.
-      const hf = (args.heroSprite as any).frame;
-      const heroTile = (hf?.width ?? 0) | 0;
-      const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
-      const heroSrc: any = heroTex?.getSourceImage?.();
-      const heroW = (heroSrc?.width ?? 0) | 0;
-      const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
-      col = clampInt((args.heroFrameIndex | 0) % heroCols, 0, weaponCols - 1);
-    }
+    const col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
   }
 
-  const idx = row * weaponCols + col;
-  return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  const anyHero: any = args.heroSprite as any;
+
+  const getData = (k: string): any => {
+    if (anyHero && typeof anyHero.getData === "function") return anyHero.getData(k);
+    return undefined;
+  };
+
+  const setData = (k: string, v: any): void => {
+    if (anyHero && typeof anyHero.setData === "function") anyHero.setData(k, v);
+  };
+
+  const nowLocal =
+    (args.scene as any)?.time?.now ??
+    (args.scene as any)?.game?.loop?.time ??
+    Date.now();
+
+  // ------------------------------------------------------------
+  // NEW: Execute yo-yo override (3<->4) using per-beat local start.
+  // Only active for a short window after each execute beat.
+  // ------------------------------------------------------------
+  const actionKindRaw = getData("ActionKind");
+  const actionKind = (typeof actionKindRaw === "string") ? actionKindRaw : "";
+
+  if (actionKind === "agility_execute" && weaponCols > 1) {
+    const beatStartRaw = getData(WPN_LOCAL_EXEC_BEAT_LOCAL_START_KEY);
+    const beatStart = (typeof beatStartRaw === "number" && Number.isFinite(beatStartRaw)) ? beatStartRaw : 0;
+
+    if (beatStart > 0) {
+      const dt = Math.max(0, nowLocal - beatStart);
+
+      if (dt <= WPN_EXEC_YOYO_WINDOW_MS) {
+        // Prefer columns 3 and 4 (good looking for 6-frame slash: 0..5).
+        // If sheet has fewer columns, use the last two columns.
+        let colA = 3;
+        let colB = 4;
+
+        if (weaponCols <= 4) {
+          colB = Math.max(0, weaponCols - 1);
+          colA = Math.max(0, weaponCols - 2);
+        }
+
+        colA = clampInt(colA, 0, weaponCols - 1);
+        colB = clampInt(colB, 0, weaponCols - 1);
+
+        const step = (Math.floor(dt / Math.max(1, WPN_EXEC_YOYO_STEP_MS)) | 0);
+        const flip = (step & 1) ? 1 : 0;
+
+        const col = flip ? colB : colA;
+        const idx = row * weaponCols + col;
+        return clampInt(idx, 0, Math.max(0, grid.total - 1));
+      }
+    }
+  }
+  // ------------------------------------------------------------
+
+  // ------------------------------------------------------------
+  // Step 9 mapping: engine-stamped ActionSequence + PhaseDurationMs pacing
+  // (keeps weapons synced even if hero is held/restarted/timeScaled)
+  // ------------------------------------------------------------
+  const actionSeq = (Number(getData("ActionSequence")) || 0) | 0;
+  const phaseStartMsEngine = (Number(getData("PhaseStartMs")) || 0) | 0;
+  const phaseDurMsEngine = (Number(getData("PhaseDurationMs")) || 0) | 0;
+
+  const lastActionSeq = (Number(getData(WPN_LOCAL_PHASE_ACTIONSEQ_KEY)) || 0) | 0;
+  const lastPhaseStartEngine = (Number(getData(WPN_LOCAL_PHASE_ENGINE_START_KEY)) || 0) | 0;
+
+  let localStart = Number(getData(WPN_LOCAL_PHASE_LOCAL_START_KEY)) || 0;
+  let localDur = (Number(getData(WPN_LOCAL_PHASE_LOCAL_DUR_KEY)) || 0) | 0;
+
+  // Restart local timing when a new action begins or engine phaseStart changes.
+  const shouldRestart =
+    (actionSeq !== 0 && actionSeq !== lastActionSeq) ||
+    (phaseStartMsEngine !== 0 && phaseStartMsEngine !== lastPhaseStartEngine);
+
+  if (shouldRestart) {
+    localStart = nowLocal;
+    localDur = phaseDurMsEngine | 0;
+
+    setData(WPN_LOCAL_PHASE_ACTIONSEQ_KEY, actionSeq);
+    setData(WPN_LOCAL_PHASE_ENGINE_START_KEY, phaseStartMsEngine);
+    setData(WPN_LOCAL_PHASE_LOCAL_START_KEY, localStart);
+    setData(WPN_LOCAL_PHASE_LOCAL_DUR_KEY, localDur);
+  }
+
+  // If we have a usable duration, map time progress -> weapon column.
+  if ((localDur | 0) > 0 && weaponCols > 1) {
+    const elapsed = Math.max(0, nowLocal - (localStart || nowLocal));
+    const p = Math.max(0, Math.min(1, elapsed / Math.max(1, localDur)));
+    const col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
+
+  // Fallback: Phaser anim progress (if present)
+  const animState: any = (args.heroSprite as any).anims;
+  if (animState && typeof animState.getProgress === "function" && weaponCols > 1) {
+    const p = Number(animState.getProgress()) || 0;
+    const col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
+
+  // Final fallback: mirror hero column if we can infer it, otherwise 0
+  try {
+    const hf: any = (args.heroSprite as any).frame;
+    const heroTile = (hf?.width ?? 0) | 0;
+    const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
+    const heroSrc: any = heroTex?.getSourceImage?.();
+    const heroW = (heroSrc?.width ?? 0) | 0;
+    const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
+
+    const heroCol = clampInt((args.heroFrameIndex | 0) % heroCols, 0, Math.max(0, weaponCols - 1));
+    const idx = row * weaponCols + heroCol;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  } catch {
+    const idx = row * weaponCols + 0;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
 }
-
-
 
 
 export function syncWeaponLayersToHero(args: {
@@ -290,8 +726,17 @@ export function syncWeaponLayersToHero(args: {
 
   const heroDepth = (args.heroSprite as any).depth ?? 0;
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
-  const x = args.heroSprite.x + off.x;
-  const y = args.heroSprite.y + off.y;
+
+  // Optional per-hero weapon offset (lets us “fake” center / placement)
+  const wpnOx = (args.heroSprite as any).getData?.("wpnOx") ?? 0;
+  const wpnOy = (args.heroSprite as any).getData?.("wpnOy") ?? 0;
+
+  const x = args.heroSprite.x + (wpnOx | 0) + off.x;
+  const y = args.heroSprite.y + (wpnOy | 0) + off.y;
+
+  // For debug reuse across blocks
+  let dbgHeroName = "";
+  let dbgHeroFamily = "";
 
   const applyOne = (
     spr: Phaser.GameObjects.Sprite,
@@ -338,7 +783,7 @@ export function syncWeaponLayersToHero(args: {
   };
 
   // -----------------------------
-  // NEW: phase fallback chain
+  // phase fallback chain
   // -----------------------------
   const rawPhase = String(args.heroPhase || "").trim();
   const snake = rawPhase
@@ -350,7 +795,6 @@ export function syncWeaponLayersToHero(args: {
 
   const phaseTry: string[] = [args.heroPhase];
 
-  // If charge forces combatIdle, but pack doesn't have it, fall back to “something”
   if (snake === "combat_idle" || snake === "combatidle") {
     phaseTry.push("idle", "slash", "attack_slash", "thrust", "walk");
   } else if (snake === "idle") {
@@ -420,6 +864,98 @@ export function syncWeaponLayersToHero(args: {
   const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
   const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
 
+  // ---------------------------------
+  // DEBUG: placement log (once per key)
+  // ---------------------------------
+  if (dbgOn) {
+    const safeGet = (spr: any, key: string, defVal: any) => {
+      try {
+        if (spr && typeof spr.getData === "function") {
+          const v = spr.getData(key);
+          return (v === undefined || v === null) ? defVal : v;
+        }
+        const dv = spr?.data?.values?.[key];
+        return (dv === undefined || dv === null) ? defVal : dv;
+      } catch {
+        return defVal;
+      }
+    };
+
+    dbgHeroName = String(safeGet(args.heroSprite as any, "heroName", "") || "");
+    dbgHeroFamily = String(safeGet(args.heroSprite as any, "heroFamily", "") || "");
+    const placedKey = `${args.weaponId}|${dbgHeroName}|${dbgHeroFamily}|${args.heroPhase}|${usedPhase}|${args.dir}|${args.variant ?? ""}|${args.frameColOverride ?? -1}`;
+
+    const bgVis = !!(args.weaponBg as any).visible;
+    const fgVis = !!(args.weaponFg as any).visible;
+
+    _logWeaponPlacedOnce(placedKey, {
+      weaponId: args.weaponId,
+      heroName: dbgHeroName,
+      heroFamily: dbgHeroFamily,
+      heroPhase: args.heroPhase,
+      usedPhase,
+      mode,
+      dir: args.dir,
+      heroFrameIndex: args.heroFrameIndex,
+      frameColOverride: args.frameColOverride ?? -1,
+      variant: args.variant ?? "base",
+      x,
+      y,
+      heroDepth,
+      bgDepth,
+      fgDepth,
+      bgVisible: bgVis,
+      fgVisible: fgVis,
+      bgKey: bg?.key ?? null,
+      bgFrame: bg?.frameIndex ?? null,
+      fgKey: fg?.key ?? null,
+      fgFrame: fg?.frameIndex ?? null
+    });
+
+    if (!bgVis && !fgVis) {
+      _logWeaponHiddenOnce(placedKey, {
+        note: "resolved pair but both layers ended up invisible (missing refs?)",
+        weaponId: args.weaponId,
+        heroPhase: args.heroPhase,
+        usedPhase,
+        mode,
+        dir: args.dir,
+        variant: args.variant ?? "base",
+        x,
+        y,
+        bgRef: (pair as any).bg?.key ?? null,
+        fgRef: (pair as any).fg?.key ?? null
+      });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // FINAL DEBUG: “weapon should be obviously here” placement log
+  // (uses the SAME computed x/y + wpnOx/wpnOy + WEAPON_OFFSET_BY_DIR)
+  // ------------------------------------------------------------
+  if (dbgOn) {
+    const bgStr = bg ? `${bg.key}#${bg.frameIndex}` : "none";
+    const fgStr = fg ? `${fg.key}#${fg.frameIndex}` : "none";
+
+    // Signature: keep it stable and “once per placement signature” unless verbose
+    const sig =
+      `WPN|wid=${args.weaponId}|hero=${dbgHeroName}|fam=${dbgHeroFamily}` +
+      `|phase=${args.heroPhase}->${usedPhase}|dir=${args.dir}` +
+      `|v=${args.variant ?? ""}|fco=${args.frameColOverride ?? -1}` +
+      `|hfi=${args.heroFrameIndex}|x=${x | 0}|y=${y | 0}|bg=${bgStr}|fg=${fgStr}`;
+
+    _logWeaponPlace(
+      dbgVerbose,
+      sig,
+      `[WPN-PLACE] wid=${args.weaponId} hero=${dbgHeroName} fam=${dbgHeroFamily} ` +
+      `phase=${args.heroPhase} used=${usedPhase} mode=${mode} dir=${args.dir} heroFrame=${args.heroFrameIndex} ` +
+      `heroXY=${((args.heroSprite.x) | 0)},${((args.heroSprite.y) | 0)} ` +
+      `wpnOxOy=${(wpnOx | 0)},${(wpnOy | 0)} off=${(off.x | 0)},${(off.y | 0)} ` +
+      `WXY=${(x | 0)},${(y | 0)} bg=${bgStr} fg=${fgStr} ` +
+      `depthH=${heroDepth} depthBg=${bgDepth} depthFg=${fgDepth}`
+    );
+  }
+
   return {
     weaponId: args.weaponId,
     heroPhase: args.heroPhase,
@@ -438,8 +974,6 @@ export function syncWeaponLayersToHero(args: {
   };
 }
 
-
-
 // ----------------------------------------------------------
 // Sync BG/FG sandwich to hero
 // ----------------------------------------------------------
@@ -454,11 +988,12 @@ export function syncWeaponToHero(args: {
   heroFrameIndex: number;
   variant?: string;
   // Optional explicit override for "single frame" poses.
-  // This is a *column index* (0..cols-1) in the weapon sheet.
+  // For our projectile crystal path, we treat this as an *absolute* frame index.
   frameColOverride?: number;
 }): void {
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
   const tile = tileForWeaponMode(mode);
+
   const sheet = resolveWeaponSheet({
     weaponId: args.weaponId,
     mode,
@@ -481,14 +1016,36 @@ export function syncWeaponToHero(args: {
 
   if (args.weaponSprite.texture?.key !== fixedSheet.key) args.weaponSprite.setTexture(fixedSheet.key);
 
-  const frameIndex = resolveWeaponFrameIndexForLayer({
-    scene: args.scene,
-    sheet: fixedSheet,
-    dir: args.dir,
-    heroSprite: args.heroSprite,
-    heroFrameIndex: args.heroFrameIndex,
-    frameColOverride: args.frameColOverride
-  });
+  // --------------------------------------------------
+  // Dedicated single-frame override support:
+  // If frameColOverride is provided, treat it as an ABSOLUTE frame index.
+  // This avoids resolver math producing out-of-range frames (e.g., 48).
+  // --------------------------------------------------
+  let frameIndex: number;
+  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
+    frameIndex = (args.frameColOverride as any) | 0; // absolute frame index (0 = first frame)
+  } else {
+    frameIndex = resolveWeaponFrameIndexForLayer({
+      scene: args.scene,
+      sheet: fixedSheet,
+      dir: args.dir,
+      heroSprite: args.heroSprite,
+      heroFrameIndex: args.heroFrameIndex,
+      frameColOverride: undefined
+    }) as any;
+    frameIndex = (frameIndex as any) | 0;
+  }
+
+  // Clamp to texture frame count if available (spritesheet safety)
+  const tex: any = (args.weaponSprite.texture as any);
+  const total = (tex && typeof tex.frameTotal === "number") ? (tex.frameTotal | 0) : -1;
+  if (total > 0) {
+    if (frameIndex < 0 || frameIndex >= total) {
+      // For projectile/static poses, safest fallback is frame 0.
+      frameIndex = 0;
+    }
+  }
+
   args.weaponSprite.setFrame(frameIndex);
 
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
@@ -499,7 +1056,6 @@ export function syncWeaponToHero(args: {
   args.weaponSprite.setDepth(heroDepth + 1);
   args.weaponSprite.setVisible(true);
 }
-
 
 
 
@@ -670,3 +1226,40 @@ export function setWeaponGhostCountExact(args: {
     }
   }
 }
+
+
+
+// ----------------------------------------------------------
+// Global export hook (lets arcadeCompat find glue via globalThis)
+// ----------------------------------------------------------
+
+const WEAPON_ANIM_GLUE_GLOBAL_KEY = "weaponAnimGlue";
+
+export function exportWeaponAnimGlueToGlobalOnce(): void {
+  try {
+    const g: any = globalThis as any;
+
+    // If someone already provided one, don't overwrite (but you can log if you want).
+    if (g[WEAPON_ANIM_GLUE_GLOBAL_KEY]) return;
+
+    g[WEAPON_ANIM_GLUE_GLOBAL_KEY] = {
+      // factory
+      createWeaponOverlaySprites,
+
+      // primary sandwich driver
+      syncWeaponLayersToHero,
+
+      // legacy single-layer driver
+      syncWeaponToHero,
+
+      // useful helpers (optional, but nice to have)
+      resolveWeaponFrameIndexForLayer,
+      resolveWeaponFrameIndexForDirAndCol
+    };
+  } catch {
+    // ignore
+  }
+}
+
+// Auto-export on module load (safe no-op if globalThis is unavailable)
+exportWeaponAnimGlueToGlobalOnce();

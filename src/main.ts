@@ -36,10 +36,10 @@ const DEBUG_TILEMAP = true;
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
 // ------------------------------------------------------------
-const ENABLE_WEAPON_DEBUG = true;          // logs missing weapon resolves (once per key)
-const ENABLE_WEAPON_DEBUG_VERBOSE = true; // also logs first successful resolve (once per key)
-const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup
-const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false
+const ENABLE_WEAPON_DEBUG = true;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_DEBUG_VERBOSE = true; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debug flag
 
 
 
@@ -407,6 +407,7 @@ private async importMakeCodeModules(): Promise<any> {
 
     // IMPORTANT: load modules in MakeCode-like order
     const compatMod = await import("./arcadeCompat");
+    await import("./arcadeCompat.net");
     await import("./text");
     await import("./status-bars");
     await import("./sprite-data");
@@ -597,10 +598,13 @@ private buildMonsterAtlasAndRegistry() {
 
         this.registry.set("monsterAtlas", this.monsterAtlas);
 
+        const DEBUG_MONSTER_SPRITES = false;
+        if (DEBUG_MONSTER_SPRITES) {
         console.log(
             ">>> [HeroScene.create] monster atlas built; ids =",
             Object.keys(this.monsterAtlas)
         );
+    }
     } catch (e) {
         console.error(">>> [HeroScene.create] FAILED to build monster atlas", e);
     }

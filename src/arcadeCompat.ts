@@ -54,6 +54,13 @@ import * as weaponAnimGlue from "./weaponAnimGlue";
 
 
 
+// ============================================================
+// DEBUG: Prove why hero disappears during intellect cast
+// ============================================================
+const DEBUG_INT_HERO_VIS = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+// Empty string = log all heroes; otherwise only log this heroName (e.g. "Jason")
+const DEBUG_INT_HERO_NAME_FILTER = "Jason";
+
 
 
 // Put this near the top of arcadeCompat.ts with your other debug toggles
@@ -141,6 +148,53 @@ const AGI_EXEC_STREAK_SIZE = 2
 const AGI_EXEC_TICK_BOUNCE_SCALE = 1.28
 const AGI_EXEC_TICK_BOUNCE_MS = 70
 
+// Execute layering: temporarily lift hero + weapon overlays above monsters during execute.
+const HERO_EXECUTE_DEPTH_BOOST = 10000;
+
+const HERO_WPN_GHOST_BG_DEPTH_OFF = 1;
+const HERO_WPN_GHOST_FG_DEPTH_OFF = 2;
+const HERO_WPN_BG_DEPTH_OFF = 3;
+const HERO_WPN_FG_DEPTH_OFF = 4;
+
+// Execute streamline (Phaser-only)
+const AGI_EXEC_STREAMLINE_LIFE_MS = 140;
+const AGI_EXEC_STREAMLINE_STREAK_THICK = 6;
+const AGI_EXEC_STREAMLINE_STREAK_ALPHA = 0.85;
+const AGI_EXEC_STREAMLINE_STREAK_COLOR = 0xfff06a;
+
+const AGI_EXEC_STREAMLINE_SQUASH_X = 1.55; // hero stretches along slash
+const AGI_EXEC_STREAMLINE_SQUASH_Y = 0.60; // hero gets skinny
+const AGI_EXEC_STREAMLINE_TWEEN_MS = 120;
+
+
+
+// Universal EventMask bits (must match HeroEngineInPhaser.ts)
+const EVENT_MASK_AGI_EXEC_SLASH = 1 << 0
+
+// Execute slash visuals (Phaser-only)
+const AGI_EXEC_SLASH_MARK_LEN = 28
+const AGI_EXEC_SLASH_MARK_THICK = 4
+const AGI_EXEC_SLASH_MARK_LIFE_MS = 520
+const AGI_EXEC_SLASH_MARK_FADE_MS = 320
+const AGI_EXEC_SLASH_MARK_COLOR = 0xffe14a
+const AGI_EXEC_SLASH_DASH_THICK = 2
+const AGI_EXEC_SLASH_DASH_FADE_MS = 160
+
+
+// Execute mark angles (radians). Chosen deterministically from ActionSeed + beat index.
+const AGI_EXEC_ANGLE_PATTERNS: number[][] = [
+    // Pattern 0: classic X
+    [ 0.78, -0.78, 0.78, -0.78 ],
+    // Pattern 1: tight cross
+    [ 0.35, -0.35, 1.20, -1.20 ],
+    // Pattern 2: spiral-ish
+    [ 0.20, 0.78, 1.35, -0.35 ],
+    // Pattern 3: aggressive alternating
+    [ 1.05, -0.35, 0.78, -1.25 ],
+];
+
+
+
 
 // Agility v4 published keys (must match HeroEngineInPhaser.ts HERO_DATA)
 const HERO_AGI_CHARGE_ACTIVE_KEY = "aChg"; // 0/1
@@ -157,8 +211,722 @@ const HERO_AGI_PKT_COUNT_FALLBACK_KEY = "aPkC"  // fallback (old stored hits)
 
 const DEFAULT_WEAPON_VARIANT = "base";
 
+
+// ------------------------------------------------------------
+// Intellect spell visuals (Phaser-only)
+// ------------------------------------------------------------
+// NOTE: FAMILY.INTELLECT is 2 in HeroEngineInPhaser.ts; we mirror that here
+// so Phaser can recognize intellect spell projectiles.
+const FAMILY_INTELLECT = 2;
+
+// Hero + projectile data keys (must match HeroEngineInPhaser.ts)
+const HERO_INDEX_DATA_KEY = "heroIndex";
+const HERO_IS_CTRL_SPELL_KEY = "isCtrlSpell";
+const PROJ_FAMILY_KEY = "family";
+const PROJ_HERO_INDEX_KEY = "heroIndex";
+
+// Phaser-only native data keys
+const NATIVE_FORCE_INVISIBLE_KEY = "__forceInvisible";
+
+// Orbiting crystal ring around the hero while controlling an intellect spell.
+const INT_CAST_CRYSTAL_COUNT = 4;
+const INT_CAST_ORBIT_RADIUS_PX = 18;
+const INT_CAST_ORBIT_Y_OFFSET_PX = -18;
+const INT_CAST_ROT_SPEED_RAD_PER_MS = 0.0042; // ~ one rotation / 1.5s
+const INT_CAST_BOB_AMP_PX = 2.5;
+const INT_CAST_JITTER_AMP_PX = 1.25;
+
+// Per projectile: a single crystal that follows the spell (replaces blue circle)
+const INT_PROJ_WOBBLE_AMP_PX = 1.0;
+const INT_PROJ_WOBBLE_SPEED_RAD_PER_MS = 0.008;
+
+
+
+// Cache: heroIndex -> cast weapon model id (wCa)
+const _heroCastWeaponByIndex: { [k: number]: string } = Object.create(null);
+
+function _destroyIntellectFxForNative(nativeAny: any): void {
+    if (!nativeAny) return;
+
+    try {
+        const arr: any[] = (nativeAny as any).__intCastCrystals;
+        if (arr && Array.isArray(arr)) {
+            for (const spr of arr) {
+                try { spr?.destroy?.(); } catch { }
+            }
+        }
+    } catch { }
+
+    try {
+        const spr: any = (nativeAny as any).__intProjCrystal;
+        if (spr) {
+            try { spr.destroy?.(); } catch { }
+        }
+    } catch { }
+
+    try { (nativeAny as any).__intCastCrystals = undefined; } catch { }
+    try { (nativeAny as any).__intProjCrystal = undefined; } catch { }
+    try { (nativeAny as any).__intCastSeq = undefined; } catch { }
+    try { (nativeAny as any).__intProjLastHeroIndex = undefined; } catch { }
+    try { (nativeAny as any).__intProjLastWeaponId = undefined; } catch { }
+}
+
+function _ensureHeroIntellectCrystals(sc: Phaser.Scene, nativeHero: any): Phaser.GameObjects.Sprite[] {
+    const anyHero: any = nativeHero as any;
+    let arr: Phaser.GameObjects.Sprite[] | undefined = anyHero.__intCastCrystals;
+    if (arr && Array.isArray(arr) && arr.length === INT_CAST_CRYSTAL_COUNT) return arr;
+
+    // Recreate cleanly
+    try {
+        if (arr && Array.isArray(arr)) {
+            for (const spr of arr) { try { (spr as any)?.destroy?.(); } catch { } }
+        }
+    } catch { }
+
+    arr = [];
+    for (let i = 0; i < INT_CAST_CRYSTAL_COUNT; i++) {
+        const spr = sc.add.sprite(nativeHero.x, nativeHero.y, "__MISSING", 0);
+        spr.setVisible(false);
+        spr.setAlpha(0.95);
+        arr.push(spr);
+    }
+
+    anyHero.__intCastCrystals = arr;
+    return arr;
+}
+
+function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Phaser.GameObjects.Sprite): void {
+    const sc = ctx.sc as any;
+    if (!sc) return;
+
+    const dataAny: any = (s as any).data || {};
+    const phaseRaw = (typeof dataAny.phase === "string" && dataAny.phase) ? dataAny.phase : "idle";
+    const isCtrlSpell = !!(dataAny[HERO_IS_CTRL_SPELL_KEY]);
+
+    // We show the ring only while the hero is actively controlling a spell AND in cast phase.
+    if (!(isCtrlSpell && phaseRaw === "cast")) {
+        const anyHero: any = nativeHero as any;
+        const arr: any[] = anyHero.__intCastCrystals;
+        if (arr && Array.isArray(arr)) {
+            for (const spr of arr) { try { spr.setVisible(false); } catch { } }
+        }
+        return;
+    }
+
+    const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+    const weaponId = _heroCastWeaponByIndex[heroIndex] || (typeof dataAny[HERO_WPN_CAST_KEY] === "string" ? String(dataAny[HERO_WPN_CAST_KEY]) : "");
+    if (!weaponId) return;
+
+    const dirRaw = (typeof dataAny.dir === "string" && dataAny.dir) ? dataAny.dir : "down";
+    const dir = (dirRaw === "up" || dirRaw === "down" || dirRaw === "left" || dirRaw === "right") ? dirRaw : "down";
+
+    const arr = _ensureHeroIntellectCrystals(sc, nativeHero as any);
+
+    const now = (sc.time?.now ?? 0) as number;
+    const heroDepth = (nativeHero as any).depth ?? 0;
+
+    for (let i = 0; i < arr.length; i++) {
+        const spr = arr[i];
+
+        // Reuse weapon atlas resolver: treat each crystal as the hero's "cast" weapon.
+        const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
+        glueAny.syncWeaponToHero({
+            scene: sc,
+            heroSprite: nativeHero,
+            weaponSprite: spr,
+            weaponId,
+            heroPhase: "cast",
+            dir: dir as any,
+            heroFrameIndex: 0,
+            variant: DEFAULT_WEAPON_VARIANT,
+            frameColOverride: 0
+        });
+
+        // Orbit + bob + jitter around the hero
+        const baseAngle = (now * INT_CAST_ROT_SPEED_RAD_PER_MS) + (i * (Math.PI * 2 / arr.length));
+        const bob = INT_CAST_BOB_AMP_PX * Math.sin(now * 0.006 + i * 1.7);
+        const jx = INT_CAST_JITTER_AMP_PX * Math.sin(now * 0.021 + i * 2.1 + heroIndex * 0.17);
+        const jy = INT_CAST_JITTER_AMP_PX * Math.cos(now * 0.019 + i * 1.9 + heroIndex * 0.11);
+
+        spr.x = nativeHero.x + Math.cos(baseAngle) * INT_CAST_ORBIT_RADIUS_PX + jx;
+        spr.y = nativeHero.y + INT_CAST_ORBIT_Y_OFFSET_PX + Math.sin(baseAngle) * (INT_CAST_ORBIT_RADIUS_PX * 0.62) + bob + jy;
+
+        // Slight independent scale so it reads as a spell object, not the held weapon.
+        spr.scaleX = (nativeHero as any).scaleX * 0.75;
+        spr.scaleY = (nativeHero as any).scaleY * 0.75;
+        (spr as any).rotation = baseAngle;
+
+        spr.setDepth(heroDepth + 3);
+        spr.setVisible(true);
+    }
+}
+
+
+
+const INT_PROJ_GLOW_TINT = 0x66ccff;          // icy blue
+const INT_PROJ_GLOW_ALPHA = 0.85;
+const INT_PROJ_GLOW_PULSE_SCALE = 0.18;       // how much it pulses
+const INT_PROJ_GLOW_HALO_R = 52;              // big halo radius (for 192px crystal)
+const INT_PROJ_GLOW_HALO_THICK = 10;
+
+function _intProj_applyObviousGlow(sc: any, anyNative: any, spr: Phaser.GameObjects.Sprite, nowMs: number): void {
+    // Base sprite: additive + tint + big scale pulse
+    try { (spr as any).setBlendMode?.((Phaser as any).BlendModes.ADD); } catch { }
+    try { (spr as any).setTint?.(INT_PROJ_GLOW_TINT); } catch { }
+    try { (spr as any).setAlpha?.(0.98); } catch { }
+
+    // Pulse scale
+    const pulse = 1 + INT_PROJ_GLOW_PULSE_SCALE * Math.sin(nowMs * 0.010);
+    try { (spr as any).setScale?.(pulse); } catch { }
+
+
+    // Optional: Phaser PostFX glow if supported (only once)
+    if (!anyNative.__intProjTriedPostFx) {
+        anyNative.__intProjTriedPostFx = true;
+        try {
+            const pfx = (spr as any).postFX;
+            if (pfx && typeof pfx.addGlow === "function") {
+                // color, outerStrength, innerStrength, knockout
+                pfx.addGlow(INT_PROJ_GLOW_TINT, 6, 2, false);
+                anyNative.__intProjHasPostFxGlow = true;
+            }
+        } catch { }
+    }
+}
+
+
+
+function _dbgDumpSpriteFramePNG(sc: any, spr: Phaser.GameObjects.Sprite, label: string): void {
+    try {
+        const texKey = spr.texture?.key ?? "";
+        const frame = (spr as any).frame;
+        if (!texKey || !frame) {
+            console.log("[DBGFRAME] missing tex/frame", "| label", label, "| texKey", texKey);
+            return;
+        }
+
+        const tex = sc.textures?.get?.(texKey);
+        if (!tex) {
+            console.log("[DBGFRAME] texture not found in manager", "| label", label, "| texKey", texKey);
+            return;
+        }
+
+        // Underlying source image (HTMLImageElement or HTMLCanvasElement)
+        const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
+        if (!src) {
+            console.log("[DBGFRAME] no source image", "| label", label, "| texKey", texKey);
+            return;
+        }
+
+        // Frame rectangle inside the source image
+        const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
+        const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
+        const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
+        const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
+
+        if (cutW <= 0 || cutH <= 0) {
+            console.log("[DBGFRAME] invalid frame dims", "| label", label, "| texKey", texKey, "| w,h", cutW, cutH);
+            return;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = cutW;
+        canvas.height = cutH;
+
+        const g = canvas.getContext("2d");
+        if (!g) return;
+
+        // Draw frame crop
+        g.clearRect(0, 0, cutW, cutH);
+        g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
+
+        // Analyze pixels: count non-transparent pixels
+        const img = g.getImageData(0, 0, cutW, cutH).data;
+        let nonZeroA = 0;
+        for (let i = 3; i < img.length; i += 4) {
+            if (img[i] !== 0) nonZeroA++;
+        }
+
+        // Convert to PNG data URL
+        const url = canvas.toDataURL("image/png");
+
+        console.log("[DBGFRAME]",
+            "| label", label,
+            "| texKey", texKey,
+            "| frame", frame.name ?? frame.index ?? "",
+            "| rect", cutX, cutY, cutW, cutH,
+            "| nonZeroAlphaPx", nonZeroA,
+            "| dataUrlPrefix", url.slice(0, 80) + "..."
+        );
+
+        // Optional: auto-download (uncomment when you want it)
+        // const a = document.createElement("a");
+        // a.href = url;
+        // a.download = `${label}__${texKey}__frame${frame.name ?? frame.index ?? 0}.png`;
+        // document.body.appendChild(a);
+        // a.click();
+        // a.remove();
+
+        // Optional: open in new tab (uncomment when you want it)
+        // window.open(url, "_blank");
+
+    } catch (e) {
+        console.log("[DBGFRAME] exception", label, e);
+    }
+}
+
+
+
+const __intProjCrystalFirstNonEmptyFrameByTex: Record<string, number> = Object.create(null);
+
+function _dbgCountNonTransparentPixelsInFrame(sc: any, texKey: string, frameIndex: number): number {
+    const tex = sc.textures?.get?.(texKey);
+    if (!tex) return -1;
+
+    const frame: any = tex.get?.(frameIndex);
+    if (!frame) return -1;
+
+    const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
+    if (!src) return -1;
+
+    const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
+    const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
+    const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
+    const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
+    if (cutW <= 0 || cutH <= 0) return -1;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = cutW;
+    canvas.height = cutH;
+    const g = canvas.getContext("2d");
+    if (!g) return -1;
+
+    g.clearRect(0, 0, cutW, cutH);
+    g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
+
+    const data = g.getImageData(0, 0, cutW, cutH).data;
+    let nonZeroA = 0;
+    for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) nonZeroA++;
+    }
+    return nonZeroA;
+}
+
+function _intProj_findFirstNonEmptyFrame(sc: any, texKey: string, maxFramesToScan: number): number {
+    const cached = __intProjCrystalFirstNonEmptyFrameByTex[texKey];
+    if (cached !== undefined) return cached;
+
+    const tex = sc.textures?.get?.(texKey);
+    const total = (tex?.frameTotal ?? 0) | 0;
+    const N = Math.max(0, Math.min(total, maxFramesToScan | 0));
+
+    // Scan from 0 upward; pick first with any non-transparent pixels.
+    for (let fi = 0; fi < N; fi++) {
+        const nz = _dbgCountNonTransparentPixelsInFrame(sc, texKey, fi);
+        if (nz > 0) {
+            __intProjCrystalFirstNonEmptyFrameByTex[texKey] = fi;
+            console.log("[INTPROJ][FRAMEPICK]", "| tex", texKey, "| picked", fi, "| nonZeroA", nz, "| scanned", N);
+            return fi;
+        }
+    }
+
+    // If none found, cache -1 so we don't keep scanning.
+    __intProjCrystalFirstNonEmptyFrameByTex[texKey] = -1;
+    console.log("[INTPROJ][FRAMEPICK]", "| tex", texKey, "| picked NONE", "| scanned", N);
+    return -1;
+}
+
+
+// --------------------------------------------------
+// DEBUG: Position write trap for a Phaser sprite.
+// Logs a stack trace whenever anything writes x/y, setPosition, or setX/setY.
+// --------------------------------------------------
+function _dbgInstallPosWriteTrap(label: string, spr: any): void {
+    if (!spr || spr.__dbgPosTrapInstalled) return;
+    spr.__dbgPosTrapInstalled = true;
+
+    // Tag we can set while *we* are writing positions (to avoid self-noise)
+    spr.__dbgPosTrapTag = "";
+
+    // Wrap setPosition / setX / setY (these are common)
+    const wrapFn = (obj: any, fnName: string) => {
+        const orig = obj?.[fnName];
+        if (typeof orig !== "function") return;
+        obj[fnName] = function (...args: any[]) {
+            if (!this.__dbgPosTrapTag) {
+                const e = new Error();
+                console.log(`[POSWRITE][${label}] ${fnName}`, "| args", args, "\n", (e.stack || ""));
+            }
+            return orig.apply(this, args);
+        };
+    };
+
+    wrapFn(spr, "setPosition");
+    wrapFn(spr, "setX");
+    wrapFn(spr, "setY");
+
+    // Trap direct x/y assignments too
+    try {
+        const proto = Object.getPrototypeOf(spr);
+        // Preserve current values
+        let _x = spr.x;
+        let _y = spr.y;
+
+        Object.defineProperty(spr, "x", {
+            configurable: true,
+            enumerable: true,
+            get() { return _x; },
+            set(v: any) {
+                if (!spr.__dbgPosTrapTag) {
+                    const e = new Error();
+                    console.log(`[POSWRITE][${label}] x=`, v, "\n", (e.stack || ""));
+                }
+                _x = v;
+            }
+        });
+
+        Object.defineProperty(spr, "y", {
+            configurable: true,
+            enumerable: true,
+            get() { return _y; },
+            set(v: any) {
+                if (!spr.__dbgPosTrapTag) {
+                    const e = new Error();
+                    console.log(`[POSWRITE][${label}] y=`, v, "\n", (e.stack || ""));
+                }
+                _y = v;
+            }
+        });
+
+        // Re-apply current values through the new setters
+        spr.__dbgPosTrapTag = "init";
+        spr.x = _x;
+        spr.y = _y;
+        spr.__dbgPosTrapTag = "";
+    } catch (e) {
+        console.log(`[POSWRITE][${label}] trap install FAILED`, e);
+    }
+}
+
+
+// Cache: per (texKey|frame) → origin point within that frame (pixel coords)
+const _intProjOriginCache: { [k: string]: { ox: number; oy: number } } = {};
+
+/**
+ * Compute alpha-centroid inside a texture frame and return a pivot point (ox, oy)
+ * in *frame-local pixel coordinates* (0..frameW-1, 0..frameH-1).
+ *
+ * If no alpha pixels exist, returns the frame center.
+ *
+ * NOTE: Called rarely (cached). Safe to do a full imageData scan once per frame.
+ */
+function _intProj_getAlphaCentroidOrigin(
+    sc: Phaser.Scene,
+    texKey: string,
+    frameNameOrIndex: any
+): { ox: number; oy: number } {
+    const cacheKey = texKey + "|" + String(frameNameOrIndex);
+    const hit = _intProjOriginCache[cacheKey];
+    if (hit) return hit;
+
+    try {
+        const tm: any = sc.textures;
+        if (!tm || !tm.exists?.(texKey)) {
+            const fallback = { ox: 96, oy: 96 };
+            _intProjOriginCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        const tex: any = tm.get(texKey);
+        const fr: any = tex?.get?.(frameNameOrIndex);
+        if (!fr) {
+            const fallback = { ox: 96, oy: 96 };
+            _intProjOriginCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        // Frame rect inside the source image
+        const fx = (fr.cutX ?? fr.x ?? 0) | 0;
+        const fy = (fr.cutY ?? fr.y ?? 0) | 0;
+        const fw = (fr.cutWidth ?? fr.width ?? 0) | 0;
+        const fh = (fr.cutHeight ?? fr.height ?? 0) | 0;
+
+        if (fw <= 0 || fh <= 0) {
+            const fallback = { ox: 96, oy: 96 };
+            _intProjOriginCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        // Source image backing this texture
+        const srcImg: any = tex?.source?.[0]?.image;
+        if (!srcImg) {
+            const fallback = { ox: (fw >> 1), oy: (fh >> 1) };
+            _intProjOriginCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        // Draw this frame into a tiny offscreen canvas, then scan alpha
+        const canvas = document.createElement("canvas");
+        canvas.width = fw;
+        canvas.height = fh;
+        const g = canvas.getContext("2d", { willReadFrequently: true } as any);
+        if (!g) {
+            const fallback = { ox: (fw >> 1), oy: (fh >> 1) };
+            _intProjOriginCache[cacheKey] = fallback;
+            return fallback;
+        }
+
+        g.clearRect(0, 0, fw, fh);
+        g.drawImage(srcImg, fx, fy, fw, fh, 0, 0, fw, fh);
+
+        const imgData = g.getImageData(0, 0, fw, fh);
+        const d = imgData.data;
+
+        let count = 0;
+        let sumX = 0;
+        let sumY = 0;
+
+        // Alpha centroid (unweighted beyond alpha>0, which is what you want here)
+        for (let y = 0; y < fh; y++) {
+            const row = y * fw;
+            for (let x = 0; x < fw; x++) {
+                const a = d[((row + x) << 2) + 3];
+                if (a) {
+                    count++;
+                    sumX += x;
+                    sumY += y;
+                }
+            }
+        }
+
+        let ox: number;
+        let oy: number;
+
+        if (count > 0) {
+            ox = (sumX / count);
+            oy = (sumY / count);
+        } else {
+            ox = fw * 0.5;
+            oy = fh * 0.5;
+        }
+
+        const out = { ox, oy };
+        _intProjOriginCache[cacheKey] = out;
+        return out;
+    } catch {
+        const fallback = { ox: 96, oy: 96 };
+        _intProjOriginCache[cacheKey] = fallback;
+        return fallback;
+    }
+}
+
+
+function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: any, flags: number): void {
+    const sc = ctx.sc as any;
+    if (!sc) return;
+
+    const dataAny: any = (s as any).data || {};
+    if (dataAny[PROJ_FAMILY_KEY] === undefined) return;
+
+    const family = (dataAny[PROJ_FAMILY_KEY] as any | 0);
+    const isIntellectSpell = (family === FAMILY_INTELLECT);
+    const anyNative: any = native as any;
+
+    // --------------------------------------------------
+    // Cleanup path
+    // --------------------------------------------------
+    if (!isIntellectSpell) {
+        if (anyNative && anyNative.getData && anyNative.getData(NATIVE_FORCE_INVISIBLE_KEY)) {
+            try { anyNative.setData(NATIVE_FORCE_INVISIBLE_KEY, 0); } catch { }
+        }
+        if (anyNative && anyNative.__intProjCrystal) {
+            try { anyNative.__intProjCrystal.destroy?.(); } catch { }
+            try { anyNative.__intProjCrystal = undefined; } catch { }
+        }
+        if (anyNative && anyNative.__intProjCrystalHalo) {
+            try { anyNative.__intProjCrystalHalo.destroy?.(); } catch { }
+            try { anyNative.__intProjCrystalHalo = undefined; } catch { }
+        }
+        return;
+    }
+
+    // --------------------------------------------------
+    // Visibility intent
+    // --------------------------------------------------
+    const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
+    const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
+    const shouldBeVisible = !hasInvisibleFlag;
+    const autoHideByPixels = (lastNonZero === 0);
+
+    // Force-hide the Arcade pixel projectile (blue circle)
+    try { anyNative.setData(NATIVE_FORCE_INVISIBLE_KEY, 1); } catch { }
+
+    const heroIndex = (dataAny[PROJ_HERO_INDEX_KEY] as any | 0);
+    const weaponId = "crystal";
+
+    // --------------------------------------------------
+    // Create / reuse sprite
+    // --------------------------------------------------
+    let spr: Phaser.GameObjects.Sprite | undefined = anyNative.__intProjCrystal;
+    const createdNow = !spr;
+
+    if (!spr) {
+        spr = sc.add.sprite(native.x, native.y, "__MISSING", 0);
+        spr.setAlpha(0.95);
+        spr.setVisible(true);
+        anyNative.__intProjCrystal = spr;
+
+        anyNative.__intProjLastHeroIndex = heroIndex;
+        anyNative.__intProjLastWeaponId = weaponId;
+
+        anyNative.__intProjLoggedCreate = false;
+        anyNative.__intProjLoggedNoSheet = false;
+        anyNative.__intProjLoggedFirstOk = false;
+        anyNative.__intProjLastLogKey = "";
+        anyNative.__intProjDumpedOnce = false;
+        anyNative.__intProjPickedLogged = false;
+
+        // Cache key for pivot so we only compute once per sprite
+        anyNative.__intProjPivotApplied = false;
+        anyNative.__intProjPivotKey = "";
+    }
+
+    if (!anyNative.__intProjLoggedCreate) {
+        anyNative.__intProjLoggedCreate = true;
+        console.log("[INTPROJ][CREATE]",
+            "| s.id", s?.id,
+            "| heroIndex", heroIndex,
+            "| nativeXY", (native?.x ?? 0), (native?.y ?? 0),
+            "| startTex", (spr as any).texture?.key,
+            "| startFrame", (spr as any).frame?.name,
+            "| alpha", (spr as any).alpha
+        );
+    }
+
+    // --------------------------------------------------
+    // Resolve texture + pick a non-empty frame (cached)
+    // --------------------------------------------------
+    const texKey = "t192__magic__crystal__thrust__fg__vbase";
+
+    const picked = _intProj_findFirstNonEmptyFrame(sc, texKey, 128);
+    if (picked >= 0) {
+        spr.setTexture(texKey);
+        spr.setFrame(picked);
+        spr.setVisible(true);
+
+        if (!anyNative.__intProjPickedLogged) {
+            anyNative.__intProjPickedLogged = true;
+            const ft = ((spr as any).texture as any)?.frameTotal ?? -1;
+            console.log("[INTPROJ][PICK]",
+                "| s.id", s?.id,
+                "| heroIndex", heroIndex,
+                "| tex", texKey,
+                "| picked", picked,
+                "| frameTotal", ft
+            );
+        }
+    } else {
+        spr.setVisible(false);
+
+        if (!anyNative.__intProjLoggedNoSheet) {
+            anyNative.__intProjLoggedNoSheet = true;
+            const texExists = !!(sc.textures?.exists?.(texKey));
+            const frameTotal = sc.textures?.get?.(texKey)?.frameTotal ?? -1;
+            console.log("[INTPROJ][FAIL] no non-empty frames found",
+                "| s.id", s?.id,
+                "| heroIndex", heroIndex,
+                "| texKey", texKey,
+                "| texExists", texExists,
+                "| frameTotal", frameTotal
+            );
+        }
+        return;
+    }
+
+    // --------------------------------------------------
+    // Apply pivot so rotation centers on the crystal pixels (NOT frame center)
+    // --------------------------------------------------
+    const pivotKey = texKey + "|" + String(picked);
+    if (!anyNative.__intProjPivotApplied || anyNative.__intProjPivotKey !== pivotKey) {
+        anyNative.__intProjPivotApplied = true;
+        anyNative.__intProjPivotKey = pivotKey;
+
+        const piv = _intProj_getAlphaCentroidOrigin(sc, texKey, picked);
+
+        // This is the important line: rotates around alpha centroid.
+        // displayOrigin expects pixel coords within the frame.
+        try { (spr as any).setOrigin?.(0.5, 0.5); } catch { }
+        try { (spr as any).setDisplayOrigin?.(piv.ox, piv.oy); } catch { }
+
+        console.log("[INTPROJ][PIVOT]",
+            "| s.id", s?.id,
+            "| heroIndex", heroIndex,
+            "| tex", texKey,
+            "| frame", picked,
+            "| ox", Math.round(piv.ox * 100) / 100,
+            "| oy", Math.round(piv.oy * 100) / 100
+        );
+    }
+
+    // One-time PNG dump (now it should be non-empty)
+    if (!anyNative.__intProjDumpedOnce) {
+        console.log("Sending as a PNG");
+        anyNative.__intProjDumpedOnce = true;
+        _dbgDumpSpriteFramePNG(sc, spr, "INTPROJ_CRYSTAL");
+    }
+
+    // --------------------------------------------------
+    // FOLLOW ENGINE PROJECTILE (authoritative)
+    // --------------------------------------------------
+    const now = (sc.time?.now ?? 0) as number;
+
+    spr.x = native.x;
+    spr.y = native.y;
+
+    // Rotation is now safe: pivot is centered on the crystal pixels.
+    (spr as any).rotation = now * 0.006;
+
+    spr.setDepth(999999);
+    spr.setVisible(shouldBeVisible);
+
+    // --------------------------------------------------
+    // Post-state log (once on first success, then only on meaningful change)
+    // --------------------------------------------------
+    const texKey2 = (spr as any).texture?.key ?? "";
+    const frameName2 = (spr as any).frame?.name ?? "";
+    const frameTotal2 = ((spr as any).texture as any)?.frameTotal ?? -1;
+    const depth2 = (spr as any).depth ?? 0;
+    const vis2 = !!spr.visible;
+
+    const logKey =
+        texKey2 + "|" + frameName2 + "|" + frameTotal2 + "|" +
+        (vis2 ? "V" : "H") + "|" + depth2 + "|" +
+        (hasInvisibleFlag ? "IF" : "if") + "|" +
+        (autoHideByPixels ? "PX0" : "px");
+
+    if (!anyNative.__intProjLoggedFirstOk || anyNative.__intProjLastLogKey !== logKey || createdNow) {
+        anyNative.__intProjLoggedFirstOk = true;
+        anyNative.__intProjLastLogKey = logKey;
+
+        console.log("[INTPROJ][OK]",
+            "| s.id", s?.id,
+            "| heroIndex", heroIndex,
+            "| createdNow", createdNow,
+            "| tex", texKey2,
+            "| frame", frameName2,
+            "| frames", frameTotal2,
+            "| xy", (spr.x | 0), (spr.y | 0),
+            "| depth", depth2,
+            "| visible", vis2,
+            "| hasInvisibleFlag", hasInvisibleFlag,
+            "| autoHideByPixels(lastNonZero==0)", autoHideByPixels
+        );
+    }
+}
+
+
 // Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = true;
+const DEBUG_WEAPON_SYNC = true; //Debug flag
 
 
 
@@ -439,7 +1207,8 @@ function _hostPerfMaybeDump(nowMs: number) {
 
     const fps = (_hostPerfFrameCount * 1000) / elapsed
 
-    console.log(
+    const shouldLogPerformance = false
+    if (shouldLogPerformance) { console.log(
         "[perf.host]",
         "fps≈", fps.toFixed(1),
         "avgTickMs≈", avgTick.toFixed(2),
@@ -448,7 +1217,8 @@ function _hostPerfMaybeDump(nowMs: number) {
         "sprites≈", _hostPerfLastSpriteCount,
         "snapSprites≈", _hostPerfLastSnapshotSprites
     )
-
+    }
+    
     _hostPerfLastDumpMs = nowMs
     _hostPerfFrameCount = 0
     _hostPerfAccumTickMs = 0
@@ -682,6 +1452,562 @@ function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
     }
 }
 
+//Shop here
+//Shop section
+//Shop integration
+// ------------------------------------------------------------
+// SHOP RING (Phaser) – internal tagging + native sprite fields
+// ------------------------------------------------------------
+const SHOP_RING_NATIVE_SIG_KEY = "__shopRingSig";
+const SHOP_RING_NATIVE_WIRED_KEY = "__shopRingCleanupWired";
+
+// Tags on the spawned Phaser sprites so we can recognize them later if needed.
+const SHOP_RING_TAG_IS = "__isShopRingWeapon";
+const SHOP_RING_TAG_INDEX = "__shopRingIndex";
+const SHOP_RING_TAG_LAYER = "__shopRingLayer"; // "bg" | "fg"
+
+// Native sprite fields we attach to the shopkeeper Phaser sprite
+// (stored as properties, not data keys)
+const SHOP_RING_NATIVE_BG_FIELD = "__shopRingBg"; // Phaser.Sprite[]
+const SHOP_RING_NATIVE_FG_FIELD = "__shopRingFg"; // Phaser.Sprite[]
+
+// Visual tuning
+const SHOP_RING_UNFOCUSED_ALPHA = 0.60;
+const SHOP_RING_FOCUSED_ALPHA = 1.00;
+
+// Optional: quick tint when focused (leave undefined to disable)
+const SHOP_RING_FOCUS_TINT: number | undefined = undefined; // e.g. 0xffffaa
+
+
+// ------------------------------------------------------------
+// SHOP (Phaser-side) sprite.data keys
+// NOTE: arcadeCompat.ts cannot see MakeCode constants.
+// ------------------------------------------------------------
+
+
+// ------------------------------------------------------------
+// SHOP WEAPON RING – contract keys (must match MakeCode side)
+// ------------------------------------------------------------
+const SHOP_WPN_RING_IDS_KEY = "shopWpnRingIds";                 // "idA|idB|idC"
+const SHOP_WPN_RING_RADIUS_PX_KEY = "shopWpnRingRadiusPx";      // number
+const SHOP_WPN_RING_ANGLE_DEG_KEY = "shopWpnRingAngleDeg";      // number
+const SHOP_WPN_DEFAULT_DIR_KEY = "shopWpnDefaultDir";           // "R","L","U","D"
+const SHOP_WPN_DIR_MAP_KEY = "shopWpnDirMap";                   // "idA:R,idB:U"
+
+const SHOP_WPN_RING_SLOTS_KEY = "shopWpnRingSlots";             // "thrust|slash|cast"
+const SHOP_WPN_RING_SOURCE_PHASES_KEY = "shopWpnRingSourcePhases"; // "thrust|slash|cast"
+
+// By-pid focus payloads (published by shop logic)
+const SHOP_WPN_TOUCHED_RING_BY_PID_KEY = "shopWpnTouchedRingByPid"; // "p1=-1|p2=0|p3=-1|p4=-1"
+const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid";     // "p1=|p2=diamond|..."
+const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"; // "p1=|p2=thrust|..."
+
+// ------------------------------------------------------------
+// SHOP WEAPON RING – Phaser-side visuals
+// ------------------------------------------------------------
+//const SHOP_RING_NATIVE_SIG_KEY = "__shopRingSig";
+
+// Alpha for focused/unfocused weapons in ring
+//const SHOP_RING_FOCUSED_ALPHA = 1.0;
+//const SHOP_RING_UNFOCUSED_ALPHA = 0.35;
+
+// Optional tint (set to undefined to disable tinting)
+//const SHOP_RING_FOCUS_TINT: number | undefined = undefined; // e.g. 0xffffaa
+
+// Variant passed to weaponAnimGlue (without leading "v")
+//const DEFAULT_WEAPON_VARIANT = "1";
+
+
+
+// ------------------------------------------------------------
+// SHOP WEAPON RING – helpers + ring cache on the native shopkeeper
+// ------------------------------------------------------------
+
+type _ShopRingNative = {
+    bg: Phaser.GameObjects.Sprite[];
+    fg: Phaser.GameObjects.Sprite[];
+};
+
+function _shopSplitPipeNonEmpty(s: string): string[] {
+    const t = (s || "").trim();
+    if (!t) return [];
+    return t.split("|").map(x => (x || "").trim()).filter(x => !!x);
+}
+
+function _shopSplitPipeKeepEmpty(s: string): string[] {
+    const t = (s ?? "");
+    // keep empties so slots/phases stay aligned by index
+    return t.split("|").map(x => (x ?? "").trim());
+}
+
+// "p1=-1|p2=0|p3=-1|p4=-1" -> array indexed by pid: out[1..4]
+function _shopParsePidEqIntPipe(s: string): number[] {
+    const out = [0, -1, -1, -1, -1]; // [0 unused, p1..p4]
+    const t = (s || "").trim();
+    if (!t) return out;
+
+    const parts = t.split("|");
+    for (const part of parts) {
+        const kv = part.split("=");
+        if (kv.length !== 2) continue;
+        const k = (kv[0] || "").trim().toLowerCase(); // "p2"
+        const v = (kv[1] || "").trim();
+        if (k.length < 2 || k[0] !== "p") continue;
+        const pid = (parseInt(k.slice(1), 10) | 0);
+        if (pid < 1 || pid > 4) continue;
+        const n = parseInt(v, 10);
+        out[pid] = isFinite(n) ? (n | 0) : -1;
+    }
+    return out;
+}
+
+// "p1=dagger|p2=|p3=foo|p4=" -> out[1..4]
+function _shopParsePidEqStrPipe(s: string): string[] {
+    const out = ["", "", "", "", ""]; // [0 unused, p1..p4]
+    const t = (s || "").trim();
+    if (!t) return out;
+
+    const parts = t.split("|");
+    for (const part of parts) {
+        const kv = part.split("=");
+        if (kv.length !== 2) continue;
+        const k = (kv[0] || "").trim().toLowerCase();
+        const v = (kv[1] || "").trim();
+        if (k.length < 2 || k[0] !== "p") continue;
+        const pid = (parseInt(k.slice(1), 10) | 0);
+        if (pid < 1 || pid > 4) continue;
+        out[pid] = v;
+    }
+    return out;
+}
+
+
+// "idA:R,idB:U" -> { idA:"R", idB:"U" }
+function _shopParseDirMap(s: string): Record<string, string> {
+    const out: Record<string, string> = Object.create(null);
+    const t = (s || "").trim();
+    if (!t) return out;
+
+    const pairs = t.split(",");
+    for (const pair of pairs) {
+        const p = (pair || "").trim();
+        if (!p) continue;
+        const kv = p.split(":");
+        if (kv.length !== 2) continue;
+        const id = (kv[0] || "").trim();
+        const dir = (kv[1] || "").trim().toUpperCase();
+        if (!id || !dir) continue;
+        out[id] = dir;
+    }
+    return out;
+}
+
+function _shopDirLetterToDir4(letter: string): number {
+    const d = (letter || "").trim().toUpperCase();
+    if (d === "U") return 0;
+    if (d === "R") return 1;
+    if (d === "D") return 2;
+    if (d === "L") return 3;
+    return 1; // default R
+}
+
+function _getFrameIndex(native: any): number {
+    // Works for Phaser sprite frames; falls back to 0
+    const fr = native?.frame;
+    if (!fr) return 0;
+
+    const idxA = (fr.index as any);
+    if (typeof idxA === "number" && isFinite(idxA)) return (idxA | 0);
+
+    const idxB = (fr.name as any);
+    if (typeof idxB === "number" && isFinite(idxB)) return (idxB | 0);
+
+    // If frame name is numeric string
+    if (typeof idxB === "string") {
+        const n = parseInt(idxB, 10);
+        if (isFinite(n)) return (n | 0);
+    }
+    return 0;
+}
+
+
+function _destroyShopWeaponRingForNative(native: any): void {
+    const ring = (native?.getData?.("__shopRing") as any) as _ShopRingNative | null;
+    if (!ring) return;
+
+    try { native.setData?.("__shopRing", null); } catch { }
+
+    const bgs = ring.bg || [];
+    const fgs = ring.fg || [];
+
+    for (const sp of bgs) {
+        try { sp?.destroy?.(); } catch { }
+    }
+    for (const sp of fgs) {
+        try { sp?.destroy?.(); } catch { }
+    }
+}
+
+
+function _ensureShopWeaponRingForNative(
+    ctx: SyncContext,
+    nativeShop: Phaser.GameObjects.Sprite,
+    count: number
+): { bg: Phaser.GameObjects.Sprite[]; fg: Phaser.GameObjects.Sprite[] } | null {
+    const sc = ctx.sc as any;
+    if (!sc || !nativeShop) return null;
+
+    const need = Math.max(0, count | 0);
+    if (need <= 0) return null;
+
+    const host: any = nativeShop as any;
+
+    // Prefer storing on nativeShop data, but fall back to fields if you want.
+    let ring: any = null;
+    try { ring = nativeShop.getData("__shopRing"); } catch { ring = null; }
+
+    let bgArr: any[] = (ring && ring.bg) ? ring.bg : [];
+    let fgArr: any[] = (ring && ring.fg) ? ring.fg : [];
+
+    const isAlive = (spr: any): boolean => {
+        if (!spr) return false;
+        if ((spr as any).destroyed) return false;
+        if (!(spr as any).scene) return false;
+        return true;
+    };
+
+    // Rebuild if mismatch or dead sprites
+    let rebuild = false;
+    if (bgArr.length !== need || fgArr.length !== need) rebuild = true;
+    if (!rebuild) {
+        for (let i = 0; i < need; i++) {
+            if (!isAlive(bgArr[i]) || !isAlive(fgArr[i])) { rebuild = true; break; }
+        }
+    }
+
+    if (rebuild) {
+        _destroyShopWeaponRingForNative(nativeShop as any);
+        bgArr = new Array(need);
+        fgArr = new Array(need);
+    }
+
+    // Create any missing sprites
+    for (let i = 0; i < need; i++) {
+        if (!isAlive(bgArr[i])) {
+            // Use a guaranteed texture key that exists in your Phaser project.
+            // "__missing__" may not exist => would create an invisible sprite / error depending on Phaser config.
+            // "white" also may not exist. So we create as a Graphics-backed texture fallback if needed.
+            bgArr[i] = _shopRingCreatePlaceholderSprite(sc, nativeShop.x, nativeShop.y);
+            try { (bgArr[i] as any).setVisible(false); } catch { }
+        }
+        if (!isAlive(fgArr[i])) {
+            fgArr[i] = _shopRingCreatePlaceholderSprite(sc, nativeShop.x, nativeShop.y);
+            try { (fgArr[i] as any).setVisible(false); } catch { }
+        }
+
+        // Common props
+        try {
+            const sfx = (nativeShop as any).scrollFactorX;
+            const sfy = (nativeShop as any).scrollFactorY;
+            (bgArr[i] as any).setScrollFactor?.(sfx, sfy);
+            (fgArr[i] as any).setScrollFactor?.(sfx, sfy);
+        } catch { }
+
+        try { (bgArr[i] as any).setDepth?.(((nativeShop as any).depth ?? 0) - 1); } catch { }
+        try { (fgArr[i] as any).setDepth?.(((nativeShop as any).depth ?? 0) + 1); } catch { }
+
+        // Tagging (optional)
+        try { (bgArr[i] as any).setData?.(SHOP_RING_TAG_IS, 1); } catch { }
+        try { (fgArr[i] as any).setData?.(SHOP_RING_TAG_IS, 1); } catch { }
+        try { (bgArr[i] as any).setData?.(SHOP_RING_TAG_INDEX, i); } catch { }
+        try { (fgArr[i] as any).setData?.(SHOP_RING_TAG_INDEX, i); } catch { }
+        try { (bgArr[i] as any).setData?.(SHOP_RING_TAG_LAYER, "bg"); } catch { }
+        try { (fgArr[i] as any).setData?.(SHOP_RING_TAG_LAYER, "fg"); } catch { }
+    }
+
+    // Persist
+    try { nativeShop.setData("__shopRing", { bg: bgArr, fg: fgArr }); } catch { }
+
+    // Wire cleanup once
+    if (!host.__shopRingWired && typeof host.once === "function") {
+        host.__shopRingWired = 1;
+        try {
+            host.once("destroy", () => _destroyShopWeaponRingForNative(nativeShop as any));
+        } catch { /* ignore */ }
+    }
+
+    return { bg: bgArr as any, fg: fgArr as any };
+}
+
+// Helper: create something that ALWAYS renders even if you don't have a texture key
+function _shopRingCreatePlaceholderSprite(
+    sc: Phaser.Scene,
+    x: number,
+    y: number
+): Phaser.GameObjects.Sprite {
+    // Try to use an existing 1x1 texture if you have one
+    const texKey = "__shopRing_px";
+
+    try {
+        if (!sc.textures.exists(texKey)) {
+            // Create a 4x4 white square texture
+            const g = sc.add.graphics();
+            g.fillStyle(0xffffff, 1);
+            g.fillRect(0, 0, 4, 4);
+            g.generateTexture(texKey, 4, 4);
+            g.destroy();
+        }
+    } catch {
+        // If texture gen fails, fall back to a normal sprite key (may still fail if missing)
+    }
+
+    try {
+        const spr = sc.add.sprite(x, y, texKey, 0);
+        // make it easier to see during bring-up
+        try { (spr as any).setScale?.(2); } catch { }
+        return spr;
+    } catch {
+        // Absolute fallback: create an image (still needs texture though)
+        return sc.add.sprite(x, y, texKey, 0);
+    }
+}
+
+
+
+function _syncShopWeaponRingIfPresent(
+    ctx: SyncContext,
+    s: any,
+    native: Phaser.GameObjects.Sprite
+): void {
+    const sc = ctx.sc as any;
+
+
+    if (!sc || !s || !native) return;
+
+    // ---- local robust data getters (no external deps, avoids scope issues) ----
+    const _readStr = (spr: any, key: string): string => {
+        if (!spr) return "";
+        const d: any = (spr as any).data;
+        if (!d) return "";
+
+        // Map / DataBag style
+        try {
+            if (typeof d.get === "function") {
+                const v = d.get(key);
+                return (typeof v === "string") ? v : "";
+            }
+        } catch { /* ignore */ }
+
+        // PXT internal
+        try {
+            if (d._data && typeof d._data[key] === "string") return d._data[key];
+        } catch { /* ignore */ }
+
+        // Plain object
+        try {
+            const v = d[key];
+            return (typeof v === "string") ? v : "";
+        } catch { /* ignore */ }
+
+        return "";
+    };
+
+    const _readNum = (spr: any, key: string): number => {
+        if (!spr) return 0;
+        const d: any = (spr as any).data;
+        if (!d) return 0;
+
+        try {
+            if (typeof d.get === "function") {
+                const v = d.get(key);
+                return (typeof v === "number") ? (v | 0) : 0;
+            }
+        } catch { /* ignore */ }
+
+        try {
+            if (d._data && typeof d._data[key] === "number") return d._data[key] | 0;
+        } catch { /* ignore */ }
+
+        try {
+            const v = d[key];
+            return (typeof v === "number") ? (v | 0) : 0;
+        } catch { /* ignore */ }
+
+        return 0;
+    };
+
+    // ---- contract presence ----
+    const ringIdsRaw = _readStr(s, SHOP_WPN_RING_IDS_KEY);
+    if (!ringIdsRaw.trim()) {
+        // If ring was previously present, tear down
+        const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
+        if (lastSig) {
+            _destroyShopWeaponRingForNative(native as any);
+            try { native.setData(SHOP_RING_NATIVE_SIG_KEY, ""); } catch { }
+        }
+        return;
+    }
+
+    const ids = _shopSplitPipeNonEmpty(ringIdsRaw);
+    const n = ids.length | 0;
+    if (n <= 0) return;
+
+    const radiusPx = (_readNum(s, SHOP_WPN_RING_RADIUS_PX_KEY) | 0) || 22;
+    const baseDeg  = (_readNum(s, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0) || 0;
+
+    const defaultDirLetter = (_readStr(s, SHOP_WPN_DEFAULT_DIR_KEY).trim() || "R");
+    const dirMapRaw  = _readStr(s, SHOP_WPN_DIR_MAP_KEY);
+    const slotsRaw   = _readStr(s, SHOP_WPN_RING_SLOTS_KEY);
+    const srcPhasesRaw = _readStr(s, SHOP_WPN_RING_SOURCE_PHASES_KEY);
+
+    const slots = _shopSplitPipeKeepEmpty(slotsRaw);
+    const srcPhases = _shopSplitPipeKeepEmpty(srcPhasesRaw);
+    const dirMap = _shopParseDirMap(dirMapRaw);
+
+    // Touch/highlight contract (ByPid) lives on shopkeeper sprite.data too
+    const touchedRingByPid = _shopParsePidEqIntPipe(_readStr(s, SHOP_WPN_TOUCHED_RING_BY_PID_KEY));
+    const touchedIdByPid   = _shopParsePidEqStrPipe(_readStr(s, SHOP_WPN_TOUCHED_ID_BY_PID_KEY));
+    const touchedSlotByPid = _shopParsePidEqStrPipe(_readStr(s, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY));
+
+    // Stable signature to rebuild ring sprites when config changes
+    const sig =
+        `n=${n}|ids=${ids.join(",")}|r=${radiusPx}|a=${baseDeg}|dd=${defaultDirLetter}|dm=${dirMapRaw}|sl=${slotsRaw}|sp=${srcPhasesRaw}`;
+
+    const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
+    if (lastSig !== sig) {
+        _destroyShopWeaponRingForNative(native as any);
+        try { native.setData(SHOP_RING_NATIVE_SIG_KEY, sig); } catch { }
+    }
+
+    
+    
+    const ring = _ensureShopWeaponRingForNative(ctx, native, n);
+    if (!ring) return;
+
+
+    // Find weaponAnimGlue (support either global injection or module var)
+    const glueAny: any =
+        (globalThis as any).weaponAnimGlue ||
+        (globalThis as any).weaponAnimGlueTs ||
+        (globalThis as any).weaponAnimGlueTS;
+
+    const hasGlue = !!(glueAny && typeof glueAny.syncWeaponLayersToHero === "function");
+
+    const anyNative: any = native as any;
+    const heroFrameIndex = _getFrameIndex(anyNative);
+    const shopDepth = ((anyNative.depth ?? 0) | 0);
+
+    // Focus indices
+    const focusedIndex: boolean[] = new Array(n);
+    for (let i = 0; i < n; i++) focusedIndex[i] = false;
+
+    for (let pid = 1; pid <= 4; pid++) {
+        const ri = (touchedRingByPid[pid] | 0);
+        if (ri >= 0 && ri < n) focusedIndex[ri] = true;
+    }
+
+    for (let i = 0; i < n; i++) {
+        const weaponId = (ids[i] || "").trim();
+        const slot = (i < slots.length) ? (slots[i] || "").trim() : "";
+        const srcPhase = (i < srcPhases.length) ? (srcPhases[i] || "").trim() : "";
+        const heroPhase = (srcPhase || slot || "thrust") + "";
+
+        const letter = (dirMap[weaponId] !== undefined) ? dirMap[weaponId] : defaultDirLetter;
+        const dir = _shopDirLetterToDir4(letter);
+
+        const thetaDeg = (baseDeg + Math.floor((360 * i) / n)) | 0;
+        const theta = (thetaDeg * Math.PI) / 180;
+
+        const ox = (Math.round(radiusPx * Math.cos(theta)) | 0);
+        const oy = (Math.round(radiusPx * Math.sin(theta)) | 0);
+
+        const bg = ring.bg[i] as any;
+        const fg = ring.fg[i] as any;
+
+        if (!weaponId) {
+            try { bg.setVisible(false); } catch { }
+            try { fg.setVisible(false); } catch { }
+            continue;
+        }
+
+        bg.x = (native.x + ox);
+        bg.y = (native.y + oy);
+        fg.x = bg.x;
+        fg.y = bg.y;
+
+        try { bg.setDepth?.(shopDepth - 1); } catch { }
+        try { fg.setDepth?.(shopDepth + 1); } catch { }
+
+        const isFocused = !!focusedIndex[i];
+        const a = isFocused ? SHOP_RING_FOCUSED_ALPHA : SHOP_RING_UNFOCUSED_ALPHA;
+        try { bg.setAlpha?.(a); } catch { }
+        try { fg.setAlpha?.(a); } catch { }
+
+        if (SHOP_RING_FOCUS_TINT !== undefined) {
+            try { (bg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
+            try { (fg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
+        }
+
+//        console.warn("[SHOPRING][GLUE_TEST]=", hasGlue);
+
+            if (hasGlue) {
+                try {
+                    // 1) Static pose: pick a column you like (0 is usually “rest”)
+                    const STATIC_COL = 0;
+
+                    glueAny.syncWeaponLayersToHero({
+                        scene: sc,
+                        heroSprite: native,
+                        weaponBg: bg,
+                        weaponFg: fg,
+                        weaponId,
+                        heroPhase,          // keep your mapping choice
+                        dir,
+                        heroFrameIndex,     // doesn't matter when frameColOverride is set
+                        variant: DEFAULT_WEAPON_VARIANT,
+                        frameColOverride: STATIC_COL
+                    });
+
+                    // 2) Ring position: glue overwrites x/y -> restore ring placement AFTER glue
+                    bg.x = (native.x + ox);
+                    bg.y = (native.y + oy);
+                    fg.x = bg.x;
+                    fg.y = bg.y;
+
+                    try { bg.setVisible(true); } catch { }
+                    try { fg.setVisible(true); } catch { }
+                } catch (e) {
+                    if (ctx.shouldLog) {
+                        console.warn("[SHOPRING][GLUE_FAIL]", "i=", i, "weaponId=", weaponId, "heroPhase=", heroPhase, "dir=", dir, "err=", e);
+                    }
+                    try { bg.setVisible(false); } catch { }
+                    try { fg.setVisible(false); } catch { }
+                    continue;
+                }
+            } else {
+                // No glue: still show placeholders so we can verify placement
+                try { bg.setVisible(true); } catch { }
+                try { fg.setVisible(true); } catch { }
+            }
+
+        // Debug metadata
+        if (isFocused) {
+            let fp = 0;
+            for (let pid = 1; pid <= 4; pid++) {
+                if ((touchedRingByPid[pid] | 0) === (i | 0)) { fp = pid; break; }
+            }
+            try { bg.setData?.("__shopFocusedByPid", fp); } catch { }
+            try { fg.setData?.("__shopFocusedByPid", fp); } catch { }
+            try { bg.setData?.("__shopFocusPidWeaponId", touchedIdByPid[fp] || ""); } catch { }
+            try { bg.setData?.("__shopFocusPidSlot", touchedSlotByPid[fp] || ""); } catch { }
+        } else {
+            try { bg.setData?.("__shopFocusedByPid", 0); } catch { }
+            try { fg.setData?.("__shopFocusedByPid", 0); } catch { }
+        }
+    }
+}
+
+
 
 
 function _findAgiStoredCounterNativeForHero(
@@ -766,6 +2092,167 @@ function _agiSetCounterText(counterNative: any, value: number): void {
     if (!txtObj) return
     try { txtObj.setText?.("" + (value | 0)) } catch { /* ignore */ }
 }
+
+
+
+
+
+
+function _agiSpawnExecuteStreamlineFx(
+    sc: Phaser.Scene,
+    nativeHero: Phaser.GameObjects.Sprite,
+    overlays: any,
+    hitX: number,
+    hitY: number
+): void {
+    if (!sc || !nativeHero) return
+
+    const hx = (overlays?.weaponFg?.x ?? nativeHero.x ?? 0) as number
+    const hy = (overlays?.weaponFg?.y ?? nativeHero.y ?? 0) as number
+    const tx = (hitX || hitX === 0) ? (hitX as number) : (nativeHero.x ?? 0)
+    const ty = (hitY || hitY === 0) ? (hitY as number) : (nativeHero.y ?? 0)
+
+    const dx = tx - hx
+    const dy = ty - hy
+    const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+    const ang = Math.atan2(dy, dx)
+
+    // 1) Bright “streamline streak” from hero weapon -> target
+    try {
+        const midX = (hx + tx) * 0.5
+        const midY = (hy + ty) * 0.5
+
+        const streak = sc.add.rectangle(
+            midX,
+            midY,
+            dist,
+            AGI_EXEC_STREAMLINE_STREAK_THICK,
+            AGI_EXEC_STREAMLINE_STREAK_COLOR,
+            AGI_EXEC_STREAMLINE_STREAK_ALPHA
+        )
+
+        try { (streak as any).setRotation?.(ang) } catch { }
+        try { (streak as any).setBlendMode?.(Phaser.BlendModes.ADD) } catch { }
+        try { (streak as any).setDepth?.(999999) } catch { }
+
+        sc.tweens.add({
+            targets: streak,
+            alpha: 0,
+            duration: AGI_EXEC_STREAMLINE_LIFE_MS,
+            onComplete: () => { try { streak.destroy() } catch { } }
+        })
+    } catch { /* ignore */ }
+
+    // 2) Hero “stretch into line” (quick squash/stretch + slight rotation), then snap back
+    try {
+        const anyHero: any = nativeHero as any
+
+        // Cancel any previous streamline tween so it never stacks into weird scaling.
+        const prevTween: any = anyHero.__agiExecStreamlineTween
+        if (prevTween) {
+            try { prevTween.stop() } catch { }
+            anyHero.__agiExecStreamlineTween = null
+        }
+
+        const baseScaleX = (typeof anyHero.scaleX === "number") ? anyHero.scaleX : 1
+        const baseScaleY = (typeof anyHero.scaleY === "number") ? anyHero.scaleY : 1
+        const baseRot = (typeof anyHero.rotation === "number") ? anyHero.rotation : 0
+
+        // Apply a short “zip pose”
+        nativeHero.setRotation(ang)
+        nativeHero.setScale(baseScaleX * AGI_EXEC_STREAMLINE_SQUASH_X, baseScaleY * AGI_EXEC_STREAMLINE_SQUASH_Y)
+
+        const t = sc.tweens.add({
+            targets: nativeHero,
+            scaleX: baseScaleX,
+            scaleY: baseScaleY,
+            rotation: baseRot,
+            duration: AGI_EXEC_STREAMLINE_TWEEN_MS,
+            ease: "Sine.easeOut"
+        })
+
+        anyHero.__agiExecStreamlineTween = t
+    } catch { /* ignore */ }
+}
+
+
+function _agiPickExecuteSlashAngle(
+    actionSeed: number,
+    beatSeq: number
+): number {
+    const seed = (actionSeed | 0)
+    const patIndex = Math.abs(seed) % AGI_EXEC_ANGLE_PATTERNS.length
+    const pat = AGI_EXEC_ANGLE_PATTERNS[patIndex] || AGI_EXEC_ANGLE_PATTERNS[0]
+    const i = Math.abs(beatSeq | 0) % pat.length
+    return pat[i] || 0.78
+}
+
+
+
+function _agiSpawnExecuteSlashMarkFx(
+    sc: Phaser.Scene,
+    nativeHero: Phaser.GameObjects.Sprite,
+    overlays: any,
+    hitX: number,
+    hitY: number
+): void {
+    if (!sc) return
+
+    const hx = (overlays?.weaponFg?.x ?? nativeHero.x ?? 0) as number
+    const hy = (overlays?.weaponFg?.y ?? nativeHero.y ?? 0) as number
+
+    const tx = (hitX || hitX === 0) ? (hitX as number) : (nativeHero.x ?? 0)
+    const ty = (hitY || hitY === 0) ? (hitY as number) : (nativeHero.y ?? 0)
+
+    const dx = tx - hx
+    const dy = ty - hy
+    const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+    const ang = Math.atan2(dy, dx)
+
+    // Beat number: stored in Step 11 as __agiExecSlashBeatSeq on the hero
+    const beatSeq = ((nativeHero.getData("__agiExecSlashBeatSeq") as any) | 0)
+    const actionSeed = ((nativeHero.getData("ActionSeed") as any) | 0)
+    const markAng = _agiPickExecuteSlashAngle(actionSeed, beatSeq)
+
+    // 1) “Zip line” from hero weapon -> target (thin, fast fade)
+    try {
+        const midX = (hx + tx) * 0.5
+        const midY = (hy + ty) * 0.5
+        const dash = sc.add.rectangle(midX, midY, dist, AGI_EXEC_SLASH_DASH_THICK, AGI_EXEC_SLASH_MARK_COLOR, 0.9)
+        try { (dash as any).setRotation?.(ang) } catch { }
+        try { (dash as any).setBlendMode?.(Phaser.BlendModes.ADD) } catch { }
+        try { (dash as any).setDepth?.(999999) } catch { }
+
+        sc.tweens.add({
+            targets: dash,
+            alpha: 0,
+            duration: AGI_EXEC_SLASH_DASH_FADE_MS,
+            onComplete: () => { try { dash.destroy() } catch { } }
+        })
+    } catch { /* ignore */ }
+
+    // 2) Slash “mark” at target (thicker, lingers so stacks are visible)
+    try {
+        const mark = sc.add.rectangle(tx, ty, AGI_EXEC_SLASH_MARK_LEN, AGI_EXEC_SLASH_MARK_THICK, AGI_EXEC_SLASH_MARK_COLOR, 0.95)
+        try { (mark as any).setRotation?.(markAng) } catch { }
+        try { (mark as any).setBlendMode?.(Phaser.BlendModes.ADD) } catch { }
+        try { (mark as any).setDepth?.(999999) } catch { }
+
+        // hold, then fade
+        sc.time.delayedCall(Math.max(0, AGI_EXEC_SLASH_MARK_LIFE_MS - AGI_EXEC_SLASH_MARK_FADE_MS), () => {
+            try {
+                sc.tweens.add({
+                    targets: mark,
+                    alpha: 0,
+                    duration: AGI_EXEC_SLASH_MARK_FADE_MS,
+                    onComplete: () => { try { mark.destroy() } catch { } }
+                })
+            } catch { try { mark.destroy() } catch { } }
+        })
+    } catch { /* ignore */ }
+}
+
+
 
 function _agiSpawnExecuteFx(
     sc: Phaser.Scene,
@@ -1752,13 +3239,35 @@ namespace sprites {
 
 
 
+
+
 // Mirror hero identity + phase/dir from the Arcade Sprite onto the Phaser native sprite.
+// Also mirrors the NEW universal Action/Phase/Event timeline keys (human-readable).
+// Mirror hero identity + phase/dir from the Arcade Sprite onto the Phaser native sprite.
+// Also mirrors the NEW universal Action/Phase/Event timeline keys (human-readable).
 function _copyHeroIdentityToNative(
     s: Sprite,
     native: Phaser.GameObjects.Sprite
 ): void {
     const dataAny: any = (s as any).data || {};
 
+    // Local helpers (avoid NaN/stickiness)
+    const readInt = (v: any, def: number): number => {
+        if (typeof v === "number" && Number.isFinite(v)) return v | 0;
+        if (typeof v === "string") {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n)) return n | 0;
+        }
+        return def | 0;
+    };
+
+    const readStr = (v: any, def: string): string => {
+        return (typeof v === "string") ? v : def;
+    };
+
+    // --------------------------------------------------------------------
+    // Existing identity (legacy)
+    // --------------------------------------------------------------------
     const heroNameRaw = dataAny.heroName;
     const heroFamilyRaw = dataAny.heroFamily;
     const phaseRaw = dataAny.phase;
@@ -1781,15 +3290,57 @@ function _copyHeroIdentityToNative(
 
     // frameColOverride (sentinel -1 means "no override")
     const rawFco = dataAny.frameColOverride;
-    let fco = -1;
-    if (typeof rawFco === "number" && Number.isFinite(rawFco)) {
-        fco = rawFco | 0;
-    } else if (typeof rawFco === "string") {
-        const n = parseInt(rawFco, 10);
-        if (Number.isFinite(n)) fco = n | 0;
-    }
+    const fco = readInt(rawFco, -1);
     native.setData("frameColOverride", fco);
+
+    // --------------------------------------------------------------------
+    // NEW: universal Action/Phase/Event timeline keys (human-readable)
+    // --------------------------------------------------------------------
+
+    // Action
+    native.setData("ActionSequence", readInt(dataAny.ActionSequence, 0));
+    native.setData("ActionKind", readStr(dataAny.ActionKind, "none"));
+    native.setData("ActionVariant", readInt(dataAny.ActionVariant, 0));
+    native.setData("ActionSeed", readInt(dataAny.ActionSeed, 0));
+    native.setData("ActionP0", readInt(dataAny.ActionP0, 0));
+    native.setData("ActionP1", readInt(dataAny.ActionP1, 0));
+    native.setData("ActionP2", readInt(dataAny.ActionP2, 0));
+    native.setData("ActionP3", readInt(dataAny.ActionP3, 0));
+    native.setData("ActionTargetId", readInt(dataAny.ActionTargetId, 0));
+
+    // Phase
+    // If PhaseName isn't published yet for some reason, fall back to legacy "phase".
+    const phaseName = readStr(dataAny.PhaseName, phase);
+    native.setData("PhaseName", phaseName);
+    native.setData("PhaseStartMs", readInt(dataAny.PhaseStartMs, 0));
+    native.setData("PhaseDurationMs", readInt(dataAny.PhaseDurationMs, 0));
+    native.setData("PhaseFlags", readInt(dataAny.PhaseFlags, 0));
+    native.setData("PhaseProgressInt", readInt(dataAny.PhaseProgressInt, 0));
+
+    // Phase Part (CRITICAL for cast-part control)
+    // Explicitly clear if absent to avoid stickiness.
+    native.setData("PhasePartName", readStr(dataAny.PhasePartName, ""));
+    native.setData("PhasePartStartMs", readInt(dataAny.PhasePartStartMs, 0));
+    native.setData("PhasePartDurationMs", readInt(dataAny.PhasePartDurationMs, 0));
+    // Optional, but safe (if your engine publishes it / glue reads it)
+    native.setData("PhasePartProgressInt", readInt(dataAny.PhasePartProgressInt, 0));
+
+    // Event
+    native.setData("EventSequence", readInt(dataAny.EventSequence, 0));
+    native.setData("EventMask", readInt(dataAny.EventMask, 0));
+
+    // --------------------------------------------------------------------
+    // NEW: weapon display controls (Shopkeeper / UI display)
+    // --------------------------------------------------------------------
+    // wAlw = show weapon even when phase is idle (or any non-weapon phase)
+    // wpnOx/wpny = extra per-hero weapon anchor offset
+    native.setData("wAlw", readInt(dataAny.wAlw, 0));
+    native.setData("wpnOx", readInt(dataAny.wpnOx, 0));
+    native.setData("wpnOy", readInt(dataAny.wpnOy, 0));
 }
+
+
+
 
 
 
@@ -1800,33 +3351,65 @@ function _tryApplyHeroAnimationForNative(s: Sprite, native: Phaser.GameObjects.S
     // Cache keys stored on the native Phaser sprite (do NOT collide with Arcade sprite data)
     const LAST_HERO_NAME_KEY = "__lastHeroName";
     const LAST_HERO_FAMILY_KEY = "__lastHeroFamily";
-    const LAST_PHASE_KEY = "__lastHeroPhase";
+    const LAST_PHASE_NAME_KEY = "__lastHeroPhaseName";
     const LAST_DIR_KEY = "__lastHeroDir";
     const LAST_FRAME_COL_OVERRIDE_KEY = "__lastHeroFrameColOverride";
+    const LAST_ACTION_KIND_KEY = "__lastHeroActionKind";
+    const LAST_PHASE_PROGRESS_INT_KEY = "__lastHeroPhaseProgressInt";
+    const LAST_PHASE_PART_NAME_KEY = "__lastHeroPhasePartName";
+    const LAST_PHASE_PART_START_MS_KEY = "__lastHeroPhasePartStartMs";
+    const LAST_PHASE_PART_DURATION_MS_KEY = "__lastHeroPhasePartDurationMs";
+    const LAST_PHASE_PART_PROGRESS_INT_KEY = "__lastHeroPhasePartProgressInt";
 
     // Current identity/state (should already have been copied via _copyHeroIdentityToNative)
     const heroName = (native.getData("heroName") as string | undefined) || "";
     const heroFamily = (native.getData("heroFamily") as string | undefined) || "";
-    const phase = (native.getData("phase") as string | undefined) || "idle";
+
+    // IMPORTANT: gate off the *universal* phase name, not just legacy "phase"
+    const phaseName = (native.getData("PhaseName") as string | undefined) || (native.getData("phase") as string | undefined) || "idle";
     const dir = (native.getData("dir") as string | undefined) || "down";
+
     const fco = (native.getData("frameColOverride") as number | undefined);
     const frameColOverride = (typeof fco === "number" && Number.isFinite(fco)) ? (fco | 0) : -1;
+
+    // These are what drive “cast-part” behavior while the phase stays constant
+    const actionKind = (native.getData("ActionKind") as string | undefined) || "none";
+    const phaseProgressInt = (native.getData("PhaseProgressInt") as number | undefined) | 0;
+
+    const phasePartName = (native.getData("PhasePartName") as string | undefined) || "";
+    const phasePartStartMs = (native.getData("PhasePartStartMs") as number | undefined) | 0;
+    const phasePartDurationMs = (native.getData("PhasePartDurationMs") as number | undefined) | 0;
+    const phasePartProgressInt = (native.getData("PhasePartProgressInt") as number | undefined) | 0;
 
     // Last applied
     const lastHeroName = (native.getData(LAST_HERO_NAME_KEY) as string | undefined) || "";
     const lastHeroFamily = (native.getData(LAST_HERO_FAMILY_KEY) as string | undefined) || "";
-    const lastPhase = (native.getData(LAST_PHASE_KEY) as string | undefined) || "";
+    const lastPhaseName = (native.getData(LAST_PHASE_NAME_KEY) as string | undefined) || "";
     const lastDir = (native.getData(LAST_DIR_KEY) as string | undefined) || "";
     const lastFco = (native.getData(LAST_FRAME_COL_OVERRIDE_KEY) as number | undefined);
     const lastFrameColOverride = (typeof lastFco === "number" && Number.isFinite(lastFco)) ? (lastFco | 0) : -1;
+
+    const lastActionKind = (native.getData(LAST_ACTION_KIND_KEY) as string | undefined) || "none";
+    const lastPhaseProgressInt = ((native.getData(LAST_PHASE_PROGRESS_INT_KEY) as number | undefined) ?? 0) | 0;
+
+    const lastPhasePartName = (native.getData(LAST_PHASE_PART_NAME_KEY) as string | undefined) || "";
+    const lastPhasePartStartMs = ((native.getData(LAST_PHASE_PART_START_MS_KEY) as number | undefined) ?? 0) | 0;
+    const lastPhasePartDurationMs = ((native.getData(LAST_PHASE_PART_DURATION_MS_KEY) as number | undefined) ?? 0) | 0;
+    const lastPhasePartProgressInt = ((native.getData(LAST_PHASE_PART_PROGRESS_INT_KEY) as number | undefined) ?? 0) | 0;
 
     // If nothing relevant changed, don't re-apply
     if (
         heroName === lastHeroName &&
         heroFamily === lastHeroFamily &&
-        phase === lastPhase &&
+        phaseName === lastPhaseName &&
         dir === lastDir &&
-        frameColOverride === lastFrameColOverride
+        frameColOverride === lastFrameColOverride &&
+        actionKind === lastActionKind &&
+        phaseProgressInt === lastPhaseProgressInt &&
+        phasePartName === lastPhasePartName &&
+        phasePartStartMs === lastPhasePartStartMs &&
+        phasePartDurationMs === lastPhasePartDurationMs &&
+        phasePartProgressInt === lastPhasePartProgressInt
     ) {
         return;
     }
@@ -1834,9 +3417,17 @@ function _tryApplyHeroAnimationForNative(s: Sprite, native: Phaser.GameObjects.S
     // Update cache first so recursive paths don't thrash
     native.setData(LAST_HERO_NAME_KEY, heroName);
     native.setData(LAST_HERO_FAMILY_KEY, heroFamily);
-    native.setData(LAST_PHASE_KEY, phase);
+    native.setData(LAST_PHASE_NAME_KEY, phaseName);
     native.setData(LAST_DIR_KEY, dir);
     native.setData(LAST_FRAME_COL_OVERRIDE_KEY, frameColOverride);
+
+    native.setData(LAST_ACTION_KIND_KEY, actionKind);
+    native.setData(LAST_PHASE_PROGRESS_INT_KEY, phaseProgressInt);
+
+    native.setData(LAST_PHASE_PART_NAME_KEY, phasePartName);
+    native.setData(LAST_PHASE_PART_START_MS_KEY, phasePartStartMs);
+    native.setData(LAST_PHASE_PART_DURATION_MS_KEY, phasePartDurationMs);
+    native.setData(LAST_PHASE_PART_PROGRESS_INT_KEY, phasePartProgressInt);
 
     // Apply (heroAnimGlue)
     try {
@@ -1845,13 +3436,73 @@ function _tryApplyHeroAnimationForNative(s: Sprite, native: Phaser.GameObjects.S
         console.log("[arcadeCompat] _tryApplyHeroAnimationForNative ERROR", e, {
             heroName,
             heroFamily,
-            phase,
+            phaseName,
             dir,
-            frameColOverride
+            frameColOverride,
+            actionKind,
+            phaseProgressInt,
+            phasePartName,
+            phasePartStartMs,
+            phasePartDurationMs,
+            phasePartProgressInt
         });
     }
 }
 
+
+
+function _spriteDataReadString(s: any, key: string): string {
+    if (!s) return "";
+
+    const d: any = (s as any).data;
+    if (!d) return "";
+
+    // Map / DataBag style
+    try {
+        if (typeof d.get === "function") {
+            const v = d.get(key);
+            return (typeof v === "string") ? v : "";
+        }
+    } catch { /* ignore */ }
+
+    // PXT-style internal storage
+    try {
+        if (d._data && typeof d._data[key] === "string") return d._data[key];
+    } catch { /* ignore */ }
+
+    // Plain object style
+    try {
+        const v = d[key];
+        return (typeof v === "string") ? v : "";
+    } catch { /* ignore */ }
+
+    return "";
+}
+
+function _spriteDataReadNumber(s: any, key: string): number {
+    if (!s) return 0;
+
+    const d: any = (s as any).data;
+    if (!d) return 0;
+
+    try {
+        if (typeof d.get === "function") {
+            const v = d.get(key);
+            return (typeof v === "number") ? (v | 0) : 0;
+        }
+    } catch { }
+
+    try {
+        if (d._data && typeof d._data[key] === "number") return d._data[key] | 0;
+    } catch { }
+
+    try {
+        const v = d[key];
+        return (typeof v === "number") ? (v | 0) : 0;
+    } catch { }
+
+    return 0;
+}
 
 
 //##########################################################################################################################################
@@ -1904,8 +3555,28 @@ function _attachNativeSprite(s: Sprite): void {
 
     const ui = _attachDetectUi(ctx);
 
+    // DEBUG: one-time attach classification for projectiles
+    if ((ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProj) {
+        (ctx.s as any).__loggedAttachProj = true;
+        const dataKeys = Object.keys(((ctx.s as any).data) || {});
+        console.log("[ATTACH][PROJ] begin",
+            "| id", (ctx.s as any).id,
+            "| kind", (ctx.s as any).kind,
+            "| flags", ((ctx.s as any).flags | 0),
+            "| dataKeys", dataKeys
+        );
+    }
+
     // If we've already attached a UI-managed native (Container), early-out.
-    if (_attachUiEarlyUpdateIfExisting(ctx)) return;
+    if (_attachUiEarlyUpdateIfExisting(ctx)) {
+        if ((ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProjEarlyOut) {
+            (ctx.s as any).__loggedAttachProjEarlyOut = true;
+            console.log("[ATTACH][PROJ] early-out: existing UI native",
+                "| id", (ctx.s as any).id
+            );
+        }
+        return;
+    }
 
     // Create UI natives (NO pixel upload)
     if (_attachCreateStatusBar(ctx, ui)) return;
@@ -1915,6 +3586,22 @@ function _attachNativeSprite(s: Sprite): void {
 
     // Step 5+ work lives here for now (unchanged legacy body)
     _attachNativeSpriteNonUiPath(ctx.sc, ctx.s, ctx.g, ctx.tA0);
+
+    // DEBUG: post-create snapshot for projectile
+    if ((ctx.s as any).kind === 51 && (ctx.s as any).native && !(ctx.s as any).__loggedAttachProjAfter) {
+        (ctx.s as any).__loggedAttachProjAfter = true;
+        const n: any = (ctx.s as any).native;
+        const sfx = n.scrollFactorX ?? 1;
+        const sfy = n.scrollFactorY ?? 1;
+        console.log("[ATTACH][PROJ] after non-ui attach and a crystal",
+            "| id", (ctx.s as any).id,
+            "| nativeType", (n && n.type) ? n.type : "",
+            "| tex", n.texture?.key ?? "",
+            "| frame", n.frame?.name ?? "",
+            "| depth", n.depth ?? 0,
+            "| scrollFactor", sfx, sfy
+        );
+    }
 }
 
 
@@ -3079,6 +4766,8 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
     }
 
 
+
+
     // ======================================================
     // KIND56 CREATION TRACE (debug)
     // ======================================================
@@ -3454,6 +5143,13 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         return (r << 16) | (g2 << 8) | b;
     };
 
+    // Cache camera info once per tick for debugging
+    const cam = (sc as any).cameras?.main;
+    const camScrollX = cam ? (cam.scrollX as number) : 0;
+    const camScrollY = cam ? (cam.scrollY as number) : 0;
+    const camZoom = cam ? (cam.zoom as number) : 1;
+    const camWV = cam ? cam.worldView : null;
+
     for (let i = all.length - 1; i >= 0; i--) {
         const s = all[i];
         if (!s) {
@@ -3489,6 +5185,9 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 // Step 8: ensure weapon overlays are destroyed too
                 _destroyWeaponOverlaysForHeroNative(s.native);
 
+                // Intellect FX attachments (hero ring + projectile crystal)
+                _destroyIntellectFxForNative(s.native);
+
                 try {
                     (s.native as any).destroy();
                 } catch (e) {
@@ -3496,7 +5195,6 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 }
             }
             s.native = null;
-
 
             const texKey = "sprite_" + s.id;
             if (sc.textures && sc.textures.exists(texKey)) {
@@ -3538,10 +5236,20 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         native.y = s.y;
 
         // --------------------------------------------------
+        // SHOP RING (Phaser-only): render ring weapons around shopkeeper
+        // --------------------------------------------------
+        const dataAny: any = (s as any).data || {};
+        const ringIdsRaw = dataAny[SHOP_WPN_RING_IDS_KEY];
+
+        if (typeof ringIdsRaw === "string" && ringIdsRaw.trim()) {
+            _syncShopWeaponRingIfPresent(ctx, s, native);
+        }
+
+        // --------------------------------------------------
         // UI FAST PATH
         // --------------------------------------------------
-        //if (_syncUiManagedFastPath(ctx, s, native)) continue;
         if (_syncUiManagedFastPath(ctx, s, native, mcToHex)) continue;
+
         // --------------------------------------------------
         // HERO PATH
         // --------------------------------------------------
@@ -3551,6 +5259,46 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         // ENEMY / ACTOR PATH
         // --------------------------------------------------
         if (_syncEnemyActorPath(ctx, s, native)) continue;
+
+        // --------------------------------------------------
+        // PROJECTILE VISUAL OVERRIDES (Phaser-only)
+        // --------------------------------------------------
+        if (s.kind === 51) {
+            // Targeted camera-space debug, throttled to once per projectile sprite id
+            const dbgKey = "__projDbgOnce_" + (s.id | 0);
+            if (!(globalThis as any)[dbgKey]) {
+                (globalThis as any)[dbgKey] = 1;
+
+                const sfx = (native as any).scrollFactorX ?? 1;
+                const sfy = (native as any).scrollFactorY ?? 1;
+                const sx = (native.x - camScrollX) * camZoom;
+                const sy = (native.y - camScrollY) * camZoom;
+
+                let inView = false;
+                if (camWV) {
+                    inView =
+                        (native.x >= camWV.x && native.x <= (camWV.x + camWV.width) &&
+                         native.y >= camWV.y && native.y <= (camWV.y + camWV.height));
+                }
+
+                console.log("[SYNC][PROJ]",
+                    "| s.id", s.id,
+                    "| kind", s.kind,
+                    "| flags", flags,
+                    "| world", (native.x | 0), (native.y | 0),
+                    "| screen", (sx | 0), (sy | 0),
+                    "| cam.scroll", (camScrollX | 0), (camScrollY | 0),
+                    "| cam.zoom", camZoom,
+                    "| inView", inView,
+                    "| nativeScrollFactor", sfx, sfy,
+                    "| relToCamFlag", !!(flags & SpriteFlag.RelativeToCamera),
+                    "| tex", (native as any).texture?.key ?? "",
+                    "| depth", (native as any).depth ?? 0
+                );
+            }
+
+            _syncIntellectSpellProjectileCrystal(ctx, s, native, flags);
+        }
 
         // --------------------------------------------------
         // PIXEL-DEATH REMOVAL
@@ -4047,41 +5795,6 @@ function _syncUiManagedText(
 
 
 
-
-function _destroyWeaponOverlaysForHeroNative(nativeHero: any): void {
-    if (!nativeHero) return;
-
-    const n: any = nativeHero as any;
-
-    const bg: any = n.__weaponBg;
-    const fg: any = n.__weaponFg;
-
-    const gbg: any[] = n.__weaponGhostsBg || [];
-    const gfg: any[] = n.__weaponGhostsFg || [];
-
-    // Stop EXEC sheen tweens if any
-    try {
-        const sc: any = (nativeHero as any).scene;
-        if (sc) _agiWeaponSheenStop(n, sc, bg, fg);
-    } catch { /* ignore */ }
-
-    n.__weaponBg = null;
-    n.__weaponFg = null;
-    n.__weaponGhostsBg = null;
-    n.__weaponGhostsFg = null;
-
-    n.__weaponVis = 0;
-    n.__agiSheenOn = 0;
-
-    try { bg?.destroy?.(); } catch { /* ignore */ }
-    try { fg?.destroy?.(); } catch { /* ignore */ }
-
-    for (const g of gbg) { try { g?.destroy?.(); } catch { /* ignore */ } }
-    for (const g of gfg) { try { g?.destroy?.(); } catch { /* ignore */ } }
-}
-
-
-
 function _ensureWeaponOverlaysForHeroNative(
     ctx: SyncContext,
     nativeHero: Phaser.GameObjects.Sprite
@@ -4140,6 +5853,26 @@ function _ensureWeaponOverlaysForHeroNative(
     const ghostsBg: Phaser.GameObjects.Sprite[] = created.ghostsBg || [];
     const ghostsFg: Phaser.GameObjects.Sprite[] = created.ghostsFg || [];
 
+    // ------------------------------------------------------------
+    // Tag overlays so they can be filtered out of any sprite scans.
+    // (Also useful later when we spawn shop ring weapons.)
+    // ------------------------------------------------------------
+    const tagOverlay = (spr: any, kind: string): void => {
+        if (!spr) return;
+        try { spr.setData?.("__isWeaponOverlay", 1); } catch { }
+        try { spr.setData?.("__weaponOverlayKind", kind); } catch { }
+        try { spr.setData?.("__weaponOverlayOwner", "hero"); } catch { }
+        // Also stash on the object for faster checks in hot loops.
+        try { spr.__isWeaponOverlay = 1; } catch { }
+        try { spr.__weaponOverlayKind = kind; } catch { }
+        try { spr.__weaponOverlayOwner = "hero"; } catch { }
+    };
+
+    tagOverlay(weaponBg as any, "bg");
+    tagOverlay(weaponFg as any, "fg");
+    for (const g of ghostsBg) tagOverlay(g as any, "ghostBg");
+    for (const g of ghostsFg) tagOverlay(g as any, "ghostFg");
+
     // Match hero scroll factors if possible.
     try {
         const sfx = (nativeHero as any).scrollFactorX;
@@ -4150,6 +5883,12 @@ function _ensureWeaponOverlaysForHeroNative(
         for (const g of ghostsBg) try { (g as any).setScrollFactor?.(sfx, sfy); } catch { }
         for (const g of ghostsFg) try { (g as any).setScrollFactor?.(sfx, sfy); } catch { }
     } catch { /* ignore */ }
+
+    // Defensive defaults (per-tick sync will override, but creation-time matters).
+    try { (weaponBg as any).setDepth?.(((nativeHero as any).depth ?? 0) - 1); } catch { }
+    try { (weaponFg as any).setDepth?.(((nativeHero as any).depth ?? 0) + 1); } catch { }
+    for (const g of ghostsBg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
+    for (const g of ghostsFg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
 
     // Hidden until Step 6 chooses to show them.
     try { weaponBg.setVisible(false); } catch { /* ignore */ }
@@ -4175,6 +5914,69 @@ function _ensureWeaponOverlaysForHeroNative(
     return { weaponBg, weaponFg, ghostsBg, ghostsFg };
 }
 
+
+//Backup just to compile. We need the old one please
+function _destroyWeaponOverlaysForHeroNative(native: any): void {
+    if (!native) return;
+
+    const tryDestroy = (spr: any) => {
+        if (!spr) return;
+        try { spr.destroy?.(); } catch { }
+    };
+
+    const tryDestroyArr = (arr: any) => {
+        if (!arr || !Array.isArray(arr)) return;
+        for (let i = 0; i < arr.length; i++) tryDestroy(arr[i]);
+        arr.length = 0;
+    };
+
+    // ------------------------------------------------------------
+    // 1) Known "field" storage (your codebase has used these patterns)
+    // ------------------------------------------------------------
+    try {
+        // If you have constants like these, great; if not, this block just won't run.
+        if (typeof WEAPON_NATIVE_BG_FIELD !== "undefined") tryDestroy(native[WEAPON_NATIVE_BG_FIELD]);
+        if (typeof WEAPON_NATIVE_FG_FIELD !== "undefined") tryDestroy(native[WEAPON_NATIVE_FG_FIELD]);
+        if (typeof WEAPON_NATIVE_GHOSTS_FIELD !== "undefined") tryDestroyArr(native[WEAPON_NATIVE_GHOSTS_FIELD]);
+    } catch { }
+
+    // ------------------------------------------------------------
+    // 2) Data manager storage (native.setData / native.getData)
+    // ------------------------------------------------------------
+    try {
+        const bg = native.getData?.("__weaponBg");
+        const fg = native.getData?.("__weaponFg");
+        const ghosts = native.getData?.("__weaponGhosts");
+        tryDestroy(bg);
+        tryDestroy(fg);
+        tryDestroyArr(ghosts);
+        try { native.setData?.("__weaponBg", null); } catch { }
+        try { native.setData?.("__weaponFg", null); } catch { }
+        try { native.setData?.("__weaponGhosts", null); } catch { }
+    } catch { }
+
+    // ------------------------------------------------------------
+    // 3) "Raw" common property names (in case refactors renamed constants)
+    // ------------------------------------------------------------
+    tryDestroy(native.weaponBg);
+    tryDestroy(native.weaponFg);
+    tryDestroyArr(native.weaponGhosts);
+    try { native.weaponBg = null; } catch { }
+    try { native.weaponFg = null; } catch { }
+    try { native.weaponGhosts = null; } catch { }
+
+    // ------------------------------------------------------------
+    // 4) Also clean up shop ring overlays if they exist on this native
+    //    (prevents leaks if shopkeeper gets destroyed)
+    // ------------------------------------------------------------
+    try {
+        if (typeof SHOP_RING_NATIVE_BG_FIELD !== "undefined") tryDestroyArr(native[SHOP_RING_NATIVE_BG_FIELD]);
+        if (typeof SHOP_RING_NATIVE_FG_FIELD !== "undefined") tryDestroyArr(native[SHOP_RING_NATIVE_FG_FIELD]);
+        if (typeof SHOP_RING_NATIVE_BG_FIELD !== "undefined") native[SHOP_RING_NATIVE_BG_FIELD] = [];
+        if (typeof SHOP_RING_NATIVE_FG_FIELD !== "undefined") native[SHOP_RING_NATIVE_FG_FIELD] = [];
+        if (typeof SHOP_RING_NATIVE_WIRED_KEY !== "undefined") native[SHOP_RING_NATIVE_WIRED_KEY] = 0;
+    } catch { }
+}
 
 
 
@@ -4277,7 +6079,6 @@ function _fmtWpnFrameResultLine(args: {
 
 
 
-
 function _syncWeaponOverlaysForHeroNative(
     ctx: SyncContext,
     s: any,
@@ -4309,7 +6110,6 @@ function _syncWeaponOverlaysForHeroNative(
     const wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
     const wCombo = (typeof dataAny[HERO_WPN_COMBO_KEY] === "string") ? String(dataAny[HERO_WPN_COMBO_KEY]) : "";
 
-
     let weaponId = "";
     let weaponPhase = phaseRaw;
 
@@ -4324,6 +6124,26 @@ function _syncWeaponOverlaysForHeroNative(
     else if (phaseRaw === "cast") weaponId = wCast;
     else weaponId = "";
 
+    // -----------------------------
+    // Mirror engine-stamped action/phase keys onto the PHASER hero sprite
+    // so weaponAnimGlue can read them (it reads ONLY heroSprite.getData()).
+    // -----------------------------
+    try {
+        const safeSet = (k: string, v: any) => {
+            try { (nativeHero as any).setData?.(k, v); } catch { }
+        };
+
+        // These are the keys weaponAnimGlue’s resolveWeaponFrameIndexForLayer may consult.
+        // Only set if present to avoid polluting with nonsense.
+        if (dataAny["ActionKind"] !== undefined) safeSet("ActionKind", dataAny["ActionKind"]);
+        if (dataAny["ActionSequence"] !== undefined) safeSet("ActionSequence", dataAny["ActionSequence"]);
+        if (dataAny["PhaseStartMs"] !== undefined) safeSet("PhaseStartMs", dataAny["PhaseStartMs"]);
+        if (dataAny["PhaseDurationMs"] !== undefined) safeSet("PhaseDurationMs", dataAny["PhaseDurationMs"]);
+
+        // Some builds store these under other spellings; mirror if you have them.
+        if (dataAny["phaseStartMs"] !== undefined && dataAny["PhaseStartMs"] === undefined) safeSet("PhaseStartMs", dataAny["phaseStartMs"]);
+        if (dataAny["phaseDurationMs"] !== undefined && dataAny["PhaseDurationMs"] === undefined) safeSet("PhaseDurationMs", dataAny["phaseDurationMs"]);
+    } catch { /* ignore */ }
 
     // Hide everything if no weapon
     if (!weaponId) {
@@ -4358,6 +6178,11 @@ function _syncWeaponOverlaysForHeroNative(
 
     // Run weapon glue (does the normal selection + sets frames)
     const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
+
+    // IMPORTANT: pass frameColOverride into weaponAnimGlue so it can honor hold-frame
+    // during its own resolution paths (including the heroCol->weaponCol mapping).
+    const glueFrameColOverride = (nativeFco >= 0) ? nativeFco : undefined;
+
     glueAny.syncWeaponLayersToHero({
         scene: sc,
         heroSprite: nativeHero,
@@ -4367,7 +6192,8 @@ function _syncWeaponOverlaysForHeroNative(
         heroPhase: weaponPhase,
         dir: requestedDir as any,
         heroFrameIndex,
-        variant: DEFAULT_WEAPON_VARIANT
+        variant: DEFAULT_WEAPON_VARIANT,
+        frameColOverride: glueFrameColOverride
     });
 
     // Compute actual weapon cols/names after glue
@@ -4386,7 +6212,8 @@ function _syncWeaponOverlaysForHeroNative(
     const bgTexKey = (bgAny.texture?.key ?? "") + "";
     const fgTexKey = (fgAny.texture?.key ?? "") + "";
 
-    // Enforce hold-frame contract for weapons too
+    // We still keep the enforcement step as a belt-and-suspenders guard
+    // (covers any future glue path that might bypass frameColOverride).
     if (nativeFco >= 0) {
         _forceSpriteColByName(bgAny, bgCols, nativeFco);
         _forceSpriteColByName(fgAny, fgCols, nativeFco);
@@ -4409,13 +6236,13 @@ function _syncWeaponOverlaysForHeroNative(
     const ghostCount = (chgActive && !isExecW) ? Math.max(0, pendingAdd | 0) : 0;
     try {
         glueAny.setWeaponGhostCountExact({
-        weaponBg: overlays.weaponBg,
-        weaponFg: overlays.weaponFg,
-        ghostsBg: overlays.ghostsBg,
-        ghostsFg: overlays.ghostsFg,
-        ghostCount,
-        dir: requestedDir,
-        spacingPx: 10
+            weaponBg: overlays.weaponBg,
+            weaponFg: overlays.weaponFg,
+            ghostsBg: overlays.ghostsBg,
+            ghostsFg: overlays.ghostsFg,
+            ghostCount,
+            dir: requestedDir,
+            spacingPx: 10
         });
     } catch { /* ignore */ }
 
@@ -4443,6 +6270,27 @@ function _syncWeaponOverlaysForHeroNative(
         }
 
         _agiSpawnExecuteFx(sc, nativeHero, overlays, lastAdd | 0, storedHits | 0)
+    }
+
+    // Step 10: Execute slash beats (universal EventSequence/EventMask)
+    const evtSeq = (dataAny["EventSequence"] as any | 0)
+    const evtMask = (dataAny["EventMask"] as any | 0)
+    const lastEvtSeq = (anyHero.__lastEventSeq as any | 0)
+
+    if ((evtSeq | 0) !== 0 && (evtSeq | 0) !== (lastEvtSeq | 0)) {
+        anyHero.__lastEventSeq = evtSeq | 0
+
+        if (((evtMask | 0) & EVENT_MASK_AGI_EXEC_SLASH) !== 0) {
+            const ex = (dataAny["EventP0"] as any | 0)
+            const ey = (dataAny["EventP1"] as any | 0)
+
+            // record a local "beat start" so weaponAnimGlue can yo-yo columns briefly
+            nativeHero.setData("__agiExecSlashBeatSeq", evtSeq | 0)
+            nativeHero.setData("__agiExecSlashBeatLocalStartMs", (sc.time?.now ?? Date.now()) as any)
+
+            _agiSpawnExecuteStreamlineFx(sc, nativeHero, overlays, ex | 0, ey | 0)
+            _agiSpawnExecuteSlashMarkFx(sc, nativeHero, overlays, ex | 0, ey | 0)
+        }
     }
 
     if (DEBUG_WEAPON_SYNC) {
@@ -4529,12 +6377,96 @@ function _syncHeroPath(
         auraColor
     );
 
+    // Cache hero cast weapon by heroIndex so projectile visuals can pick it up.
+    try {
+        const dataAny: any = (s as any).data || {};
+        const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+        const wCast = (typeof dataAny[HERO_WPN_CAST_KEY] === "string") ? String(dataAny[HERO_WPN_CAST_KEY]) : "";
+        if (wCast) _heroCastWeaponByIndex[heroIndex] = wCast;
+    } catch { }
+
     // Step 6: per-frame weapon sync
     _syncWeaponOverlaysForHeroNative(
         ctx,
         s,
         nativeAny as Phaser.GameObjects.Sprite
     );
+
+    // Intellect spell: orbiting crystals while controlling the spell
+    _syncHeroIntellectCastCrystals(
+        ctx,
+        s,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
+}
+
+
+
+function _syncHeroPathOLDCODETODELETE(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): void {
+    const dataKeys = Object.keys(s.data || {});
+    const role = _classifySpriteRole(s.kind, dataKeys);
+
+    if (role !== "HERO") return;
+
+    const nativeAny: any = s.native;
+    if (!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"))) return;
+
+    // Keep native sprite identity in sync every frame
+    _copyHeroIdentityToNative(
+        s as Sprite,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
+
+    _tryApplyHeroAnimationForNative(
+        s,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
+
+    const auraActive = !!(s.data && (s.data as any)["auraActive"]);
+    const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
+
+    heroAnimGlue.syncHeroAuraForNative(
+        s.native,
+        auraActive,
+        auraColor
+    );
+
+    // Step 6+: per-frame weapon sync (creates overlays lazily)
+    _syncWeaponOverlaysForHeroNative(
+        ctx,
+        s,
+        nativeAny as Phaser.GameObjects.Sprite
+    );
+
+    // ------------------------------------------------------------
+    // Step 12: Execute layering (hero + overlays above monsters)
+    // ------------------------------------------------------------
+    const dataAny: any = (s as any).data || {};
+    const aState = (dataAny[HERO_AGI_STATE_KEY] as any | 0);
+
+    const baseDepth = (s.z | 0);
+    const heroDepth =
+        (aState === AGI_STATE_EXECUTING)
+            ? ((baseDepth + HERO_EXECUTE_DEPTH_BOOST) | 0)
+            : baseDepth;
+
+    try { (nativeAny as any).setDepth?.(heroDepth); } catch { /* ignore */ }
+
+    // If weapon overlays exist, pin them above hero in a stable order.
+    const bgAny: any = (nativeAny as any).__weaponBg;
+    const fgAny: any = (nativeAny as any).__weaponFg;
+    const gbg: any[] = (nativeAny as any).__weaponGhostsBg || [];
+    const gfg: any[] = (nativeAny as any).__weaponGhostsFg || [];
+
+    try { if (bgAny) bgAny.setDepth?.((heroDepth + HERO_WPN_BG_DEPTH_OFF) | 0); } catch { }
+    try { if (fgAny) fgAny.setDepth?.((heroDepth + HERO_WPN_FG_DEPTH_OFF) | 0); } catch { }
+
+    for (const g of gbg) { try { g?.setDepth?.((heroDepth + HERO_WPN_GHOST_BG_DEPTH_OFF) | 0); } catch { } }
+    for (const g of gfg) { try { g?.setDepth?.((heroDepth + HERO_WPN_GHOST_FG_DEPTH_OFF) | 0); } catch { } }
 }
 
 
@@ -4659,6 +6591,9 @@ function _syncPixelDeathRemoval(
         // Step 8: ensure weapon overlays are destroyed too
         _destroyWeaponOverlaysForHeroNative(s.native);
 
+        // Intellect FX attachments (hero ring + projectile crystal)
+        _destroyIntellectFxForNative(s.native);
+
         try {
             (s.native as any).destroy();
         } catch (e) {
@@ -4693,41 +6628,86 @@ function _syncVisibilityAndDebugTail(
     native: any,
     flags: number
 ): void {
-    // EXTRA DEBUG: raw projectile state
-    if (DEBUG_PROJECTILE_NATIVE && ctx.shouldLog && s.kind === 11) {
-        console.log(
-            "[SYNC-PROJ-RAW]",
-            "| id", s.id,
-            "| engine x,y", s.x, s.y,
-            "| native x,y", native.x, native.y,
-            "| flags", flags,
-            "| image?", !!s.image,
-            "| img w,h", s.image?.width, s.image?.height,
-            "| _lastNonZeroPixels", (s as any)._lastNonZeroPixels,
-            "| native.visible(before)", native.visible,
-            "| native.alpha(before)", native.alpha,
-            "| texKey", native.texture && native.texture.key,
-            "| native.width", native.width,
-            "| native.height", native.height,
-            "| native.displayWidth", native.displayWidth,
-            "| native.displayHeight", native.displayHeight,
-            "| native.scaleX", native.scaleX,
-            "| native.scaleY", native.scaleY,
-            "| native.depth", (native as any).depth
-        );
-    }
+    if (!native) return;
 
+    // ------------------------------------------------------------
+    // Compute visibility inputs (existing behavior)
+    // ------------------------------------------------------------
     const lastNonZero = (s as any)._lastNonZeroPixels ?? -1;
     const hasInvisibleFlag = !!(flags & SpriteFlag.Invisible);
     const autoHideByPixels = lastNonZero === 0;
 
+    // ------------------------------------------------------------
+    // DEBUG SNAPSHOT (heroes only, cast only)
+    // ------------------------------------------------------------
+    const nativeAny: any = native as any;
+    const isHeroNative = !!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"));
+    const heroName = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("heroName") as any) || "") : "";
+    const phase = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("phase") as any) || "") : "";
+    const dir = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("dir") as any) || "") : "";
+    const forceInvisibleVal =
+        (nativeAny && nativeAny.getData) ? (nativeAny.getData(NATIVE_FORCE_INVISIBLE_KEY) as any) : undefined;
+
+    const shouldLogHero =
+        !!DEBUG_INT_HERO_VIS &&
+        isHeroNative &&
+        phase === "cast" &&
+        (!DEBUG_INT_HERO_NAME_FILTER || heroName === DEBUG_INT_HERO_NAME_FILTER);
+
+    if (shouldLogHero) {
+        console.log(
+            "[PROVE][HERO-VIS][BEFORE]",
+            "| id", s?.id,
+            "| heroName", heroName,
+            "| phase", phase,
+            "| dir", dir,
+            "| flags", flags,
+            "| hasInvisibleFlag", hasInvisibleFlag,
+            "| _lastNonZeroPixels", lastNonZero,
+            "| autoHideByPixels", autoHideByPixels,
+            "| __forceInvisible", forceInvisibleVal,
+            "| native.visible", native.visible,
+            "| native.alpha", native.alpha,
+            "| native.depth", (nativeAny.depth ?? undefined),
+            "| texKey", (nativeAny.texture && nativeAny.texture.key) ? nativeAny.texture.key : "",
+            "| frame", (nativeAny.frame && (nativeAny.frame.name !== undefined)) ? nativeAny.frame.name : undefined,
+            "| animKey", (nativeAny.anims && nativeAny.anims.currentAnim) ? nativeAny.anims.currentAnim.key : "",
+            "| isPlaying", (nativeAny.anims && nativeAny.anims.isPlaying) ? true : false
+        );
+    }
+
     // ============================================================
-    // UI-MANAGED VISIBILITY OVERRIDE
-    //
-    // Combo meter is intentionally SpriteFlag.Invisible in Phaser mode
-    // (Arcade pixels hidden), but the Phaser-native container MUST remain visible.
+    // PHASER-ONLY FORCE INVISIBLE (used for intellect spell projectile replacement)
     // ============================================================
+    const forceInvisible = !!(
+        native &&
+        typeof native.getData === "function" &&
+        native.getData(NATIVE_FORCE_INVISIBLE_KEY)
+    );
+    if (forceInvisible) {
+        if (shouldLogHero) {
+            console.log(
+                "[PROVE][HERO-VIS][HIDDEN]",
+                "REASON=__forceInvisible",
+                "| id", s?.id,
+                "| heroName", heroName,
+                "| phase", phase,
+                "| __forceInvisible", native.getData(NATIVE_FORCE_INVISIBLE_KEY)
+            );
+            // stack helps prove who set it (sometimes setData callsite is discoverable in devtools)
+            const st = (new Error("[PROVE][HERO-VIS] __forceInvisible stack")).stack;
+            if (st) console.log(st);
+        }
+        native.visible = false;
+        native.alpha = 0;
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // UI-managed visibility path (existing behavior)
+    // ------------------------------------------------------------
     const isUiManaged = !!(native && typeof native.getData === "function" && native.getData("uiManaged"));
+
     if (isUiManaged) {
         const uiKind = (native.getData("uiKind") as string | undefined) || "";
 
@@ -4745,51 +6725,48 @@ function _syncVisibilityAndDebugTail(
         native.visible = shouldBeVisible;
         native.alpha = shouldBeVisible ? 1 : 0;
 
+        if (shouldLogHero) {
+            console.log(
+                "[PROVE][HERO-VIS][AFTER]",
+                "| id", s?.id,
+                "| heroName", heroName,
+                "| phase", phase,
+                "| RESULT visible", native.visible,
+                "| alpha", native.alpha,
+                "| REASON", (native.visible ? "visible" : ("uiManaged + " + (hasInvisibleFlag ? "InvisibleFlag" : "") + (autoHideByPixels ? " autoHideByPixels" : "")))
+            );
+        }
         return;
     }
 
-    // ============================================================
-    // DEFAULT (NON-UI) VISIBILITY
-    // ============================================================
+    // ------------------------------------------------------------
+    // Normal visibility path (existing behavior)
+    // ------------------------------------------------------------
     const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
     native.visible = shouldBeVisible;
     native.alpha = shouldBeVisible ? 1 : 0;
 
-    if (DEBUG_PROJECTILE_NATIVE && ctx.shouldLog && s.kind === 11) {
+    if (shouldLogHero) {
         console.log(
-            "[SYNC-PROJ-VIS]",
-            "| id", s.id,
-            "| shouldBeVisible", shouldBeVisible,
-            "| hasInvisibleFlag", hasInvisibleFlag,
-            "| autoHideByPixels", autoHideByPixels,
-            "| native.visible(after)", native.visible,
-            "| native.alpha(after)", native.alpha,
-            "| flags", flags,
-            "| lastNonZero", lastNonZero
-        );
-    }
-
-    if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
-        console.log(
-            "[SYNC] sprite",
-            "| id", s.id,
-            "| kind", s.kind,
-            "| x,y", native.x, native.y,
-            "| visible", native.visible,
+            "[PROVE][HERO-VIS][AFTER]",
+            "| id", s?.id,
+            "| heroName", heroName,
+            "| phase", phase,
+            "| RESULT visible", native.visible,
             "| alpha", native.alpha,
-            "| flags", flags,
-            "| hasInvisibleFlag", hasInvisibleFlag,
-            "| lastNonZero", lastNonZero,
-            "| img w,h", s.image?.width, s.image?.height
+            "| REASON",
+            (native.visible ? "visible" :
+                ("normal + " +
+                    (hasInvisibleFlag ? "InvisibleFlag" : "") +
+                    (autoHideByPixels ? " autoHideByPixels" : "")))
         );
 
-        if (SPRITE_PIXEL_DUMP) {
-            const label = s.kind === 11 ? "PROJ" : "OVERLAY";
-            _debugDumpSpritePixels(s, label);
+        if (!native.visible) {
+            const st = (new Error("[PROVE][HERO-VIS] hidden (normal path) stack")).stack;
+            if (st) console.log(st);
         }
     }
 }
-
 
 
 // PURPOSE: Finalize per-frame timings + counters; emit perf logs if enabled.
@@ -4877,7 +6854,9 @@ function _syncEndFrame(ctx: SyncContext): void {
     // LIFESPAN PERF (accumulated by _advanceLifespans in game._tick)
     const lifeDestroyCalls = (gAny[PERF_LIFE_DESTROY_CALLS_KEY] | 0) || 0;
 
-    console.log(
+    const shouldLogPerformance = false
+
+    if (shouldLogPerformance) { console.log(
         "[perf.syncSteps]",
         "call#", _syncCallCount,
         "sprites=", spriteCount,
@@ -4909,6 +6888,7 @@ function _syncEndFrame(ctx: SyncContext): void {
         "auraTexSets=", auraTexSets,
         "| lifeDestroy=", lifeDestroyCalls
     );
+    }
 
     // Reset aura accumulators so each log line is "since last perf.syncSteps"
     gAny.__perfAuraMs = 0;
@@ -5945,11 +7925,6 @@ namespace netWorld {
     }
 
 
-    
-
-
-
-
 
     // ====================================================
     // APPLY SNAPSHOT
@@ -6161,13 +8136,6 @@ export function apply(snap: WorldSnapshot): void {
 
 
 
-
-
-
-
-
-
-
     // ====================================================
     // STRINGIFY / PARSE HELPERS
     // ====================================================
@@ -6181,6 +8149,7 @@ export function apply(snap: WorldSnapshot): void {
 }
 
 
+;(globalThis as any).netWorld = netWorld;
 
 
 
@@ -6193,7 +8162,7 @@ export function apply(snap: WorldSnapshot): void {
 //   // ... later ...
 //   (window as any).debugLoadWorldState(json);
 
-(globalThis as any).debugSaveWorldState = function (): string {
+;(globalThis as any).debugSaveWorldState = function (): string {
     try {
         const json = netWorld.toJSON();
         console.log("[netWorld] debugSaveWorldState:", json);
@@ -6405,602 +8374,25 @@ export function registerLocalPlayer(slotIndex: number, name: string | null) {
 
 
 
-
-
-
-
-/* -------------------------------------------------------
-   Network client – WebSocket → controller bridge
-------------------------------------------------------- */
-type NetMessage =
-    | { type: "assign"; playerId: number; name?: string }
-    | {
-          type: "input";
-          playerId: number;
-          button: string;
-          pressed: boolean;
-
-          // performance.now()-style timestamp (ms) captured on sender
-          sentAtMs?: number;
-
-          // Date.now()-style timestamp (ms) captured on sender (helps correlate clocks)
-          sentWallMs?: number;
-
-          // Monotonic per-client sequence number (debugging / ordering)
-          inputSeq?: number;
-
-          // Optional server timestamps (server may attach these)
-          serverRecvAt?: number;
-          serverSentAt?: number;
-      }
-    | { type: "state"; playerId: number; snapshot: netWorld.WorldSnapshot; serverSentAt?: number }
-    | { type: "hostStatus"; isHost: boolean }
-    | {
-          // Full tilemap broadcast (static-first). Encoding is future-proofed.
-          type: "tilemap";
-          rev: number;
-          tileSize: number;
-          rows: number;
-          cols: number;
-          encoding: "raw";
-          data: number[][];
-      }
-    | {
-          // Reserved for future encodings (we won’t use these yet, but types are ready).
-          type: "tilemap";
-          rev: number;
-          tileSize: number;
-          rows: number;
-          cols: number;
-          encoding: "rle" | "u8b64";
-          data: string;
-      };
-
-    
-
-
-class NetworkClient {
-    private ws: WebSocket | null = null;
-    playerId: number | null = null;
-    url: string;
-
-    // NEW: per-client monotonically increasing input sequence
-    private inputSeq: number = 0;
-
-    // Host flag as reported by the server (authoritative)
-    private _isHostFromServer: boolean = false;
-
-    // Latest tilemap revision we've accepted (monotonic)
-    private _tilemapRev: number = 0;
-
-
-    constructor(url: string) {
-        this.url = url;
-    }
-
-    connect() {
-        if (this.ws) return;
-
-        const ws = new WebSocket(this.url);
-        this.ws = ws;
-
-        ws.onopen = () => {
-            console.log("[net] connected to", this.url);
-        };
-
-        ws.onmessage = (ev) => {
-            let msg: NetMessage;
-            try {
-                msg = JSON.parse(ev.data) as NetMessage;
-            } catch (e) {
-                console.warn("[net] invalid message:", ev.data, e);
-                return;
-            }
-            this.handleMessage(msg);
-        };
-
-        ws.onclose = () => {
-            console.log("[net] disconnected");
-            this.ws = null;
-            // You can implement reconnect here later if you want.
-        };
-
-        ws.onerror = (ev) => {
-            console.warn("[net] error", ev);
-        };
-    }
-
-
-
-    // Send a button event up to the server
-    sendInput(button: string, pressed: boolean) {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            // console.log("[net] not connected; ignoring input");
-            return;
-        }
-        if (this.playerId == null) {
-            console.warn("[net] no playerId yet; ignoring input");
-            return;
-        }
-
-        // Bump sequence number
-        const seq = ++this.inputSeq;
-
-        // High-res time for *this page only* (host RTT measurement)
-        const perfNow =
-            typeof performance !== "undefined" ? performance.now() : null;
-
-        // Wall-clock time for cross-process comparisons (client↔server)
-        const wallNow = Date.now();
-
-        const payload: NetMessage = {
-            type: "input",
-            playerId: this.playerId,
-            button,
-            pressed,
-            // For host-side [inputLag.net]
-            sentAtMs: perfNow != null ? perfNow : wallNow,
-            // For server lag + cross-process correlation
-            sentWallMs: wallNow,
-            // NEW: shared ID so all logs can line up
-            inputSeq: seq
-        };
-
-        this.ws.send(JSON.stringify(payload));
-    }
-
-
-    // Host uses this to send snapshots of the world state
-    sendWorldSnapshot(snap: netWorld.WorldSnapshot) {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            return;
-        }
-
-        // Authority is based on server-reported hostStatus, NOT playerId === 1
-        if (!this.isHostNow()) {
-            return;
-        }
-
-        if (this.playerId == null) {
-            // Shouldn't happen if we're host, but keep it safe
-            return;
-        }
-
-        const payload: NetMessage = {
-            type: "state",
-            playerId: this.playerId,
-            snapshot: snap
-        };
-
-        this.ws.send(JSON.stringify(payload));
-    }
-
-
-        private isHostNow(): boolean {
-        // Central source of truth for "hostness" inside NetworkClient.
-        // Keep globalThis.__isHost in sync because other non-network code already reads it.
-        const g: any = (globalThis as any);
-        if (g.__isHost !== this._isHostFromServer) {
-            g.__isHost = this._isHostFromServer;
-        }
-        return this._isHostFromServer;
-        }
-
-    
-        private handleMessage(msg: NetMessage) {
-        switch (msg.type) {
-            case "assign":
-                this.onAssign(msg);
-                return;
-
-            case "hostStatus":
-                this.onHostStatus(msg);
-                return;
-
-            case "state":
-                this.onState(msg);
-                return;
-
-            case "input":
-                this.onInput(msg as any);
-                return;
-
-            case "tilemap":
-                this.onTilemap(msg);
-                return;
-
-            default:
-                // Unknown / unhandled message type: ignore.
-                return;
-        }
-    }
-
-
-
-    private onAssign(msg: Extract<NetMessage, { type: "assign" }>) {
-        this.playerId = msg.playerId;
-
-        const gAssign: any = (globalThis as any);
-
-        console.log("[net] assigned playerId =", this.playerId, "name=", msg.name);
-
-        // Tie this client to that global player slot (still lane-based for now)
-        const ctrlNS: any = gAssign.controller;
-        if (ctrlNS && typeof ctrlNS.setLocalPlayerSlot === "function") {
-            ctrlNS.setLocalPlayerSlot(this.playerId);
-        }
-
-        // Register profile / name for HeroEngine hook
-        const slotIndex = (this.playerId | 0) - 1;
-        const name = msg.name || null;
-
-        // IMPORTANT: do NOT hardcode length 4.
-        // We allow arrays to grow so "no cap leaks" outside the engine.
-        if (!gAssign.__heroProfiles) gAssign.__heroProfiles = [];
-        if (!gAssign.__playerNames) gAssign.__playerNames = [];
-
-        while (gAssign.__heroProfiles.length <= slotIndex) gAssign.__heroProfiles.push("Default");
-        while (gAssign.__playerNames.length <= slotIndex) gAssign.__playerNames.push(null);
-
-        gAssign.__playerNames[slotIndex] = name;
-
-        if (name) {
-            const existing = gAssign.__heroProfiles[slotIndex];
-            if (!existing || existing === "Default") {
-                gAssign.__heroProfiles[slotIndex] = name;
-            }
-        }
-    }
-
-
-    private onHostStatus(msg: any) {
-        const gAssign: any = (globalThis as any);
-        const isHost = !!msg.isHost;
-
-        // Centralized host flag
-        this._isHostFromServer = isHost;
-
-        // Keep legacy global in sync (other files read it)
-        gAssign.__isHost = isHost;
-
-        console.log("[net] hostStatus =", isHost);
-
-        // If this client is host, kick off the HeroEngine host loop
-        if (isHost && typeof gAssign.__startHeroEngineHost === "function") {
-            gAssign.__startHeroEngineHost();
-        }
-    }
-
-
-
-    private onState(msg: Extract<NetMessage, { type: "state" }>) {
-        const isHost = this.isHostNow();
-
-        // Host already has authoritative world state.
-        // Ignore echoed snapshots to avoid duplicating sprites / state.
-        if (isHost) {
-            // console.log("[net] host ignoring echoed state snapshot");
-            return;
-        }
-
-        // Followers mirror the host via snapshots.
-        netWorld.apply(msg.snapshot);
-    }
-
-    private onTilemap(msg: Extract<NetMessage, { type: "tilemap" }>) {
-        const rev = msg.rev;
-
-        // Monotonic revision guard
-        if (typeof rev !== "number") return;
-        if (rev <= this._tilemapRev) return;
-
-        this._tilemapRev = rev;
-
-        const g: any = (globalThis as any);
-        g.__netTilemapRev = rev;
-        g.__lastTilemapMsg = msg; // helpful for debugging / late hook install
-
-        const info = {
-            rev: msg.rev,
-            rows: msg.rows,
-            cols: msg.cols,
-            tileSize: msg.tileSize,
-            encoding: msg.encoding,
-        };
-
-        const hook = g.__onNetTilemap;
-        if (typeof hook === "function") {
-            try {
-                if (DEBUG_TILEMAP) {
-                    console.log(">>> [net.tilemap] received; forwarding to Phaser hook", info);
-                }
-                hook(msg);
-            } catch (e) {
-                console.error(">>> [net.tilemap] __onNetTilemap ERROR:", e);
-            }
-        } else {
-            if (DEBUG_TILEMAP) {
-                console.warn(
-                    ">>> [net.tilemap] received but __onNetTilemap not installed yet; cached in globalThis.__lastTilemapMsg",
-                    info
-                );
-            }
-        }
-    }
-
-
-
-    private onInput(msg: any) {
-        const g: any = (globalThis as any);
-        const isHost = this.isHostNow();
-
-        // Only the host should apply inputs to controllers.
-        if (!isHost) return;
-
-        const ctrlNS: any = g.controller;
-        if (!ctrlNS) return;
-
-        const playerId = msg.playerId | 0;
-
-        // TODO_NPLAYER_BRIDGE: playerId currently maps directly to a controller lane.
-        const ctrl: any =
-            (typeof ctrlNS._getControllerForSlot === "function")
-                ? ctrlNS._getControllerForSlot(playerId)
-                : null;
-
-        if (!ctrl) return;
-
-        const btnName = msg.button;       // "left" | "right" | "up" | "down" | "A" | "B"
-        const pressed = !!msg.pressed;
-
-        // ---------------------------------------------------------
-        // 1) Measure input arrival lag (client -> host)
-        // ---------------------------------------------------------
-        let lagMs = -1;
-        if (typeof msg.sentAtMs === "number") {
-            const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
-            lagMs = nowMs - msg.sentAtMs;
-
-            if (_inputLagBaselineSamples < 20) {
-                if (_inputLagBaselineSamples === 0 || lagMs < _inputLagBaselineMs) {
-                    _inputLagBaselineMs = lagMs;
-                }
-                _inputLagBaselineSamples++;
-            }
-
-            let excessMs = lagMs;
-            if (_inputLagBaselineSamples > 0) excessMs = lagMs - _inputLagBaselineMs;
-
-            let spriteCount = 0;
-            try { spriteCount = sprites.allSprites().length; } catch {}
-
-            const shouldWarn =
-                excessMs > INPUT_LAG_WARN_EXCESS_MS &&
-                lagMs > INPUT_LAG_WARN_MS &&
-                Math.abs(lagMs - _lastInputLagWarnMs) > 50;
-
-            if (DEBUG_NET && shouldWarn) {
-                _lastInputLagWarnMs = lagMs;
-
-                const hostWallNow = Date.now();
-                const seq = (msg as any).inputSeq ?? -1;
-                const sentWall = (msg as any).sentWallMs ?? null;
-
-                console.warn(
-                    "[inputLag.net]",
-                    "seq=", seq,
-                    "playerId=", playerId,
-                    "button=", btnName,
-                    "pressed=", pressed,
-                    "lagMs≈", lagMs.toFixed(1),
-                    "baseline≈", _inputLagBaselineMs.toFixed(1),
-                    "excessMs≈", excessMs.toFixed(1),
-                    "sprites=", spriteCount,
-                    "sentWallMs=", sentWall,
-                    "hostWallMs=", hostWallNow
-                );
-            }
-        }
-
-        // ---------------------------------------------------------
-        // 2) Measure host processing time for this input
-        // ---------------------------------------------------------
-        const btn: any = ctrl[btnName];
-        if (!btn || typeof btn._setPressed !== "function") return;
-
-        const procStartMs = typeof performance !== "undefined" ? performance.now() : Date.now();
-        btn._setPressed(pressed);
-        const procEndMs = typeof performance !== "undefined" ? performance.now() : Date.now();
-        const procMs = procEndMs - procStartMs;
-
-        if (
-            procMs > INPUT_PROC_WARN_MS &&
-            Math.abs(procMs - _lastInputProcWarnMs) > INPUT_PROC_SPAM_GAP_MS
-        ) {
-            _lastInputProcWarnMs = procMs;
-
-            let spriteCountForProc = 0;
-            try { spriteCountForProc = sprites.allSprites().length; } catch {}
-
-            console.warn(
-                "[inputProc.net]",
-                "playerId=", playerId,
-                "button=", btnName,
-                "pressed=", pressed,
-                "procMs≈", procMs.toFixed(3),
-                lagMs >= 0 ? "lagMs≈ " + lagMs.toFixed(1) : "lagMs≈ n/a",
-                "sprites=", spriteCountForProc
-            );
-        }
-    }
-
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// CHANGE THIS to your actual server IP/port as needed
-//const _netClient = new NetworkClient("ws://localhost:8080");
-
-
-
-const host = window.location.hostname || "localhost";
-
-
-
-const _netClient = new NetworkClient(`ws://${host}:8080`);
-
-let _lastSnapshotSentMs = 0;
-let _snapshotSentCount = 0;
-
-
-// Host perf tracking: approximate bandwidth + cadence
-let _snapshotPerfAccumSnaps = 0;
-let _snapshotPerfAccumBytes = 0;
-let _snapshotPerfLastReportMs = 0;
-
-
-
-
-
-// Called from game._tick() on the host to periodically send world snapshots
-function _maybeSendWorldSnapshotTick() {
-    const snapT0 = _hostPerfNowMs();
-
-    const g: any = (globalThis as any);
-    if (!g || !g.__isHost) return;
-
-    const now = game.runtime();
-
-    const intervalMs = 16; // ~60 snapshots per second
-
-    const dt = now - _lastSnapshotSentMs;
-    if (_lastSnapshotSentMs !== 0 && dt < intervalMs) return;
-    _lastSnapshotSentMs = now;
-
-    const snap = netWorld.capture();
-    _snapshotSentCount++;
-
-    const sprites = snap.sprites ? snap.sprites.length : 0;
-
-    // Rough size estimate: base overhead + 1 "byte" per pixel index.
-    let approxBytes = 0;
-    if (snap.sprites) {
-        for (const s of snap.sprites) {
-            if (!s) continue;
-            approxBytes += 32; // ids / coords / kind / etc.
-            if (s.pixels && s.pixels.length) {
-                approxBytes += s.pixels.length;
-            }
-        }
-    }
-
-    _snapshotPerfAccumSnaps++;
-    _snapshotPerfAccumBytes += approxBytes;
-
-    // Periodic perf report (~every 2 seconds)
-    const sinceReport = now - _snapshotPerfLastReportMs;
-    if (_snapshotPerfLastReportMs === 0) {
-        _snapshotPerfLastReportMs = now;
-    } else if (sinceReport >= 2000) {
-        const snapsPerSec =
-            (_snapshotPerfAccumSnaps * 1000) / Math.max(1, sinceReport);
-        const kbPerSec =
-            (_snapshotPerfAccumBytes * 1000) / Math.max(1, sinceReport) / 1024;
-
-        console.log(
-            "[net.host] PERF",
-            "Hz≈",
-            snapsPerSec.toFixed(1),
-            "KB/s≈",
-            kbPerSec.toFixed(2),
-            "latestSprites=",
-            sprites
-        );
-
-        _snapshotPerfAccumSnaps = 0;
-        _snapshotPerfAccumBytes = 0;
-        _snapshotPerfLastReportMs = now;
-    }
-
-
-    // Light cadence log so you can correlate with follower if needed
-    if (_snapshotSentCount <= 3 || _snapshotSentCount % 300 === 0) {
-        console.log(
-            "[net.host] snapshot #",
-            _snapshotSentCount,
-            "sprites=",
-            sprites,
-            "dtMs=",
-            dt
-        );
-    }
-
-    const snapT1 = _hostPerfNowMs()
-
-    _hostPerfAccumSnapMs += (snapT1 - snapT0)
-
-    // Keep track of how many sprites are in the snapshot
-    try {
-        if (snap && snap.sprites && snap.sprites.length != null) {
-            _hostPerfLastSnapshotSprites = snap.sprites.length
-        }
-    } catch (e) {
-        // ignore
-    }
-
-    _netClient.sendWorldSnapshot(snap);
-
-    
-
-
-
-}
-
-
-
-
-
-// Expose to the game loop
-(globalThis as any).__net_maybeSendWorldSnapshot = _maybeSendWorldSnapshotTick;
-
-
-
-
-export function initNetwork() {
-    console.log("[net] initNetwork: connecting...");
-    _netClient.connect();
-    (globalThis as any).__net = _netClient;
-}
-
-
-
-
+// =====================================================================================
+// NET: HELLO identity + desired profile (required by server Step 3+)
+// =====================================================================================
 export function img(lit: TemplateStringsArray) {
     return parseMakeCodeImage(lit);
 }
 (globalThis as any).img = img;
+
+
+export function initNetwork(): void {
+    const g: any = (globalThis as any);
+
+    // arcadeCompat.net.ts installs this once it is imported (main.ts already imports it)
+    const fn = g.__net_initNetwork;
+
+    if (typeof fn === "function") {
+        fn();
+        return;
+    }
+
+    console.warn("[NET] initNetwork missing: did arcadeCompat.net load?");
+}

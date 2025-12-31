@@ -288,12 +288,14 @@ function fillMissingPhases(set: MonsterAnimSet): void {
 }
 
 export function preloadMonsterSheets(scene: Phaser.Scene): void {
+    if (DEBUG_MONSTER_SPRITES) {
     console.log("[monsterAtlas.preloadMonsterSheets] sheets to load:",
         PARSED_SHEETS.map(s =>
             `${s.textureKey} (id="${s.id}", ${s.width}x${s.height}, skip=${!!s.skip})`
         )
     );
-
+    }
+    
     for (const sheet of PARSED_SHEETS) {
         scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: sheet.width,
@@ -305,6 +307,8 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
 /* ------------------------------------------------------------------
    5. FULLY PATCHED buildMonsterAtlas
 ------------------------------------------------------------------ */
+
+const DEBUG_MONSTER_SPRITES = false //Debug flag
 
 export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
     const byMonster = new Map<string, ParsedSheet[]>();
@@ -419,6 +423,7 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
                     ? Object.keys(animSet.phases.death)
                     : [];
 
+            if (DEBUG_MONSTER_SPRITES) {
             console.log(
                 "[monsterAtlas.build] anims for",
                 id,
@@ -426,6 +431,8 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
                 "| attack=", attackDirs,
                 "| death=", deathDirs
             );
+        }
+        
         }
     }
 

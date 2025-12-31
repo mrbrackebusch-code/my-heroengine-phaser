@@ -18,6 +18,10 @@ namespace SpriteKind {
     export let SupportBeam: number
     export let SupportIcon: number
     export let Wall: number
+    export let ShopNpc: number
+    export let ShopItem: number
+    export let ShopUI: number
+
 }
 
 // =====================================================================
@@ -28,13 +32,59 @@ namespace SpriteKind {
     // that does NOT see Player/Enemy created in arcadeCompat.ts.
     // Here we force this module's SpriteKind to use the same ids
     // that arcadeCompat expects.
+
     const SK: any = SpriteKind as any;
 
     // Match arcadeCompat's ids
     if (SK.Player == null) SK.Player = 1;
     if (SK.Enemy == null) SK.Enemy = 2;
 
-    // Stabilize custom kinds for the compat layer
+    // Stabilize custom kinds for the compat layer (fixed ids)
+    if (SK.Hero == null) SK.Hero = 50;
+    if (SK.HeroWeapon == null) SK.HeroWeapon = 51;
+    if (SK.HeroAura == null) SK.HeroAura = 52;
+    if (SK.EnemySpawner == null) SK.EnemySpawner = 53;
+    if (SK.SupportBeam == null) SK.SupportBeam = 54;
+    if (SK.SupportIcon == null) SK.SupportIcon = 55;
+    if (SK.Wall == null) SK.Wall = 56;
+
+    // NEW: Shop skeleton kinds (fixed ids)
+    if (SK.ShopNpc == null) SK.ShopNpc = 57;
+    if (SK.ShopItem == null) SK.ShopItem = 58;
+    if (SK.ShopUI == null) SK.ShopUI = 59;
+
+    // ------------------------------------------------------------
+    // Polyfill SpriteKind.create() if this module doesn't have it
+    // (Prevents crashes if any code still calls SpriteKind.create())
+    // ------------------------------------------------------------
+    if (typeof SK.create !== "function") {
+        let maxId = -1;
+        for (const k of Object.keys(SK)) {
+            const v = SK[k];
+            if (typeof v === "number" && isFinite(v)) {
+                if (v > maxId) maxId = v;
+            }
+        }
+        SK.__nextKindId = (maxId + 1) | 0;
+
+        SK.create = function (): number {
+            const id = (SK.__nextKindId | 0);
+            SK.__nextKindId = (id + 1) | 0;
+            return id;
+        };
+    }
+})();
+// =====================================================================
+// END PHASER-ONLY SHIM
+// =====================================================================
+
+
+(function phaserSpriteKindShim() {
+    const SK: any = SpriteKind as any;
+
+    if (SK.Player == null) SK.Player = 1;
+    if (SK.Enemy == null) SK.Enemy = 2;
+
     SK.Hero = 50;
     SK.HeroWeapon = 51;
     SK.HeroAura = 52;
@@ -42,43 +92,17 @@ namespace SpriteKind {
     SK.SupportBeam = 54;
     SK.SupportIcon = 55;
     SK.Wall = 56;
+
+    // NEW: shop phase kinds (fixed ids in Phaser build)
+    SK.ShopNpc = 57;
+    SK.ShopItem = 58;
+    SK.ShopUI = 59;
 })();
+
+
 // =====================================================================
 // END PHASER-ONLY SHIM
 // =====================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --------------------------------------------------------------
-// Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
-// --------------------------------------------------------------
-namespace SpriteKind {
-    export let Hero: number
-    export let HeroWeapon: number
-    export let HeroAura: number
-    export let EnemySpawner: number
-    export let SupportBeam: number
-    export let SupportIcon: number
-    export let Wall: number
-}
-
-
 
 
 // --------------------------------------------------------------
@@ -217,6 +241,67 @@ namespace SpriteKind {
 //   updateEnemyEffects() – Update enemy slow/weakness/status-effect timers and visuals.
 //
 
+// =====================================================================
+// UNIVERSAL ANIMATION TIMELINE KEY OWNERSHIP (SINGLE-WRITER CONTRACT)
+// ---------------------------------------------------------------------
+// These keys are published in HERO_DATA for Phaser rendering.
+//
+// Goal: Each key group has a SMALL set of authoritative writers.
+// Everybody else is READ-ONLY for that group.
+// This prevents double-increment / stomping / false “new action” edges.
+//
+// ---------------------------------------------------------------------
+// ACTION (edge: new move instance)
+//   Keys: ActionSequence / ActionKind / ActionVariant / ActionSeed / ActionP0..P3 / ActionTargetId
+//   Rule: ONLY ONE place may increment ActionSequence.
+//   Authoritative incrementer: _doHeroMoveBeginActionTimeline()
+//   Allowed overrides (NO ActionSequence increment): move-specific begin/commit functions may refine
+//     ActionKind/Variant/TargetId within the same action instance.
+//
+// ---------------------------------------------------------------------
+// PHASE (coarse animation family + timing window)
+//   Keys: PhaseName / PhaseStartMs / PhaseDurationMs / PhaseProgressInt / PhaseFlags
+//   Ambient phase changes (idle/run/combatIdle): setHeroPhaseString() only.
+//   Action window stamping (fresh start even if same phase repeats): _doHeroMovePlayAnimAndDispatch() only.
+//   Long-running progress updates: the move’s timing loop may update PhaseProgressInt (e.g., strength charge).
+//
+// ---------------------------------------------------------------------
+// PHASE PART (within-phase segmentation)  [future wiring]
+//   Keys: PhasePartName / PhasePartStartMs / PhasePartDurationMs / PhasePartProgress / PhasePartFlags
+//   Authoritative writers: the move timing loops that already know segmentation timing.
+//   (Examples: agility lunge motion updater, strength charge updater, intellect targeting control updater)
+//
+// ---------------------------------------------------------------------
+// EVENT BUS (one-shot pulses)
+//   Keys: EventSequence / EventMask / EventP0..P3
+//   Rule: ONLY event emitters increment EventSequence.
+//   Clearers may only clear EventMask (never touch EventSequence).
+//
+// ---------------------------------------------------------------------
+// RENDER STYLE (orthogonal cosmetic overlays)  [future wiring]
+//   Keys: RenderStyleMask / RenderStyleP0..P1
+//   Authoritative writer: action-begin (stable for the action instance), with rare move-specific overrides.
+//
+// ---------------------------------------------------------------------
+// READ-ONLY WARNING (IMPORTANT):
+//   callHeroAnim() MUST NOT publish Action/Phase/Event timeline keys.
+//   publishHeroActionPhase() is legacy and MUST NOT be used as a publisher in the final design.
+//   (Currently those functions still publish; we will remove that behavior in Step 3/4.)
+// =====================================================================
+
+
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
 
 
 
@@ -225,17 +310,29 @@ namespace SpriteKind {
 
 
 
+// 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁
+//These are the things that need to be present for this code to work in MakeCode Arcade
 
 
-
+// --------------------------------------------------------------
+// Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
+// --------------------------------------------------------------
+namespace SpriteKindArcade {
+    export let Hero: number
+    export let HeroWeapon: number
+    export let HeroAura: number
+    export let EnemySpawner: number
+    export let SupportBeam: number
+    export let SupportIcon: number
+    export let Wall: number
+    export let ShopNpc: number
+    export let ShopItem: number
+    export let ShopUI: number
+}
 
 // Allow referring to globalThis when a host (like Phaser) provides it.
 // In MakeCode Arcade this is just a type declaration; the try/catch below
 // will swallow any runtime issue if it's missing.
-
-
-
-
 
 // ================================================================
 // External hero hooks – implemented in the user project (main.ts)
@@ -249,28 +346,14 @@ namespace SpriteKind {
 // heroXLogic / animateHeroX functions.
 // ================================================================
 
-
-
-
-
-
-
 // ================================================================
 // Hero logic / animation hooks (extension side)
 // Students will assign their functions to these from main.ts
 // ================================================================
 
-
-
-
-
 // --------------------------------------------------------------
 // Sprite kinds - type declarations for TS
 // --------------------------------------------------------------
-
-
-
-
 
 namespace HeroEngine {
 
@@ -451,29 +534,36 @@ namespace HeroEngine {
         if (_started) return;
         _started = true;
 
+        // NEW: reset shared coins + HUD
+        teamCoins = 0
+        if (teamCoinsHud && !(teamCoinsHud.flags & sprites.Flag.Destroyed)) teamCoinsHud.destroy()
+        teamCoinsHud = null
+        setTeamCoins(0)
+
         ensureHeroSpriteKinds();
 
         initWorldTileMap()
-
         scene.setBackgroundColor(1);
         tiles.setCurrentTilemap(tilemap`level1`)
         setupHeroes();
+
+        // Shop boot (single path)
+        installShopInputHandlers()
+
+        // REMOVE legacy shop box spawner (it is a different shop system and conflicts)
+        // spawnShopNpcBox( (userconfig.ARCADE_SCREEN_WIDTH>>1), (userconfig.ARCADE_SCREEN_HEIGHT>>1) + 30, 1 )
+
         setupTestEnemies();
         setupEnemySpawners();
         startEnemyWaves();
-
     }
+
 }
 
 
-
-
-
-
-
-
-
-
+// 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁
+//This section is for how we check if we are in Phaser or MakeCode Arcade. I am putting these in their own section because other than this there shouldn't be a place the engine "knows" whether it is in MakeCode Arcade or not
+//This is also for debug flags so they are easy to spot
 declare const globalThis: any;
 
 
@@ -490,6 +580,101 @@ function isMakeCodeArcadeRuntime(): boolean {
 
 
 
+//##########################################################################################################################################
+// DEBUG: Agility combo v3
+//##########################################################################################################################################
+
+const DEBUG_AGI_COMBO = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_LANDING = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_EXIT = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_BUILD = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+// --------------------------------------------------------------
+// Debug filter (input/move gating probes)
+// --------------------------------------------------------------
+const DEBUG_FILTER_LOGS = true  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+// Change this string to whatever you want to grep for.
+// Must contain "P1 intent" per your filtering workflow.
+const DEBUG_FILTER_PHRASE = "[P1 intent]"
+
+
+// --------------------------------------------------------------
+// Debug flags
+// Used by: agility / integrator debug logging & probes
+// --------------------------------------------------------------
+const DEBUG_AGILITY = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DBG_INTERVAL_MS = 50
+const DEBUG_INTEGRATOR = true
+const DBG_INT_INTERVAL_MS = 50
+
+const DEBUG_HERO_LOGIC = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+
+const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+
+const DEBUG_ANIM_KEYS = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+
+const DEBUG_PHASE_CHANGES = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
+
+// --------------------------------------------------------------
+// Move pipeline debug (engine-only). Off by default.
+// --------------------------------------------------------------
+const DEBUG_MOVE_PIPE = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+
+const DEBUG_MOVE_PIPE_PLAYER = 0      // 0 = all players, else only that player index (1-based)
+const DEBUG_MOVE_PIPE_THROTTLE_MS = 500  // rate limit per hero for tick-style logs
+let _dbgMovePipeLastMsByHero: number[] = []
+
+// Internal: lets helper functions know which player is currently being processed.
+// Debug-only; do not use for gameplay logic.
+let _dbgMoveCurrentPlayerId = 0
+
+const DEBUG_AGI_AIM = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_AIM_HERO_INDEX = 0          // 0 = hero 0, 1 = hero 1, etc.
+const DEBUG_AGI_AIM_THROTTLE_MS = 250
+
+let _dbgAgiAimLastMs: number[] = []
+
+
+
+// DEBUG: track intent edges + durations for Player 1
+let _dbg_prevP1Intent = ""
+let _dbg_prevP1IntentMs = 0
+let _dbg_prevP1A = false
+let _dbg_prevP1B = false
+
+// debug flag
+const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
+
+
+
+// Simple shop mode gate (POC)
+let SHOP_MODE_ACTIVE_MASTER = true // Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+let SHOP_MODE_ACTIVE = true //local flag gets overwritten
+//Turn the shop on
+//Turn the shop off
+
+// --------------------------------------------------------------
+// ANIMKEYS logging helpers (one-line, copy/paste friendly)
+// --------------------------------------------------------------
+const DEBUG_ANIM_KEYS_HERO_INDEX = -1   // -1 = all heroes, else only this heroIndex
+const DEBUG_ANIM_KEYS_PLAYER_ID = 0     // 0 = all, else only this OWNER/player id
+const DEBUG_ANIM_KEYS_PHASE_EDGE = true
+const DEBUG_ANIM_KEYS_PHASE_STAMP = true
+const DEBUG_ANIM_KEYS_PHASE_PART = true
+const DEBUG_ANIM_KEYS_INT_FINISH = true
+
+
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+
+
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
 // ================================================================
 // SECTION 1 - ENGINE CONSTANTS, DATA KEYS & GLOBALS
 // ================================================================
@@ -502,69 +687,13 @@ function isMakeCodeArcadeRuntime(): boolean {
 // --------------------------------------------------------------
 
 // --------------------------------------------------------------
-// Debug flags
-// Used by: agility / integrator debug logging & probes
-// --------------------------------------------------------------
-const DEBUG_AGILITY = false
-const DBG_INTERVAL_MS = 50
-const DEBUG_INTEGRATOR = true
-const DBG_INT_INTERVAL_MS = 50
-
-const DEBUG_HERO_LOGIC = true
-
-
-//##########################################################################################################################################
-// DEBUG: Agility combo v3
-//##########################################################################################################################################
-
-const DEBUG_AGI_COMBO = false
-const DEBUG_AGI_COMBO_LANDING = false
-const DEBUG_AGI_COMBO_EXIT = false
-const DEBUG_AGI_COMBO_BUILD = false
-
-
-// --------------------------------------------------------------
-// Debug filter (input/move gating probes)
-// --------------------------------------------------------------
-const DEBUG_FILTER_LOGS = true
-
-// Change this string to whatever you want to grep for.
-// Must contain "P1 intent" per your filtering workflow.
-const DEBUG_FILTER_PHRASE = "[P1 intent]"
-
-// Internal: lets helper functions know which player is currently being processed.
-// Debug-only; do not use for gameplay logic.
-let _dbgMoveCurrentPlayerId = 0
-
-
-const DEBUG_AGI_AIM = false
-const DEBUG_AGI_AIM_HERO_INDEX = 0          // 0 = hero 0, 1 = hero 1, etc.
-const DEBUG_AGI_AIM_THROTTLE_MS = 250
-
-let _dbgAgiAimLastMs: number[] = []
-
-function _dbgAgiAimLog(heroIndex: number, now: number, msg: string) {
-    if (!DEBUG_AGI_AIM) return
-    if (heroIndex !== (DEBUG_AGI_AIM_HERO_INDEX | 0)) return
-    const last = (_dbgAgiAimLastMs[heroIndex] | 0)
-    if (last && (now - last) < DEBUG_AGI_AIM_THROTTLE_MS) return
-    _dbgAgiAimLastMs[heroIndex] = now | 0
-    console.log("[AGI_AIM] h=" + heroIndex + " t=" + (now | 0) + " " + msg)
-}
-
-
-
-// --------------------------------------------------------------
 // Screen config
 // Used by: spawn positions, UI layout, enemy spawners, etc.
 // --------------------------------------------------------------
-
 namespace userconfig {
     export const ARCADE_SCREEN_WIDTH = 640
     export const ARCADE_SCREEN_HEIGHT = 480
 }
-
-
 
 // --------------------------------------------------------------
 // INTERNAL TILEMAP SYSTEM (GLOBAL ENGINE SPACE)
@@ -574,7 +703,6 @@ namespace userconfig {
 const WORLD_TILE_SIZE = 32          // private
 const TILE_EMPTY = 0                // private
 const TILE_WALL = 1                 // private
-
 
 // --------------------------------------
 // Tile collision shapes (per tile "type")
@@ -612,11 +740,8 @@ const TILE_COLLISION_DEFS: TileCollisionShape[] = [
     // },
 ];
 
-
-
 // 2D array of numbers for engine-internal use only
 let _engineWorldTileMap: number[][] = []
-
 
 // ====================================================
 // WORLD SIZE CONFIG (MakeCode / HeroEngine side)
@@ -635,38 +760,10 @@ const WORLD_TILES_H = 26/2;     // rows
 const MIN_WORLD_TILES_W = 5;
 const MIN_WORLD_TILES_H = 5;
 
-
-
-
 // --------------------------------------------------------------
 // Sprite kinds (lazy init for extension safety)
 // --------------------------------------------------------------
 let _heroKindsInitialized = false
-
-
-
-function ensureHeroSpriteKinds() {
-    if (_heroKindsInitialized) return
-    _heroKindsInitialized = true
-
-    // Pure Arcade-safe version; only touches custom kinds.
-    // (In Arcade, SpriteKind.Player / Enemy are defined by runtime.)
-    if (!SpriteKind.Hero) SpriteKind.Hero = SpriteKind.create()
-    if (!SpriteKind.HeroWeapon) SpriteKind.HeroWeapon = SpriteKind.create()
-    if (!SpriteKind.HeroAura) SpriteKind.HeroAura = SpriteKind.create()
-    if (!SpriteKind.EnemySpawner) SpriteKind.EnemySpawner = SpriteKind.create()
-    if (!SpriteKind.SupportBeam) SpriteKind.SupportBeam = SpriteKind.create()
-    if (!SpriteKind.SupportIcon) SpriteKind.SupportIcon = SpriteKind.create()
-    if (!SpriteKind.Wall) SpriteKind.Wall = SpriteKind.create()
-}
-
-
-
-// Phaser/ESM shim: ensure custom SpriteKinds exist before any overlaps are registered.
-ensureHeroSpriteKinds();
-
-
-
 
 // --------------------------------------------------------------
 // Family / element enums
@@ -674,7 +771,6 @@ ensureHeroSpriteKinds();
 // ELEM: damage type / flavor for future resistances
 // Used by: calculateXStats(), executeXMove(), damage logic
 // --------------------------------------------------------------
-
 
 // Families
 const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
@@ -735,35 +831,6 @@ const STAT = {
     LEN: 15                    // length of STAT[] arrays
 }
 
-// --------------------------------------------------------------
-// OUT array – student-facing move definition
-// Shape: [FAMILY, mana, trait1, trait2, trait3, trait4, target, element, animId]
-// Used by: calculateMoveStatsForFamily(), executeXMove()
-// --------------------------------------------------------------
-const OUT = {
-    FAMILY: 0,
-    TRAIT1: 1, TRAIT2: 2, TRAIT3: 3, TRAIT4: 4,
-    ELEMENT: 5,
-    ANIM_ID: 6,
-    LEN: 7
-}
-
-
-// --------------------------------------------------------------
-// Contact / i-frames / visual tuning
-// Used by: hero damage, overlap tests, AGI visuals, feedback
-// --------------------------------------------------------------
-const HERO_CONTACT_MIN_OVERLAP_PCT = 25
-const HERO_IFRAME_MS = 600
-const AGI_LANDING_BUFFER_MS = 80
-const HERO_DAMAGE_FLASH_MS = 150
-const AGI_MIN_VISUAL_LEN = 3
-
-
-const HERO_FRAME_COL_OVERRIDE_NONE = -1
-
-
-
 
 // --------------------------------------------------------------
 // HERO_DATA – sprite data schema for hero sprites
@@ -774,7 +841,7 @@ const HERO_FRAME_COL_OVERRIDE_NONE = -1
 //                 combo handling, AGI/STR/INT modules, auras
 // --------------------------------------------------------------
 const HERO_DATA = {
-    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
+    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana", NAME: "name",
     FAMILY: "family", BUTTON: "btn",
     TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
     INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
@@ -897,6 +964,70 @@ const HERO_DATA = {
     PHASE: "phase",
     FRAME_COL_OVERRIDE: "frameColOverride",
 
+
+    // -------------------------------------------------
+    // NEW: universal Action/Phase/Event timeline contract (human-readable)
+    // -------------------------------------------------
+    ActionSequence: "ActionSequence",
+    ActionKind: "ActionKind",
+    ActionVariant: "ActionVariant",
+    ActionSeed: "ActionSeed",
+    ActionP0: "ActionP0",
+    ActionP1: "ActionP1",
+    ActionP2: "ActionP2",
+    ActionP3: "ActionP3",
+    ActionTargetId: "ActionTargetId",
+
+
+    // ------------------------------------------------------------
+    // Agility thrust motion schedule (Windup -> Forward -> Landing)
+    // ------------------------------------------------------------
+    AgilityLungeStartMs: "AgilityLungeStartMs",     // number
+    AgilityLungeEndMs: "AgilityLungeEndMs",         // number
+    AgilityLungeDirX1000: "AgilityLungeDirX1000",   // number
+    AgilityLungeDirY1000: "AgilityLungeDirY1000",   // number
+    AgilityLungeSpeed: "AgilityLungeSpeed",         // number (px/s)
+
+
+
+    PhaseName: "PhaseName",
+    PhaseStartMs: "PhaseStartMs",
+    PhaseDurationMs: "PhaseDurationMs",
+    PhaseFlags: "PhaseFlags",
+    PhaseProgressInt: "PhaseProgressInt",   // 0..PHASE_PROGRESS_MAX
+
+    // -------------------------------------------------
+    // NEW: PhasePart contract (within-phase segmentation)
+    // -------------------------------------------------
+    PhasePartName: "PhasePartName",                 // string
+    PhasePartStartMs: "PhasePartStartMs",           // number (ms)
+    PhasePartDurationMs: "PhasePartDurationMs",     // number (ms)
+    PhasePartProgress: "PhasePartProgress",         // number 0..PHASE_PROGRESS_MAX
+    PhasePartFlags: "PhasePartFlags",               // number bitmask (future)
+
+    // -------------------------------------------------
+    // NEW: RenderStyle contract (orthogonal cosmetics)
+    // -------------------------------------------------
+    RenderStyleMask: "RenderStyleMask",             // number bitmask
+    RenderStyleP0: "RenderStyleP0",                 // number (future)
+    RenderStyleP1: "RenderStyleP1",                 // number (future)
+
+
+    // Universal event bus (engine -> Phaser)
+    EventSequence: "EventSequence",   // increments each emitted event
+    EventMask: "EventMask",           // bitmask describing event type(s)
+    EventP0: "EventP0",               // payload param 0 (e.g., x)
+    EventP1: "EventP1",               // payload param 1 (e.g., y)
+    EventP2: "EventP2",               // payload param 2 (optional)
+    EventP3: "EventP3",               // payload param 3 (optional)
+
+    // Weapon display offsets (pixels)
+    HERO_WPN_OFF_X: "wpnOffX",
+    HERO_WPN_OFF_Y: "wpnOffY",
+    WEAPON_ALWAYS_SHOW: "wAlw",
+
+    _InvLastActionSequence: "_InvLastActionSequence",
+
     AURA_ACTIVE: "auraActive",
     AURA_COLOR: "auraColor",
 
@@ -905,134 +1036,6 @@ const HERO_DATA = {
     VIS_WTIP_X: "visWTipX",
     VIS_WTIP_Y: "visWTipY"
 }
-
-
-
-const HERO_DATAOLDCODETODELETE = {
-    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana",
-    FAMILY: "family", BUTTON: "btn",
-    TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
-    INPUT_LOCKED: "inputLocked", STORED_VX: "sVx", STORED_VY: "sVy",
-    TARGET_START_MS: "tStart", TARGET_LOCK_MS: "tLock",
-    IS_CONTROLLING_SPELL: "isCtrlSpell",
-    COMBO_COUNT: "comboCount", COMBO_MULT: "comboMult",
-    LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
-    IFRAME_UNTIL: "iUntil",
-    AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
-    AGI_COMBO_UNTIL: "aComboUntil",    // when AGI combo window ends (ms)
-
-    // NEW (Agility combo v2): Phaser-visible state + UI-driving fields
-    AGI_STATE: "aState",               // number enum (see AGI_STATE below)
-    AGI_CHAIN: "aChain",               // consecutive AGI presses counter
-    AGI_LAST_PRESS_MS: "aLastMs",      // sanity gate for "in a row" detection
-    AGI_METER_START_MS: "aMetS",       // pendulum start (ms)
-    AGI_METER_POS_X1000: "aMetP",      // current pendulum position 0..1000 (optional)
-    AGI_ZONE_E_W: "aZE",               // execute zone width (pixels)
-    AGI_ZONE_1_W: "aZ1",               // 1x zone width (pixels)
-    AGI_ZONE_2_W: "aZ2",               // 2x zone width (pixels)
-    AGI_ZONE_3_W: "aZ3",               // 3x zone width (pixels)
-    AGI_PKT_COUNT: "aPkC",             // packet count (stored hits)
-    AGI_PKT_SUM: "aPkS",               // optional: sum of packet damages
-    AGI_CANCEL_HOLD_MS: "aCanH",       // how long player has held movement to cancel
-
-    // NEW (Agility combo v3): persistent combo mode + landing/entry bookkeeping
-    AGI_COMBO_MODE: "aCMode",                  // 0/1 persistent combo-state flag
-    AGI_COMBO_ENTRY_BTN: "aCEntB",             // initiating button id (the one that must be held through landing)
-    AGI_COMBO_ENTRY_DASH_UNTIL: "aCEntDU",     // dashUntil of the entry-attempt dash
-    AGI_COMBO_LAND_ARMED_FOR_DU: "aCArmedDU",  // guard: last dashUntil we already armed meter for (prevents re-arming spam)
-    AGI_COMBO_LAST_AGI_BTN: "aCLastB",         // optional: last agility button pressed (debug / future use)
-
-
-    // NEW (C4): Agility execute sequencing + teleport bookkeeping
-    AGI_EXEC_ORIG_X: "aExOX",
-    AGI_EXEC_ORIG_Y: "aExOY",
-    AGI_EXEC_RADIUS: "aExR",
-    AGI_EXEC_STEP: "aExI",
-    AGI_EXEC_NEXT_MS: "aExN",
-    AGI_EXEC_INTERVAL_MS: "aExDt",
-    AGI_EXEC_SLOW_PCT: "aExSl",
-    AGI_EXEC_SLOW_DUR_MS: "aExSd",
-
-    // NEW (C5): cancel bookkeeping
-    AGI_CANCEL_LAST_TICK_MS: "aCanT",
-
-    // NEW (Bug2 fix): cancel direction must be steady to cancel
-    AGI_CANCEL_DIR_X: "aCanDX",
-    AGI_CANCEL_DIR_Y: "aCanDY",
-
-    STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
-    OWNER: "owner",                    // which player "owns" this hero
-
-
-
-    // STR charge (hold-to-charge) state
-    STR_CHARGING: "strChg",            // boolean
-    STR_CHARGE_BTN: "strChgBtn",       // number (button id)
-    STR_CHARGE_START_MS: "strChgS",    // number (ms)
-    STR_CHARGE_LAST_MS: "strChgL",     // number (ms)
-    STR_CHARGE_MAX_MS: "strChgMax",    // number (ms to full)
-    STR_CHARGE_ARC_DEG: "strChgDeg",   // number (0..360) current arc from charge
-    STR_CHARGE_MPD_X1000: "strChgMpd", // number (mana per degree * 1000)
-    STR_CHARGE_SPENT: "strChgSpent",   // number (debug/validation)
-    STR_CHARGE_REM_X1000: "strChgRem", // number (fixed-point remainder for incremental mana drain)
-
-
-    // STR cached payload (snapshotted at charge start; immune to mid-hold changes)
-    STR_PAYLOAD_FAMILY: "strPayFam",   // number
-    STR_PAYLOAD_BTNSTR: "strPayBtn",   // string ("A" | "B" | "A+B")
-    STR_PAYLOAD_T1: "strPay1",         // number
-    STR_PAYLOAD_T2: "strPay2",         // number
-    STR_PAYLOAD_T3: "strPay3",         // number
-    STR_PAYLOAD_T4: "strPay4",         // number
-    STR_PAYLOAD_EL: "strPayEl",        // number
-    STR_PAYLOAD_ANIM: "strPayAnim",    // string
-
-
-    // NEW: engine-side state we want exposed
-    BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
-    MOVE_SPEED_MULT: "mvMult",         // heroMoveSpeedMult[heroIndex]
-    DAMAGE_AMP_MULT: "dmgMult",        // heroDamageAmpMult[heroIndex]
-    BUFF_JSON: "buffsJson",             // JSON snapshot of heroBuffs[heroIndex]
-
-    // NEW: for tile-collision rollback
-    PREV_X: "prevX",
-    PREV_Y: "prevY",
-
-    // NEW: hero death state (for LPC death animation timing)
-    IS_DEAD: "isDead",
-    DEATH_UNTIL: "deathUntil",
-
-    // -------------------------------------------------
-    // Weapons (net-safe: primitives only)
-    // -------------------------------------------------
-    WEAPON_LOADOUT_VER: "wVer",     // number (start at 1)
-    WEAPON_SLASH_ID: "wSl",         // string (weapon model id)
-    WEAPON_THRUST_ID: "wTh",        // string (weapon model id)
-    WEAPON_CAST_ID: "wCa",          // string (weapon model id)
-    WEAPON_EXEC_ID: "wEx",          // string (weapon model id; optional)
-
-
-
-    // NEW: animation-facing mirror fields (for Phaser heroAnimGlue)
-    DIR: "dir",
-    PHASE: "phase",
-    FRAME_COL_OVERRIDE: "frameColOverride",
-
-
-    AURA_ACTIVE: "auraActive",
-    AURA_COLOR: "auraColor",
-
-    VIS_INNER_R: "visInnerR",
-    VIS_LEAD_EDGE: "visLeadEdge",
-    VIS_WTIP_X: "visWTipX",
-    VIS_WTIP_Y: "visWTipY"
-
-
-}
-
-
-
-
 
 // --------------------------------------------------------------
 // ENEMY_DATA – sprite data schema for enemies
@@ -1083,13 +1086,6 @@ const ENEMY_DATA = {
 
 }
 
-
-const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
-
-// How long to keep a dying hero around so LPC "death" anim can play (ms)
-const HERO_DEATH_ANIM_MS = 600;
-
-
 // --------------------------------------------------------------
 // PROJ_DATA – sprite data schema for hero projectiles
 // Includes STR/AGI melee hitboxes and INT/HEAL driven spells.
@@ -1135,6 +1131,9 @@ const PROJ_DATA = {
     DASH_MS: "dashMs",
     DASH_END_MS: "dashEndMs",
 
+    ACTIVATE_AT_MS: "ActivateAtMs",   // runtime() time when the projectile becomes “real”
+    IS_ACTIVE: "IsActive",            // 0/1: gate overlaps + visuals until activation
+
     START_HERO_X: "hStartX",
     START_HERO_Y: "hStartY",
 
@@ -1151,9 +1150,38 @@ const PROJ_DATA = {
     SUPPORT_BUFF_DURATION: "supBuffDur"
 }
 
+// --------------------------------------------------------------
+// OUT array – student-facing move definition
+// Shape: [FAMILY, mana, trait1, trait2, trait3, trait4, target, element, animId]
+// Used by: calculateMoveStatsForFamily(), executeXMove()
+// --------------------------------------------------------------
+const OUT = {
+    FAMILY: 0,
+    TRAIT1: 1, TRAIT2: 2, TRAIT3: 3, TRAIT4: 4,
+    ELEMENT: 5,
+    ANIM_ID: 6,
+    LEN: 7
+}
+
+// --------------------------------------------------------------
+// Contact / i-frames / visual tuning
+// Used by: hero damage, overlap tests, AGI visuals, feedback
+// --------------------------------------------------------------
+const HERO_CONTACT_MIN_OVERLAP_PCT = 25
+const HERO_IFRAME_MS = 600
+const AGI_LANDING_BUFFER_MS = 80
+const HERO_DAMAGE_FLASH_MS = 150
+const AGI_MIN_VISUAL_LEN = 3
 
 
+const HERO_FRAME_COL_OVERRIDE_NONE = -1
 
+const PHASE_PROGRESS_MAX = 1024   // PhaseProgressInt is 0..PHASE_PROGRESS_MAX
+
+const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
+
+// How long to keep a dying hero around so LPC "death" anim can play (ms)
+const HERO_DEATH_ANIM_MS = 600;
 
 // --------------------------------------------------------------
 // AGILITY COMBO V2 – state enum + UI defaults
@@ -1196,9 +1224,8 @@ let agiPacketBankByHeroIndex = new Map<number, number[]>()
 const AGI_EXEC_STEP_MS = 85
 const AGI_EXEC_STEP_MS_MIN = 150
 
-
-
-
+// EventMask bits (engine -> Phaser)
+const EVENT_MASK_AGI_EXEC_SLASH = 1 << 0
 
 // ================================================================
 // Agility Execute: teleport positioning + facing knobs
@@ -1209,15 +1236,14 @@ const AGI_EXEC_STEP_MS_MIN = 150
 // 2 = RIGHT
 // 3 = ALT_LR (alternate left/right each hit)
 // 4 = RAND_LR (random left/right each hit)
-const AGI_EXEC_POS_MODE = 0
+const AGI_EXEC_POS_MODE = 3   // ALT_LR (alternate left/right each hit)
 
 // Offsets (pixels)
 const AGI_EXEC_OFFSET_Y_ABOVE = -12
-const AGI_EXEC_OFFSET_X_SIDE = 12
+const AGI_EXEC_OFFSET_X_SIDE = 16
 
 // Force hero to face down during execute teleports
 const AGI_EXEC_FORCE_FACING_DOWN = true
-
 
 // NEW (C5): manual cancel while ARMED (hold movement to break lock)
 const AGI_CANCEL_HOLD_THRESHOLD_MS = 600
@@ -1244,9 +1270,6 @@ const AGI_AIM_SIDE_INSET_PX = 8
 const AGI_BREAK_STRETCH_PX = 16
 const AGI_BREAK_SHAKE_PX = 2
 
-
-
-
 // --------------------------------------------------------------
 // C6: Agility trait wiring flags (tuning knobs)
 // --------------------------------------------------------------
@@ -1271,14 +1294,16 @@ const AGI_CHARGE_DEFAULT_C_FRAC_X1000 = 140
 // (kept aligned with current pendulum constant for now)
 const AGI_CHARGE_DEFAULT_PERIOD_MS = AGI_METER_PERIOD_MS
 
+// Thrust timing ratios MUST match Phaser segmented seek (heroAnimGlue.ts)
+const AGI_THRUST_WINDUP_FRAC_X1000 = 550
+const AGI_THRUST_FORWARD_FRAC_X1000 = 200
+// landing = remainder
 
 // Strength charge button ids (matches updatePlayerInputs intent strings)
 const STR_BTN_NONE = 0
 const STR_BTN_A = 1
 const STR_BTN_B = 2
 const STR_BTN_AB = 3
-
-
 
 // --------------------------------------------------------------
 // Intellect spell sprite-data keys (non-enum string keys)
@@ -1295,6 +1320,21 @@ const INT_DETONATE_END_KEY = "INT_DE"     // detonation end time (ms)
 // NEW: control window (when the player must finish aiming)
 const INT_CTRL_UNTIL_KEY = "INT_CTRL_UNTIL"
 
+
+// ====================================================
+// INTELLECT CAST PARTS (hero animation segmentation)
+// ====================================================
+const INT_PRODUCE_DUR_MS = 1000
+const INT_LAND_DUR_MS = 500
+
+// Hero data keys to stage delayed projectile spawn + landing window
+const INT_CAST_SPAWN_AT_MS_KEY = "INT_CAST_SPAWN_AT_MS"
+const INT_CAST_DRIVE_MS_KEY = "INT_CAST_DRIVE_MS"
+const INT_CAST_FAMILY_KEY = "INT_CAST_FAMILY"
+const INT_CAST_BUTTON_KEY = "INT_CAST_BUTTON"
+const INT_CAST_LAND_END_MS_KEY = "INT_CAST_LAND_END_MS"
+
+const INT_SPELL_EXPIRES_AT_MS_KEY = "intSpellExpiresAtMs"
 
 
 
@@ -1324,6 +1364,16 @@ const DEFAULT_WEAPON_VARIANT = "blue" //"base"
 // (Internal-only object; Step 4 will write primitive strings to sprite.data)
 // --------------------------------------------------------------
 
+// ------------------------------------------------------------
+// Unified PhaseName ambient window envelopes (ms)
+// PhaseName must always be renderable and have non-zero duration.
+// Phaser may loop by modulo (now-start) % dur.
+// ------------------------------------------------------------
+const AMBIENT_IDLE_PHASE_DUR_MS = 700
+const AMBIENT_RUN_PHASE_DUR_MS = 320
+const AMBIENT_COMBATIDLE_PHASE_DUR_MS = 520
+
+
 interface HardcodedWeaponLoadout {
     slashId: string
     thrustId: string
@@ -1331,26 +1381,6 @@ interface HardcodedWeaponLoadout {
     execId: string
     comboId: string
 }
-
-function getHardcodedWeaponLoadoutForHero(profileName: string, familyNumber: number): HardcodedWeaponLoadout {
-    const key = String(profileName || "").trim().toLowerCase()
-
-    switch (key) {
-        default:
-            return {
-                slashId: DEFAULT_WEAPON_SLASH_ID,
-                thrustId: DEFAULT_WEAPON_THRUST_ID,
-                castId: DEFAULT_WEAPON_CAST_ID,
-                execId: DEFAULT_WEAPON_EXEC_ID,
-
-                // NEW: combo weapon (used during agility charge / combo visuals)
-                comboId: DEFAULT_WEAPON_COMBO_ID,
-            }
-    }
-}
-
-
-
 
 // --------------------------------------------------------------
 // GLOBAL ARRAYS – core engine collections
@@ -1363,15 +1393,10 @@ let heroProjectiles: Sprite[] = []
 // NEW (Agility): stored-hit counter text + future packet bank UI
 let heroAgiStoredCounters: Sprite[] = []
 
-
-
-
 // Global world time (ms since this game instance started)
 // We update this once per master update so the wrapper/save system
 // has a single authoritative value to export.
 let worldRuntimeMs = 0
-
-
 
 // NEW: hero buff state (per-hero arrays)
 let heroBuffs: any[][] = [[], [], [], []]
@@ -1398,15 +1423,6 @@ let heroFacingY: number[] = []
 let heroTargetCircles: Sprite[] = []
 let heroControlledSpells: Sprite[] = []
 let heroAuras: Sprite[] = []
-
-
-// DEBUG: track intent edges + durations for Player 1
-let _dbg_prevP1Intent = ""
-let _dbg_prevP1IntentMs = 0
-let _dbg_prevP1A = false
-let _dbg_prevP1B = false
-
-
 
 // Simple "intent" placeholder for P1 (used by input logic)
 let p1Intent = ""
@@ -1467,13 +1483,6 @@ let supportPendingBuffPower: number[] = [0, 0, 0, 0]
 let supportPendingBuffDuration: number[] = [0, 0, 0, 0]
 let supportPendingBuffKind: number[] = [BUFF_KIND_HASTE, BUFF_KIND_HASTE, BUFF_KIND_HASTE, BUFF_KIND_HASTE]
 
-
-
-
-
-
-
-
 // --------------------------------------------------------------
 // Aura colors – by family
 // Used by: createAuraImageFromHero(), updateHeroAuras()
@@ -1483,21 +1492,6 @@ const AURA_COLOR_AGILITY = 5
 const AURA_COLOR_INTELLECT = 8
 const AURA_COLOR_HEAL = 7 // green-ish
 
-
-
-
-
-
-// ================================================================
-// ================================================================
-// ================================================================
-// SECTION 2 - HELPER FUNCTIONS and Phaser Helper Constants
-// ================================================================
-// Utility helpers used across the engine. Stateless. No side effects.
-// ================================================================
-// ================================================================
-// ================================================================
-// ================================================================
 
 // === UI marker keys (shared) ===
 const UI_KIND_KEY = "__uiKind";
@@ -1536,8 +1530,632 @@ const AGI_AIM_INDICATOR_LEN = 14;
 const AGI_AIM_INDICATOR_OX = 0;
 const AGI_AIM_INDICATOR_OY = 0;
 
+const UI_KIND_TEAM_COINS = "teamCoins"
+
+// Coins reward tuning
+const COIN_REWARD_MIN = 1
+const COIN_REWARD_HP_DIV = 50   // ~1 coin per 50 maxHP
+
+// HUD color (Arcade palette index; 7 is usually “yellow-ish”)
+const COIN_HUD_FG = 7
+
+let teamCoins = 0
+let teamCoinsHud: Sprite = null
 
 
+
+
+
+const HERO_LOCO_IDLE_LOOP_MS = 700
+const HERO_LOCO_WALK_LOOP_MS = 700
+const HERO_LOCO_RUN_LOOP_MS  = 500
+
+const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale differs
+
+
+
+
+//End of Constants
+
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+//This is for the helpers for debugging
+function _dbgAnimKeysLineEx(heroIndex: number, hero: Sprite, tag: string, extra: string): string {
+    const base = _dbgAnimKeysLine(heroIndex, hero, tag)
+    return extra ? (base + " " + extra) : base
+}
+
+function _dbgAnimKeys(heroIndex: number, hero: Sprite, tag: string, extra: string): void {
+    if (!DEBUG_ANIM_KEYS) return
+    if (DEBUG_ANIM_KEYS_HERO_INDEX >= 0 && heroIndex !== (DEBUG_ANIM_KEYS_HERO_INDEX | 0)) return
+    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+    if (DEBUG_ANIM_KEYS_PLAYER_ID !== 0 && owner !== (DEBUG_ANIM_KEYS_PLAYER_ID | 0)) return
+    console.log(_dbgAnimKeysLineEx(heroIndex, hero, tag, extra))
+}
+
+function _dbgFindHeroIndexForSprite(hero: Sprite): number {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        if (heroes[hi] === hero) return hi
+    }
+    return -1
+}
+
+function _dbgMovePipeLine(tag: string, heroIndex: number, hero: Sprite, nowMs: number, extra: string): string {
+    const p = sprites.readDataNumber(hero, HERO_DATA.PLAYER_ID) | 0
+
+    const seq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+    const kind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+    const vari = sprites.readDataNumber(hero, HERO_DATA.ActionVariant) | 0
+    const seed = sprites.readDataNumber(hero, HERO_DATA.ActionSeed) | 0
+    const tgt = sprites.readDataNumber(hero, HERO_DATA.ActionTarget) | 0
+
+    const phName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    const phS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const phD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    const phP = sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0
+    const phF = sprites.readDataNumber(hero, HERO_DATA.PhaseFlags) | 0
+
+    const partName = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const partS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const partD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+    const partP = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+    const partF = sprites.readDataNumber(hero, HERO_DATA.PhasePartFlags) | 0
+
+    const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) ? 1 : 0
+    const ctrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+    const strCh = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0
+    const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+
+    const svx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX) | 0
+    const svy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY) | 0
+
+    // Keep this one-line and copy/paste friendly
+    return (
+        `[PIPE][${tag}] now=${nowMs} p=${p} hi=${heroIndex} ` +
+        `A{seq=${seq} kind=${kind} var=${vari} seed=${seed} tgt=${tgt}} ` +
+        `Ph{name=${phName} s=${phS} d=${phD} p=${phP} f=${phF}} ` +
+        `Part{name=${partName} s=${partS} d=${partD} p=${partP} f=${partF}} ` +
+        `Lock{busyUntil=${busyUntil} locked=${locked} ctrl=${ctrl} strCh=${strCh} agi=${agiState}} ` +
+        `Vel{vx=${hero.vx | 0} vy=${hero.vy | 0} svx=${svx} svy=${svy}}` +
+        (extra ? ` ${extra}` : "")
+    )
+}
+
+function _dbgMovePipe(tag: string, heroIndex: number, hero: Sprite, nowMs: number, extra: string): void {
+    if (!DEBUG_MOVE_PIPE) return
+
+    const p = sprites.readDataNumber(hero, HERO_DATA.PLAYER_ID) | 0
+    if (DEBUG_MOVE_PIPE_PLAYER !== 0 && p !== DEBUG_MOVE_PIPE_PLAYER) return
+
+    console.log(_dbgMovePipeLine(tag, heroIndex, hero, nowMs, extra))
+}
+
+function _dbgMovePipeTick(tag: string, heroIndex: number, hero: Sprite, nowMs: number, extra: string): void {
+    if (!DEBUG_MOVE_PIPE) return
+
+    const p = sprites.readDataNumber(hero, HERO_DATA.PLAYER_ID) | 0
+    if (DEBUG_MOVE_PIPE_PLAYER !== 0 && p !== DEBUG_MOVE_PIPE_PLAYER) return
+
+    const last = (_dbgMovePipeLastMsByHero[heroIndex] | 0) || 0
+    if (nowMs - last < DEBUG_MOVE_PIPE_THROTTLE_MS) return
+
+    _dbgMovePipeLastMsByHero[heroIndex] = nowMs
+    console.log(_dbgMovePipeLine(tag, heroIndex, hero, nowMs, extra))
+}
+
+
+function _dbgAnimKeysLine(heroIndex: number, hero: Sprite, tag: string): string {
+    const aSeq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+    const aKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+    const aVar = sprites.readDataNumber(hero, HERO_DATA.ActionVariant) | 0
+    const aSeed = sprites.readDataNumber(hero, HERO_DATA.ActionSeed) | 0
+    const aTgt = sprites.readDataNumber(hero, HERO_DATA.ActionTargetId) | 0
+
+    const ph = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    const phS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const phD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    const phP = sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0
+    const phF = sprites.readDataNumber(hero, HERO_DATA.PhaseFlags) | 0
+
+    const pp = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const ppS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const ppD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+    const ppP = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+    const ppF = sprites.readDataNumber(hero, HERO_DATA.PhasePartFlags) | 0
+
+    const eSeq = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
+    const eMask = sprites.readDataNumber(hero, HERO_DATA.EventMask) | 0
+    const e0 = sprites.readDataNumber(hero, HERO_DATA.EventP0) | 0
+    const e1 = sprites.readDataNumber(hero, HERO_DATA.EventP1) | 0
+    const e2 = sprites.readDataNumber(hero, HERO_DATA.EventP2) | 0
+    const e3 = sprites.readDataNumber(hero, HERO_DATA.EventP3) | 0
+
+    const rs = sprites.readDataNumber(hero, HERO_DATA.RenderStyleMask) | 0
+    const rs0 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP0) | 0
+    const rs1 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP1) | 0
+
+    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+
+    return (
+        `[ANIMKEYS][${tag}] p=${owner} hi=${heroIndex}` +
+        ` A{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}}` +
+        ` Ph{name=${ph} s=${phS} d=${phD} p=${phP} f=${phF}}` +
+        ` Part{name=${pp} s=${ppS} d=${ppD} p=${ppP} f=${ppF}}` +
+        ` Ev{seq=${eSeq} mask=${eMask} p0=${e0} p1=${e1} p2=${e2} p3=${e3}}` +
+        ` Style{m=${rs} p0=${rs0} p1=${rs1}}`
+    )
+}
+
+function _dbgAgiAimLog(heroIndex: number, now: number, msg: string) {
+    if (!DEBUG_AGI_AIM) return
+    if (heroIndex !== (DEBUG_AGI_AIM_HERO_INDEX | 0)) return
+    const last = (_dbgAgiAimLastMs[heroIndex] | 0)
+    if (last && (now - last) < DEBUG_AGI_AIM_THROTTLE_MS) return
+    _dbgAgiAimLastMs[heroIndex] = now | 0
+    console.log("[AGI_AIM] h=" + heroIndex + " t=" + (now | 0) + " " + msg)
+}
+
+
+
+function _ambientPhaseWindowMs(phaseName: string): number {
+    const p = (phaseName || "").toLowerCase()
+    if (p === "run" || p === "walk") return AMBIENT_RUN_PHASE_DUR_MS
+    if (p === "combatidle") return AMBIENT_COMBATIDLE_PHASE_DUR_MS
+    return AMBIENT_IDLE_PHASE_DUR_MS
+}
+
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+
+function ensureHeroSpriteKinds(): void {
+    const SK: any = SpriteKind as any
+
+    // Phaser/compat build: SpriteKind.create() does not exist.
+    // Rely on phaserSpriteKindShim() numeric ids instead.
+    if (typeof SK.create !== "function") {
+        // Defensive: ensure the fields exist (ids assigned in the shim).
+        if (SK.Hero == null) SK.Hero = 50
+        if (SK.HeroWeapon == null) SK.HeroWeapon = 51
+        if (SK.HeroAura == null) SK.HeroAura = 52
+        if (SK.EnemySpawner == null) SK.EnemySpawner = 53
+        if (SK.SupportBeam == null) SK.SupportBeam = 54
+        if (SK.SupportIcon == null) SK.SupportIcon = 55
+        if (SK.Wall == null) SK.Wall = 56
+
+        // Shop kinds (you said these are now fixed)
+        if (SK.ShopUI == null) SK.ShopUI = 57
+        if (SK.ShopNpc == null) SK.ShopNpc = 58
+        if (SK.ShopItem == null) SK.ShopItem = 59
+        return
+    }
+
+    // MakeCode Arcade runtime: create missing kinds normally
+    if (!SpriteKind.Hero) SpriteKind.Hero = SpriteKind.create()
+    if (!SpriteKind.HeroWeapon) SpriteKind.HeroWeapon = SpriteKind.create()
+    if (!SpriteKind.HeroAura) SpriteKind.HeroAura = SpriteKind.create()
+    if (!SpriteKind.EnemySpawner) SpriteKind.EnemySpawner = SpriteKind.create()
+    if (!SpriteKind.SupportBeam) SpriteKind.SupportBeam = SpriteKind.create()
+    if (!SpriteKind.SupportIcon) SpriteKind.SupportIcon = SpriteKind.create()
+    if (!SpriteKind.Wall) SpriteKind.Wall = SpriteKind.create()
+
+    if (!SpriteKind.ShopUI) SpriteKind.ShopUI = SpriteKind.create()
+    if (!SpriteKind.ShopNpc) SpriteKind.ShopNpc = SpriteKind.create()
+    if (!SpriteKind.ShopItem) SpriteKind.ShopItem = SpriteKind.create()
+}
+
+// Phaser/ESM shim: ensure custom SpriteKinds exist before any overlaps are registered.
+ensureHeroSpriteKinds();
+
+
+
+function clampInt(v: number, lo: number, hi: number): number {
+    if (v < lo) return lo
+    if (v > hi) return hi
+    return v | 0
+}
+
+function splitAgiThrustDurations(totalMs: number): [number, number, number] {
+    const T = Math.max(1, totalMs | 0)
+
+    let wind = Math.idiv(T * AGI_THRUST_WINDUP_FRAC_X1000, 1000)
+    let fwd  = Math.idiv(T * AGI_THRUST_FORWARD_FRAC_X1000, 1000)
+    let land = T - wind - fwd
+
+    // safety mins so we never get 0ms phases on small durations
+    if (wind < 1) wind = 1
+    if (fwd < 1) fwd = 1
+    if (land < 1) land = 1
+
+    // re-balance if we over-allocated
+    const sum = wind + fwd + land
+    if (sum !== T) {
+        land = Math.max(1, land + (T - sum))
+    }
+
+    return [wind, fwd, land]
+}
+
+
+function _animKeys_clearPhasePart(hero: Sprite): void {
+    const prevPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const prevS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const prevD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+
+    // Safe defaults (PhasePart is optional until we start wiring segmented moves)
+    sprites.setDataString(hero, HERO_DATA.PhasePartName, "")
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, 0) // 0..PHASE_PROGRESS_MAX
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+
+    // ---- LOG: clear only if we cleared a real part ----
+    if (DEBUG_ANIM_KEYS_PHASE_PART && prevPart) {
+        const hi = getHeroIndex(hero) | 0
+        if (hi >= 0) {
+            const now = game.runtime() | 0
+            _dbgAnimKeys(hi, hero, "PART_CLEAR", `t=${now} prev{${prevPart} s=${prevS} d=${prevD}}`)
+        }
+    }
+}
+
+function _animKeys_actionBeginHygiene(hero: Sprite): void {
+    // Allowed action-edge resets (prevents stale visuals)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
+
+    // Event bus hygiene: clear mask + payload (emitters are the only writers of EventSequence)
+    _animEvent_clear(hero)
+
+    // Clear phase-part segmentation so new actions don't inherit old parts
+    _animKeys_clearPhasePart(hero)
+}
+
+
+function _animKeys_stampPhaseWindow(
+    heroIndex: number,
+    hero: Sprite,
+    phaseName: string,
+    nowMs: number,
+    durationMs: number,
+    where: string
+): void {
+    const now = nowMs | 0;
+    const dur = durationMs | 0;
+
+    _animInvAssert(phaseName.length > 0, where, heroIndex, `stampPhaseWindow called with empty phaseName`);
+    _animInvAssert(dur > 0, where, heroIndex, `stampPhaseWindow("${phaseName}") durationMs must be > 0 (got ${dur})`);
+
+    const prevName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    const prevS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const prevD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+
+    sprites.setDataString(hero, HERO_DATA.PhaseName, phaseName);
+    sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, now);
+    sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, dur);
+
+    // A new stamped window must start at progress=0 to avoid stale values.
+    sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, 0);
+
+    // Hard-fail + consistency check right after stamping.
+    _animInvCheckHeroTimeline(heroIndex, hero, now, `${where}::stampPhaseWindow("${phaseName}")`);
+
+    // ---- LOG: authoritative timing publish ----
+    if (DEBUG_ANIM_KEYS_PHASE_STAMP) {
+        _dbgAnimKeys(heroIndex, hero, "PHASE_STAMP",
+            `t=${now} where=${where} prev{${prevName} s=${prevS} d=${prevD}} now{${phaseName} s=${now} d=${dur}}`
+        )
+    }
+}
+
+
+// Compat alias: some newer shop/POC code calls this older name.
+// Keep it as a thin wrapper so we don't have to hunt callsites.
+function _animKeys_setHeroPhaseWindow(
+    heroIndex: number,
+    hero: Sprite,
+    phaseName: string,
+    nowMs: number,
+    durationMs: number,
+    where: string
+): void {
+    _animKeys_stampPhaseWindow(heroIndex, hero, phaseName, nowMs, durationMs, where)
+}
+
+
+function _animKeys_setPhasePart(
+    hero: Sprite,
+    partName: string,
+    partStartMs: number,
+    partDurationMs: number,
+    nowMs: number
+): void {
+    const start = (partStartMs | 0)
+    const now = (nowMs | 0)
+    const dur = (partDurationMs | 0)
+
+    // If you're setting a named part, duration must be > 0.
+    if (partName && partName.length) {
+        _animInvAssert(dur > 0, "setPhasePart", -1, `PhasePart "${partName}" duration must be > 0 (got ${dur})`)
+    }
+
+    const prevPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const prevS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const prevD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+
+    sprites.setDataString(hero, HERO_DATA.PhasePartName, partName)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, start)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, dur)
+
+    // Progress: 0..PHASE_PROGRESS_MAX
+    let pInt = 0
+    if (dur > 0) {
+        const elapsed = clampInt(now - start, 0, dur)
+        pInt = clampInt(Math.idiv(PHASE_PROGRESS_MAX * elapsed, dur), 0, PHASE_PROGRESS_MAX)
+    }
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, pInt)
+
+    // Default flags to 0 unless caller sets later
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+
+    // ---- LOG: phase-part publish/change ----
+    if (DEBUG_ANIM_KEYS_PHASE_PART) {
+        const hi = getHeroIndex(hero) | 0
+        if (hi >= 0) {
+            _dbgAnimKeys(hi, hero, "PART_SET",
+                `t=${now} prev{${prevPart} s=${prevS} d=${prevD}} now{${partName} s=${start} d=${dur}}`
+            )
+        }
+    }
+}
+
+
+function _animEvent_reset(hero: Sprite): void {
+    sprites.setDataNumber(hero, HERO_DATA.EventSequence, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventMask, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP0, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP1, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP2, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP3, 0)
+}
+
+function _animEvent_clear(hero: Sprite): void {
+    sprites.setDataNumber(hero, HERO_DATA.EventMask, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP0, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP1, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP2, 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP3, 0)
+}
+
+function _animEvent_emit(hero: Sprite, mask: number, p0: number, p1: number, p2: number, p3: number): void {
+    const seq0 = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
+    sprites.setDataNumber(hero, HERO_DATA.EventSequence, (seq0 + 1) | 0)
+
+    sprites.setDataNumber(hero, HERO_DATA.EventMask, mask | 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP0, p0 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP1, p1 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP2, p2 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.EventP3, p3 | 0)
+}
+
+
+
+function _elemToRenderStyleMask(element: number): number {
+    const e = element | 0
+    if (e <= 0) return 0
+    // Reserve bit0 for future non-element styles; elements occupy bits 1..n.
+    return (1 << e) | 0
+}
+
+function _animKeys_setRenderStyle(hero: Sprite, styleMask: number, p0: number, p1: number): void {
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, styleMask | 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, p0 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP1, p1 | 0)
+}
+
+
+// --------------------------------------------------------------
+// HARD FAIL animation timeline invariants
+// Goal: immediately detect missing PhaseDurationMs / stale keys / out-of-range progress.
+// --------------------------------------------------------------
+
+const ANIM_INVARIANTS_HARDFAIL = true
+
+function _animInvFail(tag: string, heroIndex: number, msg: string): void {
+    const full = `[ANIM-INVARIANT] ${tag} hero=${heroIndex} :: ${msg}`
+    if (ANIM_INVARIANTS_HARDFAIL) throw new Error(full)
+    // If you ever flip to soft mode later:
+    // console.log(full)
+}
+
+function _animInvAssert(cond: boolean, tag: string, heroIndex: number, msg: string): void {
+    if (!cond) _animInvFail(tag, heroIndex, msg)
+}
+
+function _animInvStr(hero: Sprite, k: string): string {
+    const v = sprites.readDataString(hero, k as any)
+    return v ? String(v) : ""
+}
+function _animInvNum(hero: Sprite, k: string): number {
+    return sprites.readDataNumber(hero, k as any) | 0
+}
+
+
+function _animInvHardFail(where: string, heroIndex: number, message: string, ctx?: any): void {
+    let extra = ""
+    if (ctx !== undefined) {
+        try {
+            extra = " " + JSON.stringify(ctx)
+        } catch (e) {
+            extra = " " + String(ctx)
+        }
+    }
+
+    // tag first, then heroIndex, then message
+    _animInvFail(`[ANIM-INV] ${where}`, heroIndex, `${message}${extra}`)
+}
+
+
+function _animInvCheckHeroTimeline(heroIndex: number, hero: Sprite, nowMs: number, where: string): void {
+    // Step 6: Unified contract invariants
+    // - PhaseName is ALWAYS the render phase (ambient or action).
+    // - PhaseStartMs/PhaseDurationMs must ALWAYS be valid (non-zero) for live heroes.
+    // - PhasePart is optional and may be blank outside move segments.
+    // - ActionSequence/ActionKind must be valid (seeded at spawn).
+
+    if (!ANIM_INVARIANTS_HARDFAIL) return
+
+    const now = nowMs | 0
+
+    const phaseName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    const phaseStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const phaseDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    const phaseProg = sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0
+
+    const partName = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const partStart = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const partDur = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+    const partProg = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+
+    const actionSeq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+    const actionKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+
+    const evSeq = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
+    const evMask = sprites.readDataNumber(hero, HERO_DATA.EventMask) | 0
+
+    // Minimal context for hardfail reports
+    const ctx: any = {
+        where,
+        nowMs: now,
+        x: hero.x | 0,
+        y: hero.y | 0,
+        busyUntil: sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0,
+        phaseName,
+        phaseStart,
+        phaseDur,
+        phaseProg,
+        partName,
+        partStart,
+        partDur,
+        partProg,
+        actionSeq,
+        actionKind,
+        evSeq,
+        evMask
+    }
+
+    // Action identity must always be valid (spawn seeds it).
+    if (actionSeq <= 0) {
+        _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.ActionSequence}: ${actionSeq}`, ctx)
+    }
+    if (!actionKind) {
+        _animInvHardFail(where, heroIndex, `missing ${HERO_DATA.ActionKind}`, ctx)
+    }
+
+    // Unified Phase window invariants
+    if (!phaseName) {
+        _animInvHardFail(where, heroIndex, `missing ${HERO_DATA.PhaseName}`, ctx)
+    }
+    if (phaseStart <= 0) {
+        _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhaseStartMs}: ${phaseStart}`, ctx)
+    }
+    if (phaseDur <= 0) {
+        _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhaseDurationMs}: ${phaseDur}`, ctx)
+    }
+    if (phaseProg < 0 || phaseProg > PHASE_PROGRESS_MAX) {
+        _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhaseProgressInt}: ${phaseProg}`, ctx)
+    }
+
+    // Part is optional; if present, must be valid
+    if (partName) {
+        if (partStart <= 0) {
+            _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhasePartStartMs}: ${partStart}`, ctx)
+        }
+        if (partDur <= 0) {
+            _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhasePartDurationMs}: ${partDur}`, ctx)
+        }
+        if (partProg < 0 || partProg > PHASE_PROGRESS_MAX) {
+            _animInvHardFail(where, heroIndex, `invalid ${HERO_DATA.PhasePartProgress}: ${partProg}`, ctx)
+        }
+    }
+
+    // Optional monotonic guard (debug only): ActionSequence must never regress
+    const last = sprites.readDataNumber(hero, HERO_DATA._InvLastActionSequence) | 0
+    if (last && actionSeq < last) {
+        _animInvHardFail(where, heroIndex, `ActionSequence regressed: ${actionSeq} < ${last}`, ctx)
+    }
+    sprites.setDataNumber(hero, HERO_DATA._InvLastActionSequence, actionSeq)
+}
+
+// !!! CONTRACT NOTE !!!
+// LEGACY PUBLISHER (TEMPORARILY VIOLATES SINGLE-WRITER CONTRACT)
+// - This currently increments ActionSequence and stamps Phase keys.
+// - In the final design this must become READ-ONLY (or be retired).
+// - callHeroAnim() must not call this once Step 3/4 are applied.
+function publishHeroActionPhase(
+    hero: Sprite,
+    actionKind: string,
+    phaseName: string,
+    phaseDurationMs: number,
+    nowMs: number
+): void {
+    // RETIRED (READ-ONLY / NO-OP)
+    // This function used to (incorrectly, per the new contract) increment ActionSequence and stamp Phase keys.
+    // Keeping it as a no-op prevents accidental future calls from breaking the single-writer rules.
+    //
+    // Authoritative publishers now are:
+    //  - _doHeroMoveBeginActionTimeline()   (Action edge + ActionSequence increment)
+    //  - _doHeroMovePlayAnimAndDispatch()   (Phase window stamp)
+    //  - setHeroPhaseString()              (ambient phase changes)
+    //  - move timing loops                 (PhaseProgressInt / PhasePart*)
+    //  - event emitters                    (EventSequence pulses)
+
+    if (DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE) {
+        console.log(
+            `[WARN][publishHeroActionPhase] deprecated call; actionKind=${actionKind} phase=${phaseName} dur=${phaseDurationMs | 0} now=${nowMs | 0}`
+        )
+    }
+}
+
+
+
+
+function getHardcodedWeaponLoadoutForHero(profileName: string, familyNumber: number): HardcodedWeaponLoadout {
+    const key = String(profileName || "").trim().toLowerCase()
+
+    switch (key) {
+        default:
+            return {
+                slashId: DEFAULT_WEAPON_SLASH_ID,
+                thrustId: DEFAULT_WEAPON_THRUST_ID,
+                castId: DEFAULT_WEAPON_CAST_ID,
+                execId: DEFAULT_WEAPON_EXEC_ID,
+
+                // NEW: combo weapon (used during agility charge / combo visuals)
+                comboId: DEFAULT_WEAPON_COMBO_ID,
+            }
+    }
+}
+
+
+
+
+
+// ================================================================
+// ================================================================
+// ================================================================
+// SECTION 2 - HELPER FUNCTIONS and Phaser Helper Constants
+// ================================================================
+// Utility helpers used across the engine. Stateless. No side effects.
+// ================================================================
+// ================================================================
+// ================================================================
+// ================================================================
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// This section is for the "global helpers", those that truly serve any function and provide base calculations
 
 
 function worldPixelWidth(): number {
@@ -1554,11 +2172,6 @@ function worldCenter(): { x: number; y: number } {
         y: worldPixelHeight() / 2
     };
 }
-
-
-
-
-
 
 function makeBaseStats(baseTimeMs: number) {
     const stats: number[] = []
@@ -1614,9 +2227,37 @@ function tintImageReplace(imgBase: Image, fromColor: number, toColor: number): I
     return out
 }
 
-function getAimVectorForHero(heroIndex: number) {
-    let dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
-    if (dx == 0 && dy == 0) { dx = 1; dy = 0 }
+
+function getAimVectorForHero(heroIndex: number): number[] {
+    // Use MakeCode-style per-player d-pad buttons (works even if hero movement is locked)
+    let p: any = controller.player1
+    if (heroIndex === 1) p = controller.player2
+    else if (heroIndex === 2) p = controller.player3
+    else if (heroIndex === 3) p = controller.player4
+
+    // Defensive fallback (should never hit if controller is present)
+    if (!p || !p.left || !p.right || !p.up || !p.down) {
+        let dx0 = heroFacingX[heroIndex] || 0
+        let dy0 = heroFacingY[heroIndex] || 0
+        if (dx0 === 0 && dy0 === 0) { dx0 = 1; dy0 = 0 }
+        return [dx0, dy0]
+    }
+
+    const left  = p.left.isPressed() ? 1 : 0
+    const right = p.right.isPressed() ? 1 : 0
+    const up    = p.up.isPressed() ? 1 : 0
+    const down  = p.down.isPressed() ? 1 : 0
+
+    let dx = (right - left) | 0
+    let dy = (down - up) | 0
+
+    // If no d-pad held, keep last facing so spell continues smoothly.
+    if (dx === 0 && dy === 0) {
+        dx = heroFacingX[heroIndex] || 0
+        dy = heroFacingY[heroIndex] || 0
+        if (dx === 0 && dy === 0) { dx = 1; dy = 0 }
+    }
+
     return [dx, dy]
 }
 
@@ -1624,7 +2265,2214 @@ function r2(v: number) { return Math.round(v * 100) / 100 }
 function r3(v: number) { return Math.round(v * 1000) / 1000 }
 
 
+// --------------------------------------------------------------
+// MOD BANK: unlimited additive effectors by bucket+label
+// - Store unlimited entries (arrays) in JS memory (safe)
+// - Cache sums per hero+bucket for O(1) reads in hot paths
+// - Apply by modifying traits[] before calculateMoveStatsForFamily()
+// --------------------------------------------------------------
 
+type ModEntry = { label: string, value: number }
+
+// Buckets (POC: family-only damage axis = TRAIT1)
+const MOD_BUCKET_STR_DMG = "STR_DMG"
+const MOD_BUCKET_AGI_DMG = "AGI_DMG"
+const MOD_BUCKET_INT_DMG = "INT_DMG"
+const MOD_BUCKET_SUP_DMG = "SUP_DMG"
+
+// Lists live in memory (unbounded)
+const _heroMods: { [heroIndex: number]: { [bucket: string]: ModEntry[] } } = {}
+// Cached sums (fast reads)
+const _heroModSums: { [heroIndex: number]: { [bucket: string]: number } } = {}
+
+function _ensureHeroBucket(heroIndex: number, bucket: string): ModEntry[] {
+    let h = _heroMods[heroIndex]
+    if (!h) { h = {}; _heroMods[heroIndex] = h }
+    let arr = h[bucket]
+    if (!arr) { arr = []; h[bucket] = arr }
+    return arr
+}
+
+function _recomputeHeroBucketSum(heroIndex: number, bucket: string): number {
+    const arr = _ensureHeroBucket(heroIndex, bucket)
+    let sum = 0
+    for (let i = 0; i < arr.length; i++) sum += (arr[i].value | 0)
+
+    let s = _heroModSums[heroIndex]
+    if (!s) { s = {}; _heroModSums[heroIndex] = s }
+    s[bucket] = sum
+    return sum
+}
+
+function heroModGet(heroIndex: number, bucket: string, label: string): number {
+    const arr = _ensureHeroBucket(heroIndex, bucket)
+    for (let i = 0; i < arr.length; i++) if (arr[i].label === label) return arr[i].value | 0
+    return 0
+}
+
+// Sets/overwrites the value for a label (best for "shop level", "relic id", etc.)
+function heroModSet(heroIndex: number, bucket: string, label: string, value: number): number {
+    const arr = _ensureHeroBucket(heroIndex, bucket)
+    const v = value | 0
+
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].label === label) {
+            arr[i].value = v
+            return _recomputeHeroBucketSum(heroIndex, bucket)
+        }
+    }
+
+    arr.push({ label, value: v })
+    return _recomputeHeroBucketSum(heroIndex, bucket)
+}
+
+function heroModRemove(heroIndex: number, bucket: string, label: string): number {
+    const arr = _ensureHeroBucket(heroIndex, bucket)
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].label === label) { arr.removeAt(i); break }
+    }
+    return _recomputeHeroBucketSum(heroIndex, bucket)
+}
+
+function heroModSum(heroIndex: number, bucket: string): number {
+    const s = _heroModSums[heroIndex]
+    if (s && (bucket in s)) return s[bucket] | 0
+    return _recomputeHeroBucketSum(heroIndex, bucket)
+}
+
+function heroModDebug(heroIndex: number, bucket: string): string {
+    const arr = _ensureHeroBucket(heroIndex, bucket)
+    let out = ""
+    for (let i = 0; i < arr.length; i++) {
+        const e = arr[i]
+        if (i) out += " "
+        out += `${e.label}:${e.value | 0}`
+    }
+    return out
+}
+
+// --------------------------------------------------------------
+// APPLY MODS: POC = add bucket sum to TRAIT1 (damage axis) per family
+// --------------------------------------------------------------
+
+function _damageBucketForFamily(family: number): string {
+    switch (family | 0) {
+        case FAMILY.STRENGTH:  return MOD_BUCKET_STR_DMG
+        case FAMILY.AGILITY:   return MOD_BUCKET_AGI_DMG
+        case FAMILY.INTELLECT: return MOD_BUCKET_INT_DMG
+        case FAMILY.HEAL:      return MOD_BUCKET_SUP_DMG
+    }
+    return ""
+}
+
+// Returns either the original traits array (no change) OR a cloned array with TRAIT1 modified.
+function applyDamageModsToTraits(heroIndex: number, family: number, traits: number[]): number[] {
+    const b = _damageBucketForFamily(family)
+    if (!b) return traits
+
+    const bonus = heroModSum(heroIndex, b) | 0
+    if (!bonus) return traits
+
+    const out = traits.slice()
+    out[OUT.TRAIT1] = (out[OUT.TRAIT1] | 0) + bonus
+    return out
+}
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+//This is the shops section
+// Shop section
+
+
+const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop wave up down
+let _shopEntered = false
+
+// ------------------------------
+// SHOP registries (optional)
+// ------------------------------
+const SHOP_NPCS: Sprite[] = []
+const SHOP_ITEMS: Sprite[] = []
+
+// ------------------------------
+// Shop constants
+// ------------------------------
+const SHOPKEEPER_PLAYER_ID = 99
+const SHOPKEEPER_HERO_NAME = "Shopkeeper"
+const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+// ------------------------------
+// Shop runtime objects
+// ------------------------------
+let shopkeeperNpc: Sprite = null
+let shopItemPedestal: Sprite = null
+let shopTriggerZone: Sprite = null
+
+// Ring offer hitboxes (invisible ShopItem sprites)
+let _shopRingOfferItems: Sprite[] = []
+
+// ------------------------------
+// Per-hero shop state (heroIndex 0..3)
+// ------------------------------
+// Focus = "which offer am I currently touching/focused on?"
+let shopFocusOfferByHero: Sprite[] = [null, null, null, null]
+let shopFocusRingIndexByHero: number[] = [-1, -1, -1, -1]
+let shopFocusUntilMsByHero: number[] = [0, 0, 0, 0]
+
+// UI gating + purchase flags (if you still want them)
+let shopTouchUntilMsByHero: number[] = [0, 0, 0, 0]
+let shopBoughtByHero: boolean[] = [false, false, false, false]
+
+// ------------------------------
+// Debug + input edges
+// ------------------------------
+let _shopLastDebugDumpMs = 0
+const SHOP_DEBUG_DUMP_EVERY_MS = 25000
+
+let shopPrevAByPlayer: boolean[] = [false, false, false, false]
+let shopPrevBByPlayer: boolean[] = [false, false, false, false]
+let shopPrevUpByPlayer: boolean[] = [false, false, false, false]
+let shopPrevDownByPlayer: boolean[] = [false, false, false, false]
+let shopPrevLeftByPlayer: boolean[] = [false, false, false, false]
+let shopPrevRightByPlayer: boolean[] = [false, false, false, false]
+
+// --- SHOP UI state (MUST be top-level globals) ---
+let shopUiBgByHero: Sprite[] = [null, null, null, null]
+let shopUiTextByHero: TextSprite[] = [null, null, null, null]
+let shopUiStatsByHero: TextSprite[] = [null, null, null, null]
+
+// --- Shop focus change debug (MUST be top-level globals) ---
+let _shopPrevTouchMask = -1
+let _shopPrevTouchByHero = ""
+
+let SHOP_TOUCH_GRACE_MS = 100
+
+let _shopDbgNextAllowedMs = 0
+let _shopDbgPrevSig = ""
+const SHOP_DBG_MIN_INTERVAL_MS = 500   // throttle (still prints immediately on changes)
+
+// "p1=2|p2=-1|p3=-1|p4=0"  (ring index touched by each player; -1 = none)
+const SHOP_WPN_TOUCHED_RING_BY_PID_KEY = "shopWpnTouchedRingByPid"
+
+// "p1=dagger|p2=|p3=|p4=glowsword"
+const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid"
+
+// Optional: "p1=thrust|p2=|p3=|p4=slash"
+const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
+
+// --------------------------------------------------------------
+// Per-hero focused offer state (computed each frame)
+// --------------------------------------------------------------
+//let shopFocusUntilMsByHero: number[] = [0, 0, 0, 0]
+//let shopFocusOfferByHero: Sprite[] = [null, null, null, null]
+
+//let shopFocusRingIndexByHero: number[] = [-1, -1, -1, -1]
+
+// --------------------------------------------------------------
+// Shop input edge detect (separate from combat input)
+// --------------------------------------------------------------
+// --------------------------------------------------------------
+// Shop tick throttles
+// --------------------------------------------------------------
+//const SHOP_DEBUG_DUMP_EVERY_MS = 250
+
+// How long a focus stays “alive” without a continuous overlap event.
+//const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+
+
+function enterShopMode(): void {
+    if (_shopEntered) return
+    _shopEntered = false
+    if(SHOP_MODE_ACTIVE_MASTER) {
+    SHOP_MODE_ACTIVE = true
+    }
+    // Create shopkeeper + publish contract + spawn offers
+    shopInitPOC()
+
+    // Optional: immediate debug
+    console.log("[SHOP] ENTER shop mode t=" + (game.runtime() | 0))
+}
+
+
+
+function _shopEnsurePerHeroStateArrays(): void {
+    const N = 4
+
+    // (These vars MUST already be declared at top-level in this namespace.)
+    if (shopFocusRingIndexByHero === null) shopFocusRingIndexByHero = []
+    if (shopFocusUntilMsByHero === null) shopFocusUntilMsByHero = []
+    if (shopTouchUntilMsByHero === null) shopTouchUntilMsByHero = []
+    if (shopBoughtByHero === null) shopBoughtByHero = []
+    if (shopFocusOfferByHero === null) shopFocusOfferByHero = []
+
+    while (shopFocusRingIndexByHero.length < N) shopFocusRingIndexByHero.push(-1)
+    while (shopFocusUntilMsByHero.length < N) shopFocusUntilMsByHero.push(0)
+    while (shopTouchUntilMsByHero.length < N) shopTouchUntilMsByHero.push(0)
+    while (shopBoughtByHero.length < N) shopBoughtByHero.push(false)
+    while (shopFocusOfferByHero.length < N) shopFocusOfferByHero.push(null)
+}
+
+
+
+function shopTick(nowMs: number): void {
+    const now = nowMs | 0
+    if (!HeroEngine._isStarted()) return
+
+    // Only init when missing/destroyed (DO NOT re-init every frame)
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        shopInitPOC()
+    }
+
+    // If still not present, bail cleanly.
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        console.log("Ending shop mode")
+        SHOP_MODE_ACTIVE = false
+        return
+    }
+
+    // 1) Compute which offer each hero is focused/touching (grace-window)
+    shopUpdateFocus(now)
+
+    // 2) Publish highlight contract on shopkeeper sprite
+    shopPublishTouchedMapOnShopkeeper(now)
+
+    // 3) Route shop controls (A buy, B return, arrows reserved for future UI)
+    shopHandleControls(now)
+
+    // 4) Decide whether shop mode is active
+    let anyActive = false
+    for (let hi = 0; hi < 4; hi++) {
+        if (now <= (shopFocusUntilMsByHero[hi] | 0)) { anyActive = true; break }
+    }
+
+//    console.log("Before anyactive Shop mode is ", SHOP_MODE_ACTIVE)
+//    SHOP_MODE_ACTIVE = anyActive
+//    console.log("After anyactive Shop mode is ", SHOP_MODE_ACTIVE)
+
+    // 5) Debug dump (throttled inside)
+    shopDebugDump(now)
+}
+
+
+function shopPollControls(hi: number): {
+    A_edge: boolean;
+    B_edge: boolean;
+    Up_edge: boolean;
+    Down_edge: boolean;
+    Left_edge: boolean;
+    Right_edge: boolean;
+} {
+    const i = hi | 0
+    if (i < 0 || i > 3) {
+        return { A_edge: false, B_edge: false, Up_edge: false, Down_edge: false, Left_edge: false, Right_edge: false }
+    }
+
+    let aNow = false, bNow = false, upNow = false, downNow = false, leftNow = false, rightNow = false
+
+    if (i === 0) {
+        aNow = controller.player1.A.isPressed()
+        bNow = controller.player1.B.isPressed()
+        upNow = controller.player1.up.isPressed()
+        downNow = controller.player1.down.isPressed()
+        leftNow = controller.player1.left.isPressed()
+        rightNow = controller.player1.right.isPressed()
+    } else if (i === 1) {
+        aNow = controller.player2.A.isPressed()
+        bNow = controller.player2.B.isPressed()
+        upNow = controller.player2.up.isPressed()
+        downNow = controller.player2.down.isPressed()
+        leftNow = controller.player2.left.isPressed()
+        rightNow = controller.player2.right.isPressed()
+    } else if (i === 2) {
+        aNow = controller.player3.A.isPressed()
+        bNow = controller.player3.B.isPressed()
+        upNow = controller.player3.up.isPressed()
+        downNow = controller.player3.down.isPressed()
+        leftNow = controller.player3.left.isPressed()
+        rightNow = controller.player3.right.isPressed()
+    } else {
+        aNow = controller.player4.A.isPressed()
+        bNow = controller.player4.B.isPressed()
+        upNow = controller.player4.up.isPressed()
+        downNow = controller.player4.down.isPressed()
+        leftNow = controller.player4.left.isPressed()
+        rightNow = controller.player4.right.isPressed()
+    }
+
+    const aPrev = shopPrevAByPlayer[i]
+    const bPrev = shopPrevBByPlayer[i]
+    const upPrev = shopPrevUpByPlayer[i]
+    const downPrev = shopPrevDownByPlayer[i]
+    const leftPrev = shopPrevLeftByPlayer[i]
+    const rightPrev = shopPrevRightByPlayer[i]
+
+    shopPrevAByPlayer[i] = aNow
+    shopPrevBByPlayer[i] = bNow
+    shopPrevUpByPlayer[i] = upNow
+    shopPrevDownByPlayer[i] = downNow
+    shopPrevLeftByPlayer[i] = leftNow
+    shopPrevRightByPlayer[i] = rightNow
+
+    return {
+        A_edge: !!(aNow && !aPrev),
+        B_edge: !!(bNow && !bPrev),
+        Up_edge: !!(upNow && !upPrev),
+        Down_edge: !!(downNow && !downPrev),
+        Left_edge: !!(leftNow && !leftPrev),
+        Right_edge: !!(rightNow && !rightPrev),
+    }
+}
+
+
+
+function shopUpdateFocus(nowMs: number): void {
+    const now = nowMs | 0
+
+    // Cull destroyed focus references
+    for (let hi = 0; hi < 4; hi++) {
+        const cur = shopFocusOfferByHero[hi]
+        if (cur && (cur.flags & sprites.Flag.Destroyed)) {
+            shopFocusOfferByHero[hi] = null
+            shopFocusRingIndexByHero[hi] = -1
+            shopFocusUntilMsByHero[hi] = 0
+        }
+    }
+
+    // We prefer SHOP_ITEMS if you maintain it; otherwise fallback to sprites.allOfKind
+    let offers: Sprite[] = null as any
+    try {
+        // If SHOP_ITEMS exists in your file, use it.
+        // (This try prevents a compile fail if SHOP_ITEMS isn't declared in this branch.)
+        offers = (SHOP_ITEMS as any)
+    } catch (e) {
+        offers = null
+    }
+    if (!offers) offers = sprites.allOfKind(SpriteKind.ShopItem)
+
+    // Build a small candidate list sorted by ring index (if present)
+    // NOTE: ring index key name must match what your spawn/builder sets.
+    // Your spawnShopItem() uses SH_ITEM_RING_INDEX.
+    const sorted: Sprite[] = []
+    for (let i = 0; i < offers.length; i++) {
+        const s = offers[i]
+        if (!s) continue
+        if (s.flags & sprites.Flag.Destroyed) continue
+        sorted.push(s)
+    }
+    sorted.sort(function (a: Sprite, b: Sprite): number {
+        const ai = sprites.readDataNumber(a, SH_ITEM_RING_INDEX) | 0
+        const bi = sprites.readDataNumber(b, SH_ITEM_RING_INDEX) | 0
+        return ai - bi
+    })
+
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        let found: Sprite = null
+        let foundRing = -1
+
+        for (let j = 0; j < sorted.length; j++) {
+            const it = sorted[j]
+            if (!it) continue
+            if (_shopIsOverlapping(hero, it)) {
+                found = it
+                foundRing = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+                break
+            }
+        }
+
+        if (found) {
+            shopFocusOfferByHero[hi] = found
+            shopFocusRingIndexByHero[hi] = foundRing
+            shopFocusUntilMsByHero[hi] = (now + SHOP_FOCUS_KEEPALIVE_MS) | 0
+        } else {
+            // grace window: keep focus alive briefly even without a continuous overlap
+            if (now > (shopFocusUntilMsByHero[hi] | 0)) {
+                shopFocusOfferByHero[hi] = null
+                shopFocusRingIndexByHero[hi] = -1
+                shopFocusUntilMsByHero[hi] = 0
+            }
+        }
+    }
+}
+
+
+
+function shopPublishTouchedMapOnShopkeeper(nowMs: number): void {
+    const now = nowMs | 0
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    // Build: p1=2|p2=-1|p3=-1|p4=0
+    let ringByPid = ""
+    let idByPid = ""
+    let slotByPid = ""
+
+    for (let hi = 0; hi < 4; hi++) {
+        const pid = (hi + 1) | 0
+        let ring = -1
+        let wid = ""
+        let slot = ""
+
+        if (now <= (shopFocusUntilMsByHero[hi] | 0)) {
+            ring = shopFocusRingIndexByHero[hi] | 0
+            const offer = shopFocusOfferByHero[hi]
+            if (offer && !(offer.flags & sprites.Flag.Destroyed)) {
+                wid = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
+                slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || ""
+            }
+        }
+
+        if (hi > 0) { ringByPid += "|"; idByPid += "|"; slotByPid += "|" }
+        ringByPid += "p" + pid + "=" + ring
+        idByPid += "p" + pid + "=" + wid
+        slotByPid += "p" + pid + "=" + slot
+    }
+
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_RING_BY_PID_KEY, ringByPid)
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_ID_BY_PID_KEY, idByPid)
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY, slotByPid)
+}
+
+
+function shopHandleControls(nowMs: number): void {
+    const now = nowMs | 0
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    for (let hi = 0; hi < 4; hi++) {
+        // Only if focused (grace window alive)
+        if (!(now <= (shopFocusUntilMsByHero[hi] | 0))) continue
+
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const offer = shopFocusOfferByHero[hi]
+        if (!offer || (offer.flags & sprites.Flag.Destroyed)) continue
+
+        const ctrl = shopPollControls(hi)
+
+        // Reserved for future UI navigation
+        // if (ctrl.Left_edge) ...
+        // if (ctrl.Right_edge) ...
+
+        const pid = (hi + 1) | 0
+
+        const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
+        const slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
+        const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
+
+        const boughtByPid = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+        const isBought = (boughtByPid | 0) !== 0
+
+        // A = buy
+        if (ctrl.A_edge) {
+            if (!weaponId) {
+                console.log("[SHOP][BUY] hi=" + hi + " pid=" + pid + " DENY empty weaponId ring=" + (sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0))
+            } else if (isBought) {
+                console.log("[SHOP][BUY] hi=" + hi + " pid=" + pid + " DENY alreadyBought byPid=" + boughtByPid + " wid=" + weaponId)
+            } else if ((teamCoins | 0) < (price | 0)) {
+                console.log("[SHOP][BUY] hi=" + hi + " pid=" + pid + " DENY coins=" + (teamCoins | 0) + " price=" + price + " wid=" + weaponId)
+            } else {
+                const before = teamCoins | 0
+                setTeamCoins((before - price) | 0)
+
+                sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
+                sprites.setDataBoolean(offer, SHOP_DATA.BOUGHT, true)
+
+                // Equip: replace only the render slot for that hero
+                if (slot === "thrust") sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, weaponId)
+                else if (slot === "slash") sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, weaponId)
+                else if (slot === "cast") sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, weaponId)
+
+                console.log("[SHOP][BUY] hi=" + hi + " pid=" + pid + " ok coins " + before + "->" + (teamCoins | 0) +
+                    " slot=" + slot + " wid=" + weaponId + " ring=" + (sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0))
+            }
+        }
+
+        // B = return (undo)
+        if (ctrl.B_edge) {
+            if (!isBought) {
+                console.log("[SHOP][RETURN] hi=" + hi + " pid=" + pid + " DENY notBought wid=" + weaponId)
+            } else if ((boughtByPid | 0) !== (pid | 0)) {
+                console.log("[SHOP][RETURN] hi=" + hi + " pid=" + pid + " DENY ownedBy otherPid=" + boughtByPid + " wid=" + weaponId)
+            } else {
+                const before = teamCoins | 0
+                setTeamCoins((before + price) | 0)
+
+                sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, 0)
+                sprites.setDataBoolean(offer, SHOP_DATA.BOUGHT, false)
+
+                // Unequip: clear only the render slot for that hero
+                if (slot === "thrust") sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, "")
+                else if (slot === "slash") sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, "")
+                else if (slot === "cast") sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, "")
+
+                console.log("[SHOP][RETURN] hi=" + hi + " pid=" + pid + " ok coins " + before + "->" + (teamCoins | 0) +
+                    " slot=" + slot + " wid=" + weaponId + " ring=" + (sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0))
+            }
+        }
+    }
+}
+
+function shopDebugDump(nowMs: number): void {
+    const now = nowMs | 0
+    if (now - (_shopLastDebugDumpMs | 0) < SHOP_DEBUG_DUMP_EVERY_MS) return
+    _shopLastDebugDumpMs = now
+
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    const skId = (shopkeeperNpc.id | 0)
+    const owner = (sprites.readDataNumber(shopkeeperNpc, HERO_DATA.OWNER) | 0)
+    const heroName = sprites.readDataString(shopkeeperNpc, "heroName") || sprites.readDataString(shopkeeperNpc, HERO_DATA.NAME) || ""
+    const ringIds = sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY) || ""
+    const rPx = sprites.readDataNumber(shopkeeperNpc, SHOP_WPN_RING_RADIUS_PX_KEY) | 0
+    const aDeg = sprites.readDataNumber(shopkeeperNpc, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0
+    const defDir = sprites.readDataString(shopkeeperNpc, SHOP_WPN_DEFAULT_DIR_KEY) || ""
+    const dirMap = sprites.readDataString(shopkeeperNpc, SHOP_WPN_DIR_MAP_KEY) || ""
+
+    const touchedRingByPid = sprites.readDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_RING_BY_PID_KEY) || ""
+    const touchedIdByPid = sprites.readDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_ID_BY_PID_KEY) || ""
+    const touchedSlotByPid = sprites.readDataString(shopkeeperNpc, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY) || ""
+
+    // Offer list snapshot (ringIndex:weaponId:slot:price:boughtByPid)
+    let offers: Sprite[] = null as any
+    try { offers = (SHOP_ITEMS as any) } catch (e) { offers = null }
+    if (!offers) offers = sprites.allOfKind(SpriteKind.ShopItem)
+
+    let offerDump = ""
+    for (let i = 0; i < offers.length; i++) {
+        const it = offers[i]
+        if (!it) continue
+        if (it.flags & sprites.Flag.Destroyed) continue
+
+        const ri = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+        const wid = sprites.readDataString(it, SH_ITEM_WEAPON_ID) || ""
+        const slot = sprites.readDataString(it, SH_ITEM_RENDER_SLOT) || ""
+        const price = sprites.readDataNumber(it, SH_ITEM_PRICE) | 0
+        const byPid = sprites.readDataNumber(it, SH_ITEM_BOUGHT_BY_PID) | 0
+
+        if (offerDump !== "") offerDump += " ; "
+        offerDump += ri + ":" + wid + ":" + slot + ":" + price + ":p" + byPid
+    }
+
+    console.log(
+        "[SHOP][DUMP] t=" + now +
+        " sk{id=" + skId + " owner=" + owner + " heroName=" + heroName + "}" +
+        " ring{ids='" + ringIds + "' rPx=" + rPx + " aDeg=" + aDeg + " defDir=" + defDir + " dirMap='" + dirMap + "'}" +
+        " touched{ring='" + touchedRingByPid + "' id='" + touchedIdByPid + "' slot='" + touchedSlotByPid + "'}" +
+        " offers{n=" + offers.length + " " + offerDump + "}"
+    )
+}
+
+
+function _shopSafeStr(s: string): string {
+    return (s === null || s === undefined) ? "" : ("" + s)
+}
+
+function _shopSpriteId(s: Sprite): number {
+    // Arcade sprite ids are usually stored on the object; if not, return -1
+    return (s && (s as any).id !== undefined) ? ((s as any).id | 0) : -1
+}
+
+function _shopOfferSummary(it: Sprite): string {
+    if (!it) return "null"
+    if (it.flags & sprites.Flag.Destroyed) return "destroyed"
+
+    const id = _shopSpriteId(it)
+    const ringIndex = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+    const weaponId = _shopSafeStr(sprites.readDataString(it, SH_ITEM_WEAPON_ID))
+    const slot = _shopSafeStr(sprites.readDataString(it, SH_ITEM_RENDER_SLOT))
+    const price = sprites.readDataNumber(it, SH_ITEM_PRICE) | 0
+    const ownedBy = sprites.readDataNumber(it, SH_ITEM_BOUGHT_BY_PID) | 0
+
+    return "#" + id +
+        " i=" + ringIndex +
+        " wid=" + weaponId +
+        " slot=" + slot +
+        " $" + price +
+        " ownedBy=" + ownedBy +
+        " pos=(" + (it.x | 0) + "," + (it.y | 0) + ")"
+}
+
+function _shopBuildDebugSignature(nowMs: number): string {
+    // Signature used to detect meaningful changes for spam-safe logs
+    let sig = ""
+
+    // Shopkeeper core + contract
+    if (shopkeeperNpc && !(shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        sig += "sk@" + (shopkeeperNpc.x | 0) + "," + (shopkeeperNpc.y | 0)
+        sig += "|ids=" + _shopSafeStr(sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY))
+        sig += "|r=" + (sprites.readDataNumber(shopkeeperNpc, SHOP_WPN_RING_RADIUS_PX_KEY) | 0)
+        sig += "|a=" + (sprites.readDataNumber(shopkeeperNpc, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0)
+        sig += "|dd=" + _shopSafeStr(sprites.readDataString(shopkeeperNpc, SHOP_WPN_DEFAULT_DIR_KEY))
+        sig += "|dm=" + _shopSafeStr(sprites.readDataString(shopkeeperNpc, SHOP_WPN_DIR_MAP_KEY))
+
+        // Highlight contract
+        sig += "|tm=" + (sprites.readDataNumber(shopkeeperNpc, SHOP_WPN_TOUCH_MASK_KEY) | 0)
+        sig += "|tbh=" + _shopSafeStr(sprites.readDataString(shopkeeperNpc, SHOP_WPN_TOUCH_BY_HERO_KEY))
+    } else {
+        sig += "sk=none"
+    }
+
+    // Offers summary (weapon/slot/price/ownedBy)
+    sig += "|offers="
+    for (let i = 0; i < _shopRingOfferItems.length; i++) {
+        const it = _shopRingOfferItems[i]
+        if (!it || (it.flags & sprites.Flag.Destroyed)) { sig += "x"; continue }
+        const weaponId = _shopSafeStr(sprites.readDataString(it, SH_ITEM_WEAPON_ID))
+        const slot = _shopSafeStr(sprites.readDataString(it, SH_ITEM_RENDER_SLOT))
+        const price = sprites.readDataNumber(it, SH_ITEM_PRICE) | 0
+        const ownedBy = sprites.readDataNumber(it, SH_ITEM_BOUGHT_BY_PID) | 0
+        sig += "[" + weaponId + ":" + slot + ":" + price + ":" + ownedBy + "]"
+    }
+
+    // Per-hero focus
+    sig += "|focus="
+    for (let hi = 0; hi < 4; hi++) {
+        sig += "(" + (shopFocusRingIndexByHero[hi] | 0) + "," + (shopFocusUntilMsByHero[hi] | 0) + ")"
+    }
+
+    // Coins
+    sig += "|coins=" + (teamCoins | 0)
+
+    return sig
+}
+
+
+
+
+
+function _shopPrettySlot(slot: string): string {
+    const s = (slot || "").toLowerCase()
+    if (s === "slash") return "SLASH"
+    if (s === "cast") return "CAST"
+    return "THRUST"
+}
+
+function _shopOwnerLabel(ownedByPid: number, pid: number): string {
+    const ob = ownedByPid | 0
+    const p = pid | 0
+    if (ob === 0) return "AVAILABLE"
+    if (ob === p) return "YOURS"
+    return "OWNED(P" + ob + ")"
+}
+
+function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): {
+    offer: Sprite,
+    ringIndex: number,
+    weaponId: string,
+    slot: string,
+    price: number,
+    ownedBy: number,
+    active: boolean
+} {
+    const now = nowMs | 0
+    const offer = _shopGetFocusedOfferForHero(hi, now)
+
+    if (!offer) {
+        return {
+            offer: null,
+            ringIndex: -1,
+            weaponId: "",
+            slot: "",
+            price: 0,
+            ownedBy: 0,
+            active: false
+        }
+    }
+
+    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
+    const slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
+    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
+    const ownedBy = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+
+    return {
+        offer,
+        ringIndex,
+        weaponId,
+        slot,
+        price,
+        ownedBy,
+        active: true
+    }
+}
+
+function _shopBuildDialogLine(hi: number, pid: number, s: {
+    ringIndex: number,
+    weaponId: string,
+    slot: string,
+    price: number,
+    ownedBy: number,
+    active: boolean
+}): string {
+    if (!s.active) return ""
+
+    const slotPretty = _shopPrettySlot(s.slot)
+    const ownerStr = _shopOwnerLabel(s.ownedBy, pid)
+
+    // Example: "DAGGER  [THRUST]  $6  AVAILABLE"
+    return (s.weaponId || "???").toUpperCase() + "  [" + slotPretty + "]  $" + (s.price | 0) + "  " + ownerStr
+}
+
+function _shopBuildControlsLine(pid: number, s: {
+    price: number,
+    ownedBy: number,
+    active: boolean
+}): string {
+    if (!s.active) return ""
+
+    const owner = s.ownedBy | 0
+    const p = pid | 0
+
+    if (owner === 0) {
+        // Can buy (maybe insufficient coins, but we keep prompt; Step 7 logs deny)
+        return "A: buy  B: (none)    Coins: " + (teamCoins | 0)
+    }
+
+    if (owner === p) {
+        return "A: (owned)  B: return    Coins: " + (teamCoins | 0)
+    }
+
+    return "A: (blocked)  B: (none)    Coins: " + (teamCoins | 0)
+}
+
+function _shopBuildStatsLine(hi: number, s: {
+    weaponId: string,
+    slot: string,
+    active: boolean
+}): string {
+    if (!s.active) return ""
+
+    // Placeholder “preview” (replace later with real stat calc)
+    // Keep it short: one line.
+    const slotPretty = _shopPrettySlot(s.slot)
+    return "Slot=" + slotPretty + "   (preview stats TBD)"
+}
+
+
+
+function _shopGetFocusedOfferForHero(hi: number, nowMs: number): Sprite {
+    if (hi < 0 || hi > 3) return null
+
+    // Focus must be currently alive (freshness)
+    const until = shopFocusUntilMsByHero[hi] | 0
+    if (!(until > 0 && (nowMs | 0) < until)) return null
+
+    const idx = shopFocusRingIndexByHero[hi] | 0
+    if (idx < 0) return null
+
+    // Prefer ring list
+    if (idx < _shopRingOfferItems.length) {
+        const it = _shopRingOfferItems[idx]
+        if (it && !(it.flags & sprites.Flag.Destroyed)) return it
+    }
+
+    // Fallback: scan SHOP_ITEMS by ringIndex
+    _shopCullDestroyed(SHOP_ITEMS)
+    for (let i = 0; i < SHOP_ITEMS.length; i++) {
+        const it = SHOP_ITEMS[i]
+        if (!it) continue
+        if (it.flags & sprites.Flag.Destroyed) continue
+        const ri = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+        if (ri === idx) return it
+    }
+
+    return null
+}
+
+function _shopEquipWeaponToHeroSlot(hero: Sprite, renderSlot: string, weaponId: string): void {
+    if (!hero) return
+    const slot = (renderSlot || "").toLowerCase()
+
+    if (slot === "slash") {
+        sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, weaponId || "")
+    } else if (slot === "cast") {
+        sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, weaponId || "")
+    } else {
+        // default -> thrust
+        sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, weaponId || "")
+    }
+}
+
+function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, renderSlot: string, weaponId: string): void {
+    if (!hero) return
+    const slot = (renderSlot || "").toLowerCase()
+    const wid = weaponId || ""
+
+    if (slot === "slash") {
+        const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, "")
+    } else if (slot === "cast") {
+        const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, "")
+    } else {
+        const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, "")
+    }
+}
+
+function _shopSetUiBoughtFlagFromOffer(hi: number, pid: number, offer: Sprite): void {
+    if (hi < 0 || hi > 3) return
+    if (!offer) { shopBoughtByHero[hi] = false; return }
+    const boughtBy = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+    shopBoughtByHero[hi] = (boughtBy === (pid | 0))
+}
+
+
+
+function _shopApplyFocusGateToShopUi(nowMs: number): void {
+    const now = nowMs | 0
+    for (let hi = 0; hi < 4; hi++) {
+        const until = shopFocusUntilMsByHero[hi] | 0
+        const active = (until > 0) && (now < until)
+
+        if (active) {
+            // Keep the existing shop UI/input gate alive while an offer is focused
+            shopTouchUntilMsByHero[hi] = now + SHOP_TOUCH_GRACE_MS
+        } else {
+            // Let it decay naturally (do not force to 0; preserves your grace semantics)
+            // (No-op here)
+        }
+    }
+}
+
+
+
+function _shopIsAliveSprite(s: Sprite): boolean {
+    return !!s && ((s.flags & sprites.Flag.Destroyed) === 0)
+}
+
+function _shopComputeFocusedRingIndexForHero(hero: Sprite): number {
+    if (!hero) return -1
+
+    // Prefer the dedicated ring offer list (Step 1–4)
+    for (let i = 0; i < _shopRingOfferItems.length; i++) {
+        const it = _shopRingOfferItems[i]
+        if (!_shopIsAliveSprite(it)) continue
+        if (_shopIsOverlapping(hero, it)) {
+            const idx = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+            return (idx >= 0) ? idx : i
+        }
+    }
+
+    // Fallback: scan SHOP_ITEMS if ring list isn't populated
+    // (This keeps the seam usable even if someone later spawns items outside the ring builder.)
+    _shopCullDestroyed(SHOP_ITEMS)
+    for (let i = 0; i < SHOP_ITEMS.length; i++) {
+        const it = SHOP_ITEMS[i]
+        if (!_shopIsAliveSprite(it)) continue
+        if (_shopIsOverlapping(hero, it)) {
+            const idx = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+            return (idx >= 0) ? idx : -1
+        }
+    }
+
+    return -1
+}
+
+function _shopPublishTouchStateOnShopkeeper(nowMs: number): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    // Determine "active touch" (within keepalive)
+    let mask = 0
+    const parts: string[] = []
+
+    for (let hi = 0; hi < 4; hi++) {
+        const until = shopFocusUntilMsByHero[hi] | 0
+        const active = (until > 0) && ((nowMs | 0) < until)
+
+        const idx = active ? (shopFocusRingIndexByHero[hi] | 0) : -1
+        parts.push("" + idx)
+
+        if (active && idx >= 0 && idx < 31) {
+            mask |= (1 << idx)
+        }
+    }
+
+    const touchByHeroStr = parts.join("|")
+
+    // Publish to shopkeeper for Phaser ghost-ring renderer
+    sprites.setDataNumber(shopkeeperNpc, SHOP_WPN_TOUCH_MASK_KEY, mask | 0)
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_TOUCH_BY_HERO_KEY, touchByHeroStr)
+
+    // Debug only on change
+    if (mask !== _shopPrevTouchMask || touchByHeroStr !== _shopPrevTouchByHero) {
+        _shopPrevTouchMask = mask
+        _shopPrevTouchByHero = touchByHeroStr
+        console.log("[SHOP][FOCUS] mask=" + mask + " byHero=" + touchByHeroStr)
+    }
+}
+
+
+// Main “shop controls layer” tick (Step 5)
+// - Today: focus comes from overlap
+// - Future: focus can come from a menu selection (arrows) without touching publish/purchase code
+function shopControlTick(nowMs: number): void {
+    const now = nowMs | 0
+
+
+//    let shopFocusRingIndexByHero: number[] = [-1, -1, -1, -1]
+//    let shopFocusUntilMsByHero: number[] = [0, 0, 0, 0]
+//    let shopTouchUntilMsByHero: number[] = [0, 0, 0, 0]
+//    let shopBoughtByHero: boolean[] = [false, false, false, false]
+ //   let shopFocusOfferByHero: Sprite[] = [null, null, null, null]
+
+
+    // If shopkeeper not alive, clear state
+    if (!_shopIsAliveSprite(shopkeeperNpc)) {
+        for (let hi = 0; hi < 4; hi++) {
+            shopFocusRingIndexByHero[hi] = -1
+            shopFocusUntilMsByHero[hi] = 0
+        }
+        return
+    }
+
+    // Ensure ring offers exist (safe keep-in-sync)
+    _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
+
+    // Compute focus per hero (overlap-based for now)
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!_shopIsAliveSprite(hero)) {
+            shopFocusRingIndexByHero[hi] = -1
+            shopFocusUntilMsByHero[hi] = 0
+            continue
+        }
+
+        const idx = _shopComputeFocusedRingIndexForHero(hero)
+
+        if (idx >= 0) {
+            shopFocusRingIndexByHero[hi] = idx
+            shopFocusUntilMsByHero[hi] = (now + SHOP_FOCUS_KEEPALIVE_MS) | 0
+        } else {
+            // Persist briefly; then drop
+            const until = shopFocusUntilMsByHero[hi] | 0
+            if (!(until > 0 && now < until)) {
+                shopFocusRingIndexByHero[hi] = -1
+                shopFocusUntilMsByHero[hi] = 0
+            }
+        }
+    }
+
+    // Publish highlight/touch state onto shopkeeper
+    _shopPublishTouchStateOnShopkeeper(now)
+
+    // Step 9: comprehensive dump (spam-safe; prints on change or throttled)
+    shopDebugDump(now)
+}
+
+
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function _shopSplitPipeList(s: string): string[] {
+    const raw = (s || "").trim()
+    if (!raw) return []
+    // Keep empty segments out
+    const parts = raw.split("|")
+    const out: string[] = []
+    for (let i = 0; i < parts.length; i++) {
+        const p = (parts[i] || "").trim()
+        if (p) out.push(p)
+    }
+    return out
+}
+
+function _shopDegToRad(deg: number): number {
+    return (deg * Math.PI) / 180
+}
+
+function _shopDestroyOfferItems(): void {
+    for (let i = 0; i < _shopRingOfferItems.length; i++) {
+        const s = _shopRingOfferItems[i]
+        if (s && !(s.flags & sprites.Flag.Destroyed)) s.destroy()
+    }
+    _shopRingOfferItems = []
+}
+
+function _shopPublishWeaponRingContractOnShopkeeper(sk: Sprite): void {
+    if (!sk) return
+
+    // IDs + geometry + direction controls
+    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, SHOP_DEFAULT_RING_WEAPON_IDS)
+    sprites.setDataNumber(sk, SHOP_WPN_RING_RADIUS_PX_KEY, SHOP_DEFAULT_RING_RADIUS_PX)
+    sprites.setDataNumber(sk, SHOP_WPN_RING_ANGLE_DEG_KEY, SHOP_DEFAULT_RING_ANGLE_DEG)
+    sprites.setDataString(sk, SHOP_WPN_DEFAULT_DIR_KEY, SHOP_DEFAULT_RING_DIR)
+    sprites.setDataString(sk, SHOP_WPN_DIR_MAP_KEY, SHOP_DEFAULT_RING_DIR_MAP)
+
+    // Slots + source phases (alignment/visibility)
+    sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, SHOP_DEFAULT_RING_SLOTS)
+    sprites.setDataString(sk, SHOP_WPN_RING_SOURCE_PHASES_KEY, SHOP_DEFAULT_RING_SOURCE_PHASES)
+
+    // Highlight state
+    sprites.setDataNumber(sk, SHOP_WPN_TOUCH_MASK_KEY, 0)
+    sprites.setDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY, "-1|-1|-1|-1")
+}
+
+function _shopGameplayKindForRingIndex(i: number): string {
+    // Aligned with SHOP_DEFAULT_RING_WEAPON_IDS order:
+    // diamond (intellect staff), glowsword (strength), spear (agility), simple (support)
+    if (i === 0) return "intellect"
+    if (i === 1) return "strength"
+    if (i === 2) return "agility"
+    if (i === 3) return "support"
+    return "unknown"
+}
+
+function _shopPriceForRingIndex(i: number): number {
+    // Placeholder pricing – adjust later
+    if (i === 0) return 10
+    if (i === 1) return 10
+    if (i === 2) return 10
+    if (i === 3) return 10
+    return 10
+}
+
+function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
+    if (!sk) return
+
+    const ids = _shopSplitPipeList(sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || SHOP_DEFAULT_RING_WEAPON_IDS)
+    const slots = _shopSplitPipeList(sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || SHOP_DEFAULT_RING_SLOTS)
+
+    const n = ids.length
+    if (n <= 0) {
+        _shopDestroyOfferItems()
+        return
+    }
+
+    // Rebuild if wrong count or any destroyed
+    let rebuild = false
+    if (_shopRingOfferItems.length !== n) rebuild = true
+    else {
+        for (let i = 0; i < _shopRingOfferItems.length; i++) {
+            const s = _shopRingOfferItems[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) { rebuild = true; break }
+        }
+    }
+    if (rebuild) _shopDestroyOfferItems()
+
+    const radius = sprites.readDataNumber(sk, SHOP_WPN_RING_RADIUS_PX_KEY) | 0
+    const baseDeg = sprites.readDataNumber(sk, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0
+
+    // Create missing items (or all, if rebuilt)
+    for (let i = 0; i < n; i++) {
+        const weaponId = ids[i]
+        const renderSlot = (i < slots.length) ? slots[i] : "thrust"
+
+        const thetaDeg = baseDeg + ((360 * i) / n)
+        const theta = _shopDegToRad(thetaDeg)
+        const ox = (Math.round(radius * Math.cos(theta)) | 0)
+        const oy = (Math.round(radius * Math.sin(theta)) | 0)
+
+        const x = (sk.x + ox) | 0
+        const y = (sk.y + oy) | 0
+
+        let it: Sprite = null
+        if (!rebuild && i < _shopRingOfferItems.length) it = _shopRingOfferItems[i]
+
+        if (!it) {
+            // Spawn as an *invisible* hitbox (Arcade overlap still works; Phaser won't render it anyway)
+            it = spawnShopItem(x, y, weaponId) // label is weaponId for now
+            it.setFlag(SpriteFlag.Invisible, true)
+            it.setFlag(SpriteFlag.Ghost, true)
+            it.z = sk.z + 5
+            _shopRingOfferItems[i] = it
+        } else {
+            it.setPosition(x, y)
+        }
+
+        // Stamp contract-required metadata
+        sprites.setDataNumber(it, SH_ITEM_RING_INDEX, i | 0)
+        sprites.setDataString(it, SH_ITEM_WEAPON_ID, weaponId)
+        sprites.setDataString(it, SH_ITEM_LABEL, weaponId)
+        sprites.setDataString(it, SH_ITEM_RENDER_SLOT, renderSlot)
+        sprites.setDataString(it, SH_ITEM_GAMEPLAY_KIND, _shopGameplayKindForRingIndex(i))
+        sprites.setDataNumber(it, SH_ITEM_PRICE, _shopPriceForRingIndex(i))
+        if ((sprites.readDataNumber(it, SH_ITEM_BOUGHT_BY_PID) | 0) === 0) {
+            sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
+        }
+    }
+}
+
+
+
+function ensureTeamCoinsHud(): Sprite {
+    if (teamCoinsHud && !(teamCoinsHud.flags & sprites.Flag.Destroyed)) return teamCoinsHud
+
+    const t = textsprite.create("Coins: 0", 0, COIN_HUD_FG)
+    t.setMaxFontHeight(7)
+    t.setOutline(1, 15)
+
+    // Stick to screen
+    t.setFlag(SpriteFlag.RelativeToCamera, true)
+    t.setPosition(42, 8)
+    t.z = 10000
+
+    // Tag for Phaser-side UI identification (optional but nice)
+    sprites.setDataString(t, UI_KIND_KEY, UI_KIND_TEAM_COINS)
+
+    teamCoinsHud = t
+    return t
+}
+
+
+function _shopEnsureMenu(): TextSprite {
+    if (_shopMenu) return _shopMenu
+    const t = textsprite.create("", 0, 1)
+    t.setMaxFontHeight(8)
+    t.setBorder(1, 15, 2)
+    t.setOutline(1, 15)
+    t.z = 10_000
+    t.setFlag(SpriteFlag.Invisible, true)
+    _shopMenu = t
+    return t
+}
+
+function _shopIsOverlapping(a: Sprite, b: Sprite): boolean {
+    if (!a || !b) return false
+    const ax0 = (a.x - (a.width >> 1)) | 0
+    const ay0 = (a.y - (a.height >> 1)) | 0
+    const ax1 = (a.x + (a.width >> 1)) | 0
+    const ay1 = (a.y + (a.height >> 1)) | 0
+
+    const bx0 = (b.x - (b.width >> 1)) | 0
+    const by0 = (b.y - (b.height >> 1)) | 0
+    const bx1 = (b.x + (b.width >> 1)) | 0
+    const by1 = (b.y + (b.height >> 1)) | 0
+
+    return (ax0 < bx1) && (ax1 > bx0) && (ay0 < by1) && (ay1 > by0)
+}
+
+
+function _shopIsOverlappingOLD(a: Sprite, b: Sprite): boolean {
+    // simple AABB overlap (works in both Arcade and Phaser)
+    const dx = Math.abs((a.x | 0) - (b.x | 0))
+    const dy = Math.abs((a.y | 0) - (b.y | 0))
+    const ax = ((a.width | 0) + (b.width | 0)) >> 1
+    const ay = ((a.height | 0) + (b.height | 0)) >> 1
+    return dx <= ax && dy <= ay
+}
+
+function _shopFindTargetForHero(hero: Sprite): Sprite {
+    if (!hero) return null
+
+    _shopCullDestroyed(SHOP_NPCS)
+    _shopCullDestroyed(SHOP_ITEMS)
+
+    // Priority: NPC first, then item (change if you want)
+    for (let i = 0; i < SHOP_NPCS.length; i++) {
+        const npc = SHOP_NPCS[i]
+        if (!npc) continue
+        if (_shopIsOverlapping(hero, npc)) return npc
+    }
+
+    for (let i = 0; i < SHOP_ITEMS.length; i++) {
+        const it = SHOP_ITEMS[i]
+        if (!it) continue
+        if (_shopIsOverlapping(hero, it)) return it
+    }
+
+    return null
+}
+
+function _shopSetHighlight(target: Sprite, on: boolean): void {
+    if (!target) return
+    // Simple “touch does something”: toggle a visible outline color
+    // (works for placeholder box sprites)
+    if (on) target.image.drawRect(0, 0, target.image.width, target.image.height, 2)
+    else {
+        // re-draw border in normal color (1) without clearing the whole sprite
+        target.image.drawRect(0, 0, target.image.width, target.image.height, 1)
+    }
+}
+
+
+function setTeamCoins(newVal: number): void {
+    teamCoins = Math.max(0, newVal | 0)
+    const hud = ensureTeamCoinsHud()
+    ;(hud as any).setText("Coins: " + teamCoins)
+}
+
+function showCoinPop(x: number, y: number, delta: number): void {
+    const t = textsprite.create("+" + (delta | 0), 0, COIN_HUD_FG)
+    t.setMaxFontHeight(8)
+    t.setOutline(1, 15)
+    t.setPosition(x, y)
+    t.lifespan = 900
+    t.vy = -12
+}
+
+function addTeamCoins(delta: number, popX: number, popY: number): void {
+    const d = delta | 0
+    if (d <= 0) return
+    setTeamCoins(teamCoins + d)
+    showCoinPop(popX, popY, d)
+}
+
+
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// SHOP PHASE POC (touch → reaction) + (spawn NPC box) + (overlap-gated menu) + (B toggles bought)
+// Paste this as a new section near your other SpriteKind/constants (before the handlers is fine).
+
+// --------------------------------------------------------------
+// SHOP POC DATA KEYS
+// --------------------------------------------------------------
+const SHOP_DATA = {
+    NAME: "shopName",           // string: npc name / item name
+    PROMPT: "shopPrompt",       // number: 1 if hero is in range (for UI)
+    PURCHASED: "shopBought",    // number: 0/1
+    NEAR_KIND: "shopNearKind",  // number: 0 none, 1 npc, 2 item
+    BOUGHT: "shopBought",
+    NPC_NAME: "shopNpcName",
+    ITEM_NAME: "shopItemName",
+    IS_SHOP_NPC: "shopNpc",
+    IS_SHOP_ITEM: "shopItem",
+    LABEL: "shopLabel",
+};
+
+
+let _shopPrevB1 = false
+let _shopMenu: TextSprite = null
+let _shopLastTarget: Sprite = null
+
+
+// POC handles
+let shopNpc0: Sprite = null
+let shopItem0: Sprite = null
+let shopPromptText: TextSprite = null
+
+
+
+const SHOP_DATA_ITEM_ID = "shItemId"          // number
+const SHOP_DATA_ITEM_BOUGHT = "shBought"      // number 0/1
+
+
+// Shop weapon ring: sprite.data keys (consumed by arcadeCompat.ts)
+const SHOP_WPN_RING_IDS_KEY = "shopWpnRingIds"            // string list: "idA|idB|idC"
+const SHOP_WPN_RING_RADIUS_PX_KEY = "shopWpnRingRadiusPx" // number (pixels)
+const SHOP_WPN_RING_ANGLE_DEG_KEY = "shopWpnRingAngleDeg" // number (degrees)
+const SHOP_WPN_DEFAULT_DIR_KEY = "shopWpnDefaultDir"      // string: "R","L","U","D"
+const SHOP_WPN_DIR_MAP_KEY = "shopWpnDirMap"              // string map: "idA:R,idB:U"
+
+const SHOP_DEFAULT_RING_RADIUS_PX = 100 //22 
+const SHOP_DEFAULT_RING_ANGLE_DEG = 0
+const SHOP_DEFAULT_RING_DIR = "R"
+const SHOP_DEFAULT_RING_DIR_MAP = ""
+
+// ------------------------------------------------------------
+// SHOP WEAPON RING – contract keys (shopkeeper sprite.data)
+// ------------------------------------------------------------
+const SHOP_WPN_RING_SLOTS_KEY = "shopWpnRingSlots"                       // "thrust|slash|thrust|cast"
+const SHOP_WPN_RING_SOURCE_PHASES_KEY = "shopWpnRingSourcePhases"        // "thrust|slash|thrust|cast"
+const SHOP_WPN_TOUCH_MASK_KEY = "shopWpnTouchMask"                       // number bitmask
+const SHOP_WPN_TOUCH_BY_HERO_KEY = "shopWpnTouchByHero"                  // "-1|-1|-1|-1"
+
+// Per-offer item sprite.data keys (ShopItem hitboxes)
+const SH_ITEM_RING_INDEX = "shRingIndex"           // number
+const SH_ITEM_WEAPON_ID = "shWeaponId"             // string (atlas model id)
+const SH_ITEM_LABEL = "shLabel"                    // string
+const SH_ITEM_RENDER_SLOT = "shRenderSlot"         // string: "thrust"|"slash"|"cast"
+const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"strength"|"agility"|"support"
+const SH_ITEM_PRICE = "shPrice"                    // number
+const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
+
+// ------------------------------------------------------------
+// SHOP WEAPON RING – canonical defaults (must match atlas model ids)
+// ------------------------------------------------------------
+const SHOP_DEFAULT_RING_WEAPON_IDS = "diamond|glowsword|spear|simple"
+const SHOP_DEFAULT_RING_SLOTS = "thrust|slash|thrust|cast"
+const SHOP_DEFAULT_RING_SOURCE_PHASES = "thrust|slash|thrust|cast"
+
+
+
+
+
+
+function _mkShopNpcBox(): Image {
+    const img = image.create(16, 16)
+    img.fill(0)
+    img.drawRect(0, 0, 16, 16, 7)
+    img.drawRect(2, 2, 12, 12, 10)
+    img.setPixel(5, 6, 1); img.setPixel(10, 6, 1) // eyes
+    img.drawLine(6, 11, 9, 11, 2) // mouth
+    return img
+}
+
+function _mkShopItemBox(): Image {
+    const img = image.create(12, 12)
+    img.fill(0)
+    img.drawRect(0, 0, 12, 12, 7)
+    img.fillRect(3, 3, 6, 6, 9)
+    return img
+}
+
+
+// Per-hero interaction state (POC: overlap “freshness” time window)
+let heroShopTouchUntilMs: number[] = []
+let heroShopTargetNpc: Sprite[] = []
+let heroShopMenu: TextSprite[] = []
+let heroShopSpawnedItem: Sprite[] = []        // per hero POC “inventory box sprite”
+
+const SHOP_TOUCH_KEEPALIVE_MS = 120
+
+function _shopEnsureMenuForHero(heroIndex: number): TextSprite {
+    let t = heroShopMenu[heroIndex]
+    if (t) return t
+
+    // bg=0, fg=1 (blue) – adjust later
+    t = textsprite.create("", 0, 1)
+    t.setMaxFontHeight(8)
+    t.setBorder(1, 15, 2)
+    t.setOutline(1, 15)
+    t.setFlag(SpriteFlag.Invisible, true)
+
+    heroShopMenu[heroIndex] = t
+    return t
+}
+
+function _shopMenuTextForNpc(npc: Sprite): string {
+    const bought = (sprites.readDataNumber(npc, SHOP_DATA_ITEM_BOUGHT) | 0) ? true : false
+    return bought ? "item bought" : "item not bought"
+}
+
+function _shopMakeBoxImage(w: number, h: number, borderCol: number, fillCol: number): Image {
+    const img = image.create(w, h)
+    img.fill(fillCol)
+    img.drawRect(0, 0, w, h, borderCol)
+    // tiny “face” dot so it reads as something (optional)
+    img.setPixel((w >> 1) - 1, (h >> 1), borderCol)
+    img.setPixel((w >> 1) + 1, (h >> 1), borderCol)
+    return img
+}
+
+function _shopMakeDitherBg(w: number, h: number, col: number): Image {
+    const img = image.create(w, h)
+    // checkerboard “alpha”: color col on alternating pixels, transparent elsewhere
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            if (((x + y) & 1) === 0) img.setPixel(x, y, col)
+        }
+    }
+    img.drawRect(0, 0, w, h, 15)
+    return img
+}
+
+function _shopEnsureUiForHero(hi: number): void {
+    if (hi < 0 || hi > 3) return
+
+    if (!shopUiBgByHero[hi]) {
+        const bg = sprites.create(_shopMakeDitherBg(150, 42, 1), SpriteKind.ShopUI)
+        bg.setFlag(SpriteFlag.Ghost, true)
+        bg.setFlag(SpriteFlag.RelativeToCamera, true)
+        bg.z = 1000
+        shopUiBgByHero[hi] = bg
+    }
+
+    if (!shopUiTextByHero[hi]) {
+        const t = textsprite.create("", 15, 0)
+        t.setMaxFontHeight(12)              // BIGGER
+        t.setOutline(1, 1)
+        t.setFlag(SpriteFlag.RelativeToCamera, true)
+        t.z = 1001
+        shopUiTextByHero[hi] = t
+    }
+
+    if (!shopUiStatsByHero[hi]) {
+        const s = textsprite.create("", 15, 0)
+        s.setMaxFontHeight(10)
+        s.setOutline(1, 1)
+        s.setFlag(SpriteFlag.RelativeToCamera, true)
+        s.z = 1001
+        shopUiStatsByHero[hi] = s
+    }
+}
+
+function _shopDestroyUiForHero(hi: number): void {
+    if (hi < 0 || hi > 3) return
+
+    // Hard guards: if the arrays don't exist for some reason, do nothing.
+    if (typeof shopUiBgByHero === "undefined") return
+    if (typeof shopUiTextByHero === "undefined") return
+    if (typeof shopUiStatsByHero === "undefined") return
+
+    const bg = shopUiBgByHero[hi]
+    const t = shopUiTextByHero[hi]
+    const s = shopUiStatsByHero[hi]
+
+    if (bg) { bg.destroy(); shopUiBgByHero[hi] = null }
+    if (t) { t.destroy(); shopUiTextByHero[hi] = null }
+    if (s) { s.destroy(); shopUiStatsByHero[hi] = null }
+}
+
+function _shopStatsPreviewText(hi: number): string {
+    // For now: show “+0” baseline, then “+1” after purchase
+    const bought = shopBoughtByHero[hi]
+    const dmg = bought ? "+1" : "+0"
+    const reach = bought ? "+0" : "+0"
+    const time = bought ? "+0" : "+0"
+    const status = bought ? "+0" : "+0"
+    return "DMG " + dmg + "  REACH " + reach + "  TIME " + time + "  STATUS " + status
+}
+
+
+
+function _shopUpdateUiForHero(hi: number, now: number): void {
+    const bg = shopUiBgByHero[hi]
+    const t = shopUiTextByHero[hi]
+    const s = shopUiStatsByHero[hi]
+    if (!bg || !t || !s) return
+
+    // Bottom-left placement (unchanged)
+    const margin = 6
+    const W = userconfig.ARCADE_SCREEN_WIDTH
+    const H = userconfig.ARCADE_SCREEN_HEIGHT
+
+    bg.left = margin
+    bg.bottom = H - margin
+
+    t.left = margin + 6
+    t.bottom = H - margin - 22
+
+    s.left = margin + 6
+    s.bottom = H - margin - 8
+
+    // Focus-driven content
+    const pid = (hi + 1) | 0
+    const summary = _shopGetFocusedOfferSummaryForHero(hi, now | 0)
+
+    if (!summary.active) {
+        // If shop is gated on but no focused item, show minimal prompt
+        t.setText("Shop: (no item)")
+        s.setText("Walk onto a weapon.  Coins: " + (teamCoins | 0))
+        return
+    }
+
+    // Ensure your old boolean matches the focused offer ownership
+    shopBoughtByHero[hi] = (summary.ownedBy === pid)
+
+    const dialog = _shopBuildDialogLine(hi, pid, summary)
+    const controls = _shopBuildControlsLine(pid, summary)
+    const stats = _shopBuildStatsLine(hi, summary)
+
+    // Two-line UI:
+    // - main line: item/slot/price/owner
+    // - stats line: controls + optional preview
+    t.setText(dialog)
+    s.setText(controls + "    " + stats)
+}
+
+
+
+function shopModeUpdate(nowMs: number): void {
+//    _shopEnsurePerHeroStateArrays()
+
+    const now = nowMs | 0
+
+    // If the shop isn’t enabled, do nothing.
+    // (If you want it always running, remove this guard.)
+    // if (!SHOP_MODE_ACTIVE) return
+
+    // Step 5: compute focus + publish highlight state to shopkeeper
+    shopControlTick(now)
+
+    // Step 6: item-focus gate drives shop UI/input gate
+    _shopApplyFocusGateToShopUi(now)
+
+    // Existing UI behavior (now depends on focus-driven shopTouchUntilMsByHero)
+    for (let hi = 0; hi < 4; hi++) {
+        if (now <= (shopTouchUntilMsByHero[hi] | 0)) {
+            _shopEnsureUiForHero(hi)
+            _shopUpdateUiForHero(hi, now)
+        } else {
+            _shopDestroyUiForHero(hi)
+        }
+    }
+
+    // Step 7–8: purchase/return controls
+    shopHandleControls(now)
+
+    // Step 9: debug dump / visibility
+    shopDebugDump(now)
+}
+
+
+
+function spawnShopNpcBox(x: number, y: number, itemId: number): Sprite {
+    // 12x16 “placeholder NPC” box
+    const npc = sprites.create(_shopMakeBoxImage(12, 16, 1, 13), SpriteKind.ShopNpc)
+    npc.setFlag(SpriteFlag.Ghost, true)   // don’t block movement (POC)
+    npc.x = x
+    npc.y = y
+    npc.z = 2000                         // sit above ground clutter
+
+    sprites.setDataNumber(npc, SHOP_DATA_ITEM_ID, itemId | 0)
+    sprites.setDataNumber(npc, SHOP_DATA_ITEM_BOUGHT, 0)
+
+    return npc
+}
+
+function _shopEnsureItemForHero(heroIndex: number): Sprite {
+    let it = heroShopSpawnedItem[heroIndex]
+    if (it && !(it.flags & sprites.Flag.Destroyed)) return it
+
+    // 10x10 “inventory/weapon placeholder box”
+    it = sprites.create(_shopMakeBoxImage(10, 10, 2, 0), SpriteKind.ShopItem)
+    it.setFlag(SpriteFlag.Ghost, true)
+    it.setFlag(SpriteFlag.Invisible, true)
+    it.z = 5000
+
+    heroShopSpawnedItem[heroIndex] = it
+    return it
+}
+
+function _shopSetItemVisibleForHero(heroIndex: number, hero: Sprite, show: boolean): void {
+    const it = _shopEnsureItemForHero(heroIndex)
+    it.setFlag(SpriteFlag.Invisible, !show)
+    if (!show) return
+
+    // POC “inventory position”: floats near hero
+    it.x = hero.x + 18
+    it.y = hero.y - 18
+}
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 1) Touching something makes something happen
+//    Overlap keeps “shop target” alive for a short window; menu is gated by that window.
+sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
+    const heroIndex = getHeroIndex(hero)
+    if (heroIndex < 0) return
+
+    const now = game.runtime() | 0
+    heroShopTargetNpc[heroIndex] = npc
+    heroShopTouchUntilMs[heroIndex] = (now + SHOP_TOUCH_KEEPALIVE_MS) | 0
+
+    // “Something happens” (POC): tiny effect + debug line
+    npc.startEffect(effects.spray, 40)
+    // If you hate spam, delete this log once confirmed
+    console.log("[SHOP] overlap hero=" + heroIndex + " itemId=" + (sprites.readDataNumber(npc, SHOP_DATA_ITEM_ID) | 0))
+
+    // Update menu text immediately
+    const m = _shopEnsureMenuForHero(heroIndex)
+    m.setText(_shopMenuTextForNpc(npc))
+    m.setFlag(SpriteFlag.Invisible, false)
+})
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 2) Overlap-gated menu visibility + positioning (runs every frame)
+function updateShopUi(now: number): void {
+    const nowMs = now | 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        const until = heroShopTouchUntilMs[hi] | 0
+        const npc = heroShopTargetNpc[hi]
+
+        const aliveNpc = npc && !(npc.flags & sprites.Flag.Destroyed)
+        const active = aliveNpc && (until > 0) && (nowMs < until)
+
+        const m = _shopEnsureMenuForHero(hi)
+
+        if (!active) {
+            m.setFlag(SpriteFlag.Invisible, true)
+            // keep target but it’ll be overwritten on next overlap; you can also clear it:
+            // heroShopTargetNpc[hi] = null
+            continue
+        }
+
+        // Menu position near hero
+        m.z = hero.z + 50
+        m.x = hero.x
+        m.y = hero.y - (hero.height >> 1) - 18
+
+        // Refresh text (cheap + keeps it consistent)
+        m.setText(_shopMenuTextForNpc(npc))
+        m.setFlag(SpriteFlag.Invisible, false)
+
+        // If item is bought, keep showing placeholder “inventory” box
+        const bought = (sprites.readDataNumber(npc, SHOP_DATA_ITEM_BOUGHT) | 0) ? true : false
+        _shopSetItemVisibleForHero(hi, hero, bought)
+    }
+}
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 3) B button toggles bought/not-bought while overlapping the shop NPC
+function _shopToggleForPlayer(playerId: number): void {
+    const pid = playerId | 0
+    if (pid < 1 || pid > 4) return
+
+    const hi = (playerToHeroIndex && (playerToHeroIndex[pid] | 0) >= 0) ? (playerToHeroIndex[pid] | 0) : -1
+    if (hi < 0 || hi >= heroes.length) return
+
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const now = game.runtime() | 0
+    const until = heroShopTouchUntilMs[hi] | 0
+    const npc = heroShopTargetNpc[hi]
+
+    if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+    if (!(until > 0 && now < until)) return   // not “currently overlapping” (freshness gate)
+
+    const bought0 = sprites.readDataNumber(npc, SHOP_DATA_ITEM_BOUGHT) | 0
+    const bought1 = bought0 ? 0 : 1
+    sprites.setDataNumber(npc, SHOP_DATA_ITEM_BOUGHT, bought1)
+
+    console.log("[SHOP] TOGGLE pid=" + pid + " hero=" + hi + " bought=" + bought1)
+
+    // Menu updates instantly
+    const m = _shopEnsureMenuForHero(hi)
+    m.setText(_shopMenuTextForNpc(npc))
+    m.setFlag(SpriteFlag.Invisible, false)
+
+    // Spawn/show placeholder item box if bought
+    _shopSetItemVisibleForHero(hi, hero, bought1 ? true : false)
+}
+
+function installShopInputHandlers(): void {
+    // Phaser runtime does not define ControllerButtonEvent,
+    // and this POC uses polling edge-detect instead.
+    // (Shop input is handled in shopHandleInputs() called from the loop.)
+}
+
+
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+
+
+
+
+// Convenience: “shop upgrade” entry (label is stable; value is the current total shop bonus)
+function shopSetDamageBonus(heroIndex: number, family: number, value: number): void {
+    const b = _damageBucketForFamily(family)
+    if (!b) return
+    heroModSet(heroIndex, b, "shop.damage", value | 0)
+}
+
+function shopAddDamageBonus(heroIndex: number, family: number, delta: number): void {
+    const b = _damageBucketForFamily(family)
+    if (!b) return
+    const cur = heroModGet(heroIndex, b, "shop.damage") | 0
+    heroModSet(heroIndex, b, "shop.damage", (cur + (delta | 0)) | 0)
+}
+
+function _stampHumanoidPhaseForSprite(s: Sprite, phaseName: string, nowMs: number, durMs: number): void {
+    if (!s) return
+    const now = nowMs | 0
+    const dur = Math.max(1, durMs | 0)
+
+    // These are the same HERO_DATA keys your Phaser anim glue is reading for heroes.
+    sprites.setDataString(s, HERO_DATA.PhaseName, phaseName)
+    sprites.setDataNumber(s, HERO_DATA.PhaseStartMs, now)
+    sprites.setDataNumber(s, HERO_DATA.PhaseDurationMs, dur)
+    sprites.setDataNumber(s, HERO_DATA.PhaseProgressInt, 0)
+
+    // Keep it non-segmented
+    _animKeys_clearPhasePart(s as any)
+}
+
+
+let _shopGrantedCoins = false
+
+
+function shopInitPOC(): void {
+//    _shopEnsurePerHeroStateArrays()
+
+
+        if (!_shopGrantedCoins) {
+            _shopGrantedCoins = true
+            setTeamCoins(999)
+        }
+
+
+    // ---------------------------------------------------------
+    // 1) Spawn a simple trigger zone (this is what players overlap)
+    // ---------------------------------------------------------
+    if (!shopTriggerZone) {
+        const img = image.create(28, 18)
+        img.fill(1)
+        img.drawRect(0, 0, 28, 18, 15)
+        img.drawLine(2, 9, 25, 9, 15)
+
+        shopTriggerZone = sprites.create(img, SpriteKind.ShopUI)
+        shopTriggerZone.setFlag(SpriteFlag.Ghost, true)
+
+        // Put it somewhere obvious near center for now
+        const W = userconfig.ARCADE_SCREEN_WIDTH
+        const H = userconfig.ARCADE_SCREEN_HEIGHT
+        shopTriggerZone.setPosition((W >> 1) + 40, (H >> 1))
+    }
+
+    // ---------------------------------------------------------
+    // 2) Spawn the shopkeeper NPC as a “hero-like” sprite
+    //    PlayerId=99 so Phaser can treat it as a managed “player”
+    // ---------------------------------------------------------
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        // Find an existing hero sprite that already has OWNER=99 (no sprites.allOfKind)
+        let shopHi = -1
+        for (let i = 0; i < heroes.length; i++) {
+            const h = heroes[i]
+            if (!h) continue
+            if (h.flags & sprites.Flag.Destroyed) continue
+            const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+            if (owner === SHOPKEEPER_PLAYER_ID) { shopHi = i; break }
+        }
+
+        // If none exists yet, create it using the NORMAL hero pipeline
+        if (shopHi < 0) {
+            const sx = (shopTriggerZone.x + 22) | 0
+            const sy = (shopTriggerZone.y - 4) | 0
+
+            createHeroForPlayer(
+                SHOPKEEPER_PLAYER_ID,
+                sx,
+                sy,
+                SHOPKEEPER_HERO_NAME,     // profileNameOverride -> "Shopkeeper"
+                FAMILY.SUPPORT,           // familyOverride
+                true,                     // isNpc
+                false,                    // forcePlayerToHeroIndexMapping
+                false
+            )
+
+            shopHi = heroes.length - 1
+        }
+
+        shopkeeperNpc = heroes[shopHi]
+
+        // Force shopkeeper to face DOWN on spawn (Arcade: +Y is down)
+        heroFacingX[shopHi] = 0
+        heroFacingY[shopHi] = 1
+        shopkeeperNpc.vx = 0
+        shopkeeperNpc.vy = 0
+
+        // Publish facing into sprite.data so Phaser/anim glue sees it
+        syncHeroDirData(shopHi)
+
+        // Optional: nudge renderer to re-resolve frame immediately
+        callHeroAnim(shopHi, "idle", 0)
+
+        if (shopkeeperNpc) {
+            shopkeeperNpc.setFlag(SpriteFlag.Ghost, false)
+
+            // Canonical identity fields
+            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.OWNER, SHOPKEEPER_PLAYER_ID)
+            sprites.setDataString(shopkeeperNpc, HERO_DATA.NAME, SHOPKEEPER_HERO_NAME)
+
+            // If your glue uses these offsets/always-show, keep them:
+            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.HERO_WPN_OFF_X, 10)
+            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.HERO_WPN_OFF_Y, 6)
+            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
+
+            // Keep legacy fields too (Phaser glue often reads these)
+            sprites.setDataString(shopkeeperNpc, "heroName", SHOPKEEPER_HERO_NAME)
+            sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.SUPPORT))
+
+            // Give it a stable idle phase window
+            const nowMs = Math.max(1, game.runtime() | 0)
+            setHeroPhaseString(shopHi, "idle")
+            _animKeys_stampPhaseWindow(
+                shopHi,
+                shopkeeperNpc,
+                "idle",
+                nowMs,
+                999999,
+                "shopInitPOC(shopkeeper)"
+            )
+
+            // Place it near the trigger zone (in case it existed but was elsewhere)
+            shopkeeperNpc.setPosition(shopTriggerZone.x + 22, shopTriggerZone.y - 4)
+
+            // ---------------------------------------------------------
+            // Publish ring contract + ensure offer hitboxes exist
+            // ---------------------------------------------------------
+            _shopPublishWeaponRingContractOnShopkeeper(shopkeeperNpc)
+            _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
+        }
+    } else {
+        // Shopkeeper exists already: ensure contract + offers stay in sync
+        _shopPublishWeaponRingContractOnShopkeeper(shopkeeperNpc)
+        _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
+    }
+
+    // ---------------------------------------------------------
+    // 3) REMOVE pedestal: replaced by ring offers
+    // ---------------------------------------------------------
+    if (shopItemPedestal && !(shopItemPedestal.flags & sprites.Flag.Destroyed)) {
+        shopItemPedestal.destroy()
+    }
+    shopItemPedestal = null
+}
+
+
+
+function _near(a: Sprite, b: Sprite, r: number): boolean {
+    if (!a || !b) return false
+    const dx = (a.x - b.x)
+    const dy = (a.y - b.y)
+    return (dx*dx + dy*dy) <= (r*r)
+}
+
+function _shopCullDestroyed(list: Sprite[]): void {
+    for (let i = list.length - 1; i >= 0; i--) {
+        const s = list[i]
+        if (!s) { list.removeAt(i); continue }
+        if ((s.flags & sprites.Flag.Destroyed) != 0) { list.removeAt(i); continue }
+    }
+}
+
+function _shopRegisterNpc(s: Sprite): void {
+    sprites.setDataBoolean(s, SHOP_DATA.IS_SHOP_NPC, true)
+    SHOP_NPCS.push(s)
+}
+
+function _shopRegisterItem(s: Sprite): void {
+    sprites.setDataBoolean(s, SHOP_DATA.IS_SHOP_ITEM, true)
+    SHOP_ITEMS.push(s)
+}
+
+
+
+
+
+function shopHandleInputs(nowMs: number): void {
+    const now = nowMs | 0
+
+    // Player mapping: heroIndex 0..3 -> controller.player1..player4
+    for (let hi = 0; hi < 4; hi++) {
+        // Gate: shop active (Step 6 ties this to focus, but keep the gate anyway)
+        if (now > (shopTouchUntilMsByHero[hi] | 0)) continue
+
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const pid = (hi + 1) | 0
+
+        // Read focused offer (must be fresh)
+        const offer = _shopGetFocusedOfferForHero(hi, now)
+        if (!offer) {
+            // No offer focused => treat as not-bought for UI
+            shopBoughtByHero[hi] = false
+            continue
+        }
+
+        // Keep UI bought flag in sync with the focused offer
+        _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+
+        // Read offer metadata
+        const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
+        const renderSlot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
+        const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
+        const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+
+        // ---------------------------------------------------------
+        // Edge detect: A and B
+        // ---------------------------------------------------------
+        let aNow = false
+        let bNow = false
+        if (hi === 0) { aNow = controller.player1.A.isPressed(); bNow = controller.player1.B.isPressed() }
+        else if (hi === 1) { aNow = controller.player2.A.isPressed(); bNow = controller.player2.B.isPressed() }
+        else if (hi === 2) { aNow = controller.player3.A.isPressed(); bNow = controller.player3.B.isPressed() }
+        else if (hi === 3) { aNow = controller.player4.A.isPressed(); bNow = controller.player4.B.isPressed() }
+
+        const aPrev = shopPrevAByPlayer[hi]
+        const bPrev = shopPrevBByPlayer[hi]
+        shopPrevAByPlayer[hi] = aNow
+        shopPrevBByPlayer[hi] = bNow
+
+        const aEdge = aNow && !aPrev
+        const bEdge = bNow && !bPrev
+
+        // ---------------------------------------------------------
+        // A = BUY focused offer
+        // ---------------------------------------------------------
+        if (aEdge) {
+            const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+
+            // Already owned by this hero => no-op
+            if (boughtBy0 === pid) {
+                console.log("[SHOP][BUY] already-owned pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot)
+            } else if (boughtBy0 !== 0) {
+                // Owned by someone else => deny for now
+                console.log("[SHOP][BUY] denied-owned-by-other pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+            } else {
+                // Check coins
+                if ((teamCoins | 0) < (price | 0)) {
+                    console.log("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + teamCoins)
+                } else {
+                    // Deduct + mark + equip
+                    setTeamCoins((teamCoins - price) | 0)
+                    sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
+
+                    _shopEquipWeaponToHeroSlot(hero, renderSlot, weaponId)
+
+                    console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " price=" + price + " coins=" + teamCoins)
+
+                    // UI flag follows focused offer
+                    _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+                    _shopUpdateUiForHero(hi, now)
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // B = RETURN/UNDO focused offer (only if this hero bought it)
+        // ---------------------------------------------------------
+        if (bEdge) {
+            const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+
+            if (boughtBy0 !== pid) {
+                console.log("[SHOP][RETURN] no-op pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+            } else {
+                // Refund + clear ownership
+                sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, 0)
+                setTeamCoins((teamCoins + price) | 0)
+
+                // Clear the hero slot ONLY if still matches this weaponId
+                _shopClearWeaponFromHeroSlotIfMatches(hero, renderSlot, weaponId)
+
+                console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " refund=" + price + " coins=" + teamCoins)
+
+                _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+                _shopUpdateUiForHero(hi, now)
+            }
+        }
+    }
+}
+
+
+
+function spawnShopNpc(x: number, y: number, label: string): Sprite {
+    const img = image.create(16, 16)
+    img.fill(1)
+    img.drawRect(0, 0, 16, 16, 15)
+
+    const npc = sprites.create(img, SpriteKind.ShopNpc)
+    npc.setPosition(x, y)
+    npc.setFlag(SpriteFlag.Ghost, true) // so it doesn't collide weirdly while POC-ing
+    sprites.setDataString(npc, SHOP_DATA.LABEL, label || "NPC")
+
+    _shopRegisterNpc(npc)
+    return npc
+}
+
+
+function spawnShopItem(x: number, y: number, label: string): Sprite {
+    // Invisible hitbox by default (you can temporarily make it visible while debugging)
+    const img = image.create(12, 12)
+    img.fill(0)
+    img.drawRect(0, 0, 12, 12, 1)
+
+    const it = sprites.create(img, SpriteKind.ShopItem)
+    it.setPosition(x, y)
+    it.setFlag(SpriteFlag.Ghost, true)
+    it.setFlag(SpriteFlag.Invisible, true)
+
+    // Keep legacy label field too
+    sprites.setDataString(it, SHOP_DATA.LABEL, label || "Item")
+    sprites.setDataBoolean(it, SHOP_DATA.BOUGHT, false)
+
+    // New per-offer fields (some will be overwritten by ring builder)
+    sprites.setDataString(it, SH_ITEM_LABEL, label || "Item")
+    sprites.setDataString(it, SH_ITEM_WEAPON_ID, label || "")
+    sprites.setDataString(it, SH_ITEM_RENDER_SLOT, "thrust")
+    sprites.setDataString(it, SH_ITEM_GAMEPLAY_KIND, "unknown")
+    sprites.setDataNumber(it, SH_ITEM_RING_INDEX, -1)
+    sprites.setDataNumber(it, SH_ITEM_PRICE, 10)
+    sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
+
+    _shopRegisterItem(it)
+    return it
+}
+
+
+
+// ------------------------------------------------------------
+// SHOP HUD (shop-only overlay)
+// Panel + big dialog + stats in bottom-left.
+// Uses checkerboard transparency for "translucent" look.
+// ------------------------------------------------------------
+
+let _shopHudPanel: Sprite = null
+let _shopHudDialog: TextSprite = null
+let _shopHudStats: TextSprite = null
+
+const SHOP_HUD_W = 150
+const SHOP_HUD_H = 42
+
+function _shopHudMakePanelImage(w: number, h: number): Image {
+    const img = image.create(w, h)
+    img.fill(0) // 0 is transparent
+
+    // Border
+    img.drawRect(0, 0, w, h, 1)
+
+    // "Translucent" interior: checkerboard of transparent (0) and dark pixel (1)
+    for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+            if (((x + y) & 1) === 0) {
+                img.setPixel(x, y, 0) // transparent pixel
+            } else {
+                img.setPixel(x, y, 1) // dark pixel
+            }
+        }
+    }
+
+    return img
+}
+
+function ensureShopHud(): void {
+    if (_shopHudPanel) return
+
+    // Panel sprite
+    _shopHudPanel = sprites.create(_shopHudMakePanelImage(SHOP_HUD_W, SHOP_HUD_H), SpriteKind.ShopUI)
+    _shopHudPanel.setFlag(SpriteFlag.Ghost, true)
+    _shopHudPanel.setFlag(SpriteFlag.RelativeToCamera, true)
+    _shopHudPanel.setFlag(SpriteFlag.Invisible, true)
+    _shopHudPanel.z = 10_000
+
+    // Big dialog line
+    _shopHudDialog = textsprite.create("", 0, 15) // fg=15 (white)
+    _shopHudDialog.setMaxFontHeight(12)
+    _shopHudDialog.setOutline(1, 1) // outline=dark
+    _shopHudDialog.setFlag(SpriteFlag.RelativeToCamera, true)
+    _shopHudDialog.setFlag(SpriteFlag.Ghost, true)
+    _shopHudDialog.setFlag(SpriteFlag.Invisible, true)
+    _shopHudDialog.z = 10_001
+
+    // Stats line (slightly smaller)
+    _shopHudStats = textsprite.create("", 0, 7) // fg=7 (light)
+    _shopHudStats.setMaxFontHeight(9)
+    _shopHudStats.setOutline(1, 1)
+    _shopHudStats.setFlag(SpriteFlag.RelativeToCamera, true)
+    _shopHudStats.setFlag(SpriteFlag.Ghost, true)
+    _shopHudStats.setFlag(SpriteFlag.Invisible, true)
+    _shopHudStats.z = 10_001
+}
+
+function _shopHudSetVisible(show: boolean): void {
+    ensureShopHud()
+    _shopHudPanel.setFlag(SpriteFlag.Invisible, !show)
+    _shopHudDialog.setFlag(SpriteFlag.Invisible, !show)
+    _shopHudStats.setFlag(SpriteFlag.Invisible, !show)
+}
+
+function _shopHudSetText(dialog: string, stats: string): void {
+    ensureShopHud()
+    ;(_shopHudDialog as any).setText(dialog || "")
+    ;(_shopHudStats as any).setText(stats || "")
+}
+
+function _shopHudPositionBottomLeft(): void {
+    ensureShopHud()
+
+    const W = userconfig.ARCADE_SCREEN_WIDTH
+    const H = userconfig.ARCADE_SCREEN_HEIGHT
+
+    const pad = 2
+    const cx = pad + (SHOP_HUD_W >> 1)
+    const cy = H - pad - (SHOP_HUD_H >> 1)
+
+    _shopHudPanel.x = cx
+    _shopHudPanel.y = cy
+
+    // dialog near top of panel
+    _shopHudDialog.x = cx
+    _shopHudDialog.y = cy - 10
+
+    // stats near bottom of panel
+    _shopHudStats.x = cx
+    _shopHudStats.y = cy + 8
+}
+
+function shopHudShow(dialog: string, stats: string): void {
+    _shopHudSetText(dialog, stats)
+    _shopHudPositionBottomLeft()
+    _shopHudSetVisible(true)
+}
+
+function shopHudHide(): void {
+    if (!_shopHudPanel) return
+    _shopHudSetVisible(false)
+}
+
+function _shopBuildStatsPreview(heroIndex: number): string {
+    // TODO: replace with calculateMoveStats(...) once you pick an item model.
+    // Keep it single-line for now so it reads cleanly.
+    return "DMG:+0  REACH:+0  TIME:+0  STATUS:+0"
+}
+
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
 // ================================================================
 // SECTION 2.5 - TILEMAP AND WORLD GENERATION (improved)
@@ -1633,16 +4481,11 @@ function r3(v: number) { return Math.round(v * 1000) / 1000 }
 // a central arena for the heroes.
 // ================================================================
 
-
-
-
 function _createTileMap2D(): number[][] {
     // Just use the basic cave generator in ALL runtimes.
     // MakeCode and Phaser both see the same 0/1 logic grid.
     return _createBasicCaveMap();
 }
-
-
 
 function _createBasicCaveMap(): number[][] {
     // 1) Decide world dimensions in tiles
@@ -1791,9 +4634,6 @@ function _createBasicCaveMap(): number[][] {
 
 }
 
-
-
-
 // ------------------------------------------------------------
 // Seed map with random walls / empty
 // ------------------------------------------------------------
@@ -1921,10 +4761,6 @@ function _buildTilesIntoSprites(map: number[][]): void {
     }
 }
 
-
-
-
-
 // This is called ONLY by HeroEngine.start()
 function initWorldTileMap(): void {
     // Always build the numeric world grid (used by Phaser renderer + collision).
@@ -1937,17 +4773,11 @@ function initWorldTileMap(): void {
     }
 }
 
-
-
-
 function _readTile(r: number, c: number): number {
     if (r < 0 || r >= _engineWorldTileMap.length) return TILE_WALL
     if (c < 0 || c >= _engineWorldTileMap[0].length) return TILE_WALL
     return _engineWorldTileMap[r][c]
 }
-
-
-
 
 // ==========================================================
 // TILEMAP COLLISION – HEROES + ENEMIES, WITH LOGGING
@@ -2204,6 +5034,9 @@ function resolveTilemapCollisions(): void {
     //_resolveTilemapCollisionsForGroup(enemies, "Enemy")
 }
 
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 
 // ================================================================
 // SECTION 4 - PLAYER SPRITES CREATION AND CONTROL
@@ -2216,16 +5049,11 @@ function resolveTilemapCollisions(): void {
 // On Phaser, the wrapper can override via globalThis.__heroProfiles.
 const HERO_SLOT_PROFILE_DEFAULTS = ["Default", "Default", "Default", "Default"];
 
-
-
-
-
 // Hook: resolve a "profile name" for this hero.
 // In Phaser, the wrapper may set (globalThis as any).__heroProfiles
 // to an array like ["Jason", "Default", "Default", "Default"].
 // In MakeCode, globalThis may not exist, so we swallow errors and
 // just fall back to the default profile.
-
 
 function getHeroProfileForHeroIndex(heroIndex: number): string {
     const hero = heroes[heroIndex]
@@ -2371,6 +5199,766 @@ function calculateMoveStatsForFamily(family: number, button: string, traits: num
 
 
 
+function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before) */
+
+    if (playerId == 1) return img`
+        . . . . . . f f f f . . . . . .
+        . . . . f f f 2 2 f f f . . . .
+        . . . f f f 2 2 2 2 f f f . . .
+        . . f f f e e e e e e f f f . .
+        . . f f e 2 2 2 2 2 2 e e f . .
+        . . f e 2 f f f f f f 2 e f . .
+        . . f f f f e e e e f f f f . .
+        . f f e f b f 4 4 f b f e f f .
+        . f e e 4 1 f d d f 1 4 e e f .
+        . . f e e d d d d d d e e f . .
+        . . . f e e 4 4 4 4 e e f . . .
+        . . e 4 f 2 2 2 2 2 2 f 4 e . .
+        . . 4 d f 2 2 2 2 2 2 f d 4 . .
+        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
+        . . . . . f f f f f f . . . . .
+        . . . . . f f . . f f . . . . .
+    `
+    if (playerId == 2) return img`
+        . . . . . . c c c c . . . . . .
+        . . . . c c c 5 5 c c c . . . .
+        . . . c c c 5 5 5 5 c c c . . .
+        . . c c c e e e e e e c c c . .
+        . . c c e 5 5 5 5 5 5 e e c . .
+        . . c e 5 c c c c c c 5 e c . .
+        . . c c c c e e e e c c c c . .
+        . c c e c b c 4 4 c b c e c c .
+        . c e e 4 1 c d d c 1 4 e e c .
+        . . c e e d d d d d d e e c . .
+        . . . c e e 4 4 4 4 e e c . . .
+        . . e 4 c 5 5 5 5 5 5 c 4 e . .
+        . . 4 d c 5 5 5 5 5 5 c d 4 . .
+        . . 4 4 c 4 4 7 7 4 4 c 4 4 . .
+        . . . . . c c c c c c . . . . .
+        . . . . . c c . . c c . . . . .
+    `
+    if (playerId == 3) return img`
+        . . . . . . 6 6 6 6 . . . . . .
+        . . . . 6 6 6 3 3 6 6 6 . . . .
+        . . . 6 6 6 3 3 3 3 6 6 6 . . .
+        . . 6 6 6 e e e e e e 6 6 6 . .
+        . . 6 6 e 3 3 3 3 3 3 e e 6 . .
+        . . 6 e 3 6 6 6 6 6 6 3 e 6 . .
+        . . 6 6 6 6 e e e e 6 6 6 6 . .
+        . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 .
+        . 6 e e 4 1 6 d d 6 1 4 e e 6 .
+        . . 6 e e d d d d d d e e 6 . .
+        . . . 6 e e 4 4 4 4 e e 6 . . .
+        . . e 4 6 3 3 3 3 3 3 6 4 e . .
+        . . 4 d 6 3 3 3 3 3 3 6 d 4 . .
+        . . 4 4 6 4 4 9 9 4 4 6 4 4 . .
+        . . . . . 6 6 6 6 6 6 . . . . .
+        . . . . . 6 6 . . 6 6 . . . . .
+    `
+    return img`
+        . . . . . . 8 8 8 8 . . . . . .
+        . . . . 8 8 8 7 7 8 8 8 . . . .
+        . . . 8 8 8 7 7 7 7 8 8 8 . . .
+        . . 8 8 8 e e e e e e 8 8 8 . .
+        . . 8 8 e 7 7 7 7 7 7 e e 8 . .
+        . . 8 e 7 8 8 8 8 8 8 7 e 8 . .
+        . . 8 8 8 8 e e e e 8 8 8 8 . .
+        . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 .
+        . 8 e e 4 1 8 d d 8 1 4 e e 8 .
+        . . 8 e e d d d d d d e e 8 . .
+        . . . 8 e e 4 4 4 4 e e 8 . . .
+        . . e 4 8 7 7 7 7 7 7 8 4 e . .
+        . . 4 d 8 7 7 7 7 7 7 8 d 4 . .
+        . . 4 4 8 4 4 9 9 4 4 8 4 4 . .
+        . . . . . 8 8 8 8 8 8 . . . . .
+        . . . . . 8 8 . . 8 8 . . . . .
+    `
+
+}
+
+
+function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, familyNumber: number) {
+    const existingVer = sprites.readDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER) | 0
+    if (existingVer === DEFAULT_WEAPON_LOADOUT_VER) return
+
+    const lo = getHardcodedWeaponLoadoutForHero(profileName, familyNumber)
+
+    sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, lo.slashId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, lo.thrustId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, lo.castId)
+    sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, lo.execId)
+
+    // NEW
+    sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, lo.comboId)
+
+    sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
+}
+
+function createHeroForPlayer(
+    playerId: number,
+    startX: number,
+    startY: number,
+    // NEW (optional): allow callers to override identity/family and treat as NPC
+    profileNameOverride?: string,
+    familyOverride?: number,
+    isNpc?: boolean,
+    // NEW (optional): if true, still map playerToHeroIndex[playerId] even for non-1..4 ids
+    forcePlayerToHeroIndexMapping?: boolean
+) {
+    // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
+    // In Phaser, the native LPC sprite uses the same footprint; we skip pixel uploads.
+    // In pure Arcade, students will just see big, chunky heroes.
+    const hero = sprites.create(image.create(64, 64), SpriteKind.Player)
+
+    hero.x = startX; hero.y = startY; hero.z = 20
+
+    // NEW: seed previous position for collisions
+    sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x)
+    sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y)
+
+    const heroIndex = heroes.length; heroes.push(hero)
+
+    // -------------------------------------------------
+    // NEW: do NOT automatically map non-1..4 ids unless requested.
+    // This avoids sparse playerToHeroIndex[99] unless you WANT it.
+    // -------------------------------------------------
+    const pid = playerId | 0
+    const shouldMap =
+        (pid >= 1 && pid <= 4) ||
+        (forcePlayerToHeroIndexMapping ? true : false)
+
+    if (shouldMap) {
+        playerToHeroIndex[pid] = heroIndex
+    }
+
+    sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
+    heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
+
+    // Shopkeeper: force initial facing DOWN
+    if (playerId === SHOPKEEPER_PLAYER_ID) {
+        heroFacingX[heroIndex] = 0
+        heroFacingY[heroIndex] = 1
+    }
+
+
+    heroBusyUntil[heroIndex] = 0
+
+    // Use a non-zero timestamp for invariants even if runtime() is 0 at boot.
+    const nowMs = Math.max(1, game.runtime() | 0)
+
+    // NEW: seed initial facing + phase for animations
+    syncHeroDirData(heroIndex)
+    setHeroPhaseString(heroIndex, "idle")
+    clearHeroFrameColOverride(heroIndex) // IMPORTANT: seed to -1 so run/idle logic works
+
+    // -------------------------------------------------
+    // NEW: seed universal Action/Phase/Event timeline keys (human-readable)
+    // -------------------------------------------------
+    // IMPORTANT (unified invariants): ActionSequence must be > 0 and ActionKind non-empty
+    // even before the first player-driven move begins.
+    sprites.setDataNumber(hero, HERO_DATA.ActionSequence, 1)
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "spawn")
+    sprites.setDataNumber(hero, HERO_DATA.ActionVariant, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionSeed, nowMs | 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP0, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP1, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP2, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP3, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionTargetId, 0)
+
+    // PhaseFlags default
+    sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
+
+    // NEW: seed PhasePart (within-phase segmentation) defaults
+    sprites.setDataString(hero, HERO_DATA.PhasePartName, "")
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, 0) // 0..PHASE_PROGRESS_MAX
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+
+    // NEW: seed RenderStyle (orthogonal cosmetics) defaults
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP1, 0)
+
+    _animEvent_reset(hero)
+    // -------------------------------------------------
+
+    // UNIFIED CONTRACT: PhaseName/Start/Dur must be valid immediately (non-zero duration).
+    // setHeroPhaseString() resets duration to 0 on change, so stamp an ambient window now.
+    const idleDur = _ambientPhaseWindowMs("idle") | 0
+    _animKeys_stampPhaseWindow(heroIndex, hero, "idle", nowMs, idleDur, "createHeroForPlayer(init)")
+
+    // -------------------------------------------------
+    // NEW: decide family + profile name BEFORE seeding identity strings/loadout
+    // -------------------------------------------------
+    const fam = (familyOverride == null) ? FAMILY.STRENGTH : (familyOverride | 0)
+
+    // IMPORTANT: keep your default input state, but allow NPC override
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
+    if (isNpc) sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_COUNT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.COMBO_MULT, 100)
+    sprites.setDataNumber(hero, HERO_DATA.LAST_HIT_TIME, 0)
+    sprites.setDataString(hero, HERO_DATA.LAST_MOVE_KEY, "")
+    sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+
+    // Seed UI/state fields so Phaser can render immediately
+    sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_E_W, AGI_METER_W_E)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_1_W, AGI_METER_W_1)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_2_W, AGI_METER_W_2)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_3_W, AGI_METER_W_3)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PKT_COUNT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PKT_SUM, 0)
+
+    // Manual cancel bookkeeping (seed all to 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_X, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_Y, 0)
+
+    // NEW (Agility combo v3): persistent combo mode + landing/entry bookkeeping
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_MODE, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAND_ARMED_FOR_DU, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, 0)
+
+    // NEW (Agility combo v4): weapon-as-meter charge contract (seed defaults)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PERIOD_MS, AGI_CHARGE_DEFAULT_PERIOD_MS)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD, AGI_CHARGE_DEFAULT_TIER_A_ADD)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD, AGI_CHARGE_DEFAULT_TIER_B_ADD)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD, AGI_CHARGE_DEFAULT_TIER_C_ADD)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000, AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000, AGI_CHARGE_DEFAULT_A_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000, AGI_CHARGE_DEFAULT_B_FRAC_X1000)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, AGI_CHARGE_DEFAULT_C_FRAC_X1000)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_ADD_AMOUNT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_STORED_HITS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_LAND_BUFFER_MS, AGI_LANDING_BUFFER_MS)
+
+    sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
+
+    // -------------------------------------------------
+    // CHANGED (not removed): FAMILY now uses fam (override-capable)
+    // -------------------------------------------------
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, fam)
+
+    // -------------------------------------------------
+    // NEW: seed hero identity strings so Phaser can resolve LPC animations
+    // and ALSO set your requested HERO_DATA.Name = "name"
+    // -------------------------------------------------
+    let profileName = profileNameOverride
+
+    // If caller didn't override, keep your existing profile resolution
+    if (!profileName) {
+        profileName = getHeroProfileForHeroIndex(heroIndex)
+    }
+
+    // If this is the shopkeeper pid and no override was given, force it
+    if (!profileNameOverride && pid === SHOPKEEPER_PLAYER_ID) {
+        profileName = SHOPKEEPER_PROFILE_NAME
+    }
+
+    // Your requested canonical name field
+    sprites.setDataString(hero, HERO_DATA.Name, profileName)
+
+    // Keep legacy keys too (don’t delete them; Phaser glue may still read them)
+    sprites.setDataString(hero, "heroName", profileName)
+    sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(fam))
+
+    // NEW (Step 4): seed weapon loadout onto sprite.data (primitives only; net-safe)
+    // This runs once per hero and will not overwrite later drops/equips.
+    ensureHeroWeaponLoadoutSeeded(hero, profileName, fam)
+
+    sprites.setDataString(hero, HERO_DATA.BUTTON, "")
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT2, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT3, 25)
+    sprites.setDataNumber(hero, HERO_DATA.TRAIT4, 25)
+
+    // NEW: initialize mirrored engine-side fields
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.MOVE_SPEED_MULT, 1)
+    sprites.setDataNumber(hero, HERO_DATA.DAMAGE_AMP_MULT, 1)
+    sprites.setDataString(hero, HERO_DATA.BUFF_JSON, "[]")
+
+    // Weapon display offsets (pixels)
+//    HERO_WPN_OFF_X: "wpnOffX",
+//    HERO_WPN_OFF_Y: "wpnOffY",
+
+    sprites.setDataNumber(hero, HERO_DATA.HERO_WPN_OFF_X, 0)
+    sprites.setDataString(hero, HERO_DATA.HERO_WPN_OFF_Y, 0)
+
+    sprites.setDataNumber(hero, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
+
+    heroTargetCircles[heroIndex] = null
+
+    initHeroHP(heroIndex, hero, 1000)
+    initHeroMana(heroIndex, hero, 2000)
+    refreshHeroController(heroIndex)
+
+        // -------------------------------------------------
+    // SHOPKEEPER POC: force a tiny downward "kick" on spawn
+    // so we can prove the render + facing pipeline is live.
+    // -------------------------------------------------
+    if (playerId === SHOPKEEPER_PLAYER_ID) {
+        // Face DOWN immediately (then publish dir data)
+        heroFacingX[heroIndex] = 0
+        heroFacingY[heroIndex] = 1
+        syncHeroDirData(heroIndex)
+
+        // Tiny physical nudge downward
+        const kickVy = 20
+        const kickMs = 120
+        const kickStart = nowMs
+
+        hero.vx = 0
+        hero.vy = kickVy
+
+        // If anything reads STORED_* (locks), keep it consistent
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, kickVy)
+
+        // One-shot stop
+        const now = game.runtime() | 0
+        worldRuntimeMs = now
+
+        game.onUpdate(function () {
+            // Safety: sprite might be gone
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+            const t = game.runtime() | 0
+            if ((t - kickStart) >= kickMs) {
+                hero.vx = 0
+                hero.vy = 0
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            }
+        })
+    }
+
+    // -------------------------------------------------
+    // SHOPKEEPER: force identity for Phaser pipeline
+    // -------------------------------------------------
+    if ((playerId | 0) === 99) {
+        // This is the key Phaser glue reads (NOT HERO_DATA.Name)
+        sprites.setDataString(hero, "heroName", "Shopkeeper")
+        sprites.setDataString(hero, "heroFamily", "base") // matches your sheet classification
+
+        // Optional: give it a readable label too (your engine-side name field)
+        // (Use whatever key you actually defined: HERO_DATA.Name is "name")
+        sprites.setDataString(hero, HERO_DATA.Name, "Shopkeeper")
+
+        // Force initial facing DOWN using your existing facing arrays path
+        // (down = dy=+1)
+        heroFacingX[heroes.length - 1] = 0
+        heroFacingY[heroes.length - 1] = 1
+        syncHeroDirData(heroes.length - 1)
+
+        // No input, no movement
+        sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+        hero.vx = 0
+        hero.vy = 0
+
+        console.log(
+            `>>> [SHOPKEEPER][ENGINE] created p=99 id=${(hero as any).id ?? "?"}` +
+            ` heroName=${sprites.readDataString(hero, "heroName")}` +
+            ` heroFamily=${sprites.readDataString(hero, "heroFamily")}` +
+            ` dir=${sprites.readDataString(hero, "dir")}`
+        )
+    }
+
+
+    // NEW: let the student animation hook define what this hero actually looks like
+    // "idle" here is your base/default state; 0 duration so it's just an image set
+    callHeroAnim(heroIndex, "idle", 0)
+}
+
+
+function setupHeroes() {
+
+    // 1) Start from ARCADE screen center as a safe default.
+    // In MakeCode Arcade, this gives you the 320×240-ish center.
+    // In Phaser compat, ARCADE_SCREEN_* mirrors screen.width/height from arcadeCompat.
+    let W = userconfig.ARCADE_SCREEN_WIDTH;
+    let H = userconfig.ARCADE_SCREEN_HEIGHT;
+
+    // 2) If we have a full world tilemap, override with WORLD size in pixels.
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+        const rows = _engineWorldTileMap.length;
+        const cols = _engineWorldTileMap[0].length;
+
+        W = cols * WORLD_TILE_SIZE;
+        H = rows * WORLD_TILE_SIZE;
+
+        console.log(
+            "[setupHeroes] using WORLD center from tilemap",
+            { rows, cols, tileSize: WORLD_TILE_SIZE, W, H }
+        );
+    } else {
+        console.log(
+            "[setupHeroes] using SCREEN center (no world tilemap yet)",
+            { W, H }
+        );
+    }
+
+    const centerW = W / 2;
+    const centerH = H / 2;
+
+    // You can nudge this however you like
+    const offset = 40;
+
+    const coords: number[][] = [
+        [centerW + offset, centerH + offset],
+        [centerW - offset, centerH + offset],
+        [centerW + offset, centerH - offset],
+        [centerW - offset, centerH - offset]
+    ];
+
+    // ------------------------------------------------------------
+    // STEP 6: Phaser runtime spawn-on-demand
+    // - Phaser host starts with ONLY Player 1.
+    // - Players 2..4 are spawned later (on-demand) when they actually act/join.
+    // - MakeCode Arcade runtime keeps the original 4-player behavior.
+    // TODO_NPLAYER_BRIDGE: later we’ll remove 4-player assumptions entirely.
+    // ------------------------------------------------------------
+    if (isPhaserRuntime()) {
+        console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
+        createHeroForPlayer(1, coords[0][0], coords[0][1]);
+        return;
+    }
+
+    // MakeCode Arcade behavior (unchanged)
+    createHeroForPlayer(1, coords[0][0], coords[0][1]);
+    createHeroForPlayer(2, coords[1][0], coords[1][1]);
+    createHeroForPlayer(3, coords[2][0], coords[2][1]);
+    createHeroForPlayer(4, coords[3][0], coords[3][1]);
+}
+
+
+function lockHeroControls(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, hero.vx)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, hero.vy)
+    refreshHeroController(heroIndex)
+}
+
+function unlockHeroControls(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    hero.vx = 0; hero.vy = 0
+    refreshHeroController(heroIndex)
+}
+
+
+function refreshHeroController(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+    const baseSpeed = 50
+    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const speed = locked ? 0 : baseSpeed * hasteMult
+
+    if (playerId == 1) controller.player1.moveSprite(hero, speed, speed)
+    else if (playerId == 2) controller.player2.moveSprite(hero, speed, speed)
+    else if (playerId == 3) controller.player3.moveSprite(hero, speed, speed)
+    else if (playerId == 4) controller.player4.moveSprite(hero, speed, speed)
+}
+
+
+
+function refreshHeroControllerBUGGED(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+    const baseSpeed = 50
+    const mult = heroMoveSpeedMult[heroIndex] || 1
+    const speed = locked ? 0 : baseSpeed * mult
+
+    const vx = speed
+    const vy = speed
+    if (playerId == 1) controller.player1.moveSprite(hero, vx, vy)
+    else if (playerId == 2) controller.player2.moveSprite(hero, vx, vy)
+    else if (playerId == 3) controller.player3.moveSprite(hero, vx, vy)
+    else if (playerId == 4) controller.player4.moveSprite(hero, vx, vy)
+}
+
+
+function getHeroDirectionName(heroIndex: number) {
+    const dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
+    if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
+}
+
+
+// Mirror direction into hero data so Phaser can see it.
+function syncHeroDirData(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const dir = getHeroDirectionName(heroIndex)
+    sprites.setDataString(hero, "dir", dir)
+    sprites.setDataString(hero, HERO_DATA.DIR, dir)
+}
+
+// AUTHORITATIVE AMBIENT PHASE WRITER (SINGLE-WRITER)
+// Owns: ambient phase changes (idle/run/combatIdle/etc.).
+// Only stamps PhaseStartMs when phase actually changes.
+// MUST NOT increment ActionSequence or emit events.
+// AUTHORITATIVE PHASE WRITER (SINGLE-WRITER)
+// Unified contract:
+// - PhaseName is authoritative for rendering (always mirrors what we should render).
+// - Legacy HERO_DATA.PHASE remains as a mirror for compatibility.
+// This function MUST NOT increment ActionSequence or emit events.
+function setHeroPhaseString(heroIndex: number, phase: string, where: string = ""): void {
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    const p = phase || "idle"
+
+    // PhaseName is authoritative for rendering.
+    const prevPhaseName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+
+    // Always mirror legacy phase fields (compat)
+    sprites.setDataString(hero, "phase", p)
+    sprites.setDataString(hero, HERO_DATA.PHASE, p)
+
+    // Optional: keep PhaseRaw mirrored too if you still use it anywhere for debugging/legacy
+    sprites.setDataString(hero, HERO_DATA.PhaseRaw, p)
+
+    // If PhaseName already matches, do not reset the window.
+    if (prevPhaseName === p) return
+
+    const nowMs = game.runtime() | 0
+
+    sprites.setDataString(hero, HERO_DATA.PhaseName, p)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, nowMs)
+
+    // Duration is authored by the move code / ambient stamper,
+    // so reset here and let the caller stamp a real value.
+    sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, 0)
+
+    // Reset progress to 0 at phase start
+    sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, 0)
+
+    // ---- LOG: phase edge (ownership change) ----
+    if (DEBUG_ANIM_KEYS_PHASE_EDGE) {
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) ? 1 : 0
+        const ctrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+        const strCh = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        const w = where ? where : "?"
+        _dbgAnimKeys(heroIndex, hero, "PHASE_EDGE",
+            `t=${nowMs} where=${w} ${prevPhaseName}->${p} lock{busyUntil=${busyUntil} locked=${locked} ctrl=${ctrl} strCh=${strCh} agi=${agiState} fco=${fco}}`
+        )
+    }
+}
+
+
+function clearHeroFrameColOverride(heroIndex: number): void {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const prev = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+    if (prev === HERO_FRAME_COL_OVERRIDE_NONE) return
+
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+
+    if (DEBUG_INTEGRATOR) {
+        const phase = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+        const dir = sprites.readDataString(hero, HERO_DATA.DIR) || ""
+        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        console.log("[WPN-FCO-CLEAR]", { heroIndex, prev, v: HERO_FRAME_COL_OVERRIDE_NONE, phase, dir, strCharging, agiState, locked, busyUntil, t: (game.runtime() | 0) })
+    }
+}
+
+
+
+function getHeroBusyUntil(heroIndex: number): number {
+    const hero = heroes[heroIndex]; if (!hero) return 0
+    const v = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+    heroBusyUntil[heroIndex] = v
+    return v
+}
+
+function setHeroBusyUntil(heroIndex: number, untilMs: number): void {
+    const hero = heroes[heroIndex]; if (!hero) return
+    const v = untilMs | 0
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, v)
+    heroBusyUntil[heroIndex] = v
+}
+
+function clearHeroBusyUntil(heroIndex: number): void {
+    setHeroBusyUntil(heroIndex, 0)
+}
+
+function _updateHeroLocomotionPhaseWindow(heroIndex: number, hero: Sprite, now: number): void {
+    if (!hero) return
+
+    // If an action phase window is currently active, locomotion must NOT overwrite it.
+    const phStart = (sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0)
+    const phDur = (sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0)
+    if (phStart > 0 && phDur > 0 && (now | 0) < ((phStart + phDur) | 0)) return
+
+    // If you're otherwise "busy" by your gates, also don't stomp phases.
+    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    if (busyUntil0 > 0 && (now | 0) < (busyUntil0 | 0)) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) return
+    if (supportPuzzleActive[heroIndex]) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    const vx = hero.vx || 0
+    const vy = hero.vy || 0
+    const vSq = (vx * vx) + (vy * vy)
+
+    let nextPhase = "idle"
+    let nextDur = HERO_LOCO_IDLE_LOOP_MS | 0
+
+    if (vSq > 0) {
+        if (vSq >= (HERO_LOCO_RUN_VEL_SQ_THRESHOLD | 0)) {
+            nextPhase = "run"
+            nextDur = HERO_LOCO_RUN_LOOP_MS | 0
+        } else {
+            nextPhase = "walk"
+            nextDur = HERO_LOCO_WALK_LOOP_MS | 0
+        }
+    }
+
+    const curPhase = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    if (curPhase === nextPhase) return
+
+    sprites.setDataString(hero, HERO_DATA.PhaseName, nextPhase)
+
+    // Stamp a real phase window for the renderer (do NOT use 0 duration).
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        nextPhase,
+        now | 0,
+        nextDur | 0,
+        "_updateHeroLocomotionPhaseWindow"
+    )
+
+    if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(heroIndex, hero, "LOCO_PHASE"))
+}
+
+
+function updateHeroFacingsFromVelocity() {
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]; if (!hero) continue
+
+        // ------------------------------------------------------------
+        // Shopkeeper (Player 99): seed facing DOWN once, then keep it.
+        // This fixes “spawns up” without touching createHeroForPlayer.
+        // ------------------------------------------------------------
+        const ownerId0 = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (ownerId0 === SHOPKEEPER_PLAYER_ID) {
+            const seeded = sprites.readDataBoolean(hero, "shopFaceSeeded")
+            if (!seeded) {
+                heroFacingX[i] = 0
+                heroFacingY[i] = 1
+                syncHeroDirData(i)
+                sprites.setDataBoolean(hero, "shopFaceSeeded", true)
+            }
+            continue
+        }
+
+        const state = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+        // NEW: In Agility build mode, read D-pad to update facing (aim),
+        // but do NOT use it to change velocity.
+        if (locked && state === AGI_STATE.ARMED) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            const ctrl = getControllerForOwnerId(ownerId)
+            if (ctrl) {
+                let dx = 0, dy = 0
+                if (ctrl.left.isPressed()) dx = -1
+                else if (ctrl.right.isPressed()) dx = 1
+                if (ctrl.up.isPressed()) dy = -1
+                else if (ctrl.down.isPressed()) dy = 1
+
+                if (dx !== 0 || dy !== 0) {
+                    heroFacingX[i] = dx
+                    heroFacingY[i] = dy
+                    syncHeroDirData(i)
+                }
+            }
+            continue
+        }
+
+        // Normal behavior: facing follows velocity
+        const vx = hero.vx, vy = hero.vy
+        if (vx == 0 && vy == 0) continue
+
+        let dx = 0, dy = 0
+        if (vx > 0) dx = 1; else if (vx < 0) dx = -1
+        if (vy > 0) dy = 1; else if (vy < 0) dy = -1
+
+        if (dx != 0 || dy != 0) {
+            heroFacingX[i] = dx; heroFacingY[i] = dy
+            syncHeroDirData(i)
+        }
+    }
+}
+
+
+// READ-ONLY FOR UNIVERSAL TIMELINE KEYS (FINAL DESIGN)
+// callHeroAnim() is ONLY an animation request/hook runner.
+// It must NOT publish Action/Phase/Event keys.
+// (Currently it still calls publishHeroActionPhase; this will be removed in Step 3.)
+function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+
+    // READ-ONLY FOR UNIVERSAL TIMELINE KEYS (Action/Phase/Event/Part/RenderStyle)
+    // callHeroAnim() is ONLY an animation request/hook runner.
+    // Timeline keys are authored by:
+    //  - _doHeroMoveBeginActionTimeline() (Action edge)
+    //  - _doHeroMovePlayAnimAndDispatch() (Phase window stamp)
+    //  - move timing loops (PhaseProgress / PhasePart)
+    //  - event emitters (EventSequence pulses)
+
+    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+
+    // Existing visual effect behavior (kept exactly)
+    if (family == FAMILY.STRENGTH || family == FAMILY.INTELLECT || family == FAMILY.HEAL) {
+        hero.startEffect(effects.trail, timeMs)
+    }
+
+    const direction = getHeroDirectionName(heroIndex)
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+
+    if (playerId == 1) HeroEngine.animateHero1Hook(hero, animKey, timeMs, direction)
+    else if (playerId == 2) HeroEngine.animateHero2Hook(hero, animKey, timeMs, direction)
+    else if (playerId == 3) HeroEngine.animateHero3Hook(hero, animKey, timeMs, direction)
+    else if (playerId == 4) HeroEngine.animateHero4Hook(hero, animKey, timeMs, direction)
+}
 
 type AgilityPressResult = {
     agiZoneMult: number
@@ -2380,7 +5968,10 @@ type AgilityPressResult = {
     agiDoExecuteThisPress: boolean
 }
 
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+//Do hero move is its own section at this point. This is the function for stating what the hero should be doing
 
 function _doHeroMoveShouldIgnoreDueToBusy(heroIndex: number, hero: Sprite, now: number): boolean {
     // --------------------------------------------------------------------
@@ -2497,6 +6088,84 @@ function _doHeroMoveApplyBaseHeroMoveData(
     sprites.setDataNumber(hero, HERO_DATA.TRAIT2, t2)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT3, t3)
     sprites.setDataNumber(hero, HERO_DATA.TRAIT4, t4)
+}
+
+
+
+// AUTHORITATIVE ACTION EDGE PUBLISHER (SINGLE-WRITER)
+// Owns: ActionSequence increment + ActionKind/Variant/Seed/P0..P3/TargetId (initial publish).
+// MUST be called only after we have truly committed to a real move instance.
+// Nobody else may increment ActionSequence.
+function _doHeroMoveBeginActionTimeline(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    button: string,
+    t1: number,
+    t2: number,
+    t3: number,
+    t4: number,
+    element: number,
+    now: number
+): void {
+    // AUTHORITATIVE ACTION EDGE PUBLISHER (SINGLE-WRITER)
+    // Owns: ActionSequence increment + initial ActionKind/Variant/Seed/P0..P3/TargetId
+    // + RenderStyleMask (cosmetic, stable for action instance).
+
+    const nowMs = now | 0
+
+    const actionSeq0 = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+    sprites.setDataNumber(hero, HERO_DATA.ActionSequence, (actionSeq0 + 1) | 0)
+
+    // Default semantic action kind (execute refines elsewhere)
+    let kind = "none"
+    if (family === FAMILY.STRENGTH) kind = "strength_charge"
+    else if (family === FAMILY.AGILITY) kind = "agility_thrust"
+    else if (family === FAMILY.INTELLECT) kind = "intellect_cast"
+    else if (family === FAMILY.HEAL) kind = "support_cast"
+    else kind = heroFamilyNumberToString(family)
+
+    sprites.setDataString(hero, HERO_DATA.ActionKind, kind)
+
+    const btnId = encodeIntentToStrBtnId(button) | 0
+    sprites.setDataNumber(hero, HERO_DATA.ActionVariant, btnId)
+
+    // Deterministic seed (no Math.random)
+    const seed = (nowMs ^ ((heroIndex + 1) * 1103515245)) | 0
+    sprites.setDataNumber(hero, HERO_DATA.ActionSeed, seed)
+
+    // Param bus: traits axes
+    sprites.setDataNumber(hero, HERO_DATA.ActionP0, t1 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP1, t2 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP2, t3 | 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionP3, t4 | 0)
+
+    sprites.setDataNumber(hero, HERO_DATA.ActionTargetId, 0)
+
+    // Allowed action-edge hygiene
+    _animKeys_actionBeginHygiene(hero)
+
+    // RenderStyle authored once at action begin (stable for action instance)
+    const styleMask = _elemToRenderStyleMask(element | 0)
+    _animKeys_setRenderStyle(hero, styleMask, 0, 0)
+
+    _animInvCheckHeroTimeline(heroIndex, hero, nowMs | 0, "_doHeroMoveBeginActionTimeline(end)")
+
+    if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(heroIndex, hero, "ACTION_EDGE"))
+
+    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && _dbgMoveCurrentPlayerId === 1) {
+        const aSeq1 = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " ACTION_EDGE heroIndex=" + heroIndex +
+            " actionSeq=" + aSeq1 +
+            " kind=" + kind +
+            " variantBtnId=" + btnId +
+            " seed=" + seed +
+            " elem=" + (element | 0) +
+            " styleMask=" + styleMask
+        )
+    }
 }
 
 
@@ -2627,21 +6296,59 @@ function agiEmitExecuteEvent(hero: Sprite, lastAddAmount: number): void {
 }
 
 
+
+
 function _doHeroMoveTryAgilityExecuteThisPress(
     heroIndex: number,
     hero: Sprite,
     family: number,
+    button: string,
+    t1: number,
     t2: number,
+    t3: number,
+    t4: number,
+    element: number,
     stats: number[],
     animKey: string,
-    agiDoExecuteThisPress: boolean
+    agiDoExecuteThisPress: boolean,
+    now: number
 ): boolean {
-    // ------------------------------------------------------------
-    // C6: Execute radius comes from Trait2 (Reach)
-    // ------------------------------------------------------------
+
     if (family != FAMILY.AGILITY) return false
     if (!agiDoExecuteThisPress) return false
 
+    // ------------------------------------------------------------
+    // ACTION EDGE (authoritative): this execute is a new move instance.
+    // Must happen here because execute returns early and bypasses the
+    // normal action-edge call in doHeroMoveForPlayer.
+    // ------------------------------------------------------------
+    _doHeroMoveBeginActionTimeline(
+        heroIndex,
+        hero,
+        family,
+        button,
+        t1 | 0,
+        t2 | 0,
+        t3 | 0,
+        t4 | 0,
+        element | 0,
+        now | 0
+    )
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "agility_execute")
+    if (DEBUG_ANIM_KEYS) _dbgAnimKeys(heroIndex, hero, "KIND_REFINE", `t=${(now|0)} kind=agility_execute`)
+
+    // ------------------------------------------------------------
+
+    // Hygiene: clear any leftover lunge schedule so thrust parts don't fight execute.
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeStartMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeEndMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+
+    // ------------------------------------------------------------
+    // Execute radius comes from Trait2 (Reach)
+    // ------------------------------------------------------------
     const reach = Math.max(0, t2 | 0)
     let execRadius = 40 + reach * 2
     if (execRadius < 40) execRadius = 40
@@ -2663,13 +6370,47 @@ function _doHeroMoveTryAgilityExecuteThisPress(
     destroyAgiAimIndicator(heroIndex)
     agiBeginExecute(heroIndex, hero, execRadius, slowPct, slowDurMs)
 
-    setHeroPhaseString(heroIndex, "thrust")
-    callHeroAnim(heroIndex, animKey, 250)
+    // If execute couldn't start (no packets), agiBeginExecute already cleaned up.
+    const stateNow = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+    if (stateNow !== AGI_STATE.EXECUTING) return true
+
+    // Compute authoritative execute duration from packets + interval.
+    const arr0 = agiPacketsEnsure(heroIndex)
+    const steps0 = (arr0 ? (arr0.length | 0) : 0) | 0
+
+    const interval0 = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_INTERVAL_MS) | 0
+    const dtBase = (interval0 > 0 ? interval0 : (AGI_EXEC_STEP_MS | 0)) | 0
+    const dt = Math.max(dtBase, (AGI_EXEC_STEP_MS_MIN | 0)) | 0
+
+    // Total window: last beat happens at start+(steps-1)*dt, so choose ((steps-1)*dt + 1)
+    const stepsSafe = Math.max(1, steps0) | 0
+    const totalDur = Math.max(1, (((stepsSafe - 1) | 0) * dt + 1) | 0) | 0
+
+    // Use "slash" family for execute (semantic contract).
+    // IMPORTANT: setHeroPhaseString resets the window to duration=0, so do it BEFORE stamping.
+    setHeroPhaseString(heroIndex, "slash")
+
+    // Stamp the phase window here (execute bypasses _doHeroMovePlayAnimAndDispatch)
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "slash",
+        now | 0,
+        totalDur | 0,
+        "_doHeroMoveTryAgilityExecuteThisPress"
+    )
+
+    // Seed an initial part window; updateAgilityExecuteAll will keep it updated.
+    _animKeys_setPhasePart(hero, "beat", now | 0, dt | 0, now | 0)
+
+    // Busy gate must block other presses while executing.
+    setHeroBusyUntil(heroIndex, (now + totalDur) | 0)
+
+    // callHeroAnim is read-only for universal timeline keys
+    callHeroAnim(heroIndex, animKey, totalDur)
 
     return true
 }
-
-
 
 function _doHeroMoveTryAgilityBuildAfterLanding(
     heroIndex: number,
@@ -2704,6 +6445,10 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
         if (DEBUG_AGI_COMBO_BUILD) {
             console.log(`[agi.combo.build] UNEXPECTED execWindow=1 hero=${heroIndex} now=${now} dashUntil=${dashUntil0}`)
         }
+
+        // Universal contract:
+        // Do NOT write illegal 0-duration phase windows here.
+        // This is an unexpected path; just consume so we don't dash with no selection.
         return true // consume so we don't accidentally dash with no selection
     }
 
@@ -2776,15 +6521,12 @@ function _doHeroMoveTryAgilityBuildAfterLanding(
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_Y, 0)
 
     // Clear busy and unlock so the dash path can apply velocity/lock cleanly this same press.
-    heroBusyUntil[heroIndex] = 0
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+    clearHeroBusyUntil(heroIndex)
     unlockHeroControls(heroIndex)
 
     // Return false => doHeroMoveForPlayer continues into dash path on this same press.
     return false
 }
-
-
 
 
 
@@ -2822,6 +6564,8 @@ function _doHeroMoveSetPhaseFromFamily(heroIndex: number, family: number): void 
     else if (family == FAMILY.HEAL) setHeroPhaseString(heroIndex, "cast")
 }
 
+
+
 function _doHeroMoveApplyControlLockAndBusy(
     heroIndex: number,
     hero: Sprite,
@@ -2831,14 +6575,22 @@ function _doHeroMoveApplyControlLockAndBusy(
 ): void {
     if (family == FAMILY.AGILITY || family == FAMILY.INTELLECT) {
         lockHeroControls(heroIndex)
-        const unlockAt = now + moveDuration
-        heroBusyUntil[heroIndex] = unlockAt
-        sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, unlockAt)
+
+        const durMs = moveDuration | 0
+        const unlockAt = (now + durMs) | 0
+
+        setHeroBusyUntil(heroIndex, unlockAt)
+
+        // NOTE:
+        // Do NOT stamp PhaseDurationMs here.
+        // callHeroAnim() publishes PhaseStartMs/PhaseDurationMs for the action instance.
     } else if (family == FAMILY.HEAL) {
         hero.vx = 0
         hero.vy = 0
     }
 }
+
+
 
 function _doHeroMoveApplyAgilityDashTimers(
     heroIndex: number,
@@ -2858,6 +6610,11 @@ function _doHeroMoveApplyAgilityDashTimers(
     }
 }
 
+
+// AUTHORITATIVE ACTION PHASE-WINDOW STAMP (SINGLE-WRITER)
+// Owns: PhaseName/PhaseStartMs/PhaseDurationMs/PhaseProgressInt reset at action start,
+// even when the coarse phase repeats ("slash" -> "slash").
+// MUST NOT touch ActionSequence (action edge is handled elsewhere).
 function _doHeroMovePlayAnimAndDispatch(
     heroIndex: number,
     hero: Sprite,
@@ -2870,7 +6627,43 @@ function _doHeroMovePlayAnimAndDispatch(
     t3: number
 ): void {
     let animDuration = stats[STAT.MOVE_DURATION] | 0
-    if (family == FAMILY.STRENGTH) animDuration = strengthChargeMaxMsFromTrait3(t3)
+    if (animDuration <= 0) animDuration = 1
+
+    // Strength path still wants a duration even if it gets special handling downstream.
+    if (family == FAMILY.STRENGTH) {
+        animDuration = strengthChargeMaxMsFromTrait3(t3) | 0
+        if (animDuration <= 0) animDuration = 1
+    }
+
+    // Unified contract: PhaseName is authoritative for rendering/stamping.
+    // Do NOT consult legacy HERO_DATA.PHASE here.
+    let phaseName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+
+    // Defensive fallback (should be unreachable once Steps 1–2 are in place)
+    if (!phaseName) {
+        if (family == FAMILY.STRENGTH) phaseName = "slash"
+        else if (family == FAMILY.AGILITY) phaseName = "thrust"
+        else if (family == FAMILY.INTELLECT) phaseName = "cast"
+        else if (family == FAMILY.HEAL) phaseName = "cast"
+        else phaseName = "idle"
+
+        // Also make PhaseName consistent immediately.
+        sprites.setDataString(hero, HERO_DATA.PhaseName, phaseName)
+    }
+
+    // AUTHORITATIVE PHASE-WINDOW STAMP (per move instance)
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        phaseName,
+        now | 0,
+        animDuration | 0,
+        "_doHeroMovePlayAnimAndDispatch"
+    )
+
+    if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(heroIndex, hero, "PHASE_WINDOW"))
+
+    // callHeroAnim is read-only for universal timeline keys
     callHeroAnim(heroIndex, animKey, animDuration)
 
     if (family == FAMILY.STRENGTH) { executeStrengthMove(heroIndex, hero, button, traits, stats, animKey); return }
@@ -2881,9 +6674,45 @@ function _doHeroMovePlayAnimAndDispatch(
 
 
 
-
 function doHeroMoveForPlayer(playerId: number, button: string) {
-    const heroIndex = playerToHeroIndex[playerId]
+
+    // ------------------------------------------------------------
+    // STEP 6: Phaser runtime spawn-on-demand
+    // ------------------------------------------------------------
+    let heroIndex = playerToHeroIndex[playerId]
+
+    if ((heroIndex == null || heroIndex < 0 || heroIndex >= heroes.length) && isPhaserRuntime()) {
+        if (playerId >= 1 && playerId <= 4) {
+
+            let W = userconfig.ARCADE_SCREEN_WIDTH;
+            let H = userconfig.ARCADE_SCREEN_HEIGHT;
+
+            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+                const rows = _engineWorldTileMap.length;
+                const cols = _engineWorldTileMap[0].length;
+                W = cols * WORLD_TILE_SIZE;
+                H = rows * WORLD_TILE_SIZE;
+            }
+
+            const centerW = W / 2;
+            const centerH = H / 2;
+            const offset = 40;
+
+            const coords: number[][] = [
+                [centerW + offset, centerH + offset],
+                [centerW - offset, centerH + offset],
+                [centerW + offset, centerH - offset],
+                [centerW - offset, centerH - offset]
+            ];
+
+            const slotIndex = playerId - 1;
+            console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId);
+            createHeroForPlayer(playerId, coords[slotIndex][0], coords[slotIndex][1]);
+
+            heroIndex = playerToHeroIndex[playerId]
+        }
+    }
+
     if (heroIndex < 0 || heroIndex >= heroes.length) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             console.log(DEBUG_FILTER_PHRASE + " IGNORE badHeroIndex playerId=" + playerId + " heroIndex=" + heroIndex + " button=" + button)
@@ -2902,7 +6731,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const now = game.runtime()
     worldRuntimeMs = now
 
-    // Debug context for helper functions (P1 only)
     if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
         _dbgMoveCurrentPlayerId = playerId
 
@@ -2933,7 +6761,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         )
     }
 
-    // Busy gating (special-case AGI ARMED build-after-landing)
     if (_doHeroMoveShouldIgnoreDueToBusy(heroIndex, hero, now)) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             const busyUntil0 = heroBusyUntil[heroIndex] || 0
@@ -2953,7 +6780,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Hard gates
     if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             console.log(DEBUG_FILTER_PHRASE + " IGNORE controllingSpell timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
@@ -2976,7 +6802,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Call student logic / hook
     const out = _doHeroMoveCallLogicHook(heroIndex, button)
     if (!out) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
@@ -2993,13 +6818,13 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Parse result
     const parsed = _doHeroMoveParseHookOut(out)
     const family = parsed.family
     const t1 = parsed.t1
     const t2 = parsed.t2
     const t3 = parsed.t3
     const t4 = parsed.t4
+    const element = parsed.element
     const traits = parsed.traits
     const animKey = parsed.animKey
 
@@ -3013,14 +6838,13 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
             " t2=" + t2 +
             " t3=" + t3 +
             " t4=" + t4 +
+            " elem=" + (element | 0) +
             " animKey=" + animKey
         )
     }
 
-    // Write base move data onto hero
     _doHeroMoveApplyBaseHeroMoveData(hero, family, button, t1, t2, t3, t4)
 
-    // Agility combo/meter state machine
     const agi = _doHeroMoveUpdateAgilityComboState(heroIndex, hero, now, family)
 
     if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
@@ -3041,10 +6865,20 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         )
     }
 
-    // Trait-driven move stats
-    const stats = calculateMoveStatsForFamily(family, button, traits)
+    const traitsEff = applyDamageModsToTraits(heroIndex, family, traits)
+    
+    const stats = calculateMoveStatsForFamily(family, button, traitsEff)
 
-    // Mana (skip Strength)
+
+    if (family === FAMILY.STRENGTH) {
+        executeStrengthMove(heroIndex, hero, button, traits, stats, animKey)
+
+        if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
+            _dbgMoveCurrentPlayerId = 0
+        }
+        return
+    }
+
     if (!_doHeroMoveTrySpendMana(heroIndex, hero, family, t1, t2, t3, t4)) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             console.log(DEBUG_FILTER_PHRASE + " IGNORE noMana timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex + " family=" + family)
@@ -3053,8 +6887,21 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Agility: execute on E-zone press (while ARMED)
-    if (_doHeroMoveTryAgilityExecuteThisPress(heroIndex, hero, family, t2, stats, animKey, agi.agiDoExecuteThisPress)) {
+    if (_doHeroMoveTryAgilityExecuteThisPress(
+        heroIndex,
+        hero,
+        family,
+        button,
+        t1,
+        t2,
+        t3,
+        t4,
+        element | 0,
+        stats,
+        animKey,
+        agi.agiDoExecuteThisPress,
+        now
+    )) {
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             console.log(DEBUG_FILTER_PHRASE + " PATH execute timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
             _dbgMoveCurrentPlayerId = 0
@@ -3062,7 +6909,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Agility: build packets after landing (while ARMED)
     if (_doHeroMoveTryAgilityBuildAfterLanding(
         heroIndex,
         hero,
@@ -3081,22 +6927,39 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
     }
 
-    // Dash path setup
+    _doHeroMoveBeginActionTimeline(heroIndex, hero, family, button, t1, t2, t3, t4, element | 0, now)
+
     const [ax, ay] = _doHeroMoveComputeAimUnit(heroIndex)
     const lungeCapped = _doHeroMoveComputeLungeSpeedCapped(heroIndex, stats)
-    _doHeroMoveApplyDashVelocity(hero, family, ax, ay, lungeCapped)
 
     const moveDuration = stats[STAT.MOVE_DURATION] | 0
-    const L_exec = Math.idiv(lungeCapped * moveDuration, 1000)
+
+    if (family === FAMILY.AGILITY) {
+        const [windMs, fwdMs, _landMs] = splitAgiThrustDurations(moveDuration)
+
+        const startMs = (now + windMs) | 0
+        const endMs = (startMs + fwdMs) | 0
+
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeStartMs, startMs)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeEndMs, endMs)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, Math.round(ax * 1000) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, Math.round(ay * 1000) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, lungeCapped | 0)
+
+        hero.vx = 0
+        hero.vy = 0
+    } else {
+        _doHeroMoveApplyDashVelocity(hero, family, ax, ay, lungeCapped)
+    }
+
+    const [_, fwdMs2, __] = (family === FAMILY.AGILITY) ? splitAgiThrustDurations(moveDuration) : [0, moveDuration, 0]
+    const L_exec = Math.idiv(lungeCapped * (fwdMs2 | 0), 1000)
     sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
 
-    // Phase + busy/lock + timers
     _doHeroMoveSetPhaseFromFamily(heroIndex, family)
     _doHeroMoveApplyControlLockAndBusy(heroIndex, hero, family, now, moveDuration)
     _doHeroMoveApplyAgilityDashTimers(heroIndex, hero, family, now, moveDuration, stats)
 
-    // NEW (Agility combo v3): if this press began an agility dash while combo-mode is OFF,
-    // record the initiating button + the dashUntil we must hold through in order to enter combo-mode.
     if (family === FAMILY.AGILITY) {
         const btnId = encodeIntentToStrBtnId(button) | 0
         sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, btnId)
@@ -3129,7 +6992,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         )
     }
 
-    // Play anim and dispatch to family executor
     _doHeroMovePlayAnimAndDispatch(heroIndex, hero, family, button, traits, stats, animKey, now, t3)
 
     if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
@@ -3139,479 +7001,13 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
-
-function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before) */
-    if (playerId == 1) return img`
-        . . . . . . f f f f . . . . . .
-        . . . . f f f 2 2 f f f . . . .
-        . . . f f f 2 2 2 2 f f f . . .
-        . . f f f e e e e e e f f f . .
-        . . f f e 2 2 2 2 2 2 e e f . .
-        . . f e 2 f f f f f f 2 e f . .
-        . . f f f f e e e e f f f f . .
-        . f f e f b f 4 4 f b f e f f .
-        . f e e 4 1 f d d f 1 4 e e f .
-        . . f e e d d d d d d e e f . .
-        . . . f e e 4 4 4 4 e e f . . .
-        . . e 4 f 2 2 2 2 2 2 f 4 e . .
-        . . 4 d f 2 2 2 2 2 2 f d 4 . .
-        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
-        . . . . . f f f f f f . . . . .
-        . . . . . f f . . f f . . . . .
-    `
-    if (playerId == 2) return img`
-        . . . . . . c c c c . . . . . .
-        . . . . c c c 5 5 c c c . . . .
-        . . . c c c 5 5 5 5 c c c . . .
-        . . c c c e e e e e e c c c . .
-        . . c c e 5 5 5 5 5 5 e e c . .
-        . . c e 5 c c c c c c 5 e c . .
-        . . c c c c e e e e c c c c . .
-        . c c e c b c 4 4 c b c e c c .
-        . c e e 4 1 c d d c 1 4 e e c .
-        . . c e e d d d d d d e e c . .
-        . . . c e e 4 4 4 4 e e c . . .
-        . . e 4 c 5 5 5 5 5 5 c 4 e . .
-        . . 4 d c 5 5 5 5 5 5 c d 4 . .
-        . . 4 4 c 4 4 7 7 4 4 c 4 4 . .
-        . . . . . c c c c c c . . . . .
-        . . . . . c c . . c c . . . . .
-    `
-    if (playerId == 3) return img`
-        . . . . . . 6 6 6 6 . . . . . .
-        . . . . 6 6 6 3 3 6 6 6 . . . .
-        . . . 6 6 6 3 3 3 3 6 6 6 . . .
-        . . 6 6 6 e e e e e e 6 6 6 . .
-        . . 6 6 e 3 3 3 3 3 3 e e 6 . .
-        . . 6 e 3 6 6 6 6 6 6 3 e 6 . .
-        . . 6 6 6 6 e e e e 6 6 6 6 . .
-        . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 .
-        . 6 e e 4 1 6 d d 6 1 4 e e 6 .
-        . . 6 e e d d d d d d e e 6 . .
-        . . . 6 e e 4 4 4 4 e e 6 . . .
-        . . e 4 6 3 3 3 3 3 3 6 4 e . .
-        . . 4 d 6 3 3 3 3 3 3 6 d 4 . .
-        . . 4 4 6 4 4 9 9 4 4 6 4 4 . .
-        . . . . . 6 6 6 6 6 6 . . . . .
-        . . . . . 6 6 . . 6 6 . . . . .
-    `
-    return img`
-        . . . . . . 8 8 8 8 . . . . . .
-        . . . . 8 8 8 7 7 8 8 8 . . . .
-        . . . 8 8 8 7 7 7 7 8 8 8 . . .
-        . . 8 8 8 e e e e e e 8 8 8 . .
-        . . 8 8 e 7 7 7 7 7 7 e e 8 . .
-        . . 8 e 7 8 8 8 8 8 8 7 e 8 . .
-        . . 8 8 8 8 e e e e 8 8 8 8 . .
-        . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 .
-        . 8 e e 4 1 8 d d 8 1 4 e e 8 .
-        . . 8 e e d d d d d d e e 8 . .
-        . . . 8 e e 4 4 4 4 e e 8 . . .
-        . . e 4 8 7 7 7 7 7 7 8 4 e . .
-        . . 4 d 8 7 7 7 7 7 7 8 d 4 . .
-        . . 4 4 8 4 4 9 9 4 4 8 4 4 . .
-        . . . . . 8 8 8 8 8 8 . . . . .
-        . . . . . 8 8 . . 8 8 . . . . .
-    `
-}
-
-
-
-
-function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, familyNumber: number) {
-    const existingVer = sprites.readDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER) | 0
-    if (existingVer === DEFAULT_WEAPON_LOADOUT_VER) return
-
-    const lo = getHardcodedWeaponLoadoutForHero(profileName, familyNumber)
-
-    sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, lo.slashId)
-    sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, lo.thrustId)
-    sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, lo.castId)
-    sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, lo.execId)
-
-    // NEW
-    sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, lo.comboId)
-
-    sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
-}
-
-
-function createHeroForPlayer(playerId: number, startX: number, startY: number) {
-    // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
-    // In Phaser, the native LPC sprite uses the same footprint; we skip pixel uploads.
-    // In pure Arcade, students will just see big, chunky heroes.
-    const hero = sprites.create(image.create(64, 64), SpriteKind.Player)
-
-    hero.x = startX; hero.y = startY; hero.z = 20
-
-    // NEW: seed previous position for collisions
-    sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x)
-    sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y)
-
-    const heroIndex = heroes.length; heroes.push(hero)
-    playerToHeroIndex[playerId] = heroIndex
-
-    sprites.setDataNumber(hero, HERO_DATA.OWNER, playerId)
-    heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
-    heroBusyUntil[heroIndex] = 0
-
-    // NEW: seed initial facing + phase for animations
-    syncHeroDirData(heroIndex)
-    setHeroPhaseString(heroIndex, "idle")
-    clearHeroFrameColOverride(heroIndex) // IMPORTANT: seed to -1 so run/idle logic works
-
-    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
-    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
-    sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.COMBO_COUNT, 0)
-    sprites.setDataNumber(hero, HERO_DATA.COMBO_MULT, 100)
-    sprites.setDataNumber(hero, HERO_DATA.LAST_HIT_TIME, 0)
-    sprites.setDataString(hero, HERO_DATA.LAST_MOVE_KEY, "")
-    sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
-
-    // Seed UI/state fields so Phaser can render immediately
-    sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_E_W, AGI_METER_W_E)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_1_W, AGI_METER_W_1)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_2_W, AGI_METER_W_2)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_ZONE_3_W, AGI_METER_W_3)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_PKT_COUNT, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_PKT_SUM, 0)
-
-    // Manual cancel bookkeeping (seed all to 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_X, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_Y, 0)
-
-    // NEW (Agility combo v3): persistent combo mode + landing/entry bookkeeping
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_MODE, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAND_ARMED_FOR_DU, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, 0)
-
-    // NEW (Agility combo v4): weapon-as-meter charge contract (seed defaults)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_CHARGE_ACTIVE, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_START_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_PERIOD_MS, AGI_CHARGE_DEFAULT_PERIOD_MS)
-
-    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD, AGI_CHARGE_DEFAULT_TIER_A_ADD)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD, AGI_CHARGE_DEFAULT_TIER_B_ADD)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD, AGI_CHARGE_DEFAULT_TIER_C_ADD)
-
-    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000, AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000, AGI_CHARGE_DEFAULT_A_FRAC_X1000)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000, AGI_CHARGE_DEFAULT_B_FRAC_X1000)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, AGI_CHARGE_DEFAULT_C_FRAC_X1000)
-
-    sprites.setDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_ADD_AMOUNT, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_STORED_HITS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_LAND_BUFFER_MS, AGI_LANDING_BUFFER_MS)
-
-    sprites.setDataNumber(hero, HERO_DATA.AGI_PENDING_ADD, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW, 0)
-
-
-    sprites.setDataNumber(hero, HERO_DATA.FAMILY, FAMILY.STRENGTH)
-
-    // NEW: seed hero identity strings so Phaser can resolve LPC animations
-    const profileName = getHeroProfileForHeroIndex(heroIndex);
-    sprites.setDataString(hero, "heroName", profileName);
-    sprites.setDataString(
-        hero,
-        "heroFamily",
-        heroFamilyNumberToString(FAMILY.STRENGTH)
-    );
-
-    // NEW (Step 4): seed weapon loadout onto sprite.data (primitives only; net-safe)
-    // This runs once per hero and will not overwrite later drops/equips.
-    ensureHeroWeaponLoadoutSeeded(hero, profileName, FAMILY.STRENGTH)
-
-    sprites.setDataString(hero, HERO_DATA.BUTTON, "")
-    sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
-    sprites.setDataNumber(hero, HERO_DATA.TRAIT2, 25)
-    sprites.setDataNumber(hero, HERO_DATA.TRAIT3, 25)
-    sprites.setDataNumber(hero, HERO_DATA.TRAIT4, 25)
-
-    // NEW: initialize mirrored engine-side fields
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.MOVE_SPEED_MULT, 1)
-    sprites.setDataNumber(hero, HERO_DATA.DAMAGE_AMP_MULT, 1)
-    sprites.setDataString(hero, HERO_DATA.BUFF_JSON, "[]")
-
-    heroTargetCircles[heroIndex] = null
-
-    initHeroHP(heroIndex, hero, 1000)
-    initHeroMana(heroIndex, hero, 2000)
-    refreshHeroController(heroIndex)
-
-    // NEW: let the student animation hook define what this hero actually looks like
-    // "idle" here is your base/default state; 0 duration so it's just an image set
-    callHeroAnim(heroIndex, "idle", 0)
-}
-
-
-
-
-function setupHeroes() {
-
-    // 1) Start from ARCADE screen center as a safe default.
-    // In MakeCode Arcade, this gives you the 320×240-ish center.
-    // In Phaser compat, ARCADE_SCREEN_* mirrors screen.width/height from arcadeCompat.
-    let W = userconfig.ARCADE_SCREEN_WIDTH;
-    let H = userconfig.ARCADE_SCREEN_HEIGHT;
-
-    // 2) If we have a full world tilemap, override with WORLD size in pixels.
-    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
-        const rows = _engineWorldTileMap.length;
-        const cols = _engineWorldTileMap[0].length;
-
-        W = cols * WORLD_TILE_SIZE;
-        H = rows * WORLD_TILE_SIZE;
-
-        console.log(
-            "[setupHeroes] using WORLD center from tilemap",
-            { rows, cols, tileSize: WORLD_TILE_SIZE, W, H }
-        );
-    } else {
-        console.log(
-            "[setupHeroes] using SCREEN center (no world tilemap yet)",
-            { W, H }
-        );
-    }
-
-    const centerW = W / 2;
-    const centerH = H / 2;
-
-    // You can nudge this however you like
-    const offset = 40;
-
-    const coords: number[][] = [
-        [centerW + offset, centerH + offset],
-        [centerW - offset, centerH + offset],
-        [centerW + offset, centerH - offset],
-        [centerW - offset, centerH - offset]
-    ];
-
-    createHeroForPlayer(1, coords[0][0], coords[0][1]);
-    createHeroForPlayer(2, coords[1][0], coords[1][1]);
-    createHeroForPlayer(3, coords[2][0], coords[2][1]);
-    createHeroForPlayer(4, coords[3][0], coords[3][1]);
-}
-
-
-function lockHeroControls(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, hero.vx)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, hero.vy)
-    refreshHeroController(heroIndex)
-}
-
-function unlockHeroControls(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
-    hero.vx = 0; hero.vy = 0
-    refreshHeroController(heroIndex)
-}
-
-
-function refreshHeroController(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
-    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-    const baseSpeed = 50
-    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
-    const speed = locked ? 0 : baseSpeed * hasteMult
-
-    if (playerId == 1) controller.player1.moveSprite(hero, speed, speed)
-    else if (playerId == 2) controller.player2.moveSprite(hero, speed, speed)
-    else if (playerId == 3) controller.player3.moveSprite(hero, speed, speed)
-    else if (playerId == 4) controller.player4.moveSprite(hero, speed, speed)
-}
-
-
-
-function refreshHeroControllerBUGGED(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
-    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-    const baseSpeed = 50
-    const mult = heroMoveSpeedMult[heroIndex] || 1
-    const speed = locked ? 0 : baseSpeed * mult
-
-    const vx = speed
-    const vy = speed
-    if (playerId == 1) controller.player1.moveSprite(hero, vx, vy)
-    else if (playerId == 2) controller.player2.moveSprite(hero, vx, vy)
-    else if (playerId == 3) controller.player3.moveSprite(hero, vx, vy)
-    else if (playerId == 4) controller.player4.moveSprite(hero, vx, vy)
-}
-
-
-function getHeroDirectionName(heroIndex: number) {
-    const dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
-    if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
-}
-
-// Mirror direction into hero data so Phaser can see it.
-function syncHeroDirData(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const dir = getHeroDirectionName(heroIndex)
-    sprites.setDataString(hero, "dir", dir)
-    sprites.setDataString(hero, HERO_DATA.DIR, dir)
-}
-
-// Mirror phase into hero data so Phaser can see it.
-function setHeroPhaseString(heroIndex: number, phase: string) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    sprites.setDataString(hero, "phase", phase)
-    sprites.setDataString(hero, HERO_DATA.PHASE, phase)
-}
-
-
-// Mirror frame-col override into hero data so Phaser can see it.
-// Sentinel: HERO_FRAME_COL_OVERRIDE_NONE (-1) means "no override"
-// Mirror frame-col override into hero data so Phaser can see it.
-// Sentinel: HERO_FRAME_COL_OVERRIDE_NONE (-1) means "no override"
-function setHeroFrameColOverride(heroIndex: number, col: number): void {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const v = col | 0
-
-    const prev = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
-    if (prev === v) return
-
-    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, v)
-
-    if (DEBUG_INTEGRATOR) {
-        const phase = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
-        const dir = sprites.readDataString(hero, HERO_DATA.DIR) || ""
-        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
-        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
-        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
-        console.log("[WPN-FCO-SET]", { heroIndex, prev, v, phase, dir, strCharging, agiState, locked, busyUntil, t: (game.runtime() | 0) })
-    }
-}
-
-function clearHeroFrameColOverride(heroIndex: number): void {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const prev = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
-    if (prev === HERO_FRAME_COL_OVERRIDE_NONE) return
-
-    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
-
-    if (DEBUG_INTEGRATOR) {
-        const phase = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
-        const dir = sprites.readDataString(hero, HERO_DATA.DIR) || ""
-        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
-        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
-        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
-        console.log("[WPN-FCO-CLEAR]", { heroIndex, prev, v: HERO_FRAME_COL_OVERRIDE_NONE, phase, dir, strCharging, agiState, locked, busyUntil, t: (game.runtime() | 0) })
-    }
-}
-
-
-
-function getHeroBusyUntil(heroIndex: number): number {
-    const hero = heroes[heroIndex]; if (!hero) return 0
-    const v = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
-    heroBusyUntil[heroIndex] = v
-    return v
-}
-
-function setHeroBusyUntil(heroIndex: number, untilMs: number): void {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const v = untilMs | 0
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, v)
-    heroBusyUntil[heroIndex] = v
-}
-
-function clearHeroBusyUntil(heroIndex: number): void {
-    setHeroBusyUntil(heroIndex, 0)
-}
-
-
-
-function updateHeroFacingsFromVelocity() {
-    for (let i = 0; i < heroes.length; i++) {
-        const hero = heroes[i]; if (!hero) continue
-
-        const state = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
-        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-        // NEW: In Agility build mode, read D-pad to update facing (aim),
-        // but do NOT use it to change velocity.
-        if (locked && state === AGI_STATE.ARMED) {
-            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-            const ctrl = getControllerForOwnerId(ownerId)
-            if (ctrl) {
-                let dx = 0, dy = 0
-                if (ctrl.left.isPressed()) dx = -1
-                else if (ctrl.right.isPressed()) dx = 1
-                if (ctrl.up.isPressed()) dy = -1
-                else if (ctrl.down.isPressed()) dy = 1
-
-                if (dx !== 0 || dy !== 0) {
-                    heroFacingX[i] = dx
-                    heroFacingY[i] = dy
-                    syncHeroDirData(i)
-                }
-            }
-            continue
-        }
-
-        // Normal behavior: facing follows velocity
-        const vx = hero.vx, vy = hero.vy
-        if (vx == 0 && vy == 0) continue
-
-        let dx = 0, dy = 0
-        if (vx > 0) dx = 1; else if (vx < 0) dx = -1
-        if (vy > 0) dy = 1; else if (vy < 0) dy = -1
-
-        if (dx != 0 || dy != 0) {
-            heroFacingX[i] = dx; heroFacingY[i] = dy
-            syncHeroDirData(i)
-        }
-    }
-}
-
-
-
-function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
-    if (family == FAMILY.STRENGTH || family == FAMILY.INTELLECT || family == FAMILY.HEAL) hero.startEffect(effects.trail, timeMs)
-    const direction = getHeroDirectionName(heroIndex)
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
-
-    if (playerId == 1) HeroEngine.animateHero1Hook(hero, animKey, timeMs, direction)
-    else if (playerId == 2) HeroEngine.animateHero2Hook(hero, animKey, timeMs, direction)
-    else if (playerId == 3) HeroEngine.animateHero3Hook(hero, animKey, timeMs, direction)
-    else if (playerId == 4) HeroEngine.animateHero4Hook(hero, animKey, timeMs, direction)
-
-}
-
-
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
 // ================================================================
 // SECTION 5 - HERO STATS AND UI
@@ -3754,11 +7150,26 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
         return;
     }
 
-    const now = game.runtime() | 0;
+    const now = Math.max(1, game.runtime() | 0);
+
+    // ------------------------------------------------------------
+    // Unified PhaseName contract: death is a real render phase window.
+    // Also treat it as a new "action edge" (system-driven).
+    // ------------------------------------------------------------
+    const aSeq0 = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0;
+    sprites.setDataNumber(hero, HERO_DATA.ActionSequence, ((aSeq0 <= 0 ? 1 : aSeq0) + 1) | 0);
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "death");
+
+    // Clear any move-segmentation and one-shot pulses so "death" is clean.
+    _animKeys_clearPhasePart(hero);
+    _animEvent_clear(hero);
+
+    // Set PhaseName (authoritative) + mirror legacy, then stamp a real window.
+    setHeroPhaseString(heroIndex, "death");
 
     // Mark hero as dead and set a "death animation" window
     sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, true);
-    const deathUntil = now + HERO_DEATH_ANIM_MS;
+    const deathUntil = (now + (HERO_DEATH_ANIM_MS | 0)) | 0;
     sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, deathUntil);
 
     // Lock controls and stop movement while dying
@@ -3768,6 +7179,9 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
     heroBusyUntil[heroIndex] = deathUntil;
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, deathUntil);
     sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true);
+
+    // Stamp the authoritative render window for death (non-zero duration).
+    _animKeys_stampPhaseWindow(heroIndex, hero, "death", now, (HERO_DEATH_ANIM_MS | 0), "applyDamageToHeroIndex(death)");
 
     // Fire a "death" animation request.
     // In Arcade, defaultHeroAnim is a harmless stub.
@@ -4081,6 +7495,27 @@ function updateAgiChargeV4PublishedKeys(nowMs: number): void {
 
 
 
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 4) Hook into your existing update + startup
+// Add this call inside your existing updateHeroOverlays() (or right after it in game.onUpdate):
+//    updateShopUi(now)
+
+//
+// Example:
+// function updateHeroOverlays() {
+//     const now = game.runtime() | 0
+//     const phaser = isPhaserRuntime()
+//     updateAgiChargeV4PublishedKeys(now)
+//     updateHeroAuras(now, phaser)
+//     updateHeroAimIndicators(now, phaser)
+//     updateHeroMeters(now, phaser)
+//     updateShopUi(now)   // <-- ADD THIS
+// }
+//
+// And call these ONCE during startup (after heroes exist / setupHeroes runs):
+//    installShopInputHandlers()
+//    spawnShopNpcBox( (userconfig.ARCADE_SCREEN_WIDTH>>1), (userconfig.ARCADE_SCREEN_HEIGHT>>1) + 30, 1 )
+
 
 function updateHeroOverlays() {
     const now = game.runtime() | 0
@@ -4092,6 +7527,8 @@ function updateHeroOverlays() {
     updateHeroAuras(now, phaser)
     updateHeroAimIndicators(now, phaser)
     updateHeroMeters(now, phaser)
+    updateShopUi(now)   // <-- ADD THIS
+
 }
 
 
@@ -4418,6 +7855,8 @@ function triggerSupportGlowPulse(heroIndex: number) {
     let ticks = 0;
     const flashInterval = 60; // ms
 
+
+
     game.onUpdateInterval(flashInterval, function () {
         if (!HeroEngine._isStarted()) return;
         if (!aura || (aura.flags & sprites.Flag.Destroyed)) return;
@@ -4631,11 +8070,6 @@ function strengthExtraManaForFullCharge(baseCost: number): number {
     return extra < 0 ? 0 : extra
 }
 
-function clampInt(v: number, lo: number, hi: number): number {
-    if (v < lo) return lo
-    if (v > hi) return hi
-    return v
-}
 
 
 function beginStrengthCharge(
@@ -4649,17 +8083,15 @@ function beginStrengthCharge(
     if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
     const now = game.runtime()
-    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
     const btnId = encodeIntentToStrBtnId(button)
     if (btnId === 0) return
 
-    // Use SNAPSHOTTED traits from our passed-in array (already stored to payload by executeStrengthMove)
     const t1 = traits[1] | 0
     const t2 = traits[2] | 0
-    const t3 = traits[3] | 0 // time trait
+    const t3 = traits[3] | 0
     const t4 = traits[4] | 0
+    const element = traits[OUT.ELEMENT] | 0
 
-    // Base mana: traits 1,2,4 only (paid immediately)
     const baseCost = strengthBaseManaCostFromTraits(t1, t2, t4)
     let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
     if (mana < baseCost) {
@@ -4675,11 +8107,13 @@ function beginStrengthCharge(
         showDamageNumber(hero.x, hero.y - 10, -baseCost, "mana")
     }
 
+    // Action edge only after real commit (base mana paid)
+    _doHeroMoveBeginActionTimeline(heroIndex, hero, FAMILY.STRENGTH, button, t1, t2, t3, t4, element | 0, now | 0)
+
     const maxMs = strengthChargeMaxMsFromTrait3(t3)
     const extraCost = strengthExtraManaForFullCharge(baseCost)
     const mpdX1000 = (extraCost <= 0) ? 0 : Math.idiv(extraCost * 1000, 360)
 
-    // Charge state
     sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, true)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, btnId)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, now)
@@ -4690,21 +8124,24 @@ function beginStrengthCharge(
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, baseCost)
 
-    // Lock controls during charge
     lockHeroControls(heroIndex)
 
-    // Phase semantics unchanged: strength charge is still "slash"
     setHeroPhaseString(heroIndex, "slash")
+    clearHeroFrameColOverride(heroIndex)
 
-    // NEW: hold frame 0 while charging
-    setHeroFrameColOverride(heroIndex, 0)
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "strength_charge")
+    if (DEBUG_ANIM_KEYS) _dbgAnimKeys(heroIndex, hero, "KIND_REFINE", `t=${(now|0)} kind=strength_charge`)
 
-    // Charge bar
+    _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now | 0, maxMs | 0, "beginStrengthCharge")
+
+    // PhasePart contract: strength charge is a single segmented part.
+    _animKeys_setPhasePart(hero, "charging", now | 0, maxMs | 0, now | 0)
+
+    callHeroAnim(heroIndex, animKey, maxMs | 0)
+
     showStrengthChargeBar(heroIndex, hero, true)
     setStrengthChargeBarPct(heroIndex, hero, 0)
 }
-
-
 
 
 
@@ -4720,10 +8157,23 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     let remX1000 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000) | 0
 
     if (maxMs <= 0) {
-        // Safety fallback: if maxMs got clobbered, force release immediately
         releaseStrengthCharge(heroIndex, hero, nowMs)
         return
     }
+
+    // Publish universal progress (0..PHASE_PROGRESS_MAX)
+    const elapsed0 = clampInt((nowMs | 0) - (startMs | 0), 0, maxMs | 0)
+    const pInt = clampInt(Math.idiv(PHASE_PROGRESS_MAX * elapsed0, maxMs | 0), 0, PHASE_PROGRESS_MAX)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, pInt)
+
+    // If PhasePartName got cleared, restore charging part without touching ActionSequence
+    const ppNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    if (!ppNow) {
+        _animKeys_setPhasePart(hero, "charging", startMs | 0, maxMs | 0, nowMs | 0)
+    }
+
+    _animInvCheckHeroTimeline(heroIndex, hero, nowMs | 0, "updateStrengthChargeForHero")
 
     // Clamp dt so tab-switch / hitching doesn't instantly jump to full
     let dt = (nowMs | 0) - (lastMs | 0)
@@ -4739,20 +8189,16 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         return
     }
 
-    // Advance arc based on time progress (trait3 affects maxMs)
     // dDeg = 360 * dt / maxMs
     const dDeg = (dt <= 0) ? 0 : Math.idiv(360 * dt, maxMs)
     if (dDeg <= 0) {
-        // Still update the last time + bar from absolute progress to avoid “stalls”
-        const elapsed = (nowMs | 0) - (startMs | 0)
-        const pct = clampInt(Math.idiv(100 * clampInt(elapsed, 0, maxMs), maxMs), 0, 100)
+        const pct = clampInt(Math.idiv(100 * clampInt(elapsed0, 0, maxMs), maxMs), 0, 100)
         setStrengthChargeBarPct(heroIndex, hero, pct)
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
         return
     }
 
     // Incremental mana drain tied to degrees gained (not seconds)
-    // costX1000 = dDeg * mpdX1000 + rem
     let manaToSpend = 0
     if (mpdX1000 > 0) {
         let costX1000 = dDeg * mpdX1000 + remX1000
@@ -4764,46 +8210,34 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     if (manaToSpend > 0) {
         let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
         if (mana <= 0) {
-            // Already empty -> force release immediately
             releaseStrengthCharge(heroIndex, hero, nowMs)
             return
         }
 
         if (mana < manaToSpend) {
-            // Can’t afford full dDeg. Spend what we have and compute affordable degrees.
             const affordableMana = mana
             mana = 0
             sprites.setDataNumber(hero, HERO_DATA.MANA, 0)
             updateHeroManaBar(heroIndex)
 
-            // Convert affordableMana back to degrees (fixed-point)
-            // degAff ≈ affordableMana / (manaPerDeg)
             let degAff = 0
-            if (mpdX1000 > 0) {
-                // degAff = affordableMana*1000 / mpdX1000
-                degAff = Math.idiv(affordableMana * 1000, mpdX1000)
-            } else {
-                degAff = dDeg
-            }
+            if (mpdX1000 > 0) degAff = Math.idiv(affordableMana * 1000, mpdX1000)
+            else degAff = dDeg
 
             arcDeg += degAff
             if (arcDeg > 360) arcDeg = 360
             sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
 
-            // Update debug spent
             const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + affordableMana
             sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
 
-            // Bar update
             const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
             setStrengthChargeBarPct(heroIndex, hero, pct)
 
-            // Force release now (mana is 0)
             releaseStrengthCharge(heroIndex, hero, nowMs)
             return
         }
 
-        // Normal spend
         mana -= manaToSpend
         if (mana < 0) mana = 0
         sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
@@ -4813,18 +8247,14 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
     }
 
-    // Advance arc degrees
     arcDeg += dDeg
     if (arcDeg > 360) arcDeg = 360
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, remX1000)
 
-    // Update bar (% of 360)
     const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
     setStrengthChargeBarPct(heroIndex, hero, pct)
-
-    // If we hit 360 naturally, we keep charging state until player releases the initiating button.
 }
 
 
@@ -4833,30 +8263,54 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (!hero) return
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
-    // We are no longer holding a single frame; allow normal slash playback on release
+    const now = nowMs | 0
+
+    // We are no longer holding a single frame; allow normal playback on release
     clearHeroFrameColOverride(heroIndex)
 
+    // Snapshot arc BEFORE clearing charge state
     let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
     arcDeg = clampInt(arcDeg, 0, 360)
-
-    // Clear charging state first (prevents re-entrancy)
-    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
-
-    // Hide bar
-    showStrengthChargeBar(heroIndex, hero, false)
-    setStrengthChargeBarPct(heroIndex, hero, 0)
-
     // Minimal swing even for tiny charge (no free cancel after paying base mana)
     if (arcDeg < 10) arcDeg = 10
 
-    // --- USE SNAPSHOTTED PAYLOAD (immune to mid-hold changes) ---
-    const family = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0
+    // ------------------------------------------------------------
+    // Clear charge state FIRST (so downstream logic doesn't still see "charging")
+    // ------------------------------------------------------------
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, STR_BTN_NONE)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, 0)
+
+    // Ensure we stop any "frame freeze" override used during charge
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+
+    // Hide bar (this fixes the lingering white outline)
+    showStrengthChargeBar(heroIndex, hero, false)
+    setStrengthChargeBarPct(heroIndex, hero, 0)
+
+    // ------------------------------------------------------------
+    // Compute swing duration from charge amount (keep the V9 shaping)
+    // ------------------------------------------------------------
+    const swingDurationMs = clampInt(220 + Math.idiv(arcDeg * 220, 360), 160, 520) | 0
+
+    // ------------------------------------------------------------
+    // Busy lock for the swing window
+    // ------------------------------------------------------------
+    const until = (now + swingDurationMs) | 0
+    heroBusyUntil[heroIndex] = until
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, until)
+    lockHeroControls(heroIndex)
+
+    // ------------------------------------------------------------
+    // Use snapshotted payload (immune to mid-hold changes)
+    // ------------------------------------------------------------
+    const family0 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0
     const button = sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR) || "A"
     const t1 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1) | 0
     const t2 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2) | 0
@@ -4866,7 +8320,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const traits = [0, t1, t2, t3, t4, el]
 
     // Recompute stats from the snapshotted traits/button
-    const stats = calculateMoveStatsForFamily(family, button, traits)
+    const family = (family0 | 0) || FAMILY.STRENGTH
+    const traitsEff = applyDamageModsToTraits(heroIndex, family, traits)
+    const stats = calculateMoveStatsForFamily(family, button, traitsEff)
 
     // Damage calc (matches your existing Strength flow)
     const baseDamage = getBasePower(FAMILY.STRENGTH)
@@ -4879,13 +8335,47 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const weakenPct = stats[STAT.WEAKEN_PCT] | 0
     const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
     const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
-
-    const swingDurationMs = stats[STAT.STRENGTH_SWING_MS] || 220
     const isHeal = false
 
-    // Keep controls locked during the swing; unlock handled by canonical busy-until
-    setHeroBusyUntil(heroIndex, nowMs + swingDurationMs)
+    // ------------------------------------------------------------
+    // NORMALIZED ACTION EDGE:
+    // Use the single-writer helper to increment ActionSequence and
+    // publish ActionP0..P3, seed, variant, render style, and hygiene.
+    // ------------------------------------------------------------
+    _doHeroMoveBeginActionTimeline(
+        heroIndex,
+        hero,
+        FAMILY.STRENGTH,
+        button,
+        t1,
+        t2,
+        t3,
+        t4,
+        el,
+        now
+    )
 
+    // Refine semantic identity: this edge is the RELEASE/SWING, not the charge.
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "strength_swing")
+    if (DEBUG_ANIM_KEYS) _dbgAnimKeys(heroIndex, hero, "KIND_REFINE", `t=${(now|0)} kind=strength_swing`)
+
+    // (Leave ActionVariant as the button-id set by _doHeroMoveBeginActionTimeline)
+
+    // ------------------------------------------------------------
+    // Phase + part window for the swing
+    // ------------------------------------------------------------
+    _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now, swingDurationMs, "releaseStrengthCharge")
+    _animKeys_setPhasePart(hero, "swing", now, swingDurationMs, now)
+
+    _animInvCheckHeroTimeline(heroIndex, hero, now, "releaseStrengthCharge(begin swing)")
+
+    // Animation request (Phaser side uses the universal keys)
+    callHeroAnim(heroIndex, "slash", swingDurationMs)
+
+    _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
+    // ------------------------------------------------------------
+    // GAMEPLAY: spawn the strength swing projectile (engine-owned)
+    // ------------------------------------------------------------
     spawnStrengthSwingProjectile(
         heroIndex, hero,
         dmg, isHeal, button,
@@ -4896,7 +8386,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         arcDeg
     )
 
-    // Clear cached payload after firing (optional but cleaner)
+    
+
+    // Clear cached payload after firing (cleanliness / prevents stale reads)
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY, 0)
     sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR, "")
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, 0)
@@ -4911,29 +8403,47 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
 
 
-function cancelStrengthCharge(heroIndex: number, hero: Sprite): void {
+function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): void {
     if (!hero) return
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
 
-    // Never leave the hero stuck in hold-frame mode after cancel
-    clearHeroFrameColOverride(heroIndex)
+    const now = nowMs | 0
 
-    // Cancel means: stop charging + hide bar (no refund).
+    // End charging state
     sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, now)
+
+    // Clear charge bookkeeping (safe to zero; NOT the Phase window)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, STR_BTN_NONE)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, 0)
 
+    // Release any hold-frame override / color override
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+    clearHeroFrameColOverride(heroIndex)
+
+    // UI
     showStrengthChargeBar(heroIndex, hero, false)
     setStrengthChargeBarPct(heroIndex, hero, 0)
 
-    // Unlock immediately on cancel
-    unlockHeroControls(heroIndex)
+    // Cancel ends the move-segment (PhasePart), but PhaseName stays meaningful (unified contract)
+    _animKeys_clearPhasePart(hero)
+
+    // Clear any one-shot event pulse (mask + payload only; EventSequence untouched)
+    _animEvent_clear(hero)
+
+    // Unlock inputs and clear busy
     clearHeroBusyUntil(heroIndex)
+    unlockHeroControls(heroIndex)
+
+    // Return to ambient phase under the unified PhaseName contract
+    updateHeroMovementPhase(now)
+
+    _animInvCheckHeroTimeline(heroIndex, hero, now, "cancelStrengthCharge")
 }
 
 
@@ -5490,6 +9000,8 @@ function buildStrengthSmashBitmap(
     return img
 }
 
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+
 
 // ====================================================
 // SECTION A - AGILITY MOVE MODULE
@@ -5599,7 +9111,21 @@ function agiSelectBestEnemyInRadius(cx: number, cy: number, radius: number): num
     return bestIndex
 }
 
-function agiSpawnExecuteSlashVfx(x: number, y: number): void {
+
+// EVENT EMITTER (AUTHORITATIVE FOR THIS EVENT)
+// Phaser path: increments EventSequence + sets EventMask/Payload exactly once per slash beat.
+// IMPORTANT: Only emitters increment EventSequence.
+function agiSpawnExecuteSlashVfx(hero: Sprite, x: number, y: number): void {
+    const phaser = isPhaserRuntime()
+
+    // Phaser: emit an event beat instead of spawning an Arcade-side placeholder sprite.
+    if (phaser) {
+        _animEvent_emit(hero, EVENT_MASK_AGI_EXEC_SLASH, x | 0, y | 0, 0, 0)
+        if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(-1, hero, "EVENT_EMIT"))
+        return
+    }
+
+    // Pure Arcade fallback (unchanged behavior)
     const v = sprites.create(image.create(10, 10), SpriteKind.HeroWeapon)
     v.image.fill(0)
     v.image.drawRect(0, 0, 10, 10, 5)
@@ -5734,6 +9260,8 @@ function agiFinishExecute(heroIndex: number, hero: Sprite): void {
 
 
 function updateAgilityExecuteAll(nowMs: number): void {
+    const now = nowMs | 0
+
     for (let heroIndex = 0; heroIndex < heroes.length; heroIndex++) {
         const hero = heroes[heroIndex]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
@@ -5741,10 +9269,48 @@ function updateAgilityExecuteAll(nowMs: number): void {
         const state = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
         if (state !== AGI_STATE.EXECUTING) continue
 
-        const nextMs = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS) | 0
-        if (nextMs > 0 && nowMs < nextMs) continue
-
+        // Interval (minimum floor so slashes are visible)
         const interval = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_INTERVAL_MS) | 0
+        const dtBase = (interval > 0 ? interval : (AGI_EXEC_STEP_MS | 0)) | 0
+        const dt = Math.max(dtBase, (AGI_EXEC_STEP_MS_MIN | 0)) | 0
+
+        // ------------------------------------------------------------
+        // Phase/Part timeline publishing (EVERY FRAME while executing)
+        // ------------------------------------------------------------
+        let phaseStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+        let phaseDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+
+        // Defensive fallback: if someone started execute without stamping, stamp now.
+        if (phaseStart <= 0 || phaseDur <= 0) {
+            const arrTmp = agiPacketsEnsure(heroIndex)
+            const rem = (arrTmp ? (arrTmp.length | 0) : 0) | 0
+            const done = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_STEP) | 0
+            const totalSteps = Math.max(1, (done + rem) | 0) | 0
+
+            phaseStart = now
+            phaseDur = Math.max(1, (((totalSteps - 1) | 0) * dt + 1) | 0) | 0
+
+            // Use slash semantic if we need to stamp defensively
+            _animKeys_stampPhaseWindow(heroIndex, hero, "slash", phaseStart, phaseDur, "updateAgilityExecuteAll:fallbackStamp")
+        }
+
+        // Phase progress
+        const phaseElapsed = clampInt(now - phaseStart, 0, phaseDur)
+        const phaseProg = clampInt(Math.idiv(PHASE_PROGRESS_MAX * phaseElapsed, Math.max(1, phaseDur)), 0, PHASE_PROGRESS_MAX)
+        sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, phaseProg)
+
+        // Part window: track time since last beat using nextMs - dt
+        const nextMs0 = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS) | 0
+        let partStart = (nextMs0 - dt) | 0
+        if (partStart <= 0) partStart = now
+        _animKeys_setPhasePart(hero, "beat", partStart, dt, now)
+
+        // ------------------------------------------------------------
+        // Beat execution (only when it's time)
+        // ------------------------------------------------------------
+        const nextMs = nextMs0 | 0
+        if (nextMs > 0 && now < nextMs) continue
+
         const execRadius = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_RADIUS) | 0
         const slowPct = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_SLOW_PCT) | 0
         const slowDurMs = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_SLOW_DUR_MS) | 0
@@ -5774,7 +9340,7 @@ function updateAgilityExecuteAll(nowMs: number): void {
         const enemy = enemies[eIndex]
         if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) {
             // Skip this step; schedule next tick quickly
-            sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, nowMs + 1)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, now + 1)
             continue
         }
 
@@ -5816,22 +9382,20 @@ function updateAgilityExecuteAll(nowMs: number): void {
         // Status (Trait4): slow on execute hits
         if (slowPct > 0 && slowDurMs > 0) {
             sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, slowPct)
-            sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, nowMs + slowDurMs)
+            sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, now + slowDurMs)
         }
 
         if (packetDamage > 0) {
             applyDamageToEnemyIndex(eIndex, packetDamage)
         }
 
-        agiSpawnExecuteSlashVfx(enemy.x, enemy.y)
+        agiSpawnExecuteSlashVfx(hero, enemy.x, enemy.y)
 
         // Advance step + schedule next (with a minimum floor so slashes are visible)
         const step1 = (step0 + 1) | 0
         sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_STEP, step1)
 
-        const dtBase = (interval > 0 ? interval : AGI_EXEC_STEP_MS) | 0
-        const dt = Math.max(dtBase, AGI_EXEC_STEP_MS_MIN) | 0
-        sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, nowMs + dt)
+        sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, now + dt)
     }
 }
 
@@ -6012,6 +9576,145 @@ function computeHeroAimForIndicator(
 
 
 
+function updateAgilityThrustMotionAll(nowMs: number): void {
+    const now = nowMs | 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        const lungeStart = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0
+        const lungeEnd = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0
+        if (lungeStart <= 0 || lungeEnd <= 0) continue
+
+        // If we’re in build/execute mode, never apply lunge velocity or phase parts
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        if (agiState === AGI_STATE.ARMED || agiState === AGI_STATE.EXECUTING) {
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+            _animKeys_clearPhasePart(hero)
+            continue
+        }
+
+        // Determine the intended end of the full move window for landing progression.
+        // Prefer BUSY_UNTIL (authoritative lock), then fall back to PhaseStart+Duration.
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        const phaseStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+        const phaseDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+        let phaseEnd = (phaseStart > 0 && phaseDur > 0) ? ((phaseStart + phaseDur) | 0) : 0
+        if (busyUntil > 0 && (phaseEnd <= 0 || busyUntil > phaseEnd)) phaseEnd = busyUntil
+        if (phaseEnd <= 0) phaseEnd = (lungeEnd + 1) | 0
+
+        // Decide which part we are in
+        let desiredPart = ""
+        if (now < lungeStart) desiredPart = "windup"
+        else if (now < lungeEnd) desiredPart = "forward"
+        else desiredPart = "landing"
+
+        // Transition-based PhasePart stamping:
+        // Only set Name/Start/Duration when the part actually changes.
+        const curPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        if (curPart !== desiredPart) {
+            if (desiredPart === "windup") {
+                const windStart = (phaseStart > 0 ? phaseStart : now) | 0
+                let windDur = (lungeStart - windStart) | 0
+                if (windDur <= 0) windDur = 1
+                sprites.setDataString(hero, HERO_DATA.PhasePartName, "windup")
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, windStart)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, windDur)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+            } else if (desiredPart === "forward") {
+                let fwdDur = (lungeEnd - lungeStart) | 0
+                if (fwdDur <= 0) fwdDur = 1
+                sprites.setDataString(hero, HERO_DATA.PhasePartName, "forward")
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, lungeStart | 0)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, fwdDur)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+            } else { // landing
+                let landDur = (phaseEnd - lungeEnd) | 0
+                if (landDur <= 0) landDur = 1
+                sprites.setDataString(hero, HERO_DATA.PhasePartName, "landing")
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, lungeEnd | 0)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, landDur)
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0)
+            }
+        }
+
+        // Velocity behavior (still per-frame)
+        if (desiredPart === "windup") {
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+        } else if (desiredPart === "forward") {
+            const ax1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirX1000) | 0
+            const ay1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirY1000) | 0
+            const speed = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeSpeed) | 0
+
+            const vx = Math.idiv(ax1000 * speed, 1000)
+            const vy = Math.idiv(ay1000 * speed, 1000)
+
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, vx)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, vy)
+
+            // STEP 7: Apply motion directly so dash travel works even if lock loop is bypassed
+            hero.vx = vx
+            hero.vy = vy
+        } else { // landing
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+        }
+
+        // Progress update only (per-frame)
+        const partStart = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+        let partDur = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+        if (partDur <= 0) partDur = 1
+
+        let t = (now - partStart) | 0
+        if (t < 0) t = 0
+        if (t > partDur) t = partDur
+
+        let prog = Math.idiv(t * PHASE_PROGRESS_MAX, partDur)
+        if (prog < 0) prog = 0
+        if (prog > PHASE_PROGRESS_MAX) prog = PHASE_PROGRESS_MAX
+        sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
+
+        // NEW universal contract: keep the coarse whole-phase progress updated too.
+        let phaseProg = prog
+        if (phaseStart > 0 && phaseDur > 0) {
+            let pt = (now - phaseStart) | 0
+            if (pt < 0) pt = 0
+            if (pt > phaseDur) pt = phaseDur
+            phaseProg = Math.idiv(pt * PHASE_PROGRESS_MAX, phaseDur)
+            if (phaseProg < 0) phaseProg = 0
+            if (phaseProg > PHASE_PROGRESS_MAX) phaseProg = PHASE_PROGRESS_MAX
+        }
+        sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, phaseProg)
+
+        // Clear schedule once full action window has finished so PartProgress keeps updating during landing.
+        if (now >= phaseEnd) {
+            sprites.setDataNumber(hero, HERO_DATA.AgilityLungeStartMs, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AgilityLungeEndMs, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+
+            // Ensure we don't keep drifting after schedule ends
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+
+            // Don’t keep “landing” around after the schedule ends
+            _animKeys_clearPhasePart(hero)
+        }
+    }
+}
 
 
 
@@ -6098,49 +9801,46 @@ function getControllerForOwnerId(ownerId: number): controller.Controller {
     return null
 }
 
-function cancelAgilityComboNow(heroIndex: number, hero: Sprite): void {
-    const dashUntil0 = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
 
-    // NEW (Agility combo v3): clear persistent combo-mode bookkeeping
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_MODE, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAND_ARMED_FOR_DU, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, 0)
+function cancelAgilityComboNow(heroIndex: number, hero: Sprite) {
+    if (!hero) return
 
-    // Clear ARMED state + packets + meter timing
+    const nowMs = Math.max(1, game.runtime() | 0)
+
+    // Clear combo / meter state
     sprites.setDataNumber(hero, HERO_DATA.AGI_STATE, AGI_STATE.NONE)
     sprites.setDataNumber(hero, HERO_DATA.AGI_CHAIN, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS, 0)
-
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
 
+    // Clear cancel bookkeeping
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_LAST_TICK_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_X, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_Y, 0)
 
-    // Clear dash/combo timers (prevents any landing-based rearm from triggering later)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
-
+    // Clear packets + aim indicator
     agiPacketsClear(heroIndex, hero)
-
-    // Break out of lock cleanly
-    heroBusyUntil[heroIndex] = 0
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
-    unlockHeroControls(heroIndex)
-
-    // Visual reset
-    setHeroPhaseString(heroIndex, "idle")
-
-    // NEW: cleanup indicator sprite
     destroyAgiAimIndicator(heroIndex)
 
-    if (DEBUG_AGI_COMBO_EXIT) {
-        console.log(`[agi.combo.exit] hero=${heroIndex} dashUntil0=${dashUntil0}`)
-    }
+    // End segmentation + one-shot pulses (no lingering execute sheen / beats)
+    _animKeys_clearPhasePart(hero)
+    _animEvent_clear(hero)
+
+    // Clear any long dash/execute timers so movement can resume
+    sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_STEP, 0)
+
+    // Unlock and clear busy so ambient stamping can occur immediately
+    clearHeroBusyUntil(heroIndex)
+    unlockHeroControls(heroIndex)
+
+    // Unified contract: immediately return to ambient and stamp a valid non-zero phase window.
+    updateHeroMovementPhase(nowMs)
+
+    _animInvCheckHeroTimeline(heroIndex, hero, nowMs, "cancelAgilityComboNow")
 }
 
 
@@ -6549,6 +10249,11 @@ function spawnAgilityThrustProjectile(
     let L = sprites.readDataNumber(hero, "AGI_L_EXEC") | 0
     if (L < 1) L = 1
 
+    // Determine when the thrust should become “active”
+    // (Forward window start, scheduled by doHeroMoveForPlayer for agility)
+    let activateAt = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0
+    if (activateAt <= 0) activateAt = nowMs
+
     // Create projectile; updater will replace image + position each frame
     const proj = sprites.create(image.create(2, 2), SpriteKind.HeroWeapon)
     proj.z = hero.z + 1
@@ -6556,7 +10261,6 @@ function spawnAgilityThrustProjectile(
     proj.vy = 0
     proj.x = hero.x
     proj.y = hero.y
-    // Start with a degenerate segment; real geometry is handled in the updater
     proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny))
 
     // Core identifiers
@@ -6588,11 +10292,26 @@ function spawnAgilityThrustProjectile(
     // Planned reach for execution (center-based; updater converts to front edge frame)
     sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
 
+    // Activation gate (NEW)
+    sprites.setDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS, activateAt | 0)
+
+    const activeNow = (nowMs >= (activateAt | 0))
+    sprites.setDataNumber(proj, PROJ_DATA.IS_ACTIVE, activeNow ? 1 : 0)
+
     // Runtime fields for updater
     sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs)
     sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, 0)
     sprites.setDataNumber(proj, PROJ_DATA.REACH_T, 0)
     sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
+
+    // If not active yet: hide + disable overlaps until forward starts
+    if (!activeNow) {
+        proj.setFlag(SpriteFlag.Invisible, true)
+        proj.setFlag(SpriteFlag.Ghost, true)
+    } else {
+        proj.setFlag(SpriteFlag.Invisible, false)
+        proj.setFlag(SpriteFlag.Ghost, false)
+    }
 
     // Keep the V17 dash bookkeeping; updater doesn't depend on it, but other systems might
     const dashEnd = heroBusyUntil[heroIndex] | 0
@@ -6610,12 +10329,15 @@ function spawnAgilityThrustProjectile(
         sprites.setDataNumber(proj, "dbgLast", 0)
         function r3(v: number) { return Math.round(v * 1000) / 1000 }
         console.log(
-            `[AGI ${seq}] SPAWN hero=${heroIndex} L_exec=${L} dir=(${r3(nx)},${r3(ny)}) @(${hero.x | 0},${hero.y | 0})`
+            `[AGI ${seq}] SPAWN hero=${heroIndex} L_exec=${L} dir=(${r3(nx)},${r3(ny)}) ` +
+            `activateAt=${activateAt | 0} now=${nowMs | 0} @(${hero.x | 0},${hero.y | 0})`
         )
     }
 
     return proj
 }
+
+
 
 
 // 8.1 — AGILITY helpers (unchanged core)
@@ -6667,6 +10389,48 @@ function updateAgilityProjectilesMotionFor(
     nowMs: number,
     iInArray: number
 ): boolean {
+    // ------------------------------------------------------------
+    // NEW: activation gate (windup-safe)
+    // ------------------------------------------------------------
+    const PREV_S_KEY = "prevS"
+
+    const isActive = (sprites.readDataNumber(proj, PROJ_DATA.IS_ACTIVE) | 0)
+    const activateAt = (sprites.readDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS) | 0)
+
+    if (!isActive) {
+        if (activateAt <= 0 || nowMs >= activateAt) {
+            // Activate now: become visible and start fresh from this anchor/time
+            sprites.setDataNumber(proj, PROJ_DATA.IS_ACTIVE, 1)
+
+            proj.setFlag(SpriteFlag.Invisible, false)
+            proj.setFlag(SpriteFlag.Ghost, false)
+
+            sprites.setDataNumber(proj, PROJ_DATA.START_TIME, nowMs | 0)
+            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
+            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
+
+            sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs | 0)
+            sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, 0)
+            sprites.setDataNumber(proj, PROJ_DATA.REACH_T, 0)
+            sprites.setDataNumber(proj, PREV_S_KEY, 0)
+
+            // Safety: no stale overlap bookkeeping
+            sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
+        } else {
+            // Still in windup: keep hidden + no overlaps; follow hero silently
+            proj.setFlag(SpriteFlag.Invisible, true)
+            proj.setFlag(SpriteFlag.Ghost, true)
+
+            proj.vx = 0
+            proj.vy = 0
+            proj.x = hero.x
+            proj.y = hero.y
+
+            sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs | 0)
+            return true
+        }
+    }
+
     // Planned reach measured from HERO CENTER along the dash ray (saved at spawn)
     let L = sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) || 0
     if (L < 1) L = 1
@@ -6692,34 +10456,29 @@ function updateAgilityProjectilesMotionFor(
     nx /= m
     ny /= m
 
-    // Anchor point = hero center at cast time (world-space)
+    // Anchor point = hero center at *activation time* (world-space)
     const anchorX = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_X)
     const anchorY = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_Y)
 
-    // Distance from hero center to the FRONT EDGE in the dash direction:
-    // use width for horizontal, height for vertical (and blend for diagonals)
     // Distance from hero center to the FRONT EDGE in the dash direction.
     // Prefer the real silhouette edge; fall back to size-based estimate.
     let attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
     if (attachPx <= 0) {
-        // Fallback: old rectangle-based heuristic
         attachPx = 0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
     }
-
 
     // Your segment drawer renders a 1px nose at (sf + 2). Stop the "head base" at L - 2,
     // so the visual nose lands at L.
     const sBackAtCast = attachPx
     let sFrontStop = L - 2
     if (sFrontStop <= sBackAtCast) {
-        sFrontStop = sBackAtCast + 4 // safety so we always have a positive length
+        sFrontStop = sBackAtCast + 4
         L = sFrontStop + 2
         sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
     }
     const maxLen = Math.max(0, sFrontStop - sBackAtCast)
 
     // Runtime state: previous sample time, current arrow length, and the time we first reached full length
-    const PREV_S_KEY = "prevS"
     const lastT = sprites.readDataNumber(proj, PROJ_DATA.LAST_T) || nowMs
     let arrowLen = sprites.readDataNumber(proj, PROJ_DATA.ARROW_LEN) || 0
     let reachT = sprites.readDataNumber(proj, PROJ_DATA.REACH_T) || 0
@@ -6777,12 +10536,8 @@ function updateAgilityProjectilesMotionFor(
     const fMin = sBack
     const fMax = sFront + 2 // include nose
 
-    function cornerX(f: number, wside: number) {
-        return nx * f + sx * wside
-    }
-    function cornerY(f: number, wside: number) {
-        return ny * f + sy * wside
-    }
+    function cornerX(f: number, wside: number) { return nx * f + sx * wside }
+    function cornerY(f: number, wside: number) { return ny * f + sy * wside }
 
     const xs = [
         cornerX(fMin, -sideHalf),
@@ -6797,10 +10552,7 @@ function updateAgilityProjectilesMotionFor(
         cornerY(fMax, sideHalf)
     ]
 
-    let minXW = xs[0]
-    let maxXW = xs[0]
-    let minYW = ys[0]
-    let maxYW = ys[0]
+    let minXW = xs[0], maxXW = xs[0], minYW = ys[0], maxYW = ys[0]
     for (let j = 1; j < 4; j++) {
         if (xs[j] < minXW) minXW = xs[j]
         if (xs[j] > maxXW) maxXW = xs[j]
@@ -6857,6 +10609,7 @@ function updateAgilityProjectilesMotionFor(
 
 
 
+
 // ====================================================
 // SECTION I - INTELLECT MOVE MODULE
 // ====================================================
@@ -6890,7 +10643,7 @@ function calculateIntellectStats(baseTimeMs: number, traits: number[]) {
     // ----------------------------------------------------
     // How long you can "aim" the spell before it fires.
     // Base 500ms + 50ms per point of tTarget (can get absurdly long).
-    let targetingTime = 500 + tTarget * 50
+    let targetingTime = 500000 + tTarget * 50
     // Safety: never allow 0 or negative (shouldn't happen with floor, but just in case):
     if (targetingTime < 50) targetingTime = 50
     stats[STAT.TARGETING_TIME] = targetingTime
@@ -6939,131 +10692,95 @@ function executeIntellectMove(
     stats: number[],
     now: number
 ) {
-    // Targeting window from trait-driven stats (clamped with hard floor)
-    const targetingTime = (stats[STAT.TARGETING_TIME] | 0) || 5000 // hard floor now set in calculateIntellectStats
+    const nowMs = now | 0
 
-    // Stamp hero control metadata
+    // Total time the spell exists pre-detonation (THIS is your “16 seconds”)
+    const targetingTime = (stats[STAT.TARGETING_TIME] | 0) || 16000
+
+    const produceMs = INT_PRODUCE_DUR_MS | 0
+    const spawnAt = (nowMs + produceMs) | 0
+
+    const expiresAt = (nowMs + (targetingTime | 0)) | 0
+
+    // Hero control metadata
     sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, true)
-    sprites.setDataNumber(hero, HERO_DATA.TARGET_START_MS, now)
-    sprites.setDataNumber(hero, HERO_DATA.TARGET_LOCK_MS, targetingTime)
 
-    // NEW: phase = cast while steering intellect spell
+    // Store delayed spawn + lifetime on hero (so updateIntellectSpellsControl drives the timeline)
+    sprites.setDataNumber(hero, INT_CAST_SPAWN_AT_MS_KEY, spawnAt)
+    sprites.setDataNumber(hero, INT_SPELL_EXPIRES_AT_MS_KEY, expiresAt)
+    console.log("Set the intellect spell lifetime to ", expiresAt)
+    sprites.setDataNumber(hero, INT_CAST_FAMILY_KEY, FAMILY.INTELLECT)
+    sprites.setDataString(hero, INT_CAST_BUTTON_KEY, button)
+    sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, 0)
+
+    // Phase = cast for the whole segmented window
     setHeroPhaseString(heroIndex, "cast")
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "intellect_cast")
 
+    // Phase window includes: produce + drive + land
+    const totalCastMs = ((targetingTime | 0) + (INT_LAND_DUR_MS | 0)) | 0
+    _animKeys_stampPhaseWindow(heroIndex, hero, "cast", nowMs, totalCastMs, "executeIntellectMove")
 
-    // Delegate all spell creation + damage math to the intellect module
-    // (beginIntellectTargeting already re-reads traits and calculates its own stats)
-    beginIntellectTargeting(heroIndex, targetingTime, button, FAMILY.INTELLECT)
+    // PhasePart: PRODUCE (frames 0..4 over produceMs)
+    _animKeys_setPhasePart(hero, "produce", nowMs, produceMs, nowMs)
+
+    // Lock hero immediately (produce + drive + land are non-movement)
+    lockHeroControls(heroIndex)
+
+    // BusyUntil is only for LAND; we’ll set it at detonation time.
+    // (Do NOT set busyUntil to expiresAt — you want spell existence to control “drive”.)
 }
+
 
 function beginIntellectTargeting(
     heroIndex: number,
-    spellLifetimeMs: number,
+    expiresAtMsAbs: number, // ABSOLUTE time when the spell should auto-detonate
     button: string,
     family: number
 ) {
-    const hero = heroes[heroIndex]; if (!hero) return
+    const hero = heroes[heroIndex]
+    if (!hero) return
 
-    // Pull hero traits
-    const t1 = sprites.readDataNumber(hero, HERO_DATA.TRAIT1)
-    const t2 = sprites.readDataNumber(hero, HERO_DATA.TRAIT2)
-    const t3 = sprites.readDataNumber(hero, HERO_DATA.TRAIT3)
-    const t4 = sprites.readDataNumber(hero, HERO_DATA.TRAIT4)
-    const traits = [0, t1, t2, t3, t4]
+    const now = game.runtime() | 0
+    const expiresAt = (expiresAtMsAbs | 0)
+    if (expiresAt <= now) {
+        console.log(`[INT] BAD expiresAt hero=${heroIndex} now=${now} expiresAt=${expiresAt}`)
+        finishIntellectSpellForHero(heroIndex)
+        return
+    }
 
-    // Stats from traits
-    const stats = calculateMoveStatsForFamily(family, button, traits)
+    // Minimal spell sprite (you already replace its image during detonation)
+    const imgCore = img`
+        . 8 8 8 .
+        8 8 8 8 8
+        8 8 8 8 8
+        . 8 8 8 .
+    `
+    const spell = sprites.create(imgCore, SpriteKind.HeroWeapon)
+    spell.z = hero.z + 1
+    spell.x = hero.x
+    spell.y = hero.y
 
-    // Control window: final targeting time already computed in calculateIntellectStats
-    const lifespanMs = (stats[STAT.TARGETING_TIME] || 5000)
+    // Spell lifetime (pre-detonation)
+    sprites.setDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY, expiresAt)
 
+    // CRITICAL: do not allow lifespan to kill this early
+    // (If you *must* set something, set it safely beyond expiresAt + detonate anim)
+    spell.lifespan = 0
 
-    const baseDamage = getBasePower(family)
-    const damageMult = stats[STAT.DAMAGE_MULT]
-    let dmg = Math.idiv(baseDamage * damageMult, 100)
-    if (dmg < 1) dmg = 1
-
-    const weakenPct = stats[STAT.WEAKEN_PCT]
-    const weakenDurMs = stats[STAT.WEAKEN_DURATION]
-
-    // Aim vector from hero
-    const dir = getAimVectorForHero(heroIndex)
-    let dx = dir[0], dy = dir[1]
-    if (dx == 0 && dy == 0) { dx = 1; dy = 0 }
-
-    const baseSpeed = 30
-    let mag = Math.sqrt(dx * dx + dy * dy)
-    if (mag == 0) mag = 1
-    const vx = Math.idiv(dx * baseSpeed, mag)
-    const vy = Math.idiv(dy * baseSpeed, mag)
-
-    // Lock hero motion, mark as controlling a spell
-    hero.vx = 0
-    hero.vy = 0
-    sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, true)
-
-    const imgCore = (family == FAMILY.HEAL)
-        ? img`
-            . 7 7 7 .
-            7 7 7 7 7
-            7 7 7 7 7
-            . 7 7 7 .
-        `
-        : img`
-            . 8 8 8 .
-            8 8 8 8 8
-            8 8 8 8 8
-            . 8 8 8 .
-        `
-
-    const spell = sprites.createProjectileFromSprite(imgCore, hero, vx, vy)
-    spell.setKind(SpriteKind.HeroWeapon)
-
-    // 🔧 IMPORTANT: give the projectile a real lifespan (like v10),
-    // long enough for targeting + detonation visuals.
-    // Add a bit of buffer beyond the targeting window.
-    spell.lifespan = lifespanMs + 1000
-
-    const now = game.runtime()
-
-    // Control time window (our own floor / timer detonation)
-    const ctrlUntil = now + lifespanMs
-    //    sprites.setDataNumber(spell, "INT_CTRL_UNTIL", ctrlUntil)
-
-    sprites.setDataNumber(spell, INT_CTRL_UNTIL_KEY, ctrlUntil)
-
-
-
-    // 🔵 DEBUG: log spawn + control window
-    console.log(
-        `[INT DEBUG] SPAWN hero=${heroIndex} family=${family} ` +
-        `now=${now} ctrlUntil=${ctrlUntil} lifespanMs=${lifespanMs} ` +
-        `pos=(${hero.x},${hero.y}) vxvy=(${vx},${vy})`
-    )
-
+    // Register
     heroControlledSpells[heroIndex] = spell
     heroProjectiles.push(spell)
 
+    // Metadata used by detonation + damage
     sprites.setDataNumber(spell, PROJ_DATA.HERO_INDEX, heroIndex)
     sprites.setDataNumber(spell, PROJ_DATA.FAMILY, family)
     sprites.setDataString(spell, PROJ_DATA.BUTTON, button)
 
-    // Intellect: actual damage; Heal: 0 here (we compute healing on detonation)
-    sprites.setDataNumber(
-        spell,
-        PROJ_DATA.DAMAGE,
-        (family == FAMILY.HEAL) ? 0 : dmg
-    )
-    sprites.setDataNumber(spell, PROJ_DATA.IS_HEAL, (family == FAMILY.HEAL) ? 1 : 0)
-    sprites.setDataNumber(spell, PROJ_DATA.SLOW_PCT, 0)
-    sprites.setDataNumber(spell, PROJ_DATA.SLOW_DURATION_MS, 0)
-    sprites.setDataNumber(spell, PROJ_DATA.WEAKEN_PCT, weakenPct)
-    sprites.setDataNumber(spell, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs)
-    sprites.setDataNumber(spell, PROJ_DATA.KNOCKBACK_PCT, 0)
-
-    // Default AoE radius; traits can later tune this
-    sprites.setDataNumber(spell, INT_RADIUS_KEY, 16)
+    console.log(`[INT] SPAWN hero=${heroIndex} now=${now} expiresAt=${expiresAt}`)
 }
+
+
 
 function runIntellectDetonation(spell: Sprite, lingerMs: number) {
     if (!spell || (spell.flags & sprites.Flag.Destroyed)) return
@@ -7099,100 +10816,264 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
     sprites.setDataNumber(spell, PROJ_DATA.DESTROY_AT, now + totalLinger + 100)
 }
 
-// Finish helper
-function finishIntellectSpellForHero(heroIndex: number) {
+
+function finishIntellectSpellForHero(heroIndex: number): void {
     if (heroIndex < 0 || heroIndex >= heroes.length) return
-    const hero = heroes[heroIndex]; if (!hero) return
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    const nowMs = game.runtime() | 0
+
+    // ---- LOG (before) ----
+    if (DEBUG_ANIM_KEYS_INT_FINISH) {
+        const ctrl0 = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+        const busy0 = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        const ph0 = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+        const part0 = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        const fco0 = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        const hasSpell = heroControlledSpells[heroIndex] ? 1 : 0
+        _dbgAnimKeys(heroIndex, hero, "INT_FINISH_BEGIN",
+            `t=${nowMs} ctrl=${ctrl0} hasSpell=${hasSpell} busyUntil=${busy0} ph=${ph0} part=${part0} fco=${fco0}`
+        )
+    }
+
+    // Release control state (engine-owned)
     sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
-    const spell = heroControlledSpells[heroIndex]
-    if (spell) heroControlledSpells[heroIndex] = null
-    heroBusyUntil[heroIndex] = 0
-    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false)
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)   // NEW
+
+    // IMPORTANT: do NOT destroy the spell here.
+    // Detonation helpers call finishIntellectSpellForHero() and then run visuals on the spell.
+    if (heroControlledSpells[heroIndex]) heroControlledSpells[heroIndex] = null
+
+    // Clear movement intent + busy lock
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    hero.vx = 0
+    hero.vy = 0
+    clearHeroBusyUntil(heroIndex)
+
+    // Clear any action leftovers that can strand the hero in "aura-only" mode
+    _animEvent_clear(hero)
+    _animKeys_clearPhasePart(hero)
+
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, 0)
+    sprites.setDataNumber(hero, HERO_DATA.RenderStyleP1, 0)
+
     unlockHeroControls(heroIndex)
 
-    // NEW: spell finished → back to idle
+    // Return to ambient phase ownership (movement resolver will keep it healthy)
     setHeroPhaseString(heroIndex, "idle")
 
+    // ------------------------------------------------------------------
+    // ONLY CORRECTION:
+    // Reset FAMILY back to movement/base so idle/run/walk resolve correctly
+    // after an intellect cast. Otherwise FAMILY can stay "intelligence" and
+    // ambient phases will miss frames => hero disappears.
+    // ------------------------------------------------------------------
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, 0) // 0 = strength/base movement atlas
+
+    // ---- LOG (after) ----
+    if (DEBUG_ANIM_KEYS_INT_FINISH) {
+        const ctrl1 = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+        const busy1 = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        const ph1 = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+        const part1 = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        const fco1 = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        _dbgAnimKeys(heroIndex, hero, "INT_FINISH_END",
+            `t=${nowMs} ctrl=${ctrl1} busyUntil=${busy1} ph=${ph1} part=${part1} fco=${fco1}`
+        )
+    }
 }
 
-function updateIntellectSpellsControl() {
-    const baseAccel = 40, maxSpeed = 80
-    const now = game.runtime()
+
+
+function updateIntellectSpellsControl(): void {
+    const nowMs = game.runtime() | 0
 
     for (let i = 0; i < heroes.length; i++) {
-        const hero = heroes[i]; if (!hero) continue
+        const hero = heroes[i]
+        if (!hero) continue
+
+        // LAND finishing
+        const landEnd0 = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
+        if (landEnd0 > 0) {
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+            if (nowMs >= landEnd0) {
+                sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, 0)
+                finishIntellectSpellForHero(i)
+            }
+            continue
+        }
 
         const isCtrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
         if (!isCtrl) continue
 
-        const spell = heroControlledSpells[i]; if (!spell) continue
+        const spell = heroControlledSpells[i]
 
-        // Fizzle if floor elapsed and no detonation yet
-        //        const ctrlUntil = sprites.readDataNumber(spell, "INT_CTRL_UNTIL") | 0
+        // PRODUCE (delayed spawn)
+        if (!spell) {
+            const spawnAt = sprites.readDataNumber(hero, INT_CAST_SPAWN_AT_MS_KEY) | 0
+            const expiresAt = sprites.readDataNumber(hero, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+            const family = sprites.readDataNumber(hero, INT_CAST_FAMILY_KEY) | 0
+            const button = sprites.readDataString(hero, INT_CAST_BUTTON_KEY) || ""
 
-        const ctrlUntil = sprites.readDataNumber(spell, INT_CTRL_UNTIL_KEY) | 0
+            if (spawnAt <= 0 || expiresAt <= 0) {
+                console.log(`[INT] LIMBO BAD HERO METADATA hero=${i} now=${nowMs} spawnAt=${spawnAt} expiresAt=${expiresAt}`)
+                finishIntellectSpellForHero(i)
+                continue
+            }
 
+            // Still producing
+            if (nowMs < spawnAt) {
+                hero.vx = 0
+                hero.vy = 0
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+                continue
+            }
 
-        if (ctrlUntil > 0 && now >= ctrlUntil && !sprites.readDataNumber(spell, INT_DETONATED_KEY)) {
-            const fam = sprites.readDataNumber(spell, PROJ_DATA.FAMILY)
+            // Spawn spell now
+            beginIntellectTargeting(i, expiresAt, button, family)
 
-            // DEBUG: timer-based detonation / fizzle
-            console.log(
-                `[INT DEBUG] TIMER DETONATION hero=${i} family=${fam} ` +
-                `now=${now} ctrlUntil=${ctrlUntil} delta=${now - ctrlUntil}`
-            )
+            // Switch to DRIVE part immediately upon spell existing
+            const remaining = Math.max(1, (expiresAt - nowMs) | 0) | 0
+            _animKeys_setPhasePart(hero, "drive", nowMs, remaining, nowMs)
+        }
 
-            if (fam == FAMILY.HEAL) detonateHealSpellAt(spell, spell.x, spell.y)
-            else detonateIntellectSpellAt(spell, spell.x, spell.y)
+        const spell2 = heroControlledSpells[i]
+        if (!spell2) {
+            console.log(`[INT] LIMBO spawn failed hero=${i} now=${nowMs}`)
+            finishIntellectSpellForHero(i)
             continue
         }
 
-        // If already detonated, don't move
-        if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) continue
+        if ((spell2.flags & sprites.Flag.Destroyed) !== 0) {
+            const exp = sprites.readDataNumber(spell2, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+            console.log(`[INT BUG] SPELL DESTROYED EARLY hero=${i} now=${nowMs} expiresAt=${exp}`)
+            finishIntellectSpellForHero(i)
+            continue
+        }
 
-        // Controls
-        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-        let ctrl: controller.Controller = null
-        if (ownerId == 1) ctrl = controller.player1
-        else if (ownerId == 2) ctrl = controller.player2
-        else if (ownerId == 3) ctrl = controller.player3
-        else if (ownerId == 4) ctrl = controller.player4
-        if (!ctrl) continue
+        // While controlling: hero stays frozen
+        hero.vx = 0
+        hero.vy = 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
 
-        let ax = 0, ay = 0
-        if (ctrl.left.isPressed()) ax -= baseAccel
-        if (ctrl.right.isPressed()) ax += baseAccel
-        if (ctrl.up.isPressed()) ay -= baseAccel
-        if (ctrl.down.isPressed()) ay += baseAccel
+        // Ensure DRIVE phase-part persists as long as spell exists (and not detonated)
+        if (!sprites.readDataNumber(spell2, INT_DETONATED_KEY)) {
+            const exp = sprites.readDataNumber(spell2, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+            if (exp > 0) {
+                const remaining = Math.max(1, (exp - nowMs) | 0) | 0
+                _animKeys_setPhasePart(hero, "drive", nowMs, remaining, nowMs)
 
-        if (ax != 0 || ay != 0) {
-            spell.vx += ax
-            spell.vy += ay
-
-            const vx = spell.vx, vy = spell.vy
-            const speedSq = vx * vx + vy * vy
-            const maxSq = maxSpeed * maxSpeed
-            if (speedSq > maxSq) {
-                const m = Math.sqrt(speedSq)
-                spell.vx = Math.idiv(vx * maxSpeed, m)
-                spell.vy = Math.idiv(vy * maxSpeed, m)
+                if (nowMs >= exp) {
+                    console.log("Killing spell with detonate because nowMs is greater than exp")
+                    detonateIntellectSpellForHero(i, spell2, nowMs)
+                    continue
+                }
             }
         }
+
+        // Steering: DRIVE must be authoritative and ONLY move when player is aiming.
+        const aim = getAimVectorForHero(i)
+        let ax = aim[0] | 0
+        let ay = aim[1] | 0
+
+        // DEBUG (throttled): tells us if aim is stuck at 0,0 (causing drift in your old code)
+        const nextLogAtKey = "__intDbgNextLogAt"
+        const nextLogAt = (sprites.readDataNumber(hero, nextLogAtKey) | 0)
+        if (nowMs >= nextLogAt) {
+            sprites.setDataNumber(hero, nextLogAtKey, (nowMs + 250) | 0)
+            console.log("[INT][DRIVE]",
+                "| hero", i,
+                "| aim", ax, ay,
+                "| spellXY", (spell2.x | 0), (spell2.y | 0),
+                "| spellV", (spell2.vx | 0), (spell2.vy | 0),
+                "| now", nowMs
+            )
+        }
+
+        // ✅ Critical change: NO input => STOP (do NOT force ax=1)
+        if (ax === 0 && ay === 0) {
+            spell2.vx = 0
+            spell2.vy = 0
+            continue
+        }
+
+        const speed = 35
+        let mag = Math.sqrt(ax * ax + ay * ay)
+        if (mag === 0) mag = 1
+        const vx = Math.idiv(ax * speed, mag)
+        const vy = Math.idiv(ay * speed, mag)
+
+        spell2.vx = vx
+        spell2.vy = vy
     }
 }
 
-// INTELLECT: one-time detonation at (termX, termY) with AoE damage+weaken
+
+
+function detonateIntellectSpellForHero(heroIndex: number, spell: Sprite, nowMs: number): void {
+    if (!spell) {
+        finishIntellectSpellForHero(heroIndex)
+        return
+    }
+    if (spell.flags & sprites.Flag.Destroyed) {
+        finishIntellectSpellForHero(heroIndex)
+        return
+    }
+
+    // Already detonated? nothing to do.
+    if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
+
+    const hero = (heroIndex >= 0 && heroIndex < heroes.length) ? heroes[heroIndex] : null
+
+    // ------------------------------------------------------------
+    // DRIVE ends here: stop controlling, begin LAND part (frames 5-6)
+    // ------------------------------------------------------------
+    if (hero) {
+        sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
+
+        const landEnd = ((nowMs | 0) + (INT_LAND_DUR_MS | 0)) | 0
+        sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, landEnd)
+
+        // PhasePart: LAND (500ms)
+        _animKeys_setPhasePart(hero, "land", nowMs | 0, INT_LAND_DUR_MS | 0, nowMs | 0)
+
+        // Keep frozen during land
+        hero.vx = 0
+        hero.vy = 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        lockHeroControls(heroIndex)
+        setHeroBusyUntil(heroIndex, landEnd)
+    }
+
+    const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
+    const termX = spell.x | 0
+    const termY = spell.y | 0
+
+    if (family === FAMILY.HEAL) {
+        detonateHealSpellAt(spell, termX, termY)
+    } else {
+        console.log("Detonating intellect spell now")
+        detonateIntellectSpellAt(spell, termX, termY)
+    }
+}
+
+
+
 function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
+    
     if (!spell) return
     if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
 
     const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
-
-    // 👉 As soon as detonation begins, give control back to the hero
-    if (heroIndex >= 0 && heroIndex < heroes.length) {
-        finishIntellectSpellForHero(heroIndex)
-    }
 
     // (Optional debug – keep or delete as you like)
     const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
@@ -7240,9 +11121,12 @@ function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
         }
     }
 
-    // Visual + cleanup (spell will be destroyed later, but hero is already free)
+    // Visual + cleanup (spell will be destroyed later)
     runIntellectDetonation(spell, Math.max(400, weakenMs))
 }
+
+
+
 
 function processIntellectLingers() {
     const now = game.runtime()
@@ -7384,12 +11268,31 @@ function processIntellectLingers() {
 
 // Return control when the projectile ends
 sprites.onDestroyed(SpriteKind.HeroWeapon, function (proj) {
+
     const family = sprites.readDataNumber(proj, PROJ_DATA.FAMILY)
     if (family != FAMILY.INTELLECT && family != FAMILY.HEAL) return
+
     const heroIndex = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX)
+    console.log(`[INT DEBUG] onDestroyed heroWeapon hero=${heroIndex} t=${game.runtime()|0} detonated=${sprites.readDataNumber(proj, INT_DETONATED_KEY)|0} destroyAt=${sprites.readDataNumber(proj, PROJ_DATA.DESTROY_AT)|0} lifespan=${proj.lifespan|0}`);
+
     if (heroIndex < 0 || heroIndex >= heroes.length) return
-    if (heroControlledSpells[heroIndex] == proj) { heroControlledSpells[heroIndex] = null; finishIntellectSpellForHero(heroIndex) }
+
+    if (heroControlledSpells[heroIndex] == proj) {
+        heroControlledSpells[heroIndex] = null
+
+        const hero = heroes[heroIndex]
+        if (!hero) return
+
+        // If we are in the LAND window, finish will happen when land ends.
+        const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
+        if (landEnd > 0 && (game.runtime() | 0) < landEnd) return
+
+        // Otherwise, recover immediately (safety)
+        finishIntellectSpellForHero(heroIndex)
+    }
 })
+
+
 
 
 // ====================================================
@@ -7400,6 +11303,12 @@ sprites.onDestroyed(SpriteKind.HeroWeapon, function (proj) {
 // HEAL: one-time detonation that heals heroes only (no enemy effect)
 
 const SUPPORT_BEAM_SPEED = 80 // pixels per second-ish
+
+// Support puzzle timeline budgets (ms)
+// (Completion is player-driven, but PhaseDurationMs/PhasePartDurationMs must be non-zero.)
+const SUPPORT_PUZZLE_STEP_BUDGET_MS = 400
+const SUPPORT_PUZZLE_MIN_TOTAL_MS = 300
+
 
 // 2-wavelength "sine" made of single pixels (12×7), three phase frames
 const SUPPORT_BEAM_WAVE0 = img`
@@ -8047,61 +11956,75 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 }
 
 
-function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, now: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
+function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, nowMs: number): void {
+    const hero = heroes[heroIndex]
+    if (!hero) return
+    if (supportPuzzleActive[heroIndex]) return
 
-    // Generate random sequence
-    const seq: number[] = []
-    for (let i = 0; i < seqLen; i++) {
-        seq.push(randomSupportDir())
-    }
-    supportPuzzleSeq[heroIndex] = seq
+    const now = nowMs | 0
+
+    // Mark active + reset per-hero puzzle bookkeeping
+    supportPuzzleActive[heroIndex] = true
     supportPuzzleProgress[heroIndex] = 0
     supportPuzzleStartMs[heroIndex] = now
-    supportPuzzlePrevMask[heroIndex] = 0
 
-    // Clear any existing icons
-    const oldIcons = supportPuzzleIcons[heroIndex]
-    for (let i = 0; i < oldIcons.length; i++) {
-        if (oldIcons[i]) oldIcons[i].destroy()
+    // Create a new sequence (or keep your existing one; leaving your generation logic intact)
+    const seq: number[] = []
+    for (let i = 0; i < Math.max(1, seqLen | 0); i++) {
+        seq.push(randint(0, 3) | 0)
     }
-    supportPuzzleIcons[heroIndex] = []
+    supportPuzzleSeq[heroIndex] = seq
 
-    // 9x9 icons with a 1-pixel gap, centered under hero
-    const iconSize = 9
-    const gap = 1
-    const step = iconSize + gap
-    const mid = (seqLen - 1) / 2
-    const y = hero.y + 12
+    // Tell Arcade-side rendering to show it
+    showSupportPuzzleIcons(heroIndex)
 
-    for (let i = 0; i < seqLen; i++) {
-        const dir = seq[i]
-        const spr = sprites.create(supportIconImageFor(dir, false), SpriteKind.SupportIcon)
-        // center icons symmetrically around hero.x
-        spr.x = hero.x + (i - mid) * step
-        spr.y = y
-        spr.z = hero.z + 1 //Make sure the arrows don't get hidden behind players
-        supportPuzzleIcons[heroIndex].push(spr)
-    }
-
-    // Lock hero movement while puzzle is active
-    lockHeroControls(heroIndex)
-    supportPuzzleActive[heroIndex] = true
-
-    // NEW: treat support action as a cast phase
+    // Visual + control lock
     setHeroPhaseString(heroIndex, "cast")
 
+    // Locked until solved (keep your current behavior)
+    heroBusyUntil[heroIndex] = (now + 999999) | 0
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, heroBusyUntil[heroIndex] | 0)
+    lockHeroControls(heroIndex)
+
+    // IMPORTANT: do NOT start a new Action edge here.
+    // doHeroMoveForPlayer(...) already called _doHeroMoveBeginActionTimeline(...) for this move instance.
+
+    // Phase duration: pacing envelope (not a gameplay deadline)
+    const phaseDurMs = 120000  // 2 minutes
+
+    _animKeys_stampPhaseWindow(heroIndex, hero, "cast", now, phaseDurMs, "beginSupportPuzzleForHero")
+    _animKeys_setPhasePart(hero, "puzzle", now, phaseDurMs, now)
+
+    _animInvCheckHeroTimeline(heroIndex, hero, now, "beginSupportPuzzleForHero")
 }
 
 
 
 function updateSupportPuzzles(now: number) {
+    const nowMs = now | 0
+
     for (let hi = 0; hi < heroes.length; hi++) {
         if (!supportPuzzleActive[hi]) continue
         const hero = heroes[hi]; if (!hero) continue
+
         const seq = supportPuzzleSeq[hi]
-        const progress = supportPuzzleProgress[hi]
-        if (!seq || progress >= seq.length) continue
+        const progress = supportPuzzleProgress[hi] | 0
+        if (!seq || seq.length <= 0) continue
+        if (progress >= (seq.length | 0)) continue
+
+        // ------------------------------------------------------------
+        // Universal timeline: progress update ONLY.
+        // Under unified contract, PhaseName/Start/Dur + PhasePartName/Start/Dur
+        // were stamped once by beginSupportPuzzleForHero().
+        // This loop must not “heal” identity by rewriting those keys.
+        // ------------------------------------------------------------
+        let pInt = Math.idiv(PHASE_PROGRESS_MAX * (progress | 0), (seq.length | 0))
+        if (pInt < 0) pInt = 0
+        if (pInt > PHASE_PROGRESS_MAX) pInt = PHASE_PROGRESS_MAX
+
+        sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
+        sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, pInt)
+        // ------------------------------------------------------------
 
         // Find controller for this hero
         const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
@@ -8123,7 +12046,7 @@ function updateSupportPuzzles(now: number) {
         const newMask = mask & ~prev
         supportPuzzlePrevMask[hi] = mask
 
-        if (newMask == 0) continue  // no new press this frame
+        if (newMask == 0) continue
 
         let dir = -1
         if (newMask & 1) dir = SUP_DIR_UP
@@ -8133,43 +12056,75 @@ function updateSupportPuzzles(now: number) {
 
         if (dir < 0) continue
 
-        const expected = seq[progress]
-
-        if (dir == expected) {
-            // Correct input; advance
-            supportPuzzleProgress[hi] = progress + 1
-
-            // Turn this icon "green"
+        // Check if this matches the next required input
+        const want = seq[progress] | 0
+        if (dir == want) {
+            // Mark icon done
             const icons = supportPuzzleIcons[hi]
-            if (icons && icons[progress]) {
-                icons[progress].setImage(supportIconImageFor(expected, true))
-            }
+            if (icons && icons[progress]) icons[progress].setImage(supportIconImageFor(want, true))
 
-            if (supportPuzzleProgress[hi] >= seq.length) {
-                // Puzzle complete → activate support beams
-                completeSupportPuzzleForHero(hi)
+            supportPuzzleProgress[hi] = (progress + 1) | 0
+
+            // If completed, finish immediately
+            if ((supportPuzzleProgress[hi] | 0) >= (seq.length | 0)) {
+                finishSupportPuzzle(hero, hi, nowMs)
             }
         } else {
-            // Wrong input → fizzle
-            failSupportPuzzleForHero(hi)
+            // Wrong input: reset progress (simple)
+            resetSupportPuzzleProgress(hi)
+        }
+
+        if (ANIM_INVARIANTS_HARDFAIL) {
+            _animInvCheckHeroTimeline(hi, hero, nowMs, "updateSupportPuzzles")
         }
     }
 }
 
+
 function clearSupportPuzzleForHero(heroIndex: number) {
-    const icons = supportPuzzleIcons[heroIndex]
+    const nowMs = Math.max(1, game.runtime() | 0)
+
+    // Destroy any existing icon sprites
+    const icons = supportPuzzleIcons[heroIndex] || []
     for (let i = 0; i < icons.length; i++) {
         if (icons[i]) icons[i].destroy()
     }
+
+    // Reset puzzle state
     supportPuzzleIcons[heroIndex] = []
     supportPuzzleSeq[heroIndex] = []
     supportPuzzleProgress[heroIndex] = 0
     supportPuzzleActive[heroIndex] = false
     supportPuzzlePrevMask[heroIndex] = 0
+    supportPuzzleStartMs[heroIndex] = 0
+
+    // Clear any pending buff bookkeeping (not required for phase, but prevents stale state)
+    supportPendingBuffPower[heroIndex] = 0
+    supportPendingBuffDuration[heroIndex] = 0
+    // keep supportPendingBuffKind as-is (it’s a default selection), or set if you prefer:
+    // supportPendingBuffKind[heroIndex] = BUFF_KIND_HASTE
+
+    // HARD REQUIREMENT (unified PhaseName contract):
+    // The puzzle begin path sets BUSY_UNTIL huge; if we don't clear it here,
+    // updateHeroMovementPhase() will refuse to stamp ambient windows, leaving PhaseDurationMs=0.
+    clearHeroBusyUntil(heroIndex)
+
+    // Unlock inputs (also zeroes velocity)
     unlockHeroControls(heroIndex)
 
-    // NEW: support puzzle ended (success or fail) → back to idle
-    setHeroPhaseString(heroIndex, "idle")
+    const hero = heroes[heroIndex]
+    if (hero) {
+        // End move segmentation and one-shot pulses (puzzle visuals must not linger)
+        _animKeys_clearPhasePart(hero)
+        _animEvent_clear(hero)
+    }
+
+    // Return to ambient phase under unified contract and stamp a valid non-zero window immediately.
+    // (updateHeroMovementPhase will set PhaseName to idle/run/combatIdle and stamp PhaseStart/Dur.)
+    updateHeroMovementPhase(nowMs)
+
+    // Optional invariant check (safe now: BUSY cleared, Phase window stamped)
+    if (hero) _animInvCheckHeroTimeline(heroIndex, hero, nowMs, "clearSupportPuzzleForHero")
 }
 
 
@@ -8813,11 +12768,6 @@ function setupEnemySpawners() {
 // Wave configuration
 // --------------------------------------------------------------
 
-// Global flags you can flip later.
-const TEST_WAVE_ENABLED = false     // show ALL monsters once
-const DEBUG_WAVE_ENABLED = false     // focus on a single monster type
-const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
-
 let currentWaveIndex = 0
 
 // "Real" waves – you can expand / tweak this list.
@@ -8882,6 +12832,7 @@ function spawnTestWave() {
 
 // DEBUG wave: only a single monster type, on every spawner
 function spawnDebugWave(monsterId?: string) {
+    if (SHOP_MODE_ACTIVE) return
     if (enemySpawners.length == 0) return
     const id = monsterId || DEBUG_MONSTER_ID
     console.log("[HE.spawnDebugWave] monsterId=", id)
@@ -8894,6 +12845,7 @@ function spawnDebugWave(monsterId?: string) {
 
 // Entry point: call this after setupEnemySpawners() when you want enemies.
 function startEnemyWaves() {
+    if (SHOP_MODE_ACTIVE) return
     if (DEBUG_WAVE_ENABLED) {
         spawnDebugWave(DEBUG_MONSTER_ID)
         return
@@ -9392,6 +13344,7 @@ function spawnDummyEnemy(x: number, y: number) {
 
 //function setupTestEnemies() { spawnDummyEnemy(30, 40); spawnDummyEnemy(130, 40) }
 function setupTestEnemies() {
+    if (SHOP_MODE_ACTIVE) return
     // Use the real enemy spawn path so Phaser sees monsterId, phase, dir, etc.
     spawnEnemyOfKind("imp blue", 30, 40, /*elite=*/ false);
     spawnEnemyOfKind("imp blue", 130, 40, /*elite=*/ false);
@@ -9434,9 +13387,17 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number) {
     flashEnemyOnDamage(enemy)
 
     if (hp <= 0) {
-        // Already dying? don't reschedule
+        // Already dying? don't reschedule (and don't double-award)
         const existing = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
         if (existing > 0) return
+
+        // ----------------------------
+        // NEW: coin reward on kill
+        // ----------------------------
+        let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0
+        if (maxHp <= 0) maxHp = 1
+        const coins = Math.max(COIN_REWARD_MIN, Math.idiv(maxHp + (COIN_REWARD_HP_DIV - 1), COIN_REWARD_HP_DIV))
+        addTeamCoins(coins, enemy.x, enemy.y - 12)
 
         const now = game.runtime()
         const deathDurationMs = 900  // tweak this and LPC death anim will auto-match
@@ -9481,10 +13442,98 @@ function flashEnemyOnDamage(enemy: Sprite) {
 
 
 
+
+
+
 // ================================================================
 // SECTION F - FINAL SECTION - onUpdates, GAME LOOP, INPUT, ENEMY AI/WAVES & STARTUP
 // ================================================================
 // Input → move execution → projectile updates → INT control → cleanup → enemy AI → UI.
+
+
+function updateHeroTimelineProgressAll(nowMs: number): void {
+    const now = nowMs | 0
+
+    // Phases that should "cycle" visually (loop progress).
+    // Everything else clamps (0→max and stays).
+    const ph = (s: Sprite) => (sprites.readDataString(s, HERO_DATA.PhaseName) || "")
+    const isAmbientPhase = (phaseName: string): boolean => {
+        switch (phaseName) {
+            case "idle":
+            case "run":
+            case "walk":
+            case "combatIdle":
+            case "sit":
+            case "watering":
+            case "emote":
+            case "climb":
+                return true
+            default:
+                return false
+        }
+    }
+
+    const clampProg = (p: number): number => {
+        let x = p | 0
+        if (x < 0) x = 0
+        if (x > PHASE_PROGRESS_MAX) x = PHASE_PROGRESS_MAX
+        return x
+    }
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        // -------------------------
+        // Whole-phase progress
+        // -------------------------
+        const phaseName = ph(hero)
+        const ps = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+        let pd = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+        if (pd <= 0) pd = 1
+
+        if (ps > 0) {
+            const elapsed = (now - ps) | 0
+
+            // Loop only for ambient phases; clamp for action phases.
+            // (This matches your goal: phases own rendering; actions don't "replay" because progress loops.)
+            let e = elapsed
+            if (e < 0) e = 0
+
+            if (isAmbientPhase(phaseName)) {
+                // loop
+                const eMod = (pd > 0) ? (e % pd) : 0
+                const pInt = clampProg(Math.idiv(PHASE_PROGRESS_MAX * eMod, pd))
+                sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
+            } else {
+                // clamp
+                let eClamp = e
+                if (eClamp > pd) eClamp = pd
+                const pInt = clampProg(Math.idiv(PHASE_PROGRESS_MAX * eClamp, pd))
+                sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
+            }
+        }
+
+        // -------------------------
+        // Phase-part progress (only if part is active)
+        // -------------------------
+        const partName = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        if (partName && partName.length > 0) {
+            const partS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+            let partD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+            if (partD <= 0) partD = 1
+
+            if (partS > 0) {
+                let pe = (now - partS) | 0
+                if (pe < 0) pe = 0
+                if (pe > partD) pe = partD
+                const pPart = clampProg(Math.idiv(PHASE_PROGRESS_MAX * pe, partD))
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, pPart)
+            }
+        }
+    }
+}
 
 
 
@@ -9542,6 +13591,7 @@ function updateHeroProjectiles() {
 // Cleanup for timed destroy set by runIntellectDetonation
 function updateProjectilesCleanup() {
     const now = game.runtime()
+    
     for (let i = heroProjectiles.length - 1; i >= 0; i--) {
         const proj = heroProjectiles[i]
         if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
@@ -9816,40 +13866,124 @@ function updateHeroMovementPhase(now: number) {
         if (!hero) continue
 
         // Don't stomp death visuals
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
 
-        // Agility execute owns the phase entirely.
-        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
-        if (agiState === AGI_STATE.EXECUTING) continue
+        // Optional: avoid stomping NPC-ish actors (shopkeeper, announcer, etc.)
+        // (Uses data you already have: heroName + player index convention you’re using in logs.)
+        const pIndex = sprites.readDataNumber(hero, HERO_DATA.PLAYER_INDEX) | 0
+        const heroName0 = (sprites.readDataString(hero, "heroName") || "")
+        if (pIndex >= 90 || heroName0 === "Shopkeeper") continue
 
-        // NEW: Strength charging owns the phase ("slash"), but renderer may hold frame 0.
-        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) continue
+        // Intellect LAND owns the phase until finishIntellectSpellForHero runs.
+        const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
+        if (landEnd > 0 && nowMs < landEnd) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, `reason=INT_LAND now=${nowMs} landEnd=${landEnd}`)
+            continue
+}
 
-        // Optional: if a hold-frame override is active, don't stomp phase either.
-        const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
-        if (fco >= 0) continue
 
-        // If we're busy (attack/cast window), do not override the phase.
-        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
-        if (busyUntil > 0 && nowMs < busyUntil) continue
-
-        // Agility combo build mode: show combat idle pose
-        if (agiState === AGI_STATE.ARMED) {
-            setHeroPhaseString(hi, "combatIdle")
+        // Intellect "controlling spell" owns the phase entirely (cast / control visuals)
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=CTRL_SPELL")
             continue
         }
 
-        // Default movement-based phase
-        const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy)
-        if (speedSq > 25) setHeroPhaseString(hi, "run")
-        else setHeroPhaseString(hi, "idle")
+        // Agility execute owns the phase entirely
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        if (agiState === AGI_STATE.EXECUTING) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=AGI_EXECUTING")
+            continue
+        }
+
+        // Strength charging owns the phase ("slash")
+        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=STR_CHARGING")
+            continue
+        }
+
+        // If a hold-frame / override is active, don't stomp phase either
+        const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        if (fco >= 0) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=FRAME_COL_OVERRIDE")
+            continue
+        }
+
+        // If we're busy (attack/cast/death window), do not override the phase
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        if (busyUntil > 0 && nowMs < busyUntil) {
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, `reason=BUSY now=${nowMs} busyUntil=${busyUntil}`)
+            continue
+        }
+
+        // Decide ambient phase (PRESERVE OLD BEHAVIOR)
+        let desiredPhase = "idle"
+
+        const RUN_THRESH_SQ = 50
+        const WALK_THRESH_SQ = 10
+
+        // Agility combo build mode: show combat idle pose
+        if (agiState === AGI_STATE.ARMED) {
+            desiredPhase = "combatIdle"
+        } else {
+            const speedSq = (hero.vx * hero.vx) + (hero.vy * hero.vy)
+            if (speedSq > RUN_THRESH_SQ) desiredPhase = "run"
+            else if (speedSq > WALK_THRESH_SQ) desiredPhase = "walk"
+            else desiredPhase = "idle"
+        }
+
+        // Unified contract: ambient is NOT segmented
+        _animKeys_clearPhasePart(hero)
+
+        // ***** THE MISSING FIX *****
+        // If ambient owns the hero, ActionKind MUST be "none".
+        // Your logs show: Phase becomes idle/run but ActionKind remains intellect_cast -> animation resolver mismatch -> blank/invisible.
+        const ak = sprites.readDataString(hero, HERO_DATA.ActionKind) || "none"
+        if (ak !== "none") {
+            sprites.setDataString(hero, HERO_DATA.ActionKind, "none")
+            // Optional safety: reset action params so nothing downstream “refines” based on stale cast metadata.
+            sprites.setDataNumber(hero, HERO_DATA.ActionVariantBtnId, 0)
+            sprites.setDataNumber(hero, HERO_DATA.ActionSeed, 0)
+            sprites.setDataNumber(hero, HERO_DATA.ActionTargetSpriteId, 0)
+            _dbgMovePipeTick("AMB_CLR_AK", hi, hero, nowMs, `prevActionKind=${ak} -> none`)
+        }
+
+        const wantDur = _ambientPhaseWindowMs(desiredPhase) | 0
+
+        // Current phase window state (authoritative keys)
+        const curPhaseName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+        const curStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+        const curDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+
+        // If PhaseName differs, switch immediately and stamp a valid non-zero window.
+        if (curPhaseName !== desiredPhase) {
+            setHeroPhaseString(hi, desiredPhase)
+            _animKeys_stampPhaseWindow(hi, hero, desiredPhase, nowMs, wantDur, "updateHeroMovementPhase(ambient:change)")
+            continue
+        }
+
+        // If window is invalid (should not happen under the unified contract), repair it.
+        if (curStart <= 0 || curDur <= 0) {
+            _animKeys_stampPhaseWindow(hi, hero, desiredPhase, nowMs, wantDur, "updateHeroMovementPhase(ambient:repair)")
+            continue
+        }
+
+        // Window is valid and PhaseName matches desired ambient.
+        // Update PhaseProgressInt continuously so Phaser can animate idle/run/combatIdle via progress.
+        const elapsed = ((nowMs - curStart) % curDur) | 0
+        const e = elapsed < 0 ? 0 : elapsed
+        const pInt = clampInt(Math.idiv(PHASE_PROGRESS_MAX * e, curDur), 0, PHASE_PROGRESS_MAX)
+        sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
     }
 }
 
 
 
 
-function updateHeroControlLocks(now: number): void {
+// LOCK/UNLOCK HYGIENE (ALLOWED CLEARER)
+// Allowed: clearing PhaseFlags and EventMask on unlock to prevent stale visuals.
+// NOT allowed: incrementing ActionSequence or changing ActionKind.
+// Events: never touch EventSequence here (emitters only).
+function updateHeroControlLocks(now: number) {
     const nowMs = now | 0
 
     for (let i = 0; i < heroes.length; i++) {
@@ -9860,12 +13994,14 @@ function updateHeroControlLocks(now: number): void {
         const isAgiBuildMode = (agiState === AGI_STATE.ARMED)
         const isAgiExecuting = (agiState === AGI_STATE.EXECUTING)
 
-        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
         const isCtrlSpell = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
+        const isStrCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+        const isSupportPuzzle = (supportPuzzleActive && supportPuzzleActive[i]) ? true : false
 
         // If we are in Agility build mode but somehow not locked, lock now.
         // Critical: combo build must stay locked after dash ends.
-        if (!isCtrlSpell && isAgiBuildMode && !locked) {
+        const locked0 = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (!isCtrlSpell && isAgiBuildMode && !locked0) {
             lockHeroControls(i)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
@@ -9873,8 +14009,11 @@ function updateHeroControlLocks(now: number): void {
             hero.vy = 0
         }
 
+        // IMPORTANT: declare lockedNow BEFORE any branch that uses it
         const lockedNow = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-        if (!lockedNow) continue
+
+        // Mirror from HERO_DATA (canonical) into heroBusyUntil[] for consistency
+        const busyUntil = getHeroBusyUntil(i) | 0
 
         // ------------------------------------------------------------
         // LOCK OWNERSHIP CASES (do NOT auto-unlock here)
@@ -9883,6 +14022,7 @@ function updateHeroControlLocks(now: number): void {
         // Intellect “controlling spell” owns the lock window (often not busyUntil-driven).
         // Keep hero frozen and do NOT auto-unlock based on busyUntil.
         if (isCtrlSpell) {
+            if (!lockedNow) lockHeroControls(i)
             hero.vx = 0
             hero.vy = 0
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
@@ -9890,19 +14030,42 @@ function updateHeroControlLocks(now: number): void {
             continue
         }
 
-        // Strength charging owns the lock. Never auto-unlock, never force idle.
-        if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+        // NEW: Intellect LAND owns the lock window until landEnd expires.
+        // Prevent generic busyUntil unlock from firing during land.
+        const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
+        if (landEnd > 0 && nowMs < landEnd) {
+            if (!lockedNow) lockHeroControls(i)
             hero.vx = 0
             hero.vy = 0
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
-            
+            continue
+        }
+
+        // Support puzzle owns the lock (busyUntil is huge; cleared on solve).
+        if (isSupportPuzzle) {
+            if (!lockedNow) lockHeroControls(i)
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            continue
+        }
+
+        // Strength charging owns the lock. Never auto-unlock, never allow velocity.
+        if (isStrCharging) {
+            if (!lockedNow) lockHeroControls(i)
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
             continue
         }
 
         // During ARMED/EXECUTING: allow aim changes, but DO NOT allow velocity changes.
         // Unlock is handled by cancel or execute finish.
         if (isAgiBuildMode || isAgiExecuting) {
+            if (!lockedNow) lockHeroControls(i)
             hero.vx = 0
             hero.vy = 0
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
@@ -9914,25 +14077,41 @@ function updateHeroControlLocks(now: number): void {
         // NORMAL LOCK BEHAVIOR (dash / cast travel / etc.)
         // Preserve stored velocity until busyUntil ends.
         // ------------------------------------------------------------
-        hero.vx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX)
-        hero.vy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY)
+
+        if (lockedNow) {
+            _dbgMovePipeTick("LOCK_TICK", i, hero, nowMs, "")
+            hero.vx = sprites.readDataNumber(hero, HERO_DATA.STORED_VX)
+            hero.vy = sprites.readDataNumber(hero, HERO_DATA.STORED_VY)
+        }
 
         // IMPORTANT: do NOT auto-unlock when busyUntil is 0.
         // Only unlock when an actual busy window expires.
-        const busyUntil = getHeroBusyUntil(i) | 0
         if (busyUntil > 0 && nowMs >= busyUntil) {
-            unlockHeroControls(i)
-            clearHeroBusyUntil(i)
 
-            if (!sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
-                setHeroPhaseString(i, "idle")
-            }
+            // End of busy window
+            clearHeroBusyUntil(i)
+            sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
+
+            // Events: never touch EventSequence here (emitters only).
+            _animEvent_clear(hero)
+
+            // Clear phase-part segmentation so we don't stay "windup"/"aim"/"puzzle" while idle
+            _animKeys_clearPhasePart(hero)
+
+            // RenderStyle policy:
+            // Keep RenderStyleMask as-is (persists until next action edge overwrites it).
+            // If you want "style only during an action", uncomment the next line:
+            // sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, 0)
+
+            if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(i, hero, "UNLOCK"))
+
+            unlockHeroControls(i)
+
+            // Return to ambient phase selection; do not force a phase here.
+            // updateHeroMovementPhase() will decide idle/run/combatIdle.
         }
     }
 }
-
-
-
 
 
 
@@ -9960,10 +14139,12 @@ function updateEnemyEffects(now: number) {
 
 
 // Master update
+// Master update
+// Master update
 game.onUpdate(function () {
     if (!HeroEngine._isStarted()) return
 
-    // NEW: snapshot previous positions for all heroes
+    // snapshot previous positions for all heroes
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
         if (h) {
@@ -9974,59 +14155,90 @@ game.onUpdate(function () {
 
     updateHeroFacingsFromVelocity()
     updatePlayerInputs()
-    const now = game.runtime()
 
+    const now = game.runtime() | 0
 
-    // NEW: keep a canonical world-runtime mirror
+    // keep a canonical world-runtime mirror
     worldRuntimeMs = now
 
+    // ------------------------------------------------------------
+    // SHOP LOOP (always runs; it owns focus + publishes highlight state)
+    // ------------------------------------------------------------
+        if(SHOP_MODE_ACTIVE_MASTER) {
+    shopModeUpdate(now)
+    shopTick(now)   // or shopTick(now) if that’s your canonical name
+    }
+
+
+    // ------------------------------------------------------------
+    // SHOP MODE GATE: "exit normal loop" by returning early.
+    // We still allow movement/locks/phase/collisions so the world feels alive.
+    // ------------------------------------------------------------
+if (SHOP_MODE_ACTIVE) {
+       // The per-frame shop “owner” loop (NOT just inputs)
+        //shopTick(now)   // or shopTick(now) if that’s your canonical name
+
+
+        // Let any prior busy windows expire and unlock heroes naturally
+        updateHeroControlLocks(now)
+
+        // Keep run/idle visuals responsive while walking around the shop
+        updateHeroMovementPhase(now)
+
+        // Keep walls real in shop space too
+        resolveTilemapCollisions()
+
+        // Nothing else (no enemies, projectiles, waves, etc.)
+        return
+    }
+
+
+    
+    // ---------------- NORMAL COMBAT LOOP ----------------
+
     // Debug integrator logs
-    for (let i = 0; i < heroes.length; i++) { const hero = heroes[i]; if (hero) debugDashIntegratorTick(hero) }
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]
+        if (hero) debugDashIntegratorTick(hero)
+    }
 
     updateStrengthChargingAllHeroes(now)
-
-    // NEW (Agility combo v3): enter/rearm combo meter on landing (hold-through-landing entry)
     updateAgilityComboLandingTransitions(now)
-
-    // NEW (C5): allow canceling ARMED agility combo by holding movement
     updateAgilityManualCancelAllHeroes(now)
+    updateSupportPuzzles(now)
+    updateAgilityThrustMotionAll(now)
 
-    updateSupportPuzzles(now)     // NEW
+
+    // NEW: one universal progress updater (PhaseProgressInt + PhasePartProgress)
+    updateHeroTimelineProgressAll(now)
+
     updateHeroControlLocks(now)
-
-    // NEW: if not in a special move, phase follows motion (idle/run)
     updateHeroMovementPhase(now)
+    updateHeroBuffs(now)
+    updateHeroDeaths(now)
 
-    updateHeroBuffs(now)          // NEW
+    updateHeroProjectiles()
+    updateProjectilesCleanup()
+    updateHeroOverlays()
 
-
-    // NEW: handle post-death cleanup (LPC death anim window)
-    updateHeroDeaths(now);
-
-    //updateHeroControlLocks(now)
-
-    updateHeroProjectiles()     // <— this replaces the messy cluster
-
-    updateProjectilesCleanup()  // NEW: destroy timed VFX (DESTROY_AT) e.g. execute slashes
-
-    updateHeroOverlays()        // aura + combo meter
-
-    // NEW: enforce collisions with logical wall tiles
     resolveTilemapCollisions()
 
-    for (let hi = 0; hi < heroes.length; hi++) { const h = heroes[hi]; if (h) debugAgilityDashProgress(h, hi) }
-    updateEnemyHoming(now)             // AI + attacks
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h) debugAgilityDashProgress(h, hi)
+    }
 
-    updateEnemyEffects(now)     // clear expired enemy effects
-
+    updateEnemyHoming(now)
+    updateEnemyEffects(now)
 })
 
 
 game.onUpdateInterval(80, function () {
-    if (!HeroEngine._isStarted()) return;
+    if (!HeroEngine._isStarted()) return
+    if (SHOP_MODE_ACTIVE) return
 
     try {
-        const nowMs = game.runtime() | 0;
+        const nowMs = game.runtime() | 0
 
         const i1 = consumePlayerIntent(1)
         if (i1 !== "") {
@@ -10056,10 +14268,9 @@ game.onUpdateInterval(80, function () {
             if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P4 intent=" + i4 + " timeMs=" + nowMs)
         }
     } catch (e) {
-        console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e);
+        console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e)
     }
-});
-
+})
 
 // Timers
 
@@ -10248,6 +14459,7 @@ function pickEnemyKindForWave(waveIdx: number): string {
 
 game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     if (!HeroEngine._isStarted()) return
+    if (SHOP_MODE_ACTIVE) return
     if (!enemySpawners || enemySpawners.length == 0) return
 
     const now = game.runtime()
@@ -10257,8 +14469,10 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
         const s = enemySpawners[idx]
         // Spawns a default real monster id if you ever run with no WAVE_DEFS
         console.log("Doing a default imp blue call to spawn enemy Of Kind")
-        spawnEnemyOfKind("imp blue", s.x, s.y)
         
+        if (!SHOP_MODE_ACTIVE) {
+        spawnEnemyOfKind("imp blue", s.x, s.y)
+        }
         return
     }
 
@@ -10337,7 +14551,55 @@ if (typeof globalThis !== "undefined") {
             return WORLD_TILE_SIZE;
         };
 
-        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size)");
+        // ------------------------------------------------------------
+        // STEP 6: spawn-on-demand hook for the Phaser host.
+        // This lets arcadeCompat (or any host glue) force-spawn P2..P4
+        // the moment a player is assigned/connected, rather than waiting
+        // for first input.
+        //
+        // TODO_NPLAYER_BRIDGE: later replace playerId<=4 assumption with
+        // roster/slot assignment logic.
+        // ------------------------------------------------------------
+        g.__HeroEnginePhaserInternals.ensureHeroForPlayer = function (playerId: number): number {
+            const pid = playerId | 0;
+            if (pid < 1 || pid > 4) return -1;
+
+            const existing = playerToHeroIndex[pid] | 0;
+            if (existing >= 0 && existing < heroes.length && heroes[existing]) {
+                return existing;
+            }
+
+            // Compute the same spawn coordinates used by setupHeroes()
+            let W = userconfig.ARCADE_SCREEN_WIDTH;
+            let H = userconfig.ARCADE_SCREEN_HEIGHT;
+
+            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+                const rows = _engineWorldTileMap.length;
+                const cols = _engineWorldTileMap[0].length;
+                W = cols * WORLD_TILE_SIZE;
+                H = rows * WORLD_TILE_SIZE;
+            }
+
+            const centerW = W / 2;
+            const centerH = H / 2;
+            const offset = 40;
+
+            const coords: number[][] = [
+                [centerW + offset, centerH + offset],
+                [centerW - offset, centerH + offset],
+                [centerW + offset, centerH - offset],
+                [centerW - offset, centerH - offset]
+            ];
+
+            const slotIndex = pid - 1;
+            console.log(">>> [HeroEngineInPhaser] ensureHeroForPlayer spawning pid =", pid);
+            createHeroForPlayer(pid, coords[slotIndex][0], coords[slotIndex][1]);
+
+            const after = playerToHeroIndex[pid] | 0;
+            return (after >= 0 && after < heroes.length && heroes[after]) ? after : -1;
+        };
+
+        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + ensureHeroForPlayer)");
     } catch {
         // If globalThis isn't available (e.g., PXT runtime), just silently skip.
     }

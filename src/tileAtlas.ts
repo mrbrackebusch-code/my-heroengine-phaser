@@ -165,13 +165,17 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         return;
     }
 
+
+    const DEBUG_TILES = false
+
+    if (DEBUG_TILES) {
     logTiles(
         "[tileAtlas.preload] tilesheets to load:",
         TILE_SHEETS.map(s =>
             `${s.textureKey} (${s.cols}x${s.rows} tiles, url="${s.url}")`
         )
     );
-
+}
     for (const sheet of TILE_SHEETS) {
         scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: TILE_SIZE,

@@ -1,13 +1,17 @@
 // src/heroAnimGlue.ts
 import type Phaser from "phaser";
 import type { HeroDir, HeroPhase, HeroAnimSet } from "./heroAtlas";
+
 import {
-    getHeroAtlasFromScene,
     findHeroAnimSet,
-    HERO_FRAME_W,
-    HERO_FRAME_H,
-    HERO_SHEET_COLS
+    getHeroAtlasFromScene,
+    normalizeHeroPhase,
+    type HeroAnimSet,
+    type HeroDir,
+    type HeroFrameDef,
+    type HeroPhase
 } from "./heroAtlas";
+
 
 // Data keys we will use on hero sprites.
 // (Kept separate from monster keys.)
@@ -29,10 +33,71 @@ const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
 
 
+// Local phase window tracking (because engine PhaseStartMs is Arcade time, not Phaser time)
+const HERO_LOCAL_PHASE_ACTIONSEQ_KEY = "__heroLocalPhaseActionSequence";
+const HERO_LOCAL_PHASE_LOCAL_START_KEY = "__heroLocalPhaseLocalStartMs";
+const HERO_LOCAL_PHASE_LOCAL_DUR_KEY = "__heroLocalPhaseLocalDurMs";
+
+
+
+const HERO_ACTION_KIND_KEY = "ActionKind";
+const HERO_ACTION_SEQUENCE_KEY = "ActionSequence";
+const HERO_PHASE_DURATION_MS_KEY = "PhaseDurationMs";
+const HERO_PHASE_PROGRESS_INT_KEY = "PhaseProgressInt";
+
+const HERO_BASE_SCALE_X_KEY = "__heroBaseScaleX";
+const HERO_BASE_SCALE_Y_KEY = "__heroBaseScaleY";
+
+
+const HERO_PHASE_NAME_KEY = "PhaseName"
+const HERO_PHASE_START_MS_KEY = "PhaseStartMs"
+
+// Debug toggles
+const DEBUG_HERO_ANIM_GLUE = true
+const DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS = false  // if true: logs only when something is missing/invalid
+const DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT = true // reduces spam by focusing on intellect/cast
+
+//const HERO_PHASE_NAME_KEY = "PhaseName" // authoritative phase window key from HeroEngineInPhaser
+
+
+// ============================================================
+// DEBUG: Prove hero animation application during cast
+// ============================================================
+const DEBUG_INT_HERO_ANIM = false; //Debug flag
+const DEBUG_INT_HERO_NAME_FILTER = "Jason"; // "" = all
+
+
+
+// ============================================================
+// DEBUG: Prove hero animation application / restart / looping
+// ============================================================
+const DEBUG_PROVE_HERO_CAST_ANIM = false; //Debug flag
+// "" logs all heroes; set to "Jason" to filter.
+const DEBUG_PROVE_HERO_NAME_FILTER = "Jason";
+
+
+
+const CAST_PART_FRAME_RULES: Record<string, { start: number; end: number; hold?: number }> = {
+    // indices within the cast clip (0..6)
+    produce: { start: 0, end: 3 },
+    drive:   { start: 4, end: 4, hold: 4 },
+    land:    { start: 5, end: 6 }
+};
+
+function _clamp01(x: number): number {
+    if (x < 0) return 0;
+    if (x > 1) return 1;
+    return x;
+}
+
+
+
+
 // Global + per-file logging flag
 const HERO_GLUE_DEBUG = {
-    enabled: true
+    enabled: true //Debug flag
 };
+
 
 function heroGlueDebug(scene: Phaser.Scene): boolean {
     // Global master switch lives in the registry (same as atlas).
@@ -61,55 +126,247 @@ function logGlue(scene: Phaser.Scene, tag: string, payload?: any): void {
     console.log("[HeroAnimGlue]", line);
 }
 
+
+
+const HERO_CAST_CLOCK_OFFSET_MS_KEY = "__heroCastClockOffsetMs";
+const HERO_CAST_CLOCK_ANCHOR_START_MS_KEY = "__heroCastClockAnchorStartMs";
+
+
+// --- ADD THESE CONSTANTS (standalone; outside functions) --------------------
+
+// Authoritative per-phase-part fields published by HeroEngineInPhaser
+const HERO_PHASE_PART_NAME_KEY = "PhasePartName";
+const HERO_PHASE_PART_START_MS_KEY = "PhasePartStartMs";
+const HERO_PHASE_PART_DURATION_MS_KEY = "PhasePartDurationMs";
+
+// Local tracking for part timing (Arcade time -> Phaser time bridge)
+const HERO_LOCAL_PART_ACTIONSEQ_KEY = "__heroLocalPartActionSequence";
+const HERO_LOCAL_PART_PARTNAME_KEY = "__heroLocalPartName";
+const HERO_LOCAL_PART_PARTSTART_KEY = "__heroLocalPartStartMsArcade";
+const HERO_LOCAL_PART_LOCALSTART_KEY = "__heroLocalPartLocalStartMs";
+
+
+
+
+// ---------------------------------------------------------------------------
+// Identity deferral + proof logging (NEW)
+// ---------------------------------------------------------------------------
+const HERO_ANIM_DEFER_KEY_FIRST_SEEN_MS = "heroAnimGlue.defer.firstSeenMs";
+const HERO_ANIM_DEFER_KEY_NO_NAME_LOGGED = "heroAnimGlue.defer.noHeroNameLogged";
+const HERO_ANIM_DEFER_KEY_RESOLVED_LOGGED = "heroAnimGlue.defer.resolvedLogged";
+
+// How long we tolerate a sprite existing without a heroName (ms).
+const HERO_ANIM_IDENTITY_GRACE_MS = 900;
+
+// If true: after grace window, we throw (crash) to force attention.
+// Default false so startup ordering doesn’t explode.
+const HERO_ANIM_THROW_IF_IDENTITY_NEVER_RESOLVES = false;
+
+
+
+
+// Tiny util (old code referenced clampInt; ensure it exists)
+function clampInt(v: number, lo: number, hi: number): number {
+    v |= 0;
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+// ---------------------------------------------------------------------------
+// NEW: Cast phase-part frame control (produce/drive/land)
+// ---------------------------------------------------------------------------
+// --- FULL REPLACEMENT: _tryCastPartFrameControl ----------------------------
+function _tryCastPartFrameControl(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: any,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    if (!req || req.phase !== "cast") return false;
+
+    const partNameRaw = (req.phasePartName || "").toString().trim().toLowerCase();
+    if (!partNameRaw) return false;
+
+    const rule = CAST_PART_FRAME_RULES[partNameRaw];
+    if (!rule) return false;
+
+    const frames: number[] = (def && Array.isArray(def.frameIndices)) ? def.frameIndices : [];
+    if (frames.length <= 0) return false;
+
+    const startMs =
+        (typeof req.phasePartStartMs === "number" && Number.isFinite(req.phasePartStartMs))
+            ? (req.phasePartStartMs | 0)
+            : 0;
+
+    const durMs =
+        (typeof req.phasePartDurationMs === "number" &&
+            Number.isFinite(req.phasePartDurationMs) &&
+            req.phasePartDurationMs > 0)
+            ? (req.phasePartDurationMs | 0)
+            : 1;
+
+    const sceneNowMs =
+        (scene.time && typeof scene.time.now === "number")
+            ? (scene.time.now | 0)
+            : 0;
+
+    // ------------------------------------------------------------
+    // CLOCK ALIGNMENT (the bug you're hitting)
+    // startMs comes from HeroEngine timebase; sceneNowMs is Phaser.
+    // We learn an offset the first tick we see a given startMs:
+    //   engineNowMs = sceneNowMs - offset
+    // so that engineNowMs ~= startMs at the moment we begin observing.
+    // ------------------------------------------------------------
+    const prevAnchorStartMs = (sprite as any).getData
+        ? ((sprite as any).getData(HERO_CAST_CLOCK_ANCHOR_START_MS_KEY) as number | undefined)
+        : undefined;
+
+    let offsetMs = (sprite as any).getData
+        ? ((sprite as any).getData(HERO_CAST_CLOCK_OFFSET_MS_KEY) as number | undefined)
+        : undefined;
+
+    if (prevAnchorStartMs !== startMs || typeof offsetMs !== "number" || !Number.isFinite(offsetMs)) {
+        // Re-anchor when part start changes (new part) or first time.
+        offsetMs = sceneNowMs - startMs;
+
+        if ((sprite as any).setData) {
+            (sprite as any).setData(HERO_CAST_CLOCK_OFFSET_MS_KEY, offsetMs);
+            (sprite as any).setData(HERO_CAST_CLOCK_ANCHOR_START_MS_KEY, startMs);
+        }
+    }
+
+    const engineNowMs = sceneNowMs - (offsetMs | 0);
+
+    let clipIdx = 0;
+
+    if (typeof rule.hold === "number") {
+        clipIdx = rule.hold | 0;
+    } else {
+        let elapsed = engineNowMs - startMs;
+        if (elapsed < 0) elapsed = 0;
+        if (elapsed > durMs) elapsed = durMs;
+
+        const span = (rule.end - rule.start + 1);
+        if (span <= 1) {
+            clipIdx = rule.start | 0;
+        } else {
+            // elapsed in [0..durMs] → local in [0..span-1]
+            let local = Math.floor((elapsed * span) / durMs); // 0..span
+            if (local > (span - 1)) local = span - 1;
+            clipIdx = (rule.start + local) | 0;
+        }
+
+        if (shouldProve) {
+            // eslint-disable-next-line no-console
+            console.log(
+                `[PROVE][HERO-ANIM][CAST-PART-TIME] | part=${partNameRaw} ` +
+                `sceneNowMs=${sceneNowMs} engineNowMs=${engineNowMs} offsetMs=${offsetMs} ` +
+                `startMs=${startMs} durMs=${durMs} elapsedMs=${Math.max(0, Math.min(durMs, engineNowMs - startMs))} ` +
+                `rule=${rule.start}..${rule.end} span=${span} clipIdx=${clipIdx}`
+            );
+        }
+    }
+
+    // Clamp to actual available frames
+    const maxIdx = frames.length - 1;
+    if (clipIdx < 0) clipIdx = 0;
+    if (clipIdx > maxIdx) clipIdx = maxIdx;
+
+    const frameIndex = frames[clipIdx];
+
+    // Stop looping spellcast; we are driving frames manually.
+    if (sprite.anims && sprite.anims.isPlaying) {
+        sprite.anims.stop();
+    }
+
+    sprite.setFrame(frameIndex);
+
+    if (shouldProve) {
+        // eslint-disable-next-line no-console
+        console.log(
+            `[PROVE][HERO-ANIM][CAST-PART-APPLY] | part=${partNameRaw} ` +
+            `clipIdx=${clipIdx} frameIndex=${frameIndex} startMs=${startMs} durMs=${durMs}`
+        );
+    }
+
+    return true;
+}
+
+
 /**
  * Read and normalize the animation request from a hero sprite.
  */
+// --- FULL REPLACEMENT: readHeroAnimRequest ---------------------------------
+
+
+// --- FULL REPLACEMENT: readHeroAnimRequest ---------------------------------
 function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     heroName: string | undefined;
     family: string | undefined;
     phase: HeroPhase | null;
     dir: HeroDir;
     frameColOverride: number; // -1 means "no override"
+
+    actionKind: string | undefined;
+    actionSequence: number;
+    phaseDurationMs: number;
+    phaseProgressInt: number; // 0..1000, -1 if missing
+
+    // Authoritative phase-part window (for selected-frame control)
+    phasePartName: string | undefined;
+    phasePartStartMs: number;
+    phasePartDurationMs: number;
 } {
     const anySprite = sprite as any;
 
-    const heroNameRaw = anySprite.getData
-        ? (anySprite.getData(HERO_NAME_KEY) as string | undefined)
-        : undefined;
-    const familyRaw = anySprite.getData
-        ? (anySprite.getData(HERO_FAMILY_KEY) as string | undefined)
-        : undefined;
-    const phaseRaw = anySprite.getData
-        ? (anySprite.getData(HERO_PHASE_KEY) as string | undefined)
-        : undefined;
-    const dirRaw = anySprite.getData
-        ? (anySprite.getData(HERO_DIR_KEY) as string | undefined)
-        : undefined;
+    const heroNameRaw = anySprite.getData ? (anySprite.getData(HERO_NAME_KEY) as any) : undefined;
+    const familyRaw = anySprite.getData ? (anySprite.getData(HERO_FAMILY_KEY) as any) : undefined;
 
-    // NEW: frameColOverride (sentinel -1 means "none")
-    const frameColOverrideRaw = anySprite.getData
-        ? (anySprite.getData(HERO_FRAME_COL_OVERRIDE_KEY) as any)
-        : undefined;
+    const phaseLegacyRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_KEY) as any) : undefined;
+    const phaseNameRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_NAME_KEY) as any) : undefined;
 
-    
-    const heroName = heroNameRaw ? String(heroNameRaw) : undefined;
+    const dirRaw = anySprite.getData ? (anySprite.getData(HERO_DIR_KEY) as any) : undefined;
 
-    // Family is OPTIONAL now. If present, normalize to a known token; otherwise undefined.
-    const family = ((): string | undefined => {
-        if (!familyRaw) return undefined;
-        const f = String(familyRaw).toLowerCase();
+    const frameColOverrideRaw = anySprite.getData ? (anySprite.getData(HERO_FRAME_COL_OVERRIDE_KEY) as any) : undefined;
+
+    const actionKindRaw = anySprite.getData ? (anySprite.getData(HERO_ACTION_KIND_KEY) as any) : undefined;
+    const actionSeqRaw = anySprite.getData ? (anySprite.getData(HERO_ACTION_SEQUENCE_KEY) as any) : undefined;
+
+    const phaseDurRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_DURATION_MS_KEY) as any) : undefined;
+    const phaseProgRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_PROGRESS_INT_KEY) as any) : undefined;
+
+    const partNameRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_PART_NAME_KEY) as any) : undefined;
+    const partStartRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_PART_START_MS_KEY) as any) : undefined;
+    const partDurRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_PART_DURATION_MS_KEY) as any) : undefined;
+
+    const heroName = (() => {
+        if (heroNameRaw == null) return undefined;
+        const s = String(heroNameRaw).trim();
+        return s.length ? s : undefined;
+    })();
+
+    const family = (() => {
+        if (familyRaw == null) return undefined;
+        const f0 = String(familyRaw).trim().toLowerCase();
+        const f = f0.replace(/[\s_-]+/g, "");
         if (f === "base") return "base";
         if (f === "strength") return "strength";
         if (f === "agility") return "agility";
-        if (f === "intelligence") return "intelligence";
+        if (f === "intelligence" || f === "intellect") return "intelligence";
         if (f === "support") return "support";
         return undefined;
     })();
 
-    // Local normalization (mirrors heroAtlas.normalizeHeroPhase)
-    const phase = ((): HeroPhase | null => {
-        if (!phaseRaw) return null;
-        const p = String(phaseRaw).toLowerCase();
+    const phaseEffectiveRaw =
+        (phaseNameRaw && String(phaseNameRaw).trim().length) ? phaseNameRaw : phaseLegacyRaw;
+
+    const phase = (() => {
+        if (!phaseEffectiveRaw) return null;
+        const p0 = String(phaseEffectiveRaw).trim().toLowerCase();
+        const p = p0.replace(/[\s_-]+/g, "");
+
         if (p === "cast" || p === "spellcast" || p === "spell") return "cast";
         if (p === "thrust" || p === "spear") return "thrust";
         if (p === "walk" || p === "walking") return "walk";
@@ -123,7 +380,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (p === "emote" || p === "emotion") return "emote";
         if (p === "run" || p === "running") return "run";
         if (p === "watering" || p === "water") return "watering";
-        if (p === "combatidle" || p === "combat_idle" || p === "combat-idle") return "combatIdle";
+        if (p === "combatidle") return "combatIdle";
         if (p === "onehandslash" || p === "1handslash") return "oneHandSlash";
         if (p === "onehandbackslash" || p === "1handbackslash") return "oneHandBackslash";
         if (p === "onehandhalfslash" || p === "1handhalfslash" || p === "halfslash") return "oneHandHalfslash";
@@ -132,9 +389,10 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         return null;
     })();
 
-    const dir: HeroDir = ((): HeroDir => {
+    const dir: HeroDir = (() => {
         if (!dirRaw) return "down";
-        const d = String(dirRaw).toLowerCase();
+        const d0 = String(dirRaw).trim().toLowerCase();
+        const d = d0.replace(/[\s_-]+/g, "");
         if (d === "up" || d === "n" || d === "north") return "up";
         if (d === "down" || d === "s" || d === "south") return "down";
         if (d === "left" || d === "w" || d === "west") return "left";
@@ -142,20 +400,77 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         return "down";
     })();
 
-    const frameColOverride = ((): number => {
-        if (frameColOverrideRaw === undefined || frameColOverrideRaw === null) return -1;
-        if (typeof frameColOverrideRaw === "number" && Number.isFinite(frameColOverrideRaw)) return frameColOverrideRaw | 0;
-        if (typeof frameColOverrideRaw === "string") {
-            const n = parseInt(frameColOverrideRaw, 10);
-            if (Number.isFinite(n)) return n | 0;
-        }
-        return -1;
+    const frameColOverride = (() => {
+        const n = Number(frameColOverrideRaw);
+        if (!Number.isFinite(n)) return -1;
+        return (n | 0);
     })();
 
-    return { heroName, family, phase, dir, frameColOverride };
+    const actionKind = (() => {
+        if (actionKindRaw == null) return undefined;
+        const s = String(actionKindRaw).trim();
+        if (!s.length) return undefined;
+        const sl = s.toLowerCase();
+        if (sl === "none" || sl === "null" || sl === "undefined") return undefined;
+        return s;
+    })();
+
+    const actionSequence = (() => {
+        const n = Number(actionSeqRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+
+    const phaseDurationMs = (() => {
+        const n = Number(phaseDurRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+
+    const phaseProgressInt = (() => {
+        const n = Number(phaseProgRaw);
+        if (!Number.isFinite(n)) return -1;
+        const v = (n | 0);
+        if (v < 0) return 0;
+        if (v > 1000) return 1000;
+        return v;
+    })();
+
+    const phasePartName = (() => {
+        if (partNameRaw == null) return undefined;
+        const s = String(partNameRaw).trim();
+        return s.length ? s : undefined;
+    })();
+
+    const phasePartStartMs = (() => {
+        const n = Number(partStartRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+
+    const phasePartDurationMs = (() => {
+        const n = Number(partDurRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+
+    return {
+        heroName,
+        family,
+        phase,
+        dir,
+        frameColOverride,
+
+        actionKind,
+        actionSequence,
+        phaseDurationMs,
+        phaseProgressInt,
+
+        phasePartName,
+        phasePartStartMs,
+        phasePartDurationMs
+    };
 }
-
-
 
 /**
  * For now, every "active" animation returns to idle.
@@ -211,218 +526,482 @@ function formatFrameDebug(frameIndices: number[]): string {
     return parts.join(", ");
 }
 
-// ---------------------------------------------------------------------------
-// Core glue: internal worker with a flag to avoid infinite fallback recursion
-// ---------------------------------------------------------------------------
 
-function applyHeroAnimationForSpriteInternal(
-    sprite: Phaser.GameObjects.Sprite,
-    allowFallback: boolean
-): void {
-    const scene = sprite.scene;
-    const atlas = getHeroAtlasFromScene(scene);
-    if (!atlas) {
-        logGlue(scene, "applyHeroAnimationForSprite: no atlas");
-        return;
-    }
+// ------------------------------------------------------------
+// Split helpers (NO behavior change; refactor only)
+// ------------------------------------------------------------
 
-    const { heroName, family, phase, dir, frameColOverride } = readHeroAnimRequest(sprite);
+type _HeroAnimRequest = ReturnType<typeof readHeroAnimRequest>;
 
-    // Family is OPTIONAL now. Phase + heroName are still required.
-    if (!heroName || !phase) {
+function _shouldProveHeroAnim(req: _HeroAnimRequest): boolean {
+    return (
+        !!DEBUG_PROVE_HERO_CAST_ANIM &&
+        req.phase === "cast" &&
+        (!DEBUG_PROVE_HERO_NAME_FILTER || req.heroName === DEBUG_PROVE_HERO_NAME_FILTER)
+    );
+}
+
+function _proveLogHeroAnimReq(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequest): void {
+    const anySprite0 = sprite as any;
+    console.log(
+        "[PROVE][HERO-ANIM][REQ]",
+        "| heroName", req.heroName,
+        "| family", req.family,
+        "| phase", req.phase,
+        "| dir", req.dir,
+        "| fco", (req.frameColOverride | 0),
+        "| actionKind", req.actionKind,
+        "| phaseProgressInt", req.phaseProgressInt,
+        "| texKey(cur)", (anySprite0.texture && anySprite0.texture.key) ? anySprite0.texture.key : "",
+        "| frame(cur)", (anySprite0.frame && (anySprite0.frame.name !== undefined)) ? anySprite0.frame.name : undefined,
+        "| animKey(cur)", (anySprite0.anims && anySprite0.anims.currentAnim) ? anySprite0.anims.currentAnim.key : "",
+        "| isPlaying(cur)", (anySprite0.anims && anySprite0.anims.isPlaying) ? true : false,
+        "| visible(cur)", (anySprite0.visible === true),
+        "| alpha(cur)", (anySprite0.alpha !== undefined ? anySprite0.alpha : undefined),
+    );
+}
+
+function _requireHeroNameAndPhaseOrLog(scene: Phaser.Scene, req: _HeroAnimRequest): boolean {
+    if (!req.heroName || !req.phase) {
         logGlue(scene, "applyHeroAnimationForSprite: missing heroName/phase", {
-            heroName,
-            family,
-            phase,
-            frameColOverride
+            heroName: req.heroName,
+            family: req.family,
+            phase: req.phase,
+            frameColOverride: req.frameColOverride,
+            actionKind: req.actionKind
         });
-        return;
+        return false;
     }
+    return true;
+}
 
-    const set = findHeroAnimSet(atlas, heroName, family);
+function _findHeroSetOrLog(
+    scene: Phaser.Scene,
+    atlas: any,
+    req: _HeroAnimRequest
+): any | null {
+    const set = findHeroAnimSet(atlas, req.heroName, req.family);
     if (!set) {
         logGlue(scene, "applyHeroAnimationForSprite: no HeroAnimSet for hero (family optional)", {
-            heroName,
-            family
+            heroName: req.heroName,
+            family: req.family
         });
-        return;
+        return null;
     }
+    return set;
+}
 
+function _proveLogEffectivePhase(
+    req: _HeroAnimRequest,
+    set: any,
+    effectivePhase: any,
+    dirMap: any
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][EFFECTIVE]",
+        "| heroName", req.heroName,
+        "| requestedPhase", req.phase,
+        "| effectivePhase", effectivePhase,
+        "| hasDirMap", !!dirMap,
+        "| setId", set.id
+    );
+}
+
+function _proveLogFallback(
+    reason: string,
+    req: _HeroAnimRequest,
+    effectivePhase: any,
+    restPhase: any,
+    allowFallback: boolean
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][FALLBACK]",
+        `REASON=${reason}`,
+        "| heroName", req.heroName,
+        "| requestedPhase", req.phase,
+        "| effectivePhase", effectivePhase,
+        "| fallbackRestPhase", restPhase,
+        "| allowFallback", allowFallback
+    );
+}
+
+function _resolveDirMapOrFallback(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    set: any,
+    effectivePhase: any,
+    allowFallback: boolean,
+    shouldProve: boolean
+): any | null {
     const anySprite = sprite as any;
-
-    // Pick the best concrete phase (run→walk; oversize selection disabled)
-    const effectivePhase = getEffectivePhaseForSet(set, phase);
-
     const dirMap = set.phases[effectivePhase];
 
-    // If this phase is not present in the atlas, fall back to idle once.
     if (!dirMap) {
         logGlue(scene, "applyHeroAnimationForSprite: no phase for set", {
-            heroName,
-            family,
-            requestedPhase: phase,
+            heroName: req.heroName,
+            family: req.family,
+            requestedPhase: req.phase,
             effectivePhase,
             setId: set.id
         });
 
-        if (allowFallback && phase !== "idle") {
-            const restPhase = getRestPhase(phase);
-            if (anySprite.setData) {
-                anySprite.setData(HERO_PHASE_KEY, restPhase);
-            }
-            logGlue(scene, "applyHeroAnimationForSprite: falling back to rest phase", {
-                heroName,
-                family,
-                requestedPhase: phase,
-                restPhase
-            });
+        if (allowFallback && req.phase !== "idle") {
+            const restPhase = getRestPhase(req.phase);
+            if (shouldProve) _proveLogFallback("noDirMap", req, effectivePhase, restPhase, allowFallback);
+            if (anySprite.setData) anySprite.setData(HERO_PHASE_KEY, restPhase);
             applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
         }
-        return;
+        return null;
     }
 
-    const def = dirMap[dir];
+    return dirMap;
+}
+
+function _resolveDefOrFallback(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    set: any,
+    effectivePhase: any,
+    dirMap: any,
+    allowFallback: boolean,
+    shouldProve: boolean
+): any | null {
+    const anySprite = sprite as any;
+    const def = dirMap[req.dir];
+
     if (!def) {
         logGlue(scene, "applyHeroAnimationForSprite: no dir for phase", {
-            heroName,
-            family,
-            requestedPhase: phase,
+            heroName: req.heroName,
+            family: req.family,
+            requestedPhase: req.phase,
             effectivePhase,
-            requestedDir: dir,
+            requestedDir: req.dir,
             setId: set.id
         });
 
-        if (allowFallback && phase !== "idle") {
-            const restPhase = getRestPhase(phase);
-            if (anySprite.setData) {
-                anySprite.setData(HERO_PHASE_KEY, restPhase);
-            }
-            logGlue(scene, "applyHeroAnimationForSprite: falling back (no dir) to rest phase", {
-                heroName,
-                family,
-                requestedPhase: phase,
-                effectivePhase,
-                requestedDir: dir,
-                restPhase
-            });
+        if (allowFallback && req.phase !== "idle") {
+            const restPhase = getRestPhase(req.phase);
+            if (shouldProve) _proveLogFallback("noDefForDir", req, effectivePhase, restPhase, allowFallback);
+            if (anySprite.setData) anySprite.setData(HERO_PHASE_KEY, restPhase);
             applyHeroAnimationForSpriteInternal(sprite, /*allowFallback*/ false);
         }
-        return;
+        return null;
     }
 
-    // Canonical single-frame hold behavior
-    if ((frameColOverride | 0) >= 0) {
-        const frames: number[] = (def.frameIndices || []) as any;
-        if (!frames.length) {
-            logGlue(scene, "applyHeroAnimationForSprite: HOLD requested but def has no frames", {
-                heroName,
-                family,
-                phase: def.phase,
-                dir: def.dir,
-                textureKey: def.textureKey
-            });
-            return;
-        }
+    return def;
+}
 
-        const col = Math.max(0, Math.min(frameColOverride | 0, frames.length - 1));
-        const frameIndex = frames[col];
+function _proveLogDef(req: _HeroAnimRequest, def: any): void {
+    console.log(
+        "[PROVE][HERO-ANIM][DEF]",
+        "| heroName", req.heroName,
+        "| def.phase", def.phase,
+        "| def.dir", def.dir,
+        "| def.textureKey", def.textureKey,
+        "| framesLen", ((def.frameIndices as any)?.length ?? -1),
+        "| frameRate", def.frameRate,
+        "| repeat", def.repeat,
+        "| yoyo", def.yoyo
+    );
+}
 
-        // Stop animation playback and force frame (do not play/restart, do not advance)
-        if (sprite.anims) sprite.anims.stop();
-        sprite.setTexture(def.textureKey, frameIndex);
+function _restoreBaseScaleIfPresent(sprite: Phaser.GameObjects.Sprite): void {
+    const anySprite = sprite as any;
+    const bx = Number(anySprite.getData?.(HERO_BASE_SCALE_X_KEY));
+    const by = Number(anySprite.getData?.(HERO_BASE_SCALE_Y_KEY));
+    if (Number.isFinite(bx) && bx !== 0) (sprite as any).scaleX = bx;
+    if (Number.isFinite(by) && by !== 0) (sprite as any).scaleY = by;
+}
 
-        // Remove any prior animationcomplete handler (hold should not auto-snap rest)
-        const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
-            | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
-            | undefined;
-        if (prevHandler) {
-            sprite.off("animationcomplete", prevHandler);
-            anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = undefined;
-        }
+function _tryStrengthChargeThrob(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    const anySprite = sprite as any;
 
-        // Record last applied pose (optional but helps avoid churn)
-        if (anySprite.setData) {
-            anySprite.setData(LAST_ANIM_KEY, "");
-            anySprite.setData(LAST_PHASE_KEY, def.phase);
-            anySprite.setData(LAST_DIR_KEY, def.dir);
-            anySprite.setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
-        }
-
-        return;
+    if (!(req.actionKind === "strength_charge" && def.phase === "slash")) {
+        return false;
     }
 
-    const animKey = buildHeroAnimKey(set.heroName, def);
+    const frames: number[] = (def.frameIndices || []) as any;
+    if (!(frames && frames.length)) return false;
 
-    // If nothing changed and the anim is already playing, do nothing.
-    // (Only valid when NOT holding a frame.)
-    const lastPhase = anySprite.getData
-        ? (anySprite.getData(LAST_PHASE_KEY) as HeroPhase | undefined)
-        : undefined;
-    const lastDir = anySprite.getData
-        ? (anySprite.getData(LAST_DIR_KEY) as HeroDir | undefined)
-        : undefined;
+    const nowLocal = (scene as any)?.time?.now ?? Date.now();
 
-    if (lastPhase === def.phase && lastDir === def.dir && sprite.anims && sprite.anims.currentAnim) {
-        if (sprite.anims.currentAnim.key === animKey && sprite.anims.isPlaying) {
-            return;
-        }
+    // p in [0..1] if provided (else assume mid)
+    const p = (req.phaseProgressInt >= 0) ? Math.max(0, Math.min(1, req.phaseProgressInt / 1000)) : 0.5;
+
+    // Alternate between col 0 and col 1 with a period that tightens slightly as we near full charge
+    // (so it feels more “tense” as it fills)
+    const periodMs = Math.max(80, Math.min(220, Math.floor(220 - 120 * p)));
+    const bit = ((Math.floor(nowLocal / periodMs) | 0) & 1) ? 1 : 0;
+
+    // If we only have 1 frame, stick to 0. Otherwise 0/1.
+    let col = (frames.length >= 2) ? bit : 0;
+
+    // Near full charge, bias to the “pulled back” look (col 1) if it exists
+    if (p >= 0.95 && frames.length >= 2) col = 1;
+
+    const frameIndex = frames[Math.max(0, Math.min(col, frames.length - 1))];
+
+    if (shouldProve) {
+        console.log(
+            "[PROVE][HERO-ANIM][CHARGE-THROB]",
+            "| heroName", req.heroName,
+            "| nowLocal", nowLocal,
+            "| p", p,
+            "| periodMs", periodMs,
+            "| bit", bit,
+            "| col", col,
+            "| frameIndex", frameIndex,
+            "| textureKey", def.textureKey
+        );
     }
 
-    // Create Phaser animation on demand.
-    if (!scene.anims.exists(animKey)) {
-        scene.anims.create({
-            key: animKey,
-            frames: scene.anims.generateFrameNumbers(def.textureKey, {
-                frames: def.frameIndices
-            }),
-            frameRate: def.frameRate,
-            repeat: def.repeat,
-            yoyo: def.yoyo
+    // Stop playback and force frame
+    if (sprite.anims) sprite.anims.stop();
+    sprite.setTexture(def.textureKey, frameIndex);
+
+    // Pulse scale (weapon layers copy hero scale so this makes the sword throb too)
+    const baseX = ((): number => {
+        const v = Number(anySprite.getData?.(HERO_BASE_SCALE_X_KEY));
+        if (Number.isFinite(v) && v !== 0) return v;
+        const cur = (sprite as any).scaleX;
+        if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+            try { anySprite.setData(HERO_BASE_SCALE_X_KEY, cur); } catch { }
+            return cur;
+        }
+        try { anySprite.setData(HERO_BASE_SCALE_X_KEY, 1); } catch { }
+        return 1;
+    })();
+
+    const baseY = ((): number => {
+        const v = Number(anySprite.getData?.(HERO_BASE_SCALE_Y_KEY));
+        if (Number.isFinite(v) && v !== 0) return v;
+        const cur = (sprite as any).scaleY;
+        if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+            try { anySprite.setData(HERO_BASE_SCALE_Y_KEY, cur); } catch { }
+            return cur;
+        }
+        try { anySprite.setData(HERO_BASE_SCALE_Y_KEY, 1); } catch { }
+        return 1;
+    })();
+
+    const wob = 0.03; // 3% scale throb
+    const s = 1 + wob * Math.sin(nowLocal / 90);
+    (sprite as any).scaleX = baseX * s;
+    (sprite as any).scaleY = baseY * s;
+
+    // Remove any prior animationcomplete handler (charge should not auto-snap)
+    const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
+        | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
+        | undefined;
+    if (prevHandler) {
+        sprite.off("animationcomplete", prevHandler);
+        anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = undefined;
+    }
+
+    // Maintain rest phase bookkeeping for later snap
+    if (anySprite.setData) {
+        anySprite.setData(LAST_ANIM_KEY, "");
+        anySprite.setData(LAST_PHASE_KEY, def.phase);
+        anySprite.setData(LAST_DIR_KEY, def.dir);
+        anySprite.setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
+    }
+
+    return true;
+}
+
+function _tryHoldSingleFrame(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    const anySprite = sprite as any;
+
+    if (!((req.frameColOverride | 0) >= 0)) return false;
+
+    const frames: number[] = (def.frameIndices || []) as any;
+    if (!frames.length) {
+        logGlue(scene, "applyHeroAnimationForSprite: HOLD requested but def has no frames", {
+            heroName: req.heroName,
+            family: req.family,
+            phase: def.phase,
+            dir: def.dir,
+            textureKey: def.textureKey
         });
+        return true; // handled (by logging + return)
     }
 
-    // Remember the "rest" phase we want to go back to when this finishes.
-    const restPhase = getRestPhase(def.phase);
-    if (anySprite.setData) {
-        anySprite.setData(HERO_REST_PHASE_KEY, restPhase);
+    const col = Math.max(0, Math.min(req.frameColOverride | 0, frames.length - 1));
+    const frameIndex = frames[col];
+
+    if (shouldProve) {
+        console.log(
+            "[PROVE][HERO-ANIM][HOLD]",
+            "| heroName", req.heroName,
+            "| phase", def.phase,
+            "| dir", def.dir,
+            "| fco", (req.frameColOverride | 0),
+            "| col", col,
+            "| frameIndex", frameIndex,
+            "| textureKey", def.textureKey
+        );
     }
 
-    // Play the anim
-    sprite.anims.play(animKey, true);
+    if (sprite.anims) sprite.anims.stop();
+    sprite.setTexture(def.textureKey, frameIndex);
 
-    // Track last played phase/dir
+    const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
+        | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
+        | undefined;
+    if (prevHandler) {
+        sprite.off("animationcomplete", prevHandler);
+        anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = undefined;
+    }
+
     if (anySprite.setData) {
-        anySprite.setData(LAST_ANIM_KEY, animKey);
+        anySprite.setData(LAST_ANIM_KEY, "");
         anySprite.setData(LAST_PHASE_KEY, def.phase);
         anySprite.setData(LAST_DIR_KEY, def.dir);
     }
 
-    // Wire / replace the animationcomplete handler to snap back to restPhase
+    return true;
+}
+
+function _proveLogNoop(req: _HeroAnimRequest, animKey: string, def: any): void {
+    console.log(
+        "[PROVE][HERO-ANIM][NOOP]",
+        "| heroName", req.heroName,
+        "| animKey", animKey,
+        "| def.phase", def.phase,
+        "| def.dir", def.dir,
+        "| already playing"
+    );
+}
+
+function _proveLogCreate(req: _HeroAnimRequest, animKey: string, def: any): void {
+    console.log(
+        "[PROVE][HERO-ANIM][CREATE]",
+        "| heroName", req.heroName,
+        "| animKey", animKey,
+        "| textureKey", def.textureKey,
+        "| framesLen", ((def.frameIndices as any)?.length ?? -1),
+        "| frameRate", def.frameRate,
+        "| repeat", def.repeat,
+        "| yoyo", def.yoyo
+    );
+}
+
+function _proveLogPlayBefore(
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    animKey: string,
+    restPhase: any
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][PLAY]",
+        "| heroName", req.heroName,
+        "| animKey", animKey,
+        "| restPhase", restPhase,
+        "| visible(before)", sprite.visible,
+        "| alpha(before)", (sprite as any).alpha,
+        "| curAnimKey(before)", (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "",
+        "| isPlaying(before)", (sprite.anims && sprite.anims.isPlaying) ? true : false
+    );
+}
+
+function _proveLogPlayAfter(
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    animKey: string
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][PLAY-AFTER]",
+        "| heroName", req.heroName,
+        "| animKey", animKey,
+        "| curAnimKey(after)", (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "",
+        "| isPlaying(after)", (sprite.anims && sprite.anims.isPlaying) ? true : false,
+        "| visible(after)", sprite.visible,
+        "| alpha(after)", (sprite as any).alpha
+    );
+}
+
+function _proveLogComplete(
+    req: _HeroAnimRequest,
+    animKey: string,
+    phaseAtApply: any,
+    effectivePhase: any,
+    def: any
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][COMPLETE]",
+        "| heroName", req.heroName,
+        "| animKey", animKey,
+        "| phase(atComplete)", phaseAtApply,
+        "| effectivePhase", effectivePhase,
+        "| def.phase", def.phase,
+        "| def.dir", def.dir
+    );
+}
+
+function _proveLogCompleteSnap(
+    req: _HeroAnimRequest,
+    curPhase: any,
+    targetRestPhase: any,
+    curDir: any
+): void {
+    console.log(
+        "[PROVE][HERO-ANIM][COMPLETE-SNAP]",
+        "| heroName", req.heroName,
+        "| curPhase", curPhase,
+        "| targetRestPhase", targetRestPhase,
+        "| curDir", curDir
+    );
+}
+
+function _detachPrevAnimCompleteHandler(sprite: Phaser.GameObjects.Sprite): void {
+    const anySprite = sprite as any;
     const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
         | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
         | undefined;
+    if (prevHandler) sprite.off("animationcomplete", prevHandler);
+}
 
-    if (prevHandler) {
-        sprite.off("animationcomplete", prevHandler);
-    }
+function _attachAnimCompleteHandler(
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    animKey: string,
+    restPhase: any,
+    phaseAtApply: any,
+    effectivePhase: any,
+    def: any,
+    shouldProve: boolean
+): void {
+    const anySprite = sprite as any;
 
-    const handler = (anim: Phaser.Animations.Animation, _frame: Phaser.Animations.AnimationFrame) => {
+    const handler = (anim: Phaser.Animations.Animation) => {
         if (anim.key !== animKey) return;
 
-        const curDir = anySprite.getData
-            ? (anySprite.getData(HERO_DIR_KEY) as HeroDir | undefined)
-            : undefined;
+        if (shouldProve) _proveLogComplete(req, animKey, phaseAtApply, effectivePhase, def);
+
+        const curDir = anySprite.getData ? (anySprite.getData(HERO_DIR_KEY) as HeroDir | undefined) : undefined;
         if (!curDir) return;
 
         const targetRestPhase =
-            (anySprite.getData && (anySprite.getData(HERO_REST_PHASE_KEY) as HeroPhase | undefined)) ||
-            restPhase;
+            (anySprite.getData && (anySprite.getData(HERO_REST_PHASE_KEY) as HeroPhase | undefined)) || restPhase;
 
-        const curPhase = anySprite.getData
-            ? (anySprite.getData(HERO_PHASE_KEY) as HeroPhase | undefined)
-            : undefined;
-
+        const curPhase = anySprite.getData ? (anySprite.getData(HERO_PHASE_KEY) as HeroPhase | undefined) : undefined;
         if (!targetRestPhase || curPhase === targetRestPhase) return;
+
+        if (shouldProve) _proveLogCompleteSnap(req, curPhase, targetRestPhase, curDir);
 
         if (anySprite.setData) {
             anySprite.setData(HERO_PHASE_KEY, targetRestPhase);
@@ -435,6 +1014,182 @@ function applyHeroAnimationForSpriteInternal(
     anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = handler;
     sprite.on("animationcomplete", handler);
 }
+
+function _playDefaultAnimPath(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    set: any,
+    def: any,
+    effectivePhase: any,
+    allowFallback: boolean, // unused here but kept to mirror the old signature intent
+    shouldProve: boolean
+): void {
+    const anySprite = sprite as any;
+
+    const animKey = buildHeroAnimKey(set.heroName, def);
+
+    const lastAnimKey = anySprite.getData ? (anySprite.getData(LAST_ANIM_KEY) as string | undefined) : undefined;
+    const lastPhase = anySprite.getData ? (anySprite.getData(LAST_PHASE_KEY) as HeroPhase | undefined) : undefined;
+    const lastDir = anySprite.getData ? (anySprite.getData(LAST_DIR_KEY) as HeroDir | undefined) : undefined;
+
+    if (
+        lastAnimKey === animKey &&
+        lastPhase === def.phase &&
+        lastDir === def.dir &&
+        sprite.anims &&
+        sprite.anims.currentAnim &&
+        sprite.anims.currentAnim.key === animKey &&
+        sprite.anims.isPlaying
+    ) {
+        if (shouldProve) _proveLogNoop(req, animKey, def);
+        return;
+    }
+
+    if (!scene.anims.exists(animKey)) {
+        if (shouldProve) _proveLogCreate(req, animKey, def);
+        scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(def.textureKey, { frames: def.frameIndices }),
+            frameRate: def.frameRate,
+            repeat: def.repeat,
+            yoyo: def.yoyo
+        });
+    }
+
+    const restPhase = getRestPhase(def.phase);
+    if (anySprite.setData) anySprite.setData(HERO_REST_PHASE_KEY, restPhase);
+
+    if (shouldProve) _proveLogPlayBefore(sprite, req, animKey, restPhase);
+    sprite.anims.play(animKey, true);
+    if (shouldProve) _proveLogPlayAfter(sprite, req, animKey);
+
+    if (anySprite.setData) {
+        anySprite.setData(LAST_ANIM_KEY, animKey);
+        anySprite.setData(LAST_PHASE_KEY, def.phase);
+        anySprite.setData(LAST_DIR_KEY, def.dir);
+    }
+
+    _detachPrevAnimCompleteHandler(sprite);
+    _attachAnimCompleteHandler(
+        sprite,
+        req,
+        animKey,
+        restPhase,
+        /*phaseAtApply*/ req.phase,
+        effectivePhase,
+        def,
+        shouldProve
+    );
+}
+
+
+
+// ------------------------------------------------------------
+// Main function (split; NO behavior change)
+// ------------------------------------------------------------
+// --- FULL REPLACEMENT: applyHeroAnimationForSpriteInternal ------------------
+function applyHeroAnimationForSpriteInternal(
+    sprite: Phaser.GameObjects.Sprite,
+    allowFallback: boolean
+): void {
+    const scene = sprite.scene;
+    const atlas = getHeroAtlasFromScene(scene);
+    if (!atlas) {
+        logGlue(scene, "applyHeroAnimationForSprite: no atlas");
+        return;
+    }
+
+    const req = readHeroAnimRequest(sprite);
+    const shouldProve = _shouldProveHeroAnim(req);
+
+    if (shouldProve) _proveLogHeroAnimReq(sprite, req);
+
+    if (!_requireHeroNameAndPhaseOrLog(scene, req)) return;
+
+    const set = _findHeroSetOrLog(scene, atlas, req);
+    if (!set) return;
+
+    // ------------------------------------------------------------
+    // NEW: part-aware phase selection (cast → cast_produce/drive/land)
+    // ------------------------------------------------------------
+    const phasePartName =
+        (req as any).phasePartName && typeof (req as any).phasePartName === "string"
+            ? ((req as any).phasePartName as string)
+            : "";
+
+    const requestedPhaseForLookup =
+        (req.phase === "cast" && phasePartName)
+            ? `${req.phase}_${phasePartName}`
+            : req.phase;
+
+    const effectivePhase = getEffectivePhaseForSet(set, requestedPhaseForLookup);
+    const dirMap = set.phases[effectivePhase];
+
+    if (shouldProve) _proveLogEffectivePhase(req, set, effectivePhase, dirMap);
+
+    const resolvedDirMap = _resolveDirMapOrFallback(
+        scene,
+        sprite,
+        req,
+        set,
+        effectivePhase,
+        allowFallback,
+        shouldProve
+    );
+    if (!resolvedDirMap) return;
+
+    const def = _resolveDefOrFallback(
+        scene,
+        sprite,
+        req,
+        set,
+        effectivePhase,
+        resolvedDirMap,
+        allowFallback,
+        shouldProve
+    );
+    if (!def) return;
+
+    if (shouldProve) _proveLogDef(req, def);
+
+    // ------------------------------------------------------------
+    // Strength charge throb (early return on success)
+    // ------------------------------------------------------------
+    if (_tryStrengthChargeThrob(scene, sprite, req, def, shouldProve)) {
+        return;
+    } else {
+        _restoreBaseScaleIfPresent(sprite);
+    }
+
+    // ------------------------------------------------------------
+    // Hold single-frame path (early return)
+    // ------------------------------------------------------------
+    if (_tryHoldSingleFrame(scene, sprite, req, def, shouldProve)) {
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // Cast part frame control (early return)
+    // ------------------------------------------------------------
+    if (_tryCastPartFrameControl(scene, sprite, req, def, shouldProve)) {
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // Default anim-based path
+    // ------------------------------------------------------------
+    _playDefaultAnimPath(scene, sprite, req, set, def, effectivePhase, allowFallback, shouldProve);
+}
+
+
+
+
+
+// ---------------------------------------------------------------------------
+// Core glue: internal worker with a flag to avoid infinite fallback recursion
+// ---------------------------------------------------------------------------
+
 
 
 
@@ -456,6 +1211,9 @@ export function tryApplyHeroAnimation(sprite: Phaser.GameObjects.Sprite): void {
 function buildHeroAnimKey(heroName: string, def: { phase: string; dir: string }): string {
     return `hero_${heroName}_${def.phase}_${def.dir}`;
 }
+
+
+
 
 
 // ================================================================

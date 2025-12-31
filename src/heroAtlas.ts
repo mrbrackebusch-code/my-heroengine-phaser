@@ -1,4 +1,7 @@
 // src/heroAtlas.ts
+//URLs of NPCs for backup:
+// Shopkeeper Wizard: https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#sex=teen&body=Body_color_fur_tan&head=Human_male_fur_tan&expression=Closing_Eyes_fur_tan&furry_ears=Wolf_Ears_fur_tan&nose=Straight_nose_fur_tan&eyebrows=Thin_Eyebrows_black&hair=Cornrows_light%20brown&sleeves=Original_Shortsleeves_Overlay_black&clothes=TShirt_Buttoned_red&cape=Tattered_lavender&belt=Leather_Belt_charcoal&legs=Cuffed_Pants_gray&shoes=Basic_Shoes_white&shoes_toe=Plated_Toe_gold&weapon=Gnarled_staff_silver
+// 
 import type Phaser from "phaser";
 
 export type HeroDir = "up" | "down" | "left" | "right";
@@ -13,6 +16,9 @@ export type HeroDir = "up" | "down" | "left" | "right";
  */
 export type HeroPhase =
     | "cast"
+    | "cast_produce"
+    | "cast_drive"
+    | "cast_land"
     | "thrust"
     | "walk"
     | "slash"
@@ -34,7 +40,7 @@ export type HeroPhase =
     | "slashOversize";
 
 
-export type HeroFamily = "base" | "strength" | "agility" | "intelligence" | "support";
+    export type HeroFamily = "base" | "strength" | "agility" | "intelligence" | "support";
 
 /**
  * One concrete animation clip for a single (phase, dir) pair
@@ -849,6 +855,14 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         aliasPhase("oneHandSlash", "slash");             // if dedicated band missing
         aliasPhase("oneHandBackslash", "oneHandSlash");  // name alias if band missing
         aliasPhase("oneHandHalfslash", "slash");         // if halfslash band missing
+
+        // Cast phase-parts (spellcast split)
+        // These are logical sub-phases controlled by heroAnimGlue frame-selection.
+        // Atlas-wise they can reuse the base "cast" clip; the key must exist.
+        aliasPhase("cast_produce", "cast");
+        aliasPhase("cast_drive", "cast");
+        aliasPhase("cast_land", "cast");
+
 
         // --------------------------------------------------
         // Debug: summarize LEFT-only frame ranges in 64×64
