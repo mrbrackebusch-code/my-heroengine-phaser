@@ -926,7 +926,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
 
 // Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = true; //Debug flag
+const DEBUG_WEAPON_SYNC = false; //Debug flag
 
 
 
@@ -1611,24 +1611,73 @@ function _shopDirLetterToDir4(letter: string): number {
     return 1; // default R
 }
 
-function _getFrameIndex(native: any): number {
-    // Works for Phaser sprite frames; falls back to 0
-    const fr = native?.frame;
-    if (!fr) return 0;
 
-    const idxA = (fr.index as any);
-    if (typeof idxA === "number" && isFinite(idxA)) return (idxA | 0);
+function _getTextureFrameIndex(native: any): number {
+    // 1) Best: sprite.frame (this is what Phaser is actually displaying)
+    try {
+        const fr = native?.frame as any;
+        if (fr) {
+            const idxA = fr.index;
+            if (typeof idxA === "number" && Number.isFinite(idxA)) return (idxA | 0);
 
-    const idxB = (fr.name as any);
-    if (typeof idxB === "number" && isFinite(idxB)) return (idxB | 0);
+            const nameA = fr.name;
+            if (typeof nameA === "number" && Number.isFinite(nameA)) return (nameA | 0);
 
-    // If frame name is numeric string
-    if (typeof idxB === "string") {
-        const n = parseInt(idxB, 10);
-        if (isFinite(n)) return (n | 0);
-    }
-    return 0;
+            if (typeof nameA === "string" && nameA) {
+                const n = parseInt(nameA, 10);
+                if (Number.isFinite(n)) return (n | 0);
+            }
+        }
+    } catch { /* ignore */ }
+
+    // 2) Next: anims.currentFrame (sometimes present even when frame is weird)
+    try {
+        const cf = native?.anims?.currentFrame as any;
+        if (cf) {
+            const tf = (cf.textureFrame as any);
+            if (typeof tf === "number" && Number.isFinite(tf)) return (tf | 0);
+
+            if (typeof tf === "string" && tf) {
+                const n = parseInt(tf, 10);
+                if (Number.isFinite(n)) return (n | 0);
+            }
+
+            const fr2 = (cf.frame as any);
+            const idx2 = fr2?.index;
+            if (typeof idx2 === "number" && Number.isFinite(idx2)) return (idx2 | 0);
+
+            const name2 = fr2?.name;
+            if (typeof name2 === "number" && Number.isFinite(name2)) return (name2 | 0);
+
+            if (typeof name2 === "string" && name2) {
+                const n2 = parseInt(name2, 10);
+                if (Number.isFinite(n2)) return (n2 | 0);
+            }
+        }
+    } catch { /* ignore */ }
+
+    return -1;
 }
+
+
+function _getNativeFrameIndexLoose(nativeHero: Phaser.GameObjects.Sprite): number {
+    const fr: any = (nativeHero as any)?.frame;
+    if (!fr) return -1;
+
+    const nameAny: any = (fr.name ?? fr.textureFrame ?? fr.index ?? null);
+
+    if (typeof nameAny === "number" && Number.isFinite(nameAny)) return nameAny | 0;
+
+    const s = String(nameAny ?? "");
+    if (!s) return -1;
+
+    // "__BASE"/"base" are common sentinels in some pipelines
+    if (s === "__BASE" || s === "base") return -1;
+
+    const n2 = parseInt(s, 10);
+    return Number.isFinite(n2) ? (n2 | 0) : -1;
+}
+
 
 
 function _destroyShopWeaponRingForNative(native: any): void {
@@ -1894,7 +1943,7 @@ function _syncShopWeaponRingIfPresent(
     const hasGlue = !!(glueAny && typeof glueAny.syncWeaponLayersToHero === "function");
 
     const anyNative: any = native as any;
-    const heroFrameIndex = _getFrameIndex(anyNative);
+    const heroFrameIndex = _getNativeFrameIndexLoose(anyNative);
     const shopDepth = ((anyNative.depth ?? 0) | 0);
 
     // Focus indices
@@ -3251,7 +3300,6 @@ function _copyHeroIdentityToNative(
 ): void {
     const dataAny: any = (s as any).data || {};
 
-    // Local helpers (avoid NaN/stickiness)
     const readInt = (v: any, def: number): number => {
         if (typeof v === "number" && Number.isFinite(v)) return v | 0;
         if (typeof v === "string") {
@@ -3261,43 +3309,33 @@ function _copyHeroIdentityToNative(
         return def | 0;
     };
 
-    const readStr = (v: any, def: string): string => {
-        return (typeof v === "string") ? v : def;
-    };
+    const readStr = (v: any, def: string): string => (typeof v === "string") ? v : def;
 
-    // --------------------------------------------------------------------
-    // Existing identity (legacy)
-    // --------------------------------------------------------------------
+    // ------------------------
+    // Legacy identity
+    // ------------------------
     const heroNameRaw = dataAny.heroName;
     const heroFamilyRaw = dataAny.heroFamily;
     const phaseRaw = dataAny.phase;
     const dirRaw = dataAny.dir;
 
-    // heroName
     const heroName = (typeof heroNameRaw === "string" && heroNameRaw) ? heroNameRaw : "";
-    if (heroName) native.setData("heroName", heroName);
-    else native.setData("heroName", ""); // explicit clear (safe)
+    native.setData("heroName", heroName);
 
-    // heroFamily (IMPORTANT: explicitly clear if absent to avoid stickiness)
     const heroFamily = (typeof heroFamilyRaw === "string" && heroFamilyRaw) ? heroFamilyRaw : "";
     native.setData("heroFamily", heroFamily);
 
-    // phase/dir (safe defaults)
     const phase = (typeof phaseRaw === "string" && phaseRaw) ? phaseRaw : "idle";
     const dir = (typeof dirRaw === "string" && dirRaw) ? dirRaw : "down";
     native.setData("phase", phase);
     native.setData("dir", dir);
 
-    // frameColOverride (sentinel -1 means "no override")
-    const rawFco = dataAny.frameColOverride;
-    const fco = readInt(rawFco, -1);
+    const fco = readInt(dataAny.frameColOverride, -1);
     native.setData("frameColOverride", fco);
 
-    // --------------------------------------------------------------------
-    // NEW: universal Action/Phase/Event timeline keys (human-readable)
-    // --------------------------------------------------------------------
-
-    // Action
+    // ------------------------
+    // Universal Action keys
+    // ------------------------
     native.setData("ActionSequence", readInt(dataAny.ActionSequence, 0));
     native.setData("ActionKind", readStr(dataAny.ActionKind, "none"));
     native.setData("ActionVariant", readInt(dataAny.ActionVariant, 0));
@@ -3308,8 +3346,9 @@ function _copyHeroIdentityToNative(
     native.setData("ActionP3", readInt(dataAny.ActionP3, 0));
     native.setData("ActionTargetId", readInt(dataAny.ActionTargetId, 0));
 
-    // Phase
-    // If PhaseName isn't published yet for some reason, fall back to legacy "phase".
+    // ------------------------
+    // Universal Phase keys
+    // ------------------------
     const phaseName = readStr(dataAny.PhaseName, phase);
     native.setData("PhaseName", phaseName);
     native.setData("PhaseStartMs", readInt(dataAny.PhaseStartMs, 0));
@@ -3317,29 +3356,41 @@ function _copyHeroIdentityToNative(
     native.setData("PhaseFlags", readInt(dataAny.PhaseFlags, 0));
     native.setData("PhaseProgressInt", readInt(dataAny.PhaseProgressInt, 0));
 
-    // Phase Part (CRITICAL for cast-part control)
-    // Explicitly clear if absent to avoid stickiness.
-    native.setData("PhasePartName", readStr(dataAny.PhasePartName, ""));
-    native.setData("PhasePartStartMs", readInt(dataAny.PhasePartStartMs, 0));
-    native.setData("PhasePartDurationMs", readInt(dataAny.PhasePartDurationMs, 0));
-    // Optional, but safe (if your engine publishes it / glue reads it)
-    native.setData("PhasePartProgressInt", readInt(dataAny.PhasePartProgressInt, 0));
+    // ------------------------
+    // Universal PhasePart keys
+    // ------------------------
+    const ppName = readStr(dataAny.PhasePartName, "");
+    const ppStart = readInt(dataAny.PhasePartStartMs, 0);
+    const ppDur = readInt(dataAny.PhasePartDurationMs, 0);
+    const ppProg = readInt(
+        (dataAny.PhasePartProgressInt !== undefined) ? dataAny.PhasePartProgressInt : dataAny.PhasePartProgress,
+        0
+    );
 
-    // Event
+    native.setData("PhasePartName", ppName);
+    native.setData("PhasePartStartMs", ppStart);
+    native.setData("PhasePartDurationMs", ppDur);
+    native.setData("PhasePartProgressInt", ppProg);
+
+    // IMPORTANT ALIASES (to match older glue expectations)
+    native.setData("PhasePart", ppName);
+    native.setData("phasePart", ppName);
+    native.setData("PhasePartProgress", ppProg);
+    native.setData("phasePartProgress", ppProg);
+
+    // ------------------------
+    // Event keys
+    // ------------------------
     native.setData("EventSequence", readInt(dataAny.EventSequence, 0));
     native.setData("EventMask", readInt(dataAny.EventMask, 0));
 
-    // --------------------------------------------------------------------
-    // NEW: weapon display controls (Shopkeeper / UI display)
-    // --------------------------------------------------------------------
-    // wAlw = show weapon even when phase is idle (or any non-weapon phase)
-    // wpnOx/wpny = extra per-hero weapon anchor offset
+    // ------------------------
+    // Weapon display controls
+    // ------------------------
     native.setData("wAlw", readInt(dataAny.wAlw, 0));
     native.setData("wpnOx", readInt(dataAny.wpnOx, 0));
     native.setData("wpnOy", readInt(dataAny.wpnOy, 0));
 }
-
-
 
 
 
@@ -6012,7 +6063,7 @@ function _getFrameName(spriteAny: any): string {
     return ((spriteAny?.frame?.name ?? "") + "");
 }
 
-function _getFrameIndex(spriteAny: any): number {
+function _getFrameIndexFromSpriteIndex(spriteAny: any): number {
     return ((spriteAny?.frame?.index ?? -1) | 0);
 }
 
@@ -6078,12 +6129,77 @@ function _fmtWpnFrameResultLine(args: {
 
 
 
+const WPN_TICK_LOG_MIN_MS = 250; // tweak: 100/250/500
+const WPN_TICK_LOG_KEY_LAST_MS = "__wpnTickLastMs";
+const WPN_TICK_LOG_KEY_LAST_SIG = "__wpnTickLastSig";
+
+function _shouldLogWeaponTick(nativeHero: Phaser.GameObjects.Sprite, nowMs: number, sig: string): boolean {
+    const anyH: any = nativeHero as any;
+
+    // Try to use Phaser DataManager if present
+    const get = (k: string): any => {
+        try { return anyH.getData ? anyH.getData(k) : anyH[k]; } catch { return anyH[k]; }
+    };
+    const set = (k: string, v: any): void => {
+        try { if (anyH.setData) anyH.setData(k, v); else anyH[k] = v; } catch { anyH[k] = v; }
+    };
+
+    const lastMs = (get(WPN_TICK_LOG_KEY_LAST_MS) as any | 0);
+    const lastSig = String(get(WPN_TICK_LOG_KEY_LAST_SIG) ?? "");
+
+    // Always log immediately on first time or on “meaningful change”
+    if (!lastMs || sig !== lastSig) {
+        set(WPN_TICK_LOG_KEY_LAST_MS, nowMs | 0);
+        set(WPN_TICK_LOG_KEY_LAST_SIG, sig);
+        return true;
+    }
+
+    // Otherwise, throttle by time
+    if (((nowMs | 0) - (lastMs | 0)) >= (WPN_TICK_LOG_MIN_MS | 0)) {
+        set(WPN_TICK_LOG_KEY_LAST_MS, nowMs | 0);
+        // sig unchanged
+        return true;
+    }
+
+    return false;
+}
+
+
 
 function _syncWeaponOverlaysForHeroNative(
     ctx: SyncContext,
     s: any,
     nativeHero: Phaser.GameObjects.Sprite
 ): void {
+
+    if (DEBUG_WEAPON_SYNC) {
+        const dataAny: any = (s as any).data || {};
+        const phaseRaw = (typeof dataAny.phase === "string" && dataAny.phase) ? dataAny.phase : "idle";
+        const animKey = String((nativeHero as any)?.anims?.currentAnim?.key ?? "");
+        const ak = String(dataAny["ActionKind"] ?? "");
+        const asq = (dataAny["ActionSequence"] as any | 0);
+
+//        const part = String(dataAny["PhasePart"] ?? dataAny["phasePart"] ?? "");
+        const part = String(
+            (nativeHero.getData("PhasePartName") ??
+            nativeHero.getData("PhasePart") ??
+            nativeHero.getData("phasePart") ??
+            "") as any
+        );
+
+        const now = ((ctx.sc as any)?.time?.now ?? Date.now()) | 0;
+
+        // Signature: change any of these → log immediately (even inside throttle window)
+        const sig = `asq=${asq}|ak=${ak}|phase=${phaseRaw}|part=${part}|animKey=${animKey}`;
+
+        if (_shouldLogWeaponTick(nativeHero, now, sig)) {
+            console.log(
+                `[WPN][TICK] t=${now} asq=${asq} ak='${ak}' phase='${phaseRaw}' part='${part}' animKey='${animKey}' heroFrame=${_getNativeFrameIndexLoose(nativeHero)}`
+            );
+        }
+    }
+
+
     const sc = ctx.sc as any;
     if (!sc) return;
 
@@ -6110,37 +6226,112 @@ function _syncWeaponOverlaysForHeroNative(
     const wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
     const wCombo = (typeof dataAny[HERO_WPN_COMBO_KEY] === "string") ? String(dataAny[HERO_WPN_COMBO_KEY]) : "";
 
+
+    // ------------------------------------------------------------
+    // choose weapon's PHASE based on what hero is actually animating
+    // ------------------------------------------------------------
+    const _inferDisplayedHeroPhase = (fallbackPhase: string): string => {
+        try {
+            const keyRaw = (nativeHero as any)?.anims?.currentAnim?.key;
+            const key = (typeof keyRaw === "string") ? keyRaw : "";
+            if (!key) return fallbackPhase;
+
+            const k = key.toLowerCase();
+
+            if (k.includes("thrustoversize") || k.includes("thrust_oversize") || k.includes("oversize_thrust")) return "thrustOversize";
+            if (k.includes("slashoversize") || k.includes("slash_oversize") || k.includes("oversize_slash")) return "slashOversize";
+
+            if (k.includes("onehandslash") || k.includes("one_hand_slash") || k.includes("onehand_slash")) return "oneHandSlash";
+            if (k.includes("onehandbackslash") || k.includes("one_hand_backslash") || k.includes("onehand_backslash") || k.includes("backslash")) return "oneHandBackslash";
+            if (k.includes("onehandhalfslash") || k.includes("one_hand_halfslash") || k.includes("onehand_halfslash") || k.includes("halfslash")) return "oneHandHalfslash";
+
+            if (k.includes("slash") || k.includes("attack_slash")) return "slash";
+            if (k.includes("thrust") || k.includes("attack_thrust")) return "thrust";
+            if (k.includes("cast") || k.includes("spellcast") || k.includes("spell_cast")) return "cast";
+
+            if (k.includes("combatidle") || k.includes("combat_idle") || k.includes("universal_combat_idle")) return "combatIdle";
+            if (k.includes("run")) return "run";
+            if (k.includes("walk") || k.includes("move")) return "walk";
+            if (k.includes("idle") || k.includes("universal_idle")) return "idle";
+
+            if (k.includes("watering")) return "watering";
+            if (k.includes("shoot")) return "shoot";
+            if (k.includes("hurt")) return "hurt";
+            if (k.includes("climb")) return "climb";
+            if (k.includes("jump")) return "jump";
+            if (k.includes("sit")) return "sit";
+            if (k.includes("emote")) return "emote";
+
+            return fallbackPhase;
+        } catch {
+            return fallbackPhase;
+        }
+    };
+
+    const phaseRawSnake = String(phaseRaw || "")
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replace(/\s+/g, "_")
+        .replace(/-+/g, "_")
+        .replace(/_+/g, "_")
+        .toLowerCase();
+
+    const isComboRender =
+        phaseRawSnake === "combo" ||
+        phaseRawSnake === "combat_idle" ||
+        phaseRawSnake === "combatidle";
+
+    const displayedPhase = _inferDisplayedHeroPhase(phaseRaw);
+
     let weaponId = "";
-    let weaponPhase = phaseRaw;
+    let weaponPhase = isComboRender ? "combo" : displayedPhase;
 
-    // If we ever force "combo" (or "combatIdle") as a render phase, use the combo weapon first.
-    if (phaseRaw === "combo" || phaseRaw === "combatIdle" || phaseRaw === "combat_idle") {
+    // WeaponId selection follows DISPLAYED (except combo + execute).
+    if (isComboRender) {
         weaponId = wCombo || wSlash || wThrust || wExec || wCast;
-        weaponPhase = "combo"; // important: distinct token, maps to universal_combat_idle etc.
+        weaponPhase = "combo";
     }
-    else if (aState === AGI_STATE_EXECUTING) weaponId = wExec || wSlash;
-    else if (phaseRaw === "slash") weaponId = wSlash;
-    else if (phaseRaw === "thrust") weaponId = wThrust;
-    else if (phaseRaw === "cast") weaponId = wCast;
-    else weaponId = "";
+    else if (aState === AGI_STATE_EXECUTING) {
+        weaponId = wExec || wSlash;
+    }
+    else {
+        const dpSnake = String(displayedPhase || "")
+            .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+            .replace(/\s+/g, "_")
+            .replace(/-+/g, "_")
+            .replace(/_+/g, "_")
+            .toLowerCase();
 
-    // -----------------------------
-    // Mirror engine-stamped action/phase keys onto the PHASER hero sprite
-    // so weaponAnimGlue can read them (it reads ONLY heroSprite.getData()).
-    // -----------------------------
+        if (
+            dpSnake === "slash" ||
+            dpSnake === "attack_slash" ||
+            dpSnake.startsWith("one_hand_") ||
+            dpSnake.startsWith("onehand_") ||
+            dpSnake.includes("backslash") ||
+            dpSnake.includes("halfslash")
+        ) {
+            weaponId = wSlash;
+        } else if (dpSnake === "thrust" || dpSnake === "attack_thrust") {
+            weaponId = wThrust;
+        } else if (dpSnake === "cast" || dpSnake === "spellcast" || dpSnake === "spell_cast") {
+            weaponId = wCast;
+        } else {
+            // IMPORTANT per your requirement:
+            // no weapon for run / idle / etc (combat idle handled by combo render token)
+            weaponId = "";
+        }
+    }
+
+    // Mirror keys for glue
     try {
         const safeSet = (k: string, v: any) => {
             try { (nativeHero as any).setData?.(k, v); } catch { }
         };
 
-        // These are the keys weaponAnimGlue’s resolveWeaponFrameIndexForLayer may consult.
-        // Only set if present to avoid polluting with nonsense.
         if (dataAny["ActionKind"] !== undefined) safeSet("ActionKind", dataAny["ActionKind"]);
         if (dataAny["ActionSequence"] !== undefined) safeSet("ActionSequence", dataAny["ActionSequence"]);
         if (dataAny["PhaseStartMs"] !== undefined) safeSet("PhaseStartMs", dataAny["PhaseStartMs"]);
         if (dataAny["PhaseDurationMs"] !== undefined) safeSet("PhaseDurationMs", dataAny["PhaseDurationMs"]);
 
-        // Some builds store these under other spellings; mirror if you have them.
         if (dataAny["phaseStartMs"] !== undefined && dataAny["PhaseStartMs"] === undefined) safeSet("PhaseStartMs", dataAny["phaseStartMs"]);
         if (dataAny["phaseDurationMs"] !== undefined && dataAny["PhaseDurationMs"] === undefined) safeSet("PhaseDurationMs", dataAny["phaseDurationMs"]);
     } catch { /* ignore */ }
@@ -6151,13 +6342,11 @@ function _syncWeaponOverlaysForHeroNative(
             try { overlays.weaponBg.setVisible(false); } catch { }
             try { overlays.weaponFg.setVisible(false); } catch { }
 
-            // also hide ghosts
             try {
                 for (const g of (overlays.ghostsBg || [])) { try { g.setVisible(false) } catch { } }
                 for (const g of (overlays.ghostsFg || [])) { try { g.setVisible(false) } catch { } }
             } catch { /* ignore */ }
 
-            // stop sheen if on
             try { _agiWeaponSheenStop(anyHero, sc, overlays.weaponBg, overlays.weaponFg) } catch { }
 
             anyHero.__weaponVis = 0;
@@ -6170,17 +6359,15 @@ function _syncWeaponOverlaysForHeroNative(
     const nativeFco = _parseIntMaybe(rawNativeFco) ?? -1;
     const arcadeFcoRaw = (dataAny.frameColOverride as any);
 
-    // Use the hero’s current frame index (weapon mapping contract)
-    const heroFrameIndex = _getFrameIndex(anyHero);
+    // ✅ CRITICAL: Use TEXTURE FRAME INDEX (spritesheet frame id), not whatever was yielding -1
+    const heroFrameIndex = _getTextureFrameIndex(anyHero);
+
     const heroCols = _getSpriteCols(sc, anyHero);
     const heroCol = _colFromFrame(heroFrameIndex, _getFrameName(anyHero), heroCols);
     const heroTexKey = (anyHero.texture?.key ?? "") + "";
 
-    // Run weapon glue (does the normal selection + sets frames)
     const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
 
-    // IMPORTANT: pass frameColOverride into weaponAnimGlue so it can honor hold-frame
-    // during its own resolution paths (including the heroCol->weaponCol mapping).
     const glueFrameColOverride = (nativeFco >= 0) ? nativeFco : undefined;
 
     glueAny.syncWeaponLayersToHero({
@@ -6206,33 +6393,27 @@ function _syncWeaponOverlaysForHeroNative(
     let bgName = _getFrameName(bgAny);
     let fgName = _getFrameName(fgAny);
 
-    let bgCol = _colFromFrame(_getFrameIndex(bgAny), bgName, bgCols);
-    let fgCol = _colFromFrame(_getFrameIndex(fgAny), fgName, fgCols);
+    let bgCol = _colFromFrame(_getTextureFrameIndex(bgAny), bgName, bgCols);
+    let fgCol = _colFromFrame(_getTextureFrameIndex(fgAny), fgName, fgCols);
 
     const bgTexKey = (bgAny.texture?.key ?? "") + "";
     const fgTexKey = (fgAny.texture?.key ?? "") + "";
 
-    // We still keep the enforcement step as a belt-and-suspenders guard
-    // (covers any future glue path that might bypass frameColOverride).
     if (nativeFco >= 0) {
         _forceSpriteColByName(bgAny, bgCols, nativeFco);
         _forceSpriteColByName(fgAny, fgCols, nativeFco);
 
-        // Recompute after forcing
         bgName = _getFrameName(bgAny);
         fgName = _getFrameName(fgAny);
-        bgCol = _colFromFrame(_getFrameIndex(bgAny), bgName, bgCols);
-        fgCol = _colFromFrame(_getFrameIndex(fgAny), fgName, fgCols);
+        bgCol = _colFromFrame(_getTextureFrameIndex(bgAny), bgName, bgCols);
+        fgCol = _colFromFrame(_getTextureFrameIndex(fgAny), fgName, fgCols);
     }
 
-    // -----------------------------
-    // Step 6/7/8: Agility v4 visuals
-    // -----------------------------
+    // Step 6/7/8 ... (UNCHANGED)
     const chgActive = ((dataAny["aChgOn"] as any | 0) !== 0)
     const pendingAdd = (dataAny["aPend"] as any | 0)
     const isExecW = ((dataAny["aExW"] as any | 0) !== 0)
 
-    // Step 6: exact ghost count = pending add amount (0 during EXEC)
     const ghostCount = (chgActive && !isExecW) ? Math.max(0, pendingAdd | 0) : 0;
     try {
         glueAny.setWeaponGhostCountExact({
@@ -6244,16 +6425,14 @@ function _syncWeaponOverlaysForHeroNative(
             dir: requestedDir,
             spacingPx: 10
         });
-    } catch { /* ignore */ }
+    } catch { }
 
-    // Step 7: sheen during EXEC windows
     if (chgActive && isExecW) {
         _agiWeaponSheenStart(anyHero, sc, overlays.weaponBg as any, overlays.weaponFg as any)
     } else {
         _agiWeaponSheenStop(anyHero, sc, overlays.weaponBg as any, overlays.weaponFg as any)
     }
 
-    // Step 8: Execute FX (edge on execute seq)
     const execSeq = (dataAny[HERO_AGI_V4_EXECUTE_SEQ_KEY] as any | 0)
     const lastSeq = (anyHero.__agiLastExecSeq as any | 0)
 
@@ -6262,7 +6441,6 @@ function _syncWeaponOverlaysForHeroNative(
 
         const lastAdd = (dataAny[HERO_AGI_V4_LAST_ADD_KEY] as any | 0)
 
-        // stored hits: prefer new aStor, fallback to old aPkC
         let storedHits = (dataAny[HERO_AGI_V4_STORED_HITS_KEY] as any | 0)
         if (!storedHits && storedHits !== 0) storedHits = 0
         if ((storedHits | 0) === 0 && (dataAny[HERO_AGI_PKT_COUNT_FALLBACK_KEY] !== undefined)) {
@@ -6272,7 +6450,6 @@ function _syncWeaponOverlaysForHeroNative(
         _agiSpawnExecuteFx(sc, nativeHero, overlays, lastAdd | 0, storedHits | 0)
     }
 
-    // Step 10: Execute slash beats (universal EventSequence/EventMask)
     const evtSeq = (dataAny["EventSequence"] as any | 0)
     const evtMask = (dataAny["EventMask"] as any | 0)
     const lastEvtSeq = (anyHero.__lastEventSeq as any | 0)
@@ -6284,7 +6461,6 @@ function _syncWeaponOverlaysForHeroNative(
             const ex = (dataAny["EventP0"] as any | 0)
             const ey = (dataAny["EventP1"] as any | 0)
 
-            // record a local "beat start" so weaponAnimGlue can yo-yo columns briefly
             nativeHero.setData("__agiExecSlashBeatSeq", evtSeq | 0)
             nativeHero.setData("__agiExecSlashBeatLocalStartMs", (sc.time?.now ?? Date.now()) as any)
 
@@ -6294,6 +6470,47 @@ function _syncWeaponOverlaysForHeroNative(
     }
 
     if (DEBUG_WEAPON_SYNC) {
+        // combined log (KEPT) + now reports both animation + texture frame index sources
+        try {
+            const animKeyRaw = (nativeHero as any)?.anims?.currentAnim?.key;
+            const animKey = (typeof animKeyRaw === "string") ? animKeyRaw : "";
+
+            const mismatch =
+                String(phaseRaw) !== String(displayedPhase) ||
+                String(displayedPhase) !== String(weaponPhase);
+
+            const heroTexFrame = _getTextureFrameIndex(anyHero);
+            const heroFrameName = _getFrameName(anyHero);
+
+            const bgAny2: any = overlays.weaponBg as any;
+            const fgAny2: any = overlays.weaponFg as any;
+
+            const bgFrameName2 = _getFrameName(bgAny2);
+            const fgFrameName2 = _getFrameName(fgAny2);
+            const bgTexFrame2 = _getTextureFrameIndex(bgAny2);
+            const fgTexFrame2 = _getTextureFrameIndex(fgAny2);
+
+            const line2 =
+                `[WPN][FOLLOW]` +
+                ` phaseRaw='${phaseRaw}'` +
+                ` animKey='${animKey}'` +
+                ` displayed='${displayedPhase}'` +
+                ` weaponPhase='${weaponPhase}'` +
+                ` weaponId='${weaponId}'` +
+                ` dir='${requestedDir}'` +
+                ` heroFrame=${heroTexFrame}('${heroFrameName}')` +
+                ` bgFrame=${bgTexFrame2}('${bgFrameName2}')` +
+                ` fgFrame=${fgTexFrame2}('${fgFrameName2}')` +
+                ` aState=${aState | 0}` +
+                ` fco=${nativeFco}`;
+
+            const last2 = nativeHero.getData("__wpnFollowLastLine") as any;
+            if (mismatch || last2 !== line2) {
+                console.log(line2);
+                nativeHero.setData("__wpnFollowLastLine", line2);
+            }
+        } catch { }
+
         const line = _fmtWpnFrameResultLine({
             weaponId,
             weaponPhase,
@@ -6400,74 +6617,6 @@ function _syncHeroPath(
     );
 }
 
-
-
-function _syncHeroPathOLDCODETODELETE(
-    ctx: SyncContext,
-    s: any,
-    native: any
-): void {
-    const dataKeys = Object.keys(s.data || {});
-    const role = _classifySpriteRole(s.kind, dataKeys);
-
-    if (role !== "HERO") return;
-
-    const nativeAny: any = s.native;
-    if (!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"))) return;
-
-    // Keep native sprite identity in sync every frame
-    _copyHeroIdentityToNative(
-        s as Sprite,
-        nativeAny as Phaser.GameObjects.Sprite
-    );
-
-    _tryApplyHeroAnimationForNative(
-        s,
-        nativeAny as Phaser.GameObjects.Sprite
-    );
-
-    const auraActive = !!(s.data && (s.data as any)["auraActive"]);
-    const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
-
-    heroAnimGlue.syncHeroAuraForNative(
-        s.native,
-        auraActive,
-        auraColor
-    );
-
-    // Step 6+: per-frame weapon sync (creates overlays lazily)
-    _syncWeaponOverlaysForHeroNative(
-        ctx,
-        s,
-        nativeAny as Phaser.GameObjects.Sprite
-    );
-
-    // ------------------------------------------------------------
-    // Step 12: Execute layering (hero + overlays above monsters)
-    // ------------------------------------------------------------
-    const dataAny: any = (s as any).data || {};
-    const aState = (dataAny[HERO_AGI_STATE_KEY] as any | 0);
-
-    const baseDepth = (s.z | 0);
-    const heroDepth =
-        (aState === AGI_STATE_EXECUTING)
-            ? ((baseDepth + HERO_EXECUTE_DEPTH_BOOST) | 0)
-            : baseDepth;
-
-    try { (nativeAny as any).setDepth?.(heroDepth); } catch { /* ignore */ }
-
-    // If weapon overlays exist, pin them above hero in a stable order.
-    const bgAny: any = (nativeAny as any).__weaponBg;
-    const fgAny: any = (nativeAny as any).__weaponFg;
-    const gbg: any[] = (nativeAny as any).__weaponGhostsBg || [];
-    const gfg: any[] = (nativeAny as any).__weaponGhostsFg || [];
-
-    try { if (bgAny) bgAny.setDepth?.((heroDepth + HERO_WPN_BG_DEPTH_OFF) | 0); } catch { }
-    try { if (fgAny) fgAny.setDepth?.((heroDepth + HERO_WPN_FG_DEPTH_OFF) | 0); } catch { }
-
-    for (const g of gbg) { try { g?.setDepth?.((heroDepth + HERO_WPN_GHOST_BG_DEPTH_OFF) | 0); } catch { } }
-    for (const g of gfg) { try { g?.setDepth?.((heroDepth + HERO_WPN_GHOST_FG_DEPTH_OFF) | 0); } catch { } }
-}
 
 
 

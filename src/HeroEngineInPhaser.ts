@@ -590,16 +590,6 @@ const DEBUG_AGI_COMBO_EXIT = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥�
 const DEBUG_AGI_COMBO_BUILD = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 // --------------------------------------------------------------
-// Debug filter (input/move gating probes)
-// --------------------------------------------------------------
-const DEBUG_FILTER_LOGS = true  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
-
-// Change this string to whatever you want to grep for.
-// Must contain "P1 intent" per your filtering workflow.
-const DEBUG_FILTER_PHRASE = "[P1 intent]"
-
-
-// --------------------------------------------------------------
 // Debug flags
 // Used by: agility / integrator debug logging & probes
 // --------------------------------------------------------------
@@ -614,10 +604,20 @@ const DEBUG_HERO_LOGIC = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥�
 const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_ANIM_KEYS = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_ANIM_KEYS = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_PHASE_CHANGES = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
+const DEBUG_PHASE_CHANGES = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
+
+// Change this string to whatever you want to grep for.
+// Must contain "P1 intent" per your filtering workflow.
+const DEBUG_FILTER_PHRASE = "[P1 intent]"
+
+// --------------------------------------------------------------
+// Debug filter (input/move gating probes)
+// --------------------------------------------------------------
+const DEBUG_FILTER_LOGS = true  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+
 
 // --------------------------------------------------------------
 // Move pipeline debug (engine-only). Off by default.
@@ -654,10 +654,16 @@ const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
 
 
 // Simple shop mode gate (POC)
-let SHOP_MODE_ACTIVE_MASTER = true // Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+let SHOP_MODE_ACTIVE_MASTER = false // Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 let SHOP_MODE_ACTIVE = true //local flag gets overwritten
+
+if (!SHOP_MODE_ACTIVE_MASTER) { SHOP_MODE_ACTIVE = false}
 //Turn the shop on
 //Turn the shop off
+
+const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop wave up down
+let _shopEntered = false
+
 
 // --------------------------------------------------------------
 // ANIMKEYS logging helpers (one-line, copy/paste friendly)
@@ -666,7 +672,7 @@ const DEBUG_ANIM_KEYS_HERO_INDEX = -1   // -1 = all heroes, else only this heroI
 const DEBUG_ANIM_KEYS_PLAYER_ID = 0     // 0 = all, else only this OWNER/player id
 const DEBUG_ANIM_KEYS_PHASE_EDGE = true
 const DEBUG_ANIM_KEYS_PHASE_STAMP = true
-const DEBUG_ANIM_KEYS_PHASE_PART = true
+const DEBUG_ANIM_KEYS_PHASE_PART = false
 const DEBUG_ANIM_KEYS_INT_FINISH = true
 
 
@@ -1183,6 +1189,52 @@ const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE
 // How long to keep a dying hero around so LPC "death" anim can play (ms)
 const HERO_DEATH_ANIM_MS = 600;
 
+
+
+// Strength swing segmentation (non-breaking addon channel)
+// NOTE: does NOT touch PhasePartName/Start/Duration/Progress.
+const STR_SEG_NAME_KEY = "STR_SEG_NAME"
+const STR_SEG_START_MS_KEY = "STR_SEG_START_MS"
+const STR_SEG_DUR_MS_KEY = "STR_SEG_DUR_MS"
+const STR_SEG_PROGRESS_INT_KEY = "STR_SEG_PROGRESS_INT"
+
+// Fractions of swingDurationMs (x1000)
+const STR_SWING_SEG_WINDUP_FRAC_X1000 = 180   // 18%
+const STR_SWING_SEG_FORWARD_FRAC_X1000 = 640  // 64%
+const STR_SWING_SEG_LANDING_FRAC_X1000 = 180  // 18%
+
+const STR_SWING_SEG_MIN_MS = 40               // never 0/instant segments
+
+
+const STR_CHARGE_BASE_MAX_MS = 3000         // t3=0 charge time to full (ms)
+const STR_CHARGE_MIN_MAX_MS = 160           // clamp so it never becomes instant
+const STR_CHARGE_MS_PER_T3 = 70             // each point of trait3 reduces time by this much
+
+const STR_CHARGE_EXTRA_MANA_PCT = 100       // extra mana over the baseCost when reaching full charge
+// Example: baseCost=10, EXTRA_MANA_PCT=100 => extraCost=10 => full charge total = 20
+
+const STR_PREP_VISIBLE_MS = 500  // tune: how long we play the first slash frames before freezing
+
+// % of the RELEASE window when the projectile should spawn (0..1000)
+const STR_SWING_PROJECTILE_SPAWN_FRAC_X1000 = 700 // 70% into release (tune this)
+
+// Pending swing projectile spawn (hero data keys)
+const STR_PEND_SWING_SPAWN_AT_MS_KEY = "strPendSwingSpawnAtMs"
+const STR_PEND_SWING_ACTIVE_KEY      = "strPendSwingActive" // 0/1
+
+const STR_PEND_SWING_DMG_KEY         = "strPendSwingDmg"
+const STR_PEND_SWING_BTN_KEY         = "strPendSwingBtn"
+const STR_PEND_SWING_SLOW_PCT_KEY    = "strPendSwingSlowPct"
+const STR_PEND_SWING_SLOW_MS_KEY     = "strPendSwingSlowMs"
+const STR_PEND_SWING_WEAK_PCT_KEY    = "strPendSwingWeakPct"
+const STR_PEND_SWING_WEAK_MS_KEY     = "strPendSwingWeakMs"
+const STR_PEND_SWING_KB_PCT_KEY      = "strPendSwingKbPct"
+const STR_PEND_SWING_SWING_MS_KEY    = "strPendSwingSwingMs"
+const STR_PEND_SWING_ARC_DEG_KEY     = "strPendSwingArcDeg"
+
+
+
+
 // --------------------------------------------------------------
 // AGILITY COMBO V2 – state enum + UI defaults
 // --------------------------------------------------------------
@@ -1251,6 +1303,15 @@ const AGI_CANCEL_GRACE_MS = 120
 
 
 // --------------------------------------------------------------
+// Agility EXECUTE beat segmentation (must match Phaser seek logic)
+// Each beat dt is split into: teleport -> strike -> recover
+// --------------------------------------------------------------
+const AGI_EXEC_TELEPORT_FRAC_X1000 = 180
+const AGI_EXEC_STRIKE_FRAC_X1000 = 520
+// recover = remainder
+
+
+// --------------------------------------------------------------
 // C6: Agility trait wiring flags (tuning knobs)
 // --------------------------------------------------------------
 const AGI_BUILD_HITS_ENEMIES = false          // build dashes do 0 damage for now
@@ -1294,10 +1355,20 @@ const AGI_CHARGE_DEFAULT_C_FRAC_X1000 = 140
 // (kept aligned with current pendulum constant for now)
 const AGI_CHARGE_DEFAULT_PERIOD_MS = AGI_METER_PERIOD_MS
 
+
 // Thrust timing ratios MUST match Phaser segmented seek (heroAnimGlue.ts)
 const AGI_THRUST_WINDUP_FRAC_X1000 = 550
 const AGI_THRUST_FORWARD_FRAC_X1000 = 200
 // landing = remainder
+
+
+// --------------------------------------------------------------
+// TEMP DEBUG: make agility thrust super visible
+// --------------------------------------------------------------
+const AGI_DEBUG_SLOWMO = true
+const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5× longer total move
+const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 2500 // 2.5× faster lunge => farther
+
 
 // Strength charge button ids (matches updatePlayerInputs intent strings)
 const STR_BTN_NONE = 0
@@ -1561,6 +1632,255 @@ const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale 
 
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 //This is for the helpers for debugging
+// ------------------------------------------------------------
+// CONTRACT SNAPSHOT DEBUG (aggregated per tick, change-gated)
+// ------------------------------------------------------------
+
+const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+//The master debug turn on and turn off
+
+// Filters (0 = all players; -1 = all heroes; set to reduce noise)
+let DEBUG_CONTRACT_PLAYER_ID = 0          // match HERO_DATA.OWNER
+let DEBUG_CONTRACT_HERO_INDEX = -1        // match heroIndex
+let DEBUG_CONTRACT_THROTTLE_MS = 0        // 0 = no extra throttle beyond change-gate
+
+// Internal state
+let _dbgContract_lastTickMs = 0
+let _dbgContract_lastPrintMs = 0
+const _dbgContract_lastPrintedSigByHero: string[] = []
+const _dbgContract_lastObservedSigByHero: string[] = []
+const _dbgContract_pendingStagesByHero: string[] = []
+const _dbgContract_pendingLineByHero: string[] = []
+const _dbgContract_pendingFlagByHero: number[] = []
+const _dbgContract_pendingCoreLineByHero: string[] = []
+
+// Parts whose PhasePartStartMs/PhasePartDurationMs are expected to slide every tick.
+// These should NOT be part of the "core identity" signature.
+const DEBUG_CONTRACT_VOLATILE_PART_WINDOWS: string[] = ["drive", "beat"]
+
+function _dbgContract_isVolatilePartWindow(partName: string): boolean {
+    const p = partName || ""
+    for (let i = 0; i < DEBUG_CONTRACT_VOLATILE_PART_WINDOWS.length; i++) {
+        if (DEBUG_CONTRACT_VOLATILE_PART_WINDOWS[i] === p) return true
+    }
+    return false
+}
+
+
+
+function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
+    if (!DEBUG_CONTRACT_SNAPSHOT) return
+    if (!HeroEngine._isStarted()) return
+
+    const now = nowMs | 0
+    const st = stage || ""
+
+    // ------------------------------------------------------------
+    // Auto-flush previous tick when we observe a new tick time.
+    // ------------------------------------------------------------
+    if (_dbgContract_lastTickMs !== 0 && now !== (_dbgContract_lastTickMs | 0)) {
+        _dbgContract_flushTick(_dbgContract_lastTickMs | 0)
+        _dbgContract_lastTickMs = now
+    } else if (_dbgContract_lastTickMs === 0) {
+        _dbgContract_lastTickMs = now
+    }
+
+    // ------------------------------------------------------------
+    // Capture/aggregate this stage's observed state for each hero.
+    // ------------------------------------------------------------
+    for (let hi = 0; hi < heroes.length; hi++) {
+        if (DEBUG_CONTRACT_HERO_INDEX >= 0 && hi !== (DEBUG_CONTRACT_HERO_INDEX | 0)) continue
+
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (DEBUG_CONTRACT_PLAYER_ID !== 0 && owner !== (DEBUG_CONTRACT_PLAYER_ID | 0)) continue
+
+        // ---------------- Read contract ----------------
+        const aSeq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+        const aKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+        const aVar = sprites.readDataNumber(hero, HERO_DATA.ActionVariant) | 0
+        const aSeed = sprites.readDataNumber(hero, HERO_DATA.ActionSeed) | 0
+        const aTgt = sprites.readDataNumber(hero, HERO_DATA.ActionTargetId) | 0
+
+        const ph = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+        const phS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+        const phD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+        const phF = sprites.readDataNumber(hero, HERO_DATA.PhaseFlags) | 0
+        const phP = sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0
+
+        const pp = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        const ppS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+        const ppD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+        const ppF = sprites.readDataNumber(hero, HERO_DATA.PhasePartFlags) | 0
+        const ppP = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+
+        const eSeq = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
+        const eMask = sprites.readDataNumber(hero, HERO_DATA.EventMask) | 0
+        const e0 = sprites.readDataNumber(hero, HERO_DATA.EventP0) | 0
+        const e1 = sprites.readDataNumber(hero, HERO_DATA.EventP1) | 0
+        const e2 = sprites.readDataNumber(hero, HERO_DATA.EventP2) | 0
+        const e3 = sprites.readDataNumber(hero, HERO_DATA.EventP3) | 0
+
+        const rs = sprites.readDataNumber(hero, HERO_DATA.RenderStyleMask) | 0
+        const rs0 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP0) | 0
+        const rs1 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP1) | 0
+
+        const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) ? 1 : 0
+        const ctrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+        const strCh = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+
+        const dir = sprites.readDataNumber(hero, HERO_DATA.DIR) | 0
+        const phaseMirror = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
+        const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+        const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+
+        const wSl = sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || ""
+        const wTh = sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
+        const wCa = sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || ""
+        const wEx = sprites.readDataString(hero, HERO_DATA.WEAPON_EXEC_ID) || ""
+        const wCo = sprites.readDataString(hero, HERO_DATA.WEAPON_COMBO_ID) || ""
+
+        // ------------------------------------------------------------
+        // Per-tick aggregation meta (tspan + progress before/after)
+        // Format: "t0,t1,phP0,phP1,ppP0,ppP1"
+        // ------------------------------------------------------------
+        let meta = _dbgContract_pendingLineByHero[hi] || ""
+        let t0 = 0, t1 = 0, phP0 = 0, phP1 = 0, ppP0 = 0, ppP1 = 0
+        if (meta && meta.indexOf(",") >= 0 && meta.indexOf("[CONTRACT]") < 0) {
+            const parts = meta.split(",")
+            if (parts.length >= 6) {
+                t0 = parseInt(parts[0]) | 0
+                t1 = parseInt(parts[1]) | 0
+                phP0 = parseInt(parts[2]) | 0
+                phP1 = parseInt(parts[3]) | 0
+                ppP0 = parseInt(parts[4]) | 0
+                ppP1 = parseInt(parts[5]) | 0
+            }
+        }
+
+        if (!t0) {
+            t0 = now
+            phP0 = phP
+            ppP0 = ppP
+        }
+        t1 = now
+        phP1 = phP
+        ppP1 = ppP
+
+        _dbgContract_pendingLineByHero[hi] = "" + t0 + "," + t1 + "," + phP0 + "," + phP1 + "," + ppP0 + "," + ppP1
+
+        // Accumulate stages (even if core unchanged)
+        const prevStages = _dbgContract_pendingStagesByHero[hi] || ""
+        if (!prevStages) {
+            _dbgContract_pendingStagesByHero[hi] = st
+        } else {
+            const token = "|" + st + "|"
+            const hay = "|" + prevStages + "|"
+            if (hay.indexOf(token) < 0) {
+                _dbgContract_pendingStagesByHero[hi] = prevStages + "|" + st
+            }
+        }
+
+        // ------------------------------------------------------------
+        // CORE signature: excludes progress and also excludes volatile sliding windows
+        // (ppS/ppD) for whitelisted part names (ex: "drive").
+        // ------------------------------------------------------------
+        const ppVolatile = _dbgContract_isVolatilePartWindow(pp)
+        const ppS_sig = ppVolatile ? 0 : (ppS | 0)
+        const ppD_sig = ppVolatile ? 0 : (ppD | 0)
+
+        const coreSig =
+            owner + "|" + hi + "|" +
+            aSeq + "|" + aKind + "|" + aVar + "|" + aSeed + "|" + aTgt + "|" +
+            ph + "|" + phS + "|" + phD + "|" + phF + "|" +
+            pp + "|" + ppS_sig + "|" + ppD_sig + "|" + ppF + "|" +
+            eSeq + "|" + eMask + "|" + e0 + "|" + e1 + "|" + e2 + "|" + e3 + "|" +
+            rs + "|" + rs0 + "|" + rs1 + "|" +
+            busyUntil + "|" + locked + "|" + ctrl + "|" + strCh + "|" + agiState + "|" +
+            family + "|" + dir + "|" + phaseMirror + "|" + fco + "|" +
+            wSl + "|" + wTh + "|" + wCa + "|" + wEx + "|" + wCo
+
+        // Change gate
+        const printedCore0 = _dbgContract_lastPrintedSigByHero[hi] || ""
+        if (coreSig === printedCore0) continue
+
+        _dbgContract_pendingFlagByHero[hi] = 1
+        _dbgContract_lastObservedSigByHero[hi] = coreSig
+
+        // Build core line (prints REAL ppS/ppD so you can still see sliding values when something else changes)
+        _dbgContract_pendingCoreLineByHero[hi] =
+            `p=${owner} hi=${hi} ` +
+            `A{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}} ` +
+            `Ph{name=${ph} s=${phS} d=${phD} f=${phF}} ` +
+            `Part{name=${pp} s=${ppS} d=${ppD} f=${ppF}} ` +
+            `Ev{seq=${eSeq} mask=${eMask} p0=${e0} p1=${e1} p2=${e2} p3=${e3}} ` +
+            `Style{m=${rs} p0=${rs0} p1=${rs1}} ` +
+            `Lock{busyUntil=${busyUntil} locked=${locked} ctrl=${ctrl} strCh=${strCh} agi=${agiState}} ` +
+            `Glue{fam=${family} dir=${dir} phase=${phaseMirror} fco=${fco}} ` +
+            `W{sl=${wSl} th=${wTh} ca=${wCa} ex=${wEx} co=${wCo}}`
+    }
+}
+
+
+// ------------------------------------------------------------
+// INTERNAL: flush pending CORE changes for a tick
+// Prints CORE change with PROG before->after.
+// ------------------------------------------------------------
+
+// Add this new array near your other debug arrays (outside functions):
+// const _dbgContract_pendingCoreLineByHero: string[] = []
+
+function _dbgContract_flushTick(tickMs: number): void {
+    const t = tickMs | 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        // Always reset tick-span meta and stages after each tick,
+        // but only print if pendingFlag says CORE changed.
+        const meta = _dbgContract_pendingLineByHero[hi] || ""
+        let t0 = 0, t1 = 0, phP0 = 0, phP1 = 0, ppP0 = 0, ppP1 = 0
+        if (meta && meta.indexOf(",") >= 0 && meta.indexOf("[CONTRACT]") < 0) {
+            const parts = meta.split(",")
+            if (parts.length >= 6) {
+                t0 = parseInt(parts[0]) | 0
+                t1 = parseInt(parts[1]) | 0
+                phP0 = parseInt(parts[2]) | 0
+                phP1 = parseInt(parts[3]) | 0
+                ppP0 = parseInt(parts[4]) | 0
+                ppP1 = parseInt(parts[5]) | 0
+            }
+        }
+
+        if (_dbgContract_pendingFlagByHero[hi]) {
+            const stages = _dbgContract_pendingStagesByHero[hi] || ""
+            const coreLine = _dbgContract_pendingCoreLineByHero[hi] || ""
+
+            // Print with before/after progress only (no spam)
+            console.log(
+                `[CONTRACT] t=${t0}->${t1} stages={${stages}} ` +
+                coreLine + " " +
+                `PROG{ph ${phP0}->${phP1} part ${ppP0}->${ppP1}}`
+            )
+
+            // Commit printed CORE signature
+            const coreSig = _dbgContract_lastObservedSigByHero[hi] || ""
+            _dbgContract_lastPrintedSigByHero[hi] = coreSig
+        }
+
+        // Clear per-tick aggregation (always)
+        _dbgContract_pendingFlagByHero[hi] = 0
+        _dbgContract_pendingStagesByHero[hi] = ""
+        _dbgContract_pendingLineByHero[hi] = ""
+        _dbgContract_pendingCoreLineByHero[hi] = ""
+    }
+}
+
+
+
+
 function _dbgAnimKeysLineEx(heroIndex: number, hero: Sprite, tag: string, extra: string): string {
     const base = _dbgAnimKeysLine(heroIndex, hero, tag)
     return extra ? (base + " " + extra) : base
@@ -1707,6 +2027,7 @@ function _ambientPhaseWindowMs(phaseName: string): number {
 }
 
 
+
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
 function ensureHeroSpriteKinds(): void {
@@ -1755,6 +2076,7 @@ function clampInt(v: number, lo: number, hi: number): number {
     if (v > hi) return hi
     return v | 0
 }
+
 
 function splitAgiThrustDurations(totalMs: number): [number, number, number] {
     const T = Math.max(1, totalMs | 0)
@@ -2402,8 +2724,6 @@ function applyDamageModsToTraits(heroIndex: number, family: number, traits: numb
 // Shop section
 
 
-const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop wave up down
-let _shopEntered = false
 
 // ------------------------------
 // SHOP registries (optional)
@@ -8018,12 +8338,184 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
 
 
 
-const STR_CHARGE_BASE_MAX_MS = 900          // t3=0 charge time to full (ms)
-const STR_CHARGE_MIN_MAX_MS = 160           // clamp so it never becomes instant
-const STR_CHARGE_MS_PER_T3 = 70             // each point of trait3 reduces time by this much
 
-const STR_CHARGE_EXTRA_MANA_PCT = 100       // extra mana over the baseCost when reaching full charge
-// Example: baseCost=10, EXTRA_MANA_PCT=100 => extraCost=10 => full charge total = 20
+function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs: number): void {
+    if (!hero) return
+    if (hero.flags & sprites.Flag.Destroyed) return
+
+    const active = sprites.readDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY) | 0
+    if (!active) return
+
+    const at = sprites.readDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY) | 0
+    if (at <= 0) {
+        // Defensive cleanup
+        sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
+        sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
+        return
+    }
+
+    if ((nowMs | 0) < (at | 0)) return
+
+    // Consume payload
+    const dmg = sprites.readDataNumber(hero, STR_PEND_SWING_DMG_KEY) | 0
+    const button = sprites.readDataString(hero, STR_PEND_SWING_BTN_KEY) || "A"
+
+    const slowPct = sprites.readDataNumber(hero, STR_PEND_SWING_SLOW_PCT_KEY) | 0
+    const slowMs  = sprites.readDataNumber(hero, STR_PEND_SWING_SLOW_MS_KEY) | 0
+    const weakPct = sprites.readDataNumber(hero, STR_PEND_SWING_WEAK_PCT_KEY) | 0
+    const weakMs  = sprites.readDataNumber(hero, STR_PEND_SWING_WEAK_MS_KEY) | 0
+    const kbPct   = sprites.readDataNumber(hero, STR_PEND_SWING_KB_PCT_KEY) | 0
+    const swingMs = sprites.readDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY) | 0
+    const arcDeg  = sprites.readDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY) | 0
+
+    // Clear BEFORE spawning (prevents double-spawn if spawn throws/logs)
+    sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_DMG_KEY, 0)
+    sprites.setDataString(hero, STR_PEND_SWING_BTN_KEY, "")
+    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_PCT_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_PCT_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_KB_PCT_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, 0)
+
+    // Spawn (late)
+    const isHeal = false
+    spawnStrengthSwingProjectile(
+        heroIndex, hero,
+        dmg, isHeal, button,
+        slowPct, slowMs,
+        weakPct, weakMs,
+        kbPct,
+        swingMs,
+        arcDeg
+    )
+}
+
+function updateStrengthPendingSwingSpawnsAllHeroes(nowMs: number): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+        _strTrySpawnPendingSwingForHero(hi, hero, nowMs | 0)
+    }
+}
+
+
+function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: number): void {
+    if (!hero) return
+
+    // Only meaningful during a strength swing
+    const kind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+    if (kind !== "strength_swing") {
+        // Optional: clear segmentation keys so they don't linger
+        // (safe even if consumers ignore them)
+        if ((sprites.readDataString(hero, STR_SEG_NAME_KEY) || "") !== "") {
+            sprites.setDataString(hero, STR_SEG_NAME_KEY, "")
+            sprites.setDataNumber(hero, STR_SEG_START_MS_KEY, 0)
+            sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, 0)
+            sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, 0)
+        }
+        return
+    }
+
+    // We anchor segmentation to the existing Phase window (already stamped on release).
+    const phaseStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const phaseDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    if (phaseStart <= 0 || phaseDur <= 0) return
+
+    const endMs = (phaseStart + phaseDur) | 0
+    if (nowMs < phaseStart || nowMs > endMs) return
+
+    // Compute segment durations from fractions
+    let windMs = Math.idiv((phaseDur | 0) * STR_SWING_SEG_WINDUP_FRAC_X1000, 1000) | 0
+    let fwdMs  = Math.idiv((phaseDur | 0) * STR_SWING_SEG_FORWARD_FRAC_X1000, 1000) | 0
+    let landMs = (phaseDur - windMs - fwdMs) | 0
+
+    // Clamp each to min
+    if (windMs < STR_SWING_SEG_MIN_MS) windMs = STR_SWING_SEG_MIN_MS
+    if (fwdMs  < STR_SWING_SEG_MIN_MS) fwdMs  = STR_SWING_SEG_MIN_MS
+    if (landMs < STR_SWING_SEG_MIN_MS) landMs = STR_SWING_SEG_MIN_MS
+
+    // If clamping pushed us over budget, shave back (never below min)
+    let over = ((windMs + fwdMs + landMs - phaseDur) | 0)
+    if (over > 0) {
+        // Prefer shaving landing first, then forward, then windup
+        let shave = Math.min(over, Math.max(0, (landMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        if (shave > 0) { landMs = (landMs - shave) | 0; over = (over - shave) | 0 }
+
+        shave = Math.min(over, Math.max(0, (fwdMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        if (shave > 0) { fwdMs = (fwdMs - shave) | 0; over = (over - shave) | 0 }
+
+        shave = Math.min(over, Math.max(0, (windMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        if (shave > 0) { windMs = (windMs - shave) | 0; over = (over - shave) | 0 }
+    }
+
+    // Recompute endpoints
+    const windEnd = (phaseStart + windMs) | 0
+    const fwdEnd  = (windEnd + fwdMs) | 0
+
+    let segName = "release"
+    let segStart = fwdEnd
+    let segDur = landMs
+
+    if (nowMs < windEnd) {
+        segName = "prepareToCharge"
+        segStart = phaseStart
+        segDur = windMs
+    } else if (nowMs < fwdEnd) {
+        segName = "charging"
+        segStart = windEnd
+        segDur = fwdMs
+    }
+
+    // Only rewrite when segment actually changes (less churn)
+    const prevName = sprites.readDataString(hero, STR_SEG_NAME_KEY) || ""
+    const prevStart = sprites.readDataNumber(hero, STR_SEG_START_MS_KEY) | 0
+    const prevDur = sprites.readDataNumber(hero, STR_SEG_DUR_MS_KEY) | 0
+
+    const changed = (prevName !== segName) || (prevStart !== (segStart | 0)) || (prevDur !== (segDur | 0))
+
+    if (changed) {
+        // Side-channel keys (optional but fine)
+        sprites.setDataString(hero, STR_SEG_NAME_KEY, segName)
+        sprites.setDataNumber(hero, STR_SEG_START_MS_KEY, segStart | 0)
+        sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, segDur | 0)
+
+        // ✅ CANONICAL CONTRACT: publish PhasePart so heroAnimGlue/weaponAnimGlue can consume it
+        // NOTE: This must exist already in your codebase (you referenced it earlier).
+        _animKeys_setPhasePart(hero, segName, nowMs | 0, segDur | 0, segStart | 0)
+
+        // Debug only on segment transitions (not every frame)
+        console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
+    }
+
+    // Segment-local progress (0..PHASE_PROGRESS_MAX) for any debug tooling you have
+    let t = (nowMs - segStart) | 0
+    if (t < 0) t = 0
+    if (t > segDur) t = segDur
+
+    const prog = clampInt(
+        Math.idiv(PHASE_PROGRESS_MAX * t, Math.max(1, segDur)),
+        0,
+        PHASE_PROGRESS_MAX
+    )
+
+    sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, prog)
+}
+
+
+function updateStrengthSwingSegmentationAllHeroes(nowMs: number): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        _strPublishSwingSegForHero(hi, hero, nowMs | 0)
+    }
+}
 
 
 
@@ -8042,6 +8534,13 @@ function updateStrengthChargingAllHeroes(nowMs: number): void {
         // 2) Release if the initiating button is no longer pressed
         const ownerId = (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0)
         const btnId = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0)
+
+        const held = isStrBtnIdPressedForOwner(ownerId, btnId)
+
+//        console.log(`[STR][CHARGE][HELD?] hi=${heroIndex} owner=${ownerId} btnId=${btnId} held=${held} locked=${sprites.readDataBoolean(hero, HERO_DATA.LOCKED) ? 1 : 0}`)
+
+        if (!held) releaseStrengthCharge(heroIndex, hero, nowMs)
+
 
         if (!isStrBtnIdPressedForOwner(ownerId, btnId)) {
             releaseStrengthCharge(heroIndex, hero, nowMs)
@@ -8069,7 +8568,6 @@ function strengthExtraManaForFullCharge(baseCost: number): number {
     const extra = Math.idiv((baseCost | 0) * STR_CHARGE_EXTRA_MANA_PCT, 100)
     return extra < 0 ? 0 : extra
 }
-
 
 
 function beginStrengthCharge(
@@ -8134,9 +8632,18 @@ function beginStrengthCharge(
 
     _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now | 0, maxMs | 0, "beginStrengthCharge")
 
-    // PhasePart contract: strength charge is a single segmented part.
-    _animKeys_setPhasePart(hero, "charging", now | 0, maxMs | 0, now | 0)
+    // ✅ Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
+    let prepMs = STR_PREP_VISIBLE_MS | 0
+    if (prepMs < 0) prepMs = 0
+    if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
 
+    if (prepMs > 0) {
+        _animKeys_setPhasePart(hero, "prepareToCharge", now | 0, prepMs | 0, now | 0)
+    } else {
+        _animKeys_setPhasePart(hero, "charging", now | 0, Math.max(1, maxMs | 0) | 0, now | 0)
+    }
+
+    // Let slash play. Prep is visible; charging hold is done by heroAnimGlue when part=="charging".
     callHeroAnim(heroIndex, animKey, maxMs | 0)
 
     showStrengthChargeBar(heroIndex, hero, true)
@@ -8161,17 +8668,56 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         return
     }
 
-    // Publish universal progress (0..PHASE_PROGRESS_MAX)
+    // ----------------------------
+    // Compute prep vs hold timing
+    // ----------------------------
+    let prepMs = STR_PREP_VISIBLE_MS | 0
+    if (prepMs < 0) prepMs = 0
+    if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
+
+    const holdMsRaw = ((maxMs | 0) - (prepMs | 0)) | 0
+    const holdMs = Math.max(1, holdMsRaw | 0) | 0
+    const prepStart = startMs | 0
+    const holdStart = ((startMs | 0) + (prepMs | 0)) | 0
+
+    // ----------------------------
+    // Publish universal PHASE progress (0..1000)
+    // ----------------------------
     const elapsed0 = clampInt((nowMs | 0) - (startMs | 0), 0, maxMs | 0)
     const pInt = clampInt(Math.idiv(PHASE_PROGRESS_MAX * elapsed0, maxMs | 0), 0, PHASE_PROGRESS_MAX)
     sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
-    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, pInt)
 
-    // If PhasePartName got cleared, restore charging part without touching ActionSequence
+    // ----------------------------
+    // ✅ Maintain correct PhasePart (this was the missing piece)
+    // - during prep window => prepareToCharge
+    // - after holdStart     => charging
+    // ----------------------------
     const ppNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
-    if (!ppNow) {
-        _animKeys_setPhasePart(hero, "charging", startMs | 0, maxMs | 0, nowMs | 0)
+
+    if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
+        // In prep
+        if (ppNow !== "prepareToCharge") {
+            _animKeys_setPhasePart(hero, "prepareToCharge", prepStart | 0, prepMs | 0, prepStart | 0)
+        }
+    } else {
+        // In charging/hold
+        if (ppNow !== "charging") {
+            _animKeys_setPhasePart(hero, "charging", holdStart | 0, holdMs | 0, holdStart | 0)
+        }
     }
+
+    // ----------------------------
+    // Part-local progress (0..1000) for the current part
+    // ----------------------------
+    let partProg = 0
+    if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
+        const t = clampInt(((nowMs | 0) - (prepStart | 0)) | 0, 0, prepMs | 0)
+        partProg = clampInt(Math.idiv(PHASE_PROGRESS_MAX * t, Math.max(1, prepMs | 0)), 0, PHASE_PROGRESS_MAX)
+    } else {
+        const t = clampInt(((nowMs | 0) - (holdStart | 0)) | 0, 0, holdMs | 0)
+        partProg = clampInt(Math.idiv(PHASE_PROGRESS_MAX * t, Math.max(1, holdMs | 0)), 0, PHASE_PROGRESS_MAX)
+    }
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, partProg)
 
     _animInvCheckHeroTimeline(heroIndex, hero, nowMs | 0, "updateStrengthChargeForHero")
 
@@ -8180,7 +8726,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     if (dt < 0) dt = 0
     if (dt > 80) dt = 80
 
-    // If already full, just keep bar full and wait for button release
+    // If already full, keep bar full and wait for button release
     if (arcDeg >= 360) {
         arcDeg = 360
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 360)
@@ -8198,7 +8744,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         return
     }
 
-    // Incremental mana drain tied to degrees gained (not seconds)
+    // Incremental mana drain tied to degrees gained
     let manaToSpend = 0
     if (mpdX1000 > 0) {
         let costX1000 = dDeg * mpdX1000 + remX1000
@@ -8206,7 +8752,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         remX1000 = costX1000 - manaToSpend * 1000
     }
 
-    // Spend mana; if mana hits 0, force-release at the last affordable arc
+    // Spend mana; if mana hits 0, force-release
     if (manaToSpend > 0) {
         let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
         if (mana <= 0) {
@@ -8257,8 +8803,6 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     setStrengthChargeBarPct(heroIndex, hero, pct)
 }
 
-
-
 function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): void {
     if (!hero) return
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
@@ -8293,6 +8837,12 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     // Hide bar (this fixes the lingering white outline)
     showStrengthChargeBar(heroIndex, hero, false)
     setStrengthChargeBarPct(heroIndex, hero, 0)
+
+    // --- clear swing segmentation addon keys (fresh slate) ---
+    sprites.setDataString(hero, STR_SEG_NAME_KEY, "")
+    sprites.setDataNumber(hero, STR_SEG_START_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, 0)
+    sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, 0)
 
     // ------------------------------------------------------------
     // Compute swing duration from charge amount (keep the V9 shaping)
@@ -8335,12 +8885,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const weakenPct = stats[STAT.WEAKEN_PCT] | 0
     const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
     const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
-    const isHeal = false
 
     // ------------------------------------------------------------
-    // NORMALIZED ACTION EDGE:
-    // Use the single-writer helper to increment ActionSequence and
-    // publish ActionP0..P3, seed, variant, render style, and hygiene.
+    // NORMALIZED ACTION EDGE
     // ------------------------------------------------------------
     _doHeroMoveBeginActionTimeline(
         heroIndex,
@@ -8355,11 +8902,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         now
     )
 
-    // Refine semantic identity: this edge is the RELEASE/SWING, not the charge.
     sprites.setDataString(hero, HERO_DATA.ActionKind, "strength_swing")
     if (DEBUG_ANIM_KEYS) _dbgAnimKeys(heroIndex, hero, "KIND_REFINE", `t=${(now|0)} kind=strength_swing`)
-
-    // (Leave ActionVariant as the button-id set by _doHeroMoveBeginActionTimeline)
 
     // ------------------------------------------------------------
     // Phase + part window for the swing
@@ -8367,28 +8911,42 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now, swingDurationMs, "releaseStrengthCharge")
     _animKeys_setPhasePart(hero, "swing", now, swingDurationMs, now)
 
+    // initialize segmentation addon channel (you said you like this)
+    _strPublishSwingSegForHero(heroIndex, hero, now)
+
     _animInvCheckHeroTimeline(heroIndex, hero, now, "releaseStrengthCharge(begin swing)")
 
-    // Animation request (Phaser side uses the universal keys)
+    // Animation request
     callHeroAnim(heroIndex, "slash", swingDurationMs)
 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
-    // ------------------------------------------------------------
-    // GAMEPLAY: spawn the strength swing projectile (engine-owned)
-    // ------------------------------------------------------------
-    spawnStrengthSwingProjectile(
-        heroIndex, hero,
-        dmg, isHeal, button,
-        slowPct, slowDurationMs,
-        weakenPct, weakenDurationMs,
-        knockbackPct,
-        swingDurationMs,
-        arcDeg
-    )
 
-    
+    // ------------------------------------------------------------
+    // ✅ NEW: schedule projectile spawn LATER inside the swing window
+    // ------------------------------------------------------------
+    let spawnDelayMs = Math.idiv((swingDurationMs | 0) * STR_SWING_PROJECTILE_SPAWN_FRAC_X1000, 1000) | 0
+    if (spawnDelayMs < 0) spawnDelayMs = 0
+    if (spawnDelayMs > swingDurationMs) spawnDelayMs = swingDurationMs
 
+    const spawnAtMs = (now + spawnDelayMs) | 0
+
+    sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 1)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, spawnAtMs)
+
+    sprites.setDataNumber(hero, STR_PEND_SWING_DMG_KEY, dmg | 0)
+    sprites.setDataString(hero, STR_PEND_SWING_BTN_KEY, button)
+
+    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_PCT_KEY, slowPct | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_MS_KEY, slowDurationMs | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_PCT_KEY, weakenPct | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_MS_KEY, weakenDurationMs | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_KB_PCT_KEY, knockbackPct | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, swingDurationMs | 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, arcDeg | 0)
+
+    // ------------------------------------------------------------
     // Clear cached payload after firing (cleanliness / prevents stale reads)
+    // ------------------------------------------------------------
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY, 0)
     sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR, "")
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, 0)
@@ -8398,8 +8956,6 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL, 0)
     sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM, "")
 }
-
-
 
 
 
@@ -9165,7 +9721,6 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
         sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_X, 0)
         sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_DIR_Y, 0)
 
-        // Clear any busy window and unlock controls (true "disarm cleanly")
         heroBusyUntil[heroIndex] = 0
         sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
         unlockHeroControls(heroIndex)
@@ -9192,7 +9747,15 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
     sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_RADIUS, execRadius | 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_STEP, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_INTERVAL_MS, AGI_EXEC_STEP_MS | 0)
-    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, (game.runtime() | 0)) // run first step immediately
+
+    const now = (game.runtime() | 0)
+
+    // Interval (minimum floor so slashes are visible)
+    const dtBase = (AGI_EXEC_STEP_MS | 0)
+    const dt = Math.max(dtBase, (AGI_EXEC_STEP_MS_MIN | 0)) | 0
+
+    // Schedule first beat immediately
+    sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, now)
 
     sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_SLOW_PCT, slowPct | 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_SLOW_DUR_MS, slowDurMs | 0)
@@ -9204,8 +9767,27 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
     // Keep controls locked through execute (we’ll unlock when done)
     lockHeroControls(heroIndex)
 
+    // ------------------------------------------------------------
+    // Phase window publish NOW (deterministic)
+    // ------------------------------------------------------------
+    const totalSteps = Math.max(1, (arr.length | 0)) | 0
+    const phaseStart = now
+    const phaseDur = Math.max(1, ((totalSteps * dt) | 0)) | 0
+
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "slash",
+        phaseStart,
+        phaseDur,
+        "agiBeginExecute"
+    )
+
+    // Start first beat part immediately as "teleport"
+    _animKeys_setPhasePart(hero, "teleport", phaseStart, Math.max(1, Math.idiv(dt * AGI_EXEC_TELEPORT_FRAC_X1000, 1000)), now)
+
     if (DEBUG_AGI_COMBO_EXIT) {
-        console.log(`[agi.combo.exit] EXEC(begin) hero=${heroIndex} packets=${arr.length}`)
+        console.log(`[agi.combo.exit] EXEC(begin) hero=${heroIndex} packets=${arr.length} dt=${dt} phaseDur=${phaseDur}`)
     }
 }
 
@@ -9275,12 +9857,12 @@ function updateAgilityExecuteAll(nowMs: number): void {
         const dt = Math.max(dtBase, (AGI_EXEC_STEP_MS_MIN | 0)) | 0
 
         // ------------------------------------------------------------
-        // Phase/Part timeline publishing (EVERY FRAME while executing)
+        // Whole-phase window (should already be stamped at agiBeginExecute)
         // ------------------------------------------------------------
         let phaseStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
         let phaseDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
 
-        // Defensive fallback: if someone started execute without stamping, stamp now.
+        // Defensive fallback (should be rare now)
         if (phaseStart <= 0 || phaseDur <= 0) {
             const arrTmp = agiPacketsEnsure(heroIndex)
             const rem = (arrTmp ? (arrTmp.length | 0) : 0) | 0
@@ -9288,27 +9870,78 @@ function updateAgilityExecuteAll(nowMs: number): void {
             const totalSteps = Math.max(1, (done + rem) | 0) | 0
 
             phaseStart = now
-            phaseDur = Math.max(1, (((totalSteps - 1) | 0) * dt + 1) | 0) | 0
+            phaseDur = Math.max(1, ((totalSteps * dt) | 0)) | 0
 
-            // Use slash semantic if we need to stamp defensively
-            _animKeys_stampPhaseWindow(heroIndex, hero, "slash", phaseStart, phaseDur, "updateAgilityExecuteAll:fallbackStamp")
+            _animKeys_stampPhaseWindow(
+                heroIndex,
+                hero,
+                "slash",
+                phaseStart,
+                phaseDur,
+                "updateAgilityExecuteAll:fallbackStamp"
+            )
         }
 
-        // Phase progress
+        // Whole-phase progress
         const phaseElapsed = clampInt(now - phaseStart, 0, phaseDur)
-        const phaseProg = clampInt(Math.idiv(PHASE_PROGRESS_MAX * phaseElapsed, Math.max(1, phaseDur)), 0, PHASE_PROGRESS_MAX)
+        const phaseProg = clampInt(
+            Math.idiv(PHASE_PROGRESS_MAX * phaseElapsed, Math.max(1, phaseDur)),
+            0,
+            PHASE_PROGRESS_MAX
+        )
         sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, phaseProg)
 
-        // Part window: track time since last beat using nextMs - dt
-        const nextMs0 = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS) | 0
-        let partStart = (nextMs0 - dt) | 0
-        if (partStart <= 0) partStart = now
-        _animKeys_setPhasePart(hero, "beat", partStart, dt, now)
+        // ------------------------------------------------------------
+        // Beat window + subparts (teleport / strike / recover)
+        // Deterministic beatStart = phaseStart + step*dt
+        // ------------------------------------------------------------
+        const stepNow = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_STEP) | 0
+        let beatStart = (phaseStart + (stepNow * dt)) | 0
+        if (beatStart > now) beatStart = now // clamp immediate-after-step edge
+
+        const beatElapsed = clampInt((now - beatStart) | 0, 0, dt)
+        const beatProg = clampInt(
+            Math.idiv(PHASE_PROGRESS_MAX * beatElapsed, Math.max(1, dt)),
+            0,
+            PHASE_PROGRESS_MAX
+        )
+
+        const tpDur = Math.max(1, Math.idiv(dt * AGI_EXEC_TELEPORT_FRAC_X1000, 1000)) | 0
+        const stDur = Math.max(1, Math.idiv(dt * AGI_EXEC_STRIKE_FRAC_X1000, 1000)) | 0
+        let rcDur = (dt - tpDur - stDur) | 0
+        if (rcDur <= 0) rcDur = 1
+
+        let desiredPart = "recover"
+        let partStart = beatStart
+        let partDur = rcDur
+
+        if (beatElapsed < tpDur) {
+            desiredPart = "teleport"
+            partStart = beatStart
+            partDur = tpDur
+        } else if (beatElapsed < (tpDur + stDur)) {
+            desiredPart = "strike"
+            partStart = (beatStart + tpDur) | 0
+            partDur = stDur
+        } else {
+            desiredPart = "recover"
+            partStart = (beatStart + tpDur + stDur) | 0
+            partDur = rcDur
+        }
+
+        // Stamp phase part (transition-aware is handled inside _animKeys_setPhasePart
+        // in your codebase pattern; we call every frame to keep it authoritative).
+        _animKeys_setPhasePart(hero, desiredPart, partStart, partDur, now)
+
+        // Optional: if you want Phaser to have the per-beat progress too, publish it
+        // as PhasePartProgress when desiredPart is "teleport/strike/recover".
+        // (If _animKeys_setPhasePart already sets PhasePartProgress, this is redundant.)
+        sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, beatProg)
 
         // ------------------------------------------------------------
         // Beat execution (only when it's time)
         // ------------------------------------------------------------
-        const nextMs = nextMs0 | 0
+        const nextMs = (sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS) | 0)
         if (nextMs > 0 && now < nextMs) continue
 
         const execRadius = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_RADIUS) | 0
@@ -9344,14 +9977,11 @@ function updateAgilityExecuteAll(nowMs: number): void {
             continue
         }
 
-        // ------------------------------------------------------------
         // Teleport placement knobs
-        // ------------------------------------------------------------
         let offX = 0
         let offY = 0
 
         if (AGI_EXEC_POS_MODE === 0) {
-            // ABOVE / "behind" (your described behavior)
             offX = 0
             offY = AGI_EXEC_OFFSET_Y_ABOVE
         } else if (AGI_EXEC_POS_MODE === 1) {
@@ -9361,7 +9991,6 @@ function updateAgilityExecuteAll(nowMs: number): void {
             offX = AGI_EXEC_OFFSET_X_SIDE
             offY = 0
         } else if (AGI_EXEC_POS_MODE === 3) {
-            // Alternate left/right each hit
             offX = (step0 & 1) ? AGI_EXEC_OFFSET_X_SIDE : -AGI_EXEC_OFFSET_X_SIDE
             offY = 0
         } else if (AGI_EXEC_POS_MODE === 4) {
@@ -9391,14 +10020,12 @@ function updateAgilityExecuteAll(nowMs: number): void {
 
         agiSpawnExecuteSlashVfx(hero, enemy.x, enemy.y)
 
-        // Advance step + schedule next (with a minimum floor so slashes are visible)
+        // Advance step + schedule next
         const step1 = (step0 + 1) | 0
         sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_STEP, step1)
-
         sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_NEXT_MS, now + dt)
     }
 }
-
 
 
 // DEBUG helpers (unchanged)
@@ -10101,28 +10728,28 @@ function calculateAgilityStats(
     if (tStatus < 0) tStatus = 0
 
     // ----------------------------------------------------
-    // DAMAGE (Trait1) – mostly used for packets now
-    // (Legacy projectile damage still uses DAMAGE_MULT, but build hits are off.)
+    // DAMAGE (Trait1)
     // ----------------------------------------------------
     stats[STAT.DAMAGE_MULT] = 60 + tDmg
 
     // ----------------------------------------------------
     // REACH (Trait2) – dash reach driver
-    // We keep the existing movement model: reach ≈ lungeSpeed * moveDuration.
-    // So we map reach into LUNGE_SPEED and keep MOVE_DURATION stable.
     // ----------------------------------------------------
     stats[STAT.LUNGE_SPEED] = 230 + tReach * 5
 
     // ----------------------------------------------------
-    // MOVE DURATION – stable baseline (Time trait should not change dash length)
+    // MOVE DURATION – baseline (then debug slowmo)
     // ----------------------------------------------------
     let moveDur = baseTimeMs
     if (moveDur < 50) moveDur = 50
+
+    if (AGI_DEBUG_SLOWMO) {
+        moveDur = Math.max(50, Math.idiv(moveDur * AGI_DEBUG_MOVE_DUR_MULT_X1000, 1000)) | 0
+    }
     stats[STAT.MOVE_DURATION] = moveDur
 
     // ----------------------------------------------------
-    // VULNERABILITY WINDOW (Trait3) – affects “invuln during dash”
-    // This is implemented via AGI_DASH_UNTIL + landing buffer.
+    // VULNERABILITY WINDOW (Trait3)
     // ----------------------------------------------------
     if (AGI_TIME_AFFECTS_VULN) {
         stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS + tTime * 2
@@ -10131,13 +10758,21 @@ function calculateAgilityStats(
     }
 
     // ----------------------------------------------------
-    // STATUS (Trait4) – slow/cripple
+    // STATUS (Trait4)
     // ----------------------------------------------------
     stats[STAT.SLOW_PCT] = 10 + tStatus * 2
     stats[STAT.SLOW_DURATION] = 200 + tStatus * 20
 
     // (Old agility combo-window stat is intentionally unused now)
     stats[STAT.COMBO_WINDOW] = 0
+
+    // ----------------------------------------------------
+    // TEMP DEBUG: make movement FAR too (speed multiplier)
+    // ----------------------------------------------------
+    if (AGI_DEBUG_SLOWMO) {
+        const sp0 = stats[STAT.LUNGE_SPEED] | 0
+        stats[STAT.LUNGE_SPEED] = Math.max(1, Math.idiv(sp0 * AGI_DEBUG_LUNGE_SPEED_MULT_X1000, 1000)) | 0
+    }
 
     return stats
 }
@@ -11689,128 +12324,6 @@ function applyHealToHeroIndex(heroIndex: number, amount: number) {
 
 
 
-//Heal/Support traits should be calculated using: heal amount at traits[1], haste amount at traits[2], damage amplification at traits[3], damage reduction amount at traits[4]
-// Heal/Support traits:
-// traits[1] = heal amount
-// traits[2] = haste amount
-// traits[3] = damage amplification
-// traits[4] = damage reduction amount
-function calculateHealStats(baseTimeMs: number, traits: number[]) {
-    const stats = makeBaseStats(baseTimeMs)
-
-    // Raw trait values, floor at 0, no caps
-    let tHeal = (traits[1] | 0)  // heal focus
-    let tHaste = (traits[2] | 0)  // haste focus
-    let tAmp = (traits[3] | 0)  // damage amp focus
-    let tDR = (traits[4] | 0)  // damage reduction focus
-
-    if (tHeal < 0) tHeal = 0
-    if (tHaste < 0) tHaste = 0
-    if (tAmp < 0) tAmp = 0
-    if (tDR < 0) tDR = 0
-
-    // ----------------------------------------------------
-    // Generic support power knob
-    // ----------------------------------------------------
-    // Overall "strength" of the support spell. You can use this
-    // for beam visuals, puzzle difficulty, etc.
-    const totalSupportPower = tHeal + tHaste + tAmp + tDR
-    stats[STAT.CHANNEL_POWER] = totalSupportPower
-
-    // ----------------------------------------------------
-    // Damage amplification hook
-    // ----------------------------------------------------
-    // If/when Heal family ever deals damage or buffs ally damage
-    // via stats, tAmp is the obvious lever.
-    // 100% base + 2% per point of tAmp (unbounded).
-    stats[STAT.DAMAGE_MULT] = 100 + tAmp * 2
-
-    // ----------------------------------------------------
-    // Cast / move duration
-    // ----------------------------------------------------
-    // More healing / amp investment = slightly longer cast.
-    // Haste investment counteracts that a bit.
-    let moveDur = baseTimeMs + tHeal * 3 + tAmp * 2 - tHaste * 2
-    if (moveDur < 50) moveDur = 50 // safety floor
-    stats[STAT.MOVE_DURATION] = moveDur
-
-    // (No dedicated STAT slots yet for DR / haste; those are
-    // currently implemented through the buff system:
-    // applySupportBuffToHero + updateHeroBuffs.)
-
-    return stats
-}
-
-
-
-
-function executeHealMove(
-    heroIndex: number,
-    hero: Sprite,
-    button: string,
-    traits: number[],
-    stats: number[],
-    now: number
-) {
-    // If a puzzle is already active for this hero, ignore
-    if (supportPuzzleActive[heroIndex]) return
-
-    // Trait roles:
-    // traits[1] = heal amount
-    // traits[2] = haste amount
-    // traits[3] = damage amplification
-    // traits[4] = damage reduction amount
-    let tHeal = (traits[1] | 0)
-    let tHaste = (traits[2] | 0)
-    let tAmp = (traits[3] | 0)
-    let tDR = (traits[4] | 0)
-
-    if (tHeal < 0) tHeal = 0
-    if (tHaste < 0) tHaste = 0
-    if (tAmp < 0) tAmp = 0
-    if (tDR < 0) tDR = 0
-
-    const chanPower = (stats[STAT.CHANNEL_POWER] || 0) | 0   // from calculateHealStats
-    const dmgMult = (stats[STAT.DAMAGE_MULT] || 100) | 0 // from calculateHealStats
-
-    // Total support "budget" (same as chanPower with current calc)
-    const totalSupport = Math.max(0, chanPower)
-
-    // -----------------------------
-    // Puzzle difficulty
-    // -----------------------------
-    // Keep it simple and stable for now: fixed length 4
-    let seqLen = 4
-
-    // -----------------------------
-    // Buff duration & power from stats
-    // -----------------------------
-    // Duration: 2s base + 25ms per point of CHANNEL_POWER
-    const buffDurationMs = 2000 + totalSupport * 25
-
-    // Buff power: CHANNEL_POWER scaled by DAMAGE_MULT
-    // (so amp-focused traits matter more)
-    let buffPower = Math.idiv(totalSupport * dmgMult, 100)
-    if (buffPower < 1) buffPower = 1
-
-    // -----------------------------
-    // Choose buff kind based on haste vs amp traits
-    // -----------------------------
-    let buffKind = BUFF_KIND_HASTE
-    if (tAmp > tHaste) {
-        buffKind = BUFF_KIND_DAMAGE_AMP
-    }
-
-    supportPendingBuffPower[heroIndex] = buffPower
-    supportPendingBuffDuration[heroIndex] = buffDurationMs
-    supportPendingBuffKind[heroIndex] = buffKind
-
-    beginSupportPuzzleForHero(heroIndex, seqLen, now)
-}
-
-
-
-
 
 
 function randomSupportDir(): number {
@@ -11822,10 +12335,6 @@ function randomSupportDir(): number {
     if (r == 2) return SUP_DIR_LEFT;
     return SUP_DIR_RIGHT;
 }
-
-
-
-
 
 function supportIconImageFor(dir: number, done: boolean): Image {
 
@@ -11953,6 +12462,127 @@ function supportIconImageFor(dir: number, done: boolean): Image {
         }
     }
 
+}
+
+
+
+//Heal/Support traits should be calculated using: heal amount at traits[1], haste amount at traits[2], damage amplification at traits[3], damage reduction amount at traits[4]
+// Heal/Support traits:
+// traits[1] = heal amount
+// traits[2] = haste amount
+// traits[3] = damage amplification
+// traits[4] = damage reduction amount
+function calculateHealStats(baseTimeMs: number, traits: number[]) {
+    const stats = makeBaseStats(baseTimeMs)
+
+    // Raw trait values, floor at 0, no caps
+    let tHeal = (traits[1] | 0)  // heal focus
+    let tHaste = (traits[2] | 0)  // haste focus
+    let tAmp = (traits[3] | 0)  // damage amp focus
+    let tDR = (traits[4] | 0)  // damage reduction focus
+
+    if (tHeal < 0) tHeal = 0
+    if (tHaste < 0) tHaste = 0
+    if (tAmp < 0) tAmp = 0
+    if (tDR < 0) tDR = 0
+
+    // ----------------------------------------------------
+    // Generic support power knob
+    // ----------------------------------------------------
+    // Overall "strength" of the support spell. You can use this
+    // for beam visuals, puzzle difficulty, etc.
+    const totalSupportPower = tHeal + tHaste + tAmp + tDR
+    stats[STAT.CHANNEL_POWER] = totalSupportPower
+
+    // ----------------------------------------------------
+    // Damage amplification hook
+    // ----------------------------------------------------
+    // If/when Heal family ever deals damage or buffs ally damage
+    // via stats, tAmp is the obvious lever.
+    // 100% base + 2% per point of tAmp (unbounded).
+    stats[STAT.DAMAGE_MULT] = 100 + tAmp * 2
+
+    // ----------------------------------------------------
+    // Cast / move duration
+    // ----------------------------------------------------
+    // More healing / amp investment = slightly longer cast.
+    // Haste investment counteracts that a bit.
+    let moveDur = baseTimeMs + tHeal * 3 + tAmp * 2 - tHaste * 2
+    if (moveDur < 50) moveDur = 50 // safety floor
+    stats[STAT.MOVE_DURATION] = moveDur
+
+    // (No dedicated STAT slots yet for DR / haste; those are
+    // currently implemented through the buff system:
+    // applySupportBuffToHero + updateHeroBuffs.)
+
+    return stats
+}
+
+
+
+
+function executeHealMove(
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    traits: number[],
+    stats: number[],
+    now: number
+) {
+    // If a puzzle is already active for this hero, ignore
+    if (supportPuzzleActive[heroIndex]) return
+
+    // Trait roles:
+    // traits[1] = heal amount
+    // traits[2] = haste amount
+    // traits[3] = damage amplification
+    // traits[4] = damage reduction amount
+    let tHeal = (traits[1] | 0)
+    let tHaste = (traits[2] | 0)
+    let tAmp = (traits[3] | 0)
+    let tDR = (traits[4] | 0)
+
+    if (tHeal < 0) tHeal = 0
+    if (tHaste < 0) tHaste = 0
+    if (tAmp < 0) tAmp = 0
+    if (tDR < 0) tDR = 0
+
+    const chanPower = (stats[STAT.CHANNEL_POWER] || 0) | 0   // from calculateHealStats
+    const dmgMult = (stats[STAT.DAMAGE_MULT] || 100) | 0 // from calculateHealStats
+
+    // Total support "budget" (same as chanPower with current calc)
+    const totalSupport = Math.max(0, chanPower)
+
+    // -----------------------------
+    // Puzzle difficulty
+    // -----------------------------
+    // Keep it simple and stable for now: fixed length 4
+    let seqLen = 4
+
+    // -----------------------------
+    // Buff duration & power from stats
+    // -----------------------------
+    // Duration: 2s base + 25ms per point of CHANNEL_POWER
+    const buffDurationMs = 2000 + totalSupport * 25
+
+    // Buff power: CHANNEL_POWER scaled by DAMAGE_MULT
+    // (so amp-focused traits matter more)
+    let buffPower = Math.idiv(totalSupport * dmgMult, 100)
+    if (buffPower < 1) buffPower = 1
+
+    // -----------------------------
+    // Choose buff kind based on haste vs amp traits
+    // -----------------------------
+    let buffKind = BUFF_KIND_HASTE
+    if (tAmp > tHaste) {
+        buffKind = BUFF_KIND_DAMAGE_AMP
+    }
+
+    supportPendingBuffPower[heroIndex] = buffPower
+    supportPendingBuffDuration[heroIndex] = buffDurationMs
+    supportPendingBuffKind[heroIndex] = buffKind
+
+    beginSupportPuzzleForHero(heroIndex, seqLen, now)
 }
 
 
@@ -14188,6 +14818,8 @@ if (SHOP_MODE_ACTIVE) {
         // Keep walls real in shop space too
         resolveTilemapCollisions()
 
+        dbgContractSnapshotAllHeroes(now, "onUpdate:shopMode")
+
         // Nothing else (no enemies, projectiles, waves, etc.)
         return
     }
@@ -14212,6 +14844,11 @@ if (SHOP_MODE_ACTIVE) {
     // NEW: one universal progress updater (PhaseProgressInt + PhasePartProgress)
     updateHeroTimelineProgressAll(now)
 
+    // NEW: publish strength swing segmentation (windup/forward/landing)
+    updateStrengthSwingSegmentationAllHeroes(now)
+    // NEW: late-spawn strength projectiles inside release window
+    updateStrengthPendingSwingSpawnsAllHeroes(now)
+
     updateHeroControlLocks(now)
     updateHeroMovementPhase(now)
     updateHeroBuffs(now)
@@ -14223,6 +14860,10 @@ if (SHOP_MODE_ACTIVE) {
 
     resolveTilemapCollisions()
 
+    // After all gameplay writers + universal progress update, before render-side consumption:
+    dbgContractSnapshotAllHeroes(now, "onUpdate:postWriters")
+
+
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
         if (h) debugAgilityDashProgress(h, hi)
@@ -14230,7 +14871,11 @@ if (SHOP_MODE_ACTIVE) {
 
     updateEnemyHoming(now)
     updateEnemyEffects(now)
+
+
 })
+
+
 
 
 game.onUpdateInterval(80, function () {

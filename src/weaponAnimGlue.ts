@@ -49,6 +49,9 @@ const WPN_LOCAL_PHASE_LOCAL_START_KEY = "__wpnLocalPhaseLocalStartMs";
 const WPN_LOCAL_PHASE_LOCAL_DUR_KEY = "__wpnLocalPhaseLocalDurMs";
 
 
+// --- ADD: weapon-follow contract keys published on the hero sprite ---
+const HERO_FOLLOW_FRAME_IN_CLIP_KEY = "HeroFollowFrameInClip"; // 0..clipLen-1
+const HERO_FOLLOW_CLIP_LEN_KEY = "HeroFollowClipLen";          // N
 
 
 // Internal execute-beat bookkeeping (stored on Phaser hero sprite).
@@ -129,6 +132,65 @@ function _logWeaponHiddenOnce(key: string, payload: any): void {
   if (_WEAPON_HIDDEN_ONCE.has(key)) return;
   _WEAPON_HIDDEN_ONCE.add(key);
   console.log("[WPN-HIDDEN]", payload);
+}
+
+
+
+function _weaponPhaseFromNativeDisplayedAnim(nativeHero: Phaser.GameObjects.Sprite): string {
+    const anyHero: any = nativeHero as any;
+
+    // Prefer Phaser anim key because it represents what is ACTUALLY being rendered.
+    const k =
+        (anyHero?.anims?.currentAnim?.key as any) ||
+        (anyHero?.anims?.getName?.() as any) ||
+        "";
+
+    const key = String(k || "").trim();
+    if (!key) return "";
+
+    const low = key.toLowerCase();
+
+    // Look for canonical heroAtlas phase tokens inside the key.
+    // (Order matters: check more-specific before less-specific.)
+    const PHASES: string[] = [
+        "thrustoversize",
+        "slashoversize",
+        "onehandbackslash",
+        "onehandhalfslash",
+        "onehandslash",
+        "combatidle",
+        "watering",
+        "spellcast",
+        "cast",
+        "thrust",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "walk",
+        "idle",
+    ];
+
+    for (const p of PHASES) {
+        if (low.includes(p)) {
+            // Return the properly-cased token weaponAtlas / weaponAnimGlue expect.
+            // (Match your heroAtlas naming.)
+            if (p === "combatidle") return "combatIdle";
+            if (p === "onehandslash") return "oneHandSlash";
+            if (p === "onehandbackslash") return "oneHandBackslash";
+            if (p === "onehandhalfslash") return "oneHandHalfslash";
+            if (p === "thrustoversize") return "thrustOversize";
+            if (p === "slashoversize") return "slashOversize";
+            if (p === "spellcast") return "cast"; // treat spellcast as cast for weapons
+            return p; // already fine for most (cast/thrust/slash/walk/idle/etc.)
+        }
+    }
+
+    return "";
 }
 
 
@@ -466,7 +528,7 @@ export function resolveWeaponFrameIndexForLayer(args: {
 
   const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
 
-  // Explicit override
+  // Explicit override (treated as *column*, not absolute frame index)
   if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
     const col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
     const idx = row * weaponCols + col;
@@ -476,8 +538,12 @@ export function resolveWeaponFrameIndexForLayer(args: {
   const anyHero: any = args.heroSprite as any;
 
   const getData = (k: string): any => {
-    if (anyHero && typeof anyHero.getData === "function") return anyHero.getData(k);
-    return undefined;
+    try {
+      if (anyHero && typeof anyHero.getData === "function") return anyHero.getData(k);
+      return anyHero?.data?.values?.[k];
+    } catch {
+      return undefined;
+    }
   };
 
   const nowLocal =
@@ -520,27 +586,69 @@ export function resolveWeaponFrameIndexForLayer(args: {
   }
 
   // ------------------------------------------------------------
-  // NEW: Prefer the hero’s *actual* current column (perfect sync with manual-seek)
+  // ✅ NEW PREFERRED PATH:
+  // Use hero-published "frame within clip" and clip length.
+  // This is the correct semantic alignment for weapon sheets.
+  // ------------------------------------------------------------
+  const fincRaw = getData("HeroFollowFrameInClip");
+  const clenRaw = getData("HeroFollowClipLen");
+
+  const frameInClip = (typeof fincRaw === "number" && Number.isFinite(fincRaw)) ? (fincRaw | 0) : -1;
+  const clipLen = (typeof clenRaw === "number" && Number.isFinite(clenRaw) && clenRaw > 0) ? (clenRaw | 0) : 0;
+
+  if (frameInClip >= 0 && clipLen > 0 && weaponCols > 1) {
+    const safeClipLen = Math.max(1, clipLen);
+    const safeF = clampInt(frameInClip, 0, safeClipLen - 1);
+
+    // Map 0..clipLen-1 -> 0..weaponCols-1 (endpoint aligned)
+    const den = Math.max(1, safeClipLen - 1);
+    const wden = Math.max(1, weaponCols - 1);
+    const weaponCol = clampInt(Math.round((safeF * wden) / den), 0, weaponCols - 1);
+
+    const idx = row * weaponCols + weaponCol;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
+
+  // If weapon has only 1 col, it’s always 0
+  if (weaponCols <= 1) {
+    const idx = row * weaponCols + 0;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
+
+  // ------------------------------------------------------------
+  // OLD FALLBACK (kept): absolute-sheet-column scaling
   // ------------------------------------------------------------
   try {
     const hf: any = (args.heroSprite as any).frame;
-    const heroTile = (hf?.width ?? 0) | 0;
-    const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
+    const heroTileW = (hf?.width ?? 0) | 0;
+
+    const heroTexKey = String((args.heroSprite as any).texture?.key ?? "");
+    const heroTex = args.scene.textures.get(heroTexKey);
     const heroSrc: any = heroTex?.getSourceImage?.();
     const heroW = (heroSrc?.width ?? 0) | 0;
-    const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
+
+    const heroCols = heroTileW > 0 ? Math.max(1, Math.floor(heroW / heroTileW)) : 1;
 
     const heroCol = clampInt((args.heroFrameIndex | 0) % heroCols, 0, heroCols - 1);
 
-    // Map heroCol -> weapon col range
-    const col = clampInt(heroCol, 0, Math.max(0, weaponCols - 1));
-    const idx = row * weaponCols + col;
+    const heroDen = Math.max(1, heroCols - 1);
+    const weaponDen = Math.max(1, weaponCols - 1);
+
+    const weaponCol = clampInt(
+      Math.round((heroCol * weaponDen) / heroDen),
+      0,
+      weaponCols - 1
+    );
+
+    const idx = row * weaponCols + weaponCol;
     return clampInt(idx, 0, Math.max(0, grid.total - 1));
   } catch {
     // fall through
   }
 
+  // ------------------------------------------------------------
   // Final fallback: time-based (if needed)
+  // ------------------------------------------------------------
   if (weaponCols > 1) {
     const actionSeq = (Number(getData("ActionSequence")) || 0) | 0;
     const phaseDurMs = (Number(getData("PhaseDurationMs")) || 0) | 0;
@@ -559,151 +667,6 @@ export function resolveWeaponFrameIndexForLayer(args: {
 }
 
 
-
-
-export function resolveWeaponFrameIndexForLayerOLDCODETODELETE(args: {
-  scene: Phaser.Scene;
-  sheet: WeaponSheetRef;
-  dir: Dir4;
-  heroSprite: Phaser.GameObjects.Sprite;
-  heroFrameIndex: number;
-  // Optional explicit override ("single frame" support). If provided, it is treated as
-  // a *column index* in the weapon sheet grid (0..cols-1), and ignores hero progress.
-  frameColOverride?: number;
-}): number {
-  const grid = getSheetGrid(args.scene, args.sheet);
-  const weaponCols = grid.cols;
-  const weaponRows = grid.rows;
-
-  // Row selection: most sheets are 4 rows; some are 1 row.
-  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
-
-  // Optional single-frame override: treat as a column index in the weapon sheet.
-  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
-    const col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
-    const idx = row * weaponCols + col;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  }
-
-  const anyHero: any = args.heroSprite as any;
-
-  const getData = (k: string): any => {
-    if (anyHero && typeof anyHero.getData === "function") return anyHero.getData(k);
-    return undefined;
-  };
-
-  const setData = (k: string, v: any): void => {
-    if (anyHero && typeof anyHero.setData === "function") anyHero.setData(k, v);
-  };
-
-  const nowLocal =
-    (args.scene as any)?.time?.now ??
-    (args.scene as any)?.game?.loop?.time ??
-    Date.now();
-
-  // ------------------------------------------------------------
-  // NEW: Execute yo-yo override (3<->4) using per-beat local start.
-  // Only active for a short window after each execute beat.
-  // ------------------------------------------------------------
-  const actionKindRaw = getData("ActionKind");
-  const actionKind = (typeof actionKindRaw === "string") ? actionKindRaw : "";
-
-  if (actionKind === "agility_execute" && weaponCols > 1) {
-    const beatStartRaw = getData(WPN_LOCAL_EXEC_BEAT_LOCAL_START_KEY);
-    const beatStart = (typeof beatStartRaw === "number" && Number.isFinite(beatStartRaw)) ? beatStartRaw : 0;
-
-    if (beatStart > 0) {
-      const dt = Math.max(0, nowLocal - beatStart);
-
-      if (dt <= WPN_EXEC_YOYO_WINDOW_MS) {
-        // Prefer columns 3 and 4 (good looking for 6-frame slash: 0..5).
-        // If sheet has fewer columns, use the last two columns.
-        let colA = 3;
-        let colB = 4;
-
-        if (weaponCols <= 4) {
-          colB = Math.max(0, weaponCols - 1);
-          colA = Math.max(0, weaponCols - 2);
-        }
-
-        colA = clampInt(colA, 0, weaponCols - 1);
-        colB = clampInt(colB, 0, weaponCols - 1);
-
-        const step = (Math.floor(dt / Math.max(1, WPN_EXEC_YOYO_STEP_MS)) | 0);
-        const flip = (step & 1) ? 1 : 0;
-
-        const col = flip ? colB : colA;
-        const idx = row * weaponCols + col;
-        return clampInt(idx, 0, Math.max(0, grid.total - 1));
-      }
-    }
-  }
-  // ------------------------------------------------------------
-
-  // ------------------------------------------------------------
-  // Step 9 mapping: engine-stamped ActionSequence + PhaseDurationMs pacing
-  // (keeps weapons synced even if hero is held/restarted/timeScaled)
-  // ------------------------------------------------------------
-  const actionSeq = (Number(getData("ActionSequence")) || 0) | 0;
-  const phaseStartMsEngine = (Number(getData("PhaseStartMs")) || 0) | 0;
-  const phaseDurMsEngine = (Number(getData("PhaseDurationMs")) || 0) | 0;
-
-  const lastActionSeq = (Number(getData(WPN_LOCAL_PHASE_ACTIONSEQ_KEY)) || 0) | 0;
-  const lastPhaseStartEngine = (Number(getData(WPN_LOCAL_PHASE_ENGINE_START_KEY)) || 0) | 0;
-
-  let localStart = Number(getData(WPN_LOCAL_PHASE_LOCAL_START_KEY)) || 0;
-  let localDur = (Number(getData(WPN_LOCAL_PHASE_LOCAL_DUR_KEY)) || 0) | 0;
-
-  // Restart local timing when a new action begins or engine phaseStart changes.
-  const shouldRestart =
-    (actionSeq !== 0 && actionSeq !== lastActionSeq) ||
-    (phaseStartMsEngine !== 0 && phaseStartMsEngine !== lastPhaseStartEngine);
-
-  if (shouldRestart) {
-    localStart = nowLocal;
-    localDur = phaseDurMsEngine | 0;
-
-    setData(WPN_LOCAL_PHASE_ACTIONSEQ_KEY, actionSeq);
-    setData(WPN_LOCAL_PHASE_ENGINE_START_KEY, phaseStartMsEngine);
-    setData(WPN_LOCAL_PHASE_LOCAL_START_KEY, localStart);
-    setData(WPN_LOCAL_PHASE_LOCAL_DUR_KEY, localDur);
-  }
-
-  // If we have a usable duration, map time progress -> weapon column.
-  if ((localDur | 0) > 0 && weaponCols > 1) {
-    const elapsed = Math.max(0, nowLocal - (localStart || nowLocal));
-    const p = Math.max(0, Math.min(1, elapsed / Math.max(1, localDur)));
-    const col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
-    const idx = row * weaponCols + col;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  }
-
-  // Fallback: Phaser anim progress (if present)
-  const animState: any = (args.heroSprite as any).anims;
-  if (animState && typeof animState.getProgress === "function" && weaponCols > 1) {
-    const p = Number(animState.getProgress()) || 0;
-    const col = clampInt(Math.round(p * Math.max(0, weaponCols - 1)), 0, weaponCols - 1);
-    const idx = row * weaponCols + col;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  }
-
-  // Final fallback: mirror hero column if we can infer it, otherwise 0
-  try {
-    const hf: any = (args.heroSprite as any).frame;
-    const heroTile = (hf?.width ?? 0) | 0;
-    const heroTex = args.scene.textures.get((args.heroSprite as any).texture?.key);
-    const heroSrc: any = heroTex?.getSourceImage?.();
-    const heroW = (heroSrc?.width ?? 0) | 0;
-    const heroCols = heroTile > 0 ? Math.max(1, Math.floor(heroW / heroTile)) : 1;
-
-    const heroCol = clampInt((args.heroFrameIndex | 0) % heroCols, 0, Math.max(0, weaponCols - 1));
-    const idx = row * weaponCols + heroCol;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  } catch {
-    const idx = row * weaponCols + 0;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  }
-}
 
 
 export function syncWeaponLayersToHero(args: {
@@ -1235,11 +1198,13 @@ export function setWeaponGhostCountExact(args: {
 
 const WEAPON_ANIM_GLUE_GLOBAL_KEY = "weaponAnimGlue";
 
+
+
 export function exportWeaponAnimGlueToGlobalOnce(): void {
   try {
     const g: any = globalThis as any;
 
-    // If someone already provided one, don't overwrite (but you can log if you want).
+    // If someone already provided one, don't overwrite.
     if (g[WEAPON_ANIM_GLUE_GLOBAL_KEY]) return;
 
     g[WEAPON_ANIM_GLUE_GLOBAL_KEY] = {
@@ -1252,7 +1217,11 @@ export function exportWeaponAnimGlueToGlobalOnce(): void {
       // legacy single-layer driver
       syncWeaponToHero,
 
-      // useful helpers (optional, but nice to have)
+      // ghost helpers (YOU NEED THESE)
+      applyWeaponGhostTrails,
+      setWeaponGhostCountExact,
+
+      // useful helpers
       resolveWeaponFrameIndexForLayer,
       resolveWeaponFrameIndexForDirAndCol
     };

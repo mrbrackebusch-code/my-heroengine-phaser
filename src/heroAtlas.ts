@@ -653,6 +653,28 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         addPhaseDir("thrust", "right", 7, thrustCols, 10, 0, false);
 
 
+        // Thrust sub-phases (same thrust rows 4–7, different frame selections)
+        const thrustWindupCols  = [0, 1, 2, 3];
+        const thrustForwardCols = [4, 5];
+        const thrustLandingCols = [6, 7];
+
+        addPhaseDir("thrust_windup",  "up",    4, thrustWindupCols, 10, 0, false);
+        addPhaseDir("thrust_windup",  "left",  5, thrustWindupCols, 10, 0, false);
+        addPhaseDir("thrust_windup",  "down",  6, thrustWindupCols, 10, 0, false);
+        addPhaseDir("thrust_windup",  "right", 7, thrustWindupCols, 10, 0, false);
+
+        addPhaseDir("thrust_forward", "up",    4, thrustForwardCols, 10, 0, false);
+        addPhaseDir("thrust_forward", "left",  5, thrustForwardCols, 10, 0, false);
+        addPhaseDir("thrust_forward", "down",  6, thrustForwardCols, 10, 0, false);
+        addPhaseDir("thrust_forward", "right", 7, thrustForwardCols, 10, 0, false);
+
+        addPhaseDir("thrust_landing", "up",    4, thrustLandingCols, 10, 0, false);
+        addPhaseDir("thrust_landing", "left",  5, thrustLandingCols, 10, 0, false);
+        addPhaseDir("thrust_landing", "down",  6, thrustLandingCols, 10, 0, false);
+        addPhaseDir("thrust_landing", "right", 7, thrustLandingCols, 10, 0, false);
+
+
+
         // Watering – NOT its own rows.
         // Reuses the thrust band with pattern [0,1,4,4,4,5].
         const wateringCols = [0, 1, 4, 4, 4, 5];
@@ -682,6 +704,27 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         addPhaseDir("slash", "right", slashRowBase64 + 3, slashCols64, 12, 0, slashYoyo);
 
         
+        // Slash sub-phases (same slash rows 12–15, different frame selections)
+        const slashPrepareCols = [0];
+        const slashSwingCols   = [1, 2, 3, 4];
+        const slashReturnCols  = [5];
+
+        addPhaseDir("slash_prepare", "up",    slashRowBase64 + 0, slashPrepareCols, 12, 0, false);
+        addPhaseDir("slash_prepare", "left",  slashRowBase64 + 1, slashPrepareCols, 12, 0, false);
+        addPhaseDir("slash_prepare", "down",  slashRowBase64 + 2, slashPrepareCols, 12, 0, false);
+        addPhaseDir("slash_prepare", "right", slashRowBase64 + 3, slashPrepareCols, 12, 0, false);
+
+        addPhaseDir("slash_slash", "up",    slashRowBase64 + 0, slashSwingCols, 12, 0, false);
+        addPhaseDir("slash_slash", "left",  slashRowBase64 + 1, slashSwingCols, 12, 0, false);
+        addPhaseDir("slash_slash", "down",  slashRowBase64 + 2, slashSwingCols, 12, 0, false);
+        addPhaseDir("slash_slash", "right", slashRowBase64 + 3, slashSwingCols, 12, 0, false);
+
+        addPhaseDir("slash_return", "up",    slashRowBase64 + 0, slashReturnCols, 12, 0, false);
+        addPhaseDir("slash_return", "left",  slashRowBase64 + 1, slashReturnCols, 12, 0, false);
+        addPhaseDir("slash_return", "down",  slashRowBase64 + 2, slashReturnCols, 12, 0, false);
+        addPhaseDir("slash_return", "right", slashRowBase64 + 3, slashReturnCols, 12, 0, false);
+
+
         // Shoot (bow) – rows 16–19, usually up to ~13 frames
         const shootCols = cols0to(12); // 13 frames max
         addPhaseDir("shoot", "up",    16, shootCols, 10, 0, false);
