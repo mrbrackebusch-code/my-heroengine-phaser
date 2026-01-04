@@ -687,15 +687,34 @@ export function syncWeaponLayersToHero(args: {
   const dbgVerbose = _weaponDebugVerbose();
   const missKey = `${args.weaponId}|${args.heroPhase}|${mode}|${args.variant ?? ""}`;
 
-  const heroDepth = (args.heroSprite as any).depth ?? 0;
+  const heroAny: any = args.heroSprite as any;
+  const heroDepth = heroAny.depth ?? 0;
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
 
-  // Optional per-hero weapon offset (lets us “fake” center / placement)
-  const wpnOx = (args.heroSprite as any).getData?.("wpnOx") ?? 0;
-  const wpnOy = (args.heroSprite as any).getData?.("wpnOy") ?? 0;
+  // Optional per-hero weapon offset (lets us “fake” extra placement)
+  const wpnOx = heroAny.getData?.("wpnOx") ?? 0;
+  const wpnOy = heroAny.getData?.("wpnOy") ?? 0;
 
-  const x = args.heroSprite.x + (wpnOx | 0) + off.x;
-  const y = args.heroSprite.y + (wpnOy | 0) + off.y;
+  // IMPORTANT:
+  // Arcade sprites use x/y as the CENTER of their collider image.
+  // If the Phaser hero-native is "feet anchored" (originY=1.0), then
+  // heroSprite.x/y are NOT the center anymore.
+  // Weapons/overlays were authored assuming center anchoring (legacy behavior),
+  // so we compute the hero's visual CENTER in world coords and attach weapons there.
+  const heroOx = (typeof heroAny.originX === "number") ? (heroAny.originX as number) : 0.5;
+  const heroOy = (typeof heroAny.originY === "number") ? (heroAny.originY as number) : 0.5;
+  const heroW = ((typeof heroAny.displayWidth === "number" && heroAny.displayWidth > 0)
+    ? heroAny.displayWidth
+    : (typeof heroAny.width === "number" ? heroAny.width : 0)) as number;
+  const heroH = ((typeof heroAny.displayHeight === "number" && heroAny.displayHeight > 0)
+    ? heroAny.displayHeight
+    : (typeof heroAny.height === "number" ? heroAny.height : 0)) as number;
+
+  const heroCx = args.heroSprite.x + (0.5 - heroOx) * heroW;
+  const heroCy = args.heroSprite.y + (0.5 - heroOy) * heroH;
+
+  const x = heroCx + (wpnOx | 0) + off.x;
+  const y = heroCy + (wpnOy | 0) + off.y;
 
   // For debug reuse across blocks
   let dbgHeroName = "";
@@ -726,18 +745,16 @@ export function syncWeaponLayersToHero(args: {
     spr.x = x;
     spr.y = y;
 
-    if (typeof (spr as any).setOrigin === "function") {
-      const hx = (args.heroSprite as any).originX;
-      const hy = (args.heroSprite as any).originY;
-      if (typeof hx === "number" && typeof hy === "number") spr.setOrigin(hx, hy);
-    }
+    // Legacy weapon overlays were authored around center anchoring.
+    // Keep that stable even if the hero-native is feet-anchored.
+    try { (spr as any).setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
 
-    spr.scaleX = (args.heroSprite as any).scaleX ?? 1;
-    spr.scaleY = (args.heroSprite as any).scaleY ?? 1;
-    (spr as any).rotation = (args.heroSprite as any).rotation ?? 0;
+    spr.scaleX = heroAny.scaleX ?? 1;
+    spr.scaleY = heroAny.scaleY ?? 1;
+    (spr as any).rotation = heroAny.rotation ?? 0;
 
-    if (typeof (spr as any).setFlipX === "function") (spr as any).setFlipX(!!(args.heroSprite as any).flipX);
-    if (typeof (spr as any).setFlipY === "function") (spr as any).setFlipY(!!(args.heroSprite as any).flipY);
+    if (typeof (spr as any).setFlipX === "function") (spr as any).setFlipX(!!heroAny.flipX);
+    if (typeof (spr as any).setFlipY === "function") (spr as any).setFlipY(!!heroAny.flipY);
 
     spr.setDepth(depth);
     spr.setVisible(true);
@@ -912,7 +929,8 @@ export function syncWeaponLayersToHero(args: {
       sig,
       `[WPN-PLACE] wid=${args.weaponId} hero=${dbgHeroName} fam=${dbgHeroFamily} ` +
       `phase=${args.heroPhase} used=${usedPhase} mode=${mode} dir=${args.dir} heroFrame=${args.heroFrameIndex} ` +
-      `heroXY=${((args.heroSprite.x) | 0)},${((args.heroSprite.y) | 0)} ` +
+      `heroXY=${((args.heroSprite.x) | 0)},${((args.heroSprite.y) | 0)} heroOrigin=${heroOx.toFixed(2)},${heroOy.toFixed(2)} ` +
+      `heroCenter=${(heroCx | 0)},${(heroCy | 0)} ` +
       `wpnOxOy=${(wpnOx | 0)},${(wpnOy | 0)} off=${(off.x | 0)},${(off.y | 0)} ` +
       `WXY=${(x | 0)},${(y | 0)} bg=${bgStr} fg=${fgStr} ` +
       `depthH=${heroDepth} depthBg=${bgDepth} depthFg=${fgDepth}`
@@ -1012,14 +1030,32 @@ export function syncWeaponToHero(args: {
   args.weaponSprite.setFrame(frameIndex);
 
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
-  args.weaponSprite.x = args.heroSprite.x + off.x;
-  args.weaponSprite.y = args.heroSprite.y + off.y;
+
+  // Weapon overlay art assumes heroSprite.x/y are CENTER-anchored.
+  // If heroSprite is feet-anchored (originY=1), convert back to visual center.
+  const heroAny: any = args.heroSprite as any;
+  const heroOx = (typeof heroAny.originX === "number") ? heroAny.originX : 0.5;
+  const heroOy = (typeof heroAny.originY === "number") ? heroAny.originY : 0.5;
+  const heroW = ((typeof heroAny.displayWidth === "number" && heroAny.displayWidth > 0)
+    ? heroAny.displayWidth
+    : (typeof heroAny.width === "number" ? heroAny.width : 0)) as number;
+  const heroH = ((typeof heroAny.displayHeight === "number" && heroAny.displayHeight > 0)
+    ? heroAny.displayHeight
+    : (typeof heroAny.height === "number" ? heroAny.height : 0)) as number;
+
+  const heroCenterX = args.heroSprite.x + (0.5 - heroOx) * (heroW || 0);
+  const heroCenterY = args.heroSprite.y + (0.5 - heroOy) * (heroH || 0);
+
+  args.weaponSprite.x = heroCenterX + off.x;
+  args.weaponSprite.y = heroCenterY + off.y;
+
+  // Match legacy behavior (weapon sprite center-anchored).
+  try { (args.weaponSprite as any).setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
 
   const heroDepth = (args.heroSprite as any).depth ?? 0;
   args.weaponSprite.setDepth(heroDepth + 1);
   args.weaponSprite.setVisible(true);
 }
-
 
 
 // ----------------------------------------------------------

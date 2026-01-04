@@ -1,5 +1,6 @@
 // tileMapGlue.ts
 import type Phaser from "phaser";
+import { DECAL_VISUALS_BY_NAME, PROP_VISUALS_BY_NAME, terrainFrameIndexFromRef } from "./tileAtlas";
 import type { TileAtlas, TileFamily, AutoShape } from "./tileAtlas";
 
 // ----------------------------------------------------------
@@ -244,6 +245,11 @@ export class WorldTileRenderer {
     // NEW:
     private chasmOverlayLayer?: Phaser.Tilemaps.TilemapLayer;
 
+    // NEW: decor layers (visual-only)
+    private decalLayer?: Phaser.Tilemaps.TilemapLayer;
+    private propLayer?: Phaser.Tilemaps.TilemapLayer;
+
+
     constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions = {}) {
         this.scene = scene;
         this.atlas = atlas;
@@ -268,7 +274,7 @@ export class WorldTileRenderer {
         const tileSize = this.atlas.tileSize;
 
         // --------------------------------------------------------------
-        // Create tilemap + tileset + layer ONE TIME
+        // Create tilemap + tileset + layers ONE TIME
         // --------------------------------------------------------------
         if (!this.map) {
             this.map = this.scene.make.tilemap({
@@ -291,42 +297,62 @@ export class WorldTileRenderer {
                 throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
             }
 
-            // Ground (bottom), chasm (middle), inner-corner overlay (top)
+            // Base layers: Ground (bottom), chasm (middle), inner-corner overlay (top)
             this.groundLayer       = this.map.createBlankLayer("ground",       this.tileset, 0, 0) || undefined;
             this.chasmLayer        = this.map.createBlankLayer("chasm",        this.tileset, 0, 0) || undefined;
             this.chasmOverlayLayer = this.map.createBlankLayer("chasmOverlay", this.tileset, 0, 0) || undefined;
+
+            // Decor layers (visual-only). These MUST NOT break base rendering if absent.
+            this.decalLayer        = this.map.createBlankLayer("decal",        this.tileset, 0, 0) || undefined;
+            this.propLayer         = this.map.createBlankLayer("props",        this.tileset, 0, 0) || undefined;
 
             if (!this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
                 throw new Error("[tileMapGlue.sync] missing one of ground/chasm/chasmOverlay layers");
             }
 
+            // Depths: keep tile layers behind sprites (sprites typically at depth 0+)
             this.groundLayer.setDepth(-1000);
             this.chasmLayer.setDepth(-900);
             this.chasmOverlayLayer.setDepth(-800);
 
+            // Decals/props render above base tiles but still behind characters by default.
+            if (this.decalLayer) this.decalLayer.setDepth(-700);
+            if (this.propLayer)  this.propLayer.setDepth(-600);
+
             logTiles(
                 this.debugLocal,
-                "[tileMapGlue.sync] created new Phaser.Tilemap with ground/chasm/overlay layers",
-                { rows, cols, tileSize }
+                "[tileMapGlue.sync] created new Phaser.Tilemap with base + decor layers",
+                { rows, cols, tileSize, hasDecalLayer: !!this.decalLayer, hasPropLayer: !!this.propLayer }
             );
         }
 
-        if (!this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
-            throw new Error("[tileMapGlue.sync] ground/chasm/overlay layer missing");
+        if (!this.map || !this.tileset || !this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
+            throw new Error("[tileMapGlue.sync] map/tileset/base layers missing");
         }
 
+        // If the world grid dimensions ever change at runtime, we currently do not rebuild the tilemap.
+        // Keep this safe: just log and return. (This preserves the "does not break game" invariant.)
+        const mapW = (this.map.width | 0);
+        const mapH = (this.map.height | 0);
+        if (mapW !== (cols | 0) || mapH !== (rows | 0)) {
+            logTiles(
+                this.debugLocal,
+                "[tileMapGlue.sync] WARNING: grid dims differ from existing tilemap dims; skipping rebuild",
+                { gridRows: rows, gridCols: cols, mapH, mapW }
+            );
+            return;
+        }
 
+        // Clear layers
         this.groundLayer.fill(-1);
         this.chasmLayer.fill(-1);
         this.chasmOverlayLayer.fill(-1);
-
+        if (this.decalLayer) this.decalLayer.fill(-1);
+        if (this.propLayer)  this.propLayer.fill(-1);
 
         // --------------------------------------------------------------
         // PASS 1: Fill with ground_light using center (and its variants)
         // --------------------------------------------------------------
-        //const rows = grid.length;
-        //const cols = rows > 0 ? grid[0].length : 0;
-
         const familyCounts = new Map<TileFamily, number>();
 
         for (let r = 0; r < rows; r++) {
@@ -340,13 +366,10 @@ export class WorldTileRenderer {
                 const baseFrame = baseDef ? baseDef.frameIndex : 0;
                 this.groundLayer.putTileAt(baseFrame, c, r);
 
-
                 const current = familyCounts.get(baseFamily) || 0;
                 familyCounts.set(baseFamily, current + 1);
             }
         }
-
-
 
         // --------------------------------------------------------------
         // PASS 2: Apply chasm/wall autotiles on top of ground
@@ -379,7 +402,6 @@ export class WorldTileRenderer {
 
                 // For now: any isolated chasm tile ("single") uses a decorative chasm
                 if (family === "chasm_light" && shape === "single") {
-                    // assuming TileAtlas knows how to serve "decor" for this family
                     def = this.atlas.getRandomVariant(family, "decor" as any)
                         ?? this.atlas.getAutoTile(family, "decor" as any);
                 } else {
@@ -393,19 +415,13 @@ export class WorldTileRenderer {
                         ?? this.atlas.getAutoTile(family, "center");
                 }
 
-
-
                 const frameIndex = def ? def.frameIndex : 0;
                 this.chasmLayer.putTileAt(frameIndex, c, r);
 
                 const current = familyCounts.get(family) || 0;
                 familyCounts.set(family, current + 1);
-
-                // (Optional, later) inner-corner overlay pass could go here,
-                // using innerCornerFromMask(mask).
             }
         }
-        
 
         // --------------------------------------------------------------
         // PASS 3: Chasm inner-corner overlays (2×2) on top
@@ -429,7 +445,6 @@ export class WorldTileRenderer {
                 const innerShape = innerCornerFromMask(mask);
                 if (innerShape === "none") continue;
 
-                // This relies on your TileAtlas having entries for innerNE/etc.
                 let innerDef =
                     this.atlas.getRandomVariant(family, innerShape as AutoShape) ||
                     this.atlas.getAutoTile(family, innerShape as AutoShape);
@@ -444,9 +459,6 @@ export class WorldTileRenderer {
             }
         }
 
-
-
-
         const countsSummary: Record<string, number> = {};
         for (const [fam, count] of familyCounts.entries()) {
             countsSummary[fam] = count;
@@ -460,4 +472,86 @@ export class WorldTileRenderer {
 
         // [tileMapGlue.WorldTileRenderer.syncFromEngineGrid] logging included
     }
+        /**
+     * Apply a visual-only decal overlay grid.
+     *
+     * This does NOT affect collisions. It writes into the optional "decal" layer.
+     *
+     * The input is a grid of semantic decal keys (e.g. "sand_patch").
+     * Empty: "" or null/undefined.
+     */
+    syncDecalGridByName(decalKeys: Array<Array<string | "" | null | undefined>>): void {
+        if (!this.map || !this.decalLayer) return;
+
+        const rows = decalKeys.length | 0;
+        const cols = rows > 0 ? (decalKeys[0].length | 0) : 0;
+
+        if ((this.map.height | 0) !== rows || (this.map.width | 0) !== cols) {
+            logTiles(
+                this.debugLocal,
+                "[tileMapGlue.decals] WARNING: decal grid dims differ from tilemap; skipping",
+                { decalRows: rows, decalCols: cols, mapH: this.map.height | 0, mapW: this.map.width | 0 }
+            );
+            return;
+        }
+
+        // Clear then place.
+        this.decalLayer.fill(-1);
+
+        for (let r = 0; r < rows; r++) {
+            const row = decalKeys[r];
+            for (let c = 0; c < cols; c++) {
+                const key = row[c];
+                if (!key) continue;
+
+                const vis = DECAL_VISUALS_BY_NAME[key];
+                if (!vis) continue;
+
+                // For now, tilemap rendering assumes the primary tileset is the terrain sheet.
+                if (vis.atlas !== "terrain") continue;
+
+                const frameIndex = terrainFrameIndexFromRef(vis.ref);
+                this.decalLayer.putTileAt(frameIndex, c, r);
+            }
+        }
+    }
+
+    /**
+     * Optional: Apply a visual-only prop overlay grid (tile-aligned props).
+     * Not required for v1 overlap proof, but available if you choose to render
+     * props as tiles instead of sprites.
+     */
+    syncPropGridByName(propKeys: Array<Array<string | "" | null | undefined>>): void {
+        if (!this.map || !this.propLayer) return;
+
+        const rows = propKeys.length | 0;
+        const cols = rows > 0 ? (propKeys[0].length | 0) : 0;
+
+        if ((this.map.height | 0) !== rows || (this.map.width | 0) !== cols) {
+            logTiles(
+                this.debugLocal,
+                "[tileMapGlue.props] WARNING: prop grid dims differ from tilemap; skipping",
+                { propRows: rows, propCols: cols, mapH: this.map.height | 0, mapW: this.map.width | 0 }
+            );
+            return;
+        }
+
+        this.propLayer.fill(-1);
+
+        for (let r = 0; r < rows; r++) {
+            const row = propKeys[r];
+            for (let c = 0; c < cols; c++) {
+                const key = row[c];
+                if (!key) continue;
+
+                const vis = PROP_VISUALS_BY_NAME[key];
+                if (!vis) continue;
+                if (vis.atlas !== "terrain") continue;
+
+                const frameIndex = terrainFrameIndexFromRef(vis.ref);
+                this.propLayer.putTileAt(frameIndex, c, r);
+            }
+        }
+    }
+
 }

@@ -21,6 +21,10 @@ namespace SpriteKind {
     export let ShopNpc: number
     export let ShopItem: number
     export let ShopUI: number
+    export let FloorPad: number
+    export let FloorInteractable: number
+    export let StoryNpc: number
+
 
 }
 
@@ -328,6 +332,10 @@ namespace SpriteKindArcade {
     export let ShopNpc: number
     export let ShopItem: number
     export let ShopUI: number
+    export let FloorPad: number
+    export let FloorInteractable: number
+    export let StoryNpc: number
+
 }
 
 // Allow referring to globalThis when a host (like Phaser) provides it.
@@ -534,7 +542,7 @@ namespace HeroEngine {
         if (_started) return;
         _started = true;
 
-        // NEW: reset shared coins + HUD
+        // reset shared coins + HUD
         teamCoins = 0
         if (teamCoinsHud && !(teamCoinsHud.flags & sprites.Flag.Destroyed)) teamCoinsHud.destroy()
         teamCoinsHud = null
@@ -550,12 +558,8 @@ namespace HeroEngine {
         // Shop boot (single path)
         installShopInputHandlers()
 
-        // REMOVE legacy shop box spawner (it is a different shop system and conflicts)
-        // spawnShopNpcBox( (userconfig.ARCADE_SCREEN_WIDTH>>1), (userconfig.ARCADE_SCREEN_HEIGHT>>1) + 30, 1 )
-
-        setupTestEnemies();
-        setupEnemySpawners();
-        startEnemyWaves();
+        // NEW: start dungeon run
+        dungeonStartRun(game.runtime() | 0)
     }
 
 }
@@ -710,6 +714,30 @@ const WORLD_TILE_SIZE = 32          // private
 const TILE_EMPTY = 0                // private
 const TILE_WALL = 1                 // private
 
+
+// --------------------------------------------------------------
+// DECOR/PROPS (ENGINE-OWNED SEMANTIC IDS)
+// IMPORTANT:
+//   • Engine/gameplay code is ART-AGNOSTIC.
+//   • Mapping from these semantic ids -> atlas row/col lives in tileAtlas.ts.
+//   • Students / engine logic should reference these ids (or their names),
+//     never renderer-specific atlas coordinates.
+// --------------------------------------------------------------
+const DECAL_NONE = 0
+const DECAL_SAND_PATCH = 1
+
+const PROP_NONE = 0
+const PROP_ROCK_MOUNTAIN = 1
+
+// Decor collider sprite data keys (engine writes; Phaser wrapper reads)
+const DECOR_DATA = {
+    IS_COLLIDER: "decorCollider", // 0/1
+    ID: "decorId",               // numeric semantic id (decal or prop id)
+    ROLE: "decorRole",           // 1=trigger, 2=solid
+    NAME: "decorName",           // optional debug string
+} as const
+
+
 // --------------------------------------
 // Tile collision shapes (per tile "type")
 // --------------------------------------
@@ -748,6 +776,22 @@ const TILE_COLLISION_DEFS: TileCollisionShape[] = [
 
 // 2D array of numbers for engine-internal use only
 let _engineWorldTileMap: number[][] = []
+let _engineWorldRev = 0;
+// --------------------------------------------------------------
+// ENGINE-OWNED DECOR STATE (ART-AGNOSTIC)
+//  - decals: tile-aligned signaling layer (students query underfoot)
+//  - triggers: overlap-only colliders (may be Tier2 later)
+//  - solids: blocking later; overlap proof now
+// --------------------------------------------------------------
+let _engineDecalGrid: number[][] = []
+let _engineDecorTriggers: Sprite[] = []
+let _engineDecorSolids: Sprite[] = []
+let _engineDecorRev = 0
+
+const DECOR_ROLE = {
+    TRIGGER: 1,
+    SOLID: 2,
+} as const
 
 // ====================================================
 // WORLD SIZE CONFIG (MakeCode / HeroEngine side)
@@ -759,7 +803,7 @@ let _engineWorldTileMap: number[][] = []
 // Target world size in tiles.
 // Example: 1920x1080 with 64px tiles → 30 x 17 tiles.
 // Adjust these numbers, not the code, when you want a new world size.
-const WORLD_TILES_W = 48/2;     // columns
+const WORLD_TILES_W = 50/2;     // columns
 const WORLD_TILES_H = 26/2;     // rows
 
 // Optional small safety floor
@@ -950,6 +994,11 @@ const HERO_DATA = {
     // NEW: for tile-collision rollback
     PREV_X: "prevX",
     PREV_Y: "prevY",
+
+    // NEW: underfoot tile/decal lookup (student logic + Phaser/Arcade parity)
+    TILE_R: "tileR",                 // tile row under hero
+    TILE_C: "tileC",                 // tile col under hero
+    DECAL_ID_UNDERFOOT: "decalUnderId", // semantic decal id at [tileR][tileC]
 
     // NEW: hero death state (for LPC death animation timing)
     IS_DEAD: "isDead",
@@ -1168,6 +1217,10 @@ const OUT = {
     ANIM_ID: 6,
     LEN: 7
 }
+
+
+let nextIntentDispatchMs = 0
+
 
 // --------------------------------------------------------------
 // Contact / i-frames / visual tuning
@@ -1392,6 +1445,17 @@ const INT_DETONATE_END_KEY = "INT_DE"     // detonation end time (ms)
 const INT_CTRL_UNTIL_KEY = "INT_CTRL_UNTIL"
 
 
+const INT_SPELL_CREATED_AT_MS_KEY = "INT_CA" // ms
+const INT_SPELL_SPAWNED_AT_MS_KEY = "INT_SA" // ms
+
+// Cached combat stats for INT cast (published on hero; copied onto spell at spawn)
+const INT_CAST_DMG_KEY = "INT_CAST_DMG"
+const INT_CAST_RADIUS_KEY = "INT_CAST_RADIUS"
+const INT_CAST_DMG_MULT_KEY = "INT_CAST_DMG_MULT"
+
+// Optional multiplier stored on the spell (if you ever use it later)
+const INT_DAMAGE_MULT_KEY = "INT_DAMAGE_MULT"
+
 // ====================================================
 // INTELLECT CAST PARTS (hero animation segmentation)
 // ====================================================
@@ -1407,6 +1471,27 @@ const INT_CAST_LAND_END_MS_KEY = "INT_CAST_LAND_END_MS"
 
 const INT_SPELL_EXPIRES_AT_MS_KEY = "intSpellExpiresAtMs"
 
+const DEBUG_INT_DET = true
+const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = true
+
+// If Phaser isn’t uploading per-pixel mutations, forcing setImage() each linger tick can “wake it up”.
+const INT_LINGER_FORCE_SETIMAGE = true
+
+// Stronger hammer: clone the image each tick so it’s a *new* reference (more expensive).
+const INT_LINGER_FORCE_CLONE = false
+
+
+// Link hero -> active intellect spell sprite (optional but useful for contract/debug)
+const INT_SPELL_SPRITE_KEY = "__intSpellSprite"
+
+const INT_TERM_HIT_KEY = "INT_THIT"
+
+const INT_PULSE_PERIOD_MS_KEY = "__intPulsePeriodMs";
+const INT_PULSE_NEXT_AT_MS_KEY = "__intPulseNextAtMs";
+const INT_PULSE_WINDOW_END_MS_KEY = "__intPulseWindowEndMs";
+const INT_PULSE_HIT_MASK_KEY = "__intPulseHitMask";
+
+const PROJ_PHASER_VISUAL_MODEL_KEY = "__phaserVisualModel";
 
 
 // --------------------------------------------------------------
@@ -1635,6 +1720,12 @@ const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale 
 // ------------------------------------------------------------
 // CONTRACT SNAPSHOT DEBUG (aggregated per tick, change-gated)
 // ------------------------------------------------------------
+//This is the master debug timeline updater
+//Master timeline
+//Master contract
+//Timeline log
+//Contract log
+
 
 const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 //The master debug turn on and turn off
@@ -1658,6 +1749,485 @@ const _dbgContract_pendingCoreLineByHero: string[] = []
 // These should NOT be part of the "core identity" signature.
 const DEBUG_CONTRACT_VOLATILE_PART_WINDOWS: string[] = ["drive", "beat"]
 
+
+// ------------------------------------------------------------
+// CONTRACT schema (self-describing, versioned)
+// Bump CONTRACT_SCHEMA_VERSION ONLY on breaking interpretation changes.
+// ------------------------------------------------------------
+const CONTRACT_SCHEMA_VERSION = 1
+const CONTRACT_SCHEMA_NAME = "HeroRuntimeContract"
+
+
+// Consolidation / anti-token-bloat:
+// - Max prints per second (0 disables)
+// - If exceeded, we suppress additional lines and print a summary.
+let DEBUG_CONTRACT_MAX_PRINTS_PER_SEC = 60
+
+const _dbgContract_pendingIncludedByHero: string[] = []
+const _dbgContract_pendingEntitiesLineByHero: string[] = []
+
+// Schema + consolidation state
+let _dbgContract_budgetWindowStartMs = 0
+let _dbgContract_printsInWindow = 0
+let _dbgContract_suppressedInWindow = 0
+
+
+// ------------------------------------------------------------
+// WHY aggregation (per hero, per tick)
+// ------------------------------------------------------------
+
+let DEBUG_CONTRACT_RUN_THROTTLE_MS = 1000 // RUN lines only (when no core change), per hero
+
+const _dbgContract_pendingWhyCountsByHero: any[] = []  // each entry: { [whyId: string]: number }
+const _dbgContract_pendingWhyOrderByHero: string[] = [] // pipe-separated whyIds in first-seen order
+const _dbgContract_lastRunPrintMsByHero: number[] = []
+
+// ------------------------------------------------------------
+// DIFF snapshot (small, stable subset)
+// ------------------------------------------------------------
+
+const _dbgContract_lastDiffSnapByHero: string[] = []          // last printed snapshot
+const _dbgContract_pendingDiffByHero: string[] = []           // DIFF:[...] for this tick (if EDGE)
+const _dbgContract_pendingDiffSnapByHero: string[] = []       // snapshot observed this tick
+
+
+
+// ------------------------------------------------------------
+// CONTRACT WHY/WHO/TOUCH (per-tick per-hero aggregation)
+// ------------------------------------------------------------
+const _dbgContract_pendingWhoByHero: string[] = []
+const _dbgContract_pendingTouchedByHero: string[] = []
+
+
+
+const TOUCH_PHASE_WINDOW = "PhaseName,PhaseStartMs,PhaseDurationMs,PhaseProgressInt"
+const TOUCH_PHASE_PART = "PhasePartName,PhasePartStartMs,PhasePartDurationMs,PhasePartProgress,PhasePartFlags"
+
+const TOUCH_EVENT_RESET = "EventSequence,EventMask,EventP0,EventP1,EventP2,EventP3"
+const TOUCH_EVENT_CLEAR = "EventMask,EventP0,EventP1,EventP2,EventP3"
+
+const TOUCH_RENDER_STYLE = "RenderStyleMask,RenderStyleP0,RenderStyleP1"
+
+// compound (comma-safe)
+const TOUCH_ACTION_BEGIN_HYGIENE = "PhaseFlags," + TOUCH_EVENT_CLEAR + "," + TOUCH_PHASE_PART
+
+
+// How often we allow a "movement-only" EDGE line (ms)
+const DEBUG_CONTRACT_ENT_MOVE_EVERY_MS = 100
+
+// Quantize XY so tiny jitter doesn't spam (pixels). 2 = (x>>1).
+const DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT = 1
+
+// Per-hero movement gating
+let _dbgContract_lastEntMoveSigByHero: string[] = []
+let _dbgContract_lastEntMovePrintAtByHero: number[] = []
+
+
+
+
+function _dbgContract_assertTouchConstants(): void {
+    // One-time sanity check: every token in TOUCH_* constants must correspond
+    // to a real HERO_DATA key name (e.g. "PhaseName" must exist in HERO_DATA).
+
+    const pairs: { name: string, csv: string }[] = [
+        { name: "TOUCH_PHASE_WINDOW", csv: TOUCH_PHASE_WINDOW },
+        { name: "TOUCH_PHASE_PART", csv: TOUCH_PHASE_PART },
+        { name: "TOUCH_EVENT_RESET", csv: TOUCH_EVENT_RESET },
+        { name: "TOUCH_EVENT_CLEAR", csv: TOUCH_EVENT_CLEAR },
+        { name: "TOUCH_RENDER_STYLE", csv: TOUCH_RENDER_STYLE },
+        { name: "TOUCH_ACTION_BEGIN_HYGIENE", csv: TOUCH_ACTION_BEGIN_HYGIENE },
+    ]
+
+    for (let i = 0; i < pairs.length; i++) {
+        const name = pairs[i].name
+        const csv = pairs[i].csv || ""
+
+        const parts = csv.split(",")
+        let seenPipe = "" // pipe-set for duplicates
+
+        for (let j = 0; j < parts.length; j++) {
+            const token = (parts[j] || "").trim()
+            if (!token) continue
+
+            // duplicate detection
+            const needle = "|" + token + "|"
+            const hay = "|" + seenPipe + "|"
+            if (hay.indexOf(needle) >= 0) {
+                console.log(`[CONTRACT][ASSERT] TOUCH constant ${name} has duplicate token: "${token}" csv="${csv}"`)
+                continue
+            }
+            seenPipe = seenPipe ? (seenPipe + "|" + token) : token
+
+            // HERO_DATA key existence check (token is a property name in HERO_DATA)
+            if (!((HERO_DATA as any)[token])) {
+                console.log(`[CONTRACT][ASSERT] TOUCH constant ${name} references unknown HERO_DATA key "${token}" csv="${csv}"`)
+            }
+        }
+    }
+}
+
+
+
+function _dbgContract_pipeAppendUnique(prev: string, token: string): string {
+    const p = prev || ""
+    const t = token || ""
+    if (!t) return p
+
+    const needle = "|" + t + "|"
+    const hay = "|" + p + "|"
+    if (hay.indexOf(needle) >= 0) return p
+
+    return p ? (p + "|" + t) : t
+}
+
+
+function _dbgContract_printWhyLegend(): void {
+    const keys = Object.keys(CONTRACT_WHY_TABLE)
+    keys.sort()
+
+    console.log(
+        `[CONTRACT-WHY-LEGEND v=${CONTRACT_SCHEMA_VERSION} schema=${CONTRACT_SCHEMA_NAME}] ` +
+        `n=${keys.length} (sorted by whyId)`
+    )
+
+    for (let i = 0; i < keys.length; i++) {
+        const id = keys[i]
+        const fn = (CONTRACT_WHY_TABLE[id] || "")
+        console.log(`[CONTRACT-WHY] ${id} -> ${fn}`)
+    }
+}
+
+
+
+function _dbgContract_consumeWhoSummary(hi: number): string {
+    const heroIndex = hi | 0
+    const prev = _dbgContract_pendingWhoByHero[heroIndex] || ""
+    if (!prev) return ""
+
+    const parts = prev.split("|")
+    let out = ""
+    for (let i = 0; i < parts.length; i++) {
+        const s = parts[i]
+        if (!s) continue
+        out = out ? (out + ", " + s) : s
+    }
+    return out
+}
+
+function _dbgContract_clearWho(hi: number): void {
+    const heroIndex = hi | 0
+    _dbgContract_pendingWhoByHero[heroIndex] = ""
+}
+
+function _dbgContract_consumeTouchSummary(hi: number): string {
+    const heroIndex = hi | 0
+    const prev = _dbgContract_pendingTouchedByHero[heroIndex] || ""
+    if (!prev) return ""
+
+    const parts = prev.split("|")
+    let out = ""
+    for (let i = 0; i < parts.length; i++) {
+        const s = parts[i]
+        if (!s) continue
+        out = out ? (out + ", " + s) : s
+    }
+    return out
+}
+
+function _dbgContract_clearTouch(hi: number): void {
+    const heroIndex = hi | 0
+    _dbgContract_pendingTouchedByHero[heroIndex] = ""
+}
+
+
+
+function _dbgContract_trackTouch(
+    heroIndex: number,
+    whyId: string,
+    where: string,
+    touchedCsv: string
+): void {
+    if (!DEBUG_CONTRACT_SNAPSHOT) return
+
+    const hi = heroIndex | 0
+    if (hi < 0) return
+
+    const why = whyId || ""
+    const who = where || ""
+
+    // WHY validity is enforced; and for robustness, we ALSO record WHY here
+    // (only if not already recorded this tick) so trackTouch-only callsites
+    // still contribute to WHY aggregation.
+    if (why) {
+        _dbgContract_assertWhyId(why, who || "unknown")
+
+        const counts = _dbgContract_pendingWhyCountsByHero[hi]
+        const prev = counts ? ((counts[why] | 0) || 0) : 0
+        if (prev === 0) {
+            _dbgContract_noteWhy(hi, why, who || "unknown")
+        }
+    }
+
+    // WHO: unique list
+    if (who) {
+        _dbgContract_pendingWhoByHero[hi] = _dbgContract_pipeAppendUnique(
+            _dbgContract_pendingWhoByHero[hi] || "",
+            who
+        )
+    }
+
+    // TOUCHED: unique list of field names (CSV input)
+    const csv = touchedCsv || ""
+    if (!csv) return
+
+    const parts = csv.split(",")
+    for (let i = 0; i < parts.length; i++) {
+        const f = (parts[i] || "").trim()
+        if (!f) continue
+        _dbgContract_pendingTouchedByHero[hi] = _dbgContract_pipeAppendUnique(
+            _dbgContract_pendingTouchedByHero[hi] || "",
+            f
+        )
+    }
+}
+
+
+
+
+
+
+function _dbgContract_noteWhy(hi: number, whyId: string, funcName: string): void {
+    const heroIndex = hi | 0
+    if (heroIndex < 0) return
+    if (!whyId) return
+
+    _dbgContract_assertWhyId(whyId, funcName)
+
+    let counts = _dbgContract_pendingWhyCountsByHero[heroIndex]
+    if (!counts) {
+        counts = {}
+        _dbgContract_pendingWhyCountsByHero[heroIndex] = counts
+    }
+
+    const prev = (counts[whyId] | 0) || 0
+    counts[whyId] = (prev + 1) | 0
+
+    if (prev === 0) {
+        const prevOrder = _dbgContract_pendingWhyOrderByHero[heroIndex] || ""
+        _dbgContract_pendingWhyOrderByHero[heroIndex] = prevOrder ? (prevOrder + "|" + whyId) : whyId
+    }
+}
+
+function _dbgContract_consumeWhySummary(hi: number): string {
+    const heroIndex = hi | 0
+    const counts = _dbgContract_pendingWhyCountsByHero[heroIndex]
+    const order = _dbgContract_pendingWhyOrderByHero[heroIndex] || ""
+    if (!counts || !order) return ""
+
+    const ids = order.split("|")
+    let out = ""
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        if (!id) continue
+        const n = (counts[id] | 0) || 0
+        if (n <= 0) continue
+        out = out ? (out + ", " + id + "×" + n) : (id + "×" + n)
+    }
+    return out
+}
+
+function _dbgContract_clearWhy(hi: number): void {
+    const heroIndex = hi | 0
+    _dbgContract_pendingWhyCountsByHero[heroIndex] = null
+    _dbgContract_pendingWhyOrderByHero[heroIndex] = ""
+}
+
+// A small “diff snapshot” string: subset of fields only.
+// IMPORTANT: keep order stable forever unless you bump schema.
+function _dbgContract_buildDiffSnap(args: {
+  playerId: number;
+  heroIndex: number;
+  actionSeq: number;
+  actionKind: string;
+  actionVar: number;
+  actionSeed: number;
+  actionTgt: number;
+  phase: string;
+  part: string;
+  locked: number;
+  ctrlSpell: number;
+  strCharge: number;
+  agiState: number;
+  family: number;
+  dir: number;
+  phaseMirror: string;
+  frameColOverride: number;
+  weaponSlash: string;
+  weaponThrust: string;
+  weaponCast: string;
+  weaponExec: string;
+  weaponCombo: string;
+  hasEntities: boolean;
+  entSig: string;
+}): string {
+  // IMPORTANT: diff snapshots are '|' delimited. NO FIELD may contain '|'.
+  // entSig currently uses '|' internally, so we sanitize it here.
+  const entToken = args.hasEntities
+    ? ("E{" + (args.entSig || "").replace(/\|/g, ",") + "}")
+    : "E{}";
+
+  return [
+    args.playerId | 0,
+    args.heroIndex | 0,
+    args.actionSeq | 0,
+    args.actionKind || "",
+    args.actionVar | 0,
+    args.actionSeed | 0,
+    args.actionTgt | 0,
+    args.phase || "",
+    args.part || "",
+    args.locked | 0,
+    args.ctrlSpell | 0,
+    args.strCharge | 0,
+    args.agiState | 0,
+    args.family | 0,
+    args.dir | 0,
+    args.phaseMirror || "",
+    args.frameColOverride | 0,
+    args.weaponSlash || "",
+    args.weaponThrust || "",
+    args.weaponCast || "",
+    args.weaponExec || "",
+    args.weaponCombo || "",
+    entToken,
+  ].join("|");
+}
+
+function _dbgContract_diffFromSnaps(prevSnap: string, nextSnap: string): string {
+  const labels = [
+    "playerId",
+    "heroIndex",
+    "actionSeq",
+    "actionKind",
+    "actionVar",
+    "actionSeed",
+    "actionTgt",
+    "phase",
+    "part",
+    "locked",
+    "ctrlSpell",
+    "strCharge",
+    "agiState",
+    "family",
+    "dir",
+    "phaseMirror",
+    "frameColOverride",
+    "weaponSlash",
+    "weaponThrust",
+    "weaponCast",
+    "weaponExec",
+    "weaponCombo",
+    "entities",
+  ];
+
+  const prev = prevSnap ? prevSnap.split("|") : [];
+  const next = nextSnap ? nextSnap.split("|") : [];
+
+  const trunc = (s: string, max: number) => (s.length > max ? (s.slice(0, max - 1) + "…") : s);
+
+  const diffs: string[] = [];
+  for (let i = 0; i < labels.length; i++) {
+    const a = (prev[i] ?? "");
+    const b = (next[i] ?? "");
+    if (a !== b) {
+      if (labels[i] === "entities") {
+        diffs.push(`entities ${trunc(a, 64)}→${trunc(b, 64)}`);
+      } else {
+        diffs.push(`${labels[i]} ${a}→${b}`);
+      }
+    }
+  }
+  return diffs.join(", ");
+}
+
+
+
+
+let _dbgContractPrintedSchema = false
+
+function _dbgContract_printSchemaOnce(): void {
+    if (_dbgContractPrintedSchema) return
+    _dbgContractPrintedSchema = true
+
+    console.log(
+        `[CONTRACT-SCHEMA v=1 schema=HeroRuntimeContract file=HeroEngineInPhaser.ts] ` +
+        `Included{...} lists blocks present in each [CONTRACT] line. ` +
+        `Missing block => intentionally omitted (NOT implied zero). ` +
+        `Blocks are CURRENT STATE snapshots (not timelines). ` +
+        `Hero Phase/PhasePart describe HERO control/animation only. ` +
+        `Entity lifecycle is NOT implied by hero phase.`
+    )
+
+    console.log(
+        `[CONTRACT-WHY-SCHEMA v=1] ` +
+        `Why IDs are canonical cause identifiers. ` +
+        `They map directly to decision-point functions via CONTRACT_WHY_TABLE. ` +
+        `If a Why ID appears in logs, START investigation at its mapped function.`
+    )
+
+    _dbgContract_assertTouchConstants()
+    _dbgContract_printWhyLegend()
+
+}
+
+
+function _dbgContract_budgetMaybeRotateWindow(nowMs: number): void {
+    const now = nowMs | 0
+    if (_dbgContract_budgetWindowStartMs === 0) {
+        _dbgContract_budgetWindowStartMs = now
+        return
+    }
+
+    // Rotate on 1s boundaries (relative) so we can emit a suppression summary.
+    if ((now - _dbgContract_budgetWindowStartMs) >= 1000) {
+        if (_dbgContract_suppressedInWindow > 0) {
+            console.log(
+                `[CONTRACT-SUPPRESS v=${CONTRACT_SCHEMA_VERSION}] ` +
+                `t=${_dbgContract_budgetWindowStartMs}->${now} ` +
+                `printed=${_dbgContract_printsInWindow} suppressed=${_dbgContract_suppressedInWindow} ` +
+                `(suppressed lines mean some intermediate state changes were omitted to reduce log volume)`
+            )
+        }
+        _dbgContract_budgetWindowStartMs = now
+        _dbgContract_printsInWindow = 0
+        _dbgContract_suppressedInWindow = 0
+    }
+}
+
+function _dbgContract_budgetAllowPrint(nowMs: number): boolean {
+    const now = nowMs | 0
+    _dbgContract_budgetMaybeRotateWindow(now)
+
+    const maxPerSec = DEBUG_CONTRACT_MAX_PRINTS_PER_SEC | 0
+    if (maxPerSec <= 0) return true
+
+    if (_dbgContract_printsInWindow >= maxPerSec) {
+        _dbgContract_suppressedInWindow++
+        return false
+    }
+    _dbgContract_printsInWindow++
+    return true
+}
+
+function _dbgContract_includedList(hasEntities: boolean): string {
+    // Canonical: full words, no implicit mapping.
+    // Keep order stable so the eye learns it, but do NOT rely on order for meaning.
+    const base = "Action Phase PhasePart Event Style Lock Glue Weapons Progress"
+    return hasEntities ? (base + " Entities") : base
+}
+
+
+
 function _dbgContract_isVolatilePartWindow(partName: string): boolean {
     const p = partName || ""
     for (let i = 0; i < DEBUG_CONTRACT_VOLATILE_PART_WINDOWS.length; i++) {
@@ -1666,14 +2236,205 @@ function _dbgContract_isVolatilePartWindow(partName: string): boolean {
     return false
 }
 
+// ------------------------------------------------------------
+// CONTRACT WHY TABLE (canonical cause → decision-point function)
+// These IDs are semantic, full-word, and LLM-targeted.
+// If a WHY ID appears in logs, START investigation at its mapped function.
+// ------------------------------------------------------------
+
+const CONTRACT_WHY_TABLE: Record<string, string> = {
+    // Strength
+    STRENGTH_CHARGE_BEGIN: "updateStrengthChargeForHero",
+    STRENGTH_CHARGE_RELEASE: "updateStrengthChargeForHero",
+    STRENGTH_PROJECTILE_SPAWN: "updateStrengthChargeForHero",
+    STRENGTH_SWING_BEGIN: "releaseStrengthCharge",
+    STRENGTH_CHARGE_TICK: "updateStrengthChargeForHero",
+
+    // Agility
+    AGILITY_EXEC_BEGIN: "agiBeginExecute",
+    AGILITY_EXEC_TICK: "updateAgilityExecuteAll",
+
+    // Intellect
+    INTELLECT_CAST_BEGIN: "updateIntellectSpellsControl",
+    INTELLECT_SPELL_SPAWN: "updateIntellectSpellsControl",
+    INTELLECT_DETONATE_REQUEST_HIT_ENEMY: "detonateIntellectSpellForHero",
+    INTELLECT_DETONATE_REQUEST_HIT_WALL: "detonateIntellectSpellForHero",
+    INTELLECT_SPELL_CLEANUP: "updateIntellectSpellsControl",
+    INTELLECT_CAST_TICK: "updateIntellectSpellsControl",
+    INTELLECT_CAST_DRIVE: "updateIntellectSpellsControl",
+    INTELLECT_CAST_FINISH: "finishIntellectSpellForHero",
+    // Intellect (additions)
+    INTELLECT_DETONATE_REQUEST_EXPIRE: "detonateIntellectSpellForHero",
+    INTELLECT_DETONATE_REQUEST_UNKNOWN: "detonateIntellectSpellForHero",
 
 
-function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
+
+    // Movement ambient / ownership gates
+    AMBIENT_SKIP_INT_LAND: "updateHeroMovementPhase",
+    AMBIENT_SKIP_CTRL_SPELL: "updateHeroMovementPhase",
+    AMBIENT_SKIP_AGI_EXEC: "updateHeroMovementPhase",
+    AMBIENT_SKIP_STR_CHARGING: "updateHeroMovementPhase",
+    AMBIENT_SKIP_FRAME_COL_OVERRIDE: "updateHeroMovementPhase",
+    AMBIENT_SKIP_BUSY: "updateHeroMovementPhase",
+    AMBIENT_SKIP_DEAD: "updateHeroMovementPhase",
+    AMBIENT_SKIP_NPC: "updateHeroMovementPhase",
+
+    // Ambient writes / repairs
+    AMBIENT_CLEAR_ACTION_KIND: "updateHeroMovementPhase",
+    AMBIENT_SET_PHASE_CHANGE: "updateHeroMovementPhase",
+    AMBIENT_SET_PHASE_REPAIR_WINDOW: "updateHeroMovementPhase",
+    AMBIENT_SET_PHASE_PROGRESS: "updateHeroMovementPhase",
+    AMBIENT_CLEAR_PHASE_PART: "updateHeroMovementPhase",
+
+    // Action edge + init/death + tick updaters
+    ACTION_EDGE_BEGIN: "_doHeroMoveBeginActionTimeline",
+    HERO_CREATE_INIT: "createHeroForPlayer",
+    HERO_DEATH_BEGIN: "applyDamageToHeroIndex",
+
+}
+
+
+function _dbgContract_readHeroContractObs(nowMs: number, hi: number, hero: Sprite): any {
+    const now = nowMs | 0
+    const heroIndex = hi | 0
+
+    // ---------------- Read contract ----------------
+    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+
+    const aSeq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+    const aKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+    const aVar = sprites.readDataNumber(hero, HERO_DATA.ActionVariant) | 0
+    const aSeed = sprites.readDataNumber(hero, HERO_DATA.ActionSeed) | 0
+    const aTgt = sprites.readDataNumber(hero, HERO_DATA.ActionTargetId) | 0
+
+    const ph = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
+    const phS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
+    const phD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    const phF = sprites.readDataNumber(hero, HERO_DATA.PhaseFlags) | 0
+    const phP = sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0
+
+    const pp = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const ppS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const ppD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+    const ppF = sprites.readDataNumber(hero, HERO_DATA.PhasePartFlags) | 0
+    const ppP = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+
+    const eSeq = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
+    const eMask = sprites.readDataNumber(hero, HERO_DATA.EventMask) | 0
+    const e0 = sprites.readDataNumber(hero, HERO_DATA.EventP0) | 0
+    const e1 = sprites.readDataNumber(hero, HERO_DATA.EventP1) | 0
+    const e2 = sprites.readDataNumber(hero, HERO_DATA.EventP2) | 0
+    const e3 = sprites.readDataNumber(hero, HERO_DATA.EventP3) | 0
+
+    const rs = sprites.readDataNumber(hero, HERO_DATA.RenderStyleMask) | 0
+    const rs0 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP0) | 0
+    const rs1 = sprites.readDataNumber(hero, HERO_DATA.RenderStyleP1) | 0
+
+    const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) ? 1 : 0
+    const ctrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL) ? 1 : 0
+    const strCh = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0
+    const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+
+    const dir = sprites.readDataNumber(hero, HERO_DATA.DIR) | 0
+    const phaseMirror = sprites.readDataString(hero, HERO_DATA.PHASE) || ""
+    const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+
+    const wSl = sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || ""
+    const wTh = sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
+    const wCa = sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || ""
+    const wEx = sprites.readDataString(hero, HERO_DATA.WEAPON_EXEC_ID) || ""
+    const wCo = sprites.readDataString(hero, HERO_DATA.WEAPON_COMBO_ID) || ""
+
+    // ------------------------------------------------------------
+    // Entities (owned transient objects): projectiles, controlled spells, detonations, etc.
+    // ------------------------------------------------------------
+    let hasEntities = false
+    let entSig = ""
+    let entLine = ""
+
+    const likelyEntities = (ctrl !== 0) || (aKind && aKind !== "none")
+    if (likelyEntities) {
+        let ownedProj = 0
+        let ownedDet = 0
+        for (let i = 0; i < heroProjectiles.length; i++) {
+            const proj = heroProjectiles[i]
+            if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
+            const pHi = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX) | 0
+            if (pHi !== heroIndex) continue
+            ownedProj++
+            if (sprites.readDataNumber(proj, INT_DETONATED_KEY)) ownedDet++
+        }
+
+        let ctlExists = 0
+        let ctlDet = 0
+        let ctlActive = 0
+        let ctlExpAt = 0
+        let ctlDestroyAt = 0
+        let ctlMv = ""
+        let ctlX = 0
+        let ctlY = 0
+        let ctlTermHit = 0
+
+        const spell = heroControlledSpells[heroIndex]
+        if (spell && !(spell.flags & sprites.Flag.Destroyed)) {
+            ctlExists = 1
+            ctlDet = sprites.readDataNumber(spell, INT_DETONATED_KEY) | 0
+            ctlActive = sprites.readDataNumber(spell, PROJ_DATA.IS_ACTIVE) | 0
+            ctlExpAt = sprites.readDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+            ctlDestroyAt = sprites.readDataNumber(spell, PROJ_DATA.DESTROY_AT) | 0
+            ctlMv = sprites.readDataString(spell, PROJ_DATA.MOVE_TYPE) || ""
+            ctlX = spell.x | 0
+            ctlY = spell.y | 0
+            ctlTermHit = sprites.readDataNumber(spell, PROJ_DATA.TERMINUS_HIT) | 0
+        }
+
+        if (ownedProj > 0 || ctlExists || ctrl !== 0) {
+            hasEntities = true
+            const ttl = (ctlExpAt > 0) ? Math.max(0, (ctlExpAt - now) | 0) : 0
+            entLine =
+                `Entities{` +
+                `ownedProj=${ownedProj} ownedDet=${ownedDet} ` +
+                `ctrlFlag=${ctrl} ` +
+                `ctl=${ctlExists ? (ctlMv || "spell") : "-"} ` +
+                `ctlDet=${ctlDet} ctlAct=${ctlActive} ttl=${ttl} destroyAt=${ctlDestroyAt} ` +
+                `xy=${ctlX},${ctlY} termHit=${ctlTermHit}` +
+                `}`
+
+            entSig =
+                ownedProj + "|" + ownedDet + "|" +
+                ctrl + "|" +
+                ctlExists + "|" + ctlDet + "|" + ctlActive + "|" +
+                ctlExpAt + "|" + ctlDestroyAt + "|" + ctlMv + "|" +
+                ctlX + "|" + ctlY + "|" + ctlTermHit
+        }
+    }
+
+    const included = _dbgContract_includedList(hasEntities)
+
+    return {
+        owner,
+        aSeq, aKind, aVar, aSeed, aTgt,
+        ph, phS, phD, phF, phP,
+        pp, ppS, ppD, ppF, ppP,
+        eSeq, eMask, e0, e1, e2, e3,
+        rs, rs0, rs1,
+        busyUntil, locked, ctrl, strCh, agiState,
+        dir, phaseMirror, fco, family,
+        wSl, wTh, wCa, wEx, wCo,
+        hasEntities, entSig, entLine, included
+    }
+}
+
+function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
     if (!DEBUG_CONTRACT_SNAPSHOT) return
     if (!HeroEngine._isStarted()) return
 
     const now = nowMs | 0
     const st = stage || ""
+
+    _dbgContract_printSchemaOnce()
 
     // ------------------------------------------------------------
     // Auto-flush previous tick when we observe a new tick time.
@@ -1745,8 +2506,107 @@ function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
         const wCo = sprites.readDataString(hero, HERO_DATA.WEAPON_COMBO_ID) || ""
 
         // ------------------------------------------------------------
-        // Per-tick aggregation meta (tspan + progress before/after)
-        // Format: "t0,t1,phP0,phP1,ppP0,ppP1"
+        // Entities (owned transient objects): projectiles, controlled spells, detonations, etc.
+        // ------------------------------------------------------------
+        let hasEntities = false
+
+        // Full Entities line (big) — keep for major edges.
+        let entLine = ""
+
+        // entSigStable: INCLUDED IN coreSig (semantic). MUST NOT include XY.
+        let entSigStable = ""
+
+        // entMoveSig: ONLY for movement-only mini edges (includes quantized XY).
+        let entMoveSig = ""
+
+        // Mini movement line (small).
+        let entMoveLine = ""
+
+        const likelyEntities = (ctrl !== 0) || (aKind && aKind !== "none")
+        if (likelyEntities) {
+            let ownedProj = 0
+            let ownedDet = 0
+            for (let i = 0; i < heroProjectiles.length; i++) {
+                const proj = heroProjectiles[i]
+                if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
+                const pHi = sprites.readDataNumber(proj, PROJ_DATA.HERO_INDEX) | 0
+                if (pHi !== hi) continue
+                ownedProj++
+                if (sprites.readDataNumber(proj, INT_DETONATED_KEY)) ownedDet++
+            }
+
+            let ctlExists = 0
+            let ctlDet = 0
+            let ctlActive = 0
+            let ctlExpAt = 0
+            let ctlDestroyAt = 0
+            let ctlMv = ""
+            let ctlX = 0
+            let ctlY = 0
+            let ctlVX = 0
+            let ctlVY = 0
+            let ctlTermHit = 0
+
+            const spell = heroControlledSpells[hi]
+            if (spell && !(spell.flags & sprites.Flag.Destroyed)) {
+                ctlExists = 1
+                ctlDet = sprites.readDataNumber(spell, INT_DETONATED_KEY) | 0
+                ctlActive = sprites.readDataNumber(spell, PROJ_DATA.IS_ACTIVE) | 0
+                ctlExpAt = sprites.readDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+                ctlDestroyAt = sprites.readDataNumber(spell, PROJ_DATA.DESTROY_AT) | 0
+                ctlMv = sprites.readDataString(spell, PROJ_DATA.MOVE_TYPE) || ""
+                ctlX = spell.x | 0
+                ctlY = spell.y | 0
+                ctlVX = spell.vx | 0
+                ctlVY = spell.vy | 0
+                ctlTermHit = sprites.readDataNumber(spell, PROJ_DATA.TERMINUS_HIT) | 0
+            }
+
+            if (ownedProj > 0 || ctlExists || ctrl !== 0) {
+                hasEntities = true
+
+                // Big line for major edges (unchanged behavior)
+                const ttl = (ctlExpAt > 0) ? Math.max(0, (ctlExpAt - now) | 0) : 0
+                entLine =
+                    `Entities{` +
+                    `ownedProj=${ownedProj} ownedDet=${ownedDet} ` +
+                    `ctrlFlag=${ctrl} ` +
+                    `ctl=${ctlExists ? (ctlMv || "spell") : "-"} ` +
+                    `ctlDet=${ctlDet} ctlAct=${ctlActive} ttl=${ttl} destroyAt=${ctlDestroyAt} ` +
+                    `xy=${ctlX},${ctlY} termHit=${ctlTermHit}` +
+                    `}`
+
+                // ✅ Stable signature: NO XY
+                entSigStable =
+                    ownedProj + "|" + ownedDet + "|" +
+                    ctrl + "|" +
+                    ctlExists + "|" + ctlDet + "|" + ctlActive + "|" +
+                    ctlExpAt + "|" + ctlDestroyAt + "|" + ctlMv + "|" +
+                    ctlTermHit
+
+                // Movement signature: quantized XY + velocity (still small)
+                const qx = (ctlX >> DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT) | 0
+                const qy = (ctlY >> DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT) | 0
+                entMoveSig =
+                    ownedProj + "|" + ownedDet + "|" +
+                    ctrl + "|" +
+                    ctlExists + "|" + ctlDet + "|" + ctlActive + "|" +
+                    qx + "|" + qy + "|" +
+                    ctlVX + "|" + ctlVY + "|" +
+                    ctlTermHit
+
+                entMoveLine =
+                    `EntMove{` +
+                    `xy=${ctlX},${ctlY} v=${ctlVX},${ctlVY} ` +
+                    `det=${ctlDet} termHit=${ctlTermHit}` +
+                    `}`
+            }
+        }
+
+        const included = _dbgContract_includedList(hasEntities)
+
+        // ------------------------------------------------------------
+        // Per-tick aggregation meta
         // ------------------------------------------------------------
         let meta = _dbgContract_pendingLineByHero[hi] || ""
         let t0 = 0, t1 = 0, phP0 = 0, phP1 = 0, ppP0 = 0, ppP1 = 0
@@ -1773,7 +2633,7 @@ function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
 
         _dbgContract_pendingLineByHero[hi] = "" + t0 + "," + t1 + "," + phP0 + "," + phP1 + "," + ppP0 + "," + ppP1
 
-        // Accumulate stages (even if core unchanged)
+        // Accumulate stages
         const prevStages = _dbgContract_pendingStagesByHero[hi] || ""
         if (!prevStages) {
             _dbgContract_pendingStagesByHero[hi] = st
@@ -1786,14 +2646,13 @@ function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
         }
 
         // ------------------------------------------------------------
-        // CORE signature: excludes progress and also excludes volatile sliding windows
-        // (ppS/ppD) for whitelisted part names (ex: "drive").
+        // CORE signature (semantic) — XY removed to stop EDGE spam.
         // ------------------------------------------------------------
         const ppVolatile = _dbgContract_isVolatilePartWindow(pp)
         const ppS_sig = ppVolatile ? 0 : (ppS | 0)
         const ppD_sig = ppVolatile ? 0 : (ppD | 0)
 
-        const coreSig =
+        const majorSig =
             owner + "|" + hi + "|" +
             aSeq + "|" + aKind + "|" + aVar + "|" + aSeed + "|" + aTgt + "|" +
             ph + "|" + phS + "|" + phD + "|" + phF + "|" +
@@ -1802,28 +2661,117 @@ function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
             rs + "|" + rs0 + "|" + rs1 + "|" +
             busyUntil + "|" + locked + "|" + ctrl + "|" + strCh + "|" + agiState + "|" +
             family + "|" + dir + "|" + phaseMirror + "|" + fco + "|" +
-            wSl + "|" + wTh + "|" + wCa + "|" + wEx + "|" + wCo
+            wSl + "|" + wTh + "|" + wCa + "|" + wEx + "|" + wCo +
+            (hasEntities ? ("|E|" + entSigStable) : "")
 
+        // Build DIFF snapshot for this observation (always)
+        // NOTE: We keep entMoveSig (with XY) so DIFF can show movement when we choose to print it.
+        const diffSnap = _dbgContract_buildDiffSnap({
+            owner, hi,
+            aSeq, aKind, aVar, aSeed, aTgt,
+            ph, pp,
+            locked, ctrl, strCh, agiState,
+            family, dir, phaseMirror, fco,
+            wSl, wTh, wCa, wEx, wCo,
+            entSig: (hasEntities ? entMoveSig : ""), // DIFF sees movement
+            hasEntities
+        })
+        _dbgContract_pendingDiffSnapByHero[hi] = diffSnap
+
+        // ------------------------------------------------------------
         // Change gate
-        const printedCore0 = _dbgContract_lastPrintedSigByHero[hi] || ""
-        if (coreSig === printedCore0) continue
+        // ------------------------------------------------------------
+        const printedMajor0 = _dbgContract_lastPrintedSigByHero[hi] || ""
 
+        if (majorSig === printedMajor0) {
+            // No major EDGE. Optionally emit a tiny movement EDGE (throttled).
+            if (hasEntities && entMoveSig) {
+                const lastMoveSig0 = _dbgContract_lastEntMoveSigByHero[hi] || ""
+                const lastMoveAt0 = (_dbgContract_lastEntMovePrintAtByHero[hi] | 0)
+
+                if (entMoveSig !== lastMoveSig0 && (now - lastMoveAt0) >= (DEBUG_CONTRACT_ENT_MOVE_EVERY_MS | 0)) {
+                    _dbgContract_lastEntMoveSigByHero[hi] = entMoveSig
+                    _dbgContract_lastEntMovePrintAtByHero[hi] = now
+
+                    _dbgContract_pendingFlagByHero[hi] = 1
+                    _dbgContract_lastObservedSigByHero[hi] = majorSig
+                    _dbgContract_pendingIncludedByHero[hi] = included
+
+                    // Movement-only edges should NOT print the big Entities{} line (ttl spam).
+                    _dbgContract_pendingEntitiesLineByHero[hi] = ""
+
+                    const prevDiffSnap = _dbgContract_lastDiffSnapByHero[hi] || ""
+                    const diffText = _dbgContract_diffFromSnaps(prevDiffSnap, diffSnap)
+                    _dbgContract_pendingDiffByHero[hi] = diffText ? diffText : ""
+
+                    // ✅ Tiny core line (the whole point)
+                    _dbgContract_pendingCoreLineByHero[hi] =
+                        `p=${owner} heroIndex=${hi} ` +
+                        `Action{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}} ` +
+                        `Phase{name=${ph}} PhasePart{name=${pp}} ` +
+                        entMoveLine
+
+                    // We emitted something this tick; move on.
+                    continue
+                }
+            }
+
+            // Nothing to print this tick.
+            continue
+        }
+
+        // ------------------------------------------------------------
+        // MAJOR EDGE (semantic change) — unchanged behavior.
+        // ------------------------------------------------------------
         _dbgContract_pendingFlagByHero[hi] = 1
-        _dbgContract_lastObservedSigByHero[hi] = coreSig
+        _dbgContract_lastObservedSigByHero[hi] = majorSig
+        _dbgContract_pendingIncludedByHero[hi] = included
+        _dbgContract_pendingEntitiesLineByHero[hi] = entLine
 
-        // Build core line (prints REAL ppS/ppD so you can still see sliding values when something else changes)
+        // Compute DIFF now (EDGE only) against last printed diff snapshot
+        const prevDiffSnap = _dbgContract_lastDiffSnapByHero[hi] || ""
+        const diffText = _dbgContract_diffFromSnaps(prevDiffSnap, diffSnap)
+        _dbgContract_pendingDiffByHero[hi] = diffText ? diffText : ""
+
+        // Your existing full core line (unchanged content)
         _dbgContract_pendingCoreLineByHero[hi] =
-            `p=${owner} hi=${hi} ` +
-            `A{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}} ` +
-            `Ph{name=${ph} s=${phS} d=${phD} f=${phF}} ` +
-            `Part{name=${pp} s=${ppS} d=${ppD} f=${ppF}} ` +
-            `Ev{seq=${eSeq} mask=${eMask} p0=${e0} p1=${e1} p2=${e2} p3=${e3}} ` +
-            `Style{m=${rs} p0=${rs0} p1=${rs1}} ` +
-            `Lock{busyUntil=${busyUntil} locked=${locked} ctrl=${ctrl} strCh=${strCh} agi=${agiState}} ` +
-            `Glue{fam=${family} dir=${dir} phase=${phaseMirror} fco=${fco}} ` +
-            `W{sl=${wSl} th=${wTh} ca=${wCa} ex=${wEx} co=${wCo}}`
+            `p=${owner} heroIndex=${hi} ` +
+            `Action{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}} ` +
+            `Phase{name=${ph} startMs=${phS} durMs=${phD} flags=${phF}} ` +
+            `PhasePart{name=${pp} startMs=${ppS} durMs=${ppD} flags=${ppF}} ` +
+            `Event{seq=${eSeq} mask=${eMask} p0=${e0} p1=${e1} p2=${e2} p3=${e3}} ` +
+            `Style{mask=${rs} p0=${rs0} p1=${rs1}} ` +
+            `Lock{busyUntil=${busyUntil} locked=${locked} ctrlSpell=${ctrl} strCharge=${strCh} agiState=${agiState}} ` +
+            `Glue{family=${family} dir=${dir} phase=${phaseMirror} fco=${fco}} ` +
+            `Weapons{slash=${wSl} thrust=${wTh} cast=${wCa} exec=${wEx} combo=${wCo}`
     }
 }
+
+
+const _dbgContractMissingWhySeen: Record<string, number> = {}
+
+function _dbgContract_assertWhyId(
+    whyId: string,
+    funcName: string
+): void {
+    if (!whyId) return
+
+    if (CONTRACT_WHY_TABLE[whyId]) return
+
+    if (_dbgContractMissingWhySeen[whyId]) return
+    _dbgContractMissingWhySeen[whyId] = 1
+
+    console.error(
+        `🚨🚨🚨 [CONTRACT-WHY-MISSING v=1]\n` +
+        `WHY ID USED BUT NOT DECLARED.\n\n` +
+        `id=${whyId}\n` +
+        `func=${funcName}\n\n` +
+        `ACTION REQUIRED:\n` +
+        `Add this entry to CONTRACT_WHY_TABLE:\n` +
+        `${whyId}: "${funcName}"\n`
+    )
+}
+
 
 
 // ------------------------------------------------------------
@@ -1833,13 +2781,12 @@ function dbgContractSnapshotAllHeroes(nowMs: number, stage: string): void {
 
 // Add this new array near your other debug arrays (outside functions):
 // const _dbgContract_pendingCoreLineByHero: string[] = []
-
 function _dbgContract_flushTick(tickMs: number): void {
-    const t = tickMs | 0
+    const tick = tickMs | 0
+
+    _dbgContract_budgetMaybeRotateWindow(tick)
 
     for (let hi = 0; hi < heroes.length; hi++) {
-        // Always reset tick-span meta and stages after each tick,
-        // but only print if pendingFlag says CORE changed.
         const meta = _dbgContract_pendingLineByHero[hi] || ""
         let t0 = 0, t1 = 0, phP0 = 0, phP1 = 0, ppP0 = 0, ppP1 = 0
         if (meta && meta.indexOf(",") >= 0 && meta.indexOf("[CONTRACT]") < 0) {
@@ -1854,32 +2801,130 @@ function _dbgContract_flushTick(tickMs: number): void {
             }
         }
 
-        if (_dbgContract_pendingFlagByHero[hi]) {
-            const stages = _dbgContract_pendingStagesByHero[hi] || ""
-            const coreLine = _dbgContract_pendingCoreLineByHero[hi] || ""
-
-            // Print with before/after progress only (no spam)
-            console.log(
-                `[CONTRACT] t=${t0}->${t1} stages={${stages}} ` +
-                coreLine + " " +
-                `PROG{ph ${phP0}->${phP1} part ${ppP0}->${ppP1}}`
-            )
-
-            // Commit printed CORE signature
-            const coreSig = _dbgContract_lastObservedSigByHero[hi] || ""
-            _dbgContract_lastPrintedSigByHero[hi] = coreSig
+        // If meta wasn't populated this tick, avoid confusing 0->0 timestamps.
+        if (!t1) {
+            t0 = tick
+            t1 = tick
         }
 
-        // Clear per-tick aggregation (always)
+        // "Sig changed" means the observation gate tripped this tick.
+        const sigChanged = (_dbgContract_pendingFlagByHero[hi] | 0) !== 0
+
+        // Consume per-tick summaries (may be "")
+        const whySummary = _dbgContract_consumeWhySummary(hi)
+        const whoSummary = _dbgContract_consumeWhoSummary(hi)
+        const touchSummary = _dbgContract_consumeTouchSummary(hi)
+
+        // Pending DIFF text is only meaningful when non-empty.
+        const pendingDiffText = _dbgContract_pendingDiffByHero[hi] || ""
+
+        // EDGE only when we have an actual DIFF.
+        // If sigChanged but DIFF is empty, downgrade to RUN (and let RUN throttling handle spam).
+        const hasMeaningfulEdge = sigChanged && !!pendingDiffText
+
+        // Decide RUN eligibility (when no meaningful EDGE)
+        let doRun = false
+        if (!hasMeaningfulEdge && (whySummary || whoSummary || touchSummary)) {
+            const lastRun = (_dbgContract_lastRunPrintMsByHero[hi] | 0) || 0
+            const now = (t1 | 0)
+            if (DEBUG_CONTRACT_RUN_THROTTLE_MS <= 0) {
+                doRun = true
+            } else if (lastRun === 0 || (now - lastRun) >= (DEBUG_CONTRACT_RUN_THROTTLE_MS | 0)) {
+                doRun = true
+            }
+        }
+
+        const attempted = hasMeaningfulEdge || doRun
+        let didPrint = false
+
+        if (attempted) {
+            const stages = _dbgContract_pendingStagesByHero[hi] || ""
+            const included = _dbgContract_pendingIncludedByHero[hi] || _dbgContract_includedList(false)
+
+            // Core snapshot + Entities are EDGE-only (keep RUN compact like your existing RUN lines)
+            const coreLine = hasMeaningfulEdge ? (_dbgContract_pendingCoreLineByHero[hi] || "") : ""
+            const entLine = hasMeaningfulEdge ? (_dbgContract_pendingEntitiesLineByHero[hi] || "") : ""
+
+            const kind = hasMeaningfulEdge ? "EDGE" : "RUN"
+            const diffText = hasMeaningfulEdge ? pendingDiffText : ""
+
+            const nowPrint = (t1 | 0)
+
+            // Extra throttle beyond change-gate (applies to both EDGE and RUN)
+            let allow = true
+            if (DEBUG_CONTRACT_THROTTLE_MS > 0) {
+                const lastPrint = _dbgContract_lastPrintMs | 0
+                if (lastPrint !== 0 && ((nowPrint - lastPrint) < (DEBUG_CONTRACT_THROTTLE_MS | 0))) {
+                    _dbgContract_suppressedInWindow++
+                    allow = false
+                }
+            }
+
+            if (allow && _dbgContract_budgetAllowPrint(nowPrint)) {
+                _dbgContract_lastPrintMs = nowPrint
+                if (!hasMeaningfulEdge) _dbgContract_lastRunPrintMsByHero[hi] = nowPrint
+
+                const diffField = hasMeaningfulEdge
+                    ? (`DIFF:[${diffText}]`)
+                    : (`DIFF:N/A (RUN)`)
+
+                console.log(
+                    `[CONTRACT][${kind} v=${CONTRACT_SCHEMA_VERSION} schema=${CONTRACT_SCHEMA_NAME}] ` +
+                    `t=${t0}->${t1} stages={${stages}} ` +
+                    `${diffField} ` +
+                    `WHY:[${whySummary}] ` +
+                    `WHO:[${whoSummary}] ` +
+                    `TOUCH:[${touchSummary}] ` +
+                    `Included{${included}} ` +
+                    (coreLine ? (coreLine + " ") : "") +
+                    (entLine ? (entLine + " ") : "") +
+                    `Progress{phase ${phP0}->${phP1} part ${ppP0}->${ppP1}}`
+                )
+
+                didPrint = true
+
+                // Commit printed CORE signature only when we actually printed the EDGE line
+                if (hasMeaningfulEdge) {
+                    const coreSig = _dbgContract_lastObservedSigByHero[hi] || ""
+                    _dbgContract_lastPrintedSigByHero[hi] = coreSig
+                }
+
+                // Commit DIFF snapshot only when we actually printed a line (EDGE or RUN)
+                const snap = _dbgContract_pendingDiffSnapByHero[hi] || ""
+                if (snap) _dbgContract_lastDiffSnapByHero[hi] = snap
+            }
+        }
+
+        // Clear per-tick computed state (always; will be recomputed next tick)
         _dbgContract_pendingFlagByHero[hi] = 0
         _dbgContract_pendingStagesByHero[hi] = ""
         _dbgContract_pendingLineByHero[hi] = ""
         _dbgContract_pendingCoreLineByHero[hi] = ""
+        _dbgContract_pendingIncludedByHero[hi] = ""
+        _dbgContract_pendingEntitiesLineByHero[hi] = ""
+        _dbgContract_pendingDiffByHero[hi] = ""
+        _dbgContract_pendingDiffSnapByHero[hi] = ""
+
+        // Clear WHY/WHO/TOUCH only when we successfully printed.
+        // If suppressed by throttle/budget, keep them so the next allowed print still shows cause/context.
+        if (didPrint) {
+            _dbgContract_clearWhy(hi)
+            _dbgContract_clearWho(hi)
+            _dbgContract_clearTouch(hi)
+        } else if (!attempted) {
+            // Defensive: if nothing attempted, keep per-tick semantics clean.
+            _dbgContract_clearWhy(hi)
+            _dbgContract_clearWho(hi)
+            _dbgContract_clearTouch(hi)
+        }
     }
 }
 
 
 
+
+//End of debug contract runtime logic section
+//This is where it ends
 
 function _dbgAnimKeysLineEx(heroIndex: number, hero: Sprite, tag: string, extra: string): string {
     const base = _dbgAnimKeysLine(heroIndex, hero, tag)
@@ -2028,6 +3073,483 @@ function _ambientPhaseWindowMs(phaseName: string): number {
 
 
 
+
+//##########################################################################################################################################
+// DUNGEON RUN / FLOORS (shared-floor POC)
+//##########################################################################################################################################
+
+const DUNGEON_DEBUG = true
+
+const DUNGEON_KIND_ENTRANCE = "entrance"
+const DUNGEON_KIND_COMBAT = "combat"
+const DUNGEON_KIND_SHOP = "shop"
+const DUNGEON_KIND_TREASURE = "treasure"
+const DUNGEON_KIND_STORY = "story"
+
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3
+const DUNGEON_PAD_HOLD_MS = 650
+const DUNGEON_INTERACT_RADIUS_PX = 26
+
+const DUNGEON_THEME_BASES: string[] = [
+    "ground_light",
+    "ground_medium",
+    "ground_red",
+    "grass_sparse_light",
+    "grass_dense_light",
+    "dirt_patch_lightgrass",
+]
+
+const PAD_DATA = {
+    POWERED: "dun_pad_powered",
+    NEEDED: "dun_pad_needed",
+    READY: "dun_pad_ready",
+    MASK: "dun_pad_mask",
+}
+
+const INTERACT_DATA = {
+    KIND: "dun_i_kind",
+    OPENED: "dun_i_opened",
+}
+
+let DUNGEON_MODE_ACTIVE = false
+let DUNGEON_BLOCK_INTENTS = false
+
+let _dunFloorIndex = 0
+let _dunFloorKind = DUNGEON_KIND_ENTRANCE
+let _dunObjectiveDone = false
+let _dunFloorStartedMs = 0
+
+let _dunExitPad: Sprite = null
+let _dunInteractables: Sprite[] = []
+let _dunStoryNpcs: Sprite[] = []
+let _dunAllReadySinceMs = 0
+
+let _dunBaseFamily = "ground_light"
+let _dunWallFamily = "chasm_light"
+
+function _dunLog(msg: string): void {
+    if (!DUNGEON_DEBUG) return
+    console.log(`[DUNGEON] ${msg}`)
+}
+
+function _dunWorldRows(): number {
+    return (_engineWorldTileMap ? _engineWorldTileMap.length : 0) | 0
+}
+function _dunWorldCols(): number {
+    return (_engineWorldTileMap && _engineWorldTileMap.length > 0 ? _engineWorldTileMap[0].length : 0) | 0
+}
+
+function _dunDestroySprite(s: Sprite): void {
+    if (!s) return
+    if (s.flags & sprites.Flag.Destroyed) return
+    s.destroy()
+}
+
+function _dunClearList(list: Sprite[]): void {
+    for (let i = 0; i < list.length; i++) _dunDestroySprite(list[i])
+    list.length = 0
+}
+
+function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): void {
+    const rows = _dunWorldRows()
+    const cols = _dunWorldCols()
+    for (let r = r0; r < (r0 + rh); r++) {
+        if (r < 0 || r >= rows) continue
+        for (let c = c0; c < (c0 + cw); c++) {
+            if (c < 0 || c >= cols) continue
+            _engineWorldTileMap[r][c] = TILE_FLOOR
+        }
+    }
+}
+
+function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
+    const base = DUNGEON_THEME_BASES[Math.randomRange(0, DUNGEON_THEME_BASES.length - 1)]
+    _dunBaseFamily = base
+    _dunWallFamily = "chasm_light"
+
+    // Phaser renderer reads these (host + clients)
+    if (isPhaserRuntime()) {
+        ;(globalThis as any).__floorBaseFamily = _dunBaseFamily
+        ;(globalThis as any).__floorWallFamily = _dunWallFamily
+    }
+}
+
+function _dunRequiredHeroCount(): number {
+    // Prefer “connected slots” when present; otherwise fall back to spawned heroes.
+    if (isPhaserRuntime() && (globalThis as any).__netSlotConnected) {
+        const arr = (globalThis as any).__netSlotConnected as boolean[]
+        let n = 0
+        for (let i = 0; i < arr.length; i++) if (arr[i]) n++
+        return Math.max(1, n) | 0
+    }
+
+    // Fallback: count existing mapped heroes for pid 1..4
+    let n = 0
+    for (let pid = 1; pid <= 4; pid++) {
+        const hi = playerToHeroIndex[pid] | 0
+        if (hi >= 0 && heroes[hi] && !(heroes[hi].flags & sprites.Flag.Destroyed)) n++
+    }
+    return Math.max(1, n) | 0
+}
+
+function _dunReadyMaskAndCountInPadZone(): { mask: number, ready: number } {
+    if (!_dunExitPad || (_dunExitPad.flags & sprites.Flag.Destroyed)) return { mask: 0, ready: 0 }
+
+    const needed = _dunRequiredHeroCount() | 0
+
+    // “2x6 tiles in front of pad”: width 2 tiles, height 6 tiles, just below the pad
+    const w = (WORLD_TILE_SIZE * 2) | 0
+    const h = (WORLD_TILE_SIZE * 6) | 0
+    const cx = _dunExitPad.x | 0
+    const top = (_dunExitPad.y + (WORLD_TILE_SIZE >> 1)) | 0 // start just under pad
+    const left = (cx - (w >> 1)) | 0
+    const right = (left + w) | 0
+    const bottom = (top + h) | 0
+
+    let mask = 0
+    let ready = 0
+
+    for (let pid = 1; pid <= 4; pid++) {
+        const hi = playerToHeroIndex[pid] | 0
+        if (hi < 0) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const hx = hero.x | 0
+        const hy = hero.y | 0
+
+        const inZone = (hx >= left && hx <= right && hy >= top && hy <= bottom)
+        if (inZone) {
+            ready++
+            mask |= (1 << (pid - 1))
+        }
+    }
+
+    // If fewer heroes exist than “needed”, don’t allow accidental advance.
+    if (ready > needed) ready = needed
+
+    return { mask, ready }
+}
+
+function _dunSpawnExitPad(): void {
+    _dunDestroySprite(_dunExitPad)
+    _dunExitPad = null
+
+    const rows = _dunWorldRows()
+    const cols = _dunWorldCols()
+    if (rows <= 0 || cols <= 0) return
+
+    const padRow = 2
+    const padCol = cols >> 1
+
+    // Carve space for pad
+    _dunCarveFloorRect(padRow - 1, padCol - 1, 3, 3)
+
+    const img = image.create(28, 18)
+    img.fill(0)
+    img.drawRect(0, 0, 28, 18, 15)
+    img.drawLine(2, 9, 25, 9, 15)
+
+    _dunExitPad = sprites.create(img, (SpriteKind as any).FloorPad)
+    _dunExitPad.setFlag(SpriteFlag.Ghost, true)
+    _dunExitPad.setPosition(worldToScreenX(padCol), worldToScreenY(padRow))
+    _dunExitPad.z = 5
+
+    sprites.setDataNumber(_dunExitPad, PAD_DATA.POWERED, 0)
+    sprites.setDataNumber(_dunExitPad, PAD_DATA.NEEDED, _dunRequiredHeroCount())
+    sprites.setDataNumber(_dunExitPad, PAD_DATA.READY, 0)
+    sprites.setDataNumber(_dunExitPad, PAD_DATA.MASK, 0)
+}
+
+function _dunSetPadPowered(on: boolean): void {
+    if (!_dunExitPad || (_dunExitPad.flags & sprites.Flag.Destroyed)) return
+    sprites.setDataNumber(_dunExitPad, PAD_DATA.POWERED, on ? 1 : 0)
+}
+
+function _dunIsPadPowered(): boolean {
+    if (!_dunExitPad || (_dunExitPad.flags & sprites.Flag.Destroyed)) return false
+    return (sprites.readDataNumber(_dunExitPad, PAD_DATA.POWERED) | 0) != 0
+}
+
+function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
+    const img = image.create(16, 12)
+    img.fill(0)
+    img.drawRect(0, 0, 16, 12, 15)
+    img.drawLine(2, 5, 13, 5, 15)
+    img.setPixel(7, 6, 15)
+
+    const chest = sprites.create(img, (SpriteKind as any).FloorInteractable)
+    chest.setFlag(SpriteFlag.Ghost, true)
+    chest.setPosition(x, y)
+    chest.z = 6
+
+    sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
+    sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
+
+    _dunInteractables.push(chest)
+    return chest
+}
+
+function _dunSpawnStoryNpc(nowMs: number, profileName: string, heroFamily: string, x: number, y: number): Sprite {
+    // Option B: hero-like NPC sprite (NOT in heroes[], not Player kind)
+    const npc = sprites.create(image.create(64, 64), (SpriteKind as any).StoryNpc)
+    npc.setFlag(SpriteFlag.Ghost, true)
+    npc.setPosition(x, y)
+    npc.z = 8
+
+    sprites.setDataString(npc, "heroName", profileName)
+    sprites.setDataString(npc, "heroFamily", heroFamily)
+
+    sprites.setDataString(npc, "phase", "idle")
+    sprites.setDataString(npc, "dir", "down")
+
+    // Canonical phase keys (so anim glue stays happy)
+    sprites.setDataString(npc, HERO_DATA.PhaseName, "idle")
+    sprites.setDataNumber(npc, HERO_DATA.PhaseStartMs, nowMs | 0)
+    sprites.setDataNumber(npc, HERO_DATA.PhaseDurationMs, 0)
+
+    _dunStoryNpcs.push(npc)
+    return npc
+}
+
+function _dunClearTransientFloorEntities(): void {
+    // enemies + spawners
+    for (let i = 0; i < enemies.length; i++) _dunDestroySprite(enemies[i])
+    enemies.length = 0
+
+    for (let i = 0; i < enemySpawners.length; i++) _dunDestroySprite(enemySpawners[i])
+    enemySpawners.length = 0
+
+    for (let i = 0; i < heroProjectiles.length; i++) _dunDestroySprite(heroProjectiles[i])
+    heroProjectiles.length = 0
+
+    // shop objects (if any)
+    if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
+    if (typeof _shopDestroyUiForHero === "function") {
+        for (let hi = 0; hi < heroes.length; hi++) _shopDestroyUiForHero(hi)
+    }
+    _dunClearList(_dunInteractables)
+    _dunClearList(_dunStoryNpcs)
+
+    _dunAllReadySinceMs = 0
+
+    // shut off shop mode unless this floor enables it
+    SHOP_MODE_ACTIVE = false
+    SHOP_MODE_ACTIVE_MASTER = false
+}
+
+function _dunCountLiveEnemies(): number {
+    let n = 0
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (e && !(e.flags & sprites.Flag.Destroyed)) n++
+    }
+    return n | 0
+}
+
+function _dunPickNextFloorKind(nextIndex: number): string {
+    if (nextIndex > 0 && (nextIndex % DUNGEON_SHOP_EVERY_N_FLOORS) == 0) return DUNGEON_KIND_SHOP
+
+    const roll = Math.randomRange(0, 99)
+    if (roll < 10) return DUNGEON_KIND_STORY
+    if (roll < 25) return DUNGEON_KIND_TREASURE
+    return DUNGEON_KIND_COMBAT
+}
+
+function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
+    _dunFloorIndex = nextIndex | 0
+    _dunFloorKind = kind
+    _dunObjectiveDone = false
+    _dunFloorStartedMs = nowMs | 0
+    _dunAllReadySinceMs = 0
+
+    _dunClearTransientFloorEntities()
+    _dunPickThemeForFloor(_dunFloorIndex, _dunFloorKind)
+
+    // Rebuild the world each floor (POC roguelike feel)
+    initWorldTileMap()
+
+    // Carve a stable landing zone near center
+    const rows = _dunWorldRows()
+    const cols = _dunWorldCols()
+    const midR = rows >> 1
+    const midC = cols >> 1
+    _dunCarveFloorRect(midR - 2, midC - 2, 5, 5)
+
+    // Move heroes to landing zone (do not assume setupHeroes() again)
+    const landX = worldToScreenX(midC)
+    const landY = worldToScreenY(midR + 1)
+
+    for (let pid = 1; pid <= 4; pid++) {
+        let hi = playerToHeroIndex[pid] | 0
+        if (hi < 0) {
+            // create missing hero for connected players
+            createHeroForPlayer(pid, landX, landY)
+            hi = playerToHeroIndex[pid] | 0
+        }
+        if (hi < 0) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        hero.setPosition(landX, landY + (pid - 1) * 10)
+        hero.setVelocity(0, 0)
+        sprites.setDataString(hero, "phase", "idle")
+        sprites.setDataString(hero, HERO_DATA.PhaseName, "idle")
+        sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, nowMs | 0)
+        sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, 0)
+        sprites.setDataString(hero, "dir", "up")
+    }
+
+    _dunSpawnExitPad()
+
+    // Floor behavior
+    if (_dunFloorKind == DUNGEON_KIND_ENTRANCE) {
+        DUNGEON_BLOCK_INTENTS = true
+        // Require a “start chest” interact to begin
+        _dunSpawnChest(nowMs, landX, landY + 28)
+    }
+    else if (_dunFloorKind == DUNGEON_KIND_TREASURE) {
+        DUNGEON_BLOCK_INTENTS = true
+        _dunSpawnChest(nowMs, landX, landY + 28)
+    }
+    else if (_dunFloorKind == DUNGEON_KIND_STORY) {
+        DUNGEON_BLOCK_INTENTS = true
+        // Example NPC: profileName + family string must exist in your hero atlas system
+        _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", landX + 40, landY + 10)
+        // Also gate with a chest for now (easy repeatable pattern)
+        _dunSpawnChest(nowMs, landX, landY + 28)
+    }
+    else if (_dunFloorKind == DUNGEON_KIND_SHOP) {
+        DUNGEON_BLOCK_INTENTS = false
+
+        // Enable existing shop system, but keep it optional.
+        SHOP_MODE_ACTIVE_MASTER = true
+        SHOP_MODE_ACTIVE = false
+
+        // Force shop to exist now so its trigger can be moved away from the exit pad.
+        shopInitPOC()
+
+        // Put shop lower-left-ish so players can walk to pad separately
+        if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
+            shopTriggerZone.setPosition(landX - 70, landY + 45)
+            // force ring offers to rebuild at the new spot
+            if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
+        }
+
+        // No objective: pad is powered immediately on shop floors
+        _dunObjectiveDone = true
+        _dunSetPadPowered(true)
+    }
+    else {
+        // COMBAT
+        DUNGEON_BLOCK_INTENTS = false
+        setupEnemySpawners()
+        startEnemyWaves()
+    }
+
+    _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily}`)
+}
+
+function dungeonStartRun(nowMs: number): void {
+    DUNGEON_MODE_ACTIVE = true
+    _dunEnterFloor(0, DUNGEON_KIND_ENTRANCE, nowMs | 0)
+}
+
+function dungeonTick(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+
+    // Keep pad contract fresh for renderer
+    if (_dunExitPad && !(_dunExitPad.flags & sprites.Flag.Destroyed)) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInPadZone()
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.NEEDED, needed)
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.READY, rc.ready | 0)
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.MASK, rc.mask | 0)
+    }
+
+    // Objective evaluation
+    if (!_dunObjectiveDone) {
+        if (_dunFloorKind == DUNGEON_KIND_COMBAT) {
+            if (_dunCountLiveEnemies() == 0) {
+                _dunObjectiveDone = true
+                _dunSetPadPowered(true)
+                _dunLog(`combat cleared; pad powered`)
+            }
+        } else {
+            // Interaction-based floors: A to interact near chest/NPC
+            for (let pid = 1; pid <= 4; pid++) {
+                const hi = playerToHeroIndex[pid] | 0
+                if (hi < 0) continue
+                const hero = heroes[hi]
+                if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+                // Edge detect A
+                const btnA = (controller as any)[`player${pid}`]?.A
+                if (!btnA) continue
+
+                const prevKey = `__dun_prevA_${pid}`
+                const was = ((globalThis as any)[prevKey] ? 1 : 0) | 0
+                const is = (btnA.isPressed() ? 1 : 0) | 0
+                ;(globalThis as any)[prevKey] = (is != 0)
+
+                const aEdge = (is != 0 && was == 0)
+                if (!aEdge) continue
+
+                // Try interactables first
+                for (let i = 0; i < _dunInteractables.length; i++) {
+                    const it = _dunInteractables[i]
+                    if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+                    const dx = (it.x - hero.x)
+                    const dy = (it.y - hero.y)
+                    if ((dx * dx + dy * dy) > (DUNGEON_INTERACT_RADIUS_PX * DUNGEON_INTERACT_RADIUS_PX)) continue
+
+                    const k = sprites.readDataString(it, INTERACT_DATA.KIND)
+                    if (k == "chest") {
+                        const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+                        if (opened) continue
+
+                        sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
+                        _dunDestroySprite(it)
+
+                        // Reward + complete objective
+                        setTeamCoins((teamCoins + 10) | 0)
+
+                        _dunObjectiveDone = true
+                        _dunSetPadPowered(true)
+                        _dunLog(`chest opened by P${pid}; pad powered`)
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    // Advance when powered + everyone in zone (hold to prevent accidental teleports)
+    if (_dunObjectiveDone && _dunIsPadPowered()) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInPadZone()
+        const allReady = (needed > 0 && rc.ready >= needed)
+
+        if (!allReady) {
+            _dunAllReadySinceMs = 0
+            return
+        }
+
+        if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
+        const held = ((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0
+        if (held < DUNGEON_PAD_HOLD_MS) return
+
+        // Teleport: destroy pad and enter next floor
+        _dunDestroySprite(_dunExitPad)
+        _dunExitPad = null
+
+        const next = (_dunFloorIndex + 1) | 0
+        const kind = _dunPickNextFloorKind(next)
+        _dunEnterFloor(next, kind, nowMs | 0)
+    }
+}
+
+
+
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
 function ensureHeroSpriteKinds(): void {
@@ -2049,6 +3571,11 @@ function ensureHeroSpriteKinds(): void {
         if (SK.ShopUI == null) SK.ShopUI = 57
         if (SK.ShopNpc == null) SK.ShopNpc = 58
         if (SK.ShopItem == null) SK.ShopItem = 59
+
+        // Decor collider kinds (new)
+        if (SK.DecorTrigger == null) SK.DecorTrigger = 60
+        if (SK.DecorSolid == null) SK.DecorSolid = 61
+        
         return
     }
 
@@ -2064,6 +3591,10 @@ function ensureHeroSpriteKinds(): void {
     if (!SpriteKind.ShopUI) SpriteKind.ShopUI = SpriteKind.create()
     if (!SpriteKind.ShopNpc) SpriteKind.ShopNpc = SpriteKind.create()
     if (!SpriteKind.ShopItem) SpriteKind.ShopItem = SpriteKind.create()
+
+    // Decor collider kinds (new)
+    if (!SpriteKind.DecorTrigger) SpriteKind.DecorTrigger = SpriteKind.create()
+    if (!SpriteKind.DecorSolid) SpriteKind.DecorSolid = SpriteKind.create()
 }
 
 // Phaser/ESM shim: ensure custom SpriteKinds exist before any overlaps are registered.
@@ -2100,10 +3631,39 @@ function splitAgiThrustDurations(totalMs: number): [number, number, number] {
 }
 
 
-function _animKeys_clearPhasePart(hero: Sprite): void {
+//This is the start of the canonical phase setters
+//Part setters
+//Who touched phase
+
+function _animKeys_clearPhasePart(
+    heroIndex: number,
+    hero: Sprite,
+    nowMs: number,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+    const now = nowMs | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
     const prevPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
     const prevS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
     const prevD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+
+    // Contract touch tracking
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_PHASE_PART)
 
     // Safe defaults (PhasePart is optional until we start wiring segmented moves)
     sprites.setDataString(hero, HERO_DATA.PhasePartName, "")
@@ -2114,23 +3674,48 @@ function _animKeys_clearPhasePart(hero: Sprite): void {
 
     // ---- LOG: clear only if we cleared a real part ----
     if (DEBUG_ANIM_KEYS_PHASE_PART && prevPart) {
-        const hi = getHeroIndex(hero) | 0
         if (hi >= 0) {
-            const now = game.runtime() | 0
-            _dbgAnimKeys(hi, hero, "PART_CLEAR", `t=${now} prev{${prevPart} s=${prevS} d=${prevD}}`)
+            _dbgAnimKeys(hi, hero, "PART_CLEAR", `t=${now} where=${wh} why=${why} prev{${prevPart} s=${prevS} d=${prevD}}`)
         }
     }
 }
 
-function _animKeys_actionBeginHygiene(hero: Sprite): void {
+
+
+function _animKeys_actionBeginHygiene(
+    heroIndex: number,
+    hero: Sprite,
+    nowMs: number,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+    const now = nowMs | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    // Contract touch tracking
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_ACTION_BEGIN_HYGIENE)
+
     // Allowed action-edge resets (prevents stale visuals)
     sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
 
     // Event bus hygiene: clear mask + payload (emitters are the only writers of EventSequence)
-    _animEvent_clear(hero)
+    _animEvent_clear(heroIndex, hero, why, wh)
 
     // Clear phase-part segmentation so new actions don't inherit old parts
-    _animKeys_clearPhasePart(hero)
+    _animKeys_clearPhasePart(hi, hero, now, why, wh)
 }
 
 
@@ -2140,32 +3725,55 @@ function _animKeys_stampPhaseWindow(
     phaseName: string,
     nowMs: number,
     durationMs: number,
-    where: string
+    whyId?: string,
+    where?: string
 ): void {
-    const now = nowMs | 0;
-    const dur = durationMs | 0;
+    const hi = heroIndex | 0
+    const now = nowMs | 0
+    const dur = durationMs | 0
 
-    _animInvAssert(phaseName.length > 0, where, heroIndex, `stampPhaseWindow called with empty phaseName`);
-    _animInvAssert(dur > 0, where, heroIndex, `stampPhaseWindow("${phaseName}") durationMs must be > 0 (got ${dur})`);
+    // tolerate missing / swapped args (and the “only one string” transitional case)
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    const tag = wh || "unknown"
+
+    _animInvAssert(phaseName.length > 0, tag, hi, `stampPhaseWindow called with empty phaseName`)
+    _animInvAssert(dur > 0, tag, hi, `stampPhaseWindow("${phaseName}") durationMs must be > 0 (got ${dur})`)
 
     const prevName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
     const prevS = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
     const prevD = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
 
-    sprites.setDataString(hero, HERO_DATA.PhaseName, phaseName);
-    sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, now);
-    sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, dur);
+    // Contract touch tracking
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_PHASE_WINDOW)
+
+    sprites.setDataString(hero, HERO_DATA.PhaseName, phaseName)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, now)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, dur)
 
     // A new stamped window must start at progress=0 to avoid stale values.
-    sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, 0);
+    sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, 0)
 
     // Hard-fail + consistency check right after stamping.
-    _animInvCheckHeroTimeline(heroIndex, hero, now, `${where}::stampPhaseWindow("${phaseName}")`);
+    _animInvCheckHeroTimeline(hi, hero, now, `${tag}::stampPhaseWindow("${phaseName}")`)
 
     // ---- LOG: authoritative timing publish ----
     if (DEBUG_ANIM_KEYS_PHASE_STAMP) {
-        _dbgAnimKeys(heroIndex, hero, "PHASE_STAMP",
-            `t=${now} where=${where} prev{${prevName} s=${prevS} d=${prevD}} now{${phaseName} s=${now} d=${dur}}`
+        _dbgAnimKeys(
+            hi,
+            hero,
+            "PHASE_STAMP",
+            `t=${now} where=${wh} why=${why} prev{${prevName} s=${prevS} d=${prevD}} now{${phaseName} s=${now} d=${dur}}`
         )
     }
 }
@@ -2179,31 +3787,52 @@ function _animKeys_setHeroPhaseWindow(
     phaseName: string,
     nowMs: number,
     durationMs: number,
-    where: string
+    whyId?: string,
+    where?: string
 ): void {
-    _animKeys_stampPhaseWindow(heroIndex, hero, phaseName, nowMs, durationMs, where)
+    _animKeys_stampPhaseWindow(heroIndex, hero, phaseName, nowMs, durationMs, whyId, where)
 }
 
 
 function _animKeys_setPhasePart(
+    heroIndex: number,
     hero: Sprite,
     partName: string,
     partStartMs: number,
     partDurationMs: number,
-    nowMs: number
+    nowMs: number,
+    whyId?: string,
+    where?: string
 ): void {
+    const hi = heroIndex | 0
     const start = (partStartMs | 0)
     const now = (nowMs | 0)
     const dur = (partDurationMs | 0)
 
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
     // If you're setting a named part, duration must be > 0.
     if (partName && partName.length) {
-        _animInvAssert(dur > 0, "setPhasePart", -1, `PhasePart "${partName}" duration must be > 0 (got ${dur})`)
+        _animInvAssert(dur > 0, "setPhasePart", hi, `PhasePart "${partName}" duration must be > 0 (got ${dur})`)
     }
 
     const prevPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
     const prevS = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
     const prevD = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+
+    // Contract touch tracking
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_PHASE_PART)
 
     sprites.setDataString(hero, HERO_DATA.PhasePartName, partName)
     sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, start)
@@ -2222,17 +3851,41 @@ function _animKeys_setPhasePart(
 
     // ---- LOG: phase-part publish/change ----
     if (DEBUG_ANIM_KEYS_PHASE_PART) {
-        const hi = getHeroIndex(hero) | 0
         if (hi >= 0) {
-            _dbgAnimKeys(hi, hero, "PART_SET",
-                `t=${now} prev{${prevPart} s=${prevS} d=${prevD}} now{${partName} s=${start} d=${dur}}`
+            _dbgAnimKeys(
+                hi,
+                hero,
+                "PART_SET",
+                `t=${now} where=${wh} why=${why} prev{${prevPart} s=${prevS} d=${prevD}} now{${partName} s=${start} d=${dur}}`
             )
         }
     }
 }
 
 
-function _animEvent_reset(hero: Sprite): void {
+function _animEvent_reset(
+    heroIndex: number,
+    hero: Sprite,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_EVENT_RESET)
+
     sprites.setDataNumber(hero, HERO_DATA.EventSequence, 0)
     sprites.setDataNumber(hero, HERO_DATA.EventMask, 0)
     sprites.setDataNumber(hero, HERO_DATA.EventP0, 0)
@@ -2241,7 +3894,29 @@ function _animEvent_reset(hero: Sprite): void {
     sprites.setDataNumber(hero, HERO_DATA.EventP3, 0)
 }
 
-function _animEvent_clear(hero: Sprite): void {
+function _animEvent_clear(
+    heroIndex: number,
+    hero: Sprite,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_EVENT_CLEAR)
+
     sprites.setDataNumber(hero, HERO_DATA.EventMask, 0)
     sprites.setDataNumber(hero, HERO_DATA.EventP0, 0)
     sprites.setDataNumber(hero, HERO_DATA.EventP1, 0)
@@ -2249,7 +3924,34 @@ function _animEvent_clear(hero: Sprite): void {
     sprites.setDataNumber(hero, HERO_DATA.EventP3, 0)
 }
 
-function _animEvent_emit(hero: Sprite, mask: number, p0: number, p1: number, p2: number, p3: number): void {
+function _animEvent_emit(
+    heroIndex: number,
+    hero: Sprite,
+    mask: number,
+    p0: number,
+    p1: number,
+    p2: number,
+    p3: number,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_EVENT_RESET)
+
     const seq0 = sprites.readDataNumber(hero, HERO_DATA.EventSequence) | 0
     sprites.setDataNumber(hero, HERO_DATA.EventSequence, (seq0 + 1) | 0)
 
@@ -2262,6 +3964,7 @@ function _animEvent_emit(hero: Sprite, mask: number, p0: number, p1: number, p2:
 
 
 
+
 function _elemToRenderStyleMask(element: number): number {
     const e = element | 0
     if (e <= 0) return 0
@@ -2269,11 +3972,40 @@ function _elemToRenderStyleMask(element: number): number {
     return (1 << e) | 0
 }
 
-function _animKeys_setRenderStyle(hero: Sprite, styleMask: number, p0: number, p1: number): void {
+
+function _animKeys_setRenderStyle(
+    heroIndex: number,
+    hero: Sprite,
+    styleMask: number,
+    p0: number,
+    p1: number,
+    whyId?: string,
+    where?: string
+): void {
+    const hi = heroIndex | 0
+
+    // tolerate missing / swapped args
+    let why = (whyId || "")
+    let wh = (where || "")
+    const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
+    const whKnown0 = wh ? !!(CONTRACT_WHY_TABLE as any)[wh] : false
+    if (why && wh) {
+        if (!whyKnown0 && whKnown0) { const tmp = why; why = wh; wh = tmp }
+    } else if (why && !wh) {
+        if (!whyKnown0) { wh = why; why = "" }
+    } else if (!why && wh) {
+        if (whKnown0) { why = wh; wh = "" }
+    }
+
+    _dbgContract_trackTouch(hi, why, wh, TOUCH_RENDER_STYLE)
+
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, styleMask | 0)
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, p0 | 0)
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleP1, p1 | 0)
 }
+
+
+//This is the end of the canonical phase setters
 
 
 // --------------------------------------------------------------
@@ -2548,6 +4280,60 @@ function tintImageReplace(imgBase: Image, fromColor: number, toColor: number): I
     }
     return out
 }
+
+
+const _INT_SPELL_IMG_CACHE: { [k: string]: Image } = Object.create(null)
+
+function _getIntSpellImg(isDetonating: boolean, radiusPx?: number): Image {
+    // Radius clamp (keep small-ish; this is pixel-drawn)
+    const r = Math.max(4, Math.min(31, ((radiusPx ?? 12) | 0))) | 0
+    const key = `${isDetonating ? 1 : 0}|${r}`
+
+    const cached = _INT_SPELL_IMG_CACHE[key]
+    if (cached) return cached
+
+    const w = ((r << 1) + 3) | 0
+    const h = ((r << 1) + 3) | 0
+    const img = image.create(w, h)
+    img.fill(0)
+
+    const cx = (w >> 1) | 0
+    const cy = (h >> 1) | 0
+
+    // Keep your existing palette intent:
+    // - normal: green-ish body + brighter rim
+    // - detonating: brighter rim/body swap
+    const colBase = isDetonating ? 10 : 4
+    const colRim = isDetonating ? 2 : 7
+
+    const rr = (r * r) | 0
+    const rInner = Math.max(0, (r - 1) | 0) | 0
+    const rrInner = (rInner * rInner) | 0
+
+    for (let y = 0; y < h; y++) {
+        const dy = (y - cy) | 0
+        const dy2 = (dy * dy) | 0
+        if (dy2 > rr) continue
+
+        const dx = (Math.floor(Math.sqrt(rr - dy2)) | 0)
+        const x0 = (cx - dx) | 0
+        const x1 = (cx + dx) | 0
+
+        for (let x = x0; x <= x1; x++) {
+            const ddx = (x - cx) | 0
+            const d2 = ((ddx * ddx) + dy2) | 0
+            if (d2 > rr) continue
+            img.setPixel(x, y, (d2 >= rrInner) ? colRim : colBase)
+        }
+    }
+
+    // center dot
+    img.setPixel(cx, cy, colRim)
+
+    _INT_SPELL_IMG_CACHE[key] = img
+    return img
+}
+
 
 
 function getAimVectorForHero(heroIndex: number): number[] {
@@ -5081,17 +6867,163 @@ function _buildTilesIntoSprites(map: number[][]): void {
     }
 }
 
+function _destroyAllInPlace(list: Sprite[]): void {
+    for (let i = 0; i < list.length; i++) {
+        const s = list[i]
+        if (s && !(s.flags & sprites.Flag.Destroyed)) {
+            s.destroy()
+        }
+    }
+    list.length = 0
+}
+
+function _createDecorColliderImage(w: number, h: number): Image {
+    // Invisible colliders still need a real image for width/height in overlap math.
+    const img = image.create(w, h)
+    img.fill(0)
+    return img
+}
+
+// This is called after the base world grid exists.
+// It must be safe to call multiple times (destroy + rebuild).
+function initWorldDecorPostPass(): void {
+    // Clear old decor (in case world is re-init’d)
+    _destroyAllInPlace(_engineDecorTriggers)
+    _destroyAllInPlace(_engineDecorSolids)
+
+    // Allocate decals grid to match world
+    const rows = _engineWorldTileMap ? (_engineWorldTileMap.length | 0) : 0
+    const cols = (rows > 0 && _engineWorldTileMap[0]) ? (_engineWorldTileMap[0].length | 0) : 0
+
+    _engineDecalGrid = []
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = []
+        for (let c = 0; c < cols; c++) row.push(DECAL_NONE)
+        _engineDecalGrid.push(row)
+    }
+
+    if (rows <= 0 || cols <= 0) {
+        _engineDecorRev = (_engineDecorRev + 1) | 0
+        return
+    }
+
+    // ----------------------------------------------------------
+    // Pick a WALKABLE center-ish tile for sand (robust)
+    // ----------------------------------------------------------
+    let sandR = Math.idiv(rows, 2) | 0
+    let sandC = Math.idiv(cols, 2) | 0
+
+    function isWalkable(r: number, c: number): boolean {
+        if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+        return ((_engineWorldTileMap[r][c] | 0) !== TILE_WALL)
+    }
+
+    if (!isWalkable(sandR, sandC)) {
+        // search outward for first walkable tile
+        let found = false
+        for (let rad = 1; rad <= 6 && !found; rad++) {
+            for (let dr = -rad; dr <= rad && !found; dr++) {
+                const r0 = (sandR + dr) | 0
+                const cLeft = (sandC - rad) | 0
+                const cRight = (sandC + rad) | 0
+                if (isWalkable(r0, cLeft)) { sandR = r0; sandC = cLeft; found = true; break }
+                if (isWalkable(r0, cRight)) { sandR = r0; sandC = cRight; found = true; break }
+            }
+            for (let dc = -rad; dc <= rad && !found; dc++) {
+                const c0 = (sandC + dc) | 0
+                const rUp = (sandR - rad) | 0
+                const rDown = (sandR + rad) | 0
+                if (isWalkable(rUp, c0)) { sandR = rUp; sandC = c0; found = true; break }
+                if (isWalkable(rDown, c0)) { sandR = rDown; sandC = c0; found = true; break }
+            }
+        }
+        // If still not found, keep original center (worst-case)
+    }
+
+    // Sand decal at chosen tile
+    _engineDecalGrid[sandR][sandC] = DECAL_SAND_PATCH
+
+    // ----------------------------------------------------------
+    // Place rock SOLID adjacent to sand (prefer right, then left/down/up)
+    // ----------------------------------------------------------
+    let rockR = sandR
+    let rockC = sandC
+
+    const candidates = [
+        { dr: 0, dc: 1 },
+        { dr: 0, dc: -1 },
+        { dr: 1, dc: 0 },
+        { dr: -1, dc: 0 },
+    ]
+
+    for (let i = 0; i < candidates.length; i++) {
+        const rr = (sandR + candidates[i].dr) | 0
+        const cc = (sandC + candidates[i].dc) | 0
+        if (isWalkable(rr, cc)) {
+            rockR = rr
+            rockC = cc
+            break
+        }
+    }
+
+    // ----------------------------------------------------------
+    // Trigger collider sprite for sand (overlap proof)
+    // ----------------------------------------------------------
+    const sandImg = _createDecorColliderImage(WORLD_TILE_SIZE, WORLD_TILE_SIZE)
+    const sandTrigger = sprites.create(sandImg, (SpriteKind as any).DecorTrigger)
+
+    sandTrigger.left = (sandC * WORLD_TILE_SIZE) | 0
+    sandTrigger.top = (sandR * WORLD_TILE_SIZE) | 0
+    sandTrigger.setFlag(SpriteFlag.Invisible, true)
+
+    sprites.setDataNumber(sandTrigger, DECOR_DATA.IS_COLLIDER, 1)
+    sprites.setDataNumber(sandTrigger, DECOR_DATA.ID, DECAL_SAND_PATCH)
+    sprites.setDataNumber(sandTrigger, DECOR_DATA.ROLE, DECOR_ROLE.TRIGGER)
+    sprites.setDataString(sandTrigger, DECOR_DATA.NAME, "sand_patch")
+
+    _engineDecorTriggers.push(sandTrigger)
+
+    // ----------------------------------------------------------
+    // Solid collider sprite for rock (overlap proof now; blocking later)
+    // ----------------------------------------------------------
+    const rockImg = _createDecorColliderImage(WORLD_TILE_SIZE, WORLD_TILE_SIZE)
+    const rockSolid = sprites.create(rockImg, (SpriteKind as any).DecorSolid)
+
+    rockSolid.left = (rockC * WORLD_TILE_SIZE) | 0
+    rockSolid.top = (rockR * WORLD_TILE_SIZE) | 0
+    rockSolid.setFlag(SpriteFlag.Invisible, true)
+
+    sprites.setDataNumber(rockSolid, DECOR_DATA.IS_COLLIDER, 1)
+    sprites.setDataNumber(rockSolid, DECOR_DATA.ID, PROP_ROCK_MOUNTAIN)
+    sprites.setDataNumber(rockSolid, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+    sprites.setDataString(rockSolid, DECOR_DATA.NAME, "rock_mountain")
+
+    _engineDecorSolids.push(rockSolid)
+
+    // Revision bumps any time decor layout is (re)built
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+}
+
+
 // This is called ONLY by HeroEngine.start()
 function initWorldTileMap(): void {
-    // Always build the numeric world grid (used by Phaser renderer + collision).
-    _engineWorldTileMap = _createTileMap2D()
+    // Creates tilemap data but does NOT apply graphics
+    _engineWorldTileMap = buildWorldTileMap()
 
-    // Only the MakeCode Arcade runtime needs "walls as sprites".
-    // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
+    // Postpass: sand / rocks etc
+    initWorldDecorPostPass()
+
+    // NEW: bump world rev whenever we rebuild the world
+    _engineWorldRev = (_engineWorldRev + 1) | 0
+
+    // Arcade ONLY: also create the internal collision tilemap
     if (isMakeCodeArcadeRuntime()) {
-        _buildTilesIntoSprites(_engineWorldTileMap)
+        const tilemapData = buildTilemapDataFromWorldTileMap(_engineWorldTileMap)
+        tiles.setCurrentTilemap(tilemapData)
     }
 }
+
+
 
 function _readTile(r: number, c: number): number {
     if (r < 0 || r >= _engineWorldTileMap.length) return TILE_WALL
@@ -5353,6 +7285,248 @@ function resolveTilemapCollisions(): void {
     //_resolveTilemapCollisionsForGroup(heroes, "Hero")
     //_resolveTilemapCollisionsForGroup(enemies, "Enemy")
 }
+
+
+
+function decor_getDecalAtTile(r: number, c: number): number {
+    if (!_engineDecalGrid || _engineDecalGrid.length === 0) return DECAL_NONE
+    if (r < 0 || c < 0) return DECAL_NONE
+    if (r >= _engineDecalGrid.length) return DECAL_NONE
+    const row = _engineDecalGrid[r]
+    if (!row || c >= row.length) return DECAL_NONE
+    return row[c] | 0
+}
+
+// Publish hero underfoot tile coords + decal id for student logic.
+// Must be called AFTER resolveTilemapCollisions() so it reflects final positions.
+function updateHeroUnderfootTilesAndDecals(nowMs: number): void {
+    const tileSize = WORLD_TILE_SIZE | 0
+
+    // Prefer world grid dims if present; fallback to decal grid dims.
+    const rows = (_engineWorldTileMap && _engineWorldTileMap.length > 0)
+        ? (_engineWorldTileMap.length | 0)
+        : (_engineDecalGrid ? (_engineDecalGrid.length | 0) : 0)
+
+    const cols = (rows > 0)
+        ? ((_engineWorldTileMap && _engineWorldTileMap[0] && _engineWorldTileMap[0].length > 0)
+            ? (_engineWorldTileMap[0].length | 0)
+            : (_engineDecalGrid && _engineDecalGrid[0] ? (_engineDecalGrid[0].length | 0) : 0))
+        : 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+
+        if (rows <= 0 || cols <= 0 || tileSize <= 0) {
+            sprites.setDataNumber(h, HERO_DATA.TILE_R, -1)
+            sprites.setDataNumber(h, HERO_DATA.TILE_C, -1)
+            sprites.setDataNumber(h, HERO_DATA.DECAL_ID_UNDERFOOT, DECAL_NONE)
+            continue
+        }
+
+        // Define "underfoot tile" as the tile containing the hero's center.
+        // (If you later want "feet point", we can change to y + halfH - 1.)
+        let c = Math.idiv((h.x | 0), tileSize) | 0
+        let r = Math.idiv((h.y | 0), tileSize) | 0
+
+        // Clamp to world bounds (keeps values sane if near edges)
+        if (c < 0) c = 0
+        else if (c >= cols) c = (cols - 1) | 0
+
+        if (r < 0) r = 0
+        else if (r >= rows) r = (rows - 1) | 0
+
+        const decalId = decor_getDecalAtTile(r, c) | 0
+
+        sprites.setDataNumber(h, HERO_DATA.TILE_R, r)
+        sprites.setDataNumber(h, HERO_DATA.TILE_C, c)
+        sprites.setDataNumber(h, HERO_DATA.DECAL_ID_UNDERFOOT, decalId)
+    }
+}
+
+// --------------------------------------------------------------
+// DECOR SOLID BLOCKING HOOK (PLANNED LOCATION, DISABLED BY DEFAULT)
+// This MUST remain a NOOP unless explicitly enabled.
+// --------------------------------------------------------------
+let DECOR_SOLID_BLOCKING_ENABLED = true
+
+function decorSolids_blockingHook(nowMs: number): void {
+    if (!DECOR_SOLID_BLOCKING_ENABLED) return
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return
+
+    // Local helpers: AABB overlap using Arcade sprite bounds
+    function overlaps(a: Sprite, b: Sprite): boolean {
+        return (a.left < b.right) && (a.right > b.left) && (a.top < b.bottom) && (a.bottom > b.top)
+    }
+
+    function anySolidOverlap(h: Sprite): boolean {
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            const s = _engineDecorSolids[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            if (overlaps(h, s)) return true
+        }
+        return false
+    }
+
+    // Fallback: resolve overlap by minimal penetration (tight AABB already applied in Phaser wrapper).
+    // This is only used when rollback cannot resolve (bad/unstable PREV_*).
+    function resolveByPenetrationOnce(h: Sprite): boolean {
+        let bestAxis = 0 // 1 = x, 2 = y
+        let bestPush = 0
+        let bestMag = 1 << 30
+
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            const s = _engineDecorSolids[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            if (!overlaps(h, s)) continue
+
+            const hcx = ((h.left + h.right) >> 1) | 0
+            const hcy = ((h.top + h.bottom) >> 1) | 0
+            const scx = ((s.left + s.right) >> 1) | 0
+            const scy = ((s.top + s.bottom) >> 1) | 0
+
+            // Penetrations (positive when overlapping)
+            const penLeft = (h.right - s.left) | 0   // push left by this (negative)
+            const penRight = (s.right - h.left) | 0  // push right by this (positive)
+            const penUp = (h.bottom - s.top) | 0     // push up by this (negative)
+            const penDown = (s.bottom - h.top) | 0   // push down by this (positive)
+
+            // Candidate pushes based on relative centers (stable direction choice)
+            const pushX = (hcx < scx) ? (-(penLeft | 0)) : (penRight | 0)
+            const pushY = (hcy < scy) ? (-(penUp | 0)) : (penDown | 0)
+
+            const magX = Math.abs(pushX) | 0
+            const magY = Math.abs(pushY) | 0
+
+            // Choose minimal axis for THIS solid
+            let axis = 1
+            let push = pushX
+            let mag = magX
+
+            if (magY < magX) {
+                axis = 2
+                push = pushY
+                mag = magY
+            }
+
+            if (mag > 0 && mag < bestMag) {
+                bestMag = mag
+                bestAxis = axis
+                bestPush = push
+            }
+        }
+
+        if (!bestAxis || bestMag >= (1 << 29)) return false
+
+        if (bestAxis === 1) {
+            h.x = ((h.x | 0) + (bestPush | 0)) | 0
+            try { (h.vx as any) = 0 } catch { }
+        } else {
+            h.y = ((h.y | 0) + (bestPush | 0)) | 0
+            try { (h.vy as any) = 0 } catch { }
+        }
+
+        return true
+    }
+
+    const MAX_FALLBACK_ITERS = 6
+
+    // Resolve per hero
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+
+        if (!anySolidOverlap(h)) continue
+
+        // Read "prev" position (set earlier each tick for tile rollback).
+        let px = sprites.readDataNumber(h, HERO_DATA.PREV_X) | 0
+        let py = sprites.readDataNumber(h, HERO_DATA.PREV_Y) | 0
+
+        const cx = h.x | 0
+        const cy = h.y | 0
+
+        if ((px === 0 && py === 0) && (cx !== 0 || cy !== 0)) {
+            px = cx
+            py = cy
+        }
+
+        let dx = (cx - px) | 0
+        let dy = (cy - py) | 0
+
+        // If PREV_* is stale/overwritten, dx/dy can be 0 even while overlapping.
+        // Use velocity direction only for axis preference in that case.
+        if (dx === 0 && dy === 0) {
+            try { dx = (h.vx as any) | 0 } catch { dx = 0 }
+            try { dy = (h.vy as any) | 0 } catch { dy = 0 }
+        }
+
+        const preferX = (Math.abs(dx) >= Math.abs(dy))
+
+        const ox = cx
+        const oy = cy
+
+        let resolved = false
+
+        if (preferX) {
+            if (dx !== 0) {
+                h.x = px
+                if (!anySolidOverlap(h)) {
+                    try { (h.vx as any) = 0 } catch { }
+                    resolved = true
+                } else {
+                    h.x = ox
+                }
+            }
+
+            if (!resolved && dy !== 0) {
+                h.y = py
+                if (!anySolidOverlap(h)) {
+                    try { (h.vy as any) = 0 } catch { }
+                    resolved = true
+                } else {
+                    h.y = oy
+                }
+            }
+        } else {
+            if (dy !== 0) {
+                h.y = py
+                if (!anySolidOverlap(h)) {
+                    try { (h.vy as any) = 0 } catch { }
+                    resolved = true
+                } else {
+                    h.y = oy
+                }
+            }
+
+            if (!resolved && dx !== 0) {
+                h.x = px
+                if (!anySolidOverlap(h)) {
+                    try { (h.vx as any) = 0 } catch { }
+                    resolved = true
+                } else {
+                    h.x = ox
+                }
+            }
+        }
+
+        // Fallback: if rollback didn't resolve (or dx/dy were useless), push out by penetration.
+        if (!resolved) {
+            for (let it = 0; it < MAX_FALLBACK_ITERS; it++) {
+                if (!anySolidOverlap(h)) { resolved = true; break }
+                if (!resolveByPenetrationOnce(h)) break
+            }
+        }
+
+        // Last resort: revert fully
+        if (!resolved) {
+            h.x = px
+            h.y = py
+            try { (h.vx as any) = 0 } catch { }
+            try { (h.vy as any) = 0 } catch { }
+        }
+    }
+}
+
 
 // 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
@@ -5701,7 +7875,8 @@ function createHeroForPlayer(
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, 0)
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleP1, 0)
 
-    _animEvent_reset(hero)
+
+    _animEvent_reset(heroIndex, hero, "HERO_CREATE_INIT", "createHeroForPlayer(init)")
     // -------------------------------------------------
 
     // UNIFIED CONTRACT: PhaseName/Start/Dur must be valid immediately (non-zero duration).
@@ -6462,12 +8637,28 @@ function _doHeroMoveBeginActionTimeline(
 
     sprites.setDataNumber(hero, HERO_DATA.ActionTargetId, 0)
 
+
+    _dbgContract_noteWhy(heroIndex, "ACTION_EDGE_BEGIN", "_doHeroMoveBeginActionTimeline")
     // Allowed action-edge hygiene
-    _animKeys_actionBeginHygiene(hero)
+    _animKeys_actionBeginHygiene(
+        heroIndex,
+        hero,
+        nowMs | 0,
+        "ACTION_EDGE_BEGIN",
+        "_doHeroMoveBeginActionTimeline"
+    )
 
     // RenderStyle authored once at action begin (stable for action instance)
     const styleMask = _elemToRenderStyleMask(element | 0)
-    _animKeys_setRenderStyle(hero, styleMask, 0, 0)
+    _animKeys_setRenderStyle(
+        heroIndex,
+        hero,
+        styleMask,
+        0,
+        0,
+        "ACTION_EDGE_BEGIN",
+        "_doHeroMoveBeginActionTimeline"
+    )
 
     _animInvCheckHeroTimeline(heroIndex, hero, nowMs | 0, "_doHeroMoveBeginActionTimeline(end)")
 
@@ -6710,6 +8901,9 @@ function _doHeroMoveTryAgilityExecuteThisPress(
     // IMPORTANT: setHeroPhaseString resets the window to duration=0, so do it BEFORE stamping.
     setHeroPhaseString(heroIndex, "slash")
 
+
+    _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_BEGIN", "_doHeroMoveTryAgilityExecuteThisPress")
+
     // Stamp the phase window here (execute bypasses _doHeroMovePlayAnimAndDispatch)
     _animKeys_stampPhaseWindow(
         heroIndex,
@@ -6717,11 +8911,21 @@ function _doHeroMoveTryAgilityExecuteThisPress(
         "slash",
         now | 0,
         totalDur | 0,
+        "AGILITY_EXEC_BEGIN",
         "_doHeroMoveTryAgilityExecuteThisPress"
     )
 
     // Seed an initial part window; updateAgilityExecuteAll will keep it updated.
-    _animKeys_setPhasePart(hero, "beat", now | 0, dt | 0, now | 0)
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "beat",
+        now | 0,
+        dt | 0,
+        now | 0,
+        "AGILITY_EXEC_BEGIN",
+        "_doHeroMoveTryAgilityExecuteThisPress(seedBeat)"
+    )
 
     // Busy gate must block other presses while executing.
     setHeroBusyUntil(heroIndex, (now + totalDur) | 0)
@@ -6978,6 +9182,7 @@ function _doHeroMovePlayAnimAndDispatch(
         phaseName,
         now | 0,
         animDuration | 0,
+        "ACTION_EDGE_BEGIN",
         "_doHeroMovePlayAnimAndDispatch"
     )
 
@@ -8213,25 +10418,91 @@ ensureHeroSpriteKinds();
 
 // HeroWeapon ↔ Enemy (STR/AGI: normal; INTELLECT: detonate; HEAL: ignore enemies)
 sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, enemy) {
-    const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY)
-    const heroIndex = sprites.readDataNumber(weapon, PROJ_DATA.HERO_INDEX)
+    const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY) | 0
+    const heroIndex = sprites.readDataNumber(weapon, PROJ_DATA.HERO_INDEX) | 0
 
     // HEAL: ignore enemy overlaps entirely
     if (family == FAMILY.HEAL) return
 
-    // INTELLECT: detonate once, no destroy now
+    // INTELLECT:
+    //   - first overlap: request detonate (so LAND happens via hero path)
+    //   - during linger/detonated: apply pulsed damage (NOT every frame)
     if (family == FAMILY.INTELLECT) {
-        if (!sprites.readDataNumber(weapon, INT_DETONATED_KEY)) {
-            console.log(
-                `[INT DEBUG] OVERLAP DETONATION hero=${heroIndex} ` +
-                `spell=(${weapon.x},${weapon.y}) enemy=(${enemy.x},${enemy.y})`
+        const nowMs = game.runtime() | 0
+        const detonated = sprites.readDataNumber(weapon, INT_DETONATED_KEY) | 0
+
+        if (!detonated) {
+            // (Optional) unified “terminus” semantics/logs
+            sprites.setDataNumber(weapon, PROJ_DATA.TERMINUS_HIT, 2)
+
+            detonateIntellectSpellForHero(
+                heroIndex,
+                weapon,
+                nowMs,
+                "INTELLECT_DETONATE_REQUEST_HIT_ENEMY",
+                "sprites.onOverlap(HeroWeapon,Enemy)"
             )
-            detonateIntellectSpellAt(weapon, weapon.x, weapon.y)
+
+            // IMPORTANT: capture a contract snapshot *after* this event-driven detonate,
+            // otherwise WHY/TOUCH for detonation gets lost (onOverlap runs after onUpdate).
+            if (DEBUG_CONTRACT_SNAPSHOT) {
+                logHeroRuntimeContractAllHeroes(nowMs, "events", "overlap(HeroWeapon,Enemy)")
+            }
+
+            return
         }
+
+        // ---- PULSE DAMAGE DURING DETONATION/LINGER -------------------------
+
+        // period: settable from your "Time" axis; default if missing
+        let period = sprites.readDataNumber(weapon, INT_PULSE_PERIOD_MS_KEY) | 0
+        if (period <= 0) period = INT_PULSE_DEFAULT_PERIOD_MS
+
+        let nextAt = sprites.readDataNumber(weapon, INT_PULSE_NEXT_AT_MS_KEY) | 0
+        let winEnd = sprites.readDataNumber(weapon, INT_PULSE_WINDOW_END_MS_KEY) | 0
+
+        // Initialize schedule on first post-detonation overlap
+        if (nextAt <= 0) {
+            nextAt = nowMs
+            sprites.setDataNumber(weapon, INT_PULSE_NEXT_AT_MS_KEY, nextAt)
+        }
+
+        // Start a new pulse (reset per-pulse hit mask so multiple enemies can be hit this pulse)
+        if (nowMs >= nextAt) {
+            sprites.setDataNumber(weapon, INT_PULSE_NEXT_AT_MS_KEY, (nowMs + period) | 0)
+            sprites.setDataNumber(weapon, INT_PULSE_WINDOW_END_MS_KEY, (nowMs + INT_PULSE_WINDOW_MS) | 0)
+            sprites.setDataNumber(weapon, INT_PULSE_HIT_MASK_KEY, 0)
+
+            // Optional: a single log per pulse (comment out if you don’t want it)
+            // console.log("[INT][PULSE] begin", "| now", nowMs, "| period", period, "| wid", (weapon.id | 0))
+        }
+
+        winEnd = sprites.readDataNumber(weapon, INT_PULSE_WINDOW_END_MS_KEY) | 0
+        if (winEnd > 0 && nowMs > winEnd) return
+
+        // Once per enemy per pulse
+        const eIndex = getEnemyIndex(enemy)
+        if (eIndex < 0) return
+
+        if (eIndex < 31) {
+            let mask = sprites.readDataNumber(weapon, INT_PULSE_HIT_MASK_KEY) | 0
+            const bit = (1 << eIndex)
+            if (mask & bit) return
+            sprites.setDataNumber(weapon, INT_PULSE_HIT_MASK_KEY, mask | bit)
+        }
+
+        // Damage per pulse: default to projectile damage key (same place STR/AGI reads)
+        let dmg = sprites.readDataNumber(weapon, PROJ_DATA.DAMAGE) | 0
+        if (dmg <= 0) return
+
+        applyDamageToEnemyIndex(eIndex, dmg)
+        showDamageNumber(enemy.x, enemy.y - 6, dmg)
+
         return
     }
 
-    // STR/AGI payload (once per enemy)
+    // ---------------- STR / AGI payload (unchanged) ------------------------
+
     const button = sprites.readDataString(weapon, PROJ_DATA.BUTTON)
     const isHeal = (sprites.readDataNumber(weapon, PROJ_DATA.IS_HEAL) | 0) == 1
     const slowPct = sprites.readDataNumber(weapon, PROJ_DATA.SLOW_PCT) | 0
@@ -8258,11 +10529,10 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
         showDamageNumber(enemy.x, enemy.y - 6, dmg)
     }
     if (isHeal && dmg > 0) applyHealToHeroIndex(heroIndex, dmg)
-    
-    if (knockbackPct > 0) {
-    applyPctKnockbackToEnemy(enemy, hero.x, hero.y, knockbackPct)
-    }
 
+    if (knockbackPct > 0) {
+        applyPctKnockbackToEnemy(enemy, hero.x, hero.y, knockbackPct)
+    }
 })
 
 // NEW: HeroWeapon ↔ Player (HEAL detonates on allies)
@@ -8486,7 +10756,17 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
         // ✅ CANONICAL CONTRACT: publish PhasePart so heroAnimGlue/weaponAnimGlue can consume it
         // NOTE: This must exist already in your codebase (you referenced it earlier).
-        _animKeys_setPhasePart(hero, segName, nowMs | 0, segDur | 0, segStart | 0)
+        // AFTER
+        _animKeys_setPhasePart(
+            heroIndex,
+            hero,
+            segName,
+            segStart | 0,
+            segDur | 0,
+            nowMs | 0,
+            "STRENGTH_CHARGE_TICK",
+            "_strPublishSwingSegForHero(segChange)"
+        )
 
         // Debug only on segment transitions (not every frame)
         console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
@@ -8630,17 +10910,44 @@ function beginStrengthCharge(
     sprites.setDataString(hero, HERO_DATA.ActionKind, "strength_charge")
     if (DEBUG_ANIM_KEYS) _dbgAnimKeys(heroIndex, hero, "KIND_REFINE", `t=${(now|0)} kind=strength_charge`)
 
-    _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now | 0, maxMs | 0, "beginStrengthCharge")
+    _dbgContract_noteWhy(heroIndex, "STRENGTH_CHARGE_BEGIN", "beginStrengthCharge")
 
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "slash",
+        now | 0,
+        maxMs | 0,
+        "STRENGTH_CHARGE_BEGIN",
+        "beginStrengthCharge(stamp)"
+    )
     // ✅ Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
     let prepMs = STR_PREP_VISIBLE_MS | 0
     if (prepMs < 0) prepMs = 0
     if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
 
     if (prepMs > 0) {
-        _animKeys_setPhasePart(hero, "prepareToCharge", now | 0, prepMs | 0, now | 0)
+        _animKeys_setPhasePart(
+            heroIndex,
+            hero,
+            "prepareToCharge",
+            now | 0,
+            prepMs | 0,
+            now | 0,
+            "STRENGTH_CHARGE_BEGIN",
+            "beginStrengthCharge(prep)"
+        )        
     } else {
-        _animKeys_setPhasePart(hero, "charging", now | 0, Math.max(1, maxMs | 0) | 0, now | 0)
+        _animKeys_setPhasePart(
+            heroIndex,
+            hero,
+            "charging",
+            now | 0,
+            Math.max(1, maxMs | 0) | 0,
+            now | 0,
+            "STRENGTH_CHARGE_BEGIN",
+            "beginStrengthCharge(hold)"
+        )
     }
 
     // Let slash play. Prep is visible; charging hold is done by heroAnimGlue when part=="charging".
@@ -8694,15 +11001,36 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     // ----------------------------
     const ppNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
 
+    _dbgContract_noteWhy(heroIndex, "STRENGTH_CHARGE_TICK", "updateStrengthChargeForHero")
+
+
     if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
         // In prep
         if (ppNow !== "prepareToCharge") {
-            _animKeys_setPhasePart(hero, "prepareToCharge", prepStart | 0, prepMs | 0, prepStart | 0)
+            _animKeys_setPhasePart(
+                heroIndex,
+                hero,
+                "prepareToCharge",
+                prepStart | 0,
+                prepMs | 0,
+                nowMs | 0,
+                "STRENGTH_CHARGE_TICK",
+                "updateStrengthChargeForHero(prepPart)"
+            )
         }
     } else {
         // In charging/hold
         if (ppNow !== "charging") {
-            _animKeys_setPhasePart(hero, "charging", holdStart | 0, holdMs | 0, holdStart | 0)
+            _animKeys_setPhasePart(
+                heroIndex,
+                hero,
+                "charging",
+                holdStart | 0,
+                holdMs | 0,
+                nowMs | 0,
+                "STRENGTH_CHARGE_TICK",
+                "updateStrengthChargeForHero(holdPart)"
+            )        
         }
     }
 
@@ -8908,8 +11236,29 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     // ------------------------------------------------------------
     // Phase + part window for the swing
     // ------------------------------------------------------------
-    _animKeys_stampPhaseWindow(heroIndex, hero, "slash", now, swingDurationMs, "releaseStrengthCharge")
-    _animKeys_setPhasePart(hero, "swing", now, swingDurationMs, now)
+    _dbgContract_noteWhy(heroIndex, "STRENGTH_SWING_BEGIN", "releaseStrengthCharge")
+
+
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "slash",
+        now | 0,
+        swingDurationMs | 0,
+        "STRENGTH_SWING_BEGIN",
+        "releaseStrengthCharge(stamp)"
+    )
+
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "swing",
+        now | 0,
+        swingDurationMs | 0,
+        now | 0,
+        "STRENGTH_SWING_BEGIN",
+        "releaseStrengthCharge(swingPart)"
+    )
 
     // initialize segmentation addon channel (you said you like this)
     _strPublishSwingSegForHero(heroIndex, hero, now)
@@ -8986,11 +11335,24 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
     showStrengthChargeBar(heroIndex, hero, false)
     setStrengthChargeBarPct(heroIndex, hero, 0)
 
+    _dbgContract_noteWhy(heroIndex, "STRENGTH_CHARGE_CANCEL", "cancelStrengthCharge")
+
     // Cancel ends the move-segment (PhasePart), but PhaseName stays meaningful (unified contract)
-    _animKeys_clearPhasePart(hero)
+    _animKeys_clearPhasePart(
+        heroIndex,
+        hero,
+        now | 0,
+        "STRENGTH_CHARGE_CANCEL",
+        "cancelStrengthCharge(clearPart)"
+    )
 
     // Clear any one-shot event pulse (mask + payload only; EventSequence untouched)
-    _animEvent_clear(hero)
+    _animEvent_clear(
+        heroIndex,
+        hero,
+        "STRENGTH_CHARGE_CANCEL",
+        "cancelStrengthCharge(clearEvent)"
+    )
 
     // Unlock inputs and clear busy
     clearHeroBusyUntil(heroIndex)
@@ -9673,10 +12035,22 @@ function agiSelectBestEnemyInRadius(cx: number, cy: number, radius: number): num
 // IMPORTANT: Only emitters increment EventSequence.
 function agiSpawnExecuteSlashVfx(hero: Sprite, x: number, y: number): void {
     const phaser = isPhaserRuntime()
-
+    const heroIndex = sprites.readDataNumber(hero, HERO_DATA.HERO_INDEX) | 0
+    
     // Phaser: emit an event beat instead of spawning an Arcade-side placeholder sprite.
     if (phaser) {
-        _animEvent_emit(hero, EVENT_MASK_AGI_EXEC_SLASH, x | 0, y | 0, 0, 0)
+        _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_TICK", "agiSpawnExecuteSlashVfx")
+        _animEvent_emit(
+            heroIndex,
+            hero,
+            EVENT_MASK_AGI_EXEC_SLASH,
+            x | 0,
+            y | 0,
+            0,
+            0,
+            "AGILITY_EXEC_TICK",
+            "agiSpawnExecuteSlashVfx"
+        )
         if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(-1, hero, "EVENT_EMIT"))
         return
     }
@@ -9774,17 +12148,29 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
     const phaseStart = now
     const phaseDur = Math.max(1, ((totalSteps * dt) | 0)) | 0
 
+    _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_BEGIN", "agiBeginExecute")
+
     _animKeys_stampPhaseWindow(
         heroIndex,
         hero,
         "slash",
         phaseStart,
         phaseDur,
+        "AGILITY_EXEC_BEGIN",
         "agiBeginExecute"
     )
 
     // Start first beat part immediately as "teleport"
-    _animKeys_setPhasePart(hero, "teleport", phaseStart, Math.max(1, Math.idiv(dt * AGI_EXEC_TELEPORT_FRAC_X1000, 1000)), now)
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "teleport",
+        phaseStart,
+        Math.max(1, Math.idiv(dt * AGI_EXEC_TELEPORT_FRAC_X1000, 1000)),
+        now,
+        "AGILITY_EXEC_BEGIN",
+        "agiBeginExecute(seedTeleport)"
+    )
 
     if (DEBUG_AGI_COMBO_EXIT) {
         console.log(`[agi.combo.exit] EXEC(begin) hero=${heroIndex} packets=${arr.length} dt=${dt} phaseDur=${phaseDur}`)
@@ -9851,6 +12237,9 @@ function updateAgilityExecuteAll(nowMs: number): void {
         const state = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
         if (state !== AGI_STATE.EXECUTING) continue
 
+        _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_TICK", "updateAgilityExecuteAll")
+
+
         // Interval (minimum floor so slashes are visible)
         const interval = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_INTERVAL_MS) | 0
         const dtBase = (interval > 0 ? interval : (AGI_EXEC_STEP_MS | 0)) | 0
@@ -9878,6 +12267,7 @@ function updateAgilityExecuteAll(nowMs: number): void {
                 "slash",
                 phaseStart,
                 phaseDur,
+                "AGILITY_EXEC_TICK",
                 "updateAgilityExecuteAll:fallbackStamp"
             )
         }
@@ -9931,7 +12321,16 @@ function updateAgilityExecuteAll(nowMs: number): void {
 
         // Stamp phase part (transition-aware is handled inside _animKeys_setPhasePart
         // in your codebase pattern; we call every frame to keep it authoritative).
-        _animKeys_setPhasePart(hero, desiredPart, partStart, partDur, now)
+        _animKeys_setPhasePart(
+            heroIndex,
+            hero,
+            desiredPart,
+            partStart,
+            partDur,
+            now,
+            "AGILITY_EXEC_TICK",
+            "updateAgilityExecuteAll(part)"
+        )
 
         // Optional: if you want Phaser to have the per-beat progress too, publish it
         // as PhasePartProgress when desiredPart is "teleport/strike/recover".
@@ -10222,7 +12621,14 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
             hero.vx = 0
             hero.vy = 0
-            _animKeys_clearPhasePart(hero)
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_AGI_EXEC", "updateAgilityThrustMotionAll(skipArmedOrExecuting)")
+            _animKeys_clearPhasePart(
+                hi,
+                hero,
+                now,
+                "AMBIENT_SKIP_AGI_EXEC",
+                "updateAgilityThrustMotionAll(skipArmedOrExecuting)"
+            )
             continue
         }
 
@@ -10245,6 +12651,10 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
         // Only set Name/Start/Duration when the part actually changes.
         const curPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
         if (curPart !== desiredPart) {
+
+            _dbgContract_noteWhy(hi, "ACTION_EDGE_BEGIN", "updateAgilityThrustMotionAll(partTransition)")
+            _dbgContract_trackTouch(hi, "ACTION_EDGE_BEGIN", "updateAgilityThrustMotionAll(partTransition)", TOUCH_PHASE_PART)
+
             if (desiredPart === "windup") {
                 const windStart = (phaseStart > 0 ? phaseStart : now) | 0
                 let windDur = (lungeStart - windStart) | 0
@@ -10309,6 +12719,9 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
         let prog = Math.idiv(t * PHASE_PROGRESS_MAX, partDur)
         if (prog < 0) prog = 0
         if (prog > PHASE_PROGRESS_MAX) prog = PHASE_PROGRESS_MAX
+
+        _dbgContract_trackTouch(hi, "ACTION_EDGE_BEGIN", "updateAgilityThrustMotionAll(progress)", "PhasePartProgress")
+
         sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
 
         // NEW universal contract: keep the coarse whole-phase progress updated too.
@@ -10321,6 +12734,9 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             if (phaseProg < 0) phaseProg = 0
             if (phaseProg > PHASE_PROGRESS_MAX) phaseProg = PHASE_PROGRESS_MAX
         }
+
+        _dbgContract_trackTouch(hi, "ACTION_EDGE_BEGIN", "updateAgilityThrustMotionAll(phaseProg)", "PhaseProgressInt")
+
         sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, phaseProg)
 
         // Clear schedule once full action window has finished so PartProgress keeps updating during landing.
@@ -10337,8 +12753,17 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             hero.vx = 0
             hero.vy = 0
 
+
+            _dbgContract_noteWhy(hi, "AMBIENT_CLEAR_PHASE_PART", "updateAgilityThrustMotionAll(scheduleEnd)")
+
             // Don’t keep “landing” around after the schedule ends
-            _animKeys_clearPhasePart(hero)
+            _animKeys_clearPhasePart(
+                hi,
+                hero,
+                now,
+                "AMBIENT_CLEAR_PHASE_PART",
+                "updateAgilityThrustMotionAll(scheduleEnd)"
+            )
         }
     }
 }
@@ -10451,9 +12876,22 @@ function cancelAgilityComboNow(heroIndex: number, hero: Sprite) {
     agiPacketsClear(heroIndex, hero)
     destroyAgiAimIndicator(heroIndex)
 
+    _dbgContract_noteWhy(heroIndex, "AMBIENT_CLEAR_PHASE_PART", "cancelAgilityComboNow")
+
     // End segmentation + one-shot pulses (no lingering execute sheen / beats)
-    _animKeys_clearPhasePart(hero)
-    _animEvent_clear(hero)
+    _animKeys_clearPhasePart(
+        heroIndex,
+        hero,
+        nowMs | 0,
+        "AMBIENT_CLEAR_PHASE_PART",
+        "cancelAgilityComboNow"
+    )
+    _animEvent_clear(
+        heroIndex,
+        hero,
+        "AMBIENT_CLEAR_PHASE_PART",
+        "cancelAgilityComboNow"
+    )
 
     // Clear any long dash/execute timers so movement can resume
     sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
@@ -11354,10 +13792,30 @@ function executeIntellectMove(
 
     // Phase window includes: produce + drive + land
     const totalCastMs = ((targetingTime | 0) + (INT_LAND_DUR_MS | 0)) | 0
-    _animKeys_stampPhaseWindow(heroIndex, hero, "cast", nowMs, totalCastMs, "executeIntellectMove")
+
+    _dbgContract_noteWhy(heroIndex, "INTELLECT_CAST_BEGIN", "executeIntellectMove")
+
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "cast",
+        nowMs | 0,
+        totalCastMs | 0,
+        "INTELLECT_CAST_BEGIN",
+        "executeIntellectMove(stamp)"
+    )
 
     // PhasePart: PRODUCE (frames 0..4 over produceMs)
-    _animKeys_setPhasePart(hero, "produce", nowMs, produceMs, nowMs)
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "produce",
+        nowMs | 0,
+        produceMs | 0,
+        nowMs | 0,
+        "INTELLECT_CAST_BEGIN",
+        "executeIntellectMove(produce)"
+    )
 
     // Lock hero immediately (produce + drive + land are non-movement)
     lockHeroControls(heroIndex)
@@ -11367,88 +13825,178 @@ function executeIntellectMove(
 }
 
 
-function beginIntellectTargeting(
-    heroIndex: number,
-    expiresAtMsAbs: number, // ABSOLUTE time when the spell should auto-detonate
-    button: string,
-    family: number
-) {
+
+const INT_PULSE_DEFAULT_PERIOD_MS = 250;  // tweak (or write from your "Time" axis)
+const INT_PULSE_WINDOW_MS = 70;           // short window so multiple enemies can be hit in same pulse
+
+
+
+// Intellect spell image (Phaser-host runtime has no MakeCode `assets.*` macro)
+// Intellect spell image (Phaser-host runtime: Image has no fillCircle/drawCircle)
+let _INT_SPELL_IMG: Image | null = null
+
+function _img_fillCircleCompat(img: Image, cx: number, cy: number, r: number, col: number): void {
+    const rr = (r * r) | 0
+    for (let dy = -r; dy <= r; dy++) {
+        const y = (cy + dy) | 0
+        const inside = (rr - dy * dy) | 0
+        if (inside < 0) continue
+        const dx = (Math.sqrt(inside) | 0) | 0
+        img.drawLine((cx - dx) | 0, y, (cx + dx) | 0, y, col)
+    }
+}
+
+function beginIntellectTargeting(heroIndex: number): void {
+    const nowMs = game.runtime() | 0
     const hero = heroes[heroIndex]
     if (!hero) return
 
-    const now = game.runtime() | 0
-    const expiresAt = (expiresAtMsAbs | 0)
-    if (expiresAt <= now) {
-        console.log(`[INT] BAD expiresAt hero=${heroIndex} now=${now} expiresAt=${expiresAt}`)
+    const expiresAtMs = sprites.readDataNumber(hero, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
+    if (expiresAtMs <= nowMs) {
         finishIntellectSpellForHero(heroIndex)
         return
     }
 
-    // Minimal spell sprite (you already replace its image during detonation)
-    const imgCore = img`
-        . 8 8 8 .
-        8 8 8 8 8
-        8 8 8 8 8
-        . 8 8 8 .
-    `
-    const spell = sprites.create(imgCore, SpriteKind.HeroWeapon)
-    spell.z = hero.z + 1
+    // Destroy any previous controlled spell
+    const prev = heroControlledSpells[heroIndex]
+    if (prev && !(prev.flags & sprites.Flag.Destroyed)) {
+        prev.destroy()
+    }
+    heroControlledSpells[heroIndex] = null
+
+    // Spawn as HeroWeapon so overlap(HeroWeapon, Enemy) can apply
+    const spell = sprites.create(_getIntSpellImg(false, 16), SpriteKind.HeroWeapon)
+
+    // ✅ CRITICAL: Ghost disables overlaps in arcadeCompat
+    spell.setFlag(SpriteFlag.Ghost, false)
+
+    // TRACE: prove kind + flags at runtime
+    {
+        const SK: any = SpriteKind as any
+        const sid = (spell as any).id
+        const sk = (spell as any).kind
+        const flags = (spell as any).flags | 0
+        console.log(
+            "[INT][SPAWN-KIND]",
+            "heroIndex", heroIndex,
+            "| spell.id", sid,
+            "| spell.kind", sk,
+            "| SK.HeroWeapon", SK.HeroWeapon,
+            "| flags", flags,
+            "| ghost?", ((flags & (sprites.Flag.Ghost | 0)) ? 1 : 0)
+        )
+    }
+
     spell.x = hero.x
-    spell.y = hero.y
+    spell.y = hero.y - 12
 
-    // Spell lifetime (pre-detonation)
-    sprites.setDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY, expiresAt)
+    const family = sprites.readDataNumber(hero, INT_CAST_FAMILY_KEY) | 0
+    const button = sprites.readDataString(hero, INT_CAST_BUTTON_KEY)
 
-    // CRITICAL: do not allow lifespan to kill this early
-    // (If you *must* set something, set it safely beyond expiresAt + detonate anim)
-    spell.lifespan = 0
-
-    // Register
-    heroControlledSpells[heroIndex] = spell
-    heroProjectiles.push(spell)
-
-    // Metadata used by detonation + damage
     sprites.setDataNumber(spell, PROJ_DATA.HERO_INDEX, heroIndex)
     sprites.setDataNumber(spell, PROJ_DATA.FAMILY, family)
     sprites.setDataString(spell, PROJ_DATA.BUTTON, button)
+    sprites.setDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY, expiresAtMs)
+    sprites.setDataNumber(spell, INT_DETONATED_KEY, 0)
 
-    console.log(`[INT] SPAWN hero=${heroIndex} now=${now} expiresAt=${expiresAt}`)
+    sprites.setDataNumber(spell, INT_DETONATED_KEY, 0)
+
+    // Pulse period is read by overlap() AFTER detonation. Set it on the spell now.
+    const pulseMsFromHero = sprites.readDataNumber(hero, INT_PULSE_PERIOD_MS_KEY) | 0
+    sprites.setDataNumber(
+        spell,
+        INT_PULSE_PERIOD_MS_KEY,
+        (pulseMsFromHero > 0 ? pulseMsFromHero : INT_PULSE_DEFAULT_PERIOD_MS) | 0
+    )
+
+    // Phaser-side visual override (optional but recommended)
+    sprites.setDataString(spell, PROJ_PHASER_VISUAL_MODEL_KEY, "crystal")
+
+
+    // IMPORTANT: the control loop checks this one
+    sprites.setDataNumber(spell, PROJ_DATA.TERMINUS_HIT, 0)
+
+    sprites.setDataNumber(spell, INT_SPELL_CREATED_AT_MS_KEY, nowMs)
+    sprites.setDataNumber(spell, INT_SPELL_SPAWNED_AT_MS_KEY, nowMs)
+
+    // Publish cached combat stats onto the spell
+    const castDmg = sprites.readDataNumber(hero, INT_CAST_DMG_KEY) | 0
+    const castRadius = sprites.readDataNumber(hero, INT_CAST_RADIUS_KEY) | 0
+    const castMult = sprites.readDataNumber(hero, INT_CAST_DMG_MULT_KEY) | 0
+
+    const baseDmg = getBasePower((family | 0) || FAMILY.INTELLECT) | 0
+    const dmg = (castDmg > 0 ? castDmg : Math.max(1, baseDmg) | 0) | 0
+    const radiusPx = (castRadius > 0 ? castRadius : 16) | 0
+
+    sprites.setDataNumber(spell, PROJ_DATA.DAMAGE, dmg)
+    sprites.setDataNumber(spell, INT_RADIUS_KEY, radiusPx)
+    if (castMult > 0) sprites.setDataNumber(spell, INT_DAMAGE_MULT_KEY, castMult)
+
+    sprites.setDataSprite(hero, INT_SPELL_SPRITE_KEY, spell)
+    heroControlledSpells[heroIndex] = spell
+
+    // (Recommended) Track it so processIntellectLingers() can animate detonations
+    heroProjectiles.push(spell)
+
+    spell.vx = 0
+    spell.vy = 0
 }
-
 
 
 function runIntellectDetonation(spell: Sprite, lingerMs: number) {
     if (!spell || (spell.flags & sprites.Flag.Destroyed)) return
 
-    const now = game.runtime()
+    const now = game.runtime() | 0
 
     // How long the tendril animation should last (ms)
-    const totalLinger = Math.max(200, Math.min(1200, lingerMs))
+    const totalLinger = Math.max(200, Math.min(1200, lingerMs | 0)) | 0
 
     // Pull max radius from traits; fall back to something sane
     let maxRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
     if (maxRadius <= 0) maxRadius = 16
 
     // Make the sprite's image large enough to contain the full explosion
-    const size = maxRadius * 2 + 2
+    const size = (maxRadius * 2 + 2) | 0
     const img = image.create(size, size)
     img.fill(0)
+
+    // Optional: make detonation *unmistakably visible* even if tendrils never render in Phaser.
+    if (DEBUG_INT_DET_FORCE_VISIBLE_IMAGE) {
+        img.drawRect(0, 0, size, size, 2)
+        img.drawLine(0, size >> 1, size - 1, size >> 1, 2)
+        img.drawLine(size >> 1, 0, size >> 1, size - 1, 2)
+    }
+
     spell.setImage(img)
 
     // Center it visually at the same world location
-    // (Using spell.x / spell.y as world position is unchanged.)
     spell.z += 1
-
-    // Move sprite so its visual center = actual detonation point
     spell.x -= img.width >> 1
     spell.y -= img.height >> 1
 
     // Store timing for per-frame animation
+    const endAt = (now + totalLinger) | 0
     sprites.setDataNumber(spell, INT_DETONATE_START_KEY, now)
-    sprites.setDataNumber(spell, INT_DETONATE_END_KEY, now + totalLinger)
+    sprites.setDataNumber(spell, INT_DETONATE_END_KEY, endAt)
 
-    // Schedule actual cleanup: spell will be destroyed AFTER the animation
-    sprites.setDataNumber(spell, PROJ_DATA.DESTROY_AT, now + totalLinger + 100)
+    // Schedule cleanup: contract + actual kill
+    const destroyAt = (endAt + 100) | 0
+    sprites.setDataNumber(spell, PROJ_DATA.DESTROY_AT, destroyAt)
+
+    // **CRITICAL FIX**: guarantee actual destruction even if AutoDestroy/DestroyOnWall were disabled earlier.
+    // lifespan is "ms from now" and does not rely on any other cleanup loop.
+    spell.lifespan = (totalLinger + 150) | 0
+
+    // After detonation, allow normal policies again (harmless even if not used)
+    spell.setFlag(SpriteFlag.AutoDestroy, true)
+
+    if (DEBUG_INT_DET) {
+        const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
+        console.log(
+            `[INT][DET] hero=${heroIndex} now=${now} linger=${totalLinger} ` +
+            `endAt=${endAt} destroyAt=${destroyAt} lifespan=${spell.lifespan | 0} img=${img.width}x${img.height}`
+        )
+    }
 }
 
 
@@ -11472,11 +14020,17 @@ function finishIntellectSpellForHero(heroIndex: number): void {
         )
     }
 
+    // Clear cast metadata (prevents stale-land / stale-produce edge cases)
+    sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, 0)
+    sprites.setDataNumber(hero, INT_CAST_SPAWN_AT_MS_KEY, 0)
+    sprites.setDataNumber(hero, INT_SPELL_EXPIRES_AT_MS_KEY, 0)
+    sprites.setDataNumber(hero, INT_CAST_FAMILY_KEY, 0)
+    sprites.setDataString(hero, INT_CAST_BUTTON_KEY, "")
+
     // Release control state (engine-owned)
     sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
 
     // IMPORTANT: do NOT destroy the spell here.
-    // Detonation helpers call finishIntellectSpellForHero() and then run visuals on the spell.
     if (heroControlledSpells[heroIndex]) heroControlledSpells[heroIndex] = null
 
     // Clear movement intent + busy lock
@@ -11486,9 +14040,23 @@ function finishIntellectSpellForHero(heroIndex: number): void {
     hero.vy = 0
     clearHeroBusyUntil(heroIndex)
 
+    _dbgContract_noteWhy(heroIndex, "INTELLECT_CAST_FINISH", "finishIntellectSpellForHero")
+
     // Clear any action leftovers that can strand the hero in "aura-only" mode
-    _animEvent_clear(hero)
-    _animKeys_clearPhasePart(hero)
+    _animEvent_clear(
+        heroIndex,
+        hero,
+        "INTELLECT_CAST_FINISH",
+        "finishIntellectSpellForHero(clearEvent)"
+    )
+
+    _animKeys_clearPhasePart(
+        heroIndex,
+        hero,
+        nowMs | 0,
+        "INTELLECT_CAST_FINISH",
+        "finishIntellectSpellForHero(clearPart)"
+    )
 
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleMask, 0)
     sprites.setDataNumber(hero, HERO_DATA.RenderStyleP0, 0)
@@ -11499,13 +14067,8 @@ function finishIntellectSpellForHero(heroIndex: number): void {
     // Return to ambient phase ownership (movement resolver will keep it healthy)
     setHeroPhaseString(heroIndex, "idle")
 
-    // ------------------------------------------------------------------
-    // ONLY CORRECTION:
     // Reset FAMILY back to movement/base so idle/run/walk resolve correctly
-    // after an intellect cast. Otherwise FAMILY can stay "intelligence" and
-    // ambient phases will miss frames => hero disappears.
-    // ------------------------------------------------------------------
-    sprites.setDataNumber(hero, HERO_DATA.FAMILY, 0) // 0 = strength/base movement atlas
+    sprites.setDataNumber(hero, HERO_DATA.FAMILY, 0)
 
     // ---- LOG (after) ----
     if (DEBUG_ANIM_KEYS_INT_FINISH) {
@@ -11521,6 +14084,11 @@ function finishIntellectSpellForHero(heroIndex: number): void {
 }
 
 
+// --- DEBUG KEYS (standalone constants; keep outside the function) ---
+const INT_DRIVE_LAST_LOG_MS_KEY = "__intDriveLastLogMs"
+const INT_DRIVE_LAST_AIM_X_KEY = "__intDriveLastAimX"
+const INT_DRIVE_LAST_AIM_Y_KEY = "__intDriveLastAimY"
+const INT_DRIVE_LAST_TERM_HIT_KEY = "__intDriveLastTermHit"
 
 function updateIntellectSpellsControl(): void {
     const nowMs = game.runtime() | 0
@@ -11529,111 +14097,127 @@ function updateIntellectSpellsControl(): void {
         const hero = heroes[i]
         if (!hero) continue
 
-        // LAND finishing
-        const landEnd0 = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
-        if (landEnd0 > 0) {
-            hero.vx = 0
-            hero.vy = 0
-            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        if (!sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) continue
 
-            if (nowMs >= landEnd0) {
-                sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, 0)
-                finishIntellectSpellForHero(i)
-            }
-            continue
-        }
+        // If we don't have a spell yet, we may simply be in PRODUCE waiting for spawnAt.
+        let spell2 = sprites.readDataSprite(hero, INT_SPELL_SPRITE_KEY)
 
-        const isCtrl = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)
-        if (!isCtrl) continue
-
-        const spell = heroControlledSpells[i]
-
-        // PRODUCE (delayed spawn)
-        if (!spell) {
+        if (!spell2 || (spell2.flags & sprites.Flag.Destroyed)) {
             const spawnAt = sprites.readDataNumber(hero, INT_CAST_SPAWN_AT_MS_KEY) | 0
             const expiresAt = sprites.readDataNumber(hero, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
-            const family = sprites.readDataNumber(hero, INT_CAST_FAMILY_KEY) | 0
-            const button = sprites.readDataString(hero, INT_CAST_BUTTON_KEY) || ""
 
-            if (spawnAt <= 0 || expiresAt <= 0) {
-                console.log(`[INT] LIMBO BAD HERO METADATA hero=${i} now=${nowMs} spawnAt=${spawnAt} expiresAt=${expiresAt}`)
-                finishIntellectSpellForHero(i)
+            // If the cast already expired, end cleanly.
+            if (expiresAt > 0 && expiresAt <= nowMs) {
+                finishIntellectSpellForHero(i, hero, nowMs, "INT_FINISH_EXPIRED_BEFORE_SPAWN")
                 continue
             }
 
-            // Still producing
-            if (nowMs < spawnAt) {
-                hero.vx = 0
-                hero.vy = 0
-                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            // Still in PRODUCE: wait for spawn moment (DO NOT finish).
+            if (spawnAt > 0 && nowMs < spawnAt) {
                 continue
             }
 
-            // Spawn spell now
-            beginIntellectTargeting(i, expiresAt, button, family)
+            // Time to spawn (or spawnAt missing): try to create the controlled spell now.
+            if (spawnAt > 0 && nowMs >= spawnAt) {
+                console.log(`[INT][SPAWN] hi=${i} now=${nowMs} spawnAt=${spawnAt}`)
+                beginIntellectTargeting(i)
 
-            // Switch to DRIVE part immediately upon spell existing
-            const remaining = Math.max(1, (expiresAt - nowMs) | 0) | 0
-            _animKeys_setPhasePart(hero, "drive", nowMs, remaining, nowMs)
+                // Consume spawnAt so we don't repeatedly attempt spawn if something goes wrong.
+                sprites.setDataNumber(hero, INT_CAST_SPAWN_AT_MS_KEY, 0)
+
+                spell2 = sprites.readDataSprite(hero, INT_SPELL_SPRITE_KEY)
+            }
+
+            // If we still don't have a spell, then it's a real failure.
+            if (!spell2 || (spell2.flags & sprites.Flag.Destroyed)) {
+                finishIntellectSpellForHero(i, hero, nowMs, "INT_FINISH_MISSING_SPELL")
+                continue
+            }
         }
-
-        const spell2 = heroControlledSpells[i]
-        if (!spell2) {
-            console.log(`[INT] LIMBO spawn failed hero=${i} now=${nowMs}`)
-            finishIntellectSpellForHero(i)
-            continue
-        }
-
-        if ((spell2.flags & sprites.Flag.Destroyed) !== 0) {
-            const exp = sprites.readDataNumber(spell2, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
-            console.log(`[INT BUG] SPELL DESTROYED EARLY hero=${i} now=${nowMs} expiresAt=${exp}`)
-            finishIntellectSpellForHero(i)
-            continue
-        }
-
-        // While controlling: hero stays frozen
-        hero.vx = 0
-        hero.vy = 0
-        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
-        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
 
         // Ensure DRIVE phase-part persists as long as spell exists (and not detonated)
         if (!sprites.readDataNumber(spell2, INT_DETONATED_KEY)) {
             const exp = sprites.readDataNumber(spell2, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
             if (exp > 0) {
                 const remaining = Math.max(1, (exp - nowMs) | 0) | 0
-                _animKeys_setPhasePart(hero, "drive", nowMs, remaining, nowMs)
+                _animKeys_setPhasePart(
+                    i,
+                    hero,
+                    "drive",
+                    nowMs,
+                    remaining,
+                    nowMs,
+                    "INTELLECT_CAST_DRIVE",
+                    "updateIntellectSpellsControl(drive)"
+                )
 
+                // Auto-detonate when spell lifetime ends
                 if (nowMs >= exp) {
                     console.log("Killing spell with detonate because nowMs is greater than exp")
-                    detonateIntellectSpellForHero(i, spell2, nowMs)
+                    detonateIntellectSpellForHero(
+                        i,
+                        spell2,
+                        nowMs,
+                        "INTELLECT_DETONATE_REQUEST_EXPIRE",
+                        "updateIntellectSpellsControl(expire)"
+                    )
                     continue
                 }
             }
         }
 
+        // If the spell has a terminus hit, detonate (enemy/wall semantics come from TERMINUS_HIT)
+        const termHit = sprites.readDataNumber(spell2, PROJ_DATA.TERMINUS_HIT) | 0
+        if (termHit) {
+            console.log(`We found a terminus hit on the spell, so we are detonating. termHit=${termHit}`)
+
+            let why = "INTELLECT_DETONATE_REQUEST_UNKNOWN"
+            if (termHit == 1) why = "INTELLECT_DETONATE_REQUEST_HIT_WALL"
+            else if (termHit == 2) why = "INTELLECT_DETONATE_REQUEST_HIT_ENEMY"
+
+            detonateIntellectSpellForHero(
+                i,
+                spell2,
+                nowMs,
+                why,
+                `updateIntellectSpellsControl(terminusHit=${termHit})`
+            )
+            continue
+        }
+
         // Steering: DRIVE must be authoritative and ONLY move when player is aiming.
         const aim = getAimVectorForHero(i)
-        let ax = aim[0] | 0
-        let ay = aim[1] | 0
+        const ax = aim[0] | 0
+        const ay = aim[1] | 0
 
-        // DEBUG (throttled): tells us if aim is stuck at 0,0 (causing drift in your old code)
-        const nextLogAtKey = "__intDbgNextLogAt"
-        const nextLogAt = (sprites.readDataNumber(hero, nextLogAtKey) | 0)
-        if (nowMs >= nextLogAt) {
-            sprites.setDataNumber(hero, nextLogAtKey, (nowMs + 250) | 0)
+        // DEBUG (throttled + change-aware, per-hero keys)
+        const lastLogMs = sprites.readDataNumber(hero, INT_DRIVE_LAST_LOG_MS_KEY) | 0
+        const lastAx = sprites.readDataNumber(hero, INT_DRIVE_LAST_AIM_X_KEY) | 0
+        const lastAy = sprites.readDataNumber(hero, INT_DRIVE_LAST_AIM_Y_KEY) | 0
+        const lastTerm = sprites.readDataNumber(hero, INT_DRIVE_LAST_TERM_HIT_KEY) | 0
+
+        const aimChanged = (ax !== lastAx) || (ay !== lastAy)
+        const termChanged = (termHit !== lastTerm)
+        const timeOk = (nowMs - lastLogMs) >= 250
+
+        if (aimChanged || termChanged || timeOk) {
+            sprites.setDataNumber(hero, INT_DRIVE_LAST_LOG_MS_KEY, nowMs)
+            sprites.setDataNumber(hero, INT_DRIVE_LAST_AIM_X_KEY, ax)
+            sprites.setDataNumber(hero, INT_DRIVE_LAST_AIM_Y_KEY, ay)
+            sprites.setDataNumber(hero, INT_DRIVE_LAST_TERM_HIT_KEY, termHit)
+
             console.log("[INT][DRIVE]",
                 "| hero", i,
                 "| aim", ax, ay,
                 "| spellXY", (spell2.x | 0), (spell2.y | 0),
                 "| spellV", (spell2.vx | 0), (spell2.vy | 0),
+                "| termHit", termHit,
+                "| life", (spell2.lifespan | 0),
                 "| now", nowMs
             )
         }
 
-        // ✅ Critical change: NO input => STOP (do NOT force ax=1)
+        // NO input => STOP
         if (ax === 0 && ay === 0) {
             spell2.vx = 0
             spell2.vy = 0
@@ -11643,6 +14227,7 @@ function updateIntellectSpellsControl(): void {
         const speed = 35
         let mag = Math.sqrt(ax * ax + ay * ay)
         if (mag === 0) mag = 1
+
         const vx = Math.idiv(ax * speed, mag)
         const vy = Math.idiv(ay * speed, mag)
 
@@ -11652,59 +14237,120 @@ function updateIntellectSpellsControl(): void {
 }
 
 
+function detonateIntellectSpellForHero(
+    heroIndex: number,
+    spell: Sprite,
+    nowMs: number,
+    whyIdArg?: string,
+    whoFromArg?: string
+): void {
+    console.log("We are detonating the spell and doing the contract writes and land signaling in detonateIntellectSpellForHero")
 
-function detonateIntellectSpellForHero(heroIndex: number, spell: Sprite, nowMs: number): void {
-    if (!spell) {
-        finishIntellectSpellForHero(heroIndex)
+    // Be defensive: heroIndex can be read off sprites in overlap callbacks.
+    if (heroIndex < 0 || heroIndex >= heroes.length) return
+
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    const spell2 = spell
+    if (!spell2 || (spell2.flags & sprites.Flag.Destroyed)) {
+        finishIntellectSpellForHero(heroIndex, hero, nowMs, "INT_FINISH_MISSING_SPELL")
         return
     }
-    if (spell.flags & sprites.Flag.Destroyed) {
-        finishIntellectSpellForHero(heroIndex)
-        return
+
+    const now = nowMs | 0
+
+    // ---- normalize optional args (also tolerate accidental swap) ----
+    let whyOverride = (whyIdArg || "") as string
+    let whoFrom = (whoFromArg || "") as string
+
+    // If caller swapped them, fix it (whyIds are the ones that exist in CONTRACT_WHY_TABLE).
+    const whyOverrideKnown = !!(whyOverride && (CONTRACT_WHY_TABLE as any)[whyOverride])
+    const whoLooksLikeWhy = !!(whoFrom && (CONTRACT_WHY_TABLE as any)[whoFrom])
+    if (whyOverride && whoFrom && !whyOverrideKnown && whoLooksLikeWhy) {
+        const tmp = whyOverride
+        whyOverride = whoFrom
+        whoFrom = tmp
     }
 
-    // Already detonated? nothing to do.
-    if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
+    const termHit = sprites.readDataNumber(spell2, PROJ_DATA.TERMINUS_HIT) | 0
+    const exp = sprites.readDataNumber(spell2, INT_SPELL_EXPIRES_AT_MS_KEY) | 0
 
-    const hero = (heroIndex >= 0 && heroIndex < heroes.length) ? heroes[heroIndex] : null
+    // Default why derived from state unless caller provided a valid override.
+    let whyId = ""
+    if (whyOverride && (CONTRACT_WHY_TABLE as any)[whyOverride]) {
+        whyId = whyOverride
+    } else {
+        if (termHit == 1) whyId = "INTELLECT_DETONATE_REQUEST_HIT_WALL"
+        else if (termHit == 2) whyId = "INTELLECT_DETONATE_REQUEST_HIT_ENEMY"
+        else if (exp > 0 && now >= exp) whyId = "INTELLECT_DETONATE_REQUEST_EXPIRE"
+        else whyId = "INTELLECT_DETONATE_REQUEST_UNKNOWN"
+    }
 
-    // ------------------------------------------------------------
-    // DRIVE ends here: stop controlling, begin LAND part (frames 5-6)
-    // ------------------------------------------------------------
-    if (hero) {
+    // Encode the triggering site into WHO (while keeping the writer identifiable).
+    const who =
+        whoFrom && whoFrom.length
+            ? `detonateIntellectSpellForHero<${whoFrom}>`
+            : "detonateIntellectSpellForHero"
+
+    // WHY always (even if the spell was already in LAND etc)
+    _dbgContract_noteWhy(heroIndex, whyId, who)
+
+    // If we are still controlling the spell, drop control immediately (and unfreeze movement).
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+        _dbgContract_trackTouch(heroIndex, whyId, who, HERO_DATA.IS_CONTROLLING_SPELL)
         sprites.setDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL, false)
 
-        const landEnd = ((nowMs | 0) + (INT_LAND_DUR_MS | 0)) | 0
-        sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, landEnd)
+        _dbgContract_trackTouch(heroIndex, whyId, who, HERO_DATA.FROZEN_FRAMES)
+        sprites.setDataNumber(hero, HERO_DATA.FROZEN_FRAMES, 0)
 
-        // PhasePart: LAND (500ms)
-        _animKeys_setPhasePart(hero, "land", nowMs | 0, INT_LAND_DUR_MS | 0, nowMs | 0)
-
-        // Keep frozen during land
-        hero.vx = 0
-        hero.vy = 0
+        // If we were storing velocity, clear it (so the hero resumes cleanly).
+        _dbgContract_trackTouch(heroIndex, whyId, who, HERO_DATA.STORED_VX)
+        _dbgContract_trackTouch(heroIndex, whyId, who, HERO_DATA.STORED_VY)
         sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
         sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
-        lockHeroControls(heroIndex)
-        setHeroBusyUntil(heroIndex, landEnd)
     }
 
-    const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
-    const termX = spell.x | 0
-    const termY = spell.y | 0
+    // Pick the correct busy key (you've had both names in play)
+    const busyKey: any =
+        (HERO_DATA as any).BUSY_UNTIL_MS != null ? (HERO_DATA as any).BUSY_UNTIL_MS
+        : (HERO_DATA as any).BUSY_UNTIL
 
-    if (family === FAMILY.HEAL) {
-        detonateHealSpellAt(spell, termX, termY)
-    } else {
-        console.log("Detonating intellect spell now")
-        detonateIntellectSpellAt(spell, termX, termY)
+    // Always ensure we enter LAND window (unless we are already in LAND).
+    // ✅ FIX: ANIMKEYS was undefined; use the real stored key instead.
+    const partNameNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    if (partNameNow != "land") {
+        const landDur = INT_LAND_DUR_MS | 0
+        _animKeys_setPhasePart(heroIndex, hero, "land", now, landDur, now, whyId, who)
+        sprites.setDataNumber(hero, INT_CAST_LAND_END_MS_KEY, (now + landDur) | 0)
+
+        // Also treat LAND as busy (keeps movement-phase writers from fighting it).
+        if (busyKey != null) {
+            _dbgContract_trackTouch(heroIndex, whyId, who, busyKey)
+            sprites.setDataNumber(hero, busyKey, (now + landDur) | 0)
+        }
     }
+
+    // Idempotent: if detonation already happened, stop here (LAND window above is still valid).
+    if ((sprites.readDataNumber(spell2, INT_DETONATED_KEY) | 0) != 0) return
+
+    const family = sprites.readDataNumber(spell2, PROJ_DATA.FAMILY) | 0
+    const detonateX = spell2.x | 0
+    const detonateY = spell2.y | 0
+    const dmgNow = sprites.readDataNumber(spell2, PROJ_DATA.DAMAGE) | 0
+
+    console.log(`[INT DEBUG] DETONATE intellect hero=${heroIndex} family=${family} at=(${detonateX},${detonateY}) dmg=${dmgNow} why=${whyId} who=${who}`)
+
+    console.log("We are running detonateIntellectSpellAt within detonateIntellectSpellForHero")
+    detonateIntellectSpellAt(spell2, detonateX, detonateY)
+    console.log("We cleaned up the detonation here in detonateIntellectSpellForHero")
 }
 
 
-
 function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
-    
+
+    console.log("We are detonating the spell AT and doing the contract writes and land signaling in detonateIntellectSpellAt")
+
     if (!spell) return
     if (sprites.readDataNumber(spell, INT_DETONATED_KEY)) return
 
@@ -11758,13 +14404,13 @@ function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
 
     // Visual + cleanup (spell will be destroyed later)
     runIntellectDetonation(spell, Math.max(400, weakenMs))
+    console.log("We cleaned up the detonation here in detonateIntellectSpellAt")
 }
 
 
 
-
 function processIntellectLingers() {
-    const now = game.runtime()
+    const now = game.runtime() | 0
 
     const totalTendrils = 18        // 9 long + 9 short
     const longCount = 9
@@ -11776,18 +14422,46 @@ function processIntellectLingers() {
     const jagSegments = 5           // number of steps along each tendril
     const jagAmplitude = 0.5        // BIGGER wiggle (≈ "15" feel instead of "5")
 
+    function _killSprite(s: Sprite, reason: string): void {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+
+        // Prevent repeated attempts even if destroy fails for some reason.
+        sprites.setDataNumber(s, PROJ_DATA.DESTROY_AT, 0)
+
+        if (DEBUG_INT_DET) {
+            const hi = sprites.readDataNumber(s, PROJ_DATA.HERO_INDEX) | 0
+            console.log(`[INT][CLEANUP] hero=${hi} now=${now} reason=${reason} -> destroy()`)
+        }
+
+        // In your runtime, sprites.destroy(...) is not available.
+        // Sprite instance destroy() *should* be.
+        const anyS = s as any
+        if (anyS && typeof anyS.destroy === "function") {
+            anyS.destroy()
+        }
+    }
+
     for (let i = 0; i < heroProjectiles.length; i++) {
         const proj = heroProjectiles[i]
         if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
 
         if (!sprites.readDataNumber(proj, INT_DETONATED_KEY)) continue
 
+        // --- destroyAt safety: if something else didn’t kill it, we do. ---
+        const destroyAt = sprites.readDataNumber(proj, PROJ_DATA.DESTROY_AT) | 0
+        if (destroyAt > 0 && now >= destroyAt) {
+            _killSprite(proj, `destroyAt=${destroyAt}`)
+            // Optional: stop tracking immediately in our local list
+            heroProjectiles[i] = null
+            continue
+        }
+
         const startMs = sprites.readDataNumber(proj, INT_DETONATE_START_KEY) | 0
         const endMs = sprites.readDataNumber(proj, INT_DETONATE_END_KEY) | 0
         if (startMs <= 0 || endMs <= startMs) continue
 
-        const total = endMs - startMs
-        const elapsed = now - startMs
+        const total = (endMs - startMs) | 0
+        const elapsed = (now - startMs) | 0
         if (elapsed < 0) continue
 
         // Clamp animation progress [0, 1]
@@ -11898,6 +14572,12 @@ function processIntellectLingers() {
 
         // Tiny core so center isn't empty
         img.setPixel(cx, cy, colorIndex)
+
+        // If you were using the "force upload" trick earlier, keep it:
+        // (safe even if Phaser ignores it; it shouldn’t crash)
+        if ((proj as any).setImage && typeof (proj as any).setImage === "function") {
+            ;(proj as any).setImage(img)
+        }
     }
 }
 
@@ -12622,8 +15302,28 @@ function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, nowMs: num
     // Phase duration: pacing envelope (not a gameplay deadline)
     const phaseDurMs = 120000  // 2 minutes
 
-    _animKeys_stampPhaseWindow(heroIndex, hero, "cast", now, phaseDurMs, "beginSupportPuzzleForHero")
-    _animKeys_setPhasePart(hero, "puzzle", now, phaseDurMs, now)
+    _dbgContract_noteWhy(heroIndex, "SUPPORT_PUZZLE_BEGIN", "beginSupportPuzzleForHero")
+
+    _animKeys_stampPhaseWindow(
+        heroIndex,
+        hero,
+        "cast",
+        now | 0,
+        phaseDurMs | 0,
+        "SUPPORT_PUZZLE_BEGIN",
+        "beginSupportPuzzleForHero(stamp)"
+    )
+
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "puzzle",
+        now | 0,
+        phaseDurMs | 0,
+        now | 0,
+        "SUPPORT_PUZZLE_BEGIN",
+        "beginSupportPuzzleForHero(puzzlePart)"
+    )
 
     _animInvCheckHeroTimeline(heroIndex, hero, now, "beginSupportPuzzleForHero")
 }
@@ -12745,8 +15445,22 @@ function clearSupportPuzzleForHero(heroIndex: number) {
     const hero = heroes[heroIndex]
     if (hero) {
         // End move segmentation and one-shot pulses (puzzle visuals must not linger)
-        _animKeys_clearPhasePart(hero)
-        _animEvent_clear(hero)
+        _dbgContract_noteWhy(heroIndex, "SUPPORT_PUZZLE_CLEAR", "clearSupportPuzzleForHero")
+
+        _animKeys_clearPhasePart(
+            heroIndex,
+            hero,
+            nowMs | 0,
+            "SUPPORT_PUZZLE_CLEAR",
+            "clearSupportPuzzleForHero(clearPart)"
+        )
+
+        _animEvent_clear(
+            heroIndex,
+            hero,
+            "SUPPORT_PUZZLE_CLEAR",
+            "clearSupportPuzzleForHero(clearEvent)"
+        )
     }
 
     // Return to ambient phase under unified contract and stamp a valid non-zero window immediately.
@@ -14208,6 +16922,7 @@ function updateHeroProjectiles() {
 
     // 2) INT spells
     updateIntellectSpellsControl()
+
     processIntellectLingers()
 
     // 3) NEW (C4): Agility execute slashes (no projectiles required)
@@ -14496,24 +17211,30 @@ function updateHeroMovementPhase(now: number) {
         if (!hero) continue
 
         // Don't stomp death visuals
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_DEAD", "updateHeroMovementPhase")
+            continue
+        }
 
         // Optional: avoid stomping NPC-ish actors (shopkeeper, announcer, etc.)
-        // (Uses data you already have: heroName + player index convention you’re using in logs.)
         const pIndex = sprites.readDataNumber(hero, HERO_DATA.PLAYER_INDEX) | 0
         const heroName0 = (sprites.readDataString(hero, "heroName") || "")
-        if (pIndex >= 90 || heroName0 === "Shopkeeper") continue
+        if (pIndex >= 90 || heroName0 === "Shopkeeper") {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_NPC", "updateHeroMovementPhase")
+            continue
+        }
 
         // Intellect LAND owns the phase until finishIntellectSpellForHero runs.
         const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
         if (landEnd > 0 && nowMs < landEnd) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_INT_LAND", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, `reason=INT_LAND now=${nowMs} landEnd=${landEnd}`)
             continue
-}
-
+        }
 
         // Intellect "controlling spell" owns the phase entirely (cast / control visuals)
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_CTRL_SPELL", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=CTRL_SPELL")
             continue
         }
@@ -14521,12 +17242,14 @@ function updateHeroMovementPhase(now: number) {
         // Agility execute owns the phase entirely
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
         if (agiState === AGI_STATE.EXECUTING) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_AGI_EXEC", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=AGI_EXECUTING")
             continue
         }
 
         // Strength charging owns the phase ("slash")
         if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_STR_CHARGING", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=STR_CHARGING")
             continue
         }
@@ -14534,6 +17257,7 @@ function updateHeroMovementPhase(now: number) {
         // If a hold-frame / override is active, don't stomp phase either
         const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
         if (fco >= 0) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_FRAME_COL_OVERRIDE", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=FRAME_COL_OVERRIDE")
             continue
         }
@@ -14541,6 +17265,7 @@ function updateHeroMovementPhase(now: number) {
         // If we're busy (attack/cast/death window), do not override the phase
         const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
         if (busyUntil > 0 && nowMs < busyUntil) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_BUSY", "updateHeroMovementPhase")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, `reason=BUSY now=${nowMs} busyUntil=${busyUntil}`)
             continue
         }
@@ -14562,18 +17287,24 @@ function updateHeroMovementPhase(now: number) {
         }
 
         // Unified contract: ambient is NOT segmented
-        _animKeys_clearPhasePart(hero)
+        _animKeys_clearPhasePart(
+            hi,
+            hero,
+            nowMs,
+            "AMBIENT_CLEAR_PHASE_PART",
+            "updateHeroMovementPhase(ambient:clearPart)"
+        )
 
-        // ***** THE MISSING FIX *****
         // If ambient owns the hero, ActionKind MUST be "none".
-        // Your logs show: Phase becomes idle/run but ActionKind remains intellect_cast -> animation resolver mismatch -> blank/invisible.
         const ak = sprites.readDataString(hero, HERO_DATA.ActionKind) || "none"
         if (ak !== "none") {
+            _dbgContract_noteWhy(hi, "AMBIENT_CLEAR_ACTION_KIND", "updateHeroMovementPhase")
+
             sprites.setDataString(hero, HERO_DATA.ActionKind, "none")
-            // Optional safety: reset action params so nothing downstream “refines” based on stale cast metadata.
             sprites.setDataNumber(hero, HERO_DATA.ActionVariantBtnId, 0)
             sprites.setDataNumber(hero, HERO_DATA.ActionSeed, 0)
             sprites.setDataNumber(hero, HERO_DATA.ActionTargetSpriteId, 0)
+
             _dbgMovePipeTick("AMB_CLR_AK", hi, hero, nowMs, `prevActionKind=${ak} -> none`)
         }
 
@@ -14586,19 +17317,22 @@ function updateHeroMovementPhase(now: number) {
 
         // If PhaseName differs, switch immediately and stamp a valid non-zero window.
         if (curPhaseName !== desiredPhase) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SET_PHASE_CHANGE", "updateHeroMovementPhase")
             setHeroPhaseString(hi, desiredPhase)
             _animKeys_stampPhaseWindow(hi, hero, desiredPhase, nowMs, wantDur, "updateHeroMovementPhase(ambient:change)")
             continue
         }
 
-        // If window is invalid (should not happen under the unified contract), repair it.
+        // If window is invalid, repair it.
         if (curStart <= 0 || curDur <= 0) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SET_PHASE_REPAIR_WINDOW", "updateHeroMovementPhase")
             _animKeys_stampPhaseWindow(hi, hero, desiredPhase, nowMs, wantDur, "updateHeroMovementPhase(ambient:repair)")
             continue
         }
 
         // Window is valid and PhaseName matches desired ambient.
         // Update PhaseProgressInt continuously so Phaser can animate idle/run/combatIdle via progress.
+        _dbgContract_noteWhy(hi, "AMBIENT_SET_PHASE_PROGRESS", "updateHeroMovementPhase")
         const elapsed = ((nowMs - curStart) % curDur) | 0
         const e = elapsed < 0 ? 0 : elapsed
         const pInt = clampInt(Math.idiv(PHASE_PROGRESS_MAX * e, curDur), 0, PHASE_PROGRESS_MAX)
@@ -14704,6 +17438,40 @@ function updateHeroControlLocks(now: number) {
         }
 
         // ------------------------------------------------------------
+        // STRANDED LOCK REPAIR
+        // If we are locked but have NO busy window and no ownership case,
+        // we are in a broken state (this matches your Strength symptom).
+        // ------------------------------------------------------------
+        if (lockedNow && busyUntil <= 0) {
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+
+            sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
+
+            // Correct signature (this was your crash)
+            _animEvent_clear(
+                i,
+                hero,
+                "AMBIENT_SET_PHASE_REPAIR_WINDOW",
+                "updateHeroControlLocks(repair:clearEvent)"
+            )
+
+            _animKeys_clearPhasePart(
+                i,
+                hero,
+                nowMs | 0,
+                "AMBIENT_SET_PHASE_REPAIR_WINDOW",
+                "updateHeroControlLocks(repair:clearPart)"
+            )
+
+            if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(i, hero, "UNLOCK_REPAIR"))
+            unlockHeroControls(i)
+            continue
+        }
+
+        // ------------------------------------------------------------
         // NORMAL LOCK BEHAVIOR (dash / cast travel / etc.)
         // Preserve stored velocity until busyUntil ends.
         // ------------------------------------------------------------
@@ -14723,10 +17491,22 @@ function updateHeroControlLocks(now: number) {
             sprites.setDataNumber(hero, HERO_DATA.PhaseFlags, 0)
 
             // Events: never touch EventSequence here (emitters only).
-            _animEvent_clear(hero)
+            // Correct signature (this was your crash)
+            _animEvent_clear(
+                i,
+                hero,
+                "AMBIENT_CLEAR_PHASE_PART",
+                "updateHeroControlLocks(busyEnd:clearEvent)"
+            )
 
             // Clear phase-part segmentation so we don't stay "windup"/"aim"/"puzzle" while idle
-            _animKeys_clearPhasePart(hero)
+            _animKeys_clearPhasePart(
+                i,
+                hero,
+                nowMs | 0,
+                "AMBIENT_CLEAR_PHASE_PART",
+                "updateHeroControlLocks(busyEnd:clearPart)"
+            )
 
             // RenderStyle policy:
             // Keep RenderStyleMask as-is (persists until next action edge overwrites it).
@@ -14768,117 +17548,7 @@ function updateEnemyEffects(now: number) {
 
 
 
-// Master update
-// Master update
-// Master update
-game.onUpdate(function () {
-    if (!HeroEngine._isStarted()) return
-
-    // snapshot previous positions for all heroes
-    for (let hi = 0; hi < heroes.length; hi++) {
-        const h = heroes[hi]
-        if (h) {
-            sprites.setDataNumber(h, HERO_DATA.PREV_X, h.x)
-            sprites.setDataNumber(h, HERO_DATA.PREV_Y, h.y)
-        }
-    }
-
-    updateHeroFacingsFromVelocity()
-    updatePlayerInputs()
-
-    const now = game.runtime() | 0
-
-    // keep a canonical world-runtime mirror
-    worldRuntimeMs = now
-
-    // ------------------------------------------------------------
-    // SHOP LOOP (always runs; it owns focus + publishes highlight state)
-    // ------------------------------------------------------------
-        if(SHOP_MODE_ACTIVE_MASTER) {
-    shopModeUpdate(now)
-    shopTick(now)   // or shopTick(now) if that’s your canonical name
-    }
-
-
-    // ------------------------------------------------------------
-    // SHOP MODE GATE: "exit normal loop" by returning early.
-    // We still allow movement/locks/phase/collisions so the world feels alive.
-    // ------------------------------------------------------------
-if (SHOP_MODE_ACTIVE) {
-       // The per-frame shop “owner” loop (NOT just inputs)
-        //shopTick(now)   // or shopTick(now) if that’s your canonical name
-
-
-        // Let any prior busy windows expire and unlock heroes naturally
-        updateHeroControlLocks(now)
-
-        // Keep run/idle visuals responsive while walking around the shop
-        updateHeroMovementPhase(now)
-
-        // Keep walls real in shop space too
-        resolveTilemapCollisions()
-
-        dbgContractSnapshotAllHeroes(now, "onUpdate:shopMode")
-
-        // Nothing else (no enemies, projectiles, waves, etc.)
-        return
-    }
-
-
-    
-    // ---------------- NORMAL COMBAT LOOP ----------------
-
-    // Debug integrator logs
-    for (let i = 0; i < heroes.length; i++) {
-        const hero = heroes[i]
-        if (hero) debugDashIntegratorTick(hero)
-    }
-
-    updateStrengthChargingAllHeroes(now)
-    updateAgilityComboLandingTransitions(now)
-    updateAgilityManualCancelAllHeroes(now)
-    updateSupportPuzzles(now)
-    updateAgilityThrustMotionAll(now)
-
-
-    // NEW: one universal progress updater (PhaseProgressInt + PhasePartProgress)
-    updateHeroTimelineProgressAll(now)
-
-    // NEW: publish strength swing segmentation (windup/forward/landing)
-    updateStrengthSwingSegmentationAllHeroes(now)
-    // NEW: late-spawn strength projectiles inside release window
-    updateStrengthPendingSwingSpawnsAllHeroes(now)
-
-    updateHeroControlLocks(now)
-    updateHeroMovementPhase(now)
-    updateHeroBuffs(now)
-    updateHeroDeaths(now)
-
-    updateHeroProjectiles()
-    updateProjectilesCleanup()
-    updateHeroOverlays()
-
-    resolveTilemapCollisions()
-
-    // After all gameplay writers + universal progress update, before render-side consumption:
-    dbgContractSnapshotAllHeroes(now, "onUpdate:postWriters")
-
-
-    for (let hi = 0; hi < heroes.length; hi++) {
-        const h = heroes[hi]
-        if (h) debugAgilityDashProgress(h, hi)
-    }
-
-    updateEnemyHoming(now)
-    updateEnemyEffects(now)
-
-
-})
-
-
-
-
-game.onUpdateInterval(80, function () {
+function consumeAndDispatchPlayerIntents(nowMs: number): void {    
     if (!HeroEngine._isStarted()) return
     if (SHOP_MODE_ACTIVE) return
 
@@ -14915,7 +17585,133 @@ game.onUpdateInterval(80, function () {
     } catch (e) {
         console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e)
     }
+}
+
+
+
+// Master update
+// Master update
+// Master update
+game.onUpdate(function () {
+    if (!HeroEngine._isStarted()) return
+
+    // snapshot previous positions for all heroes
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h) {
+            sprites.setDataNumber(h, HERO_DATA.PREV_X, h.x)
+            sprites.setDataNumber(h, HERO_DATA.PREV_Y, h.y)
+        }
+    }
+
+    updateHeroFacingsFromVelocity()
+    updatePlayerInputs()
+
+    const now = game.runtime() | 0
+
+    // keep a canonical world-runtime mirror
+    worldRuntimeMs = now
+
+
+    if (now >= nextIntentDispatchMs) {
+        nextIntentDispatchMs = now + 80
+        // INTENT DISPATCH (80ms): consume queued player intents and begin moves (records WHY)
+        consumeAndDispatchPlayerIntents(now)
+    }
+
+
+    // ------------------------------------------------------------
+    // SHOP LOOP (always runs; it owns focus + publishes highlight state)
+    // ------------------------------------------------------------
+        if(SHOP_MODE_ACTIVE_MASTER) {
+    shopModeUpdate(now)
+    shopTick(now)   // or shopTick(now) if that’s your canonical name
+    }
+
+
+    // ------------------------------------------------------------
+    // SHOP MODE GATE: "exit normal loop" by returning early.
+    // We still allow movement/locks/phase/collisions so the world feels alive.
+    // ------------------------------------------------------------
+if (SHOP_MODE_ACTIVE) {
+       // The per-frame shop “owner” loop (NOT just inputs)
+        //shopTick(now)   // or shopTick(now) if that’s your canonical name
+
+
+        // Let any prior busy windows expire and unlock heroes naturally
+        updateHeroControlLocks(now)
+
+        // Keep run/idle visuals responsive while walking around the shop
+        updateHeroMovementPhase(now)
+
+        resolveTilemapCollisions()
+        updateHeroUnderfootTilesAndDecals(now)
+        decorSolids_blockingHook(now)
+
+        logHeroRuntimeContractAllHeroes(now, "onUpdate:shopMode")
+
+
+        // Nothing else (no enemies, projectiles, waves, etc.)
+        return
+    }
+
+
+    
+
+    
+    // ---------------- NORMAL COMBAT LOOP ----------------
+
+    // Debug integrator logs
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]
+        if (hero) debugDashIntegratorTick(hero)
+    }
+
+    updateStrengthChargingAllHeroes(now)
+    updateAgilityComboLandingTransitions(now)
+    updateAgilityManualCancelAllHeroes(now)
+    updateSupportPuzzles(now)
+    updateAgilityThrustMotionAll(now)
+
+
+    // NEW: one universal progress updater (PhaseProgressInt + PhasePartProgress)
+    updateHeroTimelineProgressAll(now)
+
+    // NEW: publish strength swing segmentation (windup/forward/landing)
+    updateStrengthSwingSegmentationAllHeroes(now)
+    // NEW: late-spawn strength projectiles inside release window
+    updateStrengthPendingSwingSpawnsAllHeroes(now)
+
+    updateHeroControlLocks(now)
+    updateHeroMovementPhase(now)
+    updateHeroBuffs(now)
+    updateHeroDeaths(now)
+
+    updateHeroProjectiles()
+    updateProjectilesCleanup()
+    updateHeroOverlays()
+
+    resolveTilemapCollisions()
+    updateHeroUnderfootTilesAndDecals(now)
+    decorSolids_blockingHook(now)
+
+    // After all gameplay writers + universal progress update, before render-side consumption:
+    logHeroRuntimeContractAllHeroes(now, "onUpdate:postWriters")
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h) debugAgilityDashProgress(h, hi)
+    }
+
+    updateEnemyHoming(now)
+    updateEnemyEffects(now)
+
+
 })
+
+
+
+
 
 // Timers
 
@@ -15196,6 +17992,53 @@ if (typeof globalThis !== "undefined") {
             return WORLD_TILE_SIZE;
         };
 
+        // ----------------------------------------------------------
+        // DECOR (engine-owned, art-agnostic)
+        // ----------------------------------------------------------
+        g.__HeroEnginePhaserInternals.getDecorRev = function (): number {
+            return _engineDecorRev | 0;
+        };
+
+        // Decal grid (tile-aligned signaling layer; students query underfoot too)
+        g.__HeroEnginePhaserInternals.getDecalGrid = function (): number[][] {
+            return _engineDecalGrid;
+        };
+
+        // Decor collider sprites (invisible; used for overlap proof and later blocking)
+        g.__HeroEnginePhaserInternals.getDecorTriggerSprites = function (): Sprite[] {
+            return _engineDecorTriggers;
+        };
+
+        g.__HeroEnginePhaserInternals.getDecorSolidSprites = function (): Sprite[] {
+            return _engineDecorSolids;
+        };
+
+
+
+        ;(globalThis as any).__HeroEnginePhaserInternals = {
+            ensureHeroForPlayer: (playerId: number) => {
+                const pid = playerId | 0
+                if (pid < 1 || pid > 4) return
+                if ((playerToHeroIndex[pid] | 0) >= 0) return
+                createHeroForPlayer(pid, 60 + pid * 12, 60)
+            },
+
+            getWorldTileMap: () => _engineWorldTileMap,
+            getWorldTileSize: () => WORLD_TILE_SIZE,
+
+            // NEW: lets Phaser know when to re-apply / broadcast the map
+            getWorldRev: () => _engineWorldRev,
+
+            // NEW: theme hooks (main.ts will also fall back to globals)
+            getFloorBaseFamily: () => _dunBaseFamily,
+            getFloorWallFamily: () => _dunWallFamily,
+
+            // existing decor channel
+            getWorldDecorRev: () => _engineDecorRev,
+            getWorldDecorCells: () => _engineDecorCells,
+            getWorldDecorDecals: () => _engineDecorDecals,
+        }
+
         // ------------------------------------------------------------
         // STEP 6: spawn-on-demand hook for the Phaser host.
         // This lets arcadeCompat (or any host glue) force-spawn P2..P4
@@ -15242,9 +18085,11 @@ if (typeof globalThis !== "undefined") {
 
             const after = playerToHeroIndex[pid] | 0;
             return (after >= 0 && after < heroes.length && heroes[after]) ? after : -1;
+            
         };
 
         console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + ensureHeroForPlayer)");
+        
     } catch {
         // If globalThis isn't available (e.g., PXT runtime), just silently skip.
     }

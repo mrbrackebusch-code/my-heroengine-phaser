@@ -49,7 +49,7 @@ function distanceTo(a: Sprite, b: Sprite): number {
 }
 
 
-const DEBUG_HERO_LOGIC_STUDENT = true
+const DEBUG_HERO_LOGIC_STUDENT = false
 
 
 let DEMO_HERO1_IDLE: Image = null

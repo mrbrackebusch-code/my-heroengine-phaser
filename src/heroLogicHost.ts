@@ -13,7 +13,7 @@ type HeroLogicFn = (
     heroesArr: Sprite[]
 ) => number[];
 
-const DEBUG_HOST_LOGIC = true;
+const DEBUG_HOST_LOGIC = false;
 
 // ==========================================
 // Registries (kept global for debugging)

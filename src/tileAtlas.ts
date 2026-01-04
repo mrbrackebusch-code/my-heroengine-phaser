@@ -12,6 +12,75 @@ export interface TileRef {
     col: number; // LPC tile col
 }
 
+
+
+// ---------------------------------------------------------------------------
+// Decor registry (semantic name → visual tile refs)
+//
+// IMPORTANT:
+// - Engine/gameplay code should NOT know atlas row/col.
+// - Engine should only publish semantic IDs/names (e.g. "sand_patch").
+// - Phaser-side rendering resolves those semantic values into atlas coordinates
+//   via this registry.
+// - TileRef.row/col are 0-based tile indices.
+//
+// Current terrain sheet assumption: 21 columns × 23 rows (0-based max: row=22, col=20)
+// This matches the existing autotile defs already in this file (many use col: 20).
+// ---------------------------------------------------------------------------
+
+export type DecorAtlasKey = "terrain";
+
+export interface DecorVisualRef {
+    atlas: DecorAtlasKey;
+    ref: TileRef;
+}
+
+// These are the terrain sheet tile-grid dimensions (NOT 1-based indices).
+// If/when tile sheets vary by size, this will need to become sheet-specific.
+export const TERRAIN_SHEET_TILE_COLS = 21;
+export const TERRAIN_SHEET_TILE_ROWS = 23;
+
+export function terrainFrameIndexFromRef(ref: TileRef, cols: number = TERRAIN_SHEET_TILE_COLS): number {
+    return (ref.row | 0) * (cols | 0) + (ref.col | 0);
+}
+
+// v1 proof assets (semantic keys):
+// - sand_patch → terrain tile at row 13, col 0
+// - rock_mountain → terrain tile at row 22, col 20
+export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
+    sand_patch: { atlas: "terrain", ref: { row: 13, col: 0 } },
+};
+
+export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
+    rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
+};
+
+
+
+// Minimal v1 prop registry (name → atlas row/col)
+// NOTE: row/col are 0-based.
+// Your rock is “row 22, col 20” in human terms → (21, 19) 0-based.
+export const PROP_CATALOG: { name: string; atlasRow: number; atlasCol: number }[] = [
+    { name: "rock_mountain", atlasRow: 21, atlasCol: 19 },
+];
+
+
+export function getPropTileRefByName(name: string): { row: number; col: number } | null {
+    // Assumes you have PROP_CATALOG in this file (as you planned).
+    // Example row/col field names: atlasRow/atlasCol.
+    for (let i = 0; i < PROP_CATALOG.length; i++) {
+        const p = PROP_CATALOG[i];
+        if (p && p.name === name) {
+            return { row: (p.atlasRow | 0), col: (p.atlasCol | 0) };
+        }
+    }
+    return null;
+}
+
+
+
+
+
 // Legacy types (kept so other code doesn't break, but we drive off TerrainAutoTileDef)
 export interface TerrainTiles {
     decor?: TileRef[];

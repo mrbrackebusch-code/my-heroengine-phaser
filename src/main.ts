@@ -43,6 +43,496 @@ const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debu
 
 
 
+// ------------------------------------------------------------
+// HTML HUD (side panel) — per-client view of *local* hero state
+// Reads sprite data keys from the Arcade runtime, not Phaser.
+// ------------------------------------------------------------
+const HUD_ENABLED = true;
+const HUD_REFRESH_MS = 100;
+
+// Optional “future contract” keys (engine can publish these later)
+const HUD_KEYS = {
+  PREVIEW: "__ui_actionPreview",
+  A: "__ui_A",
+  B: "__ui_B",
+  AB: "__ui_AB",
+};
+
+
+let _hudLastText = "";
+let _hudLastSub = "";
+
+
+type HudRefs = {
+  who: HTMLElement;
+  a: HTMLElement;
+  b: HTMLElement;
+  ab: HTMLElement;
+};
+
+let _hudRefs: HudRefs | null = null;
+let _hudLastWho = "";
+let _hudLastA = "";
+let _hudLastB = "";
+let _hudLastAB = "";
+let _hudTimer: any = null;
+
+
+function _hud_installOnce(): void {
+  if (!HUD_ENABLED) return;
+
+  const g: any = globalThis as any;
+  if (g.__htmlHudInstalled) return;
+
+  const who = document.getElementById("hud-cell-who");
+  const a = document.getElementById("hud-cell-a");
+  const b = document.getElementById("hud-cell-b");
+  const ab = document.getElementById("hud-cell-ab");
+
+  if (!who || !a || !b || !ab) {
+    if (!g.__htmlHudInstallQueued) {
+      g.__htmlHudInstallQueued = true;
+
+      const retry = () => {
+        g.__htmlHudInstallQueued = false;
+        _hud_installOnce();
+      };
+
+      if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", retry, { once: true });
+      } else {
+        setTimeout(retry, 0);
+      }
+    }
+    console.warn("[hud] missing DOM elements (#hud-cell-who/#hud-cell-a/#hud-cell-b/#hud-cell-ab)");
+    return;
+  }
+
+  g.__htmlHudInstalled = true;
+
+  _hudRefs = { who, a, b, ab };
+
+  _hudTimer = setInterval(() => {
+    try {
+      _hud_tick();
+    } catch (e) {
+      console.warn("[hud] tick error", e);
+    }
+  }, HUD_REFRESH_MS);
+
+  _hud_tick();
+}
+
+function _hud_tryGetLocalPlayerId(): number {
+  const g: any = globalThis as any;
+  const net: any = g.__net;
+
+  const pid =
+    net && typeof net.playerId === "number" ? (net.playerId | 0) : 0;
+
+  return pid > 0 ? pid : 0;
+}
+
+
+function _hud_getHeroIndexForPid(pid: number): number {
+  const g: any = globalThis as any;
+  const internals: any = g.__HeroEnginePhaserInternals;
+
+  // Best: ask the engine-side mapping (returns existing heroIndex; only spawns if missing)
+  try {
+    if (internals && typeof internals.ensureHeroForPlayer === "function") {
+      const hi = internals.ensureHeroForPlayer(pid) | 0;
+      return hi >= 0 ? hi : -1;
+    }
+  } catch (_e) {
+    // ignore
+  }
+
+  // Fallback: common case
+  return ((pid | 0) - 1) | 0;
+}
+
+function _hud_tryRunStudentLogic(heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
+  const g: any = globalThis as any;
+  const HE: any = g.HeroEngine;
+  if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
+
+  const prevPreview = !!g.__heroLogicPreview;
+  try {
+    // If heroLogicHost is updated to respect this flag, it suppresses spam logs.
+    g.__heroLogicPreview = true;
+
+    const out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+    return Array.isArray(out) ? out : null;
+  } catch (_e) {
+    return null;
+  } finally {
+    g.__heroLogicPreview = prevPreview;
+  }
+}
+
+function _hud_fmtLogicOut(out: any[] | null): string {
+  if (!out) return "null";
+  const max = 12; // keep line readable; tooltip shows full anyway
+  const parts = out.slice(0, max).map(v => {
+    if (typeof v === "number") return String(v | 0);
+    if (typeof v === "string") return v;
+    return String(v);
+  });
+  return `[${parts.join(",")}${out.length > max ? ",…" : ""}]`;
+}
+
+
+function _hud_tryGetLocalHeroSprite(pid: number): any | null {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+  if (!spritesNS || typeof spritesNS.allSprites !== "function") return null;
+
+  const all: any[] = spritesNS.allSprites();
+  if (!Array.isArray(all) || all.length === 0) return null;
+
+  const sk: any = g.SpriteKind;
+  const playerKind =
+    sk && typeof sk.Player === "number" ? (sk.Player | 0) : 0;
+
+  for (const s of all) {
+    if (!s) continue;
+
+    // Prefer to only consider SpriteKind.Player (heroes)
+    try {
+      if (playerKind && typeof s.kind === "function") {
+        const k = s.kind() | 0;
+        if (k !== playerKind) continue;
+      }
+    } catch (_e) {
+      // ignore
+    }
+
+    // OWNER is "owner" in HERO_DATA
+    let owner = 0;
+    try {
+      owner = (spritesNS.readDataNumber(s, "owner") | 0);
+    } catch (_e) {
+      owner = 0;
+    }
+
+    if (owner === (pid | 0)) return s;
+  }
+
+  return null;
+}
+
+function _hud_readNum(spritesNS: any, spr: any, key: string): number {
+  try {
+    return spritesNS.readDataNumber(spr, key) | 0;
+  } catch (_e) {
+    return 0;
+  }
+}
+
+function _hud_readStr(spritesNS: any, spr: any, key: string): string {
+  try {
+    const v = spritesNS.readDataString(spr, key);
+    return typeof v === "string" ? v : "";
+  } catch (_e) {
+    return "";
+  }
+}
+
+function _hud_buildTextForHero(pid: number, hero: any): { sub: string; text: string } {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+
+  const profile =
+    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
+      ? String(g.__heroProfiles[pid - 1])
+      : "";
+
+  const hp = _hud_readNum(spritesNS, hero, "hp");
+  const maxHp = _hud_readNum(spritesNS, hero, "maxHp");
+  const mana = _hud_readNum(spritesNS, hero, "mana");
+  const maxMana = _hud_readNum(spritesNS, hero, "maxMana");
+
+  const phaseName = _hud_readStr(spritesNS, hero, "PhaseName") || _hud_readStr(spritesNS, hero, "phase");
+  const phasePart = _hud_readStr(spritesNS, hero, "PhasePartName");
+
+  const actionKind = _hud_readStr(spritesNS, hero, "ActionKind");
+  const actionSeq = _hud_readNum(spritesNS, hero, "ActionSequence");
+  const actionVar = _hud_readNum(spritesNS, hero, "ActionVariant");
+
+  const dir = _hud_readNum(spritesNS, hero, "dir");
+  const frameCol = _hud_readNum(spritesNS, hero, "frameColOverride");
+
+  // If the engine publishes a full preview string, prefer it
+  const preview = _hud_readStr(spritesNS, hero, HUD_KEYS.PREVIEW);
+
+  const a = _hud_readStr(spritesNS, hero, HUD_KEYS.A);
+  const b = _hud_readStr(spritesNS, hero, HUD_KEYS.B);
+  const ab = _hud_readStr(spritesNS, hero, HUD_KEYS.AB);
+
+  const lines: string[] = [];
+
+  lines.push(`Player: ${pid}${profile ? "  (" + profile + ")" : ""}`);
+  lines.push(`HP: ${hp}/${maxHp}    MANA: ${mana}/${maxMana}`);
+  lines.push("");
+
+  lines.push(`Phase: ${phaseName || "(none)"}${phasePart ? "  | part=" + phasePart : ""}`);
+  lines.push(`Action: ${actionKind || "(none)"}  seq=${actionSeq}  var=${actionVar}`);
+  lines.push(`Dir: ${dir}   frameColOverride: ${frameCol}`);
+  lines.push("");
+
+  if (preview) {
+    lines.push("Buttons (engine preview):");
+    lines.push(preview);
+  } else {
+    lines.push("Buttons (preview keys not published yet):");
+    lines.push(`A  : ${a || "(missing " + HUD_KEYS.A + ")"}`);
+    lines.push(`B  : ${b || "(missing " + HUD_KEYS.B + ")"}`);
+    lines.push(`A+B: ${ab || "(missing " + HUD_KEYS.AB + ")"}`);
+  }
+
+  const sub = `connected=${_hud_slotConnected(pid)}  host=${!!g.__isHost}`;
+
+  return { sub, text: lines.join("\n") };
+}
+
+function _hud_slotConnected(pid: number): boolean {
+  const g: any = globalThis as any;
+  const arr: any = g.__netSlotConnected;
+  const idx = (pid | 0) - 1;
+  if (!Array.isArray(arr)) return false;
+  if (idx < 0 || idx >= arr.length) return false;
+  return !!arr[idx];
+}
+
+function _hud_tick(): void {
+  if (!_hudRefs) return;
+
+  const pid = _hud_tryGetLocalPlayerId();
+  if (!pid) {
+    const w = "Waiting for server assign…";
+    if (_hudLastWho !== w) {
+      _hudRefs.who.textContent = w;
+      _hudRefs.who.title = w;
+      _hudLastWho = w;
+    }
+    return;
+  }
+
+  const hero = _hud_tryGetLocalHeroSprite(pid);
+  if (!hero) {
+    const w = `pid=${pid} — waiting for hero sprite…`;
+    if (_hudLastWho !== w) {
+      _hudRefs.who.textContent = w;
+      _hudRefs.who.title = w;
+      _hudLastWho = w;
+    }
+    return;
+  }
+
+  const cells = _hud_buildCellsForHero(pid, hero);
+
+  if (_hudLastWho !== cells.who) {
+    _hudRefs.who.textContent = cells.who;
+    _hudRefs.who.title = cells.whoTitle || cells.who;
+    _hudLastWho = cells.who;
+  }
+  if (_hudLastA !== cells.a) {
+    _hudRefs.a.textContent = cells.a;
+    _hudRefs.a.title = cells.aTitle || cells.a;
+    _hudLastA = cells.a;
+  }
+  if (_hudLastB !== cells.b) {
+    _hudRefs.b.textContent = cells.b;
+    _hudRefs.b.title = cells.bTitle || cells.b;
+    _hudLastB = cells.b;
+  }
+  if (_hudLastAB !== cells.ab) {
+    _hudRefs.ab.textContent = cells.ab;
+    _hudRefs.ab.title = cells.abTitle || cells.ab;
+    _hudLastAB = cells.ab;
+    _hudLastAB = cells.ab;
+  }
+}
+
+function _hud_buildCellsForHero(pid: number, hero: any): {
+  who: string; whoTitle?: string;
+  a: string;   aTitle?: string;
+  b: string;   bTitle?: string;
+  ab: string;  abTitle?: string;
+} {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+
+  const profile =
+    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
+      ? String(g.__heroProfiles[pid - 1])
+      : "";
+
+  const whoPrefix = `P${pid}${profile ? ":" + profile : ""}`;
+
+  // Optional stats in the YOU cell (you can remove if you want it pure)
+  const hp = spritesNS ? _hud_readNum(spritesNS, hero, "hp") : 0;
+  const maxHp = spritesNS ? _hud_readNum(spritesNS, hero, "maxHp") : 0;
+  const mana = spritesNS ? _hud_readNum(spritesNS, hero, "mana") : 0;
+  const maxMana = spritesNS ? _hud_readNum(spritesNS, hero, "maxMana") : 0;
+
+  const who = (maxHp || maxMana)
+    ? `${whoPrefix}  HP ${hp}/${maxHp}  M ${mana}/${maxMana}`
+    : whoPrefix;
+
+  const heroIndex = _hud_resolveHeroIndexForSprite(hero);
+  if (heroIndex < 0) {
+    return {
+      who,
+      whoTitle: `${whoPrefix}\n(waiting for heroIndex…)`,
+      a: "…",
+      b: "…",
+      ab: "…",
+    };
+  }
+
+  const outA = _hud_callStudentLogic(heroIndex, "A");
+  const outB = _hud_callStudentLogic(heroIndex, "B");
+  const outAB = _hud_callStudentLogic(heroIndex, "A+B");
+
+  const aFull = _hud_fmtArrayFull(outA);
+  const bFull = _hud_fmtArrayFull(outB);
+  const abFull = _hud_fmtArrayFull(outAB);
+
+  return {
+    who,
+    whoTitle: `${whoPrefix}\nheroIndex=${heroIndex}` + ((maxHp || maxMana) ? `\nHP ${hp}/${maxHp}  M ${mana}/${maxMana}` : ""),
+
+    a: aFull,
+    aTitle: `A\n${aFull}`,
+
+    b: bFull,
+    bTitle: `B\n${bFull}`,
+
+    ab: abFull,
+    abTitle: `A+B\n${abFull}`,
+  };
+}
+
+
+function _hud_kindOf(s: any): number {
+  try {
+    if (s && typeof s.kind === "function") return (s.kind() | 0);
+    if (s && typeof s.kind === "number") return (s.kind | 0);
+  } catch (_e) {}
+  return 0;
+}
+
+function _hud_buildHeroesArr(): any[] {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+  if (!spritesNS) return [];
+
+  // Match heroEnginePhaserGlue ordering as closely as possible
+  let all: any[] = [];
+  try {
+    if (typeof spritesNS._getAllSprites === "function") all = spritesNS._getAllSprites();
+    else if (typeof spritesNS.allSprites === "function") all = spritesNS.allSprites();
+  } catch (_e) {
+    all = [];
+  }
+  if (!Array.isArray(all)) return [];
+
+  const sk: any = g.SpriteKind;
+  const playerKind = (sk && typeof sk.Player === "number") ? (sk.Player | 0) : 0;
+
+  const heroesArr: any[] = [];
+  for (const s of all) {
+    if (!s) continue;
+    if (playerKind && _hud_kindOf(s) === playerKind) heroesArr.push(s);
+  }
+  return heroesArr;
+}
+
+function _hud_resolveHeroIndexForSprite(heroSprite: any): number {
+  const heroesArr = _hud_buildHeroesArr();
+  for (let i = 0; i < heroesArr.length; i++) {
+    if (heroesArr[i] === heroSprite) return i | 0;
+  }
+  return -1;
+}
+
+function _hud_callStudentLogic(heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
+  const g: any = globalThis as any;
+  const HE: any = g.HeroEngine;
+  if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
+
+  const prev = !!g.__heroLogicPreview;
+  try {
+    // (Optional) lets host/student code suppress side effects/log spam if you choose to honor it.
+    g.__heroLogicPreview = true;
+
+    const out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+    return Array.isArray(out) ? out : null;
+  } catch (_e) {
+    return null;
+  } finally {
+    g.__heroLogicPreview = prev;
+  }
+}
+
+function _hud_fmtArrayFull(out: any[] | null): string {
+  if (!out) return "null";
+  return "[" + out.map(v => (typeof v === "number" ? String(v | 0) : String(v))).join(",") + "]";
+}
+
+
+function _hud_buildLineForHero(pid: number, hero: any): { line: string; title: string } {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+
+  const profile =
+    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
+      ? String(g.__heroProfiles[pid - 1])
+      : "";
+
+  const who = `P${pid}${profile ? ":" + profile : ""}`;
+
+  // Resolve heroIndex the SAME WAY the hook does (index in heroesArr)
+  const heroIndex = _hud_resolveHeroIndexForSprite(hero);
+  if (heroIndex < 0) {
+    const line = `${who} | logic: (waiting for heroIndex…)`;
+    return { line, title: line };
+  }
+
+  // Call student logic exactly like a real press would
+  const outA = _hud_callStudentLogic(heroIndex, "A");
+  const outB = _hud_callStudentLogic(heroIndex, "B");
+  const outAB = _hud_callStudentLogic(heroIndex, "A+B");
+
+  const aS = _hud_fmtArrayFull(outA);
+  const bS = _hud_fmtArrayFull(outB);
+  const abS = _hud_fmtArrayFull(outAB);
+
+  // (Optional) keep a tiny bit of state context; remove if you want PURE logic only
+  const hp = spritesNS ? _hud_readNum(spritesNS, hero, "hp") : 0;
+  const maxHp = spritesNS ? _hud_readNum(spritesNS, hero, "maxHp") : 0;
+  const mana = spritesNS ? _hud_readNum(spritesNS, hero, "mana") : 0;
+  const maxMana = spritesNS ? _hud_readNum(spritesNS, hero, "maxMana") : 0;
+
+  const stats = (maxHp || maxMana) ? `HP ${hp}/${maxHp} M ${mana}/${maxMana}` : "";
+
+  const line = `${who}${stats ? " | " + stats : ""} | A=${aS} | B=${bS} | A+B=${abS}`;
+
+  const title =
+    `${who}\n` +
+    `heroIndex=${heroIndex}\n` +
+    (stats ? `${stats}\n` : "") +
+    `A   = ${aS}\n` +
+    `B   = ${bS}\n` +
+    `A+B = ${abS}`;
+
+  return { line, title };
+}
+
+
+
 function getProfileFromUrl(): string | null {
     try {
         const params = new URLSearchParams(window.location.search);
@@ -162,17 +652,22 @@ async create() {
 
 
 
-    private ensureWorldTileRenderer(atlas: TileAtlas): WorldTileRenderer {
-        if (!this.tileRenderer) {
-            if (DEBUG_TILEMAP) {
-                console.log(">>> [HeroScene.tilemap] creating WorldTileRenderer");
-            }
-            this.tileRenderer = new WorldTileRenderer(this, atlas, {
-                debugLocal: true
-            });
+private ensureWorldTileRenderer(atlas: TileAtlas): WorldTileRenderer {
+    if (!this.tileRenderer) {
+        if (DEBUG_TILEMAP) {
+            console.log(">>> [HeroScene.tilemap] creating WorldTileRenderer");
         }
-        return this.tileRenderer;
+        this.tileRenderer = new WorldTileRenderer(this, atlas, {
+            debugLocal: true
+        });
     }
+
+    // Expose the active WorldTileRenderer to the scene registry so arcadeCompat
+    // can apply decor overlays without reaching into private fields.
+    this.registry.set("__worldTileRenderer", this.tileRenderer);
+
+    return this.tileRenderer;
+}
 
 
 
@@ -203,8 +698,14 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
+    // ✅ Make the CANVAS match the actual game world (no extra black space).
+    // This is the “spawn big then crop down” fix: once tilemap is known,
+    // the viewport becomes exactly world-sized.
+    this.scale.resize(worldWidth, worldHeight);
+    this.cameras.main.setSize(worldWidth, worldHeight);
+
     if (DEBUG_TILEMAP) {
-        console.log(">>> [HeroScene.tilemap] bounds set", {
+        console.log(">>> [HeroScene.tilemap] bounds + viewport set", {
             worldWidth,
             worldHeight,
             rows,
@@ -652,8 +1153,36 @@ private maybeInstallHeroAnimTester() {
 }
 
 
+let __phaserGame: Phaser.Game | null = null;
+
+function _startPhaserGameSingleton(gameConfig: Phaser.Types.Core.GameConfig): Phaser.Game {
+  const parentId = (typeof gameConfig.parent === "string" ? gameConfig.parent : "app") || "app";
+  const parentEl = document.getElementById(parentId);
+
+  // Kill any prior instance (prevents duplicate canvases)
+  try {
+    if (__phaserGame) {
+      __phaserGame.destroy(true);
+      __phaserGame = null;
+    }
+  } catch (_e) {
+    // ignore
+  }
+
+  // Also hard-clear the parent to remove any leftover canvas
+  if (parentEl) parentEl.innerHTML = "";
+
+  __phaserGame = new Phaser.Game(gameConfig);
+  return __phaserGame;
+}
 
 
+
+
+
+// -------------------------------------
+// PHASER GAME CONFIG
+// -------------------------------------
 
 // -------------------------------------
 // PHASER GAME CONFIG
@@ -662,37 +1191,22 @@ private maybeInstallHeroAnimTester() {
 function shouldStartGameFromUrl(): boolean {
     try {
         const params = new URLSearchParams(window.location.search);
-        // Require at least a profile; host defaults are handled elsewhere
         return !!params.get("profile");
     } catch {
         return false;
     }
 }
 
-
-// Choose a target max size and aspect ratio
-const MAX_WIDTH = 1536;
-const MAX_HEIGHT = 864;
-const TARGET_ASPECT = 16 / 9;
-
-// Compute a size that fits this browser window, but not bigger than your max
-let width = Math.min(window.innerWidth, MAX_WIDTH);
-let height = Math.min(window.innerHeight, MAX_HEIGHT);
-
-// Adjust to keep 16:9 without exceeding the window
-if (width / height > TARGET_ASPECT) {
-    // Too wide → clamp by height
-    width = Math.floor(height * TARGET_ASPECT);
-} else {
-    // Too tall → clamp by width
-    height = Math.floor(width / TARGET_ASPECT);
-}
+// Start with a small placeholder. We will RESIZE to the tilemap world size
+// the moment the engine publishes a tilemap.
+const INITIAL_VIEW_W = 480;
+const INITIAL_VIEW_H = 270;
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
 
-    width,
-    height,
+    width: INITIAL_VIEW_W,
+    height: INITIAL_VIEW_H,
 
     parent: "app",
     backgroundColor: "#000000",
@@ -701,8 +1215,9 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
     roundPixels: true,
 
     scale: {
-        mode: Phaser.Scale.NONE,              // no extra scaling
-        autoCenter: Phaser.Scale.CENTER_BOTH  // center inside #app
+        mode: Phaser.Scale.NONE,
+        // ✅ IMPORTANT: do NOT let Phaser write CSS offsets/margins to “center”
+        autoCenter: Phaser.Scale.NO_CENTER
     },
 
     physics: {
@@ -719,14 +1234,17 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
     scene: [HeroScene]
 };
 
-
-
-
 if (shouldStartGameFromUrl()) {
     console.log("[main] profile found in URL; starting Phaser game.");
-    new Phaser.Game(gameConfig);
+
+    _startPhaserGameSingleton(gameConfig);
+
 } else {
     console.log("[main] no ?profile= URL param; waiting for landing page redirect.");
 }
+
+
+
+_hud_installOnce();
 
 

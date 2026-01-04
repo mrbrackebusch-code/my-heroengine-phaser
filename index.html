@@ -7,24 +7,41 @@
     <title>Hero Engine</title>
 
     <style>
-      /* Keep your existing Phaser canvas styling */
-      #app canvas {
-        border: 2px solid black;
-        box-sizing: border-box;
-        image-rendering: pixelated;
+      :root {
+        --hud-bg: rgba(18, 18, 22, 0.96);
+        --hud-border: #000;
+
+        --c-strength: #ff4b4b;
+        --c-agility: #ffd54a;
+        --c-intel: #4aa3ff;
+        --c-support: #4cff88;
+
+        --txt: rgba(255, 255, 255, 0.92);
+        --txt-dim: rgba(255, 255, 255, 0.70);
+      }
+
+      html,
+      body {
+        height: 100%;
       }
 
       body {
         margin: 0;
-        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
         display: flex;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
+        padding: 12px 0;
+        box-sizing: border-box;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
         background: #ffffff;
       }
 
+      /* -----------------------------
+         Landing
+         ----------------------------- */
       #landing {
         padding: 1.5rem 2rem;
         border: 1px solid #ccc;
@@ -56,27 +73,242 @@
         font-size: 1rem;
       }
 
-      #landing .role-row {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        justify-content: center;
-      }
-
       #landing button {
         padding: 0.55rem 0.8rem;
         font-size: 1rem;
         cursor: pointer;
       }
 
-/* The Phaser container; hidden until we actually start the game */
-#app {
-  /* Let the canvas decide the size; body flexbox will center it. */
-}
+      /* -----------------------------
+         Game + HUD wrapper
+         ----------------------------- */
+      #game-wrap {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-top: 34px; /* intentional: slightly down from the top */
+      }
 
-    </style>
+      /* Stage shrink-wraps to the canvas; width is later hard-synced in JS */
+      #stage {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: fit-content;
+        gap: 10px; /* ✅ visible separation so HUD never “covers” top edge */
+      }
+
+      #app {
+        display: inline-block;
+        width: fit-content;
+      }
+
+      #app canvas {
+        display: block;
+        border: 2px solid black;
+        box-sizing: border-box;
+        image-rendering: pixelated;
+      }
+
+      /* -----------------------------
+         HUD (4 boxes)
+         ----------------------------- */
+      #hud {
+        width: 100%;
+        box-sizing: border-box;
+
+        display: grid;
+        grid-template-columns: 1.20fr 1fr 1fr 1fr;
+        gap: 8px;
+
+        padding: 10px;
+        border: 2px solid var(--hud-border);
+        border-radius: 10px;
+
+        background: var(--hud-bg);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
+
+        overflow: hidden; /* prevents HUD from forcing stage wider than canvas */
+      }
+
+      .hud-cell {
+        min-width: 0;
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        padding: 10px 10px;
+        box-sizing: border-box;
+
+        background: linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.10),
+          rgba(255, 255, 255, 0.02)
+        );
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+
+        /* ✅ taller by ~3 lines */
+        min-height: 132px;
+      }
+
+      .hud-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+
+      .hud-title {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        letter-spacing: 0.4px;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .hud-subtle {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 10px;
+        letter-spacing: 0.6px;
+        color: var(--txt-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Kind row */
+      .hud-kindline {
+        margin-bottom: 6px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .hud-kindlabel {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 9px;
+        color: var(--txt-dim);
+        white-space: nowrap;
+      }
+
+      .hud-kind {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--txt);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+      }
+
+      /* ✅ Traits tighter in width */
+      .hud-traits {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 6px; /* tighter */
+        margin-bottom: 8px;
+      }
+
+      .hud-kv {
+        display: flex;
+        align-items: center;
+        gap: 4px; /* tighter */
+        min-width: 0;
+      }
+
+      .hud-k {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 9px; /* smaller label */
+        color: var(--txt-dim);
+        white-space: nowrap;
+        flex: 0 0 auto;
+      }
+
+      .hud-n {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 15px; /* slightly smaller number */
+        font-weight: 900;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hud-elemline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .hud-elem {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      /* Family colors */
+      .family-strength { color: var(--c-strength); }
+      .family-agility { color: var(--c-agility); }
+      .family-intelligence { color: var(--c-intel); }
+      .family-support { color: var(--c-support); }
+
+      /* Box border tints */
+      .move-strength { border-color: rgba(255, 75, 75, 0.55); }
+      .move-agility { border-color: rgba(255, 213, 74, 0.55); }
+      .move-intelligence { border-color: rgba(74, 163, 255, 0.55); }
+      .move-support { border-color: rgba(76, 255, 136, 0.55); }
+
+      /* YOU box */
+      .hud-youline {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .hud-youline { margin-top: 6px; }
+      #hud-you-name { margin-top: 0; }
+
+      .hud-you-stat {
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 11.5px;
+      }
+
+</style>
   </head>
+
+  <!-- Legacy HUD compat shims (old main.ts expects these IDs). Hidden on purpose. -->
+<div id="hud-compat" style="display:none">
+  <div id="hud-title"></div>
+  <div id="hud-sub"></div>
+  <pre id="hud-pre"></pre>
+
+  <div id="hud-line"></div>
+
+  <div id="hud-cell-who"></div>
+  <div id="hud-cell-a"></div>
+  <div id="hud-cell-b"></div>
+  <div id="hud-cell-ab"></div>
+</div>
+
 
   <body>
     <!-- LANDING PAGE -->
@@ -92,58 +324,138 @@
           autocomplete="off"
           required
         />
-
-      <!--div class="role-row">
-          <input type="checkbox" id="is-host" />
-          <label for="is-host">I am the host (teacher)</label>
-        </div> -->
-
         <button type="submit">Start</button>
       </form>
     </div>
 
-    <!-- Phaser will mount into this when we actually start the game -->
-    <div id="app"></div>
+    <!-- GAME + HUD (hidden until profile exists) -->
+    <div id="game-wrap">
+      <div id="stage">
+        <div id="hud">
+          <!-- YOU -->
+          <div class="hud-cell hud-cell-who" id="hud-box-who">
+            <div class="hud-head">
+              <div class="hud-title">YOU</div>
+              <div class="hud-subtle" id="hud-you-slot">…</div>
+            </div>
+              <div class="hud-youline" id="hud-you-name">…</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-health">…</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-mana">…</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-coins">…</div>
+          </div>
 
-    <!-- Your Phaser entrypoint (unchanged path) -->
+          <!-- A -->
+          <div class="hud-cell hud-cell-a" id="hud-box-a">
+            <div class="hud-head">
+              <div class="hud-title">A Button</div>
+              <div class="hud-subtle" id="hud-a-note"></div>
+            </div>
+
+            <div class="hud-kindline">
+              <div class="hud-kindlabel">Type:</div>
+              <div class="hud-kind" id="hud-a-kind">—</div>
+            </div>
+
+            <div class="hud-traits">
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-a-dmg">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">—</span></div>
+            </div>
+
+            <div class="hud-elemline">
+              <div class="hud-k">Element:</div>
+              <div class="hud-elem" id="hud-a-elem" title="">⭕</div>
+            </div>
+          </div>
+
+          <!-- B -->
+          <div class="hud-cell hud-cell-b" id="hud-box-b">
+            <div class="hud-head">
+              <div class="hud-title">B Button</div>
+              <div class="hud-subtle" id="hud-b-note"></div>
+            </div>
+
+            <div class="hud-kindline">
+              <div class="hud-kindlabel">Type:</div>
+              <div class="hud-kind" id="hud-b-kind">—</div>
+            </div>
+
+            <div class="hud-traits">
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-b-dmg">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">—</span></div>
+            </div>
+
+            <div class="hud-elemline">
+              <div class="hud-k">Element:</div>
+              <div class="hud-elem" id="hud-b-elem" title="">⭕</div>
+            </div>
+          </div>
+
+          <!-- A+B -->
+          <div class="hud-cell hud-cell-ab" id="hud-box-ab">
+            <div class="hud-head">
+              <div class="hud-title">A+B Button</div>
+              <div class="hud-subtle" id="hud-ab-note"></div>
+            </div>
+
+            <div class="hud-kindline">
+              <div class="hud-kindlabel">Type:</div>
+              <div class="hud-kind" id="hud-ab-kind">—</div>
+            </div>
+
+            <div class="hud-traits">
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-ab-dmg">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">—</span></div>
+            </div>
+
+            <div class="hud-elemline">
+              <div class="hud-k">Element:</div>
+              <div class="hud-elem" id="hud-ab-elem" title="">⭕</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="app"></div>
+      </div>
+    </div>
+
+    <!-- Phaser entrypoint -->
     <script type="module" src="/src/main.ts"></script>
 
-    <!-- Tiny helper script to manage the landing page + URL -->
+    <!-- Landing page → URL profile helper -->
     <script>
       (function () {
         const params = new URLSearchParams(window.location.search);
         const landing = document.getElementById("landing");
-        const app = document.getElementById("app");
+        const gameWrap = document.getElementById("game-wrap");
 
-        if (!landing || !app) return;
+        if (!landing || !gameWrap) return;
 
         const hasProfile = !!params.get("profile");
 
-        // If a profile is already in the URL, skip the prompt and just show the game.
         if (hasProfile) {
           landing.style.display = "none";
-          app.style.display = "block";
+          gameWrap.style.display = "flex";
           return;
         }
 
-        // First-time visit: hide the app container until the game is started
-        app.style.display = "none";
+        gameWrap.style.display = "none";
 
         const form = document.getElementById("join-form");
         const nameInput = document.getElementById("player-name");
-        //const hostCheckbox = document.getElementById("is-host");
-
         if (!form || !nameInput) return;
 
         form.addEventListener("submit", function (e) {
           e.preventDefault();
-
           const name = nameInput.value.trim();
           if (!name) return;
 
-          // Build ?profile=NAME&host=0/1 for main.ts to read
           params.set("profile", name);
-          //params.set("host", hostCheckbox.checked ? "1" : "0");
 
           const newUrl =
             window.location.origin +
@@ -151,12 +463,425 @@
             "?" +
             params.toString();
 
-          // Full reload so main.ts sees the URL params from a clean start
           window.location.href = newUrl;
         });
       })();
     </script>
-    
 
+    <!-- HUD + width sync -->
+    <script>
+      (function () {
+        const REFRESH_MS = 100;
+
+        const stageEl = document.getElementById("stage");
+
+        // --- Force HUD width to match the actual canvas width (live) ---
+        function syncStageWidthToCanvas() {
+          if (!stageEl) return;
+          const canvas = document.querySelector("#app canvas");
+          if (!canvas) return;
+
+          // offsetWidth includes border; matches what your eyes see
+          const w = canvas.offsetWidth | 0;
+          if (w > 0) stageEl.style.width = w + "px";
+        }
+
+        // Wait until canvas exists, then observe it
+        (function initCanvasObserver() {
+          const canvas = document.querySelector("#app canvas");
+          if (!canvas) {
+            requestAnimationFrame(initCanvasObserver);
+            return;
+          }
+          syncStageWidthToCanvas();
+          try {
+            const ro = new ResizeObserver(() => syncStageWidthToCanvas());
+            ro.observe(canvas);
+          } catch (_e) {
+            // fallback: periodic sync
+            setInterval(syncStageWidthToCanvas, 200);
+          }
+        })();
+
+        // --- DOM refs ---
+        const R = {
+          youSlot: document.getElementById("hud-you-slot"),
+          youName: document.getElementById("hud-you-name"),
+          youHealth: document.getElementById("hud-you-health"),
+          youMana: document.getElementById("hud-you-mana"),
+          youCoins: document.getElementById("hud-you-coins"),
+
+          boxA: document.getElementById("hud-box-a"),
+          aNote: document.getElementById("hud-a-note"),
+          aKind: document.getElementById("hud-a-kind"),
+          aDmg: document.getElementById("hud-a-dmg"),
+          aReach: document.getElementById("hud-a-reach"),
+          aTime: document.getElementById("hud-a-time"),
+          aStatus: document.getElementById("hud-a-status"),
+          aElem: document.getElementById("hud-a-elem"),
+
+          boxB: document.getElementById("hud-box-b"),
+          bNote: document.getElementById("hud-b-note"),
+          bKind: document.getElementById("hud-b-kind"),
+          bDmg: document.getElementById("hud-b-dmg"),
+          bReach: document.getElementById("hud-b-reach"),
+          bTime: document.getElementById("hud-b-time"),
+          bStatus: document.getElementById("hud-b-status"),
+          bElem: document.getElementById("hud-b-elem"),
+
+          boxAB: document.getElementById("hud-box-ab"),
+          abNote: document.getElementById("hud-ab-note"),
+          abKind: document.getElementById("hud-ab-kind"),
+          abDmg: document.getElementById("hud-ab-dmg"),
+          abReach: document.getElementById("hud-ab-reach"),
+          abTime: document.getElementById("hud-ab-time"),
+          abStatus: document.getElementById("hud-ab-status"),
+          abElem: document.getElementById("hud-ab-elem"),
+        };
+
+        function setText(el, txt) {
+          if (!el) return;
+          if (el.textContent !== txt) el.textContent = txt;
+        }
+
+        function setTitle(el, t) {
+          if (!el) return;
+          if (el.title !== t) el.title = t;
+        }
+
+
+        // Pick your emojis here
+        const EMOJI = {
+          coin: "🪙",    // other good options: 💰 🟡 💵
+          health: "❤️",  // options: 🫀 💚 🩸
+          mana: "🫧",    // options: 🔮 ✨ 💧 🪄 🔷
+        };
+
+        function _readTextSpriteString(spritesNS, s) {
+          if (!s || !spritesNS) return "";
+
+          // ✅ Primary: MakeCode/Phaser text sprites store their string in sprite data "tx_str"
+          try {
+            const t = String(spritesNS.readDataString(s, "tx_str") || "");
+            if (t) return t;
+          } catch (_e) {}
+
+          // Fallbacks (rare / older)
+          try {
+            const t2 = String(spritesNS.readDataString(s, "text") || "");
+            if (t2) return t2;
+          } catch (_e) {}
+
+          const any = s;
+          if (typeof any.text === "string") return any.text;
+          if (typeof any._text === "string") return any._text;
+          if (typeof any.__text === "string") return any.__text;
+          if (typeof any.getText === "function") return String(any.getText());
+
+          return "";
+        }
+
+        function _findUiSpriteByUiKind(kindStr) {
+          const spritesNS = window.sprites;
+          if (!spritesNS) return null;
+
+          const all = allSprites();
+          for (const s of all) {
+            if (!s) continue;
+            let k = "";
+            try { k = String(spritesNS.readDataString(s, "__uiKind") || ""); } catch (_e) { k = ""; }
+            if (k === kindStr) return s;
+          }
+          return null;
+        }
+
+      let _hud_lastCoins = 0;
+
+      function _readTeamCoins() {
+        const spritesNS = window.sprites;
+        if (!spritesNS) return _hud_lastCoins | 0;
+
+        // 1) Preferred: __uiKind === "teamCoins"
+        const s0 = _findUiSpriteByUiKind("teamCoins");
+        let t0 = _readTextSpriteString(spritesNS, s0);
+
+        // 2) Fallback: scan any text sprite that looks like "Coins: 123"
+        if (!t0) {
+          const all = allSprites();
+          for (const s of all) {
+            if (!s) continue;
+            const txt = _readTextSpriteString(spritesNS, s);
+            if (!txt) continue;
+            if (/coins\s*:/i.test(txt)) {
+              t0 = txt;
+              break;
+            }
+          }
+        }
+
+        const m = String(t0 || "").match(/(-?\d+)/);
+        if (!m) return _hud_lastCoins | 0;
+
+        const n = (parseInt(m[1], 10) | 0);
+        _hud_lastCoins = Math.max(0, n | 0);
+        return _hud_lastCoins | 0;
+      }
+
+
+        function getPid() {
+          const net = window.__net;
+          const pid = net && typeof net.playerId === "number" ? (net.playerId | 0) : 0;
+          return pid > 0 ? pid : 0;
+        }
+
+        function kindOf(s) {
+          try {
+            if (s && typeof s.kind === "function") return (s.kind() | 0);
+            if (s && typeof s.kind === "number") return (s.kind | 0);
+          } catch (_e) {}
+          return 0;
+        }
+
+        function allSprites() {
+          const spritesNS = window.sprites;
+          if (!spritesNS) return [];
+          try {
+            if (typeof spritesNS.allSprites === "function") return spritesNS.allSprites() || [];
+            if (typeof spritesNS._getAllSprites === "function") return spritesNS._getAllSprites() || [];
+          } catch (_e) {}
+          return [];
+        }
+
+        function findLocalHeroSprite(pid) {
+          const spritesNS = window.sprites;
+          if (!spritesNS) return null;
+
+          const sk = window.SpriteKind;
+          const playerKind = sk && typeof sk.Player === "number" ? (sk.Player | 0) : 0;
+
+          const all = allSprites();
+          for (const s of all) {
+            if (!s) continue;
+            if (playerKind && kindOf(s) !== playerKind) continue;
+
+            let owner = 0;
+            try { owner = (spritesNS.readDataNumber(s, "owner") | 0); } catch (_e) { owner = 0; }
+            if (owner === (pid | 0)) return s;
+          }
+          return null;
+        }
+
+        function buildHeroesArr() {
+          const sk = window.SpriteKind;
+          const playerKind = sk && typeof sk.Player === "number" ? (sk.Player | 0) : 0;
+          const all = allSprites();
+          if (!playerKind) return [];
+          return all.filter(s => s && kindOf(s) === playerKind);
+        }
+
+        function resolveHeroIndexForSprite(hero) {
+          const heroesArr = buildHeroesArr();
+          for (let i = 0; i < heroesArr.length; i++) {
+            if (heroesArr[i] === hero) return (i | 0);
+          }
+          return -1;
+        }
+
+        function callStudentLogic(heroIndex, button) {
+          const HE = window.HeroEngine;
+          if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
+          try {
+            return HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+          } catch (_e) {
+            return null;
+          }
+        }
+
+      function familyInfo(fam) {
+        const FAMILY = window.FAMILY || {};
+        const f = (Number(fam) | 0);
+
+        // Prefer engine enums when present
+        if (typeof FAMILY.STRENGTH === "number" && f === (FAMILY.STRENGTH | 0)) {
+          return { name: "Strength", kindClass: "family-strength", boxClass: "move-strength" };
+        }
+        if (typeof FAMILY.AGILITY === "number" && f === (FAMILY.AGILITY | 0)) {
+          return { name: "Agility", kindClass: "family-agility", boxClass: "move-agility" };
+        }
+        if (typeof FAMILY.INTELLECT === "number" && f === (FAMILY.INTELLECT | 0)) {
+          return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
+        }
+
+        // Some builds might export SUPPORT instead of HEAL; treat both as “Support”
+        if (typeof FAMILY.SUPPORT === "number" && f === (FAMILY.SUPPORT | 0)) {
+          return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+        }
+        if (typeof FAMILY.HEAL === "number" && f === (FAMILY.HEAL | 0)) {
+          return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+        }
+
+        // ✅ Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
+        if (f === 0) return { name: "Strength", kindClass: "family-strength", boxClass: "move-strength" };
+        if (f === 1) return { name: "Agility", kindClass: "family-agility", boxClass: "move-agility" };
+        if (f === 2) return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
+        if (f === 3) return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+
+        return { name: "—", kindClass: "", boxClass: "" };
+      }
+
+        // --- element mapping: DEFAULT NONE unless enum says otherwise ---
+        function elemInfo(elem) {
+          const ELEM = window.ELEM || {};
+          const e = elem | 0;
+
+          // ✅ First preference: explicit NONE
+          if (typeof ELEM.NONE === "number" && e === (ELEM.NONE | 0)) {
+            return { name: "None", emoji: "⭕" };
+          }
+
+          const m = [
+            { key: "FIRE", name: "Fire", emoji: "🔥" },
+            { key: "WATER", name: "Water", emoji: "💧" },
+            { key: "LIGHTNING", name: "Lightning", emoji: "⚡" },
+            { key: "WIND", name: "Wind", emoji: "🌬️" },
+            { key: "EARTH", name: "Earth", emoji: "🪨" },     // rock
+            { key: "NATURE", name: "Nature", emoji: "🌿" },   // green
+          ];
+
+          for (const it of m) {
+            if (typeof ELEM[it.key] === "number" && e === (ELEM[it.key] | 0)) {
+              return { name: it.name, emoji: it.emoji };
+            }
+          }
+
+          // ✅ If we can't prove it's an element, show None.
+          return { name: "None", emoji: "⭕" };
+        }
+
+        function readNum(spritesNS, spr, key) {
+          try { return (spritesNS.readDataNumber(spr, key) | 0); } catch (_e) { return 0; }
+        }
+
+        function readProfile(pid) {
+          const profs = window.__heroProfiles;
+          if (Array.isArray(profs) && profs[pid - 1]) return String(profs[pid - 1]);
+          return "";
+        }
+
+        function renderMove(out, boxEl, noteEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl) {
+          // Reset defaults
+          function reset() {
+            setText(noteEl, "");
+            setText(kindEl, "—");
+            kindEl.className = "hud-kind";
+            boxEl.className = "hud-cell";
+
+            setText(dmgEl, "—");
+            setText(reachEl, "—");
+            setText(timeEl, "—");
+            setText(statusEl, "—");
+
+            const ei0 = { name: "None", emoji: "⭕" };
+            setText(elemEl, ei0.emoji);
+            setTitle(elemEl, ei0.name);
+          }
+
+          if (!Array.isArray(out) || out.length < 6) {
+            reset();
+            return;
+          }
+
+          const fam = out[0] | 0;
+          const dmg = out[1] | 0;
+          const reach = out[2] | 0;
+          const time = out[3] | 0;
+          const status = out[4] | 0;
+          const elem = out[5] | 0;
+
+          const fi = familyInfo(fam);
+          const ei = elemInfo(elem);
+
+          // If family isn't recognized yet, keep the box neutral.
+          const kindName = fi.name || "—";
+          setText(kindEl, kindName);
+          kindEl.className = "hud-kind" + (fi.kindClass ? " " + fi.kindClass : "");
+          boxEl.className = "hud-cell" + (fi.boxClass ? " " + fi.boxClass : "");
+
+          // Traits
+          setText(dmgEl, String(dmg));
+          setText(reachEl, String(reach));
+          setText(timeEl, String(time));
+          setText(statusEl, String(status));
+
+          // Element
+          setText(elemEl, ei.emoji);
+          setTitle(elemEl, ei.name);
+        }
+
+        function tick() {
+          const pid = getPid();
+          const spritesNS = window.sprites;
+
+          if (!pid) {
+            setText(R.youSlot, "…");
+            setText(R.youName, "Waiting for server…");
+            setText(R.youHealth, "");
+            setText(R.youMana, "");
+            setText(R.youCoins, "");
+
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            return;
+          }
+
+          const profile = readProfile(pid);
+          setText(R.youSlot, "P" + pid);
+          setText(R.youName, "P" + pid + (profile ? ": " + profile : ""));
+
+          const hero = findLocalHeroSprite(pid);
+          if (!hero || !spritesNS) {
+            setText(R.youHealth, "Waiting");
+            setText(R.youMana, "For");
+            setText(R.youCoins, "A Hero");
+
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            return;
+          }
+
+          const hp = readNum(spritesNS, hero, "hp");
+          const maxHp = readNum(spritesNS, hero, "maxHp");
+          const mana = readNum(spritesNS, hero, "mana");
+          const maxMana = readNum(spritesNS, hero, "maxMana");
+          setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
+          setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
+
+          const coins = _readTeamCoins();
+          setText(R.youCoins, `${EMOJI.coin} Coins: ${coins}`);
+
+
+          const heroIndex = resolveHeroIndexForSprite(hero);
+          if (heroIndex < 0) {
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            return;
+          }
+
+          const outA = callStudentLogic(heroIndex, "A");
+          const outB = callStudentLogic(heroIndex, "B");
+          const outAB = callStudentLogic(heroIndex, "A+B");
+
+          renderMove(outA, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
+          renderMove(outB, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
+          renderMove(outAB, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+        }
+
+        setInterval(tick, REFRESH_MS);
+        tick();
+      })();
+    </script>
   </body>
 </html>
