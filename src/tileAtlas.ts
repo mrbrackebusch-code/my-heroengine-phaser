@@ -30,37 +30,75 @@ export interface TileRef {
 
 export type DecorAtlasKey =
     | "terrain"
+    | "terrain_atlas"
     | "decor"
     | "props"
     | "coins"
     // Allow project-specific aliases without needing to edit this union every time.
     | (string & {});
 
+export interface DecorAnimDef {
+    /** Local animation id (combined with textureKey to form a unique Phaser anim key). */
+    key: string;
+
+    /** FPS (default 6). */
+    frameRate?: number;
+
+    /** Phaser repeat count; -1 loops forever (default -1). */
+    repeat?: number;
+
+    /** Explicit absolute frame indices within the spritesheet. */
+    frames?: number[];
+
+    /** Explicit tile refs (converted to frame indices using sheet cols). */
+    frameRefs?: TileRef[];
+
+    /** Inclusive absolute frame range within the spritesheet. */
+    startFrame?: number;
+    endFrame?: number;
+
+    /** Inclusive range in tile refs (converted to absolute frame indices row-major). */
+    startRef?: TileRef;
+    endRef?: TileRef;
+
+    /** Named single-frame “states” (e.g. chest open/closed). */
+    states?: Record<string, TileRef>;
+}
+
+export type DecorAnimFrames = {
+    /** Phaser animation key (shared / global). */
+    key: string;
+    startFrame: number;
+    endFrame: number;
+    frameRate?: number;
+    repeat?: number;
+};
+
+export type DecorAnimStates = {
+    /** Only used for debugging / future animation bridging. */
+    key: string;
+    /** Named frame selectors (ex: closed/open). */
+    states: Record<string, TileRef>;
+    /** Optional default if no "#state" is provided. */
+    defaultState?: string;
+};
+
 export interface DecorVisualRef {
-    /** Semantic atlas alias (preferred). Resolved to a Phaser textureKey via TileAtlas.resolveAtlasTextureKey(). */
-    atlas: DecorAtlasKey;
-
-    /** Optional direct Phaser textureKey override (escape hatch / debugging). */
+    // if set, use this directly. otherwise resolve from atlas (string alias)
     textureKey?: string;
+    atlas?: DecorAtlasKey;
 
-    /** Bottom-left tile of the visual within the referenced sheet (0-based tile coords). */
+    // BOTTOM-LEFT tile in the atlas
     ref: TileRef;
 
-    /** Footprint width in tiles (default 1). */
+    // footprint in TILES (default 1x1)
     wTiles?: number;
-
-    /** Footprint height in tiles (default 1). */
     hTiles?: number;
 
-    /** Reserved for future: animated props/decals. (Not used yet.) */
-    anim?: {
-        key: string;
-        startFrame: number;
-        endFrame: number;
-        frameRate?: number;
-        repeat?: number;
-    };
+    // either real animation (frames) or state selectors
+    anim?: DecorAnimFrames | DecorAnimStates;
 }
+
 
 export type PropVisualRef = DecorVisualRef;
 
@@ -80,31 +118,100 @@ export function terrainFrameIndexFromRef(ref: TileRef, cols: number = TERRAIN_SH
 export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     sand_patch: { atlas: "terrain", ref: { row: 13, col: 0 } },
 
-    // Teleporter pad: terrain_atlas rows 21/22, cols 0..4 (frame = col)
-    telepad0_top: { atlas: "terrain", ref: { row: 21, col: 0 } },
-    telepad0_bot: { atlas: "terrain", ref: { row: 22, col: 0 } },
+    // Teleporter pad pieces: terrain_atlas rows 21/22, cols 0..4 (piece = col)
+    telepad0_top: { atlas: "terrain_atlas", ref: { row: 18, col: 0 } },
+    telepad0_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 0 } },
 
-    telepad1_top: { atlas: "terrain", ref: { row: 21, col: 1 } },
-    telepad1_bot: { atlas: "terrain", ref: { row: 22, col: 1 } },
+    telepad1_top: { atlas: "terrain_atlas", ref: { row: 18, col: 1 } },
+    telepad1_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 1 } },
 
-    telepad2_top: { atlas: "terrain", ref: { row: 21, col: 2 } },
-    telepad2_bot: { atlas: "terrain", ref: { row: 22, col: 2 } },
+    telepad2_top: { atlas: "terrain_atlas", ref: { row: 18, col: 2 } },
+    telepad2_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 2 } },
 
-    telepad3_top: { atlas: "terrain", ref: { row: 21, col: 3 } },
-    telepad3_bot: { atlas: "terrain", ref: { row: 22, col: 3 } },
+    telepad3_top: { atlas: "terrain_atlas", ref: { row: 18, col: 3 } },
+    telepad3_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 3 } },
 
-    telepad4_top: { atlas: "terrain", ref: { row: 21, col: 4 } },
-    telepad4_bot: { atlas: "terrain", ref: { row: 22, col: 4 } },
-
-    // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
-    stairs_statue_top: { atlas: "terrain_atlas", ref: { row: 15, col: 19 } },
-    stairs_statue_mid: { atlas: "terrain_atlas", ref: { row: 16, col: 19 } },
-    stairs_statue_bot: { atlas: "terrain_atlas", ref: { row: 17, col: 19 } },
-}
+    telepad4_top: { atlas: "terrain_atlas", ref: { row: 18, col: 4 } },
+    telepad4_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 4 } },
+};
 
 
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
+
+    // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
+    // ref MUST be bottom-left of the whole visual => row 17, col 19
+    stairs_statue: { atlas: "terrain_atlas", ref: { row: 17, col: 19 }, wTiles: 1, hTiles: 3 },
+
+    chest: {
+        atlas: "build_atlas",
+        ref: { row: 21, col: 15 },
+        anim: {
+            key: "unusedForStates",
+            states: {
+                closed: { row: 21, col: 15 },
+                open:   { row: 22, col: 15 }
+            }
+        }
+},
+
+teleport_rune: {
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+    anim: {
+        key: "idle",
+        frames: [0, 1, 2, 3],
+        frameRate: 4,
+        repeat: -1
+    }
+},
+
+teleport_rune_fast1: {
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+    anim: {
+        key: "fast1",
+        frames: [0, 1, 2, 3],
+        frameRate: 8,
+        repeat: -1
+    }
+},
+
+teleport_rune_fast2: {
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+    anim: {
+        key: "fast2",
+        frames: [0, 1, 2, 3],
+        frameRate: 12,
+        repeat: -1
+    }
+},
+
+teleport_rune_fast3: {
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+    anim: {
+        key: "fast3",
+        frames: [0, 1, 2, 3],
+        frameRate: 18,
+        repeat: -1
+    }
+},
+
+teleport_rune_flash: {
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+    anim: {
+        key: "flash",
+        frames: [0, 1, 2, 3],
+        frameRate: 24,
+        repeat: -1
+    }
+},
+
+
+
 };
 
 
@@ -112,18 +219,38 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 // Minimal v1 prop registry (name → atlas row/col)
 // NOTE: row/col are 0-based.
 // Your rock is “row 22, col 20” in human terms → (21, 19) 0-based.
-export const PROP_CATALOG: { name: string; atlasRow: number; atlasCol: number }[] = [
-    { name: "rock_mountain", atlasRow: 21, atlasCol: 19 },
+export const PROP_CATALOG: {
+    name: string;
+    atlas: DecorAtlasKey;
+    atlasRow: number;
+    atlasCol: number;
+    wTiles?: number;
+    hTiles?: number;
+}[] = [
+    { name: "rock_mountain", atlas: "terrain", atlasRow: 22, atlasCol: 20, wTiles: 1, hTiles: 1 },
+
+    // bottom-left tile in atlas
+    { name: "stairs_statue", atlas: "terrain_atlas", atlasRow: 17, atlasCol: 19, wTiles: 1, hTiles: 3 },
 ];
 
 
-export function getPropTileRefByName(name: string): { row: number; col: number } | null {
-    // Assumes you have PROP_CATALOG in this file (as you planned).
-    // Example row/col field names: atlasRow/atlasCol.
+export function getPropTileRefByName(name: string): {
+    atlas: DecorAtlasKey;
+    row: number;
+    col: number;
+    wTiles: number;
+    hTiles: number;
+} | null {
     for (let i = 0; i < PROP_CATALOG.length; i++) {
         const p = PROP_CATALOG[i];
         if (p && p.name === name) {
-            return { row: (p.atlasRow | 0), col: (p.atlasCol | 0) };
+            return {
+                atlas: p.atlas,
+                row: (p.atlasRow | 0),
+                col: (p.atlasCol | 0),
+                wTiles: ((p.wTiles ?? 1) | 0),
+                hTiles: ((p.hTiles ?? 1) | 0),
+            };
         }
     }
     return null;
@@ -342,15 +469,15 @@ function _resolveAtlasTextureKeyDeterministic(aliasOrTextureKey: string, warnUnk
 
     // Direct textureKey passthrough
     if (s.startsWith("tiles.")) return s;
+    if (s.startsWith("anims.")) return s;
 
     const k = _computeDefaultAtlasTextureKeys();
 
-    // 1) Known semantic alias (terrain / terrain_atlas / decor / props / coins / base / ...)
+    // 1) Known semantic alias
     const hit = k.aliasToTextureKey[s];
     if (hit) return hit;
 
-    // 2) If caller passed a bare sheet name like "terrain_atlas", "props", etc,
-    //    resolve it as tiles.${name} when that sheet exists.
+    // 2) bare sheet name => tiles.${name} if exists
     const direct = `tiles.${s}`;
     if (TILE_SHEETS.some(sh => sh.textureKey === direct)) return direct;
 
@@ -375,6 +502,22 @@ function logTiles(...args: any[]) {
     console.log(...args);
 }
 
+
+const animPngs = import.meta.glob("../assets/animations/*.png", { as: "url", eager: true }) as Record<string, string>
+
+type AnimSheetDef = { textureKey: string, url: string, frameW: number, frameH: number }
+const ANIM_SHEETS: AnimSheetDef[] = []
+
+for (const [path, url] of Object.entries(animPngs)) {
+    const fileNameWithExt = path.split(/[\\/]/).pop() || "anim"
+    const baseName = fileNameWithExt.replace(/\.png$/i, "")
+    const textureKey = `anims.${baseName}`
+
+    // Default: 64x64 frames for animation sheets
+    ANIM_SHEETS.push({ textureKey, url, frameW: 64, frameH: 64 })
+}
+
+
 // Grab all tilesets under ../assets/tiles/*.png as Vite URLs.
 const tilePngs = import.meta.glob(
     "../assets/tiles/*.png",
@@ -393,37 +536,44 @@ interface TileSheetDef {
  * as terrain.png: 672x736 → 21x23 tiles of 32x32. If you add other
  * sheets with different dimensions later, this will need to grow up a bit.
  */
+
 const TILE_SHEETS: TileSheetDef[] = [];
 
 for (const [path, url] of Object.entries(tilePngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "terrain";
     const baseName = fileNameWithExt.replace(/\.png$/i, "");
     const textureKey = `tiles.${baseName}`;
-    if (baseName === "terrain") {
-        TILE_SHEETS.push({
-            textureKey,
-            url,
-            cols: 21,
-            rows: 23
-        });
-    }
-    if (baseName === "terrain_atlas") {
-    TILE_SHEETS.push({
-        textureKey,
-        url,
-        cols: 32,
-        rows: 32
-    });
-    }
-    //Need more definitions here
+
+    // Defaults are placeholders; runtime texture inspection can override later.
+    let cols = 1;
+    let rows = 1;
+
+    if (baseName === "terrain") { cols = 21; rows = 23; }
+    else if (baseName === "terrain_atlas") { cols = 32; rows = 32; }
+
+    TILE_SHEETS.push({ textureKey, url, cols, rows });
 }
 
 export function preloadTileSheets(scene: Phaser.Scene): void {
-    if (TILE_SHEETS.length === 0) {
-        logTiles("[tileAtlas.preload] no tilesheets found under ../assets/tiles/*.png");
-        return;
+    // Tilesheets
+    for (const sheet of TILE_SHEETS) {
+        if (!scene.textures.exists(sheet.textureKey)) {
+            scene.load.spritesheet(sheet.textureKey, sheet.url, {
+                frameWidth: TILE_SIZE,
+                frameHeight: TILE_SIZE,
+            });
+        }
     }
 
+    // Animation sheets (e.g., anims.teleport_rune)
+    for (const sheet of ANIM_SHEETS) {
+        if (!scene.textures.exists(sheet.textureKey)) {
+            scene.load.spritesheet(sheet.textureKey, sheet.url, {
+                frameWidth: sheet.frameW,
+                frameHeight: sheet.frameH,
+            });
+        }
+    }
 
     const DEBUG_TILES = true
 
@@ -442,7 +592,9 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         });
     }
     // [tileAtlas.preload] logging included
+
 }
+
 
 
 

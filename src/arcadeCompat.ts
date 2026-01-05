@@ -657,8 +657,7 @@ function decor_maybeSyncFromEngineInternals(): void {
         ? (internals.getWorldTileSize() | 0)
         : 32;
 
-    // Props overlay from solid colliders (tile-aligned) — IMPORTANT:
-    // use cached tile r/c, NOT s.left/top (because we will offset colliders to tight bounds)
+    // Props overlay from solid colliders (tile-aligned) AND triggers (for visuals like teleport rune)
     let propPlaced = 0;
     if (typeof renderer.syncPropGridByName === "function" && rows > 0 && cols > 0) {
         const propGrid: Array<Array<string | "" | null | undefined>> = new Array(rows);
@@ -668,6 +667,7 @@ function decor_maybeSyncFromEngineInternals(): void {
             propGrid[r] = row;
         }
 
+        // Solids first (they win if collision visuals overlap)
         if (sol && sol.length && tileSize > 0) {
             for (let i = 0; i < sol.length; i++) {
                 const s: any = sol[i];
@@ -685,11 +685,30 @@ function decor_maybeSyncFromEngineInternals(): void {
             }
         }
 
+        // Triggers next (ONLY fill empty cells)
+        if (trig && trig.length && tileSize > 0) {
+            for (let i = 0; i < trig.length; i++) {
+                const s: any = trig[i];
+                if (!s) continue;
+
+                let key = "";
+                try { key = (sprites.readDataString(s, DECOR_DATA_NAME) || ""); } catch { key = ""; }
+                if (!key) continue;
+
+                const rc = _decor_getSolidTileRC(s, tileSize);
+                if (rc.r < 0 || rc.c < 0 || rc.r >= rows || rc.c >= cols) continue;
+
+                if (!propGrid[rc.r][rc.c]) {
+                    propGrid[rc.r][rc.c] = key;
+                    propPlaced++;
+                }
+            }
+        }
+
         renderer.syncPropGridByName(propGrid);
     }
 
-    // NEW: tighten solid colliders to the opaque bounds of their PNG tile art
-    // (this directly improves engine-side wall-like blocking)
+    // tighten solid colliders to the opaque bounds of their PNG tile art
     decor_applyTightOpaqueAabbToSolids({
         scene: sc,
         renderer,
@@ -804,6 +823,8 @@ const AGI_EXEC_TICK_BOUNCE_MS = 70
 
 // Execute layering: temporarily lift hero + weapon overlays above monsters during execute.
 const HERO_EXECUTE_DEPTH_BOOST = 10000;
+
+const UI_STATUSBAR_FOLLOW_DEPTH_BIAS = 10;
 
 const HERO_WPN_GHOST_BG_DEPTH_OFF = 1;
 const HERO_WPN_GHOST_FG_DEPTH_OFF = 2;
@@ -5530,11 +5551,11 @@ function _attachImageGuard(ctx: AttachContext): boolean {
 // HERO RENDER ↔ COLLIDER ALIGNMENT (64x64 render, 16x16 collider)
 // --------------------------------------------------------------
 const HERO_NATIVE_ORIGIN_X = 0.5;
-const HERO_NATIVE_ORIGIN_Y = 1.0; // bottom-center
+const HERO_NATIVE_ORIGIN_Y = 0.5; // bottom-center
 
 // Tune: how much to move the 64x64 render UP from the collider-feet point.
 // Bigger = render higher. Smaller/negative = render lower.
-const HERO_NATIVE_FEET_LIFT_PX = 8;
+const HERO_NATIVE_FEET_LIFT_PX = 0;
 
 // Optional debug
 const DEBUG_HERO_NATIVE_FEET_ANCHOR = false;
@@ -6496,6 +6517,29 @@ function _syncUiManagedStatusBar(
         (s as any)._lastNonZeroPixels = 1;
         return true;
     }
+
+    // ------------------------------------------------------------
+    // NEW: If this status bar is attached to a sprite, match its depth
+    // so it sorts with the hero/monster vs props (behind only when they are behind).
+    // ------------------------------------------------------------
+    try {
+        const follow: any = sb.spriteToFollow;
+        const followNative: any = follow ? (follow.native as any) : null;
+
+        if (followNative) {
+            // Prefer Phaser depth when available
+            const followDepth =
+                (typeof followNative.depth === "number") ? (followNative.depth | 0) :
+                (typeof followNative.getDepth === "function") ? (followNative.getDepth() | 0) :
+                0;
+
+            const zBias = (s.z | 0); // keep Arcade z as a small tie-breaker (hp vs mana, etc.)
+            const depth = ((followDepth + UI_STATUSBAR_FOLLOW_DEPTH_BIAS + zBias) | 0);
+
+            if (typeof anyNative.setDepth === "function") anyNative.setDepth(depth);
+            else anyNative.depth = depth;
+        }
+    } catch { /* ignore */ }
 
     const borderRect = anyNative.getData?.("sb_border") as Phaser.GameObjects.Rectangle | undefined;
     const bgRect = anyNative.getData?.("sb_bg") as Phaser.GameObjects.Rectangle | undefined;
@@ -7611,6 +7655,31 @@ function _syncWeaponOverlaysForHeroNative(
 }
 
 
+// ------------------------------------------------------------
+// World depth policy (y-sort)
+// ------------------------------------------------------------
+const WORLD_DEPTH_Y_SCALE = 100;
+
+function _applyWorldDepthForNative(s: any, native: any): void {
+  if (!native) return;
+
+  // Don’t interfere with UI-managed natives
+  if (native.getData && native.getData("uiManaged")) return;
+
+  const yPx =
+    (typeof native.y === "number") ? (native.y | 0) :
+    (typeof s.y === "number") ? (s.y | 0) :
+    0;
+
+  const zBias = (typeof s.z === "number") ? (s.z | 0) : 0;
+  const depth = ((yPx * WORLD_DEPTH_Y_SCALE) + zBias) | 0;
+
+  try {
+    if (native.setDepth) native.setDepth(depth);
+    else native.depth = depth;
+  } catch {}
+}
+
 
 // PURPOSE: Apply hero animation + hero aura glue onto hero native sprites.
 // READS:
@@ -7638,8 +7707,9 @@ function _syncHeroPath(
     const nativeAny: any = s.native;
     if (!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"))) return;
 
-    // IMPORTANT: keep native sprite identity in sync every frame
-    // (phase/dir/frameColOverride must be current before glue reads native.getData)
+    // ✅ IMPORTANT: set depth BEFORE weapon/auras read heroDepth
+    _applyWorldDepthForNative(s, nativeAny);
+
     _copyHeroIdentityToNative(
         s as Sprite,
         nativeAny as Phaser.GameObjects.Sprite
@@ -7659,7 +7729,6 @@ function _syncHeroPath(
         auraColor
     );
 
-    // Cache hero cast weapon by heroIndex so projectile visuals can pick it up.
     try {
         const dataAny: any = (s as any).data || {};
         const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
@@ -7667,14 +7736,12 @@ function _syncHeroPath(
         if (wCast) _heroCastWeaponByIndex[heroIndex] = wCast;
     } catch { }
 
-    // Step 6: per-frame weapon sync
     _syncWeaponOverlaysForHeroNative(
         ctx,
         s,
         nativeAny as Phaser.GameObjects.Sprite
     );
 
-    // Intellect spell: orbiting crystals while controlling the spell
     _syncHeroIntellectCastCrystals(
         ctx,
         s,
@@ -7739,6 +7806,10 @@ function _syncEnemyActorPath(
     data["dir"]   = dir;
 
     const nativeAny: any = s.native;
+
+    // ✅ Keep enemies y-sorted against props
+    _applyWorldDepthForNative(s, nativeAny);
+
     if (!nativeAny || typeof nativeAny.setData !== "function") {
         return true;
     }
@@ -7852,6 +7923,18 @@ function _syncVisibilityAndDebugTail(
     const autoHideByPixels = lastNonZero === 0;
 
     // ------------------------------------------------------------
+    // UI-managed flag (needed early so we don't y-sort UI)
+    // ------------------------------------------------------------
+    const isUiManaged = !!(native && typeof native.getData === "function" && native.getData("uiManaged"));
+
+    // ------------------------------------------------------------
+    // Y-SORT DEPTH (NEW): apply only to non-UI native sprites
+    // ------------------------------------------------------------
+    if (!isUiManaged) {
+        _applyWorldDepthForNative(s, native);
+    }
+
+    // ------------------------------------------------------------
     // DEBUG SNAPSHOT (heroes only, cast only)
     // ------------------------------------------------------------
     const nativeAny: any = native as any;
@@ -7920,8 +8003,6 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     // UI-managed visibility path (existing behavior)
     // ------------------------------------------------------------
-    const isUiManaged = !!(native && typeof native.getData === "function" && native.getData("uiManaged"));
-
     if (isUiManaged) {
         const uiKind = (native.getData("uiKind") as string | undefined) || "";
 

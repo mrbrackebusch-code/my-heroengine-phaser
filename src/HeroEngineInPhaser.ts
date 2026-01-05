@@ -617,10 +617,10 @@ const DEBUG_HERO_LOGIC = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥�
 const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_ANIM_KEYS = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_ANIM_KEYS = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_PHASE_CHANGES = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
+const DEBUG_PHASE_CHANGES = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
 
 // Change this string to whatever you want to grep for.
 // Must contain "P1 intent" per your filtering workflow.
@@ -660,8 +660,8 @@ let _dbg_prevP1A = false
 let _dbg_prevP1B = false
 
 // debug flag
-const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
-const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
 
 
@@ -676,6 +676,9 @@ if (!SHOP_MODE_ACTIVE_MASTER) { SHOP_MODE_ACTIVE = false}
 
 const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop wave up down
 let _shopEntered = false
+
+
+const DEBUG_WORLD_SNAPSHOT = true; //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 
 // --------------------------------------------------------------
@@ -737,6 +740,9 @@ const DECAL_SAND_PATCH = 1
 
 const PROP_NONE = 0
 const PROP_ROCK_MOUNTAIN = 1
+const PROP_STAIRS_STATUE = 2
+const PROP_CHEST = 3
+
 
 // Dungeon visual decals (terrain_atlas)
 const DECAL_DUN_TELEPAD_TOP_BASE = 100  // +0..+4 -> top half
@@ -1728,6 +1734,12 @@ const HERO_LOCO_RUN_LOOP_MS  = 500
 const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale differs
 
 
+const DUNGEON_TELEPORT_CHARGE_MS = 1400
+const DUNGEON_TELEPORT_FLASH_DELAY_MS = 160
+
+let _dunTeleportRuneTrig: Sprite = null
+let _dunTeleportRuneName = ""
+let _dunTeleportCommitAtMs = 0
 
 
 //End of Constants
@@ -3150,6 +3162,12 @@ let _dunAllReadySinceMs = 0
 let _dunBaseFamily = "ground_light"
 let _dunWallFamily = "chasm_light"
 
+const FLOOR_PAD_DATA = {
+    TILE_R: "dun_pad_tile_r",
+    TILE_C: "dun_pad_tile_c",
+} as const
+
+
 // ------------------------------
 // Dungeon floor banner (DOM dialog)
 // ------------------------------
@@ -3157,6 +3175,48 @@ const DUNGEON_FLOOR_BANNER_MS = 2200
 
 let _dunFloorBannerHideAtMs = 0
 let _dunFloorBannerLabel = ""
+
+
+
+function _dunPickRandomWalkableTile(args: {
+    avoidR: number
+    avoidC: number
+    minManhattan?: number
+    maxTries?: number
+}): { r: number, c: number } {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+
+    const avoidR = args.avoidR | 0
+    const avoidC = args.avoidC | 0
+    const minManhattan = (args.minManhattan ?? 0) | 0
+    const maxTries = (args.maxTries ?? 200) | 0
+
+    function ok(r: number, c: number): boolean {
+        if (r <= 0 || c <= 0 || r >= (rows - 1) || c >= (cols - 1)) return false
+        if (!_engineWorldTileMap || !_engineWorldTileMap[r] || (_engineWorldTileMap[r][c] | 0) === (TILE_WALL | 0)) return false
+        const dist = (Math.abs((r | 0) - avoidR) + Math.abs((c | 0) - avoidC)) | 0
+        if (dist < minManhattan) return false
+        return true
+    }
+
+    for (let i = 0; i < maxTries; i++) {
+        const r = Math.randomRange(1, (rows - 2) | 0) | 0
+        const c = Math.randomRange(1, (cols - 2) | 0) | 0
+        if (ok(r, c)) return { r, c }
+    }
+
+    // Deterministic fallback scan
+    for (let r = 1; r < rows - 1; r++) {
+        for (let c = 1; c < cols - 1; c++) {
+            if (ok(r, c)) return { r, c }
+        }
+    }
+
+    // Absolute fallback: center (even if bad; better than crash)
+    return { r: (rows >> 1) | 0, c: (cols >> 1) | 0 }
+}
+
 
 function _dunOrdinal(nRaw: number): string {
     const n = Math.max(1, nRaw | 0) | 0
@@ -3261,6 +3321,95 @@ let _dunPadTileR = -1
 let _dunPadTileC = -1
 let _dunPadFrameLast = -999
 
+let _dunPadPlacedLastR = -999999
+let _dunPadPlacedLastC = -999999
+let _dunPadPlacedLastLeftC = -999999
+
+let _dunStairsStatueSolid: Sprite = null as any
+let _dunChestTileR = -1
+let _dunChestTileC = -1
+let _dunChestSolid: Sprite = null as any
+
+
+function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolean): void {
+    const r = baseR | 0
+    const c = baseC | 0
+    if (r < 0 || c < 0) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize <= 0) return
+
+    const name = opened ? "chest#open" : "chest#closed"
+
+    let s = _dunChestSolid
+    const dead = (!s || (s.flags & sprites.Flag.Destroyed))
+    if (dead) {
+        const img = _createDecorColliderImage(tileSize, tileSize)
+        s = sprites.create(img, (SpriteKind as any).DecorSolid)
+        s.setFlag(SpriteFlag.Ghost, true)
+        s.setFlag(SpriteFlag.Invisible, true)
+        _dunChestSolid = s
+        _engineDecorSolids.push(s)
+    }
+
+    // NOTE: arcadeCompat caches decorTileR/C once set. Set them correctly up-front.
+    sprites.setDataNumber(s, DECOR_DATA.ID, PROP_CHEST)
+    sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+    sprites.setDataString(s, DECOR_DATA.NAME, name)
+
+    sprites.setDataNumber(s, "decorTileR", r)
+    sprites.setDataNumber(s, "decorTileC", c)
+
+    s.left = (c * tileSize) | 0
+    s.top = (r * tileSize) | 0
+}
+
+
+function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
+    const r = baseR | 0
+    const c = baseC | 0
+    if (r < 0 || c < 0) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize <= 0) return
+
+    // If the decor system was rebuilt, the old sprite may be destroyed.
+    if (!_dunStairsStatueSolid || (_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+        const img = _createDecorColliderImage(tileSize, tileSize)
+        const s = sprites.create(img, (SpriteKind as any).DecorSolid)
+        s.setFlag(SpriteFlag.Invisible, true)
+
+        sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataNumber(s, DECOR_DATA.ID, PROP_STAIRS_STATUE)
+        sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+        sprites.setDataString(s, DECOR_DATA.NAME, "stairs_statue")
+
+        _dunStairsStatueSolid = s
+        _engineDecorSolids.push(s)
+    } else {
+        // Ensure it’s still registered (defensive)
+        let found = false
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            if (_engineDecorSolids[i] === _dunStairsStatueSolid) { found = true; break }
+        }
+        if (!found) _engineDecorSolids.push(_dunStairsStatueSolid)
+
+        sprites.setDataNumber(_dunStairsStatueSolid, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataNumber(_dunStairsStatueSolid, DECOR_DATA.ID, PROP_STAIRS_STATUE)
+        sprites.setDataNumber(_dunStairsStatueSolid, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+        sprites.setDataString(_dunStairsStatueSolid, DECOR_DATA.NAME, "stairs_statue")
+    }
+
+    // IMPORTANT for Phaser wrapper:
+    // arcadeCompat caches tile r/c in "decorTileR/C" and will NOT re-infer once set.
+    sprites.setDataNumber(_dunStairsStatueSolid, "decorTileR", r)
+    sprites.setDataNumber(_dunStairsStatueSolid, "decorTileC", c)
+
+    _dunStairsStatueSolid.left = (c * tileSize) | 0
+    _dunStairsStatueSolid.top  = (r * tileSize) | 0
+}
+
+
 function _dunDecor_setDecalSafe(r: number, c: number, id: number): void {
     if (!_engineDecalGrid || _engineDecalGrid.length === 0) return
     const rows = _engineDecalGrid.length | 0
@@ -3269,16 +3418,14 @@ function _dunDecor_setDecalSafe(r: number, c: number, id: number): void {
     _engineDecalGrid[r][c] = id | 0
 }
 
-let _dunPadPlacedLastR = -999999;
-let _dunPadPlacedLastC = -999999;
 
 
 function _dunDecor_placePadAndStairsVisual(frame0to4: number): void {
-    const f = Math.max(0, Math.min(4, frame0to4 | 0)) | 0;
-    if (_dunPadTileR < 0 || _dunPadTileC < 0) return;
+    const f = Math.max(0, Math.min(4, frame0to4 | 0)) | 0
+    if (_dunPadTileR < 0 || _dunPadTileC < 0) return
 
-    const pr = _dunPadTileR | 0;
-    const pc = _dunPadTileC | 0;
+    const pr = _dunPadTileR | 0
+    const pc = _dunPadTileC | 0
 
     // Only skip if BOTH the "frame" and the anchor location are unchanged.
     if (
@@ -3286,31 +3433,56 @@ function _dunDecor_placePadAndStairsVisual(frame0to4: number): void {
         pr === (_dunPadPlacedLastR | 0) &&
         pc === (_dunPadPlacedLastC | 0)
     ) {
-        return;
+        return
+    }
+
+    // If the pad moved, clear the old 2x5 pad decals + any old statue decal remnants.
+    if ((_dunPadPlacedLastR | 0) !== -999999) {
+        const oldPr = _dunPadPlacedLastR | 0
+        const oldPc = _dunPadPlacedLastC | 0
+        const oldLeftC = _dunPadPlacedLastLeftC | 0
+
+        if (oldPr !== pr || oldPc !== pc) {
+            // Clear old telepad area (2x5)
+            for (let x = 0; x < 5; x++) {
+                const col = (oldLeftC + x) | 0
+                _dunDecor_setDecalSafe(oldPr + 0, col, DECAL_NONE)
+                _dunDecor_setDecalSafe(oldPr + 1, col, DECAL_NONE)
+            }
+
+            // Clear old legacy statue decal area (1x3) (in case older code placed it)
+            _dunDecor_setDecalSafe(oldPr - 3, oldPc, DECAL_NONE)
+            _dunDecor_setDecalSafe(oldPr - 2, oldPc, DECAL_NONE)
+            _dunDecor_setDecalSafe(oldPr - 1, oldPc, DECAL_NONE)
+        }
     }
 
     // Telepad is 2x5 wide. Treat (pr,pc) as the CENTER of the pad.
-    const leftC = (pc - 2) | 0;
+    const leftC = (pc - 2) | 0
 
     // Telepad (2x5) at rows 21/22, cols 0..4 (piece = col)
     for (let x = 0; x < 5; x++) {
-        const col = (leftC + x) | 0;
-        _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + x) | 0);
-        _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + x) | 0);
+        const col = (leftC + x) | 0
+        _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + x) | 0)
+        _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + x) | 0)
     }
 
-    // Stairs statue (1x3) at col 19, rows 15/16/17
-    // Place it immediately above the pad (bottom aligns one tile above pad top)
-    // Keep centered on pc.
-    _dunDecor_setDecalSafe(pr - 3, pc, DECAL_DUN_STAIRS_STATUE_TOP);
-    _dunDecor_setDecalSafe(pr - 2, pc, DECAL_DUN_STAIRS_STATUE_MID);
-    _dunDecor_setDecalSafe(pr - 1, pc, DECAL_DUN_STAIRS_STATUE_BOT);
+    // IMPORTANT: Statue is now a PROP, not a decal.
+    // Clear any legacy decal tiles at the new location to prevent double draw.
+    _dunDecor_setDecalSafe(pr - 3, pc, DECAL_NONE)
+    _dunDecor_setDecalSafe(pr - 2, pc, DECAL_NONE)
+    _dunDecor_setDecalSafe(pr - 1, pc, DECAL_NONE)
 
-    _engineDecorRev = (_engineDecorRev + 1) | 0;
-    _dunPadFrameLast = f;
+    // Place a SINGLE solid at the statue base tile (base-only collision).
+    // Visual height comes from PROP_VISUALS_BY_NAME["stairs_statue"].hTiles = 3 in Phaser.
+    _dunDecor_upsertStairsStatueSolid(pr - 1, pc)
 
-    _dunPadPlacedLastR = pr;
-    _dunPadPlacedLastC = pc;
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+    _dunPadFrameLast = f
+
+    _dunPadPlacedLastR = pr
+    _dunPadPlacedLastC = pc
+    _dunPadPlacedLastLeftC = leftC
 }
 
 
@@ -3369,14 +3541,25 @@ function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): voi
     const rows = _dunWorldRows()
     const cols = _dunWorldCols()
 
+    let changed = false
+
     for (let r = r0; r < (r0 + rh); r++) {
         if (r < 0 || r >= rows) continue
 
         for (let c = c0; c < (c0 + cw); c++) {
             if (c < 0 || c >= cols) continue
 
-            _engineWorldTileMap[r][c] = DUN_TILE_FLOOR
+            // Only mark changed when we actually flip a cell.
+            if ((_engineWorldTileMap[r][c] | 0) !== (DUN_TILE_FLOOR | 0)) {
+                _engineWorldTileMap[r][c] = DUN_TILE_FLOOR
+                changed = true
+            }
         }
+    }
+
+    // Critical: if the world grid changes, Phaser must resync.
+    if (changed) {
+        _engineWorldRev = (_engineWorldRev + 1) | 0
     }
 }
 
@@ -3415,13 +3598,16 @@ function _dunReadyMaskAndCountInPadZone(): { mask: number, ready: number } {
 
     const needed = _dunRequiredHeroCount() | 0
 
-    // “2x6 tiles in front of pad”: width 2 tiles, height 6 tiles, just below the pad
+    // Rune is 64x64 => treat the ready zone as 2x2 tiles centered on pad
     const w = (WORLD_TILE_SIZE * 2) | 0
-    const h = (WORLD_TILE_SIZE * 6) | 0
+    const h = (WORLD_TILE_SIZE * 2) | 0
+
     const cx = _dunExitPad.x | 0
-    const top = (_dunExitPad.y + (WORLD_TILE_SIZE >> 1)) | 0 // start just under pad
+    const cy = _dunExitPad.y | 0
+
     const left = (cx - (w >> 1)) | 0
     const right = (left + w) | 0
+    const top = (cy - (h >> 1)) | 0
     const bottom = (top + h) | 0
 
     let mask = 0
@@ -3443,15 +3629,18 @@ function _dunReadyMaskAndCountInPadZone(): { mask: number, ready: number } {
         }
     }
 
-    // If fewer heroes exist than “needed”, don’t allow accidental advance.
     if (ready > needed) ready = needed
-
     return { mask, ready }
 }
 
 function _dunSpawnExitPad(): void {
     _dunDestroySprite(_dunExitPad)
     _dunExitPad = null
+
+    _dunDestroySprite(_dunTeleportRuneTrig)
+    _dunTeleportRuneTrig = null
+    _dunTeleportRuneName = ""
+    _dunTeleportCommitAtMs = 0
 
     let padX = (userconfig.ARCADE_SCREEN_WIDTH >> 1) | 0
     let padY = (userconfig.ARCADE_SCREEN_HEIGHT >> 1) | 0
@@ -3472,26 +3661,45 @@ function _dunSpawnExitPad(): void {
         // Sacred core around the pad
         _dunCarveFloorRect(padRow - 2, padCol - 2, 5, 5)
 
-        // "2x6 tiles in front" activation lane
-        _dunCarveFloorRect(padRow + 1, padCol - 1, 6, 2)
+        // Make sure the 2x2 "stand on it" zone is walkable
+        _dunCarveFloorRect(padRow - 1, padCol - 1, 2, 2)
     }
 
-    // Logic-only sprite (invisible); visuals are via terrain_atlas decals
-    const img = image.create(2, 2)
-    img.fill(0)
-
-    _dunExitPad = sprites.create(img, (SpriteKind as any).FloorPad)
-    _dunExitPad.setFlag(SpriteFlag.Ghost, true)
-    _dunExitPad.setFlag(SpriteFlag.Invisible, true)
-    _dunExitPad.setPosition(padX, padY)
-    _dunExitPad.z = 5
-
-    // Remember tile anchor for decal visuals
     _dunPadTileR = padRow | 0
     _dunPadTileC = padCol | 0
-    _dunPadFrameLast = -999
 
-    // Initial visual state: frame 0
+    const pad = sprites.create(image.create(16, 16), SpriteKind.FloorPad)
+    pad.setFlag(sprites.Flag.Invisible, true)
+    pad.setFlag(sprites.Flag.Ghost, true)
+    pad.x = padX
+    pad.y = padY
+    sprites.setDataNumber(pad, FLOOR_PAD_DATA.TILE_R, padRow)
+    sprites.setDataNumber(pad, FLOOR_PAD_DATA.TILE_C, padCol)
+    _dunExitPad = pad
+
+    // DECOR teleport rune trigger (rendered by Phaser; non-blocking)
+    const rune = sprites.create(image.create(64, 64), SpriteKind.DecorTrigger)
+    rune.setFlag(sprites.Flag.Invisible, true)
+    rune.setFlag(sprites.Flag.Ghost, true)
+
+    // center the 64x64 on the pad tile center
+    rune.left = (padX - 32) | 0
+    rune.top = (padY - 32) | 0
+
+    sprites.setDataNumber(rune, DECOR_DATA.ID, 0)
+    sprites.setDataNumber(rune, DECOR_DATA.ROLE, DECOR_ROLE.TRIGGER)
+    sprites.setDataString(rune, DECOR_DATA.NAME, "teleport_rune")
+
+    // IMPORTANT: arcadeCompat caches tile rc under these keys
+    sprites.setDataNumber(rune, "decorTileR", padRow | 0)
+    sprites.setDataNumber(rune, "decorTileC", padCol | 0)
+
+    _engineDecorTriggers.push(rune)
+    _engineDecorRev++
+    _dunTeleportRuneTrig = rune
+    _dunTeleportRuneName = "teleport_rune"
+
+    // Keep your existing stairs statue + pad decals if you want them
     _dunDecor_placePadAndStairsVisual(0)
 }
 
@@ -3506,15 +3714,48 @@ function _dunIsPadPowered(): boolean {
 }
 
 function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
-    const img = image.create(16, 12)
-    img.fill(0)
-    img.drawRect(0, 0, 16, 12, 15)
-    img.drawLine(2, 5, 13, 5, 15)
-    img.setPixel(7, 6, 15)
+    // Replace the placeholder sprite-art chest with a real prop-driven chest.
+    // The visible chest comes from the prop renderer using DECOR_DATA.NAME "chest#closed/open".
 
+    const tileSize = WORLD_TILE_SIZE | 0
+    const rows = _dunWorldRows()
+    const cols = _dunWorldCols()
+    if (tileSize <= 0 || rows <= 0 || cols <= 0) {
+        // Fallback: spawn the old placeholder to avoid breaking the floor.
+        const img = image.create(16, 12)
+        img.fill(0)
+        img.drawRect(0, 0, 16, 12, 15)
+        img.drawLine(2, 5, 13, 5, 15)
+        img.setPixel(7, 6, 15)
+
+        const chest = sprites.create(img, (SpriteKind as any).FloorInteractable)
+        chest.setFlag(SpriteFlag.Ghost, true)
+        chest.setPosition(x, y)
+        chest.z = 6
+        sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
+        sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
+        _dunInteractables.push(chest)
+        return chest
+    }
+
+    // Compute the chest's anchor tile from the requested pixel position.
+    const rr = Math.max(0, Math.min(rows - 1, Math.floor((y | 0) / tileSize))) | 0
+    const cc = Math.max(0, Math.min(cols - 1, Math.floor((x | 0) / tileSize))) | 0
+
+    _dunChestTileR = rr
+    _dunChestTileC = cc
+
+    // Ensure a decor-solid exists so the Phaser-side prop renderer can stamp the chest.
+    _dunDecor_upsertChestSolid(rr, cc, false)
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+
+    // Interaction target (invisible). The user sees the prop chest, not this sprite.
+    const img = image.create(1, 1)
+    img.fill(0)
     const chest = sprites.create(img, (SpriteKind as any).FloorInteractable)
     chest.setFlag(SpriteFlag.Ghost, true)
-    chest.setPosition(x, y)
+    chest.setFlag(SpriteFlag.Invisible, true)
+    chest.setPosition(_dunColToX(cc), _dunRowToY(rr))
     chest.z = 6
 
     sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
@@ -3655,16 +3896,34 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
     // Floor behavior
     if (_dunFloorKind == DUNGEON_KIND_ENTRANCE) {
         DUNGEON_BLOCK_INTENTS = true
-        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
+        const rcChest = _dunPickRandomWalkableTile({
+            avoidR: _dunPadTileR,
+            avoidC: _dunPadTileC,
+            minManhattan: 6,
+            maxTries: 250
+        })
+        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
     }
     else if (_dunFloorKind == DUNGEON_KIND_TREASURE) {
         DUNGEON_BLOCK_INTENTS = true
-        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
+        const rcChest = _dunPickRandomWalkableTile({
+            avoidR: _dunPadTileR,
+            avoidC: _dunPadTileC,
+            minManhattan: 6,
+            maxTries: 250
+        })
+        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
     }
     else if (_dunFloorKind == DUNGEON_KIND_STORY) {
         DUNGEON_BLOCK_INTENTS = true
         _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", (padX + 40) | 0, (padY + 10) | 0)
-        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
+        const rcChest = _dunPickRandomWalkableTile({
+            avoidR: _dunPadTileR,
+            avoidC: _dunPadTileC,
+            minManhattan: 6,
+            maxTries: 250
+        })
+        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
     }
     else if (_dunFloorKind == DUNGEON_KIND_SHOP) {
         DUNGEON_BLOCK_INTENTS = false
@@ -3760,6 +4019,12 @@ function dungeonTick(nowMs: number): void {
                         sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
                         _dunDestroySprite(it)
 
+                        // Flip the prop state so Phaser stamps the "open" frame.
+                        if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
+                            _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
+                            _engineDecorRev = (_engineDecorRev + 1) | 0
+                        }
+
                         // Reward + complete objective
                         setTeamCoins((teamCoins + 10) | 0)
 
@@ -3773,20 +4038,32 @@ function dungeonTick(nowMs: number): void {
         }
     }
 
-    // Advance when powered + everyone in zone (hold to prevent accidental teleports)
-    if (_dunObjectiveDone && _dunIsPadPowered()) {
+    // Teleport commit (after flash delay)
+    if ((_dunTeleportCommitAtMs | 0) != 0) {
+        // Optional safety: if someone steps off during the tiny flash delay, cancel.
         const needed = _dunRequiredHeroCount() | 0
         const rc = _dunReadyMaskAndCountInPadZone()
-        const allReady = (needed > 0 && rc.ready >= needed)
+        const stillReady = (needed > 0 && rc.ready >= needed)
 
-        if (!allReady) {
+        if (!stillReady) {
+            _dunTeleportCommitAtMs = 0
             _dunAllReadySinceMs = 0
+
+            // Reset rune anim back to idle
+            if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+                const desired = "teleport_rune"
+                if (_dunTeleportRuneName !== desired) {
+                    sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, desired)
+                    _engineDecorRev = (_engineDecorRev + 1) | 0
+                    _dunTeleportRuneName = desired
+                }
+            }
             return
         }
 
-        if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
-        const held = ((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0
-        if (held < DUNGEON_PAD_HOLD_MS) return
+        if ((nowMs | 0) < (_dunTeleportCommitAtMs | 0)) return
+
+        _dunTeleportCommitAtMs = 0
 
         // Teleport: destroy pad and enter next floor
         _dunDestroySprite(_dunExitPad)
@@ -3795,6 +4072,59 @@ function dungeonTick(nowMs: number): void {
         const next = (_dunFloorIndex + 1) | 0
         const kind = _dunPickNextFloorKind(next)
         _dunEnterFloor(next, kind, nowMs | 0)
+        return
+    }
+
+    // Advance when powered + everyone in zone (hold to prevent accidental teleports)
+    if (_dunObjectiveDone && _dunIsPadPowered()) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInPadZone()
+        const allReady = (needed > 0 && rc.ready >= needed)
+
+        if (!allReady) {
+            _dunAllReadySinceMs = 0
+
+            // Reset rune anim back to idle
+            if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+                const desired = "teleport_rune"
+                if (_dunTeleportRuneName !== desired) {
+                    sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, desired)
+                    _engineDecorRev = (_engineDecorRev + 1) | 0
+                    _dunTeleportRuneName = desired
+                }
+            }
+
+            return
+        }
+
+        if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
+        const held = ((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0
+
+        // ---- Teleport rune speed-up staging (uses your existing DUNGEON_PAD_HOLD_MS) ----
+        // Stages: idle -> fast1 -> fast2 -> fast3 -> flash -> (after delay) next floor
+        let desired = "teleport_rune"
+        const t1 = ((DUNGEON_PAD_HOLD_MS | 0) * 45 / 100) | 0
+        const t2 = ((DUNGEON_PAD_HOLD_MS | 0) * 70 / 100) | 0
+        const t3 = ((DUNGEON_PAD_HOLD_MS | 0) * 88 / 100) | 0
+
+        if (held >= (DUNGEON_PAD_HOLD_MS | 0)) desired = "teleport_rune_flash"
+        else if (held >= t3) desired = "teleport_rune_fast3"
+        else if (held >= t2) desired = "teleport_rune_fast2"
+        else if (held >= t1) desired = "teleport_rune_fast1"
+
+        if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+            if (_dunTeleportRuneName !== desired) {
+                sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, desired)
+                _engineDecorRev = (_engineDecorRev + 1) | 0
+                _dunTeleportRuneName = desired
+            }
+        }
+
+        if (held < (DUNGEON_PAD_HOLD_MS | 0)) return
+
+        // Flash happened (via desired state); now schedule the actual floor swap shortly after
+        _dunTeleportCommitAtMs = ((nowMs | 0) + (DUNGEON_TELEPORT_FLASH_DELAY_MS | 0)) | 0
+        return
     }
 }
 
@@ -7297,6 +7627,44 @@ function initWorldTileMap(): void {
     // NEW: bump world revision any time the world grid is rebuilt
     _engineWorldRev = (_engineWorldRev + 1) | 0
 
+    // WORLD SNAPSHOT (high-level, low spam)
+    if (DEBUG_WORLD_SNAPSHOT) {
+        const map = _engineWorldTileMap
+        const rows = (map && map.length) ? (map.length | 0) : 0
+        const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0
+
+        let walls = 0
+        let floors = 0
+        let sig = 0
+
+        for (let r = 0; r < rows; r++) {
+            const row = map[r]
+            if (!row) continue
+            for (let c = 0; c < cols; c++) {
+                const v = (row[c] | 0)
+                if (v === (TILE_WALL | 0)) walls++
+                else floors++
+
+                // cheap deterministic signature
+                sig = (((sig << 5) - sig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0
+            }
+        }
+
+        console.log("[WORLD][MAP]", {
+            worldRev: _engineWorldRev | 0,
+            floorIndex: _dunFloorIndex | 0,
+            floorKind: _dunFloorKind || "",
+            baseFamily: _dunBaseFamily || "",
+            wallFamily: _dunWallFamily || "",
+            rows,
+            cols,
+            walls,
+            floors,
+            sig,
+            decorRev: _engineDecorRev | 0,
+        })
+    }
+
     // Only the MakeCode Arcade runtime needs "walls as sprites".
     // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
     if (isMakeCodeArcadeRuntime()) {
@@ -9884,7 +10252,7 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
         bar.setOffsetPadding(0, 2)
     } else {
         // Phaser: LARGE padding to actually get above the real sprite
-        bar.setOffsetPadding(0, 50)
+        bar.setOffsetPadding(0, 18)
     }
 
     bar.max = 100; bar.value = 100
@@ -9915,7 +10283,7 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
         bar.setOffsetPadding(0, 1)
     } else {
         // Phaser: LARGE padding on top of the real sprite
-        bar.setOffsetPadding(0, 46)
+        bar.setOffsetPadding(0, 14)
     }
 
     bar.max = 100; bar.value = 100; bar.setColor(9, 1)
@@ -18315,6 +18683,14 @@ if (typeof globalThis !== "undefined") {
 
         internals.getFloorWallFamily = function (): string {
             return _dunWallFamily
+        }
+
+        internals.getFloorIndex = function (): number {
+            return _dunFloorIndex | 0
+        }
+
+        internals.getFloorKind = function (): string {
+            return String(_dunFloorKind || "")
         }
 
         // ----------------------------------------------------------

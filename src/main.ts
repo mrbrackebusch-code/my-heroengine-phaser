@@ -36,10 +36,10 @@ const DEBUG_TILEMAP = true;
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
 // ------------------------------------------------------------
-const ENABLE_WEAPON_DEBUG = true;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_DEBUG_VERBOSE = true; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debug flag
+const ENABLE_WEAPON_DEBUG = false;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_DEBUG_VERBOSE = false; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_ON_START = false; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false; // huge log; leave false Debug flag
 
 
 
@@ -583,6 +583,13 @@ class HeroScene extends Phaser.Scene {
     // Latest tilemap rev actually applied to the Phaser scene
     private _tilemapAppliedRev: number = 0;
 
+    // NEW: track dims too (lets us force-reapply if needed)
+    private _tilemapAppliedRows: number = 0;
+    private _tilemapAppliedCols: number = 0;
+    private _tilemapAppliedTileSize: number = 0;
+
+    private _tilemapAppliedFloorIndex: number = -1;
+
 
     constructor() {
         super("hero");
@@ -684,11 +691,33 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
 
     const renderer = this.ensureWorldTileRenderer(atlas);
 
+    // quick grid snapshot
+    let rawWalls = 0;
+    let rawFloors = 0;
+    let rawSig = 0;
+
+    const rows0 = (grid?.length ?? 0) | 0;
+    const cols0 = (rows0 > 0 ? ((grid[0]?.length ?? 0) | 0) : 0);
+
+    for (let r = 0; r < rows0; r++) {
+        const row = grid[r];
+        if (!row) continue;
+        for (let c = 0; c < cols0; c++) {
+            const v = (row[c] | 0);
+            if (v === 1) rawWalls++;
+            else rawFloors++;
+            rawSig = (((rawSig << 5) - rawSig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0;
+        }
+    }
+
     if (DEBUG_TILEMAP) {
         console.log(">>> [HeroScene.tilemap] syncing from grid", {
-            rows: grid.length,
-            cols: grid[0]?.length,
-            tileSize
+            rows: rows0,
+            cols: cols0,
+            tileSize,
+            rawWalls,
+            rawFloors,
+            rawSig
         });
     }
 
@@ -851,86 +880,100 @@ private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
 private initTileAtlasAndInstallTilemapHook() {
     console.log(">>> [HeroScene.create] building tile atlas");
 
-    this.registry.set("__tileAtlasConfig", {
-      baseTextureKey: "tiles.terrain",          // terrain.png for background/autotiles
-      decorTextureKey: "tiles.terrain_atlas",   // terrain_atlas.png for decals/props
-      propTextureKey: "tiles.terrain_atlas",
-
-      // optional per-kind routing (this is the “not one preferred sheet” part)
-      atlasTextureKeys: {
-        terrain: "tiles.terrain_atlas",
-        prop: "tiles.terrain_atlas",
-        // later you can do: statue:"tiles.someOtherSheet" if you add new keys
-      }
-    });
-
+    // Build atlas once
     this.tileAtlas = buildTileAtlas(this);
 
-
-    this.tileAtlas = buildTileAtlas(this);
-
-    // TILEMAP NETWORK HOOK (followers + host)
+    // Install net hook for tilemap messages
     (globalThis as any).__onNetTilemap = (msg: any) => {
         try {
             if (!msg || msg.type !== "tilemap") return;
 
-            const rev = typeof msg.rev === "number" ? msg.rev : 0;
-            if (rev <= this._tilemapAppliedRev) return;
-            this._tilemapAppliedRev = rev;
+            const rev = (msg.rev | 0) || 0;
+            const tileSize = (msg.tileSize | 0) || 0;
+            const encoding = (typeof msg.encoding === "string") ? msg.encoding : "";
 
-            const tileSize = msg.tileSize | 0;
+            const grid: number[][] = msg.data as any;
+            const rows = (msg.rows | 0) || ((grid && grid.length) ? (grid.length | 0) : 0);
+            const cols = (msg.cols | 0) || ((grid && grid[0]) ? (grid[0].length | 0) : 0);
 
-            // NEW: optional floor theme fields (safe if absent)
-            const g: any = globalThis as any;
-            if (msg.baseFamily) g.__floorBaseFamily = msg.baseFamily;
-            if (msg.wallFamily) g.__floorWallFamily = msg.wallFamily;
-
-            // Back-compat: if encoding is missing, treat as raw
-            const enc = (typeof msg.encoding === "string" && msg.encoding) ? msg.encoding : "raw";
-            if (enc !== "raw") {
-                console.warn(
-                    ">>> [HeroScene] __onNetTilemap: unsupported encoding (for now):",
-                    enc,
-                    "rev=",
-                    rev
-                );
+            if (rev <= 0 || tileSize <= 0 || rows <= 0 || cols <= 0) {
+                if (DEBUG_TILEMAP) {
+                    console.warn(">>> [HeroScene.tilemap] ignoring malformed tilemap msg", {
+                        rev,
+                        tileSize,
+                        rows,
+                        cols,
+                        encoding,
+                    });
+                }
                 return;
             }
 
-            const grid: number[][] = msg.data;
             if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
-                console.warn(">>> [HeroScene] __onNetTilemap: malformed raw grid", {
-                    rev,
-                    tileSize,
-                });
+                if (DEBUG_TILEMAP) {
+                    console.warn(">>> [HeroScene.tilemap] ignoring tilemap msg with non-2D data", {
+                        rev,
+                        tileSize,
+                        rows,
+                        cols,
+                        encoding,
+                    });
+                }
                 return;
             }
 
-            if (DEBUG_TILEMAP) {
-                console.log(">>> [HeroScene.tilemap] applying network tilemap", {
-                    rev,
-                    rows: msg.rows,
-                    cols: msg.cols,
-                    tileSize,
-                });
+            // Cache latest (helps local “pending apply” patterns)
+            (globalThis as any).__lastTilemapMsg = msg;
+
+            // Theme info (optional)
+            const g: any = globalThis as any;
+            const baseFamily = (msg.baseFamily || g.__floorBaseFamily || "ground_light");
+            const wallFamily = (msg.wallFamily || g.__floorWallFamily || "chasm_light");
+            g.__floorBaseFamily = baseFamily;
+            g.__floorWallFamily = wallFamily;
+
+            // Only skip if we've applied this signature already
+            if (
+                rev === (this._tilemapAppliedRev | 0) &&
+                rows === (this._tilemapAppliedRows | 0) &&
+                cols === (this._tilemapAppliedCols | 0) &&
+                tileSize === (this._tilemapAppliedTileSize | 0)
+            ) {
+                return;
             }
+
+            this._tilemapAppliedRev = rev;
+            this._tilemapAppliedRows = rows;
+            this._tilemapAppliedCols = cols;
+            this._tilemapAppliedTileSize = tileSize;
 
             this.applyTilemapToScene(grid, tileSize);
 
-            // NEW: subtle “teleport” cue
-            this.cameras?.main?.flash(140);
+            if (DEBUG_TILEMAP) {
+                console.log(">>> [HeroScene.tilemap] applied tilemap from net", {
+                    rev,
+                    rows,
+                    cols,
+                    tileSize,
+                    baseFamily,
+                    wallFamily,
+                });
+            }
         } catch (e) {
-            console.error(">>> [HeroScene] __onNetTilemap ERROR:", e);
+            console.error(">>> [HeroScene.tilemap] ERROR applying tilemap msg:", e);
         }
     };
 
-    // If a tilemap arrived before the hook was installed, apply it now.
-    const pending = (globalThis as any).__lastTilemapMsg;
-    if (pending && pending.type === "tilemap") {
-        if (DEBUG_TILEMAP) {
-            console.log(">>> [HeroScene.tilemap] applying pending cached tilemap on create()");
+    // Apply any pending cached tilemap (if the net layer received one before we installed the handler)
+    const g: any = globalThis as any;
+    const pending = g.__pendingTilemapMsg || g.__lastTilemapMsg;
+    if (pending && typeof g.__onNetTilemap === "function") {
+        try {
+            g.__pendingTilemapMsg = null;
+            g.__onNetTilemap(pending);
+        } catch (e) {
+            console.error(">>> [HeroScene.tilemap] ERROR applying pending tilemap msg:", e);
         }
-        (globalThis as any).__onNetTilemap(pending);
     }
 }
 
@@ -1051,14 +1094,21 @@ private installStartHeroEngineHostHook() {
                             const rows = grid.length;
                             const cols = grid[0]?.length || 0;
 
+                            const rev = (typeof internals.getWorldRev === "function") ? (internals.getWorldRev() | 0) : 1;
+
+                            const baseFamily = (internals.getFloorBaseFamily?.() || (globalThis as any).__floorBaseFamily || "ground_light");
+                            const wallFamily = (internals.getFloorWallFamily?.() || (globalThis as any).__floorWallFamily || "chasm_light");
+
                             const tilemapMsg = {
                                 type: "tilemap",
-                                rev: 1,
+                                rev,
                                 tileSize,
                                 rows,
                                 cols,
                                 encoding: "raw",
-                                data: grid
+                                data: grid,
+                                baseFamily,
+                                wallFamily,
                             };
 
                             try {
@@ -1181,34 +1231,80 @@ update(time: number, delta: number) {
         // Host: if engine worldRev changed, apply + broadcast tilemap
         const internals = g.__HeroEnginePhaserInternals;
         if (internals?.getWorldRev && internals?.getWorldTileMap && internals?.getWorldTileSize) {
-            const rev = (internals.getWorldRev() | 0) || 0
+            const rev = (internals.getWorldRev() | 0) || 0;
             if (rev > 0 && rev !== (this._tilemapAppliedRev | 0)) {
+                const grid: number[][] = internals.getWorldTileMap();
+                const tileSize = internals.getWorldTileSize() | 0;
+
+                const rows = (grid?.length | 0) || 0;
+                const cols = ((rows > 0 && grid[0]) ? (grid[0].length | 0) : 0) | 0;
+
                 // Theme (optional fields; still safe if missing)
-                const baseFamily = (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light")
-                const wallFamily = (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light")
-                g.__floorBaseFamily = baseFamily
-                g.__floorWallFamily = wallFamily
+                const baseFamily =
+                    (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light");
+                const wallFamily =
+                    (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
 
-                const grid = internals.getWorldTileMap()
-                const tileSize = internals.getWorldTileSize()
+                g.__floorBaseFamily = baseFamily;
+                g.__floorWallFamily = wallFamily;
 
-                this._tilemapAppliedRev = rev
-                this.applyTilemapToScene(grid, tileSize)
+                // Cheap high-level counts (helps confirm “grid changed” at a glance)
+                let rawWalls = 0;
+                let rawFloors = 0;
+                for (let r = 0; r < rows; r++) {
+                    const row = grid[r];
+                    for (let c = 0; c < cols; c++) {
+                        const v = row[c] | 0;
+                        if (v === 1) rawWalls++;
+                        else rawFloors++;
+                    }
+                }
+
+                this._tilemapAppliedRev = rev;
+                this.applyTilemapToScene(grid, tileSize);
+
+                if (DEBUG_TILEMAP) {
+                    console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
+                        rev,
+                        rows,
+                        cols,
+                        tileSize,
+                        rawWalls,
+                        rawFloors,
+                        baseFamily,
+                        wallFamily,
+                    });
+                }
 
                 // Subtle “teleport” cue
-                this.cameras?.main?.flash(140)
+                this.cameras?.main?.flash(140);
 
                 // Broadcast to clients
                 const wsAny: WebSocket | null = g.__net?.ws ?? null;
                 if (wsAny && wsAny.readyState === WebSocket.OPEN) {
-                    wsAny.send(JSON.stringify({
+                    const msg = {
                         type: "tilemap",
                         rev,
-                        data: grid,
+                        rows,
+                        cols,
                         tileSize,
+                        encoding: "raw",
+                        data: grid,
                         baseFamily,
                         wallFamily,
-                    }));
+                    };
+
+                    wsAny.send(JSON.stringify(msg));
+
+                    if (DEBUG_TILEMAP) {
+                        console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
+                            rev,
+                            rows,
+                            cols,
+                            tileSize,
+                            encoding: "raw",
+                        });
+                    }
                 }
             }
         }
