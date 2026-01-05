@@ -21,11 +21,15 @@ namespace SpriteKind {
     export let ShopNpc: number
     export let ShopItem: number
     export let ShopUI: number
+
+    // Decor collider kinds (already used elsewhere in this file)
+    export let DecorTrigger: number
+    export let DecorSolid: number
+
+    // NEW: Dungeon / story kinds
     export let FloorPad: number
     export let FloorInteractable: number
     export let StoryNpc: number
-
-
 }
 
 // =====================================================================
@@ -332,10 +336,15 @@ namespace SpriteKindArcade {
     export let ShopNpc: number
     export let ShopItem: number
     export let ShopUI: number
+
+    // Decor collider kinds (already used elsewhere in this file)
+    export let DecorTrigger: number
+    export let DecorSolid: number
+
+    // NEW: Dungeon / story kinds
     export let FloorPad: number
     export let FloorInteractable: number
     export let StoryNpc: number
-
 }
 
 // Allow referring to globalThis when a host (like Phaser) provides it.
@@ -728,6 +737,16 @@ const DECAL_SAND_PATCH = 1
 
 const PROP_NONE = 0
 const PROP_ROCK_MOUNTAIN = 1
+
+// Dungeon visual decals (terrain_atlas)
+const DECAL_DUN_TELEPAD_TOP_BASE = 100  // +0..+4 -> top half
+const DECAL_DUN_TELEPAD_BOT_BASE = 110  // +0..+4 -> bottom half
+
+const DECAL_DUN_STAIRS_STATUE_TOP = 120
+const DECAL_DUN_STAIRS_STATUE_MID = 121
+const DECAL_DUN_STAIRS_STATUE_BOT = 122
+
+
 
 // Decor collider sprite data keys (engine writes; Phaser wrapper reads)
 const DECOR_DATA = {
@@ -1418,8 +1437,8 @@ const AGI_THRUST_FORWARD_FRAC_X1000 = 200
 // --------------------------------------------------------------
 // TEMP DEBUG: make agility thrust super visible
 // --------------------------------------------------------------
-const AGI_DEBUG_SLOWMO = true
-const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5× longer total move
+const AGI_DEBUG_SLOWMO = false
+const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5× longer total move follow this knob to where agility speed timing is set the movmenet knob
 const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 2500 // 2.5× faster lunge => farther
 
 
@@ -3078,7 +3097,11 @@ function _ambientPhaseWindowMs(phaseName: string): number {
 // DUNGEON RUN / FLOORS (shared-floor POC)
 //##########################################################################################################################################
 
+
 const DUNGEON_DEBUG = true
+
+const DUN_TILE_FLOOR = 0
+
 
 const DUNGEON_KIND_ENTRANCE = "entrance"
 const DUNGEON_KIND_COMBAT = "combat"
@@ -3127,6 +3150,88 @@ let _dunAllReadySinceMs = 0
 let _dunBaseFamily = "ground_light"
 let _dunWallFamily = "chasm_light"
 
+// ------------------------------
+// Dungeon floor banner (DOM dialog)
+// ------------------------------
+const DUNGEON_FLOOR_BANNER_MS = 2200
+
+let _dunFloorBannerHideAtMs = 0
+let _dunFloorBannerLabel = ""
+
+function _dunOrdinal(nRaw: number): string {
+    const n = Math.max(1, nRaw | 0) | 0
+    const mod100 = (n % 100) | 0
+    if (mod100 >= 11 && mod100 <= 13) return "" + n + "th"
+
+    const mod10 = (n % 10) | 0
+    if (mod10 == 1) return "" + n + "st"
+    if (mod10 == 2) return "" + n + "nd"
+    if (mod10 == 3) return "" + n + "rd"
+    return "" + n + "th"
+}
+
+function _dunFloorKindTitle3(kind: string): string {
+    const k = (kind || "").toLowerCase()
+    if (k == DUNGEON_KIND_SHOP) return "Shop"
+    if (k == DUNGEON_KIND_COMBAT) return "Monsters"
+    return "Event"
+}
+
+function _dunDialog_showFloorBanner(nowMs: number): void {
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (!dlg || typeof dlg.show !== "function") return
+
+    const floorNum = ((_dunFloorIndex | 0) + 1) | 0
+    const label = _dunOrdinal(floorNum) + " Floor - " + _dunFloorKindTitle3(_dunFloorKind)
+
+    _dunFloorBannerLabel = label
+    _dunFloorBannerHideAtMs = ((nowMs | 0) + (DUNGEON_FLOOR_BANNER_MS | 0)) | 0
+
+    try {
+        // Clear any previous banner/dialog (best effort)
+        if (typeof dlg.hide === "function") dlg.hide()
+    } catch (_e) { }
+
+    try {
+        dlg.show({
+            speaker: label,
+            text: "",
+            hint: "",
+        })
+    } catch (_e2) { }
+}
+
+function _dunDialog_tickFloorBanner(nowMs: number): void {
+    const hideAt = _dunFloorBannerHideAtMs | 0
+    if (!hideAt) return
+    if (((nowMs | 0) < hideAt)) return
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+
+    // If some OTHER dialog is showing now, don't hide it.
+    let okToHide = true
+    try {
+        const doc: any = g ? g.document : null
+        if (doc && typeof doc.getElementById === "function" && _dunFloorBannerLabel) {
+            const el = doc.getElementById("dialog-speaker")
+            const cur = (el && typeof el.textContent === "string") ? el.textContent : ""
+            if (cur !== _dunFloorBannerLabel) okToHide = false
+        }
+    } catch (_e0) { }
+
+    if (okToHide && dlg && typeof dlg.hide === "function") {
+        try { dlg.hide() } catch (_e1) { }
+    }
+
+    _dunFloorBannerHideAtMs = 0
+    _dunFloorBannerLabel = ""
+}
+
+
+
+
 function _dunLog(msg: string): void {
     if (!DUNGEON_DEBUG) return
     console.log(`[DUNGEON] ${msg}`)
@@ -3150,14 +3255,127 @@ function _dunClearList(list: Sprite[]): void {
     list.length = 0
 }
 
+
+
+let _dunPadTileR = -1
+let _dunPadTileC = -1
+let _dunPadFrameLast = -999
+
+function _dunDecor_setDecalSafe(r: number, c: number, id: number): void {
+    if (!_engineDecalGrid || _engineDecalGrid.length === 0) return
+    const rows = _engineDecalGrid.length | 0
+    const cols = (_engineDecalGrid[0] ? (_engineDecalGrid[0].length | 0) : 0)
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return
+    _engineDecalGrid[r][c] = id | 0
+}
+
+let _dunPadPlacedLastR = -999999;
+let _dunPadPlacedLastC = -999999;
+
+
+function _dunDecor_placePadAndStairsVisual(frame0to4: number): void {
+    const f = Math.max(0, Math.min(4, frame0to4 | 0)) | 0;
+    if (_dunPadTileR < 0 || _dunPadTileC < 0) return;
+
+    const pr = _dunPadTileR | 0;
+    const pc = _dunPadTileC | 0;
+
+    // Only skip if BOTH the "frame" and the anchor location are unchanged.
+    if (
+        f === (_dunPadFrameLast | 0) &&
+        pr === (_dunPadPlacedLastR | 0) &&
+        pc === (_dunPadPlacedLastC | 0)
+    ) {
+        return;
+    }
+
+    // Telepad is 2x5 wide. Treat (pr,pc) as the CENTER of the pad.
+    const leftC = (pc - 2) | 0;
+
+    // Telepad (2x5) at rows 21/22, cols 0..4 (piece = col)
+    for (let x = 0; x < 5; x++) {
+        const col = (leftC + x) | 0;
+        _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + x) | 0);
+        _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + x) | 0);
+    }
+
+    // Stairs statue (1x3) at col 19, rows 15/16/17
+    // Place it immediately above the pad (bottom aligns one tile above pad top)
+    // Keep centered on pc.
+    _dunDecor_setDecalSafe(pr - 3, pc, DECAL_DUN_STAIRS_STATUE_TOP);
+    _dunDecor_setDecalSafe(pr - 2, pc, DECAL_DUN_STAIRS_STATUE_MID);
+    _dunDecor_setDecalSafe(pr - 1, pc, DECAL_DUN_STAIRS_STATUE_BOT);
+
+    _engineDecorRev = (_engineDecorRev + 1) | 0;
+    _dunPadFrameLast = f;
+
+    _dunPadPlacedLastR = pr;
+    _dunPadPlacedLastC = pc;
+}
+
+
+function _dunColToX(col: number): number {
+    return ((col * WORLD_TILE_SIZE) + (WORLD_TILE_SIZE >> 1)) | 0
+}
+
+function _dunRowToY(row: number): number {
+    return ((row * WORLD_TILE_SIZE) + (WORLD_TILE_SIZE >> 1)) | 0
+}
+
+
+
+function _dunIsPidActiveUpTo4(pid: number): boolean {
+    const p = pid | 0
+    if (p <= 0) return false
+
+    // P1 always exists (host / single-player baseline)
+    if (p === 1) return true
+
+    // If a hero already exists for this pid, treat it as active.
+    const hi = (playerToHeroIndex as any)[p] | 0
+    if (hi >= 0 && hi < heroes.length) {
+        const h = heroes[hi]
+        if (h && !(h.flags & sprites.Flag.Destroyed)) return true
+    }
+
+    // Phaser host networking uses __netSlotConnected[0..3]
+    if (typeof globalThis !== "undefined") {
+        const g: any = globalThis as any
+        const arr: any = g ? g.__netSlotConnected : null
+        if (Array.isArray(arr) && (p - 1) >= 0 && (p - 1) < arr.length) {
+            return !!arr[p - 1]
+        }
+    }
+
+    return false
+}
+
+function _dunGetActivePidsUpTo4(): number[] {
+    const out: number[] = []
+    for (let pid = 1; pid <= 4; pid++) {
+        if (_dunIsPidActiveUpTo4(pid)) out.push(pid)
+    }
+    // absolute fallback
+    if (out.length === 0) out.push(1)
+    return out
+}
+
+function _dunActiveHeroCountUpTo4(): number {
+    return _dunGetActivePidsUpTo4().length | 0
+}
+
+
 function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): void {
     const rows = _dunWorldRows()
     const cols = _dunWorldCols()
+
     for (let r = r0; r < (r0 + rh); r++) {
         if (r < 0 || r >= rows) continue
+
         for (let c = c0; c < (c0 + cw); c++) {
             if (c < 0 || c >= cols) continue
-            _engineWorldTileMap[r][c] = TILE_FLOOR
+
+            _engineWorldTileMap[r][c] = DUN_TILE_FLOOR
         }
     }
 }
@@ -3235,30 +3453,46 @@ function _dunSpawnExitPad(): void {
     _dunDestroySprite(_dunExitPad)
     _dunExitPad = null
 
+    let padX = (userconfig.ARCADE_SCREEN_WIDTH >> 1) | 0
+    let padY = (userconfig.ARCADE_SCREEN_HEIGHT >> 1) | 0
+
     const rows = _dunWorldRows()
     const cols = _dunWorldCols()
-    if (rows <= 0 || cols <= 0) return
 
-    const padRow = 2
-    const padCol = cols >> 1
+    let padRow = -1
+    let padCol = -1
 
-    // Carve space for pad
-    _dunCarveFloorRect(padRow - 1, padCol - 1, 3, 3)
+    if (rows > 0 && cols > 0) {
+        padRow = (rows >> 1) | 0
+        padCol = (cols >> 1) | 0
 
-    const img = image.create(28, 18)
+        padX = _dunColToX(padCol)
+        padY = _dunRowToY(padRow)
+
+        // Sacred core around the pad
+        _dunCarveFloorRect(padRow - 2, padCol - 2, 5, 5)
+
+        // "2x6 tiles in front" activation lane
+        _dunCarveFloorRect(padRow + 1, padCol - 1, 6, 2)
+    }
+
+    // Logic-only sprite (invisible); visuals are via terrain_atlas decals
+    const img = image.create(2, 2)
     img.fill(0)
-    img.drawRect(0, 0, 28, 18, 15)
-    img.drawLine(2, 9, 25, 9, 15)
 
     _dunExitPad = sprites.create(img, (SpriteKind as any).FloorPad)
     _dunExitPad.setFlag(SpriteFlag.Ghost, true)
-    _dunExitPad.setPosition(worldToScreenX(padCol), worldToScreenY(padRow))
+    _dunExitPad.setFlag(SpriteFlag.Invisible, true)
+    _dunExitPad.setPosition(padX, padY)
     _dunExitPad.z = 5
 
-    sprites.setDataNumber(_dunExitPad, PAD_DATA.POWERED, 0)
-    sprites.setDataNumber(_dunExitPad, PAD_DATA.NEEDED, _dunRequiredHeroCount())
-    sprites.setDataNumber(_dunExitPad, PAD_DATA.READY, 0)
-    sprites.setDataNumber(_dunExitPad, PAD_DATA.MASK, 0)
+    // Remember tile anchor for decal visuals
+    _dunPadTileR = padRow | 0
+    _dunPadTileC = padCol | 0
+    _dunPadFrameLast = -999
+
+    // Initial visual state: frame 0
+    _dunDecor_placePadAndStairsVisual(0)
 }
 
 function _dunSetPadPowered(on: boolean): void {
@@ -3366,32 +3600,51 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
     _dunClearTransientFloorEntities()
     _dunPickThemeForFloor(_dunFloorIndex, _dunFloorKind)
 
-    // Rebuild the world each floor (POC roguelike feel)
+    // Rebuild world each floor
     initWorldTileMap()
 
-    // Carve a stable landing zone near center
-    const rows = _dunWorldRows()
-    const cols = _dunWorldCols()
-    const midR = rows >> 1
-    const midC = cols >> 1
-    _dunCarveFloorRect(midR - 2, midC - 2, 5, 5)
+    // Spawn pad at world center (and carve sacred core + activation lane)
+    _dunSpawnExitPad()
 
-    // Move heroes to landing zone (do not assume setupHeroes() again)
-    const landX = worldToScreenX(midC)
-    const landY = worldToScreenY(midR + 1)
+    // Pad position is now our canonical "spawn/exit"
+    let padX = (userconfig.ARCADE_SCREEN_WIDTH >> 1) | 0
+    let padY = (userconfig.ARCADE_SCREEN_HEIGHT >> 1) | 0
+    if (_dunExitPad && !(_dunExitPad.flags & sprites.Flag.Destroyed)) {
+        padX = _dunExitPad.x | 0
+        padY = _dunExitPad.y | 0
+    }
 
-    for (let pid = 1; pid <= 4; pid++) {
+    // Active players ONLY (1..4 for now)
+    const activePids = _dunGetActivePidsUpTo4()
+
+    // Spawn points (we assign sequentially so 2 players don't leave "gaps")
+    const offset = 28
+    const coords: number[][] = [
+        [padX + offset, padY + offset],
+        [padX - offset, padY + offset],
+        [padX + offset, padY + (offset + 16)],
+        [padX - offset, padY + (offset + 16)],
+    ]
+
+    for (let i = 0; i < activePids.length; i++) {
+        const pid = activePids[i] | 0
+        const xy = coords[i % coords.length]
+
         let hi = playerToHeroIndex[pid] | 0
         if (hi < 0) {
-            // create missing hero for connected players
-            createHeroForPlayer(pid, landX, landY)
+            createHeroForPlayer(pid, xy[0], xy[1])
             hi = playerToHeroIndex[pid] | 0
         }
         if (hi < 0) continue
+
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-        hero.setPosition(landX, landY + (pid - 1) * 10)
-        hero.setVelocity(0, 0)
+
+        hero.setPosition(xy[0], xy[1])
+        hero.vx = 0
+        hero.vy = 0
+
+        // keep visuals consistent
         sprites.setDataString(hero, "phase", "idle")
         sprites.setDataString(hero, HERO_DATA.PhaseName, "idle")
         sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, nowMs | 0)
@@ -3399,43 +3652,34 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
         sprites.setDataString(hero, "dir", "up")
     }
 
-    _dunSpawnExitPad()
-
     // Floor behavior
     if (_dunFloorKind == DUNGEON_KIND_ENTRANCE) {
         DUNGEON_BLOCK_INTENTS = true
-        // Require a “start chest” interact to begin
-        _dunSpawnChest(nowMs, landX, landY + 28)
+        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
     }
     else if (_dunFloorKind == DUNGEON_KIND_TREASURE) {
         DUNGEON_BLOCK_INTENTS = true
-        _dunSpawnChest(nowMs, landX, landY + 28)
+        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
     }
     else if (_dunFloorKind == DUNGEON_KIND_STORY) {
         DUNGEON_BLOCK_INTENTS = true
-        // Example NPC: profileName + family string must exist in your hero atlas system
-        _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", landX + 40, landY + 10)
-        // Also gate with a chest for now (easy repeatable pattern)
-        _dunSpawnChest(nowMs, landX, landY + 28)
+        _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", (padX + 40) | 0, (padY + 10) | 0)
+        _dunSpawnChest(nowMs, padX, (padY + 34) | 0)
     }
     else if (_dunFloorKind == DUNGEON_KIND_SHOP) {
         DUNGEON_BLOCK_INTENTS = false
 
-        // Enable existing shop system, but keep it optional.
         SHOP_MODE_ACTIVE_MASTER = true
         SHOP_MODE_ACTIVE = false
 
-        // Force shop to exist now so its trigger can be moved away from the exit pad.
         shopInitPOC()
 
-        // Put shop lower-left-ish so players can walk to pad separately
+        // Move shop away from pad so pad can still be used
         if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
-            shopTriggerZone.setPosition(landX - 70, landY + 45)
-            // force ring offers to rebuild at the new spot
+            shopTriggerZone.setPosition((padX - 70) | 0, (padY + 55) | 0)
             if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
         }
 
-        // No objective: pad is powered immediately on shop floors
         _dunObjectiveDone = true
         _dunSetPadPowered(true)
     }
@@ -3446,7 +3690,10 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
         startEnemyWaves()
     }
 
-    _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily}`)
+    // Floor banner (DOM dialog)
+    _dunDialog_showFloorBanner(nowMs | 0)
+
+    _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily} players=${activePids.length}`)
 }
 
 function dungeonStartRun(nowMs: number): void {
@@ -3456,6 +3703,9 @@ function dungeonStartRun(nowMs: number): void {
 
 function dungeonTick(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
+
+    // Floor banner timer
+    _dunDialog_tickFloorBanner(nowMs | 0)
 
     // Keep pad contract fresh for renderer
     if (_dunExitPad && !(_dunExitPad.flags & sprites.Flag.Destroyed)) {
@@ -3567,15 +3817,20 @@ function ensureHeroSpriteKinds(): void {
         if (SK.SupportIcon == null) SK.SupportIcon = 55
         if (SK.Wall == null) SK.Wall = 56
 
-        // Shop kinds (you said these are now fixed)
-        if (SK.ShopUI == null) SK.ShopUI = 57
-        if (SK.ShopNpc == null) SK.ShopNpc = 58
-        if (SK.ShopItem == null) SK.ShopItem = 59
+        // Shop kinds (fixed ids)
+        if (SK.ShopNpc == null) SK.ShopNpc = 57
+        if (SK.ShopItem == null) SK.ShopItem = 58
+        if (SK.ShopUI == null) SK.ShopUI = 59
 
-        // Decor collider kinds (new)
+        // Decor collider kinds (fixed ids)
         if (SK.DecorTrigger == null) SK.DecorTrigger = 60
         if (SK.DecorSolid == null) SK.DecorSolid = 61
-        
+
+        // NEW: Dungeon/story kinds (fixed ids)
+        if (SK.FloorPad == null) SK.FloorPad = 62
+        if (SK.FloorInteractable == null) SK.FloorInteractable = 63
+        if (SK.StoryNpc == null) SK.StoryNpc = 64
+
         return
     }
 
@@ -3588,13 +3843,18 @@ function ensureHeroSpriteKinds(): void {
     if (!SpriteKind.SupportIcon) SpriteKind.SupportIcon = SpriteKind.create()
     if (!SpriteKind.Wall) SpriteKind.Wall = SpriteKind.create()
 
-    if (!SpriteKind.ShopUI) SpriteKind.ShopUI = SpriteKind.create()
     if (!SpriteKind.ShopNpc) SpriteKind.ShopNpc = SpriteKind.create()
     if (!SpriteKind.ShopItem) SpriteKind.ShopItem = SpriteKind.create()
+    if (!SpriteKind.ShopUI) SpriteKind.ShopUI = SpriteKind.create()
 
     // Decor collider kinds (new)
     if (!SpriteKind.DecorTrigger) SpriteKind.DecorTrigger = SpriteKind.create()
     if (!SpriteKind.DecorSolid) SpriteKind.DecorSolid = SpriteKind.create()
+
+    // NEW: Dungeon/story kinds
+    if (!SpriteKind.FloorPad) SpriteKind.FloorPad = SpriteKind.create()
+    if (!SpriteKind.FloorInteractable) SpriteKind.FloorInteractable = SpriteKind.create()
+    if (!SpriteKind.StoryNpc) SpriteKind.StoryNpc = SpriteKind.create()
 }
 
 // Phaser/ESM shim: ensure custom SpriteKinds exist before any overlaps are registered.
@@ -4239,7 +4499,7 @@ function getBaseMoveDurationMs(button: string, family: number) {
     let base = 300
     if (family == FAMILY.STRENGTH) base = 400
     else if (family == FAMILY.AGILITY) base = 250
-    else if (family == FAMILY.INTELLECT || family == FAMILY.HEAL) base = 350
+    else if (family == FAMILY.INTELLECT || family == FAMILY.HEAL) base = 1000
     if (button == "A+B") base += 150
     return base
 }
@@ -4284,21 +4544,42 @@ function tintImageReplace(imgBase: Image, fromColor: number, toColor: number): I
 
 const _INT_SPELL_IMG_CACHE: { [k: string]: Image } = Object.create(null)
 
-function _getIntSpellImg(isDetonating: boolean, radiusPx?: number): Image {
-    // Radius clamp (keep small-ish; this is pixel-drawn)
-    const r = Math.max(4, Math.min(31, ((radiusPx ?? 12) | 0))) | 0
-    const key = `${isDetonating ? 1 : 0}|${r}`
+function _getIntSpellImg(isDetonating: boolean, radius: number): Image {
+    const g: any = globalThis as any
 
-    const cached = _INT_SPELL_IMG_CACHE[key]
-    if (cached) return cached
+    // Self-initialize global cache + counters so this can never throw ReferenceError
+    // (and so cache survives hot reload / multiple module instances).
+    let cache: Map<string, Image> | null = null
+    if (g.__intSpellImgCache instanceof Map) {
+        cache = g.__intSpellImgCache as Map<string, Image>
+    } else {
+        // Fall back to the file-scope cache if present; otherwise create a new Map.
+        cache = (typeof _INT_SPELL_IMG_CACHE !== "undefined" && _INT_SPELL_IMG_CACHE instanceof Map)
+            ? (_INT_SPELL_IMG_CACHE as Map<string, Image>)
+            : new Map<string, Image>()
+        g.__intSpellImgCache = cache
+    }
 
-    const w = ((r << 1) + 3) | 0
-    const h = ((r << 1) + 3) | 0
-    const img = image.create(w, h)
-    img.fill(0)
+    if (typeof g.__intSpellImgCache_hit !== "number") g.__intSpellImgCache_hit = 0
+    if (typeof g.__intSpellImgCache_miss !== "number") g.__intSpellImgCache_miss = 0
 
-    const cx = (w >> 1) | 0
-    const cy = (h >> 1) | 0
+    // Sanitize radius (must be >= 1)
+    const r = Math.max(1, (radius | 0)) | 0
+
+    // Cache key: detonating state + radius
+    const cacheKey = `${isDetonating ? 1 : 0}|${r}`
+    const cached = cache.get(cacheKey)
+    if (cached) {
+        g.__intSpellImgCache_hit = ((g.__intSpellImgCache_hit | 0) + 1) | 0
+        return cached
+    }
+    g.__intSpellImgCache_miss = ((g.__intSpellImgCache_miss | 0) + 1) | 0
+
+    const w = ((r * 2) + 1) | 0
+    const h = w
+    const cx = r | 0
+    const cy = r | 0
+    const out = image.create(w, h)
 
     // Keep your existing palette intent:
     // - normal: green-ish body + brighter rim
@@ -4313,25 +4594,24 @@ function _getIntSpellImg(isDetonating: boolean, radiusPx?: number): Image {
     for (let y = 0; y < h; y++) {
         const dy = (y - cy) | 0
         const dy2 = (dy * dy) | 0
-        if (dy2 > rr) continue
+        for (let x = 0; x < w; x++) {
+            const dx = (x - cx) | 0
+            const d2 = (dx * dx + dy2) | 0
 
-        const dx = (Math.floor(Math.sqrt(rr - dy2)) | 0)
-        const x0 = (cx - dx) | 0
-        const x1 = (cx + dx) | 0
+            // Fill disk
+            if (d2 <= rr) {
+                out.setPixel(x, y, colBase)
+            }
 
-        for (let x = x0; x <= x1; x++) {
-            const ddx = (x - cx) | 0
-            const d2 = ((ddx * ddx) + dy2) | 0
-            if (d2 > rr) continue
-            img.setPixel(x, y, (d2 >= rrInner) ? colRim : colBase)
+            // Rim band (1px ring)
+            if (d2 <= rr && d2 >= rrInner) {
+                out.setPixel(x, y, colRim)
+            }
         }
     }
 
-    // center dot
-    img.setPixel(cx, cy, colRim)
-
-    _INT_SPELL_IMG_CACHE[key] = img
-    return img
+    cache.set(cacheKey, out)
+    return out
 }
 
 
@@ -6910,8 +7190,8 @@ function initWorldDecorPostPass(): void {
     // ----------------------------------------------------------
     // Pick a WALKABLE center-ish tile for sand (robust)
     // ----------------------------------------------------------
-    let sandR = Math.idiv(rows, 2) | 0
-    let sandC = Math.idiv(cols, 2) | 0
+    let sandR = (Math.idiv(rows, 2) | 0) + 3
+    let sandC = (Math.idiv(cols, 2) | 0) - 4
 
     function isWalkable(r: number, c: number): boolean {
         if (r < 0 || c < 0 || r >= rows || c >= cols) return false
@@ -7006,20 +7286,21 @@ function initWorldDecorPostPass(): void {
 
 
 // This is called ONLY by HeroEngine.start()
+// This is called ONLY by HeroEngine.start()
 function initWorldTileMap(): void {
-    // Creates tilemap data but does NOT apply graphics
-    _engineWorldTileMap = buildWorldTileMap()
+    // Always build the numeric world grid (used by Phaser renderer + collision).
+    _engineWorldTileMap = _createTileMap2D()
 
-    // Postpass: sand / rocks etc
+    // Decor post-pass (decals + trigger/solid colliders), art-agnostic.
     initWorldDecorPostPass()
 
-    // NEW: bump world rev whenever we rebuild the world
+    // NEW: bump world revision any time the world grid is rebuilt
     _engineWorldRev = (_engineWorldRev + 1) | 0
 
-    // Arcade ONLY: also create the internal collision tilemap
+    // Only the MakeCode Arcade runtime needs "walls as sprites".
+    // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
     if (isMakeCodeArcadeRuntime()) {
-        const tilemapData = buildTilemapDataFromWorldTileMap(_engineWorldTileMap)
-        tiles.setCurrentTilemap(tilemapData)
+        _buildTilesIntoSprites(_engineWorldTileMap)
     }
 }
 
@@ -9594,7 +9875,7 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
     const bar = statusbars.create(20, 4, StatusBarKind.Health)
     bar.attachToSprite(hero)
     //bar.setOffsetPadding(0, 2)
-
+    //This is the knob for offset of the hp bar. bar knob
 
     // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
     // So we push the bar DOWN much further in Arcade only.
@@ -9603,7 +9884,7 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
         bar.setOffsetPadding(0, 2)
     } else {
         // Phaser: LARGE padding to actually get above the real sprite
-        bar.setOffsetPadding(0, 20)
+        bar.setOffsetPadding(0, 50)
     }
 
     bar.max = 100; bar.value = 100
@@ -9625,7 +9906,7 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
     const bar = statusbars.create(20, 4, StatusBarKind.Energy)
     bar.attachToSprite(hero)
     //bar.setOffsetPadding(0, 1)
-
+    //Bar knob for offset padding of mana bar
 
     // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
     // So we push the bar DOWN much further in Arcade only.
@@ -9634,7 +9915,7 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
         bar.setOffsetPadding(0, 1)
     } else {
         // Phaser: LARGE padding on top of the real sprite
-        bar.setOffsetPadding(0, 15)
+        bar.setOffsetPadding(0, 46)
     }
 
     bar.max = 100; bar.value = 100; bar.setColor(9, 1)
@@ -13178,7 +13459,7 @@ function calculateAgilityStats(
     // ----------------------------------------------------
     // MOVE DURATION – baseline (then debug slowmo)
     // ----------------------------------------------------
-    let moveDur = baseTimeMs
+    let moveDur = baseTimeMs //This is what sets how long the move will be
     if (moveDur < 50) moveDur = 50
 
     if (AGI_DEBUG_SLOWMO) {
@@ -13829,6 +14110,12 @@ function executeIntellectMove(
 const INT_PULSE_DEFAULT_PERIOD_MS = 250;  // tweak (or write from your "Time" axis)
 const INT_PULSE_WINDOW_MS = 70;           // short window so multiple enemies can be hit in same pulse
 
+// Safe even if INT_PULSE_DEFAULT_PERIOD_MS was never declared anywhere.
+const pulsePeriodMs =
+  (typeof INT_PULSE_DEFAULT_PERIOD_MS === "number"
+    ? INT_PULSE_DEFAULT_PERIOD_MS
+    : 250) | 0;
+
 
 
 // Intellect spell image (Phaser-host runtime has no MakeCode `assets.*` macro)
@@ -13971,8 +14258,8 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
 
     // Center it visually at the same world location
     spell.z += 1
-    spell.x -= img.width >> 1
-    spell.y -= img.height >> 1
+//    spell.x -= img.width >> 1
+//    spell.y -= img.height >> 1
 
     // Store timing for per-frame animation
     const endAt = (now + totalLinger) | 0
@@ -17548,45 +17835,55 @@ function updateEnemyEffects(now: number) {
 
 
 
-function consumeAndDispatchPlayerIntents(nowMs: number): void {    
+function consumeAndDispatchPlayerIntents(nowMs: number): void {
     if (!HeroEngine._isStarted()) return
     if (SHOP_MODE_ACTIVE) return
 
+    // NEW: dungeon can temporarily block intent dispatch (story/treasure/interact floors)
+    // (This must exist as a global set by your dungeon system.)
+    if (typeof (globalThis as any).DUNGEON_BLOCK_INTENTS === "boolean") {
+        if ((globalThis as any).DUNGEON_BLOCK_INTENTS) return
+    } else {
+        // If you implemented DUNGEON_BLOCK_INTENTS as a normal variable, this line is harmless
+        // because TS will resolve it at compile time. If not, it avoids breaking builds.
+        // @ts-ignore
+        if (typeof DUNGEON_BLOCK_INTENTS !== "undefined" && DUNGEON_BLOCK_INTENTS) return
+    }
+
     try {
-        const nowMs = game.runtime() | 0
+        const now = nowMs | 0
 
         const i1 = consumePlayerIntent(1)
         if (i1 !== "") {
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P1 intent=" + i1 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P1 intent=" + i1 + " timeMs=" + now)
             doHeroMoveForPlayer(1, i1)
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P1 intent=" + i1 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P1 intent=" + i1 + " timeMs=" + now)
         }
 
         const i2 = consumePlayerIntent(2)
         if (i2 !== "") {
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P2 intent=" + i2 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P2 intent=" + i2 + " timeMs=" + now)
             doHeroMoveForPlayer(2, i2)
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P2 intent=" + i2 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P2 intent=" + i2 + " timeMs=" + now)
         }
 
         const i3 = consumePlayerIntent(3)
         if (i3 !== "") {
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P3 intent=" + i3 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P3 intent=" + i3 + " timeMs=" + now)
             doHeroMoveForPlayer(3, i3)
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P3 intent=" + i3 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P3 intent=" + i3 + " timeMs=" + now)
         }
 
         const i4 = consumePlayerIntent(4)
         if (i4 !== "") {
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P4 intent=" + i4 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P4 intent=" + i4 + " timeMs=" + now)
             doHeroMoveForPlayer(4, i4)
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P4 intent=" + i4 + " timeMs=" + nowMs)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P4 intent=" + i4 + " timeMs=" + now)
         }
     } catch (e) {
         console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e)
     }
 }
-
 
 
 // Master update
@@ -17628,6 +17925,8 @@ game.onUpdate(function () {
     shopTick(now)   // or shopTick(now) if that’s your canonical name
     }
 
+    // NEW: dungeon tick must run even if shop is active
+    dungeonTick(now)
 
     // ------------------------------------------------------------
     // SHOP MODE GATE: "exit normal loop" by returning early.
@@ -17979,118 +18278,132 @@ if (typeof globalThis !== "undefined") {
 // Phaser-only side channel: expose tile internals via global
 // WITHOUT changing namespace HeroEngine.
 // ----------------------------------------------------------
+// ----------------------------------------------------------
+// Phaser-only side channel: expose tile + decor internals via global
+// WITHOUT changing namespace HeroEngine.
+// ----------------------------------------------------------
 (() => {
     try {
-        const g: any = globalThis as any;
-        g.__HeroEnginePhaserInternals = g.__HeroEnginePhaserInternals || {};
+        const g: any = globalThis as any
+        g.__HeroEnginePhaserInternals = g.__HeroEnginePhaserInternals || {}
 
-        g.__HeroEnginePhaserInternals.getWorldTileMap = function (): number[][] {
-            return _engineWorldTileMap;
-        };
+        const internals: any = g.__HeroEnginePhaserInternals
 
-        g.__HeroEnginePhaserInternals.getWorldTileSize = function (): number {
-            return WORLD_TILE_SIZE;
-        };
+        console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (before):", Object.keys(internals || {}))
+        console.log("[DECOR][ENGINE] has getDecorRev? (before)", typeof internals?.getDecorRev)
 
         // ----------------------------------------------------------
-        // DECOR (engine-owned, art-agnostic)
+        // WORLD TILEMAP
         // ----------------------------------------------------------
-        g.__HeroEnginePhaserInternals.getDecorRev = function (): number {
-            return _engineDecorRev | 0;
-        };
+        internals.getWorldTileMap = function (): number[][] {
+            return _engineWorldTileMap
+        }
+
+        internals.getWorldTileSize = function (): number {
+            return WORLD_TILE_SIZE
+        }
+
+        // NEW: lets Phaser know when to re-apply / broadcast the map
+        internals.getWorldRev = function (): number {
+            return _engineWorldRev | 0
+        }
+
+        // NEW: theme hooks (main.ts will also fall back to globals)
+        internals.getFloorBaseFamily = function (): string {
+            return _dunBaseFamily
+        }
+
+        internals.getFloorWallFamily = function (): string {
+            return _dunWallFamily
+        }
+
+        // ----------------------------------------------------------
+        // DECOR (engine-owned, art-agnostic) — NAMES EXPECTED BY arcadeCompat.ts
+        // ----------------------------------------------------------
+        internals.getDecorRev = function (): number {
+            return _engineDecorRev | 0
+        }
 
         // Decal grid (tile-aligned signaling layer; students query underfoot too)
-        g.__HeroEnginePhaserInternals.getDecalGrid = function (): number[][] {
-            return _engineDecalGrid;
-        };
+        internals.getDecalGrid = function (): number[][] {
+            return _engineDecalGrid
+        }
+
+        // Optional alias (in case you/older code says "decor grid")
+        internals.getDecorGrid = function (): number[][] {
+            return _engineDecalGrid
+        }
 
         // Decor collider sprites (invisible; used for overlap proof and later blocking)
-        g.__HeroEnginePhaserInternals.getDecorTriggerSprites = function (): Sprite[] {
-            return _engineDecorTriggers;
-        };
+        internals.getDecorTriggerSprites = function (): Sprite[] {
+            return _engineDecorTriggers
+        }
 
-        g.__HeroEnginePhaserInternals.getDecorSolidSprites = function (): Sprite[] {
-            return _engineDecorSolids;
-        };
+        internals.getDecorSolidSprites = function (): Sprite[] {
+            return _engineDecorSolids
+        }
 
+        // ----------------------------------------------------------
+        // LEGACY / EXISTING DECOR CHANNEL (keep for compatibility)
+        // ----------------------------------------------------------
+        internals.getWorldDecorRev = function (): number {
+            return _engineDecorRev | 0
+        }
 
+        internals.getWorldDecorCells = function () {
+            return _engineDecorCells
+        }
 
-        ;(globalThis as any).__HeroEnginePhaserInternals = {
-            ensureHeroForPlayer: (playerId: number) => {
-                const pid = playerId | 0
-                if (pid < 1 || pid > 4) return
-                if ((playerToHeroIndex[pid] | 0) >= 0) return
-                createHeroForPlayer(pid, 60 + pid * 12, 60)
-            },
-
-            getWorldTileMap: () => _engineWorldTileMap,
-            getWorldTileSize: () => WORLD_TILE_SIZE,
-
-            // NEW: lets Phaser know when to re-apply / broadcast the map
-            getWorldRev: () => _engineWorldRev,
-
-            // NEW: theme hooks (main.ts will also fall back to globals)
-            getFloorBaseFamily: () => _dunBaseFamily,
-            getFloorWallFamily: () => _dunWallFamily,
-
-            // existing decor channel
-            getWorldDecorRev: () => _engineDecorRev,
-            getWorldDecorCells: () => _engineDecorCells,
-            getWorldDecorDecals: () => _engineDecorDecals,
+        internals.getWorldDecorDecals = function () {
+            return _engineDecorDecals
         }
 
         // ------------------------------------------------------------
         // STEP 6: spawn-on-demand hook for the Phaser host.
-        // This lets arcadeCompat (or any host glue) force-spawn P2..P4
-        // the moment a player is assigned/connected, rather than waiting
-        // for first input.
-        //
-        // TODO_NPLAYER_BRIDGE: later replace playerId<=4 assumption with
-        // roster/slot assignment logic.
         // ------------------------------------------------------------
-        g.__HeroEnginePhaserInternals.ensureHeroForPlayer = function (playerId: number): number {
-            const pid = playerId | 0;
-            if (pid < 1 || pid > 4) return -1;
+        internals.ensureHeroForPlayer = function (playerId: number): number {
+            const pid = playerId | 0
+            if (pid < 1 || pid > 4) return -1
 
-            const existing = playerToHeroIndex[pid] | 0;
+            const existing = playerToHeroIndex[pid] | 0
             if (existing >= 0 && existing < heroes.length && heroes[existing]) {
-                return existing;
+                return existing
             }
 
             // Compute the same spawn coordinates used by setupHeroes()
-            let W = userconfig.ARCADE_SCREEN_WIDTH;
-            let H = userconfig.ARCADE_SCREEN_HEIGHT;
+            let W = userconfig.ARCADE_SCREEN_WIDTH
+            let H = userconfig.ARCADE_SCREEN_HEIGHT
 
             if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
-                const rows = _engineWorldTileMap.length;
-                const cols = _engineWorldTileMap[0].length;
-                W = cols * WORLD_TILE_SIZE;
-                H = rows * WORLD_TILE_SIZE;
+                const rows = _engineWorldTileMap.length
+                const cols = _engineWorldTileMap[0].length
+                W = cols * WORLD_TILE_SIZE
+                H = rows * WORLD_TILE_SIZE
             }
 
-            const centerW = W / 2;
-            const centerH = H / 2;
-            const offset = 40;
+            const centerW = W / 2
+            const centerH = H / 2
+            const offset = 40
 
             const coords: number[][] = [
                 [centerW + offset, centerH + offset],
                 [centerW - offset, centerH + offset],
                 [centerW + offset, centerH - offset],
-                [centerW - offset, centerH - offset]
-            ];
+                [centerW - offset, centerH - offset],
+            ]
 
-            const slotIndex = pid - 1;
-            console.log(">>> [HeroEngineInPhaser] ensureHeroForPlayer spawning pid =", pid);
-            createHeroForPlayer(pid, coords[slotIndex][0], coords[slotIndex][1]);
+            const slotIndex = pid - 1
+            console.log(">>> [HeroEngineInPhaser] ensureHeroForPlayer spawning pid =", pid)
+            createHeroForPlayer(pid, coords[slotIndex][0], coords[slotIndex][1])
 
-            const after = playerToHeroIndex[pid] | 0;
-            return (after >= 0 && after < heroes.length && heroes[after]) ? after : -1;
-            
-        };
+            const after = playerToHeroIndex[pid] | 0
+            return after >= 0 && after < heroes.length && heroes[after] ? after : -1
+        }
 
-        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + ensureHeroForPlayer)");
-        
+        console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (after):", Object.keys(internals || {}))
+        console.log("[DECOR][ENGINE] has getDecorRev? (after)", typeof internals?.getDecorRev)
+        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)")
     } catch {
         // If globalThis isn't available (e.g., PXT runtime), just silently skip.
     }
-})();
+})()

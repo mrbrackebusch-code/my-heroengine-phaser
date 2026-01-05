@@ -643,32 +643,36 @@ async create() {
     // 11) Optional hero anim tester
     this.maybeInstallHeroAnimTester();
 
+    // 12) DOM dialog test (timed splash)
+    this.runStartupDialogTest();
+
     console.log(">>> [HeroScene.create] complete (refactored)");
+    
+
 }
 
 
     
 
 
+private ensureWorldTileRenderer(atlas: TileAtlas) {
+    if (this.tileRenderer) return this.tileRenderer;
 
+    const tileValueToFamily = (v: number) => {
+        const g: any = globalThis as any;
+        const base = (g.__floorBaseFamily as any) || "ground_light";
+        const wall = (g.__floorWallFamily as any) || "chasm_light";
+        if (v === 1) return wall;
+        return base;
+    };
 
-private ensureWorldTileRenderer(atlas: TileAtlas): WorldTileRenderer {
-    if (!this.tileRenderer) {
-        if (DEBUG_TILEMAP) {
-            console.log(">>> [HeroScene.tilemap] creating WorldTileRenderer");
-        }
-        this.tileRenderer = new WorldTileRenderer(this, atlas, {
-            debugLocal: true
-        });
-    }
-
-    // Expose the active WorldTileRenderer to the scene registry so arcadeCompat
-    // can apply decor overlays without reaching into private fields.
-    this.registry.set("__worldTileRenderer", this.tileRenderer);
+    this.tileRenderer = new WorldTileRenderer(this, atlas, {
+        debugLocal: true,
+        tileValueToFamily,
+    });
 
     return this.tileRenderer;
 }
-
 
 
 public applyTilemapToScene(grid: number[][], tileSize: number) {
@@ -687,7 +691,20 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
             tileSize
         });
     }
+
+    // Base layer sync (NOTE: WorldTileRenderer clears decal+prop layers here)
     renderer.syncFromEngineGrid(grid);
+
+    // ✅ Critical: re-apply decor overlays AFTER base sync clears them
+    try {
+        const g: any = globalThis as any;
+        if (g?.__HeroEnginePhaserDecor?.forceResync) {
+            g.__HeroEnginePhaserDecor.forceResync("applyTilemapToScene");
+        }
+    } catch (e) {
+        // Keep tilemap apply resilient; decor will try again on the next tick anyway.
+        if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] decor forceResync failed", e);
+    }
 
     const rows = grid.length;
     const cols = grid[0]?.length || 0;
@@ -699,8 +716,6 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
     // ✅ Make the CANVAS match the actual game world (no extra black space).
-    // This is the “spawn big then crop down” fix: once tilemap is known,
-    // the viewport becomes exactly world-sized.
     this.scale.resize(worldWidth, worldHeight);
     this.cameras.main.setSize(worldWidth, worldHeight);
 
@@ -835,6 +850,23 @@ private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
 
 private initTileAtlasAndInstallTilemapHook() {
     console.log(">>> [HeroScene.create] building tile atlas");
+
+    this.registry.set("__tileAtlasConfig", {
+      baseTextureKey: "tiles.terrain",          // terrain.png for background/autotiles
+      decorTextureKey: "tiles.terrain_atlas",   // terrain_atlas.png for decals/props
+      propTextureKey: "tiles.terrain_atlas",
+
+      // optional per-kind routing (this is the “not one preferred sheet” part)
+      atlasTextureKeys: {
+        terrain: "tiles.terrain_atlas",
+        prop: "tiles.terrain_atlas",
+        // later you can do: statue:"tiles.someOtherSheet" if you add new keys
+      }
+    });
+
+    this.tileAtlas = buildTileAtlas(this);
+
+
     this.tileAtlas = buildTileAtlas(this);
 
     // TILEMAP NETWORK HOOK (followers + host)
@@ -848,10 +880,17 @@ private initTileAtlasAndInstallTilemapHook() {
 
             const tileSize = msg.tileSize | 0;
 
-            if (msg.encoding !== "raw") {
+            // NEW: optional floor theme fields (safe if absent)
+            const g: any = globalThis as any;
+            if (msg.baseFamily) g.__floorBaseFamily = msg.baseFamily;
+            if (msg.wallFamily) g.__floorWallFamily = msg.wallFamily;
+
+            // Back-compat: if encoding is missing, treat as raw
+            const enc = (typeof msg.encoding === "string" && msg.encoding) ? msg.encoding : "raw";
+            if (enc !== "raw") {
                 console.warn(
                     ">>> [HeroScene] __onNetTilemap: unsupported encoding (for now):",
-                    msg.encoding,
+                    enc,
                     "rev=",
                     rev
                 );
@@ -877,6 +916,9 @@ private initTileAtlasAndInstallTilemapHook() {
             }
 
             this.applyTilemapToScene(grid, tileSize);
+
+            // NEW: subtle “teleport” cue
+            this.cameras?.main?.flash(140);
         } catch (e) {
             console.error(">>> [HeroScene] __onNetTilemap ERROR:", e);
         }
@@ -1126,29 +1168,100 @@ private maybeInstallHeroAnimTester() {
 
 
 
+update(time: number, delta: number) {
+    const g: any = globalThis as any;
 
-
-    update(time: number, delta: number) {
-        const gAny: any = (globalThis as any);
-        const isHost = !!gAny.__isHost;
-
-        // Only the host should actually tick the HeroEngine game loop.
-        if (!isHost) return;
-
-        const game = gAny.game;
-        if (game && typeof game._tick === "function") {
-            try {
-                game._tick();
-            } catch (e) {
-                console.error(">>> [HeroScene.update] _tick ERROR:", e);
-            }
+    if (g.__isHost && g.__game) {
+        try {
+            g.__game._tick();
+        } catch (e: any) {
+            console.error("HeroScene.update _tick ERROR:", e);
         }
 
+        // Host: if engine worldRev changed, apply + broadcast tilemap
+        const internals = g.__HeroEnginePhaserInternals;
+        if (internals?.getWorldRev && internals?.getWorldTileMap && internals?.getWorldTileSize) {
+            const rev = (internals.getWorldRev() | 0) || 0
+            if (rev > 0 && rev !== (this._tilemapAppliedRev | 0)) {
+                // Theme (optional fields; still safe if missing)
+                const baseFamily = (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light")
+                const wallFamily = (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light")
+                g.__floorBaseFamily = baseFamily
+                g.__floorWallFamily = wallFamily
 
+                const grid = internals.getWorldTileMap()
+                const tileSize = internals.getWorldTileSize()
+
+                this._tilemapAppliedRev = rev
+                this.applyTilemapToScene(grid, tileSize)
+
+                // Subtle “teleport” cue
+                this.cameras?.main?.flash(140)
+
+                // Broadcast to clients
+                const wsAny: WebSocket | null = g.__net?.ws ?? null;
+                if (wsAny && wsAny.readyState === WebSocket.OPEN) {
+                    wsAny.send(JSON.stringify({
+                        type: "tilemap",
+                        rev,
+                        data: grid,
+                        tileSize,
+                        baseFamily,
+                        wallFamily,
+                    }));
+                }
+            }
+        }
+    }
+}
+
+private runStartupDialogTest(): void {
+    const g: any = globalThis as any;
+
+    // Only run once per page load
+    if (g.__startupDialogTestShown) return;
+
+    const dlg = g.__heDialog;
+
+    // If index.html loaded the module before installing __heDialog, retry briefly.
+    if (!dlg || typeof dlg.show !== "function" || typeof dlg.hide !== "function") {
+        const tries = ((g.__startupDialogTestTries | 0) + 1) | 0;
+        g.__startupDialogTestTries = tries;
+
+        if (tries <= 40) {
+            // ~2 seconds max retry window (40 * 50ms)
+            this.time.delayedCall(50, () => this.runStartupDialogTest());
+            return;
+        }
+
+        console.warn("[dialog] __heDialog missing after retries; is the DOM dialog script loaded in index.html?");
+        return;
     }
 
+    g.__startupDialogTestShown = true;
+    g.__startupDialogTestTries = 0;
+
+    dlg.show({
+        speaker: "Narrator",
+        text:
+            "Welcome Hero! You must climb the tower to reach your destiny.\n" +
+            "Watch out for monsters along the way.",
+        hint: "", // optional: hide hint for this timed splash
+    });
+
+    // Hide after a timed window
+    this.time.delayedCall(5000, () => {
+        try {
+            dlg.hide();
+        } catch (_e) {
+            // ignore
+        }
+    });
+}
 
 
+
+//This is the end of Phaser scene extends
 
 }
 
@@ -1175,6 +1288,9 @@ function _startPhaserGameSingleton(gameConfig: Phaser.Types.Core.GameConfig): Ph
   __phaserGame = new Phaser.Game(gameConfig);
   return __phaserGame;
 }
+
+
+
 
 
 

@@ -28,12 +28,41 @@ export interface TileRef {
 // This matches the existing autotile defs already in this file (many use col: 20).
 // ---------------------------------------------------------------------------
 
-export type DecorAtlasKey = "terrain";
+export type DecorAtlasKey =
+    | "terrain"
+    | "decor"
+    | "props"
+    | "coins"
+    // Allow project-specific aliases without needing to edit this union every time.
+    | (string & {});
 
 export interface DecorVisualRef {
+    /** Semantic atlas alias (preferred). Resolved to a Phaser textureKey via TileAtlas.resolveAtlasTextureKey(). */
     atlas: DecorAtlasKey;
+
+    /** Optional direct Phaser textureKey override (escape hatch / debugging). */
+    textureKey?: string;
+
+    /** Bottom-left tile of the visual within the referenced sheet (0-based tile coords). */
     ref: TileRef;
+
+    /** Footprint width in tiles (default 1). */
+    wTiles?: number;
+
+    /** Footprint height in tiles (default 1). */
+    hTiles?: number;
+
+    /** Reserved for future: animated props/decals. (Not used yet.) */
+    anim?: {
+        key: string;
+        startFrame: number;
+        endFrame: number;
+        frameRate?: number;
+        repeat?: number;
+    };
 }
+
+export type PropVisualRef = DecorVisualRef;
 
 // These are the terrain sheet tile-grid dimensions (NOT 1-based indices).
 // If/when tile sheets vary by size, this will need to become sheet-specific.
@@ -47,9 +76,32 @@ export function terrainFrameIndexFromRef(ref: TileRef, cols: number = TERRAIN_SH
 // v1 proof assets (semantic keys):
 // - sand_patch → terrain tile at row 13, col 0
 // - rock_mountain → terrain tile at row 22, col 20
+
 export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     sand_patch: { atlas: "terrain", ref: { row: 13, col: 0 } },
-};
+
+    // Teleporter pad: terrain_atlas rows 21/22, cols 0..4 (frame = col)
+    telepad0_top: { atlas: "terrain", ref: { row: 21, col: 0 } },
+    telepad0_bot: { atlas: "terrain", ref: { row: 22, col: 0 } },
+
+    telepad1_top: { atlas: "terrain", ref: { row: 21, col: 1 } },
+    telepad1_bot: { atlas: "terrain", ref: { row: 22, col: 1 } },
+
+    telepad2_top: { atlas: "terrain", ref: { row: 21, col: 2 } },
+    telepad2_bot: { atlas: "terrain", ref: { row: 22, col: 2 } },
+
+    telepad3_top: { atlas: "terrain", ref: { row: 21, col: 3 } },
+    telepad3_bot: { atlas: "terrain", ref: { row: 22, col: 3 } },
+
+    telepad4_top: { atlas: "terrain", ref: { row: 21, col: 4 } },
+    telepad4_bot: { atlas: "terrain", ref: { row: 22, col: 4 } },
+
+    // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
+    stairs_statue_top: { atlas: "terrain_atlas", ref: { row: 15, col: 19 } },
+    stairs_statue_mid: { atlas: "terrain_atlas", ref: { row: 16, col: 19 } },
+    stairs_statue_bot: { atlas: "terrain_atlas", ref: { row: 17, col: 19 } },
+}
+
 
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
@@ -157,6 +209,10 @@ export type AutoShape =
     | "innerNW" | "innerNE" | "innerSE" | "innerSW"
     | "single";
 
+// Back-compat type alias for older imports (typo-casing).
+export type Autoshape = AutoShape;
+
+
 export interface AutoTileDef {
     family: TileFamily;
     shape: AutoShape;
@@ -170,16 +226,38 @@ export interface SingleTileDef {
     frameIndex: number;
 }
 
-export interface TileAtlas {
+export interface TileSheetInfo {
     textureKey: string;
+    cols: number;
+    rows: number;
+    tileSize: number;
+}
+
+export interface TileAtlas {
+    // Legacy: historically used by older tile renderers.
+    textureKey: string;
+
     /** Size of each tile in pixels (expected 32). */
     tileSize: number;
-    /** Primary texture key backing the main tileset spritesheet. */
+
+    /** Primary texture key backing the main autotile spritesheet. */
     primaryTextureKey: string;
+
+    /** All loaded tilesheet texture keys (deterministic order). */
+    allTextureKeys: string[];
+
+    /** Lookup sheet grid info for a given textureKey. */
+    getSheetInfo(textureKey: string): TileSheetInfo | null;
+
+    /** Resolve an atlas alias (e.g. "props") to a Phaser textureKey (e.g. "tiles.props"). */
+    resolveAtlasTextureKey(aliasOrTextureKey: string): string;
+
     /** Return the first tile matching family+shape. */
     getAutoTile(family: TileFamily, shape: AutoShape): AutoTileDef | undefined;
+
     /** Return a random variant for family+shape if we have several to choose from. */
     getRandomVariant(family: TileFamily, shape: AutoShape): AutoTileDef | undefined;
+
     /** Return a random decoration tile for the given family, if any. */
     getRandomDecorForFamily(family: TileFamily): SingleTileDef | undefined;
 }
@@ -190,6 +268,107 @@ export interface TileAtlas {
 
 const TILE_SIZE = 32;
 const DEBUG_TILES_GLOBAL = true;
+
+
+
+// ---------------------------------------------------------------------------
+// Deterministic atlas alias resolution (NO per-client overrides).
+// ---------------------------------------------------------------------------
+
+type DefaultAtlasTextureKeys = {
+    baseTextureKey: string;
+    decorTextureKey: string;
+    propTextureKey: string;
+    coinsTextureKey: string;
+    aliasToTextureKey: Record<string, string>;
+};
+
+let __cachedAtlasKeys: DefaultAtlasTextureKeys | null = null;
+const __warnedUnknownAtlasAliases: Record<string, 1> = Object.create(null);
+
+function _computeDefaultAtlasTextureKeys(): DefaultAtlasTextureKeys {
+    if (__cachedAtlasKeys) return __cachedAtlasKeys;
+
+    const has = (tk: string): boolean => TILE_SHEETS.some(sh => sh.textureKey === tk);
+
+    // Base terrain (autotiles) should be terrain.png when present.
+    const baseTextureKey =
+        (has("tiles.terrain") ? "tiles.terrain" : "") ||
+        (TILE_SHEETS.map(s => s.textureKey).filter(Boolean).sort().find(k => k.includes("terrain") && !k.includes("atlas")) ?? "") ||
+        (TILE_SHEETS.map(s => s.textureKey).filter(Boolean).sort()[0] ?? "tiles.terrain");
+
+    // Decor sheet should be terrain_atlas when present; else fall back to base.
+    const decorTextureKey = has("tiles.terrain_atlas") ? "tiles.terrain_atlas" : baseTextureKey;
+
+    // Props sheet should be tiles.props when present; else fall back to decor.
+    const propTextureKey = has("tiles.props") ? "tiles.props" : decorTextureKey;
+
+    // Coins sheet optional; if absent, fall back to props.
+    const coinsTextureKey = has("tiles.coins") ? "tiles.coins" : propTextureKey;
+
+    // Alias map:
+    // IMPORTANT:
+    // - "terrain" MUST mean the base autotile sheet (terrain.png when present).
+    // - "terrain_atlas" is the explicit decor sheet (terrain_atlas.png when present).
+    const aliasToTextureKey: Record<string, string> = Object.create(null);
+
+    // Explicit semantic aliases
+    aliasToTextureKey["terrain"] = baseTextureKey;
+    aliasToTextureKey["terrain_atlas"] = decorTextureKey;
+
+    aliasToTextureKey["decor"] = decorTextureKey;
+
+    aliasToTextureKey["props"] = propTextureKey;
+    aliasToTextureKey["prop"] = propTextureKey;
+
+    aliasToTextureKey["coins"] = coinsTextureKey;
+    aliasToTextureKey["coin"] = coinsTextureKey;
+
+    // Optional alias that explicitly means the base autotile sheet.
+    aliasToTextureKey["base"] = baseTextureKey;
+    aliasToTextureKey["autotile"] = baseTextureKey;
+
+    __cachedAtlasKeys = { baseTextureKey, decorTextureKey, propTextureKey, coinsTextureKey, aliasToTextureKey };
+    return __cachedAtlasKeys;
+}
+
+function _resolveAtlasTextureKeyDeterministic(aliasOrTextureKey: string, warnUnknown: boolean): string {
+    const s = (aliasOrTextureKey ?? "").trim();
+
+    if (!s) {
+        const k = _computeDefaultAtlasTextureKeys();
+        return k.decorTextureKey;
+    }
+
+    // Direct textureKey passthrough
+    if (s.startsWith("tiles.")) return s;
+
+    const k = _computeDefaultAtlasTextureKeys();
+
+    // 1) Known semantic alias (terrain / terrain_atlas / decor / props / coins / base / ...)
+    const hit = k.aliasToTextureKey[s];
+    if (hit) return hit;
+
+    // 2) If caller passed a bare sheet name like "terrain_atlas", "props", etc,
+    //    resolve it as tiles.${name} when that sheet exists.
+    const direct = `tiles.${s}`;
+    if (TILE_SHEETS.some(sh => sh.textureKey === direct)) return direct;
+
+    if (warnUnknown && !__warnedUnknownAtlasAliases[s]) {
+        __warnedUnknownAtlasAliases[s] = 1;
+        console.warn("[tileAtlas] unknown atlas alias:", s, "→ falling back to", k.decorTextureKey);
+    }
+
+    return k.decorTextureKey;
+}
+
+/**
+ * Back-compat helper used by older decor code paths.
+ * Prefer TileAtlas.resolveAtlasTextureKey() in the A2 renderer.
+ */
+export function decorAtlasTextureKey(aliasOrTextureKey: string): string {
+    return _resolveAtlasTextureKeyDeterministic(aliasOrTextureKey, /*warnUnknown*/ false);
+}
 
 function logTiles(...args: any[]) {
     if (!DEBUG_TILES_GLOBAL) return;
@@ -220,12 +399,23 @@ for (const [path, url] of Object.entries(tilePngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "terrain";
     const baseName = fileNameWithExt.replace(/\.png$/i, "");
     const textureKey = `tiles.${baseName}`;
+    if (baseName === "terrain") {
+        TILE_SHEETS.push({
+            textureKey,
+            url,
+            cols: 21,
+            rows: 23
+        });
+    }
+    if (baseName === "terrain_atlas") {
     TILE_SHEETS.push({
         textureKey,
         url,
-        cols: 21,
-        rows: 23
+        cols: 32,
+        rows: 32
     });
+    }
+    //Need more definitions here
 }
 
 export function preloadTileSheets(scene: Phaser.Scene): void {
@@ -235,7 +425,7 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
     }
 
 
-    const DEBUG_TILES = false
+    const DEBUG_TILES = true
 
     if (DEBUG_TILES) {
     logTiles(
@@ -267,25 +457,83 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         throw new Error("[tileAtlas.build] no TILE_SHEETS defined – did preloadTileSheets run?");
     }
 
-    // Prefer the terrain sheet, fall back to anything with "terrain" in the key,
-    // and finally fall back to the first sheet if nothing matches.
-    let mainSheet =
-        TILE_SHEETS.find(s => s.textureKey === "tiles.terrain") ||
-        TILE_SHEETS.find(s => s.textureKey.includes("terrain")) ||
-        TILE_SHEETS[0];
+    // -----------------------------------------------------------------------
+    // Deterministic sheet selection (NO per-client overrides).
+    // Base terrain autotiles come from baseTextureKey.
+    // Decals/props are resolved via alias map (terrain/decor/props/coins/base...).
+    // -----------------------------------------------------------------------
+    const keys = _computeDefaultAtlasTextureKeys();
+    const baseTextureKey = keys.baseTextureKey;
 
-    if (!mainSheet) {
-        throw new Error("[tileAtlas.build] no tilesheets available");
+    // Deterministic list of texture keys.
+    const allTextureKeys: string[] = Array.from(new Set(TILE_SHEETS.map(s => s.textureKey)))
+        .filter(Boolean)
+        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+    // -----------------------------------------------------------------------
+    // Compute cols/rows for ALL loaded sheets from the actual loaded texture.
+    // This is required because sheets may have different dimensions.
+    // -----------------------------------------------------------------------
+    const sheetInfoByKey = new Map<string, TileSheetInfo>();
+
+    const computeSheetInfo = (texKey: string, fallbackCols: number, fallbackRows: number): TileSheetInfo | null => {
+        try {
+            const texObj: any = (scene as any)?.textures?.get?.(texKey);
+            const img: any =
+                texObj?.getSourceImage?.() ??
+                texObj?.source?.[0]?.image ??
+                null;
+
+            const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
+            const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
+
+            const cols = w > 0 ? Math.floor(w / TILE_SIZE) : (fallbackCols | 0);
+            const rows = h > 0 ? Math.floor(h / TILE_SIZE) : (fallbackRows | 0);
+
+            if ((cols | 0) > 0 && (rows | 0) > 0) {
+                return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: TILE_SIZE };
+            }
+        } catch {
+            // ignore; fall through
+        }
+        if ((fallbackCols | 0) > 0 && (fallbackRows | 0) > 0) {
+            return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: TILE_SIZE };
+        }
+        return null;
+    };
+
+    for (const sh of TILE_SHEETS) {
+        const info = computeSheetInfo(sh.textureKey, sh.cols | 0, sh.rows | 0);
+        if (info) sheetInfoByKey.set(sh.textureKey, info);
     }
 
+    // Base sheet dims (fatal if missing — autotiles cannot index safely).
+    const baseDef = TILE_SHEETS.find(s => s.textureKey === baseTextureKey) ?? TILE_SHEETS[0];
+    if (!baseDef) throw new Error("[tileAtlas.build] no tilesheets available");
+    const baseInfo = sheetInfoByKey.get(baseDef.textureKey) ?? computeSheetInfo(baseDef.textureKey, baseDef.cols | 0, baseDef.rows | 0);
+    if (!baseInfo) {
+        throw new Error(`[tileAtlas.build] unable to resolve sheet dimensions for base sheet: ${baseDef.textureKey}`);
+    }
+    sheetInfoByKey.set(baseDef.textureKey, baseInfo);
+
+    const resolvedCols = baseInfo.cols | 0;
+
     logTiles(
-        "[tileAtlas.build] using main sheet for autotiles:",
-        `${mainSheet.textureKey} (${mainSheet.cols}x${mainSheet.rows} tiles)`
+        "[tileAtlas.build] base autotile sheet:",
+        `${baseDef.textureKey} (${baseInfo.cols}x${baseInfo.rows} tiles)`
     );
 
-    const cols = mainSheet.cols;
+    if (DEBUG_TILES_GLOBAL) {
+        logTiles("[tileAtlas.build] atlas alias map:", {
+            base: keys.baseTextureKey,
+            decor: keys.decorTextureKey,
+            props: keys.propTextureKey,
+            coins: keys.coinsTextureKey,
+        });
+    }
+
     const idx = (col: number, row: number): number => {
-        return row * cols + col;
+        return ((row | 0) * (resolvedCols | 0) + (col | 0)) | 0;
     };
 
     const autoByKey = new Map<string, AutoTileDef[]>();
@@ -310,7 +558,7 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         arr.push(def);
     }
 
-    const tex = mainSheet.textureKey;
+    const tex = baseDef.textureKey;
 
     function frameFromRef(ref: TileRef): number {
         return idx(ref.col, ref.row);
@@ -330,83 +578,23 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         }
 
         // 2) Explicit rim & corners for the convex 3×3 block.
-        addAuto({
-            family,
-            shape: "edgeN",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.edgeN)
-        });
-        addAuto({
-            family,
-            shape: "edgeS",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.edgeS)
-        });
-        addAuto({
-            family,
-            shape: "edgeW",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.edgeW)
-        });
-        addAuto({
-            family,
-            shape: "edgeE",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.edgeE)
-        });
+        addAuto({ family, shape: "edgeN", textureKey: tex, frameIndex: frameFromRef(tf.edgeN) });
+        addAuto({ family, shape: "edgeS", textureKey: tex, frameIndex: frameFromRef(tf.edgeS) });
+        addAuto({ family, shape: "edgeW", textureKey: tex, frameIndex: frameFromRef(tf.edgeW) });
+        addAuto({ family, shape: "edgeE", textureKey: tex, frameIndex: frameFromRef(tf.edgeE) });
 
-        addAuto({
-            family,
-            shape: "cornerNW",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.cornerNW)
-        });
-        addAuto({
-            family,
-            shape: "cornerNE",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.cornerNE)
-        });
-        addAuto({
-            family,
-            shape: "cornerSE",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.cornerSE)
-        });
-        addAuto({
-            family,
-            shape: "cornerSW",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.cornerSW)
-        });
+        addAuto({ family, shape: "cornerNW", textureKey: tex, frameIndex: frameFromRef(tf.cornerNW) });
+        addAuto({ family, shape: "cornerNE", textureKey: tex, frameIndex: frameFromRef(tf.cornerNE) });
+        addAuto({ family, shape: "cornerSE", textureKey: tex, frameIndex: frameFromRef(tf.cornerSE) });
+        addAuto({ family, shape: "cornerSW", textureKey: tex, frameIndex: frameFromRef(tf.cornerSW) });
 
         // 3) Concave 2×2 tiles.
-        addAuto({
-            family,
-            shape: "innerNW",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.innerNW)
-        });
-        addAuto({
-            family,
-            shape: "innerNE",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.innerNE)
-        });
-        addAuto({
-            family,
-            shape: "innerSE",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.innerSE)
-        });
-        addAuto({
-            family,
-            shape: "innerSW",
-            textureKey: tex,
-            frameIndex: frameFromRef(tf.innerSW)
-        });
+        addAuto({ family, shape: "innerNW", textureKey: tex, frameIndex: frameFromRef(tf.innerNW) });
+        addAuto({ family, shape: "innerNE", textureKey: tex, frameIndex: frameFromRef(tf.innerNE) });
+        addAuto({ family, shape: "innerSE", textureKey: tex, frameIndex: frameFromRef(tf.innerSE) });
+        addAuto({ family, shape: "innerSW", textureKey: tex, frameIndex: frameFromRef(tf.innerSW) });
 
-        // 4) Optional decor tiles.
+        // 4) Optional decor tiles (these live on the BASE sheet).
         if (tf.decor && tf.decor.length) {
             for (const ref of tf.decor) {
                 addDecor({
@@ -436,9 +624,40 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     logTiles("[tileAtlas.build] decor tiles (family → count):", decorSummary);
 
     const atlas: TileAtlas = {
-        textureKey: mainSheet.textureKey,
+        textureKey: baseDef.textureKey,
         tileSize: TILE_SIZE,
-        primaryTextureKey: mainSheet.textureKey,
+        primaryTextureKey: baseDef.textureKey,
+
+        allTextureKeys,
+
+        getSheetInfo(textureKey: string): TileSheetInfo | null {
+            const tk = (textureKey ?? "").trim();
+            if (!tk) return null;
+            return sheetInfoByKey.get(tk) ?? null;
+        },
+
+        resolveAtlasTextureKey(aliasOrTextureKey: string): string {
+            const s = (aliasOrTextureKey ?? "").trim();
+            if (!s) return keys.decorTextureKey;
+
+            // Direct textureKey passthrough
+            if (s.startsWith("tiles.")) return s;
+
+            // 1) Known semantic alias
+            const hit = keys.aliasToTextureKey[s];
+            if (hit) return hit;
+
+            // 2) Bare sheet name → tiles.${name} if it exists
+            const direct = `tiles.${s}`;
+            if (sheetInfoByKey.has(direct) || TILE_SHEETS.some(sh => sh.textureKey === direct)) return direct;
+
+            if (!__warnedUnknownAtlasAliases[s]) {
+                __warnedUnknownAtlasAliases[s] = 1;
+                console.warn("[tileAtlas] unknown atlas alias:", s, "→ falling back to", keys.decorTextureKey);
+            }
+            return keys.decorTextureKey;
+        },
+
         getAutoTile(family: TileFamily, shape: AutoShape): AutoTileDef | undefined {
             const key = `${family}|${shape}`;
             const arr = autoByKey.get(key);
@@ -463,7 +682,6 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     // Expose via the Phaser registry for convenience.
     scene.registry.set("tileAtlas", atlas);
 
-    // [tileAtlas.build] logging included
     return atlas;
 }
 

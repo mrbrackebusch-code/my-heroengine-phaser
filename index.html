@@ -111,6 +111,96 @@
       }
 
       /* -----------------------------
+        Dialog overlay (DOM, crisp text)
+        ----------------------------- */
+      #viewport {
+        position: relative;
+        display: inline-block;
+        width: fit-content;
+      }
+
+      #dialog-layer {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        padding: 10px;
+        box-sizing: border-box;
+
+        display: none;        /* hidden by default */
+        pointer-events: none; /* only interactive when shown */
+        z-index: 10;
+      }
+
+      #dialog-layer.he-show {
+        display: block;
+        pointer-events: auto;
+      }
+
+      #dialog-box {
+        background: rgba(18, 18, 22, 0.92);
+        border: 2px solid #000;
+        border-radius: 12px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+
+        color: rgba(255, 255, 255, 0.92);
+        padding: 12px 12px 10px;
+
+        font-size: 16px;
+        line-height: 1.25;
+      }
+
+      #dialog-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      #dialog-speaker {
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #dialog-hint {
+        font-size: 12px;
+        opacity: 0.75;
+        white-space: nowrap;
+      }
+
+      #dialog-text {
+        white-space: pre-wrap;
+      }
+
+      #dialog-choices {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .dialog-choice-btn {
+        font: inherit;
+        font-size: 14px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.92);
+        cursor: pointer;
+      }
+
+      .dialog-choice-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+
+      /* -----------------------------
          HUD (4 boxes)
          ----------------------------- */
       #hud {
@@ -420,7 +510,22 @@
           </div>
         </div>
 
-        <div id="app"></div>
+        <div id="viewport">
+          <div id="app"></div>
+
+          <div id="dialog-layer" aria-hidden="true">
+            <div id="dialog-box">
+              <div id="dialog-head">
+                <div id="dialog-speaker"></div>
+                <div id="dialog-hint"></div>
+              </div>
+
+              <div id="dialog-text"></div>
+              <div id="dialog-choices"></div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -881,6 +986,113 @@
 
         setInterval(tick, REFRESH_MS);
         tick();
+      })();
+    </script>
+    <script>
+      (function () {
+        const layer = document.getElementById("dialog-layer");
+        const speakerEl = document.getElementById("dialog-speaker");
+        const textEl = document.getElementById("dialog-text");
+        const hintEl = document.getElementById("dialog-hint");
+        const choicesEl = document.getElementById("dialog-choices");
+
+        function isOpen() {
+          return !!layer && layer.classList.contains("he-show");
+        }
+
+        function _setText(el, txt) {
+          if (!el) return;
+          const s = String(txt ?? "");
+          if (el.textContent !== s) el.textContent = s;
+        }
+
+        function _clearChoices() {
+          if (!choicesEl) return;
+          choicesEl.innerHTML = "";
+        }
+
+        function show(opts) {
+          if (!layer || !textEl) return;
+          const o = opts || {};
+
+          _setText(speakerEl, o.speaker || "");
+          _setText(textEl, o.text || "");
+
+          const hasChoices = Array.isArray(o.choices) && o.choices.length > 0;
+          _setText(
+            hintEl,
+            o.hint ?? (hasChoices ? "Click a choice" : "Space/Enter: next • Esc: close")
+          );
+
+          _clearChoices();
+
+          if (hasChoices) {
+            for (let i = 0; i < o.choices.length; i++) {
+              const c = o.choices[i];
+              const label = typeof c === "string" ? c : String(c.label ?? c.id ?? i);
+              const id = typeof c === "string" ? label : String(c.id ?? i);
+
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "dialog-choice-btn";
+              btn.textContent = label;
+              btn.addEventListener("click", () => {
+                window.dispatchEvent(
+                  new CustomEvent("he:dialogChoice", { detail: { index: i, id, label } })
+                );
+              });
+
+              choicesEl.appendChild(btn);
+            }
+          }
+
+          layer.classList.add("he-show");
+          layer.setAttribute("aria-hidden", "false");
+
+          window.dispatchEvent(
+            new CustomEvent("he:dialogShow", {
+              detail: { speaker: o.speaker || "", text: o.text || "" },
+            })
+          );
+        }
+
+        function hide() {
+          if (!layer) return;
+          layer.classList.remove("he-show");
+          layer.setAttribute("aria-hidden", "true");
+          _clearChoices();
+          window.dispatchEvent(new CustomEvent("he:dialogHide"));
+        }
+
+        function advance() {
+          window.dispatchEvent(new CustomEvent("he:dialogAdvance"));
+        }
+
+        // Capture keys only while dialog is open (so gameplay doesn't eat them)
+        window.addEventListener(
+          "keydown",
+          function (e) {
+            if (!isOpen()) return;
+
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              hide();
+              return;
+            }
+
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              advance();
+              return;
+            }
+          },
+          true
+        );
+
+        // Global API Phaser can call
+        window.__heDialog = { show, hide, isOpen, advance };
       })();
     </script>
   </body>

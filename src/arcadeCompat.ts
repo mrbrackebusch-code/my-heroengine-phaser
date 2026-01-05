@@ -163,17 +163,26 @@ function decor_solidsResolveMove_tier2(_hero: Sprite, _nowMs: number): boolean {
 
 function _decor_tryGetPropFrameIndexAt(renderer: any, r: number, c: number): number {
     try {
-        // WorldTileRenderer usually keeps the Phaser.Tilemap around; we probe common fields.
+        // Preferred: ask the renderer (it knows gid ranges + texture keys)
+        if (renderer && typeof renderer.tryGetPropTileInfoAt === "function") {
+            const info = renderer.tryGetPropTileInfoAt(r, c);
+            if (info && typeof info.frameIndex === "number") return info.frameIndex | 0;
+            return 0;
+        }
+
+        // Fallback: decode using tile.tileset.firstgid if present
         const tm =
             (renderer && ((renderer as any).tilemap || (renderer as any).map || (renderer as any)._tilemap || (renderer as any)._map)) ||
             null;
 
         if (tm && typeof tm.getTileAt === "function") {
-            // Layer name should be exactly "props" from your sync log (hasPropLayer: true).
-            const tile = tm.getTileAt(c, r, false, "props");
-            const idx = tile && typeof (tile as any).index === "number" ? ((tile as any).index | 0) : 0;
-            // Phaser uses -1 for empty sometimes; treat as 0 (no tile).
-            return idx > 0 ? idx : 0;
+            const tile: any = tm.getTileAt(c, r, false, "props");
+            const idx = tile && typeof tile.index === "number" ? (tile.index | 0) : -1;
+            if (idx < 0) return 0;
+
+            const ts: any = tile?.tileset ?? null;
+            const first = ts && typeof ts.firstgid === "number" ? (ts.firstgid | 0) : 0;
+            return (idx - first) | 0;
         }
     } catch { /* ignore */ }
 
@@ -360,21 +369,37 @@ function _decor_computeOpaqueAabbForTile(scene: any, textureKey: string, tileSiz
     return out;
 }
 
+
+
 function decor_applyTightOpaqueAabbToSolids(args: {
     scene: any;
     renderer: any;
     solids: any;
     tileSize: number;
 }): void {
-    const sol = args.solids;
-    if (!sol || !sol.length) return;
+    if (!args) return;
 
-    const scene = args.scene;
-    const renderer = args.renderer;
-    const tileSize = (args.tileSize | 0);
+    const scene = (args as any).scene;
+    const renderer = (args as any).renderer;
+    const tileSize = (((args as any).tileSize ?? 0) | 0);
+
     if (!scene || !renderer || tileSize <= 0) return;
 
-    const texKey = _decor_getPrimaryTileTextureKey(renderer);
+    const solAny: any = (args as any).solids;
+
+    // Normalize "solids" to a real array so we never explode on `.length`.
+    let sol: any[] | null = null;
+    if (Array.isArray(solAny)) {
+        sol = solAny as any[];
+    } else if (solAny && typeof solAny.length === "number") {
+        try {
+            sol = Array.prototype.slice.call(solAny);
+        } catch {
+            sol = null;
+        }
+    }
+
+    if (!sol || sol.length <= 0) return;
 
     for (let i = 0; i < sol.length; i++) {
         const s: any = sol[i];
@@ -387,33 +412,53 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         let r = (sprites.readDataNumber(s, "decorTileR") | 0);
         let c = (sprites.readDataNumber(s, "decorTileC") | 0);
 
-        if (!r && !c) {
-            c = ((s.left as any) / tileSize) | 0;
-            r = ((s.top as any) / tileSize) | 0;
+        // If both are 0, treat as "unset" and infer from position (safe default)
+        if ((r | 0) === 0 && (c | 0) === 0) {
+            c = (((s.left as any) / tileSize) | 0);
+            r = (((s.top as any) / tileSize) | 0);
             sprites.setDataNumber(s, "decorTileR", r);
             sprites.setDataNumber(s, "decorTileC", c);
         }
 
-        // THIS is the key fix: use the *actual frame index* currently rendered in the props layer
-        const frameIndex = _decor_tryGetPropFrameIndexAt(renderer, r, c);
-        if (!frameIndex) {
-            if (DECOR_DEBUG) _decor_dbg("AABB", "no prop frameIndex at tile; skipping tighten", { name, r, c });
+        // A2 (multi-tileset) path: ask the WorldTileRenderer for {textureKey, frameIndex}
+        // so the opaque-AABB sampling hits the correct sheet.
+        let info: { textureKey: string; frameIndex: number } | null = null;
+
+        try {
+            if (typeof (renderer as any).tryGetPropTileInfoAt === "function") {
+                info = (renderer as any).tryGetPropTileInfoAt(r, c);
+            }
+        } catch {
+            info = null;
+        }
+
+        // Back-compat fallback (single-sheet): use tile index directly on the primary sheet
+        if (!info) {
+            const idx = _decor_tryGetPropFrameIndexAt(renderer, r, c);
+            if (typeof idx === "number" && (idx | 0) >= 0) {
+                const tk = _decor_getPrimaryTileTextureKey(renderer);
+                info = { textureKey: tk, frameIndex: (idx | 0) };
+            }
+        }
+
+        if (!info) {
+            if (DECOR_DEBUG) _decor_dbg("AABB", "no prop tile info at (r,c); skipping tighten", { name, r, c });
             continue;
         }
 
-        const bb = _decor_computeOpaqueAabbForFrame(scene, texKey, frameIndex, tileSize);
+        const bb = _decor_computeOpaqueAabbForFrame(scene, info.textureKey, info.frameIndex, tileSize);
 
         // Resize Arcade collider sprite to tight bounds
-        const img = image.create(bb.w | 0, bb.h | 0);
+        const img = image.create((bb.w | 0), (bb.h | 0));
         if (typeof s.setImage === "function") s.setImage(img);
         else s.image = img;
 
         // Reposition inside the tile
-        s.left = ((c * tileSize + bb.ox) | 0);
-        s.top  = ((r * tileSize + bb.oy) | 0);
+        s.left = ((c * tileSize + (bb.ox | 0)) | 0);
+        s.top  = ((r * tileSize + (bb.oy | 0)) | 0);
 
         if (DECOR_DEBUG) {
-            _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, frameIndex, bb });
+            _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, info, bb });
         }
     }
 }
@@ -516,10 +561,21 @@ function _decor_dbg(tag: string, msg: string, payload?: any): void {
 // Engine is art-agnostic; it publishes numeric semantic ids.
 // We translate those ids to tileAtlas semantic keys here (v1 proof).
 function _decor_decalIdToKey(id: number): string {
-    switch (id | 0) {
-        case 1: return "sand_patch"; // DECAL_SAND_PATCH (engine semantic id)
-        default: return "";
-    }
+    const v = id | 0
+
+    // Existing proof asset
+    if (v === 1) return "sand_patch"
+
+    // Dungeon telepad (100..104 top, 110..114 bot)
+    if (v >= 100 && v <= 104) return `telepad${v - 100}_top`
+    if (v >= 110 && v <= 114) return `telepad${v - 110}_bot`
+
+    // Dungeon stairs statue (120..122)
+    if (v === 120) return "stairs_statue_top"
+    if (v === 121) return "stairs_statue_mid"
+    if (v === 122) return "stairs_statue_bot"
+
+    return ""
 }
 
 function _decor_propIdToKey(id: number): string {
@@ -650,6 +706,26 @@ function decor_maybeSyncFromEngineInternals(): void {
 
     _decorAppliedRev = rev;
 }
+
+
+
+function decor_forceResyncFromEngine(reason: string): void {
+    // The tilemap renderer clears decal/prop layers during syncFromEngineGrid().
+    // That can wipe overlays without changing engine decorRev.
+    // Force a re-apply by invalidating the applied rev and syncing immediately.
+    _decorAppliedRev = -999999;
+
+    if (DECOR_DEBUG) _decor_dbg("FORCE", "decor_forceResyncFromEngine", { reason });
+
+    decor_maybeSyncFromEngineInternals();
+}
+
+(function installDecorForceResyncHook() {
+    const g: any = globalThis as any;
+    g.__HeroEnginePhaserDecor = g.__HeroEnginePhaserDecor || {};
+    g.__HeroEnginePhaserDecor.forceResync = decor_forceResyncFromEngine;
+})();
+
 
 // ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 // 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
@@ -1385,6 +1461,15 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
         if (anyNative && anyNative.getData && anyNative.getData(NATIVE_FORCE_INVISIBLE_KEY)) {
             try { anyNative.setData(NATIVE_FORCE_INVISIBLE_KEY, 0); } catch { }
         }
+
+        // STEP 3 (restore): if we ever hard-hid this native, undo it.
+        if (anyNative) {
+            try { anyNative.setVisible?.(true); } catch { }
+            try { anyNative.setAlpha?.(1); } catch { }
+            try { anyNative.visible = true; } catch { }
+            try { anyNative.alpha = 1; } catch { }
+        }
+
         if (anyNative && anyNative.__intProjCrystal) {
             try { anyNative.__intProjCrystal.destroy?.(); } catch { }
             try { anyNative.__intProjCrystal = undefined; } catch { }
@@ -1412,6 +1497,15 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     if (isDetonatingOrLanding) {
         try { anyNative.setData(NATIVE_FORCE_INVISIBLE_KEY, 0); } catch { }
 
+        // STEP 3 (restore): hard-show the native again (tendrils path)
+        if (anyNative) {
+            const showNative = shouldBeVisible; // (tendrils should follow the sprite's Invisible flag)
+            try { anyNative.setVisible?.(showNative); } catch { }
+            try { anyNative.setAlpha?.(showNative ? 1 : 0); } catch { }
+            try { anyNative.visible = showNative; } catch { }
+            try { anyNative.alpha = showNative ? 1 : 0; } catch { }
+        }
+
         // Ensure our overlay is gone so it doesn't "stick" and it doesn't hide tendrils by proxy.
         if (anyNative.__intProjCrystal) {
             try { anyNative.__intProjCrystal.destroy?.(); } catch { }
@@ -1427,6 +1521,15 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
     // Otherwise (drive/flying): hide Arcade pixels and show the Phaser crystal overlay.
     try { anyNative.setData(NATIVE_FORCE_INVISIBLE_KEY, 1); } catch { }
+
+    // STEP 3 (force-hide): this is the piece that stops the placeholder circle
+    // even if some later sync step re-enables native visibility.
+    if (anyNative) {
+        try { anyNative.setVisible?.(false); } catch { }
+        try { anyNative.setAlpha?.(0); } catch { }
+        try { anyNative.visible = false; } catch { }
+        try { anyNative.alpha = 0; } catch { }
+    }
 
     const heroIndex = (dataAny[PROJ_HERO_INDEX_KEY] as any | 0);
     const weaponId = "crystal";
@@ -1570,6 +1673,9 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     (spr as any).rotation = now * 0.006;
 
     spr.setDepth(999999);
+
+    // If you want the "pixel auto-hide" to matter, use:
+    // spr.setVisible(shouldBeVisible && !autoHideByPixels);
     spr.setVisible(shouldBeVisible);
 
     // --------------------------------------------------
@@ -4096,6 +4202,13 @@ function _attachEnsureIntellectProjectileVisual(ctx: AttachContext): void {
                     "| model", modelLower,
                     "| texKey", texKey
                 );
+                // Replacement visuals are authoritative; hide the MakeCode placeholder art.
+                if (native && typeof (native as any).setVisible === "function") {
+                (native as any).__heHiddenByReplacement = true;
+                native.setVisible(false);
+                if (typeof (native as any).setAlpha === "function") native.setAlpha(0);
+                }
+
             }
         } catch (e) {
             if (!s[PROJ_PHASER_VISUAL_LOGGED_KEY]) {
@@ -5563,143 +5676,6 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
 
 
 
-function _attachHeroSkipPathWorkingOLDCODETODELETE(ctx: AttachContext): boolean {
-    const sc = ctx.sc;
-    const s = ctx.s;
-    const g = ctx.g;
-
-    // OLD behavior: hero detection via isHeroSprite(s)
-    const isHero = (() => {
-        try { return !!(isHeroSprite as any)(s); } catch { return false; }
-    })();
-
-    if (!isHero) return false;
-
-    // Compute the Phaser hero-native anchor position so Arcade's collider == "feet"
-    // Arcade uses x/y as CENTER of its image/collider.
-    // We anchor Phaser's 64x64 to bottom-center at Arcade's "bottom of collider".
-    const colliderH = ((s.image?.height ?? 16) | 0);
-    const feetOffY = (colliderH >> 1); // half height from center -> bottom
-    const nx = s.x;
-    const ny = (s.y + feetOffY - HERO_NATIVE_FEET_LIFT_PX);
-
-    // Pick a REAL, preloaded hero spritesheet texture key to use for the native sprite.
-    // Priority:
-    //   1) If we already have heroAtlas + heroName+family, use that set.textureKey (correct hero immediately).
-    //   2) Else, use the first parsed hero sheet textureKey (deterministic fallback).
-    // If neither exists, we hard-fail because the pipeline invariant was broken (preloadHeroSheets not run).
-    const pickBootHeroTexKey = (): string => {
-        const dataAny: any = (s as any).data || {};
-        const heroName = (typeof dataAny.heroName === "string") ? dataAny.heroName : "";
-        const heroFamily = (typeof dataAny.heroFamily === "string") ? dataAny.heroFamily : "";
-
-        // 1) Try to resolve the correct hero texture from the heroAtlas
-        try {
-            const atlas: any = sc.registry ? sc.registry.get("heroAtlas") : null;
-            if (atlas && heroName && heroFamily) {
-                const famLower = String(heroFamily).toLowerCase();
-                for (const set of Object.values(atlas) as any[]) {
-                    if (!set) continue;
-                    if (set.heroName === heroName && String(set.family).toLowerCase() === famLower) {
-                        if (set.textureKey && sc.textures.exists(set.textureKey)) {
-                            return String(set.textureKey);
-                        }
-                    }
-                }
-            }
-        } catch { /* ignore */ }
-
-        // 2) Deterministic fallback: first parsed hero sheet from preloadHeroSheets
-        try {
-            const parsed = (sc.registry ? sc.registry.get("__heroParsedSheets") : null) as any[] | null;
-            if (parsed && parsed.length > 0) {
-                const tk = parsed[0] && parsed[0].textureKey ? String(parsed[0].textureKey) : "";
-                if (tk && sc.textures.exists(tk)) return tk;
-            }
-        } catch { /* ignore */ }
-
-        throw new Error(
-            "[HERO-NATIVE-BOOT] No preloaded hero spritesheet texture available. " +
-            "Did you call preloadHeroSheets(scene) in preload() and let Phaser finish loading before tick?"
-        );
-    };
-
-    let native: any = (s as any).native;
-
-    if (!native) {
-        const bootTexKey = pickBootHeroTexKey();
-
-        // Create at the FEET-anchored position
-        native = sc.add.sprite(nx, ny, bootTexKey, 0);
-        try { native.setOrigin(HERO_NATIVE_ORIGIN_X, HERO_NATIVE_ORIGIN_Y); } catch { /* ignore */ }
-        try { native.setData("isHeroNative", true); } catch { /* ignore */ }
-
-        // Optional: stash for quick debugging
-        if (DEBUG_HERO_NATIVE_FEET_ANCHOR) {
-            try {
-                native.setData?.("__heroFeetAnchor", 1);
-                native.setData?.("__heroColliderH", colliderH);
-                native.setData?.("__heroFeetOffY", feetOffY);
-                native.setData?.("__heroFeetLift", HERO_NATIVE_FEET_LIFT_PX);
-            } catch { /* ignore */ }
-
-            if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-                try {
-                    console.log(
-                        "[HERO-FEET-ANCHOR] create",
-                        "| id", s.id,
-                        "| arcadeXY", s.x, s.y,
-                        "| colliderH", colliderH,
-                        "| feetOffY", feetOffY,
-                        "| nativeXY", nx, ny,
-                        "| origin", HERO_NATIVE_ORIGIN_X, HERO_NATIVE_ORIGIN_Y
-                    );
-                } catch { /* ignore */ }
-            }
-        }
-
-        // Copy identity + attempt to apply correct hero animation immediately.
-        try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
-        try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
-
-        (s as any).native = native;
-
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
-            try {
-                console.log(
-                    "[WRAP-NATIVE] create hero-native sprite",
-                    "| id", s.id,
-                    "| kind", s.kind,
-                    "| bootTexKey", bootTexKey,
-                    "| native.width", native.width,
-                    "| native.height", native.height
-                );
-            } catch { /* ignore */ }
-        }
-
-        _frameAttachCreateCount++;
-        _frameGroupAttachCreates[g]++;
-    } else {
-        // Ensure origin stays correct even if a hero-native existed before this change
-        try { native.setOrigin(HERO_NATIVE_ORIGIN_X, HERO_NATIVE_ORIGIN_Y); } catch { /* ignore */ }
-        native.setPosition(nx, ny);
-
-        // Keep identity in sync + re-apply animation if phase/dir/family changed.
-        try { (_copyHeroIdentityToNative as any)(s, native); } catch { /* ignore */ }
-        try { (_tryApplyHeroAnimationForNative as any)(s, native); } catch { /* ignore */ }
-
-        _frameAttachUpdateCount++;
-        _frameGroupAttachUpdates[g]++;
-    }
-
-    // For visibility logic that uses nonZero pixels, just mark as non-empty.
-    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
-
-    return true;
-}
-
-
-
 
 
 
@@ -6394,6 +6370,12 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                          native.y >= camWV.y && native.y <= (camWV.y + camWV.height));
                 }
 
+                if (native && (native as any).__heHiddenByReplacement) {
+                native.setVisible(false);
+                if (typeof (native as any).setAlpha === "function") native.setAlpha(0);
+                }
+
+
                 console.log("[SYNC][PROJ]",
                     "| s.id", s.id,
                     "| kind", s.kind,
@@ -7047,147 +7029,6 @@ function _ensureWeaponOverlaysForHeroNative(
     return { weaponBg, weaponFg, ghostsBg, ghostsFg };
 }
 
-
-function _ensureWeaponOverlaysForHeroNativeBUGGEDOLDCODETODELETE(
-    ctx: SyncContext,
-    nativeHero: Phaser.GameObjects.Sprite
-): {
-    weaponBg: Phaser.GameObjects.Sprite;
-    weaponFg: Phaser.GameObjects.Sprite;
-    ghostsBg: Phaser.GameObjects.Sprite[];
-    ghostsFg: Phaser.GameObjects.Sprite[];
-} | null {
-    const sc = ctx.sc as any;
-    if (!sc) return null;
-
-    const nativeAny: any = nativeHero as any;
-
-    // Keep overlays anchored to the SAME origin as the hero (feet anchor)
-    const heroOx = ((nativeHero as any).originX ?? 0.5) as number;
-    const heroOy = ((nativeHero as any).originY ?? 0.5) as number;
-
-    const syncOrigin = (spr: any): void => {
-        if (!spr) return;
-        try { spr.setOrigin?.(heroOx, heroOy); } catch { /* ignore */ }
-    };
-
-    const syncAllOrigins = (bg: any, fg: any, gbg: any[], gfg: any[]): void => {
-        syncOrigin(bg);
-        syncOrigin(fg);
-        if (gbg && Array.isArray(gbg)) for (const g of gbg) syncOrigin(g);
-        if (gfg && Array.isArray(gfg)) for (const g of gfg) syncOrigin(g);
-    };
-
-    // If overlays already exist and are alive, reuse.
-    const bgExisting: any = nativeAny.__weaponBg;
-    const fgExisting: any = nativeAny.__weaponFg;
-    const gbgExisting: any[] = nativeAny.__weaponGhostsBg || [];
-    const gfgExisting: any[] = nativeAny.__weaponGhostsFg || [];
-
-    if (bgExisting && fgExisting) {
-        const bgOk = !!bgExisting.scene && !(bgExisting as any).destroyed;
-        const fgOk = !!fgExisting.scene && !(fgExisting as any).destroyed;
-
-        // Ghosts are optional but if present must be alive too
-        let ghostsOk = true;
-        for (const g of gbgExisting) if (g && (!g.scene || (g as any).destroyed)) ghostsOk = false;
-        for (const g of gfgExisting) if (g && (!g.scene || (g as any).destroyed)) ghostsOk = false;
-
-        if (bgOk && fgOk && ghostsOk) {
-            // IMPORTANT: keep origins synced (hero-native origin changed)
-            syncAllOrigins(bgExisting, fgExisting, gbgExisting, gfgExisting);
-
-            // Ensure cleanup is wired once.
-            if (!nativeAny.__weaponCleanupWired && typeof (nativeHero as any).once === "function") {
-                nativeAny.__weaponCleanupWired = true;
-                try {
-                    (nativeHero as any).once("destroy", () => {
-                        _destroyWeaponOverlaysForHeroNative(nativeHero);
-                    });
-                } catch { /* ignore */ }
-            }
-            return { weaponBg: bgExisting, weaponFg: fgExisting, ghostsBg: gbgExisting, ghostsFg: gfgExisting };
-        }
-
-        // Something was destroyed; cleanup and recreate.
-        _destroyWeaponOverlaysForHeroNative(nativeHero);
-        nativeAny.__weaponCleanupWired = false;
-    }
-
-    const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
-    if (!glueAny || typeof glueAny.createWeaponOverlaySprites !== "function") return null;
-
-    // Step 5 set maxGhosts to 8; keep that here.
-    const created = glueAny.createWeaponOverlaySprites({ scene: sc, maxGhosts: 8 });
-
-    const weaponBg: Phaser.GameObjects.Sprite = created.weaponBg;
-    const weaponFg: Phaser.GameObjects.Sprite = created.weaponFg;
-    const ghostsBg: Phaser.GameObjects.Sprite[] = created.ghostsBg || [];
-    const ghostsFg: Phaser.GameObjects.Sprite[] = created.ghostsFg || [];
-
-    // IMPORTANT: match hero origin immediately (feet anchor)
-    syncAllOrigins(weaponBg, weaponFg, ghostsBg, ghostsFg);
-
-    // ------------------------------------------------------------
-    // Tag overlays so they can be filtered out of any sprite scans.
-    // (Also useful later when we spawn shop ring weapons.)
-    // ------------------------------------------------------------
-    const tagOverlay = (spr: any, kind: string): void => {
-        if (!spr) return;
-        try { spr.setData?.("__isWeaponOverlay", 1); } catch { }
-        try { spr.setData?.("__weaponOverlayKind", kind); } catch { }
-        try { spr.setData?.("__weaponOverlayOwner", "hero"); } catch { }
-        // Also stash on the object for faster checks in hot loops.
-        try { spr.__isWeaponOverlay = 1; } catch { }
-        try { spr.__weaponOverlayKind = kind; } catch { }
-        try { spr.__weaponOverlayOwner = "hero"; } catch { }
-    };
-
-    tagOverlay(weaponBg as any, "bg");
-    tagOverlay(weaponFg as any, "fg");
-    for (const g of ghostsBg) tagOverlay(g as any, "ghostBg");
-    for (const g of ghostsFg) tagOverlay(g as any, "ghostFg");
-
-    // Match hero scroll factors if possible.
-    try {
-        const sfx = (nativeHero as any).scrollFactorX;
-        const sfy = (nativeHero as any).scrollFactorY;
-        if (typeof weaponBg.setScrollFactor === "function") weaponBg.setScrollFactor(sfx, sfy);
-        if (typeof weaponFg.setScrollFactor === "function") weaponFg.setScrollFactor(sfx, sfy);
-
-        for (const g of ghostsBg) try { (g as any).setScrollFactor?.(sfx, sfy); } catch { }
-        for (const g of ghostsFg) try { (g as any).setScrollFactor?.(sfx, sfy); } catch { }
-    } catch { /* ignore */ }
-
-    // Defensive defaults (per-tick sync will override, but creation-time matters).
-    try { (weaponBg as any).setDepth?.(((nativeHero as any).depth ?? 0) - 1); } catch { }
-    try { (weaponFg as any).setDepth?.(((nativeHero as any).depth ?? 0) + 1); } catch { }
-    for (const g of ghostsBg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
-    for (const g of ghostsFg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
-
-    // Hidden until Step 6 chooses to show them.
-    try { weaponBg.setVisible(false); } catch { /* ignore */ }
-    try { weaponFg.setVisible(false); } catch { /* ignore */ }
-    for (const g of ghostsBg) try { g.setVisible(false); } catch { }
-    for (const g of ghostsFg) try { g.setVisible(false); } catch { }
-
-    nativeAny.__weaponBg = weaponBg;
-    nativeAny.__weaponFg = weaponFg;
-    nativeAny.__weaponGhostsBg = ghostsBg;
-    nativeAny.__weaponGhostsFg = ghostsFg;
-
-    // Wire cleanup once per hero-native
-    if (!nativeAny.__weaponCleanupWired && typeof (nativeHero as any).once === "function") {
-        nativeAny.__weaponCleanupWired = true;
-        try {
-            (nativeHero as any).once("destroy", () => {
-                _destroyWeaponOverlaysForHeroNative(nativeHero);
-            });
-        } catch { /* ignore */ }
-    }
-
-    return { weaponBg, weaponFg, ghostsBg, ghostsFg };
-}
 
 
 //Backup just to compile. We need the old one please
