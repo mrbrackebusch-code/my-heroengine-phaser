@@ -158,6 +158,7 @@ function _flushEnsureHeroesIfPossible() {
 ------------------------------------------------------- */
 type NetMessage =
     | { type: "assign"; playerId: number; name?: string; token?: string | null; profile?: string | null }
+    | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
     | {
           type: "playerState";
           playerId: number;
@@ -379,6 +380,10 @@ private handleMessage(msg: NetMessage) {
     switch (msg.type) {
         case "assign":
             this.onAssign(msg);
+            return;
+
+        case "coinBurst":
+            this.onCoinBurst(msg as any);
             return;
 
         case "playerState":
@@ -781,6 +786,36 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
                     info
                 );
             }
+        }
+    }
+
+
+    private onCoinBurst(msg: Extract<NetMessage, { type: "coinBurst" }>) {
+        const g: any = (globalThis as any);
+        const isHost = this.isHostNow();
+
+        // Host already spawned the local effect; ignore echoed bursts.
+        if (isHost) {
+            const sender = (typeof (msg as any).playerId === "number") ? ((msg as any).playerId | 0) : 0;
+            if (sender > 0 && (this.playerId | 0) === sender) return;
+        }
+
+        const bursts: any[] = Array.isArray((msg as any).bursts) ? (msg as any).bursts : [];
+        if (!bursts.length) return;
+
+        if (!Array.isArray(g.__coinBurstQueue)) g.__coinBurstQueue = [];
+
+        for (const b of bursts) {
+            if (!b) continue;
+            const x = (typeof b.x === "number") ? b.x : NaN;
+            const y = (typeof b.y === "number") ? b.y : NaN;
+            const count = (typeof b.count === "number") ? (b.count | 0) : 0;
+            const pid = (typeof b.pid === "number") ? (b.pid | 0) : 0;
+
+            if (!isFinite(x) || !isFinite(y)) continue;
+            if (count <= 0) continue;
+
+            g.__coinBurstQueue.push({ x, y, count, pid });
         }
     }
 

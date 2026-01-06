@@ -156,45 +156,40 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 },
 
 teleport_rune: {
+    // IDLE: static (no anim) so it does NOT spin unless someone stands on it
+    atlas: "anims.teleport_rune",
+    ref: { row: 0, col: 0 },
+},
+
+teleport_rune_spin1: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
     anim: {
-        key: "idle",
+        key: "spin1",
         frames: [0, 1, 2, 3],
-        frameRate: 4,
+        frameRate: 6,
         repeat: -1
     }
 },
 
-teleport_rune_fast1: {
+teleport_rune_spin2: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
     anim: {
-        key: "fast1",
-        frames: [0, 1, 2, 3],
-        frameRate: 8,
-        repeat: -1
-    }
-},
-
-teleport_rune_fast2: {
-    atlas: "anims.teleport_rune",
-    ref: { row: 0, col: 0 },
-    anim: {
-        key: "fast2",
+        key: "spin2",
         frames: [0, 1, 2, 3],
         frameRate: 12,
         repeat: -1
     }
 },
 
-teleport_rune_fast3: {
+teleport_rune_spin3: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
     anim: {
-        key: "fast3",
+        key: "spin3",
         frames: [0, 1, 2, 3],
-        frameRate: 18,
+        frameRate: 20,
         repeat: -1
     }
 },
@@ -205,10 +200,11 @@ teleport_rune_flash: {
     anim: {
         key: "flash",
         frames: [0, 1, 2, 3],
-        frameRate: 24,
+        frameRate: 28,
         repeat: -1
     }
 },
+
 
 
 
@@ -473,13 +469,17 @@ function _resolveAtlasTextureKeyDeterministic(aliasOrTextureKey: string, warnUnk
 
     const k = _computeDefaultAtlasTextureKeys();
 
-    // 1) Known semantic alias
+    // 1) Known semantic alias (terrain / terrain_atlas / decor / props / coins / base / ...)
     const hit = k.aliasToTextureKey[s];
     if (hit) return hit;
 
-    // 2) bare sheet name => tiles.${name} if exists
-    const direct = `tiles.${s}`;
-    if (TILE_SHEETS.some(sh => sh.textureKey === direct)) return direct;
+    // 2) Bare sheet name like "terrain_atlas" → tiles.${name} when exists
+    const directTiles = `tiles.${s}`;
+    if (TILE_SHEETS.some(sh => sh.textureKey === directTiles)) return directTiles;
+
+    // 3) Bare animation sheet name like "teleport_rune" → anims.${name} when exists
+    const directAnims = `anims.${s}`;
+    if (TILE_SHEETS.some(sh => sh.textureKey === directAnims)) return directAnims;
 
     if (warnUnknown && !__warnedUnknownAtlasAliases[s]) {
         __warnedUnknownAtlasAliases[s] = 1;
@@ -503,33 +503,22 @@ function logTiles(...args: any[]) {
 }
 
 
-const animPngs = import.meta.glob("../assets/animations/*.png", { as: "url", eager: true }) as Record<string, string>
-
-type AnimSheetDef = { textureKey: string, url: string, frameW: number, frameH: number }
-const ANIM_SHEETS: AnimSheetDef[] = []
-
-for (const [path, url] of Object.entries(animPngs)) {
-    const fileNameWithExt = path.split(/[\\/]/).pop() || "anim"
-    const baseName = fileNameWithExt.replace(/\.png$/i, "")
-    const textureKey = `anims.${baseName}`
-
-    // Default: 64x64 frames for animation sheets
-    ANIM_SHEETS.push({ textureKey, url, frameW: 64, frameH: 64 })
-}
-
-
-// Grab all tilesets under ../assets/tiles/*.png as Vite URLs.
-const tilePngs = import.meta.glob(
-    "../assets/tiles/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
-
 interface TileSheetDef {
     textureKey: string;
     url: string;
-    cols: number;
-    rows: number;
+    cols: number; // fallback
+    rows: number; // fallback
+    frameW: number;
+    frameH: number;
 }
+
+type AnimSheetDef = { textureKey: string, url: string, frameW: number, frameH: number }
+
+const TILE_SHEETS: TileSheetDef[] = [];
+
+const ANIM_SHEETS: AnimSheetDef[] = []
+
+
 
 /**
  * NOTE: for now we assume all tilesheets in ../assets/tiles are the same size
@@ -537,24 +526,106 @@ interface TileSheetDef {
  * sheets with different dimensions later, this will need to grow up a bit.
  */
 
-const TILE_SHEETS: TileSheetDef[] = [];
+// Grab all tilesets under ../assets/tiles/*.png as Vite URLs.
 
+// Grab all tilesets under ../assets/tiles/*.png as Vite URLs.
+
+//const animPngs = import.meta.glob("../assets/animations/*.png", { as: "url", eager: true }) as Record<string, string>
+
+const tilePngs = import.meta.glob(
+    "../assets/tiles/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+// Grab animation sheets under ../assets/animations/*.png as Vite URLs.
+const animPngs = import.meta.glob(
+    "../assets/animations/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+
+const ANIM_FRAME_OVERRIDES: Record<string, { frameW: number; frameH: number }> = {
+    coins: { frameW: 16, frameH: 16 },
+
+    // keep these if you want the system to stay generalized:
+    teleport_rune: { frameW: 64, frameH: 64 },
+    water_fountain: { frameW: 64, frameH: 96 },
+};
+
+
+// Tilesheets (32x32 frames)
 for (const [path, url] of Object.entries(tilePngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "terrain";
     const baseName = fileNameWithExt.replace(/\.png$/i, "");
     const textureKey = `tiles.${baseName}`;
 
-    // Defaults are placeholders; runtime texture inspection can override later.
     let cols = 1;
     let rows = 1;
-
     if (baseName === "terrain") { cols = 21; rows = 23; }
     else if (baseName === "terrain_atlas") { cols = 32; rows = 32; }
 
-    TILE_SHEETS.push({ textureKey, url, cols, rows });
+    TILE_SHEETS.push({
+        textureKey,
+        url,
+        cols,
+        rows,
+        frameW: TILE_SIZE,
+        frameH: TILE_SIZE
+    });
 }
 
+// Animation sheets (default 64x64 frames)
+// Animation sheets (default 64x64 frames, with per-sheet overrides)
+for (const [path, url] of Object.entries(animPngs)) {
+    const fileNameWithExt = path.split(/[\\/]/).pop() || "anim";
+    const baseName = fileNameWithExt.replace(/\.png$/i, "");
+    const textureKey = `anims.${baseName}`;
+
+    const ov = ANIM_FRAME_OVERRIDES[baseName] || null;
+    const frameW = (ov?.frameW ?? 64) | 0;
+    const frameH = (ov?.frameH ?? 64) | 0;
+
+    TILE_SHEETS.push({
+        textureKey,
+        url,
+        cols: 1,
+        rows: 1,
+        frameW,
+        frameH
+    });
+}
+
+
+
 export function preloadTileSheets(scene: Phaser.Scene): void {
+    if (TILE_SHEETS.length === 0) {
+        logTiles("[tileAtlas.preload] no sheets found under ../assets/tiles or ../assets/animations");
+        return;
+    }
+
+    const DEBUG_TILES = true;
+
+    if (DEBUG_TILES) {
+        logTiles(
+            "[tileAtlas.preload] sheets to load:",
+            TILE_SHEETS.map(s =>
+                `${s.textureKey} (${s.cols}x${s.rows} fallback, frame=${s.frameW}x${s.frameH}, url="${s.url}")`
+            )
+        );
+    }
+
+    for (const sheet of TILE_SHEETS) {
+        scene.load.spritesheet(sheet.textureKey, sheet.url, {
+            frameWidth: sheet.frameW | 0,
+            frameHeight: sheet.frameH | 0
+        });
+    }
+}
+
+
+
+
+export function preloadTileSheetsOLDCODETODELETE(scene: Phaser.Scene): void {
     // Tilesheets
     for (const sheet of TILE_SHEETS) {
         if (!scene.textures.exists(sheet.textureKey)) {
@@ -628,7 +699,16 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     // -----------------------------------------------------------------------
     const sheetInfoByKey = new Map<string, TileSheetInfo>();
 
-    const computeSheetInfo = (texKey: string, fallbackCols: number, fallbackRows: number): TileSheetInfo | null => {
+    const computeSheetInfo = (
+        texKey: string,
+        frameW: number,
+        frameH: number,
+        fallbackCols: number,
+        fallbackRows: number
+    ): TileSheetInfo | null => {
+        const fw = Math.max(1, frameW | 0);
+        const fh = Math.max(1, frameH | 0);
+
         try {
             const texObj: any = (scene as any)?.textures?.get?.(texKey);
             const img: any =
@@ -639,30 +719,33 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
             const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
             const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
 
-            const cols = w > 0 ? Math.floor(w / TILE_SIZE) : (fallbackCols | 0);
-            const rows = h > 0 ? Math.floor(h / TILE_SIZE) : (fallbackRows | 0);
+            const cols = w > 0 ? Math.floor(w / fw) : (fallbackCols | 0);
+            const rows = h > 0 ? Math.floor(h / fh) : (fallbackRows | 0);
 
             if ((cols | 0) > 0 && (rows | 0) > 0) {
-                return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: TILE_SIZE };
+                return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: fw };
             }
         } catch {
             // ignore; fall through
         }
+
         if ((fallbackCols | 0) > 0 && (fallbackRows | 0) > 0) {
-            return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: TILE_SIZE };
+            return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: fw };
         }
         return null;
     };
 
     for (const sh of TILE_SHEETS) {
-        const info = computeSheetInfo(sh.textureKey, sh.cols | 0, sh.rows | 0);
+        const info = computeSheetInfo(sh.textureKey, sh.frameW | 0, sh.frameH | 0, sh.cols | 0, sh.rows | 0);
         if (info) sheetInfoByKey.set(sh.textureKey, info);
     }
 
     // Base sheet dims (fatal if missing — autotiles cannot index safely).
     const baseDef = TILE_SHEETS.find(s => s.textureKey === baseTextureKey) ?? TILE_SHEETS[0];
     if (!baseDef) throw new Error("[tileAtlas.build] no tilesheets available");
-    const baseInfo = sheetInfoByKey.get(baseDef.textureKey) ?? computeSheetInfo(baseDef.textureKey, baseDef.cols | 0, baseDef.rows | 0);
+    const baseInfo =
+        sheetInfoByKey.get(baseDef.textureKey) ??
+        computeSheetInfo(baseDef.textureKey, baseDef.frameW | 0, baseDef.frameH | 0, baseDef.cols | 0, baseDef.rows | 0);
     if (!baseInfo) {
         throw new Error(`[tileAtlas.build] unable to resolve sheet dimensions for base sheet: ${baseDef.textureKey}`);
     }
@@ -741,10 +824,10 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         addAuto({ family, shape: "cornerSW", textureKey: tex, frameIndex: frameFromRef(tf.cornerSW) });
 
         // 3) Concave 2×2 tiles.
-        addAuto({ family, shape: "innerNW", textureKey: tex, frameIndex: frameFromRef(tf.innerNW) });
-        addAuto({ family, shape: "innerNE", textureKey: tex, frameIndex: frameFromRef(tf.innerNE) });
-        addAuto({ family, shape: "innerSE", textureKey: tex, frameIndex: frameFromRef(tf.innerSE) });
-        addAuto({ family, shape: "innerSW", textureKey: tex, frameIndex: frameFromRef(tf.innerSW) });
+        addAuto({ family, shape: "innerNW", textureKey: tex, frameIndex: frameFromRef(tf.innerSE) }); //Changing mapping to hardcode the flipped corners
+        addAuto({ family, shape: "innerNE", textureKey: tex, frameIndex: frameFromRef(tf.innerSW) });
+        addAuto({ family, shape: "innerSE", textureKey: tex, frameIndex: frameFromRef(tf.innerNW) });
+        addAuto({ family, shape: "innerSW", textureKey: tex, frameIndex: frameFromRef(tf.innerNE) });
 
         // 4) Optional decor tiles (these live on the BASE sheet).
         if (tf.decor && tf.decor.length) {
@@ -794,14 +877,19 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
 
             // Direct textureKey passthrough
             if (s.startsWith("tiles.")) return s;
+            if (s.startsWith("anims.")) return s;
 
             // 1) Known semantic alias
             const hit = keys.aliasToTextureKey[s];
             if (hit) return hit;
 
             // 2) Bare sheet name → tiles.${name} if it exists
-            const direct = `tiles.${s}`;
-            if (sheetInfoByKey.has(direct) || TILE_SHEETS.some(sh => sh.textureKey === direct)) return direct;
+            const directTiles = `tiles.${s}`;
+            if (sheetInfoByKey.has(directTiles) || TILE_SHEETS.some(sh => sh.textureKey === directTiles)) return directTiles;
+
+            // 3) Bare animation sheet name → anims.${name} if it exists
+            const directAnims = `anims.${s}`;
+            if (sheetInfoByKey.has(directAnims) || TILE_SHEETS.some(sh => sh.textureKey === directAnims)) return directAnims;
 
             if (!__warnedUnknownAtlasAliases[s]) {
                 __warnedUnknownAtlasAliases[s] = 1;
@@ -1112,6 +1200,11 @@ const water_chasm: TerrainAutoTileDef = {
         { row: 5, col: 18 },
         { row: 5, col: 19 },
         { row: 5, col: 20 },
+        //These are from the sand_water set
+        { row: 17, col: 3 },
+        { row: 17, col: 4 },
+        { row: 17, col: 5 },
+
     ],
 
     // Convex water edge 3×3 at rows 2–4, cols 18–20
@@ -1252,7 +1345,7 @@ const grass_dark: TerrainAutoTileDef = {
 
 const hedge_green_low: TerrainAutoTileDef = {
     id: "hedge_green_low",
-    kind: "hedge",
+    kind: "chasm", //"hedge",
 
     atlasBounds: { cols: [9, 11], rows: [6, 11] },
 
@@ -1292,7 +1385,7 @@ const hedge_green_low: TerrainAutoTileDef = {
 
 const hedge_green_high: TerrainAutoTileDef = {
     id: "hedge_green_high",
-    kind: "hedge",
+    kind: "chasm", //"hedge",
 
     atlasBounds: { cols: [12, 14], rows: [6, 11] },
 
@@ -1325,7 +1418,7 @@ const hedge_green_high: TerrainAutoTileDef = {
 
 const hedge_straw: TerrainAutoTileDef = {
     id: "hedge_straw",
-    kind: "hedge",
+    kind: "chasm", //"hedge",
 
     atlasBounds: { cols: [15, 17], rows: [6, 11] },
 
@@ -1400,6 +1493,225 @@ const dirt_patch_lightgrass: TerrainAutoTileDef = {
 
 
 
+const sand: TerrainAutoTileDef = {
+    id: "sand",
+    kind: "ground",
+
+    atlasBounds: { cols: [0, 2], rows: [12, 17] },
+
+    interior: [
+        { row: 17, col: 0 },
+        { row: 17, col: 1 },
+        { row: 17, col: 2 },
+    ],
+
+    edgeN: { row: 14, col: 1 },
+    edgeS: { row: 16, col: 1 },
+    edgeW: { row: 15, col: 0 },
+    edgeE: { row: 15, col: 2 },
+
+    cornerNW: { row: 14, col: 0 },
+    cornerNE: { row: 14, col: 2 },
+    cornerSE: { row: 16, col: 2 },
+    cornerSW: { row: 16, col: 0 },
+
+    innerNW: { row: 12, col: 1 },
+    innerNE: { row: 12, col: 2 },
+    innerSE: { row: 13, col: 2 },
+    innerSW: { row: 13, col: 1 },
+
+    decor: [
+        { row: 12, col: 0 },
+        { row: 13, col: 0 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 0 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 1 } },
+};
+
+const sand_water: TerrainAutoTileDef = {
+    id: "sand_water",
+    kind: "water",
+
+    atlasBounds: { cols: [3, 5], rows: [12, 17] },
+
+    // Water interior variants.
+    // Per your note: the “usual decor/alt-ground” slots in this family are actually *alternate water*,
+    // so we include them as additional interior options.
+    interior: [
+        { row: 17, col: 0 },
+        { row: 17, col: 1 },
+        { row: 17, col: 2 },
+    ],
+
+    edgeN: { row: 14, col: 4 },
+    edgeS: { row: 16, col: 4 },
+    edgeW: { row: 15, col: 3 },
+    edgeE: { row: 15, col: 5 },
+
+    cornerNW: { row: 14, col: 3 },
+    cornerNE: { row: 14, col: 5 },
+    cornerSE: { row: 16, col: 5 },
+    cornerSW: { row: 16, col: 3 },
+
+    innerNW: { row: 12, col: 4 },
+    innerNE: { row: 12, col: 5 },
+    innerSE: { row: 13, col: 5 },
+    innerSW: { row: 13, col: 4 },
+
+    // Sand underlay for sand_water:
+    // Use the SAND textures as the alternate ground texture (pulled from the sand family's interior row).
+    decor: [
+        { row: 12, col: 3 },
+        { row: 13, col: 3 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 3 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 4 } },
+};
+
+const water_grass: TerrainAutoTileDef = {
+    id: "water_grass",
+    kind: "water",
+
+    atlasBounds: { cols: [6, 8], rows: [12, 17] },
+
+    interior: [
+        { row: 17, col: 6 },
+        { row: 17, col: 7 },
+        { row: 17, col: 8 },
+    ],
+
+    edgeN: { row: 14, col: 7 },
+    edgeS: { row: 16, col: 7 },
+    edgeW: { row: 15, col: 6 },
+    edgeE: { row: 15, col: 8 },
+
+    cornerNW: { row: 14, col: 6 },
+    cornerNE: { row: 14, col: 8 },
+    cornerSE: { row: 16, col: 8 },
+    cornerSW: { row: 16, col: 6 },
+
+    innerNW: { row: 12, col: 7 },
+    innerNE: { row: 12, col: 8 },
+    innerSE: { row: 13, col: 8 },
+    innerSW: { row: 13, col: 7 },
+
+    decor: [],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 6 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 7 } },
+};
+
+const lava: TerrainAutoTileDef = {
+    id: "lava",
+    kind: "chasm",
+
+    atlasBounds: { cols: [9, 11], rows: [12, 17] },
+
+    interior: [
+        { row: 17, col: 9 },
+        { row: 17, col: 10 },
+        { row: 17, col: 11 },
+    ],
+
+    edgeN: { row: 14, col: 10 },
+    edgeS: { row: 16, col: 10 },
+    edgeW: { row: 15, col: 9 },
+    edgeE: { row: 15, col: 11 },
+
+    cornerNW: { row: 14, col: 9 },
+    cornerNE: { row: 14, col: 11 },
+    cornerSE: { row: 16, col: 11 },
+    cornerSW: { row: 16, col: 9 },
+
+    innerNW: { row: 12, col: 10 },
+    innerNE: { row: 12, col: 11 },
+    innerSE: { row: 13, col: 11 },
+    innerSW: { row: 13, col: 10 },
+
+    decor: [
+        { row: 12, col: 9 },
+        { row: 13, col: 9 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 9 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 10 } },
+};
+
+const ground_black: TerrainAutoTileDef = {
+    id: "ground_black",
+    kind: "ground",
+
+    atlasBounds: { cols: [12, 14], rows: [12, 17] },
+
+    interior: [
+        { row: 17, col: 12 },
+        { row: 17, col: 13 },
+        { row: 17, col: 14 },
+    ],
+
+    edgeN: { row: 14, col: 13 },
+    edgeS: { row: 16, col: 13 },
+    edgeW: { row: 15, col: 12 },
+    edgeE: { row: 15, col: 14 },
+
+    cornerNW: { row: 14, col: 12 },
+    cornerNE: { row: 14, col: 14 },
+    cornerSE: { row: 16, col: 14 },
+    cornerSW: { row: 16, col: 12 },
+
+    innerNW: { row: 12, col: 13 },
+    innerNE: { row: 12, col: 14 },
+    innerSE: { row: 13, col: 14 },
+    innerSW: { row: 13, col: 13 },
+
+    decor: [
+        { row: 12, col: 12 },
+        { row: 13, col: 12 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 12 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 13 } },
+};
+
+const ground_void: TerrainAutoTileDef = {
+    id: "ground_void",
+    kind: "ground",
+
+    atlasBounds: { cols: [15, 17], rows: [12, 17] },
+
+    interior: [
+        { row: 17, col: 15 },
+        { row: 17, col: 16 },
+        { row: 17, col: 17 },
+    ],
+
+    edgeN: { row: 14, col: 16 },
+    edgeS: { row: 16, col: 16 },
+    edgeW: { row: 15, col: 15 },
+    edgeE: { row: 15, col: 17 },
+
+    cornerNW: { row: 14, col: 15 },
+    cornerNE: { row: 14, col: 17 },
+    cornerSE: { row: 16, col: 17 },
+    cornerSW: { row: 16, col: 15 },
+
+    innerNW: { row: 12, col: 16 },
+    innerNE: { row: 12, col: 17 },
+    innerSE: { row: 13, col: 17 },
+    innerSW: { row: 13, col: 16 },
+
+    decor: [
+        { row: 12, col: 15 },
+        { row: 13, col: 15 },
+    ],
+
+    convex9BlockOrigin: { topLeft: { row: 14, col: 15 } },
+    concave2x2BlockOrigin: { topLeft: { row: 12, col: 16 } },
+};
+
+
 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 //
@@ -1428,6 +1740,12 @@ export const TERRAIN_AUTOTILES: TerrainAutoTileDef[] = [
     hedge_green_high,
     hedge_straw,
     dirt_patch_lightgrass,
+    sand,
+    sand_water,
+    water_grass,
+    lava,
+    ground_black,
+    ground_void,
 ];
 
 

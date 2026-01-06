@@ -473,6 +473,39 @@ function handleTilemapMessage(ws, info, msg) {
   broadcast(msg);
 }
 
+
+function handleCoinBurstMessage(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs) return;
+  if (ws !== hostWs) return;
+
+  const burstsIn = Array.isArray(msg.bursts) ? msg.bursts : null;
+  if (!burstsIn || burstsIn.length === 0) return;
+
+  const bursts = [];
+  for (let i = 0; i < burstsIn.length && i < 64; i++) {
+    const b = burstsIn[i];
+    if (!b) continue;
+    const x = (typeof b.x === "number") ? b.x : NaN;
+    const y = (typeof b.y === "number") ? b.y : NaN;
+    const count = (typeof b.count === "number") ? (b.count | 0) : 0;
+    const pid = (typeof b.pid === "number") ? (b.pid | 0) : 0;
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (count <= 0) continue;
+
+    bursts.push({ x, y, count, pid });
+  }
+
+  if (bursts.length === 0) return;
+
+  msg.playerId = info.playerId;
+  msg.bursts = bursts;
+  msg.serverSentAt = Date.now();
+  broadcast(msg);
+}
+
+
 // ============================================================
 // Socket lifecycle
 // ============================================================
@@ -489,6 +522,8 @@ function onSocketMessage(ws, data) {
     bindHello(ws, msg);
     return;
   }
+
+  if (msg.type === "coinBurst") return handleCoinBurstMessage(ws, info, msg);
 
   const info = clients.get(ws) || null;
   if (!info) {

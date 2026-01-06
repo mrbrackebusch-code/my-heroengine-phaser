@@ -1733,13 +1733,16 @@ const HERO_LOCO_RUN_LOOP_MS  = 500
 
 const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale differs
 
-
+//Dungeon constants
 const DUNGEON_TELEPORT_CHARGE_MS = 1400
 const DUNGEON_TELEPORT_FLASH_DELAY_MS = 160
 
 let _dunTeleportRuneTrig: Sprite = null
 let _dunTeleportRuneName = ""
 let _dunTeleportCommitAtMs = 0
+let _dunRuneSpinSinceMs = 0         // starts when ANY hero steps on rune
+
+// assumes you already have: let _dunTeleportRuneTrig: Sprite = null as any
 
 
 //End of Constants
@@ -3108,7 +3111,8 @@ function _ambientPhaseWindowMs(phaseName: string): number {
 //##########################################################################################################################################
 // DUNGEON RUN / FLOORS (shared-floor POC)
 //##########################################################################################################################################
-
+//Dungeon section
+//Section dungeon
 
 const DUNGEON_DEBUG = true
 
@@ -3125,13 +3129,30 @@ const DUNGEON_SHOP_EVERY_N_FLOORS = 3
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
 
-const DUNGEON_THEME_BASES: string[] = [
+const DUNGEON_THEME_GROUND_BASES: string[] = [
     "ground_light",
     "ground_medium",
     "ground_red",
     "grass_sparse_light",
     "grass_dense_light",
-    "dirt_patch_lightgrass",
+    "grass_dark",
+//    "dirt_patch_lightgrass", This entry is NOT something that can be used willy-nilly, it is much more complex
+    "sand",
+    "sand_water",
+    "ground_black",
+    "ground_void",
+
+]
+
+const DUNGEON_THEME_CHASM_BASES: string[] = [
+    "chasm_light",
+    "chasm_medium",
+    "chasm_black",
+    "water_chasm",
+//Hedges are currently busted    "hedge_green_low",
+//    "hedge_green_high",
+//Straw is current busted    "hedge_straw",
+    "lava",
 ]
 
 const PAD_DATA = {
@@ -3177,6 +3198,102 @@ let _dunFloorBannerHideAtMs = 0
 let _dunFloorBannerLabel = ""
 
 
+type DecorSpawnSpec = {
+  id: string;                 // "fountainA"
+  name: string;               // PROP_VISUALS key, e.g. "fountain"
+  role: number;               // DECOR_ROLE.TRIGGER or SOLID
+  pxW: number; pxH: number;   // 32/64/etc (drives sprite bounds & placement)
+  place: "randomWalkable" | "atPad" | "nearPad";
+  count?: number;             // for “spawn 3 coins”
+  minManhattanFromPad?: number;
+  interact?: "pressA" | "stepOn" | null;   // gameplay trigger mode
+};
+
+type FloorEventDef = {
+  id: string;
+  title: string;
+  spawns: DecorSpawnSpec[];
+  onEnter?: (rt: FloorEventRuntime, nowMs: number) => void;
+  onTick?: (rt: FloorEventRuntime, nowMs: number) => void;
+  onInteract?: (rt: FloorEventRuntime, whoPid: number, whatId: string, nowMs: number) => void;
+};
+
+type FloorEventRuntime = {
+  def: FloorEventDef;
+  byId: Record<string, Sprite>;           // decor trigger/solid sprites
+  interactById: Record<string, Sprite>;   // optional FloorInteractable sprites
+  state: Record<string, number>;          // event-local knobs/cooldowns
+};
+
+
+
+function _dunDecor_setName(s: Sprite, name: string): void {
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return
+    sprites.setDataString(s, DECOR_DATA.NAME, name)
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+}
+
+function _dunDecor_spawnAtTile(args: {
+    name: string
+    role: number
+    tileR: number
+    tileC: number
+    pxW: number
+    pxH: number
+}): Sprite {
+    const tileSize = WORLD_TILE_SIZE | 0
+    const r = args.tileR | 0
+    const c = args.tileC | 0
+
+    const img = image.create(Math.max(1, args.pxW | 0), Math.max(1, args.pxH | 0))
+    const s = sprites.create(img, (SpriteKind as any).DecorTrigger)
+
+    s.setFlag(SpriteFlag.Invisible, true)
+    s.setFlag(SpriteFlag.Ghost, true)
+
+    // Center on tile center by default (works for 64x64 rune, 32x32 props, etc.)
+    s.left = ((_dunColToX(c) | 0) - ((args.pxW | 0) >> 1)) | 0
+    s.top  = ((_dunRowToY(r) | 0) - ((args.pxH | 0) >> 1)) | 0
+
+    sprites.setDataNumber(s, DECOR_DATA.ID, 0)
+    sprites.setDataNumber(s, DECOR_DATA.ROLE, args.role | 0)
+    sprites.setDataString(s, DECOR_DATA.NAME, args.name)
+
+    // IMPORTANT: arcadeCompat uses these for tile RC
+    sprites.setDataNumber(s, "decorTileR", r)
+    sprites.setDataNumber(s, "decorTileC", c)
+
+    if ((args.role | 0) == (DECOR_ROLE.SOLID | 0)) _engineDecorSolids.push(s)
+    else _engineDecorTriggers.push(s)
+
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+    return s
+}
+
+function _dunDecor_spawnAtRandomWalkable(args: {
+    name: string
+    role: number
+    pxW: number
+    pxH: number
+    avoidR: number
+    avoidC: number
+    minManhattan?: number
+}): Sprite {
+    const pick = _dunPickRandomWalkableTile({
+        avoidR: args.avoidR | 0,
+        avoidC: args.avoidC | 0,
+        minManhattan: (args.minManhattan ?? 0) | 0,
+        maxTries: 300
+    })
+    return _dunDecor_spawnAtTile({
+        name: args.name,
+        role: args.role,
+        tileR: pick.r | 0,
+        tileC: pick.c | 0,
+        pxW: args.pxW | 0,
+        pxH: args.pxH | 0
+    })
+}
 
 function _dunPickRandomWalkableTile(args: {
     avoidR: number
@@ -3564,9 +3681,10 @@ function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): voi
 }
 
 function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
-    const base = DUNGEON_THEME_BASES[Math.randomRange(0, DUNGEON_THEME_BASES.length - 1)]
+    const base = DUNGEON_THEME_GROUND_BASES[Math.randomRange(0, DUNGEON_THEME_GROUND_BASES.length - 1)]
+    const chasm = DUNGEON_THEME_CHASM_BASES[Math.randomRange(0, DUNGEON_THEME_CHASM_BASES.length - 1)]
     _dunBaseFamily = base
-    _dunWallFamily = "chasm_light"
+    _dunWallFamily = chasm
 
     // Phaser renderer reads these (host + clients)
     if (isPhaserRuntime()) {
@@ -3827,7 +3945,7 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     const roll = Math.randomRange(0, 99)
     if (roll < 10) return DUNGEON_KIND_STORY
-    if (roll < 25) return DUNGEON_KIND_TREASURE
+    if (roll < 50) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind
     return DUNGEON_KIND_COMBAT
 }
 
@@ -4040,16 +4158,16 @@ function dungeonTick(nowMs: number): void {
 
     // Teleport commit (after flash delay)
     if ((_dunTeleportCommitAtMs | 0) != 0) {
-        // Optional safety: if someone steps off during the tiny flash delay, cancel.
         const needed = _dunRequiredHeroCount() | 0
         const rc = _dunReadyMaskAndCountInPadZone()
-        const stillReady = (needed > 0 && rc.ready >= needed)
+        const allReady = (needed > 0 && rc.ready >= needed)
 
-        if (!stillReady) {
+        if (!allReady) {
             _dunTeleportCommitAtMs = 0
             _dunAllReadySinceMs = 0
+            _dunRuneSpinSinceMs = 0
 
-            // Reset rune anim back to idle
+            // Reset rune back to idle
             if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
                 const desired = "teleport_rune"
                 if (_dunTeleportRuneName !== desired) {
@@ -4079,12 +4197,15 @@ function dungeonTick(nowMs: number): void {
     if (_dunObjectiveDone && _dunIsPadPowered()) {
         const needed = _dunRequiredHeroCount() | 0
         const rc = _dunReadyMaskAndCountInPadZone()
+
+        const anyOn = ((rc.ready | 0) > 0)
         const allReady = (needed > 0 && rc.ready >= needed)
 
-        if (!allReady) {
+        // If nobody is standing on it at all, stop spinning (idle)
+        if (!anyOn) {
             _dunAllReadySinceMs = 0
+            _dunRuneSpinSinceMs = 0
 
-            // Reset rune anim back to idle
             if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
                 const desired = "teleport_rune"
                 if (_dunTeleportRuneName !== desired) {
@@ -4093,24 +4214,36 @@ function dungeonTick(nowMs: number): void {
                     _dunTeleportRuneName = desired
                 }
             }
-
             return
         }
 
-        if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
-        const held = ((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0
+        // Somebody stepped on it: start spin timer (even if not all players ready)
+        if ((_dunRuneSpinSinceMs | 0) == 0) _dunRuneSpinSinceMs = nowMs | 0
+        const spinHeld = ((nowMs | 0) - (_dunRuneSpinSinceMs | 0)) | 0
 
-        // ---- Teleport rune speed-up staging (uses your existing DUNGEON_PAD_HOLD_MS) ----
-        // Stages: idle -> fast1 -> fast2 -> fast3 -> flash -> (after delay) next floor
-        let desired = "teleport_rune"
-        const t1 = ((DUNGEON_PAD_HOLD_MS | 0) * 45 / 100) | 0
-        const t2 = ((DUNGEON_PAD_HOLD_MS | 0) * 70 / 100) | 0
-        const t3 = ((DUNGEON_PAD_HOLD_MS | 0) * 88 / 100) | 0
+        // All-ready hold timer (this is what gates teleport)
+        if (!allReady) {
+            _dunAllReadySinceMs = 0
+        } else {
+            if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
+        }
+        const allHeld = (_dunAllReadySinceMs == 0) ? 0 : (((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0)
 
-        if (held >= (DUNGEON_PAD_HOLD_MS | 0)) desired = "teleport_rune_flash"
-        else if (held >= t3) desired = "teleport_rune_fast3"
-        else if (held >= t2) desired = "teleport_rune_fast2"
-        else if (held >= t1) desired = "teleport_rune_fast1"
+        // ---- Spin staging (based on spinHeld; speeds up while ANYONE stands on it) ----
+        // Use DUNGEON_PAD_HOLD_MS as the "full charge" scale
+        const t1 = ((DUNGEON_PAD_HOLD_MS | 0) * 35 / 100) | 0
+        const t2 = ((DUNGEON_PAD_HOLD_MS | 0) * 60 / 100) | 0
+        const t3 = ((DUNGEON_PAD_HOLD_MS | 0) * 80 / 100) | 0
+
+        let desired = "teleport_rune_spin1"
+        if (spinHeld >= t3) desired = "teleport_rune_spin3"
+        else if (spinHeld >= t2) desired = "teleport_rune_spin2"
+        else if (spinHeld >= t1) desired = "teleport_rune_spin1"
+
+        // If all players are ready and held long enough: flash
+        if (allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0)) {
+            desired = "teleport_rune_flash"
+        }
 
         if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
             if (_dunTeleportRuneName !== desired) {
@@ -4120,9 +4253,10 @@ function dungeonTick(nowMs: number): void {
             }
         }
 
-        if (held < (DUNGEON_PAD_HOLD_MS | 0)) return
+        // If we haven't met the all-ready hold, we keep spinning but do not teleport.
+        if (!(allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0))) return
 
-        // Flash happened (via desired state); now schedule the actual floor swap shortly after
+        // Flash happened; schedule actual floor swap shortly after
         _dunTeleportCommitAtMs = ((nowMs | 0) + (DUNGEON_TELEPORT_FLASH_DELAY_MS | 0)) | 0
         return
     }
@@ -6242,8 +6376,52 @@ function showCoinPop(x: number, y: number, delta: number): void {
 function addTeamCoins(delta: number, popX: number, popY: number): void {
     const d = delta | 0
     if (d <= 0) return
+
     setTeamCoins(teamCoins + d)
     showCoinPop(popX, popY, d)
+
+    // ------------------------------------------------------------
+    // PHASER-ONLY VFX: coins burst from source -> arc toward hero.
+    // (No-op in pure Arcade; guarded behind globalThis.)
+    // ------------------------------------------------------------
+    try {
+        const gAny: any = globalThis as any
+        if (!gAny) return
+
+        // Decide which hero should “receive” the coins.
+        // Current coin system is team-wide, so we pick the nearest living hero.
+        let targetPid = 0
+        let bestD2 = 1e18
+
+        try {
+            for (let hi = 0; hi < heroes.length; hi++) {
+                const h = heroes[hi]
+                if (!h) continue
+                if ((h.lifespan | 0) === 0) continue
+
+                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+                if (owner <= 0) continue
+
+                const dx = (h.x - popX)
+                const dy = (h.y - popY)
+                const d2 = (dx * dx) + (dy * dy)
+
+                if (d2 < bestD2) {
+                    bestD2 = d2
+                    targetPid = owner
+                }
+            }
+        } catch {
+            // Ignore; fall back to pid=0 (Phaser will pick a target).
+        }
+
+        if (!Array.isArray(gAny.__coinBurstQueue)) gAny.__coinBurstQueue = []
+        gAny.__coinBurstQueue.push({ x: popX, y: popY, count: d, pid: targetPid })
+        console.log("[COINFX enqueue]", { d, popX, popY, pid: targetPid, qLen: gAny.__coinBurstQueue.length })
+
+    } catch {
+        // ignore
+    }
 }
 
 
@@ -7251,12 +7429,12 @@ function _createBasicCaveMap(): number[][] {
         }
     }
 
-    // 6) Carve L-shaped corridors from each corner into the arena.
-    //
-    // Monsters spawning in the corners (near [1,1], [1, cols-2], [rows-2,1],
-    // [rows-2, cols-2]) now have guaranteed paths into the arena.
-    //
-    const corridorHalfWidth = 1 // 1 → corridors are 3 tiles wide
+    // 6) Carve L-shaped corridors from each corner into the arena (NOW 2 tiles wide).
+    const CORRIDOR_WIDTH = 2
+
+    // We target a 2-column “spine” at the arena center.
+    const spineC0 = Math.max(1, Math.min(cols - 2, centerC - 1))
+    const spineC1 = Math.max(1, Math.min(cols - 2, centerC))
 
     function carveRect(r0: number, c0: number, r1: number, c1: number) {
         const rStart = Math.max(1, Math.min(r0, r1))
@@ -7272,22 +7450,23 @@ function _createBasicCaveMap(): number[][] {
     }
 
     function carveCornerToArena(cornerR: number, cornerC: number) {
-        // First segment: from corner toward the arena horizontally
-        const targetC = centerC
+        // Horizontal segment (2 tiles tall):
+        const hr0 = (cornerR <= centerR) ? cornerR : (cornerR - (CORRIDOR_WIDTH - 1))
+        const hr1 = hr0 + (CORRIDOR_WIDTH - 1)
+
         carveRect(
-            cornerR - corridorHalfWidth,
-            Math.min(cornerC, targetC),
-            cornerR + corridorHalfWidth,
-            Math.max(cornerC, targetC)
+            hr0,
+            Math.min(cornerC, spineC0),
+            hr1,
+            Math.max(cornerC, spineC1)
         )
 
-        // Second segment: from that line down/up to the vertical center of arena
-        const targetR = centerR
+        // Vertical segment (2 tiles wide at the spine columns):
         carveRect(
-            Math.min(cornerR, targetR),
-            targetC - corridorHalfWidth,
-            Math.max(cornerR, targetR),
-            targetC + corridorHalfWidth
+            Math.min(cornerR, centerR),
+            spineC0,
+            Math.max(cornerR, centerR),
+            spineC1
         )
     }
 
@@ -7297,22 +7476,12 @@ function _createBasicCaveMap(): number[][] {
     const leftCol = 1
     const rightCol = cols - 2
 
-    // Top-left corner → arena
     carveCornerToArena(topRow, leftCol)
-    // Top-right corner → arena
     carveCornerToArena(topRow, rightCol)
-    // Bottom-left corner → arena
     carveCornerToArena(bottomRow, leftCol)
-    // Bottom-right corner → arena
     carveCornerToArena(bottomRow, rightCol)
 
-
     // 7) Carve spawn pads that INCLUDE the actual outer corners.
-    //
-    // This clears a (2*radius+1)x(2*radius+1) block of floor centered
-    // near each corner. Because we allow r/c = 0 and rows-1/cols-1
-    // here, we punch holes in the border exactly where we want them.
-
     const SPAWN_PAD_RADIUS = 2 // 2 → up to 5x5 pad; tune as needed
 
     function carveSpawnPad(centerR: number, centerC: number) {
@@ -7328,14 +7497,216 @@ function _createBasicCaveMap(): number[][] {
         }
     }
 
-    // Pads centered on the REAL world corners
-    carveSpawnPad(0, 0)                 // top-left WORLD corner
-    carveSpawnPad(0, cols - 1)          // top-right WORLD corner
-    carveSpawnPad(rows - 1, 0)          // bottom-left WORLD corner
-    carveSpawnPad(rows - 1, cols - 1)   // bottom-right WORLD corner
+    carveSpawnPad(0, 0)
+    carveSpawnPad(0, cols - 1)
+    carveSpawnPad(rows - 1, 0)
+    carveSpawnPad(rows - 1, cols - 1)
 
+    // 8) Post-process for tile-art constraints:
+    //    A) Walkways/corridors must not be 1-tile wide (widen to >=2).
+    //    B) Wall blobs must be >=4 tiles OR true singletons (size==1).
+    //    C) Non-singleton wall tiles must have >=2 cardinal wall neighbors (prune spurs).
+    ;(function postProcessForArt() {
+        const MIN_COMPONENT_SIZE = 4
+        const MIN_CARDINAL_WALL_NEI = 2
 
+        function copyGrid(src: number[][]): number[][] {
+            const out: number[][] = []
+            for (let r = 0; r < rows; r++) out.push((src[r] as number[]).slice())
+            return out
+        }
 
+        function countCardinalSame(src: number[][], r: number, c: number, val: number): number {
+            let n = 0
+            if (r > 0 && src[r - 1][c] === val) n++
+            if (r < rows - 1 && src[r + 1][c] === val) n++
+            if (c > 0 && src[r][c - 1] === val) n++
+            if (c < cols - 1 && src[r][c + 1] === val) n++
+            return n
+        }
+
+        function computeComponents4(src: number[][], targetVal: number): { compId: number[][], sizes: number[], touchesBorder: boolean[] } {
+            const compId: number[][] = []
+            for (let r = 0; r < rows; r++) {
+                const row: number[] = []
+                for (let c = 0; c < cols; c++) row.push(-1)
+                compId.push(row)
+            }
+
+            const sizes: number[] = []
+            const touchesBorder: boolean[] = []
+
+            let nextId = 0
+
+            for (let r0 = 0; r0 < rows; r0++) {
+                for (let c0 = 0; c0 < cols; c0++) {
+                    if (src[r0][c0] !== targetVal) continue
+                    if (compId[r0][c0] >= 0) continue
+
+                    const qR: number[] = [r0]
+                    const qC: number[] = [c0]
+                    compId[r0][c0] = nextId
+
+                    let head = 0
+                    let size = 0
+                    let touch = false
+
+                    while (head < qR.length) {
+                        const r = qR[head]
+                        const c = qC[head]
+                        head++
+
+                        size++
+                        if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) touch = true
+
+                        // 4-neighborhood flood
+                        if (r > 0 && src[r - 1][c] === targetVal && compId[r - 1][c] < 0) {
+                            compId[r - 1][c] = nextId
+                            qR.push(r - 1); qC.push(c)
+                        }
+                        if (r < rows - 1 && src[r + 1][c] === targetVal && compId[r + 1][c] < 0) {
+                            compId[r + 1][c] = nextId
+                            qR.push(r + 1); qC.push(c)
+                        }
+                        if (c > 0 && src[r][c - 1] === targetVal && compId[r][c - 1] < 0) {
+                            compId[r][c - 1] = nextId
+                            qR.push(r); qC.push(c - 1)
+                        }
+                        if (c < cols - 1 && src[r][c + 1] === targetVal && compId[r][c + 1] < 0) {
+                            compId[r][c + 1] = nextId
+                            qR.push(r); qC.push(c + 1)
+                        }
+                    }
+
+                    sizes[nextId] = size
+                    touchesBorder[nextId] = touch
+                    nextId++
+                }
+            }
+
+            return { compId, sizes, touchesBorder }
+        }
+
+        function widenThinCorridorsOnce(): boolean {
+            const src = copyGrid(map)
+            let changed = false
+
+            for (let r = 1; r <= rows - 2; r++) {
+                for (let c = 1; c <= cols - 2; c++) {
+                    if (src[r][c] !== TILE_EMPTY) continue
+
+                    // Vertical corridor that is 1-tile wide (walls on both sides)
+                    if (src[r][c - 1] === TILE_WALL && src[r][c + 1] === TILE_WALL) {
+                        const preferLeft = (((r + c) & 1) === 0)
+                        const carveC = preferLeft ? (c - 1) : (c + 1)
+                        if (carveC > 0 && carveC < cols - 1) {
+                            map[r][carveC] = TILE_EMPTY
+                            changed = true
+                        }
+                    }
+
+                    // Horizontal corridor that is 1-tile wide (walls above/below)
+                    if (src[r - 1][c] === TILE_WALL && src[r + 1][c] === TILE_WALL) {
+                        const preferUp = (((r + c) & 1) === 0)
+                        const carveR = preferUp ? (r - 1) : (r + 1)
+                        if (carveR > 0 && carveR < rows - 1) {
+                            map[carveR][c] = TILE_EMPTY
+                            changed = true
+                        }
+                    }
+                }
+            }
+
+            return changed
+        }
+
+        function fillSmallFloorPockets(): void {
+            const src = copyGrid(map)
+            const comp = computeComponents4(src, TILE_EMPTY)
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (src[r][c] !== TILE_EMPTY) continue
+                    const id = comp.compId[r][c]
+                    if (id < 0) continue
+                    if (comp.sizes[id] < MIN_COMPONENT_SIZE && !comp.touchesBorder[id]) {
+                        map[r][c] = TILE_WALL
+                    }
+                }
+            }
+        }
+
+        function removeSmallWallClusters(): void {
+            const src = copyGrid(map)
+            const comp = computeComponents4(src, TILE_WALL)
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (src[r][c] !== TILE_WALL) continue
+                    const id = comp.compId[r][c]
+                    if (id < 0) continue
+                    const size = comp.sizes[id] | 0
+
+                    // Keep true singletons (these render via "decor" slots on the Phaser side).
+                    if (size === 1) continue
+
+                    // Enforce >=4 for any non-singleton cluster (don’t touch border clusters).
+                    if (size < MIN_COMPONENT_SIZE && !comp.touchesBorder[id]) {
+                        map[r][c] = TILE_EMPTY
+                    }
+                }
+            }
+        }
+
+        function pruneWallSpursOnce(): boolean {
+            const src = copyGrid(map)
+            const comp = computeComponents4(src, TILE_WALL)
+
+            let changed = false
+
+            for (let r = 1; r <= rows - 2; r++) {
+                for (let c = 1; c <= cols - 2; c++) {
+                    if (src[r][c] !== TILE_WALL) continue
+
+                    const id = comp.compId[r][c]
+                    if (id < 0) continue
+                    const size = comp.sizes[id] | 0
+
+                    // Keep singleton walls (0-neighbor “rocks”).
+                    if (size <= 1) continue
+
+                    const n = countCardinalSame(src, r, c, TILE_WALL)
+                    if (n < MIN_CARDINAL_WALL_NEI) {
+                        map[r][c] = TILE_EMPTY
+                        changed = true
+                    }
+                }
+            }
+
+            return changed
+        }
+
+        // (A) Widen walkways to avoid 1-tile corridors
+        for (let i = 0; i < 3; i++) {
+            if (!widenThinCorridorsOnce()) break
+        }
+
+        // (B) Remove tiny pockets / blobs (but keep true singleton walls)
+        fillSmallFloorPockets()
+        removeSmallWallClusters()
+
+        // (C) Prune wall spurs (non-singletons must have >=2 cardinal neighbors)
+        for (let i = 0; i < 2; i++) {
+            const changed = pruneWallSpursOnce()
+            removeSmallWallClusters()
+            if (!changed) break
+        }
+
+        // Final widen pass (spur pruning can reintroduce narrow spots)
+        for (let i = 0; i < 2; i++) {
+            if (!widenThinCorridorsOnce()) break
+        }
+    })()
 
     console.log(
         ">>> [HeroEngine.worldgen] map size",
@@ -7347,7 +7718,6 @@ function _createBasicCaveMap(): number[][] {
     )
 
     return map
-
 }
 
 // ------------------------------------------------------------
@@ -8824,7 +9194,7 @@ function refreshHeroController(heroIndex: number) {
     const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
     const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
 
-    const baseSpeed = 50
+    const baseSpeed = 100 //Knob for hero movement speed
     const hasteMult = heroMoveSpeedMult[heroIndex] || 1
     const speed = locked ? 0 : baseSpeed * hasteMult
 

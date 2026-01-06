@@ -27,10 +27,11 @@ import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
 declare const globalThis: any;
 
 
-const ENABLE_HERO_ANIM_DEBUG = true;
+const ENABLE_HERO_ANIM_DEBUG = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
-const DEBUG_TILEMAP = true;
+const DEBUG_TILEMAP = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
+const DEBUG_COINFX = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 
 // ------------------------------------------------------------
@@ -1215,101 +1216,114 @@ private maybeInstallHeroAnimTester() {
 
 
 
-
-
-
 update(time: number, delta: number) {
     const g: any = globalThis as any;
 
-    if (g.__isHost && g.__game) {
+    // Legacy path: if some build still wires __game, keep it (but never require it).
+    if (g.__isHost && g.__game && typeof g.__game._tick === "function") {
         try {
             g.__game._tick();
         } catch (e: any) {
             console.error("HeroScene.update _tick ERROR:", e);
         }
+    }
 
-        // Host: if engine worldRev changed, apply + broadcast tilemap
-        const internals = g.__HeroEnginePhaserInternals;
-        if (internals?.getWorldRev && internals?.getWorldTileMap && internals?.getWorldTileSize) {
-            const rev = (internals.getWorldRev() | 0) || 0;
-            if (rev > 0 && rev !== (this._tilemapAppliedRev | 0)) {
-                const grid: number[][] = internals.getWorldTileMap();
-                const tileSize = internals.getWorldTileSize() | 0;
+    // IMPORTANT: Tilemap sync must NOT depend on __game.
+    if (!g.__isHost) return;
 
-                const rows = (grid?.length | 0) || 0;
-                const cols = ((rows > 0 && grid[0]) ? (grid[0].length | 0) : 0) | 0;
+    // Host: if engine worldRev changed, apply + broadcast tilemap
+    const internals = g.__HeroEnginePhaserInternals;
+    if (internals?.getWorldRev && internals?.getWorldTileMap && internals?.getWorldTileSize) {
+        const rev = (internals.getWorldRev() | 0) || 0;
 
-                // Theme (optional fields; still safe if missing)
-                const baseFamily =
-                    (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light");
-                const wallFamily =
-                    (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
+        // Monotonic guard: prevents “rev 1” applying after we already applied rev 2 from net/startup.
+        const lastApplied = (this._tilemapAppliedRev | 0) || 0;
 
-                g.__floorBaseFamily = baseFamily;
-                g.__floorWallFamily = wallFamily;
+        if (rev > 0 && rev > lastApplied) {
+            const grid: number[][] = internals.getWorldTileMap();
+            const tileSize = internals.getWorldTileSize() | 0;
 
-                // Cheap high-level counts (helps confirm “grid changed” at a glance)
-                let rawWalls = 0;
-                let rawFloors = 0;
-                for (let r = 0; r < rows; r++) {
-                    const row = grid[r];
-                    for (let c = 0; c < cols; c++) {
-                        const v = row[c] | 0;
-                        if (v === 1) rawWalls++;
-                        else rawFloors++;
-                    }
+            const rows = (grid?.length | 0) || 0;
+            const cols = ((rows > 0 && grid[0]) ? (grid[0].length | 0) : 0) | 0;
+
+            // Theme (optional fields; still safe if missing)
+            const baseFamily =
+                (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light");
+            const wallFamily =
+                (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
+
+            g.__floorBaseFamily = baseFamily;
+            g.__floorWallFamily = wallFamily;
+
+            // Cheap high-level counts (helps confirm “grid changed” at a glance)
+            let rawWalls = 0;
+            let rawFloors = 0;
+            for (let r = 0; r < rows; r++) {
+                const row = grid[r];
+                for (let c = 0; c < cols; c++) {
+                    const v = row[c] | 0;
+                    if (v === 1) rawWalls++;
+                    else rawFloors++;
                 }
+            }
 
-                this._tilemapAppliedRev = rev;
-                this.applyTilemapToScene(grid, tileSize);
+            this._tilemapAppliedRev = rev;
+            this.applyTilemapToScene(grid, tileSize);
+
+            if (DEBUG_TILEMAP) {
+                console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
+                    rev,
+                    rows,
+                    cols,
+                    tileSize,
+                    rawWalls,
+                    rawFloors,
+                    baseFamily,
+                    wallFamily,
+                });
+            }
+
+            // Subtle “teleport” cue
+            this.cameras?.main?.flash(140);
+
+            // Broadcast to clients
+            const wsAny: WebSocket | null = g.__net?.ws ?? null;
+            if (wsAny && wsAny.readyState === WebSocket.OPEN) {
+                const msg = {
+                    type: "tilemap",
+                    rev,
+                    rows,
+                    cols,
+                    tileSize,
+                    encoding: "raw",
+                    data: grid,
+                    baseFamily,
+                    wallFamily,
+                };
+
+                wsAny.send(JSON.stringify(msg));
 
                 if (DEBUG_TILEMAP) {
-                    console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
-                        rev,
-                        rows,
-                        cols,
-                        tileSize,
-                        rawWalls,
-                        rawFloors,
-                        baseFamily,
-                        wallFamily,
-                    });
-                }
-
-                // Subtle “teleport” cue
-                this.cameras?.main?.flash(140);
-
-                // Broadcast to clients
-                const wsAny: WebSocket | null = g.__net?.ws ?? null;
-                if (wsAny && wsAny.readyState === WebSocket.OPEN) {
-                    const msg = {
-                        type: "tilemap",
+                    console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
                         rev,
                         rows,
                         cols,
                         tileSize,
                         encoding: "raw",
-                        data: grid,
-                        baseFamily,
-                        wallFamily,
-                    };
-
-                    wsAny.send(JSON.stringify(msg));
-
-                    if (DEBUG_TILEMAP) {
-                        console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
-                            rev,
-                            rows,
-                            cols,
-                            tileSize,
-                            encoding: "raw",
-                        });
-                    }
+                    });
                 }
             }
         }
     }
 }
+
+
+
+
+
+
+
+
 
 private runStartupDialogTest(): void {
     const g: any = globalThis as any;

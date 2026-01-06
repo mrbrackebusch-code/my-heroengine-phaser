@@ -261,6 +261,8 @@ export function innerCornerFromMask(mask: number): InnerCornerShape {
 
 
 
+
+
 export function autoShapeFromMask(mask: number): AutoShape {
     const n  = (mask & (1 << 0)) !== 0;
     const e  = (mask & (1 << 1)) !== 0;
@@ -646,9 +648,20 @@ syncFromEngineGrid(grid: number[][]): void {
       const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
       const shape: AutoShape = autoShapeFromMask(mask);
 
-      let def =
-        this.atlas.getRandomVariant(family as TileFamily, shape) ||
-        this.atlas.getAutoTile(family as TileFamily, shape);
+      let def: { textureKey: string; frameIndex: number } | null = null;
+
+      // Special-case: isolated ('single') tiles use the family's decor slots (TerrainAutoTileDef.decor).
+      // This lets us render 1-tile obstacles without requiring a dedicated AutoShape='single' entry.
+      if (shape === "single") {
+        const deco = this.atlas.getRandomDecorForFamily(family as TileFamily);
+        if (deco) def = deco;
+      }
+
+      if (!def) {
+        def =
+          this.atlas.getRandomVariant(family as TileFamily, shape) ||
+          this.atlas.getAutoTile(family as TileFamily, shape);
+      }
 
       if (!def) {
         def =
@@ -929,6 +942,10 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
     const info = this.atlas.getSheetInfo(tk);
     if (!info || info.cols <= 0 || info.rows <= 0) continue;
 
+    // ✅ Only tile-sized sheets should become tilemap tilesets.
+    // anims.* (16x16, 64x64, 64x96, etc.) must NOT be added via addTilesetImage(tileSize=32).
+    if ((info.tileSize | 0) !== (tileSize | 0)) continue;
+
     const total = (info.cols | 0) * (info.rows | 0);
     if (total <= 0) continue;
 
@@ -1054,6 +1071,10 @@ constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOption
         // fail soft; decor sync will no-op
     }
 }
+
+
+
+
 
     /**
      * Rebuild the Phaser tilemap from a simple engine grid of numbers.
@@ -1271,6 +1292,9 @@ constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOption
 
         // [tileMapGlue.WorldTileRenderer.syncFromEngineGrid] logging included
     }
+
+
+    
         /**
      * Apply a visual-only decal overlay grid.
      *
