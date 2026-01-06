@@ -119,20 +119,20 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     sand_patch: { atlas: "terrain", ref: { row: 13, col: 0 } },
 
     // Teleporter pad pieces: terrain_atlas rows 21/22, cols 0..4 (piece = col)
-    telepad0_top: { atlas: "terrain_atlas", ref: { row: 18, col: 0 } },
-    telepad0_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 0 } },
+    telepad0_top: { atlas: "build_atlas", ref: { row: 13, col: 12 } },
+    telepad0_bot: { atlas: "build_atlas", ref: { row: 14, col: 12 } },
 
-    telepad1_top: { atlas: "terrain_atlas", ref: { row: 18, col: 1 } },
-    telepad1_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 1 } },
+    telepad1_top: { atlas: "build_atlas", ref: { row: 13, col: 13 } },
+    telepad1_bot: { atlas: "build_atlas", ref: { row: 14, col: 13 } },
 
-    telepad2_top: { atlas: "terrain_atlas", ref: { row: 18, col: 2 } },
-    telepad2_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 2 } },
+    telepad2_top: { atlas: "build_atlas", ref: { row: 13, col: 13 } },
+    telepad2_bot: { atlas: "build_atlas", ref: { row: 14, col: 13 } },
 
-    telepad3_top: { atlas: "terrain_atlas", ref: { row: 18, col: 3 } },
-    telepad3_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 3 } },
+    telepad3_top: { atlas: "build_atlas", ref: { row: 13, col: 13 } },
+    telepad3_bot: { atlas: "build_atlas", ref: { row: 14, col: 13 } },
 
-    telepad4_top: { atlas: "terrain_atlas", ref: { row: 18, col: 4 } },
-    telepad4_bot: { atlas: "terrain_atlas", ref: { row: 19, col: 4 } },
+    telepad4_top: { atlas: "build_atlas", ref: { row: 13, col: 14 } },
+    telepad4_bot: { atlas: "build_atlas", ref: { row: 14, col: 14 } },
 };
 
 
@@ -622,49 +622,6 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
     }
 }
 
-
-
-
-export function preloadTileSheetsOLDCODETODELETE(scene: Phaser.Scene): void {
-    // Tilesheets
-    for (const sheet of TILE_SHEETS) {
-        if (!scene.textures.exists(sheet.textureKey)) {
-            scene.load.spritesheet(sheet.textureKey, sheet.url, {
-                frameWidth: TILE_SIZE,
-                frameHeight: TILE_SIZE,
-            });
-        }
-    }
-
-    // Animation sheets (e.g., anims.teleport_rune)
-    for (const sheet of ANIM_SHEETS) {
-        if (!scene.textures.exists(sheet.textureKey)) {
-            scene.load.spritesheet(sheet.textureKey, sheet.url, {
-                frameWidth: sheet.frameW,
-                frameHeight: sheet.frameH,
-            });
-        }
-    }
-
-    const DEBUG_TILES = true
-
-    if (DEBUG_TILES) {
-    logTiles(
-        "[tileAtlas.preload] tilesheets to load:",
-        TILE_SHEETS.map(s =>
-            `${s.textureKey} (${s.cols}x${s.rows} tiles, url="${s.url}")`
-        )
-    );
-}
-    for (const sheet of TILE_SHEETS) {
-        scene.load.spritesheet(sheet.textureKey, sheet.url, {
-            frameWidth: TILE_SIZE,
-            frameHeight: TILE_SIZE
-        });
-    }
-    // [tileAtlas.preload] logging included
-
-}
 
 
 

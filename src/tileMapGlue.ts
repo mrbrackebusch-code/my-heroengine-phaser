@@ -261,9 +261,52 @@ export function innerCornerFromMask(mask: number): InnerCornerShape {
 
 
 
-
-
 export function autoShapeFromMask(mask: number): AutoShape {
+    const n  = (mask & (1 << 0)) !== 0;
+    const e  = (mask & (1 << 1)) !== 0;
+    const s  = (mask & (1 << 2)) !== 0;
+    const w  = (mask & (1 << 3)) !== 0;
+
+    const m4 =
+        (n ? 1 : 0) |
+        (e ? 2 : 0) |
+        (s ? 4 : 0) |
+        (w ? 8 : 0);
+
+    switch (m4) {
+        case 0: return "single";
+
+        // Single neighbor – treat as a simple edge facing that neighbor
+        case 1: return "edgeS"; // N only
+        case 2: return "edgeW"; // E only
+        case 4: return "edgeN"; // S only
+        case 8: return "edgeE"; // W only
+
+        // HACK: flipped 180° mapping (keep ONLY ONE mapping)
+        // NE↔SW, NW↔SE
+        case (1 | 2): return "cornerSW"; // N + E
+        case (1 | 8): return "cornerSE"; // N + W
+        case (2 | 4): return "cornerNW"; // E + S
+        case (4 | 8): return "cornerNE"; // S + W
+
+        // Two opposite neighbors – straight strips
+        case (1 | 4): return "edgeW"; // N + S (vertical)
+        case (2 | 8): return "edgeN"; // E + W (horizontal)
+
+        // Three neighbors – classic edges (one side open)
+        case (2 | 4 | 8): return "edgeN"; // no N
+        case (1 | 2 | 8): return "edgeS"; // no S
+        case (1 | 4 | 8): return "edgeE"; // no E
+        case (1 | 2 | 4): return "edgeW"; // no W
+
+        case (1 | 2 | 4 | 8): return "center";
+
+        default: return "center";
+    }
+}
+
+
+export function autoShapeFromMaskOLDCODETODELETE(mask: number): AutoShape {
     const n  = (mask & (1 << 0)) !== 0;
     const e  = (mask & (1 << 1)) !== 0;
     const s  = (mask & (1 << 2)) !== 0;
@@ -548,6 +591,160 @@ forceRebuild(rows: number, cols: number): void {
 
   // ---- core sync ----
 
+private _analyzeGridForRender(
+  grid: number[][],
+  rows: number,
+  cols: number,
+  valueToFamily: (v: number) => TileFamily | ""
+): {
+  rawWalls: number;
+  rawFloors: number;
+  rawSig: number;
+  famChasmCells: number;
+  famNonChasmCells: number;
+  fallbackFloorFamily: TileFamily;
+} {
+  let rawWalls = 0;
+  let rawFloors = 0;
+  let rawSig = 0;
+
+  let famChasmCells = 0;
+  let famNonChasmCells = 0;
+
+  let fallbackFloorFamily: TileFamily = "ground_light";
+  let fallbackFound = false;
+
+  for (let r = 0; r < rows; r++) {
+    const row = grid[r];
+    if (!row) continue;
+
+    for (let c = 0; c < cols; c++) {
+      const v = (row[c] | 0);
+      if (v === 1) rawWalls++;
+      else rawFloors++;
+
+      rawSig = (((rawSig << 5) - rawSig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0;
+
+      const fam = valueToFamily(v);
+      if (fam && isChasmLikeFamily(fam as TileFamily)) famChasmCells++;
+      else famNonChasmCells++;
+
+      if (!fallbackFound && fam && !isChasmLikeFamily(fam as TileFamily)) {
+        fallbackFloorFamily = fam as TileFamily;
+        fallbackFound = true;
+      }
+    }
+  }
+
+  return { rawWalls, rawFloors, rawSig, famChasmCells, famNonChasmCells, fallbackFloorFamily };
+}
+
+private _paintFloorUnderlayEverywhere(
+  grid: number[][],
+  rows: number,
+  cols: number,
+  valueToFamily: (v: number) => TileFamily | "",
+  fallbackFloorFamily: TileFamily
+): void {
+  if (!this.groundLayer) return;
+
+  for (let r = 0; r < rows; r++) {
+    const row = grid[r];
+    if (!row) continue;
+
+    for (let c = 0; c < cols; c++) {
+      const v = (row[c] | 0);
+      const fam0 = valueToFamily(v);
+
+      const floorFamily =
+        (fam0 && !isChasmLikeFamily(fam0 as TileFamily)) ? (fam0 as TileFamily) : fallbackFloorFamily;
+
+      const def =
+        this.atlas.getRandomVariant(floorFamily, "center") ||
+        this.atlas.getAutoTile(floorFamily, "center");
+
+      if (!def) continue;
+
+      const gid = this._gidFor(def.textureKey, def.frameIndex);
+      if (gid >= 0) this.groundLayer.putTileAt(gid, c, r);
+    }
+  }
+}
+
+private _paintChasmLike(
+  grid: number[][],
+  rows: number,
+  cols: number,
+  valueToFamily: (v: number) => TileFamily | ""
+): void {
+  if (!this.chasmLayer || !this.chasmOverlayLayer) return;
+
+  for (let r = 0; r < rows; r++) {
+    const row = grid[r];
+    if (!row) continue;
+
+    for (let c = 0; c < cols; c++) {
+      const v = (row[c] | 0);
+      const family = valueToFamily(v);
+      if (!family || !isChasmLikeFamily(family as TileFamily)) continue;
+
+      const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
+      const shape: AutoShape = autoShapeFromMask(mask);
+      const inner = innerCornerFromMask(mask);
+
+      // ---- choose BASE tile ----
+      let baseDef: { textureKey: string; frameIndex: number } | null = null;
+      let usedInnerAsBase = false;
+
+      // Prefer inner-corner as a BASE replacement tile if it exists
+      if (inner !== "none") {
+        const innerDef =
+          this.atlas.getRandomVariant(family as TileFamily, inner as any) ||
+          this.atlas.getAutoTile(family as TileFamily, inner as any);
+
+        if (innerDef) {
+          baseDef = innerDef;
+          usedInnerAsBase = true;
+        }
+      }
+
+      // Singleton: use decor slots
+      if (!baseDef && shape === "single") {
+        const deco = this.atlas.getRandomDecorForFamily(family as TileFamily);
+        if (deco) baseDef = deco;
+      }
+
+      // Normal shape lookup
+      if (!baseDef) {
+        baseDef =
+          this.atlas.getRandomVariant(family as TileFamily, shape) ||
+          this.atlas.getAutoTile(family as TileFamily, shape) ||
+          this.atlas.getRandomVariant(family as TileFamily, "center") ||
+          this.atlas.getAutoTile(family as TileFamily, "center") ||
+          null;
+      }
+
+      if (!baseDef) continue;
+
+      const gid = this._gidFor(baseDef.textureKey, baseDef.frameIndex);
+      if (gid >= 0) this.chasmLayer.putTileAt(gid, c, r);
+
+      // ---- overlay ONLY if we did NOT use inner as base ----
+      if (inner !== "none" && !usedInnerAsBase) {
+        const innerDef =
+          this.atlas.getRandomVariant(family as TileFamily, inner as any) ||
+          this.atlas.getAutoTile(family as TileFamily, inner as any);
+
+        if (innerDef) {
+          const innerGid = this._gidFor(innerDef.textureKey, innerDef.frameIndex);
+          if (innerGid >= 0) this.chasmOverlayLayer.putTileAt(innerGid, c, r);
+        }
+      }
+    }
+  }
+}
+
+
 syncFromEngineGrid(grid: number[][]): void {
   const localDebug = this.opts.debugLocal ?? true;
   const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
@@ -569,10 +766,73 @@ syncFromEngineGrid(grid: number[][]): void {
 
   if (!this.map || !this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) return;
 
-  // Clear base layers (decals/props are synced separately)
+  // Clear base layers (decals/props are synced separately — DO NOT clear them here)
   this.groundLayer.fill(-1);
   this.chasmLayer.fill(-1);
   this.chasmOverlayLayer.fill(-1);
+
+  const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily);
+
+  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily);
+  this._paintChasmLike(grid, rows, cols, valueToFamily);
+
+  // stash last snapshot for other debug consumers if needed
+  try {
+    const anyThis: any = this as any;
+    anyThis.__lastGridRows = rows | 0;
+    anyThis.__lastGridCols = cols | 0;
+    anyThis.__lastGridWalls = stats.rawWalls | 0;
+    anyThis.__lastGridSig = stats.rawSig | 0;
+  } catch { /* ignore */ }
+
+  if (localDebug) {
+    logTiles(localDebug, "[tileMapGlue] base render done", {
+      rows,
+      cols,
+      hasDecalLayer: !!this.decalLayer,
+      hasPropLayer: !!this.propLayer,
+      fallbackFloorFamily: stats.fallbackFloorFamily,
+      rawWalls: stats.rawWalls,
+      rawFloors: stats.rawFloors,
+      rawSig: stats.rawSig,
+      famChasmCells: stats.famChasmCells,
+      famNonChasmCells: stats.famNonChasmCells,
+      tilesets: this._gidRanges.map(r => `${r.textureKey}@${r.firstGid}-${r.lastExclusive - 1}`).join(", "),
+    });
+  }
+}
+
+
+
+syncFromEngineGridOLDCODETODELETE(grid: number[][]): void {
+  const localDebug = this.opts.debugLocal ?? true;
+  const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
+
+  if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0])) {
+    logTiles(localDebug, "[tileMapGlue] syncFromEngineGrid: empty/malformed grid");
+    return;
+  }
+
+  const rows = (grid.length | 0);
+  const cols = ((grid[0]?.length ?? 0) | 0);
+  const tileSize = (this.atlas.tileSize | 0);
+
+  if (rows <= 0 || cols <= 0) return;
+
+  if (!this.map || (this.map.width | 0) !== cols || (this.map.height | 0) !== rows) {
+    this._rebuildTilemap(rows, cols, tileSize);
+  }
+
+  if (!this.map || !this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) return;
+
+  // Clear base layers
+  this.groundLayer.fill(-1);
+  this.chasmLayer.fill(-1);
+  this.chasmOverlayLayer.fill(-1);
+
+  // IMPORTANT: keep decor layers from “sticking” across floors
+  if (this.decalLayer) this.decalLayer.fill(-1);
+  if (this.propLayer) this.propLayer.fill(-1);
 
   // ---- HIGH-LEVEL SNAPSHOT (grid truth + renderer interpretation) ----
   let rawWalls = 0;
@@ -599,7 +859,6 @@ syncFromEngineGrid(grid: number[][]): void {
   }
 
   // Pick a fallback "floor" family to use underneath chasm tiles.
-  // (First non-chasm family found in the grid; else default to ground_light.)
   let fallbackFloorFamily: TileFamily = "ground_light";
   outer: for (let r = 0; r < rows; r++) {
     const row = grid[r];
@@ -622,7 +881,6 @@ syncFromEngineGrid(grid: number[][]): void {
       const v = (row[c] | 0);
       const fam0 = valueToFamily(v);
 
-      // If this cell is chasm-like (or empty), still paint a floor underneath it.
       const floorFamily =
         (fam0 && !isChasmLikeFamily(fam0)) ? (fam0 as TileFamily) : fallbackFloorFamily;
 
@@ -636,7 +894,7 @@ syncFromEngineGrid(grid: number[][]): void {
     }
   }
 
-  // PASS 2: draw chasm-like families (chasm/lava/etc.) with autotiling into chasm + overlay layers.
+  // PASS 2: draw chasm-like families (chasm/lava/etc.) with autotiling
   for (let r = 0; r < rows; r++) {
     const row = grid[r];
     if (!row) continue;
@@ -648,10 +906,9 @@ syncFromEngineGrid(grid: number[][]): void {
       const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
       const shape: AutoShape = autoShapeFromMask(mask);
 
-      let def: { textureKey: string; frameIndex: number } | null = null;
+      let def: any = null;
 
-      // Special-case: isolated ('single') tiles use the family's decor slots (TerrainAutoTileDef.decor).
-      // This lets us render 1-tile obstacles without requiring a dedicated AutoShape='single' entry.
+      // ✅ Singleton rule: use the family's decor slots (TerrainAutoTileDef.decor)
       if (shape === "single") {
         const deco = this.atlas.getRandomDecorForFamily(family as TileFamily);
         if (deco) def = deco;
@@ -688,7 +945,7 @@ syncFromEngineGrid(grid: number[][]): void {
     }
   }
 
-  // stash last snapshot for other debug consumers if needed
+  // stash last snapshot
   try {
     const anyThis: any = this as any;
     anyThis.__lastGridRows = rows | 0;
@@ -714,6 +971,11 @@ syncFromEngineGrid(grid: number[][]): void {
   }
 }
 
+
+
+
+
+//End of sync from engine grid
 
 
   syncDecalGridByName(decalNameGrid: string[][]): void {
@@ -1033,620 +1295,6 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
 }
 
 
-
-export class WorldTileRendererOLDCODETODELETE {
-    private scene: Phaser.Scene;
-    private atlas: TileAtlas;
-    private debugLocal: boolean;
-    private tileValueToFamily: (v: number) => TileFamily | "";
-
-    private map?: Phaser.Tilemaps.Tilemap;
-    private tileset?: Phaser.Tilemaps.Tileset;
-
-    // NEW: separate layers
-    private groundLayer?: Phaser.Tilemaps.TilemapLayer;
-    private chasmLayer?: Phaser.Tilemaps.TilemapLayer;
-
-    // NEW:
-    private chasmOverlayLayer?: Phaser.Tilemaps.TilemapLayer;
-
-    // NEW: decor layers (visual-only)
-    private decalLayer?: Phaser.Tilemaps.TilemapLayer;
-    private propLayer?: Phaser.Tilemaps.TilemapLayer;
-
-
-constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions = {}) {
-    this.scene = scene;
-    this.atlas = atlas;
-    this.debugLocal = opts.debugLocal ?? true;
-    this.tileValueToFamily = opts.tileValueToFamily ?? defaultTileValueToFamily;
-
-    logTiles(this.debugLocal, "[tileMapGlue] created WorldTileRenderer");
-
-    // IMPORTANT: arcadeCompat decor sync expects to find this in the Phaser scene registry.
-    try {
-        (this.scene as any).__worldTileRenderer = this;
-        (this.scene as any)?.registry?.set?.("__worldTileRenderer", this);
-    } catch {
-        // fail soft; decor sync will no-op
-    }
-}
-
-
-
-
-
-    /**
-     * Rebuild the Phaser tilemap from a simple engine grid of numbers.
-     */
-    syncFromEngineGrid(grid: number[][]): void {
-        const rows = grid.length;
-        const cols = rows > 0 ? grid[0].length : 0;
-
-        if (rows === 0 || cols === 0) {
-            logTiles(this.debugLocal, "[tileMapGlue.sync] empty grid – nothing to render");
-            return;
-        }
-
-        const tileSize = this.atlas.tileSize;
-
-        // --------------------------------------------------------------
-        // Create tilemap + tileset + layers ONE TIME
-        // --------------------------------------------------------------
-        if (!this.map) {
-            this.map = this.scene.make.tilemap({
-                width: cols,
-                height: rows,
-                tileWidth: tileSize,
-                tileHeight: tileSize
-            });
-
-            this.tileset = this.map.addTilesetImage(
-                this.atlas.primaryTextureKey,
-                this.atlas.primaryTextureKey,
-                tileSize,
-                tileSize,
-                0,
-                0
-            );
-
-            if (!this.tileset) {
-                throw new Error("[tileMapGlue.sync] failed to create Tileset – check primaryTextureKey");
-            }
-
-            // Base layers: Ground (bottom), chasm (middle), inner-corner overlay (top)
-            this.groundLayer       = this.map.createBlankLayer("ground",       this.tileset, 0, 0) || undefined;
-            this.chasmLayer        = this.map.createBlankLayer("chasm",        this.tileset, 0, 0) || undefined;
-            this.chasmOverlayLayer = this.map.createBlankLayer("chasmOverlay", this.tileset, 0, 0) || undefined;
-
-            // Decor layers (visual-only). These MUST NOT break base rendering if absent.
-            this.decalLayer        = this.map.createBlankLayer("decal",        this.tileset, 0, 0) || undefined;
-            this.propLayer         = this.map.createBlankLayer("props",        this.tileset, 0, 0) || undefined;
-
-            if (!this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
-                throw new Error("[tileMapGlue.sync] missing one of ground/chasm/chasmOverlay layers");
-            }
-
-            // Depths: keep tile layers behind sprites (sprites typically at depth 0+)
-            this.groundLayer.setDepth(-1000);
-            this.chasmLayer.setDepth(-900);
-            this.chasmOverlayLayer.setDepth(-800);
-
-            // Decals/props render above base tiles but still behind characters by default.
-            if (this.decalLayer) this.decalLayer.setDepth(-700);
-            if (this.propLayer)  this.propLayer.setDepth(-600);
-
-            logTiles(
-                this.debugLocal,
-                "[tileMapGlue.sync] created new Phaser.Tilemap with base + decor layers",
-                { rows, cols, tileSize, hasDecalLayer: !!this.decalLayer, hasPropLayer: !!this.propLayer }
-            );
-
-            dbg_dumpTileLayers(scene, "after tileMapGlue.sync");
-
-        }
-
-        if (!this.map || !this.tileset || !this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) {
-            throw new Error("[tileMapGlue.sync] map/tileset/base layers missing");
-        }
-
-        // If the world grid dimensions ever change at runtime, we currently do not rebuild the tilemap.
-        // Keep this safe: just log and return. (This preserves the "does not break game" invariant.)
-        const mapW = (this.map.width | 0);
-        const mapH = (this.map.height | 0);
-        if (mapW !== (cols | 0) || mapH !== (rows | 0)) {
-            logTiles(
-                this.debugLocal,
-                "[tileMapGlue.sync] WARNING: grid dims differ from existing tilemap dims; skipping rebuild",
-                { gridRows: rows, gridCols: cols, mapH, mapW }
-            );
-            return;
-        }
-
-        // Clear layers
-        this.groundLayer.fill(-1);
-        this.chasmLayer.fill(-1);
-        this.chasmOverlayLayer.fill(-1);
-        if (this.decalLayer) this.decalLayer.fill(-1);
-        if (this.propLayer)  this.propLayer.fill(-1);
-
-        // --------------------------------------------------------------
-        // PASS 1: Fill with ground_light using center (and its variants)
-        // --------------------------------------------------------------
-        const familyCounts = new Map<TileFamily, number>();
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                // Always place ground_light as the base
-                const baseFamily: TileFamily = "ground_light";
-
-                let baseDef = this.atlas.getRandomVariant(baseFamily, "center")
-                    ?? this.atlas.getAutoTile(baseFamily, "center");
-
-                const baseFrame = baseDef ? baseDef.frameIndex : 0;
-                this.groundLayer.putTileAt(baseFrame, c, r);
-
-                const current = familyCounts.get(baseFamily) || 0;
-                familyCounts.set(baseFamily, current + 1);
-            }
-        }
-
-        // --------------------------------------------------------------
-        // PASS 2: Apply chasm/wall autotiles on top of ground
-        // --------------------------------------------------------------
-        for (let r = 0; r < rows; r++) {
-            const row = grid[r];
-            for (let c = 0; c < cols; c++) {
-                const v = row[c];
-
-                if (v !== 1) {
-                    // Not a wall/chasm cell – leave ground only
-                    continue;
-                }
-
-                const family: TileFamily = "chasm_light";
-
-                // Compute neighbor mask for this family at [r,c]
-                const mask = computeNeighborMask(
-                    grid,
-                    r,
-                    c,
-                    family,
-                    this.tileValueToFamily
-                );
-
-                // Base LPC 3x3 shape (center/edge/corner/single)
-                const shape: AutoShape = autoShapeFromMask(mask);
-
-                let def;
-
-                // For now: any isolated chasm tile ("single") uses a decorative chasm
-                if (family === "chasm_light" && shape === "single") {
-                    def = this.atlas.getRandomVariant(family, "decor" as any)
-                        ?? this.atlas.getAutoTile(family, "decor" as any);
-                } else {
-                    def = this.atlas.getRandomVariant(family, shape)
-                        ?? this.atlas.getAutoTile(family, shape);
-                }
-
-                // Fallback: center chasm if we somehow still don't have a tile
-                if (!def) {
-                    def = this.atlas.getRandomVariant(family, "center")
-                        ?? this.atlas.getAutoTile(family, "center");
-                }
-
-                const frameIndex = def ? def.frameIndex : 0;
-                this.chasmLayer.putTileAt(frameIndex, c, r);
-
-                const current = familyCounts.get(family) || 0;
-                familyCounts.set(family, current + 1);
-            }
-        }
-
-        // --------------------------------------------------------------
-        // PASS 3: Chasm inner-corner overlays (2×2) on top
-        // --------------------------------------------------------------
-        for (let r = 0; r < rows; r++) {
-            const row = grid[r];
-            for (let c = 0; c < cols; c++) {
-                const v = row[c];
-                if (v !== 1) continue; // only chasm cells
-
-                const family: TileFamily = "chasm_light";
-
-                const mask = computeNeighborMask(
-                    grid,
-                    r,
-                    c,
-                    family,
-                    this.tileValueToFamily
-                );
-
-                const innerShape = innerCornerFromMask(mask);
-                if (innerShape === "none") continue;
-
-                let innerDef =
-                    this.atlas.getRandomVariant(family, innerShape as AutoShape) ||
-                    this.atlas.getAutoTile(family, innerShape as AutoShape);
-
-                if (!innerDef) continue;
-
-                const innerFrame = innerDef.frameIndex;
-                this.chasmOverlayLayer.putTileAt(innerFrame, c, r);
-
-                const current = familyCounts.get(family) || 0;
-                familyCounts.set(family, current + 1);
-            }
-        }
-
-        const countsSummary: Record<string, number> = {};
-        for (const [fam, count] of familyCounts.entries()) {
-            countsSummary[fam] = count;
-        }
-
-        logTiles(
-            this.debugLocal,
-            "[tileMapGlue.sync] finished building tile layer – tile counts by family:",
-            countsSummary
-        );
-
-        // [tileMapGlue.WorldTileRenderer.syncFromEngineGrid] logging included
-    }
-
-
-    
-        /**
-     * Apply a visual-only decal overlay grid.
-     *
-     * This does NOT affect collisions. It writes into the optional "decal" layer.
-     *
-     * The input is a grid of semantic decal keys (e.g. "sand_patch").
-     * Empty: "" or null/undefined.
-     */
-public syncDecalGridByName(decalGrid: (string | null | undefined)[][]): void {
-    const scene = this.scene;
-    if (!scene) return;
-
-    const selfAny: any = this as any;
-
-    // Destroy previous decal images
-    const prev: Phaser.GameObjects.Image[] = selfAny.__decorDecalImgs || [];
-    for (let i = 0; i < prev.length; i++) {
-        try { prev[i]?.destroy(); } catch {}
-    }
-    selfAny.__decorDecalImgs = [];
-
-    if (!decalGrid || decalGrid.length === 0 || !decalGrid[0] || decalGrid[0].length === 0) {
-        return;
-    }
-
-    const rows = decalGrid.length | 0;
-    const cols = (decalGrid[0]?.length | 0) || 0;
-    if (rows <= 0 || cols <= 0) return;
-
-    const tileSize = (this.map?.tileWidth | 0) || (this.opts?.tileSize | 0) || 32;
-
-    // Cache: textureKey -> sheetCols (computed from texture width / tileSize)
-    const sheetColsCache: Map<string, number> =
-        selfAny.__decorSheetColsCache || (selfAny.__decorSheetColsCache = new Map<string, number>());
-
-    const getSheetCols = (texKey: string): number => {
-        const got = sheetColsCache.get(texKey);
-        if (got && got > 0) return got;
-
-        try {
-            const tex = scene.textures.get(texKey);
-            const src: any = tex?.getSourceImage?.();
-            const w = (src && (src.width || src.naturalWidth)) ? (src.width || src.naturalWidth) : 0;
-            const computed = w > 0 ? Math.max(1, Math.floor(w / tileSize)) : 1;
-            sheetColsCache.set(texKey, computed);
-            return computed;
-        } catch {
-            return 1;
-        }
-    };
-
-    const baseDepth = ((this.baseLayer as any)?.depth ?? 0) | 0;
-    const depth = baseDepth + 10;
-
-    // Stamp each decal as one-or-more tile images
-    for (let r = 0; r < rows; r++) {
-        const row = decalGrid[r];
-        if (!row) continue;
-
-        for (let c = 0; c < cols; c++) {
-            const name = row[c];
-            if (!name) continue;
-
-            const v = (DECAL_VISUALS_BY_NAME as any)[name];
-            if (!v) continue;
-
-            const texKey = decorAtlasTextureKey(v.atlas);
-            const sheetCols = getSheetCols(texKey);
-
-            const w = (v.size?.[0] | 0) || 1;
-            const h = (v.size?.[1] | 0) || 1;
-            const origin = v.origin || "topLeft";
-
-            // anchor cell (r,c) -> top-left stamp cell
-            let startC = c;
-            let startR = r;
-
-            if (origin === "bottom") {
-                startC = (c - Math.floor((w - 1) / 2)) | 0;
-                startR = (r - (h - 1)) | 0;
-            }
-
-            const baseFrame = ((v.ref.row | 0) * sheetCols + (v.ref.col | 0)) | 0;
-
-            for (let dy = 0; dy < h; dy++) {
-                const rr = (startR + dy) | 0;
-                if (rr < 0 || rr >= rows) continue;
-
-                for (let dx = 0; dx < w; dx++) {
-                    const cc = (startC + dx) | 0;
-                    if (cc < 0 || cc >= cols) continue;
-
-                    const frame = (baseFrame + dx + dy * sheetCols) | 0;
-
-                    const x = (cc * tileSize + tileSize * 0.5);
-                    const y = (rr * tileSize + tileSize * 0.5);
-
-                    const img = scene.add.image(x, y, texKey, frame);
-                    img.setDepth(depth);
-                    img.setOrigin(0.5, 0.5);
-
-                    selfAny.__decorDecalImgs.push(img);
-                }
-            }
-        }
-    }
-}
-
-
-public syncPropGridByName(propNameGrid: string[][]): void {
-  if (!this.map) return;
-
-  const anyThis: any = this as any;
-
-  function _parsePropKey(s: string): { baseName: string; state: string | null; explicitFrameIndex: number | null } {
-    const raw = (s ?? "").trim();
-    if (!raw) return { baseName: "", state: null, explicitFrameIndex: null };
-
-    // Allow patterns like:
-    //   "chest"
-    //   "chest#open"
-    //   "thing@12"
-    //   "chest#open@12"
-    let base = raw;
-    let state: string | null = null;
-    let frame: number | null = null;
-
-    const hash = raw.indexOf("#");
-    const at = raw.indexOf("@");
-
-    const cut = (hash >= 0 && at >= 0) ? Math.min(hash, at) : (hash >= 0 ? hash : (at >= 0 ? at : -1));
-    if (cut >= 0) base = raw.slice(0, cut);
-
-    if (hash >= 0) {
-      const end = (at >= 0 && at > hash) ? at : raw.length;
-      state = raw.slice(hash + 1, end).trim() || null;
-    }
-    if (at >= 0) {
-      const n = parseInt(raw.slice(at + 1).trim(), 10);
-      if (!isNaN(n)) frame = (n | 0);
-    }
-
-    return { baseName: base.trim(), state, explicitFrameIndex: frame };
-  }
-
-  function _tileRefFromFrameIndex(cols: number, frameIndex: number): { row: number; col: number } {
-    const c = Math.max(1, cols | 0);
-    const fi = Math.max(0, frameIndex | 0);
-    const row = Math.floor(fi / c) | 0;
-    const col = (fi - row * c) | 0;
-    return { row, col };
-  }
-
-  function _ensurePropAnim(scene: Phaser.Scene, textureKey: string, animDef: any): string | null {
-    if (!animDef) return null;
-
-    const keyPart = String(animDef.key ?? "anim");
-    const animKey = `${textureKey}::${keyPart}`;
-
-    try {
-      if (scene.anims.exists(animKey)) return animKey;
-    } catch { /* ignore */ }
-
-    let frames: number[] = [];
-    if (Array.isArray(animDef.frames) && animDef.frames.length) {
-      frames = animDef.frames.map((n: any) => (n | 0));
-    } else if (animDef.startFrame != null && animDef.endFrame != null) {
-      const a = (animDef.startFrame | 0);
-      const b = (animDef.endFrame | 0);
-      const lo = Math.min(a, b) | 0;
-      const hi = Math.max(a, b) | 0;
-      for (let i = lo; i <= hi; i++) frames.push(i | 0);
-    } else {
-      return null;
-    }
-
-    const frameRate = (animDef.frameRate ?? animDef.fps ?? 6) | 0;
-    const repeat = (animDef.repeat ?? -1) | 0;
-
-    try {
-      scene.anims.create({
-        key: animKey,
-        frames: frames.map((f) => ({ key: textureKey, frame: f })),
-        frameRate: Math.max(1, frameRate),
-        repeat
-      });
-      return animKey;
-    } catch {
-      return null;
-    }
-  }
-
-  // Destroy previous prop objects
-  const prev: any[] = (anyThis.__propImgs as any[]) || [];
-  for (let i = 0; i < prev.length; i++) {
-    const obj: any = prev[i];
-    try { obj?.destroy?.(); } catch { /* ignore */ }
-  }
-  anyThis.__propImgs = [];
-
-  // Reset lookup map used by decor_applyTightOpaqueAabbToSolids
-  const byRc: Record<string, { textureKey: string; frameIndex: number }> = Object.create(null);
-  anyThis.__propTileInfoByRC = byRc;
-
-  // Track instances
-  const instByAnchor: Record<string, any> = Object.create(null);
-  anyThis.__propInstancesByAnchor = instByAnchor;
-
-  // Keep the tile layer empty / hidden
-  try { this.propLayer?.fill(-1); } catch { /* ignore */ }
-
-  const rows = propNameGrid.length | 0;
-  const cols = rows > 0 ? (propNameGrid[0].length | 0) : 0;
-  const tileSize = (this.atlas.tileSize | 0);
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const rawKey = propNameGrid[r]?.[c] ?? "";
-      if (!rawKey) continue;
-
-      const parsed = _parsePropKey(rawKey);
-      const baseName = parsed.baseName;
-      if (!baseName) continue;
-
-      const vis: any = (PROP_VISUALS_BY_NAME as any)[baseName];
-      if (!vis) continue;
-
-      // Resolve textureKey from atlas/alias
-      const atlasOrTk = (vis.textureKey ?? vis.atlas ?? "") as string;
-      const textureKey = vis.textureKey
-        ? (vis.textureKey as string)
-        : decorAtlasTextureKey(atlasOrTk);
-
-      // Determine sheet cols if known
-      let sheetCols = 1;
-      try {
-        const info = this.atlas.getSheetInfo(textureKey);
-        if (info && (info.cols | 0) > 0) sheetCols = info.cols | 0;
-        else {
-          const tex: any = this.scene.textures.get(textureKey);
-          const w = (tex?.source?.[0]?.width ?? tex?.getSourceImage?.()?.width ?? 0) | 0;
-          sheetCols = Math.max(1, Math.floor(w / tileSize) | 0);
-        }
-      } catch {
-        sheetCols = 1;
-      }
-
-      // Resolve base ref (bottom-left) possibly overridden
-      let baseRef = { row: (vis.ref?.row ?? 0) | 0, col: (vis.ref?.col ?? 0) | 0 };
-
-      const animDef: any = vis.anim || null;
-
-      // State override: "chest#open" => anim.states.open -> tileRef
-      let usedState: string | null = null;
-      if (parsed.state && animDef?.states && animDef.states[parsed.state]) {
-        const st = animDef.states[parsed.state];
-        baseRef = { row: (st?.row ?? baseRef.row) | 0, col: (st?.col ?? baseRef.col) | 0 };
-        usedState = parsed.state;
-      }
-
-      // Explicit absolute frame override: "thing@123"
-      if (parsed.explicitFrameIndex != null) {
-        const tr = _tileRefFromFrameIndex(sheetCols | 0, parsed.explicitFrameIndex | 0);
-        baseRef = { row: tr.row | 0, col: tr.col | 0 };
-      }
-
-      const wTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
-      const hTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
-
-      // y-sorted depth based on anchor (bottom tile)
-      const anchorYpx = ((r | 0) * tileSize + (tileSize >> 1)) | 0;
-      const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + 0) | 0;
-
-      // Auto-animate only when:
-      // - no explicit state
-      // - no explicit frame
-      // - animDef has a usable frame sequence
-      // - prop is 1x1 (for now)
-      const canAnimate = (wTiles === 1 && hTiles === 1);
-      const animKey =
-        (usedState == null && parsed.explicitFrameIndex == null && canAnimate)
-          ? _ensurePropAnim(this.scene, textureKey, animDef)
-          : null;
-
-      const objs: any[] = [];
-
-      // Expand upward/rightward from anchor
-      for (let dy = 0; dy < hTiles; dy++) {
-        for (let dx = 0; dx < wTiles; dx++) {
-          const worldR = (r - (hTiles - 1) + dy) | 0;
-          const worldC = (c + dx) | 0;
-
-          if (worldR < 0 || worldC < 0 || worldR >= this.map.height || worldC >= this.map.width) continue;
-
-          const atlasCol = (baseRef.col + dx) | 0;
-          const atlasRow = (baseRef.row - (hTiles - 1) + dy) | 0;
-          const frameIndex = (atlasRow * (sheetCols | 0) + atlasCol) | 0;
-
-          // Record for collision sampler (initial frame)
-          byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex };
-
-          const x = (worldC * tileSize + (tileSize >> 1)) | 0;
-          const y = (worldR * tileSize + (tileSize >> 1)) | 0;
-
-          let obj: any;
-
-          if (animKey && dx === 0 && dy === 0) {
-            const spr = this.scene.add.sprite(x, y, textureKey, frameIndex);
-            spr.setOrigin(0.5, 0.5);
-            spr.setDepth(baseDepth);
-            try { spr.anims?.play?.(animKey); } catch { /* ignore */ }
-            obj = spr;
-
-            // Special-case: flash when we see the flash state
-            if (baseName === "teleport_rune_flash") {
-              try { (this.scene.cameras?.main as any)?.flash?.(140); } catch { /* ignore */ }
-            }
-          } else {
-            const img = this.scene.add.image(x, y, textureKey, frameIndex);
-            img.setOrigin(0.5, 0.5);
-            img.setDepth(baseDepth);
-            obj = img;
-          }
-
-          objs.push(obj);
-          (anyThis.__propImgs as any[]).push(obj);
-        }
-      }
-
-      instByAnchor[String(r) + "," + String(c)] = {
-        anchorR: r | 0,
-        anchorC: c | 0,
-        baseName,
-        textureKey,
-        sheetCols: sheetCols | 0,
-        wTiles,
-        hTiles,
-        baseRefRow: baseRef.row | 0,
-        baseRefCol: baseRef.col | 0,
-        objs,
-        vis,
-        byRc
-      };
-    }
-  }
-}
-
-
-
-
-
-}
 
 export function dbg_dumpTileLayers(scene: any, tag: string): void {
   try {

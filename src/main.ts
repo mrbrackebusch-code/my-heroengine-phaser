@@ -1228,6 +1228,204 @@ update(time: number, delta: number) {
         }
     }
 
+    // ------------------------------------------------------------
+    // COIN FX (Phaser-only): drain __coinBurstQueue and spawn sprites
+    // Must not break floor syncing even if something goes wrong.
+    // ------------------------------------------------------------
+    try {
+        const q: any[] | null = Array.isArray(g.__coinBurstQueue) ? g.__coinBurstQueue : null;
+        if (q && q.length) {
+            const bursts = q.splice(0, q.length);
+
+            console.log("[COINFX drain]", { n: bursts.length, isHost: !!g.__isHost });
+
+            // Ensure animation exists (once). This is intentionally self-contained.
+            const animKey = "__coinSpin";
+
+            if (!this.anims.exists(animKey)) {
+                if (!this.textures.exists("anims.coins")) {
+                    console.warn("[COINFX] missing texture anims.coins");
+                } else {
+                    // Best-effort inference of frames:
+                    // - If spritesheet frames are numeric strings ("0","1",...) we compute max.
+                    // - Otherwise default to 4 frames.
+                    let end = 0;
+
+                    try {
+                        const tex: any = this.textures.get("anims.coins");
+                        const names: string[] =
+                            (tex && typeof tex.getFrameNames === "function") ? tex.getFrameNames() : [];
+
+                        let best = -1;
+                        for (const nm of names) {
+                            if (!nm || nm === "__BASE") continue;
+                            const n = parseInt(nm, 10);
+                            if (Number.isFinite(n) && n > best) best = n;
+                        }
+
+                        if (best >= 1) end = best;
+                    } catch {
+                        end = 0;
+                    }
+
+                    if (end <= 0) end = 3; // fallback: assume 4 frames
+
+                    this.anims.create({
+                        key: animKey,
+                        frames: this.anims.generateFrameNumbers("anims.coins", { start: 0, end }),
+                        frameRate: 14,
+                        repeat: -1,
+                    });
+
+                    console.log("[COINFX] created anim", { key: animKey, end });
+                }
+            }
+
+            // Spawn bursts
+            for (const b of bursts) {
+                const sx = (typeof b?.x === "number") ? b.x : NaN;
+                const sy = (typeof b?.y === "number") ? b.y : NaN;
+                const countRaw = (typeof b?.count === "number") ? (b.count | 0) : 0;
+
+                if (!Number.isFinite(sx) || !Number.isFinite(sy) || countRaw <= 0) continue;
+
+                const hasTex = this.textures.exists("anims.coins");
+                console.log("[COINFX spawnBurst]", { sx, sy, countRaw, hasTex });
+                if (!hasTex) continue;
+
+                // ------------------------------------------------------------
+                // Target point = canvas border aligned to DOM #hud-you-coins.
+                // Coins "hit the border" right under the HUD coin line.
+                // ------------------------------------------------------------
+                let tx = sx;
+                let ty = sy;
+
+                try {
+                    const cam = this.cameras?.main;
+                    const canvas = (this.game?.canvas as HTMLCanvasElement) || null;
+                    const hudEl = document.getElementById("hud-you-coins");
+
+                    if (cam && canvas && hudEl) {
+                        const cr = canvas.getBoundingClientRect();
+                        const hr = hudEl.getBoundingClientRect();
+
+                        const sxPx = cr.width > 0 ? (canvas.width / cr.width) : 1;
+                        const syPx = cr.height > 0 ? (canvas.height / cr.height) : 1;
+
+                        const hudCx = hr.left + (hr.width / 2);
+                        const hudCy = hr.top + (hr.height / 2);
+
+                        // Choose which canvas edge to “fly into” based on where HUD is.
+                        // If HUD is to the right of canvas, use right edge; if left, use left edge.
+                        let targetCssX = cr.width / 2;
+                        if (hudCx > cr.right) targetCssX = cr.width - 6;
+                        else if (hudCx < cr.left) targetCssX = 6;
+                        else targetCssX = Math.max(6, Math.min(cr.width - 6, hudCx - cr.left));
+
+                        let targetCssY = Math.max(6, Math.min(cr.height - 6, hudCy - cr.top));
+
+                        // Convert CSS pixels -> internal canvas pixels (camera space)
+                        const targetCamX = targetCssX * sxPx;
+                        const targetCamY = targetCssY * syPx;
+
+                        const zoom = (cam.zoom || 1);
+
+                        // Convert camera-space pixels -> world coords at current scroll
+                        tx = cam.scrollX + (targetCamX / zoom);
+                        ty = cam.scrollY + (targetCamY / zoom);
+                    }
+                } catch (_e) {
+                    // fallback: leave tx/ty = sx/sy
+                }
+
+                // Visual coins per burst
+                const nVis = Math.max(1, Math.min(8, countRaw));
+
+                // Distribute the real coin value across nVis sprites so HUD increments correctly.
+                const baseVal = Math.floor(countRaw / nVis) | 0;
+                let rem = (countRaw - (baseVal * nVis)) | 0;
+
+                for (let i = 0; i < nVis; i++) {
+                    const thisVal = (baseVal + (rem > 0 ? 1 : 0)) | 0;
+                    if (rem > 0) rem--;
+
+                    const coin = this.add.sprite(sx, sy, "anims.coins", 0);
+                    coin.setOrigin(0.5, 0.5);
+                    coin.setDepth(9999);
+                    coin.setScale(1); // 16x16 (no upscaling)
+
+                    try { coin.anims.play(animKey, true); } catch {}
+
+                    // pop offsets
+                    coin.x += Phaser.Math.Between(-10, 10);
+                    coin.y += Phaser.Math.Between(-6, 6);
+
+                    const txi = tx + Phaser.Math.Between(-10, 10);
+                    const tyi = ty + Phaser.Math.Between(-6, 6);
+
+                    const midX = (coin.x + txi) / 2 + Phaser.Math.Between(-18, 18);
+
+                    const camTop = (() => {
+                        const cam = this.cameras?.main;
+                        if (!cam) return -Infinity;
+                        const z = (cam.zoom || 1);
+                        return cam.scrollY + (10 / z); // margin (in world units) to keep coin fully visible
+                    })();
+
+                    let midY = Math.min(coin.y, tyi) - 50 - Phaser.Math.Between(0, 25);
+                    if (midY < camTop) midY = camTop;
+
+
+                    const curve = new Phaser.Curves.QuadraticBezier(
+                        new Phaser.Math.Vector2(coin.x, coin.y),
+                        new Phaser.Math.Vector2(midX, midY),
+                        new Phaser.Math.Vector2(txi, tyi)
+                    );
+
+                    const driver: any = { t: 0 };
+                    const ARRIVE_T = 0.65; // ✅ knob: smaller = HUD starts sooner (try 0.88, 0.85)
+
+                    let sentArrival = false;
+
+                    this.tweens.add({
+                      targets: driver,
+                      t: 1,
+                      delay: i * 55,
+                      duration: 650 + Phaser.Math.Between(0, 260),
+                      ease: "Cubic.easeOut",
+                      onUpdate: () => {
+                        const p = curve.getPoint(driver.t);
+                        const y = (p.y < camTop) ? camTop : p.y;
+                        coin.setPosition(p.x, y);
+
+                        // ✅ fire "arrival" slightly BEFORE completion (removes the perceived pause)
+                        if (!sentArrival && driver.t >= ARRIVE_T) {
+                          sentArrival = true;
+                          try {
+                            if (!Array.isArray(g.__hudCoinArrivals)) g.__hudCoinArrivals = [];
+                            g.__hudCoinArrivals.push(thisVal);
+                          } catch (_e) {}
+                        }
+                      },
+                      onComplete: () => {
+                        // safety: if we never hit ARRIVE_T for some reason, still count it
+                        if (!sentArrival) {
+                          sentArrival = true;
+                          try {
+                            if (!Array.isArray(g.__hudCoinArrivals)) g.__hudCoinArrivals = [];
+                            g.__hudCoinArrivals.push(thisVal);
+                          } catch (_e) {}
+                        }
+                        coin.destroy();
+                      },
+                    });
+                }
+            }
+        }
+    } catch (e: any) {
+        console.warn("[COINFX] error (ignored, should not affect tile sync)", e);
+    }
+
     // IMPORTANT: Tilemap sync must NOT depend on __game.
     if (!g.__isHost) return;
 

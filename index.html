@@ -95,7 +95,7 @@
         flex-direction: column;
         align-items: stretch;
         width: fit-content;
-        gap: 10px; /* ✅ visible separation so HUD never “covers” top edge */
+        gap: 1px; /* ✅ visible separation so HUD never “covers” top edge */
       }
 
       #app {
@@ -702,6 +702,98 @@
 
       let _hud_lastCoins = 0;
 
+      let _hud_coinsActualLast = 0;
+      let _hud_coinsDisplay = 0;
+      let _hud_coinsPending = 0;
+
+
+      // NEW:
+      let _hud_coinsReleaseBank = 0;  // how many coins we’re allowed to reveal (based on arrivals)
+      let _hud_coinsNextStepAt = 0;
+
+      const HUD_COIN_STEP_MS = 50;   // slower = bigger (e.g. 180)
+      const HUD_COIN_STEP_SIZE = 1;   // bigger = chunkier (e.g. 2)
+
+      let _hud_coinsInited = false;
+
+
+      // Phaser pushes integers here when coin sprites arrive at HUD edge.
+      window.__hudCoinArrivals = window.__hudCoinArrivals || [];
+
+      function _hud_pulseCoins(el) {
+        try {
+          if (!el || typeof el.animate !== "function") return;
+          el.animate(
+            [{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }],
+            { duration: 180, easing: "ease-out" }
+          );
+        } catch (_e) {}
+      }
+
+      
+  function _hud_readAnimatedCoins(actualCoins, coinsEl) {
+    const now = Date.now();
+    const actual = Math.max(0, actualCoins | 0);
+
+    // True one-time init (NOT "coins==0").
+    if (!_hud_coinsInited) {
+      _hud_coinsInited = true;
+      _hud_coinsActualLast = actual;
+      _hud_coinsDisplay = actual;
+      _hud_coinsPending = 0;
+      _hud_coinsReleaseBank = 0;
+      _hud_coinsNextStepAt = 0;
+      return actual;
+    }
+
+    // Reset / decrease: snap
+    if (actual < _hud_coinsActualLast) {
+      _hud_coinsActualLast = actual;
+      _hud_coinsDisplay = actual;
+      _hud_coinsPending = 0;
+      _hud_coinsReleaseBank = 0;
+      _hud_coinsNextStepAt = 0;
+      return actual;
+    }
+
+    // Track new pending (actual jumped immediately)
+    if (actual > _hud_coinsActualLast) {
+      _hud_coinsPending += (actual - _hud_coinsActualLast);
+      _hud_coinsActualLast = actual;
+    }
+
+    // Collect arrivals into release bank
+    const arr = window.__hudCoinArrivals;
+    let drained = 0;
+
+    if (Array.isArray(arr) && arr.length) {
+      while (arr.length) {
+        const v = Math.max(1, (arr.shift() | 0));
+        drained += v;
+        _hud_coinsReleaseBank += v;
+      }
+    }
+
+    // ✅ If coins arrived, allow an immediate step this tick (no extra waiting)
+    if (drained > 0) _hud_coinsNextStepAt = now;
+
+    // Slow step: at most once per HUD_COIN_STEP_MS
+    if (_hud_coinsPending > 0 && _hud_coinsReleaseBank > 0 && now >= _hud_coinsNextStepAt) {
+      const step = Math.min(HUD_COIN_STEP_SIZE, _hud_coinsPending, _hud_coinsReleaseBank);
+      _hud_coinsDisplay += step;
+      _hud_coinsPending -= step;
+      _hud_coinsReleaseBank -= step;
+      _hud_pulseCoins(coinsEl);
+      _hud_coinsNextStepAt = now + HUD_COIN_STEP_MS;
+    }
+
+    // Safety
+    if (_hud_coinsDisplay > _hud_coinsActualLast) _hud_coinsDisplay = _hud_coinsActualLast;
+
+    return _hud_coinsDisplay | 0;
+  }
+
+
       function _readTeamCoins() {
         const spritesNS = window.sprites;
         if (!spritesNS) return _hud_lastCoins | 0;
@@ -963,8 +1055,9 @@
           setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
           setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
 
-          const coins = _readTeamCoins();
-          setText(R.youCoins, `${EMOJI.coin} Coins: ${coins}`);
+          const coinsActual = _readTeamCoins();
+          const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
+          setText(R.youCoins, `${EMOJI.coin} Coins: ${coinsShown}`);
 
 
           const heroIndex = resolveHeroIndexForSprite(hero);

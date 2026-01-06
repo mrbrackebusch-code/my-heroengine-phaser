@@ -49,6 +49,41 @@ function distanceTo(a: Sprite, b: Sprite): number {
 }
 
 
+
+// ----------------------------------------------------------
+// Demo dynamic logic knobs
+// ----------------------------------------------------------
+const DEMO_STR_MINHP_RANGE_PX = 90;      // <-- X range (pixels)
+const DEMO_STR_NO_TARGET_DAMAGE = 0;     // damage when no enemies are in range
+
+function demo_strengthDamageEqualsMinEnemyHpInRange(
+    me: Sprite,
+    enemiesArr: Sprite[],
+    rangePx: number
+): number {
+    if (!me || !enemiesArr || enemiesArr.length <= 0) return DEMO_STR_NO_TARGET_DAMAGE;
+
+    let minHp = 1e9;
+
+    for (let i = 0; i < enemiesArr.length; i++) {
+        const e: any = enemiesArr[i];
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue;
+
+        const d = distanceTo(me, e);
+        if (d > rangePx) continue;
+
+        let hp = 0;
+        try { hp = (sprites.readDataNumber(e, "hp") | 0); } catch (_e) { hp = 0; }
+        if (hp <= 0) continue;
+
+        if (hp < minHp) minHp = hp;
+    }
+
+    if (minHp === 1e9) return DEMO_STR_NO_TARGET_DAMAGE;
+    return (minHp | 0);
+}
+
+
 const DEBUG_HERO_LOGIC_STUDENT = false
 
 
@@ -327,6 +362,99 @@ export function JasonHeroLogic(
     heroesArr: Sprite[]
 ): number[] {
 
+    if (DEBUG_HERO_LOGIC_STUDENT) {
+        const enemiesLen = enemiesArr ? enemiesArr.length : -1;
+        const heroesLen = heroesArr ? heroesArr.length : -1;
+        console.log(
+            "[hero1Logic] ENTER button=" + button +
+            " heroIndex=" + heroIndex +
+            " enemiesLen=" + enemiesLen +
+            " heroesLen=" + heroesLen
+        );
+    }
+
+    let me: any = heroesArr[heroIndex]
+    let targetIndex = -1
+
+    if (me && enemiesArr.length > 0) {
+        let best = 1e9
+        for (let i = 0; i < enemiesArr.length; i++) {
+            let e: any = enemiesArr[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const d = distanceTo(me, e)
+            if (d < best) {
+                best = d
+                targetIndex = i
+            }
+        }
+    }
+
+    let anyHeroLow = false
+    for (let j = 0; j < heroesArr.length; j++) {
+        let h: any = heroesArr[j]
+        if (!h) continue
+        const hp = sprites.readDataNumber(h, HERO_DATA.HP) | 0
+        if (hp > 0 && hp < 50) {
+            anyHeroLow = true
+            break
+        }
+    }
+
+    if (button == "A") {
+        if (anyHeroLow) {
+            return [
+                FAMILY.HEAL,
+                25, 25, 25, 25,
+                ELEM.HEAL,
+                ANIM.ID.A
+            ]
+        } else {
+            const dynDmg = demo_strengthDamageEqualsMinEnemyHpInRange(
+                me,
+                enemiesArr,
+                DEMO_STR_MINHP_RANGE_PX
+            );
+
+            return [
+                FAMILY.STRENGTH,
+                dynDmg, 30, 0, 200,
+                ELEM.NONE,
+                ANIM.ID.A
+            ]
+        }
+    }
+    if (button == "B") {
+        return [
+            FAMILY.AGILITY,
+            4, 30, 30, 30,
+            ELEM.NONE,
+            ANIM.ID.B
+        ]
+    }
+    if (button == "A+B") {
+        return [
+            FAMILY.INTELLECT,
+            100, 25, 25, 25,
+            ELEM.NONE,
+            ANIM.ID.AB
+        ]
+    }
+    return [
+        FAMILY.STRENGTH,
+        0, 25, 25, 25,
+        ELEM.NONE,
+        ANIM.ID.IDLE
+    ]
+}
+
+
+export function Jason2HeroLogic(
+    button: string,
+    heroIndex: number,
+    enemiesArr: Sprite[],
+    heroesArr: Sprite[]
+): number[] {
+
 
 
     if (DEBUG_HERO_LOGIC_STUDENT) {
@@ -376,9 +504,10 @@ export function JasonHeroLogic(
                 ANIM.ID.A
             ]
         } else {
+            
             return [
                 FAMILY.STRENGTH,
-                10, 10, 300, 200,
+                10, 10, 0, 200,
                 ELEM.NONE,
                 ANIM.ID.A
             ]

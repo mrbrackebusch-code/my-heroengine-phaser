@@ -1742,6 +1742,10 @@ let _dunTeleportRuneName = ""
 let _dunTeleportCommitAtMs = 0
 let _dunRuneSpinSinceMs = 0         // starts when ANY hero steps on rune
 
+
+const TELEPORT_RUNE_Y_OFFSET_PX = 1000; // + = lower on screen (try 6..14)
+
+
 // assumes you already have: let _dunTeleportRuneTrig: Sprite = null as any
 
 
@@ -3802,11 +3806,17 @@ function _dunSpawnExitPad(): void {
 
     // center the 64x64 on the pad tile center
     rune.left = (padX - 32) | 0
-    rune.top = (padY - 32) | 0
+    rune.top  = (padY - 32 + TELEPORT_RUNE_Y_OFFSET_PX) | 0
+
 
     sprites.setDataNumber(rune, DECOR_DATA.ID, 0)
     sprites.setDataNumber(rune, DECOR_DATA.ROLE, DECOR_ROLE.TRIGGER)
-    sprites.setDataString(rune, DECOR_DATA.NAME, "teleport_rune")
+
+    // ✅ START HIDDEN:
+    // Phaser decor rendering keys off DECOR_DATA.NAME; empty => not drawn.
+    // Your dungeonTick() logic will set this to "teleport_rune" / "teleport_rune_spin*"
+    // only after the floor objective is done + pad is powered.
+    sprites.setDataString(rune, DECOR_DATA.NAME, "")
 
     // IMPORTANT: arcadeCompat caches tile rc under these keys
     sprites.setDataNumber(rune, "decorTileR", padRow | 0)
@@ -3815,9 +3825,9 @@ function _dunSpawnExitPad(): void {
     _engineDecorTriggers.push(rune)
     _engineDecorRev++
     _dunTeleportRuneTrig = rune
-    _dunTeleportRuneName = "teleport_rune"
+    _dunTeleportRuneName = ""
 
-    // Keep your existing stairs statue + pad decals if you want them
+    // Telepad decals + stairs statue (must be stamped every floor)
     _dunDecor_placePadAndStairsVisual(0)
 }
 
@@ -3929,6 +3939,21 @@ function _dunClearTransientFloorEntities(): void {
     // shut off shop mode unless this floor enables it
     SHOP_MODE_ACTIVE = false
     SHOP_MODE_ACTIVE_MASTER = false
+
+    // ------------------------------------------------------------
+    // IMPORTANT:
+    // Each floor rebuilds decor/decals, but _dunDecor_placePadAndStairsVisual()
+    // has a cache that can early-return if (frame, padR, padC) "didn't change".
+    // On new floors the pad is STILL centered, so without resetting this cache,
+    // the telepad decals + stairs statue never get re-stamped into the NEW grids.
+    // ------------------------------------------------------------
+    _dunPadFrameLast = -999
+    _dunPadPlacedLastR = -999999
+    _dunPadPlacedLastC = -999999
+    _dunPadPlacedLastLeftC = -999999
+
+    _dunPadTileR = -1
+    _dunPadTileC = -1
 }
 
 function _dunCountLiveEnemies(): number {
@@ -4134,19 +4159,27 @@ function dungeonTick(nowMs: number): void {
                         const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
                         if (opened) continue
 
-                        sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
-                        _dunDestroySprite(it)
 
-                        // Flip the prop state so Phaser stamps the "open" frame.
-                        if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
-                            _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
-                            _engineDecorRev = (_engineDecorRev + 1) | 0
-                        }
 
-                        // Reward + complete objective
-                        setTeamCoins((teamCoins + 10) | 0)
+                            sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
 
-                        _dunObjectiveDone = true
+                            // Capture pop coords BEFORE destroy so VFX has a stable origin.
+                            const popX = it.x
+                            const popY = it.y - 12
+
+                            _dunDestroySprite(it)
+
+                            // Flip the prop state so Phaser stamps the "open" frame.
+                            if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
+                                _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
+                                _engineDecorRev = (_engineDecorRev + 1) | 0
+                            }
+
+                            // Reward + complete objective (this triggers COINFX enqueue)
+                            addTeamCoins(10, popX, popY)
+
+                            _dunObjectiveDone = true
+
                         _dunSetPadPowered(true)
                         _dunLog(`chest opened by P${pid}; pad powered`)
                         break
