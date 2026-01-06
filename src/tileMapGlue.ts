@@ -306,88 +306,6 @@ export function autoShapeFromMask(mask: number): AutoShape {
 }
 
 
-export function autoShapeFromMaskOLDCODETODELETE(mask: number): AutoShape {
-    const n  = (mask & (1 << 0)) !== 0;
-    const e  = (mask & (1 << 1)) !== 0;
-    const s  = (mask & (1 << 2)) !== 0;
-    const w  = (mask & (1 << 3)) !== 0;
-
-    // Collapse cardinals into a 4-bit mask:
-    // bit0 = N, bit1 = E, bit2 = S, bit3 = W
-    const m4 =
-        (n ? 1 : 0) |
-        (e ? 2 : 0) |
-        (s ? 4 : 0) |
-        (w ? 8 : 0);
-
-    switch (m4) {
-        // 0 neighbors: isolated tile
-        case 0:
-            return "single";
-
-        // Single neighbor – treat as a simple edge facing that neighbor
-        case 1: // N only
-            return "edgeS";
-        case 2: // E only
-            return "edgeW";
-        case 4: // S only
-            return "edgeN";
-        case 8: // W only
-            return "edgeE";
-
-
-
-        // HACK for two adjacent neighbors – convex corners
-        // Flip all corners 180°: NE↔SW, NW↔SE
-        case 1 | 2:   // N + E
-            return "cornerSW";
-        case 1 | 8:   // N + W
-            return "cornerSE";
-        case 2 | 4:   // E + S
-            return "cornerNW";
-        case 4 | 8:   // S + W
-            return "cornerNE";
-
-
-        // Two adjacent neighbors – convex corners
-        case 1 | 2:   // N + E
-            return "cornerNE";
-        case 1 | 8:   // N + W
-            return "cornerNW";
-        case 2 | 4:   // E + S
-            return "cornerSE";
-        case 4 | 8:   // S + W
-            return "cornerSW";
-
-
-
-        // Two opposite neighbors – straight strips
-        case 1 | 4:   // N + S  (vertical)
-            // choose a vertical-ish edge – either is fine visually
-            return "edgeW";
-        case 2 | 8:   // E + W  (horizontal)
-            return "edgeN";
-
-        // Three neighbors – classic edges (one side open)
-        case 2 | 4 | 8:   // no N
-            return "edgeN";
-        case 1 | 2 | 8:   // no S
-            return "edgeS";
-        case 1 | 4 | 8:   // no E
-            return "edgeE";
-        case 1 | 2 | 4:   // no W
-            return "edgeW";
-
-        // All four neighbors – true interior
-        case 1 | 2 | 4 | 8:
-            return "center";
-
-        // Anything weird we didn't explicitly handle – fall back to center
-        default:
-            return "center";
-    }
-}
-
 // ----------------------------------------------------------
 // WorldTileRenderer
 // ----------------------------------------------------------
@@ -804,175 +722,6 @@ syncFromEngineGrid(grid: number[][]): void {
 
 
 
-syncFromEngineGridOLDCODETODELETE(grid: number[][]): void {
-  const localDebug = this.opts.debugLocal ?? true;
-  const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
-
-  if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0])) {
-    logTiles(localDebug, "[tileMapGlue] syncFromEngineGrid: empty/malformed grid");
-    return;
-  }
-
-  const rows = (grid.length | 0);
-  const cols = ((grid[0]?.length ?? 0) | 0);
-  const tileSize = (this.atlas.tileSize | 0);
-
-  if (rows <= 0 || cols <= 0) return;
-
-  if (!this.map || (this.map.width | 0) !== cols || (this.map.height | 0) !== rows) {
-    this._rebuildTilemap(rows, cols, tileSize);
-  }
-
-  if (!this.map || !this.groundLayer || !this.chasmLayer || !this.chasmOverlayLayer) return;
-
-  // Clear base layers
-  this.groundLayer.fill(-1);
-  this.chasmLayer.fill(-1);
-  this.chasmOverlayLayer.fill(-1);
-
-  // IMPORTANT: keep decor layers from “sticking” across floors
-  if (this.decalLayer) this.decalLayer.fill(-1);
-  if (this.propLayer) this.propLayer.fill(-1);
-
-  // ---- HIGH-LEVEL SNAPSHOT (grid truth + renderer interpretation) ----
-  let rawWalls = 0;
-  let rawFloors = 0;
-  let rawSig = 0;
-
-  let famChasmCells = 0;
-  let famNonChasmCells = 0;
-
-  for (let r = 0; r < rows; r++) {
-    const row = grid[r];
-    if (!row) continue;
-    for (let c = 0; c < cols; c++) {
-      const v = (row[c] | 0);
-      if (v === 1) rawWalls++;
-      else rawFloors++;
-
-      rawSig = (((rawSig << 5) - rawSig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0;
-
-      const fam = valueToFamily(v);
-      if (fam && isChasmLikeFamily(fam as TileFamily)) famChasmCells++;
-      else famNonChasmCells++;
-    }
-  }
-
-  // Pick a fallback "floor" family to use underneath chasm tiles.
-  let fallbackFloorFamily: TileFamily = "ground_light";
-  outer: for (let r = 0; r < rows; r++) {
-    const row = grid[r];
-    if (!row) continue;
-    for (let c = 0; c < cols; c++) {
-      const fam = valueToFamily((row[c] | 0));
-      if (fam && !isChasmLikeFamily(fam)) {
-        fallbackFloorFamily = fam as TileFamily;
-        break outer;
-      }
-    }
-  }
-
-  // PASS 1: paint a base floor tile EVERYWHERE (including under chasm tiles)
-  for (let r = 0; r < rows; r++) {
-    const row = grid[r];
-    if (!row) continue;
-
-    for (let c = 0; c < cols; c++) {
-      const v = (row[c] | 0);
-      const fam0 = valueToFamily(v);
-
-      const floorFamily =
-        (fam0 && !isChasmLikeFamily(fam0)) ? (fam0 as TileFamily) : fallbackFloorFamily;
-
-      const def =
-        this.atlas.getRandomVariant(floorFamily, "center") ||
-        this.atlas.getAutoTile(floorFamily, "center");
-      if (!def) continue;
-
-      const gid = this._gidFor(def.textureKey, def.frameIndex);
-      if (gid >= 0) this.groundLayer.putTileAt(gid, c, r);
-    }
-  }
-
-  // PASS 2: draw chasm-like families (chasm/lava/etc.) with autotiling
-  for (let r = 0; r < rows; r++) {
-    const row = grid[r];
-    if (!row) continue;
-    for (let c = 0; c < cols; c++) {
-      const v = (row[c] | 0);
-      const family = valueToFamily(v);
-      if (!family || !isChasmLikeFamily(family)) continue;
-
-      const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
-      const shape: AutoShape = autoShapeFromMask(mask);
-
-      let def: any = null;
-
-      // ✅ Singleton rule: use the family's decor slots (TerrainAutoTileDef.decor)
-      if (shape === "single") {
-        const deco = this.atlas.getRandomDecorForFamily(family as TileFamily);
-        if (deco) def = deco;
-      }
-
-      if (!def) {
-        def =
-          this.atlas.getRandomVariant(family as TileFamily, shape) ||
-          this.atlas.getAutoTile(family as TileFamily, shape);
-      }
-
-      if (!def) {
-        def =
-          this.atlas.getRandomVariant(family as TileFamily, "center") ||
-          this.atlas.getAutoTile(family as TileFamily, "center");
-      }
-
-      if (!def) continue;
-
-      const gid = this._gidFor(def.textureKey, def.frameIndex);
-      if (gid >= 0) this.chasmLayer.putTileAt(gid, c, r);
-
-      // Inner-corner overlays (2×2) on top of chasm layer
-      const inner = innerCornerFromMask(mask);
-      if (inner !== "none") {
-        const innerDef =
-          this.atlas.getRandomVariant(family as TileFamily, inner as AutoShape) ||
-          this.atlas.getAutoTile(family as TileFamily, inner as AutoShape);
-        if (innerDef) {
-          const innerGid = this._gidFor(innerDef.textureKey, innerDef.frameIndex);
-          if (innerGid >= 0) this.chasmOverlayLayer.putTileAt(innerGid, c, r);
-        }
-      }
-    }
-  }
-
-  // stash last snapshot
-  try {
-    const anyThis: any = this as any;
-    anyThis.__lastGridRows = rows | 0;
-    anyThis.__lastGridCols = cols | 0;
-    anyThis.__lastGridWalls = rawWalls | 0;
-    anyThis.__lastGridSig = rawSig | 0;
-  } catch { /* ignore */ }
-
-  if (localDebug) {
-    logTiles(localDebug, "[tileMapGlue] base render done", {
-      rows,
-      cols,
-      hasDecalLayer: !!this.decalLayer,
-      hasPropLayer: !!this.propLayer,
-      fallbackFloorFamily,
-      rawWalls,
-      rawFloors,
-      rawSig,
-      famChasmCells,
-      famNonChasmCells,
-      tilesets: this._gidRanges.map(r => `${r.textureKey}@${r.firstGid}-${r.lastExclusive - 1}`).join(", "),
-    });
-  }
-}
-
-
-
 
 
 //End of sync from engine grid
@@ -999,9 +748,13 @@ syncFromEngineGridOLDCODETODELETE(grid: number[][]): void {
     }
   }
 
-syncPropGridByName(propNameGrid: string[][]): void {
-  if (!this.map) return;
 
+private _propBeginSync(): {
+  anyThis: any;
+  byRc: Record<string, { textureKey: string; frameIndex: number }>;
+  instByAnchor: Record<string, any>;
+  tileSize: number;
+} {
   const anyThis: any = this as any;
 
   // Destroy previous prop objects (images/sprites)
@@ -1023,128 +776,208 @@ syncPropGridByName(propNameGrid: string[][]): void {
   // Keep the tile layer empty / hidden (props rendered as y-sorted images/sprites).
   try { this.propLayer?.fill(-1); } catch { /* ignore */ }
 
-  const rows = propNameGrid.length | 0;
-  const cols = rows > 0 ? (propNameGrid[0].length | 0) : 0;
+  return {
+    anyThis,
+    byRc,
+    instByAnchor,
+    tileSize: (this.atlas.tileSize | 0),
+  };
+}
 
-  const tileSize = (this.atlas.tileSize | 0);
+private _propResolveTextureKeyAndInfo(vis: any): { textureKey: string; cols: number } | null {
+  // Resolve textureKey from atlas/alias
+  const atlasOrTk = (vis?.textureKey ?? vis?.atlas ?? "") as string;
+  const textureKey = vis?.textureKey
+    ? String(vis.textureKey)
+    : this.atlas.resolveAtlasTextureKey(atlasOrTk);
+
+  if (!textureKey) return null;
+
+  const info = this.atlas.getSheetInfo(textureKey);
+  const cols = (info?.cols ?? 0) | 0;
+  if (!info || cols <= 0) return null;
+
+  return { textureKey, cols };
+}
+
+private _propResolveBaseRef(vis: any, parsed: { state: string | null; explicitFrameIndex: number | null }, sheetCols: number): {
+  baseRef: { row: number; col: number };
+  usedState: string | null;
+} {
+  let baseRef = {
+    row: ((vis?.ref?.row ?? 0) | 0),
+    col: ((vis?.ref?.col ?? 0) | 0),
+  };
+
+  const animDef: any = vis?.anim || null;
+
+  // State override: "chest#open"
+  let usedState: string | null = null;
+  if (parsed.state && animDef?.states && animDef.states[parsed.state]) {
+    const st = animDef.states[parsed.state];
+    baseRef = { row: (st?.row ?? baseRef.row) | 0, col: (st?.col ?? baseRef.col) | 0 };
+    usedState = parsed.state;
+  }
+
+  // Explicit absolute frame override: "thing@123"
+  if (parsed.explicitFrameIndex != null) {
+    const tr = _tileRefFromFrameIndex(sheetCols | 0, parsed.explicitFrameIndex | 0);
+    baseRef = { row: tr.row | 0, col: tr.col | 0 };
+    usedState = null;
+  }
+
+  return { baseRef, usedState };
+}
+
+private _propResolveAnimKey(vis: any, parsed: { explicitFrameIndex: number | null }, usedState: string | null, wTiles: number, hTiles: number, textureKey: string, sheetCols: number): string | null {
+  const animDef: any = vis?.anim || null;
+
+  const canAnimate = ((wTiles | 0) === 1 && (hTiles | 0) === 1);
+  if (!canAnimate) return null;
+  if (usedState != null) return null;
+  if (parsed.explicitFrameIndex != null) return null;
+
+  return _ensurePropAnim(this.scene, textureKey, sheetCols | 0, animDef);
+}
+
+private _propCreateDisplayObj(args: {
+  x: number;
+  y: number;
+  textureKey: string;
+  frameIndex: number;
+  depth: number;
+  animKey: string | null;
+  isAnimAnchorCell: boolean;
+}): any {
+  const { x, y, textureKey, frameIndex, depth, animKey, isAnimAnchorCell } = args;
+
+  if (animKey && isAnimAnchorCell) {
+    const spr = this.scene.add.sprite(x, y, textureKey, frameIndex);
+    spr.setOrigin(0.5, 0.5);
+    spr.setDepth(depth);
+    try { spr.anims?.play?.(animKey); } catch { /* ignore */ }
+    return spr;
+  }
+
+  const img = this.scene.add.image(x, y, textureKey, frameIndex);
+  img.setOrigin(0.5, 0.5);
+  img.setDepth(depth);
+  return img;
+}
+
+private _propPlaceOneAnchor(
+  st: {
+    anyThis: any;
+    byRc: Record<string, { textureKey: string; frameIndex: number }>;
+    instByAnchor: Record<string, any>;
+    tileSize: number;
+  },
+  anchorR: number,
+  anchorC: number,
+  rawKey: string
+): void {
+  const parsed = _parsePropKey(rawKey);
+  const baseName = parsed.baseName;
+  if (!baseName) return;
+
+  const vis: any = PROP_VISUALS_BY_NAME[baseName];
+  if (!vis) return;
+
+  const resolved = this._propResolveTextureKeyAndInfo(vis);
+  if (!resolved) return;
+
+  const textureKey = resolved.textureKey;
+  const cols = resolved.cols;
+
+  const wTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
+  const hTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
+
+  // Optional per-prop offsets (safe even if undefined)
+  const ox = ((vis.offsetXPx ?? 0) | 0);
+  const oy = ((vis.offsetYPx ?? 0) | 0);
+
+  const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
+
+  const animKey = this._propResolveAnimKey(vis, parsed, usedState, wTiles, hTiles, textureKey, cols);
+
+  // Depth based on anchor (bottom tile) so whole prop sorts as ONE object.
+  // Include oy so y-sort matches visual when offsets are used.
+  const anchorYpx = (((anchorR | 0) * st.tileSize + (st.tileSize >> 1) + oy) | 0);
+  const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + 0) | 0;
+
+  const objs: any[] = [];
+
+  // Expand upward and rightward from anchor.
+  for (let dy = 0; dy < hTiles; dy++) {
+    for (let dx = 0; dx < wTiles; dx++) {
+      const worldR = ((anchorR | 0) - (hTiles - 1) + dy) | 0;
+      const worldC = ((anchorC | 0) + dx) | 0;
+
+      if (!this.map) return;
+      if (worldR < 0 || worldC < 0 || worldR >= (this.map.height | 0) || worldC >= (this.map.width | 0)) continue;
+
+      const atlasCol = (baseRef.col + dx) | 0;
+      const atlasRow = (baseRef.row - (hTiles - 1) + dy) | 0;
+      const frameIndex = (atlasRow * cols + atlasCol) | 0;
+
+      // Record for collision sampler (initial frame)
+      st.byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex };
+
+      const x = ((worldC * st.tileSize + (st.tileSize >> 1) + ox) | 0);
+      const y = ((worldR * st.tileSize + (st.tileSize >> 1) + oy) | 0);
+
+      const obj = this._propCreateDisplayObj({
+        x,
+        y,
+        textureKey,
+        frameIndex,
+        depth: baseDepth,
+        animKey,
+        isAnimAnchorCell: (dx === 0 && dy === 0),
+      });
+
+      objs.push(obj);
+      (st.anyThis.__propImgs as any[]).push(obj);
+    }
+  }
+
+  // Store instance for runtime state/frame swapping (by anchor r,c)
+  st.instByAnchor[String(anchorR | 0) + "," + String(anchorC | 0)] = {
+    anchorR: anchorR | 0,
+    anchorC: anchorC | 0,
+    baseName,
+    textureKey,
+    sheetCols: cols | 0,
+    wTiles,
+    hTiles,
+    baseRefRow: baseRef.row | 0,
+    baseRefCol: baseRef.col | 0,
+    objs,
+    vis,
+    byRc: st.byRc,
+    state: usedState,
+  };
+}
+
+
+syncPropGridByName(propNameGrid: string[][]): void {
+  if (!this.map) return;
+
+  const st = this._propBeginSync();
+
+  const rows = (propNameGrid.length | 0);
+  const cols = rows > 0 ? (propNameGrid[0].length | 0) : 0;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const rawKey = propNameGrid[r]?.[c] ?? "";
       if (!rawKey) continue;
 
-      const parsed = _parsePropKey(rawKey);
-      const baseName = parsed.baseName;
-      if (!baseName) continue;
-
-      const vis: any = PROP_VISUALS_BY_NAME[baseName];
-      if (!vis) continue;
-
-      // Resolve textureKey from atlas/alias
-      const atlasOrTk = (vis.textureKey ?? vis.atlas ?? "") as string;
-      const textureKey = vis.textureKey
-        ? (vis.textureKey as string)
-        : this.atlas.resolveAtlasTextureKey(atlasOrTk);
-
-      const info = this.atlas.getSheetInfo(textureKey);
-      if (!info) continue;
-
-      // Resolve base ref (bottom-left) possibly overridden by state or explicit frame
-      let baseRef = { row: (vis.ref?.row ?? 0) | 0, col: (vis.ref?.col ?? 0) | 0 };
-
-      const animDef: any = vis.anim || null;
-
-      // State override: "chest#open"
-      let usedState: string | null = null;
-      if (parsed.state && animDef?.states && animDef.states[parsed.state]) {
-        const st = animDef.states[parsed.state];
-        baseRef = { row: (st?.row ?? baseRef.row) | 0, col: (st?.col ?? baseRef.col) | 0 };
-        usedState = parsed.state;
-      }
-
-      // Explicit absolute frame override: "thing@123"
-      if (parsed.explicitFrameIndex != null) {
-        const tr = _tileRefFromFrameIndex(info.cols | 0, parsed.explicitFrameIndex | 0);
-        baseRef = { row: tr.row | 0, col: tr.col | 0 };
-      }
-
-      const wTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
-      const hTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
-
-      // Depth based on anchor (bottom tile) so whole prop sorts as ONE object.
-      const anchorYpx = ((r | 0) * tileSize + (tileSize >> 1)) | 0;
-      const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + 0) | 0;
-
-      // Auto-animate only when:
-      // - no explicit state chosen
-      // - no explicit frame chosen
-      // - animDef provides a usable frame sequence
-      // - prop is 1x1 (for now)
-      const canAnimate = (wTiles === 1 && hTiles === 1);
-      const animKey =
-        (usedState == null && parsed.explicitFrameIndex == null && canAnimate)
-          ? _ensurePropAnim(this.scene, textureKey, info.cols | 0, animDef)
-          : null;
-
-      const objs: any[] = [];
-
-      // Expand upward and rightward from anchor.
-      for (let dy = 0; dy < hTiles; dy++) {
-        for (let dx = 0; dx < wTiles; dx++) {
-          const worldR = (r - (hTiles - 1) + dy) | 0;
-          const worldC = (c + dx) | 0;
-
-          if (worldR < 0 || worldC < 0 || worldR >= this.map.height || worldC >= this.map.width) continue;
-
-          const atlasCol = (baseRef.col + dx) | 0;
-          const atlasRow = (baseRef.row - (hTiles - 1) + dy) | 0;
-          const frameIndex = (atlasRow * (info.cols | 0) + atlasCol) | 0;
-
-          // Record for collision sampler (initial frame)
-          byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex };
-
-          const x = (worldC * tileSize + (tileSize >> 1)) | 0;
-          const y = (worldR * tileSize + (tileSize >> 1)) | 0;
-
-          let obj: any;
-
-          // If animKey exists (1x1), use a Sprite so Phaser can play an anim.
-          if (animKey && dx === 0 && dy === 0) {
-            const spr = this.scene.add.sprite(x, y, textureKey, frameIndex);
-            spr.setOrigin(0.5, 0.5);
-            spr.setDepth(baseDepth);
-            try { spr.anims?.play?.(animKey); } catch { /* ignore */ }
-            obj = spr;
-          } else {
-            const img = this.scene.add.image(x, y, textureKey, frameIndex);
-            img.setOrigin(0.5, 0.5);
-            img.setDepth(baseDepth);
-            obj = img;
-          }
-
-          objs.push(obj);
-          (anyThis.__propImgs as any[]).push(obj);
-        }
-      }
-
-      // Store instance for runtime state/frame swapping (by anchor r,c)
-      instByAnchor[String(r) + "," + String(c)] = {
-        anchorR: r | 0,
-        anchorC: c | 0,
-        baseName,
-        textureKey,
-        sheetCols: info.cols | 0,
-        wTiles,
-        hTiles,
-        baseRefRow: baseRef.row | 0,
-        baseRefCol: baseRef.col | 0,
-        objs,
-        vis,
-        byRc
-      };
+      this._propPlaceOneAnchor(st, r | 0, c | 0, rawKey);
     }
   }
 }
+
 
   // ---- internal helpers ----
 

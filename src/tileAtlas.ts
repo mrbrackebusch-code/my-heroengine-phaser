@@ -97,6 +97,10 @@ export interface DecorVisualRef {
 
     // either real animation (frames) or state selectors
     anim?: DecorAnimFrames | DecorAnimStates;
+
+    // ✅ optional pixel offsets applied at render time (Phaser prop rendering)
+    offsetXPx?: number;
+    offsetYPx?: number;
 }
 
 
@@ -159,11 +163,13 @@ teleport_rune: {
     // IDLE: static (no anim) so it does NOT spin unless someone stands on it
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
+    offsetYPx: 12,
 },
 
 teleport_rune_spin1: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
+    offsetYPx: 12,
     anim: {
         key: "spin1",
         frames: [0, 1, 2, 3],
@@ -175,6 +181,7 @@ teleport_rune_spin1: {
 teleport_rune_spin2: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
+    offsetYPx: 12,
     anim: {
         key: "spin2",
         frames: [0, 1, 2, 3],
@@ -186,6 +193,7 @@ teleport_rune_spin2: {
 teleport_rune_spin3: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
+    offsetYPx: 12,
     anim: {
         key: "spin3",
         frames: [0, 1, 2, 3],
@@ -197,6 +205,7 @@ teleport_rune_spin3: {
 teleport_rune_flash: {
     atlas: "anims.teleport_rune",
     ref: { row: 0, col: 0 },
+    offsetYPx: 12,
     anim: {
         key: "flash",
         frames: [0, 1, 2, 3],

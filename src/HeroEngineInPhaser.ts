@@ -1743,7 +1743,7 @@ let _dunTeleportCommitAtMs = 0
 let _dunRuneSpinSinceMs = 0         // starts when ANY hero steps on rune
 
 
-const TELEPORT_RUNE_Y_OFFSET_PX = 1000; // + = lower on screen (try 6..14)
+const TELEPORT_RUNE_Y_OFFSET_PX = 0; // + = lower on screen (try 6..14)
 
 
 // assumes you already have: let _dunTeleportRuneTrig: Sprite = null as any
@@ -3129,7 +3129,7 @@ const DUNGEON_KIND_SHOP = "shop"
 const DUNGEON_KIND_TREASURE = "treasure"
 const DUNGEON_KIND_STORY = "story"
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3
+const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
 
@@ -3970,11 +3970,12 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     const roll = Math.randomRange(0, 99)
     if (roll < 10) return DUNGEON_KIND_STORY
-    if (roll < 50) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind
+    if (roll < 50) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob
     return DUNGEON_KIND_COMBAT
 }
 
-function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
+
+function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number): void {
     _dunFloorIndex = nextIndex | 0
     _dunFloorKind = kind
     _dunObjectiveDone = false
@@ -3983,7 +3984,9 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
     _dunClearTransientFloorEntities()
     _dunPickThemeForFloor(_dunFloorIndex, _dunFloorKind)
+}
 
+function _dunEnterFloor_rebuildWorldAndSpawnPad(): { padX: number; padY: number } {
     // Rebuild world each floor
     initWorldTileMap()
 
@@ -3997,19 +4000,25 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
         padX = _dunExitPad.x | 0
         padY = _dunExitPad.y | 0
     }
+    return { padX, padY }
+}
 
-    // Active players ONLY (1..4 for now)
-    const activePids = _dunGetActivePidsUpTo4()
-
+function _dunEnterFloor_spawnCoordsAroundPad(padX: number, padY: number): number[][] {
     // Spawn points (we assign sequentially so 2 players don't leave "gaps")
     const offset = 28
-    const coords: number[][] = [
+    return [
         [padX + offset, padY + offset],
         [padX - offset, padY + offset],
         [padX + offset, padY + (offset + 16)],
         [padX - offset, padY + (offset + 16)],
     ]
+}
 
+function _dunEnterFloor_placeHeroesAtSpawn(
+    activePids: number[],
+    coords: number[][],
+    nowMs: number
+): void {
     for (let i = 0; i < activePids.length; i++) {
         const pid = activePids[i] | 0
         const xy = coords[i % coords.length]
@@ -4035,67 +4044,83 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
         sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, 0)
         sprites.setDataString(hero, "dir", "up")
     }
+}
 
-    // Floor behavior
-    if (_dunFloorKind == DUNGEON_KIND_ENTRANCE) {
-        DUNGEON_BLOCK_INTENTS = true
-        const rcChest = _dunPickRandomWalkableTile({
-            avoidR: _dunPadTileR,
-            avoidC: _dunPadTileC,
-            minManhattan: 6,
-            maxTries: 250
-        })
-        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
-    }
-    else if (_dunFloorKind == DUNGEON_KIND_TREASURE) {
-        DUNGEON_BLOCK_INTENTS = true
-        const rcChest = _dunPickRandomWalkableTile({
-            avoidR: _dunPadTileR,
-            avoidC: _dunPadTileC,
-            minManhattan: 6,
-            maxTries: 250
-        })
-        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
-    }
-    else if (_dunFloorKind == DUNGEON_KIND_STORY) {
-        DUNGEON_BLOCK_INTENTS = true
-        _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", (padX + 40) | 0, (padY + 10) | 0)
-        const rcChest = _dunPickRandomWalkableTile({
-            avoidR: _dunPadTileR,
-            avoidC: _dunPadTileC,
-            minManhattan: 6,
-            maxTries: 250
-        })
-        _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
-    }
-    else if (_dunFloorKind == DUNGEON_KIND_SHOP) {
-        DUNGEON_BLOCK_INTENTS = false
+function _dunEnterFloor_spawnRandomChest(nowMs: number): void {
+    const rcChest = _dunPickRandomWalkableTile({
+        avoidR: _dunPadTileR,
+        avoidC: _dunPadTileC,
+        minManhattan: 6,
+        maxTries: 250
+    })
+    _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
+}
 
-        SHOP_MODE_ACTIVE_MASTER = true
-        SHOP_MODE_ACTIVE = false
+function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
+    DUNGEON_BLOCK_INTENTS = true
+    _dunEnterFloor_spawnRandomChest(nowMs)
+}
 
-        shopInitPOC()
+function _dunEnterFloor_setupTreasureFloor(nowMs: number): void {
+    DUNGEON_BLOCK_INTENTS = true
+    _dunEnterFloor_spawnRandomChest(nowMs)
+}
 
-        // Move shop away from pad so pad can still be used
-        if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
-            shopTriggerZone.setPosition((padX - 70) | 0, (padY + 55) | 0)
-            if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
-        }
+function _dunEnterFloor_setupStoryFloor(nowMs: number, padX: number, padY: number): void {
+    DUNGEON_BLOCK_INTENTS = true
+    _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", (padX + 40) | 0, (padY + 10) | 0)
+    _dunEnterFloor_spawnRandomChest(nowMs)
+}
 
-        _dunObjectiveDone = true
-        _dunSetPadPowered(true)
-    }
-    else {
-        // COMBAT
-        DUNGEON_BLOCK_INTENTS = false
-        setupEnemySpawners()
-        startEnemyWaves()
+function _dunEnterFloor_setupShopFloor(padX: number, padY: number): void {
+    DUNGEON_BLOCK_INTENTS = false
+
+    SHOP_MODE_ACTIVE_MASTER = true
+    SHOP_MODE_ACTIVE = false
+
+    shopInitPOC()
+
+    // Move shop away from pad so pad can still be used
+    if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
+        shopTriggerZone.setPosition((padX - 70) | 0, (padY + 55) | 0)
+        if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
     }
 
-    // Floor banner (DOM dialog)
+    // NOTE: preserved existing behavior (auto-unlock exit)
+    _dunObjectiveDone = true
+    _dunSetPadPowered(true)
+}
+
+function _dunEnterFloor_setupCombatFloor(): void {
+    DUNGEON_BLOCK_INTENTS = false
+    setupEnemySpawners()
+    startEnemyWaves()
+}
+
+function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, padY: number): void {
+    if (kind == DUNGEON_KIND_ENTRANCE) _dunEnterFloor_setupEntranceFloor(nowMs)
+    else if (kind == DUNGEON_KIND_TREASURE) _dunEnterFloor_setupTreasureFloor(nowMs)
+    else if (kind == DUNGEON_KIND_STORY) _dunEnterFloor_setupStoryFloor(nowMs, padX, padY)
+    else if (kind == DUNGEON_KIND_SHOP) _dunEnterFloor_setupShopFloor(padX, padY)
+    else _dunEnterFloor_setupCombatFloor()
+}
+
+function _dunEnterFloor_finish(nowMs: number, activePidsCount: number): void {
     _dunDialog_showFloorBanner(nowMs | 0)
+    _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily} players=${activePidsCount | 0}`)
+}
 
-    _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily} players=${activePids.length}`)
+
+function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
+    _dunEnterFloor_initState(nextIndex, kind, nowMs)
+
+    const pad = _dunEnterFloor_rebuildWorldAndSpawnPad()
+    const activePids = _dunGetActivePidsUpTo4()
+    const coords = _dunEnterFloor_spawnCoordsAroundPad(pad.padX, pad.padY)
+
+    _dunEnterFloor_placeHeroesAtSpawn(activePids, coords, nowMs)
+    _dunEnterFloor_setupKind(_dunFloorKind, nowMs, pad.padX, pad.padY)
+    _dunEnterFloor_finish(nowMs, activePids.length | 0)
 }
 
 function dungeonStartRun(nowMs: number): void {
@@ -5165,6 +5190,25 @@ const MOD_BUCKET_AGI_DMG = "AGI_DMG"
 const MOD_BUCKET_INT_DMG = "INT_DMG"
 const MOD_BUCKET_SUP_DMG = "SUP_DMG"
 
+
+// --- ADD: trait mod buckets beyond damage (Trait2/3/4) ---
+const MOD_BUCKET_STR_REACH = "str.reach";
+const MOD_BUCKET_STR_TIME = "str.time";
+const MOD_BUCKET_STR_STATUS = "str.status";
+
+const MOD_BUCKET_AGI_REACH = "agi.reach";
+const MOD_BUCKET_AGI_TIME = "agi.time";
+const MOD_BUCKET_AGI_STATUS = "agi.status";
+
+const MOD_BUCKET_INT_REACH = "int.reach";
+const MOD_BUCKET_INT_TIME = "int.time";
+const MOD_BUCKET_INT_STATUS = "int.status";
+
+const MOD_BUCKET_SUP_REACH = "sup.reach";
+const MOD_BUCKET_SUP_TIME = "sup.time";
+const MOD_BUCKET_SUP_STATUS = "sup.status";
+
+
 // Lists live in memory (unbounded)
 const _heroMods: { [heroIndex: number]: { [bucket: string]: ModEntry[] } } = {}
 // Cached sums (fast reads)
@@ -5251,16 +5295,61 @@ function _damageBucketForFamily(family: number): string {
 }
 
 // Returns either the original traits array (no change) OR a cloned array with TRAIT1 modified.
-function applyDamageModsToTraits(heroIndex: number, family: number, traits: number[]): number[] {
-    const b = _damageBucketForFamily(family)
-    if (!b) return traits
+function _modBucketForFamilyAndTraitIndex(family: number, outTraitIndex: number): string | null {
+    const f = family | 0;
+    const t = outTraitIndex | 0;
 
-    const bonus = heroModSum(heroIndex, b) | 0
-    if (!bonus) return traits
+    if (t === OUT.TRAIT1) return _damageBucketForFamily(f);
 
-    const out = traits.slice()
-    out[OUT.TRAIT1] = (out[OUT.TRAIT1] | 0) + bonus
-    return out
+    if (f === FAMILY.STRENGTH) {
+        if (t === OUT.TRAIT2) return MOD_BUCKET_STR_REACH;
+        if (t === OUT.TRAIT3) return MOD_BUCKET_STR_TIME;
+        if (t === OUT.TRAIT4) return MOD_BUCKET_STR_STATUS;
+        return MOD_BUCKET_STR_DMG;
+    }
+
+    if (f === FAMILY.AGILITY) {
+        if (t === OUT.TRAIT2) return MOD_BUCKET_AGI_REACH;
+        if (t === OUT.TRAIT3) return MOD_BUCKET_AGI_TIME;
+        if (t === OUT.TRAIT4) return MOD_BUCKET_AGI_STATUS;
+        return MOD_BUCKET_AGI_DMG;
+    }
+
+    if (f === FAMILY.INTELLECT) {
+        if (t === OUT.TRAIT2) return MOD_BUCKET_INT_REACH;
+        if (t === OUT.TRAIT3) return MOD_BUCKET_INT_TIME;
+        if (t === OUT.TRAIT4) return MOD_BUCKET_INT_STATUS;
+        return MOD_BUCKET_INT_DMG;
+    }
+
+    // support/heal
+    if (t === OUT.TRAIT2) return MOD_BUCKET_SUP_REACH;
+    if (t === OUT.TRAIT3) return MOD_BUCKET_SUP_TIME;
+    if (t === OUT.TRAIT4) return MOD_BUCKET_SUP_STATUS;
+    return MOD_BUCKET_SUP_DMG;
+}
+
+function applyDamageModsToTraits(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
+    if (!traitsEff) return traitsEff;
+
+    const b1 = _modBucketForFamilyAndTraitIndex(family, OUT.TRAIT1);
+    const b2 = _modBucketForFamilyAndTraitIndex(family, OUT.TRAIT2);
+    const b3 = _modBucketForFamilyAndTraitIndex(family, OUT.TRAIT3);
+    const b4 = _modBucketForFamilyAndTraitIndex(family, OUT.TRAIT4);
+
+    const m1 = b1 ? (heroModSum(hi, b1) | 0) : 0;
+    const m2 = b2 ? (heroModSum(hi, b2) | 0) : 0;
+    const m3 = b3 ? (heroModSum(hi, b3) | 0) : 0;
+    const m4 = b4 ? (heroModSum(hi, b4) | 0) : 0;
+
+    if ((m1 | m2 | m3 | m4) === 0) return traitsEff;
+
+    const out = traitsEff.slice() as MoveTraits;
+    out[OUT.TRAIT1] = (out[OUT.TRAIT1] | 0) + m1;
+    out[OUT.TRAIT2] = (out[OUT.TRAIT2] | 0) + m2;
+    out[OUT.TRAIT3] = (out[OUT.TRAIT3] | 0) + m3;
+    out[OUT.TRAIT4] = (out[OUT.TRAIT4] | 0) + m4;
+    return out;
 }
 
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
@@ -5378,6 +5467,145 @@ const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
 // How long a focus stays “alive” without a continuous overlap event.
 //const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+
+function _shopFamilyFromGameplayKind(kind: string): number {
+    const k = (kind || "").toLowerCase();
+    if (k === "strength") return FAMILY.STRENGTH;
+    if (k === "agility") return FAMILY.AGILITY;
+    if (k === "intellect" || k === "intelligence") return FAMILY.INTELLECT;
+    if (k === "support" || k === "heal" || k === "healing") return FAMILY.HEAL;
+    return FAMILY.STRENGTH;
+}
+
+function _shopPrettyFamilyName(fam: number): string {
+    const f = fam | 0;
+    if (f === FAMILY.STRENGTH) return "Strength";
+    if (f === FAMILY.AGILITY) return "Agility";
+    if (f === FAMILY.INTELLECT) return "Intelligence";
+    return "Support";
+}
+
+function _shopFormatBonusDesc(fam: number, t1: number, t2: number, t3: number, t4: number): string {
+    const familyName = _shopPrettyFamilyName(fam);
+
+    const a1 = t1 | 0, a2 = t2 | 0, a3 = t3 | 0, a4 = t4 | 0;
+
+    // Exact patterns you asked for
+    if (a1 !== 0 && a2 === 0 && a3 === 0 && a4 === 0) {
+        return `+${a1} to Trait 1 for ${familyName}`;
+    }
+    if (a1 !== 0 && a1 === a2 && a2 === a3 && a3 === a4) {
+        return `+${a1} to Traits 1, 2, 3, and 4 for ${familyName}`;
+    }
+
+    // Generic fallback
+    let s = `Bonus for ${familyName}: `;
+    let first = true;
+
+    function addPart(traitNum: number, v: number) {
+        if ((v | 0) === 0) return;
+        if (!first) s += ", ";
+        first = false;
+        s += `T${traitNum}+${v | 0}`;
+    }
+
+    addPart(1, a1);
+    addPart(2, a2);
+    addPart(3, a3);
+    addPart(4, a4);
+
+    if (first) return `Bonus for ${familyName}: (none)`;
+    return s;
+}
+
+function _shopRollBonusForOffer(it: Sprite): void {
+    const gameplayKind = sprites.readDataString(it, SH_ITEM_GAMEPLAY_KIND) || "";
+    const fam = _shopFamilyFromGameplayKind(gameplayKind);
+
+    // 3 simple “knobs” patterns (big single, spread, duo)
+    const p = randint(0, 2);
+
+    let t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+
+    if (p === 0) {
+        t1 = randint(80, 120); // ~"+100 Trait 1"
+    } else if (p === 1) {
+        const v = randint(15, 30); // ~"+20 all traits"
+        t1 = v; t2 = v; t3 = v; t4 = v;
+    } else {
+        t1 = randint(25, 60);
+        t2 = randint(25, 60);
+        // leave t3/t4 at 0 (easy to see the change)
+    }
+
+    const desc = _shopFormatBonusDesc(fam, t1, t2, t3, t4);
+
+    sprites.setDataNumber(it, SH_ITEM_BONUS_FAMILY, fam);
+    sprites.setDataNumber(it, SH_ITEM_BONUS_T1, t1);
+    sprites.setDataNumber(it, SH_ITEM_BONUS_T2, t2);
+    sprites.setDataNumber(it, SH_ITEM_BONUS_T3, t3);
+    sprites.setDataNumber(it, SH_ITEM_BONUS_T4, t4);
+    sprites.setDataString(it, SH_ITEM_BONUS_DESC, desc);
+}
+
+function _shopEnsureOfferHasBonus(it: Sprite): void {
+    const d = sprites.readDataString(it, SH_ITEM_BONUS_DESC) || "";
+    if (d) return;
+    _shopRollBonusForOffer(it);
+}
+
+function _shopApplyOfferBonusToHero(hi: number, offer: Sprite, ringIndex: number, nowMs: number): void {
+    _shopEnsureOfferHasBonus(offer);
+
+    const fam = sprites.readDataNumber(offer, SH_ITEM_BONUS_FAMILY) | 0;
+    const t1 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T1) | 0;
+    const t2 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T2) | 0;
+    const t3 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T3) | 0;
+    const t4 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T4) | 0;
+
+    const base = `shop:${hi}:${ringIndex}:${nowMs | 0}`;
+
+    if (t1) heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT1)!, base + ":t1", t1);
+    if (t2) heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT2)!, base + ":t2", t2);
+    if (t3) heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT3)!, base + ":t3", t3);
+    if (t4) heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT4)!, base + ":t4", t4);
+}
+
+function _shopGetEquippedWeaponIdForHeroSlot(hero: Sprite, slot: string): string {
+    const s = (slot || "").toLowerCase();
+    if (s === "thrust") return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || "";
+    if (s === "slash") return sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || "";
+    if (s === "cast") return sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || "";
+    return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || "";
+}
+
+function _shopSetRingWeaponIdAtIndex(sk: Sprite, idx: number, weaponId: string): void {
+    const idsStr = sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "";
+    const ids = _shopSplitPipeList(idsStr);
+    if (idx < 0 || idx >= ids.length) return;
+    ids[idx] = weaponId || "";
+    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, ids.join("|"));
+}
+
+function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
+    if (!_dunActive) return;
+    if (_dunFloorKind !== DUNGEON_KIND_SHOP) return;
+
+    if (_dunObjectiveDone && _dunIsPadPowered()) return;
+
+    _dunObjectiveDone = true;
+    _dunSetPadPowered(true);
+
+    // Optional: quick DOM hint
+    const g: any = globalThis as any;
+    const dlg = g.__heDialog;
+    dlg?.show?.({
+        speaker: "Shopkeeper",
+        text: "Teleport rune activated.",
+        hint: "Step on the pad to leave the shop."
+    });
+}
 
 
 
@@ -5637,7 +5865,84 @@ function shopPublishTouchedMapOnShopkeeper(nowMs: number): void {
 }
 
 
+
 function shopHandleControls(nowMs: number): void {
+    const now = nowMs | 0;
+
+    if (!shopkeeperNpc) return;
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero) continue;
+
+        const pid = (hi + 1) | 0;
+        const ctrl = shopPollControls(hi);
+
+        // Focused offer (weapon underfoot)
+        const summary = _shopGetFocusedOfferSummaryForHero(hi, now);
+
+        // If focused offer and A-edge: buy/swap
+        if (summary.active && ctrl.A_edge) {
+            const offer = summary.offer as Sprite;
+            const price = summary.price | 0;
+
+            if (!summary.weaponId) {
+                continue;
+            }
+
+            if ((teamCoins | 0) < price) {
+                // not enough coins; keep it quiet for now (you can add SFX here)
+                continue;
+            }
+
+            // Pay
+            setTeamCoins((teamCoins | 0) - price);
+
+            // Apply bonus to hero (permanent mods for now)
+            _shopApplyOfferBonusToHero(hi, offer, summary.ringIndex | 0, now);
+
+            // Swap weapon: hero takes offer; offer becomes hero’s previous weapon
+            const slot = summary.slot || "thrust";
+            const newWeaponId = summary.weaponId || "";
+            const oldWeaponId = _shopGetEquippedWeaponIdForHeroSlot(hero, slot);
+
+            _shopEquipWeaponToHeroSlot(hero, slot, newWeaponId);
+
+            // Drop old weapon into this ring slot (renderer is driven by shopkeeper ring ids)
+            _shopSetRingWeaponIdAtIndex(shopkeeperNpc, summary.ringIndex | 0, oldWeaponId || "");
+
+            // Reroll the bonus text so the dropped weapon “feels like a new shop offer”
+            _shopRollBonusForOffer(offer);
+
+            // Buying counts as interaction -> unlock exit pad
+            _shopUnlockExitPadIfInShopFloor(now);
+
+            // Optional DOM dialog update
+            if (SHOP_USE_DOM_DIALOG) {
+                const g: any = globalThis as any;
+                const dlg = g.__heDialog;
+                dlg?.show?.({
+                    speaker: "Shop",
+                    text: `Purchased: ${summary.weaponLabel}\n${summary.bonusDesc}`,
+                    hint: "Teleport rune activated."
+                });
+            }
+
+            continue;
+        }
+
+        // No focused offer: A on shopkeeper unlocks exit pad (the “required interaction”)
+        if (ctrl.A_edge) {
+            // Use overlap check (simple and deterministic)
+            if (_shopIsOverlapping(hero, shopkeeperNpc)) {
+                _shopUnlockExitPadIfInShopFloor(now);
+            }
+        }
+    }
+}
+
+
+function shopHandleControlsOLDCODETODELETE(nowMs: number): void {
     const now = nowMs | 0
     if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
 
@@ -5859,45 +6164,47 @@ function _shopOwnerLabel(ownedByPid: number, pid: number): string {
     return "OWNED(P" + ob + ")"
 }
 
-function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): {
-    offer: Sprite,
-    ringIndex: number,
-    weaponId: string,
-    slot: string,
-    price: number,
-    ownedBy: number,
-    active: boolean
-} {
-    const now = nowMs | 0
-    const offer = _shopGetFocusedOfferForHero(hi, now)
+function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): any {
+    const now = nowMs | 0;
+    const offer = shopFocusOfferByHero[hi];
 
-    if (!offer) {
-        return {
-            offer: null,
-            ringIndex: -1,
-            weaponId: "",
-            slot: "",
-            price: 0,
-            ownedBy: 0,
-            active: false
-        }
-    }
+    if (!offer) return { active: false };
 
-    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
-    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
-    const slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
-    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
-    const ownedBy = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+    if (!_shopIsOfferTouchValidForHero(hi, now)) return { active: false };
+
+    _shopEnsureOfferHasBonus(offer);
+
+    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0;
+    const slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "";
+    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || "";
+    const weaponLabel = sprites.readDataString(offer, SH_ITEM_LABEL) || weaponId;
+    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0;
+
+    const gameplayKind = sprites.readDataString(offer, SH_ITEM_GAMEPLAY_KIND) || "";
+
+    const bonusFamily = sprites.readDataNumber(offer, SH_ITEM_BONUS_FAMILY) | 0;
+    const bonusT1 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T1) | 0;
+    const bonusT2 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T2) | 0;
+    const bonusT3 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T3) | 0;
+    const bonusT4 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T4) | 0;
+    const bonusDesc = sprites.readDataString(offer, SH_ITEM_BONUS_DESC) || "";
 
     return {
+        active: true,
         offer,
         ringIndex,
-        weaponId,
         slot,
+        weaponId,
+        weaponLabel,
         price,
-        ownedBy,
-        active: true
-    }
+        gameplayKind,
+        bonusFamily,
+        bonusT1,
+        bonusT2,
+        bonusT3,
+        bonusT4,
+        bonusDesc
+    };
 }
 
 function _shopBuildDialogLine(hi: number, pid: number, s: {
@@ -5917,7 +6224,20 @@ function _shopBuildDialogLine(hi: number, pid: number, s: {
     return (s.weaponId || "???").toUpperCase() + "  [" + slotPretty + "]  $" + (s.price | 0) + "  " + ownerStr
 }
 
-function _shopBuildControlsLine(pid: number, s: {
+
+function _shopBuildControlsLine(pid: number, summary: any): string {
+    if (!summary || !summary.active) return "";
+    const price = summary.price | 0;
+    return `A: buy/swap (${price}🪙)`;
+}
+
+function _shopBuildStatsLine(hi: number, summary: any): string {
+    if (!summary || !summary.active) return "";
+    return summary.bonusDesc || "";
+}
+
+
+function _shopBuildControlsLineOLDCODETODELETE(pid: number, s: {
     price: number,
     ownedBy: number,
     active: boolean
@@ -5939,7 +6259,7 @@ function _shopBuildControlsLine(pid: number, s: {
     return "A: (blocked)  B: (none)    Coins: " + (teamCoins | 0)
 }
 
-function _shopBuildStatsLine(hi: number, s: {
+function _shopBuildStatsLineOLDCODETODELETE(hi: number, s: {
     weaponId: string,
     slot: string,
     active: boolean
@@ -6232,69 +6552,130 @@ function _shopPriceForRingIndex(i: number): number {
     return 10
 }
 
+
+function shopRenderSlotForRingIndex(i: number): string {
+    const idx = i | 0
+    if (idx < 0) return "thrust"
+
+    // Prefer canonical defaults (keeps behavior stable even if shopkeeper data is missing)
+    const raw = (SHOP_DEFAULT_RING_SLOTS || "").trim()
+    if (!raw) return "thrust"
+
+    const parts = raw.split("|")
+    if (idx >= 0 && idx < parts.length) {
+        const s = (parts[idx] || "").trim().toLowerCase()
+        if (s === "slash" || s === "cast" || s === "thrust") return s
+    }
+
+    return "thrust"
+}
+
+function _shopRingRadiusPxForShopkeeper(sk: Sprite): number {
+    let r = 0
+    try { r = (sprites.readDataNumber(sk, SHOP_WPN_RING_RADIUS_PX_KEY) | 0) } catch { r = 0 }
+    if ((r | 0) <= 0) r = (SHOP_DEFAULT_RING_RADIUS_PX | 0)
+    if ((r | 0) <= 0) r = 22
+    return r | 0
+}
+
+function _shopRingBaseAngleDegForShopkeeper(sk: Sprite): number {
+    let d = 0
+    try { d = (sprites.readDataNumber(sk, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0) } catch { d = 0 }
+    return d | 0
+}
+
+function _shopRingOffsetForIndex(i: number, n: number, radiusPx: number, baseDeg: number): { ox: number; oy: number } {
+    const nn = Math.max(1, n | 0)
+    const thetaDeg = ((baseDeg | 0) + Math.floor((360 * (i | 0)) / nn)) | 0
+    const theta = _shopDegToRad(thetaDeg)
+    const ox = (Math.round((radiusPx | 0) * Math.cos(theta)) | 0)
+    const oy = (Math.round((radiusPx | 0) * Math.sin(theta)) | 0)
+    return { ox, oy }
+}
+
+function shopGameplayKindForRingIndex(i: number): string {
+    const idx = i | 0
+    if (idx < 0) return "strength"
+
+    // Optional: if shopInitPOC stamps a pipe list onto shopkeeper, use it.
+    // Example value: "strength|agility|intellect|support|strength|agility|intellect|support"
+    const KEY = "shopWpnRingGameplayKinds"
+
+    try {
+        if (shopkeeperNpc && !(shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+            const raw = (sprites.readDataString(shopkeeperNpc, KEY) || "").trim()
+            if (raw) {
+                const parts = raw.split("|")
+                if (idx >= 0 && idx < parts.length) {
+                    const s = (parts[idx] || "").trim().toLowerCase()
+                    if (s) return s
+                }
+            }
+        }
+    } catch { /* ignore */ }
+
+    // Fallback: stable default by index (repeats every 4)
+    const m = (idx & 3)
+    if (m === 0) return "strength"
+    if (m === 1) return "agility"
+    if (m === 2) return "intellect"
+    return "support"
+}
+
+
 function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
     if (!sk) return
 
-    const ids = _shopSplitPipeList(sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || SHOP_DEFAULT_RING_WEAPON_IDS)
-    const slots = _shopSplitPipeList(sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || SHOP_DEFAULT_RING_SLOTS)
+    const idsStr = sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || ""
+    const ids = _shopSplitPipeList(idsStr)
 
-    const n = ids.length
-    if (n <= 0) {
-        _shopDestroyOfferItems()
-        return
+    const wantCount = ids.length | 0
+    if (wantCount <= 0) return
+
+    const cx = sk.x | 0
+    const cy = sk.y | 0
+
+    const radiusPx = _shopRingRadiusPxForShopkeeper(sk)
+    const baseDeg = _shopRingBaseAngleDegForShopkeeper(sk)
+
+    // Ensure array sized
+    while (_shopRingOfferItems.length < wantCount) _shopRingOfferItems.push(null)
+    while (_shopRingOfferItems.length > wantCount) _shopRingOfferItems.pop()
+
+    // Create missing
+    for (let i = 0; i < wantCount; i++) {
+        if (_shopRingOfferItems[i]) continue
+        const it = spawnShopItem(cx, cy, "") // weapon id stamped below
+        _shopRingOfferItems[i] = it
     }
 
-    // Rebuild if wrong count or any destroyed
-    let rebuild = false
-    if (_shopRingOfferItems.length !== n) rebuild = true
-    else {
-        for (let i = 0; i < _shopRingOfferItems.length; i++) {
-            const s = _shopRingOfferItems[i]
-            if (!s || (s.flags & sprites.Flag.Destroyed)) { rebuild = true; break }
-        }
-    }
-    if (rebuild) _shopDestroyOfferItems()
+    // Stamp + position
+    for (let i = 0; i < wantCount; i++) {
+        const it = _shopRingOfferItems[i]!
+        const weaponId = (ids[i] || "").trim()
 
-    const radius = sprites.readDataNumber(sk, SHOP_WPN_RING_RADIUS_PX_KEY) | 0
-    const baseDeg = sprites.readDataNumber(sk, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0
+        const slot = shopRenderSlotForRingIndex(i)
+        const gameplayKind = shopGameplayKindForRingIndex(i)
+        const price = _shopPriceForRingIndex(i) | 0
 
-    // Create missing items (or all, if rebuilt)
-    for (let i = 0; i < n; i++) {
-        const weaponId = ids[i]
-        const renderSlot = (i < slots.length) ? slots[i] : "thrust"
-
-        const thetaDeg = baseDeg + ((360 * i) / n)
-        const theta = _shopDegToRad(thetaDeg)
-        const ox = (Math.round(radius * Math.cos(theta)) | 0)
-        const oy = (Math.round(radius * Math.sin(theta)) | 0)
-
-        const x = (sk.x + ox) | 0
-        const y = (sk.y + oy) | 0
-
-        let it: Sprite = null
-        if (!rebuild && i < _shopRingOfferItems.length) it = _shopRingOfferItems[i]
-
-        if (!it) {
-            // Spawn as an *invisible* hitbox (Arcade overlap still works; Phaser won't render it anyway)
-            it = spawnShopItem(x, y, weaponId) // label is weaponId for now
-            it.setFlag(SpriteFlag.Invisible, true)
-            it.setFlag(SpriteFlag.Ghost, true)
-            it.z = sk.z + 5
-            _shopRingOfferItems[i] = it
-        } else {
-            it.setPosition(x, y)
-        }
-
-        // Stamp contract-required metadata
         sprites.setDataNumber(it, SH_ITEM_RING_INDEX, i | 0)
+        sprites.setDataString(it, SH_ITEM_RENDER_SLOT, slot)
+        sprites.setDataString(it, SH_ITEM_GAMEPLAY_KIND, gameplayKind)
+
         sprites.setDataString(it, SH_ITEM_WEAPON_ID, weaponId)
         sprites.setDataString(it, SH_ITEM_LABEL, weaponId)
-        sprites.setDataString(it, SH_ITEM_RENDER_SLOT, renderSlot)
-        sprites.setDataString(it, SH_ITEM_GAMEPLAY_KIND, _shopGameplayKindForRingIndex(i))
-        sprites.setDataNumber(it, SH_ITEM_PRICE, _shopPriceForRingIndex(i))
-        if ((sprites.readDataNumber(it, SH_ITEM_BOUGHT_BY_PID) | 0) === 0) {
-            sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
-        }
+        sprites.setDataNumber(it, SH_ITEM_PRICE, price)
+
+        // Always “available” (swap shop)
+        sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
+
+        // Give it a rolled bonus if it doesn't already have one
+        _shopEnsureOfferHasBonus(it)
+
+        // Ring placement
+        const off = _shopRingOffsetForIndex(i, wantCount, radiusPx, baseDeg)
+        it.x = (cx + (off.ox | 0)) | 0
+        it.y = (cy + (off.oy | 0)) | 0
     }
 }
 
@@ -6525,6 +6906,20 @@ const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"stren
 const SH_ITEM_PRICE = "shPrice"                    // number
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
 
+
+// --- ADD: per-offer bonus payload (randomly rolled) ---
+const SH_ITEM_BONUS_FAMILY = "shBonusFam";  // number (FAMILY.*)
+const SH_ITEM_BONUS_T1 = "shBonusT1";       // Trait 1 delta
+const SH_ITEM_BONUS_T2 = "shBonusT2";       // Trait 2 delta
+const SH_ITEM_BONUS_T3 = "shBonusT3";       // Trait 3 delta
+const SH_ITEM_BONUS_T4 = "shBonusT4";       // Trait 4 delta
+const SH_ITEM_BONUS_DESC = "shBonusDesc";   // preformatted text
+
+const SHOP_USE_DOM_DIALOG = true;
+let _shopDomLastSig = "";
+let _shopDomWasShowing = false;
+
+
 // ------------------------------------------------------------
 // SHOP WEAPON RING – canonical defaults (must match atlas model ids)
 // ------------------------------------------------------------
@@ -6665,49 +7060,98 @@ function _shopStatsPreviewText(hi: number): string {
 
 
 
-function _shopUpdateUiForHero(hi: number, now: number): void {
+function _shopUpdateUiForHero(hi: number, nowMs: number): void {
+    const now = nowMs | 0
+    const pid = (hi + 1) | 0
+
+    if (hi < 0 || hi > 3) return
+    if (typeof shopUiBgByHero === "undefined") return
+    if (typeof shopUiTextByHero === "undefined") return
+    if (typeof shopUiStatsByHero === "undefined") return
+
     const bg = shopUiBgByHero[hi]
     const t = shopUiTextByHero[hi]
-    const s = shopUiStatsByHero[hi]
-    if (!bg || !t || !s) return
+    const st = shopUiStatsByHero[hi]
+    if (!bg || !t || !st) return
 
-    // Bottom-left placement (unchanged)
-    const margin = 6
-    const W = userconfig.ARCADE_SCREEN_WIDTH
-    const H = userconfig.ARCADE_SCREEN_HEIGHT
+    const summary = _shopGetFocusedOfferSummaryForHero(hi, now)
 
-    bg.left = margin
-    bg.bottom = H - margin
+    if (!summary || !summary.active) {
+        bg.setFlag(SpriteFlag.Invisible, true)
+        t.setFlag(SpriteFlag.Invisible, true)
+        st.setFlag(SpriteFlag.Invisible, true)
 
-    t.left = margin + 6
-    t.bottom = H - margin - 22
-
-    s.left = margin + 6
-    s.bottom = H - margin - 8
-
-    // Focus-driven content
-    const pid = (hi + 1) | 0
-    const summary = _shopGetFocusedOfferSummaryForHero(hi, now | 0)
-
-    if (!summary.active) {
-        // If shop is gated on but no focused item, show minimal prompt
-        t.setText("Shop: (no item)")
-        s.setText("Walk onto a weapon.  Coins: " + (teamCoins | 0))
+        // If we were showing DOM dialog for shop, hide it when no longer focused
+        if (SHOP_USE_DOM_DIALOG && hi === 0 && _shopDomWasShowing) {
+            const g: any = globalThis as any
+            const dlg = g.__heDialog
+            dlg?.hide?.()
+            _shopDomWasShowing = false
+            _shopDomLastSig = ""
+        }
         return
     }
 
-    // Ensure your old boolean matches the focused offer ownership
-    shopBoughtByHero[hi] = (summary.ownedBy === pid)
+    // Compute ownership (summary currently doesn't include ownedBy)
+    let ownedBy = 0
+    try { ownedBy = sprites.readDataNumber(summary.offer, SH_ITEM_BOUGHT_BY_PID) | 0 } catch { ownedBy = 0 }
 
-    const dialog = _shopBuildDialogLine(hi, pid, summary)
+    const dialog = _shopBuildDialogLine(hi, pid, {
+        ringIndex: summary.ringIndex | 0,
+        weaponId: summary.weaponId || "",
+        slot: summary.slot || "",
+        price: summary.price | 0,
+        ownedBy: ownedBy | 0,
+        active: true
+    })
+
     const controls = _shopBuildControlsLine(pid, summary)
     const stats = _shopBuildStatsLine(hi, summary)
 
-    // Two-line UI:
-    // - main line: item/slot/price/owner
-    // - stats line: controls + optional preview
-    t.setText(dialog)
-    s.setText(controls + "    " + stats)
+    // Text
+    ;(t as any).setText((dialog || "") + "\n" + (controls || ""))
+    ;(st as any).setText(stats || "")
+
+    // Position (stack per hero, bottom-left)
+    const W = userconfig.ARCADE_SCREEN_WIDTH | 0
+    const H = userconfig.ARCADE_SCREEN_HEIGHT | 0
+
+    const PANEL_W = 150
+    const PANEL_H = 42
+    const pad = 2
+
+    const cx = (pad + (PANEL_W >> 1)) | 0
+    const cy = (H - pad - (PANEL_H >> 1) - (hi * (PANEL_H + pad))) | 0
+
+    bg.x = cx
+    bg.y = cy
+
+    t.x = cx
+    t.y = (cy - 10) | 0
+
+    st.x = cx
+    st.y = (cy + 12) | 0
+
+    bg.setFlag(SpriteFlag.Invisible, false)
+    t.setFlag(SpriteFlag.Invisible, false)
+    st.setFlag(SpriteFlag.Invisible, false)
+
+    // Optional DOM “dialog box” that pops when you run over the weapon
+    if (SHOP_USE_DOM_DIALOG && hi === 0) {
+        const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.bonusDesc}|${summary.price}`
+        if (sig !== _shopDomLastSig) {
+            _shopDomLastSig = sig
+            _shopDomWasShowing = true
+
+            const g: any = globalThis as any
+            const dlg = g.__heDialog
+            dlg?.show?.({
+                speaker: "Shop",
+                text: `${summary.weaponLabel}\n${summary.bonusDesc}`,
+                hint: `A: buy/swap (${summary.price | 0}🪙)`
+            })
+        }
+    }
 }
 
 

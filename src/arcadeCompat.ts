@@ -2633,236 +2633,342 @@ function _shopRingCreatePlaceholderSprite(
 
 
 
+function _shopRing_readStr(spr: any, key: string): string {
+    if (!spr) return ""
+    const d: any = (spr as any).data
+    if (!d) return ""
+
+    // Map / DataBag style
+    try {
+        if (typeof d.get === "function") {
+            const v = d.get(key)
+            return (typeof v === "string") ? v : ""
+        }
+    } catch { /* ignore */ }
+
+    // PXT internal
+    try {
+        if (d._data && typeof d._data[key] === "string") return d._data[key]
+    } catch { /* ignore */ }
+
+    // Plain object
+    try {
+        const v = d[key]
+        return (typeof v === "string") ? v : ""
+    } catch { /* ignore */ }
+
+    return ""
+}
+
+function _shopRing_readNum(spr: any, key: string): number {
+    if (!spr) return 0
+    const d: any = (spr as any).data
+    if (!d) return 0
+
+    try {
+        if (typeof d.get === "function") {
+            const v = d.get(key)
+            return (typeof v === "number") ? (v | 0) : 0
+        }
+    } catch { /* ignore */ }
+
+    try {
+        if (d._data && typeof d._data[key] === "number") return d._data[key] | 0
+    } catch { /* ignore */ }
+
+    try {
+        const v = d[key]
+        return (typeof v === "number") ? (v | 0) : 0
+    } catch { /* ignore */ }
+
+    return 0
+}
+
+function _shopRing_teardownIfNoIds(native: Phaser.GameObjects.Sprite, ringIdsRaw: string): boolean {
+    if (ringIdsRaw && ringIdsRaw.trim()) return false
+
+    const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || ""
+    if (lastSig) {
+        _destroyShopWeaponRingForNative(native as any)
+        try { native.setData(SHOP_RING_NATIVE_SIG_KEY, "") } catch { }
+    }
+    return true
+}
+
+function _shopRing_buildConfig(s: any): any | null {
+    const ringIdsRaw = _shopRing_readStr(s, SHOP_WPN_RING_IDS_KEY)
+    const ids = _shopSplitPipeNonEmpty(ringIdsRaw)
+    const n = ids.length | 0
+    if (n <= 0) return null
+
+    const radiusPx = (_shopRing_readNum(s, SHOP_WPN_RING_RADIUS_PX_KEY) | 0) || 22
+    const baseDeg = (_shopRing_readNum(s, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0) || 0
+
+    const defaultDirLetter = (_shopRing_readStr(s, SHOP_WPN_DEFAULT_DIR_KEY).trim() || "R")
+    const dirMapRaw = _shopRing_readStr(s, SHOP_WPN_DIR_MAP_KEY)
+    const slotsRaw = _shopRing_readStr(s, SHOP_WPN_RING_SLOTS_KEY)
+    const srcPhasesRaw = _shopRing_readStr(s, SHOP_WPN_RING_SOURCE_PHASES_KEY)
+
+    const slots = _shopSplitPipeKeepEmpty(slotsRaw)
+    const srcPhases = _shopSplitPipeKeepEmpty(srcPhasesRaw)
+    const dirMap = _shopParseDirMap(dirMapRaw)
+
+    const touchedRingByPid = _shopParsePidEqIntPipe(_shopRing_readStr(s, SHOP_WPN_TOUCHED_RING_BY_PID_KEY))
+    const touchedIdByPid = _shopParsePidEqStrPipe(_shopRing_readStr(s, SHOP_WPN_TOUCHED_ID_BY_PID_KEY))
+    const touchedSlotByPid = _shopParsePidEqStrPipe(_shopRing_readStr(s, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY))
+
+    const sig =
+        `n=${n}|ids=${ids.join(",")}|r=${radiusPx}|a=${baseDeg}|dd=${defaultDirLetter}|dm=${dirMapRaw}|sl=${slotsRaw}|sp=${srcPhasesRaw}`
+
+    return {
+        ringIdsRaw,
+        ids,
+        n,
+        radiusPx,
+        baseDeg,
+        defaultDirLetter,
+        dirMapRaw,
+        slotsRaw,
+        srcPhasesRaw,
+        slots,
+        srcPhases,
+        dirMap,
+        touchedRingByPid,
+        touchedIdByPid,
+        touchedSlotByPid,
+        sig
+    }
+}
+
+function _shopRing_ensureSigAndRing(
+    ctx: SyncContext,
+    native: Phaser.GameObjects.Sprite,
+    cfg: any
+): any | null {
+    const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || ""
+    if (lastSig !== (cfg.sig + "")) {
+        _destroyShopWeaponRingForNative(native as any)
+        try { native.setData(SHOP_RING_NATIVE_SIG_KEY, cfg.sig + "") } catch { }
+    }
+
+    const ring = _ensureShopWeaponRingForNative(ctx, native, cfg.n | 0)
+    return ring || null
+}
+
+function _shopRing_findGlue(): { glueAny: any; hasGlue: boolean } {
+    const glueAny: any =
+        (globalThis as any).weaponAnimGlue ||
+        (globalThis as any).weaponAnimGlueTs ||
+        (globalThis as any).weaponAnimGlueTS
+
+    const hasGlue = !!(glueAny && typeof glueAny.syncWeaponLayersToHero === "function")
+    return { glueAny, hasGlue }
+}
+
+function _shopRing_buildFocusedIndex(n: number, touchedRingByPid: any): boolean[] {
+    const focusedIndex: boolean[] = new Array(n | 0)
+    for (let i = 0; i < (n | 0); i++) focusedIndex[i] = false
+
+    for (let pid = 1; pid <= 4; pid++) {
+        const ri = (touchedRingByPid[pid] | 0)
+        if (ri >= 0 && ri < (n | 0)) focusedIndex[ri] = true
+    }
+    return focusedIndex
+}
+
+function _shopRing_applyFocusVisuals(
+    bg: any,
+    fg: any,
+    isFocused: boolean,
+    shopDepth: number
+): void {
+    try { bg.setDepth?.((shopDepth | 0) - 1) } catch { }
+    try { fg.setDepth?.((shopDepth | 0) + 1) } catch { }
+
+    const a = isFocused ? SHOP_RING_FOCUSED_ALPHA : SHOP_RING_UNFOCUSED_ALPHA
+    try { bg.setAlpha?.(a) } catch { }
+    try { fg.setAlpha?.(a) } catch { }
+
+    if (SHOP_RING_FOCUS_TINT !== undefined) {
+        try { (bg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff) } catch { }
+        try { (fg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff) } catch { }
+    }
+}
+
+function _shopRing_applyGlueOrPlaceholder(args: {
+    ctx: SyncContext;
+    sc: any;
+    native: Phaser.GameObjects.Sprite;
+    bg: any;
+    fg: any;
+    weaponId: string;
+    heroPhase: string;
+    dir: any;
+    heroFrameIndex: number;
+    ox: number;
+    oy: number;
+    glueAny: any;
+    hasGlue: boolean;
+}): boolean {
+    const anyNative: any = args.native as any
+
+    if (args.hasGlue) {
+        try {
+            const STATIC_COL = 0
+
+            args.glueAny.syncWeaponLayersToHero({
+                scene: args.sc,
+                heroSprite: args.native,
+                weaponBg: args.bg,
+                weaponFg: args.fg,
+                weaponId: args.weaponId,
+                heroPhase: args.heroPhase,
+                dir: args.dir,
+                heroFrameIndex: args.heroFrameIndex,
+                variant: DEFAULT_WEAPON_VARIANT,
+                frameColOverride: STATIC_COL
+            })
+
+            // glue overwrites x/y -> restore ring placement AFTER glue
+            args.bg.x = (anyNative.x + args.ox)
+            args.bg.y = (anyNative.y + args.oy)
+            args.fg.x = args.bg.x
+            args.fg.y = args.bg.y
+
+            try { args.bg.setVisible(true) } catch { }
+            try { args.fg.setVisible(true) } catch { }
+            return true
+        } catch (e) {
+            if (args.ctx.shouldLog) {
+                console.warn(
+                    "[SHOPRING][GLUE_FAIL]",
+                    "weaponId=", args.weaponId,
+                    "heroPhase=", args.heroPhase,
+                    "dir=", args.dir,
+                    "err=", e
+                )
+            }
+            try { args.bg.setVisible(false) } catch { }
+            try { args.fg.setVisible(false) } catch { }
+            return false
+        }
+    }
+
+    // No glue: still show placeholders so we can verify placement
+    try { args.bg.setVisible(true) } catch { }
+    try { args.fg.setVisible(true) } catch { }
+    return true
+}
+
+function _shopRing_setDebugMetadata(args: {
+    bg: any;
+    fg: any;
+    isFocused: boolean;
+    idx: number;
+    touchedRingByPid: any;
+    touchedIdByPid: any;
+    touchedSlotByPid: any;
+}): void {
+    if (args.isFocused) {
+        let fp = 0
+        for (let pid = 1; pid <= 4; pid++) {
+            if ((args.touchedRingByPid[pid] | 0) === (args.idx | 0)) { fp = pid; break }
+        }
+        try { args.bg.setData?.("__shopFocusedByPid", fp) } catch { }
+        try { args.fg.setData?.("__shopFocusedByPid", fp) } catch { }
+        try { args.bg.setData?.("__shopFocusPidWeaponId", args.touchedIdByPid[fp] || "") } catch { }
+        try { args.bg.setData?.("__shopFocusPidSlot", args.touchedSlotByPid[fp] || "") } catch { }
+    } else {
+        try { args.bg.setData?.("__shopFocusedByPid", 0) } catch { }
+        try { args.fg.setData?.("__shopFocusedByPid", 0) } catch { }
+    }
+}
+
+
 function _syncShopWeaponRingIfPresent(
     ctx: SyncContext,
     s: any,
     native: Phaser.GameObjects.Sprite
 ): void {
-    const sc = ctx.sc as any;
+    const sc = ctx.sc as any
+    if (!sc || !s || !native) return
 
+    // ---- contract presence + teardown ----
+    const ringIdsRaw = _shopRing_readStr(s, SHOP_WPN_RING_IDS_KEY)
+    if (_shopRing_teardownIfNoIds(native, ringIdsRaw)) return
 
-    if (!sc || !s || !native) return;
+    const cfg = _shopRing_buildConfig(s)
+    if (!cfg) return
 
-    // ---- local robust data getters (no external deps, avoids scope issues) ----
-    const _readStr = (spr: any, key: string): string => {
-        if (!spr) return "";
-        const d: any = (spr as any).data;
-        if (!d) return "";
+    const ring = _shopRing_ensureSigAndRing(ctx, native, cfg)
+    if (!ring) return
 
-        // Map / DataBag style
-        try {
-            if (typeof d.get === "function") {
-                const v = d.get(key);
-                return (typeof v === "string") ? v : "";
-            }
-        } catch { /* ignore */ }
+    const glue = _shopRing_findGlue()
+    const anyNative: any = native as any
+    const heroFrameIndex = _getNativeFrameIndexLoose(anyNative)
+    const shopDepth = ((anyNative.depth ?? 0) | 0)
 
-        // PXT internal
-        try {
-            if (d._data && typeof d._data[key] === "string") return d._data[key];
-        } catch { /* ignore */ }
+    const focusedIndex = _shopRing_buildFocusedIndex(cfg.n | 0, cfg.touchedRingByPid)
 
-        // Plain object
-        try {
-            const v = d[key];
-            return (typeof v === "string") ? v : "";
-        } catch { /* ignore */ }
+    for (let i = 0; i < (cfg.n | 0); i++) {
+        const weaponId = (cfg.ids[i] || "").trim()
 
-        return "";
-    };
+        const slot = (i < cfg.slots.length) ? (cfg.slots[i] || "").trim() : ""
+        const srcPhase = (i < cfg.srcPhases.length) ? (cfg.srcPhases[i] || "").trim() : ""
+        const heroPhase = (srcPhase || slot || "thrust") + ""
 
-    const _readNum = (spr: any, key: string): number => {
-        if (!spr) return 0;
-        const d: any = (spr as any).data;
-        if (!d) return 0;
+        const letter = (cfg.dirMap[weaponId] !== undefined) ? cfg.dirMap[weaponId] : cfg.defaultDirLetter
+        const dir = _shopDirLetterToDir4(letter)
 
-        try {
-            if (typeof d.get === "function") {
-                const v = d.get(key);
-                return (typeof v === "number") ? (v | 0) : 0;
-            }
-        } catch { /* ignore */ }
+        const thetaDeg = (cfg.baseDeg + Math.floor((360 * i) / (cfg.n | 0))) | 0
+        const theta = (thetaDeg * Math.PI) / 180
 
-        try {
-            if (d._data && typeof d._data[key] === "number") return d._data[key] | 0;
-        } catch { /* ignore */ }
+        const ox = (Math.round((cfg.radiusPx | 0) * Math.cos(theta)) | 0)
+        const oy = (Math.round((cfg.radiusPx | 0) * Math.sin(theta)) | 0)
 
-        try {
-            const v = d[key];
-            return (typeof v === "number") ? (v | 0) : 0;
-        } catch { /* ignore */ }
-
-        return 0;
-    };
-
-    // ---- contract presence ----
-    const ringIdsRaw = _readStr(s, SHOP_WPN_RING_IDS_KEY);
-    if (!ringIdsRaw.trim()) {
-        // If ring was previously present, tear down
-        const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
-        if (lastSig) {
-            _destroyShopWeaponRingForNative(native as any);
-            try { native.setData(SHOP_RING_NATIVE_SIG_KEY, ""); } catch { }
-        }
-        return;
-    }
-
-    const ids = _shopSplitPipeNonEmpty(ringIdsRaw);
-    const n = ids.length | 0;
-    if (n <= 0) return;
-
-    const radiusPx = (_readNum(s, SHOP_WPN_RING_RADIUS_PX_KEY) | 0) || 22;
-    const baseDeg  = (_readNum(s, SHOP_WPN_RING_ANGLE_DEG_KEY) | 0) || 0;
-
-    const defaultDirLetter = (_readStr(s, SHOP_WPN_DEFAULT_DIR_KEY).trim() || "R");
-    const dirMapRaw  = _readStr(s, SHOP_WPN_DIR_MAP_KEY);
-    const slotsRaw   = _readStr(s, SHOP_WPN_RING_SLOTS_KEY);
-    const srcPhasesRaw = _readStr(s, SHOP_WPN_RING_SOURCE_PHASES_KEY);
-
-    const slots = _shopSplitPipeKeepEmpty(slotsRaw);
-    const srcPhases = _shopSplitPipeKeepEmpty(srcPhasesRaw);
-    const dirMap = _shopParseDirMap(dirMapRaw);
-
-    // Touch/highlight contract (ByPid) lives on shopkeeper sprite.data too
-    const touchedRingByPid = _shopParsePidEqIntPipe(_readStr(s, SHOP_WPN_TOUCHED_RING_BY_PID_KEY));
-    const touchedIdByPid   = _shopParsePidEqStrPipe(_readStr(s, SHOP_WPN_TOUCHED_ID_BY_PID_KEY));
-    const touchedSlotByPid = _shopParsePidEqStrPipe(_readStr(s, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY));
-
-    // Stable signature to rebuild ring sprites when config changes
-    const sig =
-        `n=${n}|ids=${ids.join(",")}|r=${radiusPx}|a=${baseDeg}|dd=${defaultDirLetter}|dm=${dirMapRaw}|sl=${slotsRaw}|sp=${srcPhasesRaw}`;
-
-    const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
-    if (lastSig !== sig) {
-        _destroyShopWeaponRingForNative(native as any);
-        try { native.setData(SHOP_RING_NATIVE_SIG_KEY, sig); } catch { }
-    }
-
-    
-    
-    const ring = _ensureShopWeaponRingForNative(ctx, native, n);
-    if (!ring) return;
-
-
-    // Find weaponAnimGlue (support either global injection or module var)
-    const glueAny: any =
-        (globalThis as any).weaponAnimGlue ||
-        (globalThis as any).weaponAnimGlueTs ||
-        (globalThis as any).weaponAnimGlueTS;
-
-    const hasGlue = !!(glueAny && typeof glueAny.syncWeaponLayersToHero === "function");
-
-    const anyNative: any = native as any;
-    const heroFrameIndex = _getNativeFrameIndexLoose(anyNative);
-    const shopDepth = ((anyNative.depth ?? 0) | 0);
-
-    // Focus indices
-    const focusedIndex: boolean[] = new Array(n);
-    for (let i = 0; i < n; i++) focusedIndex[i] = false;
-
-    for (let pid = 1; pid <= 4; pid++) {
-        const ri = (touchedRingByPid[pid] | 0);
-        if (ri >= 0 && ri < n) focusedIndex[ri] = true;
-    }
-
-    for (let i = 0; i < n; i++) {
-        const weaponId = (ids[i] || "").trim();
-        const slot = (i < slots.length) ? (slots[i] || "").trim() : "";
-        const srcPhase = (i < srcPhases.length) ? (srcPhases[i] || "").trim() : "";
-        const heroPhase = (srcPhase || slot || "thrust") + "";
-
-        const letter = (dirMap[weaponId] !== undefined) ? dirMap[weaponId] : defaultDirLetter;
-        const dir = _shopDirLetterToDir4(letter);
-
-        const thetaDeg = (baseDeg + Math.floor((360 * i) / n)) | 0;
-        const theta = (thetaDeg * Math.PI) / 180;
-
-        const ox = (Math.round(radiusPx * Math.cos(theta)) | 0);
-        const oy = (Math.round(radiusPx * Math.sin(theta)) | 0);
-
-        const bg = ring.bg[i] as any;
-        const fg = ring.fg[i] as any;
+        const bg = ring.bg[i] as any
+        const fg = ring.fg[i] as any
 
         if (!weaponId) {
-            try { bg.setVisible(false); } catch { }
-            try { fg.setVisible(false); } catch { }
-            continue;
+            try { bg.setVisible(false) } catch { }
+            try { fg.setVisible(false) } catch { }
+            continue
         }
 
-        bg.x = (native.x + ox);
-        bg.y = (native.y + oy);
-        fg.x = bg.x;
-        fg.y = bg.y;
+        bg.x = (anyNative.x + ox)
+        bg.y = (anyNative.y + oy)
+        fg.x = bg.x
+        fg.y = bg.y
 
-        try { bg.setDepth?.(shopDepth - 1); } catch { }
-        try { fg.setDepth?.(shopDepth + 1); } catch { }
+        const isFocused = !!focusedIndex[i]
+        _shopRing_applyFocusVisuals(bg, fg, isFocused, shopDepth)
 
-        const isFocused = !!focusedIndex[i];
-        const a = isFocused ? SHOP_RING_FOCUSED_ALPHA : SHOP_RING_UNFOCUSED_ALPHA;
-        try { bg.setAlpha?.(a); } catch { }
-        try { fg.setAlpha?.(a); } catch { }
+        const ok = _shopRing_applyGlueOrPlaceholder({
+            ctx,
+            sc,
+            native,
+            bg,
+            fg,
+            weaponId,
+            heroPhase,
+            dir,
+            heroFrameIndex,
+            ox,
+            oy,
+            glueAny: glue.glueAny,
+            hasGlue: glue.hasGlue
+        })
+        if (!ok) continue
 
-        if (SHOP_RING_FOCUS_TINT !== undefined) {
-            try { (bg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
-            try { (fg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
-        }
-
-//        console.warn("[SHOPRING][GLUE_TEST]=", hasGlue);
-
-            if (hasGlue) {
-                try {
-                    // 1) Static pose: pick a column you like (0 is usually “rest”)
-                    const STATIC_COL = 0;
-
-                    glueAny.syncWeaponLayersToHero({
-                        scene: sc,
-                        heroSprite: native,
-                        weaponBg: bg,
-                        weaponFg: fg,
-                        weaponId,
-                        heroPhase,          // keep your mapping choice
-                        dir,
-                        heroFrameIndex,     // doesn't matter when frameColOverride is set
-                        variant: DEFAULT_WEAPON_VARIANT,
-                        frameColOverride: STATIC_COL
-                    });
-
-                    // 2) Ring position: glue overwrites x/y -> restore ring placement AFTER glue
-                    bg.x = (native.x + ox);
-                    bg.y = (native.y + oy);
-                    fg.x = bg.x;
-                    fg.y = bg.y;
-
-                    try { bg.setVisible(true); } catch { }
-                    try { fg.setVisible(true); } catch { }
-                } catch (e) {
-                    if (ctx.shouldLog) {
-                        console.warn("[SHOPRING][GLUE_FAIL]", "i=", i, "weaponId=", weaponId, "heroPhase=", heroPhase, "dir=", dir, "err=", e);
-                    }
-                    try { bg.setVisible(false); } catch { }
-                    try { fg.setVisible(false); } catch { }
-                    continue;
-                }
-            } else {
-                // No glue: still show placeholders so we can verify placement
-                try { bg.setVisible(true); } catch { }
-                try { fg.setVisible(true); } catch { }
-            }
-
-        // Debug metadata
-        if (isFocused) {
-            let fp = 0;
-            for (let pid = 1; pid <= 4; pid++) {
-                if ((touchedRingByPid[pid] | 0) === (i | 0)) { fp = pid; break; }
-            }
-            try { bg.setData?.("__shopFocusedByPid", fp); } catch { }
-            try { fg.setData?.("__shopFocusedByPid", fp); } catch { }
-            try { bg.setData?.("__shopFocusPidWeaponId", touchedIdByPid[fp] || ""); } catch { }
-            try { bg.setData?.("__shopFocusPidSlot", touchedSlotByPid[fp] || ""); } catch { }
-        } else {
-            try { bg.setData?.("__shopFocusedByPid", 0); } catch { }
-            try { fg.setData?.("__shopFocusedByPid", 0); } catch { }
-        }
+        _shopRing_setDebugMetadata({
+            bg,
+            fg,
+            isFocused,
+            idx: i,
+            touchedRingByPid: cfg.touchedRingByPid,
+            touchedIdByPid: cfg.touchedIdByPid,
+            touchedSlotByPid: cfg.touchedSlotByPid
+        })
     }
 }
 
