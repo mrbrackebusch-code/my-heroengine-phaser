@@ -2288,6 +2288,19 @@ const SHOP_RING_FOCUSED_ALPHA = 1.00;
 // Optional: quick tint when focused (leave undefined to disable)
 const SHOP_RING_FOCUS_TINT: number | undefined = undefined; // e.g. 0xffffaa
 
+// Shop weapon display tweaks
+// We render shop weapons using the "Up" row so we can pick frames that don't have the hero silhouette cutout.
+const SHOP_RING_FORCE_DIR_LETTER = "U" as const
+
+// Table/rug layout (matches HeroEngineInPhaserV7.ts)
+const SHOP_RING_LINE_SPACING_PX = 40
+const SHOP_RING_LINE_Y_OFFSET_PX = 28
+
+// How many sprite-sheet columns we brute-test to find a “complete” weapon frame.
+const SHOP_RING_STATIC_COL_MAX = 12
+
+
+
 
 // ------------------------------------------------------------
 // SHOP (Phaser-side) sprite.data keys
@@ -2337,6 +2350,19 @@ type _ShopRingNative = {
     bg: Phaser.GameObjects.Sprite[];
     fg: Phaser.GameObjects.Sprite[];
 };
+
+function _shopRing_lineOffsetForIndex(i: number, n: number): { ox: number; oy: number } {
+    const nn = Math.max(1, n | 0)
+    const spacing = (SHOP_RING_LINE_SPACING_PX | 0) || 40
+    const yOff = (SHOP_RING_LINE_Y_OFFSET_PX | 0) || 28
+
+    // Center the row around the shopkeeper native.
+    const startX = -Math.floor(((nn - 1) * spacing) / 2)
+    const ox = (startX + ((i | 0) * spacing)) | 0
+    const oy = yOff | 0
+    return { ox, oy }
+}
+
 
 function _shopSplitPipeNonEmpty(s: string): string[] {
     const t = (s || "").trim();
@@ -2717,6 +2743,25 @@ function _shopRing_buildConfig(s: any): any | null {
     const touchedIdByPid = _shopParsePidEqStrPipe(_shopRing_readStr(s, SHOP_WPN_TOUCHED_ID_BY_PID_KEY))
     const touchedSlotByPid = _shopParsePidEqStrPipe(_shopRing_readStr(s, SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY))
 
+    // IMPORTANT: actually detect weaponAnimGlue and stash it on cfg
+    const glueInfo = _shopRing_findGlue()
+    const glueAny = glueInfo.glueAny
+    const hasGlue = glueInfo.hasGlue
+
+    // One-time debug if glue is missing (helps if export name/load order is wrong)
+    const g: any = globalThis as any
+    if (!hasGlue && !g.__shopRingWarnedNoGlue) {
+        g.__shopRingWarnedNoGlue = 1
+        try {
+            console.warn(
+                "[SHOPRING] weaponAnimGlue missing or lacks syncWeaponLayersToHero()",
+                "| weaponAnimGlue=", !!g.weaponAnimGlue,
+                "| weaponAnimGlueTs=", !!g.weaponAnimGlueTs,
+                "| weaponAnimGlueTS=", !!g.weaponAnimGlueTS
+            )
+        } catch { }
+    }
+
     const sig =
         `n=${n}|ids=${ids.join(",")}|r=${radiusPx}|a=${baseDeg}|dd=${defaultDirLetter}|dm=${dirMapRaw}|sl=${slotsRaw}|sp=${srcPhasesRaw}`
 
@@ -2736,7 +2781,11 @@ function _shopRing_buildConfig(s: any): any | null {
         touchedRingByPid,
         touchedIdByPid,
         touchedSlotByPid,
-        sig
+        sig,
+
+        // NEW: needed by _shopRing_applyGlueOrPlaceholder
+        glueAny,
+        hasGlue
     }
 }
 
@@ -2795,8 +2844,8 @@ function _shopRing_applyFocusVisuals(
     }
 }
 
-function _shopRing_applyGlueOrPlaceholder(args: {
-    ctx: SyncContext;
+
+function _shopRing_pickBestStaticFrameColCached(args: {
     sc: any;
     native: Phaser.GameObjects.Sprite;
     bg: any;
@@ -2805,17 +2854,22 @@ function _shopRing_applyGlueOrPlaceholder(args: {
     heroPhase: string;
     dir: any;
     heroFrameIndex: number;
-    ox: number;
-    oy: number;
     glueAny: any;
-    hasGlue: boolean;
-}): boolean {
-    const anyNative: any = args.native as any
+}): number {
+    const g: any = globalThis as any
+    if (!g.__shopRingBestColCache) g.__shopRingBestColCache = Object.create(null)
+    const cache: Record<string, number> = g.__shopRingBestColCache
 
-    if (args.hasGlue) {
+    const key = `${args.weaponId}|${args.heroPhase}|${args.dir}|${DEFAULT_WEAPON_VARIANT}`
+    const hit = cache[key]
+    if (typeof hit === "number") return hit | 0
+
+    let bestCol = 0
+    let bestScore = -1
+
+    const maxTry = (SHOP_RING_STATIC_COL_MAX | 0) || 12
+    for (let col = 0; col < maxTry; col++) {
         try {
-            const STATIC_COL = 0
-
             args.glueAny.syncWeaponLayersToHero({
                 scene: args.sc,
                 heroSprite: args.native,
@@ -2826,39 +2880,180 @@ function _shopRing_applyGlueOrPlaceholder(args: {
                 dir: args.dir,
                 heroFrameIndex: args.heroFrameIndex,
                 variant: DEFAULT_WEAPON_VARIANT,
-                frameColOverride: STATIC_COL
+                frameColOverride: col
+            })
+        } catch {
+            continue
+        }
+
+        const score = _shopRing_scoreCurrentFramesUnionAlpha(args.bg, args.fg)
+        if (score > bestScore) {
+            bestScore = score
+            bestCol = col | 0
+        }
+    }
+
+    cache[key] = bestCol | 0
+    return bestCol | 0
+}
+
+function _shopRing_scoreCurrentFramesUnionAlpha(bg: any, fg: any): number {
+    try {
+        const sb = _shopRing_getFrameDrawSpec(bg)
+        const sf = _shopRing_getFrameDrawSpec(fg)
+        if (!sb && !sf) return 0
+
+        const w = Math.max(sb?.sw ?? 0, sf?.sw ?? 0) | 0
+        const h = Math.max(sb?.sh ?? 0, sf?.sh ?? 0) | 0
+        if (w <= 0 || h <= 0) return 0
+
+        const g: any = globalThis as any
+        const doc: any = (g.document as any)
+        if (!doc || typeof doc.createElement !== "function") return 0
+
+        let canvas: any = g.__shopRingScanCanvas || null
+        if (!canvas) {
+            canvas = doc.createElement("canvas")
+            g.__shopRingScanCanvas = canvas
+        }
+        canvas.width = w
+        canvas.height = h
+
+        const ctx2d: any = canvas.getContext?.("2d", { willReadFrequently: true } as any)
+        if (!ctx2d) return 0
+
+        ctx2d.clearRect(0, 0, w, h)
+        if (sb) ctx2d.drawImage(sb.img, sb.sx, sb.sy, sb.sw, sb.sh, 0, 0, sb.sw, sb.sh)
+        if (sf) ctx2d.drawImage(sf.img, sf.sx, sf.sy, sf.sw, sf.sh, 0, 0, sf.sw, sf.sh)
+
+        const imgData = ctx2d.getImageData(0, 0, w, h)
+        const data = imgData.data
+
+        let alphaCount = 0
+        let minX = w, minY = h, maxX = -1, maxY = -1
+
+        // Scan alpha channel; build bbox of all non-transparent pixels.
+        for (let y = 0; y < h; y++) {
+            let rowIdx = (y * w * 4) | 0
+            for (let x = 0; x < w; x++) {
+                const a = data[rowIdx + 3] | 0
+                if (a > 0) {
+                    alphaCount++
+                    if (x < minX) minX = x
+                    if (y < minY) minY = y
+                    if (x > maxX) maxX = x
+                    if (y > maxY) maxY = y
+                }
+                rowIdx += 4
+            }
+        }
+
+        if (alphaCount <= 0 || maxX < 0 || maxY < 0) return 0
+
+        const bw = (maxX - minX + 1) | 0
+        const bh = (maxY - minY + 1) | 0
+        const bboxArea = Math.max(1, (bw * bh) | 0)
+        const fill = alphaCount / bboxArea
+
+        // Prefer: lots of pixels (big weapon) + high fill (few holes/gaps).
+        const score = (alphaCount * 1000) + Math.floor(fill * 1000000)
+        return score | 0
+    } catch {
+        // If canvas readback fails (tainted canvas, etc.), fall back to col 0 behavior.
+        return 0
+    }
+}
+
+function _shopRing_getFrameDrawSpec(spr: any): null | { img: any; sx: number; sy: number; sw: number; sh: number } {
+    try {
+        if (!spr || !spr.frame) return null
+        const fr: any = spr.frame
+        const srcImg =
+            fr?.source?.image ||
+            fr?.texture?.source?.[0]?.image ||
+            fr?.texture?.getSourceImage?.() ||
+            null
+        if (!srcImg) return null
+
+        const sx = (fr.cutX ?? fr.x ?? 0) | 0
+        const sy = (fr.cutY ?? fr.y ?? 0) | 0
+        const sw = (fr.cutWidth ?? fr.width ?? 0) | 0
+        const sh = (fr.cutHeight ?? fr.height ?? 0) | 0
+        if (sw <= 0 || sh <= 0) return null
+
+        return { img: srcImg, sx, sy, sw, sh }
+    } catch {
+        return null
+    }
+}
+
+
+function _shopRing_applyGlueOrPlaceholder(args: {
+    ctx: SyncContext
+    cfg: ReturnType<typeof _shopRing_buildConfig>
+    sc: any
+    native: Phaser.GameObjects.Sprite
+    bg: any
+    fg: any
+    weaponId: string
+    heroPhase: string
+    dir: any
+    heroFrameIndex: number
+    hasGlue: boolean
+    ox: number
+    oy: number
+}): void {
+    if (!args.weaponId) {
+        try { args.bg.setVisible(false) } catch { }
+        try { args.fg.setVisible(false) } catch { }
+        return
+    }
+
+    // We are intentionally forcing: row = "U" (handled by caller via dir),
+    // and frame = [0][0] by hardcoding heroFrameIndex=0 and frameColOverride=0.
+    if (args.hasGlue) {
+        try {
+            args.cfg.glueAny.syncWeaponLayersToHero({
+                scene: args.sc,
+                heroSprite: args.native,
+                weaponBg: args.bg,
+                weaponFg: args.fg,
+                weaponId: args.weaponId,
+                heroPhase: args.heroPhase,
+                dir: args.dir,
+                heroFrameIndex: 0,               // <-- force [row][frame] = [U][0]
+                variant: DEFAULT_WEAPON_VARIANT,
+                frameColOverride: 0              // <-- force col 0
             })
 
-            // glue overwrites x/y -> restore ring placement AFTER glue
-            args.bg.x = (anyNative.x + args.ox)
-            args.bg.y = (anyNative.y + args.oy)
+            // Glue overwrites x/y -> restore ring placement AFTER glue.
+            args.bg.x = (args.native.x + args.ox)
+            args.bg.y = (args.native.y + args.oy)
             args.fg.x = args.bg.x
             args.fg.y = args.bg.y
 
             try { args.bg.setVisible(true) } catch { }
             try { args.fg.setVisible(true) } catch { }
-            return true
+            return
         } catch (e) {
             if (args.ctx.shouldLog) {
-                console.warn(
-                    "[SHOPRING][GLUE_FAIL]",
+                console.warn("[SHOPRING][GLUE_FAIL][FORCE00]",
                     "weaponId=", args.weaponId,
                     "heroPhase=", args.heroPhase,
-                    "dir=", args.dir,
                     "err=", e
                 )
             }
             try { args.bg.setVisible(false) } catch { }
             try { args.fg.setVisible(false) } catch { }
-            return false
+            return
         }
     }
 
-    // No glue: still show placeholders so we can verify placement
-    try { args.bg.setVisible(true) } catch { }
-    try { args.fg.setVisible(true) } catch { }
-    return true
+    // No glue -> keep hidden (no white squares)
+    try { args.bg.setVisible(false) } catch { }
+    try { args.fg.setVisible(false) } catch { }
 }
+
 
 function _shopRing_setDebugMetadata(args: {
     bg: any;
@@ -2884,67 +3079,103 @@ function _shopRing_setDebugMetadata(args: {
     }
 }
 
+function _shopRing_buildFocusMask(n: number, touchedRingByPid: any): boolean[] {
+    const nn = Math.max(0, n | 0)
+    const focusedIndex: boolean[] = new Array(nn)
+    for (let i = 0; i < nn; i++) focusedIndex[i] = false
+
+    if (!touchedRingByPid) return focusedIndex
+
+    for (let pid = 1; pid <= 4; pid++) {
+        const ri = (touchedRingByPid[pid] | 0)
+        if (ri >= 0 && ri < nn) focusedIndex[ri] = true
+    }
+
+    return focusedIndex
+}
+
 
 function _syncShopWeaponRingIfPresent(
     ctx: SyncContext,
     s: any,
     native: Phaser.GameObjects.Sprite
 ): void {
-    const sc = ctx.sc as any
-    if (!sc || !s || !native) return
+    const sc = ctx.sc as any;
+    if (!sc || !s || !native) return;
 
-    // ---- contract presence + teardown ----
-    const ringIdsRaw = _shopRing_readStr(s, SHOP_WPN_RING_IDS_KEY)
-    if (_shopRing_teardownIfNoIds(native, ringIdsRaw)) return
+    const ringIdsRaw = _shopRing_readStr(s, SHOP_WPN_RING_IDS_KEY);
+    if (!ringIdsRaw.trim()) {
+        const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
+        if (lastSig) {
+            _destroyShopWeaponRingForNative(native as any);
+            try { native.setData(SHOP_RING_NATIVE_SIG_KEY, ""); } catch { }
+        }
+        return;
+    }
 
-    const cfg = _shopRing_buildConfig(s)
-    if (!cfg) return
+    const cfg = _shopRing_buildConfig(s, native);
+    if (!cfg || cfg.n <= 0) return;
 
-    const ring = _shopRing_ensureSigAndRing(ctx, native, cfg)
-    if (!ring) return
+    // Destroy/rebuild ring sprites when config changes
+    const lastSig = (native.getData(SHOP_RING_NATIVE_SIG_KEY) as any) || "";
+    if (lastSig !== cfg.sig) {
+        _destroyShopWeaponRingForNative(native as any);
+        try { native.setData(SHOP_RING_NATIVE_SIG_KEY, cfg.sig); } catch { }
+    }
 
-    const glue = _shopRing_findGlue()
-    const anyNative: any = native as any
-    const heroFrameIndex = _getNativeFrameIndexLoose(anyNative)
-    const shopDepth = ((anyNative.depth ?? 0) | 0)
+    const ring = _ensureShopWeaponRingForNative(ctx, native, cfg.n);
+    if (!ring) return;
 
-    const focusedIndex = _shopRing_buildFocusedIndex(cfg.n | 0, cfg.touchedRingByPid)
+    const shopDepth = ((native as any).depth ?? 0) | 0;
+    const heroFrameIndex = _getNativeFrameIndexLoose(native as any);
 
-    for (let i = 0; i < (cfg.n | 0); i++) {
-        const weaponId = (cfg.ids[i] || "").trim()
+    const focusedIndex = _shopRing_buildFocusMask(cfg.n, cfg.touchedRingByPid);
 
-        const slot = (i < cfg.slots.length) ? (cfg.slots[i] || "").trim() : ""
-        const srcPhase = (i < cfg.srcPhases.length) ? (cfg.srcPhases[i] || "").trim() : ""
-        const heroPhase = (srcPhase || slot || "thrust") + ""
+    for (let i = 0; i < cfg.n; i++) {
+        const weaponId = (cfg.ids[i] || "").trim();
+        const slot = (i < cfg.slots.length) ? (cfg.slots[i] || "").trim() : "";
+        const srcPhase = (i < cfg.srcPhases.length) ? (cfg.srcPhases[i] || "").trim() : "";
+        const heroPhase = (srcPhase || slot || "thrust") + "";
 
-        const letter = (cfg.dirMap[weaponId] !== undefined) ? cfg.dirMap[weaponId] : cfg.defaultDirLetter
-        const dir = _shopDirLetterToDir4(letter)
+        // Force “Up row” rendering so we can pick columns that don’t have the hero silhouette cutout.
+        const dir = _shopDirLetterToDir4(SHOP_RING_FORCE_DIR_LETTER);
+        const off = _shopRing_lineOffsetForIndex(i, cfg.n);
 
-        const thetaDeg = (cfg.baseDeg + Math.floor((360 * i) / (cfg.n | 0))) | 0
-        const theta = (thetaDeg * Math.PI) / 180
+        const ox = off.ox | 0
+        const oy = off.oy | 0
 
-        const ox = (Math.round((cfg.radiusPx | 0) * Math.cos(theta)) | 0)
-        const oy = (Math.round((cfg.radiusPx | 0) * Math.sin(theta)) | 0)
-
-        const bg = ring.bg[i] as any
-        const fg = ring.fg[i] as any
+        const bg = ring.bg[i] as any;
+        const fg = ring.fg[i] as any;
 
         if (!weaponId) {
-            try { bg.setVisible(false) } catch { }
-            try { fg.setVisible(false) } catch { }
-            continue
+            try { bg.setVisible(false); } catch { }
+            try { fg.setVisible(false); } catch { }
+            continue;
         }
 
-        bg.x = (anyNative.x + ox)
-        bg.y = (anyNative.y + oy)
-        fg.x = bg.x
-        fg.y = bg.y
+        // Position
+        bg.x = (native.x + ox);
+        bg.y = (native.y + oy);
+        fg.x = bg.x;
+        fg.y = bg.y;
 
-        const isFocused = !!focusedIndex[i]
-        _shopRing_applyFocusVisuals(bg, fg, isFocused, shopDepth)
+        // Depth
+        try { bg.setDepth?.(shopDepth - 1); } catch { }
+        try { fg.setDepth?.(shopDepth + 1); } catch { }
 
-        const ok = _shopRing_applyGlueOrPlaceholder({
+        // Highlight
+        const isFocused = !!focusedIndex[i];
+        const a = isFocused ? SHOP_RING_FOCUSED_ALPHA : SHOP_RING_UNFOCUSED_ALPHA;
+        try { bg.setAlpha?.(a); } catch { }
+        try { fg.setAlpha?.(a); } catch { }
+        if (SHOP_RING_FOCUS_TINT !== undefined) {
+            try { (bg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
+            try { (fg as any).setTint?.(isFocused ? SHOP_RING_FOCUS_TINT : 0xffffff); } catch { }
+        }
+
+        _shopRing_applyGlueOrPlaceholder({
             ctx,
+            cfg,
             sc,
             native,
             bg,
@@ -2953,22 +3184,25 @@ function _syncShopWeaponRingIfPresent(
             heroPhase,
             dir,
             heroFrameIndex,
+            hasGlue: cfg.hasGlue,
             ox,
-            oy,
-            glueAny: glue.glueAny,
-            hasGlue: glue.hasGlue
-        })
-        if (!ok) continue
+            oy
+        });
 
-        _shopRing_setDebugMetadata({
-            bg,
-            fg,
-            isFocused,
-            idx: i,
-            touchedRingByPid: cfg.touchedRingByPid,
-            touchedIdByPid: cfg.touchedIdByPid,
-            touchedSlotByPid: cfg.touchedSlotByPid
-        })
+        // Debug metadata (unchanged behavior)
+        if (isFocused) {
+            let fp = 0;
+            for (let pid = 1; pid <= 4; pid++) {
+                if ((cfg.touchedRingByPid[pid] | 0) === (i | 0)) { fp = pid; break; }
+            }
+            try { bg.setData?.("__shopFocusedByPid", fp); } catch { }
+            try { fg.setData?.("__shopFocusedByPid", fp); } catch { }
+            try { bg.setData?.("__shopFocusPidWeaponId", cfg.touchedIdByPid[fp] || ""); } catch { }
+            try { bg.setData?.("__shopFocusPidSlot", cfg.touchedSlotByPid[fp] || ""); } catch { }
+        } else {
+            try { bg.setData?.("__shopFocusedByPid", 0); } catch { }
+            try { fg.setData?.("__shopFocusedByPid", 0); } catch { }
+        }
     }
 }
 

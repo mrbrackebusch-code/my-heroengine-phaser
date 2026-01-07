@@ -708,6 +708,14 @@ const DEBUG_ANIM_KEYS_INT_FINISH = true
 //   • Declare the core global arrays the engine loops over
 // --------------------------------------------------------------
 
+
+//Knobs--for anything and everything tuneable to make the game glow and be awesome
+
+// Wave spawns — scripted waves with short breaks between them.
+// The interval below is the *tick* rate; WAVE_DEFS controls spawn density + types.
+const ENEMY_SPAWN_INTERVAL_MS = 1200 // Wave sapwn knob
+
+
 // --------------------------------------------------------------
 // Screen config
 // Used by: spawn positions, UI layout, enemy spawners, etc.
@@ -828,8 +836,9 @@ const DECOR_ROLE = {
 // Target world size in tiles.
 // Example: 1920x1080 with 64px tiles → 30 x 17 tiles.
 // Adjust these numbers, not the code, when you want a new world size.
-const WORLD_TILES_W = 50/2;     // columns
-const WORLD_TILES_H = 26/2;     // rows
+// Knob for world size tile size tiles dimensions world dimensions
+const WORLD_TILES_W = 40;     // columns
+const WORLD_TILES_H = 20;     // rows
 
 // Optional small safety floor
 const MIN_WORLD_TILES_W = 5;
@@ -1128,15 +1137,16 @@ const ENEMY_DATA = {
     HP: "hp",
     MAX_HP: "maxHp",
 
-
-    
     SPEED: "spd",                 // base movement speed for homing AI
     TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
     REGEN_PCT: "regenPct",        // % regen per tick (if used later)
 
-
     // NEW: logical monster identifier so Phaser wrapper can pick LPC sheet
     MONSTER_ID: "monsterId",
+
+    // NEW: catalog-driven style knobs (stored on each enemy)
+    ADVANCE_RANGE_PX: "advRangePx",
+    PROJECTILE_ID: "enemyProjId",
 
     SLOW_PCT: "slowPct",
     SLOW_UNTIL: "slowUntil",
@@ -1146,12 +1156,12 @@ const ENEMY_DATA = {
 
     ATK_PHASE: "atkPhase",        // current attack state (enum/int)
     ATK_UNTIL: "atkUntil",        // time current attack phase ends
-    ATK_COOLDOWN_UNTIL: "atkCd",   // when enemy can attack again
+    ATK_COOLDOWN_UNTIL: "atkCd",  // when enemy can attack again
 
     HOME_X: "HOMEX",
     HOME_Y: "HOMEY",
     RETURNING_HOME: "returningHome",
-    
+
     ATK_ORIGIN_X: "atkOriginX",
     ATK_ORIGIN_Y: "atkOriginY",
     RETURNING_TO_ORIGIN: "returningToOrigin",
@@ -1159,11 +1169,12 @@ const ENEMY_DATA = {
 
     // NEW: death timing
     DEATH_UNTIL: "deathUntil",
+
+    // legacy / misc
     homeX: "homeX",
     homeY: "homeY",
     dir: "dir",
     phase: "phase",
-
 }
 
 // --------------------------------------------------------------
@@ -1746,7 +1757,47 @@ let _dunRuneSpinSinceMs = 0         // starts when ANY hero steps on rune
 const TELEPORT_RUNE_Y_OFFSET_PX = 0; // + = lower on screen (try 6..14)
 
 
-// assumes you already have: let _dunTeleportRuneTrig: Sprite = null as any
+
+// ====================================================
+// LEVEL / XP (PER HERO)  -- v1 foundation
+// ====================================================
+
+// Hero sprite-data keys (DOM reads these directly)
+const HERO_XP_DATA = {
+    LEVEL: "lvl",
+    XP: "xp",            // xp toward next level
+    XP_NEXT: "xpNext",   // required xp for next level
+    XP_TOTAL: "xpTot",   // lifetime xp (optional)
+    LVL_PTS: "lvlPts"    // unspent "level-up points" (spend later)
+}
+
+// Enemy sprite-data keys (kept separate so we don't have to edit ENEMY_DATA)
+const ENEMY_XP_KEY = "xp"
+const ENEMY_IS_BOSS_KEY = "isBoss"
+const ENEMY_LAST_HIT_HI_KEY = "lastHitHi"
+
+// Tunable knobs
+const XP_POP_FG = 9
+const XP_DEFAULT_PER_KILL = 10
+
+// XP curve: xpNext(level) = base + a*(L-1) + b*(L-1)^2
+const XP_TO_NEXT_BASE = 40
+const XP_TO_NEXT_PER_LEVEL = 18
+const XP_TO_NEXT_PER_LEVEL2 = 6
+const XP_MAX_LEVEL = 99
+
+// Baseline XP by archetype (scales decently and is easy to tune)
+const XP_BY_ENEMY_KIND: any = {
+    GRUNT: 10,
+    RUNNER: 12,
+    BRUTE: 18,
+    ELITE: 30
+}
+
+// Boss multiplier (applied on top of kind XP)
+const XP_BOSS_MULT_PCT = 300  // 300% = 3x
+
+
 
 
 //End of Constants
@@ -3129,7 +3180,7 @@ const DUNGEON_KIND_SHOP = "shop"
 const DUNGEON_KIND_TREASURE = "treasure"
 const DUNGEON_KIND_STORY = "story"
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
 
@@ -3915,43 +3966,48 @@ function _dunSpawnStoryNpc(nowMs: number, profileName: string, heroFamily: strin
     return npc
 }
 
+
+
 function _dunClearTransientFloorEntities(): void {
-    // enemies + spawners
-    for (let i = 0; i < enemies.length; i++) _dunDestroySprite(enemies[i])
-    enemies.length = 0
+    _dunDestroySprite(_dunExitPad)
+    _dunExitPad = null
 
-    for (let i = 0; i < enemySpawners.length; i++) _dunDestroySprite(enemySpawners[i])
-    enemySpawners.length = 0
+    _dunDestroySprite(_dunTeleportRuneTrig)
+    _dunTeleportRuneTrig = null
+    _dunTeleportRuneName = ""
 
-    for (let i = 0; i < heroProjectiles.length; i++) _dunDestroySprite(heroProjectiles[i])
-    heroProjectiles.length = 0
-
-    // shop objects (if any)
-    if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
-    if (typeof _shopDestroyUiForHero === "function") {
-        for (let hi = 0; hi < heroes.length; hi++) _shopDestroyUiForHero(hi)
-    }
     _dunClearList(_dunInteractables)
-    _dunClearList(_dunStoryNpcs)
+    _dunInteractables = []
 
+    _dunClearList(enemySpawners)
+    enemySpawners = []
+
+    // NOTE: V10 does NOT declare _dunWallCollider anywhere.
+    // Do not reference it here (ReferenceError).
+    // _dunDestroySprite(_dunWallCollider)
+    // _dunWallCollider = null
+
+    _dunTeleportCommitAtMs = 0
+    _dunRuneSpinSinceMs = 0
     _dunAllReadySinceMs = 0
 
-    // shut off shop mode unless this floor enables it
-    SHOP_MODE_ACTIVE = false
-    SHOP_MODE_ACTIVE_MASTER = false
+    // Finite combat waves: reset per-floor state
+    _dunCombatWavesActive = false
+    _dunCombatWavesComplete = false
+    currentWaveIndex = 0
+    currentWaveIsBreak = true
+    debugMonsterIndex = 0
+    wavePhaseUntilMs = (game.runtime() | 0) + 1000
 
     // ------------------------------------------------------------
-    // IMPORTANT:
-    // Each floor rebuilds decor/decals, but _dunDecor_placePadAndStairsVisual()
-    // has a cache that can early-return if (frame, padR, padC) "didn't change".
-    // On new floors the pad is STILL centered, so without resetting this cache,
-    // the telepad decals + stairs statue never get re-stamped into the NEW grids.
+    // CRITICAL: force telepad + stairs statue visuals to re-stamp
+    // after world/decal rebuild on the next floor.
+    // (_dunDecor_placePadAndStairsVisual() early-outs otherwise.)
     // ------------------------------------------------------------
     _dunPadFrameLast = -999
     _dunPadPlacedLastR = -999999
     _dunPadPlacedLastC = -999999
     _dunPadPlacedLastLeftC = -999999
-
     _dunPadTileR = -1
     _dunPadTileC = -1
 }
@@ -3970,7 +4026,7 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     const roll = Math.randomRange(0, 99)
     if (roll < 10) return DUNGEON_KIND_STORY
-    if (roll < 50) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob
+    if (roll < 20) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
     return DUNGEON_KIND_COMBAT
 }
 
@@ -4078,17 +4134,18 @@ function _dunEnterFloor_setupShopFloor(padX: number, padY: number): void {
     SHOP_MODE_ACTIVE_MASTER = true
     SHOP_MODE_ACTIVE = false
 
+    // ✅ Shop should NOT auto-complete objective:
+    // Pad stays locked + rune stays hidden until you interact (A on shopkeeper) or buy.
+    _dunObjectiveDone = false
+    _dunSetPadPowered(false)
+
     shopInitPOC()
 
-    // Move shop away from pad so pad can still be used
+    // Move shop away from pad so pad can still be used (once unlocked)
     if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
         shopTriggerZone.setPosition((padX - 70) | 0, (padY + 55) | 0)
         if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
     }
-
-    // NOTE: preserved existing behavior (auto-unlock exit)
-    _dunObjectiveDone = true
-    _dunSetPadPowered(true)
 }
 
 function _dunEnterFloor_setupCombatFloor(): void {
@@ -4128,7 +4185,208 @@ function dungeonStartRun(nowMs: number): void {
     _dunEnterFloor(0, DUNGEON_KIND_ENTRANCE, nowMs | 0)
 }
 
+
+
+function _dunTickPadContractRefresh(): void {
+    if (_dunExitPad && !(_dunExitPad.flags & sprites.Flag.Destroyed)) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInPadZone()
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.NEEDED, needed)
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.READY, rc.ready | 0)
+        sprites.setDataNumber(_dunExitPad, PAD_DATA.MASK, rc.mask | 0)
+    }
+}
+
+function _dunTickObjectiveEvaluation(nowMs: number): void {
+    if (_dunObjectiveDone) return
+
+    if (_dunFloorKind == DUNGEON_KIND_COMBAT) {
+        // FINITE WAVES FIX:
+        // Combat clears ONLY once (a) waves have finished AND (b) all enemies are dead.
+        if (_dunCombatWavesComplete && _dunCountLiveEnemies() == 0) {
+            _dunObjectiveDone = true
+            _dunSetPadPowered(true)
+            _dunLog(`combat cleared; pad powered`)
+        }
+        return
+    }
+
+    // Interaction-based floors: A to interact near chest/NPC
+    for (let pid = 1; pid <= 4; pid++) {
+        const hi = playerToHeroIndex[pid] | 0
+        if (hi < 0) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        // Edge detect A
+        const btnA = (controller as any)[`player${pid}`]?.A
+        if (!btnA) continue
+
+        const prevKey = `__dun_prevA_${pid}`
+        const was = ((globalThis as any)[prevKey] ? 1 : 0) | 0
+        const is = (btnA.isPressed() ? 1 : 0) | 0
+        ;(globalThis as any)[prevKey] = (is != 0)
+
+        const aEdge = (is != 0 && was == 0)
+        if (!aEdge) continue
+
+        // Try interactables first
+        for (let i = 0; i < _dunInteractables.length; i++) {
+            const it = _dunInteractables[i]
+            if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+            const dx = (it.x - hero.x)
+            const dy = (it.y - hero.y)
+            if ((dx * dx + dy * dy) > (DUNGEON_INTERACT_RADIUS_PX * DUNGEON_INTERACT_RADIUS_PX)) continue
+
+            const k = sprites.readDataString(it, INTERACT_DATA.KIND)
+            if (k == "chest") {
+                const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+                if (opened) continue
+
+                sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
+
+                // Capture pop coords BEFORE destroy so VFX has a stable origin.
+                const popX = it.x
+                const popY = it.y - 12
+
+                _dunDestroySprite(it)
+
+                // Flip the prop state so Phaser stamps the "open" frame.
+                if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
+                    _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
+                    _engineDecorRev = (_engineDecorRev + 1) | 0
+                }
+
+                // Reward + complete objective (this triggers COINFX enqueue)
+                addTeamCoins(10, popX, popY)
+
+                _dunObjectiveDone = true
+                _dunSetPadPowered(true)
+                _dunLog(`chest opened by P${pid}; pad powered`)
+                break
+            }
+        }
+
+        if (_dunObjectiveDone) return
+    }
+}
+
+function _dunRuneSetName(desired: string): void {
+    if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+        if (_dunTeleportRuneName !== desired) {
+            sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, desired)
+            _engineDecorRev = (_engineDecorRev + 1) | 0
+            _dunTeleportRuneName = desired
+        }
+    }
+}
+
+function _dunTickTeleportCommit(nowMs: number): boolean {
+    if ((_dunTeleportCommitAtMs | 0) == 0) return false
+
+    const needed = _dunRequiredHeroCount() | 0
+    const rc = _dunReadyMaskAndCountInPadZone()
+    const allReady = (needed > 0 && rc.ready >= needed)
+
+    if (!allReady) {
+        _dunTeleportCommitAtMs = 0
+        _dunAllReadySinceMs = 0
+        _dunRuneSpinSinceMs = 0
+        _dunRuneSetName("teleport_rune")
+        return true
+    }
+
+    if ((nowMs | 0) < (_dunTeleportCommitAtMs | 0)) return true
+
+    _dunTeleportCommitAtMs = 0
+
+    // Teleport: destroy pad and enter next floor
+    _dunDestroySprite(_dunExitPad)
+    _dunExitPad = null
+
+    const next = (_dunFloorIndex + 1) | 0
+    const kind = _dunPickNextFloorKind(next)
+    _dunEnterFloor(next, kind, nowMs | 0)
+    return true
+}
+
+function _dunTickPadHoldTeleport(nowMs: number): boolean {
+    if (!(_dunObjectiveDone && _dunIsPadPowered())) return false
+
+    const needed = _dunRequiredHeroCount() | 0
+    const rc = _dunReadyMaskAndCountInPadZone()
+
+    const anyOn = ((rc.ready | 0) > 0)
+    const allReady = (needed > 0 && rc.ready >= needed)
+
+    // If nobody is standing on it at all, stop spinning (idle)
+    if (!anyOn) {
+        _dunAllReadySinceMs = 0
+        _dunRuneSpinSinceMs = 0
+        _dunRuneSetName("teleport_rune")
+        return true
+    }
+
+    // Somebody stepped on it: start spin timer (even if not all players ready)
+    if ((_dunRuneSpinSinceMs | 0) == 0) _dunRuneSpinSinceMs = nowMs | 0
+    const spinHeld = ((nowMs | 0) - (_dunRuneSpinSinceMs | 0)) | 0
+
+    // All-ready hold timer (this is what gates teleport)
+    if (!allReady) {
+        _dunAllReadySinceMs = 0
+    } else {
+        if (_dunAllReadySinceMs == 0) _dunAllReadySinceMs = nowMs | 0
+    }
+    const allHeld = (_dunAllReadySinceMs == 0) ? 0 : (((nowMs | 0) - (_dunAllReadySinceMs | 0)) | 0)
+
+    // ---- Spin staging (based on spinHeld; speeds up while ANYONE stands on it) ----
+    const t1 = ((DUNGEON_PAD_HOLD_MS | 0) * 35 / 100) | 0
+    const t2 = ((DUNGEON_PAD_HOLD_MS | 0) * 60 / 100) | 0
+    const t3 = ((DUNGEON_PAD_HOLD_MS | 0) * 80 / 100) | 0
+
+    let desired = "teleport_rune_spin1"
+    if (spinHeld >= t3) desired = "teleport_rune_spin3"
+    else if (spinHeld >= t2) desired = "teleport_rune_spin2"
+    else if (spinHeld >= t1) desired = "teleport_rune_spin1"
+
+    // If all players are ready and held long enough: flash
+    if (allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0)) {
+        desired = "teleport_rune_flash"
+    }
+
+    _dunRuneSetName(desired)
+
+    // If we haven't met the all-ready hold, we keep spinning but do not teleport.
+    if (!(allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0))) return true
+
+    // Flash happened; schedule actual floor swap shortly after
+    _dunTeleportCommitAtMs = ((nowMs | 0) + (DUNGEON_TELEPORT_FLASH_DELAY_MS | 0)) | 0
+    return true
+}
+
 function dungeonTick(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+
+    const now = nowMs | 0
+
+    // Floor banner timer
+    _dunDialog_tickFloorBanner(now)
+
+    // Keep pad contract fresh for renderer
+    _dunTickPadContractRefresh()
+
+    // Objective evaluation (combat + interact)
+    _dunTickObjectiveEvaluation(now)
+
+    // Teleport commit (after flash delay)
+    if (_dunTickTeleportCommit(now)) return
+
+    // Advance when powered + everyone in zone (hold to prevent accidental teleports)
+    _dunTickPadHoldTeleport(now)
+}
+
+
+function dungeonTickOLDCODETODELETE(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
 
     // Floor banner timer
@@ -4319,6 +4577,7 @@ function dungeonTick(nowMs: number): void {
         return
     }
 }
+
 
 
 
@@ -5589,22 +5848,35 @@ function _shopSetRingWeaponIdAtIndex(sk: Sprite, idx: number, weaponId: string):
 }
 
 function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
-    if (!_dunActive) return;
-    if (_dunFloorKind !== DUNGEON_KIND_SHOP) return;
+    const now = nowMs | 0
 
-    if (_dunObjectiveDone && _dunIsPadPowered()) return;
+    // V6 uses DUNGEON_MODE_ACTIVE (no _dunActive exists)
+    if (!DUNGEON_MODE_ACTIVE) return
+    if (_dunFloorKind !== DUNGEON_KIND_SHOP) return
 
-    _dunObjectiveDone = true;
-    _dunSetPadPowered(true);
+    if (_dunObjectiveDone && _dunIsPadPowered()) return
+
+    _dunObjectiveDone = true
+    _dunSetPadPowered(true)
+
+    // Make rune appear immediately (don’t wait for dungeonTick)
+    if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+        const desired = "teleport_rune"
+        if (_dunTeleportRuneName !== desired) {
+            sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, desired)
+            _engineDecorRev = (_engineDecorRev + 1) | 0
+            _dunTeleportRuneName = desired
+        }
+    }
 
     // Optional: quick DOM hint
-    const g: any = globalThis as any;
-    const dlg = g.__heDialog;
+    const g: any = globalThis as any
+    const dlg = g.__heDialog
     dlg?.show?.({
         speaker: "Shopkeeper",
         text: "Teleport rune activated.",
         hint: "Step on the pad to leave the shop."
-    });
+    })
 }
 
 
@@ -6272,6 +6544,34 @@ function _shopBuildStatsLineOLDCODETODELETE(hi: number, s: {
     return "Slot=" + slotPretty + "   (preview stats TBD)"
 }
 
+function _shopIsOfferTouchValidForHero(hi: number, nowMs: number): boolean {
+    const h = hi | 0
+    const now = nowMs | 0
+    if (h < 0 || h >= 4) return false
+
+    const hero = heroes[h]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+
+    const offer = shopFocusOfferByHero[h]
+    if (!offer || (offer.flags & sprites.Flag.Destroyed)) return false
+
+    const until = shopFocusUntilMsByHero[h] | 0
+    if ((until | 0) == 0) return false
+    if (now > until) return false
+
+    // Sanity: ring index should match the focused ring index (when both are present)
+    const offerRing = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+    const focusRing = shopFocusRingIndexByHero[h] | 0
+    if ((offerRing | 0) >= 0 && (focusRing | 0) >= 0 && (offerRing | 0) !== (focusRing | 0)) return false
+
+    // Ownership gate (future-proof; currently you stamp 0 = available)
+    const ownedBy = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+    const pid = (h + 1) | 0
+    if ((ownedBy | 0) !== 0 && (ownedBy | 0) !== (pid | 0)) return false
+
+    return true
+}
+
 
 
 function _shopGetFocusedOfferForHero(hi: number, nowMs: number): Sprite {
@@ -6585,11 +6885,17 @@ function _shopRingBaseAngleDegForShopkeeper(sk: Sprite): number {
 }
 
 function _shopRingOffsetForIndex(i: number, n: number, radiusPx: number, baseDeg: number): { ox: number; oy: number } {
+    // NOTE: We intentionally render offers as a *line* (table/rug) instead of a circle ring.
+    // The params radiusPx/baseDeg remain for compatibility with older callers.
     const nn = Math.max(1, n | 0)
-    const thetaDeg = ((baseDeg | 0) + Math.floor((360 * (i | 0)) / nn)) | 0
-    const theta = _shopDegToRad(thetaDeg)
-    const ox = (Math.round((radiusPx | 0) * Math.cos(theta)) | 0)
-    const oy = (Math.round((radiusPx | 0) * Math.sin(theta)) | 0)
+
+    const spacing = (SHOP_OFFER_LINE_SPACING_PX | 0) || 40
+    const yOff = (SHOP_OFFER_LINE_Y_OFFSET_PX | 0) || 28
+
+    // Center the row around the shopkeeper.
+    const startX = -Math.floor(((nn - 1) * spacing) / 2)
+    const ox = (startX + ((i | 0) * spacing)) | 0
+    const oy = yOff | 0
     return { ox, oy }
 }
 
@@ -6884,10 +7190,6 @@ const SHOP_WPN_RING_ANGLE_DEG_KEY = "shopWpnRingAngleDeg" // number (degrees)
 const SHOP_WPN_DEFAULT_DIR_KEY = "shopWpnDefaultDir"      // string: "R","L","U","D"
 const SHOP_WPN_DIR_MAP_KEY = "shopWpnDirMap"              // string map: "idA:R,idB:U"
 
-const SHOP_DEFAULT_RING_RADIUS_PX = 100 //22 
-const SHOP_DEFAULT_RING_ANGLE_DEG = 0
-const SHOP_DEFAULT_RING_DIR = "R"
-const SHOP_DEFAULT_RING_DIR_MAP = ""
 
 // ------------------------------------------------------------
 // SHOP WEAPON RING – contract keys (shopkeeper sprite.data)
@@ -6927,7 +7229,17 @@ const SHOP_DEFAULT_RING_WEAPON_IDS = "diamond|glowsword|spear|simple"
 const SHOP_DEFAULT_RING_SLOTS = "thrust|slash|thrust|cast"
 const SHOP_DEFAULT_RING_SOURCE_PHASES = "thrust|slash|thrust|cast"
 
+const SHOP_DEFAULT_RING_DIR = "U"
+const SHOP_DEFAULT_RING_DIR_MAP = ""
 
+// Shop offer layout (table/rug)
+// NOTE: This affects the real ShopItem hitboxes (MakeCode) and the Phaser-only weapon render ring.
+// Tune freely.
+const SHOP_OFFER_LINE_SPACING_PX = 40
+const SHOP_OFFER_LINE_Y_OFFSET_PX = 28
+
+const SHOP_DEFAULT_RING_RADIUS_PX = 100 //22 
+const SHOP_DEFAULT_RING_ANGLE_DEG = 0
 
 
 
@@ -9671,7 +9983,7 @@ function refreshHeroController(heroIndex: number) {
     const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
     const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
 
-    const baseSpeed = 100 //Knob for hero movement speed
+    const baseSpeed = 300 //Knob for hero movement speed base movement speed make hero faster
     const hasteMult = heroMoveSpeedMult[heroIndex] || 1
     const speed = locked ? 0 : baseSpeed * hasteMult
 
@@ -11991,7 +12303,7 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
         let dmg = sprites.readDataNumber(weapon, PROJ_DATA.DAMAGE) | 0
         if (dmg <= 0) return
 
-        applyDamageToEnemyIndex(eIndex, dmg)
+        applyDamageToEnemyIndex(eIndex, dmg, heroIndex)
         showDamageNumber(enemy.x, enemy.y - 6, dmg)
 
         return
@@ -12021,7 +12333,7 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
             dmg = Math.idiv(dmg * comboMultPct, 100)
             updateAgilityComboOnHit(heroIndex, button)
         }
-        applyDamageToEnemyIndex(eIndex, dmg)
+        applyDamageToEnemyIndex(eIndex, dmg, heroIndex)
         showDamageNumber(enemy.x, enemy.y - 6, dmg)
     }
     if (isHeal && dmg > 0) applyHealToHeroIndex(heroIndex, dmg)
@@ -13910,7 +14222,7 @@ function updateAgilityExecuteAll(nowMs: number): void {
         }
 
         if (packetDamage > 0) {
-            applyDamageToEnemyIndex(eIndex, packetDamage)
+            applyDamageToEnemyIndex(eIndex, packetDamage, heroIndex)
         }
 
         agiSpawnExecuteSlashVfx(hero, enemy.x, enemy.y)
@@ -15893,7 +16205,7 @@ function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
 
         if (distSqPointToSprite(termX, termY, e) <= rSq) {
             if (dmgNow > 0) {
-                applyDamageToEnemyIndex(i, dmgNow)
+                applyDamageToEnemyIndex(i, dmgNow, heroIndex)
                 showDamageNumber(e.x, e.y - 6, dmgNow)
             }
             if (weakenPct > 0 && weakenMs > 0) {
@@ -17167,13 +17479,39 @@ const ENEMY_KIND = {
                 return pickEnemyKindForMonster(monsterId)
             }
 
-            // Stats lookup by monster id (HP / speed / touchDamage)
-            function enemyStatsForMonsterId(monsterId: string) {
-                const kindKey = pickEnemyKindForMonster(monsterId)
-                const spec = (ENEMY_KIND as any)[kindKey]
-                if (spec) return spec
-                return ENEMY_KIND.GRUNT
-            }
+function enemyStatsForMonsterId(monsterId: string) {
+    const md = _monsterDefById(monsterId)
+
+    // Fallback baseline (your old behavior)
+    const kindKey = pickEnemyKindForMonster(monsterId)
+    const spec = (ENEMY_KIND as any)[kindKey] || ENEMY_KIND.GRUNT
+
+    // If catalog entry exists, it wins for hp/speed/damage
+    const hasCatalog = (md && (md.danger | 0) !== 999)
+
+    const maxHP = hasCatalog ? (md.hp | 0) : ((spec as any).maxHP | 0)
+    const speed = hasCatalog ? (md.speed | 0) : ((spec as any).speed | 0)
+    const touchDamage = hasCatalog ? (md.damage | 0) : ((spec as any).touchDamage | 0)
+
+    // Optional knobs (catalog can override, otherwise spec defaults)
+    const regenPct = hasCatalog ? ((md.regenPct || 0) | 0) : (((spec as any).regenPct || 0) | 0)
+    const attackRatePct = hasCatalog
+        ? (((md.attackRatePct || 100) | 0))
+        : (((spec as any).attackRatePct || 100) | 0)
+
+    const advanceRangePx = hasCatalog ? (md.advanceRangePx | 0) : 0
+    const projectileId = hasCatalog ? (md.projectileId || "") : ""
+
+    return {
+        maxHP,
+        speed,
+        touchDamage,
+        regenPct,
+        attackRatePct,
+        advanceRangePx,
+        projectileId
+    }
+}
 
 
 
@@ -17413,6 +17751,214 @@ const ENEMY_ATK_PHASE_RECOVER = 3
 
 
 
+function xpRequiredForNextLevel(level: number): number {
+    const L = Math.max(1, level | 0)
+    const n = (L - 1) | 0
+    const req = (XP_TO_NEXT_BASE + (XP_TO_NEXT_PER_LEVEL * n) + (XP_TO_NEXT_PER_LEVEL2 * n * n)) | 0
+    return Math.max(1, req)
+}
+
+function ensureHeroXpInitialized(heroIndex: number): void {
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    const lvl = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+    if (lvl > 0) return
+
+    sprites.setDataNumber(hero, HERO_XP_DATA.LEVEL, 1)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP, 0)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_TOTAL, 0)
+    sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, 0)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_NEXT, xpRequiredForNextLevel(1))
+}
+
+function showXpPop(x: number, y: number, deltaXp: number): void {
+    const d = deltaXp | 0
+    if (d <= 0) return
+    const t = textsprite.create("+" + d + " XP", 0, XP_POP_FG)
+    t.setMaxFontHeight(8)
+    t.setOutline(1, 15)
+    t.setPosition(x, y)
+    t.lifespan = 1000
+    t.vy = -10
+}
+
+function listLivingPlayerHeroIndices(): number[] {
+    const out: number[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+        if ((h.flags & sprites.Flag.Destroyed) != 0) continue
+        if ((h.lifespan | 0) === 0) continue
+
+        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+        if (owner < 1 || owner > 4) continue
+
+        out.push(hi)
+    }
+    return out
+}
+
+function findNearestLivingPlayerHeroIndex(x: number, y: number): number {
+    let bestHi = -1
+    let bestD2 = 1e18
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+        if ((h.flags & sprites.Flag.Destroyed) != 0) continue
+        if ((h.lifespan | 0) === 0) continue
+
+        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+        if (owner < 1 || owner > 4) continue
+
+        const dx = (h.x - x)
+        const dy = (h.y - y)
+        const d2 = (dx * dx) + (dy * dy)
+        if (d2 < bestD2) {
+            bestD2 = d2
+            bestHi = hi
+        }
+    }
+    return bestHi
+}
+
+function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, popY: number): void {
+    const d = deltaXp | 0
+    if (d <= 0) return
+
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    ensureHeroXpInitialized(heroIndex)
+
+    let lvl = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+    if (lvl <= 0) lvl = 1
+
+    let xp = sprites.readDataNumber(hero, HERO_XP_DATA.XP) | 0
+    let xpNext = sprites.readDataNumber(hero, HERO_XP_DATA.XP_NEXT) | 0
+    if (xpNext <= 0) xpNext = xpRequiredForNextLevel(lvl)
+
+    let xpTot = sprites.readDataNumber(hero, HERO_XP_DATA.XP_TOTAL) | 0
+    let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+
+    xp += d
+    xpTot += d
+
+    showXpPop(popX, popY, d)
+
+    // Level-up loop (no UI yet; we just bank lvlPts)
+    let leveled = 0
+    while (lvl < XP_MAX_LEVEL && xpNext > 0 && xp >= xpNext) {
+        xp -= xpNext
+        lvl++
+        xpNext = xpRequiredForNextLevel(lvl)
+        pts++
+        leveled++
+    }
+
+    sprites.setDataNumber(hero, HERO_XP_DATA.LEVEL, lvl)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP, xp)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_NEXT, xpNext)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_TOTAL, xpTot)
+    sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, pts)
+
+    // Optional: you can add a "LEVEL UP!" popup later tied to `leveled > 0`
+}
+
+function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: number, coinPopY: number): void {
+    if (!enemy) return
+
+    let xpVal = sprites.readDataNumber(enemy, ENEMY_XP_KEY) | 0
+    if (xpVal <= 0) xpVal = XP_DEFAULT_PER_KILL
+
+    const isBoss = (sprites.readDataNumber(enemy, ENEMY_IS_BOSS_KEY) | 0) != 0
+
+    // Resolve killer
+    let killerHi = (sourceHeroIndex == null) ? -1 : (sourceHeroIndex | 0)
+    if (killerHi < 0 || killerHi >= heroes.length || !heroes[killerHi]) {
+        killerHi = sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0
+    }
+    if (killerHi < 0 || killerHi >= heroes.length || !heroes[killerHi]) {
+        killerHi = findNearestLivingPlayerHeroIndex(coinPopX, coinPopY)
+    }
+
+    // Normal: last-hit gets it (popup offset from coins)
+    if (!isBoss) {
+        if (killerHi >= 0) {
+            // Coins use coinPopY, so XP goes a bit higher
+            grantXpToHeroIndex(killerHi, xpVal, coinPopX, coinPopY - 12)
+        }
+        return
+    }
+
+    // Boss: split evenly among living player heroes
+    const targets = listLivingPlayerHeroIndices()
+    if (targets.length <= 0) {
+        if (killerHi >= 0) grantXpToHeroIndex(killerHi, xpVal, coinPopX, coinPopY - 12)
+        return
+    }
+
+    const n = targets.length | 0
+    const base = Math.idiv(xpVal, n) | 0
+    let rem = (xpVal - (base * n)) | 0
+
+    // Give remainder to killer first (if participating), then spill to others
+    const deltas: number[] = []
+    for (let i = 0; i < targets.length; i++) deltas.push(base)
+
+    if (rem > 0) {
+        const killerIdx = targets.indexOf(killerHi)
+        if (killerIdx >= 0) {
+            deltas[killerIdx]++
+            rem--
+        }
+    }
+    let spill = 0
+    while (rem > 0 && targets.length > 0) {
+        deltas[spill % targets.length]++
+        spill++
+        rem--
+    }
+
+    // Popups at each hero so it’s readable (boss deaths are busy)
+    for (let i = 0; i < targets.length; i++) {
+        const hi = targets[i]
+        const h = heroes[hi]
+        if (!h) continue
+        const d = deltas[i] | 0
+        if (d <= 0) continue
+        grantXpToHeroIndex(hi, d, h.x, h.y - 26)
+    }
+}
+
+function xpForMonsterId(monsterId: string): number {
+    // If the catalog has an explicit xp value, treat it as authoritative.
+    const md = _monsterDefById(monsterId)
+    if (md && (md.danger | 0) !== 999) {
+        const x = md.xp | 0
+        return Math.max(1, x)
+    }
+
+    // Fallback: your existing archetype/tag system
+    const kindKey = pickEnemyKindForMonster(monsterId)
+    let xp = ((XP_BY_ENEMY_KIND as any)[kindKey] | 0) || XP_DEFAULT_PER_KILL
+
+    const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
+    const isBoss = tags.indexOf("BOSS") >= 0
+
+    if (isBoss) {
+        xp = Math.idiv(xp * XP_BOSS_MULT_PCT, 100)
+    } else {
+        if (tags.indexOf("STRONG") >= 0 || tags.indexOf("TANK") >= 0) xp = Math.idiv(xp * 120, 100)
+        if (tags.indexOf("WEAK") >= 0) xp = Math.idiv(xp * 80, 100)
+    }
+
+    return Math.max(1, xp | 0)
+}
+
+
+
+
 
 // Apply a short, snappy knockback away from (fromX, fromY)
 // but scale strength by enemy "weight" derived from ENEMY_DATA.SPEED.
@@ -17479,7 +18025,7 @@ function applyPctKnockbackToEnemy(
 
 
 function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boolean): Sprite {
-    const stats = enemyStatsForMonsterId(monsterId) // or pass elite if you later use it    const stats = enemyStatsForMonsterId(monsterId)  // see next section for stats fix
+    const stats = enemyStatsForMonsterId(monsterId)
 
     const img = enemyPlaceholderImageForMonster(monsterId)
     const enemy = sprites.create(img, SpriteKind.Enemy)
@@ -17491,26 +18037,30 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, y)
     sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
 
-
-    // *** NEW: register in enemies[] so AI sees it ***
+    // Register in enemies[] so AI sees it
     const eIndex = enemies.length
     enemies.push(enemy)
 
-    // Use your HP init helper so bars + MAX_HP/HP are consistent
+    // HP init helper so bars + MAX_HP/HP are consistent
     const maxHPVal = (stats as any).maxHP || 50
     initEnemyHP(eIndex, enemy, maxHPVal)
 
-    // Now store other stats
-    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, stats.speed)
-    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, stats.touchDamage)
+    // Core combat stats (NOW catalog-driven when present)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, (stats as any).speed || 10)
+    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, (stats as any).touchDamage || 5)
     sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, (stats as any).regenPct || 0)
 
- // NEW: per-enemy attack speed scalar (percent)
+    // Per-enemy attack speed scalar (percent)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, (stats as any).attackRatePct || 100)
 
-    // NEW: remember which logical monster this is (Phaser / LPC will read this)
+    // NEW: per-enemy style knobs (stored even if unused yet)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, (stats as any).advanceRangePx || 0)
+    sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, (stats as any).projectileId || "")
+
+    // Remember which logical monster this is (Phaser / LPC will read this)
     sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterId)
 
+    // Status + AI state init
     sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0)
@@ -17520,13 +18070,13 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
 
-    //console.log(
-    //    "[HE.spawned Enemy Of Kind]" +
-    //    "id=" + enemy.id +
-    //    " kind=" + enemy.kind +
-    //    " monsterId=" + monsterId +
-    //    " dataKeys=" + Object.keys((enemy as any).data || {})
-    //)
+    // XP metadata
+    const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
+    const isBoss = tags.indexOf("BOSS") >= 0
+
+    sprites.setDataNumber(enemy, ENEMY_XP_KEY, xpForMonsterId(monsterId))
+    sprites.setDataNumber(enemy, ENEMY_IS_BOSS_KEY, isBoss ? 1 : 0)
+    sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, -1)
 
     return enemy
 }
@@ -17690,19 +18240,35 @@ function spawnDebugWave(monsterId?: string) {
 }
 
 // Entry point: call this after setupEnemySpawners() when you want enemies.
+// Entry point: call this after setupEnemySpawners() when you want enemies.
 function startEnemyWaves() {
     if (SHOP_MODE_ACTIVE) return
-    if (DEBUG_WAVE_ENABLED) {
-        spawnDebugWave(DEBUG_MONSTER_ID)
-        return
-    }
-    if (TEST_WAVE_ENABLED) {
-        spawnTestWave()
+
+    // Reset per-floor wave state
+    _dunCombatWavesActive = false
+    _dunCombatWavesComplete = false
+    currentWaveIndex = 0
+    currentWaveIsBreak = true
+    debugMonsterIndex = 0
+    wavePhaseUntilMs = (game.runtime() | 0) + 150 // faster start for testing
+
+    // Build procedural plan for THIS FLOOR (NO WAVE_DEFS)
+    _dunWavePlan = _buildWavePlanForFloor((_dunFloorIndex | 0), (ENEMY_SPAWN_INTERVAL_MS | 0))
+
+    // If no spawners, treat as complete (combat clears when enemies are dead)
+    if (!enemySpawners || enemySpawners.length == 0) {
+        _dunCombatWavesComplete = true
         return
     }
 
-    // Normal progression: start at currentWaveIndex in REAL_WAVES
-    spawnRealWave(currentWaveIndex)
+    if (!_dunWavePlan || _dunWavePlan.length == 0) {
+        _dunCombatWavesComplete = true
+        return
+    }
+
+    _dunCombatWavesActive = true
+
+    console.log(`[waves] floor=${((_dunFloorIndex|0)+1)} planWaves=${_dunWavePlan.length} baseDanger=${_floorDangerBase((_dunFloorIndex|0)+1)}`)
 }
 
 
@@ -17873,288 +18439,388 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 
 let _lastEnemyHomingLogMs = 0
 
-function updateEnemyHoming(nowMs: number) {
-    // Build a list of live heroes from the existing heroes[] array
+// Enemy AI internal bookkeeping keys (standalone; avoids editing ENEMY_DATA)
+const ENEMY_AI_LAST_X = "__aiLastX"
+const ENEMY_AI_LAST_Y = "__aiLastY"
+const ENEMY_AI_STUCK_UNTIL = "__aiStuckUntil"
+const ENEMY_AI_STUCK_MODE = "__aiStuckMode" // +1 / -1 toggles which way we strafe
+
+interface EnemyEdgePick {
+    target: Sprite
+    d2: number
+    dx: number
+    dy: number
+    edgeX: number
+    edgeY: number
+}
+
+function _enemyBuildLiveHeroTargets(): Sprite[] {
     const heroTargets: Sprite[] = []
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
-        if (h && !(h.flags & sprites.Flag.Destroyed)) {
-            heroTargets.push(h)
+        if (h && !(h.flags & sprites.Flag.Destroyed)) heroTargets.push(h)
+    }
+    return heroTargets
+}
+
+function _enemyZeroVelocitiesAll(): void {
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const e = enemies[ei]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        e.vx = 0
+        e.vy = 0
+    }
+}
+
+function _enemyIsInitialized(enemy: Sprite): boolean {
+    const anyEnemy = enemy as any
+    return !!(anyEnemy && anyEnemy.data)
+}
+
+function _enemyTickDeathCleanupIfNeeded(ei: number, enemy: Sprite, nowMs: number): boolean {
+    const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
+    if (deathUntil <= 0) return false
+
+    if (nowMs >= deathUntil) {
+        _lastEnemyHomingLogMs = nowMs
+
+        const bar = enemyHPBars[ei]
+        if (bar) {
+            bar.destroy()
+            enemyHPBars[ei] = null
+        }
+        enemy.destroy()
+        enemies[ei] = null
+    }
+    return true
+}
+
+function _enemyShouldFreezeForPhaseOrKnockback(enemy: Sprite, nowMs: number): boolean {
+    const phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+    if (phaseStr === "death") {
+        enemy.vx = 0
+        enemy.vy = 0
+        return true
+    }
+
+    const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
+    if (kbUntil > 0 && nowMs < kbUntil) return true
+
+    return false
+}
+
+function _enemyEnsureHomePosition(enemy: Sprite): void {
+    let homeX = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_X)
+    let homeY = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_Y)
+    if (!homeX && !homeY) {
+        homeX = enemy.x
+        homeY = enemy.y
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
+    }
+}
+
+function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number): boolean {
+    let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+    if (phaseStr !== "attack") return false
+
+    const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
+
+    if (nowMs >= atkUntil) {
+        sprites.setDataString(enemy, "phase", "walk")
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
+        return false
+    }
+
+    enemy.vx = 0
+    enemy.vy = 0
+
+    if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
+        _lastEnemyHomingLogMs = nowMs
+    }
+    return true
+}
+
+function _enemyComputeMoveSpeed(enemy: Sprite): number {
+    const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
+    const slowPct = sprites.readDataNumber(enemy, ENEMY_DATA.SLOW_PCT) || 0
+    let speed = baseSpeed
+    if (slowPct > 0) {
+        speed = Math.idiv(baseSpeed * (100 - slowPct), 100)
+        if (speed <= 0) speed = 1
+    }
+    return speed | 0
+}
+
+function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyEdgePick {
+    let target = heroTargets[0]
+    let bestD2 = 1e9
+    let bestDx = 0
+    let bestDy = 0
+    let bestEdgeX = target.x
+    let bestEdgeY = target.y
+
+    for (let hi = 0; hi < heroTargets.length; hi++) {
+        const h = heroTargets[hi]
+
+        const img: any = (h as any).image
+        const heroW = (img && img.width) || (h as any).width || 16
+        const heroH = (img && img.height) || (h as any).height || 16
+
+        const halfW = heroW / 2
+        const halfH = heroH / 2
+
+        const left = h.x - halfW
+        const right = h.x + halfW
+        const top = h.y - halfH
+        const bottom = h.y + halfH
+
+        let edgeX = enemy.x
+        if (edgeX < left) edgeX = left
+        else if (edgeX > right) edgeX = right
+
+        let edgeY = enemy.y
+        if (edgeY < top) edgeY = top
+        else if (edgeY > bottom) edgeY = bottom
+
+        const dxEdge = edgeX - enemy.x
+        const dyEdge = edgeY - enemy.y
+        const d2 = dxEdge * dxEdge + dyEdge * dyEdge
+
+        if (d2 < bestD2) {
+            bestD2 = d2
+            target = h
+            bestDx = dxEdge
+            bestDy = dyEdge
+            bestEdgeX = edgeX
+            bestEdgeY = edgeY
         }
     }
 
+    return { target, d2: bestD2, dx: bestDx, dy: bestDy, edgeX: bestEdgeX, edgeY: bestEdgeY }
+}
+
+function _enemyDirFromVector(dx: number, dy: number): string {
+    let dir = "down"
+    if (Math.abs(dx) > Math.abs(dy)) dir = dx >= 0 ? "right" : "left"
+    else dir = dy >= 0 ? "down" : "up"
+    return dir
+}
+
+function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs: number, ei: number): boolean {
+    const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
+
+    const atkRangePx = 20
+    const atkRange2 = atkRangePx * atkRangePx
+    if (pick.d2 > atkRange2) return false
+    if (nowMs < atkCooldownUntil) return false
+
+    const attackDir = _enemyDirFromVector(pick.dx, pick.dy)
+
+    const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
+    const baseAttackDurationMs = 350
+    let attackMs = baseAttackDurationMs
+    if (atkRatePct !== 100) attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
+    if (attackMs < 150) attackMs = 150
+
+    sprites.setDataNumber(enemy, "attackAnimMs", attackMs)
+
+    sprites.setDataString(enemy, "phase", "attack")
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackMs)
+    sprites.setDataString(enemy, "dir", attackDir)
+
+    enemy.vx = 0
+    enemy.vy = 0
+
+    if (ei === 0) {
+        // optional debug hook left intact
+    }
+    return true
+}
+
+function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boolean {
+    // If key doesn't exist in your ENEMY_DATA, readDataNumber will return 0 => behaves melee
+    const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+    if (advRangePx <= 0) return false
+
+    const adv2 = advRangePx * advRangePx
+    if (pick.d2 > adv2) return false
+
+    enemy.vx = 0
+    enemy.vy = 0
+    sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+    sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+    return true
+}
+
+function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
+    const origTX = target.x
+    const origTY = target.y
+
+    ;(target as any).x = edgeX
+    ;(target as any).y = edgeY
+
+    _enemySteerTowardHero(enemy, target, speed)
+
+    ;(target as any).x = origTX
+    ;(target as any).y = origTY
+}
+
+function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: number, nowMs: number): boolean {
+    // If already in a "stuck resolution" window, keep strafing for the remainder.
+    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
+    if (stuckUntil > 0 && nowMs < stuckUntil) {
+        const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
+        const mode = (mode0 === 0 ? 1 : mode0)
+
+        // Strafe perpendicular to desired direction, but keep a little "forward" component.
+        const dx = pick.dx
+        const dy = pick.dy
+
+        const fwd = Math.idiv(speed * 35, 100) // 35% forward helps progress while sliding
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Intended horizontal → strafe vertical
+            enemy.vx = dx >= 0 ? fwd : -fwd
+            const s = (dy !== 0) ? (dy >= 0 ? 1 : -1) : mode
+            enemy.vy = s * speed
+        } else {
+            // Intended vertical → strafe horizontal
+            enemy.vy = dy >= 0 ? fwd : -fwd
+            const s = (dx !== 0) ? (dx >= 0 ? 1 : -1) : mode
+            enemy.vx = s * speed
+        }
+
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+        return true
+    }
+
+    // Detect "stuck": didn't move since last tick, but had non-trivial velocity last tick.
+    const lastX = sprites.readDataNumber(enemy, ENEMY_AI_LAST_X)
+    const lastY = sprites.readDataNumber(enemy, ENEMY_AI_LAST_Y)
+
+    // If never initialized, seed and don't flag stuck
+    if (!lastX && !lastY) {
+        sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
+        sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
+        return false
+    }
+
+    const dxMove = enemy.x - lastX
+    const dyMove = enemy.y - lastY
+    const moved2 = dxMove * dxMove + dyMove * dyMove
+
+    const prevV = Math.abs(enemy.vx) + Math.abs(enemy.vy)
+
+    // Tune thresholds: moved < ~0.5px^2 while pushing with velocity => stuck
+    if (moved2 < 0.25 && prevV > 0.5) {
+        // Flip strafe mode each time we get stuck to try the opposite side next
+        const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
+        const mode = (mode0 === 0 ? 1 : -mode0) || 1
+        sprites.setDataNumber(enemy, ENEMY_AI_STUCK_MODE, mode)
+
+        // Hold the "anti-stuck" behavior briefly
+        sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, (nowMs + 260) | 0)
+
+        // Apply it immediately this tick
+        return _enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)
+    }
+
+    return false
+}
+
+function _enemyAiUpdateLastPos(enemy: Sprite): void {
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
+}
+
+function _enemySetDirFromVelocityOrFacing(enemy: Sprite, pick: EnemyEdgePick): void {
+    const vx = enemy.vx
+    const vy = enemy.vy
+    if (Math.abs(vx) + Math.abs(vy) > 0.001) {
+        let dir = "down"
+        if (Math.abs(vx) > Math.abs(vy)) dir = vx >= 0 ? "right" : "left"
+        else dir = vy >= 0 ? "down" : "up"
+        sprites.setDataString(enemy, "dir", dir)
+    } else {
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+    }
+}
+
+
+
+function updateEnemyHoming(nowMs: number) {
+    const heroTargets = _enemyBuildLiveHeroTargets()
+
     // If there are no heroes, zero out enemy velocities and bail
     if (heroTargets.length == 0) {
-        for (let ei = 0; ei < enemies.length; ei++) {
-            const e = enemies[ei]
-            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
-            e.vx = 0
-            e.vy = 0
-        }
+        _enemyZeroVelocitiesAll()
         return
     }
 
     for (let ei = 0; ei < enemies.length; ei++) {
         const enemy = enemies[ei]
         if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
+        if (!_enemyIsInitialized(enemy)) continue
 
-        const anyEnemy = enemy as any
-        if (!anyEnemy.data) continue // not fully initialized
+        // Death timing cleanup
+        if (_enemyTickDeathCleanupIfNeeded(ei, enemy, nowMs)) continue
 
-        // --- Death timing: we scheduled this in applyDamageToEnemyIndex ---
-        const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
-        if (deathUntil > 0) {
-            // While in death phase, don't move; once the timer expires, destroy and clear arrays.
-            if (nowMs >= deathUntil) {
-
-                //console.log(
-                //"[enemyHoming] DEATH HOLD",
-                //"monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                //"phase=", sprites.readDataString(enemy, "phase") || "(none)",
-                //"x=", enemy.x, "y=", enemy.y,
-                //"t=", nowMs
-                //)
-
-                _lastEnemyHomingLogMs = nowMs
-
-                const bar = enemyHPBars[ei]
-                if (bar) {
-                    bar.destroy()
-                    enemyHPBars[ei] = null
-                }
-                enemy.destroy()
-                enemies[ei] = null
-            }
+        // Phase/knockback short-circuits
+        if (_enemyShouldFreezeForPhaseOrKnockback(enemy, nowMs)) {
+            _enemyAiUpdateLastPos(enemy)
             continue
         }
 
-        // --- Phase for animation: "walk" / "attack" / "death" ---
-        let phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+        // Home position init
+        _enemyEnsureHomePosition(enemy)
 
-        // If we're in death phase but somehow don't have a timer (edge-case),
-        // freeze and skip steering so LPC can finish the animation.
-        if (phaseStr === "death") {
-            enemy.vx = 0
-            enemy.vy = 0
+        // Attack hold/finish
+        if (_enemyTickAttackHoldOrFinish(enemy, nowMs, ei)) {
+            _enemyAiUpdateLastPos(enemy)
             continue
         }
 
-        // --- Knockback: if still in knockback window, skip AI steering ---
-        const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
-        if (kbUntil > 0 && nowMs < kbUntil) {
-            continue
-        }
-
-        // --- Home position (for RETURNING_HOME) ---
-        let homeX = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_X)
-        let homeY = sprites.readDataNumber(enemy, ENEMY_DATA.HOME_Y)
-        if (!homeX && !homeY) {
-            homeX = enemy.x
-            homeY = enemy.y
-            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, homeX)
-            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, homeY)
-        }
-
-        // Attack book-keeping
-        const atkPhase = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_PHASE) | 0
-        const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
-        const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
-
-        // ------------------------------------------------------------
-        // 1) If we are CURRENTLY in attack phase, either:
-        //    - stay attacking (vx=vy=0), or
-        //    - finish the attack, flip back to walk, set cooldown.
-        // ------------------------------------------------------------
-        if (phaseStr === "attack") {
-            if (nowMs >= atkUntil) {
-                // Attack finished → go back to walking and start a cooldown
-                sprites.setDataString(enemy, "phase", "walk")
-                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
-                sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
-                phaseStr = "walk"
-            } else {
-                // Still mid-attack: stand in place and swing
-                enemy.vx = 0
-                enemy.vy = 0
-
-                if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
-                    //console.log(
-                    //    "[enemyHoming] ATTACK HOLD",
-                    //    "monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                    //    "phase=", phaseStr,
-                    //    "x=", enemy.x, "y=", enemy.y,
-                    //    "vx=", enemy.vx, "vy=", enemy.vy,
-                    //    "t=", nowMs
-                    //)
-                    _lastEnemyHomingLogMs = nowMs
-                }
-                continue
-            }
-        }
-
-        // --- Movement speed (base, before slow/weak, etc.) ---
-        const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
-        const slowPct = sprites.readDataNumber(enemy, ENEMY_DATA.SLOW_PCT) || 0
-        let speed = baseSpeed
-        if (slowPct > 0) {
-            speed = Math.idiv(baseSpeed * (100 - slowPct), 100)
-            if (speed <= 0) speed = 1
-        }
-
-        // ------------------------------------------------------------
-        // 2) Choose target: nearest hero by distance to HERO EDGE,
-        //    not hero center. Treat hero as a rectangle hitbox.
-        // ------------------------------------------------------------
-        let target = heroTargets[0]
-        let bestD2 = 1e9
-        let bestDx = 0
-        let bestDy = 0
-        let bestEdgeX = target.x
-        let bestEdgeY = target.y
-
-        for (let hi = 0; hi < heroTargets.length; hi++) {
-            const h = heroTargets[hi]
-
-            // Get hero width/height from image if possible
-            const img: any = (h as any).image
-            const heroW =
-                (img && img.width) ||
-                (h as any).width ||
-                16
-            const heroH =
-                (img && img.height) ||
-                (h as any).height ||
-                16
-
-            const halfW = heroW / 2
-            const halfH = heroH / 2
-
-            const left   = h.x - halfW
-            const right  = h.x + halfW
-            const top    = h.y - halfH
-            const bottom = h.y + halfH
-
-            // Clamp enemy position to hero rectangle to get closest edge point
-            let edgeX = enemy.x
-            if (edgeX < left) edgeX = left
-            else if (edgeX > right) edgeX = right
-
-            let edgeY = enemy.y
-            if (edgeY < top) edgeY = top
-            else if (edgeY > bottom) edgeY = bottom
-
-            const dxEdge = edgeX - enemy.x
-            const dyEdge = edgeY - enemy.y
-            const d2 = dxEdge * dxEdge + dyEdge * dyEdge
-
-            if (d2 < bestD2) {
-                bestD2 = d2
-                target = h
-                bestDx = dxEdge
-                bestDy = dyEdge
-                bestEdgeX = edgeX
-                bestEdgeY = edgeY
-            }
-        }
-
-        // ------------------------------------------------------------
-        // 3) Maybe START a new attack if we are close enough to EDGE
-        //    and off cooldown.
-        // ------------------------------------------------------------
-        const atkRangePx = 20
-        const atkRange2 = atkRangePx * atkRangePx
-
-        if (bestD2 <= atkRange2 && nowMs >= atkCooldownUntil) {
-            // Direction we will face for the attack (based on edge offset)
-            let attackDir = "down"
-            if (Math.abs(bestDx) > Math.abs(bestDy)) {
-                attackDir = bestDx >= 0 ? "right" : "left"
-            } else {
-                attackDir = bestDy >= 0 ? "down" : "up"
-            }
-
-            // Scale attack duration by per-enemy attack rate
-            const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
-            const baseAttackDurationMs = 350
-            let attackMs = baseAttackDurationMs
-            if (atkRatePct !== 100) {
-                attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
-            }
-            if (attackMs < 150) attackMs = 150
-
-            // NEW: tell Phaser how long the attack animation should last
-            sprites.setDataNumber(enemy, "attackAnimMs", attackMs)
-
-            // Enter attack state
-            sprites.setDataString(enemy, "phase", "attack")
-            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
-            sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackMs)
-            sprites.setDataString(enemy, "dir", attackDir)
-
-            // Freeze movement while attacking
-            enemy.vx = 0
-            enemy.vy = 0
-
-            const mid = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)"
-            if (ei === 0) {
-                //console.log(
-                //    "[enemyHoming] START ATTACK",
-                //    "monsterId=", mid,
-                //    "phase=", "attack",
-                //    "d2=", bestD2,
-                //    "attackMs=", attackMs
-                //)
-            }
-
-            // IMPORTANT: bail out of steering; _syncNativeSprites + monsterAnimGlue
-            // will see phase="attack" + dir and swap the LPC anim.
-            continue
-        }
+        const speed = _enemyComputeMoveSpeed(enemy)
+        const pick = _enemyPickNearestHeroEdge(enemy, heroTargets)
 
         // If we're basically on the hero edge, stop (but stay in walk phase)
-        if (bestD2 < 1) {
+        if (pick.d2 < 1) {
             enemy.vx = 0
             enemy.vy = 0
             sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+            sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+            _enemyAiUpdateLastPos(enemy)
             continue
         }
 
-        // ------------------------------------------------------------
-        // 4) Steering: walk toward the closest EDGE point instead of center
-        // ------------------------------------------------------------
-        const origTX = target.x
-        const origTY = target.y
-
-        // Temporarily treat the hero as if its "target point"
-        // were the closest edge point we computed.
-        ;(target as any).x = bestEdgeX
-        ;(target as any).y = bestEdgeY
-
-        _enemySteerTowardHero(enemy, target, speed)
-
-        // Restore hero's real center so we don't break anything else
-        ;(target as any).x = origTX
-        ;(target as any).y = origTY
-
-        // --- Direction string for animation ("up"/"down"/"left"/"right") ---
-        let dir = "down"
-        if (Math.abs(enemy.vx) > Math.abs(enemy.vy)) {
-            dir = enemy.vx >= 0 ? "right" : "left"
-        } else {
-            dir = enemy.vy >= 0 ? "down" : "up"
+        // Start attack if close enough and off cooldown
+        if (_enemyTryStartAttackIfInRange(enemy, pick, nowMs, ei)) {
+            _enemyAiUpdateLastPos(enemy)
+            continue
         }
-        sprites.setDataString(enemy, "dir", dir)
 
-        // --- DEBUG log (throttled, first enemy only) ---
+        // NEW: advanceRange (0 melee; >0 hold position at range)
+        if (_enemyShouldHoldAtAdvanceRange(enemy, pick)) {
+            _enemyAiUpdateLastPos(enemy)
+            continue
+        }
+
+        // Normal steering toward hero EDGE point
+        _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed)
+
+        // NEW: anti-stuck wall sliding (simple strafe when jammed)
+        if (_enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)) {
+            // dir already set in anti-stuck path
+        } else {
+            _enemySetDirFromVelocityOrFacing(enemy, pick)
+        }
+
+        _enemyAiUpdateLastPos(enemy)
+
+        // Optional throttled debug, keep structure
         if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 10000) {
-            //console.log(
-                //"[enemyHoming] tick",
-                //"monsterId=", sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "(none)",
-                //"phase=", phaseStr,
-                //"x=", enemy.x, "y=", enemy.y,
-                //"vx=", enemy.vx, "vy=", enemy.vy,
-                //"t=", nowMs
-            //)
             _lastEnemyHomingLogMs = nowMs
         }
     }
@@ -18220,14 +18886,21 @@ function updateEnemyHPBar(enemyIndex: number) {
 }
 
 
-function applyDamageToEnemyIndex(eIndex: number, amount: number) {
+function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex?: number) {
     if (eIndex < 0 || eIndex >= enemies.length) return
     const enemy = enemies[eIndex]; if (!enemy) return
 
-    let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
-    hp = Math.max(0, hp - amount)
+    const dmg = amount | 0
+    if (dmg <= 0) return
 
-    showDamageNumber(enemy.x, enemy.y - 6, amount, "damage")
+    // Track last hitter (backup if someone forgets to pass heroIndex)
+    const srcHi = (sourceHeroIndex == null) ? -1 : (sourceHeroIndex | 0)
+    if (srcHi >= 0) sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, srcHi)
+
+    let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
+    hp = Math.max(0, hp - dmg)
+
+    showDamageNumber(enemy.x, enemy.y - 6, dmg, "damage")
     sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
     updateEnemyHPBar(eIndex)
     flashEnemyOnDamage(enemy)
@@ -18238,12 +18911,22 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number) {
         if (existing > 0) return
 
         // ----------------------------
-        // NEW: coin reward on kill
+        // coin reward on kill (UNCHANGED)
         // ----------------------------
         let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0
         if (maxHp <= 0) maxHp = 1
         const coins = Math.max(COIN_REWARD_MIN, Math.idiv(maxHp + (COIN_REWARD_HP_DIV - 1), COIN_REWARD_HP_DIV))
-        addTeamCoins(coins, enemy.x, enemy.y - 12)
+
+        const coinPopX = enemy.x
+        const coinPopY = enemy.y - 12
+
+        addTeamCoins(coins, coinPopX, coinPopY)
+
+        // ----------------------------
+        // NEW: XP reward on kill
+        // XP pop is offset upward so you see BOTH coins and XP
+        // ----------------------------
+        awardXpForEnemyDeath(enemy, srcHi, coinPopX, coinPopY)
 
         const now = game.runtime()
         const deathDurationMs = 900  // tweak this and LPC death anim will auto-match
@@ -19246,9 +19929,13 @@ game.onUpdateInterval(500, function () {
 
 function showWaveBanner(waveIdx: number) {
     let label = "Wave " + (waveIdx + 1)
-    if (WAVE_DEFS && waveIdx >= 0 && waveIdx < WAVE_DEFS.length) {
-        const w = WAVE_DEFS[waveIdx]
-        if (w && (w as any).label) label = (w as any).label
+
+    if (_dunWavePlan && waveIdx >= 0 && waveIdx < _dunWavePlan.length) {
+        const w = _dunWavePlan[waveIdx]
+        const arch = w.archetype || "mixed"
+        if (arch === "swarm") label = `Wave ${waveIdx + 1} – Swarm`
+        else if (arch === "elites") label = `Wave ${waveIdx + 1} – Elites`
+        else label = `Wave ${waveIdx + 1} – Mixed`
     }
 
     // bg=0 (dark), fg=1 (blue title)
@@ -19267,11 +19954,7 @@ function showWaveBanner(waveIdx: number) {
 
 
 
-// Wave spawns — scripted waves with short breaks between them.
-// The interval below is the *tick* rate; WAVE_DEFS controls spawn density + types.
-const ENEMY_SPAWN_INTERVAL_MS = 1200
-
-    const POSSIBLE_MONSTERS = [
+const POSSIBLE_MONSTERS = [
 
         "bat",
         "bee",
@@ -19366,50 +20049,218 @@ const ENEMY_SPAWN_INTERVAL_MS = 1200
 let currentWaveIsBreak = true
 let wavePhaseUntilMs = game.runtime() + 1000 // short delay before first wave
 
+// Finite combat waves: per-floor bookkeeping
+let _dunCombatWavesActive = false
+let _dunCombatWavesComplete = false
+
+
 // Debug: cycle through all POSSIBLE_MONSTERS on Wave 1
 let debugMonsterIndex = 0
 
+type WaveArchetype = "swarm" | "elites" | "mixed"
 
+interface MonsterDef {
+    id: string                 // MUST match your spawnEnemyOfKind(kind, ...)
+    danger: number             // used by the wave generator (the key idea)
 
-function pickEnemyKindForWave(waveIdx: number): string {
-    // Returns a REAL monster id (as used by WAVE_DEFS.kinds).
-    if (!WAVE_DEFS || WAVE_DEFS.length == 0) return "imp blue" // fallback
+    // Core tuning knobs
+    hp: number
+    damage: number             // touch damage for now
+    speed: number
+    xp: number                 // xp reward for this monster (authoritative if present)
 
-    if (waveIdx < 0) waveIdx = 0
-    if (waveIdx >= WAVE_DEFS.length) waveIdx = WAVE_DEFS.length - 1
+    // NEW: combat style
+    // 0 = melee (default)
+    // >0 = "stand-off" distance for later ranged logic
+    advanceRangePx: number
 
-    // --- WAVE 1 DEBUG MODE ---
-    // Wave 0: cycle deterministically through POSSIBLE_MONSTERS.
-    if (waveIdx === 0 && POSSIBLE_MONSTERS && POSSIBLE_MONSTERS.length > 0) {
-        const idx = debugMonsterIndex % POSSIBLE_MONSTERS.length
-        const name = POSSIBLE_MONSTERS[idx]
-        debugMonsterIndex++
-        return name
-    }
-    // --- END DEBUG MODE ---
+    // Optional projectile key (for later ranged attacks)
+    projectileId?: string
 
-    const w = WAVE_DEFS[waveIdx]
-    if (!w || !w.kinds || !w.weights || w.kinds.length == 0) {
-        return WAVE_DEFS[0].kinds[0]
-    }
-
-    let total = 0
-    for (let i = 0; i < w.weights.length; i++) {
-        const wt = w.weights[i] | 0
-        if (wt > 0) total += wt
-    }
-    if (total <= 0) return w.kinds[0]
-
-    let roll = randint(1, total)
-    for (let i = 0; i < w.kinds.length; i++) {
-        const wt = w.weights[i] | 0
-        if (wt <= 0) continue
-        if (roll <= wt) return w.kinds[i]
-        roll -= wt
-    }
-
-    return w.kinds[0]
+    // Optional extras (safe to ignore for now)
+    tags?: string[]
+    attackRatePct?: number
+    regenPct?: number
 }
+
+interface GenWaveDef {
+    archetype: WaveArchetype
+    dangerBudget: number
+    spawnChance: number
+    durationMs: number
+    breakMs: number
+    maxAlive: number
+    pool: { id: string, w: number }[]
+}
+
+
+const MONSTER_CATALOG: MonsterDef[] = [
+    // Start with advanceRangePx=0 everywhere until we wire enemy ranged attacks.
+    // projectileId can be left undefined for now.
+
+    { id: "eyeball",       danger: 6,  hp: 25,  damage: 5,  speed: 35, xp: 8,  advanceRangePx: 0 },
+    { id: "bat",           danger: 7,  hp: 22,  damage: 6,  speed: 45, xp: 9,  advanceRangePx: 0 },
+    { id: "pumpking",      danger: 10, hp: 40,  damage: 8,  speed: 28, xp: 12, advanceRangePx: 0 },
+
+    { id: "imp blue",      danger: 14, hp: 55,  damage: 10, speed: 38, xp: 16, advanceRangePx: 0 },
+    { id: "spider green",  danger: 16, hp: 60,  damage: 11, speed: 32, xp: 18, advanceRangePx: 0 },
+
+    { id: "big worm",      danger: 28, hp: 120, damage: 18, speed: 22, xp: 30, advanceRangePx: 0 },
+]
+
+
+// Generated per combat floor
+let _dunWavePlan: GenWaveDef[] = []
+
+
+function _monsterDefById(id: string): MonsterDef {
+    for (let i = 0; i < MONSTER_CATALOG.length; i++) {
+        const d = MONSTER_CATALOG[i]
+        if (d.id === id) return d
+    }
+
+    // fallback: unknown monsters still spawn but have "danger" = 999 so generator won't pick them
+    return {
+        id,
+        danger: 999,
+        hp: 1,
+        damage: 1,
+        speed: 1,
+        xp: 1,
+        advanceRangePx: 0
+    }
+}
+
+function _clamp(n: number, lo: number, hi: number): number {
+    if (n < lo) return lo
+    if (n > hi) return hi
+    return n
+}
+
+function _floorDangerBase(floor1: number): number {
+    // floor1 = 1..100
+    // This is THE pacing knob. Keep it linear-ish for now.
+    return 25 + (floor1 * 6)
+}
+
+function _pickArchetype(floor1: number, waveIndex: number, waveCount: number): WaveArchetype {
+    // Early floors: more swarms. Later: more elites/mixed.
+    const t = _clamp(floor1 / 100, 0, 1)
+
+    const r = Math.random()
+    const swarmW = (0.70 - 0.35 * t)
+    const elitesW = (0.10 + 0.25 * t)
+    // remainder = mixed
+
+    if (r < swarmW) return "swarm"
+    if (r < (swarmW + elitesW)) return "elites"
+    return "mixed"
+}
+
+function _buildPoolForTarget(targetAvgDanger: number, maxDangerAllowed: number): { id: string, w: number }[] {
+    const out: { id: string, w: number }[] = []
+    for (let i = 0; i < MONSTER_CATALOG.length; i++) {
+        const m = MONSTER_CATALOG[i]
+        if ((m.danger | 0) <= 0) continue
+        if (m.danger > maxDangerAllowed) continue
+
+        // Weight by closeness to targetAvgDanger (closer = heavier weight)
+        const d = Math.abs(m.danger - targetAvgDanger)
+        const w = 1 / (1 + d) // simple, stable
+        out.push({ id: m.id, w })
+    }
+    return out
+}
+
+function _sumWeights(pool: { id: string, w: number }[]): number {
+    let s = 0
+    for (let i = 0; i < pool.length; i++) s += pool[i].w
+    return s
+}
+
+function _pickFromPool(pool: { id: string, w: number }[]): string {
+    if (!pool || pool.length == 0) return MONSTER_CATALOG[0]?.id || "eyeball"
+    const total = _sumWeights(pool)
+    let r = Math.random() * total
+    for (let i = 0; i < pool.length; i++) {
+        r -= pool[i].w
+        if (r <= 0) return pool[i].id
+    }
+    return pool[pool.length - 1].id
+}
+
+function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): GenWaveDef[] {
+    const floor1 = (floorIndex0 | 0) + 1
+
+    const baseDanger = _floorDangerBase(floor1)
+
+    // 3..7 waves up to floor 100
+    const waveCount = _clamp(3 + Math.idiv(floor1, 12), 3, 7)
+
+    // Split danger across waves so later waves are heavier
+    const weights: number[] = []
+    let wsum = 0
+    for (let i = 0; i < waveCount; i++) {
+        const w = Math.pow(i + 1, 1.35)
+        weights.push(w)
+        wsum += w
+    }
+
+    const plan: GenWaveDef[] = []
+    for (let i = 0; i < waveCount; i++) {
+        const archetype = _pickArchetype(floor1, i, waveCount)
+        const waveBudget = (baseDanger * (weights[i] / wsum)) | 0
+
+        // Choose “how many spawns we want” based on archetype
+        let desiredCount = 6 + Math.idiv(floor1, 18)
+        if (archetype === "swarm") desiredCount = 10 + Math.idiv(floor1, 10)
+        else if (archetype === "elites") desiredCount = 3 + Math.idiv(floor1, 30)
+
+        desiredCount = _clamp(desiredCount, 3, 18)
+
+        // Target average danger determines which monsters are preferred
+        const targetAvgDanger = _clamp(waveBudget / Math.max(1, desiredCount), 4, 60)
+
+        // Eligible monsters must have danger <= waveBudget (your exact rule)
+        const pool = _buildPoolForTarget(targetAvgDanger, waveBudget)
+
+        // Spawn chance & duration from desired count
+        let spawnChance = 0.9
+        if (archetype === "swarm") spawnChance = 1.0
+        else if (archetype === "elites") spawnChance = 0.75
+
+        const expectedTicks = Math.ceil(desiredCount / Math.max(0.05, spawnChance))
+        const durationMs = (expectedTicks * spawnIntervalMs) | 0
+
+        // Breaks: short; you can tune later
+        const breakMs = (400 + Math.idiv(floor1, 2)) | 0
+
+        // Cap alive count so testing doesn’t explode
+        const maxAlive = _clamp(8 + Math.idiv(floor1, 6), 10, 30)
+
+        plan.push({
+            archetype,
+            dangerBudget: waveBudget,
+            spawnChance,
+            durationMs,
+            breakMs,
+            maxAlive,
+            pool
+        })
+    }
+
+    return plan
+}
+
+function pickEnemyKindForWave(waveIndex: number): string {
+    const wi = waveIndex | 0
+    if (!_dunWavePlan || _dunWavePlan.length == 0) {
+        return MONSTER_CATALOG[0]?.id || "eyeball"
+    }
+    const w = _dunWavePlan[_clamp(wi, 0, _dunWavePlan.length - 1)]
+    return _pickFromPool(w.pool)
+}
+
 
 
 game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
@@ -19417,40 +20268,48 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
     if (SHOP_MODE_ACTIVE) return
     if (!enemySpawners || enemySpawners.length == 0) return
 
-    const now = game.runtime()
+    // Finite waves run only when a combat floor has started them.
+    if (!_dunCombatWavesActive || _dunCombatWavesComplete) return
 
-    if (!WAVE_DEFS || WAVE_DEFS.length == 0) {
-        const idx = randint(0, enemySpawners.length - 1)
-        const s = enemySpawners[idx]
-        // Spawns a default real monster id if you ever run with no WAVE_DEFS
-        console.log("Doing a default imp blue call to spawn enemy Of Kind")
-        
-        if (!SHOP_MODE_ACTIVE) {
-        spawnEnemyOfKind("imp blue", s.x, s.y)
-        }
+    const now = game.runtime() | 0
+
+    // No procedural plan? then stop the wave driver (combat clears once enemies are dead)
+    if (!_dunWavePlan || _dunWavePlan.length == 0) {
+        _dunCombatWavesActive = false
+        _dunCombatWavesComplete = true
         return
     }
 
-    // Phase transitions
-    if (now >= wavePhaseUntilMs) {
+    // Phase transitions (break <-> wave)
+    if ((now | 0) >= (wavePhaseUntilMs | 0)) {
         if (currentWaveIsBreak) {
             // Start / resume a wave
             currentWaveIsBreak = false
-            const w = (currentWaveIndex < WAVE_DEFS.length)
-                ? WAVE_DEFS[currentWaveIndex]
-                : WAVE_DEFS[WAVE_DEFS.length - 1]
-            wavePhaseUntilMs = now + (w.durationMs | 0)
-            showWaveBanner(currentWaveIndex)
+
+            const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
+            const w = _dunWavePlan[wi]
+
+            wavePhaseUntilMs = (now + (w.durationMs | 0)) | 0
+            showWaveBanner(wi)
         } else {
-            // Wave just ended – schedule next break
-            currentWaveIsBreak = true
-            if (currentWaveIndex < WAVE_DEFS.length - 1) {
-                currentWaveIndex++
+            // Wave just ended
+            if ((currentWaveIndex | 0) >= (_dunWavePlan.length - 1)) {
+                currentWaveIsBreak = true
+                _dunCombatWavesActive = false
+                _dunCombatWavesComplete = true
+                wavePhaseUntilMs = (now + 999999999) | 0
+                console.log(`[waves] complete; finalWave=${currentWaveIndex} t=${now}`)
+                return
             }
-            const w = (currentWaveIndex < WAVE_DEFS.length)
-                ? WAVE_DEFS[currentWaveIndex]
-                : WAVE_DEFS[WAVE_DEFS.length - 1]
-            wavePhaseUntilMs = now + (w.breakMs | 0)
+
+            // Schedule next break, then next wave
+            currentWaveIsBreak = true
+            currentWaveIndex = ((currentWaveIndex | 0) + 1) | 0
+
+            const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
+            const w = _dunWavePlan[wi]
+
+            wavePhaseUntilMs = (now + (w.breakMs | 0)) | 0
         }
         return
     }
@@ -19460,18 +20319,25 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
         return
     }
 
-    // Active wave: spawn with wave-specific spawnChance
-    const wave = (currentWaveIndex < WAVE_DEFS.length)
-        ? WAVE_DEFS[currentWaveIndex]
-        : WAVE_DEFS[WAVE_DEFS.length - 1]
-    const chance = (wave as any).spawnChance || 1
+    // Active wave
+    const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
+    const wave = _dunWavePlan[wi]
+
+    // NEW: Cap alive enemies per-wave (prevents runaway spawns while testing)
+    const live = _dunCountLiveEnemies() | 0
+    const cap = (wave.maxAlive | 0) || 9999
+    if ((cap | 0) > 0 && (live | 0) >= (cap | 0)) return
+
+    // Wave-specific spawn chance
+    const chance = (wave.spawnChance | 0) === 0 ? 0 : (wave.spawnChance as any as number)
     if (chance < 1 && Math.random() > chance) return
 
+    // Pick a spawner + pick a monster from THIS wave's pool
     const idx = randint(0, enemySpawners.length - 1)
     const s = enemySpawners[idx]
-    const kind = pickEnemyKindForWave(currentWaveIndex)
-    //console.log("Making a call to spawn enemy Of Kind")
-    spawnEnemyOfKind(kind, s.x, s.y)
+
+    const kind = _pickFromPool(wave.pool)
+    spawnEnemyOfKind(kind, s.x, s.y, /*elite=*/ (wave.archetype === "elites"))
 })
 
 

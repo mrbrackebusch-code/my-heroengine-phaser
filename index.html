@@ -381,6 +381,131 @@
         color: rgba(255, 255, 255, 0.84);
         font-size: 11.5px;
       }
+         
+      /* -----------------------------
+         XP panel (left of canvas)
+         ----------------------------- */
+      #xp-panel {
+        position: absolute;
+        top: 0px;
+        left: -150px;          /* sits left of the canvas */
+        width: 150px;
+        height: calc(100% - 1px);
+
+        display: flex;
+        gap: 10px;
+
+        padding: 10px;
+        box-sizing: border-box;
+
+        background: rgba(18, 18, 22, 0.92);
+        border: 2px solid #000;
+        border-radius: 12px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+
+        color: rgba(255, 255, 255, 0.92);
+        z-index: 9;            /* below dialog-layer (z=10) */
+        pointer-events: none;  /* never steals input */
+
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+
+      #xp-panel .xp-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      #xp-panel .xp-title {
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.4px;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #xp-panel .xp-line {
+        font-size: 10px;
+        letter-spacing: 0.3px;
+        color: var(--txt-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #xp-panel .xp-bonuses {
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      #xp-panel .xp-bonus {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.85);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #xp-panel .xp-right {
+        width: 36px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #xp-level-top {
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        margin-bottom: 6px;
+        white-space: nowrap;
+      }
+
+      #xp-bar {
+        position: relative;
+        width: 22px;
+        flex: 1 1 auto;
+
+        border: 2px solid rgba(255, 255, 255, 0.22);
+        border-radius: 10px;
+
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+      }
+
+      #xp-bar-fill {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        height: 0%;
+        background: rgba(74, 163, 255, 0.90); /* matches your intel-blue vibe */
+      }
+
+      #xp-bottom {
+        font-size: 9px;
+        color: var(--txt-dim);
+        margin-top: 6px;
+        white-space: nowrap;
+      }
+
 
 </style>
   </head>
@@ -513,6 +638,27 @@
         <div id="viewport">
           <div id="app"></div>
 
+          <!-- XP / Level panel (per-client, per-hero) -->
+          <div id="xp-panel" aria-hidden="true">
+            <div class="xp-left">
+              <div class="xp-title">XP</div>
+              <div class="xp-line" id="xp-left-progress">…</div>
+
+              <div class="xp-bonuses" id="xp-bonuses">
+                <div class="xp-bonus" id="xp-bonus-pts">Pts: …</div>
+                <div class="xp-bonus" id="xp-bonus-total">Total XP: …</div>
+                <div class="xp-bonus" id="xp-bonus-note">Bonuses: (soon)</div>
+              </div>
+            </div>
+
+            <div class="xp-right">
+              <div id="xp-level-top">Lv …</div>
+              <div id="xp-bar"><div id="xp-bar-fill"></div></div>
+              <div id="xp-bottom">…</div>
+            </div>
+          </div>
+
+
           <div id="dialog-layer" aria-hidden="true">
             <div id="dialog-box">
               <div id="dialog-head">
@@ -642,6 +788,15 @@
           abTime: document.getElementById("hud-ab-time"),
           abStatus: document.getElementById("hud-ab-status"),
           abElem: document.getElementById("hud-ab-elem"),
+          
+          xpLeftProgress: document.getElementById("xp-left-progress"),
+          xpLevelTop: document.getElementById("xp-level-top"),
+          xpBarFill: document.getElementById("xp-bar-fill"),
+          xpBottom: document.getElementById("xp-bottom"),
+          xpBonusPts: document.getElementById("xp-bonus-pts"),
+          xpBonusTotal: document.getElementById("xp-bonus-total"),
+          xpBonusNote: document.getElementById("xp-bonus-note"),
+
         };
 
         function setText(el, txt) {
@@ -823,6 +978,102 @@
         _hud_lastCoins = Math.max(0, n | 0);
         return _hud_lastCoins | 0;
       }
+
+
+              // ------------------------------------------------------------
+        // XP / LEVEL HUD (per-hero) — smooth fill, never shrinks
+        // Reads hero sprite data keys: lvl, xp, xpNext, lvlPts, xpTot
+        // ------------------------------------------------------------
+
+        let _xp_dispPct = 0;      // what we draw
+        let _xp_targetPct = 0;    // what we’re growing toward
+        let _xp_postWrapPct = 0;  // post-level-up target
+        let _xp_wrapCount = 0;    // how many level-ups to “wrap” through
+        let _xp_lastLevelSeen = 0;
+
+        let _xp_animLastTs = 0;
+        const XP_BAR_PCT_PER_SEC = 70; // fill speed; bump to 100+ if you want snappier
+
+        function _xp_setBarHeight(pct) {
+          if (!R.xpBarFill) return;
+          const p = Math.max(0, Math.min(100, +pct || 0));
+          R.xpBarFill.style.height = p.toFixed(2) + "%";
+        }
+
+        function _xp_resetUi() {
+          _xp_dispPct = 0;
+          _xp_targetPct = 0;
+          _xp_postWrapPct = 0;
+          _xp_wrapCount = 0;
+          _xp_lastLevelSeen = 0;
+          _xp_setBarHeight(0);
+        }
+
+        function _xp_setTargetFrom(levelNow, pctNow) {
+          const lvl = (levelNow | 0) || 1;
+          const p = Math.max(0, Math.min(100, +pctNow || 0));
+
+          // First time: initialize without jumping
+          if (_xp_lastLevelSeen === 0) {
+            _xp_lastLevelSeen = lvl;
+            _xp_postWrapPct = p;
+            _xp_targetPct = p;
+            return;
+          }
+
+          // If level increased, we "wrap": fill to 100 (once per level), reset to 0, then fill toward p
+          if (lvl > _xp_lastLevelSeen) {
+            _xp_wrapCount = (lvl - _xp_lastLevelSeen) | 0;
+            _xp_lastLevelSeen = lvl;
+            _xp_postWrapPct = p;
+            _xp_targetPct = 100;
+            return;
+          }
+
+          // If level decreased (rare reset case), snap-reset
+          if (lvl < _xp_lastLevelSeen) {
+            _xp_lastLevelSeen = lvl;
+            _xp_wrapCount = 0;
+            _xp_postWrapPct = p;
+            _xp_dispPct = 0;
+            _xp_targetPct = p;
+            _xp_setBarHeight(0);
+            return;
+          }
+
+          // Same level: never shrink; just grow to new percent if larger
+          _xp_postWrapPct = p;
+          if (p > _xp_targetPct) _xp_targetPct = p;
+        }
+
+        function _xp_animLoop(ts) {
+          if (!_xp_animLastTs) _xp_animLastTs = ts;
+          const dt = Math.min(0.05, (ts - _xp_animLastTs) / 1000); // cap dt to avoid giant jumps
+          _xp_animLastTs = ts;
+
+          if (_xp_dispPct < _xp_targetPct) {
+            _xp_dispPct = Math.min(_xp_targetPct, _xp_dispPct + XP_BAR_PCT_PER_SEC * dt);
+            _xp_setBarHeight(_xp_dispPct);
+          } else {
+            // If we're in wrap mode and reached 100, perform one wrap step
+            if (_xp_wrapCount > 0 && _xp_targetPct >= 100) {
+              _xp_wrapCount--;
+              _xp_dispPct = 0;
+              _xp_setBarHeight(0);
+
+              if (_xp_wrapCount > 0) {
+                _xp_targetPct = 100; // next “wrap”
+              } else {
+                _xp_targetPct = _xp_postWrapPct; // final post-level percent
+              }
+            }
+          }
+
+          requestAnimationFrame(_xp_animLoop);
+        }
+
+        // Start the smooth XP animation loop once
+        requestAnimationFrame(_xp_animLoop);
 
 
         function getPid() {
@@ -1029,6 +1280,8 @@
             renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
             renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
             renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            
+            _xp_resetUi();
             return;
           }
 
@@ -1045,6 +1298,8 @@
             renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
             renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
             renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            
+            _xp_resetUi();
             return;
           }
 
@@ -1058,6 +1313,33 @@
           const coinsActual = _readTeamCoins();
           const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
           setText(R.youCoins, `${EMOJI.coin} Coins: ${coinsShown}`);
+
+
+          // --- XP / Level (per-hero) ---
+          const lvlRaw = readNum(spritesNS, hero, "lvl");
+          const lvl = (lvlRaw > 0 ? lvlRaw : 1);
+
+          const xp = Math.max(0, readNum(spritesNS, hero, "xp"));
+          const xpNextRaw = readNum(spritesNS, hero, "xpNext");
+          const xpNext = Math.max(1, (xpNextRaw > 0 ? xpNextRaw : 1));
+
+          const pct = Math.max(0, Math.min(100, (xp / xpNext) * 100));
+
+          const lvlPts = Math.max(0, readNum(spritesNS, hero, "lvlPts"));
+          const xpTot = Math.max(0, readNum(spritesNS, hero, "xpTot"));
+
+          setText(R.xpLevelTop, `Lv ${lvl}`);
+          setText(R.xpBottom, `${xp}/${xpNext}`);
+          setText(R.xpLeftProgress, `${Math.round(pct)}%`);
+
+          setText(R.xpBonusPts, `Pts: ${lvlPts}`);
+          setText(R.xpBonusTotal, `Total XP: ${xpTot}`);
+
+          // Placeholder until we expose actual bonuses list from engine
+          setText(R.xpBonusNote, `Bonuses: (soon)`);
+
+          // Smooth bar growth (never shrinks; wraps on level-up)
+          _xp_setTargetFrom(lvl, pct);
 
 
           const heroIndex = resolveHeroIndexForSprite(hero);

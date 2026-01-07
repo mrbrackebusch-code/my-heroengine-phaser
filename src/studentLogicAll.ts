@@ -417,7 +417,7 @@ export function JasonHeroLogic(
 
             return [
                 FAMILY.STRENGTH,
-                dynDmg, 30, 0, 200,
+                dynDmg, 30, 0, 0,
                 ELEM.NONE,
                 ANIM.ID.A
             ]
