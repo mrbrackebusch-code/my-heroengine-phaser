@@ -3180,7 +3180,7 @@ const DUNGEON_KIND_SHOP = "shop"
 const DUNGEON_KIND_TREASURE = "treasure"
 const DUNGEON_KIND_STORY = "story"
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 2 //Shop knob
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
 
@@ -3981,6 +3981,118 @@ function _dunClearTransientFloorEntities(): void {
 
     _dunClearList(enemySpawners)
     enemySpawners = []
+
+    // ------------------------------------------------------------
+    // SHOP: destroy shopkeeper + offers + any shop-floor sprites
+    // so they never persist across floors.
+    // ------------------------------------------------------------
+    let trigger01 = 0
+    let npc01 = 0
+    let npcsCleared = 0
+    let itemsCleared = 0
+
+    // 1) Destroy ring offer hitboxes (tracked separately from SHOP_ITEMS)
+    if (_shopRingOfferItems && _shopRingOfferItems.length) {
+        for (let i = 0; i < _shopRingOfferItems.length; i++) {
+            const s = _shopRingOfferItems[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) itemsCleared++
+        }
+    }
+    try { _shopDestroyOfferItems() } catch { }
+
+    // 2) Destroy trigger zone
+    if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
+        trigger01 = 1
+        _dunDestroySprite(shopTriggerZone)
+    }
+    shopTriggerZone = null
+
+    // 3) Destroy shopkeeper NPC (hero-like sprite)
+    if (shopkeeperNpc && !(shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        npc01 = 1
+        _dunDestroySprite(shopkeeperNpc)
+    }
+    shopkeeperNpc = null
+
+    // 4) Destroy any pedestal sprite (if still used anywhere)
+    if (shopItemPedestal && !(shopItemPedestal.flags & sprites.Flag.Destroyed)) {
+        itemsCleared++
+        _dunDestroySprite(shopItemPedestal)
+    }
+    shopItemPedestal = null
+
+    // 5) Clear registries (if populated)
+    if (SHOP_NPCS && SHOP_NPCS.length) {
+        for (let i = 0; i < SHOP_NPCS.length; i++) {
+            const s = SHOP_NPCS[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) npcsCleared++
+        }
+        _dunClearList(SHOP_NPCS)
+    } else {
+        // keep stable: ensure empty
+        if (SHOP_NPCS) SHOP_NPCS.length = 0
+    }
+
+    if (SHOP_ITEMS && SHOP_ITEMS.length) {
+        for (let i = 0; i < SHOP_ITEMS.length; i++) {
+            const s = SHOP_ITEMS[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) itemsCleared++
+        }
+        _dunClearList(SHOP_ITEMS)
+    } else {
+        if (SHOP_ITEMS) SHOP_ITEMS.length = 0
+    }
+
+    // 6) Kill shop UI sprites (per-hero)
+    for (let hi = 0; hi < 4; hi++) {
+        try { _shopDestroyUiForHero(hi) } catch { }
+    }
+
+    // 7) Kill shop HUD sprites (legacy shop-only overlay)
+    if (_shopHudPanel && !(_shopHudPanel.flags & sprites.Flag.Destroyed)) _shopHudPanel.destroy()
+    if (_shopHudDialog && !(_shopHudDialog.flags & sprites.Flag.Destroyed)) _shopHudDialog.destroy()
+    if (_shopHudStats && !(_shopHudStats.flags & sprites.Flag.Destroyed)) _shopHudStats.destroy()
+    _shopHudPanel = null
+    _shopHudDialog = null
+    _shopHudStats = null
+
+    // 8) Kill any per-hero POC shop menu/items (not in SHOP_ITEMS registry)
+    if (heroShopSpawnedItem && heroShopSpawnedItem.length) {
+        for (let i = 0; i < heroShopSpawnedItem.length; i++) {
+            const s = heroShopSpawnedItem[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) { itemsCleared++; s.destroy() }
+        }
+    }
+    heroShopSpawnedItem = []
+
+    if (heroShopMenu && heroShopMenu.length) {
+        for (let i = 0; i < heroShopMenu.length; i++) {
+            const t = heroShopMenu[i] as any
+            if (t && !(t.flags & sprites.Flag.Destroyed)) t.destroy()
+        }
+    }
+    heroShopMenu = []
+    heroShopTouchUntilMs = []
+    heroShopTargetNpc = []
+
+    // 9) Reset per-hero shop state arrays (prevents stale UI/touch carrying across floors)
+    for (let hi = 0; hi < 4; hi++) {
+        shopFocusOfferByHero[hi] = null
+        shopFocusRingIndexByHero[hi] = -1
+        shopFocusUntilMsByHero[hi] = 0
+        shopTouchUntilMsByHero[hi] = 0
+        shopBoughtByHero[hi] = false
+
+        shopPrevAByPlayer[hi] = false
+        shopPrevBByPlayer[hi] = false
+        shopPrevUpByPlayer[hi] = false
+        shopPrevDownByPlayer[hi] = false
+        shopPrevLeftByPlayer[hi] = false
+        shopPrevRightByPlayer[hi] = false
+    }
+
+    // Required single-line debug log (once per floor clear)
+    console.log(`[DUN][CLEAR] shop: trigger=${trigger01} npc=${npc01} npcsCleared=${npcsCleared} itemsCleared=${itemsCleared}`)
 
     // NOTE: V10 does NOT declare _dunWallCollider anywhere.
     // Do not reference it here (ReferenceError).
@@ -5916,8 +6028,19 @@ function _shopEnsurePerHeroStateArrays(): void {
 
 
 function shopTick(nowMs: number): void {
-    const now = nowMs | 0
+    const now = (nowMs | 0)
     if (!HeroEngine._isStarted()) return
+
+    // ------------------------------------------------------------
+    // CRITICAL GUARD:
+    // Prevent shopInitPOC() from running on non-shop floors.
+    // This was causing the trigger/shopkeeper to respawn forever.
+    // ------------------------------------------------------------
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) {
+        SHOP_MODE_ACTIVE_MASTER = false
+        SHOP_MODE_ACTIVE = false
+        return
+    }
 
     // Only init when missing/destroyed (DO NOT re-init every frame)
     if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
@@ -5945,10 +6068,6 @@ function shopTick(nowMs: number): void {
     for (let hi = 0; hi < 4; hi++) {
         if (now <= (shopFocusUntilMsByHero[hi] | 0)) { anyActive = true; break }
     }
-
-//    console.log("Before anyactive Shop mode is ", SHOP_MODE_ACTIVE)
-//    SHOP_MODE_ACTIVE = anyActive
-//    console.log("After anyactive Shop mode is ", SHOP_MODE_ACTIVE)
 
     // 5) Debug dump (throttled inside)
     shopDebugDump(now)
@@ -7469,13 +7588,24 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
 
 
 function shopModeUpdate(nowMs: number): void {
-//    _shopEnsurePerHeroStateArrays()
-
     const now = nowMs | 0
 
-    // If the shop isn’t enabled, do nothing.
-    // (If you want it always running, remove this guard.)
-    // if (!SHOP_MODE_ACTIVE) return
+    // ------------------------------------------------------------
+    // CRITICAL GUARD:
+    // Shop loop must never run outside shop floors, otherwise it
+    // recreates trigger/shopkeeper/offers after floor clear.
+    // ------------------------------------------------------------
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) {
+        // Hard-disable shop master on non-shop floors
+        SHOP_MODE_ACTIVE_MASTER = false
+        SHOP_MODE_ACTIVE = false
+
+        // Best-effort: ensure no shop UI lingers
+        for (let hi = 0; hi < 4; hi++) {
+            try { _shopDestroyUiForHero(hi) } catch { }
+        }
+        return
+    }
 
     // Step 5: compute focus + publish highlight state to shopkeeper
     shopControlTick(now)
@@ -18284,6 +18414,266 @@ function startEnemyWaves() {
 const _ENEMY_DIR_R: number[] = [-1, 1, 0, 0, -1, -1, 1, 1]
 const _ENEMY_DIR_C: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
 
+
+// --------------------------------------------------------------
+// Shared enemy navigation (flow-field) — one BFS per rebuild, all enemies reuse
+// --------------------------------------------------------------
+
+const ENEMY_NAV_INF = 0x3fff
+const ENEMY_NAV_REBUILD_MS = 200   // KNOB: lower = more responsive, higher = cheaper
+
+let _enemyNavDist: number[] = []
+let _enemyNavDecorBlock: number[] = []
+let _enemyNavRows = 0
+let _enemyNavCols = 0
+
+let _enemyNavBuiltAtMs = 0
+let _enemyNavBuiltWorldRev = -1
+let _enemyNavBuiltDecorRev = -1
+let _enemyNavBuiltHeroHash = 0
+
+const _NAV4_DR: number[] = [-1, 1, 0, 0]
+const _NAV4_DC: number[] = [0, 0, -1, 1]
+
+// 8-neighbor steering (diagonals allowed with corner-guard)
+const _NAV8_DR: number[] = [-1, 1, 0, 0, -1, -1, 1, 1]
+const _NAV8_DC: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
+
+function _enemyNavIdx(r: number, c: number): number {
+    return ((r * _enemyNavCols) + c) | 0
+}
+
+function _enemyNavEnsureCapacity(rows: number, cols: number): void {
+    rows |= 0
+    cols |= 0
+    const need = (rows * cols) | 0
+
+    if (_enemyNavRows !== rows || _enemyNavCols !== cols || !_enemyNavDist || _enemyNavDist.length !== need) {
+        _enemyNavRows = rows
+        _enemyNavCols = cols
+        _enemyNavDist = []
+        _enemyNavDecorBlock = []
+        for (let i = 0; i < need; i++) {
+            _enemyNavDist.push(ENEMY_NAV_INF)
+            _enemyNavDecorBlock.push(0)
+        }
+    }
+}
+
+function _enemyNavComputeHeroHash(heroTargets: Sprite[]): number {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return 0
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0].length | 0
+    const tileSize = WORLD_TILE_SIZE | 0
+
+    let h = 0
+    for (let i = 0; i < heroTargets.length; i++) {
+        const hero = heroTargets[i]
+        if (!hero) continue
+
+        let r = Math.idiv(hero.y | 0, tileSize) | 0
+        let c = Math.idiv(hero.x | 0, tileSize) | 0
+        if (r < 0) r = 0
+        else if (r >= rows) r = rows - 1
+        if (c < 0) c = 0
+        else if (c >= cols) c = cols - 1
+
+        const v = ((r * cols) + c) | 0
+        h = (((h * 131) | 0) ^ v) | 0
+    }
+    return h | 0
+}
+
+function _enemyNavRebuildDecorBlocks(rows: number, cols: number): void {
+    rows |= 0
+    cols |= 0
+    const need = (rows * cols) | 0
+    if (!_enemyNavDecorBlock || _enemyNavDecorBlock.length !== need) return
+
+    for (let i = 0; i < need; i++) _enemyNavDecorBlock[i] = 0
+
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+
+    for (let i = 0; i < _engineDecorSolids.length; i++) {
+        const s = _engineDecorSolids[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+
+        // Prefer tile-aligned collider left/top when available
+        const left = ((s as any).left != null) ? ((s as any).left | 0) : (s.x | 0)
+        const top = ((s as any).top != null) ? ((s as any).top | 0) : (s.y | 0)
+
+        const c = Math.idiv(left, tileSize) | 0
+        const r = Math.idiv(top, tileSize) | 0
+
+        if (r < 0 || r >= rows || c < 0 || c >= cols) continue
+        _enemyNavDecorBlock[_enemyNavIdx(r, c)] = 1
+    }
+}
+
+function _enemyNavIsBlocked(r: number, c: number): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return true
+    if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return true
+
+    if (((_engineWorldTileMap[r][c] | 0) === (TILE_WALL | 0))) return true
+    const idx = _enemyNavIdx(r, c)
+    if (_enemyNavDecorBlock && _enemyNavDecorBlock.length > idx && (_enemyNavDecorBlock[idx] | 0) !== 0) return true
+
+    return false
+}
+
+function _enemyNavRebuildDistanceField(heroTargets: Sprite[]): void {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+    const map = _engineWorldTileMap
+    const rows = map.length | 0
+    const cols = map[0].length | 0
+    const tileSize = WORLD_TILE_SIZE | 0
+
+    _enemyNavEnsureCapacity(rows, cols)
+    const need = (rows * cols) | 0
+
+    // Reset dist to INF
+    for (let i = 0; i < need; i++) _enemyNavDist[i] = ENEMY_NAV_INF
+
+    // Rebuild decor blocking grid (so enemies avoid statue/chest solids too)
+    _enemyNavRebuildDecorBlocks(rows, cols)
+
+    const qr: number[] = []
+    const qc: number[] = []
+    let head = 0
+
+    // Multi-source BFS: all heroes are sources with dist=0
+    for (let i = 0; i < heroTargets.length; i++) {
+        const hero = heroTargets[i]
+        if (!hero) continue
+
+        let sr = Math.idiv(hero.y | 0, tileSize) | 0
+        let sc = Math.idiv(hero.x | 0, tileSize) | 0
+        if (sr < 0) sr = 0
+        else if (sr >= rows) sr = rows - 1
+        if (sc < 0) sc = 0
+        else if (sc >= cols) sc = cols - 1
+
+        const sIdx = ((sr * cols) + sc) | 0
+        if ((_enemyNavDist[sIdx] | 0) !== 0) {
+            _enemyNavDist[sIdx] = 0
+            qr.push(sr)
+            qc.push(sc)
+        }
+    }
+
+    if (qr.length === 0) return
+
+    while (head < qr.length) {
+        const r = qr[head] | 0
+        const c = qc[head] | 0
+        head++
+
+        const baseIdx = ((r * cols) + c) | 0
+        const baseD = _enemyNavDist[baseIdx] | 0
+        const nextD = (baseD + 1) | 0
+
+        for (let k = 0; k < 4; k++) {
+            const nr = (r + _NAV4_DR[k]) | 0
+            const nc = (c + _NAV4_DC[k]) | 0
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
+            if (_enemyNavIsBlocked(nr, nc)) continue
+
+            const nIdx = ((nr * cols) + nc) | 0
+            const cur = _enemyNavDist[nIdx] | 0
+            if (cur <= nextD) continue
+
+            _enemyNavDist[nIdx] = nextD
+            qr.push(nr)
+            qc.push(nc)
+        }
+    }
+}
+
+function _enemyNavMaybeRebuild(nowMs: number, heroTargets: Sprite[]): void {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+    if (!heroTargets || heroTargets.length === 0) return
+
+    const now = nowMs | 0
+    const worldRev = _engineWorldRev | 0
+    const decorRev = _engineDecorRev | 0
+    const heroHash = _enemyNavComputeHeroHash(heroTargets) | 0
+
+    const age = (now - (_enemyNavBuiltAtMs | 0)) | 0
+    const needs =
+        (worldRev !== (_enemyNavBuiltWorldRev | 0)) ||
+        (decorRev !== (_enemyNavBuiltDecorRev | 0)) ||
+        (heroHash !== (_enemyNavBuiltHeroHash | 0)) ||
+        (age >= (ENEMY_NAV_REBUILD_MS | 0))
+
+    if (!needs) return
+
+    _enemyNavRebuildDistanceField(heroTargets)
+
+    _enemyNavBuiltAtMs = now
+    _enemyNavBuiltWorldRev = worldRev
+    _enemyNavBuiltDecorRev = decorRev
+    _enemyNavBuiltHeroHash = heroHash
+}
+
+function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
+    if (!_enemyNavDist || _enemyNavRows <= 0 || _enemyNavCols <= 0) return false
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    let r = Math.idiv(enemy.y | 0, tileSize) | 0
+    let c = Math.idiv(enemy.x | 0, tileSize) | 0
+
+    if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return false
+
+    const idx0 = _enemyNavIdx(r, c)
+    const d0 = _enemyNavDist[idx0] | 0
+    if (d0 >= ENEMY_NAV_INF) return false
+    if (d0 <= 0) return false
+
+    let bestR = r
+    let bestC = c
+    let bestD = d0
+
+    // Choose the neighbor with lowest dist, allowing diagonals but forbidding corner-cuts
+    for (let k = 0; k < 8; k++) {
+        const nr = (r + _NAV8_DR[k]) | 0
+        const nc = (c + _NAV8_DC[k]) | 0
+        if (nr < 0 || nr >= _enemyNavRows || nc < 0 || nc >= _enemyNavCols) continue
+        if (_enemyNavIsBlocked(nr, nc)) continue
+
+        const dr = _NAV8_DR[k] | 0
+        const dc = _NAV8_DC[k] | 0
+        if (dr !== 0 && dc !== 0) {
+            // diagonal: both adjacent cardinals must be open
+            if (_enemyNavIsBlocked(r, nc) || _enemyNavIsBlocked(nr, c)) continue
+        }
+
+        const nd = _enemyNavDist[_enemyNavIdx(nr, nc)] | 0
+        if (nd < bestD) {
+            bestD = nd
+            bestR = nr
+            bestC = nc
+        }
+    }
+
+    if (bestR === r && bestC === c) return false
+
+    const tx = (bestC * tileSize + (tileSize >> 1)) | 0
+    const ty = (bestR * tileSize + (tileSize >> 1)) | 0
+
+    const dx = (tx - (enemy.x | 0))
+    const dy = (ty - (enemy.y | 0))
+
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag <= 0.001) mag = 1
+
+    enemy.vx = Math.idiv(dx * speed, mag)
+    enemy.vy = Math.idiv(dy * speed, mag)
+    return true
+}
+
+
 // Compute a steering vector for enemy e toward hero h using the tilemap.
 // Falls back to straight-line homing if map is missing or path not found.
 function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
@@ -18656,16 +19046,16 @@ function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boo
 }
 
 function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
-    const origTX = target.x
-    const origTY = target.y
+    // Prefer shared nav-field (tile-aware, scalable)
+    if (_enemySteerTowardNavField(enemy, speed)) return
 
-    ;(target as any).x = edgeX
-    ;(target as any).y = edgeY
-
-    _enemySteerTowardHero(enemy, target, speed)
-
-    ;(target as any).x = origTX
-    ;(target as any).y = origTY
+    // Fallback: straight-line to the edge point
+    const dx0 = edgeX - enemy.x
+    const dy0 = edgeY - enemy.y
+    let mag0 = Math.sqrt(dx0 * dx0 + dy0 * dy0)
+    if (mag0 === 0) mag0 = 1
+    enemy.vx = Math.idiv(dx0 * speed, mag0)
+    enemy.vy = Math.idiv(dy0 * speed, mag0)
 }
 
 function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: number, nowMs: number): boolean {
@@ -18759,6 +19149,9 @@ function updateEnemyHoming(nowMs: number) {
         return
     }
 
+    // NEW: rebuild shared nav-field occasionally (or when world/hero positions change)
+    _enemyNavMaybeRebuild(nowMs | 0, heroTargets)
+
     for (let ei = 0; ei < enemies.length; ei++) {
         const enemy = enemies[ei]
         if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
@@ -18801,16 +19194,16 @@ function updateEnemyHoming(nowMs: number) {
             continue
         }
 
-        // NEW: advanceRange (0 melee; >0 hold position at range)
+        // advanceRange (0 melee; >0 hold position at range)
         if (_enemyShouldHoldAtAdvanceRange(enemy, pick)) {
             _enemyAiUpdateLastPos(enemy)
             continue
         }
 
-        // Normal steering toward hero EDGE point
+        // Normal steering (now prefers shared nav-field under the hood)
         _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed)
 
-        // NEW: anti-stuck wall sliding (simple strafe when jammed)
+        // Anti-stuck wall sliding
         if (_enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)) {
             // dir already set in anti-stuck path
         } else {
@@ -18819,7 +19212,6 @@ function updateEnemyHoming(nowMs: number) {
 
         _enemyAiUpdateLastPos(enemy)
 
-        // Optional throttled debug, keep structure
         if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 10000) {
             _lastEnemyHomingLogMs = nowMs
         }
