@@ -551,11 +551,10 @@ namespace HeroEngine {
         if (_started) return;
         _started = true;
 
-        // reset shared coins + HUD
+        // Legacy: clear any old canvas HUD remnants (DOM-only now)
         teamCoins = 0
         if (teamCoinsHud && !(teamCoinsHud.flags & sprites.Flag.Destroyed)) teamCoinsHud.destroy()
         teamCoinsHud = null
-        setTeamCoins(0)
 
         ensureHeroSpriteKinds();
 
@@ -563,6 +562,13 @@ namespace HeroEngine {
         scene.setBackgroundColor(1);
         tiles.setCurrentTilemap(tilemap`level1`)
         setupHeroes();
+
+        // NEW: per-hero coins start at 0 (or keep if you later want persistence)
+        for (let hi = 0; hi < heroes.length; hi++) {
+            const h = heroes[hi]
+            if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+            setHeroCoins(hi, 0)
+        }
 
         // Shop boot (single path)
         installShopInputHandlers()
@@ -3188,7 +3194,7 @@ const DUNGEON_KIND_SHOP = "shop"
 const DUNGEON_KIND_TREASURE = "treasure"
 const DUNGEON_KIND_STORY = "story"
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 2 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
 
@@ -4261,11 +4267,12 @@ function _dunEnterFloor_setupShopFloor(padX: number, padY: number): void {
 
     shopInitPOC()
 
-    // Move shop away from pad so pad can still be used (once unlocked)
-    if (shopTriggerZone && !(shopTriggerZone.flags & sprites.Flag.Destroyed)) {
-        shopTriggerZone.setPosition((padX - 70) | 0, (padY + 55) | 0)
-        if (typeof _shopDestroyOfferItems === "function") _shopDestroyOfferItems()
-    }
+    // NEW: tile-driven layout (2x5 slots preferred; fallback 1x5)
+    const nowMs = game.runtime() | 0
+    _shopComputeAndApplyLayoutForShopFloor(padX, padY, nowMs)
+
+    // NOTE: we intentionally do NOT do the old "padX-70" shove here anymore.
+    // Layout picker handles "not on telepad" and chooses a clean rectangle.
 }
 
 function _dunEnterFloor_setupCombatFloor(): void {
@@ -4378,7 +4385,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 }
 
                 // Reward + complete objective (this triggers COINFX enqueue)
-                addTeamCoins(10, popX, popY)
+                addHeroCoins(hi, 10, popX, popY)
 
                 _dunObjectiveDone = true
                 _dunSetPadPowered(true)
@@ -5566,9 +5573,169 @@ function setHeroLevelUpTraitBonus(hi: number, family: number, traitIndex: number
     sprites.setDataNumber(hero, _heroLvlBonusKey(family, traitIndex), (value | 0));
 }
 
+// Post-calc stat modifier hook for relics.
+// For now: no-op. Later: this is where relics rewrite stats[] (and/or append metadata).
+function applyRelicModsToStats(
+    hi: number,
+    family: number,
+    button: string,
+    traitsEff: MoveTraits,
+    stats: number[]
+): number[] {
+    // Intentionally empty for now.
+    // Example future operations:
+    // - stats[STAT.DAMAGE_MULT] = ...
+    // - stats[STAT.MOVE_DURATION] = ...
+    // - stats[STAT.STATUS_DUR_MS] = ...
+    return stats;
+}
+
+
+// ================================================================
+// LEVEL-UP SPENDING (engine API; UI can call via globals)
+// ================================================================
+
+const LVLUP_AXIS_RANK_MAX = 4
+
+// Flat bonuses derived from axis rank (rank 0..4).
+// If you later want rank->bonus to be nonlinear, change ONLY this table.
+const LVLUP_AXIS_BONUS_BY_RANK: number[] = [0, 1, 2, 3, 4]
+
+// HP/Mana picks (each costs 1 lvlPt)
+const HERO_LVLUP_HP_PICKS_KEY = "lvlHpPicks"
+const HERO_LVLUP_MANA_PICKS_KEY = "lvlManaPicks"
+
+// Tunables
+const LVLUP_HP_PER_PICK = 6
+const LVLUP_MANA_PER_PICK = 4
+
+function _lvlupBonusFromRank(rankRaw: number): number {
+    const r = clampInt(rankRaw | 0, 0, LVLUP_AXIS_RANK_MAX) | 0
+    return (LVLUP_AXIS_BONUS_BY_RANK[r] | 0) || 0
+}
+
+function getHeroLevelUpAxisRank(hi: number, family: number, traitIndex: number): number {
+    // Reuse existing storage (lvlb_<family>_<traitIndex>) but interpret as "rank"
+    return clampInt(getHeroLevelUpTraitBonus(hi, family, traitIndex) | 0, 0, LVLUP_AXIS_RANK_MAX) | 0
+}
+
+function setHeroLevelUpAxisRank(hi: number, family: number, traitIndex: number, rank: number): void {
+    const r = clampInt(rank | 0, 0, LVLUP_AXIS_RANK_MAX) | 0
+    setHeroLevelUpTraitBonus(hi, family, traitIndex, r)
+}
+
+function getHeroUnspentLevelPts(hi: number): number {
+    const hero = heroes[hi]
+    if (!hero) return 0
+    ensureHeroXpInitialized(hi)
+    return sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+}
+
+function _setHeroUnspentLevelPts(hi: number, pts: number): void {
+    const hero = heroes[hi]
+    if (!hero) return
+    sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, Math.max(0, pts | 0))
+}
+
+function trySpendLevelUpPointOnAxis(hi: number, family: number, traitIndex: number): boolean {
+    const hero = heroes[hi]
+    if (!hero) return false
+    ensureHeroXpInitialized(hi)
+
+    let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+    if (pts <= 0) return false
+
+    const curRank = getHeroLevelUpAxisRank(hi, family, traitIndex) | 0
+    if (curRank >= LVLUP_AXIS_RANK_MAX) return false
+
+    const nextRank = (curRank + 1) | 0
+    setHeroLevelUpAxisRank(hi, family, traitIndex, nextRank)
+
+    pts = (pts - 1) | 0
+    _setHeroUnspentLevelPts(hi, pts)
+
+    console.log("[LVLUP] axis", {
+        hi,
+        family,
+        traitIndex,
+        rankFrom: curRank,
+        rankTo: nextRank,
+        bonusNow: _lvlupBonusFromRank(nextRank),
+        ptsLeft: pts
+    })
+
+    return true
+}
+
+function trySpendLevelUpPointOnMaxHp(hi: number): boolean {
+    const hero = heroes[hi]
+    if (!hero) return false
+    ensureHeroXpInitialized(hi)
+
+    let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+    if (pts <= 0) return false
+
+    let picks = sprites.readDataNumber(hero, HERO_LVLUP_HP_PICKS_KEY) | 0
+    picks = (picks + 1) | 0
+    sprites.setDataNumber(hero, HERO_LVLUP_HP_PICKS_KEY, picks)
+
+    const add = LVLUP_HP_PER_PICK | 0
+
+    let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+    if (maxHp <= 0) maxHp = 1
+    maxHp = (maxHp + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHp)
+
+    let hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+    hp = (hp + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
+
+    updateHeroHPBar(hi)
+
+    pts = (pts - 1) | 0
+    _setHeroUnspentLevelPts(hi, pts)
+
+    console.log("[LVLUP] maxHp", { hi, add, picks, maxHp, hp, ptsLeft: pts })
+    return true
+}
+
+function trySpendLevelUpPointOnMaxMana(hi: number): boolean {
+    const hero = heroes[hi]
+    if (!hero) return false
+    ensureHeroXpInitialized(hi)
+
+    let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+    if (pts <= 0) return false
+
+    let picks = sprites.readDataNumber(hero, HERO_LVLUP_MANA_PICKS_KEY) | 0
+    picks = (picks + 1) | 0
+    sprites.setDataNumber(hero, HERO_LVLUP_MANA_PICKS_KEY, picks)
+
+    const add = LVLUP_MANA_PER_PICK | 0
+
+    let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+    if (maxMana <= 0) maxMana = 1
+    maxMana = (maxMana + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxMana)
+
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+    mana = (mana + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+
+    updateHeroManaBar(hi)
+
+    pts = (pts - 1) | 0
+    _setHeroUnspentLevelPts(hi, pts)
+
+    console.log("[LVLUP] maxMana", { hi, add, picks, maxMana, mana, ptsLeft: pts })
+    return true
+}
+
+
+
 // Apply flat bonuses to traits AFTER applyDamageModsToTraits() and BEFORE calculateMoveStatsForFamily().
 // This affects outputs (damage/reach/time/status) but does NOT affect mana costs.
-function applyLevelUpBonusesToTraits(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
+function applyLevelUpBonusesToTraitsOLDCODETODELETE(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
     if (!traitsEff) return traitsEff;
 
     const b1 = getHeroLevelUpTraitBonus(hi, family, OUT.TRAIT1) | 0;
@@ -5586,22 +5753,32 @@ function applyLevelUpBonusesToTraits(hi: number, family: number, traitsEff: Move
     return out;
 }
 
-// Post-calc stat modifier hook for relics.
-// For now: no-op. Later: this is where relics rewrite stats[] (and/or append metadata).
-function applyRelicModsToStats(
-    hi: number,
-    family: number,
-    button: string,
-    traitsEff: MoveTraits,
-    stats: number[]
-): number[] {
-    // Intentionally empty for now.
-    // Example future operations:
-    // - stats[STAT.DAMAGE_MULT] = ...
-    // - stats[STAT.MOVE_DURATION] = ...
-    // - stats[STAT.STATUS_DUR_MS] = ...
-    return stats;
+
+// IMPORTANT: map stored rank->bonus at application time (so table can change later).
+// Replace your existing function with this full replacement.
+function applyLevelUpBonusesToTraits(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
+    if (!traitsEff) return traitsEff
+
+    const r1 = getHeroLevelUpAxisRank(hi, family, OUT.TRAIT1) | 0
+    const r2 = getHeroLevelUpAxisRank(hi, family, OUT.TRAIT2) | 0
+    const r3 = getHeroLevelUpAxisRank(hi, family, OUT.TRAIT3) | 0
+    const r4 = getHeroLevelUpAxisRank(hi, family, OUT.TRAIT4) | 0
+
+    const b1 = _lvlupBonusFromRank(r1) | 0
+    const b2 = _lvlupBonusFromRank(r2) | 0
+    const b3 = _lvlupBonusFromRank(r3) | 0
+    const b4 = _lvlupBonusFromRank(r4) | 0
+
+    if ((b1 | b2 | b3 | b4) === 0) return traitsEff
+
+    const out = traitsEff.slice() as MoveTraits
+    out[OUT.TRAIT1] = (out[OUT.TRAIT1] | 0) + b1
+    out[OUT.TRAIT2] = (out[OUT.TRAIT2] | 0) + b2
+    out[OUT.TRAIT3] = (out[OUT.TRAIT3] | 0) + b3
+    out[OUT.TRAIT4] = (out[OUT.TRAIT4] | 0) + b4
+    return out
 }
+
 
 
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
@@ -5639,8 +5816,23 @@ const SHOP_ITEMS: Sprite[] = []
 // Shop constants
 // ------------------------------
 const SHOPKEEPER_PLAYER_ID = 99
+// Dedicated pids for the 4 shop statues (must NOT be 1..4)
+const SHOP_STATUE_PLAYER_IDS: number[] = [95, 96, 97, 98]
+
 const SHOPKEEPER_HERO_NAME = "Shopkeeper"
 const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+
+const HERO_SHOP_FOCUS_ACTIVE_KEY = "shopFocusActive"
+const HERO_SHOP_FOCUS_RING_KEY = "shopFocusRing"
+const HERO_SHOP_FOCUS_WEAPON_ID_KEY = "shopFocusWeaponId"
+const HERO_SHOP_FOCUS_WEAPON_LABEL_KEY = "shopFocusWeaponLabel"
+const HERO_SHOP_FOCUS_SLOT_KEY = "shopFocusSlot"
+const HERO_SHOP_FOCUS_PRICE_KEY = "shopFocusPrice"
+const HERO_SHOP_FOCUS_BONUS_KEY = "shopFocusBonus"
+const HERO_SHOP_FOCUS_OWNED_BY_KEY = "shopFocusOwnedByPid"
+const HERO_SHOP_FOCUS_CAN_AFFORD_KEY = "shopFocusCanAfford"
+
 
 // ------------------------------
 // Shop runtime objects
@@ -5648,6 +5840,17 @@ const SHOP_FOCUS_KEEPALIVE_MS = 120
 let shopkeeperNpc: Sprite = null
 let shopItemPedestal: Sprite = null
 let shopTriggerZone: Sprite = null
+
+// ---------------------------------------------------------
+// Shop layout (tile-driven placement for shopkeeper + statues)
+// kind: 0=none, 2=2x5 slots (2 rows), 1=1x5 slots (1 row)
+// baseR/baseC are BASE TILE coords (32px tiles), top-left of the slots-rect
+// ---------------------------------------------------------
+let _shopLayout_kind = 0
+let _shopLayout_baseR = -1
+let _shopLayout_baseC = -1
+let _shopLayout_worldRev = -1
+
 
 // Ring offer hitboxes (invisible ShopItem sprites)
 let _shopRingOfferItems: Sprite[] = []
@@ -5703,14 +5906,18 @@ const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
 let shopStatues: Sprite[] = [null, null, null, null]
 
-const SHOP_STATUE_PROFILE_NAME = "StatueHero"
+const SHOP_STATUE_PROFILE_NAME = "Statue"
 
 // Left → right order (required)
 const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligence", "support"]
 const SHOP_STATUE_ORDER_FAMILY: number[] = [FAMILY.STRENGTH, FAMILY.AGILITY, FAMILY.INTELLECT, FAMILY.HEAL]
 
-// For now: STR shows slash; the other three are thrust (per your new direction)
-const SHOP_STATUE_DESIRED_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"]
+// Equip slot = what the HERO receives on swap
+// Render slot = what the STATUE uses for its visible held weapon (temporary staff hack for Int/Support)
+const SHOP_STATUE_EQUIP_SLOT: string[] = ["slash", "thrust", "cast", "cast"]
+const SHOP_STATUE_RENDER_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"]
+
+
 
 
 
@@ -5732,6 +5939,217 @@ const SHOP_STATUE_DESIRED_SLOT: string[] = ["slash", "thrust", "thrust", "thrust
 
 // How long a focus stays “alive” without a continuous overlap event.
 //const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+
+
+function _shopRingReadIdsSlotsFromShopkeeper(sk: Sprite): any {
+    // Prefer the NEW statue contract keys (do not wake legacy ring rendering)
+    const idsRawNew = (sprites.readDataString(sk, SHOP_STATUE_OFFER_IDS_KEY) || "").trim()
+    const slotsRawNew = (sprites.readDataString(sk, SHOP_STATUE_OFFER_SLOTS_KEY) || "").trim()
+
+    // Legacy fallback (only used to migrate once)
+    const idsRawLegacy =
+        (sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "").trim() ||
+        (SHOP_DEFAULT_RING_WEAPON_IDS || "").trim()
+
+    const slotsRawLegacy =
+        (sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || "").trim() ||
+        (SHOP_DEFAULT_RING_WEAPON_SLOTS || "").trim()
+
+    const idsRaw = idsRawNew || idsRawLegacy || ""
+    const slotsRaw = slotsRawNew || slotsRawLegacy || ""
+
+    // IMPORTANT: keep empty segments so index 0..3 stays index-locked
+    const ids = _shopSplitPipeKeepEmpty(idsRaw)
+    const slots = _shopSplitPipeKeepEmpty(slotsRaw)
+
+    const want = 4
+    while (ids.length < want) ids.push("")
+    while (ids.length > want) ids.pop()
+
+    while (slots.length < want) slots.push("")
+    while (slots.length > want) slots.pop()
+
+    // Migrate into NEW keys if missing
+    if (!idsRawNew) sprites.setDataString(sk, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
+    if (!slotsRawNew) sprites.setDataString(sk, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
+
+    // HARD-KILL legacy ring keys so nothing else spawns ring offers again
+    const legacyIdsNow = (sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "").trim()
+    if (legacyIdsNow) sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, "")
+
+    const legacySlotsNow = (sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || "").trim()
+    if (legacySlotsNow) sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, "")
+
+    return { ids, slots }
+}
+
+
+
+function _shopPixToTile(x: number): number {
+    return Math.max(0, ((x / WORLD_TILE_SIZE) | 0) | 0)
+}
+
+function _shopTileIsEmpty(r: number, c: number): boolean {
+    if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0]?.length ?? 0) | 0
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return false
+    return ((_engineWorldTileMap[r][c] | 0) === (TILE_EMPTY | 0))
+}
+
+function _shopRectAllEmpty(baseR: number, baseC: number, h: number, w: number): boolean {
+    const r0 = baseR | 0
+    const c0 = baseC | 0
+    const hh = h | 0
+    const ww = w | 0
+    for (let r = 0; r < hh; r++) {
+        for (let c = 0; c < ww; c++) {
+            if (!_shopTileIsEmpty((r0 + r) | 0, (c0 + c) | 0)) return false
+        }
+    }
+    return true
+}
+
+function _shopRectsOverlap(r0: number, c0: number, h0: number, w0: number,
+                          r1: number, c1: number, h1: number, w1: number): boolean {
+    const aTop = r0 | 0
+    const aLeft = c0 | 0
+    const aBot = (aTop + (h0 | 0) - 1) | 0
+    const aRight = (aLeft + (w0 | 0) - 1) | 0
+
+    const bTop = r1 | 0
+    const bLeft = c1 | 0
+    const bBot = (bTop + (h1 | 0) - 1) | 0
+    const bRight = (bLeft + (w1 | 0) - 1) | 0
+
+    if (aRight < bLeft) return false
+    if (bRight < aLeft) return false
+    if (aBot < bTop) return false
+    if (bBot < aTop) return false
+    return true
+}
+
+function _shopSlotCenterX(baseTileC: number): number {
+    // slot is 2 base tiles wide (64px). center is +32px from slot top-left
+    return ((baseTileC * WORLD_TILE_SIZE) + WORLD_TILE_SIZE) | 0
+}
+
+function _shopSlotCenterY(baseTileR: number): number {
+    return ((baseTileR * WORLD_TILE_SIZE) + WORLD_TILE_SIZE) | 0
+}
+
+function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowMs: number): void {
+    // Only recompute when world changes (new floor / rebuild)
+    const wr = _engineWorldRev | 0
+    if ((_shopLayout_worldRev | 0) === wr && (_shopLayout_kind | 0) !== 0) {
+        // Still apply positions (idempotent)
+    } else {
+        _shopLayout_worldRev = wr
+
+        // Pad anchor in BASE TILE coords (center)
+        const padR = (_dunPadTileR | 0) > 0 ? (_dunPadTileR | 0) : _shopPixToTile(padY)
+        const padC = (_dunPadTileC | 0) > 0 ? (_dunPadTileC | 0) : _shopPixToTile(padX)
+
+        // Telepad occupies a 2x5 BASE TILE rect: rows padR..padR+1, cols (padC-2)..(padC+2)
+        const padRectR = padR | 0
+        const padRectC = (padC - 2) | 0
+        const padRectH = 2
+        const padRectW = 5
+
+        const rows = (_engineWorldTileMap?.length ?? 0) | 0
+        const cols = (_engineWorldTileMap?.[0]?.length ?? 0) | 0
+
+        let bestKind = 0
+        let bestBaseR = -1
+        let bestBaseC = -1
+        let bestScore = 999999999
+        let tried = 0
+
+        function consider(kind: number, slotsH: number, slotsW: number): void {
+            const baseH = (slotsH * 2) | 0
+            const baseW = (slotsW * 2) | 0
+
+            // scan slot-grid (top-lefts aligned on even base tiles)
+            const maxBaseR = (rows - 1 - baseH) | 0
+            const maxBaseC = (cols - 1 - baseW) | 0
+
+            for (let baseR = 0; baseR <= maxBaseR; baseR += 2) {
+                for (let baseC = 0; baseC <= maxBaseC; baseC += 2) {
+                    tried++
+
+                    // quick edge margin
+                    if (baseR <= 0 || baseC <= 0) continue
+
+                    // must not overlap pad rect
+                    if (_shopRectsOverlap(baseR, baseC, baseH, baseW, padRectR, padRectC, padRectH, padRectW)) continue
+
+                    // must be fully empty
+                    if (!_shopRectAllEmpty(baseR, baseC, baseH, baseW)) continue
+
+                    // Score by distance from SHOPKEEPER slot to pad center (in base-tile space)
+                    const shopRowSlot = (kind === 2) ? 1 : 0
+                    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
+                    const shopBaseC = (baseC + (2 * 2)) | 0 // col=2 in slot-space => +4 base tiles
+
+                    const score = (Math.abs(shopBaseR - padR) + Math.abs(shopBaseC - padC)) | 0
+                    if (score < bestScore) {
+                        bestScore = score
+                        bestKind = kind
+                        bestBaseR = baseR
+                        bestBaseC = baseC
+                    }
+                }
+            }
+        }
+
+        if (rows > 0 && cols > 0) {
+            consider(2, 2, 5) // 2x5 slots => 4x10 base tiles
+            if (bestKind === 0) consider(1, 1, 5) // fallback 1x5 slots => 2x10 base tiles
+        }
+
+        _shopLayout_kind = bestKind | 0
+        _shopLayout_baseR = bestBaseR | 0
+        _shopLayout_baseC = bestBaseC | 0
+
+        console.log(
+            `[SHOP][LAYOUT] worldRev=${wr} tried=${tried} padRC=${padR},${padC} ` +
+            `pickKind=${bestKind} baseRC=${bestBaseR},${bestBaseC} score=${bestScore}`
+        )
+    }
+
+    // Apply positions if we found a layout
+    if ((_shopLayout_kind | 0) === 0) return
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+    if (!shopTriggerZone || (shopTriggerZone.flags & sprites.Flag.Destroyed)) return
+
+    const kind = _shopLayout_kind | 0
+    const baseR = _shopLayout_baseR | 0
+    const baseC = _shopLayout_baseC | 0
+    if (baseR < 0 || baseC < 0) return
+
+    const shopRowSlot = (kind === 2) ? 1 : 0
+    const shopColSlot = 2
+
+    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
+    const shopBaseC = (baseC + (shopColSlot * 2)) | 0
+
+    const shopX = _shopSlotCenterX(shopBaseC)
+    const shopY = _shopSlotCenterY(shopBaseR)
+
+    shopkeeperNpc.setPosition(shopX, shopY)
+
+    // Trigger zone should be centered on shopkeeper for overlap interaction
+    shopTriggerZone.setPosition(shopX, shopY)
+
+    // Optional: ensure shopkeeper faces down immediately (visual)
+    // (Keeps your existing behavior, doesn’t affect controls)
+    sprites.setDataString(shopkeeperNpc, "dir", "down")
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.DIR, "down")
+
+    // Statues will be positioned by _shopEnsureStatueRow using this layout
+}
+
 
 
 
@@ -5769,106 +6187,412 @@ function _shopPickRingWeaponForDesiredSlot(ids: string[], slots: string[], desir
     return ""
 }
 
-function _shopEnsureStatueRow(nowMs: number): void {
-    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
-
-    // Keep exactly 4 slots, stable index = stable statue meaning
+function _shopStatuesEnsureLen4AndClean(): void {
     if (!shopStatues) shopStatues = []
     while (shopStatues.length < 4) shopStatues.push(null)
     while (shopStatues.length > 4) shopStatues.pop()
 
-    // Null out dead refs (do NOT removeAt / shift indices)
     for (let i = 0; i < 4; i++) {
         const s = shopStatues[i]
         if (!s || (s.flags & sprites.Flag.Destroyed)) shopStatues[i] = null
     }
+}
 
-    // Pull the ring contract as our current “offer source”
-    const idsRaw =
-        sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY) ||
-        SHOP_DEFAULT_RING_WEAPON_IDS ||
-        ""
-    const slotsRaw =
-        sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY) ||
-        SHOP_DEFAULT_RING_WEAPON_SLOTS ||
-        ""
+function _shopLayoutPlaceShopkeeperAndTriggerIfPresent(): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+    if (!shopTriggerZone || (shopTriggerZone.flags & sprites.Flag.Destroyed)) return
 
-    const ids = _shopSplitPipeList(idsRaw)
-    const slots = _shopSplitPipeKeepEmpty(slotsRaw)
+    const kind = _shopLayout_kind | 0
+    const baseR = _shopLayout_baseR | 0
+    const baseC = _shopLayout_baseC | 0
+    const haveLayout = (kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
+    if (!haveLayout) return
 
-    const used: boolean[] = []
-    for (let j = 0; j < ids.length; j++) used.push(false)
+    const shopRowSlot = (kind === 2) ? 1 : 0
+    const shopColSlot = 2
 
-    // Position: behind shopkeeper, left→right row
-    const baseX = shopkeeperNpc.x | 0
-    const baseY = (shopkeeperNpc.y - 42) | 0
-    const spacing = 36
+    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
+    const shopBaseC = (baseC + (shopColSlot * 2)) | 0
 
-    for (let si = 0; si < 4; si++) {
-        let st = shopStatues[si]
+    const shopX = _shopSlotCenterX(shopBaseC)
+    const shopY = _shopSlotCenterY(shopBaseR)
+
+    shopkeeperNpc.setPosition(shopX, shopY)
+    shopTriggerZone.setPosition(shopX, shopY)
+
+    // keep down-facing (visual consistency)
+    sprites.setDataString(shopkeeperNpc, "dir", "down")
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.DIR, "down")
+}
+
+function _shopStatueGetOrCreate(si: number, pid: number, familyNum: number, spawnX: number, spawnY: number): any {
+    let st: Sprite = shopStatues[si]
+    let stHi = -1
+
+    if (!st) {
+        // Find existing hero by OWNER pid
+        for (let i = 0; i < heroes.length; i++) {
+            const h = heroes[i]
+            if (!h) continue
+            if (h.flags & sprites.Flag.Destroyed) continue
+            const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+            if (owner === (pid | 0)) { st = h; stHi = i; break }
+        }
 
         if (!st) {
-            const img = image.create(64, 64) // transparent by default
-            st = sprites.create(img, SpriteKind.ShopNpc)
+            createHeroForPlayer(
+                pid | 0,
+                spawnX | 0,
+                spawnY | 0,
+                SHOP_STATUE_PROFILE_NAME,
+                familyNum | 0,
+                true,   // isNpc
+                false   // forcePlayerToHeroIndexMapping
+            )
+            stHi = heroes.length - 1
+            st = heroes[stHi]
+
+            console.log(
+                `[SHOP][STEP2][STATUE_CREATE] i=${si} pid=${pid} hi=${stHi} ` +
+                `heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
+            )
+        }
+
+        if (st) {
+            _shopRegisterNpc(st)
             st.setFlag(SpriteFlag.Ghost, true)
             st.vx = 0
             st.vy = 0
-
-            _shopRegisterNpc(st)
             shopStatues[si] = st
         }
+    } else {
+        for (let i = 0; i < heroes.length; i++) {
+            if (heroes[i] === st) { stHi = i; break }
+        }
+    }
 
-        const familyNum = SHOP_STATUE_ORDER_FAMILY[si] | 0
-        const familyStr = heroFamilyNumberToString(familyNum)
-        const gameplayKind = SHOP_STATUE_ORDER_GAMEPLAY[si]
-        const desiredSlot = SHOP_STATUE_DESIRED_SLOT[si] || "thrust"
+    return { st, stHi }
+}
 
-        // --- Hero-like render contract (StatueHero sheet) ---
-        sprites.setDataString(st, "heroName", SHOP_STATUE_PROFILE_NAME)
-        sprites.setDataString(st, "heroFamily", familyStr)
-        sprites.setDataString(st, HERO_DATA.NAME, SHOP_STATUE_PROFILE_NAME)
+function _shopStatueForceFrozenPose(st: Sprite, stHi: number, nowMs: number, phase: string): void {
+    const desired = (phase || "thrust").toLowerCase()
 
-        // Face DOWN always
+    // Down-facing always
+    sprites.setDataString(st, "dir", "down")
+    sprites.setDataString(st, HERO_DATA.DIR, "down")
+
+    // Freeze on frame 0 (render)
+    sprites.setDataNumber(st, HERO_DATA.FRAME_COL_OVERRIDE, 0)
+
+    // Only re-trigger anim if phase changed (prevents constant restart)
+    const prev = (sprites.readDataString(st, HERO_DATA.PHASE) || sprites.readDataString(st, "phase") || "").toLowerCase()
+    const changed = prev !== desired
+
+    if (stHi >= 0) {
+        heroFacingX[stHi] = 0
+        heroFacingY[stHi] = 1
+        syncHeroDirData(stHi)
+
+        if (changed) {
+            setHeroPhaseString(stHi, desired, "shopStatuePose")
+            callHeroAnim(stHi, desired, 0)
+        } else {
+            // still ensure underlying phase fields match
+            sprites.setDataString(st, "phase", desired)
+            sprites.setDataString(st, HERO_DATA.PHASE, desired)
+            sprites.setDataString(st, HERO_DATA.PhaseName, desired)
+        }
+    } else {
+        sprites.setDataString(st, "phase", desired)
+        sprites.setDataString(st, HERO_DATA.PHASE, desired)
+        sprites.setDataString(st, HERO_DATA.PhaseName, desired)
+        sprites.setDataNumber(st, HERO_DATA.PhaseStartMs, nowMs | 0)
+        sprites.setDataNumber(st, HERO_DATA.PhaseDurationMs, 0)
+        sprites.setDataNumber(st, HERO_DATA.PhaseProgressInt, 0)
+    }
+}
+
+
+function _shopStatueRow_ensureLen4(): void {
+    if (!shopStatues) shopStatues = []
+    while (shopStatues.length < 4) shopStatues.push(null)
+    while (shopStatues.length > 4) shopStatues.pop()
+}
+
+function _shopStatueRow_nullDeadRefs(): void {
+    for (let i = 0; i < 4; i++) {
+        const s = shopStatues[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) shopStatues[i] = null
+    }
+}
+
+function _shopStatueRow_anchorShopkeeperAndTriggerIfPresent(): void {
+    if (typeof _shopLayoutPlaceShopkeeperAndTriggerIfPresent === "function") {
+        _shopLayoutPlaceShopkeeperAndTriggerIfPresent()
+    }
+}
+
+function _shopStatueRow_readRingContractEnsureLen4(sk: Sprite): any {
+    const rr = _shopRingReadIdsSlotsFromShopkeeper(sk)
+    const ids: string[] = rr.ids
+    const slots: string[] = rr.slots
+    while (ids.length < 4) ids.push("")
+    while (slots.length < ids.length) slots.push("")
+    return { ids, slots }
+}
+
+function _shopStatueRow_getLayoutState(): any {
+    const kind = _shopLayout_kind | 0
+    const baseR = _shopLayout_baseR | 0
+    const baseC = _shopLayout_baseC | 0
+    const haveLayout = (kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
+    // Statue columns in 5-col layout: two left, gap, two right
+    const statueCols = [0, 1, 3, 4]
+    return { haveLayout, baseR, baseC, statueCols }
+}
+
+function _shopStatueRow_pidForIndex(si: number): number {
+    return (SHOP_STATUE_PLAYER_IDS && SHOP_STATUE_PLAYER_IDS[si] != null)
+        ? (SHOP_STATUE_PLAYER_IDS[si] | 0)
+        : ((SHOPKEEPER_PLAYER_ID - 1 - si) | 0)
+}
+
+function _shopStatueRow_buildCtx(si: number): any {
+    const familyNum = SHOP_STATUE_ORDER_FAMILY[si] | 0
+    const familyStr = heroFamilyNumberToString(familyNum)
+    const gameplayKind = SHOP_STATUE_ORDER_GAMEPLAY[si]
+
+    const equipSlot = (SHOP_STATUE_EQUIP_SLOT && SHOP_STATUE_EQUIP_SLOT[si]) ? (SHOP_STATUE_EQUIP_SLOT[si] || "") : ""
+    const renderSlot = (SHOP_STATUE_RENDER_SLOT && SHOP_STATUE_RENDER_SLOT[si]) ? (SHOP_STATUE_RENDER_SLOT[si] || "") : ""
+    const eqSlot = (equipSlot || "thrust").toLowerCase()
+    const rdSlot = (renderSlot || eqSlot).toLowerCase()
+
+    const pid = _shopStatueRow_pidForIndex(si)
+    return { familyNum, familyStr, gameplayKind, eqSlot, rdSlot, pid }
+}
+
+function _shopStatueRow_findHeroIndexForSprite(st: Sprite): number {
+    for (let i = 0; i < heroes.length; i++) {
+        if (heroes[i] === st) return i
+    }
+    return -1
+}
+
+function _shopStatueRow_findHeroByOwner(pid: number): any {
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h) continue
+        if (h.flags & sprites.Flag.Destroyed) continue
+        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+        if (owner === (pid | 0)) return { st: h, stHi: i }
+    }
+    return { st: null, stHi: -1 }
+}
+
+function _shopStatueRow_createStatue(si: number, pid: number, familyNum: number): any {
+    const sx = shopkeeperNpc.x | 0
+    const sy = (shopkeeperNpc.y - 42) | 0
+
+    createHeroForPlayer(
+        pid,
+        sx,
+        sy,
+        SHOP_STATUE_PROFILE_NAME,
+        familyNum,
+        true,   // isNpc
+        false   // forcePlayerToHeroIndexMapping
+    )
+
+    const stHi = heroes.length - 1
+    const st = heroes[stHi]
+
+    console.log(
+        `[SHOP][STEP2][STATUE_CREATE] i=${si} pid=${pid} hi=${stHi} ` +
+        `heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
+    )
+
+    return { st, stHi }
+}
+
+function _shopStatueRow_getOrCreateStatue(si: number, ctx: any): any {
+    let st: Sprite = shopStatues[si]
+    let stHi = -1
+
+    if (!st) {
+        const found = _shopStatueRow_findHeroByOwner(ctx.pid | 0)
+        st = found.st
+        stHi = found.stHi
+
+        if (!st) {
+            const created = _shopStatueRow_createStatue(si, ctx.pid | 0, ctx.familyNum | 0)
+            st = created.st
+            stHi = created.stHi
+        }
+
+        if (st) {
+            _shopRegisterNpc(st)
+            st.setFlag(SpriteFlag.Ghost, true)
+            st.vx = 0
+            st.vy = 0
+            shopStatues[si] = st
+        }
+    } else {
+        stHi = _shopStatueRow_findHeroIndexForSprite(st)
+    }
+
+    return { st, stHi }
+}
+
+function _shopStatueRow_stampIdentityAndOverlay(st: Sprite, familyStr: string): void {
+    // Canonical identity fields
+    sprites.setDataString(st, HERO_DATA.NAME, SHOP_STATUE_PROFILE_NAME)
+    sprites.setDataString(st, "heroName", SHOP_STATUE_PROFILE_NAME)
+    sprites.setDataString(st, "heroFamily", familyStr)
+
+    // Weapon overlay settings
+    sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_X, 10)
+    sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_Y, 6)
+    sprites.setDataNumber(st, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
+}
+
+function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids: string[], slots: string[]): string {
+    // ✅ INDEX-LOCKED weapon assignment (NO PICKING)
+    let weaponId = (ids[si] || "").trim()
+
+    // If missing, fill deterministically (and write back so it stays stable)
+    if (!weaponId) {
+        if (rdSlot === "slash") weaponId = DEFAULT_WEAPON_SLASH_ID
+        else if (rdSlot === "cast") weaponId = DEFAULT_WEAPON_CAST_ID
+        else weaponId = DEFAULT_WEAPON_THRUST_ID
+
+        ids[si] = weaponId
+        slots[si] = rdSlot
+        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, ids.join("|"))
+        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
+        console.log(`[SHOP][STEP3][RING_FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
+    }
+
+    // Force ring slot at this index to match the statue’s render slot (keeps contract coherent)
+    const curSlot = (slots[si] || "").toLowerCase()
+    if (curSlot !== rdSlot) {
+        slots[si] = rdSlot
+        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
+        console.log(`[SHOP][STEP3][RING_FIXSLOT] idx=${si} ${curSlot} -> ${rdSlot} weapon=${weaponId}`)
+    }
+
+    return weaponId
+}
+
+function _shopStatueRow_stampOfferMetadata(st: Sprite, si: number, ctx: any, weaponId: string): void {
+    sprites.setDataString(st, SHOP_DATA.LABEL, "Statue " + ctx.gameplayKind)
+    sprites.setDataString(st, SH_ITEM_GAMEPLAY_KIND, ctx.gameplayKind)
+    sprites.setDataNumber(st, SH_ITEM_RING_INDEX, si)
+    sprites.setDataString(st, SH_ITEM_EQUIP_SLOT, ctx.eqSlot)
+    sprites.setDataString(st, SH_ITEM_RENDER_SLOT, ctx.rdSlot)
+    sprites.setDataString(st, SH_ITEM_WEAPON_ID, weaponId)
+}
+
+function _shopStatueRow_forceFrozenPose(st: Sprite, stHi: number, nowMs: number, rdSlot: string): void {
+    if (typeof _shopStatueForceFrozenPose === "function") {
+        _shopStatueForceFrozenPose(st, stHi, nowMs | 0, rdSlot)
+    } else {
         sprites.setDataString(st, "dir", "down")
         sprites.setDataString(st, HERO_DATA.DIR, "down")
+        sprites.setDataString(st, "phase", rdSlot)
+        sprites.setDataString(st, HERO_DATA.PHASE, rdSlot)
+        sprites.setDataString(st, HERO_DATA.PhaseName, rdSlot)
+        sprites.setDataNumber(st, HERO_DATA.FRAME_COL_OVERRIDE, 0)
+    }
+}
 
-        // IMPORTANT: use combatIdle so your weapon overlay code actually shows a weapon
-        const phase = "combatIdle"
-        sprites.setDataString(st, "phase", phase)
-        sprites.setDataString(st, HERO_DATA.PHASE, phase)
-        sprites.setDataString(st, HERO_DATA.PhaseName, phase)
-        sprites.setDataNumber(st, HERO_DATA.PhaseStartMs, nowMs | 0)
-        sprites.setDataNumber(st, HERO_DATA.PhaseDurationMs, 999999)
-        sprites.setDataNumber(st, HERO_DATA.PhaseProgressInt, 0)
+function _shopStatueRow_equipIfChanged(st: Sprite, rdSlot: string, weaponId: string): void {
+    const prevWeapon = (sprites.readDataString(st, "_shPrevWeaponId") || "")
+    const prevSlot = (sprites.readDataString(st, "_shPrevRenderSlot") || "")
+    if (weaponId !== prevWeapon || rdSlot !== prevSlot) {
+        sprites.setDataString(st, "_shPrevWeaponId", weaponId)
+        sprites.setDataString(st, "_shPrevRenderSlot", rdSlot)
+        _shopEquipWeaponToHeroSlot(st, rdSlot, weaponId)
+    }
+}
 
-        // Weapon overlay settings
-        sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_X, 10)
-        sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_Y, 6)
-        sprites.setDataNumber(st, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
+function _shopStatueRow_debugStamp(st: Sprite, nowMs: number, si: number, ctx: any, weaponId: string, stHi: number): void {
+    const _kStamp = "shStatueStampLogMs"
+    const lastStamp = (sprites.readDataNumber(st, _kStamp) | 0)
+    if (((nowMs | 0) - lastStamp) >= 750) {
+        sprites.setDataNumber(st, _kStamp, nowMs | 0)
+        console.log(
+            `[SHOP][STEP3][STATUE_STAMP] i=${si} pid=${ctx.pid} kind=${ctx.gameplayKind} ` +
+            `equip=${ctx.eqSlot} render=${ctx.rdSlot} weapon=${weaponId} family=${ctx.familyStr} hi=${stHi}`
+        )
+    }
+}
 
-        // Choose a weapon from current ring contract (fallback-safe)
-        const picked = _shopPickRingWeaponForDesiredSlot(ids, slots, desiredSlot, used)
-        const weaponId = picked || (ids.length ? (ids[0] || "") : "")
+function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
+    if (layout.haveLayout) {
+        const rowSlot = 0
+        const colSlot = layout.statueCols[si] | 0
 
-        // Store “offer-like” metadata on the statue (we’ll use this for swap in Step 4)
-        sprites.setDataString(st, SHOP_DATA.LABEL, "Statue " + gameplayKind)
-        sprites.setDataString(st, SH_ITEM_GAMEPLAY_KIND, gameplayKind)
-        sprites.setDataString(st, SH_ITEM_RENDER_SLOT, desiredSlot)
-        sprites.setDataString(st, SH_ITEM_WEAPON_ID, weaponId)
+        const slotBaseR = (layout.baseR + (rowSlot * 2)) | 0
+        const slotBaseC = (layout.baseC + (colSlot * 2)) | 0
 
-        // Populate hero weapon keys so Phaser overlay can render
-        sprites.setDataString(st, HERO_DATA.WEAPON_COMBO_ID, weaponId)
-        sprites.setDataString(st, HERO_DATA.WEAPON_SLASH_ID, "")
-        sprites.setDataString(st, HERO_DATA.WEAPON_THRUST_ID, "")
-        sprites.setDataString(st, HERO_DATA.WEAPON_CAST_ID, "")
-        if (desiredSlot === "slash") sprites.setDataString(st, HERO_DATA.WEAPON_SLASH_ID, weaponId)
-        else if (desiredSlot === "cast") sprites.setDataString(st, HERO_DATA.WEAPON_CAST_ID, weaponId)
-        else sprites.setDataString(st, HERO_DATA.WEAPON_THRUST_ID, weaponId)
+        const x = _shopSlotCenterX(slotBaseC)
+        const y = _shopSlotCenterY(slotBaseR)
 
-        // Place left→right row
+        st.setPosition(x, y)
+    } else {
+        const baseX = shopkeeperNpc.x | 0
+        const baseY = (shopkeeperNpc.y - 42) | 0
+        const spacing = 36
         const dx = (Math.round((si - 1.5) * spacing) | 0)
         st.setPosition((baseX + dx) | 0, baseY)
-        st.z = ((shopkeeperNpc.z | 0) - 1) | 0
+    }
+
+    st.z = ((shopkeeperNpc.z | 0) - 1) | 0
+}
+
+
+function _shopEnsureStatueRow(nowMs: number): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    // Keep exactly 4 slots, stable index = stable statue meaning
+    _shopStatueRow_ensureLen4()
+
+    // Null out dead refs (do NOT removeAt / shift indices)
+    _shopStatueRow_nullDeadRefs()
+
+    // Keep shopkeeper + trigger anchored to the layout (prevents drift)
+    _shopStatueRow_anchorShopkeeperAndTriggerIfPresent()
+
+    // Read ring contract (SOURCE OF TRUTH)
+    const rr = _shopStatueRow_readRingContractEnsureLen4(shopkeeperNpc)
+    const ids: string[] = rr.ids
+    const slots: string[] = rr.slots
+
+    // Layout-aware slot positioning
+    const layout = _shopStatueRow_getLayoutState()
+
+    for (let si = 0; si < 4; si++) {
+        const ctx = _shopStatueRow_buildCtx(si)
+
+        const got = _shopStatueRow_getOrCreateStatue(si, ctx)
+        const st: Sprite = got.st
+        const stHi: number = got.stHi
+
+        if (!st) continue
+
+        _shopStatueRow_stampIdentityAndOverlay(st, ctx.familyStr)
+
+        const weaponId = _shopStatueRow_ensureWeaponIdInContract(si, ctx.rdSlot, ids, slots)
+
+        _shopStatueRow_stampOfferMetadata(st, si, ctx, weaponId)
+
+        _shopStatueRow_forceFrozenPose(st, stHi, nowMs | 0, ctx.rdSlot)
+
+        _shopStatueRow_equipIfChanged(st, ctx.rdSlot, weaponId)
+
+        _shopStatueRow_debugStamp(st, nowMs | 0, si, ctx, weaponId, stHi)
+
+        _shopStatueRow_placeStatue(si, st, layout)
     }
 }
 
@@ -5983,6 +6707,48 @@ function _shopGetEquippedWeaponIdForHeroSlot(hero: Sprite, slot: string): string
     if (s === "cast") return sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || "";
     return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || "";
 }
+
+
+function _shopSetRingWeaponAndSlotAtIndex(sk: Sprite, idx: number, weaponId: string, slot: string): void {
+    if (!sk) return
+
+    // Pull current lists
+    const idsRaw = sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || ""
+    const slotsRaw = sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || SHOP_DEFAULT_RING_SLOTS || ""
+
+    let ids = _shopSplitPipeList(idsRaw)
+    let slots = _shopSplitPipeKeepEmpty(slotsRaw)
+
+    const want = 4
+    while (ids.length < want) ids.push("")
+    while (ids.length > want) ids.pop()
+    while (slots.length < want) slots.push("")
+    while (slots.length > want) slots.pop()
+
+    const i = (idx | 0)
+    if (i < 0 || i >= want) return
+
+    // Enforce canonical slots (prevents drift; statues depend on this)
+    const wantSlot = _shopNormWeaponId((SHOP_STATUE_RENDER_SLOT && SHOP_STATUE_RENDER_SLOT[i]) ? (SHOP_STATUE_RENDER_SLOT[i] || "") : "")
+    const slotUse = wantSlot || _shopNormWeaponId(slot) || "thrust"
+
+    // Enforce allowed model ids per statue index
+    const before = _shopNormWeaponId(weaponId)
+    const list = _shopAllowedWeaponListForStatueIndex(i)
+    const fallback = (list && list.length > 0) ? _shopNormWeaponId(list[0]) : _shopNormWeaponId("")
+    const use = _shopSanitizeWeaponIdForStatueIndex(i, before, fallback)
+
+    if (use !== before) {
+        console.log(`[SHOP][RING][SET_SAN] idx=${i} bad=${before} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[i]}`)
+    }
+
+    ids[i] = use
+    slots[i] = slotUse
+
+    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, ids.join("|"))
+    sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
+}
+
 
 function _shopSetRingWeaponIdAtIndex(sk: Sprite, idx: number, weaponId: string): void {
     const idsStr = sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "";
@@ -6181,7 +6947,13 @@ function shopPollControls(hi: number): {
 function shopUpdateFocus(nowMs: number): void {
     const now = nowMs | 0
 
-    // Cull destroyed focus references
+    // Keep statues “locked in” (pose + weapon + placement) every tick
+    _shopEnsureStatueRow(now)
+
+    // If we don’t have all statues yet, do not change focus (prevents flicker)
+    if (!shopStatues || shopStatues.length < 4) return
+
+    // Clear dead focus refs
     for (let hi = 0; hi < 4; hi++) {
         const cur = shopFocusOfferByHero[hi]
         if (cur && (cur.flags & sprites.Flag.Destroyed)) {
@@ -6191,33 +6963,17 @@ function shopUpdateFocus(nowMs: number): void {
         }
     }
 
-    // We prefer SHOP_ITEMS if you maintain it; otherwise fallback to sprites.allOfKind
-    let offers: Sprite[] = null as any
-    try {
-        // If SHOP_ITEMS exists in your file, use it.
-        // (This try prevents a compile fail if SHOP_ITEMS isn't declared in this branch.)
-        offers = (SHOP_ITEMS as any)
-    } catch (e) {
-        offers = null
+    // Statue offers only (indices 0..3)
+    const offers: Sprite[] = []
+    for (let i = 0; i < 4; i++) {
+        const st = shopStatues[i]
+        if (!st) continue
+        if (st.flags & sprites.Flag.Destroyed) continue
+        offers.push(st)
     }
-    if (!offers) offers = sprites.allOfKind(SpriteKind.ShopItem)
 
-    // Build a small candidate list sorted by ring index (if present)
-    // NOTE: ring index key name must match what your spawn/builder sets.
-    // Your spawnShopItem() uses SH_ITEM_RING_INDEX.
-    const sorted: Sprite[] = []
-    for (let i = 0; i < offers.length; i++) {
-        const s = offers[i]
-        if (!s) continue
-        if (s.flags & sprites.Flag.Destroyed) continue
-        sorted.push(s)
-    }
-    sorted.sort(function (a: Sprite, b: Sprite): number {
-        const ai = sprites.readDataNumber(a, SH_ITEM_RING_INDEX) | 0
-        const bi = sprites.readDataNumber(b, SH_ITEM_RING_INDEX) | 0
-        return ai - bi
-    })
-
+    // For each player-hero, pick the first overlapping statue (sorted by ring index)
+    // (We keep the "lowest ring index wins" behavior deterministically.)
     for (let hi = 0; hi < 4; hi++) {
         const hero = heroes[hi]
         if (!hero) continue
@@ -6226,12 +6982,13 @@ function shopUpdateFocus(nowMs: number): void {
         let found: Sprite = null
         let foundRing = -1
 
-        for (let j = 0; j < sorted.length; j++) {
-            const it = sorted[j]
+        // Scan in index order 0..3 (stable)
+        for (let i = 0; i < offers.length; i++) {
+            const it = offers[i]
             if (!it) continue
             if (_shopIsOverlapping(hero, it)) {
                 found = it
-                foundRing = sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0
+                foundRing = (sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0)
                 break
             }
         }
@@ -6241,7 +6998,7 @@ function shopUpdateFocus(nowMs: number): void {
             shopFocusRingIndexByHero[hi] = foundRing
             shopFocusUntilMsByHero[hi] = (now + SHOP_FOCUS_KEEPALIVE_MS) | 0
         } else {
-            // grace window: keep focus alive briefly even without a continuous overlap
+            // Grace: allow brief dropout without losing focus immediately
             if (now > (shopFocusUntilMsByHero[hi] | 0)) {
                 shopFocusOfferByHero[hi] = null
                 shopFocusRingIndexByHero[hi] = -1
@@ -6249,6 +7006,9 @@ function shopUpdateFocus(nowMs: number): void {
             }
         }
     }
+
+    // Existing debug proof should still work downstream:
+    // shopPublishTouchedMapOnShopkeeper() reads shopFocusRingIndexByHero[]
 }
 
 
@@ -6291,75 +7051,155 @@ function shopPublishTouchedMapOnShopkeeper(nowMs: number): void {
 
 
 function shopHandleControls(nowMs: number): void {
-    const now = nowMs | 0;
+    const now = nowMs | 0
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
 
-    if (!shopkeeperNpc) return;
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
-    for (let hi = 0; hi < heroes.length; hi++) {
-        const hero = heroes[hi];
-        if (!hero) continue;
+        const pid = (hi + 1) | 0
+        const ctrl = shopPollControls(hi)
 
-        const pid = (hi + 1) | 0;
-        const ctrl = shopPollControls(hi);
+        // Focused offer (statue)
+        const summary = _shopGetFocusedOfferSummaryForHero(hi, now)
 
-        // Focused offer (weapon underfoot)
-        const summary = _shopGetFocusedOfferSummaryForHero(hi, now);
+        // ------------------------------------------------------------
+        // A: Buy/Swap (statue offer)
+        // ------------------------------------------------------------
+        if (summary && summary.active && ctrl.A_edge) {
+            const offer: Sprite = summary.offer
+            if (!offer || (offer.flags & sprites.Flag.Destroyed)) continue
 
-        // If focused offer and A-edge: buy/swap
-        if (summary.active && ctrl.A_edge) {
-            const offer = summary.offer as Sprite;
-            const price = summary.price | 0;
+            const si = summary.ringIndex | 0
 
-            if (!summary.weaponId) {
-                continue;
+            const price = summary.price | 0
+            const takeRaw = summary.weaponId || ""
+            const takeId = _shopNormWeaponId(takeRaw)
+            if (!takeId) continue
+
+            const equipSlot = (summary.equipSlot || "thrust").toLowerCase()
+            const renderSlot = (summary.renderSlot || equipSlot).toLowerCase()
+
+            const giveRaw = _shopGetEquippedWeaponIdForHeroSlot(hero, equipSlot) || ""
+            const giveId = _shopNormWeaponId(giveRaw)
+
+            if ((giveId || "") === (takeId || "")) {
+                console.log(`[SHOP][SWAP_SKIP] hi=${hi} pid=${pid} ring=${si} reason=same_weapon weapon=${takeId}`)
+                continue
             }
 
-            if ((teamCoins | 0) < price) {
-                // not enough coins; keep it quiet for now (you can add SFX here)
-                continue;
+            // LEGALITY: both sides must match statue allowed set
+            if (!_shopIsWeaponAllowedForStatueIndex(si, takeId)) {
+                console.log(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=offer_illegal take=${takeId} give=${giveId}`)
+
+                // Repair offer to something legal (do NOT spend coins)
+                const rr = _shopRingReadIdsSlotsFromShopkeeper(shopkeeperNpc)
+                const ids: string[] = rr.ids
+                const slots: string[] = rr.slots
+
+                const want = 4
+                while (ids.length < want) ids.push("")
+                while (ids.length > want) ids.pop()
+                while (slots.length < want) slots.push("")
+                while (slots.length > want) slots.pop()
+
+                const list = _shopAllowedWeaponListForStatueIndex(si)
+
+                let pick = ""
+                if (list && list.length > 0) pick = list[((Math.random() * list.length) | 0)] || ""
+                pick = _shopNormWeaponId(pick)
+
+                if (!pick || !_shopIsWeaponAllowedForStatueIndex(si, pick)) {
+                    pick = ""
+                    for (let j = 0; j < list.length; j++) {
+                        const c = _shopNormWeaponId(list[j] || "")
+                        if (_shopIsWeaponAllowedForStatueIndex(si, c)) { pick = c; break }
+                    }
+                }
+
+                if (!pick) {
+                    if (renderSlot === "slash") pick = DEFAULT_WEAPON_SLASH_ID
+                    else if (renderSlot === "cast") pick = DEFAULT_WEAPON_CAST_ID
+                    else pick = DEFAULT_WEAPON_THRUST_ID
+                    pick = _shopNormWeaponId(pick)
+                }
+
+                ids[si] = pick
+                slots[si] = renderSlot
+
+                sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
+                sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
+
+                // HARD-clear legacy ring keys so nothing external spawns ring offers
+                sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, "")
+                sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, "")
+
+                console.log(`[SHOP][SWAP_REPAIR_OFFER] ring=${si} newOffer=${pick} slot=${renderSlot}`)
+                _shopEnsureStatueRow(now)
+                continue
             }
 
-            // Pay
-            setTeamCoins((teamCoins | 0) - price);
-
-            // Apply bonus to hero (permanent mods for now)
-            _shopApplyOfferBonusToHero(hi, offer, summary.ringIndex | 0, now);
-
-            // Swap weapon: hero takes offer; offer becomes hero’s previous weapon
-            const slot = summary.slot || "thrust";
-            const newWeaponId = summary.weaponId || "";
-            const oldWeaponId = _shopGetEquippedWeaponIdForHeroSlot(hero, slot);
-
-            _shopEquipWeaponToHeroSlot(hero, slot, newWeaponId);
-
-            // Drop old weapon into this ring slot (renderer is driven by shopkeeper ring ids)
-            _shopSetRingWeaponIdAtIndex(shopkeeperNpc, summary.ringIndex | 0, oldWeaponId || "");
-
-            // Reroll the bonus text so the dropped weapon “feels like a new shop offer”
-            _shopRollBonusForOffer(offer);
-
-            // Buying counts as interaction -> unlock exit pad
-            _shopUnlockExitPadIfInShopFloor(now);
-
-            // Optional DOM dialog update
-            if (SHOP_USE_DOM_DIALOG) {
-                const g: any = globalThis as any;
-                const dlg = g.__heDialog;
-                dlg?.show?.({
-                    speaker: "Shop",
-                    text: `Purchased: ${summary.weaponLabel}\n${summary.bonusDesc}`,
-                    hint: "Teleport rune activated."
-                });
+            if (!_shopIsWeaponAllowedForStatueIndex(si, giveId)) {
+                console.log(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=hero_illegal take=${takeId} give=${giveId}`)
+                continue
             }
 
-            continue;
+            // Spend this hero's coins
+            if (!trySpendHeroCoins(hi, price)) {
+                console.log(`[SHOP][BUY_DENY] hi=${hi} pid=${pid} ring=${si} price=${price} coins=${getHeroCoins(hi) | 0}`)
+                continue
+            }
+
+            // Apply bonus to hero (mods)
+            _shopApplyOfferBonusToHero(hi, offer, si, now)
+
+            // Hero takes the offer (EQUIP SLOT drives gameplay)
+            _shopEquipWeaponToHeroSlot(hero, equipSlot, takeId)
+
+            // Offer becomes hero's previous weapon (ALWAYS SWAPPED) — write to NEW contract
+            const rr2 = _shopRingReadIdsSlotsFromShopkeeper(shopkeeperNpc)
+            const ids2: string[] = rr2.ids
+            const slots2: string[] = rr2.slots
+
+            const want = 4
+            while (ids2.length < want) ids2.push("")
+            while (ids2.length > want) ids2.pop()
+            while (slots2.length < want) slots2.push("")
+            while (slots2.length > want) slots2.pop()
+
+            ids2[si] = giveId
+            slots2[si] = renderSlot
+
+            sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_IDS_KEY, ids2.join("|"))
+            sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots2.join("|"))
+
+            // HARD-clear legacy ring keys so nothing external spawns ring offers
+            sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, "")
+            sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, "")
+
+            // Immediate visual update on the touched statue
+            sprites.setDataString(offer, SH_ITEM_WEAPON_ID, giveId)
+            sprites.setDataString(offer, SH_ITEM_RENDER_SLOT, renderSlot)
+            sprites.setDataString(offer, SH_ITEM_EQUIP_SLOT, equipSlot)
+            _shopEquipWeaponToHeroSlot(offer, renderSlot, giveId)
+
+            console.log(
+                `[SHOP][SWAP] hi=${hi} pid=${pid} ring=${si} ` +
+                `equip=${equipSlot} render=${renderSlot} take=${takeId} give=${giveId} ` +
+                `price=${price} coinsAfter=${getHeroCoins(hi) | 0}`
+            )
+
+            _shopEnsureStatueRow(now)
+            continue
         }
 
-        // No focused offer: A on shopkeeper unlocks exit pad (the “required interaction”)
+        // ------------------------------------------------------------
+        // A: No focused offer -> interacting with shopkeeper unlocks exit
+        // ------------------------------------------------------------
         if (ctrl.A_edge) {
-            // Use overlap check (simple and deterministic)
             if (_shopIsOverlapping(hero, shopkeeperNpc)) {
-                _shopUnlockExitPadIfInShopFloor(now);
+                _shopUnlockExitPadIfInShopFloor(now)
             }
         }
     }
@@ -6485,8 +7325,11 @@ function _shopBuildDebugSignature(nowMs: number): string {
         sig += "(" + (shopFocusRingIndexByHero[hi] | 0) + "," + (shopFocusUntilMsByHero[hi] | 0) + ")"
     }
 
-    // Coins
-    sig += "|coins=" + (teamCoins | 0)
+    // Per-hero coins
+    sig += "|coins="
+    for (let hi = 0; hi < 4; hi++) {
+        sig += "p" + ((hi + 1) | 0) + "=" + (getHeroCoins(hi) | 0) + ";"
+    }
 
     return sig
 }
@@ -6511,46 +7354,34 @@ function _shopOwnerLabel(ownedByPid: number, pid: number): string {
 }
 
 function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): any {
-    const now = nowMs | 0;
-    const offer = shopFocusOfferByHero[hi];
+    const now = nowMs | 0
+    const offer = shopFocusOfferByHero[hi]
+    if (!offer) return { active: false }
+    if (!_shopIsOfferTouchValidForHero(hi, now)) return { active: false }
 
-    if (!offer) return { active: false };
+    _shopEnsureOfferHasBonus(offer)
 
-    if (!_shopIsOfferTouchValidForHero(hi, now)) return { active: false };
+    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
 
-    _shopEnsureOfferHasBonus(offer);
+    const equipSlot = (sprites.readDataString(offer, SH_ITEM_EQUIP_SLOT) || "").toLowerCase()
+    const renderSlot = (sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "").toLowerCase()
+    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
 
-    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0;
-    const slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "";
-    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || "";
-    const weaponLabel = sprites.readDataString(offer, SH_ITEM_LABEL) || weaponId;
-    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0;
-
-    const gameplayKind = sprites.readDataString(offer, SH_ITEM_GAMEPLAY_KIND) || "";
-
-    const bonusFamily = sprites.readDataNumber(offer, SH_ITEM_BONUS_FAMILY) | 0;
-    const bonusT1 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T1) | 0;
-    const bonusT2 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T2) | 0;
-    const bonusT3 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T3) | 0;
-    const bonusT4 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T4) | 0;
-    const bonusDesc = sprites.readDataString(offer, SH_ITEM_BONUS_DESC) || "";
+    const weaponLabel = sprites.readDataString(offer, SH_ITEM_LABEL) || weaponId
+    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
+    const bonusDesc = sprites.readDataString(offer, SH_ITEM_BONUS_DESC) || ""
 
     return {
         active: true,
         offer,
         ringIndex,
-        slot,
         weaponId,
         weaponLabel,
         price,
-        gameplayKind,
-        bonusFamily,
-        bonusT1,
-        bonusT2,
-        bonusT3,
-        bonusT4,
+        equipSlot: (equipSlot || renderSlot || "thrust"),
+        renderSlot: (renderSlot || equipSlot || "thrust"),
         bonusDesc
-    };
+    }
 }
 
 function _shopBuildDialogLine(hi: number, pid: number, s: {
@@ -6766,60 +7597,67 @@ function _shopPublishTouchStateOnShopkeeper(nowMs: number): void {
 }
 
 
-// Main “shop controls layer” tick (Step 5)
-// - Today: focus comes from overlap
-// - Future: focus can come from a menu selection (arrows) without touching publish/purchase code
 function shopControlTick(nowMs: number): void {
     const now = nowMs | 0
-
-
-//    let shopFocusRingIndexByHero: number[] = [-1, -1, -1, -1]
-//    let shopFocusUntilMsByHero: number[] = [0, 0, 0, 0]
-//    let shopTouchUntilMsByHero: number[] = [0, 0, 0, 0]
-//    let shopBoughtByHero: boolean[] = [false, false, false, false]
- //   let shopFocusOfferByHero: Sprite[] = [null, null, null, null]
-
 
     // If shopkeeper not alive, clear state
     if (!_shopIsAliveSprite(shopkeeperNpc)) {
         for (let hi = 0; hi < 4; hi++) {
             shopFocusRingIndexByHero[hi] = -1
             shopFocusUntilMsByHero[hi] = 0
+            shopFocusOfferByHero[hi] = null
         }
         return
     }
 
-    // Ensure ring offers exist (safe keep-in-sync)
-    _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
+    // Statues are the offers now; focus is computed against statues only.
+    shopUpdateFocus(now)
 
-    // Compute focus per hero (overlap-based for now)
-    for (let hi = 0; hi < 4; hi++) {
-        const hero = heroes[hi]
-        if (!_shopIsAliveSprite(hero)) {
-            shopFocusRingIndexByHero[hi] = -1
-            shopFocusUntilMsByHero[hi] = 0
-            continue
-        }
-
-        const idx = _shopComputeFocusedRingIndexForHero(hero)
-
-        if (idx >= 0) {
-            shopFocusRingIndexByHero[hi] = idx
-            shopFocusUntilMsByHero[hi] = (now + SHOP_FOCUS_KEEPALIVE_MS) | 0
-        } else {
-            // Persist briefly; then drop
-            const until = shopFocusUntilMsByHero[hi] | 0
-            if (!(until > 0 && now < until)) {
-                shopFocusRingIndexByHero[hi] = -1
-                shopFocusUntilMsByHero[hi] = 0
-            }
-        }
-    }
-
-    // Publish highlight/touch state onto shopkeeper
+    // Publish highlight/touch state onto shopkeeper (DOM/overlay uses these)
     _shopPublishTouchStateOnShopkeeper(now)
 
     // Step 9: comprehensive dump (spam-safe; prints on change or throttled)
+    shopDebugDump(now)
+}
+
+
+// Main “shop controls layer” tick (Step 5)
+// - Today: focus comes from overlap
+// - Future: focus can come from a menu selection (arrows) without touching publish/purchase code
+function shopControlTickOLDCODETODELETE(nowMs: number): void {
+    const now = nowMs | 0
+
+    if (!_shopIsAliveSprite(shopkeeperNpc)) {
+        for (let hi = 0; hi < 4; hi++) {
+            shopFocusRingIndexByHero[hi] = -1
+            shopFocusUntilMsByHero[hi] = 0
+            shopFocusOfferByHero[hi] = null
+
+            shopTouchRingMaskByHero[hi] = 0
+            shopTouchUntilMsByHero[hi] = 0
+        }
+        return
+    }
+
+    // Statues are the ONLY offers now
+    shopUpdateFocus(now)
+
+    // Touch plumbing stays in sync with focus
+    for (let hi = 0; hi < 4; hi++) {
+        const ringIndex = shopFocusRingIndexByHero[hi] | 0
+        const aliveFocus = (ringIndex >= 0) && (shopFocusUntilMsByHero[hi] > now)
+        if (aliveFocus) {
+            shopTouchRingMaskByHero[hi] = (1 << ringIndex)
+            shopTouchUntilMsByHero[hi] = shopFocusUntilMsByHero[hi]
+        } else {
+            shopTouchRingMaskByHero[hi] = 0
+            shopTouchUntilMsByHero[hi] = 0
+        }
+    }
+
+    _shopPublishTouchStateOnShopkeeper(now)
+    shopPublishTouchedMapOnShopkeeper(now)
+
     shopDebugDump(now)
 }
 
@@ -6856,21 +7694,69 @@ function _shopDestroyOfferItems(): void {
 function _shopPublishWeaponRingContractOnShopkeeper(sk: Sprite): void {
     if (!sk) return
 
-    // IDs + geometry + direction controls
-    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, SHOP_DEFAULT_RING_WEAPON_IDS)
-    sprites.setDataNumber(sk, SHOP_WPN_RING_RADIUS_PX_KEY, SHOP_DEFAULT_RING_RADIUS_PX)
-    sprites.setDataNumber(sk, SHOP_WPN_RING_ANGLE_DEG_KEY, SHOP_DEFAULT_RING_ANGLE_DEG)
-    sprites.setDataString(sk, SHOP_WPN_DEFAULT_DIR_KEY, SHOP_DEFAULT_RING_DIR)
-    sprites.setDataString(sk, SHOP_WPN_DIR_MAP_KEY, SHOP_DEFAULT_RING_DIR_MAP)
+    // Keep geometry/config keys if anything still reads them (harmless)
+    sprites.setDataNumber(sk, SHOP_WPN_RING_RADIUS_KEY, SHOP_DEFAULT_RING_RADIUS)
+    sprites.setDataNumber(sk, SHOP_WPN_RING_START_ANGLE_KEY, SHOP_DEFAULT_RING_START_ANGLE)
+    sprites.setDataString(sk, SHOP_WPN_RING_DIR_KEY, SHOP_DEFAULT_RING_DIR)
+    sprites.setDataString(sk, SHOP_WPN_RING_DIR_MAP_KEY, SHOP_DEFAULT_RING_DIR_MAP)
 
-    // Slots + source phases (alignment/visibility)
-    sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, SHOP_DEFAULT_RING_SLOTS)
-    sprites.setDataString(sk, SHOP_WPN_RING_SOURCE_PHASES_KEY, SHOP_DEFAULT_RING_SOURCE_PHASES)
+    // Touch/highlight state: only seed if missing so we don't clobber focus every call
+    const touchByHeroExisting = sprites.readDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY)
+    if (!touchByHeroExisting || touchByHeroExisting.length <= 0) {
+        sprites.setDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY, "-1|-1|-1|-1")
+    }
+    const hiByHeroExisting = sprites.readDataString(sk, SHOP_WPN_HILITE_BY_HERO_KEY)
+    if (!hiByHeroExisting || hiByHeroExisting.length <= 0) {
+        sprites.setDataString(sk, SHOP_WPN_HILITE_BY_HERO_KEY, "-1|-1|-1|-1")
+    }
 
-    // Highlight state
-    sprites.setDataNumber(sk, SHOP_WPN_TOUCH_MASK_KEY, 0)
-    sprites.setDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY, "-1|-1|-1|-1")
+    // ---------------------------------------------------------
+    // NEW: seed/sanitize statue-offer contract (index-locked 0..3)
+    // ---------------------------------------------------------
+    const rr = _shopRingReadIdsSlotsFromShopkeeper(sk)
+    const ids: string[] = rr.ids
+    const slots: string[] = rr.slots
+
+    const want = 4
+    while (ids.length < want) ids.push("")
+    while (ids.length > want) ids.pop()
+    while (slots.length < want) slots.push("")
+    while (slots.length > want) slots.pop()
+
+    let changed = false
+
+    for (let si = 0; si < want; si++) {
+        const old = _shopNormWeaponId(ids[si] || "")
+        const list = _shopAllowedWeaponListForStatueIndex(si)
+        const fallback = (list && list.length > 0) ? _shopNormWeaponId(list[0]) : ""
+
+        const use = _shopSanitizeWeaponIdForStatueIndex(si, old, fallback)
+        const wantSlot = ((SHOP_STATUE_RENDER_SLOT && SHOP_STATUE_RENDER_SLOT[si]) ? (SHOP_STATUE_RENDER_SLOT[si] || "") : "thrust").toLowerCase()
+
+        if (use !== old) { ids[si] = use; changed = true } else { ids[si] = old }
+        if ((slots[si] || "").toLowerCase() !== wantSlot) { slots[si] = wantSlot; changed = true }
+    }
+
+    if (changed) {
+        sprites.setDataString(sk, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
+        sprites.setDataString(sk, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
+
+        const _k = "shStatueContractSanLogMs"
+        const nowMs = game.runtime() | 0
+        const last = (sprites.readDataNumber(sk, _k) | 0)
+        if ((nowMs - last) >= 750) {
+            sprites.setDataNumber(sk, _k, nowMs)
+            console.log(`[SHOP][STATUE_CONTRACT][SEED/SAN] ids=${ids.join("|")} slots=${slots.join("|")}`)
+        }
+    }
+
+    // FINAL: hard-clear legacy ring keys every time
+    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, "")
+    sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, "")
 }
+
+try { (globalThis as any)._shopPublishWeaponRingContractOnShopkeeper = _shopPublishWeaponRingContractOnShopkeeper } catch {}
+
 
 function _shopGameplayKindForRingIndex(i: number): string {
     // Aligned with SHOP_DEFAULT_RING_WEAPON_IDS order:
@@ -7027,22 +7913,8 @@ function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
 
 
 function ensureTeamCoinsHud(): Sprite {
-    if (teamCoinsHud && !(teamCoinsHud.flags & sprites.Flag.Destroyed)) return teamCoinsHud
-
-    const t = textsprite.create("Coins: 0", 0, COIN_HUD_FG)
-    t.setMaxFontHeight(7)
-    t.setOutline(1, 15)
-
-    // Stick to screen
-    t.setFlag(SpriteFlag.RelativeToCamera, true)
-    t.setPosition(42, 8)
-    t.z = 10000
-
-    // Tag for Phaser-side UI identification (optional but nice)
-    sprites.setDataString(t, UI_KIND_KEY, UI_KIND_TEAM_COINS)
-
-    teamCoinsHud = t
-    return t
+    // Canvas coin HUD removed (DOM-only).
+    return null
 }
 
 
@@ -7118,9 +7990,8 @@ function _shopSetHighlight(target: Sprite, on: boolean): void {
 
 
 function setTeamCoins(newVal: number): void {
+    // Legacy global retained for now, but NO canvas HUD.
     teamCoins = Math.max(0, newVal | 0)
-    const hud = ensureTeamCoinsHud()
-    ;(hud as any).setText("Coins: " + teamCoins)
 }
 
 function showCoinPop(x: number, y: number, delta: number): void {
@@ -7134,53 +8005,19 @@ function showCoinPop(x: number, y: number, delta: number): void {
 
 function addTeamCoins(delta: number, popX: number, popY: number): void {
     const d = delta | 0
-    if (d <= 0) return
+    if (d === 0) return
 
-    setTeamCoins(teamCoins + d)
-    showCoinPop(popX, popY, d)
-
-    // ------------------------------------------------------------
-    // PHASER-ONLY VFX: coins burst from source -> arc toward hero.
-    // (No-op in pure Arcade; guarded behind globalThis.)
-    // ------------------------------------------------------------
-    try {
-        const gAny: any = globalThis as any
-        if (!gAny) return
-
-        // Decide which hero should “receive” the coins.
-        // Current coin system is team-wide, so we pick the nearest living hero.
-        let targetPid = 0
-        let bestD2 = 1e18
-
-        try {
-            for (let hi = 0; hi < heroes.length; hi++) {
-                const h = heroes[hi]
-                if (!h) continue
-                if ((h.lifespan | 0) === 0) continue
-
-                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-                if (owner <= 0) continue
-
-                const dx = (h.x - popX)
-                const dy = (h.y - popY)
-                const d2 = (dx * dx) + (dy * dy)
-
-                if (d2 < bestD2) {
-                    bestD2 = d2
-                    targetPid = owner
-                }
-            }
-        } catch {
-            // Ignore; fall back to pid=0 (Phaser will pick a target).
-        }
-
-        if (!Array.isArray(gAny.__coinBurstQueue)) gAny.__coinBurstQueue = []
-        gAny.__coinBurstQueue.push({ x: popX, y: popY, count: d, pid: targetPid })
-        console.log("[COINFX enqueue]", { d, popX, popY, pid: targetPid, qLen: gAny.__coinBurstQueue.length })
-
-    } catch {
-        // ignore
+    // Legacy wrapper: attribute team coins to the nearest living hero.
+    const hi = findNearestLivingPlayerHeroIndex(popX, popY) | 0
+    if (hi >= 0) {
+        addHeroCoins(hi, d, popX, popY)
+        return
     }
+
+    // No heroes alive/available: keep legacy value so nothing goes weird.
+    teamCoins = Math.max(0, (teamCoins + d) | 0) | 0
+    if (d > 0) showCoinPop(popX, popY, d)
+    console.log("[COINS] addTeam fallback (no hero)", { delta: d, total: teamCoins, popX, popY })
 }
 
 
@@ -7238,11 +8075,18 @@ const SHOP_WPN_RING_SOURCE_PHASES_KEY = "shopWpnRingSourcePhases"        // "thr
 const SHOP_WPN_TOUCH_MASK_KEY = "shopWpnTouchMask"                       // number bitmask
 const SHOP_WPN_TOUCH_BY_HERO_KEY = "shopWpnTouchByHero"                  // "-1|-1|-1|-1"
 
+
+// NEW: statue-offer contract keys (do NOT trigger legacy ring rendering)
+const SHOP_STATUE_OFFER_IDS_KEY = "shopStatueOfferIds"       // "id0|id1|id2|id3"
+const SHOP_STATUE_OFFER_SLOTS_KEY = "shopStatueOfferSlots"   // "thrust|slash|cast|thrust"
+
+
 // Per-offer item sprite.data keys (ShopItem hitboxes)
 const SH_ITEM_RING_INDEX = "shRingIndex"           // number
 const SH_ITEM_WEAPON_ID = "shWeaponId"             // string (atlas model id)
 const SH_ITEM_LABEL = "shLabel"                    // string
 const SH_ITEM_RENDER_SLOT = "shRenderSlot"         // string: "thrust"|"slash"|"cast"
+const SH_ITEM_EQUIP_SLOT = "shEquipSlot"           // string: "thrust"|"slash"|"cast" (slot to equip on hero)
 const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"strength"|"agility"|"support"
 const SH_ITEM_PRICE = "shPrice"                    // number
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
@@ -7264,9 +8108,128 @@ let _shopDomWasShowing = false;
 // ------------------------------------------------------------
 // SHOP WEAPON RING – canonical defaults (must match atlas model ids)
 // ------------------------------------------------------------
-const SHOP_DEFAULT_RING_WEAPON_IDS = "diamond|glowsword|spear|simple"
-const SHOP_DEFAULT_RING_SLOTS = "thrust|slash|thrust|cast"
-const SHOP_DEFAULT_RING_SOURCE_PHASES = "thrust|slash|thrust|cast"
+// ------------------------------------------------------------
+// SHOP WEAPON RING – canonical defaults (must match atlas model ids)
+// ------------------------------------------------------------
+
+// Allowed model-id sets per statue slot (index-locked: 0=str,1=agi,2=int,3=sup)
+//
+// NOTE: These are *model ids* (not variants). Offhand models like "*_off" are intentionally excluded.
+const SHOP_ALLOWED_WPN_STRENGTH: string[] = [
+    "arming",
+    "club",
+    "flail",
+    "glowsword",
+    "katana",
+    "longsword",
+    "mace",
+    "rapier",
+    "saber",
+    "scimitar",
+    "scythe",
+    "smash",
+    "waraxe",
+]
+
+const SHOP_ALLOWED_WPN_AGILITY: string[] = [
+    "dragonspear",
+    "halberd",
+    "longspear",
+    "spear",
+    "trident",
+    "whip",
+]
+
+const SHOP_ALLOWED_WPN_INTELLIGENCE: string[] = [
+    "s",
+    "gnarled",
+]
+
+const SHOP_ALLOWED_WPN_SUPPORT: string[] = [
+    "loop",
+    "diamond",
+    "simple",
+]
+
+
+function _shopSanitizeHeroWeaponsAgainstAllowedSets(hi: number): void {
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const seenSlots: string[] = []
+
+    for (let si = 0; si < 4; si++) {
+        const eqSlot = ((SHOP_STATUE_EQUIP_SLOT && SHOP_STATUE_EQUIP_SLOT[si]) ? SHOP_STATUE_EQUIP_SLOT[si] : "thrust").toLowerCase()
+        if (seenSlots.indexOf(eqSlot) >= 0) continue
+        seenSlots.push(eqSlot)
+
+        const cur = _shopNormWeaponId(_shopGetEquippedWeaponIdForHeroSlot(hero, eqSlot) || "")
+        if (_shopIsWeaponAllowedForStatueIndex(si, cur)) continue
+
+        const list = _shopAllowedWeaponListForStatueIndex(si)
+        const fallback = (list && list.length > 0) ? list[0] : ""
+        const use = _shopNormWeaponId(fallback)
+
+        console.log(`[SHOP][HERO_SAN] hi=${hi} slot=${eqSlot} bad=${cur} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[si]}`)
+        _shopEquipWeaponToHeroSlot(hero, eqSlot, use)
+    }
+}
+
+
+function _shopAllowedWeaponListForStatueIndex(si: number): string[] {
+    const i = (si | 0)
+    if (i === 0) return SHOP_ALLOWED_WPN_STRENGTH
+    if (i === 1) return SHOP_ALLOWED_WPN_AGILITY
+    if (i === 2) return SHOP_ALLOWED_WPN_INTELLIGENCE
+    if (i === 3) return SHOP_ALLOWED_WPN_SUPPORT
+    return SHOP_ALLOWED_WPN_STRENGTH
+}
+
+function _shopNormWeaponId(wid: string): string {
+    return (wid == null) ? "" : String(wid).trim().toLowerCase()
+}
+
+function _shopIsWeaponAllowedForStatueIndex(si: number, weaponId: string): boolean {
+    const wid = _shopNormWeaponId(weaponId)
+    if (!wid) return false
+    if (wid.indexOf("_off") >= 0) return false
+
+    const list = _shopAllowedWeaponListForStatueIndex(si)
+    for (let i = 0; i < list.length; i++) {
+        if (list[i] === wid) return true
+    }
+    return false
+}
+
+function _shopPickRandomAllowedWeaponForStatueIndex(si: number, fallback: string): string {
+    const list = _shopAllowedWeaponListForStatueIndex(si)
+    if (!list || list.length <= 0) return _shopNormWeaponId(fallback)
+
+    const k = Math.randomRange(0, Math.max(0, (list.length - 1) | 0)) | 0
+    return _shopNormWeaponId(list[k] || fallback)
+}
+
+function _shopSanitizeWeaponIdForStatueIndex(si: number, weaponId: string, fallback: string): string {
+    const wid = _shopNormWeaponId(weaponId)
+    if (_shopIsWeaponAllowedForStatueIndex(si, wid)) return wid
+    return _shopPickRandomAllowedWeaponForStatueIndex(si, fallback)
+}
+
+// Defaults are a last-resort fallback; we still sanitize/seed per-statue in _shopPublishWeaponRingContractOnShopkeeper.
+const SHOP_DEFAULT_RING_WEAPON_IDS = "glowsword|spear|gnarled|diamond"
+
+// Slots drive the ring contract *and* our statue offer source-of-truth.
+// (Strength renders slash; all others render thrust for now.)
+const SHOP_DEFAULT_RING_SLOTS = "slash|thrust|thrust|thrust"
+const SHOP_DEFAULT_RING_SOURCE_PHASES = "slash|thrust|thrust|thrust"
+
+// Back-compat alias (some helpers still use the older name)
+const SHOP_DEFAULT_RING_WEAPON_SLOTS = SHOP_DEFAULT_RING_SLOTS
+
+
+//const SHOP_DEFAULT_RING_WEAPON_IDS = "diamond|glowsword|spear|simple"
+//const SHOP_DEFAULT_RING_SLOTS = "thrust|slash|thrust|cast"
+//const SHOP_DEFAULT_RING_SOURCE_PHASES = "thrust|slash|thrust|cast"
 
 const SHOP_DEFAULT_RING_DIR = "U"
 const SHOP_DEFAULT_RING_DIR_MAP = ""
@@ -7353,34 +8316,26 @@ function _shopMakeDitherBg(w: number, h: number, col: number): Image {
 }
 
 function _shopEnsureUiForHero(hi: number): void {
-    if (hi < 0 || hi > 3) return
-
-    if (!shopUiBgByHero[hi]) {
-        const bg = sprites.create(_shopMakeDitherBg(150, 42, 1), SpriteKind.ShopUI)
-        bg.setFlag(SpriteFlag.Ghost, true)
-        bg.setFlag(SpriteFlag.RelativeToCamera, true)
-        bg.z = 1000
-        shopUiBgByHero[hi] = bg
-    }
-
-    if (!shopUiTextByHero[hi]) {
-        const t = textsprite.create("", 15, 0)
-        t.setMaxFontHeight(12)              // BIGGER
-        t.setOutline(1, 1)
-        t.setFlag(SpriteFlag.RelativeToCamera, true)
-        t.z = 1001
-        shopUiTextByHero[hi] = t
-    }
-
-    if (!shopUiStatsByHero[hi]) {
-        const s = textsprite.create("", 15, 0)
-        s.setMaxFontHeight(10)
-        s.setOutline(1, 1)
-        s.setFlag(SpriteFlag.RelativeToCamera, true)
-        s.z = 1001
-        shopUiStatsByHero[hi] = s
-    }
+    // Canvas overlay removed (DOM-only). Ensure nothing lingers.
+    try { _shopDestroyUiForHero(hi) } catch {}
 }
+
+function _shopClearFocusDataForHeroIndex(hi: number): void {
+    if (hi < 0 || hi > 3) return
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_ACTIVE_KEY, 0)
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_RING_KEY, -1)
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_WEAPON_ID_KEY, "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_WEAPON_LABEL_KEY, "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_SLOT_KEY, "")
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_PRICE_KEY, 0)
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_BONUS_KEY, "")
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_OWNED_BY_KEY, 0)
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_CAN_AFFORD_KEY, 0)
+}
+
 
 function _shopDestroyUiForHero(hi: number): void {
     if (hi < 0 || hi > 3) return
@@ -7416,23 +8371,19 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
     const pid = (hi + 1) | 0
 
     if (hi < 0 || hi > 3) return
-    if (typeof shopUiBgByHero === "undefined") return
-    if (typeof shopUiTextByHero === "undefined") return
-    if (typeof shopUiStatsByHero === "undefined") return
 
-    const bg = shopUiBgByHero[hi]
-    const t = shopUiTextByHero[hi]
-    const st = shopUiStatsByHero[hi]
-    if (!bg || !t || !st) return
+    // Always kill canvas UI (DOM-only)
+    try { _shopDestroyUiForHero(hi) } catch {}
+
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
 
     const summary = _shopGetFocusedOfferSummaryForHero(hi, now)
 
     if (!summary || !summary.active) {
-        bg.setFlag(SpriteFlag.Invisible, true)
-        t.setFlag(SpriteFlag.Invisible, true)
-        st.setFlag(SpriteFlag.Invisible, true)
+        _shopClearFocusDataForHeroIndex(hi)
 
-        // If we were showing DOM dialog for shop, hide it when no longer focused
+        // If you are using the DOM dialog system, hide it when focus ends (host only)
         if (SHOP_USE_DOM_DIALOG && hi === 0 && _shopDomWasShowing) {
             const g: any = globalThis as any
             const dlg = g.__heDialog
@@ -7443,53 +8394,28 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
         return
     }
 
-    // Compute ownership (summary currently doesn't include ownedBy)
+    // Ownership (even though focus validity already gates this)
     let ownedBy = 0
     try { ownedBy = sprites.readDataNumber(summary.offer, SH_ITEM_BOUGHT_BY_PID) | 0 } catch { ownedBy = 0 }
 
-    const dialog = _shopBuildDialogLine(hi, pid, {
-        ringIndex: summary.ringIndex | 0,
-        weaponId: summary.weaponId || "",
-        slot: summary.slot || "",
-        price: summary.price | 0,
-        ownedBy: ownedBy | 0,
-        active: true
-    })
+    const price = summary.price | 0
+    const canAfford = ((getHeroCoins(hi) | 0) >= price) ? 1 : 0
+    const slot = (summary.renderSlot || summary.equipSlot || "") + ""
 
-    const controls = _shopBuildControlsLine(pid, summary)
-    const stats = _shopBuildStatsLine(hi, summary)
+    // Publish focus data for DOM
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_ACTIVE_KEY, 1)
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_RING_KEY, summary.ringIndex | 0)
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_WEAPON_ID_KEY, summary.weaponId || "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_WEAPON_LABEL_KEY, summary.weaponLabel || "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_SLOT_KEY, slot || "")
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_PRICE_KEY, price)
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_BONUS_KEY, summary.bonusDesc || "")
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_OWNED_BY_KEY, ownedBy | 0)
+    sprites.setDataNumber(hero, HERO_SHOP_FOCUS_CAN_AFFORD_KEY, canAfford)
 
-    // Text
-    ;(t as any).setText((dialog || "") + "\n" + (controls || ""))
-    ;(st as any).setText(stats || "")
-
-    // Position (stack per hero, bottom-left)
-    const W = userconfig.ARCADE_SCREEN_WIDTH | 0
-    const H = userconfig.ARCADE_SCREEN_HEIGHT | 0
-
-    const PANEL_W = 150
-    const PANEL_H = 42
-    const pad = 2
-
-    const cx = (pad + (PANEL_W >> 1)) | 0
-    const cy = (H - pad - (PANEL_H >> 1) - (hi * (PANEL_H + pad))) | 0
-
-    bg.x = cx
-    bg.y = cy
-
-    t.x = cx
-    t.y = (cy - 10) | 0
-
-    st.x = cx
-    st.y = (cy + 12) | 0
-
-    bg.setFlag(SpriteFlag.Invisible, false)
-    t.setFlag(SpriteFlag.Invisible, false)
-    st.setFlag(SpriteFlag.Invisible, false)
-
-    // Optional DOM “dialog box” that pops when you run over the weapon
+    // Optional DOM “dialog box” (if your page actually installs __heDialog)
     if (SHOP_USE_DOM_DIALOG && hi === 0) {
-        const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.bonusDesc}|${summary.price}`
+        const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.bonusDesc}|${price}`
         if (sig !== _shopDomLastSig) {
             _shopDomLastSig = sig
             _shopDomWasShowing = true
@@ -7499,7 +8425,7 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
             dlg?.show?.({
                 speaker: "Shop",
                 text: `${summary.weaponLabel}\n${summary.bonusDesc}`,
-                hint: `A: buy/swap (${summary.price | 0}🪙)`
+                hint: `A: buy/swap (${price}🪙)`
             })
         }
     }
@@ -7510,43 +8436,32 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
 function shopModeUpdate(nowMs: number): void {
     const now = nowMs | 0
 
-    // ------------------------------------------------------------
-    // CRITICAL GUARD:
-    // Shop loop must never run outside shop floors, otherwise it
-    // recreates trigger/shopkeeper/offers after floor clear.
-    // ------------------------------------------------------------
+    // Guard: never run outside shop floors
     if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) {
-        // Hard-disable shop master on non-shop floors
         SHOP_MODE_ACTIVE_MASTER = false
         SHOP_MODE_ACTIVE = false
 
-        // Best-effort: ensure no shop UI lingers
+        // Kill any lingering canvas UI + clear focus data
         for (let hi = 0; hi < 4; hi++) {
-            try { _shopDestroyUiForHero(hi) } catch { }
+            try { _shopDestroyUiForHero(hi) } catch {}
+            try { _shopClearFocusDataForHeroIndex(hi) } catch {}
         }
         return
     }
 
-    // Step 5: compute focus + publish highlight state to shopkeeper
+    // Focus computation + gate (unchanged)
     shopControlTick(now)
-
-    // Step 6: item-focus gate drives shop UI/input gate
     _shopApplyFocusGateToShopUi(now)
 
-    // Existing UI behavior (now depends on focus-driven shopTouchUntilMsByHero)
+    // Publish focus data (DOM), no canvas UI
     for (let hi = 0; hi < 4; hi++) {
-        if (now <= (shopTouchUntilMsByHero[hi] | 0)) {
-            _shopEnsureUiForHero(hi)
-            _shopUpdateUiForHero(hi, now)
-        } else {
-            _shopDestroyUiForHero(hi)
-        }
+        _shopUpdateUiForHero(hi, now)
     }
 
-    // Step 7–8: purchase/return controls
+    // Purchase/return controls (unchanged)
     shopHandleControls(now)
 
-    // Step 9: debug dump / visibility
+    // Debug (unchanged)
     shopDebugDump(now)
 }
 
@@ -7731,137 +8646,270 @@ function _stampHumanoidPhaseForSprite(s: Sprite, phaseName: string, nowMs: numbe
 let _shopGrantedCoins = false
 
 
-function shopInitPOC(): void {
-//    _shopEnsurePerHeroStateArrays()
-
-
-        if (!_shopGrantedCoins) {
-            _shopGrantedCoins = true
-            setTeamCoins(999)
-        }
-
-
-    // ---------------------------------------------------------
-    // 1) Spawn a simple trigger zone (this is what players overlap)
-    // ---------------------------------------------------------
-    if (!shopTriggerZone) {
-        const img = image.create(28, 18)
-        img.fill(1)
-        img.drawRect(0, 0, 28, 18, 15)
-        img.drawLine(2, 9, 25, 9, 15)
-
-        shopTriggerZone = sprites.create(img, SpriteKind.ShopUI)
-        shopTriggerZone.setFlag(SpriteFlag.Ghost, true)
-
-        // Put it somewhere obvious near center for now
-        const W = userconfig.ARCADE_SCREEN_WIDTH
-        const H = userconfig.ARCADE_SCREEN_HEIGHT
-        shopTriggerZone.setPosition((W >> 1) + 40, (H >> 1))
+function _shopInit_grantCoinsOnce(): void {
+    if (_shopGrantedCoins) return
+    _shopGrantedCoins = true
+    for (let hi = 0; hi < 4; hi++) {
+        const h = heroes[hi]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        setHeroCoins(hi, 999)
     }
+    console.log("[COINS] granted shop init--this is where the free coins are coming from", { perHero: 999 })
+}
 
-    // ---------------------------------------------------------
-    // 2) Spawn the shopkeeper NPC as a “hero-like” sprite
-    //    PlayerId=99 so Phaser can treat it as a managed “player”
-    // ---------------------------------------------------------
+function _shopInit_ensureTriggerZone(): void {
+    if (shopTriggerZone) return
+
+    const img = image.create(28, 18)
+    img.fill(1)
+    img.drawRect(0, 0, 28, 18, 15)
+    img.drawLine(2, 9, 25, 9, 15)
+
+    shopTriggerZone = sprites.create(img, SpriteKind.ShopUI)
+    shopTriggerZone.setFlag(SpriteFlag.Ghost, true)
+
+    // CHANGE (safe): do not render the debug box
+    shopTriggerZone.setFlag(SpriteFlag.Invisible, true)
+
+    const W = userconfig.ARCADE_SCREEN_WIDTH
+    const H = userconfig.ARCADE_SCREEN_HEIGHT
+    shopTriggerZone.setPosition((W >> 1) + 40, (H >> 1))
+}
+
+function _shopInit_findHeroIndexByOwner(ownerPid: number): number {
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h) continue
+        if (h.flags & sprites.Flag.Destroyed) continue
+        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+        if (owner === (ownerPid | 0)) return i
+    }
+    return -1
+}
+
+function _shopInit_spawnShopkeeperFromPipeline(): number {
+    const sx = (shopTriggerZone.x + 22) | 0
+    const sy = (shopTriggerZone.y - 4) | 0
+
+    createHeroForPlayer(
+        SHOPKEEPER_PLAYER_ID,
+        sx,
+        sy,
+        SHOPKEEPER_HERO_NAME,     // profileNameOverride -> "Shopkeeper"
+        FAMILY.SUPPORT,           // familyOverride
+        true,                     // isNpc
+        false,                    // forcePlayerToHeroIndexMapping
+        false
+    )
+
+    return (heroes.length - 1) | 0
+}
+
+function _shopInit_unarmShopkeeper(s: Sprite): void {
+    sprites.setDataNumber(s, HERO_DATA.WEAPON_ALWAYS_SHOW, 0)
+    _shopEquipWeaponToHeroSlot(s, "thrust", "")
+    _shopEquipWeaponToHeroSlot(s, "slash", "")
+    _shopEquipWeaponToHeroSlot(s, "cast", "")
+}
+
+function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
+    if (shopHi < 0 || shopHi >= heroes.length) return
+    shopkeeperNpc = heroes[shopHi]
+    if (!shopkeeperNpc) return
+
+    // Force shopkeeper to face DOWN on spawn (Arcade: +Y is down)
+    heroFacingX[shopHi] = 0
+    heroFacingY[shopHi] = 1
+    shopkeeperNpc.vx = 0
+    shopkeeperNpc.vy = 0
+
+    syncHeroDirData(shopHi)
+    callHeroAnim(shopHi, "idle", 0)
+
+    shopkeeperNpc.setFlag(SpriteFlag.Ghost, false)
+
+    sprites.setDataNumber(shopkeeperNpc, HERO_DATA.OWNER, SHOPKEEPER_PLAYER_ID)
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.NAME, SHOPKEEPER_HERO_NAME)
+
+    _shopInit_unarmShopkeeper(shopkeeperNpc)
+
+    // Keep legacy fields too (Phaser glue often reads these)
+    sprites.setDataString(shopkeeperNpc, "heroName", SHOPKEEPER_HERO_NAME)
+    sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.SUPPORT))
+
+    setHeroPhaseString(shopHi, "idle")
+    _animKeys_stampPhaseWindow(
+        shopHi,
+        shopkeeperNpc,
+        "idle",
+        nowMs | 0,
+        999999,
+        "shopInitPOC(shopkeeper)"
+    )
+
+    // Place it near the trigger zone (in case it existed but was elsewhere)
+    shopkeeperNpc.setPosition(shopTriggerZone.x + 22, shopTriggerZone.y - 4)
+}
+
+function _shopInit_ensureShopkeeper(nowMs: number): void {
     if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
-        // Find an existing hero sprite that already has OWNER=99 (no sprites.allOfKind)
-        let shopHi = -1
-        for (let i = 0; i < heroes.length; i++) {
-            const h = heroes[i]
-            if (!h) continue
-            if (h.flags & sprites.Flag.Destroyed) continue
-            const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-            if (owner === SHOPKEEPER_PLAYER_ID) { shopHi = i; break }
-        }
-
-        // If none exists yet, create it using the NORMAL hero pipeline
-        if (shopHi < 0) {
-            const sx = (shopTriggerZone.x + 22) | 0
-            const sy = (shopTriggerZone.y - 4) | 0
-
-            createHeroForPlayer(
-                SHOPKEEPER_PLAYER_ID,
-                sx,
-                sy,
-                SHOPKEEPER_HERO_NAME,     // profileNameOverride -> "Shopkeeper"
-                FAMILY.SUPPORT,           // familyOverride
-                true,                     // isNpc
-                false,                    // forcePlayerToHeroIndexMapping
-                false
-            )
-
-            shopHi = heroes.length - 1
-        }
-
-        shopkeeperNpc = heroes[shopHi]
-
-        // Force shopkeeper to face DOWN on spawn (Arcade: +Y is down)
-        heroFacingX[shopHi] = 0
-        heroFacingY[shopHi] = 1
-        shopkeeperNpc.vx = 0
-        shopkeeperNpc.vy = 0
-
-        // Publish facing into sprite.data so Phaser/anim glue sees it
-        syncHeroDirData(shopHi)
-
-        // Optional: nudge renderer to re-resolve frame immediately
-        callHeroAnim(shopHi, "idle", 0)
-
-        if (shopkeeperNpc) {
-            shopkeeperNpc.setFlag(SpriteFlag.Ghost, false)
-
-            // Canonical identity fields
-            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.OWNER, SHOPKEEPER_PLAYER_ID)
-            sprites.setDataString(shopkeeperNpc, HERO_DATA.NAME, SHOPKEEPER_HERO_NAME)
-
-            // If your glue uses these offsets/always-show, keep them:
-            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.HERO_WPN_OFF_X, 10)
-            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.HERO_WPN_OFF_Y, 6)
-            sprites.setDataNumber(shopkeeperNpc, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
-
-            // Keep legacy fields too (Phaser glue often reads these)
-            sprites.setDataString(shopkeeperNpc, "heroName", SHOPKEEPER_HERO_NAME)
-            sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.SUPPORT))
-
-            // Give it a stable idle phase window
-            const nowMs = Math.max(1, game.runtime() | 0)
-            setHeroPhaseString(shopHi, "idle")
-            _animKeys_stampPhaseWindow(
-                shopHi,
-                shopkeeperNpc,
-                "idle",
-                nowMs,
-                999999,
-                "shopInitPOC(shopkeeper)"
-            )
-
-            // Place it near the trigger zone (in case it existed but was elsewhere)
-            shopkeeperNpc.setPosition(shopTriggerZone.x + 22, shopTriggerZone.y - 4)
-
-            // ---------------------------------------------------------
-            // Publish ring contract + ensure offer hitboxes exist
-            // ---------------------------------------------------------
-            _shopPublishWeaponRingContractOnShopkeeper(shopkeeperNpc)
-            _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
-        }
+        let shopHi = _shopInit_findHeroIndexByOwner(SHOPKEEPER_PLAYER_ID)
+        if (shopHi < 0) shopHi = _shopInit_spawnShopkeeperFromPipeline()
+        _shopInit_setupShopkeeper(shopHi, nowMs)
     } else {
-        // Shopkeeper exists already: ensure contract + offers stay in sync
-        _shopPublishWeaponRingContractOnShopkeeper(shopkeeperNpc)
-        _shopEnsureWeaponRingOffersForShopkeeper(shopkeeperNpc)
+        // Shopkeeper exists already: keep it unarmed + anchored
+        _shopInit_unarmShopkeeper(shopkeeperNpc)
+        if (shopTriggerZone) {
+            shopkeeperNpc.setPosition(shopTriggerZone.x + 22, shopTriggerZone.y - 4)
+        }
     }
+}
 
-    // ---------------------------------------------------------
-    // 3) REMOVE pedestal: replaced by ring offers
-    // ---------------------------------------------------------
+function _shopInit_removePedestal(): void {
     if (shopItemPedestal && !(shopItemPedestal.flags & sprites.Flag.Destroyed)) {
         shopItemPedestal.destroy()
     }
     shopItemPedestal = null
+}
 
-    // ---------------------------------------------------------
-    // 4) NEW: Ensure 4 StatueHero NPCs exist behind the shopkeeper
-    // ---------------------------------------------------------
-    _shopEnsureStatueRow(game.runtime() | 0)
+function _shopInit_publishRingContractAndDestroyLegacyOffers(): void {
+    _shopPublishWeaponRingContractOnShopkeeper(shopkeeperNpc)
+
+    if (_shopRingOfferItems && _shopRingOfferItems.length > 0) {
+        console.log(`[SHOP][INIT] destroying legacy ring offer sprites count=${_shopRingOfferItems.length | 0}`)
+    }
+    _shopDestroyOfferItems()
+}
+
+function _shopInit_rollStatueWeaponsOncePerFloor(floor: number): boolean {
+    const rolledFloor = sprites.readDataNumber(shopkeeperNpc, "shShopOffersRolledFloor") | 0
+    if (rolledFloor === (floor | 0)) return false
+
+    const rr = _shopRingReadIdsSlotsFromShopkeeper(shopkeeperNpc)
+    const ids: string[] = rr.ids
+    const slots: string[] = rr.slots
+
+    while (ids.length < 4) ids.push("")
+    while (slots.length < ids.length) slots.push("")
+
+    for (let si = 0; si < 4; si++) {
+        const renderSlot = (SHOP_STATUE_RENDER_SLOT && SHOP_STATUE_RENDER_SLOT[si]) ? (SHOP_STATUE_RENDER_SLOT[si] || "") : ""
+        const rdSlot = (renderSlot || "thrust").toLowerCase()
+
+        const list = _shopAllowedWeaponListForStatueIndex(si)
+        let pick = ""
+
+        if (list && list.length > 0) {
+            pick = list[((Math.random() * list.length) | 0)] || ""
+        }
+        pick = _shopNormWeaponId(pick)
+
+        if (!pick || !_shopIsWeaponAllowedForStatueIndex(si, pick)) {
+            pick = ""
+            for (let j = 0; j < list.length; j++) {
+                const c = _shopNormWeaponId(list[j] || "")
+                if (_shopIsWeaponAllowedForStatueIndex(si, c)) { pick = c; break }
+            }
+        }
+
+        if (!pick) {
+            if (rdSlot === "slash") pick = DEFAULT_WEAPON_SLASH_ID
+            else if (rdSlot === "cast") pick = DEFAULT_WEAPON_CAST_ID
+            else pick = DEFAULT_WEAPON_THRUST_ID
+            pick = _shopNormWeaponId(pick)
+        }
+
+        ids[si] = pick
+        slots[si] = rdSlot
+    }
+
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, ids.join("|"))
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
+    sprites.setDataNumber(shopkeeperNpc, "shShopOffersRolledFloor", floor | 0)
+
+    console.log(`[SHOP][INIT][ROLL] floor=${floor | 0} ids=${ids.join("|")} slots=${slots.join("|")}`)
+    return true
+}
+
+function _shopInit_clearOfferCacheIfRolled(didRoll: boolean): void {
+    if (!didRoll || !shopStatues) return
+
+    for (let si = 0; si < 4; si++) {
+        const st = shopStatues[si]
+        if (!st || (st.flags & sprites.Flag.Destroyed)) continue
+        sprites.setDataString(st, SH_ITEM_BONUS_DESC, "")
+        const p = sprites.readDataNumber(st, SH_ITEM_PRICE) | 0
+        if (!(p > 0)) sprites.setDataNumber(st, SH_ITEM_PRICE, 10)
+        sprites.setDataNumber(st, SH_ITEM_BOUGHT_BY_PID, 0)
+    }
+}
+
+function _shopInit_sanitizeHeroesOnEntry(): void {
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const slotToSi: any = {}
+        for (let si = 0; si < 4; si++) {
+            const eq = (SHOP_STATUE_EQUIP_SLOT && SHOP_STATUE_EQUIP_SLOT[si]) ? (SHOP_STATUE_EQUIP_SLOT[si] || "") : ""
+            const eqSlot = (eq || "thrust").toLowerCase()
+            slotToSi[eqSlot] = si
+        }
+
+        const slotsToCheck = ["thrust", "slash", "cast"]
+        for (let k = 0; k < slotsToCheck.length; k++) {
+            const eqSlot = slotsToCheck[k]
+            const si = (slotToSi[eqSlot] != null) ? (slotToSi[eqSlot] | 0) : -1
+            if (si < 0) continue
+
+            const cur = _shopNormWeaponId(_shopGetEquippedWeaponIdForHeroSlot(hero, eqSlot) || "")
+            if (cur && _shopIsWeaponAllowedForStatueIndex(si, cur)) continue
+
+            const list = _shopAllowedWeaponListForStatueIndex(si)
+            let fix = ""
+            for (let j = 0; j < list.length; j++) {
+                const c = _shopNormWeaponId(list[j] || "")
+                if (_shopIsWeaponAllowedForStatueIndex(si, c)) { fix = c; break }
+            }
+            if (!fix) {
+                if (eqSlot === "slash") fix = DEFAULT_WEAPON_SLASH_ID
+                else if (eqSlot === "cast") fix = DEFAULT_WEAPON_CAST_ID
+                else fix = DEFAULT_WEAPON_THRUST_ID
+                fix = _shopNormWeaponId(fix)
+            }
+
+            _shopEquipWeaponToHeroSlot(hero, eqSlot, fix)
+            console.log(`[SHOP][INIT][HERO_SANITIZE] hi=${hi} slot=${eqSlot} old=${cur || "(empty)"} new=${fix} si=${si}`)
+        }
+    }
+}
+
+
+function shopInitPOC(): void {
+    // _shopEnsurePerHeroStateArrays()
+
+    const now = Math.max(1, game.runtime() | 0)
+    const floor = (_dunFloorIndex | 0)
+
+    _shopInit_grantCoinsOnce()
+
+    _shopInit_ensureTriggerZone()
+
+    _shopInit_ensureShopkeeper(now)
+
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    _shopInit_removePedestal()
+
+    _shopInit_publishRingContractAndDestroyLegacyOffers()
+
+    const didRoll = _shopInit_rollStatueWeaponsOncePerFloor(floor)
+
+    _shopEnsureStatueRow(now)
+
+    _shopInit_clearOfferCacheIfRolled(didRoll)
+
+    _shopInit_sanitizeHeroesOnEntry()
 }
 
 
@@ -7892,6 +8940,141 @@ function _shopRegisterItem(s: Sprite): void {
 }
 
 
+function _shopInputs_isShopActiveForHero(hi: number, now: number): boolean {
+    // Gate: shop active (Step 6 ties this to focus, but keep the gate anyway)
+    return now <= (shopTouchUntilMsByHero[hi] | 0)
+}
+
+function _shopInputs_getHeroForIndex(hi: number): Sprite {
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null
+    return hero
+}
+
+function _shopInputs_getPidForHeroIndex(hi: number): number {
+    return (hi + 1) | 0
+}
+
+function _shopInputs_getFocusedOfferOrClearUi(hi: number, now: number): Sprite {
+    const offer = _shopGetFocusedOfferForHero(hi, now)
+    if (!offer) {
+        // No offer focused => treat as not-bought for UI
+        shopBoughtByHero[hi] = false
+        return null
+    }
+    return offer
+}
+
+function _shopInputs_syncUiBoughtFlagFromOffer(hi: number, pid: number, offer: Sprite): void {
+    _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+}
+
+function _shopInputs_readOfferMeta(offer: Sprite): any {
+    const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
+    const renderSlot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
+    const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
+    const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+    return { weaponId, renderSlot, price, ringIndex }
+}
+
+function _shopInputs_pollABNow(hi: number): any {
+    let aNow = false
+    let bNow = false
+    if (hi === 0) { aNow = controller.player1.A.isPressed(); bNow = controller.player1.B.isPressed() }
+    else if (hi === 1) { aNow = controller.player2.A.isPressed(); bNow = controller.player2.B.isPressed() }
+    else if (hi === 2) { aNow = controller.player3.A.isPressed(); bNow = controller.player3.B.isPressed() }
+    else if (hi === 3) { aNow = controller.player4.A.isPressed(); bNow = controller.player4.B.isPressed() }
+    return { aNow, bNow }
+}
+
+function _shopInputs_edgeDetectAndStore(hi: number, aNow: boolean, bNow: boolean): any {
+    const aPrev = shopPrevAByPlayer[hi]
+    const bPrev = shopPrevBByPlayer[hi]
+    shopPrevAByPlayer[hi] = aNow
+    shopPrevBByPlayer[hi] = bNow
+
+    const aEdge = aNow && !aPrev
+    const bEdge = bNow && !bPrev
+    return { aEdge, bEdge }
+}
+
+function _shopInputs_handleBuyIfEdge(
+    aEdge: boolean,
+    hi: number,
+    pid: number,
+    hero: Sprite,
+    offer: Sprite,
+    meta: any,
+    now: number
+): void {
+    if (!aEdge) return
+
+    const weaponId = meta.weaponId
+    const renderSlot = meta.renderSlot
+    const price = meta.price | 0
+    const ringIndex = meta.ringIndex | 0
+
+    const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+
+    // Already owned by this hero => no-op
+    if (boughtBy0 === pid) {
+        console.log("[SHOP][BUY] already-owned pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot)
+    } else if (boughtBy0 !== 0) {
+        // Owned by someone else => deny for now
+        console.log("[SHOP][BUY] denied-owned-by-other pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+    } else {
+        // Check + spend PER HERO
+        if (!trySpendHeroCoins(hi, price | 0)) {
+            console.log("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+        } else {
+            // Mark + equip
+            sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
+
+            _shopEquipWeaponToHeroSlot(hero, renderSlot, weaponId)
+
+            console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+
+            // UI flag follows focused offer
+            _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+            _shopUpdateUiForHero(hi, now)
+        }
+    }
+}
+
+function _shopInputs_handleReturnIfEdge(
+    bEdge: boolean,
+    hi: number,
+    pid: number,
+    hero: Sprite,
+    offer: Sprite,
+    meta: any,
+    now: number
+): void {
+    if (!bEdge) return
+
+    const weaponId = meta.weaponId
+    const renderSlot = meta.renderSlot
+    const price = meta.price | 0
+    const ringIndex = meta.ringIndex | 0
+
+    const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
+
+    if (boughtBy0 !== pid) {
+        console.log("[SHOP][RETURN] no-op pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+    } else {
+        // Refund + clear ownership (PER HERO)
+        sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, 0)
+        addHeroCoins(hi, price | 0, hero.x, hero.y)
+
+        // Clear the hero slot ONLY if still matches this weaponId
+        _shopClearWeaponFromHeroSlotIfMatches(hero, renderSlot, weaponId)
+
+        console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " refund=" + price + " coins=" + (getHeroCoins(hi) | 0))
+
+        _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+        _shopUpdateUiForHero(hi, now)
+    }
+}
 
 
 
@@ -7900,103 +9083,37 @@ function shopHandleInputs(nowMs: number): void {
 
     // Player mapping: heroIndex 0..3 -> controller.player1..player4
     for (let hi = 0; hi < 4; hi++) {
-        // Gate: shop active (Step 6 ties this to focus, but keep the gate anyway)
-        if (now > (shopTouchUntilMsByHero[hi] | 0)) continue
+        if (!_shopInputs_isShopActiveForHero(hi, now)) continue
 
-        const hero = heroes[hi]
-        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const hero = _shopInputs_getHeroForIndex(hi)
+        if (!hero) continue
 
-        const pid = (hi + 1) | 0
+        const pid = _shopInputs_getPidForHeroIndex(hi)
 
-        // Read focused offer (must be fresh)
-        const offer = _shopGetFocusedOfferForHero(hi, now)
-        if (!offer) {
-            // No offer focused => treat as not-bought for UI
-            shopBoughtByHero[hi] = false
-            continue
-        }
+        const offer = _shopInputs_getFocusedOfferOrClearUi(hi, now)
+        if (!offer) continue
 
         // Keep UI bought flag in sync with the focused offer
-        _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
+        _shopInputs_syncUiBoughtFlagFromOffer(hi, pid, offer)
 
         // Read offer metadata
-        const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
-        const renderSlot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
-        const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
-        const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+        const meta = _shopInputs_readOfferMeta(offer)
 
         // ---------------------------------------------------------
         // Edge detect: A and B
         // ---------------------------------------------------------
-        let aNow = false
-        let bNow = false
-        if (hi === 0) { aNow = controller.player1.A.isPressed(); bNow = controller.player1.B.isPressed() }
-        else if (hi === 1) { aNow = controller.player2.A.isPressed(); bNow = controller.player2.B.isPressed() }
-        else if (hi === 2) { aNow = controller.player3.A.isPressed(); bNow = controller.player3.B.isPressed() }
-        else if (hi === 3) { aNow = controller.player4.A.isPressed(); bNow = controller.player4.B.isPressed() }
-
-        const aPrev = shopPrevAByPlayer[hi]
-        const bPrev = shopPrevBByPlayer[hi]
-        shopPrevAByPlayer[hi] = aNow
-        shopPrevBByPlayer[hi] = bNow
-
-        const aEdge = aNow && !aPrev
-        const bEdge = bNow && !bPrev
+        const abNow = _shopInputs_pollABNow(hi)
+        const edges = _shopInputs_edgeDetectAndStore(hi, abNow.aNow, abNow.bNow)
 
         // ---------------------------------------------------------
         // A = BUY focused offer
         // ---------------------------------------------------------
-        if (aEdge) {
-            const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
-
-            // Already owned by this hero => no-op
-            if (boughtBy0 === pid) {
-                console.log("[SHOP][BUY] already-owned pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot)
-            } else if (boughtBy0 !== 0) {
-                // Owned by someone else => deny for now
-                console.log("[SHOP][BUY] denied-owned-by-other pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
-            } else {
-                // Check coins
-                if ((teamCoins | 0) < (price | 0)) {
-                    console.log("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + teamCoins)
-                } else {
-                    // Deduct + mark + equip
-                    setTeamCoins((teamCoins - price) | 0)
-                    sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
-
-                    _shopEquipWeaponToHeroSlot(hero, renderSlot, weaponId)
-
-                    console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " price=" + price + " coins=" + teamCoins)
-
-                    // UI flag follows focused offer
-                    _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
-                    _shopUpdateUiForHero(hi, now)
-                }
-            }
-        }
+        _shopInputs_handleBuyIfEdge(edges.aEdge, hi, pid, hero, offer, meta, now)
 
         // ---------------------------------------------------------
         // B = RETURN/UNDO focused offer (only if this hero bought it)
         // ---------------------------------------------------------
-        if (bEdge) {
-            const boughtBy0 = sprites.readDataNumber(offer, SH_ITEM_BOUGHT_BY_PID) | 0
-
-            if (boughtBy0 !== pid) {
-                console.log("[SHOP][RETURN] no-op pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
-            } else {
-                // Refund + clear ownership
-                sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, 0)
-                setTeamCoins((teamCoins + price) | 0)
-
-                // Clear the hero slot ONLY if still matches this weaponId
-                _shopClearWeaponFromHeroSlotIfMatches(hero, renderSlot, weaponId)
-
-                console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " refund=" + price + " coins=" + teamCoins)
-
-                _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
-                _shopUpdateUiForHero(hi, now)
-            }
-        }
+        _shopInputs_handleReturnIfEdge(edges.bEdge, hi, pid, hero, offer, meta, now)
     }
 }
 
@@ -11409,6 +12526,42 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     _doHeroMoveDbgLogEnter(playerId, heroIndex, hero, button, now)
 
+    // ------------------------------------------------------------
+    // STEP 3: UI MODE / EXCLUSIVE INPUT (no UI rendering yet)
+    // - A+B toggles level-up UI (only if safe AND has points)
+    // - While uiMode != NONE, consume A/B intents and do not execute moves
+    // ------------------------------------------------------------
+    const uiMode0 = (sprites.readDataNumber(hero, HERO_UI_DATA.MODE) | 0)
+
+    // Toggle using intent chord
+    if (button === "A+B") {
+        if (uiMode0 === HERO_UI_MODE.LEVELUP) {
+            _uiCloseAnyUi(heroIndex, playerId, "intent:A+B")
+        } else {
+            const r = _uiTryOpenLevelUpUi(heroIndex, playerId, "intent:A+B")
+            if (!r.ok) {
+                console.log("[UI] open denied", { pid: playerId, hi: heroIndex, reason: r.reason })
+            }
+        }
+        _doHeroMoveDbgReset(playerId)
+        return
+    }
+
+    // If UI is open, consume A/B so we never fire moves while the DOM menu is up later
+    if (uiMode0 !== HERO_UI_MODE.NONE) {
+        if (button === "B") {
+            _uiCloseAnyUi(heroIndex, playerId, "intent:B")
+        } else {
+            // A is reserved for "buy" later; for now we just prove it’s consumed.
+            console.log("[UI] blocked intent (ui open)", { pid: playerId, hi: heroIndex, button })
+        }
+        _doHeroMoveDbgReset(playerId)
+        return
+    }
+
+    // ------------------------------------------------------------
+    // NORMAL MOVE PIPELINE (unchanged)
+    // ------------------------------------------------------------
     if (_doHeroMoveGuardAndLogEarlyReturns(playerId, heroIndex, hero, button, now)) {
         return
     }
@@ -11437,7 +12590,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     const stats0 = calculateMoveStatsForFamily(family, button, traitsFinal)
     const stats = applyRelicModsToStats(heroIndex, family, button, traitsFinal, stats0)
-
 
     if (family === FAMILY.STRENGTH) {
         executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
@@ -18083,6 +19235,71 @@ function findNearestLivingPlayerHeroIndex(x: number, y: number): number {
     return bestHi
 }
 
+
+const HERO_COIN_DATA = {
+    COINS: "coins"
+}
+
+function getHeroCoins(hi: number): number {
+    const hero = heroes[hi]
+    if (!hero) return 0
+    return sprites.readDataNumber(hero, HERO_COIN_DATA.COINS) | 0
+}
+
+function setHeroCoins(hi: number, n: number): void {
+    const hero = heroes[hi]
+    if (!hero) return
+    sprites.setDataNumber(hero, HERO_COIN_DATA.COINS, Math.max(0, n | 0))
+}
+
+function addHeroCoins(hi: number, delta: number, popX: number, popY: number): number {
+    const d = delta | 0
+    const cur = getHeroCoins(hi) | 0
+    const next = Math.max(0, (cur + d) | 0) | 0
+    setHeroCoins(hi, next)
+
+    // Satisfaction: popup + Phaser coin burst ONLY for positive gains
+    if (d > 0) {
+        showCoinPop(popX, popY, d)
+
+        // Phaser-only VFX: send coins to the correct player's DOM/HUD target (pid)
+        try {
+            if (isPhaserRuntime()) {
+                const gAny: any = globalThis as any
+                const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+
+                let pid = 0
+                try { pid = hero ? (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0) : 0 } catch { pid = 0 }
+                if (pid < 1 || pid > 4) pid = 0
+
+                if (!Array.isArray(gAny.__coinBurstQueue)) gAny.__coinBurstQueue = []
+                gAny.__coinBurstQueue.push({ x: popX, y: popY, count: d, pid })
+                console.log("[COINFX enqueue]", { d, popX, popY, pid, qLen: gAny.__coinBurstQueue.length })
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    console.log("[COINS] add", { hi, delta: d, total: next })
+    return next
+}
+
+function trySpendHeroCoins(hi: number, cost: number): boolean {
+    const c = Math.max(0, cost | 0) | 0
+    const cur = getHeroCoins(hi) | 0
+    const ok = cur >= c
+    if (!ok) {
+        console.log("[COINS] spend denied", { hi, cost: c, total: cur })
+        return false
+    }
+    const next = (cur - c) | 0
+    setHeroCoins(hi, next)
+    console.log("[COINS] spend ok", { hi, cost: c, total: next })
+    return true
+}
+
+
 function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, popY: number): void {
     const d = deltaXp | 0
     if (d <= 0) return
@@ -18336,6 +19553,7 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, -1)
 
     // XP metadata
     const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
@@ -18598,9 +19816,16 @@ function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: 
 }
 
 function _enemyGetColliderDims(enemy: Sprite): { w: number, h: number } {
-    const img: any = (enemy as any).image
-    const w = ((img && img.width) ? (img.width | 0) : (sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_W) | 0)) | 0
-    const h = ((img && img.height) ? (img.height | 0) : (sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_H) | 0)) | 0
+    // Prefer the explicit collider dimensions so large art frames don't inflate nav footprint.
+    let w = sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_W) | 0
+    let h = sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_H) | 0
+
+    if (w <= 0 || h <= 0) {
+        const img: any = (enemy as any).image
+        w = ((img && img.width) ? (img.width | 0) : w) | 0
+        h = ((img && img.height) ? (img.height | 0) : h) | 0
+    }
+
     return { w: (w > 0 ? w : WORLD_TILE_SIZE) | 0, h: (h > 0 ? h : WORLD_TILE_SIZE) | 0 }
 }
 
@@ -18807,14 +20032,45 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     let c = Math.idiv(enemy.x | 0, tileSize) | 0
     if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return false
 
+    const curIdx = _enemyNavIdx(r, c) | 0
+    const curD = _enemyNavDist[curIdx] | 0
+    if (curD >= ENEMY_NAV_INF) {
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
+        return false
+    }
+
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
+
+    const nowMs = game.runtime() | 0
+    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
+    const allowUp = (stuckUntil > 0 && nowMs < stuckUntil) ? 1 : 0
+
     const dims = _enemyGetColliderDims(enemy)
     const cw = dims.w | 0
     const ch = dims.h | 0
+
+    let lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX)
+    if (lastNavIdx === 0 && curIdx !== 0) lastNavIdx = -1
+
+    const vx = enemy.vx
+    const vy = enemy.vy
+    const vMag = Math.abs(vx) + Math.abs(vy)
 
     // Pick best neighbor by dist that ALSO fits this enemy's collider footprint.
     let bestR = r
     let bestC = c
     let bestD = ENEMY_NAV_INF
+    let bestAlign = -999
+    let bestIsBacktrack = false
+    let bestAnyR = r
+    let bestAnyC = c
+    let bestAnyD = ENEMY_NAV_INF
+    let bestAnyAlign = -999
+    let bestAnyIsBacktrack = false
 
     for (let k = 0; k < 8; k++) {
         const nr = (r + _NAV8_DR[k]) | 0
@@ -18824,28 +20080,89 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         // Base blocked check
         if (_enemyNavIsBlocked(nr, nc)) continue
 
-        // Diagonal corner-cut guard
         const dr = _NAV8_DR[k] | 0
         const dc = _NAV8_DC[k] | 0
+
+        // Diagonal corner-cut guard (+ footprint guard on adjacent cardinals)
         if (dr !== 0 && dc !== 0) {
             if (_enemyNavIsBlocked(r, nc) || _enemyNavIsBlocked(nr, c)) continue
+            if (!_enemyNavCanOccupyCellForDims(cw, ch, r, nc)) continue
+            if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, c)) continue
         }
 
-        // NEW: footprint occupancy check
+        // Footprint occupancy check
         if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) continue
 
-        const nd = _enemyNavDist[_enemyNavIdx(nr, nc)] | 0
+        const nIdx = _enemyNavIdx(nr, nc) | 0
+        const nd = _enemyNavDist[nIdx] | 0
         if (nd >= ENEMY_NAV_INF) continue
+
+        const isBacktrack = (nIdx === lastNavIdx)
+        let align = 0
+        if (vMag > 0.001) align = ((dr * vx) + (dc * vy)) / vMag
+
+        // Track best-any (used as fallback if no strict descent exists)
+        if (nd < bestAnyD) {
+            bestAnyD = nd
+            bestAnyR = nr
+            bestAnyC = nc
+            bestAnyAlign = align
+            bestAnyIsBacktrack = isBacktrack
+        } else if (nd === bestAnyD) {
+            if (bestAnyIsBacktrack && !isBacktrack) {
+                bestAnyR = nr
+                bestAnyC = nc
+                bestAnyAlign = align
+                bestAnyIsBacktrack = isBacktrack
+            } else if (bestAnyIsBacktrack === isBacktrack && align > bestAnyAlign) {
+                bestAnyR = nr
+                bestAnyC = nc
+                bestAnyAlign = align
+                bestAnyIsBacktrack = isBacktrack
+            }
+        }
+
+        // Require a strict descent to avoid ping-pong in flat areas
+        if (nd >= curD) continue
 
         if (nd < bestD) {
             bestD = nd
             bestR = nr
             bestC = nc
+            bestAlign = align
+            bestIsBacktrack = isBacktrack
+        } else if (nd === bestD) {
+            if (bestIsBacktrack && !isBacktrack) {
+                bestR = nr
+                bestC = nc
+                bestAlign = align
+                bestIsBacktrack = isBacktrack
+            } else if (bestIsBacktrack === isBacktrack && align > bestAlign) {
+                bestR = nr
+                bestC = nc
+                bestAlign = align
+                bestIsBacktrack = isBacktrack
+            }
         }
+    }
+
+    // Fallback: if no strict descent, allow the best non-increasing neighbor.
+    // If we're in a stuck window, allow a tiny uphill step (curD + 1) to escape concave corners.
+    if (bestD >= ENEMY_NAV_INF && bestAnyD < ENEMY_NAV_INF && bestAnyD <= (curD + allowUp)) {
+        bestD = bestAnyD
+        bestR = bestAnyR
+        bestC = bestAnyC
     }
 
     if (bestD >= ENEMY_NAV_INF) return false
     if (bestR === r && bestC === c) return false
+
+    // Remember current tile to avoid immediate backtracking next tick
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, curIdx)
+
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, bestR)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, bestC)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, bestD)
 
     const tx = (bestC * tileSize + (tileSize >> 1)) | 0
     const ty = (bestR * tileSize + (tileSize >> 1)) | 0
@@ -18860,6 +20177,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     enemy.vy = Math.idiv(dy * speed, mag)
     return true
 }
+
 
 
 // Compute a steering vector for enemy e toward hero h using the tilemap.
@@ -19017,11 +20335,18 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 
 let _lastEnemyHomingLogMs = 0
 
+const DEBUG_ENEMY_STUCK_LOG = true //Debug flag
+
 // Enemy AI internal bookkeeping keys (standalone; avoids editing ENEMY_DATA)
 const ENEMY_AI_LAST_X = "__aiLastX"
 const ENEMY_AI_LAST_Y = "__aiLastY"
 const ENEMY_AI_STUCK_UNTIL = "__aiStuckUntil"
 const ENEMY_AI_STUCK_MODE = "__aiStuckMode" // +1 / -1 toggles which way we strafe
+const ENEMY_AI_LAST_NAV_IDX = "__aiLastNavIdx"
+const ENEMY_AI_NAV_TARGET_R = "__aiNavTR"
+const ENEMY_AI_NAV_TARGET_C = "__aiNavTC"
+const ENEMY_AI_NAV_TARGET_D = "__aiNavTD"
+const ENEMY_AI_STUCK_LOG_UNTIL = "__aiStuckLogUntil"
 
 interface EnemyEdgePick {
     target: Sprite
@@ -19298,6 +20623,33 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
         const mode = (mode0 === 0 ? 1 : -mode0) || 1
         sprites.setDataNumber(enemy, ENEMY_AI_STUCK_MODE, mode)
 
+
+        if (DEBUG_ENEMY_STUCK_LOG) {
+            const logUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL) | 0
+            if ((nowMs | 0) >= (logUntil | 0)) {
+                const tileSize = WORLD_TILE_SIZE | 0
+                const r = Math.idiv(enemy.y | 0, tileSize) | 0
+                const c = Math.idiv(enemy.x | 0, tileSize) | 0
+                let curD = -1
+                if (_enemyNavDist && _enemyNavRows > 0 && _enemyNavCols > 0 && r >= 0 && c >= 0 && r < _enemyNavRows && c < _enemyNavCols) {
+                    curD = _enemyNavDist[_enemyNavIdx(r, c)] | 0
+                }
+
+                const tr = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_R) | 0
+                const tc = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_C) | 0
+                const td = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_D) | 0
+                const lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0
+
+                console.log("[enemy][stuck]", {
+                    pos: { x: enemy.x | 0, y: enemy.y | 0 },
+                    tile: { r, c, d: curD },
+                    target: { tr, tc, td },
+                    lastNavIdx,
+                    v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
+                })
+                sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
+            }
+        }
         // Hold the "anti-stuck" behavior briefly
         sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, (nowMs + 260) | 0)
 
@@ -19432,6 +20784,7 @@ function spawnDummyEnemy(x: number, y: number) {
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, -1)
 }
 
 //function setupTestEnemies() { spawnDummyEnemy(30, 40); spawnDummyEnemy(130, 40) }
@@ -19564,7 +20917,7 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
     if (existing > 0) return;
 
     // ----------------------------
-    // coin reward on kill (UNCHANGED)
+    // coin reward on kill (PER HERO)
     // ----------------------------
     let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0;
     if (maxHp <= 0) maxHp = 1;
@@ -19577,12 +20930,25 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
     const coinPopX = enemy.x;
     const coinPopY = enemy.y - 12;
 
-    addTeamCoins(coins, coinPopX, coinPopY);
+    // Resolve killer similarly to XP logic
+    let killerHi = (srcHi == null) ? -1 : (srcHi | 0)
+    if (killerHi < 0 || killerHi >= heroes.length || !heroes[killerHi] || (heroes[killerHi].flags & sprites.Flag.Destroyed)) {
+        killerHi = sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0
+    }
+    if (killerHi < 0 || killerHi >= heroes.length || !heroes[killerHi] || (heroes[killerHi].flags & sprites.Flag.Destroyed)) {
+        killerHi = findNearestLivingPlayerHeroIndex(coinPopX, coinPopY) | 0
+    }
+
+    if (killerHi >= 0) {
+        addHeroCoins(killerHi, coins, coinPopX, coinPopY);
+    } else {
+        console.log("[COINS] kill reward dropped (no hero)", { eIndex, coins, srcHi, last: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
+    }
 
     // ----------------------------
-    // XP reward on kill (UNCHANGED)
+    // XP reward on kill (unchanged behavior; pass resolved killer for consistency)
     // ----------------------------
-    awardXpForEnemyDeath(enemy, srcHi, coinPopX, coinPopY);
+    awardXpForEnemyDeath(enemy, killerHi, coinPopX, coinPopY);
 
     const deathDurationMs = 900;  // tweak this and LPC death anim will auto-match
 
@@ -19993,8 +21359,9 @@ function updatePlayerInputs() {
     // Edge intent: enqueue on rising edge, require release before another edge
     const a1Edge = a1 && !_p1PrevA
     const b1Edge = b1 && !_p1PrevB
+    const ab1Edge = (a1Edge && b1) || (b1Edge && a1) // NEW: second-press chord support
     if (a1Edge || b1Edge) {
-        const ev1 = (a1Edge && b1Edge) ? "A+B" : (a1Edge ? "A" : "B")
+        const ev1 = ab1Edge ? "A+B" : (a1Edge ? "A" : "B")
         if (p1IntentPending === "") p1IntentPending = ev1
         else if (p1IntentPending2 === "") p1IntentPending2 = ev1
         else p1IntentPending2 = ev1 // overwrite newest if spammed
@@ -20043,8 +21410,9 @@ function updatePlayerInputs() {
 
     const a2Edge = a2 && !_p2PrevA
     const b2Edge = b2 && !_p2PrevB
+    const ab2Edge = (a2Edge && b2) || (b2Edge && a2)
     if (a2Edge || b2Edge) {
-        const ev2 = (a2Edge && b2Edge) ? "A+B" : (a2Edge ? "A" : "B")
+        const ev2 = ab2Edge ? "A+B" : (a2Edge ? "A" : "B")
         if (p2IntentPending === "") p2IntentPending = ev2
         else if (p2IntentPending2 === "") p2IntentPending2 = ev2
         else p2IntentPending2 = ev2
@@ -20065,8 +21433,9 @@ function updatePlayerInputs() {
 
     const a3Edge = a3 && !_p3PrevA
     const b3Edge = b3 && !_p3PrevB
+    const ab3Edge = (a3Edge && b3) || (b3Edge && a3)
     if (a3Edge || b3Edge) {
-        const ev3 = (a3Edge && b3Edge) ? "A+B" : (a3Edge ? "A" : "B")
+        const ev3 = ab3Edge ? "A+B" : (a3Edge ? "A" : "B")
         if (p3IntentPending === "") p3IntentPending = ev3
         else if (p3IntentPending2 === "") p3IntentPending2 = ev3
         else p3IntentPending2 = ev3
@@ -20087,8 +21456,9 @@ function updatePlayerInputs() {
 
     const a4Edge = a4 && !_p4PrevA
     const b4Edge = b4 && !_p4PrevB
+    const ab4Edge = (a4Edge && b4) || (b4Edge && a4)
     if (a4Edge || b4Edge) {
-        const ev4 = (a4Edge && b4Edge) ? "A+B" : (a4Edge ? "A" : "B")
+        const ev4 = ab4Edge ? "A+B" : (a4Edge ? "A" : "B")
         if (p4IntentPending === "") p4IntentPending = ev4
         else if (p4IntentPending2 === "") p4IntentPending2 = ev4
         else p4IntentPending2 = ev4
@@ -21328,3 +22698,509 @@ if (typeof globalThis !== "undefined") {
         // If globalThis isn't available (e.g., PXT runtime), just silently skip.
     }
 })()
+
+
+
+
+// --------------------------------------------------------------
+// UI API (Step 1): expose a stable snapshot + command surface
+// DOM overlay will read snapshot + call commands later.
+// --------------------------------------------------------------
+
+// Hero UI state data keys (stored on the hero sprite)
+const HERO_UI_DATA = {
+    MODE: "uiMode",    // number: 0 none, 1 levelup, 2 relicPickup (future)
+    SEL: "uiSel",      // number: selection index for UI navigation
+}
+
+const HERO_UI_MODE = {
+    NONE: 0,
+    LEVELUP: 1,
+    RELIC_PICKUP: 2,
+}
+
+// Internal helpers for snapshot
+function _uiResolvePid(pidMaybe?: number): number {
+    if (typeof pidMaybe === "number" && (pidMaybe | 0) > 0) return (pidMaybe | 0)
+    try {
+        const g: any = globalThis as any
+        const net = g ? g.__net : null
+        const pid = net && typeof net.playerId === "number" ? (net.playerId | 0) : 0
+        return pid > 0 ? pid : 0
+    } catch {
+        return 0
+    }
+}
+
+function _uiResolveHeroIndexForPid(pid: number): number {
+    if ((pid | 0) <= 0) return -1
+
+    // Preferred: playerToHeroIndex (validate owner matches pid)
+    try {
+        const idx = playerToHeroIndex[pid] | 0
+        if (idx >= 0 && idx < heroes.length) {
+            const h = heroes[idx]
+            if (h && !(h.flags & sprites.Flag.Destroyed)) {
+                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+                if ((owner | 0) === (pid | 0)) return idx
+            }
+        }
+    } catch { }
+
+    // Fallback: scan heroes[] for matching owner
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h) continue
+        if (h.flags & sprites.Flag.Destroyed) continue
+        let owner = 0
+        try { owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0 } catch { owner = 0 }
+        if ((owner | 0) === (pid | 0)) return i | 0
+    }
+
+    return -1
+}
+
+function _uiReadNum(s: Sprite, key: string, defl: number): number {
+    try {
+        const n = sprites.readDataNumber(s, key) | 0
+        return (n | 0) === 0 && defl !== 0 ? defl : (n | 0)
+    } catch {
+        return defl | 0
+    }
+}
+
+function _uiReadStr(s: Sprite, key: string, defl: string): string {
+    try {
+        const v = sprites.readDataString(s, key)
+        return (typeof v === "string") ? v : defl
+    } catch {
+        return defl
+    }
+}
+
+
+function _uiGetSafeForSpend(hi: number): { ok: boolean, reason: string } {
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    // Dead heroes can’t spend (prevents weirdness)
+    const deathUntil = _uiReadNum(hero, HERO_DATA.DEATH_UNTIL, 0) | 0
+    if ((deathUntil | 0) > 0) return { ok: false, reason: "hero-dead" }
+
+    // If dungeon isn’t active, treat as safe (future-proof)
+    if (!DUNGEON_MODE_ACTIVE) return { ok: true, reason: "no-dungeon" }
+
+    // Don’t allow spending while teleport is arming/committing
+    if (((_dunTeleportCommitAtMs | 0) != 0)) return { ok: false, reason: "teleporting" }
+
+    const kind = String(_dunFloorKind || "")
+
+    // Combat floors: safe ONLY after clear + pad powered + no live enemies
+    if (kind === DUNGEON_KIND_COMBAT) {
+        if (!_dunObjectiveDone) return { ok: false, reason: "combat-not-cleared" }
+        if (!_dunIsPadPowered()) return { ok: false, reason: "pad-not-powered" }
+        if ((_dunCountLiveEnemies() | 0) != 0) return { ok: false, reason: "enemies-alive" }
+        return { ok: true, reason: "combat-cleared" }
+    }
+
+    // Non-combat floors: safe immediately (shop/story/treasure/entrance)
+    return { ok: true, reason: kind ? kind : "non-combat" }
+}
+
+
+function _uiBuildSnapshot(pid: number, hi: number): any {
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        return {
+            ready: false,
+            playerId: pid | 0,
+            heroIndex: -1,
+            reason: "hero-not-ready",
+        }
+    }
+
+    // XP fields: harden defaults
+    let lvl = _uiReadNum(hero, HERO_XP_DATA.LEVEL, 1) | 0
+    if (lvl <= 0) lvl = 1
+    let xp = _uiReadNum(hero, HERO_XP_DATA.XP, 0) | 0
+    let xpNext = _uiReadNum(hero, HERO_XP_DATA.XP_NEXT, 0) | 0
+    if (xpNext <= 0) xpNext = xpRequiredForNextLevel(lvl) | 0
+    const lvlPts = _uiReadNum(hero, HERO_XP_DATA.LVL_PTS, 0) | 0
+
+    // Coins (PER HERO)
+    const coins = getHeroCoins(hi) | 0
+
+    const hp = _uiReadNum(hero, HERO_DATA.HP, 0) | 0
+    const maxHp = _uiReadNum(hero, HERO_DATA.MAX_HP, 0) | 0
+    const mana = _uiReadNum(hero, HERO_DATA.MANA, 0) | 0
+    const maxMana = _uiReadNum(hero, HERO_DATA.MAX_MANA, 0) | 0
+
+    // UI state (engine-owned; DOM will render it later)
+    const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+    const uiSel = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
+
+    // Level-up flat bonuses (current storage)
+    const luBonuses: number[][] = [
+        [
+            getHeroLevelUpTraitBonus(hi, FAMILY.STRENGTH, OUT.TRAIT1) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.STRENGTH, OUT.TRAIT2) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.STRENGTH, OUT.TRAIT3) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.STRENGTH, OUT.TRAIT4) | 0,
+        ],
+        [
+            getHeroLevelUpTraitBonus(hi, FAMILY.AGILITY, OUT.TRAIT1) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.AGILITY, OUT.TRAIT2) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.AGILITY, OUT.TRAIT3) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.AGILITY, OUT.TRAIT4) | 0,
+        ],
+        [
+            getHeroLevelUpTraitBonus(hi, FAMILY.INTELLECT, OUT.TRAIT1) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.INTELLECT, OUT.TRAIT2) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.INTELLECT, OUT.TRAIT3) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.INTELLECT, OUT.TRAIT4) | 0,
+        ],
+        [
+            getHeroLevelUpTraitBonus(hi, FAMILY.HEAL, OUT.TRAIT1) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.HEAL, OUT.TRAIT2) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.HEAL, OUT.TRAIT3) | 0,
+            getHeroLevelUpTraitBonus(hi, FAMILY.HEAL, OUT.TRAIT4) | 0,
+        ],
+    ]
+
+    const safe = _uiGetSafeForSpend(hi)
+
+    return {
+        ready: true,
+        playerId: pid | 0,
+        heroIndex: hi | 0,
+
+        // Dungeon context
+        dungeonActive: !!DUNGEON_MODE_ACTIVE,
+        floorKind: String(_dunFloorKind || ""),
+
+        // Progression
+        level: lvl | 0,
+        xp: xp | 0,
+        xpNext: xpNext | 0,
+        lvlPts: lvlPts | 0,
+
+        // Vitals
+        hp: hp | 0,
+        maxHp: maxHp | 0,
+        mana: mana | 0,
+        maxMana: maxMana | 0,
+
+        // Coins (PER HERO)
+        coins: coins | 0,
+        coinsMode: "hero",
+
+        // Level-up modifiers
+        luBonuses,
+
+        // UI state
+        uiMode: uiMode | 0,
+        uiSel: uiSel | 0,
+
+        // Spend gating
+        safeForSpend: !!safe.ok,
+        safeReason: String(safe.reason || ""),
+    }
+}
+
+function _uiSetHeroUiMode(hi: number, mode: number): void {
+    const hero = heroes[hi]
+    if (!hero) return
+    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, mode | 0)
+}
+
+function _uiSetHeroUiSel(hi: number, sel: number): void {
+    const hero = heroes[hi]
+    if (!hero) return
+    sprites.setDataNumber(hero, HERO_UI_DATA.SEL, sel | 0)
+}
+
+
+
+function _uiTryOpenLevelUpUi(hi: number, pid: number, where: string): { ok: boolean, reason: string } {
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    const safe = _uiGetSafeForSpend(hi)
+    if (!safe.ok) return { ok: false, reason: "not-safe:" + safe.reason }
+
+    const pts = _uiReadNum(hero, HERO_XP_DATA.LVL_PTS, 0) | 0
+    if (pts <= 0) return { ok: false, reason: "no-pts" }
+
+    const now = game.runtime() | 0
+    const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
+    if (busyUntil > 0 && now < busyUntil) return { ok: false, reason: "busy" }
+
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+    if (locked) return { ok: false, reason: "locked" }
+
+    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.LEVELUP)
+    sprites.setDataNumber(hero, HERO_UI_DATA.SEL, 0)
+
+    // Freeze movement while UI is open (uses your existing controller lock path)
+    lockHeroControls(hi)
+
+    console.log("[UI] open levelup", { pid, hi, pts, safeReason: safe.reason, where })
+    return { ok: true, reason: "opened" }
+}
+
+function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const prevMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE)
+
+    // Resume movement (safe floors only; we don’t allow opening while busy/locked)
+    unlockHeroControls(hi)
+
+    console.log("[UI] close", { pid, hi, prevMode, where })
+}
+
+
+// Install globals once
+(() => {
+    try {
+        const g: any = globalThis as any
+        if (!g) return
+        if (g.__heUiApiInstalled) return
+        g.__heUiApiInstalled = true
+
+        // Rate-limit debug logs
+        g.__heUiApiLastLogMs = g.__heUiApiLastLogMs || 0
+
+        g.__heGetUiSnapshot = function (pidMaybe?: number): any {
+            const pid = _uiResolvePid(pidMaybe)
+            const hi = _uiResolveHeroIndexForPid(pid)
+
+            const snap = (hi >= 0) ? _uiBuildSnapshot(pid, hi) : {
+                ready: false,
+                playerId: pid | 0,
+                heroIndex: -1,
+                reason: (pid | 0) <= 0 ? "no-pid" : "no-hero",
+            }
+
+
+            const now = game.runtime() | 0
+            const last = (g.__heUiApiLastLogMs | 0)
+            if ((now - last) > 2000) {
+                g.__heUiApiLastLogMs = now
+
+
+
+                if (snap && snap.ready) {
+                    // SAFE flip log (proves gate transitions)
+                    const arr = (g.__heUiApiLastSafeByHi || (g.__heUiApiLastSafeByHi = []))
+                    const prev = arr[snap.heroIndex] // undefined on first touch
+                    const cur = snap.safeForSpend ? 1 : 0
+                    if (prev !== cur) {
+                        arr[snap.heroIndex] = cur
+                        console.log("[SAFE] hi=" + snap.heroIndex + " ok=" + cur + " reason=" + snap.safeReason + " floor=" + snap.floorKind)
+                    }
+
+                    console.log("[UIAPI] snapshot", {
+                        pid: snap.playerId,
+                        hi: snap.heroIndex,
+                        lvl: snap.level,
+                        xp: snap.xp,
+                        xpNext: snap.xpNext,
+                        pts: snap.lvlPts,
+                        coins: snap.coins,
+                        safe: snap.safeForSpend,
+                        safeReason: snap.safeReason,
+                        floor: snap.floorKind
+                    })
+                } else {
+                    console.log("[UIAPI] snapshot(not-ready)", snap)
+                }
+
+            }
+
+            return snap
+        }
+
+        // Command surface (Step 1 skeleton; spending logic + gating later)
+g.__heUiCommand = function (cmd: any): any {
+    const pid = _uiResolvePid(cmd && typeof cmd.playerId === "number" ? (cmd.playerId | 0) : undefined)
+    const hi = _uiResolveHeroIndexForPid(pid)
+    if (hi < 0) return { ok: false, reason: "no-hero", snapshot: g.__heGetUiSnapshot(pid) }
+
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        return { ok: false, reason: "no-hero", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    const t = cmd && typeof cmd.type === "string" ? String(cmd.type) : ""
+
+    if (t === "ping") {
+        return { ok: true, reason: "pong", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "openLevelUp") {
+        const r = _uiTryOpenLevelUpUi(hi, pid, "__heUiCommand")
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "closeUI") {
+        _uiCloseAnyUi(hi, pid, "__heUiCommand")
+        return { ok: true, reason: "closed", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "setSel") {
+        const sel = cmd && typeof cmd.sel === "number" ? (cmd.sel | 0) : 0
+        sprites.setDataNumber(hero, HERO_UI_DATA.SEL, sel)
+        return { ok: true, reason: "sel-set", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "dbgSetLvlPts") {
+        const pts = cmd && typeof cmd.pts === "number" ? (cmd.pts | 0) : 0
+        sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, Math.max(0, pts | 0))
+        console.log("[UIDBG] set lvlPts", { pid, hi, pts })
+        return { ok: true, reason: "dbgSetLvlPts", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    // ------------------------------------------------------------
+    // Spending (Level Up)
+    // ------------------------------------------------------------
+    if (t === "spendAxis" || t === "spendHp" || t === "spendMana") {
+
+        // Must be in level-up UI (keeps input-lock semantics clean)
+        const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+        if (uiMode !== HERO_UI_MODE.LEVELUP) {
+            console.log("[LVLUI] spend denied (ui not open)", { pid, hi, uiMode, t })
+            return { ok: false, reason: "ui-not-open", snapshot: g.__heGetUiSnapshot(pid) }
+        }
+
+        // Must still be safe
+        const safe = _uiGetSafeForSpend(hi)
+        if (!safe.ok) {
+            console.log("[LVLUI] spend denied (not safe)", { pid, hi, t, safeReason: safe.reason })
+            return { ok: false, reason: "not-safe:" + safe.reason, snapshot: g.__heGetUiSnapshot(pid) }
+        }
+
+        // Guard busy/locked (same semantics as open)
+        const now = game.runtime() | 0
+        const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
+        if (busyUntil > 0 && now < busyUntil) {
+            console.log("[LVLUI] spend denied (busy)", { pid, hi, t, now, busyUntil })
+            return { ok: false, reason: "busy", snapshot: g.__heGetUiSnapshot(pid) }
+        }
+
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (locked) {
+            console.log("[LVLUI] spend denied (locked)", { pid, hi, t })
+            return { ok: false, reason: "locked", snapshot: g.__heGetUiSnapshot(pid) }
+        }
+
+        const ptsBefore = getHeroUnspentLevelPts(hi) | 0
+        if (ptsBefore <= 0) {
+            console.log("[LVLUI] spend denied (no pts)", { pid, hi, t })
+            return { ok: false, reason: "no-pts", snapshot: g.__heGetUiSnapshot(pid) }
+        }
+
+        let ok = false
+        let reason = ""
+
+        if (t === "spendAxis") {
+            const family = cmd && typeof cmd.family === "number" ? (cmd.family | 0) : -999
+            const traitIndex = cmd && typeof cmd.traitIndex === "number" ? (cmd.traitIndex | 0) : -999
+
+            const famOk =
+                (family === (FAMILY.STRENGTH | 0)) ||
+                (family === (FAMILY.AGILITY | 0)) ||
+                (family === (FAMILY.INTELLECT | 0)) ||
+                (family === (FAMILY.HEAL | 0)) ||
+                (typeof (FAMILY as any).SUPPORT === "number" && family === (((FAMILY as any).SUPPORT | 0)))
+
+            if (!famOk) {
+                console.log("[LVLUI] spendAxis denied (bad family)", { pid, hi, family, traitIndex })
+                return { ok: false, reason: "bad-family", snapshot: g.__heGetUiSnapshot(pid) }
+            }
+
+            if (traitIndex < OUT.TRAIT1 || traitIndex > OUT.TRAIT4) {
+                console.log("[LVLUI] spendAxis denied (bad traitIndex)", { pid, hi, family, traitIndex })
+                return { ok: false, reason: "bad-traitIndex", snapshot: g.__heGetUiSnapshot(pid) }
+            }
+
+            const curRank = getHeroLevelUpAxisRank(hi, family, traitIndex) | 0
+            if (curRank >= (LVLUP_AXIS_RANK_MAX | 0)) {
+                console.log("[LVLUI] spendAxis denied (maxed)", { pid, hi, family, traitIndex, curRank })
+                return { ok: false, reason: "axis-max", snapshot: g.__heGetUiSnapshot(pid) }
+            }
+
+            ok = !!trySpendLevelUpPointOnAxis(hi, family, traitIndex)
+            reason = ok ? "spent-axis" : "spend-failed-axis"
+
+            console.log("[LVLUI] spendAxis", {
+                pid, hi, ok, family, traitIndex,
+                rankFrom: curRank,
+                rankTo: ok ? (curRank + 1) : curRank,
+                ptsBefore
+            })
+        }
+
+        if (t === "spendHp") {
+            ok = !!trySpendLevelUpPointOnMaxHp(hi)
+            reason = ok ? "spent-hp" : "spend-failed-hp"
+            console.log("[LVLUI] spendHp", { pid, hi, ok, ptsBefore })
+        }
+
+        if (t === "spendMana") {
+            ok = !!trySpendLevelUpPointOnMaxMana(hi)
+            reason = ok ? "spent-mana" : "spend-failed-mana"
+            console.log("[LVLUI] spendMana", { pid, hi, ok, ptsBefore })
+        }
+
+        // If you spent your last point, auto-close so controls unlock
+        const ptsAfter = getHeroUnspentLevelPts(hi) | 0
+        if (ok && ptsAfter <= 0) {
+            _uiCloseAnyUi(hi, pid, "spent-last-point")
+        }
+
+        return { ok: !!ok, reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    return { ok: false, reason: "unknown-cmd:" + t, snapshot: g.__heGetUiSnapshot(pid) }
+}
+
+
+
+
+        console.log("[UIAPI] installed: __heGetUiSnapshot / __heUiCommand")
+    } catch {
+        // silent in non-phaser runtimes
+    }
+})()
+
+
+
+
+
+try {
+    const g: any = globalThis as any
+    if (g && !g.__heLvlHooksInstalled) {
+        g.__heLvlHooksInstalled = true
+
+        g.__heLvlSpendAxis = (hi: number, family: number, traitIndex: number) =>
+            trySpendLevelUpPointOnAxis(hi | 0, family | 0, traitIndex | 0)
+
+        g.__heLvlSpendHp = (hi: number) =>
+            trySpendLevelUpPointOnMaxHp(hi | 0)
+
+        g.__heLvlSpendMana = (hi: number) =>
+            trySpendLevelUpPointOnMaxMana(hi | 0)
+
+        g.__heLvlPts = (hi: number) =>
+            getHeroUnspentLevelPts(hi | 0)
+
+        console.log("[LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts")
+    }
+} catch (_e) { }
+
+
+
+

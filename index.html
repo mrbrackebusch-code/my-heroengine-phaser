@@ -949,35 +949,58 @@
   }
 
 
-      function _readTeamCoins() {
-        const spritesNS = window.sprites;
-        if (!spritesNS) return _hud_lastCoins | 0;
+// ------------------------------------------------------------
+// Snapshot cache (prevents __heGetUiSnapshot spam / logs)
+// ------------------------------------------------------------
+const SNAPSHOT_REFRESH_MS = 500;
+let _hud_lastSnap = null;
+let _hud_lastSnapAt = 0;
 
-        // 1) Preferred: __uiKind === "teamCoins"
-        const s0 = _findUiSpriteByUiKind("teamCoins");
-        let t0 = _readTextSpriteString(spritesNS, s0);
+function _getUiSnapshotCached(pid) {
+  const now = Date.now() | 0;
+  const p = pid | 0;
 
-        // 2) Fallback: scan any text sprite that looks like "Coins: 123"
-        if (!t0) {
-          const all = allSprites();
-          for (const s of all) {
-            if (!s) continue;
-            const txt = _readTextSpriteString(spritesNS, s);
-            if (!txt) continue;
-            if (/coins\s*:/i.test(txt)) {
-              t0 = txt;
-              break;
-            }
-          }
-        }
+  if (_hud_lastSnap && (_hud_lastSnapAt | 0) && (now - (_hud_lastSnapAt | 0)) < SNAPSHOT_REFRESH_MS) {
+    if (((_hud_lastSnap.playerId | 0) === p) || (p === 0)) return _hud_lastSnap;
+  }
 
-        const m = String(t0 || "").match(/(-?\d+)/);
-        if (!m) return _hud_lastCoins | 0;
+  _hud_lastSnapAt = now;
 
-        const n = (parseInt(m[1], 10) | 0);
-        _hud_lastCoins = Math.max(0, n | 0);
-        return _hud_lastCoins | 0;
-      }
+  try {
+    if (typeof window.__heGetUiSnapshot === "function") {
+      _hud_lastSnap = window.__heGetUiSnapshot(p | 0) || null;
+      return _hud_lastSnap;
+    }
+  } catch (_e) {}
+
+  _hud_lastSnap = null;
+  return null;
+}
+
+
+function _readTeamCoins(pid, hero, spritesNS) {
+  const p = (pid | 0) || getPid();
+
+  // Preferred: engine snapshot (per-hero coins)
+  const snap = _getUiSnapshotCached(p);
+  if (snap && snap.ready) {
+    const n = Math.max(0, (snap.coins | 0));
+    _hud_lastCoins = n | 0;
+    return _hud_lastCoins | 0;
+  }
+
+  // Fallback: hero sprite data key "coins"
+  if (hero && spritesNS) {
+    try {
+      const n2 = Math.max(0, (spritesNS.readDataNumber(hero, "coins") | 0));
+      _hud_lastCoins = n2 | 0;
+      return _hud_lastCoins | 0;
+    } catch (_e) {}
+  }
+
+  // Last resort: keep last value (no canvas scan)
+  return _hud_lastCoins | 0;
+}
 
 
               // ------------------------------------------------------------
@@ -1310,7 +1333,7 @@
           setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
           setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
 
-          const coinsActual = _readTeamCoins();
+          const coinsActual = _readTeamCoins(pid, hero, spritesNS);
           const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
           setText(R.youCoins, `${EMOJI.coin} Coins: ${coinsShown}`);
 
@@ -1336,7 +1359,22 @@
           setText(R.xpBonusTotal, `Total XP: ${xpTot}`);
 
           // Placeholder until we expose actual bonuses list from engine
-          setText(R.xpBonusNote, `Bonuses: (soon)`);
+          // Level-up readiness prompt (engine truth = snapshot)
+          let lvlMsg = "Bonuses: (soon)";
+          const snap = _getUiSnapshotCached(pid);
+
+          if (snap && snap.ready) {
+            const pts2 = Math.max(0, (snap.lvlPts | 0));
+            const uiMode = (snap.uiMode | 0);
+            const safe = !!snap.safeForSpend;
+            const safeReason = String(snap.safeReason || "");
+
+            if (uiMode === 1) lvlMsg = "LEVEL UP OPEN — B to close";
+            else if (pts2 > 0) lvlMsg = safe ? "LEVEL UP READY — press A+B" : `LEVEL UP LOCKED — ${safeReason || "unsafe"}`;
+          }
+
+          setText(R.xpBonusNote, lvlMsg);
+
 
           // Smooth bar growth (never shrinks; wraps on level-up)
           _xp_setTargetFrom(lvl, pct);

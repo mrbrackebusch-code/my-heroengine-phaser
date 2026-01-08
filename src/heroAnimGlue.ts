@@ -56,9 +56,9 @@ const HERO_PHASE_NAME_KEY = "PhaseName"
 const HERO_PHASE_START_MS_KEY = "PhaseStartMs"
 
 // Debug toggles
-const DEBUG_HERO_ANIM_GLUE = true
-const DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS = false  // if true: logs only when something is missing/invalid
-const DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT = true // reduces spam by focusing on intellect/cast
+const DEBUG_HERO_ANIM_GLUE = false
+const DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS = true  // if true: logs only when something is missing/invalid
+const DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT = false // reduces spam by focusing on intellect/cast
 
 //const HERO_PHASE_NAME_KEY = "PhaseName" // authoritative phase window key from HeroEngineInPhaser
 
