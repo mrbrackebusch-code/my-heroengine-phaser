@@ -960,6 +960,7 @@ function _tryStrengthChargeThrob(
     // Only for strength charge while in slash phase
     if (!(req.actionKind === "strength_charge" && def.phase === "slash")) {
         try { anySprite.setData?.("strCh_holdCol", undefined); } catch {}
+        _restoreBaseScaleIfPresent(sprite);
         return false;
     }
 
@@ -971,8 +972,6 @@ function _tryStrengthChargeThrob(
 
     // Fallback: if engine forgot to label part, still allow hold while locked during strength_charge+slash
     const isLocked = (() => {
-        // If you have a HERO_LOCKED_KEY you can check it here. Otherwise, infer from phaseProgressInt being valid.
-        // Keep it conservative: we only use this fallback if partName is missing/empty.
         if (partLooksLikeCharging) return true;
         if (part.length) return false;
         return (req.phaseProgressInt | 0) >= 0;
@@ -980,25 +979,32 @@ function _tryStrengthChargeThrob(
 
     if (!(partLooksLikeCharging || isLocked)) {
         try { anySprite.setData?.("strCh_holdCol", undefined); } catch {}
+        _restoreBaseScaleIfPresent(sprite);
         return false;
     }
 
     const animKey = buildHeroAnimKey(req.heroName!, def);
 
+    // Throttle prove spam (optional)
     if (shouldProve) {
-        const ca = (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "";
-        console.log(
-            "[PROVE][CHARGE-THROB][ENTER]",
-            "| t", ((scene as any)?.time?.now ?? -1),
-            "| heroName", req.heroName,
-            "| actionKind", req.actionKind,
-            "| phase", def.phase,
-            "| part", partRaw,
-            "| partOK", (partLooksLikeCharging || isLocked),
-            "| phaseProg", req.phaseProgressInt,
-            "| animKey", animKey,
-            "| currentAnim", ca
-        );
+        const nowLocal = (scene as any)?.time?.now ?? Date.now();
+        const LOG_LAST_MS_KEY = "__strCh_proveLastMs";
+        const lastMs = Number(anySprite.getData?.(LOG_LAST_MS_KEY));
+        if (!Number.isFinite(lastMs) || (nowLocal - lastMs) >= 250) {
+            try { anySprite.setData?.(LOG_LAST_MS_KEY, nowLocal); } catch {}
+            const ca = (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "";
+            console.log(
+                "[PROVE][CHARGE-THROB][ENTER]",
+                "| t", nowLocal,
+                "| heroName", req.heroName,
+                "| actionKind", req.actionKind,
+                "| phase", def.phase,
+                "| part", partRaw,
+                "| phaseProg", req.phaseProgressInt,
+                "| animKey", animKey,
+                "| currentAnim", ca
+            );
+        }
     }
 
     if (!scene.anims.exists(animKey)) {
@@ -1030,26 +1036,23 @@ function _tryStrengthChargeThrob(
         }
     })();
 
+    // Use your existing key, but now it means: "the fixed pose index we hold"
     const HOLD_COL_KEY = "strCh_holdCol";
-    let baseCol = anySprite.getData?.(HOLD_COL_KEY);
-    if (!(typeof baseCol === "number" && Number.isFinite(baseCol))) {
+    let holdIdx = anySprite.getData?.(HOLD_COL_KEY);
+
+    if (!(typeof holdIdx === "number" && Number.isFinite(holdIdx))) {
+        // Preserve your old intent: derive a stable column from the current frame
         const curFrameIndex = _getTextureFrameIndex(anySprite);
-        baseCol = clampInt((curFrameIndex | 0) % heroCols, 0, Math.max(0, heroCols - 1));
-        try { anySprite.setData?.(HOLD_COL_KEY, baseCol); } catch {}
+        const baseCol = clampInt((curFrameIndex | 0) % heroCols, 0, Math.max(0, heroCols - 1));
+
+        // Map that into the animation's frame list
+        holdIdx = clampInt(baseCol | 0, 0, frames.length - 1);
+
+        try { anySprite.setData?.(HOLD_COL_KEY, holdIdx); } catch {}
     }
 
-    const p = (req.phaseProgressInt >= 0)
-        ? Math.max(0, Math.min(1, req.phaseProgressInt / 1000))
-        : 0.5;
-
-    const periodMs = Math.max(80, Math.min(220, Math.floor(220 - 120 * p)));
-    const bit = ((Math.floor(nowLocal / periodMs) | 0) & 1) ? 1 : 0;
-
-    const colA = clampInt(baseCol | 0, 0, Math.max(0, heroCols - 1));
-    const colB = clampInt((baseCol | 0) + 1, 0, Math.max(0, heroCols - 1));
-    const heroCol = (colB !== colA) ? (bit ? colB : colA) : colA;
-
-    const idxInFrames = clampInt(heroCol, 0, frames.length - 1);
+    // Fixed pose frame (NO alternation)
+    const idxInFrames = clampInt(holdIdx | 0, 0, frames.length - 1);
     const poseFrameIndex = frames[idxInFrames];
 
     // Force correct animation key so weapon glue still sees slash anim key
@@ -1058,10 +1061,15 @@ function _tryStrengthChargeThrob(
         try { sprite.anims.play(animKey, true); } catch { return false; }
     }
 
-    // Pause so it doesn't advance
-    try { (sprite.anims as any).pause?.(); } catch { try { sprite.anims.stop(); } catch {} }
+    // Pause so it doesn't advance (REAL fallback)
+    const animState: any = sprite.anims as any;
+    if (animState && typeof animState.pause === "function") {
+        try { animState.pause(); } catch { /* ignore */ }
+    } else {
+        try { sprite.anims.stop(); } catch { /* ignore */ }
+    }
 
-    // Set pose frame in the animation timeline (preferred), fallback to setTexture
+    // Set the SAME pose frame in the animation timeline (preferred), fallback to setTexture
     try {
         const anim = sprite.anims.currentAnim as any;
         const aframes = anim?.frames as any[] | undefined;
@@ -1075,7 +1083,7 @@ function _tryStrengthChargeThrob(
         sprite.setTexture(def.textureKey, poseFrameIndex);
     }
 
-    // Scale pulse
+    // ✅ Throb = scale pulse only (kept)
     const baseX = (() => {
         const v = Number(anySprite.getData?.(HERO_BASE_SCALE_X_KEY));
         if (Number.isFinite(v) && v !== 0) return v;
@@ -1101,7 +1109,7 @@ function _tryStrengthChargeThrob(
     })();
 
     const wob = 0.03;
-    const s = 1 + wob * Math.sin(nowLocal / 90);
+    const s = 1 + wob * Math.sin(nowLocal / 140); // slightly slower than /90
     (sprite as any).scaleX = baseX * s;
     (sprite as any).scaleY = baseY * s;
 
@@ -1120,6 +1128,9 @@ function _tryStrengthChargeThrob(
         anySprite.setData(LAST_DIR_KEY, def.dir);
         anySprite.setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
     }
+
+    // Keep follow-frame contract coherent for weapon glue
+    try { _publishHeroFollowFrameKeys(sprite, def); } catch {}
 
     return true;
 }

@@ -37,10 +37,10 @@ const DEBUG_COINFX = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
 // ------------------------------------------------------------
-const ENABLE_WEAPON_DEBUG = false;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_DEBUG_VERBOSE = false; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_ON_START = false; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false; // huge log; leave false Debug flag
+const ENABLE_WEAPON_DEBUG = true;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_DEBUG_VERBOSE = true; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debug flag
 
 
 

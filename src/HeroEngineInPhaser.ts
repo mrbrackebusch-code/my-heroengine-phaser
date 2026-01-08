@@ -892,27 +892,29 @@ const ANIM = {
 // Used by: executeXMove(), STR/AGI motion, INT/HEAL detonation logic.
 // --------------------------------------------------------------
 const STAT = {
-    DAMAGE_MULT: 0,        // overall damage multiplier vs base power
-    MOVE_DURATION: 1,      // how long the move owns the hero (ms)
-    LUNGE_SPEED: 2,        // AGI dash / thrust speed (px/s)
-    COMBO_WINDOW: 3,       // AGI combo window duration (ms)
+    DAMAGE_MULT: 0,
+    MOVE_DURATION: 1,
+    LUNGE_SPEED: 2,
+    COMBO_WINDOW: 3,
 
     SLOW_PCT: 4,
     SLOW_DURATION: 5,
     WEAKEN_PCT: 6,
     WEAKEN_DURATION: 7,
 
-    TARGETING_TIME: 8,     // INT steer window (ms)
-    RING_RADIUS: 9,        // INT detonation radius
-    CHANNEL_POWER: 10,     // INT / HEAL potency
-    KNOCKBACK_PCT: 11,     // knockback strength %
+    TARGETING_TIME: 8,
+    RING_RADIUS: 9,
+    CHANNEL_POWER: 10,
+    KNOCKBACK_PCT: 11,
 
-    // Family-specific knobs we want centralized
-    STRENGTH_TOTAL_ARC_DEG: 12, // total degrees swept by STR smash
-    STRENGTH_SWING_MS: 13,      // STR swing duration (ms)
-    AGILITY_LAND_BUFFER_MS: 14, // AGI landing grace buffer (ms)
+    STRENGTH_TOTAL_ARC_DEG: 12,
+    STRENGTH_SWING_MS: 13,
+    AGILITY_LAND_BUFFER_MS: 14,
 
-    LEN: 15                    // length of STAT[] arrays
+    // ✅ NEW (Strength reach is RELATIVE; store it explicitly)
+    STRENGTH_REACH_EXTRA_PX: 15,
+
+    LEN: 16
 }
 
 
@@ -1018,6 +1020,8 @@ const HERO_DATA = {
     STR_PAYLOAD_T4: "strPay4",         // number
     STR_PAYLOAD_EL: "strPayEl",        // number
     STR_PAYLOAD_ANIM: "strPayAnim",    // string
+
+    STR_CHARGE_ARC_MAX_DEG: "strChgMaxD",
 
     // NEW: engine-side state we want exposed
     BUSY_UNTIL: "busyUntil",           // heroBusyUntil[heroIndex]
@@ -1137,16 +1141,21 @@ const ENEMY_DATA = {
     HP: "hp",
     MAX_HP: "maxHp",
 
-    SPEED: "spd",                 // base movement speed for homing AI
-    TOUCH_DAMAGE: "touchDmg",     // contact damage vs heroes
-    REGEN_PCT: "regenPct",        // % regen per tick (if used later)
+    SPEED: "spd",
+    TOUCH_DAMAGE: "touchDmg",
+    REGEN_PCT: "regenPct",
 
-    // NEW: logical monster identifier so Phaser wrapper can pick LPC sheet
     MONSTER_ID: "monsterId",
 
-    // NEW: catalog-driven style knobs (stored on each enemy)
     ADVANCE_RANGE_PX: "advRangePx",
     PROJECTILE_ID: "enemyProjId",
+
+    // NEW: sizing metadata (Phaser can use these later for "feet anchoring")
+    FRAME_W: "frameW",
+    FRAME_H: "frameH",
+    COLLIDER_W: "colW",
+    COLLIDER_H: "colH",
+    RENDER_OFFS_Y: "renderOffsY", // how much Phaser should shift UP if art is taller than collider
 
     SLOW_PCT: "slowPct",
     SLOW_UNTIL: "slowUntil",
@@ -1154,9 +1163,9 @@ const ENEMY_DATA = {
     WEAKEN_UNTIL: "weakUntil",
     KNOCKBACK_UNTIL: "kbUntil",
 
-    ATK_PHASE: "atkPhase",        // current attack state (enum/int)
-    ATK_UNTIL: "atkUntil",        // time current attack phase ends
-    ATK_COOLDOWN_UNTIL: "atkCd",  // when enemy can attack again
+    ATK_PHASE: "atkPhase",
+    ATK_UNTIL: "atkUntil",
+    ATK_COOLDOWN_UNTIL: "atkCd",
 
     HOME_X: "HOMEX",
     HOME_Y: "HOMEY",
@@ -1167,10 +1176,8 @@ const ENEMY_DATA = {
     RETURNING_TO_ORIGIN: "returningToOrigin",
     ATK_RATE_PCT: "atkRatePct",
 
-    // NEW: death timing
     DEATH_UNTIL: "deathUntil",
 
-    // legacy / misc
     homeX: "homeX",
     homeY: "homeY",
     dir: "dir",
@@ -1320,6 +1327,7 @@ const STR_PEND_SWING_WEAK_MS_KEY     = "strPendSwingWeakMs"
 const STR_PEND_SWING_KB_PCT_KEY      = "strPendSwingKbPct"
 const STR_PEND_SWING_SWING_MS_KEY    = "strPendSwingSwingMs"
 const STR_PEND_SWING_ARC_DEG_KEY     = "strPendSwingArcDeg"
+const STR_PEND_SWING_REACH_EXTRA_KEY = "strPendSwingReachExtra"
 
 
 
@@ -5700,6 +5708,7 @@ function _modBucketForFamilyAndTraitIndex(family: number, outTraitIndex: number)
     return MOD_BUCKET_SUP_DMG;
 }
 
+
 function applyDamageModsToTraits(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
     if (!traitsEff) return traitsEff;
 
@@ -5722,6 +5731,70 @@ function applyDamageModsToTraits(hi: number, family: number, traitsEff: MoveTrai
     out[OUT.TRAIT4] = (out[OUT.TRAIT4] | 0) + m4;
     return out;
 }
+
+
+
+// ================================================================
+// LEVEL-UP FLAT BONUSES (traits) + RELIC MODS (stats)
+// ================================================================
+
+// Store per-hero, per-family, per-trait flat bonuses on the hero sprite.
+// Key format: "lvlb_<family>_<traitIndex>" (traitIndex uses OUT.TRAIT1..OUT.TRAIT4)
+const HERO_LVL_BONUS_KEY_PREFIX = "lvlb_";
+
+function _heroLvlBonusKey(family: number, traitIndex: number): string {
+    return HERO_LVL_BONUS_KEY_PREFIX + (family | 0) + "_" + (traitIndex | 0);
+}
+
+function getHeroLevelUpTraitBonus(hi: number, family: number, traitIndex: number): number {
+    const hero = heroes[hi];
+    if (!hero) return 0;
+    return (sprites.readDataNumber(hero, _heroLvlBonusKey(family, traitIndex)) | 0);
+}
+
+function setHeroLevelUpTraitBonus(hi: number, family: number, traitIndex: number, value: number): void {
+    const hero = heroes[hi];
+    if (!hero) return;
+    sprites.setDataNumber(hero, _heroLvlBonusKey(family, traitIndex), (value | 0));
+}
+
+// Apply flat bonuses to traits AFTER applyDamageModsToTraits() and BEFORE calculateMoveStatsForFamily().
+// This affects outputs (damage/reach/time/status) but does NOT affect mana costs.
+function applyLevelUpBonusesToTraits(hi: number, family: number, traitsEff: MoveTraits): MoveTraits {
+    if (!traitsEff) return traitsEff;
+
+    const b1 = getHeroLevelUpTraitBonus(hi, family, OUT.TRAIT1) | 0;
+    const b2 = getHeroLevelUpTraitBonus(hi, family, OUT.TRAIT2) | 0;
+    const b3 = getHeroLevelUpTraitBonus(hi, family, OUT.TRAIT3) | 0;
+    const b4 = getHeroLevelUpTraitBonus(hi, family, OUT.TRAIT4) | 0;
+
+    if ((b1 | b2 | b3 | b4) === 0) return traitsEff;
+
+    const out = traitsEff.slice() as MoveTraits;
+    out[OUT.TRAIT1] = (out[OUT.TRAIT1] | 0) + b1;
+    out[OUT.TRAIT2] = (out[OUT.TRAIT2] | 0) + b2;
+    out[OUT.TRAIT3] = (out[OUT.TRAIT3] | 0) + b3;
+    out[OUT.TRAIT4] = (out[OUT.TRAIT4] | 0) + b4;
+    return out;
+}
+
+// Post-calc stat modifier hook for relics.
+// For now: no-op. Later: this is where relics rewrite stats[] (and/or append metadata).
+function applyRelicModsToStats(
+    hi: number,
+    family: number,
+    button: string,
+    traitsEff: MoveTraits,
+    stats: number[]
+): number[] {
+    // Intentionally empty for now.
+    // Example future operations:
+    // - stats[STAT.DAMAGE_MULT] = ...
+    // - stats[STAT.MOVE_DURATION] = ...
+    // - stats[STAT.STATUS_DUR_MS] = ...
+    return stats;
+}
+
 
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 // ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
@@ -5820,6 +5893,19 @@ const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid"
 // Optional: "p1=thrust|p2=|p3=|p4=slash"
 const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
+let shopStatues: Sprite[] = [null, null, null, null]
+
+const SHOP_STATUE_PROFILE_NAME = "StatueHero"
+
+// Left → right order (required)
+const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligence", "support"]
+const SHOP_STATUE_ORDER_FAMILY: number[] = [FAMILY.STRENGTH, FAMILY.AGILITY, FAMILY.INTELLECT, FAMILY.HEAL]
+
+// For now: STR shows slash; the other three are thrust (per your new direction)
+const SHOP_STATUE_DESIRED_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"]
+
+
+
 // --------------------------------------------------------------
 // Per-hero focused offer state (computed each frame)
 // --------------------------------------------------------------
@@ -5838,6 +5924,145 @@ const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
 // How long a focus stays “alive” without a continuous overlap event.
 //const SHOP_FOCUS_KEEPALIVE_MS = 120
+
+
+
+function _shopSplitPipeKeepEmpty(s: string): string[] {
+    if (!s) return []
+    const parts = s.split("|")
+    for (let i = 0; i < parts.length; i++) parts[i] = (parts[i] || "").trim()
+    return parts
+}
+
+function _shopPickRingWeaponForDesiredSlot(ids: string[], slots: string[], desiredSlot: string, used: boolean[]): string {
+    // First pass: exact slot match
+    for (let i = 0; i < ids.length; i++) {
+        if (used[i]) continue
+        const wid = (ids[i] || "").trim()
+        if (!wid) continue
+        const sl = (i < slots.length ? (slots[i] || "") : "").trim()
+        if (sl === desiredSlot) {
+            used[i] = true
+            return wid
+        }
+    }
+
+    // Second pass: if we asked for thrust, accept any non-empty weapon (fallback)
+    if (desiredSlot === "thrust") {
+        for (let i = 0; i < ids.length; i++) {
+            if (used[i]) continue
+            const wid = (ids[i] || "").trim()
+            if (!wid) continue
+            used[i] = true
+            return wid
+        }
+    }
+
+    return ""
+}
+
+function _shopEnsureStatueRow(nowMs: number): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    // Keep exactly 4 slots, stable index = stable statue meaning
+    if (!shopStatues) shopStatues = []
+    while (shopStatues.length < 4) shopStatues.push(null)
+    while (shopStatues.length > 4) shopStatues.pop()
+
+    // Null out dead refs (do NOT removeAt / shift indices)
+    for (let i = 0; i < 4; i++) {
+        const s = shopStatues[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) shopStatues[i] = null
+    }
+
+    // Pull the ring contract as our current “offer source”
+    const idsRaw =
+        sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY) ||
+        SHOP_DEFAULT_RING_WEAPON_IDS ||
+        ""
+    const slotsRaw =
+        sprites.readDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY) ||
+        SHOP_DEFAULT_RING_WEAPON_SLOTS ||
+        ""
+
+    const ids = _shopSplitPipeList(idsRaw)
+    const slots = _shopSplitPipeKeepEmpty(slotsRaw)
+
+    const used: boolean[] = []
+    for (let j = 0; j < ids.length; j++) used.push(false)
+
+    // Position: behind shopkeeper, left→right row
+    const baseX = shopkeeperNpc.x | 0
+    const baseY = (shopkeeperNpc.y - 42) | 0
+    const spacing = 36
+
+    for (let si = 0; si < 4; si++) {
+        let st = shopStatues[si]
+
+        if (!st) {
+            const img = image.create(64, 64) // transparent by default
+            st = sprites.create(img, SpriteKind.ShopNpc)
+            st.setFlag(SpriteFlag.Ghost, true)
+            st.vx = 0
+            st.vy = 0
+
+            _shopRegisterNpc(st)
+            shopStatues[si] = st
+        }
+
+        const familyNum = SHOP_STATUE_ORDER_FAMILY[si] | 0
+        const familyStr = heroFamilyNumberToString(familyNum)
+        const gameplayKind = SHOP_STATUE_ORDER_GAMEPLAY[si]
+        const desiredSlot = SHOP_STATUE_DESIRED_SLOT[si] || "thrust"
+
+        // --- Hero-like render contract (StatueHero sheet) ---
+        sprites.setDataString(st, "heroName", SHOP_STATUE_PROFILE_NAME)
+        sprites.setDataString(st, "heroFamily", familyStr)
+        sprites.setDataString(st, HERO_DATA.NAME, SHOP_STATUE_PROFILE_NAME)
+
+        // Face DOWN always
+        sprites.setDataString(st, "dir", "down")
+        sprites.setDataString(st, HERO_DATA.DIR, "down")
+
+        // IMPORTANT: use combatIdle so your weapon overlay code actually shows a weapon
+        const phase = "combatIdle"
+        sprites.setDataString(st, "phase", phase)
+        sprites.setDataString(st, HERO_DATA.PHASE, phase)
+        sprites.setDataString(st, HERO_DATA.PhaseName, phase)
+        sprites.setDataNumber(st, HERO_DATA.PhaseStartMs, nowMs | 0)
+        sprites.setDataNumber(st, HERO_DATA.PhaseDurationMs, 999999)
+        sprites.setDataNumber(st, HERO_DATA.PhaseProgressInt, 0)
+
+        // Weapon overlay settings
+        sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_X, 10)
+        sprites.setDataNumber(st, HERO_DATA.HERO_WPN_OFF_Y, 6)
+        sprites.setDataNumber(st, HERO_DATA.WEAPON_ALWAYS_SHOW, 1)
+
+        // Choose a weapon from current ring contract (fallback-safe)
+        const picked = _shopPickRingWeaponForDesiredSlot(ids, slots, desiredSlot, used)
+        const weaponId = picked || (ids.length ? (ids[0] || "") : "")
+
+        // Store “offer-like” metadata on the statue (we’ll use this for swap in Step 4)
+        sprites.setDataString(st, SHOP_DATA.LABEL, "Statue " + gameplayKind)
+        sprites.setDataString(st, SH_ITEM_GAMEPLAY_KIND, gameplayKind)
+        sprites.setDataString(st, SH_ITEM_RENDER_SLOT, desiredSlot)
+        sprites.setDataString(st, SH_ITEM_WEAPON_ID, weaponId)
+
+        // Populate hero weapon keys so Phaser overlay can render
+        sprites.setDataString(st, HERO_DATA.WEAPON_COMBO_ID, weaponId)
+        sprites.setDataString(st, HERO_DATA.WEAPON_SLASH_ID, "")
+        sprites.setDataString(st, HERO_DATA.WEAPON_THRUST_ID, "")
+        sprites.setDataString(st, HERO_DATA.WEAPON_CAST_ID, "")
+        if (desiredSlot === "slash") sprites.setDataString(st, HERO_DATA.WEAPON_SLASH_ID, weaponId)
+        else if (desiredSlot === "cast") sprites.setDataString(st, HERO_DATA.WEAPON_CAST_ID, weaponId)
+        else sprites.setDataString(st, HERO_DATA.WEAPON_THRUST_ID, weaponId)
+
+        // Place left→right row
+        const dx = (Math.round((si - 1.5) * spacing) | 0)
+        st.setPosition((baseX + dx) | 0, baseY)
+        st.z = ((shopkeeperNpc.z | 0) - 1) | 0
+    }
+}
 
 
 function _shopFamilyFromGameplayKind(kind: string): number {
@@ -7937,6 +8162,11 @@ function shopInitPOC(): void {
         shopItemPedestal.destroy()
     }
     shopItemPedestal = null
+
+    // ---------------------------------------------------------
+    // 4) NEW: Ensure 4 StatueHero NPCs exist behind the shopkeeper
+    // ---------------------------------------------------------
+    _shopEnsureStatueRow(game.runtime() | 0)
 }
 
 
@@ -11093,7 +11323,7 @@ function _doHeroMovePlayAnimAndDispatch(
 
     // Strength path still wants a duration even if it gets special handling downstream.
     if (family == FAMILY.STRENGTH) {
-        animDuration = strengthChargeMaxMsFromTrait3(t3) | 0
+        animDuration = stats[STAT.MOVE_DURATION] | 0
         if (animDuration <= 0) animDuration = 1
     }
 
@@ -11136,8 +11366,469 @@ function _doHeroMovePlayAnimAndDispatch(
 }
 
 
+function _doHeroMoveDbgEnabledForPlayer(playerId: number): boolean {
+    return !!(DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1)
+}
+
+function _doHeroMoveDbgReset(playerId: number): void {
+    if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+        _dbgMoveCurrentPlayerId = 0
+    }
+}
+
+// ------------------------------------------------------------
+// STEP 6: Phaser runtime spawn-on-demand
+// ------------------------------------------------------------
+function _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId: number): number {
+    let heroIndex = playerToHeroIndex[playerId]
+
+    if ((heroIndex == null || heroIndex < 0 || heroIndex >= heroes.length) && isPhaserRuntime()) {
+        if (playerId >= 1 && playerId <= 4) {
+
+            let W = userconfig.ARCADE_SCREEN_WIDTH
+            let H = userconfig.ARCADE_SCREEN_HEIGHT
+
+            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+                const rows = _engineWorldTileMap.length
+                const cols = _engineWorldTileMap[0].length
+                W = cols * WORLD_TILE_SIZE
+                H = rows * WORLD_TILE_SIZE
+            }
+
+            const centerW = W / 2
+            const centerH = H / 2
+            const offset = 40
+
+            const coords: number[][] = [
+                [centerW + offset, centerH + offset],
+                [centerW - offset, centerH + offset],
+                [centerW + offset, centerH - offset],
+                [centerW - offset, centerH - offset]
+            ]
+
+            const slotIndex = playerId - 1
+            console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId)
+            createHeroForPlayer(playerId, coords[slotIndex][0], coords[slotIndex][1])
+
+            heroIndex = playerToHeroIndex[playerId]
+        }
+    }
+
+    return (heroIndex as any) | 0
+}
+
+function _doHeroMoveTryGetHeroOrLogAndReturnNull(
+    playerId: number,
+    button: string,
+    heroIndex: number
+): Sprite | null {
+
+    if (heroIndex < 0 || heroIndex >= heroes.length) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE badHeroIndex playerId=" + playerId + " heroIndex=" + heroIndex + " button=" + button)
+        }
+        return null
+    }
+
+    const hero = heroes[heroIndex]
+    if (!hero) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE heroNull playerId=" + playerId + " heroIndex=" + heroIndex + " button=" + button)
+        }
+        return null
+    }
+
+    return hero
+}
+
+function _doHeroMoveDbgLogEnter(
+    playerId: number,
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    now: number
+): void {
+    if (!_doHeroMoveDbgEnabledForPlayer(playerId)) return
+
+    _dbgMoveCurrentPlayerId = playerId
+
+    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+    const chain0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0)
+    const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+    const lastPress0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS) | 0)
+    const meterStart0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_METER_START_MS) | 0)
+    const dtBusy0 = busyUntil0 - (now | 0)
+    const dtDash0 = dashUntil0 - (now | 0)
+
+    console.log(
+        DEBUG_FILTER_PHRASE +
+        " ENTER doHeroMove timeMs=" + now +
+        " button=" + button +
+        " heroIndex=" + heroIndex +
+        " busyUntil=" + busyUntil0 +
+        " dtBusy=" + dtBusy0 +
+        " agiState=" + state0 +
+        " agiChain=" + chain0 +
+        " dashUntil=" + dashUntil0 +
+        " dtDash=" + dtDash0 +
+        " lastPressMs=" + lastPress0 +
+        " meterStartMs=" + meterStart0 +
+        " vx=" + hero.vx +
+        " vy=" + hero.vy
+    )
+}
+
+function _doHeroMoveGuardAndLogEarlyReturns(
+    playerId: number,
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    now: number
+): boolean {
+
+    if (_doHeroMoveShouldIgnoreDueToBusy(heroIndex, hero, now)) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            const busyUntil0 = heroBusyUntil[heroIndex] || 0
+            const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+            const dashUntil0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+            console.log(
+                DEBUG_FILTER_PHRASE +
+                " IGNORE busyGate timeMs=" + now +
+                " button=" + button +
+                " heroIndex=" + heroIndex +
+                " busyUntil=" + busyUntil0 +
+                " agiState=" + state0 +
+                " dashUntil=" + dashUntil0
+            )
+            _doHeroMoveDbgReset(playerId)
+        }
+        return true
+    }
+
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE controllingSpell timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return true
+    }
+
+    if (supportPuzzleActive[heroIndex]) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE supportPuzzleActive timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return true
+    }
+
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE strCharging timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return true
+    }
+
+    return false
+}
+
+function _doHeroMoveTryGetParsedHookOutOrNull(
+    playerId: number,
+    heroIndex: number,
+    button: string,
+    now: number
+): {
+    family: number
+    t1: number
+    t2: number
+    t3: number
+    t4: number
+    element: number
+    traits: number[]
+    animKey: string
+} | null {
+
+    const out = _doHeroMoveCallLogicHook(heroIndex, button)
+    if (!out) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE hookNull timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return null
+    }
+
+    if (!_doHeroMoveValidateHookOut(heroIndex, button, out)) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE invalidOut timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return null
+    }
+
+    const parsed = _doHeroMoveParseHookOut(out)
+
+    if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+        console.log(
+            DEBUG_FILTER_PHRASE +
+            " OUT timeMs=" + now +
+            " button=" + button +
+            " family=" + parsed.family +
+            " t1=" + parsed.t1 +
+            " t2=" + parsed.t2 +
+            " t3=" + parsed.t3 +
+            " t4=" + parsed.t4 +
+            " elem=" + (parsed.element | 0) +
+            " animKey=" + parsed.animKey
+        )
+    }
+
+    return parsed
+}
+
+function _doHeroMoveDbgLogAgiState(
+    playerId: number,
+    heroIndex: number,
+    hero: Sprite,
+    now: number,
+    agi: AgilityPressResult
+): void {
+    if (!_doHeroMoveDbgEnabledForPlayer(playerId)) return
+
+    const state1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
+    const chain1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_CHAIN) | 0)
+    const dashUntil1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+
+    console.log(
+        DEBUG_FILTER_PHRASE +
+        " AGI_STATE timeMs=" + now +
+        " stateNow=" + state1 +
+        " chainNow=" + chain1 +
+        " dashUntil=" + dashUntil1 +
+        " zoneMult=" + agi.agiZoneMult +
+        " stateBefore=" + agi.agiStateBefore +
+        " chainAfter=" + agi.agiChainAfter +
+        " armedThisPress=" + (agi.agiIsArmedThisPress ? 1 : 0) +
+        " doExecuteThisPress=" + (agi.agiDoExecuteThisPress ? 1 : 0)
+    )
+}
+
+function _doHeroMoveDbgLogNoManaAndReset(
+    playerId: number,
+    heroIndex: number,
+    button: string,
+    now: number,
+    family: number
+): void {
+    if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+        console.log(DEBUG_FILTER_PHRASE + " IGNORE noMana timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex + " family=" + family)
+        _doHeroMoveDbgReset(playerId)
+    }
+}
+
+function _doHeroMoveDbgLogPathAndReset(playerId: number, msg: string): void {
+    if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+        console.log(msg)
+        _doHeroMoveDbgReset(playerId)
+    }
+}
+
+function _doHeroMoveApplyMovementScheduleAndVelocity(
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    now: number,
+    stats: number[]
+): { ax: number; ay: number; lungeCapped: number; moveDuration: number } {
+
+    const [ax, ay] = _doHeroMoveComputeAimUnit(heroIndex)
+    const lungeCapped = _doHeroMoveComputeLungeSpeedCapped(heroIndex, stats)
+
+    const moveDuration = stats[STAT.MOVE_DURATION] | 0
+
+    if (family === FAMILY.AGILITY) {
+        const [windMs, fwdMs, _landMs] = splitAgiThrustDurations(moveDuration)
+
+        const startMs = (now + windMs) | 0
+        const endMs = (startMs + fwdMs) | 0
+
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeStartMs, startMs)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeEndMs, endMs)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, Math.round(ax * 1000) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, Math.round(ay * 1000) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, lungeCapped | 0)
+
+        hero.vx = 0
+        hero.vy = 0
+    } else {
+        _doHeroMoveApplyDashVelocity(hero, family, ax, ay, lungeCapped)
+    }
+
+    const [_, fwdMs2, __] = (family === FAMILY.AGILITY) ? splitAgiThrustDurations(moveDuration) : [0, moveDuration, 0]
+    const L_exec = Math.idiv(lungeCapped * (fwdMs2 | 0), 1000)
+    sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
+
+    return { ax, ay, lungeCapped, moveDuration }
+}
+
+function _doHeroMoveDbgLogDashPath(
+    playerId: number,
+    heroIndex: number,
+    hero: Sprite,
+    button: string,
+    now: number,
+    family: number,
+    moveDuration: number,
+    lungeCapped: number
+): void {
+    if (!_doHeroMoveDbgEnabledForPlayer(playerId)) return
+
+    const busyUntil1 = heroBusyUntil[heroIndex] || 0
+    const dashUntil1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
+
+    console.log(
+        DEBUG_FILTER_PHRASE +
+        " PATH dash timeMs=" + now +
+        " button=" + button +
+        " heroIndex=" + heroIndex +
+        " family=" + family +
+        " moveDuration=" + moveDuration +
+        " lunge=" + lungeCapped +
+        " busyUntil=" + busyUntil1 +
+        " dashUntil=" + dashUntil1 +
+        " vx=" + hero.vx +
+        " vy=" + hero.vy
+    )
+}
+
 
 function doHeroMoveForPlayer(playerId: number, button: string) {
+
+    const heroIndex = _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId)
+
+    const hero = _doHeroMoveTryGetHeroOrLogAndReturnNull(playerId, button, heroIndex)
+    if (!hero) return
+
+    const now = game.runtime()
+    worldRuntimeMs = now
+
+    _doHeroMoveDbgLogEnter(playerId, heroIndex, hero, button, now)
+
+    if (_doHeroMoveGuardAndLogEarlyReturns(playerId, heroIndex, hero, button, now)) {
+        return
+    }
+
+    const parsed = _doHeroMoveTryGetParsedHookOutOrNull(playerId, heroIndex, button, now)
+    if (!parsed) {
+        return
+    }
+
+    const family = parsed.family
+    const t1 = parsed.t1
+    const t2 = parsed.t2
+    const t3 = parsed.t3
+    const t4 = parsed.t4
+    const element = parsed.element
+    const traits = parsed.traits
+    const animKey = parsed.animKey
+
+    _doHeroMoveApplyBaseHeroMoveData(hero, family, button, t1, t2, t3, t4)
+
+    const agi = _doHeroMoveUpdateAgilityComboState(heroIndex, hero, now, family)
+    _doHeroMoveDbgLogAgiState(playerId, heroIndex, hero, now, agi)
+
+    const traitsEff0 = applyDamageModsToTraits(heroIndex, family, traits)
+    const traitsFinal = applyLevelUpBonusesToTraits(heroIndex, family, traitsEff0)
+
+    const stats0 = calculateMoveStatsForFamily(family, button, traitsFinal)
+    const stats = applyRelicModsToStats(heroIndex, family, button, traitsFinal, stats0)
+
+
+    if (family === FAMILY.STRENGTH) {
+        executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
+
+        _doHeroMoveDbgReset(playerId)
+        return
+    }
+
+    if (!_doHeroMoveTrySpendMana(heroIndex, hero, family, t1, t2, t3, t4)) {
+        _doHeroMoveDbgLogNoManaAndReset(playerId, heroIndex, button, now, family)
+        return
+    }
+
+    if (_doHeroMoveTryAgilityExecuteThisPress(
+        heroIndex,
+        hero,
+        family,
+        button,
+        t1,
+        t2,
+        t3,
+        t4,
+        element | 0,
+        stats,
+        animKey,
+        agi.agiDoExecuteThisPress,
+        now
+    )) {
+        _doHeroMoveDbgLogPathAndReset(
+            playerId,
+            DEBUG_FILTER_PHRASE + " PATH execute timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex
+        )
+        return
+    }
+
+    if (_doHeroMoveTryAgilityBuildAfterLanding(
+        heroIndex,
+        hero,
+        now,
+        family,
+        t1,
+        animKey,
+        agi.agiChainAfter,
+        agi.agiZoneMult,
+        agi.agiIsArmedThisPress
+    )) {
+        _doHeroMoveDbgLogPathAndReset(
+            playerId,
+            DEBUG_FILTER_PHRASE + " PATH build timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex
+        )
+        return
+    }
+
+    _doHeroMoveBeginActionTimeline(heroIndex, hero, family, button, t1, t2, t3, t4, element | 0, now)
+
+    const mv = _doHeroMoveApplyMovementScheduleAndVelocity(heroIndex, hero, family, now, stats)
+    const moveDuration = mv.moveDuration | 0
+
+    _doHeroMoveSetPhaseFromFamily(heroIndex, family)
+    _doHeroMoveApplyControlLockAndBusy(heroIndex, hero, family, now, moveDuration)
+    _doHeroMoveApplyAgilityDashTimers(heroIndex, hero, family, now, moveDuration, stats)
+
+    if (family === FAMILY.AGILITY) {
+        const btnId = encodeIntentToStrBtnId(button) | 0
+        sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_LAST_AGI_BTN, btnId)
+
+        const comboMode0 = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0
+        if (!comboMode0) {
+            const dashUntilNew = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+            if (dashUntilNew > 0) {
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, btnId)
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, dashUntilNew)
+            }
+        }
+    }
+
+    _doHeroMoveDbgLogDashPath(playerId, heroIndex, hero, button, now, family, moveDuration, mv.lungeCapped | 0)
+
+    _doHeroMovePlayAnimAndDispatch(heroIndex, hero, family, button, traitsFinal, stats, animKey, now, t3)
+
+    _doHeroMoveDbgReset(playerId)
+}
+
+
+
+function doHeroMoveForPlayerOLDCODETODELETE(playerId: number, button: string) {
 
     // ------------------------------------------------------------
     // STEP 6: Phaser runtime spawn-on-demand
@@ -11334,7 +12025,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
     if (family === FAMILY.STRENGTH) {
-        executeStrengthMove(heroIndex, hero, button, traits, stats, animKey)
+        executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
 
         if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
             _dbgMoveCurrentPlayerId = 0
@@ -11455,7 +12146,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         )
     }
 
-    _doHeroMovePlayAnimAndDispatch(heroIndex, hero, family, button, traits, stats, animKey, now, t3)
+    _doHeroMovePlayAnimAndDispatch(heroIndex, hero, family, button, traitsFinal, stats, animKey, now, t3)
 
     if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS && playerId === 1) {
         _dbgMoveCurrentPlayerId = 0
@@ -12433,8 +13124,10 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
         let dmg = sprites.readDataNumber(weapon, PROJ_DATA.DAMAGE) | 0
         if (dmg <= 0) return
 
-        applyDamageToEnemyIndex(eIndex, dmg, heroIndex)
-        showDamageNumber(enemy.x, enemy.y - 6, dmg)
+        applyDamageToEnemyIndex(eIndex, dmg, heroIndex, {
+            family: FAMILY.INTELLECT,
+            sourceTag: "INT_PULSE"
+        })
 
         return
     }
@@ -12454,23 +13147,31 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
     const bit = 1 << eIndex; if (hitMask & bit) return
     sprites.setDataNumber(weapon, PROJ_DATA.HIT_MASK, hitMask | bit)
     const now = game.runtime()
-    if (slowPct > 0 && slowDurationMs > 0) { sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, slowPct); sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, now + slowDurationMs) }
-    if (weakenPct > 0 && weakenDurationMs > 0) { sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, weakenPct); sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, now + weakenDurationMs) }
+
     let dmg = sprites.readDataNumber(weapon, PROJ_DATA.DAMAGE) | 0
-    if (dmg > 0) {
-        if (family == FAMILY.AGILITY) {
-            const comboMultPct = getComboDamageMultPct(heroIndex)
-            dmg = Math.idiv(dmg * comboMultPct, 100)
-            updateAgilityComboOnHit(heroIndex, button)
-        }
-        applyDamageToEnemyIndex(eIndex, dmg, heroIndex)
-        showDamageNumber(enemy.x, enemy.y - 6, dmg)
+
+    if (dmg > 0 && family == FAMILY.AGILITY) {
+        const comboMultPct = getComboDamageMultPct(heroIndex)
+        dmg = Math.idiv(dmg * comboMultPct, 100)
+        updateAgilityComboOnHit(heroIndex, button)
     }
+
+    const hit: EnemyHitPacket = {
+        family,
+        button,
+        sourceTag: "WEAPON_OVERLAP",
+        slowPct,
+        slowMs: slowDurationMs,
+        weakenPct,
+        weakenMs: weakenDurationMs,
+        knockbackPct
+    }
+
+    // IMPORTANT: call even if dmg==0, because status/knockback may exist
+    applyDamageToEnemyIndex(eIndex, dmg, heroIndex, hit)
+
     if (isHeal && dmg > 0) applyHealToHeroIndex(heroIndex, dmg)
 
-    if (knockbackPct > 0) {
-        applyPctKnockbackToEnemy(enemy, hero.x, hero.y, knockbackPct)
-    }
 })
 
 // NEW: HeroWeapon ↔ Player (HEAL detonates on allies)
@@ -12576,6 +13277,9 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     const swingMs = sprites.readDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY) | 0
     const arcDeg  = sprites.readDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY) | 0
 
+    // ✅ NEW
+    const reachExtraPx = sprites.readDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY) | 0
+
     // Clear BEFORE spawning (prevents double-spawn if spawn throws/logs)
     sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
@@ -12589,6 +13293,9 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, 0)
 
+    // ✅ NEW
+    sprites.setDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY, 0)
+
     // Spawn (late)
     const isHeal = false
     spawnStrengthSwingProjectile(
@@ -12598,7 +13305,8 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
         weakPct, weakMs,
         kbPct,
         swingMs,
-        arcDeg
+        arcDeg,
+        reachExtraPx
     )
 }
 
@@ -12826,15 +13534,26 @@ function beginStrengthCharge(
     // Action edge only after real commit (base mana paid)
     _doHeroMoveBeginActionTimeline(heroIndex, hero, FAMILY.STRENGTH, button, t1, t2, t3, t4, element | 0, now | 0)
 
-    const maxMs = strengthChargeMaxMsFromTrait3(t3)
+    // ✅ Centralized: charge max ms comes from calculateStrengthStats() via STAT.MOVE_DURATION
+    let maxMs = stats[STAT.MOVE_DURATION] | 0
+    if (maxMs <= 0) maxMs = 1
+
+    // ✅ Centralized: arc max comes from calculateStrengthStats()
+    let arcMaxDeg = stats[STAT.STRENGTH_TOTAL_ARC_DEG] | 0
+    if (arcMaxDeg <= 0) arcMaxDeg = 360
+
     const extraCost = strengthExtraManaForFullCharge(baseCost)
-    const mpdX1000 = (extraCost <= 0) ? 0 : Math.idiv(extraCost * 1000, 360)
+    const mpdX1000 = (extraCost <= 0) ? 0 : Math.idiv(extraCost * 1000, arcMaxDeg)
 
     sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, true)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, btnId)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, now)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, now)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, maxMs)
+
+    // ✅ NEW: store arc max so the charge loop never hardcodes 360
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, arcMaxDeg)
+
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, mpdX1000)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
@@ -12859,6 +13578,7 @@ function beginStrengthCharge(
         "STRENGTH_CHARGE_BEGIN",
         "beginStrengthCharge(stamp)"
     )
+
     // ✅ Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
     let prepMs = STR_PREP_VISIBLE_MS | 0
     if (prepMs < 0) prepMs = 0
@@ -12874,7 +13594,7 @@ function beginStrengthCharge(
             now | 0,
             "STRENGTH_CHARGE_BEGIN",
             "beginStrengthCharge(prep)"
-        )        
+        )
     } else {
         _animKeys_setPhasePart(
             heroIndex,
@@ -12904,6 +13624,11 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     const startMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0
     let lastMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS) | 0
     const maxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0
+
+    // ✅ Centralized (no hardcoded 360)
+    let arcMaxDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0
+    if (arcMaxDeg <= 0) arcMaxDeg = 360
+
     let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
     const mpdX1000 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000) | 0
     let remX1000 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000) | 0
@@ -12933,17 +13658,13 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     sprites.setDataNumber(hero, HERO_DATA.PhaseProgressInt, pInt)
 
     // ----------------------------
-    // ✅ Maintain correct PhasePart (this was the missing piece)
-    // - during prep window => prepareToCharge
-    // - after holdStart     => charging
+    // Maintain correct PhasePart
     // ----------------------------
     const ppNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
 
     _dbgContract_noteWhy(heroIndex, "STRENGTH_CHARGE_TICK", "updateStrengthChargeForHero")
 
-
     if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
-        // In prep
         if (ppNow !== "prepareToCharge") {
             _animKeys_setPhasePart(
                 heroIndex,
@@ -12957,7 +13678,6 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
             )
         }
     } else {
-        // In charging/hold
         if (ppNow !== "charging") {
             _animKeys_setPhasePart(
                 heroIndex,
@@ -12968,12 +13688,12 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
                 nowMs | 0,
                 "STRENGTH_CHARGE_TICK",
                 "updateStrengthChargeForHero(holdPart)"
-            )        
+            )
         }
     }
 
     // ----------------------------
-    // Part-local progress (0..1000) for the current part
+    // Part-local progress (0..1000)
     // ----------------------------
     let partProg = 0
     if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
@@ -12993,19 +13713,19 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     if (dt > 80) dt = 80
 
     // If already full, keep bar full and wait for button release
-    if (arcDeg >= 360) {
-        arcDeg = 360
-        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 360)
+    if (arcDeg >= arcMaxDeg) {
+        arcDeg = arcMaxDeg
+        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcMaxDeg)
         setStrengthChargeBarPct(heroIndex, hero, 100)
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
         return
     }
 
-    // dDeg = 360 * dt / maxMs
-    const dDeg = (dt <= 0) ? 0 : Math.idiv(360 * dt, maxMs)
+    // dDeg = arcMaxDeg * dt / maxMs
+    const dDeg = (dt <= 0) ? 0 : Math.idiv(arcMaxDeg * dt, maxMs)
     if (dDeg <= 0) {
-        const pct = clampInt(Math.idiv(100 * clampInt(elapsed0, 0, maxMs), maxMs), 0, 100)
-        setStrengthChargeBarPct(heroIndex, hero, pct)
+        const pct0 = clampInt(Math.idiv(arcDeg * 100, Math.max(1, arcMaxDeg)), 0, 100)
+        setStrengthChargeBarPct(heroIndex, hero, pct0)
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
         return
     }
@@ -13037,13 +13757,13 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
             else degAff = dDeg
 
             arcDeg += degAff
-            if (arcDeg > 360) arcDeg = 360
+            if (arcDeg > arcMaxDeg) arcDeg = arcMaxDeg
             sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
 
             const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + affordableMana
             sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
 
-            const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
+            const pct = clampInt(Math.idiv(arcDeg * 100, Math.max(1, arcMaxDeg)), 0, 100)
             setStrengthChargeBarPct(heroIndex, hero, pct)
 
             releaseStrengthCharge(heroIndex, hero, nowMs)
@@ -13060,12 +13780,12 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     }
 
     arcDeg += dDeg
-    if (arcDeg > 360) arcDeg = 360
+    if (arcDeg > arcMaxDeg) arcDeg = arcMaxDeg
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, remX1000)
 
-    const pct = clampInt(Math.idiv(arcDeg * 100, 360), 0, 100)
+    const pct = clampInt(Math.idiv(arcDeg * 100, Math.max(1, arcMaxDeg)), 0, 100)
     setStrengthChargeBarPct(heroIndex, hero, pct)
 }
 
@@ -13080,9 +13800,16 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     // Snapshot arc BEFORE clearing charge state
     let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
-    arcDeg = clampInt(arcDeg, 0, 360)
+
+    // ✅ Centralized: arc max comes from charge state (which came from stats)
+    let arcMaxDeg0 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0
+    if (arcMaxDeg0 <= 0) arcMaxDeg0 = 360
+
+    arcDeg = clampInt(arcDeg, 0, arcMaxDeg0)
+
     // Minimal swing even for tiny charge (no free cancel after paying base mana)
-    if (arcDeg < 10) arcDeg = 10
+    const minArcDeg = Math.max(1, Math.idiv(arcMaxDeg0, 36)) | 0 // 360->10
+    if (arcDeg < minArcDeg) arcDeg = minArcDeg
 
     // ------------------------------------------------------------
     // Clear charge state FIRST (so downstream logic doesn't still see "charging")
@@ -13092,6 +13819,10 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
+
+    // ✅ NEW
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, 0)
+
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
@@ -13111,19 +13842,6 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, 0)
 
     // ------------------------------------------------------------
-    // Compute swing duration from charge amount (keep the V9 shaping)
-    // ------------------------------------------------------------
-    const swingDurationMs = clampInt(220 + Math.idiv(arcDeg * 220, 360), 160, 520) | 0
-
-    // ------------------------------------------------------------
-    // Busy lock for the swing window
-    // ------------------------------------------------------------
-    const until = (now + swingDurationMs) | 0
-    heroBusyUntil[heroIndex] = until
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, until)
-    lockHeroControls(heroIndex)
-
-    // ------------------------------------------------------------
     // Use snapshotted payload (immune to mid-hold changes)
     // ------------------------------------------------------------
     const family0 = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0
@@ -13137,8 +13855,34 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     // Recompute stats from the snapshotted traits/button
     const family = (family0 | 0) || FAMILY.STRENGTH
-    const traitsEff = applyDamageModsToTraits(heroIndex, family, traits)
-    const stats = calculateMoveStatsForFamily(family, button, traitsEff)
+
+    const traitsEff0 = applyDamageModsToTraits(heroIndex, family, traits)
+    const traitsFinal = applyLevelUpBonusesToTraits(heroIndex, family, traitsEff0)
+
+    const stats0 = calculateMoveStatsForFamily(family, button, traitsFinal)
+    const stats = applyRelicModsToStats(heroIndex, family, button, traitsFinal, stats0)
+
+    // ------------------------------------------------------------
+    // Compute swing duration from charge amount using stats knobs
+    // (still the same “V9 shaping,” just not hardcoded)
+    // ------------------------------------------------------------
+    const baseSwingMs0 = (stats[STAT.STRENGTH_SWING_MS] | 0) || 220
+    const swingMin0 = Math.max(1, (baseSwingMs0 - 60) | 0)         // 220->160
+    const swingMax0 = ((baseSwingMs0 * 2) + 80) | 0                // 220->520
+    const swingDurationMs =
+        clampInt(
+            baseSwingMs0 + Math.idiv(arcDeg * baseSwingMs0, Math.max(1, arcMaxDeg0)),
+            swingMin0,
+            swingMax0
+        ) | 0
+
+    // ------------------------------------------------------------
+    // Busy lock for the swing window
+    // ------------------------------------------------------------
+    const until = (now + swingDurationMs) | 0
+    heroBusyUntil[heroIndex] = until
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, until)
+    lockHeroControls(heroIndex)
 
     // Damage calc (matches your existing Strength flow)
     const baseDamage = getBasePower(FAMILY.STRENGTH)
@@ -13151,6 +13895,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const weakenPct = stats[STAT.WEAKEN_PCT] | 0
     const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
     const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
+
+    // ✅ Reach snapshot for the swing projectile (no recomputing elsewhere)
+    const reachExtraPx = stats[STAT.STRENGTH_REACH_EXTRA_PX] | 0
 
     // ------------------------------------------------------------
     // NORMALIZED ACTION EDGE
@@ -13176,7 +13923,6 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     // ------------------------------------------------------------
     _dbgContract_noteWhy(heroIndex, "STRENGTH_SWING_BEGIN", "releaseStrengthCharge")
 
-
     _animKeys_stampPhaseWindow(
         heroIndex,
         hero,
@@ -13198,7 +13944,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         "releaseStrengthCharge(swingPart)"
     )
 
-    // initialize segmentation addon channel (you said you like this)
+    // initialize segmentation addon channel
     _strPublishSwingSegForHero(heroIndex, hero, now)
 
     _animInvCheckHeroTimeline(heroIndex, hero, now, "releaseStrengthCharge(begin swing)")
@@ -13209,7 +13955,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
 
     // ------------------------------------------------------------
-    // ✅ NEW: schedule projectile spawn LATER inside the swing window
+    // ✅ schedule projectile spawn LATER inside the swing window
     // ------------------------------------------------------------
     let spawnDelayMs = Math.idiv((swingDurationMs | 0) * STR_SWING_PROJECTILE_SPAWN_FRAC_X1000, 1000) | 0
     if (spawnDelayMs < 0) spawnDelayMs = 0
@@ -13230,6 +13976,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, STR_PEND_SWING_KB_PCT_KEY, knockbackPct | 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, swingDurationMs | 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, arcDeg | 0)
+
+    // ✅ NEW: carry reach snapshot into the late-spawn projectile
+    sprites.setDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY, reachExtraPx | 0)
 
     // ------------------------------------------------------------
     // Clear cached payload after firing (cleanliness / prevents stale reads)
@@ -13260,6 +14009,10 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_BTN, STR_BTN_NONE)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
+
+    // ✅ NEW
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, 0)
+
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
@@ -13307,15 +14060,15 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
 function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     const stats = makeBaseStats(baseTimeMs)
 
-    // New Strength trait mapping:
+    // Strength trait axes (canonical for this refactor):
     // traits[1] = Damage
-    // traits[2] = Reach (handled in spawnStrengthSwingProjectile via HERO_DATA.TRAIT2)
-    // traits[3] = Time (charge-to-full time; handled by the charging system, not stats[])
-    // traits[4] = Status (knockback, and any future STR status knobs)
+    // traits[2] = Reach (RELATIVE px beyond silhouette radius)
+    // traits[3] = Time  (charge-to-full time window)
+    // traits[4] = Status (knockback, and future STR status knobs)
 
     let tDmg = (traits[1] | 0)
-    let tReach = (traits[2] | 0) // not used here; documented for clarity
-    let tTime = (traits[3] | 0)  // not used here; charging system uses this
+    let tReach = (traits[2] | 0)
+    let tTime = (traits[3] | 0)
     let tStatus = (traits[4] | 0)
 
     if (tDmg < 0) tDmg = 0
@@ -13323,36 +14076,48 @@ function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     if (tTime < 0) tTime = 0
     if (tStatus < 0) tStatus = 0
 
-    // ----------------------------------------------------
+    // -----------------------------------
     // DAMAGE (traits[1])
-    // ----------------------------------------------------
-    // Keep your existing feel: starts at 80%, +2% per point
+    // -----------------------------------
     stats[STAT.DAMAGE_MULT] = 80 + tDmg * 2
 
-    // ----------------------------------------------------
-    // TIMING (post-release swing only)
-    // ----------------------------------------------------
-    // Charging time is handled outside stats[] now.
-    // After release, we only lock for the swing animation.
+    // -----------------------------------
+    // TIME (traits[3]) – charge-to-full max ms
+    // ✅ This is the knob that makes the meter easier/harder to fill.
+    // -----------------------------------
+    let chargeMaxMs = strengthChargeMaxMsFromTrait3(tTime) | 0
+    if (chargeMaxMs <= 0) chargeMaxMs = 1
+    stats[STAT.MOVE_DURATION] = chargeMaxMs
+
+    // -----------------------------------
+    // ARC max (centralized; charge clamps to this)
+    // -----------------------------------
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 360
+
+    // -----------------------------------
+    // SWING base (post-release shaping uses this)
+    // -----------------------------------
     const BASE_SWING_MS = 220
     stats[STAT.STRENGTH_SWING_MS] = BASE_SWING_MS
-    stats[STAT.MOVE_DURATION] = BASE_SWING_MS
 
-    // ----------------------------------------------------
-    // LUNGE: tiny crawl forward during the swing
-    // ----------------------------------------------------
+    // -----------------------------------
+    // REACH (traits[2]) – RELATIVE px beyond silhouette radius
+    // -----------------------------------
+    const BASE_EXTRA_REACH_PX = 4
+    const EXTRA_PER_POINT_PX = 1
+    let reachExtraPx = BASE_EXTRA_REACH_PX + tReach * EXTRA_PER_POINT_PX
+    if (reachExtraPx < 1) reachExtraPx = 1
+    stats[STAT.STRENGTH_REACH_EXTRA_PX] = reachExtraPx
+
+    // -----------------------------------
+    // LUNGE: tiny crawl forward during swing
+    // -----------------------------------
     const STRENGTH_CRAWL_SPEED = 5
     stats[STAT.LUNGE_SPEED] = STRENGTH_CRAWL_SPEED
 
-    // ----------------------------------------------------
-    // ARC: no longer trait-driven here (charge drives arc 0..360)
-    // Keep a safe default for any legacy reads.
-    // ----------------------------------------------------
-    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 360
-
-    // ----------------------------------------------------
-    // STATUS (traits[4]) → knockback percentage
-    // ----------------------------------------------------
+    // -----------------------------------
+    // STATUS (traits[4]) → knockback pct
+    // -----------------------------------
     stats[STAT.KNOCKBACK_PCT] = 10 + tStatus * 10
 
     return stats
@@ -13544,7 +14309,8 @@ function spawnStrengthSwingProjectile(
     weakenDurMs: number,
     knockbackPct: number,
     swingDurationMs: number,
-    totalArcDeg: number
+    totalArcDeg: number,
+    reachExtraPx: number
 ) {
 
     const now = game.runtime()
@@ -13558,7 +14324,6 @@ function spawnStrengthSwingProjectile(
     nx /= mag
     ny /= mag
 
-
     // Pull silhouette-derived geometry via hook (Phaser override) or fallback (Arcade scan)
     const vis = getHeroVisualInfoForStrength(hero, nx, ny)
     let inner0 = (vis[0] || 0)
@@ -13571,28 +14336,18 @@ function spawnStrengthSwingProjectile(
     if (leadEdge <= 0) leadEdge = 32
 
     // Where the thrust should START (leading edge, not max-radius circle)
-    // This keeps the “initiates from the front” feel you care about.
     const AURA_THICKNESS = 1
     const SPACING = 1
     let frontStartR = leadEdge + AURA_THICKNESS + SPACING
     if (frontStartR < 0) frontStartR = 0
     if (frontStartR > inner0) frontStartR = inner0
 
+    // ✅ Reach is now a pure input (centralized in calculateStrengthStats -> STAT.STRENGTH_REACH_EXTRA_PX)
+    let reachFromInner = (reachExtraPx | 0)
+    if (reachFromInner < 1) reachFromInner = 1
 
-
-    // ----------------------------------------------------
-    // REACH: baseline just outside aura + trait-driven extra
-    // ----------------------------------------------------
-    let tReach = sprites.readDataNumber(hero, HERO_DATA.TRAIT2) | 0
-    if (tReach < 0) tReach = 0
-
-    const baseExtraReach = 4      // tiny bit beyond aura even at 0 reach
-    const extraPerPoint = 1       // 1px per trait point; tweak to taste
-    const reachFromInner = baseExtraReach + tReach * extraPerPoint
-
-    // Create initial image at progress = 0 (tiny nub / initial thrust)
+    // Create initial image at progress = 0
     const img0 = buildStrengthSmashBitmap(nx, ny, inner0, frontStartR, reachFromInner, totalArcDeg, 0)
-    //const img0 = buildStrengthSmashBitmap(nx, ny, inner0, reachFromInner, totalArcDeg, 0)
 
     const proj = sprites.create(img0, SpriteKind.HeroWeapon)
     proj.z = hero.z + 1
@@ -13609,16 +14364,12 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, "SS_NX", nx)
     sprites.setDataNumber(proj, "SS_NY", ny)
 
-    // Semantics:
-    //  - "SS_ATTACH" stores inner0 (inner radius from hero center)
-    //  - "SS_REACH_FRONT" stores extra reach beyond inner0
     sprites.setDataNumber(proj, "SS_ATTACH", inner0)
     sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner)
 
     sprites.setDataNumber(proj, "SS_FRONT_START", frontStartR)
     sprites.setDataNumber(proj, "SS_WTIP_X", wTipX)
     sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY)
-
 
     proj.lifespan = swingDuration
     heroProjectiles.push(proj)
@@ -14345,15 +15096,16 @@ function updateAgilityExecuteAll(nowMs: number): void {
             syncHeroDirData(heroIndex)
         }
 
-        // Status (Trait4): slow on execute hits
-        if (slowPct > 0 && slowDurMs > 0) {
-            sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, slowPct)
-            sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, now + slowDurMs)
+        const hit: EnemyHitPacket = {
+            family: FAMILY.AGILITY,
+            button: "EXEC",
+            sourceTag: "AGI_EXEC",
+            slowPct,
+            slowMs: slowDurMs
         }
 
-        if (packetDamage > 0) {
-            applyDamageToEnemyIndex(eIndex, packetDamage, heroIndex)
-        }
+        // Call even if packetDamage==0, so slow still applies
+        applyDamageToEnemyIndex(eIndex, packetDamage, heroIndex, hit)
 
         agiSpawnExecuteSlashVfx(hero, enemy.x, enemy.y)
 
@@ -16334,15 +17086,19 @@ function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
         if (!e) continue
 
         if (distSqPointToSprite(termX, termY, e) <= rSq) {
-            if (dmgNow > 0) {
-                applyDamageToEnemyIndex(i, dmgNow, heroIndex)
-                showDamageNumber(e.x, e.y - 6, dmgNow)
+
+            const hit: EnemyHitPacket = {
+                family: FAMILY.INTELLECT,
+                sourceTag: "INT_DETONATE",
+                weakenPct,
+                weakenMs
             }
-            if (weakenPct > 0 && weakenMs > 0) {
-                const now = game.runtime()
-                sprites.setDataNumber(e, ENEMY_DATA.WEAKEN_PCT, weakenPct)
-                sprites.setDataNumber(e, ENEMY_DATA.WEAKEN_UNTIL, now + weakenMs)
+
+            // Call if either damage OR weaken exists
+            if (dmgNow > 0 || (weakenPct > 0 && weakenMs > 0)) {
+                applyDamageToEnemyIndex(i, dmgNow, heroIndex, hit)
             }
+
         }
     }
 
@@ -17669,28 +18425,35 @@ function enemyStatsForMonsterId(monsterId: string) {
             // In Phaser builds with monsterAtlas, we size this to match the LPC frame
             // so HP bars + collisions line up with the pretty art.
             // In plain Arcade (no monsterAtlas), we fall back to archetype art.
-            function enemyPlaceholderImageForMonster(monsterId: string): Image {
-                // 1) Try LPC-aligned size (Phaser)
-                const size = getLpcFrameSizeForMonster(monsterId)
-                if (size) {
-                    const { w, h } = size
-                    const img = image.create(w, h)
+function enemyPlaceholderImageForMonster(monsterId: string): Image {
+    const sizing = _monsterSizingForId(monsterId)
 
-                    // Simple solid color so you can still see something in pure Arcade
-                    // if the Phaser glue ever calls this path.
-                    const baseColor = 6
-                    for (let y = 0; y < h; y++) {
-                        for (let x = 0; x < w; x++) {
-                            img.setPixel(x, y, baseColor)
-                        }
-                    }
-                    return img
-                }
+    // If Phaser is present, we always want collisions driven by collider size.
+    // In pure Arcade, you can still fall back to the old pixel art if you prefer.
+    const g: any = globalThis as any
+    const hasAtlas = !!(g && g.monsterAtlas)
 
-                // 2) Fallback: old behavior (nice archetype-specific pixel art)
-                const kindKey = pickEnemyKindForMonster(monsterId)
-                return enemyImageForKind(kindKey)
+    if (hasAtlas) {
+        const w = sizing.colliderW | 0
+        const h = sizing.colliderH | 0
+        const img = image.create(w, h)
+
+        // Visible debug body (so you can "see" collision size)
+        const fill = 1
+        const border = 2
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const isBorder = (x === 0 || y === 0 || x === (w - 1) || y === (h - 1))
+                img.setPixel(x, y, isBorder ? border : fill)
             }
+        }
+        return img
+    }
+
+    // Arcade fallback: your old archetype-specific art
+    const kindKey = pickEnemyKindForMonster(monsterId)
+    return enemyImageForKind(kindKey)
+}
 
 
 
@@ -18156,15 +18919,24 @@ function applyPctKnockbackToEnemy(
 
 function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boolean): Sprite {
     const stats = enemyStatsForMonsterId(monsterId)
+    const sizing = _monsterSizingForId(monsterId)
 
     const img = enemyPlaceholderImageForMonster(monsterId)
     const enemy = sprites.create(img, SpriteKind.Enemy)
+
     enemy.x = x
     enemy.y = y
 
+    // Sizing metadata for Phaser + debugging
+    sprites.setDataNumber(enemy, ENEMY_DATA.FRAME_W, sizing.frameW | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.FRAME_H, sizing.frameH | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_W, sizing.colliderW | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_H, sizing.colliderH | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, sizing.renderOffsY | 0)
+
     // Remember spawn/home position
-    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, x)
-    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, y)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, enemy.y)
     sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
 
     // Register in enemies[] so AI sees it
@@ -18175,19 +18947,16 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     const maxHPVal = (stats as any).maxHP || 50
     initEnemyHP(eIndex, enemy, maxHPVal)
 
-    // Core combat stats (NOW catalog-driven when present)
+    // Core combat stats (catalog-driven when present)
     sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, (stats as any).speed || 10)
     sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, (stats as any).touchDamage || 5)
     sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, (stats as any).regenPct || 0)
 
-    // Per-enemy attack speed scalar (percent)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, (stats as any).attackRatePct || 100)
 
-    // NEW: per-enemy style knobs (stored even if unused yet)
     sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, (stats as any).advanceRangePx || 0)
     sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, (stats as any).projectileId || "")
 
-    // Remember which logical monster this is (Phaser / LPC will read this)
     sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterId)
 
     // Status + AI state init
@@ -18220,46 +18989,37 @@ let enemySpawners: Sprite[] = []
 function setupEnemySpawners() {
     enemySpawners = []
 
-    // 1) Start from the *visible screen* size (Arcade behavior).
-    //    In MakeCode Arcade this is the real 320x240-ish screen.
-    //    In Phaser, arcadeCompat.ts makes these match the Phaser game size.
     let W = scene.screenWidth()
     let H = scene.screenHeight()
 
-    const tileSize = WORLD_TILE_SIZE
+    const tileSize = WORLD_TILE_SIZE | 0
+    let rows = 0
+    let cols = 0
 
-    // 2) If we have a real world tilemap, override W/H with WORLD size.
-    //    In Arcade, you can keep _engineWorldTileMap empty so this is false.
-    //    In Phaser, initWorldTileMap() fills _engineWorldTileMap → branch is true.
     if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
-        const rows = _engineWorldTileMap.length
-        const cols = _engineWorldTileMap[0].length
-
+        rows = _engineWorldTileMap.length | 0
+        cols = _engineWorldTileMap[0].length | 0
         W = cols * tileSize
         H = rows * tileSize
-
-        console.log(
-            "[setupEnemySpawners] using WORLD size from _engineWorldTileMap:",
-            { rows, cols, tileSize, W, H }
-        )
+        console.log("[setupEnemySpawners] using WORLD size from _engineWorldTileMap:", { rows, cols, tileSize, W, H })
     } else {
-        console.log(
-            "[setupEnemySpawners] using SCREEN size (no world tilemap yet):",
-            { W, H }
-        )
+        console.log("[setupEnemySpawners] using SCREEN size (no world tilemap yet):", { W, H })
     }
 
-    // 3) Place spawners at corners (inset a bit so they aren't on the exact edge)
-    const inset = 20
+    // Place at safe tile centers (avoid boundary walls)
+    const insetTiles = 2
+    const xL = (insetTiles * tileSize + (tileSize >> 1)) | 0
+    const yT = (insetTiles * tileSize + (tileSize >> 1)) | 0
+    const xR = (W - insetTiles * tileSize - (tileSize >> 1)) | 0
+    const yB = (H - insetTiles * tileSize - (tileSize >> 1)) | 0
 
     const coords: number[][] = [
-        [inset, inset],
-        [W - inset, inset],
-        [inset, H - inset],
-        [W - inset, H - inset]
+        [xL, yT],
+        [xR, yT],
+        [xL, yB],
+        [xR, yB]
     ]
 
-    // Big obvious "portal" – same image you already had
     const spawnerImg = img`
         . . . . . 1 1 1 1 . . . . . .
         . . . 1 1 1 1 1 1 1 1 . . . .
@@ -18278,11 +19038,12 @@ function setupEnemySpawners() {
         . . . . . . . . . . . . . . .
         . . . . . . . . . . . . . . .
     `
+
     for (let i = 0; i < coords.length; i++) {
         const s = sprites.create(spawnerImg, SpriteKind.EnemySpawner)
         s.x = coords[i][0]
         s.y = coords[i][1]
-        s.z = 100  // draw above background / tiles / bars
+        s.z = 100
         enemySpawners.push(s)
     }
 }
@@ -18439,6 +19200,43 @@ const _NAV4_DC: number[] = [0, 0, -1, 1]
 const _NAV8_DR: number[] = [-1, 1, 0, 0, -1, -1, 1, 1]
 const _NAV8_DC: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
 
+
+function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: number, c: number): boolean {
+    const tile = WORLD_TILE_SIZE | 0
+    const cx = (c * tile + (tile >> 1)) | 0
+    const cy = (r * tile + (tile >> 1)) | 0
+
+    const halfW = Math.idiv(colliderW | 0, 2) | 0
+    const halfH = Math.idiv(colliderH | 0, 2) | 0
+
+    const left = (cx - halfW) | 0
+    const right = (cx + halfW - 1) | 0
+    const top = (cy - halfH) | 0
+    const bottom = (cy + halfH - 1) | 0
+
+    let c0 = Math.idiv(left, tile) | 0
+    let c1 = Math.idiv(right, tile) | 0
+    let r0 = Math.idiv(top, tile) | 0
+    let r1 = Math.idiv(bottom, tile) | 0
+
+    if (r0 < 0 || c0 < 0 || r1 >= (_enemyNavRows | 0) || c1 >= (_enemyNavCols | 0)) return false
+
+    for (let rr = r0; rr <= r1; rr++) {
+        for (let cc = c0; cc <= c1; cc++) {
+            if (_enemyNavIsBlocked(rr | 0, cc | 0)) return false
+        }
+    }
+    return true
+}
+
+function _enemyGetColliderDims(enemy: Sprite): { w: number, h: number } {
+    const img: any = (enemy as any).image
+    const w = ((img && img.width) ? (img.width | 0) : (sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_W) | 0)) | 0
+    const h = ((img && img.height) ? (img.height | 0) : (sprites.readDataNumber(enemy, ENEMY_DATA.COLLIDER_H) | 0)) | 0
+    return { w: (w > 0 ? w : WORLD_TILE_SIZE) | 0, h: (h > 0 ? h : WORLD_TILE_SIZE) | 0 }
+}
+
+
 function _enemyNavIdx(r: number, c: number): number {
     return ((r * _enemyNavCols) + c) | 0
 }
@@ -18491,7 +19289,6 @@ function _enemyNavRebuildDecorBlocks(rows: number, cols: number): void {
     if (!_enemyNavDecorBlock || _enemyNavDecorBlock.length !== need) return
 
     for (let i = 0; i < need; i++) _enemyNavDecorBlock[i] = 0
-
     if (!_engineDecorSolids || _engineDecorSolids.length === 0) return
 
     const tileSize = WORLD_TILE_SIZE | 0
@@ -18500,15 +19297,32 @@ function _enemyNavRebuildDecorBlocks(rows: number, cols: number): void {
         const s = _engineDecorSolids[i]
         if (!s || (s.flags & sprites.Flag.Destroyed)) continue
 
-        // Prefer tile-aligned collider left/top when available
-        const left = ((s as any).left != null) ? ((s as any).left | 0) : (s.x | 0)
-        const top = ((s as any).top != null) ? ((s as any).top | 0) : (s.y | 0)
+        const img: any = (s as any).image
+        const w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) || tileSize
+        const h = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) || tileSize
 
-        const c = Math.idiv(left, tileSize) | 0
-        const r = Math.idiv(top, tileSize) | 0
+        let left = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+        let top = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (h >> 1))
 
-        if (r < 0 || r >= rows || c < 0 || c >= cols) continue
-        _enemyNavDecorBlock[_enemyNavIdx(r, c)] = 1
+        let right = ((s as any).right != null) ? (((s as any).right | 0)) : ((left + w) | 0)
+        let bottom = ((s as any).bottom != null) ? (((s as any).bottom | 0)) : ((top + h) | 0)
+
+        // Convert to tile rect
+        let c0 = Math.idiv(left, tileSize) | 0
+        let c1 = Math.idiv((right - 1) | 0, tileSize) | 0
+        let r0 = Math.idiv(top, tileSize) | 0
+        let r1 = Math.idiv((bottom - 1) | 0, tileSize) | 0
+
+        if (c0 < 0) c0 = 0
+        if (r0 < 0) r0 = 0
+        if (c1 >= cols) c1 = cols - 1
+        if (r1 >= rows) r1 = rows - 1
+
+        for (let rr = r0; rr <= r1; rr++) {
+            for (let cc = c0; cc <= c1; cc++) {
+                _enemyNavDecorBlock[_enemyNavIdx(rr, cc)] = 1
+            }
+        }
     }
 }
 
@@ -18623,33 +19437,38 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     const tileSize = WORLD_TILE_SIZE | 0
     let r = Math.idiv(enemy.y | 0, tileSize) | 0
     let c = Math.idiv(enemy.x | 0, tileSize) | 0
-
     if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return false
 
-    const idx0 = _enemyNavIdx(r, c)
-    const d0 = _enemyNavDist[idx0] | 0
-    if (d0 >= ENEMY_NAV_INF) return false
-    if (d0 <= 0) return false
+    const dims = _enemyGetColliderDims(enemy)
+    const cw = dims.w | 0
+    const ch = dims.h | 0
 
+    // Pick best neighbor by dist that ALSO fits this enemy's collider footprint.
     let bestR = r
     let bestC = c
-    let bestD = d0
+    let bestD = ENEMY_NAV_INF
 
-    // Choose the neighbor with lowest dist, allowing diagonals but forbidding corner-cuts
     for (let k = 0; k < 8; k++) {
         const nr = (r + _NAV8_DR[k]) | 0
         const nc = (c + _NAV8_DC[k]) | 0
         if (nr < 0 || nr >= _enemyNavRows || nc < 0 || nc >= _enemyNavCols) continue
+
+        // Base blocked check
         if (_enemyNavIsBlocked(nr, nc)) continue
 
+        // Diagonal corner-cut guard
         const dr = _NAV8_DR[k] | 0
         const dc = _NAV8_DC[k] | 0
         if (dr !== 0 && dc !== 0) {
-            // diagonal: both adjacent cardinals must be open
             if (_enemyNavIsBlocked(r, nc) || _enemyNavIsBlocked(nr, c)) continue
         }
 
+        // NEW: footprint occupancy check
+        if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) continue
+
         const nd = _enemyNavDist[_enemyNavIdx(nr, nc)] | 0
+        if (nd >= ENEMY_NAV_INF) continue
+
         if (nd < bestD) {
             bestD = nd
             bestR = nr
@@ -18657,6 +19476,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         }
     }
 
+    if (bestD >= ENEMY_NAV_INF) return false
     if (bestR === r && bestC === c) return false
 
     const tx = (bestC * tileSize + (tileSize >> 1)) | 0
@@ -19278,68 +20098,243 @@ function updateEnemyHPBar(enemyIndex: number) {
 }
 
 
-function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex?: number) {
-    if (eIndex < 0 || eIndex >= enemies.length) return
-    const enemy = enemies[eIndex]; if (!enemy) return
 
-    const dmg = amount | 0
-    if (dmg <= 0) return
+// ================================================================
+// ON-HIT MASTER PIPELINE (centralizes status + knockback + relic hooks)
+// ================================================================
+
+interface EnemyHitPacket {
+    // identity / gating (optional)
+    family?: number;      // FAMILY.*
+    button?: string;      // "A"/"B"/etc (optional)
+    sourceTag?: string;   // debug label
+
+    // status intent (centralized here)
+    slowPct?: number;
+    slowMs?: number;
+
+    weakenPct?: number;
+    weakenMs?: number;
+
+    // physics intent (centralized here)
+    knockbackPct?: number;
+
+    // UI
+    suppressDamageNumber?: boolean;
+}
+
+// Effects queue for “weird” relic actions (teleport, mark, etc.)
+type EnemyHitEffect =
+    | { kind: "teleportEnemyTo"; x: number; y: number }
+    | { kind: "setEnemyDataNumber"; key: any; value: number }
+    | { kind: "setEnemyDataString"; key: any; value: string };
+
+interface EnemyHitContext {
+    now: number;
+
+    eIndex: number;
+    enemy: Sprite;
+
+    sourceHeroIndex: number; // -1 allowed
+    sourceHero: Sprite;      // null allowed
+
+    family: number;          // -1 allowed
+    button: string;
+    sourceTag: string;
+
+    // mutable payload
+    damage: number;
+
+    slowPct: number;
+    slowMs: number;
+
+    weakenPct: number;
+    weakenMs: number;
+
+    knockbackPct: number;
+
+    suppressDamageNumber: boolean;
+
+    // “weird” actions
+    effects: EnemyHitEffect[];
+}
+
+// Supporting relic hook (NO-OP for now).
+// Later: read hero relic inventory and mutate ctx.damage/status/effects.
+function applyRelicOnHitToEnemy(ctx: EnemyHitContext): void {
+    // Intentionally empty for now.
+    // You will implement relic logic here (or dispatch to specialized handlers).
+}
+
+function _enemyHitRunEffects(ctx: EnemyHitContext): void {
+    const enemy = ctx.enemy;
+    if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return;
+
+    const fx = ctx.effects;
+    if (!fx || fx.length <= 0) return;
+
+    for (let i = 0; i < fx.length; i++) {
+        const e = fx[i];
+        if (!e) continue;
+
+        if (e.kind === "teleportEnemyTo") {
+            enemy.x = e.x;
+            enemy.y = e.y;
+        } else if (e.kind === "setEnemyDataNumber") {
+            sprites.setDataNumber(enemy, e.key, e.value | 0);
+        } else if (e.kind === "setEnemyDataString") {
+            sprites.setDataString(enemy, e.key, "" + e.value);
+        }
+    }
+}
+
+function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi: number, now: number): void {
+    if (!enemy) return;
+
+    // Already dying? don't reschedule (and don't double-award)
+    const existing = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0;
+    if (existing > 0) return;
+
+    // ----------------------------
+    // coin reward on kill (UNCHANGED)
+    // ----------------------------
+    let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0;
+    if (maxHp <= 0) maxHp = 1;
+
+    const coins = Math.max(
+        COIN_REWARD_MIN,
+        Math.idiv(maxHp + (COIN_REWARD_HP_DIV - 1), COIN_REWARD_HP_DIV)
+    );
+
+    const coinPopX = enemy.x;
+    const coinPopY = enemy.y - 12;
+
+    addTeamCoins(coins, coinPopX, coinPopY);
+
+    // ----------------------------
+    // XP reward on kill (UNCHANGED)
+    // ----------------------------
+    awardXpForEnemyDeath(enemy, srcHi, coinPopX, coinPopY);
+
+    const deathDurationMs = 900;  // tweak this and LPC death anim will auto-match
+
+    // Tell Phaser: switch to death anim
+    sprites.setDataString(enemy, "phase", "death");
+
+    // Tell Phaser how long the death animation should last
+    sprites.setDataNumber(enemy, "deathAnimMs", deathDurationMs);
+
+    // Clear attack state
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE);
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0);
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0);
+
+    // Freeze motion (NOTE: knockback may reapply after this; matches prior call-site behavior)
+    enemy.vx = 0;
+    enemy.vy = 0;
+
+    // Let updateEnemyHoming own the actual destroy timing
+    sprites.setDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL, (now + deathDurationMs) | 0);
+}
+
+
+function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex?: number, hit?: EnemyHitPacket): void {
+    if (eIndex < 0 || eIndex >= enemies.length) return;
+    const enemy = enemies[eIndex];
+    if (!enemy) return;
+    if (enemy.flags & sprites.Flag.Destroyed) return;
+
+    const now = game.runtime() | 0;
 
     // Track last hitter (backup if someone forgets to pass heroIndex)
-    const srcHi = (sourceHeroIndex == null) ? -1 : (sourceHeroIndex | 0)
-    if (srcHi >= 0) sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, srcHi)
+    const srcHi = (sourceHeroIndex == null) ? -1 : (sourceHeroIndex | 0);
+    const srcHero = (srcHi >= 0 && srcHi < heroes.length) ? heroes[srcHi] : null;
 
-    let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP)
-    hp = Math.max(0, hp - dmg)
+    // Build context (hit packet is optional)
+    const ctx: EnemyHitContext = {
+        now,
 
-    showDamageNumber(enemy.x, enemy.y - 6, dmg, "damage")
-    sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp)
-    updateEnemyHPBar(eIndex)
-    flashEnemyOnDamage(enemy)
+        eIndex,
+        enemy,
 
-    if (hp <= 0) {
-        // Already dying? don't reschedule (and don't double-award)
-        const existing = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
-        if (existing > 0) return
+        sourceHeroIndex: srcHi,
+        sourceHero: srcHero,
 
-        // ----------------------------
-        // coin reward on kill (UNCHANGED)
-        // ----------------------------
-        let maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0
-        if (maxHp <= 0) maxHp = 1
-        const coins = Math.max(COIN_REWARD_MIN, Math.idiv(maxHp + (COIN_REWARD_HP_DIV - 1), COIN_REWARD_HP_DIV))
+        family: (hit && hit.family != null) ? (hit.family | 0) : -1,
+        button: (hit && hit.button != null) ? ("" + hit.button) : "",
+        sourceTag: (hit && hit.sourceTag != null) ? ("" + hit.sourceTag) : "",
 
-        const coinPopX = enemy.x
-        const coinPopY = enemy.y - 12
+        damage: Math.max(0, amount | 0),
 
-        addTeamCoins(coins, coinPopX, coinPopY)
+        slowPct: (hit && hit.slowPct != null) ? (hit.slowPct | 0) : 0,
+        slowMs:  (hit && hit.slowMs  != null) ? (hit.slowMs  | 0) : 0,
 
-        // ----------------------------
-        // NEW: XP reward on kill
-        // XP pop is offset upward so you see BOTH coins and XP
-        // ----------------------------
-        awardXpForEnemyDeath(enemy, srcHi, coinPopX, coinPopY)
+        weakenPct: (hit && hit.weakenPct != null) ? (hit.weakenPct | 0) : 0,
+        weakenMs:  (hit && hit.weakenMs  != null) ? (hit.weakenMs  | 0) : 0,
 
-        const now = game.runtime()
-        const deathDurationMs = 900  // tweak this and LPC death anim will auto-match
+        knockbackPct: (hit && hit.knockbackPct != null) ? (hit.knockbackPct | 0) : 0,
 
-        // Tell Phaser: switch to death anim
-        sprites.setDataString(enemy, "phase", "death")
+        suppressDamageNumber: (hit && hit.suppressDamageNumber) ? true : false,
 
-        // Tell Phaser how long the death animation should last
-        sprites.setDataNumber(enemy, "deathAnimMs", deathDurationMs)
+        effects: []
+    };
 
-        // Clear attack state
-        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
-        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
-        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+    // Record last hitter even for “0 damage but status/knockback” hits
+    if (srcHi >= 0) {
+        sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, srcHi);
+    }
 
-        // Freeze motion
-        enemy.vx = 0
-        enemy.vy = 0
+    // If we truly have nothing to do, bail early
+    const hasAnyWork =
+        (ctx.damage > 0) ||
+        (ctx.slowPct > 0 && ctx.slowMs > 0) ||
+        (ctx.weakenPct > 0 && ctx.weakenMs > 0) ||
+        (ctx.knockbackPct > 0) ||
+        (ctx.effects && ctx.effects.length > 0) ||
+        (!!hit);
 
-        // Let updateEnemyHoming own the actual destroy timing
-        sprites.setDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL, now + deathDurationMs)
+    if (!hasAnyWork) return;
+
+    // 1) Relics (and other “on-hit” rule mutations) run FIRST
+    applyRelicOnHitToEnemy(ctx);
+
+    // 2) Execute any queued “weird effects” (teleport, mark, etc.)
+    _enemyHitRunEffects(ctx);
+
+    // 3) Apply status effects (even if damage is 0)
+    if (ctx.slowPct > 0 && ctx.slowMs > 0) {
+        sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_PCT, ctx.slowPct);
+        sprites.setDataNumber(enemy, ENEMY_DATA.SLOW_UNTIL, (now + ctx.slowMs) | 0);
+    }
+    if (ctx.weakenPct > 0 && ctx.weakenMs > 0) {
+        sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, ctx.weakenPct);
+        sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL, (now + ctx.weakenMs) | 0);
+    }
+
+    // 4) Apply damage (if any)
+    if (ctx.damage > 0) {
+        let hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP) | 0;
+        hp = Math.max(0, (hp - ctx.damage) | 0);
+
+        if (!ctx.suppressDamageNumber) {
+            showDamageNumber(enemy.x, enemy.y - 6, ctx.damage, "damage");
+        }
+
+        sprites.setDataNumber(enemy, ENEMY_DATA.HP, hp);
+        updateEnemyHPBar(eIndex);
+        flashEnemyOnDamage(enemy);
+
+        if (hp <= 0) {
+            handleEnemyKilledAndScheduleDeath(eIndex, enemy, srcHi, now);
+        }
+    }
+
+    // 5) Apply knockback LAST (matches prior call-site ordering; may override death “freeze”)
+    if (ctx.knockbackPct > 0) {
+        // Prefer hero position if we have it; otherwise knockback from enemy center (no-op direction)
+        const hx = (srcHero) ? srcHero.x : enemy.x;
+        const hy = (srcHero) ? srcHero.y : enemy.y;
+        applyPctKnockbackToEnemy(enemy, hx, hy, ctx.knockbackPct);
     }
 }
 
@@ -20452,28 +21447,37 @@ let debugMonsterIndex = 0
 type WaveArchetype = "swarm" | "elites" | "mixed"
 
 interface MonsterDef {
-    id: string                 // MUST match your spawnEnemyOfKind(kind, ...)
-    danger: number             // used by the wave generator (the key idea)
+    id: string
+    danger: number
 
     // Core tuning knobs
     hp: number
-    damage: number             // touch damage for now
+    damage: number
     speed: number
-    xp: number                 // xp reward for this monster (authoritative if present)
+    xp: number
 
-    // NEW: combat style
-    // 0 = melee (default)
-    // >0 = "stand-off" distance for later ranged logic
+    // Combat style
     advanceRangePx: number
-
-    // Optional projectile key (for later ranged attacks)
     projectileId?: string
 
-    // Optional extras (safe to ignore for now)
     tags?: string[]
     attackRatePct?: number
     regenPct?: number
+
+    // ----------------------------------------------------------
+    // SIZING
+    // Frame size is the LPC/PNG frame size (Phaser-side art).
+    // If omitted, we try monsterAtlas (Phaser) and otherwise default 64x64.
+    // ----------------------------------------------------------
+    frameW?: number
+    frameH?: number
+
+    // Collision box size for the Arcade placeholder sprite (drives collisions + nav footprint).
+    // If omitted, derived from frame size using the default rules below.
+    colliderW?: number
+    colliderH?: number
 }
+
 
 interface GenWaveDef {
     archetype: WaveArchetype
@@ -20503,6 +21507,74 @@ const MONSTER_CATALOG: MonsterDef[] = [
 
 // Generated per combat floor
 let _dunWavePlan: GenWaveDef[] = []
+
+
+
+const DEFAULT_MONSTER_FRAME_W = 64
+const DEFAULT_MONSTER_FRAME_H = 64
+
+// Default collider rule: for most frames < 96px, treat as 1-tile footprint (32×32).
+// For big frames (>=96px), default to 2-tile footprint (64×64).
+const MONSTER_COLLIDER_BIG_THRESHOLD_PX = 96
+
+interface MonsterSizing {
+    frameW: number
+    frameH: number
+    colliderW: number
+    colliderH: number
+    renderOffsY: number
+}
+
+function _monsterFrameSizeForId(monsterId: string): { w: number, h: number } {
+    const md = _monsterDefById(monsterId)
+    if (md && (md.frameW || md.frameH)) {
+        const w = (md.frameW || DEFAULT_MONSTER_FRAME_W) | 0
+        const h = (md.frameH || DEFAULT_MONSTER_FRAME_H) | 0
+        return { w, h }
+    }
+
+    const atlasSize = getLpcFrameSizeForMonster(monsterId)
+    if (atlasSize) return { w: atlasSize.w | 0, h: atlasSize.h | 0 }
+
+    return { w: DEFAULT_MONSTER_FRAME_W, h: DEFAULT_MONSTER_FRAME_H }
+}
+
+function _defaultColliderFromFrame(frameW: number, frameH: number): { cw: number, ch: number } {
+    const tile = WORLD_TILE_SIZE | 0
+
+    let cw = tile
+    let ch = tile
+
+    if ((frameW | 0) <= tile) cw = frameW | 0
+    else if ((frameW | 0) >= (MONSTER_COLLIDER_BIG_THRESHOLD_PX | 0)) cw = (tile * 2) | 0
+
+    if ((frameH | 0) <= tile) ch = frameH | 0
+    else if ((frameH | 0) >= (MONSTER_COLLIDER_BIG_THRESHOLD_PX | 0)) ch = (tile * 2) | 0
+
+    if (cw < 1) cw = 1
+    if (ch < 1) ch = 1
+    return { cw, ch }
+}
+
+function _monsterSizingForId(monsterId: string): MonsterSizing {
+    const md = _monsterDefById(monsterId)
+    const fs = _monsterFrameSizeForId(monsterId)
+    const frameW = fs.w | 0
+    const frameH = fs.h | 0
+
+    const defCol = _defaultColliderFromFrame(frameW, frameH)
+    const colliderW = ((md && md.colliderW) ? (md.colliderW | 0) : (defCol.cw | 0)) | 0
+    const colliderH = ((md && md.colliderH) ? (md.colliderH | 0) : (defCol.ch | 0)) | 0
+
+    // Phaser sprite should be shifted UP so the "feet" sit on the collider
+    // (centered collider vs centered art)
+    let renderOffsY = 0
+    if ((frameH | 0) > (colliderH | 0)) {
+        renderOffsY = Math.idiv((frameH - colliderH) | 0, 2) | 0
+    }
+
+    return { frameW, frameH, colliderW, colliderH, renderOffsY }
+}
 
 
 function _monsterDefById(id: string): MonsterDef {
