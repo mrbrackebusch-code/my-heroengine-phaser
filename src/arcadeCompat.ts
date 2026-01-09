@@ -581,6 +581,7 @@ function _decor_decalIdToKey(id: number): string {
 function _decor_propIdToKey(id: number): string {
     switch (id | 0) {
         case 1: return "rock_mountain"; // PROP_ROCK_MOUNTAIN (engine semantic id)
+        case 4: return "pedestal"; // PROP_PEDESTAL (engine semantic id)
         default: return "";
     }
 }
@@ -804,6 +805,23 @@ const HERO_WPN_SLASH_KEY = "wSl";
 const HERO_WPN_THRUST_KEY = "wTh";
 const HERO_WPN_CAST_KEY = "wCa";
 const HERO_WPN_EXEC_KEY = "wEx";
+const HERO_WPN_INT_KEY = "wInt";
+const HERO_WPN_SUP_KEY = "wSup";
+
+// Staff-cast hover tuning (Intellect/Support)
+const STAFF_CAST_DEFAULT_CLIP_LEN = 7;
+const STAFF_CAST_RETURN_FRAMES = 2;
+const STAFF_CAST_X_OFF_PX = 14;
+const STAFF_CAST_BASE_Y_OFF_PX = -4;
+const STAFF_CAST_HOVER_AMP_PX = 2;
+const STAFF_CAST_HOVER_PERIOD_MS = 500;
+const STAFF_CAST_FRAME_COL_BY_ID: Record<string, number> = {
+    gnarled: 0,
+    simple: 0,
+    loop: 0,
+    diamond: 0,
+    s: 0,
+};
 
 // Agility state key + enum values (must match HeroEngineInPhaser.ts)
 const HERO_AGI_STATE_KEY = "aState";
@@ -845,6 +863,16 @@ const AGI_EXEC_STREAMLINE_TWEEN_MS = 120;
 
 // Universal EventMask bits (must match HeroEngineInPhaser.ts)
 const EVENT_MASK_AGI_EXEC_SLASH = 1 << 0
+const EVENT_MASK_SHOP_SWAP = 1 << 1
+
+const SHOP_AURA_GLOW_PERIOD_MS = 1280
+const SHOP_AURA_GLOW_ALPHA_MIN = 0.65
+const SHOP_AURA_GLOW_ALPHA_MAX = 1.0
+
+const SHOP_SWAP_FX_MS = 180
+const SHOP_SWAP_FX_PULSE_MS = 60
+const SHOP_SWAP_FX_ALPHA_MIN = 0.35
+const SHOP_SWAP_FX_ALPHA_MAX = 1.0
 
 // Execute slash visuals (Phaser-only)
 const AGI_EXEC_SLASH_MARK_LEN = 28
@@ -893,6 +921,7 @@ const DEFAULT_WEAPON_VARIANT = "base";
 // NOTE: FAMILY.INTELLECT is 2 in HeroEngineInPhaser.ts; we mirror that here
 // so Phaser can recognize intellect spell projectiles.
 const FAMILY_INTELLECT = 2;
+const FAMILY_HEAL = 3;
 
 // Hero + projectile data keys (must match HeroEngineInPhaser.ts)
 const HERO_INDEX_DATA_KEY = "heroIndex";
@@ -1855,7 +1884,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
 
 // Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = false; //Debug flag
+const DEBUG_WEAPON_SYNC = true; //Debug flag
 
 
 
@@ -6033,6 +6062,16 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     const sc = ctx.sc;
     const s = ctx.s;
     const g = ctx.g;
+    const dataAny: any = (s as any).data || {};
+
+    const readInt = (v: any, def: number): number => {
+        if (typeof v === "number" && Number.isFinite(v)) return v | 0;
+        if (typeof v === "string") {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n)) return n | 0;
+        }
+        return def | 0;
+    };
 
     // OLD behavior: hero detection via isHeroSprite(s)
     const isHero = (() => {
@@ -6046,8 +6085,9 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     // Phaser native hero is anchored bottom-center (originY=1).
     const colliderH = ((s.image?.height ?? 16) | 0);
     const feetOffY = (colliderH >> 1); // half height from center -> bottom
+    const renderOffsY = readInt(dataAny.renderOffsY, 0);
     const nx = s.x;
-    const ny = (s.y + feetOffY - HERO_NATIVE_FEET_LIFT_PX);
+    const ny = (s.y + feetOffY - HERO_NATIVE_FEET_LIFT_PX - renderOffsY);
 
     // Pick a REAL, preloaded hero spritesheet texture key to use for the native sprite.
     // Priority:
@@ -6055,7 +6095,6 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     //   2) Else, use the first parsed hero sheet textureKey (deterministic fallback).
     // If neither exists, we hard-fail because the pipeline invariant was broken (preloadHeroSheets not run).
     const pickBootHeroTexKey = (): string => {
-        const dataAny: any = (s as any).data || {};
         const heroName = (typeof dataAny.heroName === "string") ? dataAny.heroName : "";
         const heroFamily = (typeof dataAny.heroFamily === "string") ? dataAny.heroFamily : "";
 
@@ -6108,6 +6147,7 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
                     "| colliderH", colliderH,
                     "| feetOffY", feetOffY,
                     "| liftPx", HERO_NATIVE_FEET_LIFT_PX,
+                    "| renderOffsY", renderOffsY,
                     "| nativeXY", nx, ny,
                     "| origin", HERO_NATIVE_ORIGIN_X, HERO_NATIVE_ORIGIN_Y
                 );
@@ -7599,6 +7639,41 @@ function _destroyWeaponOverlaysForHeroNative(native: any): void {
     } catch { }
 }
 
+function _purgePhaserWeaponOverlays(reason?: string): number {
+    const sc: any = (globalThis as any).__phaserScene;
+    const list: any[] = (sc && sc.children && Array.isArray(sc.children.list)) ? sc.children.list : [];
+    let killed = 0;
+
+    for (let i = list.length - 1; i >= 0; i--) {
+        const obj: any = list[i];
+        if (!obj || typeof obj.destroy !== "function") continue;
+
+        let isOverlay = false;
+        try {
+            if (obj.getData && (obj.getData("__isWeaponOverlay") || obj.getData(SHOP_RING_TAG_IS))) {
+                isOverlay = true;
+            }
+        } catch { }
+
+        if (!isOverlay && (obj.__isWeaponOverlay || obj.__isShopRingWeapon)) isOverlay = true;
+        if (!isOverlay) continue;
+
+        try { obj.destroy(); killed++; } catch { }
+    }
+
+    try {
+        const g: any = globalThis as any;
+        if (killed && g && g.__weaponDebug) {
+            console.log(`[PHASER][PURGE] overlays=${killed} reason=${reason || ""}`);
+        }
+    } catch { }
+
+    return killed | 0;
+}
+
+try { (globalThis as any).__heDestroyWeaponOverlaysForNative = _destroyWeaponOverlaysForHeroNative; } catch { }
+try { (globalThis as any).__hePurgeWeaponOverlays = _purgePhaserWeaponOverlays; } catch { }
+
 
 
 
@@ -7863,6 +7938,7 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
     weaponId: string;
     isComboRender: boolean;
     aState: number;
+    staffCast: boolean;
 
     // keep these for later code paths/logging if needed
     wSlash: string;
@@ -7880,8 +7956,33 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
     const wCast = (typeof dataAny[HERO_WPN_CAST_KEY] === "string") ? String(dataAny[HERO_WPN_CAST_KEY]) : "";
     const wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
     const wCombo = (typeof dataAny[HERO_WPN_COMBO_KEY] === "string") ? String(dataAny[HERO_WPN_COMBO_KEY]) : "";
+    const wInt = (typeof dataAny[HERO_WPN_INT_KEY] === "string") ? String(dataAny[HERO_WPN_INT_KEY]) : "";
+    const wSup = (typeof dataAny[HERO_WPN_SUP_KEY] === "string") ? String(dataAny[HERO_WPN_SUP_KEY]) : "";
+
+    const heroFamilyRaw = (typeof dataAny.heroFamily === "string") ? dataAny.heroFamily : "";
+    const heroFamily = String(heroFamilyRaw || "").toLowerCase();
+
+    const familyNumRaw = (dataAny.family as any);
+    let familyNum = -999;
+    if (typeof familyNumRaw === "number" && isFinite(familyNumRaw)) {
+        familyNum = familyNumRaw | 0;
+    } else if (typeof familyNumRaw === "string") {
+        const n = parseInt(familyNumRaw, 10);
+        if (isFinite(n)) familyNum = n | 0;
+    }
+
+    const isIntFamily =
+        (familyNum === FAMILY_INTELLECT) ||
+        (heroFamily === "intelligence" || heroFamily === "intellect");
+    const isSupportFamily =
+        (familyNum === FAMILY_HEAL) ||
+        (heroFamily === "support" || heroFamily === "heal");
 
     const phaseRawSnake = _wpnSnake(phaseRaw);
+    const castPhaseByRaw =
+        phaseRawSnake === "cast" ||
+        phaseRawSnake === "spellcast" ||
+        phaseRawSnake === "spell_cast";
     const isComboRender =
         phaseRawSnake === "combo" ||
         phaseRawSnake === "combat_idle" ||
@@ -7891,6 +7992,7 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
 
     let weaponId = "";
     let weaponPhase = isComboRender ? "combo" : displayedPhase;
+    let staffCast = false;
 
     // WeaponId selection follows DISPLAYED (except combo + execute).
     if (isComboRender) {
@@ -7902,6 +8004,10 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
     }
     else {
         const dpSnake = _wpnSnake(displayedPhase);
+        const castPhaseByDisplay =
+            dpSnake === "cast" ||
+            dpSnake === "spellcast" ||
+            dpSnake === "spell_cast";
 
         if (
             dpSnake === "slash" ||
@@ -7914,8 +8020,15 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
             weaponId = wSlash;
         } else if (dpSnake === "thrust" || dpSnake === "attack_thrust") {
             weaponId = wThrust;
-        } else if (dpSnake === "cast" || dpSnake === "spellcast" || dpSnake === "spell_cast") {
-            weaponId = wCast;
+        } else if (castPhaseByDisplay || castPhaseByRaw) {
+            if (isIntFamily || isSupportFamily) {
+                staffCast = true;
+                const staffId = isIntFamily ? wInt : wSup;
+                weaponId = staffId || wCast;
+                weaponPhase = "thrust";
+            } else {
+                weaponId = wCast;
+            }
         } else {
             // IMPORTANT per your requirement:
             // no weapon for run / idle / etc (combat idle handled by combo render token)
@@ -7923,7 +8036,7 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
         }
     }
 
-    return { phaseRaw, displayedPhase, weaponPhase, weaponId, isComboRender, aState, wSlash, wThrust, wCast, wExec, wCombo };
+    return { phaseRaw, displayedPhase, weaponPhase, weaponId, isComboRender, aState, staffCast, wSlash, wThrust, wCast, wExec, wCombo };
 }
 
 function _wpnComputeHeroFrameInfo(sc: any, dataAny: any, nativeHero: Phaser.GameObjects.Sprite): {
@@ -8056,6 +8169,34 @@ function _wpnStep6_7_8_Effects(sc: any, dataAny: any, nativeHero: Phaser.GameObj
 
             _agiSpawnExecuteStreamlineFx(sc, nativeHero, overlays, ex | 0, ey | 0)
             _agiSpawnExecuteSlashMarkFx(sc, nativeHero, overlays, ex | 0, ey | 0)
+        }
+
+        if (((evtMask | 0) & EVENT_MASK_SHOP_SWAP) !== 0) {
+            const nowMs = (sc.time?.now ?? Date.now()) as number
+            anyHero.__shopSwapFxStartMs = nowMs | 0
+            anyHero.__shopSwapFxEndMs = (nowMs + SHOP_SWAP_FX_MS) | 0
+        }
+    }
+
+    const swapEnd = (anyHero.__shopSwapFxEndMs as any | 0)
+    if (swapEnd > 0) {
+        const nowMs = (sc.time?.now ?? Date.now()) as number
+        if (nowMs < swapEnd) {
+            if (!anyHero.__agiSheenOn) {
+                const startMs = (anyHero.__shopSwapFxStartMs as any | 0)
+                const t = (startMs > 0) ? ((nowMs - startMs) / SHOP_SWAP_FX_PULSE_MS) : 0
+                const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 2)
+                const alpha = SHOP_SWAP_FX_ALPHA_MIN + (SHOP_SWAP_FX_ALPHA_MAX - SHOP_SWAP_FX_ALPHA_MIN) * pulse
+                try { overlays.weaponBg.setAlpha(alpha) } catch { }
+                try { overlays.weaponFg.setAlpha(alpha) } catch { }
+            }
+        } else {
+            anyHero.__shopSwapFxStartMs = 0
+            anyHero.__shopSwapFxEndMs = 0
+            if (!anyHero.__agiSheenOn) {
+                try { overlays.weaponBg.setAlpha(1) } catch { }
+                try { overlays.weaponFg.setAlpha(1) } catch { }
+            }
         }
     }
 }
@@ -8200,6 +8341,7 @@ function _syncWeaponOverlaysForHeroNative(
     const weaponPhase = sel.weaponPhase;
     const weaponId = sel.weaponId;
     const aState = sel.aState;
+    const staffCast = sel.staffCast;
 
     // Mirror keys for glue (unchanged)
     _wpnMirrorKeysForGlue(nativeHero, dataAny);
@@ -8221,8 +8363,42 @@ function _syncWeaponOverlaysForHeroNative(
     const heroCol = hfi.heroCol;
     const heroTexKey = hfi.heroTexKey;
 
+    let staffOffsetX = 0;
+    let staffOffsetY = 0;
+    let staffFrameDirOverride: "up" | undefined;
+    let staffFrameColOverride: number | undefined;
+
+    if (staffCast) {
+        staffFrameDirOverride = "up";
+        const staffKey = String(weaponId || "").toLowerCase();
+        staffFrameColOverride = (STAFF_CAST_FRAME_COL_BY_ID[staffKey] ?? 0) | 0;
+
+        const dir = requestedDir;
+        const xSign = (dir === "down" || dir === "right") ? 1 : -1;
+
+        const clipLenRaw = nativeHero.getData("HeroFollowClipLen");
+        const frameRaw = nativeHero.getData("HeroFollowFrameInClip");
+        const clipLen = (typeof clipLenRaw === "number" && clipLenRaw > 0) ? (clipLenRaw | 0) : STAFF_CAST_DEFAULT_CLIP_LEN;
+        const frameInClip = (typeof frameRaw === "number" && frameRaw >= 0) ? (frameRaw | 0) : 0;
+
+        const retreatStart = Math.max(0, (clipLen | 0) - STAFF_CAST_RETURN_FRAMES);
+        let retreatScale = 1;
+        if (frameInClip >= retreatStart) {
+            const denom = Math.max(1, (clipLen | 0) - retreatStart - 1);
+            const t = Math.max(0, Math.min(1, (frameInClip - retreatStart) / denom));
+            retreatScale = 1 - t;
+        }
+
+        const nowMs = (sc?.time?.now ?? Date.now()) as number;
+        const hover = Math.sin((nowMs / STAFF_CAST_HOVER_PERIOD_MS) * Math.PI * 2) * STAFF_CAST_HOVER_AMP_PX;
+
+        staffOffsetX = (STAFF_CAST_X_OFF_PX * xSign) * retreatScale;
+        staffOffsetY = (STAFF_CAST_BASE_Y_OFF_PX + hover) * retreatScale;
+    }
+
     const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
-    const glueFrameColOverride = (nativeFco >= 0) ? nativeFco : undefined;
+    const glueFrameColOverride = staffCast ? staffFrameColOverride : ((nativeFco >= 0) ? nativeFco : undefined);
+    const glueFrameDirOverride = staffCast ? staffFrameDirOverride : undefined;
 
     // Glue sync (unchanged)
     glueAny.syncWeaponLayersToHero({
@@ -8235,11 +8411,15 @@ function _syncWeaponOverlaysForHeroNative(
         dir: requestedDir as any,
         heroFrameIndex,
         variant: DEFAULT_WEAPON_VARIANT,
-        frameColOverride: glueFrameColOverride
+        frameColOverride: glueFrameColOverride,
+        frameDirOverride: glueFrameDirOverride,
+        posOffsetX: staffOffsetX,
+        posOffsetY: staffOffsetY
     });
 
     // Post-glue: compute actual weapon frame cols/names + apply nativeFco if present (unchanged)
-    const wfi = _wpnPostGlueComputeWeaponFrameInfoAndApplyFco(sc, overlays, nativeFco);
+    const nativeFcoForWeapon = staffCast ? -1 : nativeFco;
+    const wfi = _wpnPostGlueComputeWeaponFrameInfoAndApplyFco(sc, overlays, nativeFcoForWeapon);
 
     // Step 6/7/8 ... (UNCHANGED behavior; just moved)
     _wpnStep6_7_8_Effects(sc, dataAny, nativeHero, overlays);
@@ -8312,6 +8492,23 @@ function _applyWorldDepthForNative(s: any, native: any): void {
   } catch {}
 }
 
+function _applyHeroAuraGlow(nativeHero: any, auraActive: boolean, auraGlow: boolean, sc: any): void {
+    if (!nativeHero) return;
+    const auraAny: any = (nativeHero as any).__heroAuraImage;
+    if (!auraAny) return;
+
+    if (!auraActive || !auraGlow) {
+        try { auraAny.setAlpha(1) } catch { }
+        return;
+    }
+
+    const nowMs = (sc?.time?.now ?? Date.now()) as number;
+    const t = (nowMs / SHOP_AURA_GLOW_PERIOD_MS) * Math.PI * 2;
+    const pulse = 0.5 + 0.5 * Math.sin(t);
+    const alpha = SHOP_AURA_GLOW_ALPHA_MIN + (SHOP_AURA_GLOW_ALPHA_MAX - SHOP_AURA_GLOW_ALPHA_MIN) * pulse;
+    try { auraAny.setAlpha(alpha) } catch { }
+}
+
 
 // PURPOSE: Apply hero animation + hero aura glue onto hero native sprites.
 // READS:
@@ -8354,12 +8551,14 @@ function _syncHeroPath(
 
     const auraActive = !!(s.data && (s.data as any)["auraActive"]);
     const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
+    const auraGlow = !!(s.data && (s.data as any)["auraGlow"]);
 
     heroAnimGlue.syncHeroAuraForNative(
         s.native,
         auraActive,
         auraColor
     );
+    _applyHeroAuraGlow(nativeAny, auraActive, auraGlow, ctx.sc);
 
     try {
         const dataAny: any = (s as any).data || {};

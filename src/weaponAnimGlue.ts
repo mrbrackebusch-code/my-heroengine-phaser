@@ -680,6 +680,9 @@ export function syncWeaponLayersToHero(args: {
   heroFrameIndex: number;
   variant?: string; // without leading "v"
   frameColOverride?: number;
+  frameDirOverride?: Dir4;
+  posOffsetX?: number;
+  posOffsetY?: number;
 }): WeaponRenderResolve | null {
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
 
@@ -713,8 +716,11 @@ export function syncWeaponLayersToHero(args: {
   const heroCx = args.heroSprite.x + (0.5 - heroOx) * heroW;
   const heroCy = args.heroSprite.y + (0.5 - heroOy) * heroH;
 
-  const x = heroCx + (wpnOx | 0) + off.x;
-  const y = heroCy + (wpnOy | 0) + off.y;
+  const extraX = (typeof args.posOffsetX === "number") ? args.posOffsetX : 0;
+  const extraY = (typeof args.posOffsetY === "number") ? args.posOffsetY : 0;
+
+  const x = heroCx + (wpnOx | 0) + off.x + extraX;
+  const y = heroCy + (wpnOy | 0) + off.y + extraY;
 
   // For debug reuse across blocks
   let dbgHeroName = "";
@@ -735,7 +741,7 @@ export function syncWeaponLayersToHero(args: {
     const frameIndex = resolveWeaponFrameIndexForLayer({
       scene: args.scene,
       sheet: layerRef,
-      dir: args.dir,
+      dir: args.frameDirOverride ?? args.dir,
       heroSprite: args.heroSprite,
       heroFrameIndex: args.heroFrameIndex,
       frameColOverride: args.frameColOverride

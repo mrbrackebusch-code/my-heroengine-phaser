@@ -147,6 +147,8 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     // ref MUST be bottom-left of the whole visual => row 17, col 19
     stairs_statue: { atlas: "terrain_atlas", ref: { row: 17, col: 19 }, wTiles: 1, hTiles: 3 },
 
+    pedestal: { atlas: "terrain_atlas", ref: { row: 14, col: 19 } },
+
     chest: {
         atlas: "build_atlas",
         ref: { row: 21, col: 15 },
@@ -236,6 +238,7 @@ export const PROP_CATALOG: {
 
     // bottom-left tile in atlas
     { name: "stairs_statue", atlas: "terrain_atlas", atlasRow: 17, atlasCol: 19, wTiles: 1, hTiles: 3 },
+    { name: "pedestal", atlas: "terrain_atlas", atlasRow: 14, atlasCol: 19, wTiles: 1, hTiles: 1 },
 ];
 
 

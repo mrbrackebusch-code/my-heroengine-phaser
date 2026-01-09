@@ -199,6 +199,149 @@
         background: rgba(255, 255, 255, 0.14);
       }
 
+      /* -----------------------------
+        Level Up overlay (DOM)
+        ----------------------------- */
+      #levelup-layer {
+        position: absolute;
+        inset: 0;
+
+        display: none;
+        pointer-events: none;
+        z-index: 11; /* above dialog */
+
+        padding: 12px;
+        box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+      #levelup-layer.he-show {
+        display: flex;
+        pointer-events: auto;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #levelup-box {
+        width: min(720px, 94vw);
+        max-height: min(88vh, 760px);
+        overflow: auto;
+
+        background: rgba(18, 18, 22, 0.96);
+        border: 2px solid #000;
+        border-radius: 14px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.50);
+
+        color: rgba(255, 255, 255, 0.92);
+        padding: 12px;
+      }
+
+      #levelup-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      #levelup-title {
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        font-size: 18px;
+      }
+
+      #levelup-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+        opacity: 0.85;
+        margin-bottom: 10px;
+      }
+
+      .lvlui-chip {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        white-space: nowrap;
+      }
+
+      #levelup-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      @media (max-width: 640px) {
+        #levelup-grid { grid-template-columns: 1fr; }
+      }
+
+      .lvlui-fam {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .lvlui-fam-title {
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+
+      .lvlui-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+      }
+      .lvlui-row:first-of-type { border-top: none; }
+
+      .lvlui-axis { opacity: 0.92; }
+      .lvlui-rank {
+        font-variant-numeric: tabular-nums;
+        opacity: 0.85;
+        min-width: 84px;
+        text-align: right;
+      }
+
+      .lvlui-btn {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.92);
+        cursor: pointer;
+      }
+      .lvlui-btn:hover { background: rgba(255, 255, 255, 0.14); }
+      .lvlui-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      .lvlui-btn.lvlui-sel {
+        outline: 2px solid rgba(255,255,255,0.8);
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.8) inset;
+      }
+
+      #levelup-footer {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #lvlui-msg {
+        font-size: 12px;
+        opacity: 0.85;
+        flex: 1;
+        min-width: 220px;
+        text-align: right;
+      }
+
 
       /* -----------------------------
          HUD (4 boxes)
@@ -659,6 +802,63 @@
           </div>
 
 
+          <!-- Level Up overlay (DOM) -->
+          <div id="levelup-layer" aria-hidden="true">
+            <div id="levelup-box">
+              <div id="levelup-head">
+                <div id="levelup-title">Level Up</div>
+                <button class="lvlui-btn" id="lvlui-close" type="button">Close (B)</button>
+              </div>
+
+              <div id="levelup-meta">
+                <div class="lvlui-chip" id="lvlui-chip-pts">Pts: …</div>
+                <div class="lvlui-chip" id="lvlui-chip-safe">Safe: …</div>
+              </div>
+
+              <div id="levelup-grid">
+                <div class="lvlui-fam">
+                  <div class="lvlui-fam-title">Strength</div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-0-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-1" data-kind="axis" data-family="0" data-trait="1" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-0-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-2" data-kind="axis" data-family="0" data-trait="2" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-0-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-3" data-kind="axis" data-family="0" data-trait="3" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-0-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-4" data-kind="axis" data-family="0" data-trait="4" type="button">Spend</button></div>
+                </div>
+
+                <div class="lvlui-fam">
+                  <div class="lvlui-fam-title">Agility</div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-1-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-1" data-kind="axis" data-family="1" data-trait="1" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-1-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-2" data-kind="axis" data-family="1" data-trait="2" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-1-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-3" data-kind="axis" data-family="1" data-trait="3" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-1-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-4" data-kind="axis" data-family="1" data-trait="4" type="button">Spend</button></div>
+                </div>
+
+                <div class="lvlui-fam">
+                  <div class="lvlui-fam-title">Intelligence</div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-2-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-1" data-kind="axis" data-family="2" data-trait="1" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-2-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-2" data-kind="axis" data-family="2" data-trait="2" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-2-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-3" data-kind="axis" data-family="2" data-trait="3" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-2-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-4" data-kind="axis" data-family="2" data-trait="4" type="button">Spend</button></div>
+                </div>
+
+                <div class="lvlui-fam">
+                  <div class="lvlui-fam-title">Support</div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-3-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-1" data-kind="axis" data-family="3" data-trait="1" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-3-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-2" data-kind="axis" data-family="3" data-trait="2" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-3-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-3" data-kind="axis" data-family="3" data-trait="3" type="button">Spend</button></div>
+                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-3-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-4" data-kind="axis" data-family="3" data-trait="4" type="button">Spend</button></div>
+                </div>
+              </div>
+
+              <div id="levelup-footer">
+                <div>
+                  <button class="lvlui-btn lvlui-opt" id="lvlui-btn-hp" data-kind="hp" type="button">+6 Max HP (Spend 1)</button>
+                  <button class="lvlui-btn lvlui-opt" id="lvlui-btn-mana" data-kind="mana" type="button">+4 Max Mana (Spend 1)</button>
+                </div>
+                <div id="lvlui-msg"></div>
+              </div>
+            </div>
+          </div>
+
           <div id="dialog-layer" aria-hidden="true">
             <div id="dialog-box">
               <div id="dialog-head">
@@ -796,6 +996,11 @@
           xpBonusPts: document.getElementById("xp-bonus-pts"),
           xpBonusTotal: document.getElementById("xp-bonus-total"),
           xpBonusNote: document.getElementById("xp-bonus-note"),
+          lvlLayer: document.getElementById("levelup-layer"),
+          lvlChipPts: document.getElementById("lvlui-chip-pts"),
+          lvlChipSafe: document.getElementById("lvlui-chip-safe"),
+          lvlClose: document.getElementById("lvlui-close"),
+          lvlMsg: document.getElementById("lvlui-msg"),
 
         };
 
@@ -1098,6 +1303,198 @@ function _readTeamCoins(pid, hero, spritesNS) {
         // Start the smooth XP animation loop once
         requestAnimationFrame(_xp_animLoop);
 
+        // ------------------------------------------------------------
+        // Level Up DOM menu (uiMode===1)
+        // Controls while open:
+        //   arrows = move selection
+        //   Enter/Space/Z = spend (A)
+        //   Esc/X = close (B)
+        // ------------------------------------------------------------
+        const _lvlui = {
+          inited: false,
+          selIdx: 0,
+          btns: [],
+        };
+
+        function _lvlui_isDialogOpen() {
+          try {
+            return window.__heDialog && typeof window.__heDialog.isOpen === "function" && window.__heDialog.isOpen();
+          } catch (_e) { return false; }
+        }
+
+        function _lvlui_setShown(show) {
+          if (!R.lvlLayer) return;
+          const want = !!show;
+          const has = R.lvlLayer.classList.contains("he-show");
+          if (want === has) return;
+
+          if (want) {
+            R.lvlLayer.classList.add("he-show");
+            R.lvlLayer.setAttribute("aria-hidden", "false");
+          } else {
+            R.lvlLayer.classList.remove("he-show");
+            R.lvlLayer.setAttribute("aria-hidden", "true");
+            if (R.lvlMsg) setText(R.lvlMsg, "");
+          }
+        }
+
+        function _lvlui_rankStr(rank) {
+          const r = Math.max(0, rank | 0);
+          return `r${r}/4 (+${r})`;
+        }
+
+        function _lvlui_setSel(idx) {
+          const n = _lvlui.btns.length | 0;
+          if (n <= 0) return;
+          let i = idx | 0;
+          while (i < 0) i += n;
+          i = i % n;
+
+          _lvlui.selIdx = i;
+          for (let k = 0; k < n; k++) {
+            const b = _lvlui.btns[k];
+            if (!b) continue;
+            if (k === i) b.classList.add("lvlui-sel");
+            else b.classList.remove("lvlui-sel");
+          }
+        }
+
+        function _lvlui_cmd(pid, payload) {
+          const fn = window.__heUiCommand;
+          if (typeof fn !== "function") return null;
+
+          const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
+          const r = fn(cmd);
+
+          // If engine returns a snapshot, use it immediately (no cache lag)
+          try {
+            if (r && r.snapshot) {
+              _hud_lastSnap = r.snapshot;
+              _hud_lastSnapAt = Date.now() | 0;
+              _lvlui_applySnapshot(r.snapshot);
+            }
+          } catch (_e) {}
+
+          if (R.lvlMsg) {
+            const ok = !!(r && r.ok);
+            const reason = String((r && r.reason) || "");
+            setText(R.lvlMsg, ok ? "OK" : (`Denied: ${reason || "?"}`));
+          }
+          return r;
+        }
+
+        function _lvlui_applySnapshot(snap) {
+          if (!snap || !snap.ready) {
+            _lvlui_setShown(false);
+            return;
+          }
+
+          const open = ((snap.uiMode | 0) === 1);
+          _lvlui_setShown(open);
+          if (!open) return;
+
+          const pts = Math.max(0, (snap.lvlPts | 0));
+          const safe = !!snap.safeForSpend;
+          const safeReason = String(snap.safeReason || "");
+
+          if (R.lvlChipPts) setText(R.lvlChipPts, `Pts: ${pts}`);
+          if (R.lvlChipSafe) setText(R.lvlChipSafe, safe ? "Safe: yes" : `Safe: no (${safeReason || "unsafe"})`);
+
+          const lu = Array.isArray(snap.luBonuses) ? snap.luBonuses : null;
+
+          // Update rank labels + disable logic
+          for (let fam = 0; fam <= 3; fam++) {
+            for (let trait = 1; trait <= 4; trait++) {
+              const rank = (lu && lu[fam]) ? (lu[fam][trait - 1] | 0) : 0;
+
+              const rankEl = document.getElementById(`lvlui-rank-${fam}-${trait}`);
+              if (rankEl) setText(rankEl, _lvlui_rankStr(rank));
+
+              const btn = document.getElementById(`lvlui-btn-${fam}-${trait}`);
+              if (btn) btn.disabled = !(pts > 0 && safe && rank < 4);
+            }
+          }
+
+          const hpBtn = document.getElementById("lvlui-btn-hp");
+          const manaBtn = document.getElementById("lvlui-btn-mana");
+          if (hpBtn) hpBtn.disabled = !(pts > 0 && safe);
+          if (manaBtn) manaBtn.disabled = !(pts > 0 && safe);
+        }
+
+        function _lvlui_initOnce() {
+          if (_lvlui.inited) return;
+          _lvlui.inited = true;
+
+          if (!R.lvlLayer) return;
+
+          _lvlui.btns = Array.from(R.lvlLayer.querySelectorAll(".lvlui-opt"));
+          _lvlui_setSel(0);
+
+          // Click behavior
+          for (const b of _lvlui.btns) {
+            b.addEventListener("click", () => {
+              const pid = getPid();
+              if (!pid) return;
+
+              const kind = String(b.getAttribute("data-kind") || "");
+              if (kind === "axis") {
+                const fam = Number(b.getAttribute("data-family") || "0") | 0;
+                const trait = Number(b.getAttribute("data-trait") || "1") | 0;
+                _lvlui_cmd(pid, { type: "spendAxis", family: fam, traitIndex: trait });
+              } else if (kind === "hp") {
+                _lvlui_cmd(pid, { type: "spendHp" });
+              } else if (kind === "mana") {
+                _lvlui_cmd(pid, { type: "spendMana" });
+              }
+            });
+          }
+
+          if (R.lvlClose) {
+            R.lvlClose.addEventListener("click", () => {
+              const pid = getPid();
+              if (!pid) return;
+              _lvlui_cmd(pid, { type: "closeUI" });
+            });
+          }
+
+          // Key capture while open (don't fight dialog overlay)
+          window.addEventListener("keydown", (e) => {
+            if (!R.lvlLayer || !R.lvlLayer.classList.contains("he-show")) return;
+            if (_lvlui_isDialogOpen()) return;
+
+            const k = e.key;
+
+            // Navigation
+            if (k === "ArrowDown" || k === "ArrowRight") {
+              e.preventDefault(); e.stopPropagation();
+              _lvlui_setSel((_lvlui.selIdx + 1) | 0);
+              return;
+            }
+            if (k === "ArrowUp" || k === "ArrowLeft") {
+              e.preventDefault(); e.stopPropagation();
+              _lvlui_setSel((_lvlui.selIdx - 1) | 0);
+              return;
+            }
+
+            // "A" = spend
+            if (k === "Enter" || k === " " || k === "z" || k === "Z") {
+              e.preventDefault(); e.stopPropagation();
+              const b = _lvlui.btns[_lvlui.selIdx];
+              if (b && !b.disabled) b.click();
+              return;
+            }
+
+            // "B" = close
+            if (k === "Escape" || k === "x" || k === "X") {
+              e.preventDefault(); e.stopPropagation();
+              const pid = getPid();
+              if (!pid) return;
+              _lvlui_cmd(pid, { type: "closeUI" });
+              return;
+            }
+          }, true);
+        }
+
 
         function getPid() {
           const net = window.__net;
@@ -1362,6 +1759,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           // Level-up readiness prompt (engine truth = snapshot)
           let lvlMsg = "Bonuses: (soon)";
           const snap = _getUiSnapshotCached(pid);
+          _lvlui_initOnce();
+          _lvlui_applySnapshot(snap);
 
           if (snap && snap.ready) {
             const pts2 = Math.max(0, (snap.lvlPts | 0));

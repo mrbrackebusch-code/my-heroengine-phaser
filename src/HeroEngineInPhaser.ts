@@ -756,6 +756,7 @@ const PROP_NONE = 0
 const PROP_ROCK_MOUNTAIN = 1
 const PROP_STAIRS_STATUE = 2
 const PROP_CHEST = 3
+const PROP_PEDESTAL = 4
 
 
 // Dungeon visual decals (terrain_atlas)
@@ -1129,6 +1130,7 @@ const HERO_DATA = {
 
     AURA_ACTIVE: "auraActive",
     AURA_COLOR: "auraColor",
+    AURA_GLOW: "auraGlow",
 
     VIS_INNER_R: "visInnerR",
     VIS_LEAD_EDGE: "visLeadEdge",
@@ -1381,6 +1383,7 @@ const AGI_EXEC_STEP_MS_MIN = 150
 
 // EventMask bits (engine -> Phaser)
 const EVENT_MASK_AGI_EXEC_SLASH = 1 << 0
+const EVENT_MASK_SHOP_SWAP = 1 << 1
 
 // ================================================================
 // Agility Execute: teleport positioning + facing knobs
@@ -1565,6 +1568,12 @@ const DEFAULT_WEAPON_CAST_ID = "simple"
 // Optional (future):
 const DEFAULT_WEAPON_VARIANT = "blue" //"base"
 
+// Trait-slot default weapons (shop equip slots)
+const DEFAULT_WEAPON_STRENGTH_ID = "glowsword"
+const DEFAULT_WEAPON_AGILITY_ID = "spear"
+const DEFAULT_WEAPON_INTELLIGENCE_ID = "gnarled"
+const DEFAULT_WEAPON_SUPPORT_ID = "simple"
+
 // --------------------------------------------------------------
 // Hardcoded weapon loadout source (Step 3)
 // (Internal-only object; Step 4 will write primitive strings to sprite.data)
@@ -1697,6 +1706,8 @@ const AURA_COLOR_STRENGTH = 2
 const AURA_COLOR_AGILITY = 5
 const AURA_COLOR_INTELLECT = 8
 const AURA_COLOR_HEAL = 7 // green-ish
+const AURA_COLOR_WHITE = 1
+const AURA_COLOR_GRAY = 11
 
 
 // === UI marker keys (shared) ===
@@ -4028,12 +4039,21 @@ function _dunClearTransientFloorEntities(): void {
     }
     shopkeeperNpc = null
 
+    // 3b) Destroy shop statues and their weapon overlays (Phaser safety)
+    _shopDestroyStatueSprites()
+
     // 4) Destroy any pedestal sprite (if still used anywhere)
     if (shopItemPedestal && !(shopItemPedestal.flags & sprites.Flag.Destroyed)) {
         itemsCleared++
         _dunDestroySprite(shopItemPedestal)
     }
     shopItemPedestal = null
+
+    // 4b) Phaser: purge any lingering weapon overlay sprites
+    try {
+        const g: any = globalThis as any
+        if (g && typeof g.__hePurgeWeaponOverlays === "function") g.__hePurgeWeaponOverlays("shop-exit")
+    } catch { }
 
     // 5) Clear registries (if populated)
     if (SHOP_NPCS && SHOP_NPCS.length) {
@@ -5821,6 +5841,7 @@ const SHOP_STATUE_PLAYER_IDS: number[] = [95, 96, 97, 98]
 
 const SHOPKEEPER_HERO_NAME = "Shopkeeper"
 const SHOP_FOCUS_KEEPALIVE_MS = 120
+const SHOP_FOCUS_EXTRA_BELOW_PX = WORLD_TILE_SIZE
 
 
 const HERO_SHOP_FOCUS_ACTIVE_KEY = "shopFocusActive"
@@ -5905,8 +5926,24 @@ const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid"
 const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
 let shopStatues: Sprite[] = [null, null, null, null]
+let shopPedestalSolids: Sprite[] = [null, null, null, null]
 
 const SHOP_STATUE_PROFILE_NAME = "Statue"
+// Depth bias so statues (1 tile above pedestals) still render above pedestal props.
+// NOTE: must match WORLD_DEPTH_Y_SCALE in arcadeCompat/tileMapGlue (100).
+const SHOP_STATUE_DEPTH_BIAS = (WORLD_TILE_SIZE * 100) + 1
+
+// Trait equip slots (inventory / gameplay slots)
+const SHOP_EQUIP_SLOT_STRENGTH = "strength"
+const SHOP_EQUIP_SLOT_AGILITY = "agility"
+const SHOP_EQUIP_SLOT_INTELLIGENCE = "intelligence"
+const SHOP_EQUIP_SLOT_SUPPORT = "support"
+
+// Hero data keys for trait weapon ids (data-only for now)
+const HERO_DATA_WEAPON_STRENGTH_ID = "wStr"
+const HERO_DATA_WEAPON_AGILITY_ID = "wAgi"
+const HERO_DATA_WEAPON_INTELLIGENCE_ID = "wInt"
+const HERO_DATA_WEAPON_SUPPORT_ID = "wSup"
 
 // Left → right order (required)
 const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligence", "support"]
@@ -5914,7 +5951,12 @@ const SHOP_STATUE_ORDER_FAMILY: number[] = [FAMILY.STRENGTH, FAMILY.AGILITY, FAM
 
 // Equip slot = what the HERO receives on swap
 // Render slot = what the STATUE uses for its visible held weapon (temporary staff hack for Int/Support)
-const SHOP_STATUE_EQUIP_SLOT: string[] = ["slash", "thrust", "cast", "cast"]
+const SHOP_STATUE_EQUIP_SLOT: string[] = [
+    SHOP_EQUIP_SLOT_STRENGTH,
+    SHOP_EQUIP_SLOT_AGILITY,
+    SHOP_EQUIP_SLOT_INTELLIGENCE,
+    SHOP_EQUIP_SLOT_SUPPORT,
+]
 const SHOP_STATUE_RENDER_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"]
 
 
@@ -5943,21 +5985,12 @@ const SHOP_STATUE_RENDER_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"
 
 
 function _shopRingReadIdsSlotsFromShopkeeper(sk: Sprite): any {
-    // Prefer the NEW statue contract keys (do not wake legacy ring rendering)
+    // Statue contract keys are the source of truth (ring system retired)
     const idsRawNew = (sprites.readDataString(sk, SHOP_STATUE_OFFER_IDS_KEY) || "").trim()
     const slotsRawNew = (sprites.readDataString(sk, SHOP_STATUE_OFFER_SLOTS_KEY) || "").trim()
 
-    // Legacy fallback (only used to migrate once)
-    const idsRawLegacy =
-        (sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "").trim() ||
-        (SHOP_DEFAULT_RING_WEAPON_IDS || "").trim()
-
-    const slotsRawLegacy =
-        (sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || "").trim() ||
-        (SHOP_DEFAULT_RING_WEAPON_SLOTS || "").trim()
-
-    const idsRaw = idsRawNew || idsRawLegacy || ""
-    const slotsRaw = slotsRawNew || slotsRawLegacy || ""
+    const idsRaw = idsRawNew || (SHOP_DEFAULT_RING_WEAPON_IDS || "").trim()
+    const slotsRaw = slotsRawNew || (SHOP_DEFAULT_RING_WEAPON_SLOTS || "").trim()
 
     // IMPORTANT: keep empty segments so index 0..3 stays index-locked
     const ids = _shopSplitPipeKeepEmpty(idsRaw)
@@ -5970,16 +6003,9 @@ function _shopRingReadIdsSlotsFromShopkeeper(sk: Sprite): any {
     while (slots.length < want) slots.push("")
     while (slots.length > want) slots.pop()
 
-    // Migrate into NEW keys if missing
+    // Commit to statue keys if missing
     if (!idsRawNew) sprites.setDataString(sk, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
     if (!slotsRawNew) sprites.setDataString(sk, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
-
-    // HARD-KILL legacy ring keys so nothing else spawns ring offers again
-    const legacyIdsNow = (sprites.readDataString(sk, SHOP_WPN_RING_IDS_KEY) || "").trim()
-    if (legacyIdsNow) sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, "")
-
-    const legacySlotsNow = (sprites.readDataString(sk, SHOP_WPN_RING_SLOTS_KEY) || "").trim()
-    if (legacySlotsNow) sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, "")
 
     return { ids, slots }
 }
@@ -6467,17 +6493,17 @@ function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids
 
         ids[si] = weaponId
         slots[si] = rdSlot
-        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, ids.join("|"))
-        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
-        console.log(`[SHOP][STEP3][RING_FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
+        sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
+        sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
+        console.log(`[SHOP][STATUE_CONTRACT][FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
     }
 
     // Force ring slot at this index to match the statue’s render slot (keeps contract coherent)
     const curSlot = (slots[si] || "").toLowerCase()
     if (curSlot !== rdSlot) {
         slots[si] = rdSlot
-        sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
-        console.log(`[SHOP][STEP3][RING_FIXSLOT] idx=${si} ${curSlot} -> ${rdSlot} weapon=${weaponId}`)
+        sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
+        console.log(`[SHOP][STATUE_CONTRACT][FIX_SLOT] idx=${si} ${curSlot} -> ${rdSlot} weapon=${weaponId}`)
     }
 
     return weaponId
@@ -6527,27 +6553,129 @@ function _shopStatueRow_debugStamp(st: Sprite, nowMs: number, si: number, ctx: a
     }
 }
 
+function _shopPedestalEnsureLen4(): void {
+    if (!shopPedestalSolids) shopPedestalSolids = []
+    while (shopPedestalSolids.length < 4) shopPedestalSolids.push(null)
+    while (shopPedestalSolids.length > 4) shopPedestalSolids.pop()
+}
+
+function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number): void {
+    const r = tileR | 0
+    const c = tileC | 0
+    if (r < 0 || c < 0) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize <= 0) return
+
+    _shopPedestalEnsureLen4()
+
+    let s = shopPedestalSolids[si]
+    const dead = (!s || (s.flags & sprites.Flag.Destroyed))
+
+    if (dead) {
+        const img = _createDecorColliderImage(tileSize, tileSize)
+        s = sprites.create(img, (SpriteKind as any).DecorSolid)
+        s.setFlag(SpriteFlag.Invisible, true)
+
+        sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataNumber(s, DECOR_DATA.ID, PROP_PEDESTAL)
+        sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+        sprites.setDataString(s, DECOR_DATA.NAME, "pedestal")
+
+        shopPedestalSolids[si] = s
+        _engineDecorSolids.push(s)
+    } else {
+        let found = false
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            if (_engineDecorSolids[i] === s) { found = true; break }
+        }
+        if (!found) _engineDecorSolids.push(s)
+
+        sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataNumber(s, DECOR_DATA.ID, PROP_PEDESTAL)
+        sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+        sprites.setDataString(s, DECOR_DATA.NAME, "pedestal")
+    }
+
+    const prevR = sprites.readDataNumber(s, "decorTileR") | 0
+    const prevC = sprites.readDataNumber(s, "decorTileC") | 0
+    if (dead || prevR !== r || prevC !== c) {
+        sprites.setDataNumber(s, "decorTileR", r)
+        sprites.setDataNumber(s, "decorTileC", c)
+
+        s.left = (c * tileSize) | 0
+        s.top = (r * tileSize) | 0
+
+        _engineDecorRev = (_engineDecorRev + 1) | 0
+    }
+}
+
 function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
+    let pedR = -1
+    let pedC = -1
+
     if (layout.haveLayout) {
         const rowSlot = 0
         const colSlot = layout.statueCols[si] | 0
 
         const slotBaseR = (layout.baseR + (rowSlot * 2)) | 0
         const slotBaseC = (layout.baseC + (colSlot * 2)) | 0
-
-        const x = _shopSlotCenterX(slotBaseC)
-        const y = _shopSlotCenterY(slotBaseR)
-
-        st.setPosition(x, y)
+        pedR = (slotBaseR + 1) | 0
+        pedC = (slotBaseC + 1) | 0
     } else {
         const baseX = shopkeeperNpc.x | 0
         const baseY = (shopkeeperNpc.y - 42) | 0
         const spacing = 36
         const dx = (Math.round((si - 1.5) * spacing) | 0)
-        st.setPosition((baseX + dx) | 0, baseY)
+        const guessX = (baseX + dx) | 0
+        const guessY = baseY | 0
+
+        pedR = _shopPixToTile(guessY)
+        pedC = _shopPixToTile(guessX)
     }
 
-    st.z = ((shopkeeperNpc.z | 0) - 1) | 0
+    st.z = ((shopkeeperNpc.z | 0) + SHOP_STATUE_DEPTH_BIAS) | 0
+
+    if (pedR >= 0 && pedC >= 0) {
+        // Statues should sit ON the pedestal tile center (not the 2x2 slot center).
+        const pedX = _dunColToX(pedC)
+        const pedY = _dunRowToY(pedR)
+        const stR = Math.max(0, (pedR - 1) | 0)
+        const stY = _dunRowToY(stR)
+        st.setPosition(pedX, stY)
+        _shopUpsertPedestalSolid(si, pedR, pedC)
+
+        const nowMs = game.runtime() | 0
+        const _k = "shPedLogMs"
+        const last = sprites.readDataNumber(st, _k) | 0
+        if ((nowMs - last) >= 750) {
+            sprites.setDataNumber(st, _k, nowMs)
+            const dx = ((st.x | 0) - (pedX | 0)) | 0
+            const dy = ((st.y | 0) - (pedY | 0)) | 0
+            const stHi = _shopStatueRow_findHeroIndexForSprite(st)
+            let heroXY = "?,?"
+            let heroTile = "?,?"
+            let heroOwner = -1
+            let nativeXY = "?,?"
+            const renderOffsY = sprites.readDataNumber(st, HERO_DATA.RENDER_OFFS_Y) | 0
+            if (stHi >= 0 && heroes[stHi]) {
+                const h = heroes[stHi]
+                heroXY = `${h.x | 0},${h.y | 0}`
+                heroOwner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+                const tr = sprites.readDataNumber(h, HERO_DATA.TILE_R) | 0
+                const tc = sprites.readDataNumber(h, HERO_DATA.TILE_C) | 0
+                heroTile = `${tr},${tc}`
+            }
+            const nat: any = (st as any).native
+            if (nat && typeof nat.x === "number" && typeof nat.y === "number") {
+                nativeXY = `${nat.x | 0},${nat.y | 0}`
+            }
+            console.log(
+                `[SHOP][PED] i=${si} stXY=${st.x|0},${st.y|0} pedRC=${pedR},${pedC} pedXY=${pedX|0},${pedY|0} d=${dx},${dy} ` +
+                `heroHi=${stHi} heroXY=${heroXY} heroTile=${heroTile} heroOwner=${heroOwner} nativeXY=${nativeXY} renderOffsY=${renderOffsY}`
+            )
+        }
+    }
 }
 
 
@@ -6700,12 +6828,20 @@ function _shopApplyOfferBonusToHero(hi: number, offer: Sprite, ringIndex: number
     if (t4) heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT4)!, base + ":t4", t4);
 }
 
-function _shopGetEquippedWeaponIdForHeroSlot(hero: Sprite, slot: string): string {
-    const s = (slot || "").toLowerCase();
-    if (s === "thrust") return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || "";
-    if (s === "slash") return sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || "";
-    if (s === "cast") return sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || "";
-    return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || "";
+function _shopGetEquippedWeaponIdForHeroSlot(hero: Sprite, equipSlot: string): string {
+    if (!hero) return ""
+    const slot = (equipSlot || "").toLowerCase()
+
+    // New trait slots
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) return sprites.readDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID) || ""
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) return sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_ID) || ""
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) return sprites.readDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID) || ""
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) return sprites.readDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID) || ""
+
+    // Legacy render/equip slots (keep for old callers)
+    if (slot === "slash") return sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || ""
+    if (slot === "cast") return sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || ""
+    return sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
 }
 
 
@@ -6978,6 +7114,14 @@ function shopUpdateFocus(nowMs: number): void {
         const hero = heroes[hi]
         if (!hero) continue
         if (hero.flags & sprites.Flag.Destroyed) continue
+        const pid = (hi + 1) | 0
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if ((owner | 0) !== (pid | 0)) {
+            shopFocusOfferByHero[hi] = null
+            shopFocusRingIndexByHero[hi] = -1
+            shopFocusUntilMsByHero[hi] = 0
+            continue
+        }
 
         let found: Sprite = null
         let foundRing = -1
@@ -6986,7 +7130,7 @@ function shopUpdateFocus(nowMs: number): void {
         for (let i = 0; i < offers.length; i++) {
             const it = offers[i]
             if (!it) continue
-            if (_shopIsOverlapping(hero, it)) {
+            if (_shopIsHeroTouchingStatueOffer(hero, it)) {
                 found = it
                 foundRing = (sprites.readDataNumber(it, SH_ITEM_RING_INDEX) | 0)
                 break
@@ -7059,6 +7203,8 @@ function shopHandleControls(nowMs: number): void {
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
         const pid = (hi + 1) | 0
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if ((owner | 0) !== (pid | 0)) continue
         const ctrl = shopPollControls(hi)
 
         // Focused offer (statue)
@@ -7189,6 +7335,12 @@ function shopHandleControls(nowMs: number): void {
                 `equip=${equipSlot} render=${renderSlot} take=${takeId} give=${giveId} ` +
                 `price=${price} coinsAfter=${getHeroCoins(hi) | 0}`
             )
+
+            _animEvent_emit(hi, hero, EVENT_MASK_SHOP_SWAP, 0, 0, 0, 0, "SHOP_SWAP", "shopHandleControls")
+            const offerHi = sprites.readDataNumber(offer, HERO_DATA.HERO_INDEX) | 0
+            if (offerHi >= 0) {
+                _animEvent_emit(offerHi, offer, EVENT_MASK_SHOP_SWAP, 0, 0, 0, 0, "SHOP_SWAP", "shopHandleControls")
+            }
 
             _shopEnsureStatueRow(now)
             continue
@@ -7473,35 +7625,63 @@ function _shopGetFocusedOfferForHero(hi: number, nowMs: number): Sprite {
     return null
 }
 
-function _shopEquipWeaponToHeroSlot(hero: Sprite, renderSlot: string, weaponId: string): void {
+function _shopEquipWeaponToHeroSlot(hero: Sprite, equipSlot: string, weaponId: string): void {
     if (!hero) return
-    const slot = (renderSlot || "").toLowerCase()
-
-    if (slot === "slash") {
-        sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, weaponId || "")
-    } else if (slot === "cast") {
-        sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, weaponId || "")
-    } else {
-        // default -> thrust
-        sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, weaponId || "")
-    }
-}
-
-function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, renderSlot: string, weaponId: string): void {
-    if (!hero) return
-    const slot = (renderSlot || "").toLowerCase()
+    const slot = (equipSlot || "").toLowerCase()
     const wid = weaponId || ""
 
+    // New trait slots
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) { sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) { sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) { sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) { sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, wid); return }
+
+    // Legacy render/equip slots (keep for old callers)
+    if (slot === "slash") { sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, wid); return }
+    if (slot === "cast") { sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, wid); return }
+    sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, wid)
+}
+
+function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, weaponId: string): void {
+    if (!hero) return
+    const slot = (equipSlot || "").toLowerCase()
+    const wid = weaponId || ""
+
+    // New trait slots
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) {
+        const cur = sprites.readDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, "")
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) {
+        const cur = sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, "")
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) {
+        const cur = sprites.readDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, "")
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) {
+        const cur = sprites.readDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID) || ""
+        if (cur === wid) sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, "")
+        return
+    }
+
+    // Legacy render/equip slots
     if (slot === "slash") {
         const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_SLASH_ID) || ""
         if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, "")
-    } else if (slot === "cast") {
+        return
+    }
+    if (slot === "cast") {
         const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_CAST_ID) || ""
         if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, "")
-    } else {
-        const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
-        if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, "")
+        return
     }
+    const cur = sprites.readDataString(hero, HERO_DATA.WEAPON_THRUST_ID) || ""
+    if (cur === wid) sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, "")
 }
 
 function _shopSetUiBoughtFlagFromOffer(hi: number, pid: number, offer: Sprite): void {
@@ -7694,22 +7874,6 @@ function _shopDestroyOfferItems(): void {
 function _shopPublishWeaponRingContractOnShopkeeper(sk: Sprite): void {
     if (!sk) return
 
-    // Keep geometry/config keys if anything still reads them (harmless)
-    sprites.setDataNumber(sk, SHOP_WPN_RING_RADIUS_KEY, SHOP_DEFAULT_RING_RADIUS)
-    sprites.setDataNumber(sk, SHOP_WPN_RING_START_ANGLE_KEY, SHOP_DEFAULT_RING_START_ANGLE)
-    sprites.setDataString(sk, SHOP_WPN_RING_DIR_KEY, SHOP_DEFAULT_RING_DIR)
-    sprites.setDataString(sk, SHOP_WPN_RING_DIR_MAP_KEY, SHOP_DEFAULT_RING_DIR_MAP)
-
-    // Touch/highlight state: only seed if missing so we don't clobber focus every call
-    const touchByHeroExisting = sprites.readDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY)
-    if (!touchByHeroExisting || touchByHeroExisting.length <= 0) {
-        sprites.setDataString(sk, SHOP_WPN_TOUCH_BY_HERO_KEY, "-1|-1|-1|-1")
-    }
-    const hiByHeroExisting = sprites.readDataString(sk, SHOP_WPN_HILITE_BY_HERO_KEY)
-    if (!hiByHeroExisting || hiByHeroExisting.length <= 0) {
-        sprites.setDataString(sk, SHOP_WPN_HILITE_BY_HERO_KEY, "-1|-1|-1|-1")
-    }
-
     // ---------------------------------------------------------
     // NEW: seed/sanitize statue-offer contract (index-locked 0..3)
     // ---------------------------------------------------------
@@ -7749,10 +7913,6 @@ function _shopPublishWeaponRingContractOnShopkeeper(sk: Sprite): void {
             console.log(`[SHOP][STATUE_CONTRACT][SEED/SAN] ids=${ids.join("|")} slots=${slots.join("|")}`)
         }
     }
-
-    // FINAL: hard-clear legacy ring keys every time
-    sprites.setDataString(sk, SHOP_WPN_RING_IDS_KEY, "")
-    sprites.setDataString(sk, SHOP_WPN_RING_SLOTS_KEY, "")
 }
 
 try { (globalThis as any)._shopPublishWeaponRingContractOnShopkeeper = _shopPublishWeaponRingContractOnShopkeeper } catch {}
@@ -7945,6 +8105,111 @@ function _shopIsOverlapping(a: Sprite, b: Sprite): boolean {
     return (ax0 < bx1) && (ax1 > bx0) && (ay0 < by1) && (ay1 > by0)
 }
 
+function _shopIsStatueHero(s: Sprite): boolean {
+    if (!s) return false
+    const name = (sprites.readDataString(s, HERO_DATA.NAME) || "")
+    if (name === SHOP_STATUE_PROFILE_NAME) return true
+    const owner = sprites.readDataNumber(s, HERO_DATA.OWNER) | 0
+    for (let i = 0; i < SHOP_STATUE_PLAYER_IDS.length; i++) {
+        if ((SHOP_STATUE_PLAYER_IDS[i] | 0) === (owner | 0)) return true
+    }
+    return false
+}
+
+function _shopClearWeaponDataForStatue(st: Sprite): void {
+    if (!st) return
+    try { sprites.setDataNumber(st, HERO_DATA.WEAPON_ALWAYS_SHOW, 0) } catch { }
+    try { _shopEquipWeaponToHeroSlot(st, "slash", "") } catch { }
+    try { _shopEquipWeaponToHeroSlot(st, "thrust", "") } catch { }
+    try { _shopEquipWeaponToHeroSlot(st, "cast", "") } catch { }
+    try { sprites.setDataString(st, HERO_DATA.PHASE, "idle") } catch { }
+    try { sprites.setDataString(st, "phase", "idle") } catch { }
+    try { sprites.setDataString(st, HERO_DATA.PhaseName, "idle") } catch { }
+}
+
+function _shopDestroyStatueSprites(): void {
+    const g: any = globalThis as any
+    const destroyOverlays = g ? g.__heDestroyWeaponOverlaysForNative : null
+
+    const destroyOne = (st: Sprite): void => {
+        if (!st || (st.flags & sprites.Flag.Destroyed)) return
+        _shopClearWeaponDataForStatue(st)
+        try {
+            const nat: any = (st as any).native
+            if (destroyOverlays && nat) destroyOverlays(nat)
+        } catch { }
+        _dunDestroySprite(st)
+    }
+
+    if (shopStatues && shopStatues.length) {
+        for (let i = 0; i < shopStatues.length; i++) {
+            const st = shopStatues[i]
+            destroyOne(st)
+            shopStatues[i] = null
+        }
+    }
+
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        if (!_shopIsStatueHero(h)) continue
+        destroyOne(h)
+    }
+}
+
+function _shopIsStatueFocused(st: Sprite, nowMs: number): boolean {
+    if (!st) return false
+    const now = nowMs | 0
+    for (let hi = 0; hi < 4; hi++) {
+        if (shopFocusOfferByHero[hi] !== st) continue
+        const until = shopFocusUntilMsByHero[hi] | 0
+        if (until > 0 && now <= until) return true
+    }
+    return false
+}
+
+function _shopIsHeroTouchingStatueOffer(hero: Sprite, offer: Sprite): boolean {
+    if (!hero || !offer) return false
+    if (_shopIsOverlapping(hero, offer)) return true
+
+    const extraY = SHOP_FOCUS_EXTRA_BELOW_PX | 0
+    if (extraY > 0) {
+        const ax0 = (hero.x - (hero.width >> 1)) | 0
+        const ay0 = (hero.y - (hero.height >> 1)) | 0
+        const ax1 = (hero.x + (hero.width >> 1)) | 0
+        const ay1 = (hero.y + (hero.height >> 1)) | 0
+
+        const bx0 = (offer.x - (offer.width >> 1)) | 0
+        const by0 = (offer.y - (offer.height >> 1)) | 0
+        const bx1 = (offer.x + (offer.width >> 1)) | 0
+        const by1 = ((offer.y + (offer.height >> 1)) | 0) + extraY
+
+        if ((ax0 < bx1) && (ax1 > bx0) && (ay0 < by1) && (ay1 > by0)) return true
+    }
+
+    const heroR = _shopPixToTile(hero.y)
+    const heroC = _shopPixToTile(hero.x)
+    const stR = _shopPixToTile(offer.y)
+    const stC = _shopPixToTile(offer.x)
+
+    if (heroR === stR && heroC === stC) return true
+
+    const si = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
+    let pedR = (stR + 1) | 0
+    let pedC = stC | 0
+
+    if (si >= 0 && shopPedestalSolids && si < shopPedestalSolids.length) {
+        const ped = shopPedestalSolids[si]
+        if (ped && !(ped.flags & sprites.Flag.Destroyed)) {
+            const pr = sprites.readDataNumber(ped, "decorTileR") | 0
+            const pc = sprites.readDataNumber(ped, "decorTileC") | 0
+            if (pr >= 0 && pc >= 0) { pedR = pr; pedC = pc }
+        }
+    }
+
+    return (heroR === pedR && heroC === pedC)
+}
+
 
 function _shopIsOverlappingOLD(a: Sprite, b: Sprite): boolean {
     // simple AABB overlap (works in both Arcade and Phaser)
@@ -7976,18 +8241,6 @@ function _shopFindTargetForHero(hero: Sprite): Sprite {
 
     return null
 }
-
-function _shopSetHighlight(target: Sprite, on: boolean): void {
-    if (!target) return
-    // Simple “touch does something”: toggle a visible outline color
-    // (works for placeholder box sprites)
-    if (on) target.image.drawRect(0, 0, target.image.width, target.image.height, 2)
-    else {
-        // re-draw border in normal color (1) without clearing the whole sprite
-        target.image.drawRect(0, 0, target.image.width, target.image.height, 1)
-    }
-}
-
 
 function setTeamCoins(newVal: number): void {
     // Legacy global retained for now, but NO canvas HUD.
@@ -8065,6 +8318,8 @@ const SHOP_WPN_RING_RADIUS_PX_KEY = "shopWpnRingRadiusPx" // number (pixels)
 const SHOP_WPN_RING_ANGLE_DEG_KEY = "shopWpnRingAngleDeg" // number (degrees)
 const SHOP_WPN_DEFAULT_DIR_KEY = "shopWpnDefaultDir"      // string: "R","L","U","D"
 const SHOP_WPN_DIR_MAP_KEY = "shopWpnDirMap"              // string map: "idA:R,idB:U"
+// Legacy alias to stop old callers from exploding
+const SHOP_WPN_RING_RADIUS_KEY = SHOP_WPN_RING_RADIUS_PX_KEY
 
 
 // ------------------------------------------------------------
@@ -8086,7 +8341,7 @@ const SH_ITEM_RING_INDEX = "shRingIndex"           // number
 const SH_ITEM_WEAPON_ID = "shWeaponId"             // string (atlas model id)
 const SH_ITEM_LABEL = "shLabel"                    // string
 const SH_ITEM_RENDER_SLOT = "shRenderSlot"         // string: "thrust"|"slash"|"cast"
-const SH_ITEM_EQUIP_SLOT = "shEquipSlot"           // string: "thrust"|"slash"|"cast" (slot to equip on hero)
+const SH_ITEM_EQUIP_SLOT = "shEquipSlot"           // string: "strength"|"agility"|"intelligence"|"support"
 const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"strength"|"agility"|"support"
 const SH_ITEM_PRICE = "shPrice"                    // number
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
@@ -8189,14 +8444,37 @@ function _shopNormWeaponId(wid: string): string {
     return (wid == null) ? "" : String(wid).trim().toLowerCase()
 }
 
-function _shopIsWeaponAllowedForStatueIndex(si: number, weaponId: string): boolean {
+function _shopWeaponModelIdFromAny(weaponId: string): string {
     const wid = _shopNormWeaponId(weaponId)
-    if (!wid) return false
-    if (wid.indexOf("_off") >= 0) return false
+    if (!wid) return ""
+    if (wid.indexOf("_off") >= 0) return ""
+
+    // Examples handled:
+    // "glowsword blue" -> "glowsword"
+    // "spear normal"   -> "spear"
+    // "spear_normal"   -> "spear"
+    // "gnarled"        -> "gnarled"
+    let s = wid.replace(/[_\-]+/g, " ").trim()
+    if (!s) return ""
+
+    const parts = s.split(/\s+/g)
+    let model = (parts && parts.length > 0) ? (parts[0] || "") : ""
+    model = model.replace(/[^a-z0-9]/g, "")
+    return model
+}
+
+function _shopIsWeaponAllowedForStatueIndex(si: number, weaponId: string): boolean {
+    const widFull = _shopNormWeaponId(weaponId)
+    if (!widFull) return false
+    if (widFull.indexOf("_off") >= 0) return false
+
+    const model = _shopWeaponModelIdFromAny(widFull)
+    if (!model) return false
 
     const list = _shopAllowedWeaponListForStatueIndex(si)
     for (let i = 0; i < list.length; i++) {
-        if (list[i] === wid) return true
+        const allowModel = _shopNormWeaponId(list[i] || "")
+        if (allowModel === model) return true
     }
     return false
 }
@@ -8242,6 +8520,8 @@ const SHOP_OFFER_LINE_Y_OFFSET_PX = 28
 
 const SHOP_DEFAULT_RING_RADIUS_PX = 100 //22 
 const SHOP_DEFAULT_RING_ANGLE_DEG = 0
+// Back-compat alias (older code references this name)
+const SHOP_DEFAULT_RING_RADIUS = SHOP_DEFAULT_RING_RADIUS_PX
 
 
 
@@ -8733,6 +9013,10 @@ function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
 
     _shopInit_unarmShopkeeper(shopkeeperNpc)
 
+    // Retired: ensure legacy ring system stays empty on the shopkeeper
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, "")
+    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, "")
+
     // Keep legacy fields too (Phaser glue often reads these)
     sprites.setDataString(shopkeeperNpc, "heroName", SHOPKEEPER_HERO_NAME)
     sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.SUPPORT))
@@ -8823,8 +9107,8 @@ function _shopInit_rollStatueWeaponsOncePerFloor(floor: number): boolean {
         slots[si] = rdSlot
     }
 
-    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_IDS_KEY, ids.join("|"))
-    sprites.setDataString(shopkeeperNpc, SHOP_WPN_RING_SLOTS_KEY, slots.join("|"))
+    sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_IDS_KEY, ids.join("|"))
+    sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
     sprites.setDataNumber(shopkeeperNpc, "shShopOffersRolledFloor", floor | 0)
 
     console.log(`[SHOP][INIT][ROLL] floor=${floor | 0} ids=${ids.join("|")} slots=${slots.join("|")}`)
@@ -8856,7 +9140,12 @@ function _shopInit_sanitizeHeroesOnEntry(): void {
             slotToSi[eqSlot] = si
         }
 
-        const slotsToCheck = ["thrust", "slash", "cast"]
+        const slotsToCheck = [
+            SHOP_EQUIP_SLOT_STRENGTH,
+            SHOP_EQUIP_SLOT_AGILITY,
+            SHOP_EQUIP_SLOT_INTELLIGENCE,
+            SHOP_EQUIP_SLOT_SUPPORT,
+        ]
         for (let k = 0; k < slotsToCheck.length; k++) {
             const eqSlot = slotsToCheck[k]
             const si = (slotToSi[eqSlot] != null) ? (slotToSi[eqSlot] | 0) : -1
@@ -8872,8 +9161,10 @@ function _shopInit_sanitizeHeroesOnEntry(): void {
                 if (_shopIsWeaponAllowedForStatueIndex(si, c)) { fix = c; break }
             }
             if (!fix) {
-                if (eqSlot === "slash") fix = DEFAULT_WEAPON_SLASH_ID
-                else if (eqSlot === "cast") fix = DEFAULT_WEAPON_CAST_ID
+                if (eqSlot === SHOP_EQUIP_SLOT_STRENGTH) fix = DEFAULT_WEAPON_STRENGTH_ID
+                else if (eqSlot === SHOP_EQUIP_SLOT_AGILITY) fix = DEFAULT_WEAPON_AGILITY_ID
+                else if (eqSlot === SHOP_EQUIP_SLOT_INTELLIGENCE) fix = DEFAULT_WEAPON_INTELLIGENCE_ID
+                else if (eqSlot === SHOP_EQUIP_SLOT_SUPPORT) fix = DEFAULT_WEAPON_SUPPORT_ID
                 else fix = DEFAULT_WEAPON_THRUST_ID
                 fix = _shopNormWeaponId(fix)
             }
@@ -8972,9 +9263,10 @@ function _shopInputs_syncUiBoughtFlagFromOffer(hi: number, pid: number, offer: S
 function _shopInputs_readOfferMeta(offer: Sprite): any {
     const weaponId = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
     const renderSlot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || "thrust"
+    const equipSlot = sprites.readDataString(offer, SH_ITEM_EQUIP_SLOT) || ""
     const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
     const ringIndex = sprites.readDataNumber(offer, SH_ITEM_RING_INDEX) | 0
-    return { weaponId, renderSlot, price, ringIndex }
+    return { weaponId, renderSlot, equipSlot, price, ringIndex }
 }
 
 function _shopInputs_pollABNow(hi: number): any {
@@ -9011,6 +9303,7 @@ function _shopInputs_handleBuyIfEdge(
 
     const weaponId = meta.weaponId
     const renderSlot = meta.renderSlot
+    const equipSlot = meta.equipSlot
     const price = meta.price | 0
     const ringIndex = meta.ringIndex | 0
 
@@ -9030,9 +9323,9 @@ function _shopInputs_handleBuyIfEdge(
             // Mark + equip
             sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
 
-            _shopEquipWeaponToHeroSlot(hero, renderSlot, weaponId)
+            _shopEquipWeaponToHeroSlot(hero, equipSlot, weaponId)
 
-            console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+            console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
 
             // UI flag follows focused offer
             _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
@@ -9054,6 +9347,7 @@ function _shopInputs_handleReturnIfEdge(
 
     const weaponId = meta.weaponId
     const renderSlot = meta.renderSlot
+    const equipSlot = meta.equipSlot
     const price = meta.price | 0
     const ringIndex = meta.ringIndex | 0
 
@@ -9067,9 +9361,9 @@ function _shopInputs_handleReturnIfEdge(
         addHeroCoins(hi, price | 0, hero.x, hero.y)
 
         // Clear the hero slot ONLY if still matches this weaponId
-        _shopClearWeaponFromHeroSlotIfMatches(hero, renderSlot, weaponId)
+        _shopClearWeaponFromHeroSlotIfMatches(hero, equipSlot, weaponId)
 
-        console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot + " refund=" + price + " coins=" + (getHeroCoins(hi) | 0))
+        console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " refund=" + price + " coins=" + (getHeroCoins(hi) | 0))
 
         _shopSetUiBoughtFlagFromOffer(hi, pid, offer)
         _shopUpdateUiForHero(hi, now)
@@ -10248,7 +10542,9 @@ function resolveHeroTilemapCollisions(): void {
     // Apply to all heroes
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
-        if (h) resolveForSprite(h)
+        if (!h) continue
+        if (h.flags & sprites.Flag.Ghost) continue
+        resolveForSprite(h)
     }
 
     // Apply to all enemies
@@ -10415,6 +10711,7 @@ function decorSolids_blockingHook(nowMs: number): void {
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
         if (!h) continue
+        if (h.flags & sprites.Flag.Ghost) continue
 
         if (!anySolidOverlap(h)) continue
 
@@ -10765,6 +11062,12 @@ function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, family
     // NEW
     sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, lo.comboId)
 
+    // Seed family-slot weapons (defaults only; shop swaps will replace later)
+    sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, DEFAULT_WEAPON_STRENGTH_ID)
+    sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, DEFAULT_WEAPON_AGILITY_ID)
+    sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, DEFAULT_WEAPON_INTELLIGENCE_ID)
+    sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, DEFAULT_WEAPON_SUPPORT_ID)
+
     sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
 }
 
@@ -10963,8 +11266,24 @@ function createHeroForPlayer(
     sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(fam))
 
     // NEW (Step 4): seed weapon loadout onto sprite.data (primitives only; net-safe)
-    // This runs once per hero and will not overwrite later drops/equips.
-    ensureHeroWeaponLoadoutSeeded(hero, profileName, fam)
+    // Only real players (pid 1..4) should receive loadouts; NPCs (shopkeeper, etc.) do not.
+    if ((pid | 0) >= 1 && (pid | 0) <= 4) {
+        ensureHeroWeaponLoadoutSeeded(hero, profileName, fam)
+
+        // Ensure defaults exist even if loadout was previously seeded.
+        if (!(sprites.readDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID) || "")) {
+            sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, DEFAULT_WEAPON_STRENGTH_ID)
+        }
+        if (!(sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_ID) || "")) {
+            sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, DEFAULT_WEAPON_AGILITY_ID)
+        }
+        if (!(sprites.readDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID) || "")) {
+            sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, DEFAULT_WEAPON_INTELLIGENCE_ID)
+        }
+        if (!(sprites.readDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID) || "")) {
+            sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, DEFAULT_WEAPON_SUPPORT_ID)
+        }
+    }
 
     sprites.setDataString(hero, HERO_DATA.BUTTON, "")
     sprites.setDataNumber(hero, HERO_DATA.TRAIT1, 25)
@@ -12537,14 +12856,18 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     if (button === "A+B") {
         if (uiMode0 === HERO_UI_MODE.LEVELUP) {
             _uiCloseAnyUi(heroIndex, playerId, "intent:A+B")
-        } else {
-            const r = _uiTryOpenLevelUpUi(heroIndex, playerId, "intent:A+B")
-            if (!r.ok) {
-                console.log("[UI] open denied", { pid: playerId, hi: heroIndex, reason: r.reason })
-            }
+            _doHeroMoveDbgReset(playerId)
+            return
         }
-        _doHeroMoveDbgReset(playerId)
-        return
+
+        const r = _uiTryOpenLevelUpUi(heroIndex, playerId, "intent:A+B")
+        if (r.ok) {
+            _doHeroMoveDbgReset(playerId)
+            return
+        }
+
+        // If UI can't open, fall through so A+B can still be a move input.
+        console.log("[UI] open denied", { pid: playerId, hi: heroIndex, reason: r.reason })
     }
 
     // If UI is open, consume A/B so we never fire moves while the DOM menu is up later
@@ -13451,35 +13774,48 @@ function updateHeroAuras(now: number, phaser: boolean) {
 
         let showAura = false
         let color = 0
+        let auraGlow = 0
         const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
+        const isStatue = _shopIsStatueHero(hero)
 
-        // Strength aura
-        const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
-        if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
-            showAura = true
-            color = AURA_COLOR_STRENGTH
-        }
+        if (isStatue) {
+            if (phaser && DUNGEON_MODE_ACTIVE && _dunFloorKind === DUNGEON_KIND_SHOP) {
+                if (_shopIsStatueFocused(hero, now)) {
+                    showAura = true
+                    color = AURA_COLOR_WHITE
+                    auraGlow = 1
+                }
+            }
+        } else {
+            // Strength aura
+            const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+            if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
+                showAura = true
+                color = AURA_COLOR_STRENGTH
+            }
 
-        // Agility aura
-        if (family == FAMILY.AGILITY) {
-            const dashUntil0 = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
-            if (dashUntil0 > now) { showAura = true; color = AURA_COLOR_AGILITY }
-        }
+            // Agility aura
+            if (family == FAMILY.AGILITY) {
+                const dashUntil0 = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
+                if (dashUntil0 > now) { showAura = true; color = AURA_COLOR_AGILITY }
+            }
 
-        // Intellect / Heal aura
-        if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
-            showAura = true
-            color = AURA_COLOR_INTELLECT
-        }
-        if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
-            showAura = true
-            color = AURA_COLOR_HEAL
+            // Intellect / Heal aura
+            if (family == FAMILY.INTELLECT && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+                showAura = true
+                color = AURA_COLOR_INTELLECT
+            }
+            if (family == FAMILY.HEAL && sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) {
+                showAura = true
+                color = AURA_COLOR_HEAL
+            }
         }
 
         // Phaser: publish aura state; hide Arcade aura sprite
         if (phaser) {
             sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
             sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, auraGlow)
             const aura = heroAuras[i]
             if (aura) aura.setFlag(SpriteFlag.Invisible, true)
         } else {
@@ -19175,14 +19511,29 @@ function ensureHeroXpInitialized(heroIndex: number): void {
     const hero = heroes[heroIndex]
     if (!hero) return
 
-    const lvl = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
-    if (lvl > 0) return
+    const lvl0 = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+    if (lvl0 > 0) return
 
-    sprites.setDataNumber(hero, HERO_XP_DATA.LEVEL, 1)
-    sprites.setDataNumber(hero, HERO_XP_DATA.XP, 0)
-    sprites.setDataNumber(hero, HERO_XP_DATA.XP_TOTAL, 0)
-    sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, 0)
-    sprites.setDataNumber(hero, HERO_XP_DATA.XP_NEXT, xpRequiredForNextLevel(1))
+    // IMPORTANT:
+    // Do not clobber already-set progression fields (e.g. dbgSetLvlPts before init).
+    const pts0 = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+    const xp0 = sprites.readDataNumber(hero, HERO_XP_DATA.XP) | 0
+    const xpTot0 = sprites.readDataNumber(hero, HERO_XP_DATA.XP_TOTAL) | 0
+    const xpNext0 = sprites.readDataNumber(hero, HERO_XP_DATA.XP_NEXT) | 0
+
+    const lvl = 1
+    const pts = Math.max(0, pts0 | 0) | 0
+    const xp = Math.max(0, xp0 | 0) | 0
+    const xpTot = Math.max(0, xpTot0 | 0) | 0
+    const xpNext = (xpNext0 | 0) > 0 ? (xpNext0 | 0) : (xpRequiredForNextLevel(lvl) | 0)
+
+    sprites.setDataNumber(hero, HERO_XP_DATA.LEVEL, lvl)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP, xp)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_TOTAL, xpTot)
+    sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, pts)
+    sprites.setDataNumber(hero, HERO_XP_DATA.XP_NEXT, xpNext)
+
+    console.log("[XPINIT] hero", { hi: heroIndex, lvl, xp, xpTot, xpNext, pts })
 }
 
 function showXpPop(x: number, y: number, deltaXp: number): void {
@@ -22827,6 +23178,16 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
     if (xpNext <= 0) xpNext = xpRequiredForNextLevel(lvl) | 0
     const lvlPts = _uiReadNum(hero, HERO_XP_DATA.LVL_PTS, 0) | 0
 
+    try {
+        const gAny: any = globalThis as any
+        if (gAny && gAny.__heDbgLvlPtsOnce) {
+            gAny.__heDbgLvlPtsOnce = false
+            const lvlRaw2 = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+            const ptsRaw2 = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+            console.log("[LVLPTS][SNAP]", { pid, hi, lvlRaw: lvlRaw2, lvlPts: ptsRaw2 })
+        }
+    } catch { }
+
     // Coins (PER HERO)
     const coins = getHeroCoins(hi) | 0
 
@@ -23098,7 +23459,9 @@ g.__heUiCommand = function (cmd: any): any {
 
         const ptsBefore = getHeroUnspentLevelPts(hi) | 0
         if (ptsBefore <= 0) {
-            console.log("[LVLUI] spend denied (no pts)", { pid, hi, t })
+//            console.log("[LVLUI] spend denied (no pts)", { pid, hi, t })
+            const lvlRaw = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+            console.log("[LVLPTS][SPEND_PRECHECK]", { pid, hi, t, ptsBefore, lvlRaw })
             return { ok: false, reason: "no-pts", snapshot: g.__heGetUiSnapshot(pid) }
         }
 
