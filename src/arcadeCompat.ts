@@ -43,6 +43,22 @@
 //   - Safe no-op if scene missing (Arcade can run headless).
 // =====================================================================
 
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+
+
+
+
 
 // ✅ create a module object called `monsterAnimGlue`
 import * as monsterAnimGlue from "./monsterAnimGlue";
@@ -147,6 +163,10 @@ const _decorOverlapLastLogMs: Record<string, number> = Object.create(null);
 // The engine-side hook exists (decorSolids_blockingHook) but is disabled.
 // When we enable it, THIS is where the wrapper-side resolution will live.
 // --------------------------------------------------------------
+
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+//This section is for the decor things decor section section decor section props props section
+
 
 function decor_solidsResolveMove_tier1(_hero: Sprite, _nowMs: number): boolean {
     // Tier 1 backend: AABB/circle/compound-rect resolution (fast)
@@ -746,41 +766,16 @@ function decor_forceResyncFromEngine(reason: string): void {
     g.__HeroEnginePhaserDecor.forceResync = decor_forceResyncFromEngine;
 })();
 
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+
 
 // ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 // 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
 
-// Debug the "Extra" category
-const DEBUG_CATEGORY_X = false;
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+//Constants -- random and various constants section section constants
 
-let _heroAnimNoAtlasLogged = false;
-
-
-const INPUT_LAG_WARN_MS = 120;          // already have this
-const INPUT_LAG_WARN_EXCESS_MS = 80;    // how much above baseline counts as "bad"
-
-let _inputLagBaselineMs = 0;
-let _inputLagBaselineSamples = 0;
-let _lastInputLagWarnMs = 0;
-
-
-// New: per-input processing time thresholds (host only)
-const INPUT_PROC_WARN_MS = 1.5;          // ms, log if host spends longer than this per input
-const INPUT_PROC_SPAM_GAP_MS = 0.5;      // don't re-log at nearly the same cost
-
-let _lastInputProcWarnMs = 0;
-
-
-const PERF_FPS_WARN = 55;                // always log if fps < this
-const PERF_MIN_LOG_INTERVAL_MS = 3000;   // ms between normal perf logs
-
-let _lastPerfLogMs = 0;
-
-const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
-
-// PERF: how many sprites were destroyed due to lifespan expiry since last perf.syncSteps dump
-const PERF_LIFE_DESTROY_CALLS_KEY = "__perfLifeDestroyCalls";
 
 
 
@@ -914,6 +909,92 @@ const HERO_AGI_PKT_COUNT_FALLBACK_KEY = "aPkC"  // fallback (old stored hits)
 
 const DEFAULT_WEAPON_VARIANT = "base";
 
+// Cache: heroIndex -> cast weapon model id (wCa)
+const _heroCastWeaponByIndex: { [k: number]: string } = Object.create(null);
+
+
+
+// === Agility aim indicator sprite data keys ===
+const UI_AIM_VISIBLE_KEY = "__aimVis";       // 0/1
+const UI_AIM_DIR_X1000_KEY = "__aimDx1000";  // -1000..1000
+const UI_AIM_DIR_Y1000_KEY = "__aimDy1000";  // -1000..1000
+const UI_AIM_ANGLE_MDEG_KEY = "__aimAngleMdeg"; // milli-deg (future 360)
+const UI_AIM_LEN_KEY = "__aimLen";           // optional length
+
+
+// === Combo meter sprite data keys ===
+const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
+const UI_COMBO_H_KEY = "__comboH";
+
+const UI_COMBO_W_E_KEY = "__comboWE";
+const UI_COMBO_W_1_KEY = "__comboW1";
+const UI_COMBO_W_2_KEY = "__comboW2";
+const UI_COMBO_W_3_KEY = "__comboW3";
+
+const UI_COMBO_POS_X1000_KEY = "__comboPosX1000";
+const UI_COMBO_VISIBLE_KEY = "__comboVisible";
+const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional (only if you decide to render count in Phaser)
+
+// === Status bar data key (must match status-bars.ts exactly) ===
+const STATUS_BAR_DATA_KEY = "STATUS_BAR_DATA_KEY";
+
+
+// === Text sprite data keys (written by text.ts; read by Phaser UI attach/sync) ===
+const UI_TEXT_STR_KEY = "__txt";          // string
+const UI_TEXT_VER_KEY = "__txtVer";       // number; bump to mark dirty
+
+const UI_TEXT_FG_KEY = "__txtFg";         // number; MakeCode palette index (0-15)
+const UI_TEXT_BG_KEY = "__txtBg";         // number; palette index (0-15) or -1 for "none"
+
+const UI_TEXT_MAX_H_KEY = "__txtMaxH";    // number; "maxFontHeight" from textsprite
+const UI_TEXT_MAX_W_KEY = "__txtMaxW";    // number; optional (0 = no wrap/fixed width)
+
+const UI_TEXT_PAD_KEY = "__txtPad";       // number; padding px
+
+const UI_TEXT_BORDER_W_KEY = "__txtBW";   // number; border width px (0 = none)
+const UI_TEXT_BORDER_C_KEY = "__txtBC";   // number; border color palette index (0-15)
+
+const UI_TEXT_OUTLINE_W_KEY = "__txtOW";  // number; outline/stroke width px (0 = none)
+const UI_TEXT_OUTLINE_C_KEY = "__txtOC";  // number; outline/stroke color palette index (0-15)
+
+const UI_TEXT_ALIGN_KEY = "__txtAlign";   // number; 0=left, 1=center, 2=right
+
+// (Reserved for later if we decide to support icon sprites in Phaser text containers)
+const UI_TEXT_ICON_KIND_KEY = "__txtIconKind";
+
+
+
+
+// MakeCode Arcade 16-color palette
+// 0 is *transparent*; 15 is black
+const MAKECODE_PALETTE: number[][] = [
+    [0, 0, 0],         // 0 - transparent (we will not draw this)
+    [255, 255, 255],   // 1 - #FFFFFF
+    [255, 33, 33],     // 2 - #FF2121
+    [255, 147, 196],   // 3 - #FF93C4
+    [255, 129, 53],    // 4 - #FF8135
+    [255, 246, 9],     // 5 - #FFF609
+    [36, 156, 163],    // 6 - #249CA3
+    [120, 220, 82],    // 7 - #78DC52
+    [0, 63, 173],      // 8 - #003FAD
+    [135, 242, 255],   // 9 - #87F2FF
+    [142, 46, 196],    // 10 - #8E2EC4
+    [164, 131, 159],   // 11 - #A4839F
+    [92, 64, 108],     // 12 - #5C406C
+    [229, 205, 196],   // 13 - #E5CDC4
+    [145, 70, 61],     // 14 - #91463D
+    [0, 0, 0]          // 15 - #000000
+];
+
+
+
+
+
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+
+//Intellect specials section
 
 // ------------------------------------------------------------
 // Intellect spell visuals (Phaser-only)
@@ -943,11 +1024,6 @@ const INT_CAST_JITTER_AMP_PX = 1.25;
 // Per projectile: a single crystal that follows the spell (replaces blue circle)
 const INT_PROJ_WOBBLE_AMP_PX = 1.0;
 const INT_PROJ_WOBBLE_SPEED_RAD_PER_MS = 0.008;
-
-
-
-// Cache: heroIndex -> cast weapon model id (wCa)
-const _heroCastWeaponByIndex: { [k: number]: string } = Object.create(null);
 
 
 
@@ -1138,8 +1214,17 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
 const INT_PROJ_GLOW_TINT = 0x66ccff;          // icy blue
 const INT_PROJ_GLOW_ALPHA = 0.85;
 const INT_PROJ_GLOW_PULSE_SCALE = 0.18;       // how much it pulses
-const INT_PROJ_GLOW_HALO_R = 52;              // big halo radius (for 192px crystal)
+const INT_PROJ_GLOW_HALO_R = 25;              // big halo radius (for 192px crystal)
 const INT_PROJ_GLOW_HALO_THICK = 10;
+const INT_PROJ_CRYSTAL_SCALE = 2.5;
+const INT_PROJ_CLOUD_TINT = 0xff6a3d;
+const INT_PROJ_CLOUD_BASE_R = 10;
+const INT_PROJ_CLOUD_PULSE_SCALE = 0.35;
+const INT_PROJ_CLOUD_PULSE_SPEED = 0.022;
+const INT_PROJ_CLOUD_FLASH_BASE = 0.35;
+const INT_PROJ_CLOUD_FLASH_AMP = 0.55;
+const INT_PROJ_CLOUD_FLASH_SPEED = 0.035;
+const INT_PROJ_CLOUD_Y_OFFSET = 0;
 
 function _intProj_applyObviousGlow(sc: any, anyNative: any, spr: Phaser.GameObjects.Sprite, nowMs: number): void {
     // Base sprite: additive + tint + big scale pulse
@@ -1166,123 +1251,45 @@ function _intProj_applyObviousGlow(sc: any, anyNative: any, spr: Phaser.GameObje
     }
 }
 
-
-
-function _dbgDumpSpriteFramePNG(sc: any, spr: Phaser.GameObjects.Sprite, label: string): void {
-    try {
-        const texKey = spr.texture?.key ?? "";
-        const frame = (spr as any).frame;
-        if (!texKey || !frame) {
-            console.log("[DBGFRAME] missing tex/frame", "| label", label, "| texKey", texKey);
-            return;
-        }
-
-        const tex = sc.textures?.get?.(texKey);
-        if (!tex) {
-            console.log("[DBGFRAME] texture not found in manager", "| label", label, "| texKey", texKey);
-            return;
-        }
-
-        // Underlying source image (HTMLImageElement or HTMLCanvasElement)
-        const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
-        if (!src) {
-            console.log("[DBGFRAME] no source image", "| label", label, "| texKey", texKey);
-            return;
-        }
-
-        // Frame rectangle inside the source image
-        const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
-        const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
-        const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
-        const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
-
-        if (cutW <= 0 || cutH <= 0) {
-            console.log("[DBGFRAME] invalid frame dims", "| label", label, "| texKey", texKey, "| w,h", cutW, cutH);
-            return;
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = cutW;
-        canvas.height = cutH;
-
-        const g = canvas.getContext("2d");
-        if (!g) return;
-
-        // Draw frame crop
-        g.clearRect(0, 0, cutW, cutH);
-        g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
-
-        // Analyze pixels: count non-transparent pixels
-        const img = g.getImageData(0, 0, cutW, cutH).data;
-        let nonZeroA = 0;
-        for (let i = 3; i < img.length; i += 4) {
-            if (img[i] !== 0) nonZeroA++;
-        }
-
-        // Convert to PNG data URL
-        const url = canvas.toDataURL("image/png");
-
-        console.log("[DBGFRAME]",
-            "| label", label,
-            "| texKey", texKey,
-            "| frame", frame.name ?? frame.index ?? "",
-            "| rect", cutX, cutY, cutW, cutH,
-            "| nonZeroAlphaPx", nonZeroA,
-            "| dataUrlPrefix", url.slice(0, 80) + "..."
-        );
-
-        // Optional: auto-download (uncomment when you want it)
-        // const a = document.createElement("a");
-        // a.href = url;
-        // a.download = `${label}__${texKey}__frame${frame.name ?? frame.index ?? 0}.png`;
-        // document.body.appendChild(a);
-        // a.click();
-        // a.remove();
-
-        // Optional: open in new tab (uncomment when you want it)
-        // window.open(url, "_blank");
-
-    } catch (e) {
-        console.log("[DBGFRAME] exception", label, e);
-    }
+function _intProj_drawCrystalCloud(g: Phaser.GameObjects.Graphics): void {
+    g.clear();
+    g.fillStyle(INT_PROJ_CLOUD_TINT, 0.45);
+    g.fillCircle(0, 0, INT_PROJ_CLOUD_BASE_R);
+    g.fillStyle(INT_PROJ_CLOUD_TINT, 0.25);
+    g.fillCircle(0, 0, INT_PROJ_CLOUD_BASE_R * 1.45);
+    g.fillStyle(INT_PROJ_CLOUD_TINT, 0.18);
+    g.fillCircle(0, 0, INT_PROJ_CLOUD_BASE_R * 1.9);
 }
 
+function _intProj_ensureCrystalCloud(sc: any, anyNative: any): Phaser.GameObjects.Graphics {
+    let g: Phaser.GameObjects.Graphics | undefined = anyNative.__intProjCrystalHalo;
+    if (!g) {
+        g = sc.add.graphics();
+        _intProj_drawCrystalCloud(g);
+        try { (g as any).setBlendMode?.((Phaser as any).BlendModes.ADD); } catch { }
+        try { (g as any).setVisible?.(true); } catch { }
+        anyNative.__intProjCrystalHalo = g;
+    }
+    return g!;
+}
 
+function _intProj_updateCrystalCloud(sc: any, anyNative: any, native: any, shouldBeVisible: boolean): void {
+    const g = _intProj_ensureCrystalCloud(sc, anyNative);
+    const now = (sc.time?.now ?? 0) as number;
+    const pulse = 1 + INT_PROJ_CLOUD_PULSE_SCALE * Math.sin(now * INT_PROJ_CLOUD_PULSE_SPEED);
+    const flash = INT_PROJ_CLOUD_FLASH_BASE + INT_PROJ_CLOUD_FLASH_AMP * Math.abs(Math.sin(now * INT_PROJ_CLOUD_FLASH_SPEED));
+
+    g.x = native.x;
+    g.y = native.y + INT_PROJ_CLOUD_Y_OFFSET;
+    try { (g as any).setScale?.(pulse); } catch { }
+    try { (g as any).setAlpha?.(flash); } catch { }
+    try { (g as any).setDepth?.(999998); } catch { }
+    try { (g as any).setVisible?.(shouldBeVisible); } catch { }
+}
 
 const __intProjCrystalFirstNonEmptyFrameByTex: Record<string, number> = Object.create(null);
 
-function _dbgCountNonTransparentPixelsInFrame(sc: any, texKey: string, frameIndex: number): number {
-    const tex = sc.textures?.get?.(texKey);
-    if (!tex) return -1;
 
-    const frame: any = tex.get?.(frameIndex);
-    if (!frame) return -1;
-
-    const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
-    if (!src) return -1;
-
-    const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
-    const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
-    const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
-    const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
-    if (cutW <= 0 || cutH <= 0) return -1;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = cutW;
-    canvas.height = cutH;
-    const g = canvas.getContext("2d");
-    if (!g) return -1;
-
-    g.clearRect(0, 0, cutW, cutH);
-    g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
-
-    const data = g.getImageData(0, 0, cutW, cutH).data;
-    let nonZeroA = 0;
-    for (let i = 3; i < data.length; i += 4) {
-        if (data[i] !== 0) nonZeroA++;
-    }
-    return nonZeroA;
-}
 
 function _intProj_findFirstNonEmptyFrame(sc: any, texKey: string, maxFramesToScan: number): number {
     const cached = __intProjCrystalFirstNonEmptyFrameByTex[texKey];
@@ -1308,77 +1315,6 @@ function _intProj_findFirstNonEmptyFrame(sc: any, texKey: string, maxFramesToSca
     return -1;
 }
 
-
-// --------------------------------------------------
-// DEBUG: Position write trap for a Phaser sprite.
-// Logs a stack trace whenever anything writes x/y, setPosition, or setX/setY.
-// --------------------------------------------------
-function _dbgInstallPosWriteTrap(label: string, spr: any): void {
-    if (!spr || spr.__dbgPosTrapInstalled) return;
-    spr.__dbgPosTrapInstalled = true;
-
-    // Tag we can set while *we* are writing positions (to avoid self-noise)
-    spr.__dbgPosTrapTag = "";
-
-    // Wrap setPosition / setX / setY (these are common)
-    const wrapFn = (obj: any, fnName: string) => {
-        const orig = obj?.[fnName];
-        if (typeof orig !== "function") return;
-        obj[fnName] = function (...args: any[]) {
-            if (!this.__dbgPosTrapTag) {
-                const e = new Error();
-                console.log(`[POSWRITE][${label}] ${fnName}`, "| args", args, "\n", (e.stack || ""));
-            }
-            return orig.apply(this, args);
-        };
-    };
-
-    wrapFn(spr, "setPosition");
-    wrapFn(spr, "setX");
-    wrapFn(spr, "setY");
-
-    // Trap direct x/y assignments too
-    try {
-        const proto = Object.getPrototypeOf(spr);
-        // Preserve current values
-        let _x = spr.x;
-        let _y = spr.y;
-
-        Object.defineProperty(spr, "x", {
-            configurable: true,
-            enumerable: true,
-            get() { return _x; },
-            set(v: any) {
-                if (!spr.__dbgPosTrapTag) {
-                    const e = new Error();
-                    console.log(`[POSWRITE][${label}] x=`, v, "\n", (e.stack || ""));
-                }
-                _x = v;
-            }
-        });
-
-        Object.defineProperty(spr, "y", {
-            configurable: true,
-            enumerable: true,
-            get() { return _y; },
-            set(v: any) {
-                if (!spr.__dbgPosTrapTag) {
-                    const e = new Error();
-                    console.log(`[POSWRITE][${label}] y=`, v, "\n", (e.stack || ""));
-                }
-                _y = v;
-            }
-        });
-
-        // Re-apply current values through the new setters
-        spr.__dbgPosTrapTag = "init";
-        spr.x = _x;
-        spr.y = _y;
-        spr.__dbgPosTrapTag = "";
-    } catch (e) {
-        console.log(`[POSWRITE][${label}] trap install FAILED`, e);
-    }
-}
 
 
 // Cache: per (texKey|frame) → origin point within that frame (pixel coords)
@@ -1723,19 +1659,22 @@ function _intProj_dumpOnce(sc: any, anyNative: any, spr: Phaser.GameObjects.Spri
     }
 }
 
-function _intProj_followProjectileOverlay(sc: any, native: any, spr: Phaser.GameObjects.Sprite, shouldBeVisible: boolean): void {
+function _intProj_followProjectileOverlay(sc: any, anyNative: any, native: any, spr: Phaser.GameObjects.Sprite, shouldBeVisible: boolean): void {
     const now = (sc.time?.now ?? 0) as number;
-
-    spr.x = native.x;
-    spr.y = native.y;
 
     (spr as any).rotation = now * 0.006;
 
     spr.setDepth(999999);
+    try { (spr as any).setScale?.(INT_PROJ_CRYSTAL_SCALE); } catch { }
+
+    spr.x = native.x;
+    spr.y = native.y;
 
     // If you want the "pixel auto-hide" to matter, use:
     // spr.setVisible(shouldBeVisible && !autoHideByPixels);
     spr.setVisible(shouldBeVisible);
+
+    _intProj_updateCrystalCloud(sc, anyNative, native, shouldBeVisible);
 }
 
 function _intProj_postOkLogIfNeeded(args: {
@@ -1853,7 +1792,10 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
         texKey
     });
 
-    if (picked < 0) return;
+    if (picked < 0) {
+        try { anyNative.__intProjCrystalHalo?.setVisible?.(false); } catch { }
+        return;
+    }
 
     // --------------------------------------------------
     // Apply pivot so rotation centers on the crystal pixels (NOT frame center)
@@ -1866,7 +1808,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     // --------------------------------------------------
     // FOLLOW ENGINE PROJECTILE (authoritative)
     // --------------------------------------------------
-    _intProj_followProjectileOverlay(sc, native, spr, shouldBeVisible);
+    _intProj_followProjectileOverlay(sc, anyNative, native, spr, shouldBeVisible);
 
     // --------------------------------------------------
     // Post-state log (once on first success, then only on meaningful change)
@@ -1883,363 +1825,205 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 }
 
 
-// Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = false; //Debug flag
 
 
 
-// === Agility aim indicator sprite data keys ===
-const UI_AIM_VISIBLE_KEY = "__aimVis";       // 0/1
-const UI_AIM_DIR_X1000_KEY = "__aimDx1000";  // -1000..1000
-const UI_AIM_DIR_Y1000_KEY = "__aimDy1000";  // -1000..1000
-const UI_AIM_ANGLE_MDEG_KEY = "__aimAngleMdeg"; // milli-deg (future 360)
-const UI_AIM_LEN_KEY = "__aimLen";           // optional length
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+
+//Debug functions debug section section debug
+
+// Debug the "Extra" category
+const DEBUG_CATEGORY_X = false;
+
+let _heroAnimNoAtlasLogged = false;
 
 
 
-// === Combo meter sprite data keys ===
-const UI_COMBO_TOTAL_W_KEY = "__comboTotalW";
-const UI_COMBO_H_KEY = "__comboH";
-
-const UI_COMBO_W_E_KEY = "__comboWE";
-const UI_COMBO_W_1_KEY = "__comboW1";
-const UI_COMBO_W_2_KEY = "__comboW2";
-const UI_COMBO_W_3_KEY = "__comboW3";
-
-const UI_COMBO_POS_X1000_KEY = "__comboPosX1000";
-const UI_COMBO_VISIBLE_KEY = "__comboVisible";
-const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional (only if you decide to render count in Phaser)
-
-// === Status bar data key (must match status-bars.ts exactly) ===
-const STATUS_BAR_DATA_KEY = "STATUS_BAR_DATA_KEY";
-
-
-// === Text sprite data keys (written by text.ts; read by Phaser UI attach/sync) ===
-const UI_TEXT_STR_KEY = "__txt";          // string
-const UI_TEXT_VER_KEY = "__txtVer";       // number; bump to mark dirty
-
-const UI_TEXT_FG_KEY = "__txtFg";         // number; MakeCode palette index (0-15)
-const UI_TEXT_BG_KEY = "__txtBg";         // number; palette index (0-15) or -1 for "none"
-
-const UI_TEXT_MAX_H_KEY = "__txtMaxH";    // number; "maxFontHeight" from textsprite
-const UI_TEXT_MAX_W_KEY = "__txtMaxW";    // number; optional (0 = no wrap/fixed width)
-
-const UI_TEXT_PAD_KEY = "__txtPad";       // number; padding px
-
-const UI_TEXT_BORDER_W_KEY = "__txtBW";   // number; border width px (0 = none)
-const UI_TEXT_BORDER_C_KEY = "__txtBC";   // number; border color palette index (0-15)
-
-const UI_TEXT_OUTLINE_W_KEY = "__txtOW";  // number; outline/stroke width px (0 = none)
-const UI_TEXT_OUTLINE_C_KEY = "__txtOC";  // number; outline/stroke color palette index (0-15)
-
-const UI_TEXT_ALIGN_KEY = "__txtAlign";   // number; 0=left, 1=center, 2=right
-
-// (Reserved for later if we decide to support icon sprites in Phaser text containers)
-const UI_TEXT_ICON_KIND_KEY = "__txtIconKind";
-
-
-
-
-// ---------------------------------------
-// Host perf buckets (arcadeCompat.ts)
-// ---------------------------------------
-let _hostPerfLastDumpMs = 0
-let _hostPerfFrameCount = 0
-let _hostPerfAccumTickMs = 0
-let _hostPerfAccumSyncMs = 0
-let _hostPerfAccumSnapMs = 0
-let _hostPerfLastSpriteCount = 0
-let _hostPerfLastSnapshotSprites = 0
-
-
-let _frameAttachMsAccum = 0;
-let _frameAttachCreateCount = 0;
-let _frameAttachUpdateCount = 0;
-
-let _frameAttachTexMs = 0;         // texture create/recreate time
-let _frameAttachPixelMs = 0;       // pixel upload + putImageData + refresh
-let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
-
-
-
-// ======================================================
-// SYNC PERF BREAKDOWN (Heroes / Enemies / Bars / Extras)
-// ======================================================
-
-const PERF_GROUP_HERO = 0 as const;
-const PERF_GROUP_ENEMY = 1 as const;
-const PERF_GROUP_BARS = 2 as const;
-const PERF_GROUP_EXTRA = 3 as const;
-
-type PerfGroup =
-    | typeof PERF_GROUP_HERO
-    | typeof PERF_GROUP_ENEMY
-    | typeof PERF_GROUP_BARS
-    | typeof PERF_GROUP_EXTRA;
-
-function _perfGroupName(g: PerfGroup): "H" | "E" | "B" | "X" {
-    return g === PERF_GROUP_HERO
-        ? "H"
-        : (g === PERF_GROUP_ENEMY
-            ? "E"
-            : (g === PERF_GROUP_BARS ? "B" : "X"));
-}
-
-function _perfGroupFromRole(role: string): PerfGroup {
-    // Roles: HERO / ENEMY / ACTOR / PROJECTILE / OVERLAY / BAR / etc.
-    if (role === "HERO") return PERF_GROUP_HERO;
-    if (role === "ENEMY" || role === "ACTOR") return PERF_GROUP_ENEMY;
-    if (role === "BAR") return PERF_GROUP_BARS;
-    return PERF_GROUP_EXTRA;
-}
-
-// "current group" for the _attachNativeSprite call; set by _syncNativeSprites before calling attach
-let _syncAttachPerfGroup: PerfGroup = PERF_GROUP_EXTRA;
-
-// Per-frame accumulators (reset in _syncNativeSprites)
-let _frameGroupAttachMs = [0, 0, 0, 0];       // total attach time
-let _frameGroupAttachTexMs = [0, 0, 0, 0];    // texture create/recreate time
-let _frameGroupAttachPixelMs = [0, 0, 0, 0];  // pixel upload time
-
-let _frameGroupAttachCalls = [0, 0, 0, 0];
-let _frameGroupAttachCreates = [0, 0, 0, 0];
-let _frameGroupAttachUpdates = [0, 0, 0, 0];
-let _frameGroupAttachEarlyOuts = [0, 0, 0, 0];
-
-
-
-
-// --------------------------------------------------------------
-// Phaser-only: HeroEngine hook override (visual geometry)
-// --------------------------------------------------------------
-// Engine calls:
-//   (globalThis as any).__HeroEngineHooks.getHeroVisualInfo(hero, nx, ny)
-// returning:
-//   [innerR, leadEdge, wTipX, wTipY]
-// wTip offsets are relative to hero center (pixels).
-
-let __heroVisualHookInstalled = false;
-
-
-
-
-function __installHeroVisualInfoHookOnce(): void {
-    if (__heroVisualHookInstalled) return;
-    __heroVisualHookInstalled = true;
-
+function _dbgDumpSpriteFramePNG(sc: any, spr: Phaser.GameObjects.Sprite, label: string): void {
     try {
-        const g: any = (globalThis as any);
-        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
-
-        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
-            // 1) Try cached silhouette-derived values first
-            let innerR = 0;
-            let leadEdge = 0;
-
-            try {
-                innerR = sprites.readDataNumber(hero, HERO_DATA.VIS_INNER_R) | 0;
-                leadEdge = sprites.readDataNumber(hero, HERO_DATA.VIS_LEAD_EDGE) | 0;
-            } catch { /* ignore */ }
-
-            // 2) Fallback if not ready yet (still compile-safe)
-            if (innerR <= 0 || leadEdge <= 0) {
-                const native: any = hero && hero.native;
-                const w = native ? (native.displayWidth || native.width || 64) : 64;
-                const h = native ? (native.displayHeight || native.height || 64) : 64;
-                leadEdge = Math.min(w, h) / 2;
-                innerR = leadEdge + 3;
-            }
-
-            // 3) Weapon tip: start dumb, later replace with real offsets from heroAnimGlue
-            const tip = leadEdge + 6;
-            const wTipX = nx * tip;
-            const wTipY = ny * tip;
-
-            return [innerR, leadEdge, wTipX, wTipY];
-        };
-
-
-        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
-    } catch (e) {
-        console.warn("[arcadeCompat] failed to install hero visual hook", e);
-    }
-}
-
-
-(function installHeroVisualHook() {
-    try {
-        const g: any = globalThis as any;
-        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
-
-        const AURA_RADIUS = 2;
-        const AURA_THICKNESS = 1;
-        const SPACING = 1;
-
-        function cardinalFrom(nx: number, ny: number): "up" | "down" | "left" | "right" {
-            if (Math.abs(nx) >= Math.abs(ny)) return nx >= 0 ? "right" : "left";
-            return ny >= 0 ? "down" : "up";
+        const texKey = spr.texture?.key ?? "";
+        const frame = (spr as any).frame;
+        if (!texKey || !frame) {
+            console.log("[DBGFRAME] missing tex/frame", "| label", label, "| texKey", texKey);
+            return;
         }
 
-        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
-            const native: any = hero && hero.native;
+        const tex = sc.textures?.get?.(texKey);
+        if (!tex) {
+            console.log("[DBGFRAME] texture not found in manager", "| label", label, "| texKey", texKey);
+            return;
+        }
 
-            // 1) Try cached hero data first (fast path)
-            let innerR = 0;
-            let leadEdge = 0;
-            try {
-                innerR = (hero?.data?.visInnerR | 0) || 0;
-                leadEdge = (hero?.data?.visLeadEdge | 0) || 0;
-            } catch { /* ignore */ }
+        // Underlying source image (HTMLImageElement or HTMLCanvasElement)
+        const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
+        if (!src) {
+            console.log("[DBGFRAME] no source image", "| label", label, "| texKey", texKey);
+            return;
+        }
 
-            // 2) If missing, compute from aura silhouette cache (true pixels)
-            if ((innerR <= 0 || leadEdge <= 0) && native) {
-                const dir = cardinalFrom(nx, ny);
+        // Frame rectangle inside the source image
+        const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
+        const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
+        const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
+        const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
 
-                const baseInner = heroAnimGlue.getHeroAuraInnerRForNative(native, AURA_RADIUS);
-                const baseLead = heroAnimGlue.getHeroAuraLeadForNativeDir(native, AURA_RADIUS, dir);
+        if (cutW <= 0 || cutH <= 0) {
+            console.log("[DBGFRAME] invalid frame dims", "| label", label, "| texKey", texKey, "| w,h", cutW, cutH);
+            return;
+        }
 
-                if (baseInner > 0) {
-                    innerR = Math.ceil(baseInner + AURA_THICKNESS + SPACING);
-                    leadEdge = Math.ceil(baseLead);
+        const canvas = document.createElement("canvas");
+        canvas.width = cutW;
+        canvas.height = cutH;
 
-                    // store onto the Arcade hero (numbers only)
-                    try {
-                        hero.data = hero.data || {};
-                        hero.data.visInnerR = innerR;
-                        hero.data.visLeadEdge = leadEdge;
-                    } catch { /* ignore */ }
-                }
-            }
+        const g = canvas.getContext("2d");
+        if (!g) return;
 
-            //console.log("[hook] getHeroVisualInfo called inner/lead=", innerR, leadEdge, "dir=", nx, ny)
+        // Draw frame crop
+        g.clearRect(0, 0, cutW, cutH);
+        g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
 
-            // 3) Final fallback (still never breaks)
-            if (innerR <= 0) innerR = 35;
-            if (leadEdge <= 0) leadEdge = 32;
+        // Analyze pixels: count non-transparent pixels
+        const img = g.getImageData(0, 0, cutW, cutH).data;
+        let nonZeroA = 0;
+        for (let i = 3; i < img.length; i += 4) {
+            if (img[i] !== 0) nonZeroA++;
+        }
 
-            // 4) Weapon tip offset (dumb for now; we’ll replace with real weapon offsets later)
-            const tip = leadEdge + 6;
-            const wTipX = nx * tip;
-            const wTipY = ny * tip;
+        // Convert to PNG data URL
+        const url = canvas.toDataURL("image/png");
 
-            return [innerR, leadEdge, wTipX, wTipY];
-        };
+        console.log("[DBGFRAME]",
+            "| label", label,
+            "| texKey", texKey,
+            "| frame", frame.name ?? frame.index ?? "",
+            "| rect", cutX, cutY, cutW, cutH,
+            "| nonZeroAlphaPx", nonZeroA,
+            "| dataUrlPrefix", url.slice(0, 80) + "..."
+        );
 
-        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)");
+        // Optional: auto-download (uncomment when you want it)
+        // const a = document.createElement("a");
+        // a.href = url;
+        // a.download = `${label}__${texKey}__frame${frame.name ?? frame.index ?? 0}.png`;
+        // document.body.appendChild(a);
+        // a.click();
+        // a.remove();
+
+        // Optional: open in new tab (uncomment when you want it)
+        // window.open(url, "_blank");
+
     } catch (e) {
-        console.warn("[arcadeCompat] hero visual hook install failed", e);
+        console.log("[DBGFRAME] exception", label, e);
     }
-})();
+}
 
 
+function _dbgCountNonTransparentPixelsInFrame(sc: any, texKey: string, frameIndex: number): number {
+    const tex = sc.textures?.get?.(texKey);
+    if (!tex) return -1;
 
-// Install immediately on module load
-//__installHeroVisualInfoHookOnce();
+    const frame: any = tex.get?.(frameIndex);
+    if (!frame) return -1;
 
+    const src: any = tex.getSourceImage?.() ?? tex.source?.[0]?.image;
+    if (!src) return -1;
 
+    const cutX = (frame.cutX ?? frame.x ?? 0) | 0;
+    const cutY = (frame.cutY ?? frame.y ?? 0) | 0;
+    const cutW = (frame.cutWidth ?? frame.width ?? 0) | 0;
+    const cutH = (frame.cutHeight ?? frame.height ?? 0) | 0;
+    if (cutW <= 0 || cutH <= 0) return -1;
 
+    const canvas = document.createElement("canvas");
+    canvas.width = cutW;
+    canvas.height = cutH;
+    const g = canvas.getContext("2d");
+    if (!g) return -1;
 
+    g.clearRect(0, 0, cutW, cutH);
+    g.drawImage(src, cutX, cutY, cutW, cutH, 0, 0, cutW, cutH);
 
-
-
-
-
-function _hostPerfNowMs(): number {
-    if (typeof performance !== "undefined" && performance.now) {
-        return performance.now()
+    const data = g.getImageData(0, 0, cutW, cutH).data;
+    let nonZeroA = 0;
+    for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) nonZeroA++;
     }
-    return Date.now()
+    return nonZeroA;
 }
 
-function _hostPerfMaybeDump(nowMs: number) {
-    const elapsed = nowMs - _hostPerfLastDumpMs
-    if (elapsed < 1000) return
-    if (_hostPerfFrameCount <= 0) {
-        _hostPerfLastDumpMs = nowMs
-        return
+// --------------------------------------------------
+// DEBUG: Position write trap for a Phaser sprite.
+// Logs a stack trace whenever anything writes x/y, setPosition, or setX/setY.
+// --------------------------------------------------
+function _dbgInstallPosWriteTrap(label: string, spr: any): void {
+    if (!spr || spr.__dbgPosTrapInstalled) return;
+    spr.__dbgPosTrapInstalled = true;
+
+    // Tag we can set while *we* are writing positions (to avoid self-noise)
+    spr.__dbgPosTrapTag = "";
+
+    // Wrap setPosition / setX / setY (these are common)
+    const wrapFn = (obj: any, fnName: string) => {
+        const orig = obj?.[fnName];
+        if (typeof orig !== "function") return;
+        obj[fnName] = function (...args: any[]) {
+            if (!this.__dbgPosTrapTag) {
+                const e = new Error();
+                console.log(`[POSWRITE][${label}] ${fnName}`, "| args", args, "\n", (e.stack || ""));
+            }
+            return orig.apply(this, args);
+        };
+    };
+
+    wrapFn(spr, "setPosition");
+    wrapFn(spr, "setX");
+    wrapFn(spr, "setY");
+
+    // Trap direct x/y assignments too
+    try {
+        const proto = Object.getPrototypeOf(spr);
+        // Preserve current values
+        let _x = spr.x;
+        let _y = spr.y;
+
+        Object.defineProperty(spr, "x", {
+            configurable: true,
+            enumerable: true,
+            get() { return _x; },
+            set(v: any) {
+                if (!spr.__dbgPosTrapTag) {
+                    const e = new Error();
+                    console.log(`[POSWRITE][${label}] x=`, v, "\n", (e.stack || ""));
+                }
+                _x = v;
+            }
+        });
+
+        Object.defineProperty(spr, "y", {
+            configurable: true,
+            enumerable: true,
+            get() { return _y; },
+            set(v: any) {
+                if (!spr.__dbgPosTrapTag) {
+                    const e = new Error();
+                    console.log(`[POSWRITE][${label}] y=`, v, "\n", (e.stack || ""));
+                }
+                _y = v;
+            }
+        });
+
+        // Re-apply current values through the new setters
+        spr.__dbgPosTrapTag = "init";
+        spr.x = _x;
+        spr.y = _y;
+        spr.__dbgPosTrapTag = "";
+    } catch (e) {
+        console.log(`[POSWRITE][${label}] trap install FAILED`, e);
     }
-
-    const avgTick = _hostPerfAccumTickMs / _hostPerfFrameCount
-    const avgSync = _hostPerfAccumSyncMs / _hostPerfFrameCount
-    const avgSnap = _hostPerfAccumSnapMs / _hostPerfFrameCount
-
-    const fps = (_hostPerfFrameCount * 1000) / elapsed
-
-    const shouldLogPerformance = false
-    if (shouldLogPerformance) { console.log(
-        "[perf.host]",
-        "fps≈", fps.toFixed(1),
-        "avgTickMs≈", avgTick.toFixed(2),
-        "avgSyncMs≈", avgSync.toFixed(2),
-        "avgSnapMs≈", avgSnap.toFixed(2),
-        "sprites≈", _hostPerfLastSpriteCount,
-        "snapSprites≈", _hostPerfLastSnapshotSprites
-    )
-    }
-    
-    _hostPerfLastDumpMs = nowMs
-    _hostPerfFrameCount = 0
-    _hostPerfAccumTickMs = 0
-    _hostPerfAccumSyncMs = 0
-    _hostPerfAccumSnapMs = 0
 }
-
-
-
-
-
-// MakeCode Arcade 16-color palette
-// 0 is *transparent*; 15 is black
-const MAKECODE_PALETTE: number[][] = [
-    [0, 0, 0],         // 0 - transparent (we will not draw this)
-    [255, 255, 255],   // 1 - #FFFFFF
-    [255, 33, 33],     // 2 - #FF2121
-    [255, 147, 196],   // 3 - #FF93C4
-    [255, 129, 53],    // 4 - #FF8135
-    [255, 246, 9],     // 5 - #FFF609
-    [36, 156, 163],    // 6 - #249CA3
-    [120, 220, 82],    // 7 - #78DC52
-    [0, 63, 173],      // 8 - #003FAD
-    [135, 242, 255],   // 9 - #87F2FF
-    [142, 46, 196],    // 10 - #8E2EC4
-    [164, 131, 159],   // 11 - #A4839F
-    [92, 64, 108],     // 12 - #5C406C
-    [229, 205, 196],   // 13 - #E5CDC4
-    [145, 70, 61],     // 14 - #91463D
-    [0, 0, 0]          // 15 - #000000
-];
-
-
-/* -------------------------------------------------------
-   Basic helpers
-------------------------------------------------------- */
-
-export function syncHeroAuraForNative(
-  native: Phaser.GameObjects.Sprite,
-  auraActive: boolean,
-  auraColorIndex: number
-)
-
-
-function randint(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// Extend Math with idiv
-interface Math {
-    idiv(a: number, b: number): number;
-}
-(Math as any).idiv = (a: number, b: number): number => (a / b) | 0;
-
-
-interface Math {
-    randomRange(min: number, max: number): number;
-}
-
-(Math as any).randomRange = (min: number, max: number): number =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
-
-
 
 
 
@@ -2410,6 +2194,309 @@ function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
     }
 }
 
+
+// Optional debug (leave false)
+const DEBUG_WEAPON_SYNC = false; //Debug flag
+
+
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+
+//Performance section section performance
+
+const INPUT_LAG_WARN_MS = 120;          // already have this
+const INPUT_LAG_WARN_EXCESS_MS = 80;    // how much above baseline counts as "bad"
+
+let _inputLagBaselineMs = 0;
+let _inputLagBaselineSamples = 0;
+let _lastInputLagWarnMs = 0;
+
+
+// New: per-input processing time thresholds (host only)
+const INPUT_PROC_WARN_MS = 1.5;          // ms, log if host spends longer than this per input
+const INPUT_PROC_SPAM_GAP_MS = 0.5;      // don't re-log at nearly the same cost
+
+let _lastInputProcWarnMs = 0;
+
+
+const PERF_FPS_WARN = 55;                // always log if fps < this
+const PERF_MIN_LOG_INTERVAL_MS = 3000;   // ms between normal perf logs
+
+let _lastPerfLogMs = 0;
+
+const PERF_ALWAYS_LOG = false;   // flip to true if you want per-second spam
+
+// PERF: how many sprites were destroyed due to lifespan expiry since last perf.syncSteps dump
+const PERF_LIFE_DESTROY_CALLS_KEY = "__perfLifeDestroyCalls";
+
+
+
+// ---------------------------------------
+// Host perf buckets (arcadeCompat.ts)
+// ---------------------------------------
+let _hostPerfLastDumpMs = 0
+let _hostPerfFrameCount = 0
+let _hostPerfAccumTickMs = 0
+let _hostPerfAccumSyncMs = 0
+let _hostPerfAccumSnapMs = 0
+let _hostPerfLastSpriteCount = 0
+let _hostPerfLastSnapshotSprites = 0
+
+
+let _frameAttachMsAccum = 0;
+let _frameAttachCreateCount = 0;
+let _frameAttachUpdateCount = 0;
+
+let _frameAttachTexMs = 0;         // texture create/recreate time
+let _frameAttachPixelMs = 0;       // pixel upload + putImageData + refresh
+let _frameAttachEarlyOutCount = 0; // calls that return before pixel work
+
+
+
+// ======================================================
+// SYNC PERF BREAKDOWN (Heroes / Enemies / Bars / Extras)
+// ======================================================
+
+const PERF_GROUP_HERO = 0 as const;
+const PERF_GROUP_ENEMY = 1 as const;
+const PERF_GROUP_BARS = 2 as const;
+const PERF_GROUP_EXTRA = 3 as const;
+
+type PerfGroup =
+    | typeof PERF_GROUP_HERO
+    | typeof PERF_GROUP_ENEMY
+    | typeof PERF_GROUP_BARS
+    | typeof PERF_GROUP_EXTRA;
+
+function _perfGroupName(g: PerfGroup): "H" | "E" | "B" | "X" {
+    return g === PERF_GROUP_HERO
+        ? "H"
+        : (g === PERF_GROUP_ENEMY
+            ? "E"
+            : (g === PERF_GROUP_BARS ? "B" : "X"));
+}
+
+function _perfGroupFromRole(role: string): PerfGroup {
+    // Roles: HERO / ENEMY / ACTOR / PROJECTILE / OVERLAY / BAR / etc.
+    if (role === "HERO") return PERF_GROUP_HERO;
+    if (role === "ENEMY" || role === "ACTOR") return PERF_GROUP_ENEMY;
+    if (role === "BAR") return PERF_GROUP_BARS;
+    return PERF_GROUP_EXTRA;
+}
+
+// "current group" for the _attachNativeSprite call; set by _syncNativeSprites before calling attach
+let _syncAttachPerfGroup: PerfGroup = PERF_GROUP_EXTRA;
+
+// Per-frame accumulators (reset in _syncNativeSprites)
+let _frameGroupAttachMs = [0, 0, 0, 0];       // total attach time
+let _frameGroupAttachTexMs = [0, 0, 0, 0];    // texture create/recreate time
+let _frameGroupAttachPixelMs = [0, 0, 0, 0];  // pixel upload time
+
+let _frameGroupAttachCalls = [0, 0, 0, 0];
+let _frameGroupAttachCreates = [0, 0, 0, 0];
+let _frameGroupAttachUpdates = [0, 0, 0, 0];
+let _frameGroupAttachEarlyOuts = [0, 0, 0, 0];
+
+
+
+
+// --------------------------------------------------------------
+// Phaser-only: HeroEngine hook override (visual geometry)
+// --------------------------------------------------------------
+// Engine calls:
+//   (globalThis as any).__HeroEngineHooks.getHeroVisualInfo(hero, nx, ny)
+// returning:
+//   [innerR, leadEdge, wTipX, wTipY]
+// wTip offsets are relative to hero center (pixels).
+
+let __heroVisualHookInstalled = false;
+
+function __installHeroVisualInfoHookOnce(): void {
+    if (__heroVisualHookInstalled) return;
+    __heroVisualHookInstalled = true;
+
+    try {
+        const g: any = (globalThis as any);
+        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+
+        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
+            // 1) Try cached silhouette-derived values first
+            let innerR = 0;
+            let leadEdge = 0;
+
+            try {
+                innerR = sprites.readDataNumber(hero, HERO_DATA.VIS_INNER_R) | 0;
+                leadEdge = sprites.readDataNumber(hero, HERO_DATA.VIS_LEAD_EDGE) | 0;
+            } catch { /* ignore */ }
+
+            // 2) Fallback if not ready yet (still compile-safe)
+            if (innerR <= 0 || leadEdge <= 0) {
+                const native: any = hero && hero.native;
+                const w = native ? (native.displayWidth || native.width || 64) : 64;
+                const h = native ? (native.displayHeight || native.height || 64) : 64;
+                leadEdge = Math.min(w, h) / 2;
+                innerR = leadEdge + 3;
+            }
+
+            // 3) Weapon tip: start dumb, later replace with real offsets from heroAnimGlue
+            const tip = leadEdge + 6;
+            const wTipX = nx * tip;
+            const wTipY = ny * tip;
+
+            return [innerR, leadEdge, wTipX, wTipY];
+        };
+
+
+        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
+    } catch (e) {
+        console.warn("[arcadeCompat] failed to install hero visual hook", e);
+    }
+}
+
+
+(function installHeroVisualHook() {
+    try {
+        const g: any = globalThis as any;
+        g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+
+        const AURA_RADIUS = 2;
+        const AURA_THICKNESS = 1;
+        const SPACING = 1;
+
+        function cardinalFrom(nx: number, ny: number): "up" | "down" | "left" | "right" {
+            if (Math.abs(nx) >= Math.abs(ny)) return nx >= 0 ? "right" : "left";
+            return ny >= 0 ? "down" : "up";
+        }
+
+        g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
+            const native: any = hero && hero.native;
+
+            // 1) Try cached hero data first (fast path)
+            let innerR = 0;
+            let leadEdge = 0;
+            try {
+                innerR = (hero?.data?.visInnerR | 0) || 0;
+                leadEdge = (hero?.data?.visLeadEdge | 0) || 0;
+            } catch { /* ignore */ }
+
+            // 2) If missing, compute from aura silhouette cache (true pixels)
+            if ((innerR <= 0 || leadEdge <= 0) && native) {
+                const dir = cardinalFrom(nx, ny);
+
+                const baseInner = heroAnimGlue.getHeroAuraInnerRForNative(native, AURA_RADIUS);
+                const baseLead = heroAnimGlue.getHeroAuraLeadForNativeDir(native, AURA_RADIUS, dir);
+
+                if (baseInner > 0) {
+                    innerR = Math.ceil(baseInner + AURA_THICKNESS + SPACING);
+                    leadEdge = Math.ceil(baseLead);
+
+                    // store onto the Arcade hero (numbers only)
+                    try {
+                        hero.data = hero.data || {};
+                        hero.data.visInnerR = innerR;
+                        hero.data.visLeadEdge = leadEdge;
+                    } catch { /* ignore */ }
+                }
+            }
+
+            //console.log("[hook] getHeroVisualInfo called inner/lead=", innerR, leadEdge, "dir=", nx, ny)
+
+            // 3) Final fallback (still never breaks)
+            if (innerR <= 0) innerR = 35;
+            if (leadEdge <= 0) leadEdge = 32;
+
+            // 4) Weapon tip offset (dumb for now; we’ll replace with real weapon offsets later)
+            const tip = leadEdge + 6;
+            const wTipX = nx * tip;
+            const wTipY = ny * tip;
+
+            return [innerR, leadEdge, wTipX, wTipY];
+        };
+
+        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)");
+    } catch (e) {
+        console.warn("[arcadeCompat] hero visual hook install failed", e);
+    }
+})();
+
+
+
+// Install immediately on module load
+//__installHeroVisualInfoHookOnce();
+
+
+
+
+function _hostPerfNowMs(): number {
+    if (typeof performance !== "undefined" && performance.now) {
+        return performance.now()
+    }
+    return Date.now()
+}
+
+function _hostPerfMaybeDump(nowMs: number) {
+    const elapsed = nowMs - _hostPerfLastDumpMs
+    if (elapsed < 1000) return
+    if (_hostPerfFrameCount <= 0) {
+        _hostPerfLastDumpMs = nowMs
+        return
+    }
+
+    const avgTick = _hostPerfAccumTickMs / _hostPerfFrameCount
+    const avgSync = _hostPerfAccumSyncMs / _hostPerfFrameCount
+    const avgSnap = _hostPerfAccumSnapMs / _hostPerfFrameCount
+
+    const fps = (_hostPerfFrameCount * 1000) / elapsed
+
+    const shouldLogPerformance = false
+    if (shouldLogPerformance) { console.log(
+        "[perf.host]",
+        "fps≈", fps.toFixed(1),
+        "avgTickMs≈", avgTick.toFixed(2),
+        "avgSyncMs≈", avgSync.toFixed(2),
+        "avgSnapMs≈", avgSnap.toFixed(2),
+        "sprites≈", _hostPerfLastSpriteCount,
+        "snapSprites≈", _hostPerfLastSnapshotSprites
+    )
+    }
+    
+    _hostPerfLastDumpMs = nowMs
+    _hostPerfFrameCount = 0
+    _hostPerfAccumTickMs = 0
+    _hostPerfAccumSyncMs = 0
+    _hostPerfAccumSnapMs = 0
+}
+
+
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+/* -------------------------------------------------------
+   Basic helpers
+------------------------------------------------------- */
+
+function randint(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Extend Math with idiv
+interface Math {
+    idiv(a: number, b: number): number;
+}
+(Math as any).idiv = (a: number, b: number): number => (a / b) | 0;
+
+
+interface Math {
+    randomRange(min: number, max: number): number;
+}
+
+(Math as any).randomRange = (min: number, max: number): number =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+
+
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 //Shop here
 //Shop section
 //Shop integration
@@ -3354,8 +3441,11 @@ function _syncShopWeaponRingIfPresent(
     }
 }
 
+//End of shop section
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 
-
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+//Agility section
 
 function _findAgiStoredCounterNativeForHero(
     heroArcade: any,
@@ -3751,10 +3841,12 @@ function _agiWeaponSheenStart(nativeHero: any, sc: any, weaponBg: any, weaponFg:
 }
 
 
+//End of agility section
 
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
-
-
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+//Beginning of main image section
 /* -------------------------------------------------------
    Image + image namespace
 ------------------------------------------------------- */
@@ -4096,9 +4188,13 @@ if (!(Array.prototype as any).removeAt) {
 }
 
 
+//End of first image section
+
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
 
 
-
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// More constants / kinds / flags 
 
 /* -------------------------------------------------------
    SpriteKind + flags + Sprite
@@ -4315,6 +4411,7 @@ destroy(effect?: number, durationMs?: number): void {
 }
 
 
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
 
 
 /* -------------------------------------------------------
@@ -4589,9 +4686,10 @@ namespace sprites {
 
     let _debugFirstPlaced = false;
 
-    // ... your _attachNativeSprite comes next ...
 
-
+    
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// Intellect section within sprites namespace
 // --- Projectile visual override (Phaser-side) ---------------------------------
 
 const HERO_WEAPON_KIND_ID = 51;
@@ -4743,6 +4841,10 @@ function _attachEnsureIntellectProjectileVisual(ctx: AttachContext): void {
     }
 }
 
+// End of intellect section within sprites namespace
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
 
 // Mirror hero identity + phase/dir from the Arcade Sprite onto the Phaser native sprite.
 // Also mirrors the NEW universal Action/Phase/Event timeline keys (human-readable).
@@ -7433,6 +7535,9 @@ function _syncUiManagedText(
 
 
 
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+//Weapon section
+
 function _ensureWeaponOverlaysForHeroNative(
     ctx: SyncContext,
     nativeHero: Phaser.GameObjects.Sprite
@@ -8467,6 +8572,13 @@ function _syncWeaponOverlaysForHeroNative(
 }
 
 
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+
+//End of weapon section
+
 // ------------------------------------------------------------
 // World depth policy (y-sort)
 // ------------------------------------------------------------
@@ -8491,6 +8603,13 @@ function _applyWorldDepthForNative(s: any, native: any): void {
     else native.depth = depth;
   } catch {}
 }
+
+
+export function syncHeroAuraForNative(
+  native: Phaser.GameObjects.Sprite,
+  auraActive: boolean,
+  auraColorIndex: number
+)
 
 function _applyHeroAuraGlow(nativeHero: any, auraActive: boolean, auraGlow: boolean, sc: any): void {
     if (!nativeHero) return;
@@ -9364,6 +9483,8 @@ if (_overlapHandlers.length && spritesSnapshot.length > 1) {
 
 
 }
+
+//End of sprites namespace
 
 /* -------------------------------------------------------
    screen & scene namespaces

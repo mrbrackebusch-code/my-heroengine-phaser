@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -95,7 +95,7 @@
         flex-direction: column;
         align-items: stretch;
         width: fit-content;
-        gap: 1px; /* ✅ visible separation so HUD never “covers” top edge */
+        gap: 1px; /* âœ… visible separation so HUD never â€œcoversâ€ top edge */
       }
 
       #app {
@@ -223,7 +223,7 @@
       }
 
       #levelup-box {
-        width: min(720px, 94vw);
+        width: clamp(180px, 20vw, 260px);
         max-height: min(88vh, 760px);
         overflow: auto;
 
@@ -236,116 +236,88 @@
         padding: 12px;
       }
 
-      #levelup-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 8px;
-      }
-
       #levelup-title {
         font-weight: 900;
         letter-spacing: 0.3px;
         font-size: 18px;
-      }
-
-      #levelup-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        font-size: 12px;
-        opacity: 0.85;
-        margin-bottom: 10px;
-      }
-
-      .lvlui-chip {
-        padding: 4px 8px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        white-space: nowrap;
-      }
-
-      #levelup-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-
-      @media (max-width: 640px) {
-        #levelup-grid { grid-template-columns: 1fr; }
-      }
-
-      .lvlui-fam {
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 12px;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.04);
-      }
-
-      .lvlui-fam-title {
-        font-weight: 900;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .lvlui-row {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.10);
+        justify-content: space-between;
+        gap: 10px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        line-height: 1.1;
       }
-      .lvlui-row:first-of-type { border-top: none; }
 
-      .lvlui-axis { opacity: 0.92; }
-      .lvlui-rank {
+      .lvlui-row-value {
         font-variant-numeric: tabular-nums;
-        opacity: 0.85;
-        min-width: 84px;
+        opacity: 0.9;
+        min-width: 44px;
         text-align: right;
       }
 
-      .lvlui-btn {
+      .lvlui-row-label {
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+
+      .lvlui-row-static {
+        opacity: 0.85;
+      }
+
+      .lvlui-opt {
         font: inherit;
-        font-size: 13px;
-        padding: 6px 10px;
-        border-radius: 10px;
+        font-size: 14px;
         border: 1px solid rgba(255, 255, 255, 0.22);
         background: rgba(255, 255, 255, 0.08);
         color: rgba(255, 255, 255, 0.92);
         cursor: pointer;
+        text-align: left;
+        width: 100%;
       }
-      .lvlui-btn:hover { background: rgba(255, 255, 255, 0.14); }
-      .lvlui-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+      .lvlui-opt:hover { background: rgba(255, 255, 255, 0.14); }
+      .lvlui-opt:disabled { opacity: 0.35; cursor: not-allowed; }
 
-      .lvlui-btn.lvlui-sel {
+      .lvlui-opt.lvlui-sel {
         outline: 2px solid rgba(255,255,255,0.8);
         box-shadow: 0 0 0 2px rgba(0,0,0,0.8) inset;
-      }
-
-      #levelup-footer {
-        margin-top: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      #lvlui-msg {
-        font-size: 12px;
-        opacity: 0.85;
-        flex: 1;
-        min-width: 220px;
-        text-align: right;
       }
 
       #lvlui-list {
         display: flex;
         flex-direction: column;
-        gap: 0px;
+        gap: 4px;
+        margin-top: 8px;
+      }
+
+      @keyframes lvluiPulse {
+        0% { text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+        50% { text-shadow: 0 0 6px rgba(255, 255, 255, 0.7); }
+        100% { text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+      }
+
+      @keyframes pointsPulse {
+        0% { transform: scale(1); text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+        50% { transform: scale(1.12); text-shadow: 0 0 10px rgba(255, 255, 255, 0.95); }
+        100% { transform: scale(1); text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+      }
+
+      .lvlui-points-ready {
+        animation: lvluiPulse 1.5s ease-in-out infinite;
+      }
+
+      .xp-pts-ready {
+        animation: pointsPulse 0.75s ease-in-out infinite;
+        transform-origin: left center;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.16);
+        border-radius: 6px;
+        padding: 2px 4px;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
       }
 
 
@@ -384,7 +356,7 @@
         );
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
 
-        /* ✅ taller by ~3 lines */
+        /* âœ… taller by ~3 lines */
         min-height: 132px;
       }
 
@@ -448,7 +420,7 @@
         min-width: 0;
       }
 
-      /* ✅ Traits tighter in width */
+      /* âœ… Traits tighter in width */
       .hud-traits {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -542,7 +514,8 @@
         height: calc(100% - 1px);
 
         display: flex;
-        gap: 10px;
+        flex-direction: column;
+        gap: 6px;
 
         padding: 10px;
         box-sizing: border-box;
@@ -558,14 +531,6 @@
 
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-      }
-
-      #xp-panel .xp-left {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
       }
 
       #xp-panel .xp-title {
@@ -589,13 +554,6 @@
         text-overflow: ellipsis;
       }
 
-      #xp-panel .xp-bonuses {
-        margin-top: 4px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
       #xp-panel .xp-bonus {
         font-size: 10px;
         color: rgba(255, 255, 255, 0.85);
@@ -606,31 +564,22 @@
         text-overflow: ellipsis;
       }
 
-      #xp-panel .xp-right {
-        width: 36px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-between;
-      }
-
       #xp-level-top {
         font-size: 12px;
         font-weight: 900;
         line-height: 1;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-        margin-bottom: 6px;
         white-space: nowrap;
       }
 
       #xp-bar {
         position: relative;
-        width: 22px;
-        flex: 1 1 auto;
+        width: 100%;
+        height: 10px;
 
         border: 2px solid rgba(255, 255, 255, 0.22);
-        border-radius: 10px;
+        border-radius: 8px;
 
         background: rgba(255, 255, 255, 0.08);
         overflow: hidden;
@@ -641,18 +590,57 @@
       #xp-bar-fill {
         position: absolute;
         left: 0;
-        right: 0;
+        top: 0;
         bottom: 0;
 
-        height: 0%;
+        width: 0%;
         background: rgba(74, 163, 255, 0.90); /* matches your intel-blue vibe */
       }
 
-      #xp-bottom {
-        font-size: 9px;
-        color: var(--txt-dim);
+      #xp-panel .xp-stats {
         margin-top: 6px;
-        white-space: nowrap;
+      }
+
+      #xp-panel .xp-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 50px;
+        gap: 4px 1px;
+        align-items: center;
+      }
+
+      #xp-panel .xp-stat-head {
+        font-size: 9px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: var(--txt-dim);
+        text-align: center;
+      }
+
+      #xp-panel .xp-stat-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+
+      #xp-panel .xp-stat-val {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.85);
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+      }
+
+      #xp-panel .xp-relics-title {
+        margin-top: 6px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+
+      #xp-panel .xp-relics-box {
+        height: 44px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
       }
 
 
@@ -700,12 +688,12 @@
           <div class="hud-cell hud-cell-who" id="hud-box-who">
             <div class="hud-head">
               <div class="hud-title">YOU</div>
-              <div class="hud-subtle" id="hud-you-slot">…</div>
+              <div class="hud-subtle" id="hud-you-slot">â€¦</div>
             </div>
-              <div class="hud-youline" id="hud-you-name">…</div>
-              <div class="hud-youline hud-you-stat" id="hud-you-health">…</div>
-              <div class="hud-youline hud-you-stat" id="hud-you-mana">…</div>
-              <div class="hud-youline hud-you-stat" id="hud-you-coins">…</div>
+              <div class="hud-youline" id="hud-you-name">â€¦</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-health">â€¦</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-mana">â€¦</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-coins">â€¦</div>
           </div>
 
           <!-- A -->
@@ -717,19 +705,19 @@
 
             <div class="hud-kindline">
               <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-a-kind">—</div>
+              <div class="hud-kind" id="hud-a-kind">â€”</div>
             </div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-a-dmg">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-a-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-a-elem" title="">⭕</div>
+              <div class="hud-elem" id="hud-a-elem" title="">â­•</div>
             </div>
           </div>
 
@@ -742,19 +730,19 @@
 
             <div class="hud-kindline">
               <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-b-kind">—</div>
+              <div class="hud-kind" id="hud-b-kind">â€”</div>
             </div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-b-dmg">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-b-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-b-elem" title="">⭕</div>
+              <div class="hud-elem" id="hud-b-elem" title="">â­•</div>
             </div>
           </div>
 
@@ -767,66 +755,67 @@
 
             <div class="hud-kindline">
               <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-ab-kind">—</div>
+              <div class="hud-kind" id="hud-ab-kind">â€”</div>
             </div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-ab-dmg">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">—</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">—</span></div>
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-ab-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-ab-elem" title="">⭕</div>
+              <div class="hud-elem" id="hud-ab-elem" title="">â­•</div>
             </div>
           </div>
         </div>
 
         <div id="viewport">
           <div id="app"></div>
-
           <!-- XP / Level panel (per-client, per-hero) -->
           <div id="xp-panel" aria-hidden="true">
-            <div class="xp-left">
-              <div class="xp-title">XP</div>
-              <div class="xp-line" id="xp-left-progress">…</div>
+            <div class="xp-title" id="xp-level-top">Level ...</div>
+            <div class="xp-line" id="xp-left-progress">...</div>
+            <div id="xp-bar"><div id="xp-bar-fill"></div></div>
+            <div class="xp-bonus" id="xp-bonus-pts">Points: ...</div>
 
-              <div class="xp-bonuses" id="xp-bonuses">
-                <div class="xp-bonus" id="xp-bonus-pts">Pts: …</div>
-                <div class="xp-bonus" id="xp-bonus-total">Total XP: …</div>
-                <div class="xp-bonus" id="xp-bonus-note">Bonuses: (soon)</div>
+            <div class="xp-stats" id="xp-stats">
+              <div class="xp-stats-grid">
+                <div></div>
+                <div class="xp-stat-head">Levels</div>
+
+                <div class="xp-stat-label">Damage</div>
+                <div class="xp-stat-val" id="xp-stat-dmg-lvl">+0</div>
+
+                <div class="xp-stat-label">Reach</div>
+                <div class="xp-stat-val" id="xp-stat-reach-lvl">+0</div>
+
+                <div class="xp-stat-label">Time</div>
+                <div class="xp-stat-val" id="xp-stat-time-lvl">+0</div>
+
+                <div class="xp-stat-label">Status</div>
+                <div class="xp-stat-val" id="xp-stat-status-lvl">+0</div>
+
+                <div class="xp-stat-label">HP</div>
+                <div class="xp-stat-val" id="xp-stat-hp-lvl">+0</div>
+
+                <div class="xp-stat-label">MP</div>
+                <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
               </div>
             </div>
 
-            <div class="xp-right">
-              <div id="xp-level-top">Lv …</div>
-              <div id="xp-bar"><div id="xp-bar-fill"></div></div>
-              <div id="xp-bottom">…</div>
-            </div>
+            <div class="xp-relics-title">Relics:</div>
+            <div class="xp-relics-box" id="xp-relics-box"></div>
           </div>
-
-
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
             <div id="levelup-box">
-              <div id="levelup-head">
-                <div id="levelup-title">Level Up</div>
-                <button class="lvlui-btn" id="lvlui-close" type="button">Close (B)</button>
-              </div>
+              <div id="levelup-title">Level Up</div>
 
-              <div id="levelup-meta">
-                <div class="lvlui-chip" id="lvlui-chip-pts">Pts: ...</div>
-                <div class="lvlui-chip" id="lvlui-chip-safe">Safe: ...</div>
-              </div>
-
-              <!-- List is generated from LVLUI_CORE_OPTIONS in JS -->
+              <!-- List is generated from LVLUI_MENU_ITEMS in JS -->
               <div id="lvlui-list"></div>
-
-              <div id="levelup-footer">
-                <div id="lvlui-msg"></div>
-              </div>
             </div>
           </div>
 
@@ -849,7 +838,7 @@
     <!-- Phaser entrypoint -->
     <script type="module" src="/src/main.ts"></script>
 
-    <!-- Landing page → URL profile helper -->
+    <!-- Landing page â†’ URL profile helper -->
     <script>
       (function () {
         const params = new URLSearchParams(window.location.search);
@@ -963,15 +952,15 @@
           xpLeftProgress: document.getElementById("xp-left-progress"),
           xpLevelTop: document.getElementById("xp-level-top"),
           xpBarFill: document.getElementById("xp-bar-fill"),
-          xpBottom: document.getElementById("xp-bottom"),
           xpBonusPts: document.getElementById("xp-bonus-pts"),
-          xpBonusTotal: document.getElementById("xp-bonus-total"),
-          xpBonusNote: document.getElementById("xp-bonus-note"),
+          xpStatDmgLvl: document.getElementById("xp-stat-dmg-lvl"),
+          xpStatReachLvl: document.getElementById("xp-stat-reach-lvl"),
+          xpStatTimeLvl: document.getElementById("xp-stat-time-lvl"),
+          xpStatStatusLvl: document.getElementById("xp-stat-status-lvl"),
+          xpStatHpLvl: document.getElementById("xp-stat-hp-lvl"),
+          xpStatMpLvl: document.getElementById("xp-stat-mp-lvl"),
           lvlLayer: document.getElementById("levelup-layer"),
-          lvlChipPts: document.getElementById("lvlui-chip-pts"),
-          lvlChipSafe: document.getElementById("lvlui-chip-safe"),
-          lvlClose: document.getElementById("lvlui-close"),
-          lvlMsg: document.getElementById("lvlui-msg"),
+          lvlPoints: document.getElementById("lvlui-points"),
 
         };
 
@@ -988,15 +977,15 @@
 
         // Pick your emojis here
         const EMOJI = {
-          coin: "🪙",    // other good options: 💰 🟡 💵
-          health: "❤️",  // options: 🫀 💚 🩸
-          mana: "🫧",    // options: 🔮 ✨ 💧 🪄 🔷
+          coin: "\u{1FA99}",
+          health: "\u2764\uFE0F",
+          mana: "\u{1FAE7}",
         };
 
         function _readTextSpriteString(spritesNS, s) {
           if (!s || !spritesNS) return "";
 
-          // ✅ Primary: MakeCode/Phaser text sprites store their string in sprite data "tx_str"
+          // âœ… Primary: MakeCode/Phaser text sprites store their string in sprite data "tx_str"
           try {
             const t = String(spritesNS.readDataString(s, "tx_str") || "");
             if (t) return t;
@@ -1039,7 +1028,7 @@
 
 
       // NEW:
-      let _hud_coinsReleaseBank = 0;  // how many coins we’re allowed to reveal (based on arrivals)
+      let _hud_coinsReleaseBank = 0;  // how many coins weâ€™re allowed to reveal (based on arrivals)
       let _hud_coinsNextStepAt = 0;
 
       const HUD_COIN_STEP_MS = 50;   // slower = bigger (e.g. 180)
@@ -1105,7 +1094,7 @@
       }
     }
 
-    // ✅ If coins arrived, allow an immediate step this tick (no extra waiting)
+    // âœ… If coins arrived, allow an immediate step this tick (no extra waiting)
     if (drained > 0) _hud_coinsNextStepAt = now;
 
     // Slow step: at most once per HUD_COIN_STEP_MS
@@ -1180,14 +1169,14 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
 
               // ------------------------------------------------------------
-        // XP / LEVEL HUD (per-hero) — smooth fill, never shrinks
+        // XP / LEVEL HUD (per-hero) â€” smooth fill, never shrinks
         // Reads hero sprite data keys: lvl, xp, xpNext, lvlPts, xpTot
         // ------------------------------------------------------------
 
         let _xp_dispPct = 0;      // what we draw
-        let _xp_targetPct = 0;    // what we’re growing toward
+        let _xp_targetPct = 0;    // what weâ€™re growing toward
         let _xp_postWrapPct = 0;  // post-level-up target
-        let _xp_wrapCount = 0;    // how many level-ups to “wrap” through
+        let _xp_wrapCount = 0;    // how many level-ups to â€œwrapâ€ through
         let _xp_lastLevelSeen = 0;
 
         let _xp_animLastTs = 0;
@@ -1196,7 +1185,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function _xp_setBarHeight(pct) {
           if (!R.xpBarFill) return;
           const p = Math.max(0, Math.min(100, +pct || 0));
-          R.xpBarFill.style.height = p.toFixed(2) + "%";
+          R.xpBarFill.style.width = p.toFixed(2) + "%";
         }
 
         function _xp_resetUi() {
@@ -1261,7 +1250,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
               _xp_setBarHeight(0);
 
               if (_xp_wrapCount > 0) {
-                _xp_targetPct = 100; // next “wrap”
+                _xp_targetPct = 100; // next â€œwrapâ€
               } else {
                 _xp_targetPct = _xp_postWrapPct; // final post-level percent
               }
@@ -1289,13 +1278,14 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         // Add new options later by appending to this list ONLY.
         // Engine must also recognize the key in trySpendLevelUpPointOnCore.
-        const LVLUI_CORE_OPTIONS = [
-          { key: "dmg",   label: "Damage" },
-          { key: "reach", label: "Reach"  },
-          { key: "time",  label: "Time"   },
-          { key: "status",label: "Status" },
-          { key: "hp",    label: "HP"     },
-          { key: "mp",    label: "MP"     },
+        const LVLUI_MENU_ITEMS = [
+          { key: "dmg",   label: "Damage", action: "spend" },
+          { key: "reach", label: "Reach",  action: "spend" },
+          { key: "time",  label: "Time",   action: "spend" },
+          { key: "status",label: "Status", action: "spend" },
+          { key: "hp",    label: "HP",     action: "spend" },
+          { key: "mp",    label: "MP",     action: "spend" },
+          { key: "close", label: "Close",  action: "close" },
         ];
 
         function _lvlui_isDialogOpen() {
@@ -1316,7 +1306,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
           } else {
             R.lvlLayer.classList.remove("he-show");
             R.lvlLayer.setAttribute("aria-hidden", "true");
-            if (R.lvlMsg) setText(R.lvlMsg, "");
           }
         }
 
@@ -1345,36 +1334,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         function _lvlui_valueTextForOpt(opt, snap) {
           const k = String(opt.key || "");
-          if (!snap) return "...";
+          if (k === "close") return "";
+          if (!snap || !snap.lvlUiBonuses) return "+0";
 
-          if (k === "dmg") {
-            const mm = _lvlui_axisMinMax(snap.luBonuses, 1);
-            if (!mm.ok) return "...";
-            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
-          }
-          if (k === "reach") {
-            const mm = _lvlui_axisMinMax(snap.luBonuses, 2);
-            if (!mm.ok) return "...";
-            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
-          }
-          if (k === "time") {
-            const mm = _lvlui_axisMinMax(snap.luBonuses, 3);
-            if (!mm.ok) return "...";
-            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
-          }
-          if (k === "status") {
-            const mm = _lvlui_axisMinMax(snap.luBonuses, 4);
-            if (!mm.ok) return "...";
-            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
-          }
-
-          if (k === "hp") return `max ${snap.maxHp | 0} (+6)`;
-          if (k === "mp") return `max ${snap.maxMana | 0} (+4)`;
-
-          return "...";
+          const v = (snap.lvlUiBonuses[k] | 0) || 0;
+          return `+${v}`;
         }
 
         function _lvlui_canSpendOpt(opt, snap) {
+          if (!opt || opt.action === "close") return true;
           if (!snap) return false;
           const pts = Math.max(0, (snap.lvlPts | 0));
           const safe = !!snap.safeForSpend;
@@ -1403,12 +1371,18 @@ function _readTeamCoins(pid, hero, spritesNS) {
           while (i < 0) i += n;
           i = i % n;
 
+          const prev = _lvlui.selIdx | 0;
           _lvlui.selIdx = i;
           for (let k = 0; k < n; k++) {
             const b = _lvlui.btns[k];
             if (!b) continue;
             if (k === i) b.classList.add("lvlui-sel");
             else b.classList.remove("lvlui-sel");
+          }
+
+          if (i !== prev) {
+            const pid = getPid();
+            if (pid) _lvlui_cmd(pid, { type: "setSel", sel: i });
           }
         }
 
@@ -1425,11 +1399,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
             if (snap2 && snap2.ready) _lvlui_applySnapshot(snap2);
           } catch (_e) {}
 
-          if (R.lvlMsg) {
-            const ok = !!(r && r.ok);
-            const reason = String((r && r.reason) || "");
-            setText(R.lvlMsg, ok ? "OK" : (`Denied: ${reason || "?"}`));
-          }
           return r;
         }
 
@@ -1439,30 +1408,32 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           list.innerHTML = "";
 
-          for (const opt of LVLUI_CORE_OPTIONS) {
-            const row = document.createElement("div");
-            row.className = "lvlui-row";
+          const ptsRow = document.createElement("div");
+          ptsRow.className = "lvlui-row lvlui-row-static";
+          ptsRow.id = "lvlui-points";
+          ptsRow.textContent = "Points: ...";
+          list.appendChild(ptsRow);
 
-            const label = document.createElement("div");
-            label.className = "lvlui-axis";
-            label.textContent = String(opt.label || opt.key || "");
-
-            const val = document.createElement("div");
-            val.className = "lvlui-rank";
-            val.id = `lvlui-val-${opt.key}`;
-            val.textContent = "...";
-
+          for (const opt of LVLUI_MENU_ITEMS) {
             const btn = document.createElement("button");
-            btn.className = "lvlui-btn lvlui-opt";
+            btn.className = "lvlui-row lvlui-opt";
             btn.type = "button";
             btn.id = `lvlui-btn-${opt.key}`;
             btn.setAttribute("data-key", String(opt.key || ""));
-            btn.textContent = "Spend";
+            btn.setAttribute("data-action", String(opt.action || ""));
 
-            row.appendChild(label);
-            row.appendChild(val);
-            row.appendChild(btn);
-            list.appendChild(row);
+            const val = document.createElement("div");
+            val.className = "lvlui-row-value";
+            val.id = `lvlui-val-${opt.key}`;
+            val.textContent = "...";
+
+            const label = document.createElement("div");
+            label.className = "lvlui-row-label";
+            label.textContent = String(opt.label || opt.key || "");
+
+            btn.appendChild(val);
+            btn.appendChild(label);
+            list.appendChild(btn);
           }
         }
 
@@ -1478,12 +1449,20 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const pts = Math.max(0, (snap.lvlPts | 0));
           const safe = !!snap.safeForSpend;
-          const safeReason = String(snap.safeReason || "");
 
-          if (R.lvlChipPts) setText(R.lvlChipPts, `Pts: ${pts}`);
-          if (R.lvlChipSafe) setText(R.lvlChipSafe, safe ? "Safe: yes" : `Safe: no (${safeReason || "unsafe"})`);
+          if (R.lvlPoints) {
+            setText(R.lvlPoints, `Points: ${pts}`);
+            const glow = (pts > 0 && safe);
+            R.lvlPoints.classList.toggle("lvlui-points-ready", glow);
+          }
 
-          for (const opt of LVLUI_CORE_OPTIONS) {
+          if (pts <= 0) {
+            const pid = (snap.playerId | 0);
+            if (pid > 0) _lvlui_cmd(pid, { type: "closeUI" });
+            return;
+          }
+
+          for (const opt of LVLUI_MENU_ITEMS) {
             const v = document.getElementById(`lvlui-val-${opt.key}`);
             if (v) setText(v, _lvlui_valueTextForOpt(opt, snap));
 
@@ -1498,6 +1477,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           _lvlui_buildListOnce();
 
+          R.lvlPoints = document.getElementById("lvlui-points");
+
           _lvlui.btns = Array.from(document.querySelectorAll("#lvlui-list .lvlui-opt"));
           _lvlui_setSel(0);
 
@@ -1506,16 +1487,13 @@ function _readTeamCoins(pid, hero, spritesNS) {
             b.addEventListener("click", () => {
               const pid = getPid();
               if (!pid) return;
+              const action = String(b.getAttribute("data-action") || "spend");
+              if (action === "close") {
+                _lvlui_cmd(pid, { type: "closeUI" });
+                return;
+              }
               const key = String(b.getAttribute("data-key") || "");
               _lvlui_cmd(pid, { type: "spendCore", key });
-            });
-          }
-
-          if (R.lvlClose) {
-            R.lvlClose.addEventListener("click", () => {
-              const pid = getPid();
-              if (!pid) return;
-              _lvlui_cmd(pid, { type: "closeUI" });
             });
           }
 
@@ -1640,7 +1618,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
         }
 
-        // Some builds might export SUPPORT instead of HEAL; treat both as “Support”
+        // Some builds might export SUPPORT instead of HEAL; treat both as â€œSupportâ€
         if (typeof FAMILY.SUPPORT === "number" && f === (FAMILY.SUPPORT | 0)) {
           return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
         }
@@ -1648,13 +1626,13 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
         }
 
-        // ✅ Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
+        // âœ… Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
         if (f === 0) return { name: "Strength", kindClass: "family-strength", boxClass: "move-strength" };
         if (f === 1) return { name: "Agility", kindClass: "family-agility", boxClass: "move-agility" };
         if (f === 2) return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
         if (f === 3) return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
 
-        return { name: "—", kindClass: "", boxClass: "" };
+        return { name: "â€”", kindClass: "", boxClass: "" };
       }
 
         // --- element mapping: DEFAULT NONE unless enum says otherwise ---
@@ -1662,18 +1640,18 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const ELEM = window.ELEM || {};
           const e = elem | 0;
 
-          // ✅ First preference: explicit NONE
+          // âœ… First preference: explicit NONE
           if (typeof ELEM.NONE === "number" && e === (ELEM.NONE | 0)) {
-            return { name: "None", emoji: "⭕" };
+            return { name: "None", emoji: "\u2205" };
           }
 
           const m = [
-            { key: "FIRE", name: "Fire", emoji: "🔥" },
-            { key: "WATER", name: "Water", emoji: "💧" },
-            { key: "LIGHTNING", name: "Lightning", emoji: "⚡" },
-            { key: "WIND", name: "Wind", emoji: "🌬️" },
-            { key: "EARTH", name: "Earth", emoji: "🪨" },     // rock
-            { key: "NATURE", name: "Nature", emoji: "🌿" },   // green
+            { key: "FIRE", name: "Fire", emoji: "\u{1F525}" },
+            { key: "WATER", name: "Water", emoji: "\u{1F4A7}" },
+            { key: "LIGHTNING", name: "Lightning", emoji: "\u26A1" },
+            { key: "WIND", name: "Wind", emoji: "\u{1F4A8}" },
+            { key: "EARTH", name: "Earth", emoji: "\u{1FAA8}" },
+            { key: "NATURE", name: "Nature", emoji: "\u{1F33F}" },
           ];
 
           for (const it of m) {
@@ -1682,8 +1660,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
             }
           }
 
-          // ✅ If we can't prove it's an element, show None.
-          return { name: "None", emoji: "⭕" };
+          // âœ… If we can't prove it's an element, show None.
+          return { name: "None", emoji: "\u2205" };
         }
 
         function readNum(spritesNS, spr, key) {
@@ -1696,20 +1674,31 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return "";
         }
 
-        function renderMove(out, boxEl, noteEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl) {
+
+        function _getWpnModsForFamily(wpnModsByFamily, fam) {
+          if (!wpnModsByFamily) return null;
+          return wpnModsByFamily[fam] || wpnModsByFamily[String(fam)] || null;
+        }
+
+        function _fmtTraitWithWeapon(val, mod) {
+          const v = (val | 0);
+          const m = (mod | 0);
+          return m !== 0 ? `${v} (+${m})` : String(v);
+        }
+        function renderMove(out, boxEl, noteEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
           // Reset defaults
           function reset() {
             setText(noteEl, "");
-            setText(kindEl, "—");
+            setText(kindEl, "â€”");
             kindEl.className = "hud-kind";
             boxEl.className = "hud-cell";
 
-            setText(dmgEl, "—");
-            setText(reachEl, "—");
-            setText(timeEl, "—");
-            setText(statusEl, "—");
+            setText(dmgEl, "â€”");
+            setText(reachEl, "â€”");
+            setText(timeEl, "â€”");
+            setText(statusEl, "â€”");
 
-            const ei0 = { name: "None", emoji: "⭕" };
+            const ei0 = { name: "None", emoji: "\u2205" };
             setText(elemEl, ei0.emoji);
             setTitle(elemEl, ei0.name);
           }
@@ -1728,18 +1717,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const fi = familyInfo(fam);
           const ei = elemInfo(elem);
+          const wmods = _getWpnModsForFamily(wpnModsByFamily, fam);
 
           // If family isn't recognized yet, keep the box neutral.
-          const kindName = fi.name || "—";
+          const kindName = fi.name || "â€”";
           setText(kindEl, kindName);
           kindEl.className = "hud-kind" + (fi.kindClass ? " " + fi.kindClass : "");
           boxEl.className = "hud-cell" + (fi.boxClass ? " " + fi.boxClass : "");
 
           // Traits
-          setText(dmgEl, String(dmg));
-          setText(reachEl, String(reach));
-          setText(timeEl, String(time));
-          setText(statusEl, String(status));
+          setText(dmgEl, _fmtTraitWithWeapon(dmg, wmods ? wmods.dmg : 0));
+          setText(reachEl, _fmtTraitWithWeapon(reach, wmods ? wmods.reach : 0));
+          setText(timeEl, _fmtTraitWithWeapon(time, wmods ? wmods.time : 0));
+          setText(statusEl, _fmtTraitWithWeapon(status, wmods ? wmods.status : 0));
 
           // Element
           setText(elemEl, ei.emoji);
@@ -1751,15 +1741,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const spritesNS = window.sprites;
 
           if (!pid) {
-            setText(R.youSlot, "…");
-            setText(R.youName, "Waiting for server…");
+            setText(R.youSlot, "â€¦");
+            setText(R.youName, "Waiting for serverâ€¦");
             setText(R.youHealth, "");
             setText(R.youMana, "");
             setText(R.youCoins, "");
 
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             
             _xp_resetUi();
             return;
@@ -1775,9 +1765,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youMana, "For");
             setText(R.youCoins, "A Hero");
 
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             
             _xp_resetUi();
             return;
@@ -1807,43 +1797,36 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const lvlPts = Math.max(0, readNum(spritesNS, hero, "lvlPts"));
           const xpTot = Math.max(0, readNum(spritesNS, hero, "xpTot"));
+          setText(R.xpLevelTop, `Level ${lvl}`);
+          setText(R.xpLeftProgress, `${xp}/${xpNext} XP`);
+          setText(R.xpBonusPts, `Points: ${lvlPts}`);
 
-          setText(R.xpLevelTop, `Lv ${lvl}`);
-          setText(R.xpBottom, `${xp}/${xpNext}`);
-          setText(R.xpLeftProgress, `${Math.round(pct)}%`);
-
-          setText(R.xpBonusPts, `Pts: ${lvlPts}`);
-          setText(R.xpBonusTotal, `Total XP: ${xpTot}`);
-
-          // Placeholder until we expose actual bonuses list from engine
-          // Level-up readiness prompt (engine truth = snapshot)
-          let lvlMsg = "Bonuses: (soon)";
           const snap = _getUiSnapshotCached(pid);
+          const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
           _lvlui_initOnce();
           _lvlui_applySnapshot(snap);
 
-          if (snap && snap.ready) {
-            const pts2 = Math.max(0, (snap.lvlPts | 0));
-            const uiMode = (snap.uiMode | 0);
-            const safe = !!snap.safeForSpend;
-            const safeReason = String(snap.safeReason || "");
+          const flash = (lvlPts | 0) > 1;
+          if (R.xpBonusPts) R.xpBonusPts.classList.toggle("xp-pts-ready", flash);
 
-            if (uiMode === 1) lvlMsg = "LEVEL UP OPEN — B to close";
-            else if (pts2 > 0) lvlMsg = safe ? "LEVEL UP READY — press A+B" : `LEVEL UP LOCKED — ${safeReason || "unsafe"}`;
-          }
+          const lvlBonuses = (snap && snap.lvlBonuses) ? snap.lvlBonuses : null;
+          const fmt = (v) => `+${(v | 0)}`;
 
-          setText(R.xpBonusNote, lvlMsg);
-
-
+          setText(R.xpStatDmgLvl, fmt((lvlBonuses && lvlBonuses.dmg) || 0));
+          setText(R.xpStatReachLvl, fmt((lvlBonuses && lvlBonuses.reach) || 0));
+          setText(R.xpStatTimeLvl, fmt((lvlBonuses && lvlBonuses.time) || 0));
+          setText(R.xpStatStatusLvl, fmt((lvlBonuses && lvlBonuses.status) || 0));
+          setText(R.xpStatHpLvl, fmt((lvlBonuses && lvlBonuses.hp) || 0));
+          setText(R.xpStatMpLvl, fmt((lvlBonuses && lvlBonuses.mp) || 0));
           // Smooth bar growth (never shrinks; wraps on level-up)
           _xp_setTargetFrom(lvl, pct);
 
 
           const heroIndex = resolveHeroIndexForSprite(hero);
           if (heroIndex < 0) {
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             return;
           }
 
@@ -1851,9 +1834,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const outB = callStudentLogic(heroIndex, "B");
           const outAB = callStudentLogic(heroIndex, "A+B");
 
-          renderMove(outA, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem);
-          renderMove(outB, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem);
-          renderMove(outAB, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem);
+          renderMove(outA, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
+          renderMove(outB, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
+          renderMove(outAB, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
         }
 
         setInterval(tick, REFRESH_MS);
@@ -1893,7 +1876,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const hasChoices = Array.isArray(o.choices) && o.choices.length > 0;
           _setText(
             hintEl,
-            o.hint ?? (hasChoices ? "Click a choice" : "Space/Enter: next • Esc: close")
+            o.hint ?? (hasChoices ? "Click a choice" : "Space/Enter: next â€¢ Esc: close")
           );
 
           _clearChoices();
@@ -1969,3 +1952,20 @@ function _readTeamCoins(pid, hero, spritesNS) {
     </script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
