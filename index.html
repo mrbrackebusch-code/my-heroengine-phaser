@@ -342,6 +342,12 @@
         text-align: right;
       }
 
+      #lvlui-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0px;
+      }
+
 
       /* -----------------------------
          HUD (4 boxes)
@@ -811,49 +817,14 @@
               </div>
 
               <div id="levelup-meta">
-                <div class="lvlui-chip" id="lvlui-chip-pts">Pts: …</div>
-                <div class="lvlui-chip" id="lvlui-chip-safe">Safe: …</div>
+                <div class="lvlui-chip" id="lvlui-chip-pts">Pts: ...</div>
+                <div class="lvlui-chip" id="lvlui-chip-safe">Safe: ...</div>
               </div>
 
-              <div id="levelup-grid">
-                <div class="lvlui-fam">
-                  <div class="lvlui-fam-title">Strength</div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-0-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-1" data-kind="axis" data-family="0" data-trait="1" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-0-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-2" data-kind="axis" data-family="0" data-trait="2" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-0-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-3" data-kind="axis" data-family="0" data-trait="3" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-0-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-0-4" data-kind="axis" data-family="0" data-trait="4" type="button">Spend</button></div>
-                </div>
-
-                <div class="lvlui-fam">
-                  <div class="lvlui-fam-title">Agility</div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-1-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-1" data-kind="axis" data-family="1" data-trait="1" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-1-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-2" data-kind="axis" data-family="1" data-trait="2" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-1-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-3" data-kind="axis" data-family="1" data-trait="3" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-1-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-1-4" data-kind="axis" data-family="1" data-trait="4" type="button">Spend</button></div>
-                </div>
-
-                <div class="lvlui-fam">
-                  <div class="lvlui-fam-title">Intelligence</div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-2-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-1" data-kind="axis" data-family="2" data-trait="1" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-2-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-2" data-kind="axis" data-family="2" data-trait="2" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-2-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-3" data-kind="axis" data-family="2" data-trait="3" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-2-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-2-4" data-kind="axis" data-family="2" data-trait="4" type="button">Spend</button></div>
-                </div>
-
-                <div class="lvlui-fam">
-                  <div class="lvlui-fam-title">Support</div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Damage</div><div class="lvlui-rank" id="lvlui-rank-3-1">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-1" data-kind="axis" data-family="3" data-trait="1" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Reach</div><div class="lvlui-rank" id="lvlui-rank-3-2">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-2" data-kind="axis" data-family="3" data-trait="2" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Time</div><div class="lvlui-rank" id="lvlui-rank-3-3">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-3" data-kind="axis" data-family="3" data-trait="3" type="button">Spend</button></div>
-                  <div class="lvlui-row"><div class="lvlui-axis">Status</div><div class="lvlui-rank" id="lvlui-rank-3-4">…</div><button class="lvlui-btn lvlui-opt" id="lvlui-btn-3-4" data-kind="axis" data-family="3" data-trait="4" type="button">Spend</button></div>
-                </div>
-              </div>
+              <!-- List is generated from LVLUI_CORE_OPTIONS in JS -->
+              <div id="lvlui-list"></div>
 
               <div id="levelup-footer">
-                <div>
-                  <button class="lvlui-btn lvlui-opt" id="lvlui-btn-hp" data-kind="hp" type="button">+6 Max HP (Spend 1)</button>
-                  <button class="lvlui-btn lvlui-opt" id="lvlui-btn-mana" data-kind="mana" type="button">+4 Max Mana (Spend 1)</button>
-                </div>
                 <div id="lvlui-msg"></div>
               </div>
             </div>
@@ -1304,7 +1275,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         requestAnimationFrame(_xp_animLoop);
 
         // ------------------------------------------------------------
-        // Level Up DOM menu (uiMode===1)
+        // Level Up DOM menu (uiMode===1) - CORE 6 options, extensible
         // Controls while open:
         //   arrows = move selection
         //   Enter/Space/Z = spend (A)
@@ -1315,6 +1286,17 @@ function _readTeamCoins(pid, hero, spritesNS) {
           selIdx: 0,
           btns: [],
         };
+
+        // Add new options later by appending to this list ONLY.
+        // Engine must also recognize the key in trySpendLevelUpPointOnCore.
+        const LVLUI_CORE_OPTIONS = [
+          { key: "dmg",   label: "Damage" },
+          { key: "reach", label: "Reach"  },
+          { key: "time",  label: "Time"   },
+          { key: "status",label: "Status" },
+          { key: "hp",    label: "HP"     },
+          { key: "mp",    label: "MP"     },
+        ];
 
         function _lvlui_isDialogOpen() {
           try {
@@ -1340,7 +1322,78 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         function _lvlui_rankStr(rank) {
           const r = Math.max(0, rank | 0);
-          return `r${r}/4 (+${r})`;
+          return `r${r}/4`;
+        }
+
+        function _lvlui_axisMinMax(luBonuses, traitIndex1to4) {
+          // luBonuses[fam][trait0..3]
+          const t0 = (traitIndex1to4 | 0) - 1;
+          if (!Array.isArray(luBonuses) || t0 < 0 || t0 > 3) return { min: 0, max: 0, ok: false };
+
+          let min = 999, max = -999, any = false;
+          for (let fam = 0; fam < 4; fam++) {
+            const row = luBonuses[fam];
+            if (!Array.isArray(row) || row.length < 4) continue;
+            const r = (row[t0] | 0);
+            if (r < min) min = r;
+            if (r > max) max = r;
+            any = true;
+          }
+          if (!any) return { min: 0, max: 0, ok: false };
+          return { min, max, ok: true };
+        }
+
+        function _lvlui_valueTextForOpt(opt, snap) {
+          const k = String(opt.key || "");
+          if (!snap) return "...";
+
+          if (k === "dmg") {
+            const mm = _lvlui_axisMinMax(snap.luBonuses, 1);
+            if (!mm.ok) return "...";
+            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
+          }
+          if (k === "reach") {
+            const mm = _lvlui_axisMinMax(snap.luBonuses, 2);
+            if (!mm.ok) return "...";
+            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
+          }
+          if (k === "time") {
+            const mm = _lvlui_axisMinMax(snap.luBonuses, 3);
+            if (!mm.ok) return "...";
+            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
+          }
+          if (k === "status") {
+            const mm = _lvlui_axisMinMax(snap.luBonuses, 4);
+            if (!mm.ok) return "...";
+            return (mm.min === mm.max) ? _lvlui_rankStr(mm.min) : `r${mm.min}-${mm.max}/4`;
+          }
+
+          if (k === "hp") return `max ${snap.maxHp | 0} (+6)`;
+          if (k === "mp") return `max ${snap.maxMana | 0} (+4)`;
+
+          return "...";
+        }
+
+        function _lvlui_canSpendOpt(opt, snap) {
+          if (!snap) return false;
+          const pts = Math.max(0, (snap.lvlPts | 0));
+          const safe = !!snap.safeForSpend;
+          if (!(pts > 0 && safe)) return false;
+
+          const k = String(opt.key || "");
+
+          // For axis, only disable when ALL families are maxed (min==4)
+          if (k === "dmg" || k === "reach" || k === "time" || k === "status") {
+            const traitIndex = (k === "dmg") ? 1 : (k === "reach") ? 2 : (k === "time") ? 3 : 4;
+            const mm = _lvlui_axisMinMax(snap.luBonuses, traitIndex);
+            if (!mm.ok) return true; // allow if unknown
+            return (mm.min < 4);
+          }
+
+          // HP/MP always allowed if pts/safe
+          if (k === "hp" || k === "mp") return true;
+
+          return false;
         }
 
         function _lvlui_setSel(idx) {
@@ -1366,13 +1419,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
           const r = fn(cmd);
 
-          // If engine returns a snapshot, use it immediately (no cache lag)
+          // refresh immediately
           try {
-            if (r && r.snapshot) {
-              _hud_lastSnap = r.snapshot;
-              _hud_lastSnapAt = Date.now() | 0;
-              _lvlui_applySnapshot(r.snapshot);
-            }
+            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
+            if (snap2 && snap2.ready) _lvlui_applySnapshot(snap2);
           } catch (_e) {}
 
           if (R.lvlMsg) {
@@ -1381,6 +1431,39 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.lvlMsg, ok ? "OK" : (`Denied: ${reason || "?"}`));
           }
           return r;
+        }
+
+        function _lvlui_buildListOnce() {
+          const list = document.getElementById("lvlui-list");
+          if (!list) return;
+
+          list.innerHTML = "";
+
+          for (const opt of LVLUI_CORE_OPTIONS) {
+            const row = document.createElement("div");
+            row.className = "lvlui-row";
+
+            const label = document.createElement("div");
+            label.className = "lvlui-axis";
+            label.textContent = String(opt.label || opt.key || "");
+
+            const val = document.createElement("div");
+            val.className = "lvlui-rank";
+            val.id = `lvlui-val-${opt.key}`;
+            val.textContent = "...";
+
+            const btn = document.createElement("button");
+            btn.className = "lvlui-btn lvlui-opt";
+            btn.type = "button";
+            btn.id = `lvlui-btn-${opt.key}`;
+            btn.setAttribute("data-key", String(opt.key || ""));
+            btn.textContent = "Spend";
+
+            row.appendChild(label);
+            row.appendChild(val);
+            row.appendChild(btn);
+            list.appendChild(row);
+          }
         }
 
         function _lvlui_applySnapshot(snap) {
@@ -1400,52 +1483,31 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (R.lvlChipPts) setText(R.lvlChipPts, `Pts: ${pts}`);
           if (R.lvlChipSafe) setText(R.lvlChipSafe, safe ? "Safe: yes" : `Safe: no (${safeReason || "unsafe"})`);
 
-          const lu = Array.isArray(snap.luBonuses) ? snap.luBonuses : null;
+          for (const opt of LVLUI_CORE_OPTIONS) {
+            const v = document.getElementById(`lvlui-val-${opt.key}`);
+            if (v) setText(v, _lvlui_valueTextForOpt(opt, snap));
 
-          // Update rank labels + disable logic
-          for (let fam = 0; fam <= 3; fam++) {
-            for (let trait = 1; trait <= 4; trait++) {
-              const rank = (lu && lu[fam]) ? (lu[fam][trait - 1] | 0) : 0;
-
-              const rankEl = document.getElementById(`lvlui-rank-${fam}-${trait}`);
-              if (rankEl) setText(rankEl, _lvlui_rankStr(rank));
-
-              const btn = document.getElementById(`lvlui-btn-${fam}-${trait}`);
-              if (btn) btn.disabled = !(pts > 0 && safe && rank < 4);
-            }
+            const b = document.getElementById(`lvlui-btn-${opt.key}`);
+            if (b) b.disabled = !_lvlui_canSpendOpt(opt, snap);
           }
-
-          const hpBtn = document.getElementById("lvlui-btn-hp");
-          const manaBtn = document.getElementById("lvlui-btn-mana");
-          if (hpBtn) hpBtn.disabled = !(pts > 0 && safe);
-          if (manaBtn) manaBtn.disabled = !(pts > 0 && safe);
         }
 
         function _lvlui_initOnce() {
           if (_lvlui.inited) return;
           _lvlui.inited = true;
 
-          if (!R.lvlLayer) return;
+          _lvlui_buildListOnce();
 
-          _lvlui.btns = Array.from(R.lvlLayer.querySelectorAll(".lvlui-opt"));
+          _lvlui.btns = Array.from(document.querySelectorAll("#lvlui-list .lvlui-opt"));
           _lvlui_setSel(0);
 
-          // Click behavior
+          // Click spend => spendCore(key)
           for (const b of _lvlui.btns) {
             b.addEventListener("click", () => {
               const pid = getPid();
               if (!pid) return;
-
-              const kind = String(b.getAttribute("data-kind") || "");
-              if (kind === "axis") {
-                const fam = Number(b.getAttribute("data-family") || "0") | 0;
-                const trait = Number(b.getAttribute("data-trait") || "1") | 0;
-                _lvlui_cmd(pid, { type: "spendAxis", family: fam, traitIndex: trait });
-              } else if (kind === "hp") {
-                _lvlui_cmd(pid, { type: "spendHp" });
-              } else if (kind === "mana") {
-                _lvlui_cmd(pid, { type: "spendMana" });
-              }
+              const key = String(b.getAttribute("data-key") || "");
+              _lvlui_cmd(pid, { type: "spendCore", key });
             });
           }
 
@@ -1464,7 +1526,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
             const k = e.key;
 
-            // Navigation
             if (k === "ArrowDown" || k === "ArrowRight") {
               e.preventDefault(); e.stopPropagation();
               _lvlui_setSel((_lvlui.selIdx + 1) | 0);
@@ -1494,7 +1555,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
             }
           }, true);
         }
-
 
         function getPid() {
           const net = window.__net;

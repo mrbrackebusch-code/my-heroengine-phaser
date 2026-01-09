@@ -1664,11 +1664,20 @@ let p2IntentPending2 = ""
 let p3IntentPending2 = ""
 let p4IntentPending2 = ""
 
+// A+B chord window (ms)
+const AB_CHORD_WINDOW_MS = 200
+
 // Previous raw button states (for edge detection)
 let _p1PrevA = false, _p1PrevB = false
 let _p2PrevA = false, _p2PrevB = false
 let _p3PrevA = false, _p3PrevB = false
 let _p4PrevA = false, _p4PrevB = false
+
+// Last edge timestamps (for A+B chord detection window)
+let _p1LastAEdgeMs = 0, _p1LastBEdgeMs = 0
+let _p2LastAEdgeMs = 0, _p2LastBEdgeMs = 0
+let _p3LastAEdgeMs = 0, _p3LastBEdgeMs = 0
+let _p4LastAEdgeMs = 0, _p4LastBEdgeMs = 0
 
 
 // Control-lock timestamps: when each hero's inputs should unlock
@@ -1841,7 +1850,7 @@ const XP_BOSS_MULT_PCT = 300  // 300% = 3x
 //Contract log
 
 
-const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 //The master debug turn on and turn off
 
 // Filters (0 = all players; -1 = all heroes; set to reduce noise)
@@ -5685,6 +5694,88 @@ function trySpendLevelUpPointOnAxis(hi: number, family: number, traitIndex: numb
     })
 
     return true
+}
+
+function trySpendLevelUpPointOnAxisGlobal(hi: number, traitIndex: number): boolean {
+    const hero = heroes[hi]
+    if (!hero) return false
+    ensureHeroXpInitialized(hi)
+
+    // Validate traitIndex (Damage/Reach/Time/Status)
+    if (traitIndex < OUT.TRAIT1 || traitIndex > OUT.TRAIT4) return false
+
+    let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
+    if (pts <= 0) return false
+
+    // Families to apply to (Support may be aliased depending on build)
+    const fams: number[] = [
+        (FAMILY.STRENGTH | 0),
+        (FAMILY.AGILITY | 0),
+        (FAMILY.INTELLECT | 0),
+        (FAMILY.HEAL | 0),
+    ]
+    if (typeof (FAMILY as any).SUPPORT === "number") {
+        const sup = ((FAMILY as any).SUPPORT | 0)
+        if (fams.indexOf(sup) < 0) fams.push(sup)
+    }
+
+    // Can we increment at least one family?
+    let canAny = false
+    let minRank = 999
+    let maxRank = -999
+
+    for (let i = 0; i < fams.length; i++) {
+        const f = fams[i] | 0
+        const r = getHeroLevelUpAxisRank(hi, f, traitIndex) | 0
+        if (r < LVLUP_AXIS_RANK_MAX) canAny = true
+        if (r < minRank) minRank = r
+        if (r > maxRank) maxRank = r
+    }
+
+    if (!canAny) return false
+
+    // Increment every family that isn't maxed (still costs only 1 point total)
+    let changed = 0
+    for (let i = 0; i < fams.length; i++) {
+        const f = fams[i] | 0
+        const r = getHeroLevelUpAxisRank(hi, f, traitIndex) | 0
+        if (r < LVLUP_AXIS_RANK_MAX) {
+            setHeroLevelUpAxisRank(hi, f, traitIndex, (r + 1) | 0)
+            changed++
+        }
+    }
+
+    pts = (pts - 1) | 0
+    _setHeroUnspentLevelPts(hi, pts)
+
+    console.log("[LVLUP] axisGlobal", {
+        hi,
+        traitIndex,
+        minRankFrom: minRank,
+        maxRankFrom: maxRank,
+        familiesTouched: changed,
+        ptsLeft: pts,
+    })
+
+    return true
+}
+
+function trySpendLevelUpPointOnCore(hi: number, key: string): boolean {
+    const k = (key || "").trim().toLowerCase()
+
+    // Axis keys (global)
+    if (k === "damage" || k === "dmg") return trySpendLevelUpPointOnAxisGlobal(hi, OUT.TRAIT1)
+    if (k === "reach") return trySpendLevelUpPointOnAxisGlobal(hi, OUT.TRAIT2)
+    if (k === "time") return trySpendLevelUpPointOnAxisGlobal(hi, OUT.TRAIT3)
+    if (k === "status") return trySpendLevelUpPointOnAxisGlobal(hi, OUT.TRAIT4)
+
+    // HP / MP keys
+    if (k === "hp") return trySpendLevelUpPointOnMaxHp(hi)
+    if (k === "mp" || k === "mana") return trySpendLevelUpPointOnMaxMana(hi)
+
+    // Future-proof: unknown key
+    console.log("[LVLUP] core denied (unknown key)", { hi, key })
+    return false
 }
 
 function trySpendLevelUpPointOnMaxHp(hi: number): boolean {
@@ -11109,6 +11200,9 @@ function createHeroForPlayer(
     }
 
     sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
+    if (!isNpc && (pid | 0) > 0) {
+        sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, 1)
+    }
     heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
 
     // Shopkeeper: force initial facing DOWN
@@ -21695,6 +21789,57 @@ function consumePlayerIntent(playerId: number): string {
 function updatePlayerInputs() {
     const nowMs = game.runtime() | 0
 
+    const _queueIntent = (pid: number, ev: string): void => {
+        if (pid === 1) {
+            if (p1IntentPending === "") p1IntentPending = ev
+            else if (p1IntentPending2 === "") p1IntentPending2 = ev
+            else p1IntentPending2 = ev
+            return
+        }
+        if (pid === 2) {
+            if (p2IntentPending === "") p2IntentPending = ev
+            else if (p2IntentPending2 === "") p2IntentPending2 = ev
+            else p2IntentPending2 = ev
+            return
+        }
+        if (pid === 3) {
+            if (p3IntentPending === "") p3IntentPending = ev
+            else if (p3IntentPending2 === "") p3IntentPending2 = ev
+            else p3IntentPending2 = ev
+            return
+        }
+        if (pid === 4) {
+            if (p4IntentPending === "") p4IntentPending = ev
+            else if (p4IntentPending2 === "") p4IntentPending2 = ev
+            else p4IntentPending2 = ev
+            return
+        }
+    }
+
+    const _upgradePendingToAB = (pid: number): boolean => {
+        if (pid === 1) {
+            if (p1IntentPending === "A" || p1IntentPending === "B") { p1IntentPending = "A+B"; return true }
+            if (p1IntentPending2 === "A" || p1IntentPending2 === "B") { p1IntentPending2 = "A+B"; return true }
+            return false
+        }
+        if (pid === 2) {
+            if (p2IntentPending === "A" || p2IntentPending === "B") { p2IntentPending = "A+B"; return true }
+            if (p2IntentPending2 === "A" || p2IntentPending2 === "B") { p2IntentPending2 = "A+B"; return true }
+            return false
+        }
+        if (pid === 3) {
+            if (p3IntentPending === "A" || p3IntentPending === "B") { p3IntentPending = "A+B"; return true }
+            if (p3IntentPending2 === "A" || p3IntentPending2 === "B") { p3IntentPending2 = "A+B"; return true }
+            return false
+        }
+        if (pid === 4) {
+            if (p4IntentPending === "A" || p4IntentPending === "B") { p4IntentPending = "A+B"; return true }
+            if (p4IntentPending2 === "A" || p4IntentPending2 === "B") { p4IntentPending2 = "A+B"; return true }
+            return false
+        }
+        return false
+    }
+
     // --------------------------
     // Player 1
     // --------------------------
@@ -21707,15 +21852,25 @@ function updatePlayerInputs() {
     else if (b1) p1Intent = "B"
     else p1Intent = ""
 
-    // Edge intent: enqueue on rising edge, require release before another edge
+    // Edge intent: enqueue on rising edge (A+B chord window)
     const a1Edge = a1 && !_p1PrevA
     const b1Edge = b1 && !_p1PrevB
-    const ab1Edge = (a1Edge && b1) || (b1Edge && a1) // NEW: second-press chord support
+    if (a1Edge) _p1LastAEdgeMs = nowMs
+    if (b1Edge) _p1LastBEdgeMs = nowMs
+
+    const ab1Edge =
+        (a1Edge && b1) ||
+        (b1Edge && a1) ||
+        (a1Edge && (nowMs - _p1LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
+        (b1Edge && (nowMs - _p1LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
+
     if (a1Edge || b1Edge) {
-        const ev1 = ab1Edge ? "A+B" : (a1Edge ? "A" : "B")
-        if (p1IntentPending === "") p1IntentPending = ev1
-        else if (p1IntentPending2 === "") p1IntentPending2 = ev1
-        else p1IntentPending2 = ev1 // overwrite newest if spammed
+        if (ab1Edge) {
+            const upgraded = _upgradePendingToAB(1)
+            if (!upgraded) _queueIntent(1, "A+B")
+        } else {
+            _queueIntent(1, a1Edge ? "A" : "B")
+        }
     }
 
     if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS) {
@@ -21761,12 +21916,22 @@ function updatePlayerInputs() {
 
     const a2Edge = a2 && !_p2PrevA
     const b2Edge = b2 && !_p2PrevB
-    const ab2Edge = (a2Edge && b2) || (b2Edge && a2)
+    if (a2Edge) _p2LastAEdgeMs = nowMs
+    if (b2Edge) _p2LastBEdgeMs = nowMs
+
+    const ab2Edge =
+        (a2Edge && b2) ||
+        (b2Edge && a2) ||
+        (a2Edge && (nowMs - _p2LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
+        (b2Edge && (nowMs - _p2LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
+
     if (a2Edge || b2Edge) {
-        const ev2 = ab2Edge ? "A+B" : (a2Edge ? "A" : "B")
-        if (p2IntentPending === "") p2IntentPending = ev2
-        else if (p2IntentPending2 === "") p2IntentPending2 = ev2
-        else p2IntentPending2 = ev2
+        if (ab2Edge) {
+            const upgraded = _upgradePendingToAB(2)
+            if (!upgraded) _queueIntent(2, "A+B")
+        } else {
+            _queueIntent(2, a2Edge ? "A" : "B")
+        }
     }
     _p2PrevA = a2
     _p2PrevB = b2
@@ -21784,12 +21949,22 @@ function updatePlayerInputs() {
 
     const a3Edge = a3 && !_p3PrevA
     const b3Edge = b3 && !_p3PrevB
-    const ab3Edge = (a3Edge && b3) || (b3Edge && a3)
+    if (a3Edge) _p3LastAEdgeMs = nowMs
+    if (b3Edge) _p3LastBEdgeMs = nowMs
+
+    const ab3Edge =
+        (a3Edge && b3) ||
+        (b3Edge && a3) ||
+        (a3Edge && (nowMs - _p3LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
+        (b3Edge && (nowMs - _p3LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
+
     if (a3Edge || b3Edge) {
-        const ev3 = ab3Edge ? "A+B" : (a3Edge ? "A" : "B")
-        if (p3IntentPending === "") p3IntentPending = ev3
-        else if (p3IntentPending2 === "") p3IntentPending2 = ev3
-        else p3IntentPending2 = ev3
+        if (ab3Edge) {
+            const upgraded = _upgradePendingToAB(3)
+            if (!upgraded) _queueIntent(3, "A+B")
+        } else {
+            _queueIntent(3, a3Edge ? "A" : "B")
+        }
     }
     _p3PrevA = a3
     _p3PrevB = b3
@@ -21807,12 +21982,22 @@ function updatePlayerInputs() {
 
     const a4Edge = a4 && !_p4PrevA
     const b4Edge = b4 && !_p4PrevB
-    const ab4Edge = (a4Edge && b4) || (b4Edge && a4)
+    if (a4Edge) _p4LastAEdgeMs = nowMs
+    if (b4Edge) _p4LastBEdgeMs = nowMs
+
+    const ab4Edge =
+        (a4Edge && b4) ||
+        (b4Edge && a4) ||
+        (a4Edge && (nowMs - _p4LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
+        (b4Edge && (nowMs - _p4LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
+
     if (a4Edge || b4Edge) {
-        const ev4 = ab4Edge ? "A+B" : (a4Edge ? "A" : "B")
-        if (p4IntentPending === "") p4IntentPending = ev4
-        else if (p4IntentPending2 === "") p4IntentPending2 = ev4
-        else p4IntentPending2 = ev4
+        if (ab4Edge) {
+            const upgraded = _upgradePendingToAB(4)
+            if (!upgraded) _queueIntent(4, "A+B")
+        } else {
+            _queueIntent(4, a4Edge ? "A" : "B")
+        }
     }
     _p4PrevA = a4
     _p4PrevB = b4
@@ -22215,13 +22400,32 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
 
     // NEW: dungeon can temporarily block intent dispatch (story/treasure/interact floors)
     // (This must exist as a global set by your dungeon system.)
+    let blockIntents = false
     if (typeof (globalThis as any).DUNGEON_BLOCK_INTENTS === "boolean") {
-        if ((globalThis as any).DUNGEON_BLOCK_INTENTS) return
+        if ((globalThis as any).DUNGEON_BLOCK_INTENTS) blockIntents = true
     } else {
         // If you implemented DUNGEON_BLOCK_INTENTS as a normal variable, this line is harmless
         // because TS will resolve it at compile time. If not, it avoids breaking builds.
         // @ts-ignore
-        if (typeof DUNGEON_BLOCK_INTENTS !== "undefined" && DUNGEON_BLOCK_INTENTS) return
+        if (typeof DUNGEON_BLOCK_INTENTS !== "undefined" && DUNGEON_BLOCK_INTENTS) blockIntents = true
+    }
+
+    if (blockIntents) {
+        const drainBlockedIntent = (pid: number): void => {
+            for (let i = 0; i < 2; i++) {
+                const intent = consumePlayerIntent(pid)
+                if (!intent) break
+                if (intent === "A+B" || intent === "B") {
+                    doHeroMoveForPlayer(pid, intent)
+                }
+            }
+        }
+
+        drainBlockedIntent(1)
+        drainBlockedIntent(2)
+        drainBlockedIntent(3)
+        drainBlockedIntent(4)
+        return
     }
 
     try {
@@ -23427,7 +23631,7 @@ g.__heUiCommand = function (cmd: any): any {
     // ------------------------------------------------------------
     // Spending (Level Up)
     // ------------------------------------------------------------
-    if (t === "spendAxis" || t === "spendHp" || t === "spendMana") {
+    if (t === "spendCore" || t === "spendAxis" || t === "spendHp" || t === "spendMana") {
 
         // Must be in level-up UI (keeps input-lock semantics clean)
         const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
@@ -23459,7 +23663,7 @@ g.__heUiCommand = function (cmd: any): any {
 
         const ptsBefore = getHeroUnspentLevelPts(hi) | 0
         if (ptsBefore <= 0) {
-//            console.log("[LVLUI] spend denied (no pts)", { pid, hi, t })
+            // console.log("[LVLUI] spend denied (no pts)", { pid, hi, t })
             const lvlRaw = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
             console.log("[LVLPTS][SPEND_PRECHECK]", { pid, hi, t, ptsBefore, lvlRaw })
             return { ok: false, reason: "no-pts", snapshot: g.__heGetUiSnapshot(pid) }
@@ -23467,6 +23671,13 @@ g.__heUiCommand = function (cmd: any): any {
 
         let ok = false
         let reason = ""
+
+        if (t === "spendCore") {
+            const key = cmd && typeof cmd.key === "string" ? String(cmd.key) : ""
+            ok = !!trySpendLevelUpPointOnCore(hi, key)
+            reason = ok ? ("spent-core:" + key) : ("spend-failed-core:" + key)
+            console.log("[LVLUI] spendCore", { pid, hi, ok, key, ptsBefore })
+        }
 
         if (t === "spendAxis") {
             const family = cmd && typeof cmd.family === "number" ? (cmd.family | 0) : -999

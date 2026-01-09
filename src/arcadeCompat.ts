@@ -1884,7 +1884,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
 
 // Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = true; //Debug flag
+const DEBUG_WEAPON_SYNC = false; //Debug flag
 
 
 
