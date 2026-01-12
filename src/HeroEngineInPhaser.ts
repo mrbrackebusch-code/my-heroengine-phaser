@@ -44867,6 +44867,20 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 
     console.log(`[enemy][navlog][dump] reason=${reason} enemyIndex=${enemyIndex} size=${size} now=${now}`)
 
+    // Emit a simple 0/1 map snapshot so we can correlate shape to stuck spots.
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        const cols = _engineWorldTileMap[0].length | 0
+        console.log(`[enemy][navlog][map] rows=${rows} cols=${cols} legend:1=blocked,0=open`)
+        for (let r = 0; r < rows; r++) {
+            let line = ""
+            for (let c = 0; c < cols; c++) {
+                line += _enemyNavIsBaseBlocked(r, c) ? "1" : "0"
+            }
+            console.log(`[enemy][navlog][maprow] r=${r} ${line}`)
+        }
+    }
+
     for (let i = 0; i < size; i++) {
         const slot = ((start + i) % ENEMY_NAV_LOG_RING_SIZE) | 0
         const entry = e.__navLogRing[slot]

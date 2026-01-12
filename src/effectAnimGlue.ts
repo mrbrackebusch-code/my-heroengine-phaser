@@ -4,6 +4,7 @@ import type { EffectAtlas, EffectDir } from "./effectAtlas";
 
 const EFFECT_SKIN_KEY = "effectSkin";
 const EFFECT_DIR_KEY = "effectDir";
+const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
@@ -40,16 +41,43 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
     if (!skinId) return;
 
     const atlas = getEffectAtlasFromScene(scene);
-    if (!atlas) return;
+    if (!atlas) {
+        try {
+            const dbgId = (data.get(EFFECT_DEBUG_ID_KEY) as number | undefined) || 0;
+            const g: any = globalThis as any;
+            if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId) {
+                g.__heEffectDebug.mark(dbgId, "atlas_missing", { skin: skinId }, true);
+            }
+        } catch { }
+        return;
+    }
 
     const skin = atlas[skinId];
-    if (!skin) return;
+    if (!skin) {
+        try {
+            const dbgId = (data.get(EFFECT_DEBUG_ID_KEY) as number | undefined) || 0;
+            const g: any = globalThis as any;
+            if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId) {
+                g.__heEffectDebug.mark(dbgId, "skin_missing", { skin: skinId }, true);
+            }
+        } catch { }
+        return;
+    }
 
     const dirRaw = (data.get(EFFECT_DIR_KEY) as string | undefined) || "";
     const dir = (dirRaw as EffectDir) || skin.defaultDir || "down";
 
     const resolved = pickResolvedDir(skin.dirs, dir, skin.defaultDir || "down");
-    if (!resolved) return;
+    if (!resolved) {
+        try {
+            const dbgId = (data.get(EFFECT_DEBUG_ID_KEY) as number | undefined) || 0;
+            const g: any = globalThis as any;
+            if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId) {
+                g.__heEffectDebug.mark(dbgId, "clip_missing", { skin: skinId, dir }, true);
+            }
+        } catch { }
+        return;
+    }
 
     const lastSkin = data.get(LAST_EFFECT_SKIN_KEY) as string | undefined;
     const lastDir = data.get(LAST_EFFECT_DIR_KEY) as string | undefined;
@@ -80,6 +108,20 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
     data.set(LAST_EFFECT_ANIM_KEY, animKey);
     data.set(LAST_EFFECT_SKIN_KEY, skinId);
     data.set(LAST_EFFECT_DIR_KEY, dirKey);
+
+    try {
+        const dbgId = (data.get(EFFECT_DEBUG_ID_KEY) as number | undefined) || 0;
+        const g: any = globalThis as any;
+        if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId) {
+            g.__heEffectDebug.mark(dbgId, "apply", {
+                skin: skinId,
+                dir: dirKey,
+                animKey,
+                textureKey: resolved.textureKey,
+                frameCount: resolved.frameIndices.length
+            }, true);
+        }
+    } catch { }
 }
 
 export function tryAttachEffectSprite(sprite: Phaser.GameObjects.Sprite): void {
