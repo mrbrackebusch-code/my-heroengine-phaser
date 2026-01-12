@@ -1,0 +1,362 @@
+[enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=1 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [85] eid=1 mid=slime step=572 t=102966 pos=(8,19)@632,256 idx=339 d=8 mask=0 allowUp=0 pick=(8,20,d=7) hero=(8,27) reason=descent phase=walk lastIdx=299 stuckUntil=102958 stuckMode=1 speed=18 vel=(14,9) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (7,19) d=9 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (9,19) d=9 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (8,18) d=9 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (8,20) d=7 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (7,18) d=10 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (7,20) d=8 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (9,18) d=10 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (9,20) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [86] eid=1 mid=slime step=573 t=102983 pos=(7,19)@632,255 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=339 stuckUntil=103226 stuckMode=-1 speed=18 vel=(14,10) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=1 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [87] eid=1 mid=slime step=574 t=103215 pos=(7,19)@633,251 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=299 stuckUntil=103226 stuckMode=-1 speed=18 vel=(13,12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [88] eid=1 mid=slime step=575 t=103441 pos=(7,19)@634,255 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=299 stuckUntil=103492 stuckMode=1 speed=18 vel=(14,11) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=1 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [89] eid=1 mid=slime step=576 t=103492 pos=(8,19)@635,256 idx=339 d=8 mask=0 allowUp=0 pick=(8,20,d=7) hero=(8,27) reason=descent phase=walk lastIdx=299 stuckUntil=103492 stuckMode=1 speed=18 vel=(14,10) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (7,19) d=9 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (9,19) d=9 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (8,18) d=9 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (8,20) d=7 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (7,18) d=10 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (7,20) d=8 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (9,18) d=10 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (9,20) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [90] eid=1 mid=slime step=577 t=103507 pos=(7,19)@635,255 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=339 stuckUntil=103752 stuckMode=-1 speed=18 vel=(13,11) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=1 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [91] eid=1 mid=slime step=578 t=103724 pos=(7,19)@636,251 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=299 stuckUntil=103752 stuckMode=-1 speed=18 vel=(12,13) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [92] eid=1 mid=slime step=579 t=103974 pos=(7,19)@638,255 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=299 stuckUntil=104016 stuckMode=1 speed=18 vel=(13,12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=1 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [93] eid=1 mid=slime step=580 t=104023 pos=(8,19)@638,256 idx=339 d=8 mask=0 allowUp=0 pick=(8,20,d=7) hero=(8,27) reason=descent phase=walk lastIdx=299 stuckUntil=104016 stuckMode=1 speed=18 vel=(13,11) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (7,19) d=9 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (9,19) d=9 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (8,18) d=9 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (8,20) d=7 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (7,18) d=10 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (7,20) d=8 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (9,18) d=10 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (9,20) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [94] eid=1 mid=slime step=581 t=104040 pos=(7,19)@638,255 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=339 stuckUntil=104283 stuckMode=-1 speed=18 vel=(13,12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=1 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [95] eid=1 mid=slime step=582 t=104257 pos=(7,19)@639,251 idx=299 d=9 mask=0 allowUp=1 pick=(8,20,d=7) hero=(7,27) reason=descent phase=walk lastIdx=299 stuckUntil=104283 stuckMode=-1 speed=18 vel=(11,13) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (6,19) d=10 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (8,19) d=8 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (7,18) d=10 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (7,20) d=8 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (6,18) d=11 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (6,20) d=9 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (8,18) d=9 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (8,20) d=7 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15774 [enemy][navlog][dump] reason=stuck enemyIndex=3 size=88 now=109647
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [0] eid=3 mid=slime step=1 t=27457 pos=(2,2)@80,80 idx=82 d=31 mask=0 allowUp=0 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=-1 stuckUntil=0 stuckMode=0 speed=18 vel=(18,0) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (1,2) d=32 blk=0 back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (3,2) d=32 blk=0 back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (2,1) d=32 blk=0 back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (2,3) d=30 blk=0 back=0 diag=0 fit=0 align=0 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (1,1) d=33 blk=0 back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (1,3) d=31 blk=0 back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (3,3) d=31 blk=0 back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [1] eid=3 mid=slime step=2 t=27707 pos=(2,2)@81,84 idx=82 d=31 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=82 stuckUntil=27733 stuckMode=1 speed=18 vel=(17,-2) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (1,2) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (3,2) d=32 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (2,1) d=32 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (2,3) d=30 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (1,1) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (1,3) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (3,3) d=31 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [2] eid=3 mid=slime step=3 t=27923 pos=(2,2)@82,88 idx=82 d=31 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=82 stuckUntil=28001 stuckMode=-1 speed=18 vel=(17,-4) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (1,2) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (3,2) d=32 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (2,1) d=32 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (2,3) d=30 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (1,1) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (1,3) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (3,3) d=31 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [3] eid=3 mid=slime step=4 t=28140 pos=(2,2)@84,92 idx=82 d=31 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=82 stuckUntil=28267 stuckMode=1 speed=18 vel=(16,-7) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (1,2) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (3,2) d=32 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (2,1) d=32 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (2,3) d=30 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (1,1) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (1,3) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (3,3) d=31 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [4] eid=3 mid=slime step=5 t=28373 pos=(3,2)@85,96 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=82 stuckUntil=28534 stuckMode=-1 speed=18 vel=(15,-9) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [5] eid=3 mid=slime step=6 t=28591 pos=(3,2)@86,100 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=28800 stuckMode=1 speed=18 vel=(14,-10) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [6] eid=3 mid=slime step=7 t=28807 pos=(3,2)@88,104 idx=122 d=32 mask=0 allowUp=0 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=28800 stuckMode=1 speed=18 vel=(12,-12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [7] eid=3 mid=slime step=8 t=29040 pos=(3,2)@89,108 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=29067 stuckMode=-1 speed=18 vel=(11,-13) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [8] eid=3 mid=slime step=9 t=29257 pos=(3,2)@90,112 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=29333 stuckMode=1 speed=18 vel=(10,-14) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [9] eid=3 mid=slime step=10 t=29490 pos=(3,2)@92,116 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=29600 stuckMode=-1 speed=18 vel=(8,-15) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [10] eid=3 mid=slime step=11 t=29707 pos=(3,2)@93,120 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=29867 stuckMode=1 speed=18 vel=(7,-16) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [11] eid=3 mid=slime step=12 t=29924 pos=(3,2)@94,124 idx=122 d=32 mask=0 allowUp=1 pick=(2,3,d=30) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=30133 stuckMode=-1 speed=18 vel=(6,-16) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,2) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,1) d=-1 blk=diag back=0 diag=1 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,3) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,1) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,3) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [12] eid=3 mid=slime step=13 t=30107 pos=(3,3)@96,127 idx=123 d=31 mask=0 allowUp=1 pick=(2,4,d=29) hero=(7,27) reason=descent phase=walk lastIdx=122 stuckUntil=30133 stuckMode=-1 speed=18 vel=(12,-12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (2,3) d=30 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (3,2) d=32 blk=0 back=1 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (3,4) d=30 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (2,2) d=31 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (2,4) d=29 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [13] eid=3 mid=slime step=14 t=30140 pos=(4,3)@96,128 idx=163 d=32 mask=0 allowUp=0 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=123 stuckUntil=30133 stuckMode=-1 speed=18 vel=(17,-5) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [14] eid=3 mid=slime step=15 t=30373 pos=(4,3)@97,132 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=30400 stuckMode=1 speed=18 vel=(16,-7) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [15] eid=3 mid=slime step=16 t=30590 pos=(4,3)@98,136 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=30666 stuckMode=-1 speed=18 vel=(15,-8) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [16] eid=3 mid=slime step=17 t=30807 pos=(4,3)@100,140 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=30936 stuckMode=1 speed=18 vel=(15,-9) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [17] eid=3 mid=slime step=18 t=31040 pos=(4,3)@101,144 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=31200 stuckMode=-1 speed=18 vel=(14,-10) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [18] eid=3 mid=slime step=19 t=31257 pos=(4,3)@102,148 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=31467 stuckMode=1 speed=18 vel=(13,-11) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [19] eid=3 mid=slime step=20 t=31474 pos=(4,3)@104,152 idx=163 d=32 mask=0 allowUp=0 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=31467 stuckMode=1 speed=18 vel=(12,-12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [20] eid=3 mid=slime step=21 t=31707 pos=(4,3)@105,156 idx=163 d=32 mask=0 allowUp=1 pick=(3,4,d=30) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=31733 stuckMode=-1 speed=18 vel=(11,-13) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (3,3) d=31 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (5,3) d=33 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (4,2) d=33 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (4,4) d=31 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (3,2) d=32 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (3,4) d=30 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (5,2) d=34 blk=0 back=0 diag=1 fit=0 align=-0.5 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (5,4) d=32 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [21] eid=3 mid=slime step=22 t=31926 pos=(5,3)@107,160 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=163 stuckUntil=32000 stuckMode=1 speed=18 vel=(16,-7) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=1 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [22] eid=3 mid=slime step=23 t=32140 pos=(5,3)@108,164 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=32267 stuckMode=-1 speed=18 vel=(15,-8) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [23] eid=3 mid=slime step=24 t=32374 pos=(5,3)@109,168 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=32533 stuckMode=1 speed=18 vel=(14,-10) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [24] eid=3 mid=slime step=25 t=32590 pos=(5,3)@110,172 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=32800 stuckMode=-1 speed=18 vel=(13,-11) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [25] eid=3 mid=slime step=26 t=32807 pos=(5,3)@112,176 idx=203 d=33 mask=0 allowUp=0 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=32800 stuckMode=-1 speed=18 vel=(12,-12) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [26] eid=3 mid=slime step=27 t=33040 pos=(5,3)@113,180 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=33067 stuckMode=1 speed=18 vel=(11,-13) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [27] eid=3 mid=slime step=28 t=33257 pos=(5,3)@114,184 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=33333 stuckMode=-1 speed=18 vel=(10,-14) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand3: (5,4) d=32 blk=0 back=0 diag=0 fit=0 align=0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand4: (4,2) d=33 blk=0 back=0 diag=1 fit=0 align=-1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand5: (4,4) d=31 blk=0 back=0 diag=1 fit=0 align=0.5 chosen=1
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand6: (6,2) d=16383 blk=blocked back=0 diag=0 fit=0 align=0 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand7: (6,4) d=33 blk=0 back=0 diag=1 fit=0 align=1 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15786 [enemy][navlog][entry] [28] eid=3 mid=slime step=29 t=33473 pos=(5,3)@116,188 idx=203 d=33 mask=0 allowUp=1 pick=(4,4,d=31) hero=(7,27) reason=descent phase=walk lastIdx=203 stuckUntil=33600 stuckMode=1 speed=18 vel=(9,-15) cands=8
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand0: (4,3) d=32 blk=0 back=0 diag=0 fit=0 align=-0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand1: (6,3) d=34 blk=0 back=0 diag=0 fit=0 align=0.25 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15790 [enemy][navlog][cand]   cand2: (5,2) d=34 blk=0 back=0 diag=0 fit=0 align=-0.75 chosen=0
+HeroEngineInPhaser.ts?t=1768232041203:15

@@ -67,6 +67,7 @@ import * as heroAnimGlue from "./heroAnimGlue";
 
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
+import * as effectAnimGlue from "./effectAnimGlue";
 
 
 
@@ -1017,6 +1018,9 @@ const HERO_INDEX_DATA_KEY = "heroIndex";
 const HERO_IS_CTRL_SPELL_KEY = "isCtrlSpell";
 const PROJ_FAMILY_KEY = "family";
 const PROJ_HERO_INDEX_KEY = "heroIndex";
+const EFFECT_SKIN_DATA_KEY = "effectSkin";
+const EFFECT_DIR_DATA_KEY = "effectDir";
+const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 
 // Phaser-only native data keys
 const NATIVE_FORCE_INVISIBLE_KEY = "__forceInvisible";
@@ -4530,6 +4534,7 @@ namespace sprites {
     const DEBUG_ROLE_PROJECTILE  = false;
     const DEBUG_ROLE_AURA        = false;
     const DEBUG_ROLE_ACTOR       = false;  // generic combat actors (if not clearly hero/enemy)
+    const DEBUG_ROLE_EFFECT      = false;
     const DEBUG_ROLE_OTHER       = false;
     
     // Per-role log limits (so even when enabled, they don't spam forever)
@@ -4539,6 +4544,7 @@ namespace sprites {
         PROJECTILE: 200,
         AURA:       200,
         ACTOR:      20,
+        EFFECT:     100,
         OTHER:      10
     };
 
@@ -4575,11 +4581,15 @@ namespace sprites {
 
         // Direct kind-name checks
         if (kindName === "HeroAura" || kindName.indexOf("Aura") >= 0) return "AURA";
+        if (kindName === "RelicEffect" || kindName.indexOf("Effect") >= 0) return "EFFECT";
         if (kindName === "HeroWeapon" || kindName.indexOf("Weapon") >= 0) return "PROJECTILE";
         if (kindName === "Player" || kindName === "Hero") return "HERO";
         if (kindName.indexOf("Enemy") >= 0) return "ENEMY";
 
         // Use data flags as heuristics (engine-specific)
+        if (dataKeys.indexOf(EFFECT_SKIN_DATA_KEY) >= 0 || dataKeys.indexOf("effectSkinId") >= 0) {
+            return "EFFECT";
+        }
         if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
             return "ACTOR";
         }
@@ -4625,6 +4635,7 @@ namespace sprites {
             case "PROJECTILE": enabled = DEBUG_ROLE_PROJECTILE; break;
             case "AURA":       enabled = DEBUG_ROLE_AURA;       break;
             case "ACTOR":      enabled = DEBUG_ROLE_ACTOR;      break;
+            case "EFFECT":     enabled = DEBUG_ROLE_EFFECT;     break;
             default:           enabled = DEBUG_ROLE_OTHER;      break;
         }
         if (!enabled) return false;
@@ -6992,6 +7003,11 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         if (_syncEnemyActorPath(ctx, s, native)) continue;
 
         // --------------------------------------------------
+        // EFFECT PATH (relics, spells, generic FX)
+        // --------------------------------------------------
+        _syncEffectPath(ctx, s, native);
+
+        // --------------------------------------------------
         // PROJECTILE VISUAL OVERRIDES (Phaser-only)
         // --------------------------------------------------
         if (s.kind === 51) {
@@ -8832,6 +8848,78 @@ function _syncEnemyActorPath(
 // SAFETY:
 //   - Must tolerate native.destroy throwing; contain exceptions
 // ---------------------------------------------------------------------
+// PURPOSE: Apply effect animation data onto native sprites (Phaser-side anim glue).
+// READS:
+//   - sprites.readDataString(s, "effectSkin" | "effectDir")
+//   - role classification via _classifySpriteRole(kind, dataKeys)
+// WRITES:
+//   - nativeAny.setData("effectSkin"|"effectDir")
+//   - triggers effectAnimGlue hook (side effect on native anim)
+// PERF:
+//   - Called: per-frame for EFFECT sprites
+// SAFETY:
+//   - Must tolerate missing native.setData / missing glue hook
+// ---------------------------------------------------------------------
+function _syncEffectPath(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): void {
+    const dataKeys = Object.keys(s.data || {});
+    const role = _classifySpriteRole(s.kind, dataKeys);
+    if (role !== "EFFECT") return;
+
+    if (!(s as any).data) (s as any).data = {};
+    const data: any = (s as any).data;
+
+    const skin = sprites.readDataString(s, EFFECT_SKIN_DATA_KEY) || "";
+    const dir = sprites.readDataString(s, EFFECT_DIR_DATA_KEY) || "";
+    const dbgId = sprites.readDataNumber(s, EFFECT_DEBUG_ID_KEY) | 0;
+
+    if (skin) data[EFFECT_SKIN_DATA_KEY] = skin;
+    if (dir) data[EFFECT_DIR_DATA_KEY] = dir;
+
+    const nativeAny: any = s.native;
+    if (!nativeAny || typeof nativeAny.setData !== "function") {
+        try {
+            const g: any = globalThis as any;
+            if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId > 0) {
+                g.__heEffectDebug.mark(dbgId, "sync", {
+                    spriteId: s.id | 0,
+                    skin,
+                    dir,
+                    native: false
+                });
+            }
+        } catch { }
+        return;
+    }
+
+    if (skin) nativeAny.setData(EFFECT_SKIN_DATA_KEY, skin);
+    if (dir) nativeAny.setData(EFFECT_DIR_DATA_KEY, dir);
+
+    const glueAny: any = (globalThis as any).effectAnimGlue || effectAnimGlue;
+    const effectSprite = nativeAny as Phaser.GameObjects.Sprite;
+
+    try {
+        const g: any = globalThis as any;
+        if (g && g.__heEffectDebug && g.__heEffectDebug.enabled && dbgId > 0) {
+            g.__heEffectDebug.mark(dbgId, "sync", {
+                spriteId: s.id | 0,
+                skin,
+                dir,
+                native: true
+            });
+        }
+    } catch { }
+
+    if (glueAny && typeof glueAny.tryAttachEffectSprite === "function") {
+        glueAny.tryAttachEffectSprite(effectSprite);
+    } else if (glueAny && typeof glueAny.applyEffectAnimationForSprite === "function") {
+        glueAny.applyEffectAnimationForSprite(effectSprite);
+    }
+}
+
 function _syncPixelDeathRemoval(
     ctx: SyncContext,
     sc: Phaser.Scene,

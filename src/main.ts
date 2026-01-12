@@ -18,6 +18,8 @@ import { installHeroAnimTester } from "./heroAnimGlue";
 import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
 import { WorldTileRenderer } from "./tileMapGlue";
 
+import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
+
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
@@ -628,6 +630,9 @@ class HeroScene extends Phaser.Scene {
         console.log(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
 
+        console.log(">>> [HeroScene.preload] loading effect sheets");
+        preloadEffectSheets(this);
+
     }
 
 
@@ -652,6 +657,9 @@ async create() {
     buildHeroAtlas(this);
     this.validateHeroAuras(loadingText);
     loadingText.destroy();
+
+    // 3b) Effect atlas
+    buildEffectAtlas(this);
 
     // 4) Tile atlas + net tilemap hook (+ apply pending cached tilemap)
     this.initTileAtlasAndInstallTilemapHook();
