@@ -6213,11 +6213,18 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
             const atlas: any = sc.registry ? sc.registry.get("heroAtlas") : null;
             if (atlas && heroName && heroFamily) {
                 const famLower = String(heroFamily).toLowerCase();
-                for (const set of Object.values(atlas) as any[]) {
-                    if (!set) continue;
-                    if (set.heroName === heroName && String(set.family).toLowerCase() === famLower) {
-                        if (set.textureKey && sc.textures.exists(set.textureKey)) {
-                            return String(set.textureKey);
+                const famAliases =
+                    famLower === "wisdom" ? ["wisdom", "support"] :
+                    famLower === "support" ? ["support", "wisdom"] :
+                    [famLower];
+
+                for (const fam of famAliases) {
+                    for (const set of Object.values(atlas) as any[]) {
+                        if (!set) continue;
+                        if (set.heroName === heroName && String(set.family).toLowerCase() === fam) {
+                            if (set.textureKey && sc.textures.exists(set.textureKey)) {
+                                return String(set.textureKey);
+                            }
                         }
                     }
                 }
@@ -8094,7 +8101,7 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
         (heroFamily === "intelligence" || heroFamily === "intellect");
     const isSupportFamily =
         (familyNum === FAMILY_HEAL) ||
-        (heroFamily === "support" || heroFamily === "heal");
+        (heroFamily === "support" || heroFamily === "heal" || heroFamily === "wisdom" || heroFamily === "healing");
 
     const phaseRawSnake = _wpnSnake(phaseRaw);
     const castPhaseByRaw =

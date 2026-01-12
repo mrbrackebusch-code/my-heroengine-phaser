@@ -1352,6 +1352,8 @@ function _loadFromXmlText(xmlText: string): void {
     ? uxml.textToDom(xmlText)
     : (Blockly as any).Xml.textToDom(xmlText);
 
+  _heUpgradeLegacyFamilyValues(dom);
+
   // Loading XML can create variables before our canonical reserved-var IDs are established.
   // Suppress "name exists" UI during load to avoid modal spam / loops (e.g., on Reset).
   _heLoadingXml = true;
@@ -1362,6 +1364,24 @@ function _loadFromXmlText(xmlText: string): void {
     _heSuppressNameExistsUi = false;
     _heLoadingXml = false;
   }
+}
+
+function _heUpgradeLegacyFamilyValues(dom: any): void {
+  try {
+    const fields = dom?.getElementsByTagName?.("field");
+    if (!fields || typeof fields.length !== "number") return;
+
+    for (let i = 0; i < fields.length; i++) {
+      const f = fields[i];
+      const name = f?.getAttribute?.("name") || "";
+      if (name !== "FAM") continue;
+
+      const val = String(f.textContent || "").trim().toLowerCase();
+      if (val === "support") {
+        f.textContent = "wisdom";
+      }
+    }
+  } catch {}
 }
 
 

@@ -1901,19 +1901,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
         }
 
-        // Some builds might export SUPPORT instead of HEAL; treat both as Support
+        // Some builds might export SUPPORT instead of HEAL; treat both as Wisdom
         if (typeof FAMILY.SUPPORT === "number" && f === (FAMILY.SUPPORT | 0)) {
-          return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+          return { name: "Wisdom", kindClass: "family-support", boxClass: "move-support" };
         }
         if (typeof FAMILY.HEAL === "number" && f === (FAMILY.HEAL | 0)) {
-          return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+          return { name: "Wisdom", kindClass: "family-support", boxClass: "move-support" };
         }
 
         // Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
         if (f === 0) return { name: "Strength", kindClass: "family-strength", boxClass: "move-strength" };
         if (f === 1) return { name: "Agility", kindClass: "family-agility", boxClass: "move-agility" };
         if (f === 2) return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
-        if (f === 3) return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
+        if (f === 3) return { name: "Wisdom", kindClass: "family-support", boxClass: "move-support" };
 
         return { name: "", kindClass: "", boxClass: "" };
       }

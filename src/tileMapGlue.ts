@@ -86,26 +86,29 @@ const DEBUG_PROP_FOCUS_AURA_FORCE_FRONT_BUMP = 2000000;
 
 const DEBUG_PROP_FOCUS_AURA_WORLD_MARKER = false;
 const DEBUG_PROP_FOCUS_AURA_NEON = false;
-const DEBUG_PROP_FOCUS_AURA_SCENE_DIAG = true;
-const LOG_PROP_FOCUS_AURA_SCENE_DIAG_ONCE = true;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE = true;
-const LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE = true;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_LOG_NO_SNAPSHOT = true;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_ENTER_LOG = true;
+const DEBUG_PROP_FOCUS_AURA_SCENE_DIAG = false;
+const LOG_PROP_FOCUS_AURA_SCENE_DIAG_ONCE = false;
+const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE = false;
+const LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE = false;
+const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_LOG_NO_SNAPSHOT = false;
+const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_ENTER_LOG = false;
 const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_TIMEOUT_MS = 250;
 const DEBUG_PROP_FOCUS_AURA_PROP_TINT = false;
-const DEBUG_PROP_FOCUS_AURA_POSTRENDER_PROBE = true;
+const DEBUG_PROP_FOCUS_AURA_POSTRENDER_PROBE = false;
 const DEBUG_PROP_FOCUS_AURA_SCREEN_SAMPLE = false;
 const DEBUG_PROP_FOCUS_AURA_PIN_SCREEN = false;
 const DEBUG_PROP_FOCUS_AURA_HUD_PREVIEW = false;
 const DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES = new Set<string>();
-const DEBUG_PROP_FOCUS_AURA_TRACE = true;
+const DEBUG_PROP_FOCUS_AURA_TRACE = false;
 const DEBUG_PROP_FOCUS_AURA_OVERRIDE = {
   enabled: true,
   fromBaseName: "chest",
   auraTextureKey: "tiles.terrain_atlas_aura_r2",
   frameIndex: 499,
 };
+const DEBUG_PROP_FOCUS_AURA_VERBOSE = false;
+const CHEST_AURA_PAD_PX = 2;
+const CHEST_AURA_PAD_KEY = "__chestAuraPadBox__";
 const DEBUG_PROP_FOCUS_AURA_BLINK = true;
 
 
@@ -770,6 +773,20 @@ function _dbgOffscreenAuraPixelSnapshot(
   } catch (err: any) {
     console.log(`[PROPAURA][CHEST-OFFSCREEN-SNAPSHOT] ${JSON.stringify({ ok: false, error: String(err?.message ?? err) })}`);
   }
+}
+
+function _ensureChestAuraPadTexture(scene: Phaser.Scene, tileSize: number, padPx: number): string {
+  const key = `${CHEST_AURA_PAD_KEY}${padPx}::${tileSize}`;
+  if (scene.textures.exists(key)) return key;
+  const w = Math.max(2, (tileSize | 0) + ((padPx | 0) * 2));
+  const h = w;
+  const g = scene.add.graphics({ x: 0, y: 0 });
+  g.clear();
+  g.fillStyle(0xffffff, 1);
+  g.fillRect(0, 0, w, h);
+  g.generateTexture(key, w, h);
+  g.destroy();
+  return key;
 }
 
 function _ensurePropAnim(
@@ -2007,35 +2024,37 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
   const overrideEnabled =
     DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
     String(inst.baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || "");
-  try {
-    if (String(inst.baseName || "") === "chest") {
-      if (active) {
-        (inst as any).__loggedChestTraceInactive = 0;
-        if (!(inst as any).__loggedChestTraceActive) {
-          (inst as any).__loggedChestTraceActive = 1;
-          console.log(`[PROPAURA][CHEST-TRACE] ${JSON.stringify({
-            anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
-            active,
-            override: overrideEnabled,
-            radius: radius | 0,
-            depthBias: depthBias | 0
-          })}`);
-        }
-      } else {
-        (inst as any).__loggedChestTraceActive = 0;
-        if (!(inst as any).__loggedChestTraceInactive) {
-          (inst as any).__loggedChestTraceInactive = 1;
-          console.log(`[PROPAURA][CHEST-TRACE] ${JSON.stringify({
-            anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
-            active,
-            override: overrideEnabled,
-            radius: radius | 0,
-            depthBias: depthBias | 0
-          })}`);
+  if (DEBUG_PROP_FOCUS_AURA_TRACE) {
+    try {
+      if (String(inst.baseName || "") === "chest") {
+        if (active) {
+          (inst as any).__loggedChestTraceInactive = 0;
+          if (!(inst as any).__loggedChestTraceActive) {
+            (inst as any).__loggedChestTraceActive = 1;
+            console.log(`[PROPAURA][CHEST-TRACE] ${JSON.stringify({
+              anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
+              active,
+              override: overrideEnabled,
+              radius: radius | 0,
+              depthBias: depthBias | 0
+            })}`);
+          }
+        } else {
+          (inst as any).__loggedChestTraceActive = 0;
+          if (!(inst as any).__loggedChestTraceInactive) {
+            (inst as any).__loggedChestTraceInactive = 1;
+            console.log(`[PROPAURA][CHEST-TRACE] ${JSON.stringify({
+              anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
+              active,
+              override: overrideEnabled,
+              radius: radius | 0,
+              depthBias: depthBias | 0
+            })}`);
+          }
         }
       }
-    }
-  } catch { /* ignore */ }
+    } catch { /* ignore */ }
+  }
 
     try {
       const baseName = String(inst.baseName ?? "");
@@ -2177,6 +2196,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     0.01,
     (inst.focusAuraBaseScale ?? PROP_FOCUS_AURA_BASE_SCALE) + (rad * PROP_FOCUS_AURA_RADIUS_SCALE)
   );
+  const tileSize = (this.atlas?.tileSize ?? 32) | 0;
 
   const baseDepth = (inst.baseDepth | 0);
   let depth = ((baseDepth - (PROP_FOCUS_AURA_DEPTH_BEHIND_PROP | 0) + (depthBias | 0)) | 0);
@@ -2244,6 +2264,20 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     cont?.setVisible?.(true);
     cont?.setDepth?.(depth);
   } catch { /* ignore */ }
+    // Chest: force a simple solid pad texture sized slightly larger than the tile
+    if (active && String(inst.baseName || "") === "chest" && children.length) {
+      try {
+        const padKey = _ensureChestAuraPadTexture(this.scene, tileSize, CHEST_AURA_PAD_PX);
+        const ch: any = children[0];
+        ch?.setTexture?.(padKey);
+        ch?.setFrame?.("__BASE");
+        ch?.setDisplaySize?.(tileSize + CHEST_AURA_PAD_PX * 2, tileSize + CHEST_AURA_PAD_PX * 2);
+        (ch as any).__auraPadBaked = true;
+        (ch as any).__auraPadMode = "box";
+        (ch as any).__auraPadTexKey = padKey;
+        (ch as any).__auraPadScale = 1;
+      } catch { /* ignore */ }
+    }
     if (children.length) {
       try {
         for (let i = 0; i < children.length; i++) {
@@ -2251,7 +2285,12 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           if (!ch) continue;
           const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
           const padBaked = !!(ch as any).__auraPadBaked;
-          const finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
+          let finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
+          // For chests, we want the pad box to stay exactly its authored size (no extra scale).
+          if (String(inst.baseName || "") === "chest") {
+            finalScale = 1;
+            try { ch.setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
+          }
           ch.setVisible?.(true);
           ch.setScale?.(finalScale);
           ch.setDepth?.(depth);
@@ -2264,26 +2303,28 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
       } catch { /* ignore */ }
     }
 
-    try {
-      if (String(inst.baseName || "") === "chest") {
-        const child0: any = children.length ? children[0] : null;
-        const overrideEnabled =
-          DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
-          String(inst.baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || "");
-        console.log(`[PROPAURA][CHEST-COMPARE] ${JSON.stringify({
-          mode: overrideEnabled ? "override" : "normal",
-          padMode: child0?.__auraPadMode ?? null,
-          padTexKey: child0?.__auraPadTexKey ?? null,
-          childFrame: child0?.frame?.name ?? null,
-          displayW: child0?.displayWidth ?? null,
-          displayH: child0?.displayHeight ?? null,
-          scaleX: child0?.scaleX ?? null,
-          scaleY: child0?.scaleY ?? null,
-          hasChildren: !!children.length,
-          depth
-        })}`);
-      }
-    } catch { /* ignore */ }
+    if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
+      try {
+        if (String(inst.baseName || "") === "chest") {
+          const child0: any = children.length ? children[0] : null;
+          const overrideEnabled =
+            DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
+            String(inst.baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || "");
+          console.log(`[PROPAURA][CHEST-COMPARE] ${JSON.stringify({
+            mode: overrideEnabled ? "override" : "normal",
+            padMode: child0?.__auraPadMode ?? null,
+            padTexKey: child0?.__auraPadTexKey ?? null,
+            childFrame: child0?.frame?.name ?? null,
+            displayW: child0?.displayWidth ?? null,
+            displayH: child0?.displayHeight ?? null,
+            scaleX: child0?.scaleX ?? null,
+            scaleY: child0?.scaleY ?? null,
+            hasChildren: !!children.length,
+            depth
+          })}`);
+        }
+      } catch { /* ignore */ }
+    }
 
     try {
       const overrideEnabled =
@@ -2447,25 +2488,29 @@ if (DEBUG_PROP_FOCUS_AURA_WORLD_MARKER) {
 }
 
 // --- DEBUG: camera status line (very telling) ---
-try {
-  console.log(`[PROPAURA][CAM] ${_dbgCameraRenderStatus(this.scene, cont)}`);
-} catch { /* ignore */ }
+  if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
+    try {
+      console.log(`[PROPAURA][CAM] ${_dbgCameraRenderStatus(this.scene, cont)}`);
+    } catch { /* ignore */ }
+  }
 
 
-  try {
-    const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
-    const child0: any = (kids && kids.length) ? kids[0] : null;
+  if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
+    try {
+      const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
+      const child0: any = (kids && kids.length) ? kids[0] : null;
 
-    const cam: any = (this.scene as any)?.cameras?.main ?? null;
+      const cam: any = (this.scene as any)?.cameras?.main ?? null;
 
-    console.log(
-      `[PROPAURA][STATE] cont vis=${cont.visible} a=${cont.alpha} depth=${cont.depth} camFilter=${(cont as any).cameraFilter ?? "?"} ` +
-      `child0 vis=${child0?.visible ?? "?"} a=${child0?.alpha ?? "?"} depth=${child0?.depth ?? "?"} ` +
-      `camFilter=${(child0 as any)?.cameraFilter ?? "?"} scroll=${child0?.scrollFactorX ?? "?"},${child0?.scrollFactorY ?? "?"} ` +
-      `mask=${(child0 as any)?.mask ? "YES" : "no"} pipeline=${(child0 as any)?.pipeline?.name ?? "?"} ` +
-      `camIgnore=${cam && typeof cam.ignore === "function" ? "exists" : "no"}`
-    );
-  } catch { /* ignore */ }
+      console.log(
+        `[PROPAURA][STATE] cont vis=${cont.visible} a=${cont.alpha} depth=${cont.depth} camFilter=${(cont as any).cameraFilter ?? "?"} ` +
+        `child0 vis=${child0?.visible ?? "?"} a=${child0?.alpha ?? "?"} depth=${child0?.depth ?? "?"} ` +
+        `camFilter=${(child0 as any)?.cameraFilter ?? "?"} scroll=${child0?.scrollFactorX ?? "?"},${child0?.scrollFactorY ?? "?"} ` +
+        `mask=${(child0 as any)?.mask ? "YES" : "no"} pipeline=${(child0 as any)?.pipeline?.name ?? "?"} ` +
+        `camIgnore=${cam && typeof cam.ignore === "function" ? "exists" : "no"}`
+      );
+    } catch { /* ignore */ }
+  }
 
   if (DEBUG_PROP_FOCUS_AURA_SCENE_DIAG) {
     try {
@@ -2480,31 +2525,33 @@ try {
     } catch { /* ignore */ }
   }
 
-  // Always log multi-tile stats once per focus activation.
-  try {
-    const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
-    if ((isMulti || String(inst.baseName || "") === "stairs_statue") && !(inst as any).__loggedFocusAuraMulti) {
-      (inst as any).__loggedFocusAuraMulti = 1;
-      const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
-      const childInfo = kids.map((k, i) => ({
-        i,
-        x: (k?.x ?? null),
-        y: (k?.y ?? null),
-        frame: (k?.frame?.name ?? null),
-        w: (k?.displayWidth ?? null),
-        h: (k?.displayHeight ?? null),
-        padBaked: !!(k as any)?.__auraPadBaked,
-        crop: (k as any)?.__dbgAuraCrop ?? null
-      }));
-      console.log(`[PROPAURA][MULTI] ${JSON.stringify({
-        baseName: inst.baseName ?? "",
-        tiles: { w: inst.wTiles | 0, h: inst.hTiles | 0 },
-        baseRef: { row: inst.baseRefRow | 0, col: inst.baseRefCol | 0 },
-        frameIndices: inst.focusAuraFrameIndices ?? null,
-        children: childInfo
-      })}`);
-    }
-  } catch { /* ignore */ }
+  // Always log multi-tile stats once per focus activation (gated by verbose flag).
+  if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
+    try {
+      const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
+      if ((isMulti || String(inst.baseName || "") === "stairs_statue") && !(inst as any).__loggedFocusAuraMulti) {
+        (inst as any).__loggedFocusAuraMulti = 1;
+        const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
+        const childInfo = kids.map((k, i) => ({
+          i,
+          x: (k?.x ?? null),
+          y: (k?.y ?? null),
+          frame: (k?.frame?.name ?? null),
+          w: (k?.displayWidth ?? null),
+          h: (k?.displayHeight ?? null),
+          padBaked: !!(k as any)?.__auraPadBaked,
+          crop: (k as any)?.__dbgAuraCrop ?? null
+        }));
+        console.log(`[PROPAURA][MULTI] ${JSON.stringify({
+          baseName: inst.baseName ?? "",
+          tiles: { w: inst.wTiles | 0, h: inst.hTiles | 0 },
+          baseRef: { row: inst.baseRefRow | 0, col: inst.baseRefCol | 0 },
+          frameIndices: inst.focusAuraFrameIndices ?? null,
+          children: childInfo
+        })}`);
+      }
+    } catch { /* ignore */ }
+  }
 
   if (DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE) {
     try {
@@ -2615,8 +2662,8 @@ try {
   }
 
 
-  // One-time debug + proof
-  if (LOG_PROP_FOCUS_AURA_RENDER_ONCE && !inst.__loggedFocusAuraRender && !wasVisible) {
+  // One-time debug + proof (gated)
+  if (DEBUG_PROP_FOCUS_AURA_VERBOSE && LOG_PROP_FOCUS_AURA_RENDER_ONCE && !inst.__loggedFocusAuraRender && !wasVisible) {
     inst.__loggedFocusAuraRender = 1;
 
     const comp = String(inst.focusAuraComposition ?? inst.rawKey ?? inst.baseName ?? "");
@@ -2658,45 +2705,47 @@ try {
       child0Alpha: null,
       child0Visible: null,
     }));
-    try {
-      const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
-      if (isMulti || String(inst.baseName || "").includes("stairs_statue")) {
-        const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
-        const childInfo = kids.map((k, i) => ({
-          i,
-          x: (k?.x ?? null),
-          y: (k?.y ?? null),
-          frame: (k?.frame?.name ?? null),
-          w: (k?.displayWidth ?? null),
-          h: (k?.displayHeight ?? null),
-          padBaked: !!(k as any)?.__auraPadBaked
-        }));
-        console.log(`[PROPAURA][MULTI] ${JSON.stringify({
-          baseName: inst.baseName ?? "",
-          tiles: { w: inst.wTiles | 0, h: inst.hTiles | 0 },
-          baseRef: { row: inst.baseRefRow | 0, col: inst.baseRefCol | 0 },
-          frameIndices: inst.focusAuraFrameIndices ?? null,
-          children: childInfo
-        })}`);
-      }
-    } catch { /* ignore */ }
-    try {
-      const ch: any = child0Obj;
-      if (ch) {
-        const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
-        const padBaked = !!(ch as any).__auraPadBaked;
-        const finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
-        const tileSize = (this.atlas?.tileSize ?? 32) | 0;
-        console.log(`[PROPAURA][SCALE] ${JSON.stringify({
-          tile: tileSize,
-          scale: { base: scale, padScale, finalScale },
-          base: { w: (ch.width ?? null), h: (ch.height ?? null) },
-          display: { w: (ch.displayWidth ?? null), h: (ch.displayHeight ?? null) },
-          appliedScale: { x: (ch.scaleX ?? null), y: (ch.scaleY ?? null) },
-          expected: { w: ((tileSize * finalScale) | 0), h: ((tileSize * finalScale) | 0) }
-        })}`);
-      }
-    } catch { /* ignore */ }
+    if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
+      try {
+        const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
+        if (isMulti || String(inst.baseName || "").includes("stairs_statue")) {
+          const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
+          const childInfo = kids.map((k, i) => ({
+            i,
+            x: (k?.x ?? null),
+            y: (k?.y ?? null),
+            frame: (k?.frame?.name ?? null),
+            w: (k?.displayWidth ?? null),
+            h: (k?.displayHeight ?? null),
+            padBaked: !!(k as any)?.__auraPadBaked
+          }));
+          console.log(`[PROPAURA][MULTI] ${JSON.stringify({
+            baseName: inst.baseName ?? "",
+            tiles: { w: inst.wTiles | 0, h: inst.hTiles | 0 },
+            baseRef: { row: inst.baseRefRow | 0, col: inst.baseRefCol | 0 },
+            frameIndices: inst.focusAuraFrameIndices ?? null,
+            children: childInfo
+          })}`);
+        }
+      } catch { /* ignore */ }
+      try {
+        const ch: any = child0Obj;
+        if (ch) {
+          const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
+          const padBaked = !!(ch as any).__auraPadBaked;
+          const finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
+          const tileSize = (this.atlas?.tileSize ?? 32) | 0;
+          console.log(`[PROPAURA][SCALE] ${JSON.stringify({
+            tile: tileSize,
+            scale: { base: scale, padScale, finalScale },
+            base: { w: (ch.width ?? null), h: (ch.height ?? null) },
+            display: { w: (ch.displayWidth ?? null), h: (ch.displayHeight ?? null) },
+            appliedScale: { x: (ch.scaleX ?? null), y: (ch.scaleY ?? null) },
+            expected: { w: ((tileSize * finalScale) | 0), h: ((tileSize * finalScale) | 0) }
+          })}`);
+        }
+      } catch { /* ignore */ }
+    }
 
     if (DEBUG_PROP_FOCUS_AURA) {
       let cropMsg = "crop=none";
@@ -4197,9 +4246,5 @@ export function dbg_dumpTileLayers(scene: any, tag: string): void {
     }
   } catch (e) {
     console.log(`[DBG][TILES] ${tag} ERROR`, e);
-  }
-}
-
-ILES] ${tag} ERROR`, e);
   }
 }

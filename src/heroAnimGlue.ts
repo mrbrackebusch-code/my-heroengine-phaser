@@ -90,7 +90,7 @@ const DEBUG_PROVE_HERO_CAST_ANIM = false; //Debug flag
 // "" logs all heroes; set to "Jason" to filter.
 const DEBUG_PROVE_HERO_NAME_FILTER = "Jason";
 
-const DEBUG_TURN_SHOULD_PROVE_ON = true; //Debug flag
+const DEBUG_TURN_SHOULD_PROVE_ON = false; //Debug flag
 
 // Debug override: use scaled base texture as prop outline.
 const FORCE_PROP_SCALE_OUTLINE = false;
@@ -795,7 +795,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (f === "strength") return "strength";
         if (f === "agility") return "agility";
         if (f === "intelligence" || f === "intellect") return "intelligence";
-        if (f === "support") return "support";
+        if (f === "support" || f === "wisdom" || f === "heal" || f === "healing") return "wisdom";
         return undefined;
     })();
 
@@ -3930,7 +3930,7 @@ export function getHeroAuraInnerRForNative(
 
 export interface DebugHeroAnimOptions {
     heroName?: string;
-    family?: "strength" | "agility" | "intelligence" | "support";
+    family?: "strength" | "agility" | "intelligence" | "support" | "wisdom";
     phase?: HeroPhase;
     dir?: HeroDir;
     x?: number;

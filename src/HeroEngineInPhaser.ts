@@ -791,8 +791,8 @@ const BALANCE = {
         }
     },
     HERO: {
-        START_HP: 1000,
-        START_MANA: 2000,
+        START_HP: 50,
+        START_MANA: 10,
         MANA_REGEN_PCT_PER_TICK: 2
     },
     LEVEL: {
@@ -1891,6 +1891,9 @@ const CONTRACT_WHY_TABLE: Record<string, string> = {
     INTELLECT_DETONATE_REQUEST_EXPIRE: "detonateIntellectSpellForHero",
     INTELLECT_DETONATE_REQUEST_UNKNOWN: "detonateIntellectSpellForHero",
 
+    // Support/Wisdom
+    SUPPORT_PUZZLE_BEGIN: "beginSupportPuzzleForHero",
+    SUPPORT_PUZZLE_CLEAR: "clearSupportPuzzleForHero",
 
 
     // Movement ambient / ownership gates
@@ -3283,6 +3286,8 @@ let _dunChestTileC = -1
 let _dunChestSolid: Sprite = null as any
 let _dunChestFocusActive = 0
 const DEBUG_CHEST_ROUTE_TO_PILLAR = false
+const DEBUG_FOCUS_DIRECT_LOGS = false
+const DEBUG_CHEST_SCAN_LOGS = false
 
 
 function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolean): void {
@@ -4171,9 +4176,11 @@ function _dunTickPadContractRefresh(): void {
                 if (_dunStairsStatueFocusActive !== want || !_dunStairsStatueSolid) {
                     // no-op; guard for lint
                 }
-                if (!(_dunStairsStatueSolid as any).__loggedPillarDirect || want === 0) {
-                    ;(_dunStairsStatueSolid as any).__loggedPillarDirect = 1
-                    console.log("[FOCUS][PILLAR][DIRECT]", { r, c, active: runeActive ? 1 : 0, renderer: ok })
+                if (DEBUG_FOCUS_DIRECT_LOGS) {
+                    if (!(_dunStairsStatueSolid as any).__loggedPillarDirect || want === 0) {
+                        ;(_dunStairsStatueSolid as any).__loggedPillarDirect = 1
+                        console.log("[FOCUS][PILLAR][DIRECT]", { r, c, active: runeActive ? 1 : 0, renderer: ok })
+                    }
                 }
             } catch { /* ignore */ }
         }
@@ -6044,7 +6051,7 @@ const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligen
 const SHOP_STATUE_ORDER_FAMILY: number[] = [FAMILY.STRENGTH, FAMILY.AGILITY, FAMILY.INTELLECT, FAMILY.HEAL]
 
 // Equip slot = what the HERO receives on swap
-// Render slot = what the STATUE uses for its visible held weapon (temporary staff hack for Int/Support)
+// Render slot = what the STATUE uses for its visible held weapon (temporary staff hack for Int/Wisdom)
 const SHOP_STATUE_EQUIP_SLOT: string[] = [
     SHOP_EQUIP_SLOT_STRENGTH,
     SHOP_EQUIP_SLOT_AGILITY,
@@ -8112,11 +8119,11 @@ try { (globalThis as any)._shopPublishWeaponRingContractOnShopkeeper = _shopPubl
 
 function _shopGameplayKindForRingIndex(i: number): string {
     // Aligned with SHOP_DEFAULT_RING_WEAPON_IDS order:
-    // diamond (intellect staff), glowsword (strength), spear (agility), simple (support)
+    // diamond (intellect staff), glowsword (strength), spear (agility), simple (wisdom)
     if (i === 0) return "intellect"
     if (i === 1) return "strength"
     if (i === 2) return "agility"
-    if (i === 3) return "support"
+    if (i === 3) return "wisdom"
     return "unknown"
 }
 
@@ -8181,7 +8188,7 @@ function shopGameplayKindForRingIndex(i: number): string {
     if (idx < 0) return "strength"
 
     // Optional: if shopInitPOC stamps a pipe list onto shopkeeper, use it.
-    // Example value: "strength|agility|intellect|support|strength|agility|intellect|support"
+    // Example value: "strength|agility|intellect|wisdom|strength|agility|intellect|wisdom"
     const KEY = "shopWpnRingGameplayKinds"
 
     try {
@@ -8202,7 +8209,7 @@ function shopGameplayKindForRingIndex(i: number): string {
     if (m === 0) return "strength"
     if (m === 1) return "agility"
     if (m === 2) return "intellect"
-    return "support"
+    return "wisdom"
 }
 
 
@@ -8525,8 +8532,8 @@ const SH_ITEM_RING_INDEX = "shRingIndex"           // number
 const SH_ITEM_WEAPON_ID = "shWeaponId"             // string (atlas model id)
 const SH_ITEM_LABEL = "shLabel"                    // string
 const SH_ITEM_RENDER_SLOT = "shRenderSlot"         // string: "thrust"|"slash"|"cast"
-const SH_ITEM_EQUIP_SLOT = "shEquipSlot"           // string: "strength"|"agility"|"intelligence"|"support"
-const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"strength"|"agility"|"support"
+const SH_ITEM_EQUIP_SLOT = "shEquipSlot"           // string: "strength"|"agility"|"intelligence"|"wisdom"
+const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"strength"|"agility"|"wisdom"
 const SH_ITEM_PRICE = "shPrice"                    // number
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
 
@@ -9203,7 +9210,7 @@ function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
 
     // Keep legacy fields too (Phaser glue often reads these)
     sprites.setDataString(shopkeeperNpc, "heroName", SHOPKEEPER_HERO_NAME)
-    sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.SUPPORT))
+    sprites.setDataString(shopkeeperNpc, "heroFamily", heroFamilyNumberToString(FAMILY.WISDOM))
 
     setHeroPhaseString(shopHi, "idle")
     _animKeys_stampPhaseWindow(
@@ -10566,7 +10573,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
                 try {
                     const g: any = globalThis as any
                     const last = (it as any).__dbgChestScanMs ?? -999999
-                    if (nowMs - last > 1000) {
+                    if (DEBUG_CHEST_SCAN_LOGS && nowMs - last > 1000) {
                         (it as any).__dbgChestScanMs = nowMs
                         const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
                         console.log("[FOCUS][CHEST][SCAN]", {
@@ -10641,18 +10648,20 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
                     try { (renderer as any).__dbgAuraOverrideTarget = null } catch { /* ignore */ }
                 }
                 if (ok) renderer.setPropFocusAuraAt(targetR, targetC, !!_dunChestFocusActive, 2, 1)
-                if (!(_dunChestSolid as any)?.__loggedChestDirect || !_dunChestFocusActive) {
-                    if (_dunChestSolid) ( _dunChestSolid as any ).__loggedChestDirect = 1
-                    console.log("[FOCUS][CHEST][DIRECT]", {
-                        r,
-                        c,
-                        active: _dunChestFocusActive ? 1 : 0,
-                        renderer: ok,
-                        target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "chest",
-                        targetR,
-                        targetC,
-                        overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: r | 0, c: c | 0 } : null
-                    })
+                if (DEBUG_FOCUS_DIRECT_LOGS) {
+                    if (!(_dunChestSolid as any)?.__loggedChestDirect || !_dunChestFocusActive) {
+                        if (_dunChestSolid) (_dunChestSolid as any).__loggedChestDirect = 1
+                        console.log("[FOCUS][CHEST][DIRECT]", {
+                            r,
+                            c,
+                            active: _dunChestFocusActive ? 1 : 0,
+                            renderer: ok,
+                            target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "chest",
+                            targetR,
+                            targetC,
+                            overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: r | 0, c: c | 0 } : null
+                        })
+                    }
                 }
             }
         }
@@ -14928,6 +14937,12 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
     if (weakenPct > 0 && weakenUntil <= now) { weakenPct = 0; sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0) }
     if (weakenPct > 0) { const factor = 100 - weakenPct; dmg = (factor <= 0) ? 0 : Math.idiv(dmg * factor, 100) }
     if (dmg <= 0) return
+    const atkIntervalMs = sprites.readDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS) | 0
+    if (atkIntervalMs > 0) {
+        const lastAtk = sprites.readDataNumber(enemy, ENEMY_DATA.LAST_ATTACK_MS) | 0
+        if (lastAtk > 0 && now < (lastAtk + atkIntervalMs)) return
+        sprites.setDataNumber(enemy, ENEMY_DATA.LAST_ATTACK_MS, now)
+    }
     applyDamageToHeroIndex(heroIndex, dmg)
     showDamageNumber(hero.x, hero.y - 6, dmg)
     sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, now + HERO_IFRAME_MS)
@@ -20065,6 +20080,50 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 }
 
 
+function _positionSupportPuzzleIcons(heroIndex: number, hero: Sprite): void {
+    const icons = supportPuzzleIcons[heroIndex] || []
+    if (!icons.length) return
+
+    const heroH = hero.image ? (hero.image.height | 0) : 16
+    const y = (hero.y - Math.idiv(heroH, 2) - 6 + 50) | 0
+
+    const spacing = 10
+    const totalW = ((icons.length - 1) * spacing) | 0
+    const startX = (hero.x - (totalW / 2)) | 0
+
+    for (let i = 0; i < icons.length; i++) {
+        const icon = icons[i]
+        if (!icon) continue
+        icon.x = (startX + (i * spacing)) | 0
+        icon.y = y
+        icon.z = (hero.z + 5) | 0
+    }
+}
+
+function showSupportPuzzleIcons(heroIndex: number): void {
+    const hero = heroes[heroIndex]
+    if (!hero) return
+
+    const prev = supportPuzzleIcons[heroIndex] || []
+    for (let i = 0; i < prev.length; i++) {
+        if (prev[i]) prev[i].destroy()
+    }
+
+    const seq = supportPuzzleSeq[heroIndex] || []
+    supportPuzzleIcons[heroIndex] = []
+    if (!seq.length) return
+
+    for (let i = 0; i < seq.length; i++) {
+        const img = supportIconImageFor(seq[i], false)
+        const icon = sprites.create(img, SpriteKind.SupportIcon)
+        icon.setFlag(SpriteFlag.Ghost, true)
+        supportPuzzleIcons[heroIndex].push(icon)
+    }
+
+    _positionSupportPuzzleIcons(heroIndex, hero)
+}
+
+
 
 //Heal/Support traits should be calculated using: heal amount at traits[1], haste amount at traits[2], damage amplification at traits[3], damage reduction amount at traits[4]
 // Heal/Support traits:
@@ -20260,12 +20319,32 @@ function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, nowMs: num
 
 
 
+function resetSupportPuzzleProgress(heroIndex: number): void {
+    supportPuzzleProgress[heroIndex] = 0
+    supportPuzzlePrevMask[heroIndex] = 0
+
+    const seq = supportPuzzleSeq[heroIndex] || []
+    const icons = supportPuzzleIcons[heroIndex] || []
+    const count = Math.min(seq.length | 0, icons.length | 0)
+
+    for (let i = 0; i < count; i++) {
+        const icon = icons[i]
+        if (icon) icon.setImage(supportIconImageFor(seq[i], false))
+    }
+}
+
+function finishSupportPuzzle(_hero: Sprite, heroIndex: number, _nowMs: number): void {
+    completeSupportPuzzleForHero(heroIndex)
+}
+
 function updateSupportPuzzles(now: number) {
     const nowMs = now | 0
 
     for (let hi = 0; hi < heroes.length; hi++) {
         if (!supportPuzzleActive[hi]) continue
         const hero = heroes[hi]; if (!hero) continue
+
+        _positionSupportPuzzleIcons(hi, hero)
 
         const seq = supportPuzzleSeq[hi]
         const progress = supportPuzzleProgress[hi] | 0
@@ -20620,6 +20699,7 @@ function enemyStatsForMonsterId(monsterId: string) {
     const attackRatePct = hasCatalog
         ? (((md.attackRatePct || 100) | 0))
         : (((spec as any).attackRatePct || 100) | 0)
+    const attackIntervalMs = hasCatalog ? ((md.attackIntervalMs || 0) | 0) : 0
 
     const advanceRangePx = hasCatalog ? (md.advanceRangePx | 0) : 0
     const projectileId = hasCatalog ? (md.projectileId || "") : ""
@@ -20630,6 +20710,7 @@ function enemyStatsForMonsterId(monsterId: string) {
         touchDamage,
         regenPct,
         attackRatePct,
+        attackIntervalMs,
         advanceRangePx,
         projectileId
     }
@@ -21348,6 +21429,8 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, (stats as any).regenPct || 0)
 
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, (stats as any).attackRatePct || 100)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, (stats as any).attackIntervalMs || 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.LAST_ATTACK_MS, 0)
 
     sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, (stats as any).advanceRangePx || 0)
     sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, (stats as any).projectileId || "")
@@ -24228,6 +24311,9 @@ const MONSTER_CATALOG: MonsterDef[] = [
     // Start with advanceRangePx=0 everywhere until we wire enemy ranged attacks.
     // projectileId can be left undefined for now.
 
+    // Baseline weak enemy (balance anchor).
+    { id: "slime",         danger: 4,  hp: 25,  damage: 10, speed: 18, xp: 6,  advanceRangePx: 0, attackIntervalMs: 5000 },
+
     { id: "eyeball",       danger: 6,  hp: 25,  damage: 5,  speed: 35, xp: 8,  advanceRangePx: 0 },
     { id: "bat",           danger: 7,  hp: 22,  damage: 6,  speed: 45, xp: 9,  advanceRangePx: 0 },
     { id: "pumpking",      danger: 10, hp: 40,  damage: 8,  speed: 28, xp: 12, advanceRangePx: 0 },
@@ -26177,20 +26263,9 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
                         console.log("[SAFE] hi=" + snap.heroIndex + " ok=" + cur + " reason=" + snap.safeReason + " floor=" + snap.floorKind)
                     }
 
-                    console.log("[UIAPI] snapshot", {
-                        pid: snap.playerId,
-                        hi: snap.heroIndex,
-                        lvl: snap.level,
-                        xp: snap.xp,
-                        xpNext: snap.xpNext,
-                        pts: snap.lvlPts,
-                        coins: snap.coins,
-                        safe: snap.safeForSpend,
-                        safeReason: snap.safeReason,
-                        floor: snap.floorKind
-                    })
+                    // noisy snapshot log removed
                 } else {
-                    console.log("[UIAPI] snapshot(not-ready)", snap)
+                    // snapshot not ready; suppressed
                 }
 
             }

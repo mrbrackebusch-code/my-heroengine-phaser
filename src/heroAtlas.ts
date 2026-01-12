@@ -40,7 +40,7 @@ export type HeroPhase =
     | "slashOversize";
 
 
-    export type HeroFamily = "base" | "strength" | "agility" | "intelligence" | "support";
+export type HeroFamily = "base" | "strength" | "agility" | "intelligence" | "support" | "wisdom";
 
 /**
  * One concrete animation clip for a single (phase, dir) pair
@@ -78,7 +78,7 @@ export interface HeroAnimSet {
     /** Logical hero name, e.g. "Jason" */
     heroName: string;
 
-    /** Move family: strength / agility / intelligence / support */
+    /** Move family: strength / agility / intelligence / wisdom */
     family: HeroFamily;
 
     /** Texture key used when we loaded the 64×64 spritesheet */
@@ -305,6 +305,7 @@ function parseHeroFilename(baseName: string, url: string): ParsedHeroSheet | nul
         else if (famLower.startsWith("agility")) family = "agility";
         else if (famLower.startsWith("intelligence")) family = "intelligence";
         else if (famLower.startsWith("support")) family = "support";
+        else if (famLower.startsWith("wisdom")) family = "wisdom";
         else return null;
     }
 
@@ -1015,16 +1016,29 @@ export function findHeroAnimSet(
     if (!heroName) return undefined;
 
     let family: HeroFamily | null = null;
+    let altFamily: HeroFamily | null = null;
     if (famLower === "base") family = "base";
     else if (famLower === "strength") family = "strength";
     else if (famLower === "agility") family = "agility";
     else if (famLower === "intelligence") family = "intelligence";
-    else if (famLower === "support") family = "support";
+    else if (famLower === "support") { family = "support"; altFamily = "wisdom"; }
+    else if (famLower === "wisdom" || famLower === "heal" || famLower === "healing") {
+        family = "wisdom";
+        altFamily = "support";
+    }
 
     // 1) Exact match (legacy behavior)
     if (family) {
         for (const set of Object.values(atlas)) {
             if (set.heroName === heroName && set.family === family) {
+                return set;
+            }
+        }
+    }
+
+    if (altFamily) {
+        for (const set of Object.values(atlas)) {
+            if (set.heroName === heroName && set.family === altFamily) {
                 return set;
             }
         }

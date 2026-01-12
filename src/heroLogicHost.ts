@@ -352,12 +352,14 @@ if (typeof setResolver === "function") {
         }
 
         // 0) Blockly (optional/forced)
+        let sawBlocklyXml = false;
         if (mode !== "ts") {
             for (const p of profilesToTry) {
                 const key = "he_blockly_ws_v1:" + encodeURIComponent(p);
                 const hasXml = (() => {
                     try { return !!(localStorage.getItem(key) || "").trim(); } catch { return false; }
                 })();
+                if (hasXml) sawBlocklyXml = true;
 
                 _he_setBlocklyReadonlyCtx(heroIndex, enemiesArr, heroesArr)
                 const raw = tryRunBlocklyHeroLogic(p, button)
@@ -388,6 +390,14 @@ if (typeof setResolver === "function") {
             if (mode === "forceBlockly") {
                 if (DEBUG_HOST_LOGIC) {
                     console.log("[heroLogicHost] FORCE Blockly: returning null (no move)");
+                }
+                _setLogicSource("blockly:miss", effectiveProfile);
+                return null;
+            }
+
+            if (sawBlocklyXml) {
+                if (DEBUG_HOST_LOGIC) {
+                    console.log("[heroLogicHost] Blockly workspace present but no valid output; returning null");
                 }
                 _setLogicSource("blockly:miss", effectiveProfile);
                 return null;
