@@ -62,6 +62,13 @@ const DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT = false // reduces spam by focusin
 
 //const HERO_PHASE_NAME_KEY = "PhaseName" // authoritative phase window key from HeroEngineInPhaser
 
+// Prop outline debug controls
+const DEBUG_PROP_OUTLINE_ONELOG = true;
+const DEBUG_PROP_OUTLINE_PREFER_CAMERA_SNAPSHOT = true;
+const DEBUG_PROP_OUTLINE_PREFER_PIXEL_PROBE = true;
+const DEBUG_PROP_OUTLINE_EXAGGERATE = true;
+const DEBUG_PROP_OUTLINE_EXAGGERATE_TINT = 0xff00ff;
+const DEBUG_PROP_OUTLINE_VERBOSE = false;
 
 // ============================================================
 // DEBUG: Prove hero animation application during cast
@@ -85,6 +92,8 @@ const DEBUG_PROVE_HERO_NAME_FILTER = "Jason";
 
 const DEBUG_TURN_SHOULD_PROVE_ON = true; //Debug flag
 
+// Debug override: use scaled base texture as prop outline.
+const FORCE_PROP_SCALE_OUTLINE = false;
 
 
 // --- ADD: canonical frame contract keys (additive; do NOT replace existing follow keys) ---
@@ -1703,6 +1712,9 @@ let __auraPerf_misses = 0;
 let __auraPerf_buildMs = 0;
 let __auraPerf_totalMs = 0;
 
+// Log once per aura sheet to confirm lookup path for props/tiles.
+const __outlineAuraLogOnce = new Set<string>();
+
 
 type HeroAuraMetrics = {
     innerR: number;      // max radius from center to any solid pixel
@@ -1838,12 +1850,26 @@ function __getOrBuildHeroOutlineTexture(
 
 
 
-    for (let y = 0; y < ch; y++) {
-        for (let x = 0; x < cw; x++) {
-            const i = (y * cw + x) * 4;
-            solid[y * cw + x] = data[i + 3] > 0 ? 1 : 0;
-        }
-    }
+      let solidCount = 0;
+      for (let y = 0; y < ch; y++) {
+          for (let x = 0; x < cw; x++) {
+              const i = (y * cw + x) * 4;
+              solid[y * cw + x] = data[i + 3] > 0 ? 1 : 0;
+              if (solid[y * cw + x]) solidCount++;
+          }
+      }
+      const isFullSolid = (solidCount === (cw * ch));
+
+      if (isFullSolid) {
+          // Full-opaque tile: draw a 1px border so outline is visible.
+          ctx.clearRect(0, 0, cw, ch);
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, cw, ch);
+          ctex.refresh();
+          __heroAuraOutlineCache.set(cacheKey, outTexKey);
+          return outTexKey;
+      }
 
 
     for (let y = 0; y < ch; y++) {
@@ -1964,6 +1990,19 @@ type MaskEntry = {
 };
 
 const __auraMaskCache = new Map<string, MaskEntry>();
+const __outlineAuraFrameHasAlpha = new Map<string, boolean>();
+const __outlineAuraFrameStats = new Map<string, {
+    alphaCount: number;
+    maxAlpha: number;
+    avgR: number;
+    avgG: number;
+    avgB: number;
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+}>();
+const __outlineAuraWhiteCache = new Map<string, string>();
 
 function __maskKey(texKey: string, frameName: string, r: number): string {
     return `${texKey}|${frameName}|r=${r}`;
@@ -2013,6 +2052,915 @@ function __readFrameImageData(scene: Phaser.Scene, texKey: string, frameName: st
 
     ctx.drawImage(src, sx, sy, w, h, 0, 0, w, h);
     return ctx.getImageData(0, 0, w, h);
+}
+
+function __getOrBuildPrebakedOutlineTexture(
+    scene: Phaser.Scene,
+    texKey: string,
+    frameName: string,
+    radius: number,
+    pad: number
+): string | null {
+    try {
+        const baseImg = __readFrameImageData(scene, texKey, frameName);
+        const w = baseImg.width | 0;
+        const h = baseImg.height | 0;
+        const outW = w + (pad * 2);
+        const outH = h + (pad * 2);
+
+        const cacheKey = `__prebakedOutline__${texKey}::${frameName}::r${radius}::p${pad}`;
+        if (scene.textures.exists(cacheKey)) return cacheKey;
+
+        const outlineKey = __getOrBuildHeroOutlineTexture(scene, texKey, frameName, radius);
+        if (!outlineKey) return null;
+        const outlineImg = __readFrameImageData(scene, outlineKey, "__BASE");
+
+        const ctex = scene.textures.createCanvas(cacheKey, outW, outH);
+        const canvas = ctex.getSourceImage() as any;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+        if (!ctx) return null;
+
+        // Draw scaled outline to make it slightly larger than the base.
+        const outlineCanvas = document.createElement("canvas");
+        outlineCanvas.width = outlineImg.width | 0;
+        outlineCanvas.height = outlineImg.height | 0;
+        const octx = outlineCanvas.getContext("2d", { willReadFrequently: true } as any);
+        if (octx) {
+            octx.putImageData(outlineImg, 0, 0);
+            ctx.clearRect(0, 0, outW, outH);
+            ctx.drawImage(outlineCanvas, 0, 0, outW, outH);
+        }
+
+        // Paint base sprite over the outline at pad offset.
+        ctx.putImageData(baseImg, pad, pad);
+        ctex.refresh();
+        __logAuraBuildProbeOnce(scene, texKey, frameName, outlineKey, cacheKey, baseImg, outlineImg, outW, outH, pad);
+        return cacheKey;
+    } catch {
+        return null;
+    }
+}
+
+function __logOutlinePixelDiffOnce(
+    scene: Phaser.Scene,
+    baseKey: string,
+    baseFrame: string,
+    outlineKey: string,
+    outlineFrame: string
+): void {
+    try {
+        if (!DEBUG_PROP_OUTLINE_VERBOSE) return;
+        const g: any = globalThis as any;
+        const k = `__outlinePixelDiff__${baseKey}::${baseFrame}__${outlineKey}::${outlineFrame}`;
+        if (g[k]) return;
+        g[k] = 1;
+
+        const baseImg = __readFrameImageData(scene, baseKey, baseFrame);
+        const outImg = __readFrameImageData(scene, outlineKey, outlineFrame);
+        const bw = baseImg.width | 0;
+        const bh = baseImg.height | 0;
+        const ow = outImg.width | 0;
+        const oh = outImg.height | 0;
+        const sx = Math.max(1, (bw / 4) | 0);
+        const sy = Math.max(1, (bh / 4) | 0);
+        let diff = 0;
+        let samples = 0;
+        for (let y = 0; y < bh; y += sy) {
+            for (let x = 0; x < bw; x += sx) {
+                const bi = (y * bw + x) * 4;
+                const oi = (Math.min(y, oh - 1) * ow + Math.min(x, ow - 1)) * 4;
+                const br = baseImg.data[bi + 0] | 0;
+                const bg = baseImg.data[bi + 1] | 0;
+                const bb = baseImg.data[bi + 2] | 0;
+                const ba = baseImg.data[bi + 3] | 0;
+                const or = outImg.data[oi + 0] | 0;
+                const og = outImg.data[oi + 1] | 0;
+                const ob = outImg.data[oi + 2] | 0;
+                const oa = outImg.data[oi + 3] | 0;
+                if (br !== or || bg !== og || bb !== ob || ba !== oa) diff++;
+                samples++;
+            }
+        }
+        console.log("[AURA][PROPS][PIXEL-DIFF]", {
+            baseKey,
+            baseFrame,
+            outlineKey,
+            outlineFrame,
+            baseSize: { w: bw, h: bh },
+            outlineSize: { w: ow, h: oh },
+            samples,
+            diff
+        });
+    } catch { /* ignore */ }
+}
+
+function __logFrameAlphaCountOnce(scene: Phaser.Scene, texKey: string, frameName: string): void {
+    try {
+        if (!DEBUG_PROP_OUTLINE_VERBOSE) return;
+        const g: any = globalThis as any;
+        const k = `__frameAlphaCount__${texKey}::${frameName}`;
+        if (g[k]) return;
+        g[k] = 1;
+
+        const img = __readFrameImageData(scene, texKey, frameName);
+        const data = img.data;
+        let count = 0;
+        let maxA = 0;
+        for (let i = 3; i < data.length; i += 4) {
+            const a = data[i] | 0;
+            if (a > 0) {
+                count++;
+                if (a > maxA) maxA = a;
+            }
+        }
+        console.log("[AURA][PROPS][ALPHA-COUNT]", {
+            texKey,
+            frameName,
+            w: img.width | 0,
+            h: img.height | 0,
+            alphaCount: count,
+            maxAlpha: maxA
+        });
+    } catch { /* ignore */ }
+}
+
+function __sampleFrameColorStats(img: ImageData): {
+    sampleCount: number;
+    unique: number;
+    top: Array<{ rgb: string; count: number }>;
+} {
+    const data = img.data;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const sx = Math.max(1, (w / 8) | 0);
+    const sy = Math.max(1, (h / 8) | 0);
+    const counts = new Map<number, number>();
+    let sampleCount = 0;
+    for (let y = 0; y < h; y += sy) {
+        for (let x = 0; x < w; x += sx) {
+            const i = (y * w + x) * 4;
+            const a = data[i + 3] | 0;
+            if (a === 0) continue;
+            const r = data[i + 0] | 0;
+            const g = data[i + 1] | 0;
+            const b = data[i + 2] | 0;
+            const key = (r << 16) | (g << 8) | b;
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+            sampleCount++;
+        }
+    }
+    const top = Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([k, c]) => ({
+            rgb: "#" + k.toString(16).padStart(6, "0"),
+            count: c
+        }));
+    return { sampleCount, unique: counts.size, top };
+}
+
+function __summarizeImageStats(img: ImageData): {
+    w: number;
+    h: number;
+    alphaCount: number;
+    maxAlpha: number;
+    colorSamples: { sampleCount: number; unique: number; top: Array<{ rgb: string; count: number }> };
+} {
+    const data = img.data;
+    let alphaCount = 0;
+    let maxAlpha = 0;
+    for (let i = 3; i < data.length; i += 4) {
+        const a = data[i] | 0;
+        if (a > 0) {
+            alphaCount++;
+            if (a > maxAlpha) maxAlpha = a;
+        }
+    }
+    return {
+        w: img.width | 0,
+        h: img.height | 0,
+        alphaCount,
+        maxAlpha,
+        colorSamples: __sampleFrameColorStats(img)
+    };
+}
+
+function __summarizeRawData(
+    data: Uint8ClampedArray,
+    w: number,
+    h: number
+): {
+    alphaCount: number;
+    maxAlpha: number;
+    colorSamples: { sampleCount: number; unique: number; top: Array<{ rgb: string; count: number }> };
+} {
+    let alphaCount = 0;
+    let maxAlpha = 0;
+    for (let i = 3; i < data.length; i += 4) {
+        const a = data[i] | 0;
+        if (a > 0) {
+            alphaCount++;
+            if (a > maxAlpha) maxAlpha = a;
+        }
+    }
+    const img = new ImageData(data, w, h);
+    return {
+        alphaCount,
+        maxAlpha,
+        colorSamples: __sampleFrameColorStats(img)
+    };
+}
+
+function __logAuraBuildProbeOnce(
+    scene: Phaser.Scene,
+    baseKey: string,
+    baseFrame: string,
+    outlineKey: string,
+    outKey: string,
+    baseImg: ImageData,
+    outlineImg: ImageData,
+    outW: number,
+    outH: number,
+    pad: number
+): void {
+    try {
+        if (!DEBUG_PROP_OUTLINE_VERBOSE) return;
+        const g: any = globalThis as any;
+        const k = `__auraBuildProbe__${baseKey}::${baseFrame}`;
+        if (g[k]) return;
+        g[k] = 1;
+
+        const baseData = baseImg.data;
+        const outlineData = outlineImg.data;
+        let baseAlpha = 0;
+        let outlineAlpha = 0;
+        let baseMaxA = 0;
+        let outlineMaxA = 0;
+        for (let i = 3; i < baseData.length; i += 4) {
+            const a = baseData[i] | 0;
+            if (a > 0) {
+                baseAlpha++;
+                if (a > baseMaxA) baseMaxA = a;
+            }
+        }
+        for (let i = 3; i < outlineData.length; i += 4) {
+            const a = outlineData[i] | 0;
+            if (a > 0) {
+                outlineAlpha++;
+                if (a > outlineMaxA) outlineMaxA = a;
+            }
+        }
+
+        const baseSample = __sampleFrameColorStats(baseImg);
+        const outlineSample = __sampleFrameColorStats(outlineImg);
+
+        console.log("[AURA][PROPS][BUILD-PROBE]", {
+            base: {
+                key: baseKey,
+                frame: baseFrame,
+                w: baseImg.width | 0,
+                h: baseImg.height | 0,
+                alphaCount: baseAlpha,
+                maxAlpha: baseMaxA,
+                colorSamples: baseSample
+            },
+            outline: {
+                key: outlineKey,
+                frame: "__BASE",
+                w: outlineImg.width | 0,
+                h: outlineImg.height | 0,
+                alphaCount: outlineAlpha,
+                maxAlpha: outlineMaxA,
+                colorSamples: outlineSample
+            },
+            composite: {
+                key: outKey,
+                outW,
+                outH,
+                pad
+            }
+        });
+    } catch { /* ignore */ }
+}
+
+function __captureScreenStats(
+    scene: Phaser.Scene,
+    rect: { x: number; y: number; w: number; h: number },
+    cb: (stats: any, data: Uint8ClampedArray) => void
+): void {
+    try {
+        const cam: any = scene.cameras?.main;
+        const renderer: any = (scene as any).game?.renderer;
+        const useCam = !!(cam && typeof cam.snapshotArea === "function");
+        const useRenderer = !useCam && !!(renderer && typeof renderer.snapshotArea === "function");
+        if (!useCam && !useRenderer) {
+            if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS][SCREEN-SAMPLE][ERROR]", {
+                reason: "no snapshotArea",
+                hasCamera: !!cam,
+                hasRenderer: !!renderer
+            });
+            return;
+        }
+        const snapshot = useCam ? cam.snapshotArea.bind(cam) : renderer.snapshotArea.bind(renderer);
+        const source = useCam ? "camera" : "renderer";
+        snapshot(rect.x, rect.y, rect.w, rect.h, (image: any) => {
+            try {
+                const canvas = document.createElement("canvas");
+                canvas.width = rect.w;
+                canvas.height = rect.h;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) return;
+                ctx.drawImage(image, 0, 0);
+                const img = ctx.getImageData(0, 0, rect.w, rect.h);
+                const data = img.data;
+                let alphaCount = 0;
+                let maxAlpha = 0;
+                const colors = new Map<number, number>();
+                for (let i = 0; i < data.length; i += 4) {
+                    const a = data[i + 3] | 0;
+                    if (a > 0) {
+                        alphaCount++;
+                        if (a > maxAlpha) maxAlpha = a;
+                    }
+                    const r = data[i + 0] | 0;
+                    const g = data[i + 1] | 0;
+                    const b = data[i + 2] | 0;
+                    const key = (r << 16) | (g << 8) | b;
+                    colors.set(key, (colors.get(key) ?? 0) + 1);
+                }
+                const top = Array.from(colors.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([k, c]) => ({
+                        rgb: "#" + k.toString(16).padStart(6, "0"),
+                        count: c
+                    }));
+                cb({
+                    rect,
+                    source,
+                    totalPixels: (rect.w * rect.h) | 0,
+                    alphaCount,
+                    maxAlpha,
+                    uniqueColors: colors.size,
+                    topColors: top
+                }, data);
+            } catch { /* ignore */ }
+        });
+    } catch { /* ignore */ }
+}
+
+function __scheduleScreenSampleProbe(
+    scene: Phaser.Scene,
+    native: any,
+    baseKey: string,
+    baseFrame: string,
+    outlineKey: string | null,
+    outlineFrame: string | null,
+    applySwap: () => void
+): void {
+    let logged = false;
+    const baseKeyStr = String(baseKey);
+    const baseFrameStr = String(baseFrame);
+    let baseStats: any = null;
+    let outlineStats: any = null;
+    let source = "none";
+    let rect: any = null;
+    try {
+        if (!DEBUG_PROP_OUTLINE_ONELOG) {
+            applySwap();
+            return;
+        }
+        const g: any = globalThis as any;
+        const k = `__propOutlineOneLog__${baseKeyStr}::${baseFrameStr}`;
+        if (g[k]) {
+            applySwap();
+            return;
+        }
+        const logOnce = (screen: any) => {
+            if (g[k] || logged) return;
+            logged = true;
+            g[k] = 1;
+            const payload = {
+                base: { key: baseKeyStr, frame: baseFrameStr, stats: baseStats },
+                outline: { key: outlineKey, frame: outlineFrame, stats: outlineStats },
+                screen
+            };
+            try {
+                console.log("[AURA][PROPS][ONELOG] " + JSON.stringify(payload));
+            } catch {
+                console.log("[AURA][PROPS][ONELOG] " + String(payload));
+            }
+        };
+
+        try {
+            const baseImg = __readFrameImageData(scene, baseKeyStr, baseFrameStr);
+            baseStats = __summarizeImageStats(baseImg);
+        } catch { /* ignore */ }
+        try {
+            if (outlineKey && outlineFrame) {
+                const outImg = __readFrameImageData(scene, outlineKey, outlineFrame);
+                outlineStats = __summarizeImageStats(outImg);
+            }
+        } catch { /* ignore */ }
+
+        const cam: any = scene.cameras?.main;
+        const renderer: any = (scene as any).game?.renderer;
+        const camSnapshotArea = (cam && typeof cam.snapshotArea === "function") ? cam.snapshotArea.bind(cam) : null;
+        const camSnapshotFull = (cam && typeof cam.snapshot === "function") ? cam.snapshot.bind(cam) : null;
+        const rendererSnapshot = (renderer && typeof renderer.snapshotArea === "function") ? renderer.snapshotArea.bind(renderer) : null;
+        const rendererSnapshotPixel = (renderer && typeof renderer.snapshotPixel === "function") ? renderer.snapshotPixel.bind(renderer) : null;
+        const camInfo = {
+            hasSnapshotArea: !!camSnapshotArea,
+            hasSnapshot: !!camSnapshotFull,
+            hasRendererSnapshot: !!rendererSnapshot,
+            hasRendererSnapshotPixel: !!rendererSnapshotPixel
+        };
+        let snapshot: any = null;
+        let snapshotIsFull = false;
+        let fallbackReason = "";
+        if (DEBUG_PROP_OUTLINE_PREFER_CAMERA_SNAPSHOT) {
+            if (camSnapshotArea) {
+                snapshot = camSnapshotArea;
+                snapshotIsFull = false;
+                source = "camera";
+            } else if (camSnapshotFull) {
+                snapshot = camSnapshotFull;
+                snapshotIsFull = true;
+                source = "camera";
+                fallbackReason = "cameraAreaUnavailable";
+            } else if (rendererSnapshot) {
+                snapshot = rendererSnapshot;
+                snapshotIsFull = false;
+                source = "renderer";
+                fallbackReason = "cameraUnavailable";
+            }
+        } else {
+            if (camSnapshotArea) {
+                snapshot = camSnapshotArea;
+                snapshotIsFull = false;
+                source = "camera";
+            } else if (camSnapshotFull) {
+                snapshot = camSnapshotFull;
+                snapshotIsFull = true;
+                source = "camera";
+            } else if (rendererSnapshot) {
+                snapshot = rendererSnapshot;
+                snapshotIsFull = false;
+                source = "renderer";
+            }
+        }
+
+        const zoom = cam?.zoom ?? 1;
+        const fw = (native.frame?.width ?? native.width ?? 32) | 0;
+        const fh = (native.frame?.height ?? native.height ?? 32) | 0;
+        const sx = (native.scaleX ?? 1) * zoom;
+        const sy = (native.scaleY ?? 1) * zoom;
+        const ox = (native.originX ?? 0.5);
+        const oy = (native.originY ?? 0.5);
+        const w = Math.max(4, Math.round(fw * sx));
+        const h = Math.max(4, Math.round(fh * sy));
+        const screenX = cam ? (native.x - cam.scrollX) * zoom : native.x;
+        const screenY = cam ? (native.y - cam.scrollY) * zoom : native.y;
+        let x = Math.round(screenX - w * ox) - 4;
+        let y = Math.round(screenY - h * oy) - 4;
+        let sw = Math.round(w + 8);
+        let sh = Math.round(h + 8);
+        const rw = (scene.scale?.width ?? 0) | 0;
+        const rh = (scene.scale?.height ?? 0) | 0;
+        if (rw > 0 && rh > 0) {
+            if (x < 0) { sw += x; x = 0; }
+            if (y < 0) { sh += y; y = 0; }
+            if (x + sw > rw) sw = rw - x;
+            if (y + sh > rh) sh = rh - y;
+        }
+        rect = { x, y, w: Math.max(1, sw), h: Math.max(1, sh) };
+
+        const maybeLogPixelProbe = () => {
+            if (!DEBUG_PROP_OUTLINE_PREFER_PIXEL_PROBE || !rendererSnapshotPixel) return false;
+            const renderW =
+                (renderer?.width ?? renderer?.canvas?.width ?? scene.scale?.width ?? 0) | 0;
+            const renderH =
+                (renderer?.height ?? renderer?.canvas?.height ?? scene.scale?.height ?? 0) | 0;
+            const outlineW = outlineStats?.w ?? fw;
+            const outlineH = outlineStats?.h ?? fh;
+            const probeScaleX = (native.scaleX ?? 1) * (DEBUG_PROP_OUTLINE_EXAGGERATE ? 2 : 1);
+            const probeScaleY = (native.scaleY ?? 1) * (DEBUG_PROP_OUTLINE_EXAGGERATE ? 2 : 1);
+            const outW = Math.max(2, Math.round(outlineW * probeScaleX));
+            const outH = Math.max(2, Math.round(outlineH * probeScaleY));
+            const left = Math.round(screenX - outW * ox);
+            const top = Math.round(screenY - outH * oy);
+            const right = left + outW - 1;
+            const bottom = top + outH - 1;
+
+            const midX = Math.round((left + right) / 2);
+            const midY = Math.round((top + bottom) / 2);
+            const inset2 = Math.min(6, Math.max(2, Math.round(Math.min(outW, outH) * 0.1)));
+
+            const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));
+            const maxX = Math.max(0, renderW - 1);
+            const maxY = Math.max(0, renderH - 1);
+            const makeRing = (inset: number, tag: string) => ([
+                { name: `tl${tag}`, x: left + inset, y: top + inset },
+                { name: `tr${tag}`, x: right - inset, y: top + inset },
+                { name: `bl${tag}`, x: left + inset, y: bottom - inset },
+                { name: `br${tag}`, x: right - inset, y: bottom - inset },
+                { name: `tm${tag}`, x: midX, y: top + inset },
+                { name: `bm${tag}`, x: midX, y: bottom - inset },
+                { name: `lm${tag}`, x: left + inset, y: midY },
+                { name: `rm${tag}`, x: right - inset, y: midY }
+            ]);
+            const pts: Array<{ name: string; x: number; y: number }> = [
+                ...makeRing(1, "1"),
+                ...makeRing(inset2, "2"),
+                { name: "c", x: Math.round(screenX), y: Math.round(screenY) }
+            ]
+                .map((p) => ({
+                    name: p.name,
+                    x: clamp(p.x, maxX),
+                    y: clamp(p.y, maxY)
+                }))
+                .filter((p, idx, arr) => arr.findIndex((q) => q.x === p.x && q.y === p.y) === idx);
+
+            if (!renderW || !renderH || pts.length === 0) {
+                applySwap();
+                const screen: any = {
+                    available: true,
+                    source: "rendererPixel",
+                    rect,
+                    camera: camInfo,
+                    error: "pixelProbeNoPoints",
+                    bounds: { renderW, renderH }
+                };
+                if (fallbackReason) screen.fallbackReason = fallbackReason;
+                logOnce(screen);
+                return true;
+            }
+
+            const toColor = (c: any) => {
+                if (!c || typeof c !== "object") return null;
+                const r = (c.r ?? c.red ?? 0) | 0;
+                const g = (c.g ?? c.green ?? 0) | 0;
+                const b = (c.b ?? c.blue ?? 0) | 0;
+                const a = (c.a ?? c.alpha ?? 255) | 0;
+                const hex = "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+                return { r, g, b, a, hex };
+            };
+
+            const sampleList = (points: Array<{ name: string; x: number; y: number }>, out: any[], done: () => void, idx = 0) => {
+                if (idx >= points.length) {
+                    done();
+                    return;
+                }
+                const p = points[idx];
+                try {
+                    rendererSnapshotPixel(p.x, p.y, (color: any) => {
+                        out.push({ name: p.name, x: p.x, y: p.y, color: toColor(color) });
+                        scene.time?.delayedCall?.(0, () => sampleList(points, out, done, idx + 1));
+                    });
+                } catch {
+                    out.push({ name: p.name, x: p.x, y: p.y, color: null, error: "snapshotPixelFailed" });
+                    scene.time?.delayedCall?.(0, () => sampleList(points, out, done, idx + 1));
+                }
+            };
+
+            const before: any[] = [];
+            const after: any[] = [];
+            sampleList(pts, before, () => {
+                applySwap();
+                sampleList(pts, after, () => {
+                    let changed = 0;
+                    for (let i = 0; i < pts.length; i++) {
+                        const b = before[i]?.color;
+                        const a = after[i]?.color;
+                        if (!b || !a) continue;
+                        if (b.r !== a.r || b.g !== a.g || b.b !== a.b || b.a !== a.a) changed++;
+                    }
+                    const screen: any = {
+                        available: true,
+                        source: "rendererPixel",
+                        rect,
+                        camera: camInfo,
+                        pixelProbe: {
+                            bounds: { renderW, renderH },
+                            outlineSize: { w: outW, h: outH },
+                            scale: { x: probeScaleX, y: probeScaleY },
+                            points: pts,
+                            before,
+                            after,
+                            changed
+                        }
+                    };
+                    if (fallbackReason) screen.fallbackReason = fallbackReason;
+                    logOnce(screen);
+                });
+            });
+            return true;
+        };
+
+        if (maybeLogPixelProbe()) return;
+
+        const scheduleFallback = () => {
+            const fn = () => {
+                if (logged) return;
+                applySwap();
+                const screen: any = { available: !!snapshot, source, rect, error: "snapshotTimeout", camera: camInfo };
+                if (fallbackReason) screen.fallbackReason = fallbackReason;
+                logOnce(screen);
+            };
+            try {
+                scene.time?.delayedCall?.(750, fn);
+            } catch {
+                try { setTimeout(fn, 750); } catch { /* ignore */ }
+            }
+        };
+
+        if (!snapshot) {
+            applySwap();
+            const screen: any = { available: false, source, rect, camera: camInfo };
+            if (fallbackReason) screen.fallbackReason = fallbackReason;
+            logOnce(screen);
+            return;
+        }
+
+        const captureSnapshot = (cb: (image: any) => void) => {
+            try {
+                if (snapshotIsFull) snapshot(cb);
+                else snapshot(rect.x, rect.y, rect.w, rect.h, cb);
+            } catch {
+                cb(null);
+            }
+        };
+
+        const extractImageData = (image: any, useFull: boolean, cropRect?: { x: number; y: number; w: number; h: number }) => {
+            const iw = (image?.width ?? image?.naturalWidth ?? rect.w) | 0;
+            const ih = (image?.height ?? image?.naturalHeight ?? rect.h) | 0;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, iw);
+            canvas.height = Math.max(1, ih);
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return null;
+            ctx.drawImage(image, 0, 0);
+            let rx = 0;
+            let ry = 0;
+            let rw = rect.w;
+            let rh = rect.h;
+            if (useFull) {
+                if (cropRect) {
+                    rx = cropRect.x | 0;
+                    ry = cropRect.y | 0;
+                    rw = cropRect.w | 0;
+                    rh = cropRect.h | 0;
+                } else {
+                    rx = rect.x | 0;
+                    ry = rect.y | 0;
+                    rw = rect.w | 0;
+                    rh = rect.h | 0;
+                }
+                if (rx < 0) { rw += rx; rx = 0; }
+                if (ry < 0) { rh += ry; ry = 0; }
+                if (rx + rw > iw) rw = iw - rx;
+                if (ry + rh > ih) rh = ih - ry;
+                rw = Math.max(1, rw);
+                rh = Math.max(1, rh);
+            }
+            const img = ctx.getImageData(rx, ry, rw, rh);
+            return { img, rect: { x: rx, y: ry, w: rw, h: rh } };
+        };
+
+        scheduleFallback();
+        captureSnapshot((image: any) => {
+            try {
+                if (!image) {
+                    applySwap();
+                    const screen: any = { available: true, source, rect, error: "noImageBefore", camera: camInfo };
+                    if (fallbackReason) screen.fallbackReason = fallbackReason;
+                    logOnce(screen);
+                    return;
+                }
+                const beforeExtract = extractImageData(image, snapshotIsFull);
+                if (!beforeExtract) {
+                    applySwap();
+                    const screen: any = { available: true, source, rect, error: "noCtxBefore", camera: camInfo };
+                    if (fallbackReason) screen.fallbackReason = fallbackReason;
+                    logOnce(screen);
+                    return;
+                }
+                if (snapshotIsFull && beforeExtract.rect) rect = beforeExtract.rect;
+                const beforeStats = __summarizeRawData(beforeExtract.img.data, rect.w, rect.h);
+                const beforeData = beforeExtract.img.data.slice(0);
+                applySwap();
+                scene.time?.delayedCall?.(0, () => {
+                    captureSnapshot((image2: any) => {
+                        try {
+                            if (!image2) {
+                                const screen: any = { available: true, source, rect, before: beforeStats, error: "noImageAfter", camera: camInfo };
+                                if (fallbackReason) screen.fallbackReason = fallbackReason;
+                                logOnce(screen);
+                                return;
+                            }
+                            const afterExtract = extractImageData(image2, snapshotIsFull, beforeExtract.rect);
+                            if (!afterExtract) {
+                                const screen: any = { available: true, source, rect, before: beforeStats, error: "noCtxAfter", camera: camInfo };
+                                if (fallbackReason) screen.fallbackReason = fallbackReason;
+                                logOnce(screen);
+                                return;
+                            }
+                            const afterStats = __summarizeRawData(afterExtract.img.data, rect.w, rect.h);
+                            let changed = 0;
+                            const n = Math.min(beforeData.length, afterExtract.img.data.length);
+                            for (let i = 0; i < n; i++) {
+                                if (beforeData[i] !== afterExtract.img.data[i]) changed++;
+                            }
+                            const screen: any = {
+                                available: true,
+                                source,
+                                rect,
+                                before: beforeStats,
+                                after: afterStats,
+                                diff: { totalBytes: n, changedBytes: changed },
+                                camera: camInfo
+                            };
+                            if (fallbackReason) screen.fallbackReason = fallbackReason;
+                            logOnce(screen);
+                        } catch { /* ignore */ }
+                    });
+                });
+            } catch { /* ignore */ }
+        });
+    } catch { /* ignore */ }
+}
+
+function __getOrBuildAuraWhiteTexture(scene: Phaser.Scene, texKey: string, frameName: string): string | null {
+    try {
+        const img = __readFrameImageData(scene, texKey, frameName);
+        const w = img.width | 0;
+        const h = img.height | 0;
+        const data = img.data;
+
+        let allOpaque = true;
+        let sumLum = 0;
+        let minLum = 255;
+        let maxLum = 0;
+        const pxCount = Math.max(1, (w * h) | 0);
+        for (let i = 0; i < data.length; i += 4) {
+            const a = data[i + 3] | 0;
+            if (a === 0) allOpaque = false;
+            const r = data[i + 0] | 0;
+            const g = data[i + 1] | 0;
+            const b = data[i + 2] | 0;
+            const lum = ((r * 54 + g * 183 + b * 19) >> 8);
+            sumLum += lum;
+            if (lum < minLum) minLum = lum;
+            if (lum > maxLum) maxLum = lum;
+        }
+        const avgLum = (sumLum / pxCount);
+        const invertLum = allOpaque && avgLum > 200;
+        const isFlatLum = allOpaque && (minLum === maxLum);
+        const forceFull = isFlatLum;
+
+        let minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+        let maskCount = 0;
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i + 0] | 0;
+            const g = data[i + 1] | 0;
+            const b = data[i + 2] | 0;
+            const a = data[i + 3] | 0;
+            let alpha = a;
+            if (allOpaque) {
+                const lum = (r * 54 + g * 183 + b * 19) >> 8;
+                alpha = invertLum ? (255 - lum) : lum;
+            }
+            if (alpha) {
+                maskCount++;
+                const p = (i >> 2);
+                const x = (p % w) | 0;
+                const y = ((p / w) | 0);
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        }
+
+        if (forceFull) {
+            minX = 0;
+            minY = 0;
+            maxX = w - 1;
+            maxY = h - 1;
+        }
+
+        const area = Math.max(1, (w * h) | 0);
+        const sparseMask = (!forceFull && (maskCount / area) < 0.25);
+        const ringThickness = (forceFull || sparseMask) ? 2 : 1;
+        let ringPad = (forceFull || sparseMask) ? 2 : 1;
+        if (ringPad < ringThickness) ringPad = ringThickness;
+
+        const ringMode = forceFull ? "full" : (sparseMask ? "sparse" : "normal");
+        const cacheKey = `${texKey}::${frameName}::white::box${ringPad}::t${ringThickness}::m${ringMode}`;
+        const cached = __outlineAuraWhiteCache.get(cacheKey);
+        if (cached && scene.textures.exists(cached)) return cached;
+
+        const outKey = `__auraWhite__${texKey}::${frameName}::box${ringPad}::t${ringThickness}::m${ringMode}`;
+        const outW = w + (ringPad * 2);
+        const outH = h + (ringPad * 2);
+        if (scene.textures.exists(outKey)) {
+            __outlineAuraWhiteCache.set(cacheKey, outKey);
+            return outKey;
+        }
+
+        const ctex = scene.textures.createCanvas(outKey, outW, outH);
+        const canvas = ctex.getSourceImage() as any;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+        if (!ctx) return null;
+
+        const out = ctx.createImageData(outW, outH);
+        const outData = out.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i + 0] | 0;
+            const g = data[i + 1] | 0;
+            const b = data[i + 2] | 0;
+            const a = data[i + 3] | 0;
+            let alpha = a;
+            if (allOpaque) {
+                // Aura sheets may be opaque with black background. Use luminance as alpha.
+                const lum = (r * 54 + g * 183 + b * 19) >> 8;
+                alpha = invertLum ? (255 - lum) : lum;
+            }
+            if (alpha && !forceFull) {
+                const p = (i >> 2);
+                const x = (p % w) | 0;
+                const y = ((p / w) | 0);
+
+                const ox = x + ringPad;
+                const oy = y + ringPad;
+                const outIndex = (oy * outW + ox) * 4;
+                outData[outIndex + 0] = 255;
+                outData[outIndex + 1] = 255;
+                outData[outIndex + 2] = 255;
+                outData[outIndex + 3] = alpha;
+            }
+        }
+
+        if (forceFull || maxX >= minX) {
+            const useFullBounds = forceFull || sparseMask;
+            const baseLeft = (useFullBounds ? 0 : Math.max(0, minX - 1)) + ringPad;
+            const baseRight = (useFullBounds ? (w - 1) : Math.min(w - 1, maxX + 1)) + ringPad;
+            const baseTop = (useFullBounds ? 0 : Math.max(0, minY - 1)) + ringPad;
+            const baseBottom = (useFullBounds ? (h - 1) : Math.min(h - 1, maxY + 1)) + ringPad;
+            const expand = ringPad;
+            const outerLeft = Math.max(0, baseLeft - expand);
+            const outerRight = Math.min(outW - 1, baseRight + expand);
+            const outerTop = Math.max(0, baseTop - expand);
+            const outerBottom = Math.min(outH - 1, baseBottom + expand);
+            for (let t = 0; t < ringThickness; t++) {
+                const left = Math.max(0, outerLeft + t);
+                const right = Math.min(outW - 1, outerRight - t);
+                const top = Math.max(0, outerTop + t);
+                const bottom = Math.min(outH - 1, outerBottom - t);
+                if (right < left || bottom < top) break;
+                for (let x = left; x <= right; x++) {
+                    let i = (top * outW + x) * 4;
+                    outData[i + 0] = 255; outData[i + 1] = 255; outData[i + 2] = 255; outData[i + 3] = 255;
+                    i = (bottom * outW + x) * 4;
+                    outData[i + 0] = 255; outData[i + 1] = 255; outData[i + 2] = 255; outData[i + 3] = 255;
+                }
+                for (let y = top; y <= bottom; y++) {
+                    let i = (y * outW + left) * 4;
+                    outData[i + 0] = 255; outData[i + 1] = 255; outData[i + 2] = 255; outData[i + 3] = 255;
+                    i = (y * outW + right) * 4;
+                    outData[i + 0] = 255; outData[i + 1] = 255; outData[i + 2] = 255; outData[i + 3] = 255;
+                }
+            }
+            if (forceFull) {
+                if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] flat aura frame; forced outward box ring", {
+                    texKey,
+                    frameName,
+                    w,
+                    h,
+                    ringPad,
+                    minLum,
+                    maxLum,
+                    avgLum: Math.round(avgLum)
+                });
+            }
+        }
+
+        ctx.putImageData(out, 0, 0);
+        ctex.refresh();
+        if (!forceFull && allOpaque && invertLum) {
+            if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] opaque aura detected; using inverted luminance", {
+                texKey,
+                frameName,
+                minLum,
+                maxLum,
+                avgLum: Math.round(avgLum)
+            });
+        }
+        __outlineAuraWhiteCache.set(cacheKey, outKey);
+        return outKey;
+    } catch {
+        return null;
+    }
 }
 
 // Build a 1-bit mask from alpha>0 pixels, then dilate by radius r
@@ -2404,6 +3352,525 @@ export function syncHeroAuraForNative(
         // Preserve your existing “fail loudly” behavior for missing textures,
         // but don’t hard-crash the whole game loop for non-critical issues.
         throw e;
+    }
+}
+
+// Generic outline helper for non-hero focus highlights (Phaser-side).
+export function syncOutlineForNative(
+    native: any,
+    active: boolean,
+    colorIndex: number,
+    radius: number,
+    depthBias: number
+): void {
+    try {
+        if (!native) return;
+
+        const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+        if (!scene) return;
+
+          const outlineAny: any = (native as any).__focusOutlineImage;
+          const forceOutlineBuild = !!(native as any).__forceOutlineBuild;
+          const restoreSwap = () => {
+              const origKey = (native as any).__outlineSwapOrigKey;
+              const origFrame = (native as any).__outlineSwapOrigFrame;
+              if (origKey) {
+                  try { native.setTexture(origKey, origFrame ?? origKey); } catch { /* ignore */ }
+              }
+              const origTint = (native as any).__outlineSwapOrigTint;
+              const hadTint = (native as any).__outlineSwapHadTint;
+              try {
+                  if (hadTint) native.setTint(origTint ?? 0xffffff);
+                  else native.clearTint?.();
+              } catch { /* ignore */ }
+              try {
+                  const baseSX = (native as any).__outlineSwapOrigScaleX;
+                  const baseSY = (native as any).__outlineSwapOrigScaleY;
+                  if (typeof baseSX === "number") native.scaleX = baseSX;
+                  if (typeof baseSY === "number") native.scaleY = baseSY;
+              } catch { /* ignore */ }
+              (native as any).__outlineSwapOrigKey = null;
+              (native as any).__outlineSwapOrigFrame = null;
+              (native as any).__outlineSwapOrigTint = null;
+              (native as any).__outlineSwapHadTint = null;
+              (native as any).__outlineSwapOrigScaleX = null;
+              (native as any).__outlineSwapOrigScaleY = null;
+              (native as any).__outlineSwapApplied = null;
+          };
+          if (!forceOutlineBuild && (native as any).__outlineSwapOrigKey) {
+              restoreSwap();
+          }
+          if (!active) {
+              if (forceOutlineBuild) {
+                  restoreSwap();
+              }
+              if (outlineAny) outlineAny.setVisible(false);
+              return;
+          }
+
+        const texKey = native.texture?.key ? String(native.texture.key) : "";
+        if (!texKey) return;
+
+        const frameName =
+            (native.frame && (native.frame.name !== undefined))
+                ? native.frame.name
+                : undefined;
+        if (frameName === undefined) return;
+
+          const r = (radius | 0) > 0 ? (radius | 0) : 2;
+          let outlineTexKey = "";
+          let useFrameName = true;
+          if (forceOutlineBuild) {
+              const origKey = (native as any).__outlineSwapOrigKey;
+              const origFrame = (native as any).__outlineSwapOrigFrame;
+              const baseKey = origKey ? String(origKey) : String(texKey);
+              const baseFrame = (origFrame !== undefined && origFrame !== null) ? String(origFrame) : String(frameName);
+              if (!origKey) {
+                  (native as any).__outlineSwapOrigKey = String(texKey);
+                  (native as any).__outlineSwapOrigFrame = frameName ?? null;
+                  const tintVal = (native as any).tintTopLeft ?? 0;
+                  (native as any).__outlineSwapOrigTint = tintVal;
+                  (native as any).__outlineSwapHadTint = tintVal !== 0xffffff;
+                  (native as any).__outlineSwapOrigScaleX = native.scaleX ?? 1;
+                  (native as any).__outlineSwapOrigScaleY = native.scaleY ?? 1;
+              }
+              const outTexKey = __getOrBuildPrebakedOutlineTexture(scene, baseKey, baseFrame, r, 2);
+              if (DEBUG_PROP_OUTLINE_ONELOG) {
+                  try {
+                      const g: any = globalThis as any;
+                      const k = `__propOutlineForceLog__${baseKey}::${baseFrame}`;
+                      if (!g[k]) {
+                          g[k] = 1;
+                          const payload = {
+                              baseKey,
+                              baseFrame,
+                              texKey: String(texKey),
+                              frameName: String(frameName),
+                              outTexKey,
+                              outFrame: outTexKey ? "__BASE" : null
+                          };
+                          try {
+                              console.log("[AURA][PROPS][FORCE-BUILD] " + JSON.stringify(payload));
+                          } catch {
+                              console.log("[AURA][PROPS][FORCE-BUILD] " + String(payload));
+                          }
+                      }
+                  } catch { /* ignore */ }
+              }
+              const applySwap = () => {
+                  if (!outTexKey) return;
+                  try { native.setTexture(outTexKey, "__BASE"); } catch { /* ignore */ }
+                  try { native.setTint?.(0xffffff); } catch { /* ignore */ }
+                  (native as any).__outlineSwapApplied = true;
+                  __logFrameAlphaCountOnce(scene, outTexKey, "__BASE");
+              };
+              __scheduleScreenSampleProbe(
+                  scene,
+                  native,
+                  baseKey,
+                  baseFrame,
+                  outTexKey,
+                  outTexKey ? "__BASE" : null,
+                  applySwap
+              );
+              if (outlineAny) outlineAny.setVisible(false);
+              return;
+          }
+          const canUseAuraSheet = (texKey.startsWith("tiles.") || texKey.startsWith("anims."));
+          if (canUseAuraSheet && FORCE_PROP_SCALE_OUTLINE && !forceOutlineBuild) {
+              outlineTexKey = texKey;
+              useFrameName = true;
+          }
+          if (canUseAuraSheet && !forceOutlineBuild) {
+              const auraTexKey = `${texKey}_aura_r2`;
+              if (scene.textures.exists(auraTexKey)) {
+                const auraTex = scene.textures.get(auraTexKey);
+                const auraFrame = auraTex.get(frameName as any);
+                if (auraFrame) {
+                    const alphaKey = auraTexKey + "::" + String(frameName);
+                    let hasAlpha = __outlineAuraFrameHasAlpha.get(alphaKey);
+                    if (hasAlpha === undefined) {
+                        hasAlpha = false;
+                          let alphaCount = 0;
+                          let maxAlpha = 0;
+                          let sumR = 0;
+                          let sumG = 0;
+                          let sumB = 0;
+                          let minX = 9999, minY = 9999, maxX = -1, maxY = -1;
+                          let allOpaque = true;
+                          let maskCount = 0;
+                          let minLum = 255;
+                          let maxLum = 0;
+                          let flatLum = false;
+                          try {
+                              const img = __readFrameImageData(scene, auraTexKey, String(frameName));
+                              const data = img.data;
+                              const w = img.width | 0;
+                              const h = img.height | 0;
+                              for (let i = 3; i < data.length; i += 4) {
+                                  const p = (i - 3) >> 2;
+                                  const r = data[i - 3] | 0;
+                                  const g = data[i - 2] | 0;
+                                  const b = data[i - 1] | 0;
+                                  sumR += r;
+                                  sumG += g;
+                                  sumB += b;
+                                  const a = data[i] | 0;
+                                  if (a === 0) allOpaque = false;
+                                  if (a > 0) {
+                                      alphaCount++;
+                                      if (a > maxAlpha) maxAlpha = a;
+                                  }
+                                  const lum = (r * 54 + g * 183 + b * 19) >> 8;
+                                  if (lum < minLum) minLum = lum;
+                                  if (lum > maxLum) maxLum = lum;
+                              }
+                              if (allOpaque) {
+                                  for (let i = 0; i < data.length; i += 4) {
+                                      const p = (i >> 2);
+                                      const r = data[i + 0] | 0;
+                                      const g = data[i + 1] | 0;
+                                      const b = data[i + 2] | 0;
+                                      const lum = (r * 54 + g * 183 + b * 19) >> 8;
+                                      if (lum > 0) {
+                                          hasAlpha = true;
+                                          maskCount++;
+                                          const x = (p % w) | 0;
+                                          const y = ((p / w) | 0);
+                                          if (x < minX) minX = x;
+                                          if (y < minY) minY = y;
+                                          if (x > maxX) maxX = x;
+                                          if (y > maxY) maxY = y;
+                                      }
+                                  }
+                              } else if (alphaCount > 0) {
+                                  hasAlpha = true;
+                                  for (let i = 3; i < data.length; i += 4) {
+                                      const a = data[i] | 0;
+                                      if (a > 0) {
+                                          const p = (i - 3) >> 2;
+                                          const x = (p % w) | 0;
+                                          const y = ((p / w) | 0);
+                                          if (x < minX) minX = x;
+                                          if (y < minY) minY = y;
+                                          if (x > maxX) maxX = x;
+                                          if (y > maxY) maxY = y;
+                                      }
+                                  }
+                              }
+                              flatLum = (allOpaque && minLum === maxLum);
+                              if (flatLum) {
+                                  // Still treat as valid so we can force a ring mask for flat frames.
+                                  hasAlpha = true;
+                              }
+                          } catch { /* ignore */ }
+                          __outlineAuraFrameHasAlpha.set(alphaKey, hasAlpha);
+                          const totalPx = Math.max(1, (32 * 32));
+                          __outlineAuraFrameStats.set(alphaKey, {
+                              alphaCount,
+                              maxAlpha,
+                              avgR: Math.round(sumR / totalPx),
+                              avgG: Math.round(sumG / totalPx),
+                              avgB: Math.round(sumB / totalPx),
+                              maskCount,
+                              allOpaque,
+                              minLum,
+                              maxLum,
+                              flatLum,
+                              minX,
+                              minY,
+                              maxX,
+                              maxY
+                          });
+                    }
+
+                      if (hasAlpha) {
+                          // Force a white mask from aura alpha so tinting always works.
+                          const whiteKey = __getOrBuildAuraWhiteTexture(scene, auraTexKey, String(frameName));
+                          if (whiteKey) {
+                              outlineTexKey = whiteKey;
+                              useFrameName = false;
+                              if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] using white aura mask (forced)", { auraTexKey, frameName, whiteKey });
+                          } else {
+                              outlineTexKey = auraTexKey;
+                          }
+                          if (!__outlineAuraLogOnce.has(auraTexKey)) {
+                              __outlineAuraLogOnce.add(auraTexKey);
+                              if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] using aura sheet", { texKey, auraTexKey });
+                          }
+                          const stats = __outlineAuraFrameStats.get(alphaKey);
+                          if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] aura pixels detected", {
+                              texKey,
+                              auraTexKey,
+                              frame: frameName,
+                              alphaCount: stats?.alphaCount ?? 0,
+                              maskCount: stats?.maskCount ?? 0,
+                              allOpaque: !!stats?.allOpaque,
+                              minLum: stats?.minLum ?? 0,
+                              maxLum: stats?.maxLum ?? 0,
+                              flatLum: !!stats?.flatLum
+                          });
+                          if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] aura frame ok", {
+                              texKey,
+                              auraTexKey,
+                              frame: frameName,
+                              w: (auraFrame?.width ?? 0) | 0,
+                              h: (auraFrame?.height ?? 0) | 0,
+                              alphaCount: stats?.alphaCount ?? 0,
+                              maxAlpha: stats?.maxAlpha ?? 0,
+                              avgRGB: stats ? { r: stats.avgR, g: stats.avgG, b: stats.avgB } : null,
+                              maskCount: stats?.maskCount ?? 0,
+                              allOpaque: !!stats?.allOpaque,
+                              minLum: stats?.minLum ?? 0,
+                              maxLum: stats?.maxLum ?? 0,
+                              flatLum: !!stats?.flatLum,
+                              bb: stats ? { minX: stats.minX, minY: stats.minY, maxX: stats.maxX, maxY: stats.maxY } : null
+                          });
+                      } else {
+                          if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] empty or flat aura frame; fallback to outline build", { texKey, auraTexKey, frame: frameName });
+                      }
+                  }
+              }
+              if (!outlineTexKey && !__outlineAuraLogOnce.has(auraTexKey)) {
+                  __outlineAuraLogOnce.add(auraTexKey);
+                  if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] missing aura sheet", { texKey, auraTexKey });
+              }
+        }
+
+          if (!outlineTexKey) {
+              outlineTexKey = __getOrBuildHeroOutlineTexture(scene, texKey, frameName as any, r);
+              useFrameName = false;
+          }
+          if (!outlineTexKey) return;
+
+          let outlineImg: Phaser.GameObjects.Image;
+          const baseFrameName = "__BASE";
+          const forceRecreate = canUseAuraSheet;
+          if (forceRecreate && outlineAny && (outlineAny as any).scene) {
+              try { outlineAny.destroy?.(); } catch { /* ignore */ }
+              (native as any).__focusOutlineImage = null;
+          }
+
+          if (!outlineAny || !(outlineAny as any).scene || forceRecreate) {
+              // Match hero aura path: use Image for outlines.
+              const newObj = scene.add.image(
+                  native.x,
+                  native.y,
+                  outlineTexKey,
+                  useFrameName ? (frameName as any) : baseFrameName
+              );
+              outlineImg = newObj as any;
+              (native as any).__focusOutlineImage = outlineImg;
+
+              if (typeof native.originX === "number" && typeof native.originY === "number") {
+                  outlineImg.setOrigin(native.originX, native.originY);
+              }
+          } else {
+              outlineImg = outlineAny as Phaser.GameObjects.Image;
+              outlineImg.setTexture(outlineTexKey, useFrameName ? (frameName as any) : baseFrameName);
+          }
+
+        // Ensure Sprite outline doesn't try to play animations
+        try { (outlineImg as any).anims?.stop?.(); } catch { /* ignore */ }
+
+          outlineImg.x = native.x;
+          outlineImg.y = native.y;
+
+          if (outlineImg && DEBUG_PROP_OUTLINE_VERBOSE) {
+              const g: any = globalThis as any;
+              const k = `__outlineRenderProbeOnce__${String(texKey)}::${String(frameName)}`;
+              if (!g[k]) {
+                  g[k] = 1;
+                  try {
+                      // Confirm the outline object has nonzero bounds.
+                      const b = (outlineImg as any).getBounds ? (outlineImg as any).getBounds() : null;
+                      console.log("[AURA][PROPS][RENDER-PROBE]", {
+                          texKey: String(texKey),
+                          frameName: String(frameName),
+                          forceOutlineBuild,
+                          outlineClass: outlineImg?.constructor?.name ?? "",
+                          hasTexture: !!(outlineImg as any).texture?.key,
+                          width: (outlineImg as any).width ?? 0,
+                          height: (outlineImg as any).height ?? 0,
+                          displayWidth: (outlineImg as any).displayWidth ?? 0,
+                          displayHeight: (outlineImg as any).displayHeight ?? 0,
+                          bounds: b ? { x: b.x | 0, y: b.y | 0, w: b.width | 0, h: b.height | 0 } : null
+                      });
+                  } catch { /* ignore */ }
+              }
+          }
+
+          const baseDepth = (native as any).depth ?? 0;
+            let outlineDepth = (baseDepth + (depthBias | 0)) | 0;
+            if (forceOutlineBuild) outlineDepth = baseDepth + 1000;
+            const isRingTex = String(outlineTexKey).includes("::ring");
+            if (isRingTex) outlineDepth = 9999999;
+            if (DEBUG_PROP_OUTLINE_EXAGGERATE && canUseAuraSheet && !forceOutlineBuild) {
+                outlineDepth = 9999999;
+            }
+            outlineImg.setDepth(outlineDepth);
+
+        const outlineFrameName = useFrameName ? String(frameName) : "__BASE";
+        let shouldLogOnce = false;
+        if (!forceOutlineBuild && DEBUG_PROP_OUTLINE_ONELOG) {
+            try {
+                const g: any = globalThis as any;
+                const k = `__propOutlineOneLog__${String(texKey)}::${String(frameName)}`;
+                shouldLogOnce = !g[k];
+            } catch { /* ignore */ }
+        }
+        if (shouldLogOnce) {
+            outlineImg.setVisible(false);
+            __scheduleScreenSampleProbe(
+                scene,
+                native,
+                String(texKey),
+                String(frameName),
+                outlineTexKey,
+                outlineFrameName,
+                () => {
+                    outlineImg.setVisible(true);
+                }
+            );
+        } else {
+            outlineImg.setVisible(true);
+        }
+        outlineImg.alpha = 1;
+
+          outlineImg.scaleX = native.scaleX ?? 1;
+          outlineImg.scaleY = native.scaleY ?? 1;
+          if (!forceOutlineBuild && (canUseAuraSheet && FORCE_PROP_SCALE_OUTLINE)) {
+              const fw = (native.frame?.width ?? 0) | 0;
+              const fh = (native.frame?.height ?? 0) | 0;
+              if (fw > 0 && fh > 0) {
+                  const sx = (fw + 4) / fw;
+                  const sy = (fh + 4) / fh;
+                  outlineImg.scaleX = (native.scaleX ?? 1) * sx;
+                  outlineImg.scaleY = (native.scaleY ?? 1) * sy;
+              }
+          }
+          if (isRingTex) {
+              outlineImg.scaleX = (native.scaleX ?? 1) * 3;
+              outlineImg.scaleY = (native.scaleY ?? 1) * 3;
+          }
+          if (DEBUG_PROP_OUTLINE_EXAGGERATE && canUseAuraSheet && !forceOutlineBuild) {
+              const boost = 2;
+              outlineImg.scaleX = (outlineImg.scaleX ?? 1) * boost;
+              outlineImg.scaleY = (outlineImg.scaleY ?? 1) * boost;
+              outlineImg.alpha = 1;
+          }
+        outlineImg.rotation = native.rotation ?? 0;
+        if (typeof (outlineImg as any).setScrollFactor === "function") {
+            (outlineImg as any).setScrollFactor(native.scrollFactorX ?? 1, native.scrollFactorY ?? 1);
+        }
+          if (!canUseAuraSheet) {
+              try {
+                  (outlineImg as any).setBlendMode?.((Phaser as any)?.BlendModes?.NORMAL ?? 0);
+                  (outlineImg as any).setPipeline?.("TextureTintPipeline");
+                  (outlineImg as any).cameraFilter = 0;
+                  (outlineImg as any).renderFlags = 15;
+              } catch { /* ignore */ }
+          }
+
+        if (typeof (outlineImg as any).setFlipX === "function") {
+            (outlineImg as any).setFlipX(!!native.flipX);
+        }
+        if (typeof (outlineImg as any).setFlipY === "function") {
+            (outlineImg as any).setFlipY(!!native.flipY);
+        }
+
+          if (typeof outlineImg.setTint === "function") {
+              const tintHex = __tintForArcadeColorIndex(colorIndex | 0);
+              if (tintHex !== 0) outlineImg.setTint(tintHex);
+              else outlineImg.clearTint();
+              if (isRingTex) outlineImg.setTint(0xff00ff);
+              if (forceOutlineBuild) outlineImg.setTint(0xffffff);
+              if (DEBUG_PROP_OUTLINE_EXAGGERATE && canUseAuraSheet && !forceOutlineBuild) {
+                  outlineImg.setTint(DEBUG_PROP_OUTLINE_EXAGGERATE_TINT);
+                  outlineImg.alpha = 1;
+                  try { (outlineImg as any).setBlendMode?.((Phaser as any)?.BlendModes?.ADD ?? 1); } catch { /* ignore */ }
+              }
+          }
+
+          if (canUseAuraSheet) {
+              // If the prop is in a container, move the outline into the same container.
+              try {
+                  const parent = (native as any)?.parentContainer;
+                  if (parent) {
+                      parent.add(outlineImg);
+                      if (DEBUG_PROP_OUTLINE_EXAGGERATE && typeof parent.bringToTop === "function") {
+                          parent.bringToTop(outlineImg);
+                      }
+                  }
+              } catch { /* ignore */ }
+
+              // Minimal one-time proof log (no debug visuals).
+              if (DEBUG_PROP_OUTLINE_VERBOSE) {
+                  try {
+                      const anyImg: any = outlineImg as any;
+                      if (!anyImg.__focusOutlineOnce) {
+                          anyImg.__focusOutlineOnce = true;
+                          console.log("[AURA][PROPS][FINAL]", {
+                              outlineTexKey: outlineImg.texture?.key ?? "",
+                              outlineFrame: outlineImg.frame?.name ?? "",
+                              x: outlineImg.x | 0,
+                              y: outlineImg.y | 0,
+                              depth: (outlineImg as any).depth ?? 0,
+                              visible: !!(outlineImg as any).visible,
+                              alpha: outlineImg.alpha,
+                              isSprite: typeof (outlineImg as any).anims?.stop === "function",
+                              outlineSize: {
+                                  w: (outlineImg as any).width ?? 0,
+                                  h: (outlineImg as any).height ?? 0,
+                                  dw: (outlineImg as any).displayWidth ?? 0,
+                                  dh: (outlineImg as any).displayHeight ?? 0,
+                                  sx: (outlineImg as any).scaleX ?? 1,
+                                  sy: (outlineImg as any).scaleY ?? 1
+                              },
+                              outlineBlend: (outlineImg as any).blendMode ?? 0,
+                              outlinePipeline: (outlineImg as any).pipeline?.name ?? "",
+                              outlineCamFilter: (outlineImg as any).cameraFilter ?? 0,
+                              outlineMask: !!(outlineImg as any).mask,
+                              nativeTexKey: native.texture?.key ?? "",
+                              nativeFrame: native.frame?.name ?? "",
+                              nativeX: native.x | 0,
+                              nativeY: native.y | 0,
+                              nativeDepth: (native as any).depth ?? 0,
+                              nativeVisible: !!(native as any).visible,
+                              nativeAlpha: (native as any).alpha ?? 1,
+                              nativeSize: {
+                                  w: (native as any).width ?? 0,
+                                  h: (native as any).height ?? 0,
+                                  dw: (native as any).displayWidth ?? 0,
+                                  dh: (native as any).displayHeight ?? 0,
+                                  sx: (native as any).scaleX ?? 1,
+                                  sy: (native as any).scaleY ?? 1
+                              },
+                              nativeScale: {
+                                  x: (native.scaleX ?? 1),
+                                  y: (native.scaleY ?? 1)
+                              },
+                              nativeScrollFactor: {
+                                  x: (native.scrollFactorX ?? 1),
+                                  y: (native.scrollFactorY ?? 1)
+                              },
+                              outlineScrollFactor: {
+                                  x: (outlineImg as any).scrollFactorX ?? 1,
+                                  y: (outlineImg as any).scrollFactorY ?? 1
+                              },
+                              nativeHasParent: !!(native as any).parentContainer,
+                              outlineHasParent: !!(outlineImg as any).parentContainer,
+                              nativeInDisplayList: !!(native as any).displayList,
+                              outlineInDisplayList: !!(outlineImg as any).displayList,
+                              sceneKey: scene?.sys?.settings?.key ?? "",
+                              nativeSceneKey: (native as any).scene?.sys?.settings?.key ?? ""
+                          });
+                      }
+                  } catch { /* ignore */ }
+              }
+          }
+    } catch {
+        // Non-critical: focus outline should never crash the game loop.
     }
 }
 

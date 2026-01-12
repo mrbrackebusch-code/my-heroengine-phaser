@@ -33,7 +33,7 @@ namespace SpriteKind {
 }
 
 // =====================================================================
-// PHASER-ONLY SHIM â€“ DO NOT COPY THIS BLOCK INTO MAKECODE ARCADE
+// PHASER-ONLY SHIM – DO NOT COPY THIS BLOCK INTO MAKECODE ARCADE
 // =====================================================================
 (function phaserSpriteKindShim() {
     // In the Phaser build, this module has its own SpriteKind object
@@ -114,7 +114,7 @@ namespace SpriteKind {
 
 
 // --------------------------------------------------------------
-// HERO ENGINE V20 â€“ FUNCTION INDEX
+// HERO ENGINE V20 – FUNCTION INDEX
 // --------------------------------------------------------------
 //
 // SECTION 0 - UPDATE STATUS AND COMMENTARY
@@ -124,17 +124,17 @@ namespace SpriteKind {
 //   (no top-level functions)
 //
 // SECTION 2 - HELPER FUNCTIONS
-//   makeBaseStats() â€“ Allocate and initialize a STAT[] array with defaults for a single move.
-//   getBaseMoveDurationMs() â€“ Return baseline move duration in ms for a given button/family.
-//   getBasePower() â€“ Return baseline damage/power budget for a button/family.
-//   animIdToKey() â€“ Convert a numeric animation ID into a string key for hero animations.
-//   distanceTo() â€“ Compute Euclidean distance between two sprites.
-//   distSqPointToSprite() â€“ Compute squared distance from a world point to a sprite's center.
-//   worldPointAlongRay() â€“ Return a point along a ray from a sprite, given direction and distance.
-//   tintImageReplace() â€“ Clone an image while remapping a color (for aura/tint effects).
-//   getAimVectorForHero() â€“ Compute normalized aim vector for a hero from facing/inputs.
-//   r2() â€“ Round a value to 2 decimal places (numeric helper).
-//   r3() â€“ Round a value to 3 decimal places (numeric helper).
+//   makeBaseStats() – Allocate and initialize a STAT[] array with defaults for a single move.
+//   getBaseMoveDurationMs() – Return baseline move duration in ms for a given button/family.
+//   getBasePower() – Return baseline damage/power budget for a button/family.
+//   animIdToKey() – Convert a numeric animation ID into a string key for hero animations.
+//   distanceTo() – Compute Euclidean distance between two sprites.
+//   distSqPointToSprite() – Compute squared distance from a world point to a sprite's center.
+//   worldPointAlongRay() – Return a point along a ray from a sprite, given direction and distance.
+//   tintImageReplace() – Clone an image while remapping a color (for aura/tint effects).
+//   getAimVectorForHero() – Compute normalized aim vector for a hero from facing/inputs.
+//   r2() – Round a value to 2 decimal places (numeric helper).
+//   r3() – Round a value to 3 decimal places (numeric helper).
 //
 //
 // SECTION 2.5 - TILEMAP AND WORLD GENERATION
@@ -146,107 +146,107 @@ namespace SpriteKind {
 //
 //
 // SECTION 3 - STUDENT HOOKS: HERO LOGIC & ANIMATION - NO LONGER HERE. THEY ARE GONE. They have been moved to a project that uses the Hero Engine extension.
-//   hero1Logic() â€“ Student-editable logic for Hero 1's behavior each frame.
-//   hero2Logic() â€“ Student-editable logic for Hero 2's behavior each frame.
-//   hero3Logic() â€“ Student-editable logic for Hero 3's behavior each frame.
-//   hero4Logic() â€“ Student-editable logic for Hero 4's behavior each frame.
-//   animateHero1() â€“ Student-editable animation for Hero 1 based on state/facing.
-//   animateHero2() â€“ Student-editable animation for Hero 2 based on state/facing.
-//   animateHero3() â€“ Student-editable animation for Hero 3 based on state/facing.
-//   animateHero4() â€“ Student-editable animation for Hero 4 based on state/facing.
+//   hero1Logic() – Student-editable logic for Hero 1's behavior each frame.
+//   hero2Logic() – Student-editable logic for Hero 2's behavior each frame.
+//   hero3Logic() – Student-editable logic for Hero 3's behavior each frame.
+//   hero4Logic() – Student-editable logic for Hero 4's behavior each frame.
+//   animateHero1() – Student-editable animation for Hero 1 based on state/facing.
+//   animateHero2() – Student-editable animation for Hero 2 based on state/facing.
+//   animateHero3() – Student-editable animation for Hero 3 based on state/facing.
+//   animateHero4() – Student-editable animation for Hero 4 based on state/facing.
 //
 // SECTION 4 - PLAYER SPRITES CREATION AND CONTROL
-//   runHeroLogicForHero() â€“ Call the appropriate heroXLogic() for the given hero index.
-//   calculateMoveStatsForFamily() â€“ Dispatch to calculateXStats() for the chosen family/button.
-//   doHeroMoveForPlayer() â€“ Entry point when a player presses a move button; resolves family, spends mana, and executes the move.
-//   heroImageForPlayer() â€“ Return the base sprite image for the hero controlled by a given player.
-//   createHeroForPlayer() â€“ Create and initialize a hero sprite for a specific player index.
-//   setupHeroes() â€“ Create all hero sprites, assign them to players, and initialize hero arrays.
-//   lockHeroControls() â€“ Mark a hero as busy and prevent input until a given time.
-//   unlockHeroControls() â€“ Clear a hero's busy flag and restore control.
-//   refreshHeroController() â€“ Rebind hardware controllers to hero sprites (e.g., after respawn/reset).
-//   getHeroDirectionName() â€“ Return a string like "up"/"down"/"left"/"right" for current hero facing.
-//   updateHeroFacingsFromVelocity() â€“ Update hero facing direction based on its velocity vector.
-//   callHeroAnim() â€“ Call the appropriate animateHeroX() helper for the given hero index.
+//   runHeroLogicForHero() – Call the appropriate heroXLogic() for the given hero index.
+//   calculateMoveStatsForFamily() – Dispatch to calculateXStats() for the chosen family/button.
+//   doHeroMoveForPlayer() – Entry point when a player presses a move button; resolves family, spends mana, and executes the move.
+//   heroImageForPlayer() – Return the base sprite image for the hero controlled by a given player.
+//   createHeroForPlayer() – Create and initialize a hero sprite for a specific player index.
+//   setupHeroes() – Create all hero sprites, assign them to players, and initialize hero arrays.
+//   lockHeroControls() – Mark a hero as busy and prevent input until a given time.
+//   unlockHeroControls() – Clear a hero's busy flag and restore control.
+//   refreshHeroController() – Rebind hardware controllers to hero sprites (e.g., after respawn/reset).
+//   getHeroDirectionName() – Return a string like "up"/"down"/"left"/"right" for current hero facing.
+//   updateHeroFacingsFromVelocity() – Update hero facing direction based on its velocity vector.
+//   callHeroAnim() – Call the appropriate animateHeroX() helper for the given hero index.
 //
 // SECTION 5 - HERO STATS AND UI
-//   initHeroHP() â€“ Initialize hero HP, HP bar sprite, and HP-related data fields.
-//   updateHeroHPBar() â€“ Update hero HP bar width/position based on current HP.
-//   initHeroMana() â€“ Initialize hero mana pool and mana bar sprite for a hero.
-//   updateHeroManaBar() â€“ Update hero mana bar to reflect current mana value.
-//   flashHeroManaBar() â€“ Temporarily flash the hero mana bar (e.g., on insufficient mana).
-//   applyDamageToHeroIndex() â€“ Apply damage to a hero, clamp HP, and trigger HP-related effects.
-//   flashHeroOnDamage() â€“ Briefly flash the hero sprite when taking damage.
-//   regenHeroManaAll() â€“ Regenerate mana for all heroes each tick/frame.
-//   showDamageNumber() â€“ Spawn a floating text sprite showing damage dealt at a position.
-//   createAuraImageFromHero() â€“ Generate an aura outline image based on a hero's sprite bitmap.
-//   ensureHeroAuraSprite() â€“ Ensure a hero has an attached aura sprite and create it if missing.
-//   updateHeroOverlays() â€“ Update aura and combo meter and agility indicator sprites (position, visibility, style) for all heroes.
+//   initHeroHP() – Initialize hero HP, HP bar sprite, and HP-related data fields.
+//   updateHeroHPBar() – Update hero HP bar width/position based on current HP.
+//   initHeroMana() – Initialize hero mana pool and mana bar sprite for a hero.
+//   updateHeroManaBar() – Update hero mana bar to reflect current mana value.
+//   flashHeroManaBar() – Temporarily flash the hero mana bar (e.g., on insufficient mana).
+//   applyDamageToHeroIndex() – Apply damage to a hero, clamp HP, and trigger HP-related effects.
+//   flashHeroOnDamage() – Briefly flash the hero sprite when taking damage.
+//   regenHeroManaAll() – Regenerate mana for all heroes each tick/frame.
+//   showDamageNumber() – Spawn a floating text sprite showing damage dealt at a position.
+//   createAuraImageFromHero() – Generate an aura outline image based on a hero's sprite bitmap.
+//   ensureHeroAuraSprite() – Ensure a hero has an attached aura sprite and create it if missing.
+//   updateHeroOverlays() – Update aura and combo meter and agility indicator sprites (position, visibility, style) for all heroes.
 //
 // SECTION 6 - ON OVERLAP - COLLISIONS AND INTERACTIONS BETWEEN KINDS
-//   hasSignificantOverlap() â€“ Return true if two sprites overlap enough to count as a hit/collision.
+//   hasSignificantOverlap() – Return true if two sprites overlap enough to count as a hit/collision.
 //
 // SECTION S - STRENGTH MOVE MODULE
-//   calculateStrengthStats() â€“ Compute STAT[] for the Strength family based on base time and traits.
-//   executeStrengthMove() â€“ Perform a Strength move: spend mana, lock hero, and schedule the smash.
-//   getStrengthInnerRadiusForHero() â€“ Return the inner radius for the Strength smash hit area around a hero.
-//   findHeroLeadingEdgeDistance() â€“ Compute distance from hero center to leading edge in facing direction.
-//   spawnStrengthSwingProjectile() â€“ Spawn the visual Strength smash projectile attached to a hero.
-//   updateStrengthProjectilesMotionFor() â€“ Move Strength smash projectiles and decide when they expire.
-//   buildStrengthSmashBitmap() â€“ Build the custom bitmap used to render the Strength smash arc.
+//   calculateStrengthStats() – Compute STAT[] for the Strength family based on base time and traits.
+//   executeStrengthMove() – Perform a Strength move: spend mana, lock hero, and schedule the smash.
+//   getStrengthInnerRadiusForHero() – Return the inner radius for the Strength smash hit area around a hero.
+//   findHeroLeadingEdgeDistance() – Compute distance from hero center to leading edge in facing direction.
+//   spawnStrengthSwingProjectile() – Spawn the visual Strength smash projectile attached to a hero.
+//   updateStrengthProjectilesMotionFor() – Move Strength smash projectiles and decide when they expire.
+//   buildStrengthSmashBitmap() – Build the custom bitmap used to render the Strength smash arc.
 //
 // SECTION A - AGILITY MOVE MODULE
-//   calculateAgilityStats() â€“ Compute STAT[] for the Agility family based on base time and traits.
-//   executeAgilityMove() â€“ Perform an Agility move: spend mana, lock hero, and start dash/thrust.
-//   updateAgilityComboOnHit() â€“ Update the hero's combo meter and state after an Agility hit.
-//   getComboDamageMultPct() â€“ Return damage multiplier percent based on current combo streak.
-//   spawnAgilityThrustProjectile() â€“ Spawn the melee thrust hitbox/visual for an Agility move.
-//   createAgilityArrowSegmentImage() â€“ Create the segment image used for Agility thrust trails/arrow.
-//   updateAgilityProjectilesMotionFor() â€“ Move Agility thrust projectiles and handle dash follow-through/timing.
-//   debugAgilityDashProgress() â€“ Visual/logging helper to inspect dash integration over time.
-//   debugDashIntegratorTick() â€“ Helper used by debugAgilityDashProgress() to step the integrator.
-//   showComboPop() â€“ Spawn a temporary "Nx" combo popup over the hero sprite.
-//   ensureComboMeter() â€“ Ensure a combo meter sprite exists for a hero and attach/position it.
+//   calculateAgilityStats() – Compute STAT[] for the Agility family based on base time and traits.
+//   executeAgilityMove() – Perform an Agility move: spend mana, lock hero, and start dash/thrust.
+//   updateAgilityComboOnHit() – Update the hero's combo meter and state after an Agility hit.
+//   getComboDamageMultPct() – Return damage multiplier percent based on current combo streak.
+//   spawnAgilityThrustProjectile() – Spawn the melee thrust hitbox/visual for an Agility move.
+//   createAgilityArrowSegmentImage() – Create the segment image used for Agility thrust trails/arrow.
+//   updateAgilityProjectilesMotionFor() – Move Agility thrust projectiles and handle dash follow-through/timing.
+//   debugAgilityDashProgress() – Visual/logging helper to inspect dash integration over time.
+//   debugDashIntegratorTick() – Helper used by debugAgilityDashProgress() to step the integrator.
+//   showComboPop() – Spawn a temporary "Nx" combo popup over the hero sprite.
+//   ensureComboMeter() – Ensure a combo meter sprite exists for a hero and attach/position it.
 //
 // SECTION I - INTELLECT MOVE MODULE
-//   calculateIntellectStats() â€“ Compute STAT[] for the Intellect family based on base time and traits.
-//   executeIntellectMove() â€“ Perform an Intellect move: start targeting mode and consume mana.
-//   beginIntellectTargeting() â€“ Create a controllable Intellect spell projectile and enter steering mode.
-//   runIntellectDetonation() â€“ Handle Intellect projectile detonation, damage application, and linger spawn.
-//   finishIntellectSpellForHero() â€“ Clean up Intellect spell state and unlock hero after spell ends.
-//   updateIntellectSpellsControl() â€“ Per-frame steering/motion control for active Intellect spells.
-//   detonateIntellectSpellAt() â€“ Helper to detonate an Intellect spell at a specific world (x,y).
-//   processIntellectLingers() â€“ Update Intellect linger sprites (DoT, visuals, cleanup).
+//   calculateIntellectStats() – Compute STAT[] for the Intellect family based on base time and traits.
+//   executeIntellectMove() – Perform an Intellect move: start targeting mode and consume mana.
+//   beginIntellectTargeting() – Create a controllable Intellect spell projectile and enter steering mode.
+//   runIntellectDetonation() – Handle Intellect projectile detonation, damage application, and linger spawn.
+//   finishIntellectSpellForHero() – Clean up Intellect spell state and unlock hero after spell ends.
+//   updateIntellectSpellsControl() – Per-frame steering/motion control for active Intellect spells.
+//   detonateIntellectSpellAt() – Helper to detonate an Intellect spell at a specific world (x,y).
+//   processIntellectLingers() – Update Intellect linger sprites (DoT, visuals, cleanup).
 //
 // SECTION H - HEAL AND SUPPORT SPELLS MODULE
-//   detonateHealSpellAt() â€“ Trigger a heal/support effect centered at a given world point.
-//   applyHealToHeroIndex() â€“ Apply healing and buffs to a specific hero index.
-//   calculateHealStats() â€“ Compute STAT[] for the Heal family based on base time and traits.
-//   executeHealMove() â€“ Perform a Heal move: spawn heal/support effect and consume mana.
+//   detonateHealSpellAt() – Trigger a heal/support effect centered at a given world point.
+//   applyHealToHeroIndex() – Apply healing and buffs to a specific hero index.
+//   calculateHealStats() – Compute STAT[] for the Heal family based on base time and traits.
+//   executeHealMove() – Perform a Heal move: spawn heal/support effect and consume mana.
 //
 // SECTION E - ENEMY MODULE
-//   enemyImageForKind() â€“ Return the base sprite image for a given enemy kind.
-//   spawnEnemyOfKind() â€“ Spawn a single enemy of the requested kind at a specified position.
-//   setupEnemySpawners() â€“ Create invisible spawner sprites around the arena edges (current version).
-//   setupEnemySpawnersBUGGED() â€“ Older/broken spawner setup kept for reference while debugging.
-//   spawnEnemyFromRandomSpawnerWeighted() â€“ Randomly pick a spawner and enemy kind using weights and spawn it.
-//   updateEnemyHoming() â€“ Update enemy velocity to home toward their chosen hero target.
-//   spawnDummyEnemy() â€“ Spawn a dummy/test enemy for development purposes.
-//   setupTestEnemies() â€“ Spawn an initial batch of test enemies.
-//   getEnemyIndex() â€“ Return the index of an enemy sprite inside the enemies[] array.
-//   getHeroIndex() â€“ Return the index of a hero sprite inside the heroes[] array.
-//   initEnemyHP() â€“ Initialize enemy HP and attach an HP bar sprite.
-//   updateEnemyHPBar() â€“ Update enemy HP bar based on current HP.
-//   applyDamageToEnemyIndex() â€“ Apply damage to an enemy, clamp HP, and handle death logic.
-//   flashEnemyOnDamage() â€“ Flash the enemy sprite briefly when it takes damage.
+//   enemyImageForKind() – Return the base sprite image for a given enemy kind.
+//   spawnEnemyOfKind() – Spawn a single enemy of the requested kind at a specified position.
+//   setupEnemySpawners() – Create invisible spawner sprites around the arena edges (current version).
+//   setupEnemySpawnersBUGGED() – Older/broken spawner setup kept for reference while debugging.
+//   spawnEnemyFromRandomSpawnerWeighted() – Randomly pick a spawner and enemy kind using weights and spawn it.
+//   updateEnemyHoming() – Update enemy velocity to home toward their chosen hero target.
+//   spawnDummyEnemy() – Spawn a dummy/test enemy for development purposes.
+//   setupTestEnemies() – Spawn an initial batch of test enemies.
+//   getEnemyIndex() – Return the index of an enemy sprite inside the enemies[] array.
+//   getHeroIndex() – Return the index of a hero sprite inside the heroes[] array.
+//   initEnemyHP() – Initialize enemy HP and attach an HP bar sprite.
+//   updateEnemyHPBar() – Update enemy HP bar based on current HP.
+//   applyDamageToEnemyIndex() – Apply damage to an enemy, clamp HP, and handle death logic.
+//   flashEnemyOnDamage() – Flash the enemy sprite briefly when it takes damage.
 //
 // SECTION F - FINAL SECTION - onUpdates, GAME LOOP, INPUT, ENEMY AI/WAVES & STARTUP
-//   updateHeroProjectiles() â€“ Per-frame update for STR/AGI projectiles; leaves driven spells to their modules.
-//   updateProjectilesCleanup() â€“ Destroy projectiles whose timed DESTROY_AT has passed.
-//   updatePlayerInputs() â€“ Poll controllers and convert button state into move intents.
-//   updateMeleeProjectilesMotion() â€“ Legacy melee projectile updater (older path, mostly superseded).
-//   updateHeroControlLocks() â€“ Per-frame check to unlock heroes whose busyUntil has expired.
-//   updateEnemyEffects() â€“ Update enemy slow/weakness/status-effect timers and visuals.
+//   updateHeroProjectiles() – Per-frame update for STR/AGI projectiles; leaves driven spells to their modules.
+//   updateProjectilesCleanup() – Destroy projectiles whose timed DESTROY_AT has passed.
+//   updatePlayerInputs() – Poll controllers and convert button state into move intents.
+//   updateMeleeProjectilesMotion() – Legacy melee projectile updater (older path, mostly superseded).
+//   updateHeroControlLocks() – Per-frame check to unlock heroes whose busyUntil has expired.
+//   updateEnemyEffects() – Update enemy slow/weakness/status-effect timers and visuals.
 //
 
 // =====================================================================
@@ -256,7 +256,7 @@ namespace SpriteKind {
 //
 // Goal: Each key group has a SMALL set of authoritative writers.
 // Everybody else is READ-ONLY for that group.
-// This prevents double-increment / stomping / false â€œnew actionâ€ edges.
+// This prevents double-increment / stomping / false “new action” edges.
 //
 // ---------------------------------------------------------------------
 // ACTION (edge: new move instance)
@@ -271,7 +271,7 @@ namespace SpriteKind {
 //   Keys: PhaseName / PhaseStartMs / PhaseDurationMs / PhaseProgressInt / PhaseFlags
 //   Ambient phase changes (idle/run/combatIdle): setHeroPhaseString() only.
 //   Action window stamping (fresh start even if same phase repeats): _doHeroMovePlayAnimAndDispatch() only.
-//   Long-running progress updates: the moveâ€™s timing loop may update PhaseProgressInt (e.g., strength charge).
+//   Long-running progress updates: the move’s timing loop may update PhaseProgressInt (e.g., strength charge).
 //
 // ---------------------------------------------------------------------
 // PHASE PART (within-phase segmentation)  [future wiring]
@@ -298,18 +298,18 @@ namespace SpriteKind {
 // =====================================================================
 
 
-// ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
-// ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
 
 
 
@@ -318,7 +318,7 @@ namespace SpriteKind {
 
 
 
-// ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ SECTION ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ SECTION ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ
+// 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁
 //These are the things that need to be present for this code to work in MakeCode Arcade
 
 
@@ -352,13 +352,13 @@ namespace SpriteKindArcade {
 // will swallow any runtime issue if it's missing.
 
 // ================================================================
-// External hero hooks â€“ implemented in the user project (main.ts)
+// External hero hooks – implemented in the user project (main.ts)
 // ================================================================
 
 // Logic hooks: must return an OUT array-like structure
 
 // ================================================================
-// Default hero hooks â€“ safe stubs for the extension itself.
+// Default hero hooks – safe stubs for the extension itself.
 // Student projects will override these in main.ts with their own
 // heroXLogic / animateHeroX functions.
 // ================================================================
@@ -532,7 +532,7 @@ namespace HeroEngine {
 
 
     // Overridable hook for hero logic.
-    // Arcade: stays null â†’ we fall back to runHeroLogicForHero.
+    // Arcade: stays null → we fall back to runHeroLogicForHero.
     // Phaser: heroEnginePhaserGlue.ts overrides this.
     export type RunHeroLogicForHeroHook = (heroIndex: number, button: string) => number[] | null;
     export let runHeroLogicForHeroHook: RunHeroLogicForHeroHook = null;
@@ -580,7 +580,7 @@ namespace HeroEngine {
 }
 
 
-// ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ SECTION ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ SECTION ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ
+// 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 SECTION 🍁 ────── 🍂 ────── 🍁
 //This section is for how we check if we are in Phaser or MakeCode Arcade. I am putting these in their own section because other than this there shouldn't be a place the engine "knows" whether it is in MakeCode Arcade or not
 //This is also for debug flags so they are easy to spot
 declare const globalThis: any;
@@ -603,30 +603,30 @@ function isMakeCodeArcadeRuntime(): boolean {
 // DEBUG: Agility combo v3
 //##########################################################################################################################################
 
-const DEBUG_AGI_COMBO = false  //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
-const DEBUG_AGI_COMBO_LANDING = false  //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
-const DEBUG_AGI_COMBO_EXIT = false  //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
-const DEBUG_AGI_COMBO_BUILD = false  //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_AGI_COMBO = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_LANDING = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_EXIT = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
+const DEBUG_AGI_COMBO_BUILD = false  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 // --------------------------------------------------------------
 // Debug flags
 // Used by: agility / integrator debug logging & probes
 // --------------------------------------------------------------
-const DEBUG_AGILITY = false //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_AGILITY = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 const DBG_INTERVAL_MS = 50
 const DEBUG_INTEGRATOR = true
 const DBG_INT_INTERVAL_MS = 50
 
-const DEBUG_HERO_LOGIC = true //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_HERO_LOGIC = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_ANIM_KEYS = false //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_ANIM_KEYS = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 
-const DEBUG_PHASE_CHANGES = false //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v 
+const DEBUG_PHASE_CHANGES = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v 
 
 // Change this string to whatever you want to grep for.
 // Must contain "P1 intent" per your filtering workflow.
@@ -635,13 +635,13 @@ const DEBUG_FILTER_PHRASE = "[P1 intent]"
 // --------------------------------------------------------------
 // Debug filter (input/move gating probes)
 // --------------------------------------------------------------
-const DEBUG_FILTER_LOGS = true  //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
+const DEBUG_FILTER_LOGS = true  //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 
 // --------------------------------------------------------------
 // Move pipeline debug (engine-only). Off by default.
 // --------------------------------------------------------------
-const DEBUG_MOVE_PIPE = false //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_MOVE_PIPE = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 
 const DEBUG_MOVE_PIPE_PLAYER = 0      // 0 = all players, else only that player index (1-based)
 const DEBUG_MOVE_PIPE_THROTTLE_MS = 500  // rate limit per hero for tick-style logs
@@ -651,7 +651,7 @@ let _dbgMovePipeLastMsByHero: number[] = []
 // Debug-only; do not use for gameplay logic.
 let _dbgMoveCurrentPlayerId = 0
 
-const DEBUG_AGI_AIM = false //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥v
+const DEBUG_AGI_AIM = false //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥v
 const DEBUG_AGI_AIM_HERO_INDEX = 0          // 0 = hero 0, 1 = hero 1, etc.
 const DEBUG_AGI_AIM_THROTTLE_MS = 250
 
@@ -666,14 +666,14 @@ let _dbg_prevP1A = false
 let _dbg_prevP1B = false
 
 // debug flag
-const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
-const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
+const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
 
 
 
 // Simple shop mode gate (POC)
-let SHOP_MODE_ACTIVE_MASTER = false // Debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
+let SHOP_MODE_ACTIVE_MASTER = false // Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 let SHOP_MODE_ACTIVE = true //local flag gets overwritten
 
 if (!SHOP_MODE_ACTIVE_MASTER) { SHOP_MODE_ACTIVE = false}
@@ -684,7 +684,7 @@ const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop
 let _shopEntered = false
 
 
-const DEBUG_WORLD_SNAPSHOT = true; //debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
+const DEBUG_WORLD_SNAPSHOT = true; //debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 
 // --------------------------------------------------------------
@@ -699,26 +699,170 @@ const DEBUG_ANIM_KEYS_INT_FINISH = true
 
 
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
 
-// ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
 // ================================================================
 // SECTION 1 - ENGINE CONSTANTS, DATA KEYS & GLOBALS
 // ================================================================
 // --------------------------------------------------------------
-// SECTION 1 â€“ CONSTANTS, DATA KEYS, GLOBALS
+// SECTION 1 – CONSTANTS, DATA KEYS, GLOBALS
 // Purpose:
-//   â€¢ Centralize all tuning constants and enums
-//   â€¢ Define sprite data "schemas" for heroes, enemies, and projectiles
-//   â€¢ Declare the core global arrays the engine loops over
+//   • Centralize all tuning constants and enums
+//   • Define sprite data "schemas" for heroes, enemies, and projectiles
+//   • Declare the core global arrays the engine loops over
 // --------------------------------------------------------------
 
 
 //Knobs and balancing--for anything and everything tuneable to make the game glow and be awesome
+const BALANCE = {
+    MOVES: {
+        // Axis weights: keep mana-point value consistent across the 4 trait fields.
+        AXIS_WEIGHT_X1000: {
+            DAMAGE: 1000,
+            REACH: 1000,
+            TIME: 1000,
+            STATUS: 1000
+        },
+        BASE_DURATION_MS: {
+            DEFAULT: 300,
+            STRENGTH: 400,
+            AGILITY: 250,
+            INTELLECT: 1000,
+            WISDOM: 1000,
+            AB_BONUS: 150
+        },
+        BASE_POWER: {
+            DEFAULT: 5,
+            STRENGTH: 15,
+            AGILITY: 10,
+            INTELLECT: 8,
+            WISDOM: 8
+        },
+        STRENGTH: {
+            DAMAGE_BASE: 80,
+            DAMAGE_PER_POINT: 2,
+            TOTAL_ARC_DEG: 360,
+            BASE_SWING_MS: 220,
+            REACH_BASE_PX: 4,
+            REACH_PER_POINT_PX: 1,
+            LUNGE_SPEED: 5,
+            KNOCKBACK_BASE_PCT: 10,
+            KNOCKBACK_PER_POINT_PCT: 10
+        },
+        AGILITY: {
+            DAMAGE_BASE: 60,
+            DAMAGE_PER_POINT: 1,
+            LUNGE_BASE: 230,
+            LUNGE_PER_POINT: 5,
+            MOVE_DURATION_MIN_MS: 50,
+            LANDING_BUFFER_MS: 80,
+            LANDING_BUFFER_PER_POINT_MS: 2,
+            STATUS_SLOW_BASE_PCT: 10,
+            STATUS_SLOW_PER_POINT_PCT: 2,
+            STATUS_SLOW_DURATION_BASE_MS: 200,
+            STATUS_SLOW_DURATION_PER_POINT_MS: 20
+        },
+        INTELLECT: {
+            TARGETING_BASE_MS: 500000,
+            TARGETING_PER_POINT_MS: 50,
+            TARGETING_MIN_MS: 50,
+            RING_RADIUS_BASE_PX: 8,
+            RING_RADIUS_PER_POINT_PX: 1,
+            DAMAGE_BASE: 60,
+            DAMAGE_PER_POINT: 2,
+            CHANNEL_POWER_BASE: 100,
+            CHANNEL_POWER_PER_POINT: 5,
+            MOVE_DURATION_PER_POINT_MS: 5,
+            MOVE_DURATION_MIN_MS: 50,
+            WEAKEN_BASE_PCT: 5,
+            WEAKEN_PER_POINT_PCT: 1,
+            WEAKEN_DURATION_BASE_MS: 500,
+            WEAKEN_DURATION_PER_POINT_MS: 20
+        },
+        WISDOM: {
+            DAMAGE_MULT_BASE: 100,
+            DAMAGE_MULT_PER_POINT: 2,
+            MOVE_DURATION_MIN_MS: 50,
+            MOVE_DURATION_HEAL_PER_POINT_MS: 3,
+            MOVE_DURATION_AMP_PER_POINT_MS: 2,
+            MOVE_DURATION_HASTE_PER_POINT_MS: 2
+        }
+    },
+    HERO: {
+        START_HP: 1000,
+        START_MANA: 2000,
+        MANA_REGEN_PCT_PER_TICK: 2
+    },
+    LEVEL: {
+        XP_DEFAULT_PER_KILL: 10,
+        XP_BASE: 40,
+        XP_PER_LEVEL: 18,
+        XP_PER_LEVEL2: 6,
+        XP_MAX_LEVEL: 99,
+        XP_BOSS_MULT_PCT: 300,
+        AXIS_RANK_MAX: 4,
+        AXIS_BONUS_BY_RANK: [0, 1, 2, 3, 4],
+        HP_PER_PICK: 6,
+        MANA_PER_PICK: 4
+    },
+    BUFFS: {
+        SUPPORT_BEAM_SPEED: 80,
+        SUPPORT_PUZZLE_STEP_BUDGET_MS: 400,
+        SUPPORT_PUZZLE_MIN_TOTAL_MS: 300,
+        SUPPORT_PUZZLE_SEQ_LEN: 4,
+        SUPPORT_BUFF_DURATION_BASE_MS: 2000,
+        SUPPORT_BUFF_DURATION_PER_POWER_MS: 25,
+        SUPPORT_BUFF_POWER_MIN: 1
+    },
+    MOVEMENT: {
+        HERO_BASE_SPEED: 300
+    },
+    MONSTERS: {
+        DEFAULT_FRAME_W: 64,
+        DEFAULT_FRAME_H: 64,
+        COLLIDER_BIG_THRESHOLD_PX: 96
+    },
+    WAVES: {
+        SPAWN_INTERVAL_MS: 1200,
+        INITIAL_PHASE_DELAY_MS: 1000,
+        RESET_START_DELAY_MS: 150,
+        DANGER_BASE: 25,
+        DANGER_PER_FLOOR: 6,
+        WAVE_COUNT_BASE: 3,
+        WAVE_COUNT_FLOOR_DIV: 12,
+        WAVE_COUNT_MIN: 3,
+        WAVE_COUNT_MAX: 7,
+        WAVE_WEIGHT_EXP: 1.35,
+        DESIRED_COUNT_BASE: 6,
+        DESIRED_COUNT_FLOOR_DIV: 18,
+        SWARM_COUNT_BASE: 10,
+        SWARM_COUNT_FLOOR_DIV: 10,
+        ELITES_COUNT_BASE: 3,
+        ELITES_COUNT_FLOOR_DIV: 30,
+        DESIRED_COUNT_MIN: 3,
+        DESIRED_COUNT_MAX: 18,
+        TARGET_AVG_DANGER_MIN: 4,
+        TARGET_AVG_DANGER_MAX: 60,
+        SPAWN_CHANCE_DEFAULT: 0.9,
+        SPAWN_CHANCE_SWARM: 1.0,
+        SPAWN_CHANCE_ELITES: 0.75,
+        BREAK_BASE_MS: 400,
+        BREAK_PER_FLOOR_DIV: 2,
+        MAX_ALIVE_BASE: 8,
+        MAX_ALIVE_FLOOR_DIV: 6,
+        MAX_ALIVE_MIN: 10,
+        MAX_ALIVE_MAX: 30,
+        ARCHETYPE_SWARM_WEIGHT_BASE: 0.70,
+        ARCHETYPE_SWARM_WEIGHT_DELTA: -0.35,
+        ARCHETYPE_ELITES_WEIGHT_BASE: 0.10,
+        ARCHETYPE_ELITES_WEIGHT_DELTA: 0.25
+    }
+}
 
 
-// ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•
+// 🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕
 //Dungeon and world and tile constants
 
 // --------------------------------------------------------------
@@ -726,7 +870,7 @@ const DEBUG_ANIM_KEYS_INT_FINISH = true
 // Used by: spawn positions, UI layout, enemy spawners, etc.
 // --------------------------------------------------------------
 
-// ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•ðŸŒ•
+// 🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕🌕
 
 // --------------------------------------------------------------
 // Sprite kinds (lazy init for extension safety)
@@ -741,13 +885,20 @@ const DEBUG_ANIM_KEYS_INT_FINISH = true
 // --------------------------------------------------------------
 
 // Families
-const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 }
+const FAMILY = {
+    STRENGTH: 0,
+    AGILITY: 1,
+    INTELLECT: 2,
+    HEAL: 3,
+    WISDOM: 3,   // new name (alias)
+    SUPPORT: 3   // legacy alias
+}
 
 // Elements
 const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5 }
 
 // --------------------------------------------------------------
-// STAT index map â€“ per-move stats array
+// STAT index map – per-move stats array
 // One STAT[] is produced by calculateXStats() for each move.
 // Used by: executeXMove(), STR/AGI motion, INT/HEAL detonation logic.
 // --------------------------------------------------------------
@@ -771,7 +922,7 @@ const STAT = {
     STRENGTH_SWING_MS: 13,
     AGILITY_LAND_BUFFER_MS: 14,
 
-    // âœ… NEW (Strength reach is RELATIVE; store it explicitly)
+    // ✅ NEW (Strength reach is RELATIVE; store it explicitly)
     STRENGTH_REACH_EXTRA_PX: 15,
 
     LEN: 16
@@ -779,11 +930,11 @@ const STAT = {
 
 
 // --------------------------------------------------------------
-// HERO_DATA â€“ sprite data schema for hero sprites
+// HERO_DATA – sprite data schema for hero sprites
 // Ownership:
-//   â€¢ Written by: setupHeroes(), initHeroHP(), initHeroMana(),
+//   • Written by: setupHeroes(), initHeroHP(), initHeroMana(),
 //                 executeXMove(), combo / dash / iframe logic
-//   â€¢ Read by:    applyDamageToHeroIndex(), control-lock logic,
+//   • Read by:    applyDamageToHeroIndex(), control-lock logic,
 //                 combo handling, AGI/STR/INT modules, auras
 // --------------------------------------------------------------
 const HERO_DATA = {
@@ -993,10 +1144,10 @@ const HERO_DATA = {
 }
 
 // --------------------------------------------------------------
-// ENEMY_DATA â€“ sprite data schema for enemies
+// ENEMY_DATA – sprite data schema for enemies
 // Ownership:
-//   â€¢ Written by: spawnEnemyOfKind(), initEnemyHP(), enemy AI setup
-//   â€¢ Read by:    updateEnemyHoming(), updateEnemyEffects(),
+//   • Written by: spawnEnemyOfKind(), initEnemyHP(), enemy AI setup
+//   • Read by:    updateEnemyHoming(), updateEnemyEffects(),
 //                 applyDamageToEnemyIndex(), wave logic
 // --------------------------------------------------------------
 const ENEMY_DATA = {
@@ -1037,6 +1188,8 @@ const ENEMY_DATA = {
     ATK_ORIGIN_Y: "atkOriginY",
     RETURNING_TO_ORIGIN: "returningToOrigin",
     ATK_RATE_PCT: "atkRatePct",
+    ATTACK_INTERVAL_MS: "atkIntervalMs",
+    LAST_ATTACK_MS: "atkLastMs",
 
     DEATH_UNTIL: "deathUntil",
 
@@ -1047,14 +1200,14 @@ const ENEMY_DATA = {
 }
 
 // --------------------------------------------------------------
-// PROJ_DATA â€“ sprite data schema for hero projectiles
+// PROJ_DATA – sprite data schema for hero projectiles
 // Includes STR/AGI melee hitboxes and INT/HEAL driven spells.
 // Ownership:
-//   â€¢ Written by: spawnStrengthSwingProjectile(),
+//   • Written by: spawnStrengthSwingProjectile(),
 //                 spawnAgilityThrustProjectile(),
 //                 beginIntellectTargeting(), runIntellectDetonation(),
 //                 detonateHealSpellAt()
-//   â€¢ Read by:    updateHeroProjectiles(),
+//   • Read by:    updateHeroProjectiles(),
 //                 updateAgilityProjectilesMotionFor(),
 //                 updateStrengthProjectilesMotionFor(),
 //                 updateIntellectSpellsControl(),
@@ -1091,7 +1244,7 @@ const PROJ_DATA = {
     DASH_MS: "dashMs",
     DASH_END_MS: "dashEndMs",
 
-    ACTIVATE_AT_MS: "ActivateAtMs",   // runtime() time when the projectile becomes â€œrealâ€
+    ACTIVATE_AT_MS: "ActivateAtMs",   // runtime() time when the projectile becomes “real”
     IS_ACTIVE: "IsActive",            // 0/1: gate overlaps + visuals until activation
 
     START_HERO_X: "hStartX",
@@ -1111,7 +1264,7 @@ const PROJ_DATA = {
 }
 
 // --------------------------------------------------------------
-// OUT array â€“ student-facing move definition
+// OUT array – student-facing move definition
 // Shape: [FAMILY, mana, trait1, trait2, trait3, trait4, target, element, animId]
 // Used by: calculateMoveStatsForFamily(), executeXMove()
 // --------------------------------------------------------------
@@ -1137,7 +1290,7 @@ const HERO_DAMAGE_FLASH_MS = 150
 
 
 // --------------------------------------------------------------
-// GLOBAL ARRAYS â€“ core engine collections
+// GLOBAL ARRAYS – core engine collections
 // These are what the main update loops iterate over.
 // --------------------------------------------------------------
 let heroes: Sprite[] = []
@@ -1184,9 +1337,9 @@ let heroAuras: Sprite[] = []
 
 //End of Constants
 
-// ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•  SECTION  ðŸŒ• â”€â”€â”€â”€â”€â”€ âœ¨ â”€â”€â”€â”€â”€â”€ ðŸŒ•
+// 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕 ────── ✨ ────── 🌕  SECTION  🌕 ────── ✨ ────── 🌕
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 //This is for the helpers for debugging
 // ------------------------------------------------------------
 // CONTRACT SNAPSHOT DEBUG (aggregated per tick, change-gated)
@@ -1198,7 +1351,7 @@ let heroAuras: Sprite[] = []
 //Contract log
 
 
-const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥ðŸ”¥
+const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 //The master debug turn on and turn off
 
 // Filters (0 = all players; -1 = all heroes; set to reduce noise)
@@ -1502,7 +1655,7 @@ function _dbgContract_consumeWhySummary(hi: number): string {
         if (!id) continue
         const n = (counts[id] | 0) || 0
         if (n <= 0) continue
-        out = out ? (out + ", " + id + "Ã—" + n) : (id + "Ã—" + n)
+        out = out ? (out + ", " + id + "×" + n) : (id + "×" + n)
     }
     return out
 }
@@ -1513,7 +1666,7 @@ function _dbgContract_clearWhy(hi: number): void {
     _dbgContract_pendingWhyOrderByHero[heroIndex] = ""
 }
 
-// A small â€œdiff snapshotâ€ string: subset of fields only.
+// A small “diff snapshot” string: subset of fields only.
 // IMPORTANT: keep order stable forever unless you bump schema.
 function _dbgContract_buildDiffSnap(args: {
   playerId: number;
@@ -1604,7 +1757,7 @@ function _dbgContract_diffFromSnaps(prevSnap: string, nextSnap: string): string 
   const prev = prevSnap ? prevSnap.split("|") : [];
   const next = nextSnap ? nextSnap.split("|") : [];
 
-  const trunc = (s: string, max: number) => (s.length > max ? (s.slice(0, max - 1) + "â€¦") : s);
+  const trunc = (s: string, max: number) => (s.length > max ? (s.slice(0, max - 1) + "…") : s);
 
   const diffs: string[] = [];
   for (let i = 0; i < labels.length; i++) {
@@ -1612,9 +1765,9 @@ function _dbgContract_diffFromSnaps(prevSnap: string, nextSnap: string): string 
     const b = (next[i] ?? "");
     if (a !== b) {
       if (labels[i] === "entities") {
-        diffs.push(`entities ${trunc(a, 64)}â†’${trunc(b, 64)}`);
+        diffs.push(`entities ${trunc(a, 64)}→${trunc(b, 64)}`);
       } else {
-        diffs.push(`${labels[i]} ${a}â†’${b}`);
+        diffs.push(`${labels[i]} ${a}→${b}`);
       }
     }
   }
@@ -1708,7 +1861,7 @@ function _dbgContract_isVolatilePartWindow(partName: string): boolean {
 }
 
 // ------------------------------------------------------------
-// CONTRACT WHY TABLE (canonical cause â†’ decision-point function)
+// CONTRACT WHY TABLE (canonical cause → decision-point function)
 // These IDs are semantic, full-word, and LLM-targeted.
 // If a WHY ID appears in logs, START investigation at its mapped function.
 // ------------------------------------------------------------
@@ -1981,7 +2134,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
         // ------------------------------------------------------------
         let hasEntities = false
 
-        // Full Entities line (big) â€” keep for major edges.
+        // Full Entities line (big) — keep for major edges.
         let entLine = ""
 
         // entSigStable: INCLUDED IN coreSig (semantic). MUST NOT include XY.
@@ -2047,7 +2200,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
                     `xy=${ctlX},${ctlY} termHit=${ctlTermHit}` +
                     `}`
 
-                // âœ… Stable signature: NO XY
+                // ✅ Stable signature: NO XY
                 entSigStable =
                     ownedProj + "|" + ownedDet + "|" +
                     ctrl + "|" +
@@ -2117,7 +2270,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
         }
 
         // ------------------------------------------------------------
-        // CORE signature (semantic) â€” XY removed to stop EDGE spam.
+        // CORE signature (semantic) — XY removed to stop EDGE spam.
         // ------------------------------------------------------------
         const ppVolatile = _dbgContract_isVolatilePartWindow(pp)
         const ppS_sig = ppVolatile ? 0 : (ppS | 0)
@@ -2175,7 +2328,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
                     const diffText = _dbgContract_diffFromSnaps(prevDiffSnap, diffSnap)
                     _dbgContract_pendingDiffByHero[hi] = diffText ? diffText : ""
 
-                    // âœ… Tiny core line (the whole point)
+                    // ✅ Tiny core line (the whole point)
                     _dbgContract_pendingCoreLineByHero[hi] =
                         `p=${owner} heroIndex=${hi} ` +
                         `Action{seq=${aSeq} kind=${aKind} var=${aVar} seed=${aSeed} tgt=${aTgt}} ` +
@@ -2192,7 +2345,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
         }
 
         // ------------------------------------------------------------
-        // MAJOR EDGE (semantic change) â€” unchanged behavior.
+        // MAJOR EDGE (semantic change) — unchanged behavior.
         // ------------------------------------------------------------
         _dbgContract_pendingFlagByHero[hi] = 1
         _dbgContract_lastObservedSigByHero[hi] = majorSig
@@ -2233,7 +2386,7 @@ function _dbgContract_assertWhyId(
     _dbgContractMissingWhySeen[whyId] = 1
 
     console.error(
-        `ðŸš¨ðŸš¨ðŸš¨ [CONTRACT-WHY-MISSING v=1]\n` +
+        `🚨🚨🚨 [CONTRACT-WHY-MISSING v=1]\n` +
         `WHY ID USED BUT NOT DECLARED.\n\n` +
         `id=${whyId}\n` +
         `func=${funcName}\n\n` +
@@ -2570,9 +2723,9 @@ const TILE_WALL = 1                 // private
 // --------------------------------------------------------------
 // DECOR/PROPS (ENGINE-OWNED SEMANTIC IDS)
 // IMPORTANT:
-//   â€¢ Engine/gameplay code is ART-AGNOSTIC.
-//   â€¢ Mapping from these semantic ids -> atlas row/col lives in tileAtlas.ts.
-//   â€¢ Students / engine logic should reference these ids (or their names),
+//   • Engine/gameplay code is ART-AGNOSTIC.
+//   • Mapping from these semantic ids -> atlas row/col lives in tileAtlas.ts.
+//   • Students / engine logic should reference these ids (or their names),
 //     never renderer-specific atlas coordinates.
 // --------------------------------------------------------------
 const DECAL_NONE = 0
@@ -2667,10 +2820,10 @@ const DECOR_ROLE = {
 // ====================================================
 
 // Tile size is whatever you're already using
-//const WORLD_TILE_SIZE = 16;   // or 32 or 64 â€” whatever you already have
+//const WORLD_TILE_SIZE = 16;   // or 32 or 64 — whatever you already have
 
 // Target world size in tiles.
-// Example: 1920x1080 with 64px tiles â†’ 30 x 17 tiles.
+// Example: 1920x1080 with 64px tiles → 30 x 17 tiles.
 // Adjust these numbers, not the code, when you want a new world size.
 // Knob for world size tile size tiles dimensions world dimensions
 const WORLD_TILES_W = 40;     // columns
@@ -2692,9 +2845,52 @@ const DUNGEON_KIND_SHOP = "shop"
 const DUNGEON_KIND_TREASURE = "treasure"
 const DUNGEON_KIND_STORY = "story"
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
 const DUNGEON_PAD_HOLD_MS = 650
 const DUNGEON_INTERACT_RADIUS_PX = 26
+const DUNGEON_INTERACT_EXTRA_X_PX = 0
+const DUNGEON_INTERACT_EXTRA_Y_PX = 18
+const NPC_INTERACT_EXTRA_X_PX = 40
+const NPC_INTERACT_EXTRA_Y_PX = 40
+
+const HERO_FOCUS_ACTIVE_KEY = "focusActive"
+
+const FOCUS_OUTLINE_ACTIVE_KEY = "focusOutlineActive"
+const FOCUS_OUTLINE_COLOR_KEY = "focusOutlineColor"
+const FOCUS_OUTLINE_RADIUS_KEY = "focusOutlineRadius"
+const FOCUS_OUTLINE_DEPTH_BIAS_KEY = "focusOutlineDepthBias"
+const FOCUS_OUTLINE_COLOR_DEFAULT = 1
+const FOCUS_OUTLINE_RADIUS_DEFAULT = 2
+const FOCUS_OUTLINE_DEPTH_BIAS_DEFAULT = 1
+let _dunStairsStatueFocusActive = -1
+
+function _setFocusOutline(s: Sprite, active: boolean, color?: number, radius?: number, depthBias?: number): void {
+    if (!s) return
+    if (!active) {
+        sprites.setDataNumber(s, FOCUS_OUTLINE_ACTIVE_KEY, 0)
+        return
+    }
+    sprites.setDataNumber(s, FOCUS_OUTLINE_ACTIVE_KEY, 1)
+    sprites.setDataNumber(s, FOCUS_OUTLINE_COLOR_KEY, (color ?? FOCUS_OUTLINE_COLOR_DEFAULT) | 0)
+    sprites.setDataNumber(s, FOCUS_OUTLINE_RADIUS_KEY, (radius ?? FOCUS_OUTLINE_RADIUS_DEFAULT) | 0)
+    sprites.setDataNumber(s, FOCUS_OUTLINE_DEPTH_BIAS_KEY, (depthBias ?? FOCUS_OUTLINE_DEPTH_BIAS_DEFAULT) | 0)
+}
+
+function _heroCollisionCenterXY(hero: Sprite): { x: number, y: number } {
+    const b = _boundsWithOffset(hero, _heroCollisionOffsetY(hero))
+    return { x: b.centerX | 0, y: b.centerY | 0 }
+}
+
+function _isHeroInInteractRange(hero: Sprite, target: Sprite, extraX: number, extraY: number): boolean {
+    if (!hero || !target) return false
+    const h = _heroCollisionCenterXY(hero)
+    const t = _boundsWithOffset(target, _heroCollisionOffsetY(target))
+    const dx = Math.abs((t.centerX | 0) - (h.x | 0)) | 0
+    const dy = Math.abs((t.centerY | 0) - (h.y | 0)) | 0
+    if (dx > ((DUNGEON_INTERACT_RADIUS_PX + (extraX | 0)) | 0)) return false
+    if (dy > ((DUNGEON_INTERACT_RADIUS_PX + (extraY | 0)) | 0)) return false
+    return true
+}
 
 const DUNGEON_THEME_GROUND_BASES: string[] = [
     "ground_light",
@@ -2763,7 +2959,7 @@ const UI_KIND_TEAM_COINS = "teamCoins"
 const COIN_REWARD_MIN = 1
 const COIN_REWARD_HP_DIV = 50   // ~1 coin per 50 maxHP
 
-// HUD color (Arcade palette index; 7 is usually â€œyellow-ishâ€)
+// HUD color (Arcade palette index; 7 is usually “yellow-ish”)
 const COIN_HUD_FG = 7
 
 let teamCoins = 0
@@ -2805,13 +3001,13 @@ const ENEMY_LAST_HIT_HI_KEY = "lastHitHi"
 
 // Tunable knobs
 const XP_POP_FG = 9
-const XP_DEFAULT_PER_KILL = 10
+const XP_DEFAULT_PER_KILL = BALANCE.LEVEL.XP_DEFAULT_PER_KILL
 
 // XP curve: xpNext(level) = base + a*(L-1) + b*(L-1)^2
-const XP_TO_NEXT_BASE = 40
-const XP_TO_NEXT_PER_LEVEL = 18
-const XP_TO_NEXT_PER_LEVEL2 = 6
-const XP_MAX_LEVEL = 99
+const XP_TO_NEXT_BASE = BALANCE.LEVEL.XP_BASE
+const XP_TO_NEXT_PER_LEVEL = BALANCE.LEVEL.XP_PER_LEVEL
+const XP_TO_NEXT_PER_LEVEL2 = BALANCE.LEVEL.XP_PER_LEVEL2
+const XP_MAX_LEVEL = BALANCE.LEVEL.XP_MAX_LEVEL
 
 // Baseline XP by archetype (scales decently and is easy to tune)
 const XP_BY_ENEMY_KIND: any = {
@@ -2822,7 +3018,7 @@ const XP_BY_ENEMY_KIND: any = {
 }
 
 // Boss multiplier (applied on top of kind XP)
-const XP_BOSS_MULT_PCT = 300  // 300% = 3x
+const XP_BOSS_MULT_PCT = BALANCE.LEVEL.XP_BOSS_MULT_PCT  // 300% = 3x
 
 
 
@@ -2843,7 +3039,7 @@ type DecorSpawnSpec = {
   role: number;               // DECOR_ROLE.TRIGGER or SOLID
   pxW: number; pxH: number;   // 32/64/etc (drives sprite bounds & placement)
   place: "randomWalkable" | "atPad" | "nearPad";
-  count?: number;             // for â€œspawn 3 coinsâ€
+  count?: number;             // for “spawn 3 coins”
   minManhattanFromPad?: number;
   interact?: "pressA" | "stepOn" | null;   // gameplay trigger mode
 };
@@ -3085,6 +3281,8 @@ let _dunStairsStatueSolid: Sprite = null as any
 let _dunChestTileR = -1
 let _dunChestTileC = -1
 let _dunChestSolid: Sprite = null as any
+let _dunChestFocusActive = 0
+const DEBUG_CHEST_ROUTE_TO_PILLAR = false
 
 
 function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolean): void {
@@ -3143,7 +3341,7 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
         _dunStairsStatueSolid = s
         _engineDecorSolids.push(s)
     } else {
-        // Ensure itâ€™s still registered (defensive)
+        // Ensure it’s still registered (defensive)
         let found = false
         for (let i = 0; i < _engineDecorSolids.length; i++) {
             if (_engineDecorSolids[i] === _dunStairsStatueSolid) { found = true; break }
@@ -3333,7 +3531,7 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
 }
 
 function _dunRequiredHeroCount(): number {
-    // Prefer â€œconnected slotsâ€ when present; otherwise fall back to spawned heroes.
+    // Prefer “connected slots” when present; otherwise fall back to spawned heroes.
     if (isPhaserRuntime() && (globalThis as any).__netSlotConnected) {
         const arr = (globalThis as any).__netSlotConnected as boolean[]
         let n = 0
@@ -3447,7 +3645,7 @@ function _dunSpawnExitPad(): void {
     sprites.setDataNumber(rune, DECOR_DATA.ID, 0)
     sprites.setDataNumber(rune, DECOR_DATA.ROLE, DECOR_ROLE.TRIGGER)
 
-    // âœ… START HIDDEN:
+    // ✅ START HIDDEN:
     // Phaser decor rendering keys off DECOR_DATA.NAME; empty => not drawn.
     // Your dungeonTick() logic will set this to "teleport_rune" / "teleport_rune_spin*"
     // only after the floor objective is done + pad is powered.
@@ -3521,6 +3719,11 @@ function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
     chest.setPosition(_dunColToX(cc), _dunRowToY(rr))
     chest.z = 6
 
+    // Link to decor anchor so Phaser focus outlines can target the prop visual.
+    sprites.setDataString(chest, DECOR_DATA.NAME, "chest#closed")
+    sprites.setDataNumber(chest, "decorTileR", rr)
+    sprites.setDataNumber(chest, "decorTileC", cc)
+
     sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
     sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
 
@@ -3531,7 +3734,7 @@ function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
 function _dunSpawnStoryNpc(nowMs: number, profileName: string, heroFamily: string, x: number, y: number): Sprite {
     // Option B: hero-like NPC sprite (NOT in heroes[], not Player kind)
     const npc = sprites.create(image.create(64, 64), (SpriteKind as any).StoryNpc)
-    npc.setFlag(SpriteFlag.Ghost, true)
+    npc.setFlag(SpriteFlag.Ghost, false)
     npc.setPosition(x, y)
     npc.z = 8
 
@@ -3737,6 +3940,28 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
 
 function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number): void {
+    // Capture previous floor info BEFORE overwrite
+    const prevFloorIndex = _dunFloorIndex | 0
+    const prevFloorKind = String((_dunFloorKind as any) || "")
+
+    // RELIC HOOK: floor exit (per player)
+    try {
+        const ctx: RelicFloorExitContext = {
+            now: nowMs | 0,
+            floorIndex: prevFloorIndex | 0,
+            floorKind: prevFloorKind,
+        }
+
+        for (let pid = 1; pid <= 4; pid++) {
+            const hi = playerToHeroIndex[pid]
+            if (hi == null || hi < 0 || hi >= heroes.length) continue
+            const hero = heroes[hi]
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+            relic_onFloorExit(ctx, pid)
+        }
+    } catch { }
+
+    // Overwrite to new floor
     _dunFloorIndex = nextIndex | 0
     _dunFloorKind = kind
     _dunObjectiveDone = false
@@ -3839,7 +4064,7 @@ function _dunEnterFloor_setupShopFloor(padX: number, padY: number): void {
     SHOP_MODE_ACTIVE_MASTER = true
     SHOP_MODE_ACTIVE = false
 
-    // âœ… Shop should NOT auto-complete objective:
+    // ✅ Shop should NOT auto-complete objective:
     // Pad stays locked + rune stays hidden until you interact (A on shopkeeper) or buy.
     _dunObjectiveDone = false
     _dunSetPadPowered(false)
@@ -3871,6 +4096,26 @@ function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, pad
 function _dunEnterFloor_finish(nowMs: number, activePidsCount: number): void {
     _dunDialog_showFloorBanner(nowMs | 0)
     _dunLog(`enter floor=${_dunFloorIndex} kind=${_dunFloorKind} theme=${_dunBaseFamily}/${_dunWallFamily} players=${activePidsCount | 0}`)
+
+    // RELIC HOOK: floor enter (per player)
+    try {
+        const ctx: RelicFloorEnterContext = {
+            now: nowMs | 0,
+            floorIndex: _dunFloorIndex | 0,
+            floorKind: String((_dunFloorKind as any) || ""),
+            activePidsCount: activePidsCount | 0,
+            baseFamily: String((_dunBaseFamily as any) || ""),
+            wallFamily: String((_dunWallFamily as any) || ""),
+        }
+
+        for (let pid = 1; pid <= 4; pid++) {
+            const hi = playerToHeroIndex[pid]
+            if (hi == null || hi < 0 || hi >= heroes.length) continue
+            const hero = heroes[hi]
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+            relic_onFloorEnter(ctx, pid)
+        }
+    } catch { }
 }
 
 
@@ -3901,7 +4146,40 @@ function _dunTickPadContractRefresh(): void {
         sprites.setDataNumber(_dunExitPad, PAD_DATA.READY, rc.ready | 0)
         sprites.setDataNumber(_dunExitPad, PAD_DATA.MASK, rc.mask | 0)
     }
+
+    // TEMP: highlight the stairs statue when the teleport rune is visible.
+    const runeActive =
+        !!_dunTeleportRuneTrig &&
+        !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed) &&
+        (_dunTeleportRuneName != "")
+    if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+        const want = runeActive ? 1 : 0
+        if (_dunStairsStatueFocusActive !== want) {
+            _dunStairsStatueFocusActive = want
+            console.log(`[FOCUS][PILLAR] focus ${want ? "on" : "off"} (runeActive=${runeActive ? 1 : 0}, rune="${_dunTeleportRuneName}")`)
+        }
+        _setFocusOutline(_dunStairsStatueSolid, runeActive)
+        if (_dunStairsStatueFocusActive === want) {
+            try {
+                const r = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileR") | 0
+                const c = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileC") | 0
+                const g: any = globalThis as any
+                const sc: any = g ? g.__phaserScene : null
+                const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+                const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
+                if (ok) renderer.setPropFocusAuraAt(r, c, runeActive, 2, 1)
+                if (_dunStairsStatueFocusActive !== want || !_dunStairsStatueSolid) {
+                    // no-op; guard for lint
+                }
+                if (!(_dunStairsStatueSolid as any).__loggedPillarDirect || want === 0) {
+                    ;(_dunStairsStatueSolid as any).__loggedPillarDirect = 1
+                    console.log("[FOCUS][PILLAR][DIRECT]", { r, c, active: runeActive ? 1 : 0, renderer: ok })
+                }
+            } catch { /* ignore */ }
+        }
+    }
 }
+
 
 function _dunTickObjectiveEvaluation(nowMs: number): void {
     if (_dunObjectiveDone) return
@@ -3911,6 +4189,10 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
         // Combat clears ONLY once (a) waves have finished AND (b) all enemies are dead.
         if (_dunCombatWavesComplete && _dunCountLiveEnemies() == 0) {
             _dunObjectiveDone = true
+
+            // RELIC HOOK: end of combat (objective completes)
+            try { relic_onCombatCleared_allPlayers(nowMs | 0) } catch { }
+
             _dunSetPadPowered(true)
             _dunLog(`combat cleared; pad powered`)
         }
@@ -3940,9 +4222,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
         for (let i = 0; i < _dunInteractables.length; i++) {
             const it = _dunInteractables[i]
             if (!it || (it.flags & sprites.Flag.Destroyed)) continue
-            const dx = (it.x - hero.x)
-            const dy = (it.y - hero.y)
-            if ((dx * dx + dy * dy) > (DUNGEON_INTERACT_RADIUS_PX * DUNGEON_INTERACT_RADIUS_PX)) continue
+            if (!_isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)) continue
 
             const k = sprites.readDataString(it, INTERACT_DATA.KIND)
             if (k == "chest") {
@@ -3964,12 +4244,31 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 }
 
                 // Reward + complete objective (this triggers COINFX enqueue)
-                addHeroCoins(hi, 10, popX, popY)
+                let coinsReward = 10
+
+                // RELIC HOOK: chest opened (may modify reward / later open offers)
+                try {
+                    const chestCtx: RelicChestOpenedContext = {
+                        now: nowMs | 0,
+                        pid: pid | 0,
+                        hi: hi | 0,
+                        hero,
+                        coinsReward: coinsReward | 0,
+                        popX: popX | 0,
+                        popY: popY | 0,
+                    }
+                    relic_onChestOpened(chestCtx)
+                    coinsReward = (chestCtx.coinsReward | 0)
+                    if (coinsReward < 0) coinsReward = 0
+                } catch { }
+
+                addHeroCoins(hi, coinsReward, popX, popY)
 
                 _dunObjectiveDone = true
                 _dunSetPadPowered(true)
                 _dunLog(`chest opened by P${pid}; pad powered`)
                 break
+
             }
         }
 
@@ -3999,10 +4298,27 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
         _dunAllReadySinceMs = 0
         _dunRuneSpinSinceMs = 0
         _dunRuneSetName("teleport_rune")
+
+        // If a floor-choice session was open, cancel it (teleport got uncommitted).
+        relic_cancelNextFloorChoiceIfPending("pad-not-all-ready")
         return true
     }
 
     if ((nowMs | 0) < (_dunTeleportCommitAtMs | 0)) return true
+
+    const next = (_dunFloorIndex + 1) | 0
+    const defaultKind = _dunPickNextFloorKind(next)
+
+    // ------------------------------------------------------------
+    // RELIC HOOK: allow a relic to pause floor entry and offer
+    // two next-floor options to ONE player.
+    //
+    // If held: do NOT shake/flash/destroy pad yet. We just keep
+    // waiting for the player's choice; this function will re-run
+    // every tick and proceed once chosen.
+    // ------------------------------------------------------------
+    const r = relic_resolveNextFloorKindOrHold(nowMs | 0, next, String(defaultKind || ""), rc.mask | 0)
+    if (r.hold) return true
 
     _dunTeleportCommitAtMs = 0
 
@@ -4010,9 +4326,7 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
     _dunDestroySprite(_dunExitPad)
     _dunExitPad = null
 
-    const next = (_dunFloorIndex + 1) | 0
-    const kind = _dunPickNextFloorKind(next)
-    _dunEnterFloor(next, kind, nowMs | 0)
+    _dunEnterFloor(next, String(r.kind || defaultKind || ""), nowMs | 0)
     return true
 }
 
@@ -4095,7 +4409,7 @@ function dungeonTick(nowMs: number): void {
 
 
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
 
 function splitAgiThrustDurations(totalMs: number): [number, number, number] {
@@ -4120,7 +4434,7 @@ function splitAgiThrustDurations(totalMs: number): [number, number, number] {
 }
 
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 //This section is for animation things section animation animation section
 
 const HERO_FRAME_COL_OVERRIDE_NONE = -1
@@ -4273,7 +4587,7 @@ function _animKeys_stampPhaseWindow(
     const now = nowMs | 0
     const dur = durationMs | 0
 
-    // tolerate missing / swapped args (and the â€œonly one stringâ€ transitional case)
+    // tolerate missing / swapped args (and the “only one string” transitional case)
     let why = (whyId || "")
     let wh = (where || "")
     const whyKnown0 = why ? !!(CONTRACT_WHY_TABLE as any)[why] : false
@@ -4716,9 +5030,9 @@ function publishHeroActionPhase(
 
 
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€
+// ❄️ ────── 💧 ─
 //Subsection for weapons and weapon animations
 // --------------------------------------------------------------
 // Weapon defaults (Step 2)
@@ -4781,9 +5095,9 @@ function getHardcodedWeaponLoadoutForHero(profileName: string, familyNumber: num
 // ================================================================
 // ================================================================
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 // This section is for the "global helpers", those that truly serve any function and provide base calculations
 
 // Map numeric FAMILY to the HeroAtlas family strings
@@ -4792,7 +5106,7 @@ function heroFamilyNumberToString(family: number): string {
         case FAMILY.STRENGTH:   return "strength";
         case FAMILY.AGILITY:    return "agility";
         case FAMILY.INTELLECT:  return "intelligence";
-        case FAMILY.HEAL:       return "support";
+        case FAMILY.HEAL:       return "wisdom";
         default:                return "strength";
     }
 }
@@ -4892,21 +5206,31 @@ function makeBaseStats(baseTimeMs: number) {
     return stats
 }
 
+function applyAxisWeight(raw: number, weightX1000: number): number {
+    const r = raw | 0
+    const w = weightX1000 | 0
+    if (r <= 0 || w <= 0) return 0
+    return Math.idiv(r * w, 1000) | 0
+}
+
 function getBaseMoveDurationMs(button: string, family: number) {
-    let base = 300
-    if (family == FAMILY.STRENGTH) base = 400
-    else if (family == FAMILY.AGILITY) base = 250
-    else if (family == FAMILY.INTELLECT || family == FAMILY.HEAL) base = 1000
-    if (button == "A+B") base += 150
+    const baseCfg = BALANCE.MOVES.BASE_DURATION_MS
+    let base = baseCfg.DEFAULT
+    if (family == FAMILY.STRENGTH) base = baseCfg.STRENGTH
+    else if (family == FAMILY.AGILITY) base = baseCfg.AGILITY
+    else if (family == FAMILY.INTELLECT) base = baseCfg.INTELLECT
+    else if (family == FAMILY.HEAL) base = baseCfg.WISDOM
+    if (button == "A+B") base += baseCfg.AB_BONUS
     return base
 }
 
 function getBasePower(family: number) {
-    if (family == FAMILY.STRENGTH) return 15
-    if (family == FAMILY.AGILITY) return 10
-    if (family == FAMILY.INTELLECT) return 8
-    if (family == FAMILY.HEAL) return 8
-    return 5
+    const base = BALANCE.MOVES.BASE_POWER
+    if (family == FAMILY.STRENGTH) return base.STRENGTH
+    if (family == FAMILY.AGILITY) return base.AGILITY
+    if (family == FAMILY.INTELLECT) return base.INTELLECT
+    if (family == FAMILY.HEAL) return base.WISDOM
+    return base.DEFAULT
 }
 
 // Map numeric anim IDs to string keys (used by callHeroAnim)
@@ -5263,12 +5587,29 @@ function applyRelicModsToStats(
     traitsEff: MoveTraits,
     stats: number[]
 ): number[] {
-    // Intentionally empty for now.
-    // Example future operations:
-    // - stats[STAT.DAMAGE_MULT] = ...
-    // - stats[STAT.MOVE_DURATION] = ...
-    // - stats[STAT.STATUS_DUR_MS] = ...
-    return stats;
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return stats
+
+    // Work on a copy so relic logic can't accidentally mutate shared arrays.
+    const statsCopy = Array.isArray(stats) ? stats.slice() : []
+
+    const ctx: RelicModifyMoveStatsContext = {
+        now: game.runtime() | 0,
+        hi: hi | 0,
+        hero,
+        family: family | 0,
+        button: String(button || ""),
+        traitsEff,
+        stats: statsCopy,
+    }
+
+    try {
+        relic_modifyMoveStats(ctx)
+    } catch { }
+
+    // Allow handlers to replace ctx.stats entirely, but keep it safe.
+    const out = (ctx && Array.isArray(ctx.stats)) ? ctx.stats : statsCopy
+    return out
 }
 
 
@@ -5276,19 +5617,19 @@ function applyRelicModsToStats(
 // LEVEL-UP SPENDING (engine API; UI can call via globals)
 // ================================================================
 
-const LVLUP_AXIS_RANK_MAX = 4
+const LVLUP_AXIS_RANK_MAX = BALANCE.LEVEL.AXIS_RANK_MAX
 
 // Flat bonuses derived from axis rank (rank 0..4).
 // If you later want rank->bonus to be nonlinear, change ONLY this table.
-const LVLUP_AXIS_BONUS_BY_RANK: number[] = [0, 1, 2, 3, 4]
+const LVLUP_AXIS_BONUS_BY_RANK: number[] = BALANCE.LEVEL.AXIS_BONUS_BY_RANK
 
 // HP/Mana picks (each costs 1 lvlPt)
 const HERO_LVLUP_HP_PICKS_KEY = "lvlHpPicks"
 const HERO_LVLUP_MANA_PICKS_KEY = "lvlManaPicks"
 
 // Tunables
-const LVLUP_HP_PER_PICK = 6
-const LVLUP_MANA_PER_PICK = 4
+const LVLUP_HP_PER_PICK = BALANCE.LEVEL.HP_PER_PICK
+const LVLUP_MANA_PER_PICK = BALANCE.LEVEL.MANA_PER_PICK
 
 // UI-facing per-point bonuses (edit here to tune level-up display values per trait).
 const LVLUP_UI_BONUS_BY_KEY: Record<string, number> = {
@@ -5554,26 +5895,26 @@ function applyLevelUpBonusesToTraits(hi: number, family: number, traitsEff: Move
 
 
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 //This is the shops section
 // Shop section
 
@@ -5698,8 +6039,8 @@ const HERO_DATA_WEAPON_AGILITY_ID = "wAgi"
 const HERO_DATA_WEAPON_INTELLIGENCE_ID = "wInt"
 const HERO_DATA_WEAPON_SUPPORT_ID = "wSup"
 
-// Left â†’ right order (required)
-const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligence", "support"]
+// Left → right order (required)
+const SHOP_STATUE_ORDER_GAMEPLAY: string[] = ["strength", "agility", "intelligence", "wisdom"]
 const SHOP_STATUE_ORDER_FAMILY: number[] = [FAMILY.STRENGTH, FAMILY.AGILITY, FAMILY.INTELLECT, FAMILY.HEAL]
 
 // Equip slot = what the HERO receives on swap
@@ -5732,7 +6073,7 @@ const SHOP_STATUE_RENDER_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"
 // --------------------------------------------------------------
 //const SHOP_DEBUG_DUMP_EVERY_MS = 250
 
-// How long a focus stays â€œaliveâ€ without a continuous overlap event.
+// How long a focus stays “alive” without a continuous overlap event.
 //const SHOP_FOCUS_KEEPALIVE_MS = 120
 
 
@@ -5922,7 +6263,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
     shopTriggerZone.setPosition(shopX, shopY)
 
     // Optional: ensure shopkeeper faces down immediately (visual)
-    // (Keeps your existing behavior, doesnâ€™t affect controls)
+    // (Keeps your existing behavior, doesn’t affect controls)
     sprites.setDataString(shopkeeperNpc, "dir", "down")
     sprites.setDataString(shopkeeperNpc, HERO_DATA.DIR, "down")
 
@@ -6235,7 +6576,7 @@ function _shopStatueRow_stampIdentityAndOverlay(st: Sprite, familyStr: string): 
 }
 
 function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids: string[], slots: string[]): string {
-    // âœ… INDEX-LOCKED weapon assignment (NO PICKING)
+    // ✅ INDEX-LOCKED weapon assignment (NO PICKING)
     let weaponId = (ids[si] || "").trim()
 
     // If missing, fill deterministically (and write back so it stays stable)
@@ -6251,7 +6592,7 @@ function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids
         console.log(`[SHOP][STATUE_CONTRACT][FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
     }
 
-    // Force ring slot at this index to match the statueâ€™s render slot (keeps contract coherent)
+    // Force ring slot at this index to match the statue’s render slot (keeps contract coherent)
     const curSlot = (slots[si] || "").toLowerCase()
     if (curSlot !== rdSlot) {
         slots[si] = rdSlot
@@ -6489,7 +6830,7 @@ function _shopFamilyFromGameplayKind(kind: string): number {
     if (k === "strength") return FAMILY.STRENGTH;
     if (k === "agility") return FAMILY.AGILITY;
     if (k === "intellect" || k === "intelligence") return FAMILY.INTELLECT;
-    if (k === "support" || k === "heal" || k === "healing") return FAMILY.HEAL;
+    if (k === "wisdom" || k === "support" || k === "heal" || k === "healing") return FAMILY.HEAL;
     return FAMILY.STRENGTH;
 }
 
@@ -6498,7 +6839,7 @@ function _shopFamilyFromEquipSlot(slot: string): number {
     if (s === SHOP_EQUIP_SLOT_STRENGTH) return FAMILY.STRENGTH
     if (s === SHOP_EQUIP_SLOT_AGILITY) return FAMILY.AGILITY
     if (s === SHOP_EQUIP_SLOT_INTELLIGENCE) return FAMILY.INTELLECT
-    if (s === SHOP_EQUIP_SLOT_SUPPORT) return FAMILY.HEAL
+    if (s === SHOP_EQUIP_SLOT_SUPPORT || s === "wisdom") return FAMILY.HEAL
     return FAMILY.STRENGTH
 }
 
@@ -6527,7 +6868,7 @@ function _shopPrettyFamilyName(fam: number): string {
     if (f === FAMILY.STRENGTH) return "Strength";
     if (f === FAMILY.AGILITY) return "Agility";
     if (f === FAMILY.INTELLECT) return "Intelligence";
-    return "Support";
+    return "Wisdom";
 }
 
 function _shopFormatBonusDesc(fam: number, t1: number, t2: number, t3: number, t4: number): string {
@@ -6567,7 +6908,7 @@ function _shopRollBonusForOffer(it: Sprite): void {
     const gameplayKind = sprites.readDataString(it, SH_ITEM_GAMEPLAY_KIND) || "";
     const fam = _shopFamilyFromGameplayKind(gameplayKind);
 
-    // 3 simple â€œknobsâ€ patterns (big single, spread, duo)
+    // 3 simple “knobs” patterns (big single, spread, duo)
     const p = randint(0, 2);
 
     let t1 = 0, t2 = 0, t3 = 0, t4 = 0;
@@ -6704,7 +7045,7 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
     _dunObjectiveDone = true
     _dunSetPadPowered(true)
 
-    // Make rune appear immediately (donâ€™t wait for dungeonTick)
+    // Make rune appear immediately (don’t wait for dungeonTick)
     if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
         const desired = "teleport_rune"
         if (_dunTeleportRuneName !== desired) {
@@ -6786,6 +7127,12 @@ function shopTick(nowMs: number): void {
         SHOP_MODE_ACTIVE = false
         return
     }
+
+    shopkeeperNpc.setFlag(SpriteFlag.Ghost, false)
+
+    // Force-move escape hatch + auto-rescue if stuck in walls
+    _shopApplyForceMoveIfRequested()
+    _shopRescueShopkeeperFromWalls()
 
     // 1) Compute which offer each hero is focused/touching (grace-window)
     shopUpdateFocus(now)
@@ -6881,10 +7228,10 @@ function shopPollControls(hi: number): {
 function shopUpdateFocus(nowMs: number): void {
     const now = nowMs | 0
 
-    // Keep statues â€œlocked inâ€ (pose + weapon + placement) every tick
+    // Keep statues “locked in” (pose + weapon + placement) every tick
     _shopEnsureStatueRow(now)
 
-    // If we donâ€™t have all statues yet, do not change focus (prevents flicker)
+    // If we don’t have all statues yet, do not change focus (prevents flicker)
     if (!shopStatues || shopStatues.length < 4) return
 
     // Clear dead focus refs
@@ -7116,7 +7463,7 @@ function shopHandleControls(nowMs: number): void {
             // Hero takes the offer (EQUIP SLOT drives gameplay)
             _shopEquipWeaponToHeroSlot(hero, equipSlot, takeId)
 
-            // Offer becomes hero's previous weapon (ALWAYS SWAPPED) â€” write to NEW contract
+            // Offer becomes hero's previous weapon (ALWAYS SWAPPED) — write to NEW contract
             const rr2 = _shopRingReadIdsSlotsFromShopkeeper(shopkeeperNpc)
             const ids2: string[] = rr2.ids
             const slots2: string[] = rr2.slots
@@ -7370,7 +7717,7 @@ function _shopBuildDialogLine(hi: number, pid: number, s: {
 function _shopBuildControlsLine(pid: number, summary: any): string {
     if (!summary || !summary.active) return "";
     const price = summary.price | 0;
-    return `A: buy/swap (${price}ðŸª™)`;
+    return `A: buy/swap (${price}🪙)`;
 }
 
 function _shopBuildStatsLine(hi: number, summary: any): string {
@@ -7563,7 +7910,7 @@ function _shopIsAliveSprite(s: Sprite): boolean {
 function _shopComputeFocusedRingIndexForHero(hero: Sprite): number {
     if (!hero) return -1
 
-    // Prefer the dedicated ring offer list (Step 1â€“4)
+    // Prefer the dedicated ring offer list (Step 1–4)
     for (let i = 0; i < _shopRingOfferItems.length; i++) {
         const it = _shopRingOfferItems[i]
         if (!_shopIsAliveSprite(it)) continue
@@ -7646,7 +7993,7 @@ function shopControlTick(nowMs: number): void {
 }
 
 
-// Main â€œshop controls layerâ€ tick (Step 5)
+// Main “shop controls layer” tick (Step 5)
 // - Today: focus comes from overlap
 // - Future: focus can come from a menu selection (arrows) without touching publish/purchase code
 function shopControlTickOLDCODETODELETE(nowMs: number): void {
@@ -7774,7 +8121,7 @@ function _shopGameplayKindForRingIndex(i: number): string {
 }
 
 function _shopPriceForRingIndex(i: number): number {
-    // Placeholder pricing â€“ adjust later
+    // Placeholder pricing – adjust later
     if (i === 0) return 10
     if (i === 1) return 10
     if (i === 2) return 10
@@ -7902,7 +8249,7 @@ function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
         sprites.setDataString(it, SH_ITEM_LABEL, weaponId)
         sprites.setDataNumber(it, SH_ITEM_PRICE, price)
 
-        // Always â€œavailableâ€ (swap shop)
+        // Always “available” (swap shop)
         sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
 
         // Give it a rolled bonus if it doesn't already have one
@@ -7937,17 +8284,9 @@ function _shopEnsureMenu(): TextSprite {
 
 function _shopIsOverlapping(a: Sprite, b: Sprite): boolean {
     if (!a || !b) return false
-    const ax0 = (a.x - (a.width >> 1)) | 0
-    const ay0 = (a.y - (a.height >> 1)) | 0
-    const ax1 = (a.x + (a.width >> 1)) | 0
-    const ay1 = (a.y + (a.height >> 1)) | 0
-
-    const bx0 = (b.x - (b.width >> 1)) | 0
-    const by0 = (b.y - (b.height >> 1)) | 0
-    const bx1 = (b.x + (b.width >> 1)) | 0
-    const by1 = (b.y + (b.height >> 1)) | 0
-
-    return (ax0 < bx1) && (ax1 > bx0) && (ay0 < by1) && (ay1 > by0)
+    const ab = _boundsWithOffset(a, _heroCollisionOffsetY(a))
+    const bb = _boundsWithOffset(b, _heroCollisionOffsetY(b))
+    return (ab.left < bb.right) && (ab.right > bb.left) && (ab.top < bb.bottom) && (ab.bottom > bb.top)
 }
 
 function _shopIsStatueHero(s: Sprite): boolean {
@@ -8120,8 +8459,8 @@ function addTeamCoins(delta: number, popX: number, popY: number): void {
 
 
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
-// SHOP PHASE POC (touch â†’ reaction) + (spawn NPC box) + (overlap-gated menu) + (B toggles bought)
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
+// SHOP PHASE POC (touch → reaction) + (spawn NPC box) + (overlap-gated menu) + (B toggles bought)
 // Paste this as a new section near your other SpriteKind/constants (before the handlers is fine).
 
 // --------------------------------------------------------------
@@ -8168,7 +8507,7 @@ const SHOP_WPN_RING_RADIUS_KEY = SHOP_WPN_RING_RADIUS_PX_KEY
 
 
 // ------------------------------------------------------------
-// SHOP WEAPON RING â€“ contract keys (shopkeeper sprite.data)
+// SHOP WEAPON RING – contract keys (shopkeeper sprite.data)
 // ------------------------------------------------------------
 const SHOP_WPN_RING_SLOTS_KEY = "shopWpnRingSlots"                       // "thrust|slash|thrust|cast"
 const SHOP_WPN_RING_SOURCE_PHASES_KEY = "shopWpnRingSourcePhases"        // "thrust|slash|thrust|cast"
@@ -8206,10 +8545,10 @@ let _shopDomWasShowing = false;
 
 
 // ------------------------------------------------------------
-// SHOP WEAPON RING â€“ canonical defaults (must match atlas model ids)
+// SHOP WEAPON RING – canonical defaults (must match atlas model ids)
 // ------------------------------------------------------------
 // ------------------------------------------------------------
-// SHOP WEAPON RING â€“ canonical defaults (must match atlas model ids)
+// SHOP WEAPON RING – canonical defaults (must match atlas model ids)
 // ------------------------------------------------------------
 
 // Allowed model-id sets per statue slot (index-locked: 0=str,1=agi,2=int,3=sup)
@@ -8390,11 +8729,11 @@ function _mkShopItemBox(): Image {
 }
 
 
-// Per-hero interaction state (POC: overlap â€œfreshnessâ€ time window)
+// Per-hero interaction state (POC: overlap “freshness” time window)
 let heroShopTouchUntilMs: number[] = []
 let heroShopTargetNpc: Sprite[] = []
 let heroShopMenu: TextSprite[] = []
-let heroShopSpawnedItem: Sprite[] = []        // per hero POC â€œinventory box spriteâ€
+let heroShopSpawnedItem: Sprite[] = []        // per hero POC “inventory box sprite”
 
 const SHOP_TOUCH_KEEPALIVE_MS = 120
 
@@ -8402,7 +8741,7 @@ function _shopEnsureMenuForHero(heroIndex: number): TextSprite {
     let t = heroShopMenu[heroIndex]
     if (t) return t
 
-    // bg=0, fg=1 (blue) â€“ adjust later
+    // bg=0, fg=1 (blue) – adjust later
     t = textsprite.create("", 0, 1)
     t.setMaxFontHeight(8)
     t.setBorder(1, 15, 2)
@@ -8422,7 +8761,7 @@ function _shopMakeBoxImage(w: number, h: number, borderCol: number, fillCol: num
     const img = image.create(w, h)
     img.fill(fillCol)
     img.drawRect(0, 0, w, h, borderCol)
-    // tiny â€œfaceâ€ dot so it reads as something (optional)
+    // tiny “face” dot so it reads as something (optional)
     img.setPixel((w >> 1) - 1, (h >> 1), borderCol)
     img.setPixel((w >> 1) + 1, (h >> 1), borderCol)
     return img
@@ -8430,7 +8769,7 @@ function _shopMakeBoxImage(w: number, h: number, borderCol: number, fillCol: num
 
 function _shopMakeDitherBg(w: number, h: number, col: number): Image {
     const img = image.create(w, h)
-    // checkerboard â€œalphaâ€: color col on alternating pixels, transparent elsewhere
+    // checkerboard “alpha”: color col on alternating pixels, transparent elsewhere
     for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
             if (((x + y) & 1) === 0) img.setPixel(x, y, col)
@@ -8480,7 +8819,7 @@ function _shopDestroyUiForHero(hi: number): void {
 }
 
 function _shopStatsPreviewText(hi: number): string {
-    // For now: show â€œ+0â€ baseline, then â€œ+1â€ after purchase
+    // For now: show “+0” baseline, then “+1” after purchase
     const bought = shopBoughtByHero[hi]
     const dmg = bought ? "+1" : "+0"
     const reach = bought ? "+0" : "+0"
@@ -8538,7 +8877,7 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_OWNED_BY_KEY, ownedBy | 0)
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_CAN_AFFORD_KEY, canAfford)
 
-    // Optional DOM â€œdialog boxâ€ (if your page actually installs __heDialog)
+    // Optional DOM “dialog box” (if your page actually installs __heDialog)
     if (SHOP_USE_DOM_DIALOG && hi === 0) {
         const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.bonusDesc}|${price}`
         if (sig !== _shopDomLastSig) {
@@ -8550,7 +8889,7 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
             dlg?.show?.({
                 speaker: "Shop",
                 text: `${summary.weaponLabel}\n${summary.bonusDesc}`,
-                hint: `A: buy/swap (${price}ðŸª™)`
+                hint: `A: buy/swap (${price}🪙)`
             })
         }
     }
@@ -8593,9 +8932,9 @@ function shopModeUpdate(nowMs: number): void {
 
 
 function spawnShopNpcBox(x: number, y: number, itemId: number): Sprite {
-    // 12x16 â€œplaceholder NPCâ€ box
+    // 12x16 “placeholder NPC” box
     const npc = sprites.create(_shopMakeBoxImage(12, 16, 1, 13), SpriteKind.ShopNpc)
-    npc.setFlag(SpriteFlag.Ghost, true)   // donâ€™t block movement (POC)
+    npc.setFlag(SpriteFlag.Ghost, false)
     npc.x = x
     npc.y = y
     npc.z = 2000                         // sit above ground clutter
@@ -8610,7 +8949,7 @@ function _shopEnsureItemForHero(heroIndex: number): Sprite {
     let it = heroShopSpawnedItem[heroIndex]
     if (it && !(it.flags & sprites.Flag.Destroyed)) return it
 
-    // 10x10 â€œinventory/weapon placeholder boxâ€
+    // 10x10 “inventory/weapon placeholder box”
     it = sprites.create(_shopMakeBoxImage(10, 10, 2, 0), SpriteKind.ShopItem)
     it.setFlag(SpriteFlag.Ghost, true)
     it.setFlag(SpriteFlag.Invisible, true)
@@ -8625,14 +8964,14 @@ function _shopSetItemVisibleForHero(heroIndex: number, hero: Sprite, show: boole
     it.setFlag(SpriteFlag.Invisible, !show)
     if (!show) return
 
-    // POC â€œinventory positionâ€: floats near hero
+    // POC “inventory position”: floats near hero
     it.x = hero.x + 18
     it.y = hero.y - 18
 }
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 // 1) Touching something makes something happen
-//    Overlap keeps â€œshop targetâ€ alive for a short window; menu is gated by that window.
+//    Overlap keeps “shop target” alive for a short window; menu is gated by that window.
 sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
     const heroIndex = getHeroIndex(hero)
     if (heroIndex < 0) return
@@ -8641,7 +8980,7 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
     heroShopTargetNpc[heroIndex] = npc
     heroShopTouchUntilMs[heroIndex] = (now + SHOP_TOUCH_KEEPALIVE_MS) | 0
 
-    // â€œSomething happensâ€ (POC): tiny effect + debug line
+    // “Something happens” (POC): tiny effect + debug line
     npc.startEffect(effects.spray, 40)
     // If you hate spam, delete this log once confirmed
     console.log("[SHOP] overlap hero=" + heroIndex + " itemId=" + (sprites.readDataNumber(npc, SHOP_DATA_ITEM_ID) | 0))
@@ -8652,7 +8991,7 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
     m.setFlag(SpriteFlag.Invisible, false)
 })
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 // 2) Overlap-gated menu visibility + positioning (runs every frame)
 function updateShopUi(now: number): void {
     const nowMs = now | 0
@@ -8672,7 +9011,7 @@ function updateShopUi(now: number): void {
 
         if (!active) {
             m.setFlag(SpriteFlag.Invisible, true)
-            // keep target but itâ€™ll be overwritten on next overlap; you can also clear it:
+            // keep target but it’ll be overwritten on next overlap; you can also clear it:
             // heroShopTargetNpc[hi] = null
             continue
         }
@@ -8686,12 +9025,12 @@ function updateShopUi(now: number): void {
         m.setText(_shopMenuTextForNpc(npc))
         m.setFlag(SpriteFlag.Invisible, false)
 
-        // If item is bought, keep showing placeholder â€œinventoryâ€ box
+        // If item is bought, keep showing placeholder “inventory” box
         const bought = (sprites.readDataNumber(npc, SHOP_DATA_ITEM_BOUGHT) | 0) ? true : false
         _shopSetItemVisibleForHero(hi, hero, bought)
     }
 }
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 // 3) B button toggles bought/not-bought while overlapping the shop NPC
 function _shopToggleForPlayer(playerId: number): void {
     const pid = playerId | 0
@@ -8708,7 +9047,7 @@ function _shopToggleForPlayer(playerId: number): void {
     const npc = heroShopTargetNpc[hi]
 
     if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
-    if (!(until > 0 && now < until)) return   // not â€œcurrently overlappingâ€ (freshness gate)
+    if (!(until > 0 && now < until)) return   // not “currently overlapping” (freshness gate)
 
     const bought0 = sprites.readDataNumber(npc, SHOP_DATA_ITEM_BOUGHT) | 0
     const bought1 = bought0 ? 0 : 1
@@ -8733,12 +9072,12 @@ function installShopInputHandlers(): void {
 
 
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
 
 
 
-// Convenience: â€œshop upgradeâ€ entry (label is stable; value is the current total shop bonus)
+// Convenience: “shop upgrade” entry (label is stable; value is the current total shop bonus)
 function shopSetDamageBonus(heroIndex: number, family: number, value: number): void {
     const b = _damageBucketForFamily(family)
     if (!b) return
@@ -9266,7 +9605,7 @@ function spawnShopNpc(x: number, y: number, label: string): Sprite {
 
     const npc = sprites.create(img, SpriteKind.ShopNpc)
     npc.setPosition(x, y)
-    npc.setFlag(SpriteFlag.Ghost, true) // so it doesn't collide weirdly while POC-ing
+    npc.setFlag(SpriteFlag.Ghost, false)
     sprites.setDataString(npc, SHOP_DATA.LABEL, label || "NPC")
 
     _shopRegisterNpc(npc)
@@ -9420,54 +9759,54 @@ function _shopBuildStatsPreview(heroIndex: number): string {
 }
 
 
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
 // ================================================================
 // SECTION 2.5 - TILEMAP AND WORLD GENERATION (improved)
@@ -9533,7 +9872,7 @@ function _createBasicCaveMap(): number[][] {
     // 6) Carve L-shaped corridors from each corner into the arena (NOW 2 tiles wide).
     const CORRIDOR_WIDTH = 2
 
-    // We target a 2-column â€œspineâ€ at the arena center.
+    // We target a 2-column “spine” at the arena center.
     const spineC0 = Math.max(1, Math.min(cols - 2, centerC - 1))
     const spineC1 = Math.max(1, Math.min(cols - 2, centerC))
 
@@ -9583,7 +9922,7 @@ function _createBasicCaveMap(): number[][] {
     carveCornerToArena(bottomRow, rightCol)
 
     // 7) Carve spawn pads that INCLUDE the actual outer corners.
-    const SPAWN_PAD_RADIUS = 2 // 2 â†’ up to 5x5 pad; tune as needed
+    const SPAWN_PAD_RADIUS = 2 // 2 → up to 5x5 pad; tune as needed
 
     function carveSpawnPad(centerR: number, centerC: number) {
         const rStart = Math.max(0, centerR - SPAWN_PAD_RADIUS)
@@ -9751,7 +10090,7 @@ function _createBasicCaveMap(): number[][] {
                     // Keep true singletons (these render via "decor" slots on the Phaser side).
                     if (size === 1) continue
 
-                    // Enforce >=4 for any non-singleton cluster (donâ€™t touch border clusters).
+                    // Enforce >=4 for any non-singleton cluster (don’t touch border clusters).
                     if (size < MIN_COMPONENT_SIZE && !comp.touchesBorder[id]) {
                         map[r][c] = TILE_EMPTY
                     }
@@ -9773,7 +10112,7 @@ function _createBasicCaveMap(): number[][] {
                     if (id < 0) continue
                     const size = comp.sizes[id] | 0
 
-                    // Keep singleton walls (0-neighbor â€œrocksâ€).
+                    // Keep singleton walls (0-neighbor “rocks”).
                     if (size <= 1) continue
 
                     const n = countCardinalSame(src, r, c, TILE_WALL)
@@ -9968,7 +10307,7 @@ function _createDecorColliderImage(w: number, h: number): Image {
 // This is called after the base world grid exists.
 // It must be safe to call multiple times (destroy + rebuild).
 function initWorldDecorPostPass(): void {
-    // Clear old decor (in case world is re-initâ€™d)
+    // Clear old decor (in case world is re-init’d)
     _destroyAllInPlace(_engineDecorTriggers)
     _destroyAllInPlace(_engineDecorSolids)
 
@@ -10152,11 +10491,34 @@ function _readTile(r: number, c: number): number {
 }
 
 // ==========================================================
-// TILEMAP COLLISION â€“ HEROES + ENEMIES, WITH LOGGING
+// TILEMAP COLLISION – HEROES + ENEMIES, WITH LOGGING
 // Soft slide along walls instead of teleporting
 // ==========================================================
 
 let _tileCollFrame = 0
+
+// HERO collision-only Y offset (pixels). Positive = collision sits lower than sprite center.
+// Keep visuals/projectiles aligned by only applying this to collision math.
+const HERO_COLLISION_Y_OFFSET_PX = 22
+
+function _heroCollisionOffsetY(s: Sprite): number {
+    try { return (getHeroIndex(s) >= 0) ? HERO_COLLISION_Y_OFFSET_PX : 0 } catch { return 0 }
+}
+
+function _boundsWithOffset(s: Sprite, offY: number) {
+    const halfW = s.width >> 1
+    const halfH = s.height >> 1
+    const cx = s.x | 0
+    const cy = ((s.y | 0) + (offY | 0)) | 0
+    return {
+        left: cx - halfW,
+        right: cx + halfW - 1,
+        top: cy - halfH,
+        bottom: cy + halfH - 1,
+        centerX: cx,
+        centerY: cy
+    }
+}
 
 // Check if an axis-aligned box overlaps any TILE_WALL
 function _boxOverlapsWall(
@@ -10165,17 +10527,260 @@ function _boxOverlapsWall(
     halfW: number,
     halfH: number
 ): boolean {
+    const left = centerX - halfW
+    const right = centerX + halfW - 1
+    const top = centerY - halfH
+    const bottom = centerY + halfH - 1
+    return _boxOverlapsWallBounds(left, right, top, bottom)
+}
+
+function _dunUpdateInteractableFocus(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    if (!_dunInteractables || _dunInteractables.length === 0) return
+
+    // Clear focus outline on interactables each tick
+    for (let i = 0; i < _dunInteractables.length; i++) {
+        const it = _dunInteractables[i]
+        if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+        _setFocusOutline(it, false)
+    }
+
+    let chestFocusThisTick = false
+    let chestFocusR = -1
+    let chestFocusC = -1
+
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if ((owner | 0) !== ((hi + 1) | 0)) continue
+
+        let found: Sprite = null
+        for (let i = 0; i < _dunInteractables.length; i++) {
+            const it = _dunInteractables[i]
+            if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+
+            const kind = sprites.readDataString(it, INTERACT_DATA.KIND)
+            if (kind === "chest") {
+                const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+                try {
+                    const g: any = globalThis as any
+                    const last = (it as any).__dbgChestScanMs ?? -999999
+                    if (nowMs - last > 1000) {
+                        (it as any).__dbgChestScanMs = nowMs
+                        const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+                        console.log("[FOCUS][CHEST][SCAN]", {
+                            opened: opened ? 1 : 0,
+                            inRange: inRange ? 1 : 0,
+                            hero: { x: hero.x | 0, y: hero.y | 0 },
+                            chest: { x: it.x | 0, y: it.y | 0 },
+                            decor: {
+                                r: (sprites.readDataNumber(it, "decorTileR") | 0),
+                                c: (sprites.readDataNumber(it, "decorTileC") | 0),
+                            }
+                        })
+                    }
+                } catch { }
+                if (opened) continue
+            }
+
+            if (_isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)) {
+                found = it
+                break
+            }
+        }
+
+        if (found) {
+            sprites.setDataNumber(hero, HERO_FOCUS_ACTIVE_KEY, 1)
+            _setFocusOutline(found, true)
+            try {
+                if (sprites.readDataString(found, INTERACT_DATA.KIND) === "chest") {
+                    chestFocusThisTick = true
+                    chestFocusR = sprites.readDataNumber(found, "decorTileR") | 0
+                    chestFocusC = sprites.readDataNumber(found, "decorTileC") | 0
+                    const k = "__focusChestOnce_" + (found.id | 0);
+                    const g: any = globalThis as any;
+                    if (!g[k]) {
+                        g[k] = 1;
+                        console.log("[FOCUS][CHEST] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
+                    }
+                }
+            } catch { }
+        }
+    }
+
+    // Directly drive the chest aura using the same path as the pillar.
+    try {
+        const want = chestFocusThisTick ? 1 : 0
+        if (_dunChestFocusActive !== want) {
+            _dunChestFocusActive = want
+        }
+        if (_dunChestFocusActive || (_dunChestTileR >= 0 && _dunChestTileC >= 0)) {
+            const r = (chestFocusR >= 0) ? chestFocusR : (_dunChestTileR | 0)
+            const c = (chestFocusC >= 0) ? chestFocusC : (_dunChestTileC | 0)
+            if (r >= 0 && c >= 0) {
+                const g: any = globalThis as any
+                const sc: any = g ? g.__phaserScene : null
+                const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+                const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
+                let targetR = r
+                let targetC = c
+                if (DEBUG_CHEST_ROUTE_TO_PILLAR && _dunStairsStatueSolid) {
+                    const sr = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileR") | 0
+                    const sc2 = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileC") | 0
+                    if (sr >= 0 && sc2 >= 0) {
+                        targetR = sr
+                        targetC = sc2
+                    }
+                }
+                if (DEBUG_CHEST_ROUTE_TO_PILLAR && renderer) {
+                    try {
+                        (renderer as any).__dbgAuraOverrideTarget = { r: (r | 0), c: (c | 0) }
+                    } catch { /* ignore */ }
+                } else if (renderer) {
+                    try { (renderer as any).__dbgAuraOverrideTarget = null } catch { /* ignore */ }
+                }
+                if (ok) renderer.setPropFocusAuraAt(targetR, targetC, !!_dunChestFocusActive, 2, 1)
+                if (!(_dunChestSolid as any)?.__loggedChestDirect || !_dunChestFocusActive) {
+                    if (_dunChestSolid) ( _dunChestSolid as any ).__loggedChestDirect = 1
+                    console.log("[FOCUS][CHEST][DIRECT]", {
+                        r,
+                        c,
+                        active: _dunChestFocusActive ? 1 : 0,
+                        renderer: ok,
+                        target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "chest",
+                        targetR,
+                        targetC,
+                        overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: r | 0, c: c | 0 } : null
+                    })
+                }
+            }
+        }
+    } catch { /* ignore */ }
+}
+
+const SHOPKEEPER_FORCE_MOVE_NOW_KEY = "shopkeeperForceMove"
+const SHOPKEEPER_FORCE_MOVE_X_KEY = "shopkeeperForceX"
+const SHOPKEEPER_FORCE_MOVE_Y_KEY = "shopkeeperForceY"
+
+function _shopTryMoveShopkeeperTo(x: number, y: number): boolean {
+    if (!shopkeeperNpc) return false
+    const halfW = shopkeeperNpc.width >> 1
+    const halfH = shopkeeperNpc.height >> 1
+    const collOffY = _heroCollisionOffsetY(shopkeeperNpc)
+    const cy = (y + collOffY) | 0
+    const left = (x - halfW) | 0
+    const right = (x + halfW - 1) | 0
+    const top = (cy - halfH) | 0
+    const bottom = (cy + halfH - 1) | 0
+    if (_boxOverlapsWallBounds(left, right, top, bottom)) return false
+    shopkeeperNpc.setPosition(x, y)
+    return true
+}
+
+function _shopRescueShopkeeperFromWalls(): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+
+    const b = _boundsWithOffset(shopkeeperNpc, _heroCollisionOffsetY(shopkeeperNpc))
+    if (!_boxOverlapsWallBounds(b.left, b.right, b.top, b.bottom)) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0].length | 0
+    if (tileSize <= 0 || rows <= 0 || cols <= 0) return
+
+    const startR = Math.max(0, Math.min(rows - 1, Math.idiv((shopkeeperNpc.y | 0), tileSize))) | 0
+    const startC = Math.max(0, Math.min(cols - 1, Math.idiv((shopkeeperNpc.x | 0), tileSize))) | 0
+
+    const maxRadius = 4
+    for (let r = 0; r <= maxRadius; r++) {
+        for (let dr = -r; dr <= r; dr++) {
+            for (let dc = -r; dc <= r; dc++) {
+                if (Math.abs(dr) !== r && Math.abs(dc) !== r) continue
+                const rr = startR + dr
+                const cc = startC + dc
+                if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue
+                if ((_engineWorldTileMap[rr][cc] | 0) === TILE_WALL) continue
+                const px = _dunColToX(cc)
+                const py = _dunRowToY(rr)
+                if (_shopTryMoveShopkeeperTo(px, py)) return
+            }
+        }
+    }
+}
+
+function _shopApplyForceMoveIfRequested(): void {
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+    const req = sprites.readDataNumber(shopkeeperNpc, SHOPKEEPER_FORCE_MOVE_NOW_KEY) | 0
+    if (!req) return
+    const fx = sprites.readDataNumber(shopkeeperNpc, SHOPKEEPER_FORCE_MOVE_X_KEY) | 0
+    const fy = sprites.readDataNumber(shopkeeperNpc, SHOPKEEPER_FORCE_MOVE_Y_KEY) | 0
+    shopkeeperNpc.setPosition(fx, fy)
+    sprites.setDataNumber(shopkeeperNpc, SHOPKEEPER_FORCE_MOVE_NOW_KEY, 0)
+}
+
+function _shopUpdateFocusHighlights(nowMs: number): void {
+    const now = nowMs | 0
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
+
+    // Clear outlines by default
+    _setFocusOutline(shopkeeperNpc, false)
+    for (let i = 0; i < (shopStatues ? shopStatues.length : 0); i++) {
+        const st = shopStatues[i]
+        if (!st || (st.flags & sprites.Flag.Destroyed)) continue
+        _setFocusOutline(st, false)
+    }
+
+    // Statues: highlight when focused
+    for (let i = 0; i < (shopStatues ? shopStatues.length : 0); i++) {
+        const st = shopStatues[i]
+        if (!st || (st.flags & sprites.Flag.Destroyed)) continue
+        if (_shopIsStatueFocused(st, now)) {
+            _setFocusOutline(st, true)
+        }
+    }
+
+    // Shopkeeper: highlight when a hero is close enough to interact
+    let keeperFocused = false
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if ((owner | 0) !== ((hi + 1) | 0)) continue
+        if (now <= (shopFocusUntilMsByHero[hi] | 0)) continue
+        if (_isHeroInInteractRange(hero, shopkeeperNpc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)) {
+            sprites.setDataNumber(hero, HERO_FOCUS_ACTIVE_KEY, 1)
+            keeperFocused = true
+        }
+    }
+    if (keeperFocused) _setFocusOutline(shopkeeperNpc, true)
+}
+
+function updateGenericFocus(nowMs: number): void {
+    // Clear generic focus for all player heroes (will re-arm below as needed)
+    for (let hi = 0; hi < 4; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        sprites.setDataNumber(hero, HERO_FOCUS_ACTIVE_KEY, 0)
+    }
+
+    _dunUpdateInteractableFocus(nowMs)
+    _shopUpdateFocusHighlights(nowMs)
+}
+
+function _boxOverlapsWallBounds(
+    left: number,
+    right: number,
+    top: number,
+    bottom: number
+): boolean {
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
 
     const map = _engineWorldTileMap
     const rows = map.length
     const cols = map[0].length
     const tileSize = WORLD_TILE_SIZE
-
-    const left = centerX - halfW
-    const right = centerX + halfW - 1
-    const top = centerY - halfH
-    const bottom = centerY + halfH - 1
 
     const minCol = Math.idiv(left, tileSize)
     const maxCol = Math.idiv(right, tileSize)
@@ -10224,8 +10829,9 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
 
         const prevX = sprites.readDataNumber(s, HERO_DATA.PREV_X)
         const prevY = sprites.readDataNumber(s, HERO_DATA.PREV_Y)
+        const collOffY = _heroCollisionOffsetY(s)
         const cx = s.x
-        const cy = s.y
+        const cy = s.y + collOffY
 
         const halfW = s.width >> 1
         const halfH = s.height >> 1
@@ -10245,7 +10851,12 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
         let blockedY = false
 
         // Test horizontal movement (X) first
-        if (_boxOverlapsWall(cx, prevY, halfW, halfH)) {
+        if (_boxOverlapsWallBounds(
+            cx - halfW,
+            cx + halfW - 1,
+            (prevY + collOffY) - halfH,
+            (prevY + collOffY) + halfH - 1
+        )) {
             blockedX = true
             finalX = prevX  // can't move into the wall; keep previous X
         } else {
@@ -10253,16 +10864,21 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
         }
 
         // Test vertical movement (Y) with resolved X
-        if (_boxOverlapsWall(finalX, cy, halfW, halfH)) {
+        if (_boxOverlapsWallBounds(
+            finalX - halfW,
+            finalX + halfW - 1,
+            cy - halfH,
+            cy + halfH - 1
+        )) {
             blockedY = true
-            finalY = prevY  // can't move into the wall; keep previous Y
+            finalY = prevY + collOffY  // can't move into the wall; keep previous Y
         } else {
             finalY = cy
         }
 
         // Apply final position
         s.x = finalX
-        s.y = finalY
+        s.y = finalY - collOffY
 
         // Zero out velocity on the blocked axes so they "slide"
         if (blockedX) s.vx = 0
@@ -10274,7 +10890,7 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
                 "blockedX" + blockedX + "blockedY" + blockedY +
                 "prev=(" + prevX + "," + prevY + ")" +
                 "curr=(" + cx + "," + cy + ")" +
-                "final=(" + finalX + "," + finalY + ")"
+                "final=(" + finalX + "," + (finalY - collOffY) + ")"
             )
         } else if (doFrameLog && i === 0) {
             // Occasional sample log even when no collision,
@@ -10283,7 +10899,7 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
                 "[tileColl]" + label + "#" + i +
                 "no collision" +
                 "prev=(" + prevX + "," + prevY + ")" +
-                "curr=(" + cx + "," + cy + ")"
+                "curr=(" + cx + "," + (cy - collOffY) + ")"
             )
         }
     }
@@ -10303,13 +10919,17 @@ function resolveHeroTilemapCollisions(): void {
 
         const halfW = s.width >> 1
         const halfH = s.height >> 1
+        const collOffY = _heroCollisionOffsetY(s)
 
         // Run a couple of passes in case we overlap more than one tile
         for (let iter = 0; iter < 3; iter++) {
-            const left = s.x - halfW
-            const right = s.x + halfW - 1
-            const top = s.y - halfH
-            const bottom = s.y + halfH - 1
+            const cx = s.x
+            const cy = s.y + collOffY
+            const b = _boundsWithOffset(s, collOffY)
+            const left = b.left
+            const right = b.right
+            const top = b.top
+            const bottom = b.bottom
 
             const minCol = Math.idiv(left, tileSize)
             const maxCol = Math.idiv(right, tileSize)
@@ -10363,7 +10983,7 @@ function resolveHeroTilemapCollisions(): void {
                     } else {
                         // Push in Y
                         const shapeCenterY = shapeTop + def.height / 2;
-                        if (s.y < shapeCenterY) {
+                        if (cy < shapeCenterY) {
                             s.y -= penY;
                         } else {
                             s.y += penY;
@@ -10478,7 +11098,9 @@ function decorSolids_blockingHook(nowMs: number): void {
 
     // Local helpers: AABB overlap using Arcade sprite bounds
     function overlaps(a: Sprite, b: Sprite): boolean {
-        return (a.left < b.right) && (a.right > b.left) && (a.top < b.bottom) && (a.bottom > b.top)
+        const ab = _boundsWithOffset(a, _heroCollisionOffsetY(a))
+        const bb = _boundsWithOffset(b, _heroCollisionOffsetY(b))
+        return (ab.left < bb.right) && (ab.right > bb.left) && (ab.top < bb.bottom) && (ab.bottom > bb.top)
     }
 
     function anySolidOverlap(h: Sprite): boolean {
@@ -10500,18 +11122,20 @@ function decorSolids_blockingHook(nowMs: number): void {
         for (let i = 0; i < _engineDecorSolids.length; i++) {
             const s = _engineDecorSolids[i]
             if (!s || (s.flags & sprites.Flag.Destroyed)) continue
-            if (!overlaps(h, s)) continue
+            const hb = _boundsWithOffset(h, _heroCollisionOffsetY(h))
+            const sb = _boundsWithOffset(s, _heroCollisionOffsetY(s))
+            if (!((hb.left < sb.right) && (hb.right > sb.left) && (hb.top < sb.bottom) && (hb.bottom > sb.top))) continue
 
-            const hcx = ((h.left + h.right) >> 1) | 0
-            const hcy = ((h.top + h.bottom) >> 1) | 0
-            const scx = ((s.left + s.right) >> 1) | 0
-            const scy = ((s.top + s.bottom) >> 1) | 0
+            const hcx = ((hb.left + hb.right) >> 1) | 0
+            const hcy = ((hb.top + hb.bottom) >> 1) | 0
+            const scx = ((sb.left + sb.right) >> 1) | 0
+            const scy = ((sb.top + sb.bottom) >> 1) | 0
 
             // Penetrations (positive when overlapping)
-            const penLeft = (h.right - s.left) | 0   // push left by this (negative)
-            const penRight = (s.right - h.left) | 0  // push right by this (positive)
-            const penUp = (h.bottom - s.top) | 0     // push up by this (negative)
-            const penDown = (s.bottom - h.top) | 0   // push down by this (positive)
+            const penLeft = (hb.right - sb.left) | 0   // push left by this (negative)
+            const penRight = (sb.right - hb.left) | 0  // push right by this (positive)
+            const penUp = (hb.bottom - sb.top) | 0     // push up by this (negative)
+            const penDown = (sb.bottom - hb.top) | 0   // push down by this (positive)
 
             // Candidate pushes based on relative centers (stable direction choice)
             const pushX = (hcx < scx) ? (-(penLeft | 0)) : (penRight | 0)
@@ -10651,9 +11275,9 @@ function decorSolids_blockingHook(nowMs: number): void {
 }
 
 
-// ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®  SECTION  ðŸ”® â”€â”€â”€â”€â”€â”€ ðŸª» â”€â”€â”€â”€â”€â”€ ðŸ”®
+// 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
 
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 
 // ================================================================
 // SECTION 4 - PLAYER SPRITES CREATION AND CONTROL
@@ -10685,7 +11309,7 @@ let p2IntentPending = ""
 let p3IntentPending = ""
 let p4IntentPending = ""
 
-// NEW: tiny 2-deep FIFO so fast taps between TIMER80 ticks donâ€™t get dropped
+// NEW: tiny 2-deep FIFO so fast taps between TIMER80 ticks don’t get dropped
 let p1IntentPending2 = ""
 let p2IntentPending2 = ""
 let p3IntentPending2 = ""
@@ -10821,32 +11445,64 @@ HeroEngine.runHeroLogicForHeroHook = runHeroLogicForHero;
 
 
 // Positional unpack (allow strings or numbers from Blocks)
-// 0: family, 1â€“4: trait pools, 5: element, 6: anim
+// 0: family, 1–4: trait pools, 5: element, 6: anim
 function coerceFamily(val: any): number {
     if (typeof val === "string") {
-        const s = val.toLowerCase()
+        const s = val.trim().toLowerCase()
         if (s === "strength") return FAMILY.STRENGTH
         if (s === "agility") return FAMILY.AGILITY
-        if (s === "intelligence" || s === "intellect") return FAMILY.INTELLECT
+        if (s === "intellect" || s === "intelligence") return FAMILY.INTELLECT
+
+        // NEW NAME: Wisdom == old support/heal family
+        if (s === "wisdom") return FAMILY.HEAL
+
+        // Keep legacy synonyms (optional, but harmless)
         if (s === "support" || s === "heal") return FAMILY.HEAL
     }
+
+    // number path
+    if (typeof val === "number" && isFinite(val)) return val | 0
     return (val | 0)
 }
 
 function coerceElement(val: any): number {
     if (typeof val === "string") {
-        const s = val.toLowerCase()
-        if (s === "none") return ELEM.NONE
-        if (s === "grass" || s === "plant" || s === "plants") return ELEM.GRASS
+        const s = val.trim().toLowerCase()
         if (s === "fire") return ELEM.FIRE
         if (s === "water") return ELEM.WATER
+        if (s === "earth") return ELEM.EARTH
+
+        // Optional convenience (won’t hurt anything)
+        if (s === "none") return ELEM.NONE
         if (s === "electric" || s === "lightning") return ELEM.ELECTRIC
-        // Earth support â€” you'll add ELEM.EARTH yourself
-        if (s === "earth" && (ELEM as any).EARTH !== undefined) {
-            return (ELEM as any).EARTH
-        }
+        if (s === "grass" || s === "plant" || s === "plants") return ELEM.GRASS
     }
+
+    if (typeof val === "number" && isFinite(val)) return val | 0
     return (val | 0)
+}
+
+function coerceAnimKey(val: any): string {
+    if (typeof val === "string") {
+        const s = val.trim().toLowerCase()
+
+        // Accept simple student-facing tokens
+        if (s === "a") return ANIM.A
+        if (s === "b") return ANIM.B
+        if (s === "ab" || s === "a+b") return ANIM.AB
+        if (s === "idle") return ANIM.IDLE
+
+        // Also accept exact internal keys if they somehow pass them
+        if (val === ANIM.A || val === ANIM.B || val === ANIM.AB || val === ANIM.IDLE) return val
+    }
+
+    // numeric anim id path
+    if (typeof val === "number" && isFinite(val)) {
+        return animIdToKey(val | 0)
+    }
+
+    // fallback
+    return ANIM.IDLE
 }
 
 
@@ -11155,7 +11811,7 @@ function createHeroForPlayer(
     // Your requested canonical name field
     sprites.setDataString(hero, HERO_DATA.Name, profileName)
 
-    // Keep legacy keys too (donâ€™t delete them; Phaser glue may still read them)
+    // Keep legacy keys too (don’t delete them; Phaser glue may still read them)
     sprites.setDataString(hero, "heroName", profileName)
     sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(fam))
 
@@ -11202,8 +11858,8 @@ function createHeroForPlayer(
 
     heroTargetCircles[heroIndex] = null
 
-    initHeroHP(heroIndex, hero, 1000)
-    initHeroMana(heroIndex, hero, 2000)
+    initHeroHP(heroIndex, hero, BALANCE.HERO.START_HP)
+    initHeroMana(heroIndex, hero, BALANCE.HERO.START_MANA)
     refreshHeroController(heroIndex)
 
         // -------------------------------------------------
@@ -11287,7 +11943,7 @@ function createHeroForPlayer(
 function setupHeroes() {
 
     // 1) Start from ARCADE screen center as a safe default.
-    // In MakeCode Arcade, this gives you the 320Ã—240-ish center.
+    // In MakeCode Arcade, this gives you the 320×240-ish center.
     // In Phaser compat, ARCADE_SCREEN_* mirrors screen.width/height from arcadeCompat.
     let W = userconfig.ARCADE_SCREEN_WIDTH;
     let H = userconfig.ARCADE_SCREEN_HEIGHT;
@@ -11329,7 +11985,7 @@ function setupHeroes() {
     // - Phaser host starts with ONLY Player 1.
     // - Players 2..4 are spawned later (on-demand) when they actually act/join.
     // - MakeCode Arcade runtime keeps the original 4-player behavior.
-    // TODO_NPLAYER_BRIDGE: later weâ€™ll remove 4-player assumptions entirely.
+    // TODO_NPLAYER_BRIDGE: later we’ll remove 4-player assumptions entirely.
     // ------------------------------------------------------------
     if (isPhaserRuntime()) {
         console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
@@ -11365,12 +12021,35 @@ function unlockHeroControls(heroIndex: number) {
 
 function refreshHeroController(heroIndex: number) {
     const hero = heroes[heroIndex]; if (!hero) return
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
     const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
 
-    const baseSpeed = 300 //Knob for hero movement speed base movement speed make hero faster
+    const baseSpeed = BALANCE.MOVEMENT.HERO_BASE_SPEED // Knob for hero movement speed base movement speed make hero faster
     const hasteMult = heroMoveSpeedMult[heroIndex] || 1
-    const speed = locked ? 0 : baseSpeed * hasteMult
+
+    // Compute speed (relics may modify, but lock must still win)
+    let speed0 = baseSpeed * hasteMult
+    if (speed0 < 0) speed0 = 0
+
+    // RELIC HOOK: modify move speed
+    const ctx: RelicMoveSpeedContext = {
+        now: game.runtime() | 0,
+        hi: heroIndex | 0,
+        hero,
+        playerId: playerId | 0,
+        locked: !!locked,
+        baseSpeed: baseSpeed,
+        hasteMult: hasteMult,
+        speed: speed0,
+    }
+    relic_modifyMoveSpeed(ctx)
+
+    let speed = ctx.speed
+    if (!isFinite(speed)) speed = speed0
+    if (speed < 0) speed = 0
+
+    // Input lock always wins
+    if (locked) speed = 0
 
     if (playerId == 1) controller.player1.moveSprite(hero, speed, speed)
     else if (playerId == 2) controller.player2.moveSprite(hero, speed, speed)
@@ -11380,22 +12059,6 @@ function refreshHeroController(heroIndex: number) {
 
 
 
-function refreshHeroControllerBUGGED(heroIndex: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
-    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-    const baseSpeed = 50
-    const mult = heroMoveSpeedMult[heroIndex] || 1
-    const speed = locked ? 0 : baseSpeed * mult
-
-    const vx = speed
-    const vy = speed
-    if (playerId == 1) controller.player1.moveSprite(hero, vx, vy)
-    else if (playerId == 2) controller.player2.moveSprite(hero, vx, vy)
-    else if (playerId == 3) controller.player3.moveSprite(hero, vx, vy)
-    else if (playerId == 4) controller.player4.moveSprite(hero, vx, vy)
-}
 
 
 function getHeroDirectionName(heroIndex: number) {
@@ -11563,7 +12226,7 @@ function updateHeroFacingsFromVelocity() {
 
         // ------------------------------------------------------------
         // Shopkeeper (Player 99): seed facing DOWN once, then keep it.
-        // This fixes â€œspawns upâ€ without touching createHeroForPlayer.
+        // This fixes “spawns up” without touching createHeroForPlayer.
         // ------------------------------------------------------------
         const ownerId0 = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
         if (ownerId0 === SHOPKEEPER_PLAYER_ID) {
@@ -11656,9 +12319,9 @@ type AgilityPressResult = {
     agiDoExecuteThisPress: boolean
 }
 
-// â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸  SECTION  â„ï¸ â”€â”€â”€â”€â”€â”€ ðŸ’§ â”€â”€â”€â”€â”€â”€ â„ï¸
+// ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 //Do hero move is its own section at this point. This is the function for stating what the hero should be doing
 
 function _doHeroMoveShouldIgnoreDueToBusy(heroIndex: number, hero: Sprite, now: number): boolean {
@@ -11743,18 +12406,16 @@ function _doHeroMoveParseHookOut(out: any[]): {
     animKey: string
 } {
     const family = coerceFamily(out[0])
+
     const t1 = out[1] | 0
     const t2 = out[2] | 0
     const t3 = out[3] | 0
     const t4 = out[4] | 0
-    const element = coerceElement(out[5])
 
+    const element = coerceElement(out[5])
     const traits = [0, t1, t2, t3, t4, element]
 
-    let animKey: string
-    const rawAnim = out[6]
-    if (typeof rawAnim === "string") animKey = rawAnim
-    else animKey = animIdToKey(rawAnim | 0)
+    const animKey = coerceAnimKey(out[6])
 
     return { family, t1, t2, t3, t4, element, traits, animKey }
 }
@@ -11962,7 +12623,6 @@ function _doHeroMoveUpdateAgilityComboState(
 
 
 
-
 function _doHeroMoveTrySpendMana(
     heroIndex: number,
     hero: Sprite,
@@ -11975,19 +12635,65 @@ function _doHeroMoveTrySpendMana(
     // Mana (skip Strength)
     if (family == FAMILY.STRENGTH) return true
 
-    let manaCost = t1 + t2 + t3 + t4
+    let manaCost = (t1 + t2 + t3 + t4) | 0
     if (manaCost < 0) manaCost = 0
 
-    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+    const maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+
+    // RELIC HOOK: modify mana cost
+    if (manaCost > 0) {
+        try {
+            const ctx: RelicManaCostContext = {
+                now: game.runtime() | 0,
+                hi: heroIndex | 0,
+                hero,
+                family: family | 0,
+                t1: t1 | 0,
+                t2: t2 | 0,
+                t3: t3 | 0,
+                t4: t4 | 0,
+                baseCost: manaCost | 0,
+                cost: manaCost | 0,
+                manaBefore: mana | 0,
+                maxMana: maxMana | 0,
+            }
+            relic_modifyManaCost(ctx)
+            manaCost = (ctx.cost | 0)
+            if (manaCost < 0) manaCost = 0
+        } catch { }
+    }
+
     if (mana < manaCost) {
         flashHeroManaBar(heroIndex)
         return false
     }
 
-    mana -= manaCost
+    const before = mana | 0
+    mana = (mana - manaCost) | 0
+    if (mana < 0) mana = 0
+
     sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
     updateHeroManaBar(heroIndex)
     if (manaCost > 0) showDamageNumber(hero.x, hero.y - 10, -manaCost, "mana")
+
+    // RELIC HOOK: mana spent (post-success)
+    if (manaCost > 0) {
+        try {
+            const spent: RelicManaSpentContext = {
+                now: game.runtime() | 0,
+                hi: heroIndex | 0,
+                hero,
+                family: family | 0,
+                baseCost: (t1 + t2 + t3 + t4) | 0,
+                finalCost: manaCost | 0,
+                manaBefore: before | 0,
+                manaAfter: mana | 0,
+                maxMana: maxMana | 0,
+            }
+            relic_onManaSpent(spent)
+        } catch { }
+    }
 
     return true
 }
@@ -12356,7 +13062,7 @@ function _doHeroMovePlayAnimAndDispatch(
     // Do NOT consult legacy HERO_DATA.PHASE here.
     let phaseName = sprites.readDataString(hero, HERO_DATA.PhaseName) || ""
 
-    // Defensive fallback (should be unreachable once Steps 1â€“2 are in place)
+    // Defensive fallback (should be unreachable once Steps 1–2 are in place)
     if (!phaseName) {
         if (family == FAMILY.STRENGTH) phaseName = "slash"
         else if (family == FAMILY.AGILITY) phaseName = "thrust"
@@ -12865,6 +13571,18 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const stats = applyRelicModsToStats(heroIndex, family, button, traitsFinal, stats0)
 
     if (family === FAMILY.STRENGTH) {
+        // RELIC HOOK: move committed
+        try {
+            const ctx: RelicMoveCommittedContext = {
+                now: now | 0,
+                hi: heroIndex | 0,
+                hero,
+                family: family | 0,
+                button,
+            }
+            relic_onMoveCommitted(ctx)
+        } catch { }
+
         executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
 
         _doHeroMoveDbgReset(playerId)
@@ -12891,6 +13609,18 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         agi.agiDoExecuteThisPress,
         now
     )) {
+        // RELIC HOOK: move committed
+        try {
+            const ctx: RelicMoveCommittedContext = {
+                now: now | 0,
+                hi: heroIndex | 0,
+                hero,
+                family: family | 0,
+                button,
+            }
+            relic_onMoveCommitted(ctx)
+        } catch { }
+
         _doHeroMoveDbgLogPathAndReset(
             playerId,
             DEBUG_FILTER_PHRASE + " PATH execute timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex
@@ -12918,7 +13648,20 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     _doHeroMoveBeginActionTimeline(heroIndex, hero, family, button, t1, t2, t3, t4, element | 0, now)
 
+    // RELIC HOOK: move committed (generic path)
+    try {
+        const ctx: RelicMoveCommittedContext = {
+            now: now | 0,
+            hi: heroIndex | 0,
+            hero,
+            family: family | 0,
+            button,
+        }
+        relic_onMoveCommitted(ctx)
+    } catch { }
+
     const mv = _doHeroMoveApplyMovementScheduleAndVelocity(heroIndex, hero, family, now, stats)
+
     const moveDuration = mv.moveDuration | 0
 
     _doHeroMoveSetPhaseFromFamily(heroIndex, family)
@@ -12948,13 +13691,13 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
-// ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ  SECTION  ðŸƒ â”€â”€â”€â”€â”€â”€ ðŸŒ¿ â”€â”€â”€â”€â”€â”€ ðŸƒ
+// 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 
 // ================================================================
 // SECTION 5 - HERO STATS AND UI
@@ -12965,7 +13708,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 const STATUS_KIND_STRENGTH_CHARGE = StatusBarKind.create()
 
 // --------------------------------------------------------------
-// Aura colors â€“ by family
+// Aura colors – by family
 // Used by: createAuraImageFromHero(), updateHeroAuras()
 // --------------------------------------------------------------
 const AURA_COLOR_STRENGTH = 2
@@ -13095,20 +13838,137 @@ function flashHeroManaBar(heroIndex: number) {
 function applyDamageToHeroIndex(heroIndex: number, amount: number) {
     const hero = heroes[heroIndex]; if (!hero) return;
 
-    let hp = sprites.readDataNumber(hero, HERO_DATA.HP);
-    hp = Math.max(0, hp - amount);
-    sprites.setDataNumber(hero, HERO_DATA.HP, hp);
+    const now = Math.max(1, game.runtime() | 0);
+
+    const hpBefore0 = sprites.readDataNumber(hero, HERO_DATA.HP) | 0;
+    const maxHp0 = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0;
+    const maxHp = (maxHp0 > 0 ? maxHp0 : hpBefore0) | 0;
+
+    // -----------------------------
+    // RELIC HOOK: beforeHeroDamage
+    // -----------------------------
+    const dmgCtx: RelicHeroDamageContext = {
+        now,
+        hi: heroIndex | 0,
+        hero,
+        hpBefore: hpBefore0 | 0,
+        maxHp: maxHp | 0,
+        damage: amount | 0,
+        preventDamage: false,
+        sourceKind: "unknown",
+    };
+
+    relic_beforeHeroDamage(dmgCtx);
+
+    let dmg = (dmgCtx.preventDamage ? 0 : (dmgCtx.damage | 0)) | 0;
+    if (dmg < 0) dmg = 0;
+
+    // Apply damage (same behavior as before, but uses relic-modified dmg)
+    let hpAfter = (hpBefore0 | 0) - dmg;
+    if (hpAfter < 0) hpAfter = 0;
+
+    sprites.setDataNumber(hero, HERO_DATA.HP, hpAfter | 0);
     updateHeroHPBar(heroIndex);
     flashHeroOnDamage(hero);
 
-    if (hp > 0) return;
-
-    // Already processed death for this hero? Don't double-trigger.
-    if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+    // ------------------------------------------------------------
+    // RELIC HOOK: afterHeroDamage (non-lethal fast path)
+    // ------------------------------------------------------------
+    if ((hpAfter | 0) > 0) {
+        const appliedLoss = Math.min((hpBefore0 | 0), (dmg | 0)) | 0;
+        const afterCtx: RelicHeroAfterDamageContext = {
+            now,
+            hi: heroIndex | 0,
+            hero,
+            hpBefore: hpBefore0 | 0,
+            maxHp: maxHp | 0,
+            damageAttempted: dmg | 0,
+            damageApplied: appliedLoss | 0,
+            hpAfter: hpAfter | 0,
+            deathCommitted: false,
+            preventedDeath: false,
+            preventedDamage: !!dmgCtx.preventDamage,
+            sourceKind: dmgCtx.sourceKind,
+            sourceEIndex: dmgCtx.sourceEIndex,
+            sourceTag: dmgCtx.sourceTag,
+        };
+        relic_afterHeroDamage(afterCtx);
         return;
     }
 
-    const now = Math.max(1, game.runtime() | 0);
+    // Already processed death for this hero? Don't double-trigger.
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+        // Still report the post-damage event once (lethal path, already dead)
+        const appliedLoss = Math.min((hpBefore0 | 0), (dmg | 0)) | 0;
+        const afterCtx: RelicHeroAfterDamageContext = {
+            now,
+            hi: heroIndex | 0,
+            hero,
+            hpBefore: hpBefore0 | 0,
+            maxHp: maxHp | 0,
+            damageAttempted: dmg | 0,
+            damageApplied: appliedLoss | 0,
+            hpAfter: 0,
+            deathCommitted: true,
+            preventedDeath: false,
+            preventedDamage: !!dmgCtx.preventDamage,
+            sourceKind: dmgCtx.sourceKind,
+            sourceEIndex: dmgCtx.sourceEIndex,
+            sourceTag: dmgCtx.sourceTag,
+        };
+        relic_afterHeroDamage(afterCtx);
+        return;
+    }
+
+    // -----------------------------
+    // RELIC HOOK: beforeHeroDeath
+    // (only when damage would kill)
+    // -----------------------------
+    const deathCtx: RelicHeroDeathContext = {
+        now,
+        hi: heroIndex | 0,
+        hero,
+        hpBefore: hpBefore0 | 0,
+        maxHp: maxHp | 0,
+        damage: dmg | 0,
+        hpAfter: hpAfter | 0,
+        preventDeath: false,
+        setHpTo: undefined,
+    };
+
+    relic_beforeHeroDeath(deathCtx);
+
+    if (deathCtx.preventDeath || (deathCtx.setHpTo != null)) {
+        let newHp = (deathCtx.setHpTo == null ? 1 : (deathCtx.setHpTo | 0)) | 0;
+        if (newHp < 1) newHp = 1;
+        if (maxHp > 0 && newHp > maxHp) newHp = maxHp;
+
+        sprites.setDataNumber(hero, HERO_DATA.HP, newHp | 0);
+        updateHeroHPBar(heroIndex);
+
+        // RELIC HOOK: afterHeroDamage (death prevented)
+        const appliedLoss = Math.min((hpBefore0 | 0), (dmg | 0)) | 0;
+        const afterCtx: RelicHeroAfterDamageContext = {
+            now,
+            hi: heroIndex | 0,
+            hero,
+            hpBefore: hpBefore0 | 0,
+            maxHp: maxHp | 0,
+            damageAttempted: dmg | 0,
+            damageApplied: appliedLoss | 0,
+            hpAfter: newHp | 0,
+            deathCommitted: false,
+            preventedDeath: true,
+            preventedDamage: !!dmgCtx.preventDamage,
+            sourceKind: dmgCtx.sourceKind,
+            sourceEIndex: dmgCtx.sourceEIndex,
+            sourceTag: dmgCtx.sourceTag,
+        };
+        relic_afterHeroDamage(afterCtx);
+
+        console.log("[RELICHOOK] prevented hero death", { heroIndex, hpBefore: hpBefore0 | 0, dmg: dmg | 0, newHp })
+        return;
+    }
 
     // ------------------------------------------------------------
     // Unified PhaseName contract: death is a real render phase window.
@@ -13118,19 +13978,15 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
     sprites.setDataNumber(hero, HERO_DATA.ActionSequence, ((aSeq0 <= 0 ? 1 : aSeq0) + 1) | 0);
     sprites.setDataString(hero, HERO_DATA.ActionKind, "death");
 
-    // Clear any move-segmentation and one-shot pulses so "death" is clean.
     _animKeys_clearPhasePart(hero);
     _animEvent_clear(hero);
 
-    // Set PhaseName (authoritative) + mirror legacy, then stamp a real window.
     setHeroPhaseString(heroIndex, "death");
 
-    // Mark hero as dead and set a "death animation" window
     sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, true);
     const deathUntil = (now + (HERO_DEATH_ANIM_MS | 0)) | 0;
     sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, deathUntil);
 
-    // Lock controls and stop movement while dying
     hero.vx = 0;
     hero.vy = 0;
 
@@ -13138,13 +13994,28 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, deathUntil);
     sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true);
 
-    // Stamp the authoritative render window for death (non-zero duration).
     _animKeys_stampPhaseWindow(heroIndex, hero, "death", now, (HERO_DEATH_ANIM_MS | 0), "applyDamageToHeroIndex(death)");
-
-    // Fire a "death" animation request.
-    // In Arcade, defaultHeroAnim is a harmless stub.
-    // In Phaser, heroAnimGlue / phaser glue will interpret this as "play LPC death".
     callHeroAnim(heroIndex, "death", HERO_DEATH_ANIM_MS);
+
+    // RELIC HOOK: afterHeroDamage (death committed)
+    const appliedLoss = Math.min((hpBefore0 | 0), (dmg | 0)) | 0;
+    const afterCtx: RelicHeroAfterDamageContext = {
+        now,
+        hi: heroIndex | 0,
+        hero,
+        hpBefore: hpBefore0 | 0,
+        maxHp: maxHp | 0,
+        damageAttempted: dmg | 0,
+        damageApplied: appliedLoss | 0,
+        hpAfter: 0,
+        deathCommitted: true,
+        preventedDeath: false,
+        preventedDamage: !!dmgCtx.preventDamage,
+        sourceKind: dmgCtx.sourceKind,
+        sourceEIndex: dmgCtx.sourceEIndex,
+        sourceTag: dmgCtx.sourceTag,
+    };
+    relic_afterHeroDamage(afterCtx);
 }
 
 
@@ -13164,14 +14035,41 @@ function flashHeroOnDamage(hero: Sprite) {
 }
 
 function regenHeroManaAll(percentOfMax: number) {
+    const now = game.runtime() | 0
+
     for (let i = 0; i < heroes.length; i++) {
         const hero = heroes[i]; if (!hero) continue
-        const maxM = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxM <= 0) continue
-        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
-        let gain = Math.idiv(maxM * percentOfMax, 100)
-        if (gain < 1 && mana < maxM) gain = 1
-        mana = Math.min(maxM, mana + gain)
-        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+
+        const maxM = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+        if (maxM <= 0) continue
+
+        let manaBefore = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+
+        // Base gain (unchanged behavior)
+        let baseGain = Math.idiv((maxM * (percentOfMax | 0)) | 0, 100) | 0
+        if (baseGain < 1 && manaBefore < maxM) baseGain = 1
+
+        // RELIC HOOK: modify mana regen
+        const ctx: RelicManaRegenContext = {
+            now,
+            hi: i | 0,
+            hero,
+            percentOfMax: percentOfMax | 0,
+            maxMana: maxM | 0,
+            manaBefore: manaBefore | 0,
+            gain: baseGain | 0,
+        }
+
+        try {
+            relic_modifyManaRegen(ctx)
+        } catch { }
+
+        let gain = (ctx.gain | 0)
+        if (!isFinite(gain as any)) gain = baseGain | 0
+        if (gain < 0) gain = 0
+
+        const manaAfter = Math.min(maxM, (manaBefore + gain) | 0) | 0
+        sprites.setDataNumber(hero, HERO_DATA.MANA, manaAfter)
         updateHeroManaBar(i)
     }
 }
@@ -13197,7 +14095,7 @@ function showDamageNumber(x: number, y: number, amount: number, kind?: string) {
     txt.setOutline(1, 15)          // thin black outline around the colored text
 
     txt.setPosition(x, y)
-    txt.lifespan = 900             // was 400 â†’ more than double time on screen
+    txt.lifespan = 900             // was 400 → more than double time on screen
     txt.vy = -12                   // slower rise so it's readable
 }
 
@@ -13212,7 +14110,7 @@ function createAuraImageFromHero(hero: Sprite, color: number): Image {
     const aura = image.create(w, h);
 
     // How far out the aura should extend from the sprite's solid pixels.
-    // 2 â†’ roughly "2 pixels wider" halo.
+    // 2 → roughly "2 pixels wider" halo.
     const MAX_RADIUS = 2;
 
     // For every transparent pixel, check if it's within MAX_RADIUS of any solid pixel.
@@ -13384,8 +14282,9 @@ function updateAgiChargeV4PublishedKeys(nowMs: number): void {
         // Land buffer mirrors calculateAgilityStats() logic (Trait3 -> vuln window) for later use
         let landBuf = AGI_LANDING_BUFFER_MS | 0
         if (AGI_TIME_AFFECTS_VULN) {
-            const tTime = sprites.readDataNumber(hero, HERO_DATA.TRAIT3) | 0
-            landBuf = (AGI_LANDING_BUFFER_MS + Math.max(0, tTime) * 2) | 0
+            const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+            const tTime = applyAxisWeight(sprites.readDataNumber(hero, HERO_DATA.TRAIT3), axis.TIME)
+            landBuf = (AGI_LANDING_BUFFER_MS + Math.max(0, tTime) * BALANCE.MOVES.AGILITY.LANDING_BUFFER_PER_POINT_MS) | 0
         }
         sprites.setDataNumber(hero, HERO_DATA.AGI_LAND_BUFFER_MS, landBuf)
 
@@ -13453,7 +14352,7 @@ function updateAgiChargeV4PublishedKeys(nowMs: number): void {
 
 
 
-// ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥  SECTION  ðŸ”¥ â”€â”€â”€â”€â”€â”€ ðŸ® â”€â”€â”€â”€â”€â”€ ðŸ”¥
+// 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥 ────── 🏮 ────── 🔥  SECTION  🔥 ────── 🏮 ────── 🔥
 // 4) Hook into your existing update + startup
 // Add this call inside your existing updateHeroOverlays() (or right after it in game.onUpdate):
 //    updateShopUi(now)
@@ -13577,7 +14476,7 @@ function updateHeroAimIndicators(now: number, phaser: boolean) {
             ind.y = hero.y + tailDy + AGI_AIM_INDICATOR_OY
         }
 
-        // Safety: NaN guard (this is the â€œdisappears silentlyâ€ killer)
+        // Safety: NaN guard (this is the “disappears silently” killer)
         if (!isFinite(ind.x as any) || !isFinite(ind.y as any)) {
             _dbgAgiAimLog(i, now,
                 "ERROR NaN pos: ind=(" + ind.x + "," + ind.y + ") hero=(" + hero.x + "," + hero.y + ") nx=" + aim.nx + " ny=" + aim.ny + " edgeDist=" + edgeDist + " src=" + edgeSrc
@@ -13704,7 +14603,7 @@ function updateHeroMeters(now: number, phaser: boolean) {
         }
 
         // ------------------------------------------------------------
-        // Stored-hits counter: separate, above the heroâ€™s head.
+        // Stored-hits counter: separate, above the hero’s head.
         // Show if there are stored hits OR charge is relevant.
         // ------------------------------------------------------------
         const showCounter = ((storedHits | 0) > 0) || chargeRelevant
@@ -13862,7 +14761,7 @@ ensureHeroSpriteKinds();
 // Overlap logic shared by STR/AGI/INT/HEAL effects.
 
 
-// HeroWeapon â†” Enemy (STR/AGI: normal; INTELLECT: detonate; HEAL: ignore enemies)
+// HeroWeapon ↔ Enemy (STR/AGI: normal; INTELLECT: detonate; HEAL: ignore enemies)
 sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, enemy) {
     const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY) | 0
     const heroIndex = sprites.readDataNumber(weapon, PROJ_DATA.HERO_INDEX) | 0
@@ -13878,7 +14777,7 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
         const detonated = sprites.readDataNumber(weapon, INT_DETONATED_KEY) | 0
 
         if (!detonated) {
-            // (Optional) unified â€œterminusâ€ semantics/logs
+            // (Optional) unified “terminus” semantics/logs
             sprites.setDataNumber(weapon, PROJ_DATA.TERMINUS_HIT, 2)
 
             detonateIntellectSpellForHero(
@@ -13919,7 +14818,7 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
             sprites.setDataNumber(weapon, INT_PULSE_WINDOW_END_MS_KEY, (nowMs + INT_PULSE_WINDOW_MS) | 0)
             sprites.setDataNumber(weapon, INT_PULSE_HIT_MASK_KEY, 0)
 
-            // Optional: a single log per pulse (comment out if you donâ€™t want it)
+            // Optional: a single log per pulse (comment out if you don’t want it)
             // console.log("[INT][PULSE] begin", "| now", nowMs, "| period", period, "| wid", (weapon.id | 0))
         }
 
@@ -13991,7 +14890,7 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
 
 })
 
-// NEW: HeroWeapon â†” Player (HEAL detonates on allies)
+// NEW: HeroWeapon ↔ Player (HEAL detonates on allies)
 sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, hero) {
     const family = sprites.readDataNumber(weapon, PROJ_DATA.FAMILY)
     if (family != FAMILY.HEAL) return
@@ -14002,14 +14901,15 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, he
 function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: number): boolean {
     const heroW = hero.width, heroH = hero.height, enemyW = enemy.width, enemyH = enemy.height
     const halfHW = Math.idiv(heroW, 2), halfHH = Math.idiv(heroH, 2), halfEW = Math.idiv(enemyW, 2), halfEH = Math.idiv(enemyH, 2)
-    const dx = Math.abs(hero.x - enemy.x), dy = Math.abs(hero.y - enemy.y)
+    const dy = Math.abs((hero.y + _heroCollisionOffsetY(hero)) - enemy.y)
+    const dx = Math.abs(hero.x - enemy.x)
     const overlapX = (halfHW + halfEW) - dx, overlapY = (halfHH + halfEH) - dy
     if (overlapX <= 0 || overlapY <= 0) return false
     const overlapArea = overlapX * overlapY, heroArea = heroW * heroH
     return overlapArea * 100 >= heroArea * minHeroAreaPct
 }
 
-// Player â†” Enemy contact (with agility invuln & weaken on enemy attacks)
+// Player ↔ Enemy contact (with agility invuln & weaken on enemy attacks)
 sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
     const heroIndex = getHeroIndex(hero); if (heroIndex < 0) return
     if (!hasSignificantOverlap(hero, enemy, HERO_CONTACT_MIN_OVERLAP_PCT)) return
@@ -14031,6 +14931,86 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
     applyDamageToHeroIndex(heroIndex, dmg)
     showDamageNumber(hero.x, hero.y - 6, dmg)
     sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, now + HERO_IFRAME_MS)
+})
+
+function _resolveSpriteOverlap(a: Sprite, b: Sprite, moveA: boolean, moveB: boolean): boolean {
+    if (!a || !b) return false
+    const ab = _boundsWithOffset(a, _heroCollisionOffsetY(a))
+    const bb = _boundsWithOffset(b, _heroCollisionOffsetY(b))
+    if ((ab.left >= bb.right) || (ab.right <= bb.left) || (ab.top >= bb.bottom) || (ab.bottom <= bb.top)) return false
+
+    const acx = ((ab.left + ab.right) >> 1) | 0
+    const acy = ((ab.top + ab.bottom) >> 1) | 0
+    const bcx = ((bb.left + bb.right) >> 1) | 0
+    const bcy = ((bb.top + bb.bottom) >> 1) | 0
+
+    const penLeft = (ab.right - bb.left) | 0
+    const penRight = (bb.right - ab.left) | 0
+    const penUp = (ab.bottom - bb.top) | 0
+    const penDown = (bb.bottom - ab.top) | 0
+
+    const pushX = (acx < bcx) ? (-(penLeft | 0)) : (penRight | 0)
+    const pushY = (acy < bcy) ? (-(penUp | 0)) : (penDown | 0)
+
+    const magX = Math.abs(pushX) | 0
+    const magY = Math.abs(pushY) | 0
+
+    const useX = (magX > 0 && (magX <= magY || magY <= 0))
+    const push = useX ? pushX : pushY
+
+    if (moveA && moveB) {
+        const half = Math.idiv(push, 2) | 0
+        const rest = (push - half) | 0
+        if (useX) {
+            a.x = ((a.x | 0) + half) | 0
+            b.x = ((b.x | 0) - rest) | 0
+            try { (a.vx as any) = 0 } catch { }
+            try { (b.vx as any) = 0 } catch { }
+        } else {
+            a.y = ((a.y | 0) + half) | 0
+            b.y = ((b.y | 0) - rest) | 0
+            try { (a.vy as any) = 0 } catch { }
+            try { (b.vy as any) = 0 } catch { }
+        }
+        return true
+    }
+
+    const mover = moveA ? a : (moveB ? b : null)
+    if (!mover) return false
+    if (useX) {
+        mover.x = ((mover.x | 0) + push) | 0
+        try { (mover.vx as any) = 0 } catch { }
+    } else {
+        mover.y = ((mover.y | 0) + push) | 0
+        try { (mover.vy as any) = 0 } catch { }
+    }
+    return true
+}
+
+sprites.onOverlap(SpriteKind.Player, SpriteKind.Player, function (a, b) {
+    if (!a || !b || a === b) return
+    const aOwner = sprites.readDataNumber(a, HERO_DATA.OWNER) | 0
+    const bOwner = sprites.readDataNumber(b, HERO_DATA.OWNER) | 0
+    const aIsShop = (aOwner | 0) === (SHOPKEEPER_PLAYER_ID | 0)
+    const bIsShop = (bOwner | 0) === (SHOPKEEPER_PLAYER_ID | 0)
+
+    if (aIsShop && bIsShop) return
+    if (aIsShop || bIsShop) {
+        const mover = aIsShop ? b : a
+        const other = aIsShop ? a : b
+        _resolveSpriteOverlap(mover, other, true, false)
+        return
+    }
+
+    _resolveSpriteOverlap(a, b, true, true)
+})
+
+sprites.onOverlap(SpriteKind.Player, SpriteKind.StoryNpc, function (hero, npc) {
+    _resolveSpriteOverlap(hero, npc, true, false)
+})
+
+sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
+    _resolveSpriteOverlap(hero, npc, true, false)
 })
 
 
@@ -14146,7 +15126,7 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     const swingMs = sprites.readDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY) | 0
     const arcDeg  = sprites.readDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY) | 0
 
-    // âœ… NEW
+    // ✅ NEW
     const reachExtraPx = sprites.readDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY) | 0
 
     // Clear BEFORE spawning (prevents double-spawn if spawn throws/logs)
@@ -14162,7 +15142,7 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, 0)
 
-    // âœ… NEW
+    // ✅ NEW
     sprites.setDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY, 0)
 
     // Spawn (late)
@@ -14269,7 +15249,7 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         sprites.setDataNumber(hero, STR_SEG_START_MS_KEY, segStart | 0)
         sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, segDur | 0)
 
-        // âœ… CANONICAL CONTRACT: publish PhasePart so heroAnimGlue/weaponAnimGlue can consume it
+        // ✅ CANONICAL CONTRACT: publish PhasePart so heroAnimGlue/weaponAnimGlue can consume it
         // NOTE: This must exist already in your codebase (you referenced it earlier).
         // AFTER
         _animKeys_setPhasePart(
@@ -14403,11 +15383,11 @@ function beginStrengthCharge(
     // Action edge only after real commit (base mana paid)
     _doHeroMoveBeginActionTimeline(heroIndex, hero, FAMILY.STRENGTH, button, t1, t2, t3, t4, element | 0, now | 0)
 
-    // âœ… Centralized: charge max ms comes from calculateStrengthStats() via STAT.MOVE_DURATION
+    // ✅ Centralized: charge max ms comes from calculateStrengthStats() via STAT.MOVE_DURATION
     let maxMs = stats[STAT.MOVE_DURATION] | 0
     if (maxMs <= 0) maxMs = 1
 
-    // âœ… Centralized: arc max comes from calculateStrengthStats()
+    // ✅ Centralized: arc max comes from calculateStrengthStats()
     let arcMaxDeg = stats[STAT.STRENGTH_TOTAL_ARC_DEG] | 0
     if (arcMaxDeg <= 0) arcMaxDeg = 360
 
@@ -14420,7 +15400,7 @@ function beginStrengthCharge(
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, now)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, maxMs)
 
-    // âœ… NEW: store arc max so the charge loop never hardcodes 360
+    // ✅ NEW: store arc max so the charge loop never hardcodes 360
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, arcMaxDeg)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
@@ -14448,7 +15428,7 @@ function beginStrengthCharge(
         "beginStrengthCharge(stamp)"
     )
 
-    // âœ… Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
+    // ✅ Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
     let prepMs = STR_PREP_VISIBLE_MS | 0
     if (prepMs < 0) prepMs = 0
     if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
@@ -14494,7 +15474,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     let lastMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS) | 0
     const maxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0
 
-    // âœ… Centralized (no hardcoded 360)
+    // ✅ Centralized (no hardcoded 360)
     let arcMaxDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0
     if (arcMaxDeg <= 0) arcMaxDeg = 360
 
@@ -14670,7 +15650,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     // Snapshot arc BEFORE clearing charge state
     let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
 
-    // âœ… Centralized: arc max comes from charge state (which came from stats)
+    // ✅ Centralized: arc max comes from charge state (which came from stats)
     let arcMaxDeg0 = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0
     if (arcMaxDeg0 <= 0) arcMaxDeg0 = 360
 
@@ -14689,7 +15669,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
 
-    // âœ… NEW
+    // ✅ NEW
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
@@ -14733,7 +15713,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     // ------------------------------------------------------------
     // Compute swing duration from charge amount using stats knobs
-    // (still the same â€œV9 shaping,â€ just not hardcoded)
+    // (still the same “V9 shaping,” just not hardcoded)
     // ------------------------------------------------------------
     const baseSwingMs0 = (stats[STAT.STRENGTH_SWING_MS] | 0) || 220
     const swingMin0 = Math.max(1, (baseSwingMs0 - 60) | 0)         // 220->160
@@ -14765,7 +15745,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const weakenDurationMs = stats[STAT.WEAKEN_DURATION] | 0
     const knockbackPct = stats[STAT.KNOCKBACK_PCT] | 0
 
-    // âœ… Reach snapshot for the swing projectile (no recomputing elsewhere)
+    // ✅ Reach snapshot for the swing projectile (no recomputing elsewhere)
     const reachExtraPx = stats[STAT.STRENGTH_REACH_EXTRA_PX] | 0
 
     // ------------------------------------------------------------
@@ -14824,7 +15804,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
 
     // ------------------------------------------------------------
-    // âœ… schedule projectile spawn LATER inside the swing window
+    // ✅ schedule projectile spawn LATER inside the swing window
     // ------------------------------------------------------------
     let spawnDelayMs = Math.idiv((swingDurationMs | 0) * STR_SWING_PROJECTILE_SPAWN_FRAC_X1000, 1000) | 0
     if (spawnDelayMs < 0) spawnDelayMs = 0
@@ -14846,7 +15826,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, swingDurationMs | 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, arcDeg | 0)
 
-    // âœ… NEW: carry reach snapshot into the late-spawn projectile
+    // ✅ NEW: carry reach snapshot into the late-spawn projectile
     sprites.setDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY, reachExtraPx | 0)
 
     // ------------------------------------------------------------
@@ -14879,7 +15859,7 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS, 0)
 
-    // âœ… NEW
+    // ✅ NEW
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
@@ -14935,10 +15915,11 @@ function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     // traits[3] = Time  (charge-to-full time window)
     // traits[4] = Status (knockback, and future STR status knobs)
 
-    let tDmg = (traits[1] | 0)
-    let tReach = (traits[2] | 0)
-    let tTime = (traits[3] | 0)
-    let tStatus = (traits[4] | 0)
+    const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+    let tDmg = applyAxisWeight(traits[1], axis.DAMAGE)
+    let tReach = applyAxisWeight(traits[2], axis.REACH)
+    let tTime = applyAxisWeight(traits[3], axis.TIME)
+    let tStatus = applyAxisWeight(traits[4], axis.STATUS)
 
     if (tDmg < 0) tDmg = 0
     if (tReach < 0) tReach = 0
@@ -14948,11 +15929,11 @@ function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     // -----------------------------------
     // DAMAGE (traits[1])
     // -----------------------------------
-    stats[STAT.DAMAGE_MULT] = 80 + tDmg * 2
+    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.STRENGTH.DAMAGE_BASE + tDmg * BALANCE.MOVES.STRENGTH.DAMAGE_PER_POINT
 
     // -----------------------------------
-    // TIME (traits[3]) â€“ charge-to-full max ms
-    // âœ… This is the knob that makes the meter easier/harder to fill.
+    // TIME (traits[3]) – charge-to-full max ms
+    // ✅ This is the knob that makes the meter easier/harder to fill.
     // -----------------------------------
     let chargeMaxMs = strengthChargeMaxMsFromTrait3(tTime) | 0
     if (chargeMaxMs <= 0) chargeMaxMs = 1
@@ -14961,33 +15942,29 @@ function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
     // -----------------------------------
     // ARC max (centralized; charge clamps to this)
     // -----------------------------------
-    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = 360
+    stats[STAT.STRENGTH_TOTAL_ARC_DEG] = BALANCE.MOVES.STRENGTH.TOTAL_ARC_DEG
 
     // -----------------------------------
     // SWING base (post-release shaping uses this)
     // -----------------------------------
-    const BASE_SWING_MS = 220
-    stats[STAT.STRENGTH_SWING_MS] = BASE_SWING_MS
+    stats[STAT.STRENGTH_SWING_MS] = BALANCE.MOVES.STRENGTH.BASE_SWING_MS
 
     // -----------------------------------
-    // REACH (traits[2]) â€“ RELATIVE px beyond silhouette radius
+    // REACH (traits[2]) – RELATIVE px beyond silhouette radius
     // -----------------------------------
-    const BASE_EXTRA_REACH_PX = 4
-    const EXTRA_PER_POINT_PX = 1
-    let reachExtraPx = BASE_EXTRA_REACH_PX + tReach * EXTRA_PER_POINT_PX
+    let reachExtraPx = BALANCE.MOVES.STRENGTH.REACH_BASE_PX + tReach * BALANCE.MOVES.STRENGTH.REACH_PER_POINT_PX
     if (reachExtraPx < 1) reachExtraPx = 1
     stats[STAT.STRENGTH_REACH_EXTRA_PX] = reachExtraPx
 
     // -----------------------------------
     // LUNGE: tiny crawl forward during swing
     // -----------------------------------
-    const STRENGTH_CRAWL_SPEED = 5
-    stats[STAT.LUNGE_SPEED] = STRENGTH_CRAWL_SPEED
+    stats[STAT.LUNGE_SPEED] = BALANCE.MOVES.STRENGTH.LUNGE_SPEED
 
     // -----------------------------------
-    // STATUS (traits[4]) â†’ knockback pct
+    // STATUS (traits[4]) → knockback pct
     // -----------------------------------
-    stats[STAT.KNOCKBACK_PCT] = 10 + tStatus * 10
+    stats[STAT.KNOCKBACK_PCT] = BALANCE.MOVES.STRENGTH.KNOCKBACK_BASE_PCT + tStatus * BALANCE.MOVES.STRENGTH.KNOCKBACK_PER_POINT_PCT
 
     return stats
 }
@@ -15126,7 +16103,7 @@ function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): numb
         const p = img.getPixel(px, py)
 
         if (p != 0) {
-            // Solid pixel â€“ keep extending the edge
+            // Solid pixel – keep extending the edge
             if (!sawOpaque) {
                 //console.log("S-EDGE: first opaque at d=" + d +
                 //    " px=" + px + " py=" + py + " color=" + p)
@@ -15211,7 +16188,7 @@ function spawnStrengthSwingProjectile(
     if (frontStartR < 0) frontStartR = 0
     if (frontStartR > inner0) frontStartR = inner0
 
-    // âœ… Reach is now a pure input (centralized in calculateStrengthStats -> STAT.STRENGTH_REACH_EXTRA_PX)
+    // ✅ Reach is now a pure input (centralized in calculateStrengthStats -> STAT.STRENGTH_REACH_EXTRA_PX)
     let reachFromInner = (reachExtraPx | 0)
     if (reachFromInner < 1) reachFromInner = 1
 
@@ -15279,7 +16256,7 @@ function updateStrengthProjectilesMotionFor(
     proj.vx = 0
     proj.vy = 0
 
-    // ðŸ”§ FIX: do NOT use `||` here, or we'll corrupt vertical directions
+    // 🔧 FIX: do NOT use `||` here, or we'll corrupt vertical directions
     let nx = sprites.readDataNumber(proj, "SS_NX")
     let ny = sprites.readDataNumber(proj, "SS_NY")
 
@@ -15345,7 +16322,7 @@ function buildStrengthSmashBitmap(
     // Constants controlling animation / shape
     // Constants controlling animation / shape
     const PHASE1_FRAC = 0.25         // % of anim spent in thrust phase
-    const TOTAL_ARC_DEG = totalArcDeg // total degrees (Â± around forward), now passed in
+    const TOTAL_ARC_DEG = totalArcDeg // total degrees (± around forward), now passed in
 
     // Strength: how far past the hero's boundary the arc extends (in pixels)
     const STRENGTH_REACH_EXTRA = 32
@@ -15372,7 +16349,7 @@ function buildStrengthSmashBitmap(
         const thrustT = progress / PHASE1_FRAC
         const tipR = inner0 + reachExtra * thrustT
 
-        // Straight "spear" along forward direction, from inner0 â†’ tipR.
+        // Straight "spear" along forward direction, from inner0 → tipR.
         for (let r = frontStartR; r <= tipR; r++) {
 //        for (let r = inner0; r <= tipR; r++) {
             const px = nx * r
@@ -15421,7 +16398,7 @@ function buildStrengthSmashBitmap(
             img.setPixel(ix, iy, 2)
         }
     } else {
-        // Number of angle steps to go from -halfArcRad â†’ +halfArcRad
+        // Number of angle steps to go from -halfArcRad → +halfArcRad
         const stepsFloat = halfArcRad / angleStepRad
         let steps = Math.floor(stepsFloat) * 2 + 1
         if (steps < 1) steps = 1
@@ -15433,8 +16410,8 @@ function buildStrengthSmashBitmap(
             const distFromCenter = Math.abs(i - centerIndex)
 
             // Inner radius tapers toward outerR:
-            //   - at center: inner â‰ˆ inner0
-            //   - at ends:   inner â‰ˆ outerR - 1 (1-pixel thick)
+            //   - at center: inner ≈ inner0
+            //   - at ends:   inner ≈ outerR - 1 (1-pixel thick)
             let innerR = inner0 + distFromCenter
             if (innerR > outerR - 1) innerR = outerR - 1
             if (innerR < inner0) innerR = inner0
@@ -15476,7 +16453,7 @@ function buildStrengthSmashBitmap(
     return img
 }
 
-// ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ  SECTION  ðŸ â”€â”€â”€â”€â”€â”€ ðŸ‚ â”€â”€â”€â”€â”€â”€ ðŸ
+// 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁 ────── 🍂 ────── 🍁  SECTION  🍁 ────── 🍂 ────── 🍁
 
 
 // ====================================================
@@ -15513,10 +16490,10 @@ function buildStrengthSmashBitmap(
 // ------------------------------------------------------------
 
 const AGI_MIN_VISUAL_LEN = 3
-const AGI_LANDING_BUFFER_MS = 80
+const AGI_LANDING_BUFFER_MS = BALANCE.MOVES.AGILITY.LANDING_BUFFER_MS
 
 // --------------------------------------------------------------
-// AGILITY COMBO V2 â€“ state enum + UI defaults
+// AGILITY COMBO V2 – state enum + UI defaults
 // --------------------------------------------------------------
 
 const AGI_STATE = {
@@ -15542,7 +16519,7 @@ const AGI_METER_W_EXEC = AGI_METER_W_E
 // (Later phases replace this with true pendulum logic driven by sprite-data.)
 const AGI_METER_COMPAT_TOTAL_MS = 300
 
-// NEW (Agility combo v2): â€œin-a-rowâ€ sanity gate (press #2 must happen soon)
+// NEW (Agility combo v2): “in-a-row” sanity gate (press #2 must happen soon)
 const AGI_CHAIN_MAX_GAP_MS = 1200
 
 // NEW (C2): temporary pendulum sweep period for visibility/testing (real pendulum logic later)
@@ -15564,7 +16541,7 @@ const EVENT_MASK_SHOP_SWAP = 1 << 1
 // Agility Execute: teleport positioning + facing knobs
 // ================================================================
 
-// 0 = ABOVE (same X, slightly above enemy)  [your â€œbehindâ€ description]
+// 0 = ABOVE (same X, slightly above enemy)  [your “behind” description]
 // 1 = LEFT
 // 2 = RIGHT
 // 3 = ALT_LR (alternate left/right each hit)
@@ -15621,7 +16598,7 @@ const AGI_TIME_AFFECTS_SCHEDULE = false      // NEW (v4): Trait3 reshapes tier s
 // Agility combo v4 (weapon-as-meter) defaults
 // NOTE: Step 1 only seeds/publishes keys; behavior is wired later.
 // Contract: EXEC + A + B + C = 500 (X1000 units, half-cycle)
-// Full cycle implied: EXEC â†’ A â†’ B â†’ C â†’ B â†’ A â†’ EXEC
+// Full cycle implied: EXEC → A → B → C → B → A → EXEC
 // --------------------------------------------------------------
 const AGI_CHARGE_DEFAULT_TIER_A_ADD = 3
 const AGI_CHARGE_DEFAULT_TIER_B_ADD = 4
@@ -15647,8 +16624,8 @@ const AGI_THRUST_FORWARD_FRAC_X1000 = 200
 // TEMP DEBUG: make agility thrust super visible
 // --------------------------------------------------------------
 const AGI_DEBUG_SLOWMO = false
-const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5Ã— longer total move follow this knob to where agility speed timing is set the movmenet knob
-const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 2500 // 2.5Ã— faster lunge => farther
+const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5× longer total move follow this knob to where agility speed timing is set the movmenet knob
+const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 2500 // 2.5× faster lunge => farther
 
 
 // === UI marker keys (shared) ===
@@ -15727,7 +16704,7 @@ function agiMeterZoneMultiplier(hero: Sprite, nowMs: number): number {
 
 
 // --------------------------------------------------------------
-// C4: Agility execute (consume packets â†’ teleport slashes)
+// C4: Agility execute (consume packets → teleport slashes)
 // --------------------------------------------------------------
 
 function agiSelectBestEnemyInRadius(cx: number, cy: number, radius: number): number {
@@ -15876,7 +16853,7 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_START_MS, 0)
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, 0)
 
-    // Keep controls locked through execute (weâ€™ll unlock when done)
+    // Keep controls locked through execute (we’ll unlock when done)
     lockHeroControls(heroIndex)
 
     // ------------------------------------------------------------
@@ -16171,7 +17148,7 @@ function debugAgilityDashProgress(hero: Sprite, heroIndex: number) { /* unchange
 
 function debugDashIntegratorTick(hero: Sprite) { /* unchanged */ }
 
-// NEW: combo pop ("1x", â€¦)
+// NEW: combo pop ("1x", …)
 function showComboPop(hero: Sprite, multX: number) {
     const t = textsprite.create(multX + "x")
     t.setPosition(hero.x, hero.y - 12)
@@ -16195,7 +17172,7 @@ function ensureAgiStoredCounter(heroIndex: number): Sprite {
         // Tag for Phaser-native execute FX targeting
         sprites.setDataString(t, UI_KIND_KEY, UI_KIND_AGI_STORED_COUNTER)
 
-        // Copy hero owner so Phaser can match counter â†” hero deterministically
+        // Copy hero owner so Phaser can match counter ↔ hero deterministically
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
         sprites.setDataNumber(t, HERO_DATA.OWNER, owner)
     }
@@ -16353,7 +17330,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
         const lungeEnd = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0
         if (lungeStart <= 0 || lungeEnd <= 0) continue
 
-        // If weâ€™re in build/execute mode, never apply lunge velocity or phase parts
+        // If we’re in build/execute mode, never apply lunge velocity or phase parts
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
         if (agiState === AGI_STATE.ARMED || agiState === AGI_STATE.EXECUTING) {
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
@@ -16495,7 +17472,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
             _dbgContract_noteWhy(hi, "AMBIENT_CLEAR_PHASE_PART", "updateAgilityThrustMotionAll(scheduleEnd)")
 
-            // Donâ€™t keep â€œlandingâ€ around after the schedule ends
+            // Don’t keep “landing” around after the schedule ends
             _animKeys_clearPhasePart(
                 hi,
                 hero,
@@ -16675,7 +17652,7 @@ function updateAgilityComboLandingTransitions(nowMs: number): void {
         const comboMode0 = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0
 
         // ------------------------------------------------------------
-        // Case A: combo mode already ON â†’ re-arm meter on every AGI landing
+        // Case A: combo mode already ON → re-arm meter on every AGI landing
         // ------------------------------------------------------------
         if (comboMode0) {
             if (family0 !== FAMILY.AGILITY) {
@@ -16710,7 +17687,7 @@ function updateAgilityComboLandingTransitions(nowMs: number): void {
         }
 
         // ------------------------------------------------------------
-        // Case B: combo mode OFF â†’ entry attempt only if this landing matches the
+        // Case B: combo mode OFF → entry attempt only if this landing matches the
         //         marked entry dash and the initiating button is still held now.
         // ------------------------------------------------------------
         const entryDu = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL) | 0
@@ -16848,7 +17825,7 @@ function updateAgilityManualCancelAllHeroes(nowMs: number): void {
         }
 
         // Also: don't allow immediate cancel right after an Agility press;
-        // this prevents â€œcombo endsâ€ while you're actively building.
+        // this prevents “combo ends” while you're actively building.
         const lastPress = sprites.readDataNumber(hero, HERO_DATA.AGI_LAST_PRESS_MS) | 0
         if (lastPress > 0 && (nowMs - lastPress) < 260) {
             sprites.setDataNumber(hero, HERO_DATA.AGI_CANCEL_HOLD_MS, 0)
@@ -16894,10 +17871,11 @@ function calculateAgilityStats(
     // traits[2] = Reach (dash reach + execute radius)
     // traits[3] = Time (vulnerability window + pendulum speed)
     // traits[4] = Status (slow amount)
-    let tDmg = (traits[1] | 0)
-    let tReach = (traits[2] | 0)
-    let tTime = (traits[3] | 0)
-    let tStatus = (traits[4] | 0)
+    const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+    let tDmg = applyAxisWeight(traits[1], axis.DAMAGE)
+    let tReach = applyAxisWeight(traits[2], axis.REACH)
+    let tTime = applyAxisWeight(traits[3], axis.TIME)
+    let tStatus = applyAxisWeight(traits[4], axis.STATUS)
 
     if (tDmg < 0) tDmg = 0
     if (tReach < 0) tReach = 0
@@ -16907,18 +17885,18 @@ function calculateAgilityStats(
     // ----------------------------------------------------
     // DAMAGE (Trait1)
     // ----------------------------------------------------
-    stats[STAT.DAMAGE_MULT] = 60 + tDmg
+    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.AGILITY.DAMAGE_BASE + tDmg * BALANCE.MOVES.AGILITY.DAMAGE_PER_POINT
 
     // ----------------------------------------------------
-    // REACH (Trait2) â€“ dash reach driver
+    // REACH (Trait2) – dash reach driver
     // ----------------------------------------------------
-    stats[STAT.LUNGE_SPEED] = 230 + tReach * 5
+    stats[STAT.LUNGE_SPEED] = BALANCE.MOVES.AGILITY.LUNGE_BASE + tReach * BALANCE.MOVES.AGILITY.LUNGE_PER_POINT
 
     // ----------------------------------------------------
-    // MOVE DURATION â€“ baseline (then debug slowmo)
+    // MOVE DURATION – baseline (then debug slowmo)
     // ----------------------------------------------------
     let moveDur = baseTimeMs //This is what sets how long the move will be
-    if (moveDur < 50) moveDur = 50
+    if (moveDur < BALANCE.MOVES.AGILITY.MOVE_DURATION_MIN_MS) moveDur = BALANCE.MOVES.AGILITY.MOVE_DURATION_MIN_MS
 
     if (AGI_DEBUG_SLOWMO) {
         moveDur = Math.max(50, Math.idiv(moveDur * AGI_DEBUG_MOVE_DUR_MULT_X1000, 1000)) | 0
@@ -16929,7 +17907,7 @@ function calculateAgilityStats(
     // VULNERABILITY WINDOW (Trait3)
     // ----------------------------------------------------
     if (AGI_TIME_AFFECTS_VULN) {
-        stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS + tTime * 2
+        stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS + tTime * BALANCE.MOVES.AGILITY.LANDING_BUFFER_PER_POINT_MS
     } else {
         stats[STAT.AGILITY_LAND_BUFFER_MS] = AGI_LANDING_BUFFER_MS
     }
@@ -16937,8 +17915,8 @@ function calculateAgilityStats(
     // ----------------------------------------------------
     // STATUS (Trait4)
     // ----------------------------------------------------
-    stats[STAT.SLOW_PCT] = 10 + tStatus * 2
-    stats[STAT.SLOW_DURATION] = 200 + tStatus * 20
+    stats[STAT.SLOW_PCT] = BALANCE.MOVES.AGILITY.STATUS_SLOW_BASE_PCT + tStatus * BALANCE.MOVES.AGILITY.STATUS_SLOW_PER_POINT_PCT
+    stats[STAT.SLOW_DURATION] = BALANCE.MOVES.AGILITY.STATUS_SLOW_DURATION_BASE_MS + tStatus * BALANCE.MOVES.AGILITY.STATUS_SLOW_DURATION_PER_POINT_MS
 
     // (Old agility combo-window stat is intentionally unused now)
     stats[STAT.COMBO_WINDOW] = 0
@@ -16965,7 +17943,7 @@ function executeAgilityMove(
     traits: number[],
     stats: number[]
 ) {
-    // âœ… NEW: When agility combo v2 is active (ARMED/EXECUTING), do NOT spawn the legacy thrust projectile.
+    // ✅ NEW: When agility combo v2 is active (ARMED/EXECUTING), do NOT spawn the legacy thrust projectile.
     // The combo system uses the aim-indicator + execute sequence; spawning thrust here creates the "extra arrow".
     const state = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
     if (state === AGI_STATE.ARMED || state === AGI_STATE.EXECUTING) {
@@ -17057,11 +18035,11 @@ function spawnAgilityThrustProjectile(
     nx /= mag
     ny /= mag
 
-    // Planned reach (centerâ†’center), computed earlier into "AGI_L_EXEC"
+    // Planned reach (center→center), computed earlier into "AGI_L_EXEC"
     let L = sprites.readDataNumber(hero, "AGI_L_EXEC") | 0
     if (L < 1) L = 1
 
-    // Determine when the thrust should become â€œactiveâ€
+    // Determine when the thrust should become “active”
     // (Forward window start, scheduled by doHeroMoveForPlayer for agility)
     let activateAt = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0
     if (activateAt <= 0) activateAt = nowMs
@@ -17152,7 +18130,7 @@ function spawnAgilityThrustProjectile(
 
 
 
-// 8.1 â€” AGILITY helpers (unchanged core)
+// 8.1 — AGILITY helpers (unchanged core)
 function createAgilityArrowSegmentImage(sBack: number, sFront: number, nx: number, ny: number): Image { /* same as before */
     const sx = -ny, sy = nx
     let sb = sBack, sf = sFront
@@ -17311,7 +18289,7 @@ function updateAgilityProjectilesMotionFor(
     let sFront: number
 
     if (reachT <= 0) {
-        // Phase A â€” extend: grow only the front from the front edge
+        // Phase A — extend: grow only the front from the front edge
         arrowLen = arrowLen + vArrow * dtSec
         if (arrowLen >= maxLen) {
             arrowLen = maxLen
@@ -17321,7 +18299,7 @@ function updateAgilityProjectilesMotionFor(
         sBack = sBackAtCast
         sFront = sBackAtCast + arrowLen
     } else {
-        // Phase B â€” reel: keep head fixed at sFrontStop; pull tail forward over a fixed short time
+        // Phase B — reel: keep head fixed at sFrontStop; pull tail forward over a fixed short time
         const REEL_MS = 200
         const u = Math.max(0, Math.min(1, (nowMs - reachT) / REEL_MS))
         arrowLen = maxLen * (1 - u)
@@ -17408,7 +18386,7 @@ function updateAgilityProjectilesMotionFor(
                 `[AGI ${dbgId}] ${dirTag} ` +
                 `L=${L} w=${hero.width} h=${hero.height} attachPx=${r(attachPx)} | ` +
                 `sBack=${r(sBack)} sFront=${r(sFront)} ` +
-                `sHeroFront=${r(sHeroFront)} sNose=${r(sNose)} Î”=${r(deltaFN)} | ` +
+                `sHeroFront=${r(sHeroFront)} sNose=${r(sNose)} Δ=${r(deltaFN)} | ` +
                 `heroFront=(${heroFrontXY[0] | 0},${heroFrontXY[1] | 0}) ` +
                 `nose=(${arrowNoseXY[0] | 0},${arrowNoseXY[1] | 0})`
             )
@@ -17481,10 +18459,10 @@ const INT_SPELL_EXPIRES_AT_MS_KEY = "intSpellExpiresAtMs"
 const DEBUG_INT_DET = true
 const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = true
 
-// If Phaser isnâ€™t uploading per-pixel mutations, forcing setImage() each linger tick can â€œwake it upâ€.
+// If Phaser isn’t uploading per-pixel mutations, forcing setImage() each linger tick can “wake it up”.
 const INT_LINGER_FORCE_SETIMAGE = true
 
-// Stronger hammer: clone the image each tick so itâ€™s a *new* reference (more expensive).
+// Stronger hammer: clone the image each tick so it’s a *new* reference (more expensive).
 const INT_LINGER_FORCE_CLONE = false
 
 
@@ -17503,10 +18481,11 @@ function calculateIntellectStats(baseTimeMs: number, traits: number[]) {
     const stats = makeBaseStats(baseTimeMs)
 
     // Pull raw trait values and floor at 0 (no upper caps)
-    let tEnergy = (traits[1] | 0)   // energy / inertia
-    let tSize = (traits[2] | 0)   // AOE size
-    let tTarget = (traits[3] | 0)   // max targeting duration
-    let tWeak = (traits[4] | 0)   // weakness debuff
+    const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+    let tEnergy = applyAxisWeight(traits[1], axis.DAMAGE)   // energy / inertia
+    let tSize = applyAxisWeight(traits[2], axis.REACH)   // AOE size
+    let tTarget = applyAxisWeight(traits[3], axis.TIME)   // max targeting duration
+    let tWeak = applyAxisWeight(traits[4], axis.STATUS)   // weakness debuff
 
     if (tEnergy < 0) tEnergy = 0
     if (tSize < 0) tSize = 0
@@ -17518,41 +18497,45 @@ function calculateIntellectStats(baseTimeMs: number, traits: number[]) {
     // ----------------------------------------------------
     // How long you can "aim" the spell before it fires.
     // Base 500ms + 50ms per point of tTarget (can get absurdly long).
-    let targetingTime = 500000 + tTarget * 50
+    let targetingTime = BALANCE.MOVES.INTELLECT.TARGETING_BASE_MS + tTarget * BALANCE.MOVES.INTELLECT.TARGETING_PER_POINT_MS
     // Safety: never allow 0 or negative (shouldn't happen with floor, but just in case):
-    if (targetingTime < 50) targetingTime = 50
+    if (targetingTime < BALANCE.MOVES.INTELLECT.TARGETING_MIN_MS) {
+        targetingTime = BALANCE.MOVES.INTELLECT.TARGETING_MIN_MS
+    }
     stats[STAT.TARGETING_TIME] = targetingTime
 
     // ----------------------------------------------------
-    // AOE SIZE (traits[2]) â†’ ring radius
+    // AOE SIZE (traits[2]) → ring radius
     // ----------------------------------------------------
     // Base radius 8px + 1px per point of tSize.
     // No cap here; huge values just mean huge circles.
-    stats[STAT.RING_RADIUS] = 8 + tSize
+    stats[STAT.RING_RADIUS] = BALANCE.MOVES.INTELLECT.RING_RADIUS_BASE_PX + tSize * BALANCE.MOVES.INTELLECT.RING_RADIUS_PER_POINT_PX
 
     // ----------------------------------------------------
-    // ENERGY / INERTIA (traits[1]) â†’ damage, channel power, move duration
+    // ENERGY / INERTIA (traits[1]) → damage, channel power, move duration
     // ----------------------------------------------------
     // Damage multiplier: 60% base + 2% per point of tEnergy
-    stats[STAT.DAMAGE_MULT] = 60 + tEnergy * 2
+    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.INTELLECT.DAMAGE_BASE + tEnergy * BALANCE.MOVES.INTELLECT.DAMAGE_PER_POINT
 
     // Channel power: 100 base + 5 per point of tEnergy
-    stats[STAT.CHANNEL_POWER] = 100 + tEnergy * 5
+    stats[STAT.CHANNEL_POWER] = BALANCE.MOVES.INTELLECT.CHANNEL_POWER_BASE + tEnergy * BALANCE.MOVES.INTELLECT.CHANNEL_POWER_PER_POINT
 
     // Move duration: baseTimeMs + 5ms per point of tEnergy
     // (Big, heavy, high-energy spells take longer.)
-    let moveDur = baseTimeMs + tEnergy * 5
-    if (moveDur < 50) moveDur = 50 // minimal safety floor
+    let moveDur = baseTimeMs + tEnergy * BALANCE.MOVES.INTELLECT.MOVE_DURATION_PER_POINT_MS
+    if (moveDur < BALANCE.MOVES.INTELLECT.MOVE_DURATION_MIN_MS) {
+        moveDur = BALANCE.MOVES.INTELLECT.MOVE_DURATION_MIN_MS
+    }
     stats[STAT.MOVE_DURATION] = moveDur
 
     // ----------------------------------------------------
-    // WEAKNESS (traits[4]) â†’ debuff strength and duration
+    // WEAKNESS (traits[4]) → debuff strength and duration
     // ----------------------------------------------------
     // Weaken percent: 5% base + 1% per point of tWeak
-    stats[STAT.WEAKEN_PCT] = 5 + tWeak
+    stats[STAT.WEAKEN_PCT] = BALANCE.MOVES.INTELLECT.WEAKEN_BASE_PCT + tWeak * BALANCE.MOVES.INTELLECT.WEAKEN_PER_POINT_PCT
 
     // Weaken duration: 500ms base + 20ms per point of tWeak
-    stats[STAT.WEAKEN_DURATION] = 500 + tWeak * 20
+    stats[STAT.WEAKEN_DURATION] = BALANCE.MOVES.INTELLECT.WEAKEN_DURATION_BASE_MS + tWeak * BALANCE.MOVES.INTELLECT.WEAKEN_DURATION_PER_POINT_MS
 
     return stats
 }
@@ -17641,7 +18624,7 @@ function executeIntellectMove(
 ) {
     const nowMs = now | 0
 
-    // Total time the spell exists pre-detonation (THIS is your â€œ16 secondsâ€)
+    // Total time the spell exists pre-detonation (THIS is your “16 seconds”)
     const targetingTime = (stats[STAT.TARGETING_TIME] | 0) || 16000
 
     const produceMs = INT_PRODUCE_DUR_MS | 0
@@ -17694,8 +18677,8 @@ function executeIntellectMove(
     // Lock hero immediately (produce + drive + land are non-movement)
     lockHeroControls(heroIndex)
 
-    // BusyUntil is only for LAND; weâ€™ll set it at detonation time.
-    // (Do NOT set busyUntil to expiresAt â€” you want spell existence to control â€œdriveâ€.)
+    // BusyUntil is only for LAND; we’ll set it at detonation time.
+    // (Do NOT set busyUntil to expiresAt — you want spell existence to control “drive”.)
 }
 
 
@@ -17747,7 +18730,7 @@ function beginIntellectTargeting(heroIndex: number): void {
     // Spawn as HeroWeapon so overlap(HeroWeapon, Enemy) can apply
     const spell = sprites.create(_getIntSpellImg(false, 16), SpriteKind.HeroWeapon)
 
-    // âœ… CRITICAL: Ghost disables overlaps in arcadeCompat
+    // ✅ CRITICAL: Ghost disables overlaps in arcadeCompat
     spell.setFlag(SpriteFlag.Ghost, false)
 
     // TRACE: prove kind + flags at runtime
@@ -18197,7 +19180,7 @@ function detonateIntellectSpellForHero(
         : (HERO_DATA as any).BUSY_UNTIL
 
     // Always ensure we enter LAND window (unless we are already in LAND).
-    // âœ… FIX: ANIMKEYS was undefined; use the real stored key instead.
+    // ✅ FIX: ANIMKEYS was undefined; use the real stored key instead.
     const partNameNow = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
     if (partNameNow != "land") {
         const landDur = INT_LAND_DUR_MS | 0
@@ -18236,7 +19219,7 @@ function detonateIntellectSpellAt(spell: Sprite, termX: number, termY: number) {
 
     const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
 
-    // (Optional debug â€“ keep or delete as you like)
+    // (Optional debug – keep or delete as you like)
     const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
     const dmg = sprites.readDataNumber(spell, PROJ_DATA.DAMAGE) | 0
     console.log(
@@ -18304,7 +19287,7 @@ function processIntellectLingers() {
     const growthFrac = 0.4          // portion of time spent "growing" before spin
 
     const jagSegments = 5           // number of steps along each tendril
-    const jagAmplitude = 0.5        // BIGGER wiggle (â‰ˆ "15" feel instead of "5")
+    const jagAmplitude = 0.5        // BIGGER wiggle (≈ "15" feel instead of "5")
 
     function _killSprite(s: Sprite, reason: string): void {
         if (!s || (s.flags & sprites.Flag.Destroyed)) return
@@ -18331,7 +19314,7 @@ function processIntellectLingers() {
 
         if (!sprites.readDataNumber(proj, INT_DETONATED_KEY)) continue
 
-        // --- destroyAt safety: if something else didnâ€™t kill it, we do. ---
+        // --- destroyAt safety: if something else didn’t kill it, we do. ---
         const destroyAt = sprites.readDataNumber(proj, PROJ_DATA.DESTROY_AT) | 0
         if (destroyAt > 0 && now >= destroyAt) {
             _killSprite(proj, `destroyAt=${destroyAt}`)
@@ -18419,7 +19402,7 @@ function processIntellectLingers() {
                 // Flip offset direction each segment for up/down/up/down look
                 const segDir = (s % 2 == 0) ? 1 : -1
 
-                // Wiggle angle â€“ larger near center, smaller toward tip
+                // Wiggle angle – larger near center, smaller toward tip
                 const wiggle = patternSign * segDir * jagAmplitude * (1 - segFrac)
 
                 const angle = baseAngle
@@ -18458,7 +19441,7 @@ function processIntellectLingers() {
         img.setPixel(cx, cy, colorIndex)
 
         // If you were using the "force upload" trick earlier, keep it:
-        // (safe even if Phaser ignores it; it shouldnâ€™t crash)
+        // (safe even if Phaser ignores it; it shouldn’t crash)
         if ((proj as any).setImage && typeof (proj as any).setImage === "function") {
             ;(proj as any).setImage(img)
         }
@@ -18536,15 +19519,15 @@ let supportPendingBuffKind: number[] = [BUFF_KIND_HASTE, BUFF_KIND_HASTE, BUFF_K
 
 
 // HEAL: one-time detonation that heals heroes only (no enemy effect)
-const SUPPORT_BEAM_SPEED = 80 // pixels per second-ish
+const SUPPORT_BEAM_SPEED = BALANCE.BUFFS.SUPPORT_BEAM_SPEED // pixels per second-ish
 
 // Support puzzle timeline budgets (ms)
 // (Completion is player-driven, but PhaseDurationMs/PhasePartDurationMs must be non-zero.)
-const SUPPORT_PUZZLE_STEP_BUDGET_MS = 400
-const SUPPORT_PUZZLE_MIN_TOTAL_MS = 300
+const SUPPORT_PUZZLE_STEP_BUDGET_MS = BALANCE.BUFFS.SUPPORT_PUZZLE_STEP_BUDGET_MS
+const SUPPORT_PUZZLE_MIN_TOTAL_MS = BALANCE.BUFFS.SUPPORT_PUZZLE_MIN_TOTAL_MS
 
 
-// 2-wavelength "sine" made of single pixels (12Ã—7), three phase frames
+// 2-wavelength "sine" made of single pixels (12×7), three phase frames
 const SUPPORT_BEAM_WAVE0 = img`
     . . . . . . . . . . . .
     . . 7 . . . . . . . 7 .
@@ -18601,7 +19584,7 @@ function spawnSupportBeam(
     sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_BUFF_POWER, buffPower)
     sprites.setDataNumber(beam, PROJ_DATA.SUPPORT_BUFF_DURATION, buffDurationMs)
 
-    // Track travel distance along the line from caster â†’ target
+    // Track travel distance along the line from caster → target
     sprites.setDataNumber(beam, "SUP_TRAVEL", 0)
 
     heroProjectiles.push(beam)
@@ -18618,7 +19601,7 @@ function updateSupportBeamFor(proj: Sprite, casterHeroIndex: number, now: number
         return false
     }
 
-    // World-space line from caster â†’ target
+    // World-space line from caster → target
     const x0 = caster.x
     const y0 = caster.y
     const x1 = target.x
@@ -18659,7 +19642,7 @@ function updateSupportBeamFor(proj: Sprite, casterHeroIndex: number, now: number
     }
 
     // ------------------------------------------
-    // Rectangle that fully spans casterâ†”target
+    // Rectangle that fully spans caster↔target
     // ------------------------------------------
     const margin = 6
     const minX = Math.min(x0, x1) - margin
@@ -18673,7 +19656,7 @@ function updateSupportBeamFor(proj: Sprite, casterHeroIndex: number, now: number
     const beamImg = image.create(imgWidth, imgHeight)
     beamImg.fill(0)
 
-    // Position the sprite so its image covers [minX,maxX]Ã—[minY,maxY]
+    // Position the sprite so its image covers [minX,maxX]×[minY,maxY]
     proj.x = minX + imgWidth / 2
     proj.y = minY + imgHeight / 2
 
@@ -18821,7 +19804,7 @@ function updateHeroBuffs(now: number) {
             }
         }
 
-        // Haste: totalHaste=50 â†’ 1.5x, 0 â†’ 1x, etc.
+        // Haste: totalHaste=50 → 1.5x, 0 → 1x, etc.
         let hasteMult = 1 + totalHaste / 100
         let dmgMult = 1 + totalDmgAmp / 100
 
@@ -18873,7 +19856,7 @@ function detonateHealSpellAt(spell: Sprite, termX: number, termY: number) {
 
     const heroIndex = sprites.readDataNumber(spell, PROJ_DATA.HERO_INDEX) | 0
 
-    // ðŸ‘‰ As soon as detonation begins, give control back to the hero
+    // 👉 As soon as detonation begins, give control back to the hero
     if (heroIndex >= 0 && heroIndex < heroes.length) {
         finishIntellectSpellForHero(heroIndex)
     }
@@ -18909,15 +19892,33 @@ function detonateHealSpellAt(spell: Sprite, termX: number, termY: number) {
 
 
 function applyHealToHeroIndex(heroIndex: number, amount: number) {
-    const hero = heroes[heroIndex]; if (!hero) return
-    let hp = sprites.readDataNumber(hero, HERO_DATA.HP)
-    const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP)
-    hp = Math.min(maxHp, hp + amount)
-    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
-    updateHeroHPBar(heroIndex)
+    const hi = heroIndex | 0
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
 
-    if (amount > 0) {
-        showDamageNumber(hero.x, hero.y - 6, amount, "heal")
+    const hpBefore = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+    const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+
+    const ctx: RelicHeroHealContext = {
+        now: game.runtime() | 0,
+        hi,
+        hero,
+        hpBefore,
+        maxHp,
+        amount: amount | 0,
+    }
+
+    try { relic_modifyHeroHeal(ctx) } catch { }
+
+    const amt = ctx.amount | 0
+    const hpAfter = Math.min(maxHp, Math.max(0, (hpBefore + amt) | 0)) | 0
+
+    sprites.setDataNumber(hero, HERO_DATA.HP, hpAfter)
+    updateHeroHPBar(hi)
+
+    const applied = (hpAfter - hpBefore) | 0
+    if (applied > 0) {
+        showDamageNumber(hero.x, hero.y - 6, applied, "heal")
     }
 }
 
@@ -18938,7 +19939,7 @@ function randomSupportDir(): number {
 function supportIconImageFor(dir: number, done: boolean): Image {
 
     // ==========================
-    // =======  UP (8Ã—8)  =======
+    // =======  UP (8×8)  =======
     // ==========================
     if (dir == SUP_DIR_UP) {
         if (done) {
@@ -18969,7 +19970,7 @@ function supportIconImageFor(dir: number, done: boolean): Image {
     }
 
     // ============================
-    // =======  DOWN (8Ã—8)  =======
+    // =======  DOWN (8×8)  =======
     // ============================
     else if (dir == SUP_DIR_DOWN) {
         if (done) {
@@ -19000,7 +20001,7 @@ function supportIconImageFor(dir: number, done: boolean): Image {
     }
 
     // ============================
-    // =======  LEFT (8Ã—8)  =======
+    // =======  LEFT (8×8)  =======
     // ============================
     else if (dir == SUP_DIR_LEFT) {
         if (done) {
@@ -19031,7 +20032,7 @@ function supportIconImageFor(dir: number, done: boolean): Image {
     }
 
     // =============================
-    // =======  RIGHT (8Ã—8)  =======
+    // =======  RIGHT (8×8)  =======
     // =============================
     else {
         if (done) {
@@ -19075,10 +20076,11 @@ function calculateHealStats(baseTimeMs: number, traits: number[]) {
     const stats = makeBaseStats(baseTimeMs)
 
     // Raw trait values, floor at 0, no caps
-    let tHeal = (traits[1] | 0)  // heal focus
-    let tHaste = (traits[2] | 0)  // haste focus
-    let tAmp = (traits[3] | 0)  // damage amp focus
-    let tDR = (traits[4] | 0)  // damage reduction focus
+    const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+    let tHeal = applyAxisWeight(traits[1], axis.DAMAGE)  // heal focus
+    let tHaste = applyAxisWeight(traits[2], axis.REACH)  // haste focus
+    let tAmp = applyAxisWeight(traits[3], axis.TIME)  // damage amp focus
+    let tDR = applyAxisWeight(traits[4], axis.STATUS)  // damage reduction focus
 
     if (tHeal < 0) tHeal = 0
     if (tHaste < 0) tHaste = 0
@@ -19099,15 +20101,20 @@ function calculateHealStats(baseTimeMs: number, traits: number[]) {
     // If/when Heal family ever deals damage or buffs ally damage
     // via stats, tAmp is the obvious lever.
     // 100% base + 2% per point of tAmp (unbounded).
-    stats[STAT.DAMAGE_MULT] = 100 + tAmp * 2
+    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.WISDOM.DAMAGE_MULT_BASE + tAmp * BALANCE.MOVES.WISDOM.DAMAGE_MULT_PER_POINT
 
     // ----------------------------------------------------
     // Cast / move duration
     // ----------------------------------------------------
     // More healing / amp investment = slightly longer cast.
     // Haste investment counteracts that a bit.
-    let moveDur = baseTimeMs + tHeal * 3 + tAmp * 2 - tHaste * 2
-    if (moveDur < 50) moveDur = 50 // safety floor
+    let moveDur = baseTimeMs
+        + tHeal * BALANCE.MOVES.WISDOM.MOVE_DURATION_HEAL_PER_POINT_MS
+        + tAmp * BALANCE.MOVES.WISDOM.MOVE_DURATION_AMP_PER_POINT_MS
+        - tHaste * BALANCE.MOVES.WISDOM.MOVE_DURATION_HASTE_PER_POINT_MS
+    if (moveDur < BALANCE.MOVES.WISDOM.MOVE_DURATION_MIN_MS) {
+        moveDur = BALANCE.MOVES.WISDOM.MOVE_DURATION_MIN_MS
+    }
     stats[STAT.MOVE_DURATION] = moveDur
 
     // (No dedicated STAT slots yet for DR / haste; those are
@@ -19136,10 +20143,11 @@ function executeHealMove(
     // traits[2] = haste amount
     // traits[3] = damage amplification
     // traits[4] = damage reduction amount
-    let tHeal = (traits[1] | 0)
-    let tHaste = (traits[2] | 0)
-    let tAmp = (traits[3] | 0)
-    let tDR = (traits[4] | 0)
+    const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+    let tHeal = applyAxisWeight(traits[1], axis.DAMAGE)
+    let tHaste = applyAxisWeight(traits[2], axis.REACH)
+    let tAmp = applyAxisWeight(traits[3], axis.TIME)
+    let tDR = applyAxisWeight(traits[4], axis.STATUS)
 
     if (tHeal < 0) tHeal = 0
     if (tHaste < 0) tHaste = 0
@@ -19156,18 +20164,21 @@ function executeHealMove(
     // Puzzle difficulty
     // -----------------------------
     // Keep it simple and stable for now: fixed length 4
-    let seqLen = 4
+    let seqLen = BALANCE.BUFFS.SUPPORT_PUZZLE_SEQ_LEN
 
     // -----------------------------
     // Buff duration & power from stats
     // -----------------------------
     // Duration: 2s base + 25ms per point of CHANNEL_POWER
-    const buffDurationMs = 2000 + totalSupport * 25
+    const buffDurationMs = BALANCE.BUFFS.SUPPORT_BUFF_DURATION_BASE_MS
+        + totalSupport * BALANCE.BUFFS.SUPPORT_BUFF_DURATION_PER_POWER_MS
 
     // Buff power: CHANNEL_POWER scaled by DAMAGE_MULT
     // (so amp-focused traits matter more)
     let buffPower = Math.idiv(totalSupport * dmgMult, 100)
-    if (buffPower < 1) buffPower = 1
+    if (buffPower < BALANCE.BUFFS.SUPPORT_BUFF_POWER_MIN) {
+        buffPower = BALANCE.BUFFS.SUPPORT_BUFF_POWER_MIN
+    }
 
     // -----------------------------
     // Choose buff kind based on haste vs amp traits
@@ -19265,7 +20276,7 @@ function updateSupportPuzzles(now: number) {
         // Universal timeline: progress update ONLY.
         // Under unified contract, PhaseName/Start/Dur + PhasePartName/Start/Dur
         // were stamped once by beginSupportPuzzleForHero().
-        // This loop must not â€œhealâ€ identity by rewriting those keys.
+        // This loop must not “heal” identity by rewriting those keys.
         // ------------------------------------------------------------
         let pInt = Math.idiv(PHASE_PROGRESS_MAX * (progress | 0), (seq.length | 0))
         if (pInt < 0) pInt = 0
@@ -19350,7 +20361,7 @@ function clearSupportPuzzleForHero(heroIndex: number) {
     // Clear any pending buff bookkeeping (not required for phase, but prevents stale state)
     supportPendingBuffPower[heroIndex] = 0
     supportPendingBuffDuration[heroIndex] = 0
-    // keep supportPendingBuffKind as-is (itâ€™s a default selection), or set if you prefer:
+    // keep supportPendingBuffKind as-is (it’s a default selection), or set if you prefer:
     // supportPendingBuffKind[heroIndex] = BUFF_KIND_HASTE
 
     // HARD REQUIREMENT (unified PhaseName contract):
@@ -19405,7 +20416,7 @@ function completeSupportPuzzleForHero(heroIndex: number) {
     const buffPower = supportPendingBuffPower[heroIndex]
     const buffDuration = supportPendingBuffDuration[heroIndex]
 
-    // Targeting: 0 = ALL ALLIES, 1â€“4 = specific hero (player number)
+    // Targeting: 0 = ALL ALLIES, 1–4 = specific hero (player number)
     // For now, use "0 = all allies" hardcoded; we can later add per-move targeting.
     const casterPlayerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
 
@@ -19445,9 +20456,9 @@ function completeSupportPuzzleForHero(heroIndex: number) {
 // ====================================================
 // Spawn logic, HP, homing AI, slow/weak/knockback effects.
 
-// Wave spawns â€” scripted waves with short breaks between them.
+// Wave spawns — scripted waves with short breaks between them.
 // The interval below is the *tick* rate; WAVE_DEFS controls spawn density + types.
-const ENEMY_SPAWN_INTERVAL_MS = 1200 // Wave sapwn knob
+const ENEMY_SPAWN_INTERVAL_MS = BALANCE.WAVES.SPAWN_INTERVAL_MS // Wave sapwn knob
 
 const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
 
@@ -19506,7 +20517,7 @@ const ENEMY_KIND = {
 
     const ENEMY_ARCHETYPE_KEYS = ["FLYING", "STATIONARY", "UNDERGROUND", "SLOWSTRONG", "CRITTER", "HUMANOID", "SLIMES", "SPIDERS", "IMPS", "FASTWEAK", "SPECIAL", "WEAK", "STRONG", "AVERAGE", "BOSS", "FAST", "SLOW", "MEDIUM", "TANK", "RANGED"]
 
-    // Map REAL monster IDs (from your LPC filenames) â†’ label tags.
+    // Map REAL monster IDs (from your LPC filenames) → label tags.
     // Each entry is: [category, strength-band, speed-band, optional extras...]
     const MONSTER_ARCHETYPE: { [id: string]: string[] } = {
         "bat": ["FLYING", "WEAK", "FAST"],
@@ -19554,27 +20565,27 @@ const ENEMY_KIND = {
 
 
 
-            // Map monster labels â†’ a stat archetype key in ENEMY_KIND
+            // Map monster labels → a stat archetype key in ENEMY_KIND
             function pickEnemyKindForMonster(monsterId: string): string {
                 const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
 
-                // Explicit BOSS â†’ ELITE
+                // Explicit BOSS → ELITE
                 if (tags.indexOf("BOSS") >= 0) return "ELITE"
 
-                // Big chunky / tanky things â†’ BRUTE
+                // Big chunky / tanky things → BRUTE
                 if (tags.indexOf("SLOWSTRONG") >= 0 ||
                     tags.indexOf("TANK") >= 0 ||
                     tags.indexOf("STRONG") >= 0) {
                     return "BRUTE"
                 }
 
-                // Very fast / weak things â†’ RUNNER
+                // Very fast / weak things → RUNNER
                 if (tags.indexOf("FASTWEAK") >= 0 ||
                     (tags.indexOf("FAST") >= 0 && tags.indexOf("WEAK") >= 0)) {
                     return "RUNNER"
                 }
 
-                // Generic weak â†’ GRUNT
+                // Generic weak → GRUNT
                 if (tags.indexOf("WEAK") >= 0) return "GRUNT"
 
                 // Fallback by speed
@@ -19973,49 +20984,115 @@ function setHeroCoins(hi: number, n: number): void {
 }
 
 function addHeroCoins(hi: number, delta: number, popX: number, popY: number): number {
-    const d = delta | 0
+    const baseDelta = delta | 0
+    const hero = heroes[hi]
+
+    let d = baseDelta | 0
+
+    // RELIC HOOK: modify coin gain/loss
+    if (hero) {
+        try {
+            const ctx: RelicCoinGainContext = {
+                now: game.runtime() | 0,
+                hi: hi | 0,
+                hero,
+                delta: d | 0,
+                popX: popX | 0,
+                popY: popY | 0,
+            }
+            relic_modifyCoinGain(ctx)
+            d = (ctx.delta | 0)
+        } catch { }
+    }
+
     const cur = getHeroCoins(hi) | 0
-    const next = Math.max(0, (cur + d) | 0) | 0
+    const next = Math.max(0, (cur + (d | 0)) | 0) | 0
     setHeroCoins(hi, next)
 
     // Satisfaction: popup + Phaser coin burst ONLY for positive gains
-    if (d > 0) {
-        showCoinPop(popX, popY, d)
+    if ((d | 0) > 0) {
+        showCoinPop(popX, popY, d | 0)
 
         // Phaser-only VFX: send coins to the correct player's DOM/HUD target (pid)
         try {
             if (isPhaserRuntime()) {
                 const gAny: any = globalThis as any
-                const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+                const hero2 = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
 
                 let pid = 0
-                try { pid = hero ? (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0) : 0 } catch { pid = 0 }
+                try { pid = hero2 ? (sprites.readDataNumber(hero2, HERO_DATA.OWNER) | 0) : 0 } catch { pid = 0 }
                 if (pid < 1 || pid > 4) pid = 0
 
                 if (!Array.isArray(gAny.__coinBurstQueue)) gAny.__coinBurstQueue = []
-                gAny.__coinBurstQueue.push({ x: popX, y: popY, count: d, pid })
-                console.log("[COINFX enqueue]", { d, popX, popY, pid, qLen: gAny.__coinBurstQueue.length })
+                gAny.__coinBurstQueue.push({ x: popX, y: popY, count: d | 0, pid })
+                console.log("[COINFX enqueue]", { d: d | 0, popX: popX | 0, popY: popY | 0, pid, qLen: gAny.__coinBurstQueue.length })
             }
         } catch {
             // ignore
         }
     }
 
-    console.log("[COINS] add", { hi, delta: d, total: next })
+    if ((d | 0) !== (baseDelta | 0)) {
+        console.log("[COINS] add (modified)", { hi, baseDelta: baseDelta | 0, delta: d | 0, total: next })
+    } else {
+        console.log("[COINS] add", { hi, delta: d | 0, total: next })
+    }
+
     return next
 }
 
 function trySpendHeroCoins(hi: number, cost: number): boolean {
-    const c = Math.max(0, cost | 0) | 0
+    const hero = heroes[hi]
+    const baseCost = Math.max(0, cost | 0) | 0
+
+    let c = baseCost | 0
+
+    // RELIC HOOK: modify spend cost (discounts, surcharges)
+    if (hero) {
+        try {
+            const ctx: RelicCoinSpendContext = {
+                now: game.runtime() | 0,
+                hi: hi | 0,
+                hero,
+                cost: c | 0,
+            }
+            relic_modifyCoinSpend(ctx)
+            c = Math.max(0, ctx.cost | 0) | 0
+        } catch { }
+    }
+
     const cur = getHeroCoins(hi) | 0
     const ok = cur >= c
     if (!ok) {
-        console.log("[COINS] spend denied", { hi, cost: c, total: cur })
+        console.log("[COINS] spend denied", { hi, cost: c | 0, total: cur | 0 })
         return false
     }
+
     const next = (cur - c) | 0
     setHeroCoins(hi, next)
-    console.log("[COINS] spend ok", { hi, cost: c, total: next })
+
+    // RELIC HOOK: post-spend event (only on success)
+    if (hero) {
+        try {
+            const spentCtx: RelicCoinsSpentContext = {
+                now: game.runtime() | 0,
+                hi: hi | 0,
+                hero,
+                baseCost: baseCost | 0,
+                finalCost: c | 0,
+                coinsBefore: cur | 0,
+                coinsAfter: next | 0,
+            }
+            relic_onCoinsSpent(spentCtx)
+        } catch { }
+    }
+
+    if ((c | 0) !== (baseCost | 0)) {
+        console.log("[COINS] spend ok (modified)", { hi, baseCost: baseCost | 0, cost: c | 0, total: next | 0 })
+    } else {
+        console.log("[COINS] spend ok", { hi, cost: c | 0, total: next | 0 })
+    }
+
     return true
 }
 
@@ -20063,11 +21140,19 @@ function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, po
     // Optional: you can add a "LEVEL UP!" popup later tied to `leveled > 0`
 }
 
-function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: number, coinPopY: number): void {
+function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: number, coinPopY: number, xpScale?: number): void {
     if (!enemy) return
 
     let xpVal = sprites.readDataNumber(enemy, ENEMY_XP_KEY) | 0
     if (xpVal <= 0) xpVal = XP_DEFAULT_PER_KILL
+
+    // Apply xpScale (from relic kill hook)
+    let s = (xpScale == null) ? 1 : Number(xpScale)
+    if (!(s >= 0)) s = 1
+    if (s !== 1) {
+        xpVal = Math.floor(xpVal * s) | 0
+        if (xpVal < 0) xpVal = 0
+    }
 
     const isBoss = (sprites.readDataNumber(enemy, ENEMY_IS_BOSS_KEY) | 0) != 0
 
@@ -20080,25 +21165,30 @@ function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: 
         killerHi = findNearestLivingPlayerHeroIndex(coinPopX, coinPopY)
     }
 
-    // Normal: last-hit gets it (popup offset from coins)
-    if (!isBoss) {
-        if (killerHi >= 0) {
-            // Coins use coinPopY, so XP goes a bit higher
-            grantXpToHeroIndex(killerHi, xpVal, coinPopX, coinPopY - 12)
+    // Determine recipients: all living heroes in pad zone for boss, else killer only
+    const targets: number[] = []
+    if (isBoss) {
+        for (let pid = 1; pid <= 4; pid++) {
+            const hi = playerToHeroIndex[pid] | 0
+            if (hi < 0 || hi >= heroes.length) continue
+            const h = heroes[hi]
+            if (!h) continue
+            if (h.flags & sprites.Flag.Destroyed) continue
+            if ((sprites.readDataNumber(h, HERO_DATA.HP) | 0) <= 0) continue
+            targets.push(hi)
         }
-        return
+    } else {
+        if (killerHi >= 0 && killerHi < heroes.length && heroes[killerHi] && !(heroes[killerHi].flags & sprites.Flag.Destroyed)) {
+            targets.push(killerHi)
+        }
     }
 
-    // Boss: split evenly among living player heroes
-    const targets = listLivingPlayerHeroIndices()
-    if (targets.length <= 0) {
-        if (killerHi >= 0) grantXpToHeroIndex(killerHi, xpVal, coinPopX, coinPopY - 12)
-        return
-    }
+    if (targets.length === 0) return
 
-    const n = targets.length | 0
-    const base = Math.idiv(xpVal, n) | 0
-    let rem = (xpVal - (base * n)) | 0
+    // Split evenly across targets
+    const base = Math.idiv(xpVal, targets.length) | 0
+    let rem = (xpVal - base * targets.length) | 0
+    if (base <= 0 && rem <= 0) return
 
     // Give remainder to killer first (if participating), then spill to others
     const deltas: number[] = []
@@ -20118,7 +21208,7 @@ function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: 
         rem--
     }
 
-    // Popups at each hero so itâ€™s readable (boss deaths are busy)
+    // Popups at each hero so it’s readable (boss deaths are busy)
     for (let i = 0; i < targets.length; i++) {
         const hi = targets[i]
         const h = heroes[hi]
@@ -20173,7 +21263,7 @@ function applyPctKnockbackToEnemy(
     //   ELITE: 5, BRUTE: 15, GRUNT: 20, RUNNER: 42
     const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
 
-    // Heavier (slow) â†’ less knockback; lighter (fast) â†’ more.
+    // Heavier (slow) → less knockback; lighter (fast) → more.
     // These are just percentages on top of knockbackPct.
     let weightPct = 100
     if (baseSpeed <= 15) {
@@ -20192,7 +21282,7 @@ function applyPctKnockbackToEnemy(
     if (effectivePct > 100) effectivePct = 100
     if (effectivePct < 0) effectivePct = 0
 
-    // --- 2) Map effectivePct â†’ distance ---
+    // --- 2) Map effectivePct → distance ---
     const minDistPx = 16   // tiny shove
     const maxDistPx = 48   // big smash
     const distPx = minDistPx + Math.idiv((maxDistPx - minDistPx) * effectivePct, 100)
@@ -20200,7 +21290,7 @@ function applyPctKnockbackToEnemy(
     // --- 3) Fixed, short knockback duration ---
     const durationMs = 160 // ~0.16s
 
-    // Direction: from source â†’ enemy (push enemy away)
+    // Direction: from source → enemy (push enemy away)
     const dx = enemy.x - fromX
     const dy = enemy.y - fromY
     let mag = Math.sqrt(dx * dx + dy * dy)
@@ -20363,7 +21453,7 @@ function setupEnemySpawners() {
 
 let currentWaveIndex = 0
 
-// "Real" waves â€“ you can expand / tweak this list.
+// "Real" waves – you can expand / tweak this list.
 // Each wave is just an id + a list of monsterIds to spawn.
 const REAL_WAVES: { id: string, monsters: string[] }[] = [
     {
@@ -20447,7 +21537,7 @@ function startEnemyWaves() {
     currentWaveIndex = 0
     currentWaveIsBreak = true
     debugMonsterIndex = 0
-    wavePhaseUntilMs = (game.runtime() | 0) + 150 // faster start for testing
+    wavePhaseUntilMs = (game.runtime() | 0) + BALANCE.WAVES.RESET_START_DELAY_MS // faster start for testing
 
     // Build procedural plan for THIS FLOOR (NO WAVE_DEFS)
     _dunWavePlan = _buildWavePlanForFloor((_dunFloorIndex | 0), (ENEMY_SPAWN_INTERVAL_MS | 0))
@@ -20483,7 +21573,7 @@ const _ENEMY_DIR_C: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
 
 
 // --------------------------------------------------------------
-// Shared enemy navigation (flow-field) â€” one BFS per rebuild, all enemies reuse
+// Shared enemy navigation (flow-field) — one BFS per rebuild, all enemies reuse
 // --------------------------------------------------------------
 
 const ENEMY_NAV_INF = 0x3fff
@@ -21304,12 +22394,12 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
 
         const fwd = Math.idiv(speed * 35, 100) // 35% forward helps progress while sliding
         if (Math.abs(dx) > Math.abs(dy)) {
-            // Intended horizontal â†’ strafe vertical
+            // Intended horizontal → strafe vertical
             enemy.vx = dx >= 0 ? fwd : -fwd
             const s = (dy !== 0) ? (dy >= 0 ? 1 : -1) : mode
             enemy.vy = s * speed
         } else {
-            // Intended vertical â†’ strafe horizontal
+            // Intended vertical → strafe horizontal
             enemy.vy = dy >= 0 ? fwd : -fwd
             const s = (dx !== 0) ? (dx >= 0 ? 1 : -1) : mode
             enemy.vx = s * speed
@@ -21564,7 +22654,7 @@ interface EnemyHitPacket {
     suppressDamageNumber?: boolean;
 }
 
-// Effects queue for â€œweirdâ€ relic actions (teleport, mark, etc.)
+// Effects queue for “weird” relic actions (teleport, mark, etc.)
 type EnemyHitEffect =
     | { kind: "teleportEnemyTo"; x: number; y: number }
     | { kind: "setEnemyDataNumber"; key: any; value: number }
@@ -21596,15 +22686,15 @@ interface EnemyHitContext {
 
     suppressDamageNumber: boolean;
 
-    // â€œweirdâ€ actions
+    // “weird” actions
     effects: EnemyHitEffect[];
 }
 
 // Supporting relic hook (NO-OP for now).
 // Later: read hero relic inventory and mutate ctx.damage/status/effects.
 function applyRelicOnHitToEnemy(ctx: EnemyHitContext): void {
-    // Intentionally empty for now.
-    // You will implement relic logic here (or dispatch to specialized handlers).
+    // RELIC DISPATCH: route to per-hero owned relic handlers via RELICS section
+    relic_onHitEnemy(ctx)
 }
 
 function _enemyHitRunEffects(ctx: EnemyHitContext): void {
@@ -21628,6 +22718,8 @@ function _enemyHitRunEffects(ctx: EnemyHitContext): void {
         }
     }
 }
+
+const ENEMY_DEATH_MS_DEFAULT = 2
 
 function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi: number, now: number): void {
     if (!enemy) return;
@@ -21659,21 +22751,69 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
         killerHi = findNearestLivingPlayerHeroIndex(coinPopX, coinPopY) | 0
     }
 
+    let coinsFinal = coins | 0
+    let xpScaleFinal = 1
+
     if (killerHi >= 0) {
-        addHeroCoins(killerHi, coins, coinPopX, coinPopY);
+        // RELIC HOOK: enemy killed (pre rewards)
+        try {
+            const killCtx: RelicEnemyKilledContext = {
+                now: now | 0,
+                eIndex: eIndex | 0,
+                enemy,
+                srcHi: (srcHi == null ? -1 : (srcHi | 0)),
+                killerHi: killerHi | 0,
+                coins: coinsFinal | 0,
+                xpScale: 1,
+                coinPopX: coinPopX | 0,
+                coinPopY: coinPopY | 0,
+            };
+
+            relic_onEnemyKilledPreRewards(killCtx);
+
+            coinsFinal = (killCtx.coins | 0);
+            if (coinsFinal < 0) coinsFinal = 0;
+
+            const xs = (killCtx.xpScale == null) ? 1 : Number(killCtx.xpScale)
+            xpScaleFinal = (xs >= 0) ? xs : 1
+
+            if ((coinsFinal | 0) !== (coins | 0)) {
+                console.log("[RELICHOOK] kill coins modified", { eIndex, killerHi, base: coins | 0, final: coinsFinal | 0 })
+            }
+        } catch { }
+
+        addHeroCoins(killerHi, coinsFinal, coinPopX, coinPopY);
     } else {
-        console.log("[COINS] kill reward dropped (no hero)", { eIndex, coins, srcHi, last: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
+        console.log("[COINS] kill reward dropped (no hero)", { eIndex, srcHi: (srcHi == null ? -1 : (srcHi | 0)), lastHit: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
     }
 
     // ----------------------------
-    // XP reward on kill (unchanged behavior; pass resolved killer for consistency)
+    // XP reward on kill (now supports xpScaleFinal)
     // ----------------------------
-    awardXpForEnemyDeath(enemy, killerHi, coinPopX, coinPopY);
+    awardXpForEnemyDeath(enemy, killerHi, coinPopX, coinPopY, xpScaleFinal);
 
-    const deathDurationMs = 900;  // tweak this and LPC death anim will auto-match
+    // RELIC HOOK: enemy killed (post rewards)
+    if (killerHi >= 0) {
+        try {
+            const postCtx: RelicEnemyKilledContext = {
+                now: now | 0,
+                eIndex: eIndex | 0,
+                enemy,
+                srcHi: (srcHi == null ? -1 : (srcHi | 0)),
+                killerHi: killerHi | 0,
+                coins: coinsFinal | 0,
+                xpScale: xpScaleFinal,
+                coinPopX: coinPopX | 0,
+                coinPopY: coinPopY | 0,
+            }
+            relic_onEnemyKilledPostRewards(postCtx)
+        } catch { }
+    }
 
-    // Tell Phaser: switch to death anim
-    sprites.setDataString(enemy, "phase", "death");
+    // ----------------------------
+    // Schedule death animation / cleanup
+    // ----------------------------
+    const deathDurationMs = (sprites.readDataNumber(enemy, "deathAnimMs") | 0) || ENEMY_DEATH_MS_DEFAULT
 
     // Tell Phaser how long the death animation should last
     sprites.setDataNumber(enemy, "deathAnimMs", deathDurationMs);
@@ -21733,7 +22873,7 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
         effects: []
     };
 
-    // Record last hitter even for â€œ0 damage but status/knockbackâ€ hits
+    // Record last hitter even for “0 damage but status/knockback” hits
     if (srcHi >= 0) {
         sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, srcHi);
     }
@@ -21749,10 +22889,10 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
     if (!hasAnyWork) return;
 
-    // 1) Relics (and other â€œon-hitâ€ rule mutations) run FIRST
+    // 1) Relics (and other “on-hit” rule mutations) run FIRST
     applyRelicOnHitToEnemy(ctx);
 
-    // 2) Execute any queued â€œweird effectsâ€ (teleport, mark, etc.)
+    // 2) Execute any queued “weird effects” (teleport, mark, etc.)
     _enemyHitRunEffects(ctx);
 
     // 3) Apply status effects (even if damage is 0)
@@ -21783,7 +22923,7 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
         }
     }
 
-    // 5) Apply knockback LAST (matches prior call-site ordering; may override death â€œfreezeâ€)
+    // 5) Apply knockback LAST (matches prior call-site ordering; may override death “freeze”)
     if (ctx.knockbackPct > 0) {
         // Prefer hero position if we have it; otherwise knockback from enemy center (no-op direction)
         const hx = (srcHero) ? srcHero.x : enemy.x;
@@ -21818,14 +22958,14 @@ function flashEnemyOnDamage(enemy: Sprite) {
 // ================================================================
 // SECTION F - FINAL SECTION - onUpdates, GAME LOOP, INPUT, ENEMY AI/WAVES & STARTUP
 // ================================================================
-// Input â†’ move execution â†’ projectile updates â†’ INT control â†’ cleanup â†’ enemy AI â†’ UI.
+// Input → move execution → projectile updates → INT control → cleanup → enemy AI → UI.
 
 
 function updateHeroTimelineProgressAll(nowMs: number): void {
     const now = nowMs | 0
 
     // Phases that should "cycle" visually (loop progress).
-    // Everything else clamps (0â†’max and stays).
+    // Everything else clamps (0→max and stays).
     const ph = (s: Sprite) => (sprites.readDataString(s, HERO_DATA.PhaseName) || "")
     const isAmbientPhase = (phaseName: string): boolean => {
         switch (phaseName) {
@@ -21949,7 +23089,7 @@ function updateHeroProjectiles() {
     // 2) INT spells
     updateIntellectSpellsControl()
 
-    // NEW: grid-based wall hit â†’ detonate request (Phaser has no wall sprites)
+    // NEW: grid-based wall hit → detonate request (Phaser has no wall sprites)
     maybeDetonateIntellectSpellsOnWall(now | 0)
 
     processIntellectLingers()
@@ -22317,7 +23457,17 @@ function updateHeroDeaths(now: number) {
 
         const deathUntil = sprites.readDataNumber(hero, HERO_DATA.DEATH_UNTIL) | 0;
         if (deathUntil > 0 && now >= deathUntil) {
-            // Final destroy â€“ same effect as before, just delayed so LPC death can play.
+            // RELIC HOOK: hero death finalization (after death anim window, before destroy)
+            try {
+                const ctx: RelicHeroDeathFinalContext = {
+                    now: now | 0,
+                    hi: i | 0,
+                    hero,
+                }
+                relic_onHeroDeathFinal(ctx)
+            } catch { }
+
+            // Final destroy – same effect as before, just delayed so LPC death can play.
             hero.destroy(effects.disintegrate, 200);
 
             // Optional: clear the timer so we don't re-evaluate
@@ -22507,7 +23657,7 @@ function updateHeroControlLocks(now: number) {
         // LOCK OWNERSHIP CASES (do NOT auto-unlock here)
         // ------------------------------------------------------------
 
-        // Intellect â€œcontrolling spellâ€ owns the lock window (often not busyUntil-driven).
+        // Intellect “controlling spell” owns the lock window (often not busyUntil-driven).
         // Keep hero frozen and do NOT auto-unlock based on busyUntil.
         if (isCtrlSpell) {
             if (!lockedNow) lockHeroControls(i)
@@ -22788,7 +23938,7 @@ game.onUpdate(function () {
     // ------------------------------------------------------------
         if(SHOP_MODE_ACTIVE_MASTER) {
     shopModeUpdate(now)
-    shopTick(now)   // or shopTick(now) if thatâ€™s your canonical name
+    shopTick(now)   // or shopTick(now) if that’s your canonical name
     }
 
     // NEW: dungeon tick must run even if shop is active
@@ -22799,8 +23949,8 @@ game.onUpdate(function () {
     // We still allow movement/locks/phase/collisions so the world feels alive.
     // ------------------------------------------------------------
 if (SHOP_MODE_ACTIVE) {
-       // The per-frame shop â€œownerâ€ loop (NOT just inputs)
-        //shopTick(now)   // or shopTick(now) if thatâ€™s your canonical name
+       // The per-frame shop “owner” loop (NOT just inputs)
+        //shopTick(now)   // or shopTick(now) if that’s your canonical name
 
 
         // Let any prior busy windows expire and unlock heroes naturally
@@ -22812,6 +23962,7 @@ if (SHOP_MODE_ACTIVE) {
         resolveTilemapCollisions()
         updateHeroUnderfootTilesAndDecals(now)
         decorSolids_blockingHook(now)
+        updateGenericFocus(now)
 
         logHeroRuntimeContractAllHeroes(now, "onUpdate:shopMode")
 
@@ -22859,6 +24010,7 @@ if (SHOP_MODE_ACTIVE) {
     resolveTilemapCollisions()
     updateHeroUnderfootTilesAndDecals(now)
     decorSolids_blockingHook(now)
+    updateGenericFocus(now)
 
     // After all gameplay writers + universal progress update, before render-side consumption:
     logHeroRuntimeContractAllHeroes(now, "onUpdate:postWriters")
@@ -22882,7 +24034,7 @@ if (SHOP_MODE_ACTIVE) {
 
 game.onUpdateInterval(500, function () {
     if (!HeroEngine._isStarted()) return
-    regenHeroManaAll(2)
+    regenHeroManaAll(BALANCE.HERO.MANA_REGEN_PCT_PER_TICK)
 })
 
 
@@ -22890,7 +24042,7 @@ game.onUpdateInterval(500, function () {
 
 
 
-// Wave spawns â€” scripted waves with short breaks between them.
+// Wave spawns — scripted waves with short breaks between them.
 // The interval below is the *tick* rate for the spawner; the wave table
 // controls when we are allowed to spawn and which kinds appear.
 
@@ -22901,9 +24053,9 @@ function showWaveBanner(waveIdx: number) {
     if (_dunWavePlan && waveIdx >= 0 && waveIdx < _dunWavePlan.length) {
         const w = _dunWavePlan[waveIdx]
         const arch = w.archetype || "mixed"
-        if (arch === "swarm") label = `Wave ${waveIdx + 1} â€“ Swarm`
-        else if (arch === "elites") label = `Wave ${waveIdx + 1} â€“ Elites`
-        else label = `Wave ${waveIdx + 1} â€“ Mixed`
+        if (arch === "swarm") label = `Wave ${waveIdx + 1} – Swarm`
+        else if (arch === "elites") label = `Wave ${waveIdx + 1} – Elites`
+        else label = `Wave ${waveIdx + 1} – Mixed`
     }
 
     // bg=0 (dark), fg=1 (blue title)
@@ -22969,7 +24121,7 @@ const POSSIBLE_MONSTERS = [
 
     const WAVE_DEFS = [
     {
-        label: "Wave 1 â€“ Warmup",
+        label: "Wave 1 – Warmup",
         durationMs: 1200,
         breakMs: 4000,
         spawnChance: 0.5,
@@ -22978,7 +24130,7 @@ const POSSIBLE_MONSTERS = [
         weights: [1,1,1]
     },
     {
-        label: "Wave 2 â€“ More Grunts",
+        label: "Wave 2 – More Grunts",
         durationMs: 2400,
         breakMs: 4000,
         spawnChance: 0.75,
@@ -22986,7 +24138,7 @@ const POSSIBLE_MONSTERS = [
         weights: [1]
     },
     {
-        label: "Wave 3 â€“ Runners appear",
+        label: "Wave 3 – Runners appear",
         durationMs: 2400,
         breakMs: 5000,
         spawnChance: 0.9,
@@ -22994,7 +24146,7 @@ const POSSIBLE_MONSTERS = [
         weights: [3, 2]
     },
     {
-        label: "Wave 4 â€“ Big guys",
+        label: "Wave 4 – Big guys",
         durationMs: 2400,
         breakMs: 5000,
         spawnChance: 1.0,
@@ -23002,7 +24154,7 @@ const POSSIBLE_MONSTERS = [
         weights: [2, 2, 2]
     },
     {
-        label: "Wave 5 â€“ Elite Mix",
+        label: "Wave 5 – Elite Mix",
         durationMs: 2400,
         breakMs: 5000,
         spawnChance: 1.0,
@@ -23015,7 +24167,7 @@ const POSSIBLE_MONSTERS = [
 // Wave state
 //let currentWaveIndex = 0
 let currentWaveIsBreak = true
-let wavePhaseUntilMs = game.runtime() + 1000 // short delay before first wave
+let wavePhaseUntilMs = game.runtime() + BALANCE.WAVES.INITIAL_PHASE_DELAY_MS // short delay before first wave
 
 // Finite combat waves: per-floor bookkeeping
 let _dunCombatWavesActive = false
@@ -23043,6 +24195,7 @@ interface MonsterDef {
 
     tags?: string[]
     attackRatePct?: number
+    attackIntervalMs?: number
     regenPct?: number
 
     // ----------------------------------------------------------
@@ -23091,12 +24244,12 @@ let _dunWavePlan: GenWaveDef[] = []
 
 
 
-const DEFAULT_MONSTER_FRAME_W = 64
-const DEFAULT_MONSTER_FRAME_H = 64
+const DEFAULT_MONSTER_FRAME_W = BALANCE.MONSTERS.DEFAULT_FRAME_W
+const DEFAULT_MONSTER_FRAME_H = BALANCE.MONSTERS.DEFAULT_FRAME_H
 
-// Default collider rule: for most frames < 96px, treat as 1-tile footprint (32Ã—32).
-// For big frames (>=96px), default to 2-tile footprint (64Ã—64).
-const MONSTER_COLLIDER_BIG_THRESHOLD_PX = 96
+// Default collider rule: for most frames < 96px, treat as 1-tile footprint (32×32).
+// For big frames (>=96px), default to 2-tile footprint (64×64).
+const MONSTER_COLLIDER_BIG_THRESHOLD_PX = BALANCE.MONSTERS.COLLIDER_BIG_THRESHOLD_PX
 
 interface MonsterSizing {
     frameW: number
@@ -23185,7 +24338,7 @@ function _clamp(n: number, lo: number, hi: number): number {
 function _floorDangerBase(floor1: number): number {
     // floor1 = 1..100
     // This is THE pacing knob. Keep it linear-ish for now.
-    return 25 + (floor1 * 6)
+    return BALANCE.WAVES.DANGER_BASE + (floor1 * BALANCE.WAVES.DANGER_PER_FLOOR)
 }
 
 function _pickArchetype(floor1: number, waveIndex: number, waveCount: number): WaveArchetype {
@@ -23193,8 +24346,8 @@ function _pickArchetype(floor1: number, waveIndex: number, waveCount: number): W
     const t = _clamp(floor1 / 100, 0, 1)
 
     const r = Math.random()
-    const swarmW = (0.70 - 0.35 * t)
-    const elitesW = (0.10 + 0.25 * t)
+    const swarmW = (BALANCE.WAVES.ARCHETYPE_SWARM_WEIGHT_BASE + BALANCE.WAVES.ARCHETYPE_SWARM_WEIGHT_DELTA * t)
+    const elitesW = (BALANCE.WAVES.ARCHETYPE_ELITES_WEIGHT_BASE + BALANCE.WAVES.ARCHETYPE_ELITES_WEIGHT_DELTA * t)
     // remainder = mixed
 
     if (r < swarmW) return "swarm"
@@ -23240,13 +24393,17 @@ function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): G
     const baseDanger = _floorDangerBase(floor1)
 
     // 3..7 waves up to floor 100
-    const waveCount = _clamp(3 + Math.idiv(floor1, 12), 3, 7)
+    const waveCount = _clamp(
+        BALANCE.WAVES.WAVE_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.WAVE_COUNT_FLOOR_DIV),
+        BALANCE.WAVES.WAVE_COUNT_MIN,
+        BALANCE.WAVES.WAVE_COUNT_MAX
+    )
 
     // Split danger across waves so later waves are heavier
     const weights: number[] = []
     let wsum = 0
     for (let i = 0; i < waveCount; i++) {
-        const w = Math.pow(i + 1, 1.35)
+        const w = Math.pow(i + 1, BALANCE.WAVES.WAVE_WEIGHT_EXP)
         weights.push(w)
         wsum += w
     }
@@ -23256,32 +24413,43 @@ function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): G
         const archetype = _pickArchetype(floor1, i, waveCount)
         const waveBudget = (baseDanger * (weights[i] / wsum)) | 0
 
-        // Choose â€œhow many spawns we wantâ€ based on archetype
-        let desiredCount = 6 + Math.idiv(floor1, 18)
-        if (archetype === "swarm") desiredCount = 10 + Math.idiv(floor1, 10)
-        else if (archetype === "elites") desiredCount = 3 + Math.idiv(floor1, 30)
+        // Choose “how many spawns we want” based on archetype
+        let desiredCount = BALANCE.WAVES.DESIRED_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.DESIRED_COUNT_FLOOR_DIV)
+        if (archetype === "swarm") {
+            desiredCount = BALANCE.WAVES.SWARM_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.SWARM_COUNT_FLOOR_DIV)
+        } else if (archetype === "elites") {
+            desiredCount = BALANCE.WAVES.ELITES_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.ELITES_COUNT_FLOOR_DIV)
+        }
 
-        desiredCount = _clamp(desiredCount, 3, 18)
+        desiredCount = _clamp(desiredCount, BALANCE.WAVES.DESIRED_COUNT_MIN, BALANCE.WAVES.DESIRED_COUNT_MAX)
 
         // Target average danger determines which monsters are preferred
-        const targetAvgDanger = _clamp(waveBudget / Math.max(1, desiredCount), 4, 60)
+        const targetAvgDanger = _clamp(
+            waveBudget / Math.max(1, desiredCount),
+            BALANCE.WAVES.TARGET_AVG_DANGER_MIN,
+            BALANCE.WAVES.TARGET_AVG_DANGER_MAX
+        )
 
         // Eligible monsters must have danger <= waveBudget (your exact rule)
         const pool = _buildPoolForTarget(targetAvgDanger, waveBudget)
 
         // Spawn chance & duration from desired count
-        let spawnChance = 0.9
-        if (archetype === "swarm") spawnChance = 1.0
-        else if (archetype === "elites") spawnChance = 0.75
+        let spawnChance = BALANCE.WAVES.SPAWN_CHANCE_DEFAULT
+        if (archetype === "swarm") spawnChance = BALANCE.WAVES.SPAWN_CHANCE_SWARM
+        else if (archetype === "elites") spawnChance = BALANCE.WAVES.SPAWN_CHANCE_ELITES
 
         const expectedTicks = Math.ceil(desiredCount / Math.max(0.05, spawnChance))
         const durationMs = (expectedTicks * spawnIntervalMs) | 0
 
         // Breaks: short; you can tune later
-        const breakMs = (400 + Math.idiv(floor1, 2)) | 0
+        const breakMs = (BALANCE.WAVES.BREAK_BASE_MS + Math.idiv(floor1, BALANCE.WAVES.BREAK_PER_FLOOR_DIV)) | 0
 
-        // Cap alive count so testing doesnâ€™t explode
-        const maxAlive = _clamp(8 + Math.idiv(floor1, 6), 10, 30)
+        // Cap alive count so testing doesn’t explode
+        const maxAlive = _clamp(
+            BALANCE.WAVES.MAX_ALIVE_BASE + Math.idiv(floor1, BALANCE.WAVES.MAX_ALIVE_FLOOR_DIV),
+            BALANCE.WAVES.MAX_ALIVE_MIN,
+            BALANCE.WAVES.MAX_ALIVE_MAX
+        )
 
         plan.push({
             archetype,
@@ -23434,6 +24602,17 @@ if (typeof globalThis !== "undefined") {
             return _engineWorldRev | 0
         }
 
+        // HERO collision offset (used by Phaser wrapper for overlap math)
+        internals.getHeroCollisionOffsetY = function (): number {
+            return HERO_COLLISION_Y_OFFSET_PX | 0
+        }
+
+        // HERO collision bounds (engine-authoritative AABB for overlaps)
+        internals.getCollisionBoundsForSprite = function (s: Sprite) {
+            if (!s) return null
+            return _boundsWithOffset(s, _heroCollisionOffsetY(s))
+        }
+
         // NEW: theme hooks (main.ts will also fall back to globals)
         internals.getFloorBaseFamily = function (): string {
             return _dunBaseFamily
@@ -23452,7 +24631,7 @@ if (typeof globalThis !== "undefined") {
         }
 
         // ----------------------------------------------------------
-        // DECOR (engine-owned, art-agnostic) â€” NAMES EXPECTED BY arcadeCompat.ts
+        // DECOR (engine-owned, art-agnostic) — NAMES EXPECTED BY arcadeCompat.ts
         // ----------------------------------------------------------
         internals.getDecorRev = function (): number {
             return _engineDecorRev | 0
@@ -23546,6 +24725,1062 @@ if (typeof globalThis !== "undefined") {
 
 
 // --------------------------------------------------------------
+// RELICS (v1 scaffolding)
+//
+// Goals (this patch):
+// - Define a catalog (defs) suitable for DOM caching (no gameplay effects yet)
+// - Define a generic per-relic UI state surface (disabled/counter/glyph/throb/alt)
+// - Expose __heGetRelicCatalog() for index.html to load once
+// - Append hardcoded per-player relic ownership + UI state into the UI snapshot
+//
+// NOTE: Icon tile coords below are placeholders until you pick real coords in
+// ProjectUtumno_full.png / ProjectUtumno_supplemental.png.
+// --------------------------------------------------------------
+
+type RelicSheetName = "ProjectUtumno_full" | "ProjectUtumno_supplemental"
+
+type RelicIconSpec = {
+    sheet: RelicSheetName
+    x: number // 32x32 tile coordinate
+    y: number // 32x32 tile coordinate
+}
+
+type RelicUiHints = {
+    kind?: "cornerCount" | "glyphTrack" | "none"
+    glyphText?: string
+}
+
+// This is what the DOM caches once; do NOT put functions here.
+type RelicDefinition = {
+    id: string
+    name: string
+    effectText: string
+    flavorText?: string
+    iconPrimary: RelicIconSpec
+    iconAlt?: RelicIconSpec
+    uiHints?: RelicUiHints
+
+    // Gameplay hook entrypoint (implemented later):
+    // - keep it data-only for now (maps to a handler table defined in-engine)
+    effectKey?: string
+}
+
+type RelicUiState = {
+    disabled: boolean
+    cornerCount?: number
+    glyphText?: string
+    glyphLitMask?: number
+    throb?: boolean
+    useAltIcon?: boolean
+}
+
+// ----------------------------------------------------------
+// RELIC HOOK CONTEXT TYPES (v2.2)
+// Keep these small + purpose-built. Some are mutable on purpose.
+// ----------------------------------------------------------
+
+type RelicModifyMoveStatsContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+    family: number
+    button: string
+    traitsEff: MoveTraits
+    stats: number[] // mutable (relics may rewrite stat slots)
+}
+
+type RelicMoveCommittedContext = {
+    now: number
+    hi: number
+    hero: Sprite
+    family: number
+    button: string
+}
+
+type RelicHeroDamageContext = {
+    now: number
+    hi: number
+    hero: Sprite
+
+    hpBefore: number
+    maxHp: number
+
+    damage: number // mutable (relic may reduce/negate)
+    preventDamage?: boolean
+
+    // optional provenance (fill later when you have sources)
+    sourceKind?: "enemyTouch" | "projectile" | "script" | "unknown"
+    sourceEIndex?: number
+    sourceTag?: string
+}
+
+
+type RelicHeroAfterDamageContext = {
+    now: number
+    hi: number
+    hero: Sprite
+
+    hpBefore: number
+    maxHp: number
+
+    damageAttempted: number   // final incoming damage after beforeHeroDamage
+    damageApplied: number     // actual HP lost (capped by hpBefore)
+    hpAfter: number           // final HP after death prevention (if any)
+
+    deathCommitted: boolean
+    preventedDeath?: boolean
+    preventedDamage?: boolean
+
+    sourceKind?: "enemyTouch" | "projectile" | "script" | "unknown"
+    sourceEIndex?: number
+    sourceTag?: string
+}
+
+
+type RelicHeroHealContext = {
+    now: number
+    hi: number
+    hero: Sprite
+
+    hpBefore: number
+    maxHp: number
+
+    amount: number // mutable (relics may increase/reduce/zero healing)
+}
+
+type RelicHeroDeathContext = {
+    now: number
+    hi: number
+    hero: Sprite
+
+    hpBefore: number
+    maxHp: number
+
+    damage: number     // final incoming damage after beforeHeroDamage
+    hpAfter: number    // computed hpBefore - damage
+
+    // mutable: allow death prevention / replacement hp
+    preventDeath: boolean
+    setHpTo?: number
+}
+
+type RelicHeroDeathFinalContext = {
+    now: number
+    hi: number
+    hero: Sprite
+}
+
+type RelicEnemyKilledContext = {
+    now: number
+    eIndex: number
+    enemy: Sprite
+
+    srcHi: number
+    killerHi: number
+
+    // mutable reward knobs
+    coins: number
+    xpScale?: number
+
+    coinPopX: number
+    coinPopY: number
+}
+
+type RelicChestOpenedContext = {
+    now: number
+    pid: number
+    hi: number
+    hero: Sprite
+
+    // mutable reward knobs
+    coinsReward: number
+
+    popX: number
+    popY: number
+}
+
+type RelicMoveSpeedContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+    playerId: number
+    locked: boolean
+
+    baseSpeed: number
+    hasteMult: number
+
+    speed: number // mutable
+}
+
+type RelicManaRegenContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+
+    percentOfMax: number
+    maxMana: number
+    manaBefore: number
+
+    gain: number // mutable
+}
+
+type RelicManaCostContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+
+    family: number
+
+    // raw axis costs (as passed into _doHeroMoveTrySpendMana)
+    t1: number
+    t2: number
+    t3: number
+    t4: number
+
+    baseCost: number
+    cost: number // mutable
+
+    manaBefore: number
+    maxMana: number
+}
+
+type RelicManaSpentContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+
+    family: number
+
+    baseCost: number
+    finalCost: number
+
+    manaBefore: number
+    manaAfter: number
+    maxMana: number
+}
+
+type RelicCombatClearedContext = {
+    now: number
+    pid: number
+    hi: number
+    hero: Sprite
+
+    floorIndex: number
+    floorKind: string
+}
+
+
+type RelicFloorExitContext = {
+    now: number
+    floorIndex: number
+    floorKind: string
+}
+
+type RelicChooseNextFloorContext = {
+    now: number
+    pid: number
+    hi: number
+    hero: Sprite
+
+    nextFloorIndex: number
+    defaultKind: string
+
+    // mutable: handlers may rewrite these (must end with 2 unique kinds)
+    options: string[]
+
+    // handler flips this to true to take over selection UI
+    requestChoice: boolean
+
+    // optional: handler may override title
+    title?: string
+}
+
+
+type RelicFloorEnterContext = {
+    now: number
+    floorIndex: number
+    floorKind: string
+    activePidsCount: number
+    baseFamily: string
+    wallFamily: string
+}
+
+type RelicCoinGainContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+    delta: number // mutable
+    popX: number
+    popY: number
+}
+
+type RelicCoinSpendContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+    cost: number // mutable (rare, but keeps door open)
+}
+
+type RelicCoinsSpentContext = {
+    now?: number
+    hi: number
+    hero: Sprite
+
+    baseCost: number
+    finalCost: number
+
+    coinsBefore: number
+    coinsAfter: number
+}
+
+
+// Future: this is where gameplay effects will plug in.
+// For now it is intentionally empty/stubbed.
+type RelicEffectHandler = {
+    effectKey: string
+
+    // MOVE PIPELINE
+    modifyMoveStats?: (ctx: RelicModifyMoveStatsContext) => void
+    onMoveCommitted?: (ctx: RelicMoveCommittedContext) => void
+
+    // ENEMY COMBAT PIPELINE
+    onHitEnemy?: (ctx: EnemyHitContext) => void
+    onEnemyKilledPreRewards?: (ctx: RelicEnemyKilledContext) => void
+    onEnemyKilledPostRewards?: (ctx: RelicEnemyKilledContext) => void
+
+    // HERO DAMAGE / HEAL / DEATH PIPELINE
+    beforeHeroDamage?: (ctx: RelicHeroDamageContext) => void
+    afterHeroDamage?: (ctx: RelicHeroAfterDamageContext) => void
+    modifyHeroHeal?: (ctx: RelicHeroHealContext) => void
+    beforeHeroDeath?: (ctx: RelicHeroDeathContext) => void
+    onHeroDeathFinal?: (ctx: RelicHeroDeathFinalContext) => void
+
+    // MOBILITY / REGEN
+    modifyMoveSpeed?: (ctx: RelicMoveSpeedContext) => void
+    modifyManaRegen?: (ctx: RelicManaRegenContext) => void
+    modifyHpRegen?: (ctx: any) => void // optional future; keep loose for now
+
+    // NEW: Mana spend/cost hooks
+    modifyManaCost?: (ctx: RelicManaCostContext) => void
+    onManaSpent?: (ctx: RelicManaSpentContext) => void
+
+    // DUNGEON / FLOOR LIFECYCLE
+    onFloorExit?: (ctx: RelicFloorExitContext) => void
+
+    // NEW: End-of-combat hook (combat objective completes)
+    onCombatCleared?: (ctx: RelicCombatClearedContext) => void
+
+    // NEW: Next-floor selection takeover (Wing Boots analog)
+    chooseNextFloor?: (ctx: RelicChooseNextFloorContext) => void
+
+    onFloorEnter?: (ctx: RelicFloorEnterContext) => void
+
+    // ECONOMY / LOOT / SHOP
+    onChestOpened?: (ctx: RelicChestOpenedContext) => void
+    modifyCoinGain?: (ctx: RelicCoinGainContext) => void
+    modifyCoinSpend?: (ctx: RelicCoinSpendContext) => void
+    onCoinsSpent?: (ctx: RelicCoinsSpentContext) => void
+
+    modifyShopPrices?: (ctx: any) => void
+    onShopPurchase?: (ctx: any) => void
+}
+
+const RELIC_IDS = {
+    ETHEREAL_SHROUD: "ethereal_shroud",
+    RAINBOW_SCEPTER: "rainbow_scepter",
+    LANTERN_OF_LIFE: "lantern_of_life",
+}
+
+const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
+    [RELIC_IDS.ETHEREAL_SHROUD]: {
+        id: RELIC_IDS.ETHEREAL_SHROUD,
+        name: "Ethereal Shroud",
+        effectText: "Once every 10 seconds you become insubstantial upon the next time you would take damage",
+        flavorText: "Ghost! I'm a ghost I say!",
+        iconPrimary: { sheet: "ProjectUtumno_full", x: 61, y: 35 }, //Column 61, row 35
+        uiHints: { kind: "cornerCount" },
+        effectKey: "ethereal_shroud",
+    },
+
+    [RELIC_IDS.RAINBOW_SCEPTER]: {
+        id: RELIC_IDS.RAINBOW_SCEPTER,
+        name: "Rainbow Scepter",
+        effectText: "Each time you use exactly one of each type of move Strength/Agility/Intelligence/Wisdom consecutively, the damage trait of your next move is multiplied by 4",
+        flavorText: "The end of a rainbow of moves has a pot of...damage!",
+        iconPrimary: { sheet: "ProjectUtumno_full", x: 61, y: 47}, //Column 61, row 47
+        uiHints: { kind: "glyphTrack", glyphText: "SAIW" },
+        effectKey: "rainbow_scepter",
+    },
+
+    [RELIC_IDS.LANTERN_OF_LIFE]: {
+        id: RELIC_IDS.LANTERN_OF_LIFE,
+        name: "Lantern of Life",
+        effectText: "The next time you would die, you instead heal back to half HP. This relic will only work ONCE.",
+        flavorText: "The light of my life!",
+        iconPrimary: { sheet: "ProjectUtumno_full", x: 11, y: 41 }, //Column 11, row 41
+        iconAlt: { sheet: "ProjectUtumno_full", x: 10, y: 41 }, //Column 10, row 41
+        uiHints: { kind: "cornerCount" },
+        effectKey: "lantern_of_life",
+    },
+}
+
+// Handler table (v3.1 proof-of-concept for the 3 starter relics).
+// NOTE: Handlers must be pure engine-side logic; DOM gets only ids + UI state.
+const RELIC_EFFECTS: { [effectKey: string]: RelicEffectHandler } = {
+    ethereal_shroud: {
+        effectKey: "ethereal_shroud",
+        beforeHeroDamage: (ctx: RelicHeroDamageContext) => {
+            if (!ctx) return
+            const pid = _relicResolvePidFromHeroIndex(ctx.hi) | 0
+            if (pid <= 0) return
+
+            // Only intercept real damage
+            const dmg = ctx.damage | 0
+            if (dmg <= 0) return
+
+            const st = _relicEnsureRuntimeForPid(pid)
+            const now = ctx.now | 0
+
+            // Ready => prevent this instance of damage and start cooldown
+            if ((st.shroudReadyAtMs | 0) <= now) {
+                ctx.damage = 0
+                ctx.preventDamage = true
+                st.shroudReadyAtMs = (now + RELIC_SHROUD_COOLDOWN_MS) | 0
+                console.log("[RELICHOOK][SHROUD] prevented damage", { pid, hi: ctx.hi | 0, now, nextReady: st.shroudReadyAtMs | 0 })
+            }
+        },
+    },
+
+    rainbow_scepter: {
+        effectKey: "rainbow_scepter",
+
+        // Tracks committed moves to advance the S→A→I→W sequence.
+        onMoveCommitted: (ctx: RelicMoveCommittedContext) => {
+            if (!ctx) return
+            const pid = _relicResolvePidFromHeroIndex(ctx.hi) | 0
+            if (pid <= 0) return
+
+            const st = _relicEnsureRuntimeForPid(pid)
+            if (st.rainbowArmed) return // armed until consumed by next move
+
+            const nextStep = _relicRainbowAdvanceStep(st.rainbowStep | 0, ctx.family | 0) | 0
+            st.rainbowStep = nextStep
+            if ((st.rainbowStep | 0) >= 4) {
+                st.rainbowStep = 4
+                st.rainbowArmed = true
+                console.log("[RELICHOOK][RAINBOW] armed", { pid, hi: ctx.hi | 0 })
+            }
+        },
+
+        // When armed, multiplies DAMAGE_MULT by 4 on the next move and consumes itself.
+        modifyMoveStats: (ctx: RelicModifyMoveStatsContext) => {
+            if (!ctx) return
+            const pid = _relicResolvePidFromHeroIndex(ctx.hi) | 0
+            if (pid <= 0) return
+
+            const st = _relicEnsureRuntimeForPid(pid)
+            if (!st.rainbowArmed) return
+
+            try {
+                if (ctx.stats && ctx.stats.length > (STAT.DAMAGE_MULT | 0)) {
+                    const i = STAT.DAMAGE_MULT | 0
+                    const prev = ctx.stats[i] | 0
+                    ctx.stats[i] = (prev * 4) | 0
+                }
+            } catch { }
+
+            st.rainbowArmed = false
+            st.rainbowStep = 0
+            console.log("[RELICHOOK][RAINBOW] consumed", { pid, hi: ctx.hi | 0 })
+        },
+    },
+
+    lantern_of_life: {
+        effectKey: "lantern_of_life",
+        beforeHeroDeath: (ctx: RelicHeroDeathContext) => {
+            if (!ctx) return
+            const pid = _relicResolvePidFromHeroIndex(ctx.hi) | 0
+            if (pid <= 0) return
+
+            const st = _relicEnsureRuntimeForPid(pid)
+            if ((st.lanternCharges | 0) <= 0) return
+
+            // Consume charge and prevent death; set HP to half max.
+            st.lanternCharges = 0
+            ctx.preventDeath = true
+            const half = Math.idiv((ctx.maxHp | 0), 2) | 0
+            ctx.setHpTo = (half > 0 ? half : 1) | 0
+            console.log("[RELICHOOK][LANTERN] prevented death", { pid, hi: ctx.hi | 0, setHpTo: ctx.setHpTo | 0 })
+        },
+    },
+}
+
+// ----------------------------------------------------------
+// RELIC DISPATCH (v2.2)
+// One loop for all relic calls; engine call-sites stay 1-liners.
+// ----------------------------------------------------------
+
+function _relicResolvePidFromHeroIndex(hi: number): number {
+    if ((hi | 0) < 0 || (hi | 0) >= heroes.length) return 0
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return 0
+    try {
+        return (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0) || 0
+    } catch {
+        return 0
+    }
+}
+
+function _relicEffectKeyForRelicId(relicId: string): string {
+    const def = RELIC_CATALOG[relicId]
+    const k = def && def.effectKey ? String(def.effectKey) : String(relicId || "")
+    return k
+}
+
+function _withHeroRelicHandlers(hi: number, visit: (handler: RelicEffectHandler, relicId: string, effectKey: string) => void): void {
+    const pid = _relicResolvePidFromHeroIndex(hi)
+    if ((pid | 0) <= 0) return
+
+    const owned = getOwnedRelicIdsForPid(pid)
+    if (!owned || owned.length === 0) return
+
+    for (let i = 0; i < owned.length; i++) {
+        const relicId = owned[i]
+        if (!relicId) continue
+        const effectKey = _relicEffectKeyForRelicId(relicId)
+        const handler = RELIC_EFFECTS[effectKey]
+        if (!handler) continue
+        visit(handler, relicId, effectKey)
+    }
+}
+
+
+
+type RelicNextFloorChoiceSession = {
+    active: boolean
+    activePid: number
+    nextFloorIndex: number
+    title: string
+    options: string[]
+    selectedIndex: number
+    chosenKind: string
+}
+
+const _relicNextFloorChoice: RelicNextFloorChoiceSession = {
+    active: false,
+    activePid: 0,
+    nextFloorIndex: 0,
+    title: "Choose Next Floor",
+    options: [],
+    selectedIndex: 0,
+    chosenKind: "",
+}
+
+function relic_cancelNextFloorChoiceIfPending(reason: string): void {
+    if (!_relicNextFloorChoice.active) return
+    console.log("[RELICHOOK][FLOORCHOICE] cancel", { reason, pid: _relicNextFloorChoice.activePid, next: _relicNextFloorChoice.nextFloorIndex })
+    _relicNextFloorChoice.active = false
+    _relicNextFloorChoice.activePid = 0
+    _relicNextFloorChoice.nextFloorIndex = 0
+    _relicNextFloorChoice.options = []
+    _relicNextFloorChoice.selectedIndex = 0
+    _relicNextFloorChoice.chosenKind = ""
+    _relicNextFloorChoice.title = "Choose Next Floor"
+}
+
+function _relicResolveHeroIndexForPid(pid: number): number {
+    if ((pid | 0) <= 0) return -1
+    try {
+        const idx = playerToHeroIndex[pid] | 0
+        if (idx >= 0 && idx < heroes.length) {
+            const h = heroes[idx]
+            if (h && !(h.flags & sprites.Flag.Destroyed)) {
+                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+                if ((owner | 0) === (pid | 0)) return idx
+            }
+        }
+    } catch { }
+
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h) continue
+        if (h.flags & sprites.Flag.Destroyed) continue
+        let owner = 0
+        try { owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0 } catch { owner = 0 }
+        if ((owner | 0) === (pid | 0)) return i | 0
+    }
+
+    return -1
+}
+
+function _relicAltFloorKind(defaultKind: string, nextFloorIndex: number): string {
+    const opts = [DUNGEON_KIND_COMBAT, DUNGEON_KIND_TREASURE, DUNGEON_KIND_STORY, DUNGEON_KIND_SHOP]
+    let pick = opts[Math.abs(nextFloorIndex | 0) % opts.length] || DUNGEON_KIND_COMBAT
+    if (pick === defaultKind) {
+        pick = opts[(Math.abs((nextFloorIndex | 0) + 1) % opts.length)] || DUNGEON_KIND_COMBAT
+        if (pick === defaultKind) pick = DUNGEON_KIND_COMBAT
+    }
+    return String(pick || defaultKind || "")
+}
+
+function _relicNormalizeTwoUniqueKinds(defaultKind: string, options: string[]): string[] {
+    const out: string[] = []
+    const seen: any = {}
+
+    const push = (k: string) => {
+        const kk = String(k || "")
+        if (!kk) return
+        if (seen[kk]) return
+        seen[kk] = 1
+        out.push(kk)
+    }
+
+    // Prefer provided order, but guarantee defaultKind is included if possible
+    for (let i = 0; i < options.length; i++) push(options[i])
+
+    if (!seen[String(defaultKind || "")]) push(String(defaultKind || ""))
+
+    // Ensure length >= 2
+    if (out.length < 2) push(_relicAltFloorKind(String(defaultKind || ""), (_relicNextFloorChoice.nextFloorIndex | 0) || 0))
+
+    // Truncate to 2 (UI spec: show two possibilities)
+    return out.slice(0, 2)
+}
+
+/**
+ * Called from teleport-commit.
+ * - If a relic wants to take over next-floor choice: opens a session and returns {hold:true}.
+ * - While session active and no choice made: returns {hold:true}.
+ * - Once chosen: returns {hold:false, kind:<chosen>} and clears session.
+ */
+function relic_resolveNextFloorKindOrHold(
+    now: number,
+    nextFloorIndex: number,
+    defaultKind: string,
+    readyMask: number
+): { hold: boolean, kind: string } {
+
+    // Existing session for this next floor: hold until chosen.
+    if (_relicNextFloorChoice.active && (_relicNextFloorChoice.nextFloorIndex | 0) === (nextFloorIndex | 0)) {
+        if (_relicNextFloorChoice.chosenKind) {
+            const chosen = String(_relicNextFloorChoice.chosenKind || defaultKind || "")
+            console.log("[RELICHOOK][FLOORCHOICE] chosen -> proceed", { pid: _relicNextFloorChoice.activePid, next: nextFloorIndex, chosen })
+            relic_cancelNextFloorChoiceIfPending("chosen")
+            return { hold: false, kind: chosen }
+        }
+        return { hold: true, kind: String(defaultKind || "") }
+    }
+
+    // If session is for a different nextFloorIndex, clear it.
+    if (_relicNextFloorChoice.active && (_relicNextFloorChoice.nextFloorIndex | 0) !== (nextFloorIndex | 0)) {
+        relic_cancelNextFloorChoiceIfPending("stale-next-index")
+    }
+
+    // Try to open a session: first eligible pid in readyMask who has a relic that requests takeover.
+    const baseOptions = [String(defaultKind || ""), _relicAltFloorKind(String(defaultKind || ""), nextFloorIndex | 0)]
+
+    for (let pid = 1; pid <= 4; pid++) {
+        const bit = 1 << (pid - 1)
+        if (((readyMask | 0) & bit) === 0) continue
+
+        const hi = _relicResolveHeroIndexForPid(pid | 0)
+        if (hi < 0) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const ctx: RelicChooseNextFloorContext = {
+            now: now | 0,
+            pid: pid | 0,
+            hi: hi | 0,
+            hero,
+            nextFloorIndex: nextFloorIndex | 0,
+            defaultKind: String(defaultKind || ""),
+            options: baseOptions.slice(),
+            requestChoice: false,
+            title: "Choose Next Floor",
+        }
+
+        // Dispatch to this hero's relics; any one may request takeover.
+        _withHeroRelicHandlers(hi, (handler) => {
+            if (ctx.requestChoice) return
+            if (handler.chooseNextFloor) handler.chooseNextFloor(ctx)
+        })
+
+        if (ctx.requestChoice) {
+            const two = _relicNormalizeTwoUniqueKinds(ctx.defaultKind, ctx.options)
+
+            _relicNextFloorChoice.active = true
+            _relicNextFloorChoice.activePid = pid | 0
+            _relicNextFloorChoice.nextFloorIndex = nextFloorIndex | 0
+            _relicNextFloorChoice.title = String(ctx.title || "Choose Next Floor")
+            _relicNextFloorChoice.options = two
+            _relicNextFloorChoice.selectedIndex = 0
+            _relicNextFloorChoice.chosenKind = ""
+
+            console.log("[RELICHOOK][FLOORCHOICE] opened", {
+                pid,
+                next: nextFloorIndex,
+                defaultKind,
+                options: two
+            })
+
+            return { hold: true, kind: String(defaultKind || "") }
+        }
+    }
+
+    // No relic requested takeover
+    return { hold: false, kind: String(defaultKind || "") }
+}
+
+
+// ----------------------------------------------------------
+// Hook wrappers (called by engine hook-sites)
+// ----------------------------------------------------------
+
+function relic_modifyMoveStats(ctx: RelicModifyMoveStatsContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyMoveStats) h.modifyMoveStats(ctx) })
+}
+
+function relic_onMoveCommitted(ctx: RelicMoveCommittedContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.onMoveCommitted) h.onMoveCommitted(ctx) })
+}
+
+function relic_onHitEnemy(ctx: EnemyHitContext): void {
+    // V2.3 EnemyHitContext uses sourceHeroIndex
+    if (!ctx) return
+    const srcHi = (ctx.sourceHeroIndex | 0)
+    if (srcHi < 0 || srcHi >= heroes.length) return
+    _withHeroRelicHandlers(srcHi, (h) => { if (h.onHitEnemy) h.onHitEnemy(ctx) })
+}
+
+function relic_onEnemyKilledPreRewards(ctx: RelicEnemyKilledContext): void {
+    _withHeroRelicHandlers(ctx.killerHi, (h) => { if (h.onEnemyKilledPreRewards) h.onEnemyKilledPreRewards(ctx) })
+}
+
+function relic_onEnemyKilledPostRewards(ctx: RelicEnemyKilledContext): void {
+    _withHeroRelicHandlers(ctx.killerHi, (h) => { if (h.onEnemyKilledPostRewards) h.onEnemyKilledPostRewards(ctx) })
+}
+
+function relic_beforeHeroDamage(ctx: RelicHeroDamageContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.beforeHeroDamage) h.beforeHeroDamage(ctx) })
+}
+
+function relic_afterHeroDamage(ctx: RelicHeroAfterDamageContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.afterHeroDamage) h.afterHeroDamage(ctx) })
+}
+
+function relic_modifyHeroHeal(ctx: RelicHeroHealContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyHeroHeal) h.modifyHeroHeal(ctx) })
+}
+
+function relic_beforeHeroDeath(ctx: RelicHeroDeathContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.beforeHeroDeath) h.beforeHeroDeath(ctx) })
+}
+
+function relic_onHeroDeathFinal(ctx: RelicHeroDeathFinalContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.onHeroDeathFinal) h.onHeroDeathFinal(ctx) })
+}
+
+function relic_modifyMoveSpeed(ctx: RelicMoveSpeedContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyMoveSpeed) h.modifyMoveSpeed(ctx) })
+}
+
+function relic_modifyManaRegen(ctx: RelicManaRegenContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyManaRegen) h.modifyManaRegen(ctx) })
+}
+
+function relic_modifyManaCost(ctx: RelicManaCostContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyManaCost) h.modifyManaCost(ctx) })
+}
+
+function relic_onManaSpent(ctx: RelicManaSpentContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.onManaSpent) h.onManaSpent(ctx) })
+}
+
+function relic_onCombatCleared_allPlayers(nowMs: number): void {
+    // Prefer connected slots when available
+    const connected = (isPhaserRuntime() && (globalThis as any).__netSlotConnected)
+        ? ((globalThis as any).__netSlotConnected as boolean[])
+        : null
+
+    for (let pid = 1; pid <= 4; pid++) {
+        if (connected && !connected[pid - 1]) continue
+
+        const hi = playerToHeroIndex[pid] | 0
+        if (hi < 0 || hi >= heroes.length) continue
+
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const ctx: RelicCombatClearedContext = {
+            now: nowMs | 0,
+            pid: pid | 0,
+            hi: hi | 0,
+            hero,
+            floorIndex: _dunFloorIndex | 0,
+            floorKind: String(_dunFloorKind || ""),
+        }
+
+        _withHeroRelicHandlers(hi, (h) => { if (h.onCombatCleared) h.onCombatCleared(ctx) })
+    }
+}
+
+
+function relic_onFloorExit(ctx: RelicFloorExitContext, affectPid: number): void {
+    // Floor exit/enter are global events; run for a specific player.
+    const owned = getOwnedRelicIdsForPid(affectPid)
+    if (!owned || owned.length === 0) return
+    for (let i = 0; i < owned.length; i++) {
+        const relicId = owned[i]
+        if (!relicId) continue
+        const effectKey = _relicEffectKeyForRelicId(relicId)
+        const h = RELIC_EFFECTS[effectKey]
+        if (h && h.onFloorExit) h.onFloorExit(ctx)
+    }
+}
+
+function relic_onFloorEnter(ctx: RelicFloorEnterContext, affectPid: number): void {
+    const owned = getOwnedRelicIdsForPid(affectPid)
+    if (!owned || owned.length === 0) return
+    for (let i = 0; i < owned.length; i++) {
+        const relicId = owned[i]
+        if (!relicId) continue
+        const effectKey = _relicEffectKeyForRelicId(relicId)
+        const h = RELIC_EFFECTS[effectKey]
+        if (h && h.onFloorEnter) h.onFloorEnter(ctx)
+    }
+}
+
+function relic_onChestOpened(ctx: RelicChestOpenedContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.onChestOpened) h.onChestOpened(ctx) })
+}
+
+function relic_modifyCoinGain(ctx: RelicCoinGainContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyCoinGain) h.modifyCoinGain(ctx) })
+}
+
+function relic_modifyCoinSpend(ctx: RelicCoinSpendContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.modifyCoinSpend) h.modifyCoinSpend(ctx) })
+}
+
+function relic_onCoinsSpent(ctx: RelicCoinsSpentContext): void {
+    _withHeroRelicHandlers(ctx.hi, (h) => { if (h.onCoinsSpent) h.onCoinsSpent(ctx) })
+}
+
+
+
+// -----------------------------------------------------------------
+// v1 Hardcoded per-player relic ownership + UI state.
+// Later, these become real per-player saved/loaded fields.
+// -----------------------------------------------------------------
+// -----------------------------------------------------------------
+// RELIC RUNTIME STATE (v3.1 PoC)
+// These are engine-only, per-player mutable fields that drive both
+// gameplay hooks and the UI state sent in snapshots.
+// -----------------------------------------------------------------
+
+const RELIC_SHROUD_COOLDOWN_MS = 10_000
+const RELIC_RAINBOW_GLYPH_TEXT = "SAIW"
+const RELIC_RAINBOW_FULL_MASK = 0b1111
+
+type RelicRuntimeState = {
+    shroudReadyAtMs: number
+    lanternCharges: number
+    rainbowStep: number
+    rainbowArmed: boolean
+}
+
+const _relicRuntimeByPid: { [pid: string]: RelicRuntimeState } = {
+    // Dev default: player 1 has the three starter relics
+    "1": { shroudReadyAtMs: 0, lanternCharges: 1, rainbowStep: 0, rainbowArmed: false },
+}
+
+function _relicEnsureRuntimeForPid(pid: number): RelicRuntimeState {
+    const k = String(pid | 0)
+    let st = _relicRuntimeByPid[k]
+    if (!st) {
+        st = { shroudReadyAtMs: 0, lanternCharges: 1, rainbowStep: 0, rainbowArmed: false }
+        _relicRuntimeByPid[k] = st
+    }
+    // sanitize
+    st.shroudReadyAtMs = st.shroudReadyAtMs | 0
+    st.lanternCharges = st.lanternCharges | 0
+    st.rainbowStep = st.rainbowStep | 0
+    st.rainbowArmed = !!st.rainbowArmed
+    return st
+}
+
+function _relicRainbowMaskFromStep(step: number): number {
+    const s = step | 0
+    if (s <= 0) return 0
+    if (s >= 4) return RELIC_RAINBOW_FULL_MASK
+    return ((1 << s) - 1) | 0
+}
+
+function _relicRainbowExpectedFamilyForStep(step: number): number {
+    const s = step | 0
+    if (s === 0) return FAMILY.STRENGTH | 0
+    if (s === 1) return FAMILY.AGILITY | 0
+    if (s === 2) return FAMILY.INTELLECT | 0
+    if (s === 3) return FAMILY.HEAL | 0 // "W" = Wisdom/Heal in this engine
+    return -1
+}
+
+function _relicRainbowAdvanceStep(currentStep: number, committedFamily: number): number {
+    const fam = committedFamily | 0
+    const step = currentStep | 0
+
+    // If correct next step, advance
+    const expected = _relicRainbowExpectedFamilyForStep(step) | 0
+    if (expected >= 0 && fam === expected) return (step + 1) | 0
+
+    // Otherwise, restart only if the new move is Strength (start of sequence)
+    if (fam === (FAMILY.STRENGTH | 0)) return 1
+    return 0
+}
+
+function _relicUiCeilSeconds(remainMs: number): number {
+    const r = remainMs | 0
+    if (r <= 0) return 0
+    return Math.idiv((r + 999), 1000) | 0
+}
+
+
+
+const _relicOwnedByPid: { [pid: string]: string[] } = {
+    // Dev default: player 1 has all three so the DOM can render/test
+    "1": [RELIC_IDS.ETHEREAL_SHROUD, RELIC_IDS.RAINBOW_SCEPTER, RELIC_IDS.LANTERN_OF_LIFE],
+}
+
+const _relicUiStateByPid: { [pid: string]: { [relicId: string]: RelicUiState } } = {
+    // Runtime-derived UI state is computed on snapshot build; leave this empty by default.
+    "1": {},
+}
+
+function _relicDbgEnsurePid(pid: number): void {
+    const k = String(pid | 0)
+    if (!_relicOwnedByPid[k]) _relicOwnedByPid[k] = []
+    if (!_relicUiStateByPid[k]) _relicUiStateByPid[k] = {}
+    _relicEnsureRuntimeForPid(pid | 0)
+}
+
+function getOwnedRelicIdsForPid(pid: number): string[] {
+    _relicDbgEnsurePid(pid)
+    const ids = _relicOwnedByPid[String(pid | 0)]
+    return ids ? ids.slice() : []
+}
+
+function getRelicUiStateByIdForPid(pid: number): { [relicId: string]: RelicUiState } {
+    _relicDbgEnsurePid(pid)
+
+    const k = String(pid | 0)
+    const owned = getOwnedRelicIdsForPid(pid)
+    const now = game.runtime() | 0
+
+    const base = _relicUiStateByPid[k] || {}
+    const out: { [relicId: string]: RelicUiState } = {}
+
+    // Start with defaults for every owned relic
+    for (let i = 0; i < owned.length; i++) {
+        const rid = owned[i]
+        if (!rid) continue
+        const st = base[rid]
+        out[rid] = st ? st : { disabled: false }
+    }
+
+    // Overlay dynamic UI state derived from runtime for the three starter relics.
+    const rt = _relicEnsureRuntimeForPid(pid | 0)
+
+    // A) Ethereal Shroud: cooldown-driven disabled + cornerCount (seconds remaining)
+    if (out[RELIC_IDS.ETHEREAL_SHROUD]) {
+        const readyAt = rt.shroudReadyAtMs | 0
+        const disabled = (readyAt > 0 && now < readyAt)
+        const remain = disabled ? _relicUiCeilSeconds((readyAt - now) | 0) : 0
+        out[RELIC_IDS.ETHEREAL_SHROUD] = {
+            disabled: disabled,
+            cornerCount: disabled ? (remain | 0) : undefined,
+        }
+    }
+
+    // B) Rainbow Scepter: glyph tracking + throb when armed
+    if (out[RELIC_IDS.RAINBOW_SCEPTER]) {
+        const mask = _relicRainbowMaskFromStep(rt.rainbowStep | 0) | 0
+        out[RELIC_IDS.RAINBOW_SCEPTER] = {
+            disabled: false,
+            glyphText: RELIC_RAINBOW_GLYPH_TEXT,
+            glyphLitMask: mask,
+            throb: !!rt.rainbowArmed,
+        }
+    }
+
+    // C) Lantern of Life: one-time charge + alt icon + disabled
+    if (out[RELIC_IDS.LANTERN_OF_LIFE]) {
+        const charges = rt.lanternCharges | 0
+        const usedUp = charges <= 0
+        out[RELIC_IDS.LANTERN_OF_LIFE] = {
+            disabled: usedUp,
+            cornerCount: charges,
+            useAltIcon: usedUp,
+        }
+    }
+
+    return out
+}
+
+function appendRelicsToSnapshot(snap: any, pid: number): void {
+    if (!snap || !snap.ready) return
+
+    const ownedRelicIds = getOwnedRelicIdsForPid(pid)
+    const stateById = getRelicUiStateByIdForPid(pid)
+
+    // Only include state for owned relics (keeps snapshot small + matches contract)
+    const filteredState: any = {}
+    for (let i = 0; i < ownedRelicIds.length; i++) {
+        const rid = ownedRelicIds[i]
+        if (!rid) continue
+        filteredState[rid] = stateById[rid] ? stateById[rid] : { disabled: false }
+    }
+
+    snap.relics = {
+        ownedRelicIds,
+        relicUiStateById: filteredState,
+    }
+
+    // Offer session will be added later; keep field stable for DOM.
+    if (snap.offer == null) snap.offer = null
+
+    // Next-floor choice session (Wing Boots analog)
+    if (_relicNextFloorChoice.active) {
+        snap.floorChoice = {
+            activePlayerId: _relicNextFloorChoice.activePid | 0,
+            nextFloorIndex: _relicNextFloorChoice.nextFloorIndex | 0,
+            title: String(_relicNextFloorChoice.title || "Choose Next Floor"),
+            options: (_relicNextFloorChoice.options || []).slice(0, 2),
+            selectedIndex: _relicNextFloorChoice.selectedIndex | 0,
+            canControl: ((pid | 0) === (_relicNextFloorChoice.activePid | 0)),
+        }
+    } else {
+        if (snap.floorChoice == null) snap.floorChoice = null
+    }
+}
+
+// Expose catalog for DOM caching
+(() => {
+    try {
+        const g: any = globalThis as any
+        if (!g) return
+        if (g.__heRelicApiInstalled) return
+        g.__heRelicApiInstalled = true
+
+        g.__heGetRelicCatalog = function (): any {
+            return RELIC_CATALOG
+        }
+    } catch { }
+})()
+
+
+
+// --------------------------------------------------------------
 // UI API (Step 1): expose a stable snapshot + command surface
 // DOM overlay will read snapshot + call commands later.
 // --------------------------------------------------------------
@@ -23628,14 +25863,14 @@ function _uiGetSafeForSpend(hi: number): { ok: boolean, reason: string } {
     const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
 
-    // Dead heroes canâ€™t spend (prevents weirdness)
+    // Dead heroes can’t spend (prevents weirdness)
     const deathUntil = _uiReadNum(hero, HERO_DATA.DEATH_UNTIL, 0) | 0
     if ((deathUntil | 0) > 0) return { ok: false, reason: "hero-dead" }
 
-    // If dungeon isnâ€™t active, treat as safe (future-proof)
+    // If dungeon isn’t active, treat as safe (future-proof)
     if (!DUNGEON_MODE_ACTIVE) return { ok: true, reason: "no-dungeon" }
 
-    // Donâ€™t allow spending while teleport is arming/committing
+    // Don’t allow spending while teleport is arming/committing
     if (((_dunTeleportCommitAtMs | 0) != 0)) return { ok: false, reason: "teleporting" }
 
     const kind = String(_dunFloorKind || "")
@@ -23798,7 +26033,7 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
 
     const safe = _uiGetSafeForSpend(hi)
 
-    return {
+    const snap: any = {
         ready: true,
         playerId: pid | 0,
         heroIndex: hi | 0,
@@ -23837,7 +26072,14 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
         // Spend gating
         safeForSpend: !!safe.ok,
         safeReason: String(safe.reason || ""),
+
+        // Relics / offers will be appended via helpers (keeps this block stable)
     }
+
+    // Relics (v1 scaffolding): hardcoded state for now
+    appendRelicsToSnapshot(snap, pid)
+
+    return snap
 }
 
 function _uiSetHeroUiMode(hi: number, mode: number): void {
@@ -23888,7 +26130,7 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
     const prevMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
     sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE)
 
-    // Resume movement (safe floors only; we donâ€™t allow opening while busy/locked)
+    // Resume movement (safe floors only; we don’t allow opening while busy/locked)
     unlockHeroControls(hi)
 
     console.log("[UI] close", { pid, hi, prevMode, where })
@@ -24142,6 +26384,8 @@ try {
         console.log("[LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts")
     }
 } catch (_e) { }
+
+
 
 
 

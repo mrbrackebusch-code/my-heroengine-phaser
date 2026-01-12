@@ -1,8 +1,10 @@
 
-
 import Phaser from "phaser";
 
 console.log(">>> [main.ts] dynamic-import version loaded");
+
+import { installBlocklyHeroLogicEditor } from "./blocklyHeroLogicEditor";
+
 
 import { preloadMonsterSheets, buildMonsterAtlas, type MonsterAtlas } from "./monsterAtlas";
 import { applyMonsterAnimationForSprite } from "./monsterAnimGlue";
@@ -586,6 +588,20 @@ class HeroScene extends Phaser.Scene {
 
     private _tilemapAppliedWorldRev: number = 0; // engine-world rev last applied locally (host-side)
 
+    // DOM-sized viewport tracking (canvas should match the available game area, NOT the world)
+    private _domResizeObs?: ResizeObserver;
+    private _domViewW: number = 0;
+    private _domViewH: number = 0;
+
+    // Camera follow tracking
+    private _camFollowPid: number = 0;
+    private _camFollowNative?: Phaser.GameObjects.GameObject;
+
+    // Camera zoom tracking
+    private _camZoomUser: number = 1;
+    private _camZoomBase: number = 1;
+    private _camControlsInstalled: boolean = false;
+
 
     // NEW: track dims too (lets us force-reapply if needed)
     private _tilemapAppliedRows: number = 0;
@@ -621,6 +637,13 @@ async create() {
 
     // 1) Globals + debug flags (weapon flags come from constants, not URL)
     this.setupGlobalsAndDebug();
+
+    
+    // ✅ DOM-sized viewport management (canvas tracks #app size)
+    this._installDomResizeObserver();
+
+    this._installCameraZoomControls();
+    this._updateCameraZoom();
 
     // 2) Loading indicator
     const loadingText = this.createLoadingText();
@@ -686,6 +709,188 @@ private ensureWorldTileRenderer(atlas: TileAtlas) {
 }
 
 
+private _installDomResizeObserver(): void {
+    if (this._domResizeObs) return;
+
+    const el = document.getElementById("app") || document.getElementById("viewport");
+    if (!el || typeof (globalThis as any).ResizeObserver === "undefined") {
+        // Fallback: still try once
+        this._resizeGameToDomViewport("install(no-RO)");
+        return;
+    }
+
+    this._domResizeObs = new ResizeObserver(() => {
+        this._resizeGameToDomViewport("ResizeObserver");
+    });
+    this._domResizeObs.observe(el);
+
+    // One immediate sizing pass
+    this._resizeGameToDomViewport("install");
+}
+
+private _resizeGameToDomViewport(reason: string): void {
+    const el = document.getElementById("app") || document.getElementById("viewport");
+    if (!el) return;
+
+    const r = el.getBoundingClientRect();
+    if (!Number.isFinite(r.width) || !Number.isFinite(r.height)) return;
+
+    const w = (r.width | 0);
+    const h = (r.height | 0);
+    if (w < 16 || h < 16) return;
+
+    if (w === this._domViewW && h === this._domViewH) return;
+    this._domViewW = w;
+    this._domViewH = h;
+
+    // With Phaser.Scale.RESIZE this is legal; it makes the canvas match DOM
+    this.scale.resize(w, h);
+
+    // Ensure the main camera viewport matches
+    this.cameras.main.setViewport(0, 0, w, h);
+
+    this._updateCameraZoom();
+}
+
+private _installCameraZoomControls(): void {
+    if (this._camControlsInstalled) return;
+    this._camControlsInstalled = true;
+
+    const kb = this.input?.keyboard;
+    if (kb) {
+        kb.on("keydown", (ev: KeyboardEvent) => {
+            if (this._shouldIgnoreKeyEvent(ev)) return;
+            if (ev.ctrlKey || ev.metaKey) return;
+
+            const key = ev.key;
+            if (key === "=" || key === "+" || key === "]") {
+                ev.preventDefault();
+                ev.stopPropagation();
+                this._nudgeUserZoom(CAMERA_ZOOM_STEP);
+                return;
+            }
+            if (key === "-" || key === "_" || key === "[") {
+                ev.preventDefault();
+                ev.stopPropagation();
+                this._nudgeUserZoom(-CAMERA_ZOOM_STEP);
+                return;
+            }
+            if (key === "0") {
+                ev.preventDefault();
+                ev.stopPropagation();
+                this._setUserZoom(1);
+            }
+        });
+    }
+
+    this.input.on("wheel", (_pointer: any, _go: any, _dx: number, dy: number, _dz: number, ev: WheelEvent) => {
+        if (!ev) return;
+        if (ev.ctrlKey || ev.metaKey) return;
+
+        const dir = (dy > 0) ? -1 : 1;
+        if (dir === 0) return;
+        this._nudgeUserZoom(dir * CAMERA_WHEEL_ZOOM_STEP);
+
+        ev.preventDefault();
+    });
+}
+
+private _shouldIgnoreKeyEvent(ev: KeyboardEvent): boolean {
+    const t = ev.target as HTMLElement | null;
+    if (!t) return false;
+    const tag = t.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if ((t as any).isContentEditable) return true;
+    return false;
+}
+
+private _nudgeUserZoom(delta: number): void {
+    this._setUserZoom(this._camZoomUser + delta);
+}
+
+private _setUserZoom(next: number): void {
+    if (!Number.isFinite(next)) return;
+
+    const clamped = Phaser.Math.Clamp(next, CAMERA_USER_ZOOM_MIN, CAMERA_USER_ZOOM_MAX);
+    if (Math.abs(clamped - this._camZoomUser) < 0.0001) return;
+
+    this._camZoomUser = clamped;
+    this._updateCameraZoom();
+}
+
+private _updateCameraZoom(): void {
+    const cam = this.cameras?.main;
+    if (!cam) return;
+
+    const viewW = this._domViewW || cam.width || 0;
+    const viewH = this._domViewH || cam.height || 0;
+    if (viewW <= 0 || viewH <= 0) return;
+
+    const fit = Math.min(viewW / CAMERA_BASE_VIEW_W, viewH / CAMERA_BASE_VIEW_H);
+    this._camZoomBase = (Number.isFinite(fit) && fit > 0) ? Math.min(1, fit) : 1;
+
+    const dpr = (typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const zoomComp = (Number.isFinite(dpr) && dpr > 0) ? Math.max(1, 1 / dpr) : 1;
+
+    let target = this._camZoomBase * zoomComp * this._camZoomUser;
+    if (target >= 1) {
+        target = Math.round(target * 2) / 2;
+    }
+
+    target = Phaser.Math.Clamp(
+        target,
+        CAMERA_ZOOM_MIN,
+        CAMERA_ZOOM_MAX
+    );
+
+    if (!Number.isFinite(target) || target <= 0) return;
+    if (Math.abs((cam.zoom || 1) - target) < 0.0001) return;
+
+    cam.setRoundPixels(true);
+    cam.setZoom(target);
+}
+
+private _updateCameraFollowLocalHero(): void {
+    const g: any = globalThis as any;
+    const net = g.__net || g.net;
+    const pid = ((net?.playerId ?? 0) | 0);
+    if (pid <= 0) return;
+
+    const spritesNS: any = g?.sprites;
+    if (!spritesNS || typeof spritesNS.allSprites !== "function") return;
+
+    let bestNative: any = undefined;
+
+    const all = spritesNS.allSprites() as any[];
+    for (const s of all) {
+        if (!s) continue;
+        const native = (s as any).native as Phaser.GameObjects.GameObject | undefined;
+        if (!native) continue;
+
+        let owner = 0;
+        try {
+            owner = (spritesNS.readDataNumber(s, "owner") | 0);
+        } catch {
+            owner = 0;
+        }
+        if (owner === pid) {
+            bestNative = native;
+            break;
+        }
+    }
+
+    if (!bestNative) return;
+
+    if (this._camFollowPid !== pid || this._camFollowNative !== bestNative) {
+        this._camFollowPid = pid;
+        this._camFollowNative = bestNative;
+
+        // Smooth follow; tweak lerp if you want it snappier
+        this.cameras.main.startFollow(bestNative, true, 0.18, 0.18);
+    }
+}
+
+
 public applyTilemapToScene(grid: number[][], tileSize: number) {
     const atlas = this.tileAtlas;
     if (!atlas) {
@@ -735,7 +940,6 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
             g.__HeroEnginePhaserDecor.forceResync("applyTilemapToScene");
         }
     } catch (e) {
-        // Keep tilemap apply resilient; decor will try again on the next tick anyway.
         if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] decor forceResync failed", e);
     }
 
@@ -745,15 +949,16 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     const worldWidth = cols * tileSize;
     const worldHeight = rows * tileSize;
 
+    // World bounds define where the camera can scroll
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    // ✅ Make the CANVAS match the actual game world (no extra black space).
-    this.scale.resize(worldWidth, worldHeight);
-    this.cameras.main.setSize(worldWidth, worldHeight);
+    // ✅ The canvas should match the DOM viewport (NOT the world).
+    // This is what enables camera-follow / scrolling.
+    this._resizeGameToDomViewport("applyTilemapToScene");
 
     if (DEBUG_TILEMAP) {
-        console.log(">>> [HeroScene.tilemap] bounds + viewport set", {
+        console.log(">>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM)", {
             worldWidth,
             worldHeight,
             rows,
@@ -779,6 +984,9 @@ private setupGlobalsAndDebug() {
     // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
     // (kept as-is; profile selection is not "debug")
     applyUrlProfileToGlobals();
+
+    // ✅ Install Blockly editor button + overlay (editor only; no execution yet)
+    installBlocklyHeroLogicEditor();
 
     // Existing hero anim debug registry flag
     this.registry.set("heroAnimDebug", ENABLE_HERO_ANIM_DEBUG);
@@ -1721,9 +1929,14 @@ private maybeInstallHeroAnimTester() {
 }
 
 
-
 update(time: number, delta: number) {
     const g: any = globalThis as any;
+
+    // Keep canvas size locked to DOM game-area
+    this._resizeGameToDomViewport("update");
+
+    // Keep camera following local player hero (works on host + clients)
+    this._updateCameraFollowLocalHero();
 
     this._updateLegacyHostTick(g);
 
@@ -1850,6 +2063,15 @@ function shouldStartGameFromUrl(): boolean {
 const INITIAL_VIEW_W = 480;
 const INITIAL_VIEW_H = 270;
 
+const CAMERA_BASE_VIEW_W = INITIAL_VIEW_W;
+const CAMERA_BASE_VIEW_H = INITIAL_VIEW_H;
+const CAMERA_ZOOM_MIN = 0.5;
+const CAMERA_ZOOM_MAX = 6;
+const CAMERA_USER_ZOOM_MIN = 0.5;
+const CAMERA_USER_ZOOM_MAX = 3;
+const CAMERA_ZOOM_STEP = 0.25;
+const CAMERA_WHEEL_ZOOM_STEP = 0.1;
+
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
 
@@ -1864,8 +2086,8 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 
     scale: {
         mode: Phaser.Scale.NONE,
-        // ✅ IMPORTANT: do NOT let Phaser write CSS offsets/margins to “center”
-        autoCenter: Phaser.Scale.NO_CENTER
+        autoCenter: Phaser.Scale.NO_CENTER,
+        parent: "app",
     },
 
     physics: {

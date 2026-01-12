@@ -101,6 +101,8 @@ const DEBUG_TILEMAP = true;
 // --------------------------------------------------------------
 // Master switch: if false, ALL decor ingestion/rendering is disabled (no-op).
 const DECOR_ENABLED = true;
+const DEBUG_PROP_OUTLINE_VERBOSE = false;
+const FORCE_PROP_PREBAKED_OUTLINE = false;
 // Centralized debug logging for decor pipeline.
 const DECOR_DEBUG = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
@@ -956,6 +958,12 @@ const UI_TEXT_BORDER_C_KEY = "__txtBC";   // number; border color palette index 
 
 const UI_TEXT_OUTLINE_W_KEY = "__txtOW";  // number; outline/stroke width px (0 = none)
 const UI_TEXT_OUTLINE_C_KEY = "__txtOC";  // number; outline/stroke color palette index (0-15)
+
+// Generic focus outline data keys (engine-driven)
+const FOCUS_OUTLINE_ACTIVE_KEY = "focusOutlineActive";
+const FOCUS_OUTLINE_COLOR_KEY = "focusOutlineColor";
+const FOCUS_OUTLINE_RADIUS_KEY = "focusOutlineRadius";
+const FOCUS_OUTLINE_DEPTH_BIAS_KEY = "focusOutlineDepthBias";
 
 const UI_TEXT_ALIGN_KEY = "__txtAlign";   // number; 0=left, 1=center, 2=right
 
@@ -6967,6 +6975,11 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         _syncHeroPath(ctx, s, native);
 
         // --------------------------------------------------
+        // FOCUS OUTLINE (engine-driven)
+        // --------------------------------------------------
+        _syncFocusOutlineForNative(ctx, s, native);
+
+        // --------------------------------------------------
         // ENEMY / ACTOR PATH
         // --------------------------------------------------
         if (_syncEnemyActorPath(ctx, s, native)) continue;
@@ -8590,7 +8603,9 @@ function _applyWorldDepthForNative(s: any, native: any): void {
   // Don’t interfere with UI-managed natives
   if (native.getData && native.getData("uiManaged")) return;
 
+  const eb = _getEngineCollisionBounds(s as any);
   const yPx =
+    (eb && typeof eb.centerY === "number") ? (eb.centerY | 0) :
     (typeof native.y === "number") ? (native.y | 0) :
     (typeof s.y === "number") ? (s.y | 0) :
     0;
@@ -8677,6 +8692,25 @@ function _syncHeroPath(
         auraActive,
         auraColor
     );
+    try {
+        if (auraActive) {
+            const k = "__heroAuraLogOnce_" + (nativeAny?.texture?.key ?? "") + ":" + (nativeAny?.frame?.name ?? "");
+            const g: any = globalThis as any;
+            if (!g[k]) {
+                g[k] = 1;
+                const auraImg: any = (nativeAny as any).__heroAuraImage;
+                console.log("[AURA][HERO][RENDER]", {
+                    heroTex: (nativeAny as any)?.texture?.key ?? "",
+                    heroFrame: (nativeAny as any)?.frame?.name,
+                    auraTex: auraImg?.texture?.key ?? "",
+                    auraFrame: auraImg?.frame?.name,
+                    visible: !!auraImg?.visible,
+                    alpha: auraImg?.alpha ?? 0,
+                    depth: auraImg?.depth ?? 0
+                });
+            }
+        }
+    } catch { /* ignore */ }
     _applyHeroAuraGlow(nativeAny, auraActive, auraGlow, ctx.sc);
 
     try {
@@ -9254,6 +9288,143 @@ const MAX_OVERLAP_DEBUG_LOGS = 40;
 let _overlapDebugCount = 0;
 let _processEventsCallCount = 0;
 
+function _heroCollisionOffsetY(s: Sprite): number {
+    if (!s) return 0;
+    if (!isHeroSprite(s)) return 0;
+    try {
+        const g: any = (globalThis as any);
+        const internals = g ? g.__HeroEnginePhaserInternals : null;
+        if (internals && typeof internals.getHeroCollisionOffsetY === "function") {
+            return (internals.getHeroCollisionOffsetY() | 0) | 0;
+        }
+    } catch { /* ignore */ }
+    return 0;
+}
+
+
+function _syncFocusOutlineForNative(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): void {
+    if (!s) return;
+
+    const active = _readDataNumber0(s, FOCUS_OUTLINE_ACTIVE_KEY, 0) | 0;
+    const color = _readDataNumber0(s, FOCUS_OUTLINE_COLOR_KEY, 1) | 0;
+    const radius = _readDataNumber0(s, FOCUS_OUTLINE_RADIUS_KEY, 2) | 0;
+    const depthBias = _readDataNumber0(s, FOCUS_OUTLINE_DEPTH_BIAS_KEY, 1) | 0;
+
+    // Decor props: DO NOT use hero-outline logic. We render a dedicated focus aura
+    // underneath the prop using the prop's pre-baked aura tilesheet.
+    try {
+        const decorName = (sprites.readDataString(s, DECOR_DATA_NAME) || "");
+        if (decorName) {
+            const r = (sprites.readDataNumber(s, DECOR_DATA_TILE_R) | 0);
+            const c = (sprites.readDataNumber(s, DECOR_DATA_TILE_C) | 0);
+            const renderer: any = ctx?.sc?.registry ? ctx.sc.registry.get("__worldTileRenderer") : null;
+            try {
+                const k = `__focusOutlineDecorSync__${decorName}:${r},${c}:${active}`;
+                const g: any = globalThis as any;
+                if (!g[k]) {
+                    g[k] = 1;
+                    console.log("[FOCUS][DECOR][SYNC]", {
+                        name: decorName,
+                        r,
+                        c,
+                        active,
+                        radius,
+                        depthBias,
+                        renderer: !!renderer
+                    });
+                }
+            } catch { /* ignore */ }
+            if (renderer && typeof renderer.setPropFocusAuraAt === "function") {
+                renderer.setPropFocusAuraAt(r, c, active !== 0, radius, depthBias);
+                return;
+            }
+        }
+    } catch { /* ignore */ }
+
+    if (!native) return;
+    if (native.getData && native.getData("uiManaged")) return;
+
+    // Everything else: fallback to heroAnimGlue outline.
+    heroAnimGlue.syncOutlineForNative(native, active !== 0, color, radius, depthBias);
+}
+
+
+function _syncFocusOutlineForNativeOLDCODETODELETE(
+    ctx: SyncContext,
+    s: any,
+    native: any
+): void {
+    if (!native || !s) return;
+    if (native.getData && native.getData("uiManaged")) return;
+
+    const active = _readDataNumber0(s, FOCUS_OUTLINE_ACTIVE_KEY, 0) | 0;
+    const color = _readDataNumber0(s, FOCUS_OUTLINE_COLOR_KEY, 1) | 0;
+    const radius = _readDataNumber0(s, FOCUS_OUTLINE_RADIUS_KEY, 2) | 0;
+    const depthBias = _readDataNumber0(s, FOCUS_OUTLINE_DEPTH_BIAS_KEY, 1) | 0;
+
+    let targetNative: any = native;
+    try {
+        const name = (sprites.readDataString(s, DECOR_DATA_NAME) || "");
+        if (name) {
+            const r = (sprites.readDataNumber(s, DECOR_DATA_TILE_R) | 0);
+            const c = (sprites.readDataNumber(s, DECOR_DATA_TILE_C) | 0);
+            const renderer: any = ctx?.sc?.registry ? ctx.sc.registry.get("__worldTileRenderer") : null;
+            if (renderer && typeof renderer.tryGetPropDisplayAt === "function") {
+                const propObj = renderer.tryGetPropDisplayAt(r, c);
+                  if (propObj) {
+                      targetNative = propObj;
+                      if (name.toLowerCase().includes("chest")) {
+                          (targetNative as any).__forceOutlineBuild = FORCE_PROP_PREBAKED_OUTLINE;
+                      }
+                      if (name.toLowerCase().includes("chest")) {
+                          const frameIndex = _decor_tryGetPropFrameIndexAt(renderer, r, c);
+                          const primaryKey = _decor_getPrimaryTileTextureKey(renderer);
+                          const propTexKey = propObj?.texture?.key ?? "";
+                          const propFrame = propObj?.frame?.name ?? null;
+                          if (DEBUG_PROP_OUTLINE_VERBOSE) {
+                              console.log("[FOCUS][CHEST][PROP-FRAME]", {
+                                  name,
+                                  r,
+                                  c,
+                                  propTexKey,
+                                  propFrame,
+                                  frameIndex,
+                                  primaryKey,
+                                  auraTexKey: propTexKey ? `${propTexKey}_aura_r2` : ""
+                              });
+                          }
+                      }
+                      const k = "__focusOutlineDecorOnce_" + String(name) + ":" + (r | 0) + "," + (c | 0);
+                      const g: any = globalThis as any;
+                    if (!g[k]) {
+                        g[k] = 1;
+                        console.log("[FOCUS][DECOR] outline target resolved", { name, r, c, tex: propObj.texture?.key ?? "" });
+                    }
+                } else {
+                    console.log("[AURA][PROPS] no prop display for decor", { name, r, c });
+                }
+            }
+        }
+    } catch { /* ignore */ }
+
+    heroAnimGlue.syncOutlineForNative(targetNative, active !== 0, color, radius, depthBias);
+}
+
+function _getEngineCollisionBounds(s: Sprite): any | null {
+    try {
+        const g: any = (globalThis as any);
+        const internals = g ? g.__HeroEnginePhaserInternals : null;
+        if (internals && typeof internals.getCollisionBoundsForSprite === "function") {
+            return internals.getCollisionBoundsForSprite(s);
+        }
+    } catch { /* ignore */ }
+    return null;
+}
+
 // NEW: limit how many times we log onOverlap registration
 const MAX_ON_OVERLAP_LOGS = 2;
 let _onOverlapLogCount = 0;
@@ -9325,15 +9496,21 @@ let _checkHandlerLogCount = 0;
 
             if (aw <= 0 || ah <= 0 || bw <= 0 || bh <= 0) return false;
 
-            const leftA   = a.x - aw / 2;
-            const rightA  = a.x + aw / 2;
-            const topA    = a.y - ah / 2;
-            const bottomA = a.y + ah / 2;
+            const ebA = _getEngineCollisionBounds(a);
+            const ebB = _getEngineCollisionBounds(b);
 
-            const leftB   = b.x - bw / 2;
-            const rightB  = b.x + bw / 2;
-            const topB    = b.y - bh / 2;
-            const bottomB = b.y + bh / 2;
+            const offYA = _heroCollisionOffsetY(a);
+            const offYB = _heroCollisionOffsetY(b);
+
+            const leftA   = ebA ? ebA.left   : (a.x - aw / 2);
+            const rightA  = ebA ? ebA.right  : (a.x + aw / 2);
+            const topA    = ebA ? ebA.top    : ((a.y + offYA) - ah / 2);
+            const bottomA = ebA ? ebA.bottom : ((a.y + offYA) + ah / 2);
+
+            const leftB   = ebB ? ebB.left   : (b.x - bw / 2);
+            const rightB  = ebB ? ebB.right  : (b.x + bw / 2);
+            const topB    = ebB ? ebB.top    : ((b.y + offYB) - bh / 2);
+            const bottomB = ebB ? ebB.bottom : ((b.y + offYB) + bh / 2);
 
             return (
                 leftA < rightB &&

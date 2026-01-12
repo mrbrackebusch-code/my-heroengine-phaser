@@ -101,6 +101,12 @@ export interface DecorVisualRef {
     // ✅ optional pixel offsets applied at render time (Phaser prop rendering)
     offsetXPx?: number;
     offsetYPx?: number;
+
+    // Optional aura padding overrides for focus outlines.
+    focusAuraPadPx?: number;
+    focusAuraPadAlways?: boolean;
+    auraPadPx?: number;
+    auraPadAlways?: boolean;
 }
 
 
@@ -145,13 +151,22 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 
     // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
     // ref MUST be bottom-left of the whole visual => row 17, col 19
-    stairs_statue: { atlas: "terrain_atlas", ref: { row: 17, col: 19 }, wTiles: 1, hTiles: 3 },
+    stairs_statue: {
+        atlas: "terrain_atlas",
+        ref: { row: 17, col: 19 },
+        wTiles: 1,
+        hTiles: 3,
+        focusAuraPadPx: 4,
+        focusAuraPadAlways: true,
+    },
 
     pedestal: { atlas: "terrain_atlas", ref: { row: 14, col: 19 } },
 
     chest: {
         atlas: "build_atlas",
         ref: { row: 21, col: 15 },
+        focusAuraPadPx: 4,
+        focusAuraPadAlways: true,
         anim: {
             key: "unusedForStates",
             states: {
@@ -372,6 +387,10 @@ export interface TileAtlas {
     // Legacy: historically used by older tile renderers.
     textureKey: string;
 
+    /** Debug helper: return the source PNG URL used to load a given textureKey (if known). */
+    getSheetUrl(textureKey: string): string | undefined;
+
+
     /** Size of each tile in pixels (expected 32). */
     tileSize: number;
 
@@ -528,6 +547,10 @@ type AnimSheetDef = { textureKey: string, url: string, frameW: number, frameH: n
 
 const TILE_SHEETS: TileSheetDef[] = [];
 
+// Debug: map textureKey -> source PNG URL (filled during preload).
+const __SHEET_URL_BY_KEY = new Map<string, string>();
+
+
 const ANIM_SHEETS: AnimSheetDef[] = []
 
 
@@ -552,6 +575,22 @@ const tilePngs = import.meta.glob(
 // Grab animation sheets under ../assets/animations/*.png as Vite URLs.
 const animPngs = import.meta.glob(
     "../assets/animations/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+// Aura sheets for tiles/props/animations (precomputed outlines)
+const tileAuraPngs = import.meta.glob(
+    "../assets/auras_32x32/tiles/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+const animAura32Pngs = import.meta.glob(
+    "../assets/auras_32x32/animations/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+const animAura64Pngs = import.meta.glob(
+    "../assets/auras_64x64/animations/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
@@ -615,7 +654,34 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         return;
     }
 
+    // Reset url map each preload so logs always reflect current load set.
+    __SHEET_URL_BY_KEY.clear();
+
     const DEBUG_TILES = true;
+
+    const auraUrlById = new Map<string, string>();
+    for (const [p, url] of Object.entries(tileAuraPngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4);
+        auraUrlById.set(base, url);
+    }
+
+    const animAura32ById = new Map<string, string>();
+    for (const [p, url] of Object.entries(animAura32Pngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4);
+        animAura32ById.set(base, url);
+    }
+
+    const animAura64ById = new Map<string, string>();
+    for (const [p, url] of Object.entries(animAura64Pngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4);
+        animAura64ById.set(base, url);
+    }
 
     if (DEBUG_TILES) {
         logTiles(
@@ -627,15 +693,119 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
     }
 
     for (const sheet of TILE_SHEETS) {
+        // Base sheet
+        __SHEET_URL_BY_KEY.set(sheet.textureKey, sheet.url);
+
         scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: sheet.frameW | 0,
             frameHeight: sheet.frameH | 0
         });
+
+        const texKey = sheet.textureKey;
+        const isAnim = texKey.startsWith("anims.");
+        const baseName = texKey.replace(/^tiles\./, "").replace(/^anims\./, "");
+        const auraBase = `${baseName}_aura_r2`;
+
+        let auraUrl: string | undefined;
+        let shouldLogMissing = false;
+
+        if (isAnim) {
+            const fw = sheet.frameW | 0;
+            const fh = sheet.frameH | 0;
+            if (fw === 32 && fh === 32) {
+                auraUrl = animAura32ById.get(auraBase);
+                shouldLogMissing = true;
+            } else if (fw === 64 && fh === 64) {
+                auraUrl = animAura64ById.get(auraBase);
+                shouldLogMissing = true;
+            }
+        } else {
+            auraUrl = auraUrlById.get(auraBase);
+            shouldLogMissing = true;
+        }
+
+        if (auraUrl) {
+            const auraTexKey = `${texKey}_aura_r2`;
+
+            // Aura sheet
+            __SHEET_URL_BY_KEY.set(auraTexKey, auraUrl);
+
+            scene.load.spritesheet(auraTexKey, auraUrl, {
+                frameWidth: sheet.frameW | 0,
+                frameHeight: sheet.frameH | 0
+            });
+
+            if (DEBUG_TILES) {
+                logTiles("[tileAtlas.preload] aura loaded", { texKey, auraTexKey, auraUrl });
+            }
+        } else if (DEBUG_TILES && shouldLogMissing && (isAnim || auraUrlById.size > 0)) {
+            logTiles(`[tileAtlas.preload] missing aura for ${texKey} (${auraBase})`);
+        }
     }
 }
 
 
 
+
+function _computeSheetInfoFromLoadedTexture(
+    scene: Phaser.Scene,
+    texKey: string,
+    frameW: number,
+    frameH: number,
+    fallbackCols: number,
+    fallbackRows: number
+): TileSheetInfo | null {
+    const fw = Math.max(1, frameW | 0);
+    const fh = Math.max(1, frameH | 0);
+
+    try {
+        const texObj: any = (scene as any)?.textures?.get?.(texKey);
+        const img: any =
+            texObj?.getSourceImage?.() ??
+            texObj?.source?.[0]?.image ??
+            null;
+
+        const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
+        const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
+
+        const cols = w > 0 ? Math.floor(w / fw) : (fallbackCols | 0);
+        const rows = h > 0 ? Math.floor(h / fh) : (fallbackRows | 0);
+
+        if ((cols | 0) > 0 && (rows | 0) > 0) {
+            return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: fw };
+        }
+    } catch {
+        // ignore; fall through
+    }
+
+    if ((fallbackCols | 0) > 0 && (fallbackRows | 0) > 0) {
+        return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: fw };
+    }
+    return null;
+}
+
+function _registerAuraSheetInfos(
+    scene: Phaser.Scene,
+    sheetInfoByKey: Map<string, TileSheetInfo>
+): void {
+    for (const sh of TILE_SHEETS) {
+        const auraKey = `${sh.textureKey}_aura_r2`;
+
+        const texExists = !!((scene as any)?.textures?.exists?.(auraKey));
+        if (!texExists) continue;
+
+        const info = _computeSheetInfoFromLoadedTexture(
+            scene,
+            auraKey,
+            sh.frameW | 0,
+            sh.frameH | 0,
+            sh.cols | 0,
+            sh.rows | 0
+        );
+
+        if (info) sheetInfoByKey.set(auraKey, info);
+    }
+}
 
 
 
@@ -708,6 +878,8 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         const info = computeSheetInfo(sh.textureKey, sh.frameW | 0, sh.frameH | 0, sh.cols | 0, sh.rows | 0);
         if (info) sheetInfoByKey.set(sh.textureKey, info);
     }
+    
+    _registerAuraSheetInfos(scene, sheetInfoByKey);
 
     // Base sheet dims (fatal if missing — autotiles cannot index safely).
     const baseDef = TILE_SHEETS.find(s => s.textureKey === baseTextureKey) ?? TILE_SHEETS[0];
@@ -839,6 +1011,13 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
             if (!tk) return null;
             return sheetInfoByKey.get(tk) ?? null;
         },
+
+        getSheetUrl(textureKey: string): string | undefined {
+            const tk = (textureKey ?? "").trim();
+            if (!tk) return undefined;
+            return __SHEET_URL_BY_KEY.get(tk);
+        },
+
 
         resolveAtlasTextureKey(aliasOrTextureKey: string): string {
             const s = (aliasOrTextureKey ?? "").trim();

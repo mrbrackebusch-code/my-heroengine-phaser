@@ -95,20 +95,21 @@
         flex-direction: column;
         align-items: stretch;
         width: fit-content;
-        gap: 1px; /* âœ… visible separation so HUD never â€œcoversâ€ top edge */
+        gap: 1px; /* visible separation so HUD never covers top edge */
       }
 
-      #app {
-        display: inline-block;
-        width: fit-content;
-      }
+    #app {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
-      #app canvas {
-        display: block;
-        border: 2px solid black;
-        box-sizing: border-box;
-        image-rendering: pixelated;
-      }
+    #app canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
 
       /* -----------------------------
         Dialog overlay (DOM, crisp text)
@@ -324,11 +325,18 @@
       /* -----------------------------
          HUD (4 boxes)
          ----------------------------- */
-      #hud {
+    :root {
+      --hud-left-w: 150px; /* single source of truth */
+    }
+
+    #hud {
         width: 100%;
         box-sizing: border-box;
 
         display: grid;
+        grid-template-columns: var(--hud-left-w) 1.20fr 1fr 1fr 1fr;
+        gap: 1px;
+
         grid-template-columns: 1.20fr 1fr 1fr 1fr;
         gap: 8px;
 
@@ -466,7 +474,7 @@
 
       .hud-elem {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
+          "Liberation Mono", "Courier New", monospace, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
         font-size: 18px;
         line-height: 1;
       }
@@ -486,7 +494,7 @@
       /* YOU box */
       .hud-youline {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
+          "Liberation Mono", "Courier New", monospace, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
         font-size: 12px;
@@ -544,6 +552,31 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
+      #stage-body {
+        display: flex;
+        gap: 1px;
+        background: #000;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #000;
+        min-height: 0;
+      }
+
+      #hud-left {
+        width: var(--hud-left-w);
+        flex: 0 0 var(--hud-left-w);
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+    #viewport {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
 
       #xp-panel .xp-line {
         font-size: 10px;
@@ -636,12 +669,229 @@
         letter-spacing: 0.2px;
       }
 
-      #xp-panel .xp-relics-box {
-        height: 44px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.04);
-      }
+
+  #xp-panel .xp-relics-box {
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+#xp-panel .xp-relics-box {
+  /* MASSIVE by default */
+  height: clamp(140px, 28vh, 360px);
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+
+  display: flex;
+  flex-wrap: wrap;          /* allow multiple rows */
+  align-content: flex-start;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  overflow-y: auto;         /* scroll when needed */
+  overflow-x: hidden;
+}
+
+
+.xp-relic {
+  width: 32px;
+  height: 44px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.xp-relic-icon {
+  width: 32px;
+  height: 32px;
+  position: relative;
+
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.xp-relic-icon.xp-disabled {
+  filter: grayscale(1);
+  opacity: 0.42;
+}
+
+.xp-relic-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+
+  color: rgba(255,255,255,0.95);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xp-relic-glyph {
+  margin-top: 2px;
+  height: 10px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  line-height: 1;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.xp-relic-glyph span {
+  opacity: 0.25;
+}
+
+.xp-relic-glyph span.xp-lit {
+  opacity: 0.95;
+}
+
+@keyframes xpRelicThrob {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.10); }
+  100% { transform: scale(1); }
+}
+
+.xp-relic-icon.xp-throb {
+  animation: xpRelicThrob 420ms ease-in-out infinite;
+}
+
+/* =========================================================
+   LAYOUT OVERRIDES (paste at end of <style>)
+   Goal:
+   - Top HUD (#hud) fixed DOM size, spans full width (including left area)
+   - Left HUD (#xp-panel) fixed DOM size, always visible
+   - Game canvas fills remaining space
+   ========================================================= */
+
+:root {
+  --hud-left-w: 170px; /* tweak if you want wider/narrower left sidebar */
+  --hud-gap: 8px;
+}
+
+/* Keep landing page behavior as-is (body flex centering is fine).
+   Game view will be fixed-position and fill the window. */
+
+/* Make the entire game UI fill the viewport when shown */
+#game-wrap {
+  position: fixed;
+  inset: 0;
+  margin-top: 0 !important;      /* kill the “intentional” drop */
+  width: 100vw;
+  height: 100vh;
+  display: flex;                 /* script already sets flex; keep consistent */
+  justify-content: stretch;
+  align-items: stretch;
+}
+
+/* Stage becomes a 2-row grid: top HUD + rest (sidebar + canvas) */
+#stage {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--hud-gap);
+  box-sizing: border-box;
+  padding: var(--hud-gap);
+  border: 2px solid rgba(0, 0, 0, 0.9);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+/* HUD spans full width (covers top-left too) */
+#hud {
+  width: 100%;
+  grid-row: 1;
+}
+
+/* Viewport becomes a 2-column grid: left panel + game canvas */
+#viewport {
+  grid-row: 2;
+
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  grid-template-columns: var(--hud-left-w) 1fr;
+  gap: var(--hud-gap);
+
+  /* critical for grid children to be allowed to shrink */
+  min-height: 0;
+  min-width: 0;
+
+  position: relative;
+}
+
+/* Left sidebar: stop positioning it “outside” the canvas */
+#xp-panel {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+
+  width: var(--hud-left-w) !important;
+  height: 100% !important;
+
+  /* keep your existing look, just ensure it doesn't get clipped */
+  pointer-events: none;
+
+  /* critical for internal scrolling/fit */
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Game container fills its cell */
+#app {
+  width: 100% !important;
+  height: 100% !important;
+
+  /* critical for grid */
+  min-width: 0;
+  min-height: 0;
+
+  display: block;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid rgba(0, 0, 0, 0.95);
+  border-radius: 12px;
+  background: #000;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* Scale the canvas to fill the available area */
+#app canvas {
+  width: 100% !important;
+  height: 100% !important;
+
+  display: block;
+  image-rendering: pixelated;
+}
 
 
 </style>
@@ -773,7 +1023,6 @@
         </div>
 
         <div id="viewport">
-          <div id="app"></div>
           <!-- XP / Level panel (per-client, per-hero) -->
           <div id="xp-panel" aria-hidden="true">
             <div class="xp-title" id="xp-level-top">Level ...</div>
@@ -809,6 +1058,7 @@
             <div class="xp-relics-title">Relics:</div>
             <div class="xp-relics-box" id="xp-relics-box"></div>
           </div>
+          <div id="app"></div>
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
             <div id="levelup-box">
@@ -885,17 +1135,34 @@
         const REFRESH_MS = 100;
 
         const stageEl = document.getElementById("stage");
+        const gameWrapEl = document.getElementById("game-wrap");
+        let lastW = 0;
 
         // --- Force HUD width to match the actual canvas width (live) ---
-        function syncStageWidthToCanvas() {
-          if (!stageEl) return;
-          const canvas = document.querySelector("#app canvas");
-          if (!canvas) return;
-
-          // offsetWidth includes border; matches what your eyes see
-          const w = canvas.offsetWidth | 0;
-          if (w > 0) stageEl.style.width = w + "px";
+      function syncStageWidthToCanvas() {
+        if (gameWrapEl) {
+          const pos = getComputedStyle(gameWrapEl).position;
+          if (pos === "fixed") return;
         }
+        const canvas = document.querySelector("#app canvas");
+        if (!canvas || !stageEl) return;
+
+        const leftEl = document.getElementById("hud-left");
+        const leftW = (leftEl ? (leftEl.offsetWidth | 0) : 0) | 0;
+        const canvasW = (canvas.offsetWidth | 0) | 0;
+
+        // keep CSS var in sync (so the HUD grid column stays correct even if you change it later)
+        if (leftW > 0) {
+          document.documentElement.style.setProperty("--hud-left-w", `${leftW}px`);
+        }
+
+        // stage width should include left column + canvas
+        const totalW = (leftW + canvasW) | 0;
+        if (totalW > 0 && totalW !== lastW) {
+          lastW = totalW;
+          stageEl.style.width = totalW + "px";
+        }
+      }
 
         // Wait until canvas exists, then observe it
         (function initCanvasObserver() {
@@ -977,7 +1244,7 @@
 
         // Pick your emojis here
         const EMOJI = {
-          coin: "\u{1FA99}",
+          coin: "\u{1F4B0}",
           health: "\u2764\uFE0F",
           mana: "\u{1FAE7}",
         };
@@ -1169,14 +1436,14 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
 
               // ------------------------------------------------------------
-        // XP / LEVEL HUD (per-hero) â€” smooth fill, never shrinks
+        // XP / LEVEL HUD (per-hero) smooth fill, never shrinks
         // Reads hero sprite data keys: lvl, xp, xpNext, lvlPts, xpTot
         // ------------------------------------------------------------
 
         let _xp_dispPct = 0;      // what we draw
-        let _xp_targetPct = 0;    // what weâ€™re growing toward
+        let _xp_targetPct = 0;    // what we're growing toward
         let _xp_postWrapPct = 0;  // post-level-up target
-        let _xp_wrapCount = 0;    // how many level-ups to â€œwrapâ€ through
+        let _xp_wrapCount = 0;    // how many level-ups to wrap through
         let _xp_lastLevelSeen = 0;
 
         let _xp_animLastTs = 0;
@@ -1250,7 +1517,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
               _xp_setBarHeight(0);
 
               if (_xp_wrapCount > 0) {
-                _xp_targetPct = 100; // next â€œwrapâ€
+                _xp_targetPct = 100; // next wrap
               } else {
                 _xp_targetPct = _xp_postWrapPct; // final post-level percent
               }
@@ -1603,6 +1870,22 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
         }
 
+        function _logicNoteForButton(button, profile) {
+          const map = window.__heLogicSourceByButton || null;
+          const src = map ? map[String(button || "")] : null;
+          if (!src) return "";
+          let note = `src:${src.source || ""}`;
+          if (src.profile) note += ` (${src.profile})`;
+          if (src.source && String(src.source).indexOf("blockly") >= 0 &&
+              typeof window.__heBlocklyHeroLogicDebug === "function") {
+            try {
+              const dbg = window.__heBlocklyHeroLogicDebug(profile);
+              if (dbg && dbg.lastErr) note += ` err:${dbg.lastErr}`;
+            } catch (_e) {}
+          }
+          return note;
+        }
+
       function familyInfo(fam) {
         const FAMILY = window.FAMILY || {};
         const f = (Number(fam) | 0);
@@ -1618,7 +1901,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
         }
 
-        // Some builds might export SUPPORT instead of HEAL; treat both as â€œSupportâ€
+        // Some builds might export SUPPORT instead of HEAL; treat both as Support
         if (typeof FAMILY.SUPPORT === "number" && f === (FAMILY.SUPPORT | 0)) {
           return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
         }
@@ -1626,43 +1909,48 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
         }
 
-        // âœ… Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
+        // Robust fallback (your screenshot shows 0/1/2 = Strength/Agility/Intelligence)
         if (f === 0) return { name: "Strength", kindClass: "family-strength", boxClass: "move-strength" };
         if (f === 1) return { name: "Agility", kindClass: "family-agility", boxClass: "move-agility" };
         if (f === 2) return { name: "Intelligence", kindClass: "family-intelligence", boxClass: "move-intelligence" };
         if (f === 3) return { name: "Support", kindClass: "family-support", boxClass: "move-support" };
 
-        return { name: "â€”", kindClass: "", boxClass: "" };
+        return { name: "", kindClass: "", boxClass: "" };
       }
 
         // --- element mapping: DEFAULT NONE unless enum says otherwise ---
         function elemInfo(elem) {
-          const ELEM = window.ELEM || {};
-          const e = elem | 0;
+          const WE = window.ELEM || {};
+          const e = (Number(elem) | 0);
 
-          // âœ… First preference: explicit NONE
-          if (typeof ELEM.NONE === "number" && e === (ELEM.NONE | 0)) {
-            return { name: "None", emoji: "\u2205" };
-          }
-
-          const m = [
-            { key: "FIRE", name: "Fire", emoji: "\u{1F525}" },
-            { key: "WATER", name: "Water", emoji: "\u{1F4A7}" },
-            { key: "LIGHTNING", name: "Lightning", emoji: "\u26A1" },
-            { key: "WIND", name: "Wind", emoji: "\u{1F4A8}" },
-            { key: "EARTH", name: "Earth", emoji: "\u{1FAA8}" },
-            { key: "NATURE", name: "Nature", emoji: "\u{1F33F}" },
-          ];
-
-          for (const it of m) {
-            if (typeof ELEM[it.key] === "number" && e === (ELEM[it.key] | 0)) {
-              return { name: it.name, emoji: it.emoji };
+          // Helper: prefer engine enum ids when available; otherwise use fallback numeric ids
+          function _matchesAnyKey(keys) {
+            for (const k of keys) {
+              if (typeof WE[k] === "number" && e === (WE[k] | 0)) return true;
             }
+            return false;
           }
 
-          // âœ… If we can't prove it's an element, show None.
+          // NONE
+          if (_matchesAnyKey(["NONE"]) || e === 0) return { name: "None", emoji: "\u2205" };
+
+          // FIRE / WATER / EARTH / WIND (your asked set)
+          if (_matchesAnyKey(["FIRE"]) || e === 2) return { name: "Fire", emoji: "\u{1F525}" };
+          if (_matchesAnyKey(["WATER"]) || e === 3) return { name: "Water", emoji: "\u{1F4A7}" };
+          if (_matchesAnyKey(["EARTH"]) || e === 5) return { name: "Earth", emoji: "\u{1FAA8}" };
+
+          // WIND: accept either engine key or fallback id 6
+          if (_matchesAnyKey(["WIND"]) || e === 6) return { name: "Wind", emoji: "\u{1F4A8}" };
+
+          // Extras (won’t hurt)
+          if (_matchesAnyKey(["ELECTRIC", "LIGHTNING"]) || e === 4) return { name: "Electric", emoji: "\u26A1" };
+          if (_matchesAnyKey(["GRASS", "NATURE"]) || e === 1) return { name: "Nature", emoji: "\u{1F33F}" };
+
+          // Unknown => show None
           return { name: "None", emoji: "\u2205" };
         }
+
+
 
         function readNum(spritesNS, spr, key) {
           try { return (spritesNS.readDataNumber(spr, key) | 0); } catch (_e) { return 0; }
@@ -1736,6 +2024,113 @@ function _readTeamCoins(pid, hero, spritesNS) {
           setTitle(elemEl, ei.name);
         }
 
+
+        // ------------------------------------------------------------
+        // RELICS UI (sidebar)
+        // ------------------------------------------------------------
+
+        // Cached once
+        let _hud_relicCatalog = null;
+
+        // If your assets live somewhere else, change these two.
+        const RELIC_SHEET_URL = {
+          ProjectUtumno_full: "/assets/tiles/ProjectUtumno_full.png",
+          ProjectUtumno_supplemental: "/assets/tiles/ProjectUtumno_supplemental.png",
+        };
+
+        let _hud_relicRenderKey = "";
+
+        function _hud_getRelicCatalogOnce() {
+          if (_hud_relicCatalog) return _hud_relicCatalog;
+          try {
+            if (typeof window.__heGetRelicCatalog === "function") {
+              _hud_relicCatalog = window.__heGetRelicCatalog() || null;
+              return _hud_relicCatalog;
+            }
+          } catch (_e) {}
+          return null;
+        }
+
+        function _hud_tooltipForRelic(def) {
+          if (!def) return "";
+          const name = String(def.name || "");
+          const effect = String(def.effectText || "");
+          const flavor = String(def.flavorText || "");
+          // Keep it simple: title tooltip
+          return flavor ? `${name}\n${effect}\n\n${flavor}` : `${name}\n${effect}`;
+        }
+
+        function _hud_buildGlyphHtml(glyphText, litMask) {
+          const txt = String(glyphText || "");
+          const m = (litMask | 0) >>> 0;
+          let out = "";
+          for (let i = 0; i < txt.length; i++) {
+            const ch = txt[i];
+            const lit = ((m >>> i) & 1) !== 0;
+            out += `<span class="${lit ? "xp-lit" : ""}">${ch}</span>`;
+          }
+          return out;
+        }
+
+        function _hud_renderRelics(boxEl, snap) {
+          if (!boxEl) return;
+
+          const cat = _hud_getRelicCatalogOnce();
+          const owned = snap && snap.relics && Array.isArray(snap.relics.ownedRelicIds) ? snap.relics.ownedRelicIds : null;
+          const stById = snap && snap.relics && snap.relics.relicUiStateById ? snap.relics.relicUiStateById : null;
+
+          if (!cat || !owned || owned.length === 0) {
+            if (boxEl.innerHTML !== "") boxEl.innerHTML = "";
+            _hud_relicRenderKey = "";
+            return;
+          }
+
+          // Render only when changed (cheap “diff”)
+          const key = JSON.stringify({ owned, stById });
+          if (key === _hud_relicRenderKey) return;
+          _hud_relicRenderKey = key;
+
+          let html = "";
+          for (const relicId of owned) {
+            const def = cat[String(relicId)] || null;
+            const st = (stById && stById[String(relicId)]) ? stById[String(relicId)] : {};
+
+            const disabled = !!st.disabled;
+            const throb = !!st.throb;
+            const useAlt = !!st.useAltIcon;
+
+            const iconSpec = (useAlt && def && def.iconAlt) ? def.iconAlt : (def ? def.iconPrimary : null);
+            const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
+            const x = iconSpec ? (iconSpec.x | 0) : 0;
+            const y = iconSpec ? (iconSpec.y | 0) : 0;
+
+            const url = RELIC_SHEET_URL[sheetName] || "";
+            const bg = url ? `background-image:url('${url}'); background-position:${-(x * 32)}px ${-(y * 32)}px;` : "";
+
+            const badge = (st.cornerCount === undefined || st.cornerCount === null) ? "" : `<div class="xp-relic-badge">${st.cornerCount | 0}</div>`;
+
+            const glyphText = (st.glyphText !== undefined && st.glyphText !== null) ? String(st.glyphText) : "";
+            const glyphMask = (st.glyphLitMask | 0) >>> 0;
+            const glyph = glyphText
+              ? `<div class="xp-relic-glyph">${_hud_buildGlyphHtml(glyphText, glyphMask)}</div>`
+              : `<div class="xp-relic-glyph"></div>`;
+
+            const tip = _hud_tooltipForRelic(def).replace(/"/g, "&quot;");
+
+            html += `
+              <div class="xp-relic" title="${tip}">
+                <div class="xp-relic-icon ${disabled ? "xp-disabled" : ""} ${throb ? "xp-throb" : ""}" style="${bg}">
+                  ${badge}
+                </div>
+                ${glyph}
+              </div>
+            `;
+          }
+
+          boxEl.innerHTML = html;
+        }
+
+
         function tick() {
           const pid = getPid();
           const spritesNS = window.sprites;
@@ -1802,6 +2197,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           setText(R.xpBonusPts, `Points: ${lvlPts}`);
 
           const snap = _getUiSnapshotCached(pid);
+          _hud_renderRelics(document.getElementById("xp-relics-box"), snap);
+
           const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
           _lvlui_initOnce();
           _lvlui_applySnapshot(snap);
@@ -1837,6 +2234,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
           renderMove(outA, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
           renderMove(outB, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
           renderMove(outAB, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
+
+          setText(R.aNote, _logicNoteForButton("A", profile));
+          setText(R.bNote, _logicNoteForButton("B", profile));
+          setText(R.abNote, _logicNoteForButton("A+B", profile));
         }
 
         setInterval(tick, REFRESH_MS);
