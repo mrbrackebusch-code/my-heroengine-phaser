@@ -3,7 +3,7 @@ declare const globalThis: any;
 
 import * as StudentLogic from "./studentLogicAll";
 
-import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
+import { tryRunBlocklyHeroLogic, dbgBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 
 // ==========================================
 // Types
@@ -16,7 +16,7 @@ type HeroLogicFn = (
 ) => any[];
 
 
-const DEBUG_HOST_LOGIC = false;
+const DEBUG_HOST_LOGIC = true;
 
 // ==========================================
 // Registries (kept global for debugging)
@@ -305,6 +305,14 @@ function _he_normOut(profile: string, button: string, out: any[] | null): number
 if (typeof setResolver === "function") {
     setResolver((profile, heroIndex, button, enemiesArr, heroesArr) => {
         const g: any = globalThis as any;
+        const TRACE = DEBUG_HOST_LOGIC || !!g.__heHeroLogicTrace;
+        const _trace = (msg: string, data?: any) => {
+            if (!TRACE) return;
+            try {
+                if (data == null) console.log(msg);
+                else console.log(msg + " " + JSON.stringify(data));
+            } catch {}
+        };
         const _setLogicSource = (source: string, prof: string) => {
             try {
                 if (!g.__heLogicSourceByButton) g.__heLogicSourceByButton = {};
@@ -322,7 +330,9 @@ if (typeof setResolver === "function") {
         //   "ts": disable Blockly completely
         const mode: string = (g.__heHeroLogicMode || "blocklyIfPresent");
 
-        const effectiveProfile = (profile && String(profile).trim()) ? String(profile).trim() : "Demo";
+        // Keep this in sync with blocklyHeroLogicRuntime's fallback ("Default")
+        const FALLBACK_PROFILE = "Default";
+        const effectiveProfile = (profile && String(profile).trim()) ? String(profile).trim() : FALLBACK_PROFILE;
 
         // Try profile candidates in case of mismatches
         const cand: string[] = [];
@@ -339,82 +349,75 @@ if (typeof setResolver === "function") {
 
         // Unique preserve order
         const seen = new Set<string>();
+        // Always append the shared fallback so Blockly/TS agree on the “no profile” name.
+        cand.push(FALLBACK_PROFILE);
+
         const profilesToTry = cand.filter(p => (p && !seen.has(p) && (seen.add(p), true)));
 
-        if (DEBUG_HOST_LOGIC) {
-            console.log(
-                "[heroLogicHost] RESOLVE mode=" + mode +
-                " profile=" + effectiveProfile +
-                " heroIndex=" + heroIndex +
-                " button=" + button +
-                " tryProfiles=" + JSON.stringify(profilesToTry)
-            );
-        }
+        _trace("[heroLogicHost] RESOLVE", { mode, profile: effectiveProfile, heroIndex, button, tryProfiles: profilesToTry });
 
         // 0) Blockly (optional/forced)
         let sawBlocklyXml = false;
         if (mode !== "ts") {
             for (const p of profilesToTry) {
                 const key = "he_blockly_ws_v1:" + encodeURIComponent(p);
-                const hasXml = (() => {
+                let hasXml = (() => {
                     try { return !!(localStorage.getItem(key) || "").trim(); } catch { return false; }
                 })();
+                if (!hasXml && p !== FALLBACK_PROFILE) {
+                    const fbKey = "he_blockly_ws_v1:" + encodeURIComponent(FALLBACK_PROFILE);
+                    try { hasXml = !!(localStorage.getItem(fbKey) || "").trim(); } catch { hasXml = false; }
+                }
                 if (hasXml) sawBlocklyXml = true;
 
                 _he_setBlocklyReadonlyCtx(heroIndex, enemiesArr, heroesArr)
-                const raw = tryRunBlocklyHeroLogic(p, button)
+                const raw = tryRunBlocklyHeroLogic(p, button);
 
                 const out = _he_normOut(p, button, raw);
 
                 if (out && out.length) {
-                    if (DEBUG_HOST_LOGIC) {
-                        console.log(
-                            "[heroLogicHost] USING Blockly profile=" + p +
-                            " out=" + JSON.stringify(out)
-                        );
-                    }
+                    _trace("[heroLogicHost] USING Blockly", { profile: p, button, out });
                     _setLogicSource("blockly", p);
                     return out;
                 }
 
-                if (DEBUG_HOST_LOGIC) {
-                    console.log(
-                        "[heroLogicHost] Blockly MISS profile=" + p +
-                        " hasXml=" + hasXml +
-                        " key=" + key
-                    );
+                // Miss: collect detailed diagnostics and, if XML exists, stop (no TS fallback).
+                const dbg = (() => { try { return dbgBlocklyHeroLogic(p); } catch { return null; } })();
+                const reason = (!hasXml) ? "no-xml" : (dbg?.lastErrByButton?.[button] || dbg?.lastErr || "null-out");
+                const rawSample = dbg?.lastRawByButton ? dbg.lastRawByButton[button] : (dbg && ("lastRaw" in (dbg as any)) ? (dbg as any).lastRaw : undefined);
+                _trace("[heroLogicHost] Blockly MISS", {
+                    profile: p,
+                    button,
+                    hasXml,
+                    key,
+                    reason,
+                    lastRaw: rawSample,
+                    lastRawType: rawSample === undefined ? "undefined" : (rawSample === null ? "null" : typeof rawSample),
+                    lastRawJson: (() => { try { return JSON.stringify(rawSample); } catch { return "<unserializable>"; } })(),
+                    dbg,
+                });
+
+                if (hasXml) {
+                    _setLogicSource("blockly:invalid", p);
+                    return null; // per-move hard stop: do not fall back to TS for this button
                 }
             }
 
             // If forced, do NOT fall back to TS
             if (mode === "forceBlockly") {
-                if (DEBUG_HOST_LOGIC) {
-                    console.log("[heroLogicHost] FORCE Blockly: returning null (no move)");
-                }
+                _trace("[heroLogicHost] FORCE Blockly: returning null (no move)");
                 _setLogicSource("blockly:miss", effectiveProfile);
                 return null;
             }
 
-            if (sawBlocklyXml) {
-                if (DEBUG_HOST_LOGIC) {
-                    console.log("[heroLogicHost] Blockly workspace present but no valid output; returning null");
-                }
-                _setLogicSource("blockly:miss", effectiveProfile);
-                return null;
-            }
+            // If Blockly XML exists but failed to run, mark it and fall back to TS/Demo.
+            if (sawBlocklyXml) _setLogicSource("blockly:miss", effectiveProfile);
         }
 
         // 1) Profile-based (TS)
         const byProfile = heroLogicByProfile[effectiveProfile];
         if (byProfile) {
-            if (DEBUG_HOST_LOGIC) {
-                console.log(
-                    "[heroLogicHost] USING profile logic",
-                    effectiveProfile,
-                    "fn=",
-                    byProfile.name
-                );
-            }
+            _trace("[heroLogicHost] USING ts:profile", { profile: effectiveProfile, fn: byProfile.name });
             const raw = byProfile(button, heroIndex, enemiesArr, heroesArr);
             const out = _he_normOut(effectiveProfile, button, raw);
             if (out && out.length) {
@@ -426,29 +429,19 @@ if (typeof setResolver === "function") {
         // 2) Index-based (TS)
         const byIndex = heroLogicByIndex[heroIndex | 0];
         if (byIndex) {
-            if (DEBUG_HOST_LOGIC) {
-                console.log(
-                    "[heroLogicHost] USING index-based logic heroIndex=" + heroIndex,
-                    "fn=",
-                    byIndex.name
-                );
-            }
+            _trace("[heroLogicHost] USING ts:index", { heroIndex, fn: byIndex.name, profile: effectiveProfile });
             _setLogicSource("ts:index", effectiveProfile);
             return byIndex(button, heroIndex, enemiesArr, heroesArr);
         }
 
         // 3) Demo fallback
         if (DemoHeroLogic) {
-            if (DEBUG_HOST_LOGIC) {
-                console.log("[heroLogicHost] USING DemoHeroLogic fallback");
-            }
+            _trace("[heroLogicHost] USING demo fallback", { profile: effectiveProfile });
             _setLogicSource("demo", effectiveProfile);
             return DemoHeroLogic(button, heroIndex, enemiesArr, heroesArr);
         }
 
-        if (DEBUG_HOST_LOGIC) {
-            console.log("[heroLogicHost] NO logic found, returning null");
-        }
+        _trace("[heroLogicHost] NO logic found, returning null", { profile: effectiveProfile });
         _setLogicSource("none", effectiveProfile);
         return null;
     });

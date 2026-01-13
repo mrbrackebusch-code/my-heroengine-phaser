@@ -321,6 +321,136 @@
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
       }
 
+      /* -----------------------------
+        Shop overlay (DOM)
+        ----------------------------- */
+      #shop-layer {
+        position: absolute;
+        inset: 0;
+
+        display: none;
+        pointer-events: none;
+        z-index: 12; /* above levelup */
+
+        padding: 12px;
+        box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+      #shop-layer.he-show {
+        display: flex;
+        pointer-events: auto;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #shop-box {
+        width: clamp(220px, 26vw, 340px);
+        max-height: min(88vh, 760px);
+        overflow: auto;
+
+        background: rgba(18, 16, 12, 0.96);
+        border: 2px solid #000;
+        border-radius: 14px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.50);
+
+        color: rgba(255, 255, 255, 0.92);
+        padding: 12px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #shop-title {
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        font-size: 18px;
+      }
+
+      #shop-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .shopui-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.95);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .shopui-item:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .shopui-item.shopui-sel {
+        outline: 2px solid rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .shopui-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .shopui-name {
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+
+      .shopui-desc {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      .shopui-flavor {
+        font-size: 11px;
+        opacity: 0.65;
+      }
+
+      .shopui-price {
+        margin-left: auto;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .shopui-owned {
+        margin-left: auto;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .shopui-soldout {
+        padding: 10px;
+        text-align: center;
+        border-radius: 10px;
+        border: 1px dashed rgba(255, 255, 255, 0.35);
+        color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      #shop-hint {
+        font-size: 12px;
+        opacity: 0.75;
+      }
+
 
       /* -----------------------------
          HUD (4 boxes)
@@ -1069,6 +1199,15 @@
             </div>
           </div>
 
+          <!-- Shop overlay (DOM) -->
+          <div id="shop-layer" aria-hidden="true">
+            <div id="shop-box">
+              <div id="shop-title">Shop</div>
+              <div id="shop-items"></div>
+              <div id="shop-hint">A: Buy  B: Close</div>
+            </div>
+          </div>
+
           <div id="dialog-layer" aria-hidden="true">
             <div id="dialog-box">
               <div id="dialog-head">
@@ -1228,6 +1367,10 @@
           xpStatMpLvl: document.getElementById("xp-stat-mp-lvl"),
           lvlLayer: document.getElementById("levelup-layer"),
           lvlPoints: document.getElementById("lvlui-points"),
+          shopLayer: document.getElementById("shop-layer"),
+          shopTitle: document.getElementById("shop-title"),
+          shopItems: document.getElementById("shop-items"),
+          shopHint: document.getElementById("shop-hint"),
 
         };
 
@@ -1801,6 +1944,235 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }, true);
         }
 
+        // ------------------------------------------------------------
+        // Shop DOM window (uiMode===3)
+        // Controls while open:
+        //   arrows = move selection
+        //   Enter/Space/Z = buy (A)
+        //   Esc/X = close (B)
+        // ------------------------------------------------------------
+        const _shopui = {
+          inited: false,
+          selIdx: 0,
+          btns: [],
+          lastKey: "",
+        };
+
+        const SHOPUI_MODE = 3;
+
+        function _shopui_setShown(show) {
+          if (!R.shopLayer) return;
+          const want = !!show;
+          const has = R.shopLayer.classList.contains("he-show");
+          if (want === has) return;
+
+          if (want) {
+            R.shopLayer.classList.add("he-show");
+            R.shopLayer.setAttribute("aria-hidden", "false");
+          } else {
+            R.shopLayer.classList.remove("he-show");
+            R.shopLayer.setAttribute("aria-hidden", "true");
+          }
+        }
+
+        function _shopui_cmd(pid, payload) {
+          const fn = window.__heUiCommand;
+          if (typeof fn !== "function") return null;
+
+          const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
+          const r = fn(cmd);
+
+          try {
+            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
+            if (snap2 && snap2.ready) _shopui_applySnapshot(snap2);
+          } catch (_e) {}
+
+          return r;
+        }
+
+        function _shopui_setSel(idx) {
+          const n = _shopui.btns.length | 0;
+          if (n <= 0) return;
+          let i = idx | 0;
+          while (i < 0) i += n;
+          i = i % n;
+
+          const prev = _shopui.selIdx | 0;
+          _shopui.selIdx = i;
+          for (let k = 0; k < n; k++) {
+            const b = _shopui.btns[k];
+            if (!b) continue;
+            if (k === i) b.classList.add("shopui-sel");
+            else b.classList.remove("shopui-sel");
+          }
+
+          if (i !== prev) {
+            const pid = getPid();
+            if (pid) _shopui_cmd(pid, { type: "setSel", sel: i });
+          }
+        }
+
+        function _shopui_iconStyleForRelic(relicId) {
+          const cat = _hud_getRelicCatalogOnce();
+          const def = cat ? (cat[String(relicId)] || null) : null;
+          const iconSpec = def ? def.iconPrimary : null;
+          const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
+          const x = iconSpec ? (iconSpec.x | 0) : 0;
+          const y = iconSpec ? (iconSpec.y | 0) : 0;
+          const url = RELIC_SHEET_URL[sheetName] || "";
+          return url ? `background-image:url('${url}'); background-position:${-(x * 32)}px ${-(y * 32)}px;` : "";
+        }
+
+        function _shopui_buildList(items) {
+          if (!R.shopItems) return;
+          const list = R.shopItems;
+          list.innerHTML = "";
+          _shopui.btns = [];
+
+          const cat = _hud_getRelicCatalogOnce();
+
+          if (!items || items.length <= 0) {
+            const sold = document.createElement("div");
+            sold.className = "shopui-soldout";
+            sold.textContent = "Sold out";
+            list.appendChild(sold);
+            return;
+          }
+
+          for (let i = 0; i < items.length; i++) {
+            const it = items[i] || {};
+            const relicId = String(it.relicId || "");
+            const def = cat ? (cat[relicId] || null) : null;
+
+            const name = (def && def.name) ? String(def.name) : (relicId || "Item");
+            const desc = (def && def.effectText) ? String(def.effectText) : "";
+            const flavor = (def && def.flavorText) ? String(def.flavorText) : "";
+
+            const price = (it.price | 0);
+            const owned = !!it.owned;
+            const canAfford = !!it.canAfford;
+
+            const btn = document.createElement("button");
+            btn.className = "shopui-item";
+            btn.type = "button";
+            btn.setAttribute("data-index", String(i));
+            if (owned || !canAfford) btn.disabled = true;
+
+            const icon = document.createElement("div");
+            icon.className = "xp-relic-icon shopui-icon";
+            icon.setAttribute("style", _shopui_iconStyleForRelic(relicId));
+
+            const info = document.createElement("div");
+            info.className = "shopui-info";
+
+            const nameEl = document.createElement("div");
+            nameEl.className = "shopui-name";
+            nameEl.textContent = name;
+
+            const descEl = document.createElement("div");
+            descEl.className = "shopui-desc";
+            descEl.textContent = desc;
+
+            info.appendChild(nameEl);
+            info.appendChild(descEl);
+
+            if (flavor) {
+              const flavorEl = document.createElement("div");
+              flavorEl.className = "shopui-flavor";
+              flavorEl.textContent = flavor;
+              info.appendChild(flavorEl);
+            }
+
+            const priceEl = document.createElement("div");
+            if (owned) {
+              priceEl.className = "shopui-owned";
+              priceEl.textContent = "Owned";
+            } else {
+              priceEl.className = "shopui-price";
+              priceEl.textContent = `${price}c`;
+            }
+
+            btn.appendChild(icon);
+            btn.appendChild(info);
+            btn.appendChild(priceEl);
+
+            btn.addEventListener("click", () => {
+              const pid = getPid();
+              if (!pid) return;
+              _shopui_setSel(i);
+              if (btn.disabled) return;
+              _shopui_cmd(pid, { type: "shopBuy", index: i });
+            });
+
+            list.appendChild(btn);
+            _shopui.btns.push(btn);
+          }
+        }
+
+        function _shopui_applySnapshot(snap) {
+          if (!snap || !snap.ready) {
+            _shopui_setShown(false);
+            return;
+          }
+
+          const open = ((snap.uiMode | 0) === SHOPUI_MODE);
+          _shopui_setShown(open);
+          if (!open) return;
+
+          const shop = snap.shop || {};
+          if (R.shopTitle) setText(R.shopTitle, String(shop.title || "Shop"));
+
+          const items = Array.isArray(shop.items) ? shop.items : [];
+          const key = JSON.stringify({ items });
+          if (key !== _shopui.lastKey) {
+            _shopui.lastKey = key;
+            _shopui_buildList(items);
+          }
+
+          if (items && items.length > 0) _shopui_setSel((snap.uiSel | 0));
+        }
+
+        function _shopui_initOnce() {
+          if (_shopui.inited) return;
+          _shopui.inited = true;
+
+          window.addEventListener("keydown", (e) => {
+            if (!R.shopLayer || !R.shopLayer.classList.contains("he-show")) return;
+            if (_lvlui_isDialogOpen()) return;
+
+            const k = e.key;
+
+            if (k === "ArrowDown" || k === "ArrowRight") {
+              e.preventDefault(); e.stopPropagation();
+              _shopui_setSel((_shopui.selIdx + 1) | 0);
+              return;
+            }
+            if (k === "ArrowUp" || k === "ArrowLeft") {
+              e.preventDefault(); e.stopPropagation();
+              _shopui_setSel((_shopui.selIdx - 1) | 0);
+              return;
+            }
+
+            // "A" = buy
+            if (k === "Enter" || k === " " || k === "z" || k === "Z") {
+              e.preventDefault(); e.stopPropagation();
+              const pid = getPid();
+              if (!pid) return;
+              _shopui_cmd(pid, { type: "shopBuy", index: _shopui.selIdx | 0 });
+              return;
+            }
+
+            // "B" = close
+            if (k === "Escape" || k === "x" || k === "X") {
+              e.preventDefault(); e.stopPropagation();
+              const pid = getPid();
+              if (!pid) return;
+              _shopui_cmd(pid, { type: "closeUI" });
+              return;
+            }
+          }, true);
+        }
+
         function getPid() {
           const net = window.__net;
           const pid = net && typeof net.playerId === "number" ? (net.playerId | 0) : 0;
@@ -2053,11 +2425,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         function _hud_tooltipForRelic(def) {
           if (!def) return "";
-          const name = String(def.name || "");
           const effect = String(def.effectText || "");
-          const flavor = String(def.flavorText || "");
-          // Keep it simple: title tooltip
-          return flavor ? `${name}\n${effect}\n\n${flavor}` : `${name}\n${effect}`;
+          return effect;
         }
 
         function _hud_buildGlyphHtml(glyphText, litMask) {
@@ -2202,6 +2571,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
           _lvlui_initOnce();
           _lvlui_applySnapshot(snap);
+          _shopui_initOnce();
+          _shopui_applySnapshot(snap);
 
           const flash = (lvlPts | 0) > 1;
           if (R.xpBonusPts) R.xpBonusPts.classList.toggle("xp-pts-ready", flash);

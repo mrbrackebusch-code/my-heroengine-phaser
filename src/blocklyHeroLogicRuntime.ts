@@ -5,6 +5,7 @@ import { javascriptGenerator } from "blockly/javascript";
 
 const STORAGE_PREFIX = "he_blockly_ws_v1:";
 const STEP_LIMIT = 20000;
+const FALLBACK_PROFILE = "Default";
 
 
 const HE_OUTPUT_VARS = ["family", "damage", "reach", "time", "status", "element", "id"] as const;
@@ -22,6 +23,8 @@ function _ensureHeBlocksRegistered(): void {
     (Blockly as any).Blocks["he_return_move"] = {
       init: function () {
         this.setColour(170);
+        this.setDeletable(true);
+        this.setMovable(true);
         this.appendDummyInput().appendField("Return Move (7)");
         this.appendValueInput("FAMILY").appendField("Family:");
         this.appendValueInput("DAMAGE").appendField("Damage:");
@@ -78,7 +81,12 @@ function _ensureHeBlocksRegistered(): void {
     (Blockly as any).Blocks[type] = {
       init: function () {
         this.setColour("#4cff88");
-        this.appendValueInput("VALUE").appendField(label);
+        const input = this.appendValueInput("VALUE").appendField(label).setCheck("Number");
+        try {
+          // Shadow default so users start with a number field already present.
+          const shadow = Blockly.utils.xml.textToDom('<shadow type="math_number"><field name="NUM">0</field></shadow>');
+          input.connection.setShadowDom(shadow);
+        } catch { }
         this.setPreviousStatement(true);
         this.setNextStatement(true);
       },
@@ -89,6 +97,39 @@ function _ensureHeBlocksRegistered(): void {
   _mkNumSetter("he_set_reach", "set reach to");
   _mkNumSetter("he_set_time", "set time to");
   _mkNumSetter("he_set_status", "set status to");
+
+  // Convenience block: set all outputs at once
+  if (!Blocks["he_set_outputs_bundle"]) {
+    (Blockly as any).Blocks["he_set_outputs_bundle"] = {
+      init: function () {
+        this.setColour(170);
+        this.appendDummyInput().appendField("Set move outputs");
+        this.appendDummyInput().appendField("family").appendField(new (Blockly as any).FieldDropdown([
+          ["strength", "strength"], ["agility", "agility"], ["intelligence", "intelligence"], ["wisdom", "wisdom"],
+        ]), "FAM");
+        const dmg = this.appendValueInput("DAMAGE").appendField("damage").setCheck("Number");
+        const reach = this.appendValueInput("REACH").appendField("reach").setCheck("Number");
+        const time = this.appendValueInput("TIME").appendField("time").setCheck("Number");
+        const status = this.appendValueInput("STATUS").appendField("status").setCheck("Number");
+        try {
+          const numShadow = '<shadow type="math_number"><field name="NUM">0</field></shadow>';
+          dmg.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+          reach.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+          time.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+          status.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+        } catch { }
+        this.appendDummyInput().appendField("element").appendField(new (Blockly as any).FieldDropdown([
+          ["none", "none"], ["fire", "fire"], ["earth", "earth"], ["wind", "wind"], ["water", "water"],
+          ["lightning", "lightning"], ["ice", "ice"], ["poison", "poison"],
+        ]), "EL");
+        this.appendDummyInput().appendField("ID").appendField(new (Blockly as any).FieldDropdown([
+          ["A", "A"], ["B", "B"], ["A+B", "A+B"],
+        ]), "ID");
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+      },
+    };
+  }
 
   const _mkSensor = (type: string, label: string, output: string | null) => {
     if (Blocks[type]) return;
@@ -324,6 +365,24 @@ function heroLogic(button){ return chooseMyMove(button); }
 `;
   };
 
+  G.forBlock["he_set_outputs_bundle"] = function (block: any, generator: any) {
+    const fam = block.getFieldValue("FAM") || "strength";
+    const dmg = generator.valueToCode(block, "DAMAGE", generator.ORDER_NONE) || "0";
+    const reach = generator.valueToCode(block, "REACH", generator.ORDER_NONE) || "0";
+    const time = generator.valueToCode(block, "TIME", generator.ORDER_NONE) || "0";
+    const status = generator.valueToCode(block, "STATUS", generator.ORDER_NONE) || "0";
+    const el = block.getFieldValue("EL") || "none";
+    const id = block.getFieldValue("ID") || "A";
+    return `family = ${JSON.stringify(fam)};
+damage = ${dmg};
+reach = ${reach};
+time = ${time};
+status = ${status};
+element = ${JSON.stringify(el)};
+id = ${JSON.stringify(id)};
+`;
+  };
+
   const _mkNumSetterGen = (type: string, varName: string) => {
     G.forBlock[type] = function (block: any, generator: any) {
       const v = generator.valueToCode(block, "VALUE", generator.ORDER_NONE) || "0";
@@ -438,6 +497,8 @@ type CacheEntry = {
   fn: ((button: string) => any) | null;
   lastErr: string | null;
   lastRaw: any;
+  lastRawByButton: Record<string, any>;
+  lastErrByButton: Record<string, string | null>;
 };
 
 const _cache = new Map<string, CacheEntry>();
@@ -456,7 +517,7 @@ const _cache = new Map<string, CacheEntry>();
 })();
 
 function _storageKey(profile: string): string {
-  return STORAGE_PREFIX + encodeURIComponent(profile || "Default");
+  return STORAGE_PREFIX + encodeURIComponent(profile || FALLBACK_PROFILE);
 }
 
 function _getSavedXml(profile: string): string | null {
@@ -498,6 +559,49 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
     if (!dom) return { ok: false, err: "no xml parser available" };
 
     (Blockly as any).Xml.domToWorkspace(dom, ws);
+
+    // Ensure each entry block has a terminal return so headless compiles don't produce null.
+    const ensureReturn = (main: any) => {
+      if (!main || typeof main.getInput !== "function") return;
+      const stackInput = main.getInput("DO");
+      const stackConn = stackInput && stackInput.connection;
+      if (!stackConn) return;
+      const getTail = (b: any) => {
+        let cur = b, tail = b;
+        while (cur) {
+          tail = cur;
+          cur = cur.getNextBlock?.();
+        }
+        return tail || null;
+      };
+      const findReturn = (b: any) => {
+        let cur = b;
+        while (cur) {
+          if (cur.type === "he_return_move") return cur;
+          cur = cur.getNextBlock?.();
+        }
+        return null;
+      };
+      const head = (typeof main.getInputTargetBlock === "function") ? main.getInputTargetBlock("DO") : null;
+      let ret = findReturn(head);
+      if (!ret) {
+        ret = ws.newBlock("he_return_move");
+        ret.initSvg?.();
+        ret.render?.();
+      }
+      const tail = getTail((typeof main.getInputTargetBlock === "function") ? main.getInputTargetBlock("DO") : null);
+      if (!tail) {
+        try { stackConn.connect(ret.previousConnection); } catch { }
+      } else if (tail !== ret) {
+        try { ret.previousConnection?.disconnect(); } catch { }
+        try { tail.nextConnection?.connect(ret.previousConnection); } catch { }
+      }
+    };
+    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
+    const allBlocks: any[] = ws.getAllBlocks(false) || [];
+    for (const b of allBlocks) {
+      if (entryTypes.indexOf(b.type) >= 0) ensureReturn(b);
+    }
 
     // Generate JS from blocks
     const code = javascriptGenerator.workspaceToCode(ws);
@@ -652,8 +756,9 @@ var id = (id == null) ? "A" : id;
 
     const factory = new Function(factorySrc) as any;
     const fn = factory();
-    if (typeof fn !== "function") return { ok: false, err: "heroLogic() not defined" };
-    return { ok: true, fn };
+    // If no entry blocks were present, fall back to a harmless no-op so we don't spam errors.
+    const safeFn = (typeof fn === "function") ? fn : (() => null);
+    return { ok: true, fn: safeFn };
   } catch (e: any) {
     return { ok: false, err: String(e?.message || e) };
   }
@@ -688,20 +793,30 @@ function _validateOut(out: any): HeroLogicOut {
  * - null if no workspace, compile error, runtime error, invalid result, or step-limit
  */
 export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLogicOut {
-  const effectiveProfile = profile && profile.trim() ? profile.trim() : "Default";
+  const effectiveProfile = profile && profile.trim() ? profile.trim() : FALLBACK_PROFILE;
 
-  const xml = _getSavedXml(effectiveProfile);
+  let xmlProfile = effectiveProfile;
+  let xml = _getSavedXml(effectiveProfile);
+  if (!xml && effectiveProfile !== FALLBACK_PROFILE) {
+    const fallbackXml = _getSavedXml(FALLBACK_PROFILE);
+    if (fallbackXml) {
+      xml = fallbackXml;
+      xmlProfile = FALLBACK_PROFILE;
+    }
+  }
   if (!xml) return null;
 
   const cached = _cache.get(effectiveProfile);
   if (!cached || cached.xml !== xml) {
     const { fn, err } = _compileFromXml(xml);
     _cache.set(effectiveProfile, {
-      profile: effectiveProfile,
+      profile: xmlProfile,
       xml,
       fn,
       lastErr: err,
       lastRaw: null,
+      lastRawByButton: {},
+      lastErrByButton: {},
     });
 
     if (err) {
@@ -716,18 +831,22 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
   try {
     const rawOut = entry.fn(button);
     entry.lastRaw = rawOut;
+    entry.lastRawByButton[button] = rawOut;
 
     const ok = _validateOut(rawOut);
     if (!ok) {
       entry.lastErr = "invalid-out";
+      entry.lastErrByButton[button] = "invalid-out";
       return null;
     }
 
     entry.lastErr = null;
+    entry.lastErrByButton[button] = null;
     return ok;
   } catch (e: any) {
     const msg = String(e?.message || e);
     entry.lastErr = msg;
+    entry.lastErrByButton[button] = msg;
     console.warn(`[BlocklyHeroLogic] runtime failed profile=${effectiveProfile} err=${msg}`);
     return null;
   }
@@ -747,7 +866,13 @@ export function dbgBlocklyHeroLogic(profile: string) {
     xmlLen: xml ? xml.length : 0,
     cached: !!entry,
     lastErr: entry?.lastErr ?? null,
-    lastRaw: entry?.lastRaw ?? null,
+    lastRaw: entry ? entry.lastRaw : undefined,
+    lastRawType: entry ? (typeof entry.lastRaw) : "undefined",
+    lastRawJson: (() => {
+      try { return JSON.stringify(entry ? entry.lastRaw : undefined); } catch { return "<unserializable>"; }
+    })(),
+    lastRawByButton: entry?.lastRawByButton || {},
+    lastErrByButton: entry?.lastErrByButton || {},
   };
 }
 

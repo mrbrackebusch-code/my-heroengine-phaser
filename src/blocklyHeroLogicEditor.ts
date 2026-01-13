@@ -81,6 +81,7 @@ const TOOLBOX: any = {
       name: "Output",
       colour: "#FF6680",
       contents: [
+        { kind: "block", type: "he_set_outputs_bundle" },
         { kind: "block", type: "he_set_family" },
         { kind: "block", type: "he_set_element" },
         { kind: "block", type: "he_set_id" },
@@ -481,7 +482,7 @@ function _heInstallReservedVariableGuards(workspace: Blockly.WorkspaceSvg): void
 
 function _heEnsureBlocksRegistered(): void {
   const B: any = (Blockly as any).Blocks;
-  if (B && B.he_return_move && B.he_choose_move && B.he_on_button_a && B.he_on_button_b && B.he_on_button_ab) {
+  if (B && B.he_return_move && B.he_choose_move && B.he_on_button_a && B.he_on_button_b && B.he_on_button_ab && B.he_set_outputs_bundle) {
     return;
   }
 
@@ -510,6 +511,8 @@ function _heEnsureBlocksRegistered(): void {
   (Blockly as any).Blocks["he_return_move"] = {
     init: function () {
       this.setColour("#FF6680");
+      this.setDeletable(true);
+      this.setMovable(true);
       this.appendDummyInput().appendField("Return Move (7)");
       for (const row of HE_RETURN_INPUTS) {
         this.appendValueInput(row.input)
@@ -561,7 +564,11 @@ function _heEnsureBlocksRegistered(): void {
     (Blockly as any).Blocks[type] = {
       init: function () {
         this.setColour("#FF6680");
-        this.appendValueInput("VALUE").setCheck("Number").appendField(label);
+        const input = this.appendValueInput("VALUE").setCheck("Number").appendField(label);
+        try {
+          const shadow = Blockly.utils.xml.textToDom('<shadow type="math_number"><field name="NUM">0</field></shadow>');
+          input.connection.setShadowDom(shadow);
+        } catch {}
         this.setPreviousStatement(true);
         this.setNextStatement(true);
         (this as any).__heOutputVar = varName;
@@ -573,6 +580,36 @@ function _heEnsureBlocksRegistered(): void {
   _mkNumSetter("he_set_reach", "set reach to", "reach");
   _mkNumSetter("he_set_time", "set time to", "time");
   _mkNumSetter("he_set_status", "set status to", "status");
+
+  // Convenience block to set all outputs at once.
+  (Blockly as any).Blocks["he_set_outputs_bundle"] = {
+    init: function () {
+      this.setColour("#FF6680");
+      this.appendDummyInput()
+        .appendField("Set move outputs")
+        .appendField("family")
+        .appendField(new (Blockly as any).FieldDropdown(HE_FAMILY_OPTIONS), "FAM");
+      const dmg = this.appendValueInput("DAMAGE").appendField("damage").setCheck("Number");
+      const reach = this.appendValueInput("REACH").appendField("reach").setCheck("Number");
+      const time = this.appendValueInput("TIME").appendField("time").setCheck("Number");
+      const status = this.appendValueInput("STATUS").appendField("status").setCheck("Number");
+      try {
+        const numShadow = '<shadow type="math_number"><field name="NUM">0</field></shadow>';
+        dmg.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+        reach.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+        time.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+        status.connection.setShadowDom(Blockly.utils.xml.textToDom(numShadow));
+      } catch {}
+      this.appendDummyInput()
+        .appendField("element")
+        .appendField(new (Blockly as any).FieldDropdown(HE_ELEMENT_OPTIONS), "EL");
+      this.appendDummyInput()
+        .appendField("ID")
+        .appendField(new (Blockly as any).FieldDropdown(HE_ID_OPTIONS), "ID");
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+    },
+  };
 
   // --- Sensors (read-only getters) ---
   const _mkSensor = (type: string, label: string, output: string | null) => {
@@ -773,6 +810,7 @@ function _heEnsureEntryBlock(workspace: Blockly.WorkspaceSvg, type: string, x: n
 
   const mains = all.filter(b => b.type === type);
   let main = mains[0] || null;
+  let mainWasCreated = false;
 
   if (!main) {
     const xml = `
@@ -781,16 +819,20 @@ function _heEnsureEntryBlock(workspace: Blockly.WorkspaceSvg, type: string, x: n
       </xml>
     `;
     main = _heCreateBlockFromXml(workspace, xml);
+    mainWasCreated = true;
   }
 
-  try {
-    const xy = (main as any).getRelativeToSurfaceXY?.() || { x: 0, y: 0 };
-    const dx = (x - (xy.x | 0)) | 0;
-    const dy = (y - (xy.y | 0)) | 0;
-    if (dx !== 0 || dy !== 0) main.moveBy(dx, dy);
-  } catch {}
+  // Only position freshly-created mains; let users move existing ones without snap-back.
+  if (mainWasCreated) {
+    try {
+      const xy = (main as any).getRelativeToSurfaceXY?.() || { x: 0, y: 0 };
+      const dx = (x - (xy.x | 0)) | 0;
+      const dy = (y - (xy.y | 0)) | 0;
+      if (dx !== 0 || dy !== 0) main.moveBy(dx, dy);
+    } catch {}
+  }
 
-  // If multiple mains exist, keep the first and park the extras.
+  // If multiple mains exist, keep the first and park the extras so they don't overlap.
   for (let i = 1; i < mains.length; i++) {
     try { mains[i].moveBy(420, 0); } catch {}
   }
@@ -885,10 +927,10 @@ function _heGetTail(head: Blockly.Block | null): Blockly.Block | null {
   return tail || null;
 }
 
-function _heEnsureReturnAtEnd(workspace: Blockly.WorkspaceSvg, main: Blockly.Block): void {
+function _heEnsureReturnAtEnd(workspace: Blockly.WorkspaceSvg, main: Blockly.Block): Blockly.Block {
   const stackInput: any = (main as any).getInput?.("DO");
   const stackConn = stackInput?.connection;
-  if (!stackConn) return;
+  if (!stackConn) return main;
 
   const head = (main as any).getInputTargetBlock?.("DO") || null;
   const retExisting = _heFindReturnInChain(head);
@@ -926,6 +968,7 @@ function _heEnsureReturnAtEnd(workspace: Blockly.WorkspaceSvg, main: Blockly.Blo
   try { (ret as any).setMovable?.(true); } catch {}
 
   _heEnsureReturnShadows(workspace, ret);
+  return ret;
 }
 
 function _heEnsureTemplate(workspace: Blockly.WorkspaceSvg, reason: string): void {
@@ -939,9 +982,21 @@ function _heEnsureTemplate(workspace: Blockly.WorkspaceSvg, reason: string): voi
     _heEnsureBlocksRegistered();
     _heEnsureOutputVars(workspace);
     const entries = _heEnsureEntryBlocks(workspace);
+    const requiredReturns: string[] = [];
     for (const main of entries) {
-      _heEnsureReturnAtEnd(workspace, main);
+      const r = _heEnsureReturnAtEnd(workspace, main);
+      if (r && r.id) requiredReturns.push(r.id);
     }
+
+    // Allow any extra return blocks (not the required tail blocks) to be deleted/moved.
+    try {
+      const allReturns = workspace.getAllBlocks(false).filter(b => b.type === "he_return_move");
+      for (const ret of allReturns) {
+        if (requiredReturns.indexOf(ret.id) >= 0) continue;
+        try { (ret as any).setDeletable?.(true); } catch {}
+        try { (ret as any).setMovable?.(true); } catch {}
+      }
+    } catch {}
   } finally {
     try { if (Events && typeof Events.enable === "function") Events.enable(); } catch {}
     _heRepairing = false;

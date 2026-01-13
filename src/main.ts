@@ -46,6 +46,39 @@ const ENABLE_WEAPON_DEBUG_VERBOSE = false; // also logs first successful resolve
 const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debug flag
 
+// ------------------------------------------------------------
+// Host visibility pause (prevents jumps/teleports on tab blur)
+// ------------------------------------------------------------
+function _setEnginePaused(flag: boolean, reason: string): void {
+  try {
+    const he: any = (globalThis as any).HeroEngine;
+    if (he && typeof he.setPaused === "function") {
+      he.setPaused(flag, reason);
+    }
+  } catch { }
+}
+
+function _installVisibilityPause(): void {
+  const g: any = globalThis as any;
+  if (g.__heVisPauseInstalled) return;
+  g.__heVisPauseInstalled = true;
+
+  const onVis = () => {
+    _setEnginePaused(document.hidden, document.hidden ? "hidden" : "visible");
+  };
+  const onBlur = () => _setEnginePaused(true, "blur");
+  const onFocus = () => _setEnginePaused(document.hidden, "focus");
+
+  document.addEventListener("visibilitychange", onVis);
+  window.addEventListener("blur", onBlur);
+  window.addEventListener("focus", onFocus);
+
+  // Seed initial state
+  onVis();
+}
+
+_installVisibilityPause();
+
 
 
 // ------------------------------------------------------------

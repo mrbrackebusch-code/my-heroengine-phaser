@@ -1104,6 +1104,14 @@ namespace HeroEngine {
 
     }
 
+    export function setPaused(flag: boolean, reason?: string): void {
+        _engineSetPaused(flag, reason)
+    }
+
+    export function isPaused(): boolean {
+        return _engineIsPaused()
+    }
+
 
 
     //% blockId=heroEngine_start
@@ -1532,6 +1540,12 @@ const BALANCE = {
 
             LUNGE_PER_POINT: 5,
 
+            REACH_BASE_PX: 0,
+
+            REACH_PER_POINT_PX: 1,
+
+            EXEC_RADIUS_MAX_PX: 220,
+
             MOVE_DURATION_MIN_MS: 50,
 
             LANDING_BUFFER_MS: 80,
@@ -1899,10 +1913,11 @@ const STAT = {
     // ? NEW (Strength reach is RELATIVE; store it explicitly)
 
     STRENGTH_REACH_EXTRA_PX: 15,
+    AGILITY_REACH_PX: 16,
 
 
 
-    LEN: 16
+    LEN: 17
 
 }
 
@@ -12304,6 +12319,7 @@ const SHOP_STATUE_RENDER_SLOT: string[] = ["slash", "thrust", "thrust", "thrust"
 
 
 
+
 // --------------------------------------------------------------
 
 // Per-hero focused offer state (computed each frame)
@@ -14890,6 +14906,10 @@ function shopHandleControls(nowMs: number): void {
 
         if ((owner | 0) !== (pid | 0)) continue
 
+        const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+
+        if (uiMode === HERO_UI_MODE.SHOP) continue
+
         const ctrl = shopPollControls(hi)
 
 
@@ -14911,8 +14931,6 @@ function shopHandleControls(nowMs: number): void {
             const offer: Sprite = summary.offer
 
             if (!offer || (offer.flags & sprites.Flag.Destroyed)) continue
-
-
 
             const si = summary.ringIndex | 0
 
@@ -15210,8 +15228,9 @@ function shopHandleControls(nowMs: number): void {
 
         if (ctrl.A_edge) {
 
-            if (_shopIsOverlapping(hero, shopkeeperNpc)) {
+            if (_isHeroInInteractRange(hero, shopkeeperNpc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)) {
 
+                _uiTryOpenShopUi(hi, pid, "shopkeeper:A")
                 _shopUnlockExitPadIfInShopFloor(now)
 
             }
@@ -17247,6 +17266,7 @@ const SH_ITEM_GAMEPLAY_KIND = "shGameplayKind"     // string: "intellect"|"stren
 const SH_ITEM_PRICE = "shPrice"                    // number
 
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
+
 
 
 
@@ -25712,13 +25732,14 @@ function _doHeroMoveTryAgilityExecuteThisPress(
 
     // ------------------------------------------------------------
 
-    const reach = Math.max(0, t2 | 0)
+    let execRadius = stats[STAT.AGILITY_REACH_PX] | 0
 
-    let execRadius = 40 + reach * 2
+    if (execRadius < 0) execRadius = 0
 
-    if (execRadius < 40) execRadius = 40
+    const execMax = BALANCE.MOVES.AGILITY.EXEC_RADIUS_MAX_PX | 0
 
-    if (execRadius > 220) execRadius = 220
+    if (execMax > 0 && execRadius > execMax) execRadius = execMax
+
 
 
 
@@ -26986,9 +27007,10 @@ function _doHeroMoveApplyMovementScheduleAndVelocity(
 
     const [_, fwdMs2, __] = (family === FAMILY.AGILITY) ? splitAgiThrustDurations(moveDuration) : [0, moveDuration, 0]
 
-    const L_exec = Math.idiv(lungeCapped * (fwdMs2 | 0), 1000)
+    let reachPx = stats[STAT.AGILITY_REACH_PX] | 0
+    if (reachPx < 0) reachPx = 0
+    sprites.setDataNumber(hero, "AGI_L_EXEC", reachPx)
 
-    sprites.setDataNumber(hero, "AGI_L_EXEC", L_exec)
 
 
 
@@ -27102,7 +27124,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
     if (button === "A+B") {
 
-        if (uiMode0 === HERO_UI_MODE.LEVELUP) {
+        if (uiMode0 === HERO_UI_MODE.LEVELUP || uiMode0 === HERO_UI_MODE.SHOP) {
 
             _uiCloseAnyUi(heroIndex, playerId, "intent:A+B")
 
@@ -27152,15 +27174,87 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
         if (button === "A") {
 
-            const sel = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
+            if (uiMode0 === HERO_UI_MODE.LEVELUP) {
 
-            const key = String(LVLUI_MENU_KEYS[sel] || "")
+                const sel = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
+
+                const key = String(LVLUI_MENU_KEYS[sel] || "")
 
 
 
-            if (key === "close") {
+                if (key === "close") {
 
-                _uiCloseAnyUi(heroIndex, playerId, "intent:A")
+                    _uiCloseAnyUi(heroIndex, playerId, "intent:A")
+
+                    _doHeroMoveDbgReset(playerId)
+
+                    return
+
+                }
+
+
+
+                const safe = _uiGetSafeForSpend(heroIndex)
+
+                if (!safe.ok) {
+
+                    console.log("[LVLUI] spend denied (not safe)", { pid: playerId, hi: heroIndex, reason: safe.reason })
+
+                    _doHeroMoveDbgReset(playerId)
+
+                    return
+
+                }
+
+
+
+                const now2 = game.runtime() | 0
+
+                const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
+
+                if (busyUntil > 0 && now2 < busyUntil) {
+
+                    console.log("[LVLUI] spend denied (busy)", { pid: playerId, hi: heroIndex, now: now2, busyUntil })
+
+                    _doHeroMoveDbgReset(playerId)
+
+                    return
+
+                }
+
+
+
+                const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+                if (locked) {
+
+                    console.log("[LVLUI] spend denied (locked)", { pid: playerId, hi: heroIndex })
+
+                    _doHeroMoveDbgReset(playerId)
+
+                    return
+
+                }
+
+
+
+                const ptsBefore = getHeroUnspentLevelPts(heroIndex) | 0
+
+                if (ptsBefore <= 0) {
+
+                    console.log("[LVLUI] spend denied (no pts)", { pid: playerId, hi: heroIndex })
+
+                    _doHeroMoveDbgReset(playerId)
+
+                    return
+
+                }
+
+
+
+                const ok = trySpendLevelUpPointOnCore(heroIndex, key)
+
+                console.log("[LVLUI] spendCore(intent)", { pid: playerId, hi: heroIndex, ok, key, sel })
 
                 _doHeroMoveDbgReset(playerId)
 
@@ -27170,71 +27264,21 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-            const safe = _uiGetSafeForSpend(heroIndex)
+            if (uiMode0 === HERO_UI_MODE.SHOP) {
 
-            if (!safe.ok) {
+                const r = _uiShopTryBuySelected(heroIndex, playerId, "intent:A")
 
-                console.log("[LVLUI] spend denied (not safe)", { pid: playerId, hi: heroIndex, reason: safe.reason })
+                if (!r.ok) {
 
-                _doHeroMoveDbgReset(playerId)
+                    console.log("[SHOP][UI_BUY] denied", { pid: playerId, hi: heroIndex, reason: r.reason })
 
-                return
-
-            }
-
-
-
-            const now2 = game.runtime() | 0
-
-            const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
-
-            if (busyUntil > 0 && now2 < busyUntil) {
-
-                console.log("[LVLUI] spend denied (busy)", { pid: playerId, hi: heroIndex, now: now2, busyUntil })
+                }
 
                 _doHeroMoveDbgReset(playerId)
 
                 return
 
             }
-
-
-
-            const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-            if (locked) {
-
-                console.log("[LVLUI] spend denied (locked)", { pid: playerId, hi: heroIndex })
-
-                _doHeroMoveDbgReset(playerId)
-
-                return
-
-            }
-
-
-
-            const ptsBefore = getHeroUnspentLevelPts(heroIndex) | 0
-
-            if (ptsBefore <= 0) {
-
-                console.log("[LVLUI] spend denied (no pts)", { pid: playerId, hi: heroIndex })
-
-                _doHeroMoveDbgReset(playerId)
-
-                return
-
-            }
-
-
-
-            const ok = trySpendLevelUpPointOnCore(heroIndex, key)
-
-            console.log("[LVLUI] spendCore(intent)", { pid: playerId, hi: heroIndex, ok, key, sel })
-
-            _doHeroMoveDbgReset(playerId)
-
-            return
 
         }
 
@@ -28582,7 +28626,15 @@ function agiResolveHalfCyclePosX1000(nowMs: number, startMs: number, periodMs: n
 
     // 0..1000 inclusive
 
-    const posX1000 = Math.idiv((halfT * 1000) | 0, halfPer) | 0
+    let u = halfT / halfPer
+
+    if (u < 0) u = 0
+
+    if (u > 1) u = 1
+
+    const eased = (1 - Math.cos(u * Math.PI)) / 2
+
+    const posX1000 = Math.round(eased * 1000) | 0
 
     if (posX1000 < 0) return 0
 
@@ -28829,6 +28881,86 @@ function updateAgiChargeV4PublishedKeys(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, cF)
 
         }
+        if (AGI_TIME_AFFECTS_SCHEDULE) {
+
+            const axis = BALANCE.MOVES.AXIS_WEIGHT_X1000
+
+            const tTime = applyAxisWeight(sprites.readDataNumber(hero, HERO_DATA.TRAIT3), axis.TIME) | 0
+
+            const shift = Math.idiv(Math.max(0, tTime), AGI_CHARGE_TIER_SHIFT_POINTS) | 0
+
+            tA = (AGI_CHARGE_DEFAULT_TIER_A_ADD + shift) | 0
+
+            tB = (AGI_CHARGE_DEFAULT_TIER_B_ADD + shift) | 0
+
+            tC = (AGI_CHARGE_DEFAULT_TIER_C_ADD + shift) | 0
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD, tA)
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD, tB)
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD, tC)
+
+            const execBase = AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000 | 0
+
+            const avail = (500 - execBase) | 0
+
+            let cNew = (AGI_CHARGE_DEFAULT_C_FRAC_X1000 + Math.max(0, tTime) * AGI_CHARGE_C_FRAC_PER_TIME) | 0
+
+            const minA = AGI_CHARGE_MIN_A_FRAC_X1000 | 0
+
+            const minB = AGI_CHARGE_MIN_B_FRAC_X1000 | 0
+
+            const maxC = Math.max(0, (avail - minA - minB) | 0) | 0
+
+            if (cNew > maxC) cNew = maxC
+
+            let rem = (avail - cNew) | 0
+
+            const baseAB = (AGI_CHARGE_DEFAULT_A_FRAC_X1000 + AGI_CHARGE_DEFAULT_B_FRAC_X1000) | 0
+
+            let aNew = Math.idiv(rem * AGI_CHARGE_DEFAULT_A_FRAC_X1000, Math.max(1, baseAB)) | 0
+
+            let bNew = (rem - aNew) | 0
+
+            if (aNew < minA) {
+
+                aNew = minA
+
+                bNew = (rem - aNew) | 0
+
+            }
+
+            if (bNew < minB) {
+
+                bNew = minB
+
+                aNew = (rem - bNew) | 0
+
+            }
+
+            if (aNew < 0) aNew = 0
+
+            if (bNew < 0) bNew = 0
+
+            exF = execBase
+
+            aF = aNew
+
+            bF = bNew
+
+            cF = (avail - aF - bF) | 0
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000, exF)
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000, aF)
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000, bF)
+
+            sprites.setDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000, cF)
+
+        }
+
 
 
 
@@ -32170,27 +32302,43 @@ function executeStrengthMove(
 
 
 
+    // Raw traits (pre-levelup/mods) live on the hero data; keep these for mana + payload.
+
+    const t1Raw = sprites.readDataNumber(hero, HERO_DATA.TRAIT1) | 0
+
+    const t2Raw = sprites.readDataNumber(hero, HERO_DATA.TRAIT2) | 0
+
+    const t3Raw = sprites.readDataNumber(hero, HERO_DATA.TRAIT3) | 0
+
+    const t4Raw = sprites.readDataNumber(hero, HERO_DATA.TRAIT4) | 0
+
+    const element = traits[OUT.ELEMENT] | 0
+
+    const traitsRaw: MoveTraits = [0, t1Raw, t2Raw, t3Raw, t4Raw, element]
+
+
+
     // Snapshot payload (immune to any later changes while holding)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY, FAMILY.STRENGTH)
 
     sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR, button)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, traits[1] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1, traitsRaw[1] | 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2, traits[2] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2, traitsRaw[2] | 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3, traits[3] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3, traitsRaw[3] | 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4, traits[4] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4, traitsRaw[4] | 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL, traits[5] | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL, element | 0)
 
     sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM, animKey || "")
 
 
 
-    beginStrengthCharge(heroIndex, hero, button, traits, stats, animKey)
+    beginStrengthCharge(heroIndex, hero, button, traitsRaw, stats, animKey)
 
 }
 
@@ -33390,7 +33538,7 @@ const AGI_BREAK_SHAKE_PX = 2
 
 // --------------------------------------------------------------
 
-const AGI_TIME_AFFECTS_SCHEDULE = false      // NEW (v4): Trait3 reshapes tier set + schedule (not wired yet)
+const AGI_TIME_AFFECTS_SCHEDULE = true      // NEW (v4): Trait3 reshapes tier set + schedule
 
 
 
@@ -33406,21 +33554,29 @@ const AGI_TIME_AFFECTS_SCHEDULE = false      // NEW (v4): Trait3 reshapes tier s
 
 // --------------------------------------------------------------
 
-const AGI_CHARGE_DEFAULT_TIER_A_ADD = 3
+const AGI_CHARGE_DEFAULT_TIER_A_ADD = 1
 
-const AGI_CHARGE_DEFAULT_TIER_B_ADD = 4
+const AGI_CHARGE_DEFAULT_TIER_B_ADD = 2
 
-const AGI_CHARGE_DEFAULT_TIER_C_ADD = 5
+const AGI_CHARGE_DEFAULT_TIER_C_ADD = 3
 
 
 
-const AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000 = 80
+const AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000 = 250
 
-const AGI_CHARGE_DEFAULT_A_FRAC_X1000 = 140
+const AGI_CHARGE_DEFAULT_A_FRAC_X1000 = 100
 
-const AGI_CHARGE_DEFAULT_B_FRAC_X1000 = 140
+const AGI_CHARGE_DEFAULT_B_FRAC_X1000 = 80
 
-const AGI_CHARGE_DEFAULT_C_FRAC_X1000 = 140
+const AGI_CHARGE_DEFAULT_C_FRAC_X1000 = 70
+
+const AGI_CHARGE_TIER_SHIFT_POINTS = 8
+
+const AGI_CHARGE_C_FRAC_PER_TIME = 4
+
+const AGI_CHARGE_MIN_A_FRAC_X1000 = 20
+
+const AGI_CHARGE_MIN_B_FRAC_X1000 = 20
 
 
 
@@ -35292,21 +35448,7 @@ function agiMeterPosX1000(hero: Sprite, nowMs: number): number {
 
 
 
-    let t = (nowMs - meterStart) % period
-
-    if (t < 0) t += period
-
-    const half = (period >> 1) || 1
-
-
-
-    let pos: number
-
-    if (t <= half) pos = Math.idiv(t * 1000, half)
-
-    else pos = Math.idiv((period - t) * 1000, half)
-
-
+    const pos = agiResolveHalfCyclePosX1000(nowMs, meterStart, period)
 
     sprites.setDataNumber(hero, HERO_DATA.AGI_METER_POS_X1000, pos)
 
@@ -35980,13 +36122,21 @@ function calculateAgilityStats(
 
 
 
-    // ----------------------------------------------------
-
-    // REACH (Trait2) – dash reach driver
 
     // ----------------------------------------------------
 
-    stats[STAT.LUNGE_SPEED] = BALANCE.MOVES.AGILITY.LUNGE_BASE + tReach * BALANCE.MOVES.AGILITY.LUNGE_PER_POINT
+    // REACH (Trait2) - dash reach driver
+
+    // ----------------------------------------------------
+
+    const reachPx = (BALANCE.MOVES.AGILITY.REACH_BASE_PX + tReach * BALANCE.MOVES.AGILITY.REACH_PER_POINT_PX) | 0
+    stats[STAT.AGILITY_REACH_PX] = Math.max(0, reachPx | 0)
+
+    // TIME (Trait3) - dash speed (chain pull)
+
+    let lunge = BALANCE.MOVES.AGILITY.LUNGE_BASE + tTime * BALANCE.MOVES.AGILITY.LUNGE_PER_POINT
+    if (stats[STAT.AGILITY_REACH_PX] <= 0) lunge = 0
+    stats[STAT.LUNGE_SPEED] = lunge
 
 
 
@@ -36276,11 +36426,11 @@ function spawnAgilityThrustProjectile(
 
 
 
-    // Planned reach (center?center), computed earlier into "AGI_L_EXEC"
+    // Planned extra reach beyond the leading edge, computed earlier into "AGI_L_EXEC"
 
     let L = sprites.readDataNumber(hero, "AGI_L_EXEC") | 0
 
-    if (L < 1) L = 1
+    if (L < 0) L = 0
 
 
 
@@ -36364,9 +36514,18 @@ function spawnAgilityThrustProjectile(
 
 
 
-    // Planned reach for execution (center-based; updater converts to front edge frame)
+    // Planned extra reach; updater adds the front-edge distance
 
     sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
+
+    const lungeStart = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0
+
+    const lungeEnd = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0
+
+    const dashMs = Math.max(1, (lungeEnd - lungeStart) | 0)
+
+    sprites.setDataNumber(proj, PROJ_DATA.DASH_MS, dashMs)
+
 
 
 
@@ -36648,11 +36807,13 @@ function updateAgilityProjectilesMotionFor(
 
 
 
-    // Planned reach measured from HERO CENTER along the dash ray (saved at spawn)
+    // Planned reach stored as EXTRA distance beyond the hero's leading edge
 
-    let L = sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) || 0
+    let reachExtra = sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) || 0
 
-    if (L < 1) L = 1
+    if (reachExtra < 0) reachExtra = 0
+
+
 
 
 
@@ -36718,6 +36879,11 @@ function updateAgilityProjectilesMotionFor(
 
     }
 
+    let L = (attachPx + reachExtra) | 0
+
+    if (L < 1) L = 1
+
+
 
 
     // Your segment drawer renders a 1px nose at (sf + 2). Stop the "head base" at L - 2,
@@ -36734,7 +36900,9 @@ function updateAgilityProjectilesMotionFor(
 
         L = sFrontStop + 2
 
-        sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, L)
+        reachExtra = Math.max(0, (L - attachPx) | 0)
+
+        sprites.setDataNumber(proj, PROJ_DATA.MAX_REACH, reachExtra)
 
     }
 
@@ -36749,6 +36917,10 @@ function updateAgilityProjectilesMotionFor(
     let arrowLen = sprites.readDataNumber(proj, PROJ_DATA.ARROW_LEN) || 0
 
     let reachT = sprites.readDataNumber(proj, PROJ_DATA.REACH_T) || 0
+
+    const startMs = sprites.readDataNumber(proj, PROJ_DATA.START_TIME) | 0
+
+    const dashMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0
 
 
 
@@ -36787,6 +36959,20 @@ function updateAgilityProjectilesMotionFor(
         // Phase A — extend: grow only the front from the front edge
 
         arrowLen = arrowLen + vArrow * dtSec
+
+        if (dashMs > 0) {
+
+            let u = (nowMs - startMs) / dashMs
+
+            if (u < 0) u = 0
+
+            if (u > 1) u = 1
+
+            const timeLen = Math.floor(maxLen * u)
+
+            if (timeLen > arrowLen) arrowLen = timeLen
+
+        }
 
         if (arrowLen >= maxLen) {
 
@@ -43857,7 +44043,13 @@ const ENEMY_NAV_LOG_MIN_MOVE_PX2 = ENEMY_NAV_LOG_MIN_MOVE_PX * ENEMY_NAV_LOG_MIN
 const ENEMY_NAV_LOG_DUMP_COOLDOWN_MS = 800
 const ENEMY_NAV_LOG_QUAD_STALE_MS = 1500
 const ENEMY_NAV_LOG_TILE_CHANGE_ONLY = true
+const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
+
+let _enginePaused = false
+let _enginePausedReason = ""
+let _enginePausedAtMs = 0
+let _enemyNavLastMapDumpRev = -1
 
 
 
@@ -43878,6 +44070,91 @@ let _enemyNavRows = 0
 let _enemyNavCols = 0
 let _enemyNavQuadOwner: number[] = [-1, -1, -1, -1]
 let _enemyNavQuadSeenAt: number[] = [0, 0, 0, 0]
+let _enemyNavQuadOwnerRev: number[] = [-1, -1, -1, -1]
+let _enemyNavSpawnerLogger: number[] = []
+
+function _enemyNavDumpLocalSnapshot(r: number, c: number, enemy: Sprite): void {
+    if (!DEBUG_ENEMY_NAV_LOG) return
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+
+    const rows = _enemyNavRows | 0
+    const cols = _enemyNavCols | 0
+    const tr = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_R) | 0
+    const tc = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_C) | 0
+    const td = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_D) | 0
+
+    console.log(`[enemy][navlog][localsnap] eid=${getEnemyIndex(enemy)|0} at=(${r},${c}) target=(${tr},${tc},d=${td})`)
+
+    // 5x5 mask/dist snapshot centered on (r,c)
+    for (let dr = -2; dr <= 2; dr++) {
+        let maskLine = ""
+        let distLine = ""
+        const rr = (r + dr) | 0
+        for (let dc = -2; dc <= 2; dc++) {
+            const cc = (c + dc) | 0
+            let blocked = 1
+            let d = -1
+            if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) {
+                blocked = _enemyNavIsBaseBlocked(rr, cc) ? 1 : 0
+                if (_enemyNavDist && _enemyNavDist.length > 0) {
+                    const idx = _enemyNavIdx(rr, cc) | 0
+                    if (idx >= 0 && idx < _enemyNavDist.length) {
+                        d = _enemyNavDist[idx] | 0
+                    }
+                }
+            }
+            maskLine += blocked ? "1" : "0"
+            distLine += (d >= 0 && d < ENEMY_NAV_INF) ? `${d.toString().padStart(2,"0")}` : "##"
+            if (dc !== 2) {
+                distLine += " "
+            }
+        }
+        console.log(`[enemy][navlog][localsnap] mask r=${rr} ${maskLine}`)
+        console.log(`[enemy][navlog][localsnap] dist r=${rr} ${distLine}`)
+    }
+}
+function _engineSetPaused(flag: boolean, reason?: string): void {
+    const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    if (flag) {
+        if (_enginePaused) return
+        _enginePaused = true
+        _enginePausedReason = reason || ""
+        _enginePausedAtMs = now
+
+        // Freeze movement immediately.
+        for (let hi = 0; hi < heroes.length; hi++) {
+            const h = heroes[hi]
+            if (!h) continue
+            h.vx = 0
+            h.vy = 0
+        }
+        for (let ei = 0; ei < enemies.length; ei++) {
+            const e = enemies[ei]
+            if (!e) continue
+            e.vx = 0
+            e.vy = 0
+        }
+        return
+    }
+
+    if (!_enginePaused) return
+    _enginePaused = false
+    _enginePausedReason = ""
+    _enginePausedAtMs = 0
+
+    // Force nav rebuild on resume.
+    _enemyNavBuiltAtMs = 0
+    _enemyNavBuiltWorldRev = -1
+    _enemyNavBuiltDecorRev = -1
+    _enemyNavBuiltHeroHash = 0
+
+    // Nudge intent dispatch to restart soon after resume.
+    nextIntentDispatchMs = ((now + 80) | 0)
+}
+
+function _engineIsPaused(): boolean {
+    return _enginePaused
+}
 
 
 
@@ -43911,54 +44188,35 @@ function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: 
 
     const tile = WORLD_TILE_SIZE | 0
 
-    const cx = (c * tile + (tile >> 1)) | 0
-
-    const cy = (r * tile + (tile >> 1)) | 0
-
-
+    // Interpret (r,c) as the tile containing the enemy's FEET point.
+    // Use the tile center as the desired feet point.
+    const footX = (c * tile + (tile >> 1)) | 0
+    const footY = (r * tile + (tile >> 1)) | 0
 
     const halfW = Math.idiv(colliderW | 0, 2) | 0
+    const h = (colliderH | 0)
 
-    const halfH = Math.idiv(colliderH | 0, 2) | 0
+    const left = (footX - halfW) | 0
+    const right = (footX + halfW - 1) | 0
 
-
-
-    const left = (cx - halfW) | 0
-
-    const right = (cx + halfW - 1) | 0
-
-    const top = (cy - halfH) | 0
-
-    const bottom = (cy + halfH - 1) | 0
-
-
+    // Feet point is the bottom of the collider.
+    const bottom = footY | 0
+    const top = (bottom - h + 1) | 0
 
     let c0 = Math.idiv(left, tile) | 0
-
     let c1 = Math.idiv(right, tile) | 0
-
     let r0 = Math.idiv(top, tile) | 0
-
     let r1 = Math.idiv(bottom, tile) | 0
-
-
 
     if (r0 < 0 || c0 < 0 || r1 >= (_enemyNavRows | 0) || c1 >= (_enemyNavCols | 0)) return false
 
-
-
     for (let rr = r0; rr <= r1; rr++) {
-
         for (let cc = c0; cc <= c1; cc++) {
-
             if (_enemyNavIsBlocked(rr | 0, cc | 0)) return false
-
         }
-
     }
 
     return true
-
 }
 
 
@@ -44084,45 +44342,35 @@ function _enemyNavComputeHeroHash(heroTargets: Sprite[]): number {
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return 0
 
     const rows = _engineWorldTileMap.length | 0
-
     const cols = _engineWorldTileMap[0].length | 0
-
     const tileSize = WORLD_TILE_SIZE | 0
-
-
 
     let h = 0
 
     for (let i = 0; i < heroTargets.length; i++) {
 
         const hero = heroTargets[i]
-
         if (!hero) continue
 
+        // Use HERO COLLISION (feet), not sprite center.
+        const hb = _boundsWithOffset(hero, _heroCollisionOffsetY(hero))
+        const footX = hb.centerX | 0
+        const footY = hb.bottom | 0
 
-
-        let r = Math.idiv(hero.y | 0, tileSize) | 0
-
-        let c = Math.idiv(hero.x | 0, tileSize) | 0
+        let r = Math.idiv(footY, tileSize) | 0
+        let c = Math.idiv(footX, tileSize) | 0
 
         if (r < 0) r = 0
-
         else if (r >= rows) r = rows - 1
 
         if (c < 0) c = 0
-
         else if (c >= cols) c = cols - 1
 
-
-
         const v = ((r * cols) + c) | 0
-
         h = (((h * 131) | 0) ^ v) | 0
-
     }
 
     return h | 0
-
 }
 
 
@@ -44548,135 +44796,83 @@ function _enemyNavRebuildDistanceField(heroTargets: Sprite[]): void {
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
 
     const map = _engineWorldTileMap
-
     const rows = map.length | 0
-
     const cols = map[0].length | 0
-
     const tileSize = WORLD_TILE_SIZE | 0
-
-
 
     _enemyNavEnsureCapacity(rows, cols)
 
     const need = (rows * cols) | 0
 
-
-
     // Reset dist to INF
-
     for (let i = 0; i < need; i++) _enemyNavDist[i] = ENEMY_NAV_INF
 
-
-
     // Rebuild decor blocking grid (so enemies avoid statue/chest solids too)
-
     _enemyNavRebuildDecorBlocks(rows, cols)
-
     _enemyNavMarkDeadEnds(rows, cols, heroTargets)
 
-
-
     const qr: number[] = []
-
     const qc: number[] = []
-
     let head = 0
 
-
-
     // Multi-source BFS: all heroes are sources with dist=0
-
     for (let i = 0; i < heroTargets.length; i++) {
 
         const hero = heroTargets[i]
-
         if (!hero) continue
 
+        // Use HERO COLLISION (feet), not sprite center.
+        const hb = _boundsWithOffset(hero, _heroCollisionOffsetY(hero))
+        const footX = hb.centerX | 0
+        const footY = hb.bottom | 0
 
-
-        let sr = Math.idiv(hero.y | 0, tileSize) | 0
-
-        let sc = Math.idiv(hero.x | 0, tileSize) | 0
+        let sr = Math.idiv(footY, tileSize) | 0
+        let sc = Math.idiv(footX, tileSize) | 0
 
         if (sr < 0) sr = 0
-
         else if (sr >= rows) sr = rows - 1
 
         if (sc < 0) sc = 0
-
         else if (sc >= cols) sc = cols - 1
-
-
 
         const sIdx = ((sr * cols) + sc) | 0
 
         if ((_enemyNavDist[sIdx] | 0) !== 0) {
-
             _enemyNavDist[sIdx] = 0
-
             qr.push(sr)
-
             qc.push(sc)
-
         }
-
     }
 
-
-
     if (qr.length === 0) return
-
-
 
     while (head < qr.length) {
 
         const r = qr[head] | 0
-
         const c = qc[head] | 0
-
         head++
 
-
-
         const baseIdx = ((r * cols) + c) | 0
-
         const baseD = _enemyNavDist[baseIdx] | 0
-
         const nextD = (baseD + 1) | 0
-
-
 
         for (let k = 0; k < 4; k++) {
 
             const nr = (r + _NAV4_DR[k]) | 0
-
             const nc = (c + _NAV4_DC[k]) | 0
 
             if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
-
             if (_enemyNavIsBlocked(nr, nc)) continue
 
-
-
             const nIdx = ((nr * cols) + nc) | 0
-
             const cur = _enemyNavDist[nIdx] | 0
-
             if (cur <= nextD) continue
 
-
-
             _enemyNavDist[nIdx] = nextD
-
             qr.push(nr)
-
             qc.push(nc)
-
         }
-
     }
-
 }
 
 
@@ -44738,6 +44934,7 @@ function _enemyNavShouldLog(enemy: Sprite, tileIdx: number, x: number, y: number
 
     const now = game.runtime() | 0
     const eid = getEnemyIndex(enemy)
+    const spawnerId = sprites.readDataNumber(enemy, ENEMY_DATA.SPAWNER_ID) | 0
     const map = _engineWorldTileMap
     const tileSize = WORLD_TILE_SIZE | 0
     let worldW = 160
@@ -44747,25 +44944,26 @@ function _enemyNavShouldLog(enemy: Sprite, tileIdx: number, x: number, y: number
         worldW = (map[0].length * tileSize) | 0
     }
 
-    // Decay stale quad ownership
-    for (let i = 0; i < 4; i++) {
-        if ((_enemyNavQuadOwner[i] | 0) >= 0 && ((now - (_enemyNavQuadSeenAt[i] | 0)) > (ENEMY_NAV_LOG_QUAD_STALE_MS | 0))) {
-            _enemyNavQuadOwner[i] = -1
-            _enemyNavQuadSeenAt[i] = 0
-        }
-    }
-
-    // Quadrant gating to cap concurrent loggers per screen region.
+    // Spawner gating: only the first enemy spawned from each spawner logs until worldRev changes.
     if (!force && eid >= 0) {
-        const qx = ((x | 0) < (worldW >> 1)) ? 0 : 1
-        const qy = ((y | 0) < (worldH >> 1)) ? 0 : 1
-        const q = ((qy << 1) | qx) | 0
-        const owner = _enemyNavQuadOwner[q] | 0
-        if (owner === -1 || owner === (eid | 0)) {
-            _enemyNavQuadOwner[q] = eid | 0
-            _enemyNavQuadSeenAt[q] = now | 0
-        } else {
-            return false
+        const worldRev = _engineWorldRev | 0
+        if (!_enemyNavSpawnerLogger || _enemyNavSpawnerLogger.length < enemySpawners.length) {
+            _enemyNavSpawnerLogger = []
+            for (let i = 0; i < enemySpawners.length; i++) _enemyNavSpawnerLogger.push(-1)
+        }
+
+        if (_enemyNavQuadOwnerRev[0] !== worldRev) {
+            for (let i = 0; i < _enemyNavSpawnerLogger.length; i++) _enemyNavSpawnerLogger[i] = -1
+            _enemyNavQuadOwnerRev[0] = worldRev
+        }
+
+        if (spawnerId >= 0 && spawnerId < _enemyNavSpawnerLogger.length) {
+            const owner = _enemyNavSpawnerLogger[spawnerId] | 0
+            if (owner === -1) {
+                _enemyNavSpawnerLogger[spawnerId] = eid | 0
+            } else if (owner !== (eid | 0)) {
+                return false
+            }
         }
     }
 
@@ -44867,17 +45065,26 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 
     console.log(`[enemy][navlog][dump] reason=${reason} enemyIndex=${enemyIndex} size=${size} now=${now}`)
 
-    // Emit a simple 0/1 map snapshot so we can correlate shape to stuck spots.
+    // Emit a simple 0/1 map snapshot once per world rev so we can correlate shape to stuck spots.
     if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
         const rows = _engineWorldTileMap.length | 0
         const cols = _engineWorldTileMap[0].length | 0
-        console.log(`[enemy][navlog][map] rows=${rows} cols=${cols} legend:1=blocked,0=open`)
-        for (let r = 0; r < rows; r++) {
-            let line = ""
-            for (let c = 0; c < cols; c++) {
-                line += _enemyNavIsBaseBlocked(r, c) ? "1" : "0"
+        const worldRev = _engineWorldRev | 0
+        const decorRev = _engineDecorRev | 0
+        const floorIdx = ((_dunFloorIndex | 0) + 1) | 0
+
+        if (_enemyNavLastMapDumpRev !== worldRev) {
+            console.log(`[enemy][navlog][map] rows=${rows} cols=${cols} floor=${floorIdx} worldRev=${worldRev} decorRev=${decorRev} legend:1=blocked,0=open`)
+            for (let r = 0; r < rows; r++) {
+                let line = ""
+                for (let c = 0; c < cols; c++) {
+                    line += _enemyNavIsBaseBlocked(r, c) ? "1" : "0"
+                }
+                console.log(`[enemy][navlog][maprow] r=${r} ${line}`)
             }
-            console.log(`[enemy][navlog][maprow] r=${r} ${line}`)
+            _enemyNavLastMapDumpRev = worldRev
+        } else {
+            console.log(`[enemy][navlog][map] skipped (already dumped for worldRev=${worldRev}) floor=${floorIdx}`)
         }
     }
 
@@ -44893,14 +45100,25 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
         const stuck = entry.stuck || {}
         const vel = entry.vel || {}
         const candCount = entry.candidates ? entry.candidates.length : 0
-
-        console.log(`[enemy][navlog][entry] [${i}] eid=${entry.eid|0} mid=${entry.mid||""} step=${entry.step|0} t=${entry.t|0} pos=(${pos.r|0},${pos.c|0})@${pos.x|0},${pos.y|0} idx=${pos.idx|0} d=${dist.cur|0} mask=${dist.mask|0} allowUp=${dist.allowUp|0} pick=(${pick.r|0},${pick.c|0},d=${pick.d==null?-1:pick.d|0}) hero=(${(entry.hero&&entry.hero.r)||0},${(entry.hero&&entry.hero.c)||0}) reason=${entry.reason||""} phase=${entry.phase||""} lastIdx=${nav.lastIdx|0} stuckUntil=${stuck.until|0} stuckMode=${stuck.mode|0} speed=${entry.speed|0} vel=(${vel.vx|0},${vel.vy|0}) cands=${candCount}`)
+        let candsCompact = ""
         if (entry.candidates && entry.candidates.length > 0) {
+            const parts: string[] = []
             for (let j = 0; j < entry.candidates.length; j++) {
                 const c = entry.candidates[j] || {}
-                console.log(`[enemy][navlog][cand]   cand${j}: (${c.r|0},${c.c|0}) d=${c.d==null?-1:c.d|0} blk=${c.blocked?c.blockReason||1:0} back=${c.back||0} diag=${c.diag||0} fit=${c.blockReason==="fit"?1:0} align=${c.align==null?0:Math.round((c.align||0)*100)/100} chosen=${c.chosen||0}`)
+                let flags = 0
+                if (c.blocked) flags |= 1   // blocked
+                if (c.back) flags |= 2      // backtrack
+                if (c.diag) flags |= 4      // diagonal
+                if (c.blockReason === "fit") flags |= 8 // footprint fail
+                if (c.chosen) flags |= 16   // chosen step
+                const align = (c.align == null) ? 0 : Math.round((c.align || 0) * 100) / 100
+                const br = c.blockReason ? `:${c.blockReason}` : ""
+                parts.push(`(${c.r|0},${c.c|0},d=${c.d==null?-1:c.d|0},f=${flags}${br},a=${align})`)
             }
+            candsCompact = parts.join(" ")
         }
+
+        console.log(`[enemy][navlog][entry] [${i}] eid=${entry.eid|0} mid=${entry.mid||""} step=${entry.step|0} t=${entry.t|0} pos=(${pos.r|0},${pos.c|0})@${pos.x|0},${pos.y|0} idx=${pos.idx|0} d=${dist.cur|0} mask=${dist.mask|0} allowUp=${dist.allowUp|0} pick=(${pick.r|0},${pick.c|0},d=${pick.d==null?-1:pick.d|0}) hero=(${(entry.hero&&entry.hero.r)||0},${(entry.hero&&entry.hero.c)||0}) reason=${entry.reason||""} phase=${entry.phase||""} lastIdx=${nav.lastIdx|0} stuckUntil=${stuck.until|0} stuckMode=${stuck.mode|0} speed=${entry.speed|0} vel=(${vel.vx|0},${vel.vy|0}) cands=${candCount}${candsCompact ? " candFlags(1=blk,2=back,4=diag,8=fitFail,16=chosen) cands=" + candsCompact : ""}`)
     }
 }
 
@@ -44909,147 +45127,100 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
 
     if (!_enemyNavDist || _enemyNavRows <= 0 || _enemyNavCols <= 0) return false
 
-
-
     const tileSize = WORLD_TILE_SIZE | 0
 
-    let r = Math.idiv(enemy.y | 0, tileSize) | 0
+    // --- Enemy FEET (collision) point ---
+    const dims = _enemyGetColliderDims(enemy)
+    const cw = dims.w | 0
+    const ch = dims.h | 0
 
-    let c = Math.idiv(enemy.x | 0, tileSize) | 0
+    const img: any = (enemy as any).image
+    const dispH = (((img && img.height) ? (img.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
+
+    // Offset that places the collider's bottom near the sprite's bottom (feet-like).
+    let offY = Math.idiv((dispH - ch) | 0, 2) | 0
+    if (offY < 0) offY = 0
+
+    const footX = enemy.x | 0
+    const footY = (((enemy.y | 0) + offY + (Math.idiv(ch, 2) | 0) - 1) | 0)
+
+    let r = Math.idiv(footY, tileSize) | 0
+    let c = Math.idiv(footX, tileSize) | 0
 
     if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return false
 
-
-
     const curIdx = _enemyNavIdx(r, c) | 0
-
     const curD = _enemyNavDist[curIdx] | 0
-
     const nowMs = game.runtime() | 0
 
     const curMask = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > curIdx) ? (_enemyNavDeadEnd[curIdx] | 0) : 0
 
     const heroR = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_R) | 0
-
     const heroC = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_C) | 0
-
     const heroEX = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_EX) | 0
-
     const heroEY = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_EY) | 0
 
     const phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
-
     const stuckMode = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-
     const monsterId = sprites.readDataString(enemy, "monsterId") || sprites.readDataString(enemy, "id") || ""
-
     const eid = getEnemyIndex(enemy) | 0
 
-    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, curIdx, enemy.x | 0, enemy.y | 0, false)
-
+    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, curIdx, footX, footY, false)
     const candidates: any[] = DEBUG_ENEMY_NAV_LOG ? [] : null
 
     let pickReason = "descent"
-
     let logForce = false
 
     if (curD >= ENEMY_NAV_INF) {
 
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
-
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
-
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
 
         if (DEBUG_ENEMY_NAV_LOG) {
-
             _enemyNavLogAdd(enemy, {
-
                 t: nowMs,
-
                 reason: "curDistInf",
-
-                pos: { x: enemy.x | 0, y: enemy.y | 0, r, c, idx: curIdx },
-
+                pos: { x: footX, y: footY, r, c, idx: curIdx },
                 dist: { cur: curD, mask: curMask, allowUp: 0 },
-
                 nav: { lastIdx: sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0 },
-
                 vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-
                 candidates
-
             }, true)
-
         }
 
         return false
-
     }
 
-
-
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
-
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
-
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
 
-
-
     const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
-
     const allowUp = (stuckUntil > 0 && nowMs < stuckUntil) ? 1 : 0
 
-
-
-    const dims = _enemyGetColliderDims(enemy)
-
-    const cw = dims.w | 0
-
-    const ch = dims.h | 0
-
-
-
     let lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX)
-
     if (lastNavIdx === 0 && curIdx !== 0) lastNavIdx = -1
 
-
-
     const vx = enemy.vx
-
     const vy = enemy.vy
-
     const vMag = Math.abs(vx) + Math.abs(vy)
 
-
-
     // Pick best neighbor by dist that ALSO fits this enemy's collider footprint.
-
     let bestR = r
-
     let bestC = c
-
     let bestD = ENEMY_NAV_INF
-
     let bestAlign = -999
-
     let bestIsBacktrack = false
 
     let bestAnyR = r
-
     let bestAnyC = c
-
     let bestAnyD = ENEMY_NAV_INF
-
     let bestAnyAlign = -999
-
     let bestAnyIsBacktrack = false
 
-
-
     for (let k = 0; k < 8; k++) {
+
         const nr = (r + _NAV8_DR[k]) | 0
         const nc = (c + _NAV8_DC[k]) | 0
         if (nr < 0 || nr >= _enemyNavRows || nc < 0 || nc >= _enemyNavCols) continue
@@ -45057,14 +45228,13 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         let cand: any = null
         if (candidates) cand = { r: nr, c: nc }
 
-        // Base blocked check
         if (_enemyNavIsBlocked(nr, nc)) {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "blocked"
                 cand.d = ENEMY_NAV_INF
+                candidates.push(cand)
             }
-            if (cand) candidates.push(cand)
             continue
         }
 
@@ -45072,40 +45242,43 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         const dc = _NAV8_DC[k] | 0
 
         // Diagonal corner-cut guard (+ footprint guard on adjacent cardinals)
-        let diagBlocked = false
         if (dr !== 0 && dc !== 0) {
+
+            let diagBlocked = false
             if (_enemyNavIsBlocked(r, nc) || _enemyNavIsBlocked(nr, c)) diagBlocked = true
             else if (!_enemyNavCanOccupyCellForDims(cw, ch, r, nc) || !_enemyNavCanOccupyCellForDims(cw, ch, nr, c)) diagBlocked = true
+
             if (diagBlocked) {
                 if (cand) {
                     cand.blocked = 1
                     cand.blockReason = "diag"
                     cand.diag = 1
+                    candidates.push(cand)
                 }
-                if (cand) candidates.push(cand)
                 continue
             }
         }
 
-        // Footprint occupancy check
         if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "fit"
+                candidates.push(cand)
             }
-            if (cand) candidates.push(cand)
             continue
         }
 
         const nIdx = _enemyNavIdx(nr, nc) | 0
         const nd = _enemyNavDist[nIdx] | 0
+
         if (cand) cand.d = nd
+
         if (nd >= ENEMY_NAV_INF) {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "inf"
+                candidates.push(cand)
             }
-            if (cand) candidates.push(cand)
             continue
         }
 
@@ -45119,7 +45292,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             cand.diag = (dr !== 0 && dc !== 0) ? 1 : 0
         }
 
-        // Track best-any (used as fallback if no strict descent exists)
+        // best-any (fallback)
         if (nd < bestAnyD) {
             bestAnyD = nd
             bestAnyR = nr
@@ -45140,7 +45313,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             }
         }
 
-        // Require a strict descent to avoid ping-pong in flat areas
+        // strict descent unless we later fall back
         if (nd >= curD) {
             if (cand) candidates.push(cand)
             continue
@@ -45169,11 +45342,6 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         if (cand) candidates.push(cand)
     }
 
-
-    // Fallback: if no strict descent, allow the best non-increasing neighbor.
-
-    // If we're in a stuck window, allow a tiny uphill step (curD + 1) to escape concave corners.
-
     if (bestD >= ENEMY_NAV_INF && bestAnyD < ENEMY_NAV_INF && bestAnyD <= (curD + allowUp)) {
         bestD = bestAnyD
         bestR = bestAnyR
@@ -45195,9 +45363,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     if (candidates) {
         for (let i = 0; i < candidates.length; i++) {
             const cand = candidates[i]
-            if (cand && (cand.r | 0) === (bestR | 0) && (cand.c | 0) === (bestC | 0)) {
-                cand.chosen = 1
-            }
+            if (cand && (cand.r | 0) === (bestR | 0) && (cand.c | 0) === (bestC | 0)) cand.chosen = 1
         }
     }
 
@@ -45206,7 +45372,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         mid: monsterId,
         t: nowMs,
         reason: pickReason,
-        pos: { x: enemy.x | 0, y: enemy.y | 0, r, c, idx: curIdx },
+        pos: { x: footX, y: footY, r, c, idx: curIdx },
         dist: { cur: curD, best: bestD, mask: curMask, allowUp },
         nav: { lastIdx: lastNavIdx, bestAny: { r: bestAnyR, c: bestAnyC, d: bestAnyD } },
         pick: { r: bestR, c: bestC, d: bestD },
@@ -45222,41 +45388,34 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         if (DEBUG_ENEMY_NAV_LOG) _enemyNavLogAdd(enemy, makeNavLogEntry(), true)
         return false
     }
+
     if (bestR === r && bestC === c) {
         if (DEBUG_ENEMY_NAV_LOG) _enemyNavLogAdd(enemy, makeNavLogEntry(), true)
         return false
     }
 
-    // Remember current tile to avoid immediate backtracking next tick
+    // Avoid immediate backtrack next tick
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, curIdx)
 
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, bestR)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, bestC)
-
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, bestD)
 
-
-
+    // Target FEET point = tile center
     const tx = (bestC * tileSize + (tileSize >> 1)) | 0
-
     const ty = (bestR * tileSize + (tileSize >> 1)) | 0
 
-
-
-    const dx = (tx - (enemy.x | 0))
-
-    const dy = (ty - (enemy.y | 0))
-
-
+    const dx = (tx - footX) | 0
+    const dy = (ty - footY) | 0
 
     let mag = Math.sqrt(dx * dx + dy * dy)
-
     if (mag <= 0.001) mag = 1
-
 
     enemy.vx = Math.idiv(dx * speed, mag)
     enemy.vy = Math.idiv(dy * speed, mag)
+
     if (DEBUG_ENEMY_NAV_LOG) _enemyNavLogAdd(enemy, makeNavLogEntry(), (logForce || wantLog))
+
     return true
 }
 
@@ -45598,6 +45757,8 @@ const ENEMY_AI_NAV_TARGET_C = "__aiNavTC"
 const ENEMY_AI_NAV_TARGET_D = "__aiNavTD"
 
 const ENEMY_AI_STUCK_LOG_UNTIL = "__aiStuckLogUntil"
+const ENEMY_AI_LAST_STUCK_IDX = "__aiStuckIdx"
+const ENEMY_AI_LAST_STUCK_MS = "__aiStuckMs"
 
 const ENEMY_AI_NAV_HERO_R = "__aiNavHeroR"
 
@@ -45828,95 +45989,51 @@ function _enemyComputeMoveSpeed(enemy: Sprite): number {
 function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyEdgePick {
 
     let target = heroTargets[0]
-
     let bestD2 = 1e9
-
     let bestDx = 0
-
     let bestDy = 0
-
     let bestEdgeX = target.x
-
     let bestEdgeY = target.y
 
+    // Enemy FEET point (based on collider dims + feet alignment)
+    const dims = _enemyGetColliderDims(enemy)
+    const ch = dims.h | 0
 
+    const eImg: any = (enemy as any).image
+    const eDispH = (((eImg && eImg.height) ? (eImg.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
+
+    let eOffY = Math.idiv((eDispH - ch) | 0, 2) | 0
+    if (eOffY < 0) eOffY = 0
+
+    const eFootX = enemy.x | 0
+    const eFootY = (((enemy.y | 0) + eOffY + (Math.idiv(ch, 2) | 0) - 1) | 0)
 
     for (let hi = 0; hi < heroTargets.length; hi++) {
 
         const h = heroTargets[hi]
+        if (!h) continue
 
+        // Hero FEET point = hero collision bounds bottom-center
+        const hb = _boundsWithOffset(h, _heroCollisionOffsetY(h))
+        const hFootX = hb.centerX | 0
+        const hFootY = hb.bottom | 0
 
-
-        const img: any = (h as any).image
-
-        const heroW = (img && img.width) || (h as any).width || 16
-
-        const heroH = (img && img.height) || (h as any).height || 16
-
-
-
-        const halfW = heroW / 2
-
-        const halfH = heroH / 2
-
-
-
-        const left = h.x - halfW
-
-        const right = h.x + halfW
-
-        const top = h.y - halfH
-
-        const bottom = h.y + halfH
-
-
-
-        let edgeX = enemy.x
-
-        if (edgeX < left) edgeX = left
-
-        else if (edgeX > right) edgeX = right
-
-
-
-        let edgeY = enemy.y
-
-        if (edgeY < top) edgeY = top
-
-        else if (edgeY > bottom) edgeY = bottom
-
-
-
-        const dxEdge = edgeX - enemy.x
-
-        const dyEdge = edgeY - enemy.y
-
-        const d2 = dxEdge * dxEdge + dyEdge * dyEdge
-
-
+        const dx = (hFootX - eFootX) | 0
+        const dy = (hFootY - eFootY) | 0
+        const d2 = (dx * dx + dy * dy)
 
         if (d2 < bestD2) {
-
             bestD2 = d2
-
             target = h
-
-            bestDx = dxEdge
-
-            bestDy = dyEdge
-
-            bestEdgeX = edgeX
-
-            bestEdgeY = edgeY
-
+            bestDx = dx
+            bestDy = dy
+            bestEdgeX = hFootX
+            bestEdgeY = hFootY
         }
-
     }
 
-
-
+    // NOTE: edgeX/edgeY now mean "hero feet point" (collision), not sprite edge.
     return { target, d2: bestD2, dx: bestDx, dy: bestDy, edgeX: bestEdgeX, edgeY: bestEdgeY }
-
 }
 
 
@@ -46032,25 +46149,29 @@ function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boo
 function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
 
     // Prefer shared nav-field (tile-aware, scalable)
-
     if (_enemySteerTowardNavField(enemy, speed)) return
 
+    // Fallback: straight-line to the HERO FEET point, using ENEMY FEET point.
+    const dims = _enemyGetColliderDims(enemy)
+    const ch = dims.h | 0
 
+    const eImg: any = (enemy as any).image
+    const eDispH = (((eImg && eImg.height) ? (eImg.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
 
-    // Fallback: straight-line to the edge point
+    let eOffY = Math.idiv((eDispH - ch) | 0, 2) | 0
+    if (eOffY < 0) eOffY = 0
 
-    const dx0 = edgeX - enemy.x
+    const eFootX = enemy.x | 0
+    const eFootY = (((enemy.y | 0) + eOffY + (Math.idiv(ch, 2) | 0) - 1) | 0)
 
-    const dy0 = edgeY - enemy.y
+    const dx0 = (edgeX | 0) - eFootX
+    const dy0 = (edgeY | 0) - eFootY
 
     let mag0 = Math.sqrt(dx0 * dx0 + dy0 * dy0)
-
     if (mag0 === 0) mag0 = 1
 
     enemy.vx = Math.idiv(dx0 * speed, mag0)
-
     enemy.vy = Math.idiv(dy0 * speed, mag0)
-
 }
 
 
@@ -46188,18 +46309,34 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
                 const td = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_D) | 0
                 const lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0
 
-                console.log("[enemy][stuck] " + JSON.stringify({
-                    eid: getEnemyIndex(enemy) | 0,
-                    pos: { x: enemy.x | 0, y: enemy.y | 0 },
-                    tile: { r, c, d: curD },
-                    target: { tr, tc, td },
-                    lastNavIdx,
-                    v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-                }))
-                if (DEBUG_ENEMY_NAV_LOG) {
-                    _enemyNavDump(enemy, "stuck")
+                const curIdx = _enemyNavIdx(r, c) | 0
+                const lastStuckIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_STUCK_IDX) | 0
+                const lastStuckMs = sprites.readDataNumber(enemy, ENEMY_AI_LAST_STUCK_MS) | 0
+
+                const now = nowMs | 0
+                const dedupTile = (curIdx === (lastStuckIdx | 0))
+                const dedupTime = (lastStuckMs > 0 && (now - lastStuckMs) < (ENEMY_STUCK_DEDUP_MS | 0))
+
+                if (!(dedupTile && dedupTime)) {
+                    console.log("[enemy][stuck] " + JSON.stringify({
+                        eid: getEnemyIndex(enemy) | 0,
+                        pos: { x: enemy.x | 0, y: enemy.y | 0 },
+                        tile: { r, c, idx: curIdx, d: curD },
+                        target: { tr, tc, td },
+                        lastNavIdx,
+                        lastStuck: { idx: lastStuckIdx, ms: lastStuckMs },
+                        move: { dx: dxMove, dy: dyMove, moved2: moved2 },
+                        v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
+                    }))
+                    sprites.setDataNumber(enemy, ENEMY_AI_LAST_STUCK_IDX, curIdx)
+                    sprites.setDataNumber(enemy, ENEMY_AI_LAST_STUCK_MS, now)
+
+                    if (DEBUG_ENEMY_NAV_LOG) {
+                        _enemyNavDump(enemy, "stuck")
+                        _enemyNavDumpLocalSnapshot(r, c, enemy)
+                    }
+                    sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
                 }
-                sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
             }
         }
         // Hold the "anti-stuck" behavior briefly
@@ -46384,20 +46521,24 @@ function updateEnemyHoming(nowMs: number) {
 
         const tSize = WORLD_TILE_SIZE | 0
 
-        let hR = Math.idiv(pick.edgeY | 0, tSize) | 0
 
+        let hR = Math.idiv(pick.edgeY | 0, tSize) | 0
         let hC = Math.idiv(pick.edgeX | 0, tSize) | 0
 
+        const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+        const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+
         if (hR < 0) hR = 0
+        else if (rows > 0 && hR >= rows) hR = rows - 1
 
         if (hC < 0) hC = 0
+        else if (cols > 0 && hC >= cols) hC = cols - 1
 
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_R, hR)
-
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_C, hC)
 
+        // These are now "hero feet point" (collision), not sprite center/edge.
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EX, pick.edgeX | 0)
-
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EY, pick.edgeY | 0)
 
         _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed)
@@ -48988,7 +49129,7 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
 
             const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
 
-            return uiMode === HERO_UI_MODE.LEVELUP
+            return uiMode === HERO_UI_MODE.LEVELUP || uiMode === HERO_UI_MODE.SHOP
 
         }
 
@@ -49111,6 +49252,8 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
 game.onUpdate(function () {
 
     if (!HeroEngine._isStarted()) return
+
+    if (_engineIsPaused()) return
 
 
 
@@ -49365,6 +49508,8 @@ if (SHOP_MODE_ACTIVE) {
 game.onUpdateInterval(500, function () {
 
     if (!HeroEngine._isStarted()) return
+
+    if (_engineIsPaused()) return
 
     regenHeroManaAll(BALANCE.HERO.MANA_REGEN_PCT_PER_TICK)
 
@@ -50262,6 +50407,8 @@ game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
 
     if (!HeroEngine._isStarted()) return
 
+    if (_engineIsPaused()) return
+
     if (SHOP_MODE_ACTIVE) return
 
     if (!enemySpawners || enemySpawners.length == 0) return
@@ -50910,10 +51057,12 @@ function _installEffectDebugOnce(): void {
             }
         }
 
-        g.__heEffectDebugEnable = function (v: boolean): void {
+        const enableFn = function (v: boolean): void {
             if (!g.__heEffectDebug) return
             g.__heEffectDebug.enabled = !!v
         }
+        g.__heEffectDebugEnable = enableFn
+        g._heEffectDebugEnable = enableFn
     } catch { }
 }
 
@@ -50925,6 +51074,8 @@ function _effectDebugMark(id: number, stage: string, payload?: any, finalize?: b
         }
     } catch { }
 }
+
+try { _installEffectDebugOnce() } catch { }
 
 
 
@@ -51564,6 +51715,8 @@ const RELIC_IDS = {
 
     RING_OF_FIRE: "ring_of_fire",
 
+    LOAF_OF_BREAD: "loaf_of_bread",
+
 }
 
 
@@ -51667,6 +51820,24 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         uiHints: { kind: "cornerCount" },
 
         effectKey: "ring_of_fire",
+
+    },
+
+
+
+    [RELIC_IDS.LOAF_OF_BREAD]: {
+
+        id: RELIC_IDS.LOAF_OF_BREAD,
+
+        name: "Loaf of Bread",
+
+        effectText: "+10 HP",
+
+        flavorText: "Fluffy!",
+
+        iconPrimary: { sheet: "ProjectUtumno_full", x: 9, y: 40 }, //Column 9, row 40
+
+        effectKey: "loaf_of_bread",
 
     },
 
@@ -52739,6 +52910,8 @@ const RELIC_RING_OF_FIRE_RADIUS = 44
 const RELIC_RING_OF_FIRE_FLAME_COUNT = 12
 const RELIC_RING_OF_FIRE_LIFESPAN_MS = 1_000
 const RELIC_RING_OF_FIRE_SKIN_ID = "firelion"
+const RELIC_LOAF_OF_BREAD_HP_BONUS = 10
+const RELIC_LOAF_OF_BREAD_SHOP_PRICE = 10
 const RELIC_RAINBOW_GLYPH_TEXT = "SAIW"
 const RELIC_RAINBOW_FULL_MASK = 0b1111
 
@@ -53172,6 +53345,84 @@ function _relicDbgEnsurePid(pid: number): void {
 
 
 
+function _relicHasPid(pid: number, relicId: string): boolean {
+
+    const rid = String(relicId || "")
+
+    if (!rid) return false
+
+    _relicDbgEnsurePid(pid)
+
+    const list = _relicOwnedByPid[String(pid | 0)]
+
+    if (!list || list.length <= 0) return false
+
+    return list.indexOf(rid) >= 0
+
+}
+
+function _relicApplyLoafOfBread(pid: number): void {
+
+    const hi = _relicResolveHeroIndexForPid(pid | 0)
+
+    if (hi < 0 || hi >= heroes.length) return
+
+    const hero = heroes[hi]
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const add = RELIC_LOAF_OF_BREAD_HP_BONUS | 0
+
+    if (add <= 0) return
+
+    let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+
+    if (maxHp <= 0) maxHp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+
+    if (maxHp <= 0) maxHp = 1
+
+    const nextMax = (maxHp + add) | 0
+
+    sprites.setDataNumber(hero, HERO_DATA.MAX_HP, nextMax)
+
+    const hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+
+    const nextHp = Math.min(nextMax, (hp + add) | 0) | 0
+
+    sprites.setDataNumber(hero, HERO_DATA.HP, nextHp)
+
+    updateHeroHPBar(hi)
+
+}
+
+function _relicGrantToPid(pid: number, relicId: string, source: string): boolean {
+
+    const rid = String(relicId || "")
+
+    if (!rid) return false
+
+    _relicDbgEnsurePid(pid)
+
+    const list = _relicOwnedByPid[String(pid | 0)]
+
+    if (!list) return false
+
+    if (list.indexOf(rid) >= 0) return false
+
+    list.push(rid)
+
+    if (rid === RELIC_IDS.LOAF_OF_BREAD) {
+
+        _relicApplyLoafOfBread(pid | 0)
+
+    }
+
+    console.log("[RELIC][GRANT]", { pid: pid | 0, relicId: rid, source: String(source || "") })
+
+    return true
+
+}
+
 function getOwnedRelicIdsForPid(pid: number): string[] {
 
     _relicDbgEnsurePid(pid)
@@ -53408,6 +53659,24 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
 
 
 
+function appendShopToSnapshot(snap: any, pid: number, hi: number): void {
+
+    if (!snap || !snap.ready) return
+
+    const items = _shopUiBuildItemsForPid(pid | 0, hi | 0)
+
+    const list = items || []
+
+    snap.shop = {
+        title: "Shop",
+        items: list,
+        selectedIndex: (snap.uiSel | 0) || 0,
+        open: ((snap.uiMode | 0) === HERO_UI_MODE.SHOP),
+        soldOut: (list.length <= 0),
+    }
+
+}
+
 // Expose catalog for DOM caching
 
 (() => {
@@ -53454,9 +53723,11 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
 
 const HERO_UI_DATA = {
 
-    MODE: "uiMode",    // number: 0 none, 1 levelup, 2 relicPickup (future)
+    MODE: "uiMode",    // number: 0 none, 1 levelup, 2 relicPickup (future), 3 shop
 
     SEL: "uiSel",      // number: selection index for UI navigation
+
+    OPENED_AT: "uiOpenedAt", // number: ms timestamp when UI opened
 
 }
 
@@ -53470,7 +53741,11 @@ const HERO_UI_MODE = {
 
     RELIC_PICKUP: 2,
 
+    SHOP: 3,
+
 }
+
+const SHOP_UI_BUY_GUARD_MS = 200
 
 
 
@@ -54036,6 +54311,8 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
 
     appendRelicsToSnapshot(snap, pid)
 
+    appendShopToSnapshot(snap, pid, hi)
+
 
 
     return snap
@@ -54078,6 +54355,11 @@ function _uiTryOpenLevelUpUi(hi: number, pid: number, where: string): { ok: bool
 
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
 
+    const now = game.runtime() | 0
+
+    // Clear any lingering strength charge so inputs work cleanly when returning to gameplay.
+    try { cancelStrengthCharge(hi, hero, now) } catch { }
+
 
 
     const safe = _uiGetSafeForSpend(hi)
@@ -54091,8 +54373,6 @@ function _uiTryOpenLevelUpUi(hi: number, pid: number, where: string): { ok: bool
     if (pts <= 0) return { ok: false, reason: "no-pts" }
 
 
-
-    const now = game.runtime() | 0
 
     const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
 
@@ -54137,10 +54417,16 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
     const prevMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
 
     sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE)
+    sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, 0)
+
+    const now = game.runtime() | 0
+
+    // Ensure any held strength charge state is cleared when leaving a UI.
+    try { cancelStrengthCharge(hi, hero, now) } catch { }
 
 
 
-    // Resume movement (safe floors only; we don’t allow opening while busy/locked)
+    // Resume movement (safe floors only; we don't allow opening while busy/locked)
 
     unlockHeroControls(hi)
 
@@ -54153,6 +54439,145 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
 
 
 
+
+function _shopUiBuildItemsForPid(pid: number, hi: number): any[] {
+
+    const items: any[] = []
+
+    const relicId = RELIC_IDS.LOAF_OF_BREAD
+
+    if (relicId) {
+
+        const owned = _relicHasPid(pid | 0, relicId)
+
+        if (!owned) {
+
+            const price = RELIC_LOAF_OF_BREAD_SHOP_PRICE | 0
+
+            const canAfford = (getHeroCoins(hi) | 0) >= (price | 0)
+
+            items.push({
+                relicId,
+                price: price | 0,
+                owned: false,
+                canAfford: !!canAfford,
+            })
+
+        }
+
+    }
+
+    return items
+
+}
+
+function _uiTryOpenShopUi(hi: number, pid: number, where: string): { ok: boolean, reason: string } {
+
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    const now = game.runtime() | 0
+
+    // Clear lingering strength charge so UI interactions don't freeze attacks afterward.
+    try { cancelStrengthCharge(hi, hero, now) } catch { }
+
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) {
+
+        return { ok: false, reason: "not-shop-floor" }
+
+    }
+
+    const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+
+    if (uiMode === HERO_UI_MODE.SHOP) return { ok: true, reason: "already-open" }
+
+    if (uiMode !== HERO_UI_MODE.NONE) return { ok: false, reason: "other-ui-open" }
+
+    const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
+
+    if (busyUntil > 0 && now < busyUntil) return { ok: false, reason: "busy" }
+
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+    if (locked) return { ok: false, reason: "locked" }
+
+    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.SHOP)
+
+    sprites.setDataNumber(hero, HERO_UI_DATA.SEL, 0)
+    sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, now | 0)
+
+    lockHeroControls(hi)
+
+    console.log("[UI] open shop", { pid, hi, where })
+
+    return { ok: true, reason: "opened" }
+
+}
+
+function _uiShopTryBuyIndex(hi: number, pid: number, index: number, where: string): { ok: boolean, reason: string } {
+
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+
+    if (uiMode !== HERO_UI_MODE.SHOP) return { ok: false, reason: "ui-not-open" }
+
+    const now = game.runtime() | 0
+    const openedAt = _uiReadNum(hero, HERO_UI_DATA.OPENED_AT, 0) | 0
+    if (openedAt > 0 && (now - openedAt) < (SHOP_UI_BUY_GUARD_MS | 0)) {
+        return { ok: false, reason: "debounce" }
+    }
+
+    const items = _shopUiBuildItemsForPid(pid | 0, hi)
+
+    if (!items || items.length <= 0) return { ok: false, reason: "no-items" }
+
+    let idx = index | 0
+
+    if (idx < 0) idx = 0
+
+    if (idx >= items.length) idx = items.length - 1
+
+    const item = items[idx]
+
+    if (!item || !item.relicId) return { ok: false, reason: "bad-item" }
+
+    if (item.owned) return { ok: false, reason: "owned" }
+
+    const price = (item.price | 0)
+
+    if (!trySpendHeroCoins(hi, price | 0)) return { ok: false, reason: "coins" }
+
+    const granted = _relicGrantToPid(pid | 0, String(item.relicId || ""), "shop-ui")
+
+    if (!granted) {
+
+        addHeroCoins(hi, price | 0, hero.x, hero.y)
+
+        return { ok: false, reason: "grant-failed" }
+
+    }
+
+    console.log("[SHOP][BUY_UI]", { pid: pid | 0, hi, relicId: item.relicId, price, where })
+
+    return { ok: true, reason: "bought" }
+
+}
+
+function _uiShopTryBuySelected(hi: number, pid: number, where: string): { ok: boolean, reason: string } {
+
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    const sel = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
+
+    return _uiShopTryBuyIndex(hi, pid, sel | 0, where)
+
+}
 
 // Install globals once
 
@@ -54296,6 +54721,14 @@ g.__heUiCommand = function (cmd: any): any {
 
     }
 
+    if (t === "openShop") {
+
+        const r = _uiTryOpenShopUi(hi, pid, "__heUiCommand")
+
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+
+    }
+
 
 
     if (t === "closeUI") {
@@ -54315,6 +54748,16 @@ g.__heUiCommand = function (cmd: any): any {
         sprites.setDataNumber(hero, HERO_UI_DATA.SEL, sel)
 
         return { ok: true, reason: "sel-set", snapshot: g.__heGetUiSnapshot(pid) }
+
+    }
+
+    if (t === "shopBuy") {
+
+        const index = cmd && typeof cmd.index === "number" ? (cmd.index | 0) : _uiReadNum(hero, HERO_UI_DATA.SEL, 0)
+
+        const r = _uiShopTryBuyIndex(hi, pid, index | 0, "__heUiCommand")
+
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
 
     }
 
@@ -54625,12 +55068,6 @@ try {
     }
 
 } catch (_e) { }
-
-
-
-
-
-
 
 
 
