@@ -2408,7 +2408,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
               raw = (dbg && dbg.lastRawByButton && dbg.lastRawByButton[button]) || dbg?.lastRaw || null;
             }
           } catch (_e) {}
-          return { out, raw };
+          return { out, raw, button, profile };
         }
 
         function _logicNoteForButton(button, profile) {
@@ -2426,6 +2426,47 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
           return note;
         }
+
+        // One-shot dump of Blockly/runtime/HUD state for a profile (helper for debugging).
+        window.__dumpMoveDebug = function dumpMoveDebug(profile) {
+          try { window.DEBUG_HOST_LOGIC = true; } catch (_e) {}
+          const dbg = (typeof window.__heBlocklyHeroLogicDebug === "function")
+            ? window.__heBlocklyHeroLogicDebug(profile || "")
+            : null;
+          const btnIds = { "A": "a", "B": "b", "A+B": "ab" };
+          const hud = Object.keys(btnIds).map(btn => {
+            const suffix = btnIds[btn];
+            const rawEl = document.getElementById(`hud-${suffix}-raw`);
+            const noteEl = document.getElementById(`hud-${suffix}-note`);
+            return {
+              button: btn,
+              noteText: (noteEl?.textContent || "").trim(),
+              rawHtml: rawEl?.innerHTML || "",
+              rawText: (rawEl?.innerText || "").trim()
+            };
+          });
+          const ls = window.__heLogicSourceByButton || {};
+          const errs = dbg?.lastErrByButton || {};
+          const defs = dbg?.lastDefaultsUsedByButton || {};
+          const raws = dbg?.lastRawByButton || {};
+          const lines = [];
+          lines.push(`profile=${profile || ""}`);
+          lines.push(`sources=${JSON.stringify(ls)}`);
+          lines.push(`errByBtn=${JSON.stringify(errs)}`);
+          lines.push(`defaultsByBtn=${JSON.stringify(defs)}`);
+          lines.push(`rawByBtn=${JSON.stringify(raws)}`);
+          lines.push(`codePreview=${dbg?.codePreview || "<none>"}`);
+          hud.forEach(h => {
+            lines.push(`hud[${h.button}] note="${h.noteText}" raw="${h.rawText}"`);
+          });
+          try {
+            const hudDbg = window.__heHudRenderDebug || null;
+            lines.push(`hudRender=${hudDbg ? JSON.stringify(hudDbg) : "<none>"}`);
+          } catch (_e) {}
+          const msg = lines.join("\n");
+          console.log("=== HERO MOVE DEBUG ===\n" + msg);
+          return msg;
+        };
 
       function familyInfo(fam) {
         const FAMILY = window.FAMILY || {};
@@ -2522,8 +2563,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
         const RAW_LABELS = ["family", "damage", "reach", "time", "status", "element", "id"];
         function renderMoveV2(data, boxEl, noteEl, rawEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
           const out = data ? data.out : null;
-          const raw = data ? data.raw : null;
-          const note = data ? data.note : "";
+          let raw = data ? data.raw : null;
+          let note = data ? data.note : "";
+          const btn = data ? data.button : null;
+          const prof = data ? data.profile : null;
           const detailNodes = boxEl ? boxEl.querySelectorAll(".hud-kindline, .hud-traits, .hud-elemline") : null;
 
           function reset() {
@@ -2543,13 +2586,28 @@ function _readTeamCoins(pid, hero, spritesNS) {
             if (rawEl) rawEl.style.display = "none";
           }
 
-          const arrMain = (Array.isArray(out) && out.length >= 7) ? out : null;
-          const arrRaw = (Array.isArray(raw) && raw.length >= 7) ? raw : null;
+          // If raw missing, try pulling the latest from the debug helper for this button/profile.
+          if ((!raw || !Array.isArray(raw)) && typeof window.__heBlocklyHeroLogicDebug === "function" && btn) {
+            try {
+              const dbg = window.__heBlocklyHeroLogicDebug(prof || "");
+              const cand = dbg && dbg.lastRawByButton ? dbg.lastRawByButton[btn] : null;
+              if (cand && Array.isArray(cand)) raw = cand;
+            } catch (_e) {}
+          }
+
+          let arrMain = (Array.isArray(out) && out.length >= 7) ? out : null;
+          const arrRaw = (Array.isArray(raw) && raw.length >= 7) ? raw : (Array.isArray(out) && out.length >= 7 ? out : null);
+
+          // Force invalid view if Blockly reported invalid/default-out or if raw has null/undefined entries
+          const noteInvalid = (note || "").indexOf("blockly:invalid") >= 0;
+          const rawHasHoles = !!(arrRaw && arrRaw.some(v => v === null || typeof v === "undefined"));
+          if (noteInvalid || rawHasHoles) {
+            arrMain = null;
+          }
 
           if (!arrMain) {
             reset();
-            const n = note ? `${note} | ` : "";
-            setText(noteEl, `${n}No valid move made`);
+            setText(noteEl, `No valid move made`);
             if (rawEl) {
               const src = arrRaw || [];
               rawEl.innerHTML = RAW_LABELS.map((lbl, i) => {
@@ -2559,6 +2617,17 @@ function _readTeamCoins(pid, hero, spritesNS) {
               rawEl.style.display = "block";
             }
             if (detailNodes) detailNodes.forEach(n => { try { n.style.display = "none"; } catch (_e) {} });
+            try {
+              const dbgHud = window.__heHudRenderDebug || (window.__heHudRenderDebug = {});
+              dbgHud[btn || ""] = {
+                button: btn || "",
+                profile: prof || "",
+                arrMain: null,
+                arrRaw: arrRaw ? arrRaw.slice(0, 7) : null,
+                rawVisible: true,
+                note: note || ""
+              };
+            } catch (_e) {}
             return;
           }
 
@@ -2596,7 +2665,20 @@ function _readTeamCoins(pid, hero, spritesNS) {
             }).join("");
           }
 
-          setText(noteEl, note || "");
+          setText(noteEl, "");
+
+          // Record render debug for dump helper
+          try {
+            const dbgHud = window.__heHudRenderDebug || (window.__heHudRenderDebug = {});
+            dbgHud[btn || ""] = {
+              button: btn || "",
+              profile: prof || "",
+              arrMain: arrMain ? arrMain.slice(0, 7) : null,
+              arrRaw: arrRaw ? arrRaw.slice(0, 7) : null,
+              rawVisible: !!(rawEl && rawEl.style && rawEl.style.display !== "none"),
+              note: note || ""
+            };
+          } catch (_e) {}
         }
         function renderMove(out, boxEl, noteEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
           // Reset defaults
@@ -2874,9 +2956,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const outB = callStudentLogic(heroIndex, "B", profile);
           const outAB = callStudentLogic(heroIndex, "A+B", profile);
 
-          renderMoveV2({ out: outA.out, raw: outA.raw, note: _logicNoteForButton("A", profile) }, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
-          renderMoveV2({ out: outB.out, raw: outB.raw, note: _logicNoteForButton("B", profile) }, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
-          renderMoveV2({ out: outAB.out, raw: outAB.raw, note: _logicNoteForButton("A+B", profile) }, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
+          renderMoveV2({ out: outA.out, raw: outA.raw, note: _logicNoteForButton("A", profile), button: "A", profile }, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
+          renderMoveV2({ out: outB.out, raw: outB.raw, note: _logicNoteForButton("B", profile), button: "B", profile }, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
+          renderMoveV2({ out: outAB.out, raw: outAB.raw, note: _logicNoteForButton("A+B", profile), button: "A+B", profile }, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
         }
 
         setInterval(tick, REFRESH_MS);

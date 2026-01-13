@@ -311,6 +311,13 @@ function heroLogic(button){ return chooseMyMove(button); }
 
   const _emitDefaults = (forcedId: string) => `
   __heResetDefaultsUsed();
+  family = undefined;
+  damage = undefined;
+  reach = undefined;
+  time = undefined;
+  status = undefined;
+  status2 = undefined;
+  element = undefined;
   id = ${JSON.stringify(forcedId)};
 `;
 
@@ -642,7 +649,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         } catch {}
       }
       function __heValOut(name, v, def) {
-        if (v == null) { __heDefaultsUsed[name] = true; return def; }
+        if (v == null) { __heDefaultsUsed[name] = true; return undefined; }
         return v;
       }
       function __heVal(v, def) { return (v == null) ? def : v; }
@@ -650,12 +657,12 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         const n = Number(v);
         if (typeof n === "number" && isFinite(n)) return n;
         __heDefaultsUsed[name] = true;
-        return 0;
+        return undefined;
       }
       function __heNum(v) { const n = Number(v); return (typeof n === "number" && isFinite(n)) ? n : 0; }
       function __heIdOut(forcedId, v) {
         if (typeof forcedId !== "undefined") return forcedId;
-        if (v == null) { __heDefaultsUsed.id = true; return "A"; }
+        if (v == null) { __heDefaultsUsed.id = true; return undefined; }
         return v;
       }
       function __heStatusOut(v1, v2) {
@@ -666,7 +673,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
           if (typeof n === "number" && isFinite(n)) return n;
         }
         __heDefaultsUsed.status = true;
-        return 0;
+        return undefined;
       }
       function __heRO() {
         const hasGT = (typeof globalThis !== "undefined");
@@ -882,6 +889,7 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
       lastErr: err,
       lastRaw: null,
       lastDefaultsUsed: null,
+      lastDefaultsUsedByButton: {},
       lastRawByButton: {},
       lastErrByButton: {},
     });
@@ -913,7 +921,10 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
       const errMsg = !ok ? "invalid-out" : "default-out";
       entry.lastErr = errMsg;
       entry.lastErrByButton[button] = errMsg;
-      if (defaultsUsed) entry.lastDefaultsUsed = defaultsUsed;
+      if (defaultsUsed) {
+        entry.lastDefaultsUsed = defaultsUsed;
+        entry.lastDefaultsUsedByButton[button] = defaultsUsed;
+      }
       try {
         console.warn(`[BlocklyHeroLogic] raw (${errMsg}) profile=${effectiveProfile} button=${button} out=`, rawOut, "defaultsUsed=", defaultsUsed);
         if (entry.lastCode) {
@@ -924,6 +935,7 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
     }
 
     entry.lastDefaultsUsed = defaultsUsed;
+    entry.lastDefaultsUsedByButton[button] = defaultsUsed;
     entry.lastErr = null;
     entry.lastErrByButton[button] = null;
     return ok;
@@ -956,6 +968,7 @@ export function dbgBlocklyHeroLogic(profile: string) {
       try { return JSON.stringify(entry ? entry.lastRaw : undefined); } catch { return "<unserializable>"; }
     })(),
     lastDefaultsUsed: entry?.lastDefaultsUsed || null,
+    lastDefaultsUsedByButton: entry?.lastDefaultsUsedByButton || {},
     lastRawByButton: entry?.lastRawByButton || {},
     lastErrByButton: entry?.lastErrByButton || {},
     lastXml: entry?.lastXml || null,

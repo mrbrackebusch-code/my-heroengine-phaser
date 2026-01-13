@@ -44052,6 +44052,7 @@ const ENEMY_NAV_LOG_QUAD_STALE_MS = 1500
 const ENEMY_NAV_LOG_TILE_CHANGE_ONLY = true
 const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
+const ENEMY_ASTAR_MAX_NODES = 5000
 
 let _enginePaused = false
 let _enginePausedReason = ""
@@ -44079,6 +44080,20 @@ let _enemyNavQuadOwner: number[] = [-1, -1, -1, -1]
 let _enemyNavQuadSeenAt: number[] = [0, 0, 0, 0]
 let _enemyNavQuadOwnerRev: number[] = [-1, -1, -1, -1]
 let _enemyNavSpawnerLogger: number[] = []
+
+// A* cache (rebuilt per world/decor rev)
+let _enemyAstarRows = 0
+let _enemyAstarCols = 0
+let _enemyAstarBlocked: number[] = []
+let _enemyAstarWorldRev = -1
+let _enemyAstarDecorRev = -1
+let _enemyAstarHeroHash = -1
+let _enemyAstarG: number[] = []
+let _enemyAstarCameFrom: number[] = []
+let _enemyAstarSeen: number[] = []
+let _enemyAstarClosed: number[] = []
+let _enemyAstarSeenList: number[] = []
+let _enemyAstarClosedList: number[] = []
 
 
 function _navStr(v: any): string {
@@ -44461,6 +44476,53 @@ function _enemyNavEnsureCapacity(rows: number, cols: number): void {
 
 }
 
+
+
+function _enemyAstarEnsureScratch(need: number): void {
+    if (!_enemyAstarG || _enemyAstarG.length < need) _enemyAstarG = new Array(need)
+    if (!_enemyAstarCameFrom || _enemyAstarCameFrom.length < need) _enemyAstarCameFrom = new Array(need)
+    if (!_enemyAstarSeen || _enemyAstarSeen.length < need) _enemyAstarSeen = new Array(need)
+    if (!_enemyAstarClosed || _enemyAstarClosed.length < need) _enemyAstarClosed = new Array(need)
+    if (!_enemyAstarSeenList) _enemyAstarSeenList = []
+    if (!_enemyAstarClosedList) _enemyAstarClosedList = []
+}
+
+function _enemyAstarResetScratch(): void {
+    if (_enemyAstarSeenList && _enemyAstarSeenList.length > 0) {
+        for (let i = 0; i < _enemyAstarSeenList.length; i++) _enemyAstarSeen[_enemyAstarSeenList[i] | 0] = 0
+        _enemyAstarSeenList.length = 0
+    }
+    if (_enemyAstarClosedList && _enemyAstarClosedList.length > 0) {
+        for (let i = 0; i < _enemyAstarClosedList.length; i++) _enemyAstarClosed[_enemyAstarClosedList[i] | 0] = 0
+        _enemyAstarClosedList.length = 0
+    }
+}
+
+function _enemyAstarRebuildBlocked(rows: number, cols: number, heroHash: number): void {
+    rows |= 0; cols |= 0
+    const need = (rows * cols) | 0
+    if (need <= 0) return
+
+    _enemyAstarEnsureScratch(need)
+
+    if (!_enemyAstarBlocked || _enemyAstarBlocked.length !== need) {
+        _enemyAstarBlocked = []
+        for (let i = 0; i < need; i++) _enemyAstarBlocked.push(0)
+    }
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const idx = ((r * cols) + c) | 0
+            _enemyAstarBlocked[idx] = _enemyNavIsBlocked(r, c) ? 1 : 0
+        }
+    }
+
+    _enemyAstarRows = rows
+    _enemyAstarCols = cols
+    _enemyAstarWorldRev = _engineWorldRev | 0
+    _enemyAstarDecorRev = _engineDecorRev | 0
+    _enemyAstarHeroHash = heroHash | 0
+}
 
 
 function _enemyNavComputeHeroHash(heroTargets: Sprite[]): number {
@@ -44917,7 +44979,7 @@ function _enemyNavMarkDeadEnds(rows: number, cols: number, heroTargets: Sprite[]
 
 
 
-function _enemyNavRebuildDistanceField(heroTargets: Sprite[]): void {
+function _enemyNavRebuildDistanceField(heroTargets: Sprite[], heroHash: number): void {
 
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
 
@@ -44936,6 +44998,7 @@ function _enemyNavRebuildDistanceField(heroTargets: Sprite[]): void {
     // Rebuild decor blocking grid (so enemies avoid statue/chest solids too)
     _enemyNavRebuildDecorBlocks(rows, cols)
     _enemyNavMarkDeadEnds(rows, cols, heroTargets)
+    _enemyAstarRebuildBlocked(rows, cols, heroHash | 0)
 
     const qr: number[] = []
     const qc: number[] = []
@@ -45039,7 +45102,7 @@ function _enemyNavMaybeRebuild(nowMs: number, heroTargets: Sprite[]): void {
 
 
 
-    _enemyNavRebuildDistanceField(heroTargets)
+    _enemyNavRebuildDistanceField(heroTargets, heroHash)
 
 
 
@@ -45327,6 +45390,287 @@ function _enemyNavApplyVelocityTowardTileCenter(enemy: Sprite, speed: number, fo
 
     enemy.vx = Math.idiv(dx * (speed | 0), mag)
     enemy.vy = Math.idiv(dy * (speed | 0), mag)
+}
+
+
+function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number, speed: number): boolean {
+
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0].length | 0
+    if (rows <= 0 || cols <= 0) return false
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const dims = _enemyGetColliderDims(enemy)
+    const cw = dims.w | 0
+    const ch = dims.h | 0
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
+    const footX = feet.footX | 0
+    const footY = feet.footY | 0
+
+    let sr = Math.idiv(footY, tileSize) | 0
+    let sc = Math.idiv(footX, tileSize) | 0
+    if (sr < 0) sr = 0
+    else if (sr >= rows) sr = rows - 1
+    if (sc < 0) sc = 0
+    else if (sc >= cols) sc = cols - 1
+
+    let gr = Math.idiv(targetY | 0, tileSize) | 0
+    let gc = Math.idiv(targetX | 0, tileSize) | 0
+    if (gr < 0) gr = 0
+    else if (gr >= rows) gr = rows - 1
+    if (gc < 0) gc = 0
+    else if (gc >= cols) gc = cols - 1
+
+    const startIdx = ((sr * cols) + sc) | 0
+    const goalIdx = ((gr * cols) + gc) | 0
+
+    const heroR = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_R) | 0
+    const heroC = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_C) | 0
+    const heroEX = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_EX) | 0
+    const heroEY = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_EY) | 0
+    const phaseStr = (sprites.readDataString(enemy, "phase") || "walk") as string
+    const monsterId = sprites.readDataString(enemy, "monsterId") || sprites.readDataString(enemy, "id") || ""
+    const eid = getEnemyIndex(enemy) | 0
+    const nowMs = game.runtime() | 0
+    const lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0
+    const stuckMode = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
+    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
+    const curMask = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > startIdx) ? (_enemyNavDeadEnd[startIdx] | 0) : 0
+
+    const heroHash = _enemyNavBuiltHeroHash | 0
+    const need = (rows * cols) | 0
+
+    // Keep the cached blocked grid in sync with the nav rebuilds (world/decor/hero hash).
+    if (_enemyNavRows !== rows || _enemyNavCols !== cols || !_enemyAstarBlocked || _enemyAstarBlocked.length !== need ||
+        _enemyAstarWorldRev !== (_engineWorldRev | 0) || _enemyAstarDecorRev !== (_engineDecorRev | 0) ||
+        _enemyAstarHeroHash !== heroHash) {
+        if (_enemyNavRows !== rows || _enemyNavCols !== cols) _enemyNavEnsureCapacity(rows, cols)
+        _enemyAstarRebuildBlocked(rows, cols, heroHash)
+    }
+
+    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, startIdx, footX, footY, false)
+
+    // Already in goal tile? Still steer to the exact edge point to avoid jitter.
+    if (startIdx === goalIdx) {
+        _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, gr, gc)
+        sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, startIdx)
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, gr)
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, gc)
+        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, 0)
+
+        if (wantLog) {
+            _enemyNavLogAdd(enemy, {
+                eid,
+                mid: monsterId,
+                t: nowMs,
+                reason: "astar_here",
+                pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
+                dist: { cur: 0, mask: curMask, allowUp: 0 },
+                nav: { lastIdx: lastNavIdx },
+                pick: { r: gr, c: gc, d: 0 },
+                hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
+                phase: phaseStr,
+                stuck: { until: stuckUntil, mode: stuckMode },
+                speed,
+                vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 }
+            }, true)
+        }
+
+        return true
+    }
+
+    _enemyAstarEnsureScratch(need)
+    _enemyAstarResetScratch()
+
+    const heapIdx: number[] = []
+    const heapF: number[] = []
+
+    const heapPush = (idx: number, f: number) => {
+        let i = heapIdx.length | 0
+        heapIdx.push(idx | 0)
+        heapF.push(f | 0)
+        while (i > 0) {
+            const p = ((i - 1) >> 1) | 0
+            if ((heapF[p] | 0) <= (f | 0)) break
+            heapIdx[i] = heapIdx[p] | 0
+            heapF[i] = heapF[p] | 0
+            i = p
+        }
+        heapIdx[i] = idx | 0
+        heapF[i] = f | 0
+    }
+
+    const heapPop = (): number => {
+        const n = heapIdx.length | 0
+        if (n === 0) return -1
+        const res = heapIdx[0] | 0
+        const lastIdx = heapIdx.pop()
+        const lastF = heapF.pop()
+        if ((heapIdx.length | 0) === 0 || lastIdx == null || lastF == null) return res
+
+        let i = 0
+        while (true) {
+            const l = ((i << 1) + 1) | 0
+            const r = (l + 1) | 0
+            if (l >= (heapIdx.length | 0)) break
+            let child = l
+            if (r < (heapIdx.length | 0) && (heapF[r] | 0) < (heapF[l] | 0)) child = r
+            if ((heapF[child] | 0) >= (lastF | 0)) break
+            heapIdx[i] = heapIdx[child] | 0
+            heapF[i] = heapF[child] | 0
+            i = child
+        }
+
+        heapIdx[i] = lastIdx | 0
+        heapF[i] = lastF | 0
+        return res
+    }
+
+    const markSeen = (idx: number) => {
+        if ((_enemyAstarSeen[idx] | 0) === 0) {
+            _enemyAstarSeen[idx] = 1
+            _enemyAstarSeenList.push(idx | 0)
+        }
+    }
+    const markClosed = (idx: number) => {
+        if ((_enemyAstarClosed[idx] | 0) === 0) {
+            _enemyAstarClosed[idx] = 1
+            _enemyAstarClosedList.push(idx | 0)
+        }
+    }
+
+    const heuristic = (r: number, c: number): number => {
+        const dr = Math.abs((r | 0) - (gr | 0))
+        const dc = Math.abs((c | 0) - (gc | 0))
+        const mn = dr < dc ? dr : dc
+        const mx = dr < dc ? dc : dr
+        return ((14 * mn) + (10 * (mx - mn))) | 0
+    }
+
+    markSeen(startIdx)
+    _enemyAstarG[startIdx] = 0
+    _enemyAstarCameFrom[startIdx] = -1
+    heapPush(startIdx, heuristic(sr, sc))
+
+    let found = false
+    let foundIdx = -1
+    let expanded = 0
+
+    while ((heapIdx.length | 0) > 0 && expanded < (ENEMY_ASTAR_MAX_NODES | 0)) {
+        const curIdx = heapPop()
+        if (curIdx < 0) break
+        if ((_enemyAstarClosed[curIdx] | 0) !== 0) continue
+
+        markClosed(curIdx)
+        if ((curIdx | 0) === (goalIdx | 0)) { found = true; foundIdx = curIdx; break }
+
+        const cr = Math.idiv(curIdx, cols) | 0
+        const cc = (curIdx % cols) | 0
+        const baseG = _enemyAstarG[curIdx] | 0
+
+        for (let k = 0; k < 8; k++) {
+            const nr = (cr + _NAV8_DR[k]) | 0
+            const nc = (cc + _NAV8_DC[k]) | 0
+
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
+
+            const nIdx = ((nr * cols) + nc) | 0
+            if ((_enemyAstarClosed[nIdx] | 0) !== 0) continue
+
+            const blocked = (_enemyAstarBlocked && _enemyAstarBlocked.length > nIdx && (_enemyAstarBlocked[nIdx] | 0) !== 0)
+            if (blocked && (nIdx | 0) !== (goalIdx | 0)) continue
+
+            const dr = _NAV8_DR[k] | 0
+            const dc = _NAV8_DC[k] | 0
+            if (dr !== 0 && dc !== 0 && _enemyNavIsDiagBlockedForFootprint(cr, cc, nr, nc, cw, ch)) continue
+            if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) continue
+
+            const stepCost = (dr !== 0 && dc !== 0) ? 14 : 10
+            const tentativeG = (baseG + stepCost) | 0
+
+            const seen = (_enemyAstarSeen[nIdx] | 0) !== 0
+            const prevG = seen ? (_enemyAstarG[nIdx] | 0) : 0x3fffffff
+            if (!seen || tentativeG < prevG) {
+                markSeen(nIdx)
+                _enemyAstarG[nIdx] = tentativeG
+                _enemyAstarCameFrom[nIdx] = curIdx
+                heapPush(nIdx, (tentativeG + heuristic(nr, nc)) | 0)
+            }
+        }
+
+        expanded++
+    }
+
+    let nextIdx = -1
+    let pathLen = 0
+    if (found && foundIdx >= 0) {
+        let walk = foundIdx | 0
+        while (walk >= 0 && (walk | 0) !== (startIdx | 0)) {
+            pathLen++
+            const prev = _enemyAstarCameFrom[walk] | 0
+            if ((prev | 0) === (startIdx | 0)) {
+                nextIdx = walk | 0
+                break
+            }
+            walk = prev
+        }
+    }
+
+    _enemyAstarResetScratch()
+
+    if (!found || nextIdx < 0 || (nextIdx | 0) === (startIdx | 0)) {
+        _enemyNavClearNavTargetData(enemy)
+
+        if (DEBUG_ENEMY_NAV_LOG && (wantLog || !found)) {
+            _enemyNavLogAdd(enemy, {
+                eid,
+                mid: monsterId,
+                t: nowMs,
+                reason: "astar_fail",
+                pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
+                dist: { cur: 0, mask: curMask, allowUp: 0 },
+                nav: { lastIdx: lastNavIdx, astar: { nodes: expanded | 0, goalR: gr, goalC: gc } },
+                hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
+                phase: phaseStr,
+                stuck: { until: stuckUntil, mode: stuckMode },
+                speed,
+                vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 }
+            }, true)
+        }
+
+        return false
+    }
+
+    const nextR = Math.idiv(nextIdx, cols) | 0
+    const nextC = (nextIdx % cols) | 0
+
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, startIdx)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, nextR)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, nextC)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, pathLen | 0)
+
+    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, nextR, nextC)
+
+    if (DEBUG_ENEMY_NAV_LOG && wantLog) {
+        _enemyNavLogAdd(enemy, {
+            eid,
+            mid: monsterId,
+            t: nowMs,
+            reason: "astar",
+            pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
+            dist: { cur: 0, mask: curMask, allowUp: 0 },
+            nav: { lastIdx: lastNavIdx, astar: { nodes: expanded | 0, path: pathLen | 0, goalR: gr, goalC: gc } },
+            pick: { r: nextR, c: nextC, d: pathLen | 0 },
+            hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
+            phase: phaseStr,
+            stuck: { until: stuckUntil, mode: stuckMode },
+            speed,
+            vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 }
+        }, false)
+    }
+
+    return true
 }
 
 
@@ -46433,6 +46777,9 @@ function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boo
 
 
 function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
+
+    // Prefer A* path steering (tile-aware) when available
+    if (_enemySteerTowardAStar(enemy, edgeX, edgeY, speed)) return
 
     // Prefer shared nav-field (tile-aware, scalable)
     if (_enemySteerTowardNavField(enemy, speed)) return
