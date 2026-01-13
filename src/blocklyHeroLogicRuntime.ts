@@ -288,13 +288,13 @@ function _ensureHeBlocksRegistered(): void {
     const element = generator.valueToCode(block, "ELEMENT", generator.ORDER_NONE) || `"none"`;
     const id = generator.valueToCode(block, "ID", generator.ORDER_NONE) || `"A"`;
     return `return [
-  __heVal(${family}, "strength"),
-  __heNum(${damage}),
-  __heNum(${reach}),
-  __heNum(${time}),
-  __heNum(${status}),
-  __heVal(${element}, "none"),
-  (typeof __heForcedId !== "undefined" ? __heForcedId : __heVal(${id}, "A"))
+  __heValOut("family", ${family}, "strength"),
+  __heNumOut("damage", ${damage}),
+  __heNumOut("reach", ${reach}),
+  __heNumOut("time", ${time}),
+  __heStatusOut(${status}, status2),
+  __heValOut("element", ${element}, "none"),
+  __heIdOut(__heForcedId, ${id})
 ];
 `;
   };
@@ -304,31 +304,35 @@ function chooseMyMove(button) {
   if (button === "A" && typeof chooseMoveA === "function") return chooseMoveA(button);
   if (button === "B" && typeof chooseMoveB === "function") return chooseMoveB(button);
   if (button === "A+B" && typeof chooseMoveAB === "function") return chooseMoveAB(button);
-  if (typeof chooseMoveA === "function") return chooseMoveA(button);
-  if (typeof chooseMoveB === "function") return chooseMoveB(button);
-  if (typeof chooseMoveAB === "function") return chooseMoveAB(button);
   return null;
 }
 function heroLogic(button){ return chooseMyMove(button); }
 `;
 
   const _emitDefaults = (forcedId: string) => `
-  family = (family == null) ? "strength" : family;
-  damage = (typeof damage === "number" && isFinite(damage)) ? damage : 0;
-  reach = (typeof reach === "number" && isFinite(reach)) ? reach : 0;
-  time = (typeof time === "number" && isFinite(time)) ? time : 0;
-  status = (typeof status === "number" && isFinite(status)) ? status : 0;
-  element = (element == null) ? "none" : element;
+  __heResetDefaultsUsed();
   id = ${JSON.stringify(forcedId)};
 `;
 
-  const _mkEntryGen = (type: string, fnName: string, forcedId: string) => {
+const _mkEntryGen = (type: string, fnName: string, forcedId: string) => {
     G.forBlock[type] = function (block: any, generator: any) {
       const body = generator.statementToCode(block, "DO");
+      const fallbackReturn = `
+  return [
+    __heValOut("family", family, "strength"),
+    __heNumOut("damage", damage),
+    __heNumOut("reach", reach),
+    __heNumOut("time", time),
+    __heStatusOut(status, status2),
+    __heValOut("element", element, "none"),
+    __heIdOut(__heForcedId, id)
+  ];
+`;
       return `function ${fnName}(button) {
   const __heForcedId = ${JSON.stringify(forcedId)};
 ${_emitDefaults(forcedId)}
-${body}}
+${body || ""}
+${fallbackReturn}}
 ${_emitRouter()}`;
     };
   };
@@ -378,6 +382,7 @@ damage = ${dmg};
 reach = ${reach};
 time = ${time};
 status = ${status};
+status2 = ${status};
 element = ${JSON.stringify(el)};
 id = ${JSON.stringify(id)};
 `;
@@ -386,6 +391,11 @@ id = ${JSON.stringify(id)};
   const _mkNumSetterGen = (type: string, varName: string) => {
     G.forBlock[type] = function (block: any, generator: any) {
       const v = generator.valueToCode(block, "VALUE", generator.ORDER_NONE) || "0";
+      if (varName === "status") {
+        return `status = ${v};
+status2 = ${v};
+`;
+      }
       return `${varName} = ${v};
 `;
     };
@@ -499,6 +509,8 @@ type CacheEntry = {
   lastRaw: any;
   lastRawByButton: Record<string, any>;
   lastErrByButton: Record<string, string | null>;
+  lastXml: string;
+  lastCode: string | null;
 };
 
 const _cache = new Map<string, CacheEntry>();
@@ -548,7 +560,7 @@ function _xmlTextToDom(xmlText: string): Element {
 }
 
 
-function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => any } | { ok: false; err: string } {
+function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => any; code: string } | { ok: false; err: string } {
   try {
     _ensureHeBlocksRegistered();
 
@@ -559,6 +571,15 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
     if (!dom) return { ok: false, err: "no xml parser available" };
 
     (Blockly as any).Xml.domToWorkspace(dom, ws);
+
+    // Drop any loose top-level blocks that are NOT entry blocks to avoid stray returns.
+    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
+    const tops: any[] = ws.getTopBlocks(false) || [];
+    for (const b of tops) {
+      if (entryTypes.indexOf(b.type) < 0) {
+        try { b.dispose(false, true); } catch { }
+      }
+    }
 
     // Ensure each entry block has a terminal return so headless compiles don't produce null.
     const ensureReturn = (main: any) => {
@@ -597,7 +618,6 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         try { tail.nextConnection?.connect(ret.previousConnection); } catch { }
       }
     };
-    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
     const allBlocks: any[] = ws.getAllBlocks(false) || [];
     for (const b of allBlocks) {
       if (entryTypes.indexOf(b.type) >= 0) ensureReturn(b);
@@ -608,6 +628,46 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
 
     // Helpers are available inside heroLogic().
     const helpers = `
+      const __heDefaultsUsed = { family: false, damage: false, reach: false, time: false, status: false, element: false, id: false };
+      function __heResetDefaultsUsed() {
+        try {
+          for (const k in __heDefaultsUsed) {
+            if (Object.prototype.hasOwnProperty.call(__heDefaultsUsed, k)) {
+              __heDefaultsUsed[k] = false;
+            }
+          }
+          if (typeof globalThis !== "undefined") {
+            globalThis.__heLastDefaultsUsed = __heDefaultsUsed;
+          }
+        } catch {}
+      }
+      function __heValOut(name, v, def) {
+        if (v == null) { __heDefaultsUsed[name] = true; return def; }
+        return v;
+      }
+      function __heVal(v, def) { return (v == null) ? def : v; }
+      function __heNumOut(name, v) {
+        const n = Number(v);
+        if (typeof n === "number" && isFinite(n)) return n;
+        __heDefaultsUsed[name] = true;
+        return 0;
+      }
+      function __heNum(v) { const n = Number(v); return (typeof n === "number" && isFinite(n)) ? n : 0; }
+      function __heIdOut(forcedId, v) {
+        if (typeof forcedId !== "undefined") return forcedId;
+        if (v == null) { __heDefaultsUsed.id = true; return "A"; }
+        return v;
+      }
+      function __heStatusOut(v1, v2) {
+        // Prefer explicit status, then Blockly-renamed status2
+        const cands = [v1, v2];
+        for (const c of cands) {
+          const n = Number(c);
+          if (typeof n === "number" && isFinite(n)) return n;
+        }
+        __heDefaultsUsed.status = true;
+        return 0;
+      }
       function __heRO() {
         const hasGT = (typeof globalThis !== "undefined");
         const ro = (hasGT && globalThis.__heBlocklyRO) ? globalThis.__heBlocklyRO : null;
@@ -728,14 +788,18 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         }
       } catch (e) {}
     
-// Ensure required output vars always exist (prevents ReferenceError if XML only reads them).
-var family = (family == null) ? "strength" : family;
-var damage = (typeof damage === "number" && isFinite(damage)) ? damage : 0;
-var reach = (typeof reach === "number" && isFinite(reach)) ? reach : 0;
-var time = (typeof time === "number" && isFinite(time)) ? time : 0;
-var status = (typeof status === "number" && isFinite(status)) ? status : 0;
-var element = (element == null) ? "none" : element;
-var id = (id == null) ? "A" : id;
+// Declare output vars (Blockly may rename "status" to "status2"). No defaults so missing fields can be detected.
+var family;
+var damage;
+var reach;
+var time;
+var status;
+var status2;
+var element;
+var id;
+// Normalize status/status2 aliases if one is defined.
+if (typeof status === "undefined" && typeof status2 !== "undefined") { status = status2; }
+if (typeof status2 === "undefined" && typeof status !== "undefined") { status2 = status; }
 `;
 
     const factorySrc = `
@@ -758,7 +822,7 @@ var id = (id == null) ? "A" : id;
     const fn = factory();
     // If no entry blocks were present, fall back to a harmless no-op so we don't spam errors.
     const safeFn = (typeof fn === "function") ? fn : (() => null);
-    return { ok: true, fn: safeFn };
+    return { ok: true, fn: safeFn, code };
   } catch (e: any) {
     return { ok: false, err: String(e?.message || e) };
   }
@@ -808,13 +872,16 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
 
   const cached = _cache.get(effectiveProfile);
   if (!cached || cached.xml !== xml) {
-    const { fn, err } = _compileFromXml(xml);
+    const { fn, err, code } = _compileFromXml(xml);
     _cache.set(effectiveProfile, {
       profile: xmlProfile,
       xml,
+      lastXml: xml,
+      lastCode: code || null,
       fn,
       lastErr: err,
       lastRaw: null,
+      lastDefaultsUsed: null,
       lastRawByButton: {},
       lastErrByButton: {},
     });
@@ -833,13 +900,30 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
     entry.lastRaw = rawOut;
     entry.lastRawByButton[button] = rawOut;
 
+    let defaultsUsed: any = null;
+    try {
+      const g: any = (typeof globalThis !== "undefined") ? (globalThis as any) : null;
+      const du = g && g.__heLastDefaultsUsed;
+      if (du && typeof du === "object") defaultsUsed = { ...du };
+    } catch {}
+
     const ok = _validateOut(rawOut);
-    if (!ok) {
-      entry.lastErr = "invalid-out";
-      entry.lastErrByButton[button] = "invalid-out";
+    const usedDefaults = !!(defaultsUsed && Object.values(defaultsUsed).some(Boolean));
+    if (!ok || usedDefaults) {
+      const errMsg = !ok ? "invalid-out" : "default-out";
+      entry.lastErr = errMsg;
+      entry.lastErrByButton[button] = errMsg;
+      if (defaultsUsed) entry.lastDefaultsUsed = defaultsUsed;
+      try {
+        console.warn(`[BlocklyHeroLogic] raw (${errMsg}) profile=${effectiveProfile} button=${button} out=`, rawOut, "defaultsUsed=", defaultsUsed);
+        if (entry.lastCode) {
+          console.warn(`[BlocklyHeroLogic] code profile=${effectiveProfile} code=`, entry.lastCode);
+        }
+      } catch {}
       return null;
     }
 
+    entry.lastDefaultsUsed = defaultsUsed;
     entry.lastErr = null;
     entry.lastErrByButton[button] = null;
     return ok;
@@ -871,8 +955,13 @@ export function dbgBlocklyHeroLogic(profile: string) {
     lastRawJson: (() => {
       try { return JSON.stringify(entry ? entry.lastRaw : undefined); } catch { return "<unserializable>"; }
     })(),
+    lastDefaultsUsed: entry?.lastDefaultsUsed || null,
     lastRawByButton: entry?.lastRawByButton || {},
     lastErrByButton: entry?.lastErrByButton || {},
+    lastXml: entry?.lastXml || null,
+    lastCode: entry?.lastCode || null,
+    codePreview: entry?.lastCode ? entry.lastCode.slice(0, 800) : null,
+    xmlPreview: xml ? xml.slice(0, 800) : null,
   };
 }
 

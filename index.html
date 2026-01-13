@@ -609,6 +609,25 @@
         line-height: 1;
       }
 
+      .hud-raw {
+        display: none;
+        margin-top: 6px;
+        font: 11px/1.2 monospace;
+        color: rgba(255, 255, 255, 0.85);
+      }
+      .hud-raw-row {
+        display: flex;
+        gap: 6px;
+      }
+      .hud-raw-k {
+        width: 70px;
+        opacity: 0.7;
+      }
+      .hud-raw-v {
+        flex: 1;
+        word-break: break-all;
+      }
+
       /* Family colors */
       .family-strength { color: var(--c-strength); }
       .family-agility { color: var(--c-agility); }
@@ -644,7 +663,7 @@
       /* -----------------------------
          XP panel (left of canvas)
          ----------------------------- */
-      #xp-panel {
+       #xp-panel {
         position: absolute;
         top: 0px;
         left: -150px;          /* sits left of the canvas */
@@ -665,7 +684,7 @@
 
         color: rgba(255, 255, 255, 0.92);
         z-index: 9;            /* below dialog-layer (z=10) */
-        pointer-events: none;  /* never steals input */
+         pointer-events: auto;  /* allow relic hover tooltips */
 
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
@@ -912,6 +931,44 @@
   animation: xpRelicThrob 420ms ease-in-out infinite;
 }
 
+/* Relic tooltip (sidebar hover) */
+#relic-tooltip {
+  position: absolute;
+  z-index: 20;
+  display: none;
+  pointer-events: none;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(16, 16, 20, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+#relic-tooltip.he-show {
+  display: block;
+}
+
+#relic-tooltip .relic-tip-name {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 2px;
+}
+
+#relic-tooltip .relic-tip-effect {
+  font-size: 12px;
+}
+
+#relic-tooltip .relic-tip-flavor {
+  font-size: 10px;
+  opacity: 0.7;
+  font-style: italic;
+  margin-top: 4px;
+}
+
 /* =========================================================
    LAYOUT OVERRIDES (paste at end of <style>)
    Goal:
@@ -989,7 +1046,7 @@
   height: 100% !important;
 
   /* keep your existing look, just ensure it doesn't get clipped */
-  pointer-events: none;
+  pointer-events: auto;
 
   /* critical for internal scrolling/fit */
   min-height: 0;
@@ -1097,8 +1154,9 @@
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-a-elem" title="">â­•</div>
+              <div class="hud-elem" id="hud-a-elem" title="">*</div>
             </div>
+            <div class="hud-raw" id="hud-a-raw"></div>
           </div>
 
           <!-- B -->
@@ -1122,8 +1180,9 @@
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-b-elem" title="">â­•</div>
+              <div class="hud-elem" id="hud-b-elem" title="">*</div>
             </div>
+            <div class="hud-raw" id="hud-b-raw"></div>
           </div>
 
           <!-- A+B -->
@@ -1147,8 +1206,9 @@
 
             <div class="hud-elemline">
               <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-ab-elem" title="">â­•</div>
+              <div class="hud-elem" id="hud-ab-elem" title="">*</div>
             </div>
+            <div class="hud-raw" id="hud-ab-raw"></div>
           </div>
         </div>
 
@@ -1188,6 +1248,7 @@
             <div class="xp-relics-title">Relics:</div>
             <div class="xp-relics-box" id="xp-relics-box"></div>
           </div>
+          <div id="relic-tooltip" aria-hidden="true"></div>
           <div id="app"></div>
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
@@ -1330,6 +1391,7 @@
 
           boxA: document.getElementById("hud-box-a"),
           aNote: document.getElementById("hud-a-note"),
+          aRaw: document.getElementById("hud-a-raw"),
           aKind: document.getElementById("hud-a-kind"),
           aDmg: document.getElementById("hud-a-dmg"),
           aReach: document.getElementById("hud-a-reach"),
@@ -1339,6 +1401,7 @@
 
           boxB: document.getElementById("hud-box-b"),
           bNote: document.getElementById("hud-b-note"),
+          bRaw: document.getElementById("hud-b-raw"),
           bKind: document.getElementById("hud-b-kind"),
           bDmg: document.getElementById("hud-b-dmg"),
           bReach: document.getElementById("hud-b-reach"),
@@ -1348,6 +1411,7 @@
 
           boxAB: document.getElementById("hud-box-ab"),
           abNote: document.getElementById("hud-ab-note"),
+          abRaw: document.getElementById("hud-ab-raw"),
           abKind: document.getElementById("hud-ab-kind"),
           abDmg: document.getElementById("hud-ab-dmg"),
           abReach: document.getElementById("hud-ab-reach"),
@@ -1367,6 +1431,7 @@
           xpStatMpLvl: document.getElementById("xp-stat-mp-lvl"),
           lvlLayer: document.getElementById("levelup-layer"),
           lvlPoints: document.getElementById("lvlui-points"),
+          relicTip: document.getElementById("relic-tooltip"),
           shopLayer: document.getElementById("shop-layer"),
           shopTitle: document.getElementById("shop-title"),
           shopItems: document.getElementById("shop-items"),
@@ -2173,6 +2238,100 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }, true);
         }
 
+        const _relicTip = {
+          inited: false,
+          activeEl: null,
+        };
+
+        function _relicTip_setShown(show) {
+          if (!R.relicTip) return;
+          const want = !!show;
+          const has = R.relicTip.classList.contains("he-show");
+          if (want === has) return;
+
+          if (want) {
+            R.relicTip.classList.add("he-show");
+            R.relicTip.setAttribute("aria-hidden", "false");
+          } else {
+            R.relicTip.classList.remove("he-show");
+            R.relicTip.setAttribute("aria-hidden", "true");
+          }
+        }
+
+        function _relicTip_setContent(name, effect, flavor) {
+          if (!R.relicTip) return;
+          const n = String(name || "");
+          const e = String(effect || "");
+          const f = String(flavor || "");
+          R.relicTip.innerHTML = `
+            <div class="relic-tip-name">${_hud_escapeAttr(n)}</div>
+            <div class="relic-tip-effect">${_hud_escapeAttr(e)}</div>
+            ${f ? `<div class="relic-tip-flavor">${_hud_escapeAttr(f)}</div>` : ""}
+          `;
+        }
+
+        function _relicTip_position(evt) {
+          if (!R.relicTip) return;
+          const tip = R.relicTip;
+          const vp = document.getElementById("viewport");
+          if (!vp) return;
+          const rect = vp.getBoundingClientRect();
+          const pad = 10;
+          let x = (evt.clientX - rect.left) + pad;
+          let y = (evt.clientY - rect.top) + pad;
+          const w = tip.offsetWidth || 0;
+          const h = tip.offsetHeight || 0;
+          if (x + w > rect.width) x = Math.max(0, rect.width - w - pad);
+          if (y + h > rect.height) y = Math.max(0, rect.height - h - pad);
+          tip.style.left = `${x}px`;
+          tip.style.top = `${y}px`;
+        }
+
+        function _relicTip_initOnce() {
+          if (_relicTip.inited) return;
+          _relicTip.inited = true;
+
+          const box = document.getElementById("xp-relics-box");
+          console.log("[RELICTIP] init", { hasBox: !!box });
+          if (!box) return;
+
+          box.addEventListener("mousemove", (e) => {
+            const target = e.target && e.target.closest ? e.target.closest(".xp-relic") : null;
+            if (!target) {
+              if (_relicTip.activeEl) {
+                console.log("[RELICTIP] leave");
+              }
+              _relicTip.activeEl = null;
+              _relicTip_setShown(false);
+              return;
+            }
+
+            if (_relicTip.activeEl !== target) {
+              _relicTip.activeEl = target;
+              _relicTip_setContent(
+                target.getAttribute("data-name"),
+                target.getAttribute("data-effect"),
+                target.getAttribute("data-flavor")
+              );
+              _relicTip_setShown(true);
+              console.log("[RELICTIP] hover", {
+                name: target.getAttribute("data-name") || "",
+                effect: target.getAttribute("data-effect") || ""
+              });
+            }
+
+            _relicTip_position(e);
+          });
+
+          box.addEventListener("mouseleave", () => {
+            if (_relicTip.activeEl) {
+              console.log("[RELICTIP] leave");
+            }
+            _relicTip.activeEl = null;
+            _relicTip_setShown(false);
+          });
+        }
+
         function getPid() {
           const net = window.__net;
           const pid = net && typeof net.playerId === "number" ? (net.playerId | 0) : 0;
@@ -2232,14 +2391,24 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return -1;
         }
 
-        function callStudentLogic(heroIndex, button) {
+        function callStudentLogic(heroIndex, button, profile) {
           const HE = window.HeroEngine;
-          if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
-          try {
-            return HE.runHeroLogicForHeroHook(heroIndex | 0, button);
-          } catch (_e) {
-            return null;
+          let out = null;
+          if (HE && typeof HE.runHeroLogicForHeroHook === "function") {
+            try {
+              out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+            } catch (_e) {
+              out = null;
+            }
           }
+          let raw = null;
+          try {
+            if (typeof window.__heBlocklyHeroLogicDebug === "function") {
+              const dbg = window.__heBlocklyHeroLogicDebug(profile || "");
+              raw = (dbg && dbg.lastRawByButton && dbg.lastRawByButton[button]) || dbg?.lastRaw || null;
+            }
+          } catch (_e) {}
+          return { out, raw };
         }
 
         function _logicNoteForButton(button, profile) {
@@ -2331,6 +2500,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function readProfile(pid) {
           const profs = window.__heroProfiles;
           if (Array.isArray(profs) && profs[pid - 1]) return String(profs[pid - 1]);
+          // Fallback to the locally selected profile name (e.g., when no server profile exists)
+          if (typeof window.__localHeroProfileName === "string" && window.__localHeroProfileName.trim()) {
+            return window.__localHeroProfileName.trim();
+          }
           return "";
         }
 
@@ -2344,6 +2517,86 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const v = (val | 0);
           const m = (mod | 0);
           return m !== 0 ? `${v} (+${m})` : String(v);
+        }
+
+        const RAW_LABELS = ["family", "damage", "reach", "time", "status", "element", "id"];
+        function renderMoveV2(data, boxEl, noteEl, rawEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
+          const out = data ? data.out : null;
+          const raw = data ? data.raw : null;
+          const note = data ? data.note : "";
+          const detailNodes = boxEl ? boxEl.querySelectorAll(".hud-kindline, .hud-traits, .hud-elemline") : null;
+
+          function reset() {
+            setText(noteEl, note || "");
+            setText(kindEl, "—");
+            kindEl.className = "hud-kind";
+            boxEl.className = "hud-cell";
+            setText(dmgEl, "—");
+            setText(reachEl, "—");
+            setText(timeEl, "—");
+            setText(statusEl, "—");
+            const ei0 = { name: "None", emoji: "∅" };
+            setText(elemEl, ei0.emoji);
+            setTitle(elemEl, ei0.name);
+            if (rawEl) rawEl.innerHTML = "";
+            if (detailNodes) detailNodes.forEach(n => { try { n.style.display = ""; } catch (_e) {} });
+            if (rawEl) rawEl.style.display = "none";
+          }
+
+          const arrMain = (Array.isArray(out) && out.length >= 7) ? out : null;
+          const arrRaw = (Array.isArray(raw) && raw.length >= 7) ? raw : null;
+
+          if (!arrMain) {
+            reset();
+            const n = note ? `${note} | ` : "";
+            setText(noteEl, `${n}No valid move made`);
+            if (rawEl) {
+              const src = arrRaw || [];
+              rawEl.innerHTML = RAW_LABELS.map((lbl, i) => {
+                const v = (i < src.length) ? src[i] : undefined;
+                return `<div class="hud-raw-row"><span class="hud-raw-k">${lbl}:</span><span class="hud-raw-v">${v === undefined ? "—" : String(v)}</span></div>`;
+              }).join("");
+              rawEl.style.display = "block";
+            }
+            if (detailNodes) detailNodes.forEach(n => { try { n.style.display = "none"; } catch (_e) {} });
+            return;
+          }
+
+          if (detailNodes) detailNodes.forEach(n => { try { n.style.display = ""; } catch (_e) {} });
+          if (rawEl) rawEl.style.display = "none";
+
+          const fam = arrMain[0] | 0;
+          const dmg = arrMain[1] | 0;
+          const reach = arrMain[2] | 0;
+          const time = arrMain[3] | 0;
+          const status = arrMain[4] | 0;
+          const elem = arrMain[5] | 0;
+
+          const fi = familyInfo(fam);
+          const ei = elemInfo(elem);
+          const wmods = _getWpnModsForFamily(wpnModsByFamily, fam);
+
+          const kindName = fi.name || "—";
+          setText(kindEl, kindName);
+          kindEl.className = "hud-kind" + (fi.kindClass ? " " + fi.kindClass : "");
+          boxEl.className = "hud-cell" + (fi.boxClass ? " " + fi.boxClass : "");
+
+          setText(dmgEl, _fmtTraitWithWeapon(dmg, wmods ? wmods.dmg : 0));
+          setText(reachEl, _fmtTraitWithWeapon(reach, wmods ? wmods.reach : 0));
+          setText(timeEl, _fmtTraitWithWeapon(time, wmods ? wmods.time : 0));
+          setText(statusEl, _fmtTraitWithWeapon(status, wmods ? wmods.status : 0));
+
+          setText(elemEl, ei.emoji);
+          setTitle(elemEl, ei.name);
+
+          if (rawEl) {
+            rawEl.innerHTML = RAW_LABELS.map((lbl, i) => {
+              const v = (i < arrMain.length) ? arrMain[i] : undefined;
+              return `<div class="hud-raw-row"><span class="hud-raw-k">${lbl}:</span><span class="hud-raw-v">${v === undefined ? "—" : String(v)}</span></div>`;
+            }).join("");
+          }
+
+          setText(noteEl, note || "");
         }
         function renderMove(out, boxEl, noteEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
           // Reset defaults
@@ -2425,8 +2678,18 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         function _hud_tooltipForRelic(def) {
           if (!def) return "";
+          const name = String(def.name || "");
           const effect = String(def.effectText || "");
-          return effect;
+          const flavor = String(def.flavorText || "");
+          return flavor ? `${name}\n${effect}\n\n${flavor}` : `${name}\n${effect}`;
+        }
+
+        function _hud_escapeAttr(s) {
+          return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
         }
 
         function _hud_buildGlyphHtml(glyphText, litMask) {
@@ -2484,10 +2747,16 @@ function _readTeamCoins(pid, hero, spritesNS) {
               ? `<div class="xp-relic-glyph">${_hud_buildGlyphHtml(glyphText, glyphMask)}</div>`
               : `<div class="xp-relic-glyph"></div>`;
 
+            const name = def ? String(def.name || "") : "";
+            const effect = def ? String(def.effectText || "") : "";
+            const flavor = def ? String(def.flavorText || "") : "";
             const tip = _hud_tooltipForRelic(def).replace(/"/g, "&quot;");
+            const nameEsc = _hud_escapeAttr(name);
+            const effectEsc = _hud_escapeAttr(effect);
+            const flavorEsc = _hud_escapeAttr(flavor);
 
             html += `
-              <div class="xp-relic" title="${tip}">
+              <div class="xp-relic" data-name="${nameEsc}" data-effect="${effectEsc}" data-flavor="${flavorEsc}">
                 <div class="xp-relic-icon ${disabled ? "xp-disabled" : ""} ${throb ? "xp-throb" : ""}" style="${bg}">
                   ${badge}
                 </div>
@@ -2497,6 +2766,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           boxEl.innerHTML = html;
+          console.log("[RELICTIP] render", { count: owned.length });
         }
 
 
@@ -2511,15 +2781,16 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youMana, "");
             setText(R.youCoins, "");
 
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             
             _xp_resetUi();
             return;
           }
 
-          const profile = readProfile(pid);
+          const urlProf = (typeof window.__localHeroProfileName === "string" && window.__localHeroProfileName.trim()) ? window.__localHeroProfileName.trim() : "";
+          const profile = readProfile(pid) || urlProf || "";
           setText(R.youSlot, "P" + pid);
           setText(R.youName, "P" + pid + (profile ? ": " + profile : ""));
 
@@ -2529,9 +2800,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youMana, "For");
             setText(R.youCoins, "A Hero");
 
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             
             _xp_resetUi();
             return;
@@ -2573,6 +2844,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _lvlui_applySnapshot(snap);
           _shopui_initOnce();
           _shopui_applySnapshot(snap);
+          _relicTip_initOnce();
 
           const flash = (lvlPts | 0) > 1;
           if (R.xpBonusPts) R.xpBonusPts.classList.toggle("xp-pts-ready", flash);
@@ -2592,23 +2864,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const heroIndex = resolveHeroIndexForSprite(hero);
           if (heroIndex < 0) {
-            renderMove(null, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMove(null, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMove(null, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
             return;
           }
 
-          const outA = callStudentLogic(heroIndex, "A");
-          const outB = callStudentLogic(heroIndex, "B");
-          const outAB = callStudentLogic(heroIndex, "A+B");
+          const outA = callStudentLogic(heroIndex, "A", profile);
+          const outB = callStudentLogic(heroIndex, "B", profile);
+          const outAB = callStudentLogic(heroIndex, "A+B", profile);
 
-          renderMove(outA, R.boxA, R.aNote, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
-          renderMove(outB, R.boxB, R.bNote, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
-          renderMove(outAB, R.boxAB, R.abNote, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
-
-          setText(R.aNote, _logicNoteForButton("A", profile));
-          setText(R.bNote, _logicNoteForButton("B", profile));
-          setText(R.abNote, _logicNoteForButton("A+B", profile));
+          renderMoveV2({ out: outA.out, raw: outA.raw, note: _logicNoteForButton("A", profile) }, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
+          renderMoveV2({ out: outB.out, raw: outB.raw, note: _logicNoteForButton("B", profile) }, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
+          renderMoveV2({ out: outAB.out, raw: outAB.raw, note: _logicNoteForButton("A+B", profile) }, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
         }
 
         setInterval(tick, REFRESH_MS);

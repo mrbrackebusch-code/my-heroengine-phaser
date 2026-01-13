@@ -464,7 +464,7 @@ const DBG_INTERVAL_MS = 50
 const DEBUG_INTEGRATOR = true
 const DBG_INT_INTERVAL_MS = 50
 
-const DEBUG_HERO_LOGIC = true
+const DEBUG_HERO_LOGIC = false
 
 // --------------------------------------------------------------
 // Screen config

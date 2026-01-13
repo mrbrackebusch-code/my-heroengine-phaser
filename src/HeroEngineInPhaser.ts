@@ -1262,7 +1262,7 @@ const DBG_INT_INTERVAL_MS = 50
 
 
 
-const DEBUG_HERO_LOGIC = true //debug flag ????????????????????v
+const DEBUG_HERO_LOGIC = false //debug flag ????????????????????v
 
 
 
@@ -44032,6 +44032,13 @@ const _ENEMY_DIR_C: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
 
 // --------------------------------------------------------------
 
+const ENEMY_NAV_LOG_FORMAT_TSV = true
+const ENEMY_NAV_LOG_TSV_HEADER_EVERY_DUMP = true
+
+// Candidate verbosity knobs
+const ENEMY_NAV_LOG_CANDS_ON_FORCE_ONLY = true   // candidates only when logForce/force dump
+const ENEMY_NAV_LOG_CANDS_MAX = 8                // cap candidates printed
+const ENEMY_NAV_LOG_MAX_LINE_CHARS = 500         // split long lines deterministically
 
 
 const ENEMY_NAV_INF = 0x3fff
@@ -44073,6 +44080,129 @@ let _enemyNavQuadSeenAt: number[] = [0, 0, 0, 0]
 let _enemyNavQuadOwnerRev: number[] = [-1, -1, -1, -1]
 let _enemyNavSpawnerLogger: number[] = []
 
+
+function _navStr(v: any): string {
+    if (v == null) return ""
+    return String(v)
+}
+
+function _navNum(v: any, fallback = 0): number {
+    const n = (v == null) ? fallback : (v | 0)
+    return n
+}
+
+// Ensures NO console truncation by printing STRINGS only, and splitting long lines.
+function _navPrint(prefix: string, line: string): void {
+    const max = ENEMY_NAV_LOG_MAX_LINE_CHARS | 0
+    if (!line) {
+        console.log(prefix)
+        return
+    }
+
+    if ((line.length | 0) <= max) {
+        console.log(prefix + line)
+        return
+    }
+
+    // Split into chunks with stable numbering so you can copy/paste and re-join.
+    let i = 0
+    let part = 0
+    while (i < line.length) {
+        const chunk = line.slice(i, i + max)
+        console.log(`${prefix}[part ${part}] ${chunk}`)
+        i += max
+        part++
+    }
+}
+
+function _enemyNavTsvHeader(): string {
+    return [
+        "eid","mid","step","tMs",
+        "pr","pc","pIdx","px","py",
+        "curD","mask","allowUp",
+        "herR","herC","herEX","herEY",
+        "pickR","pickC","pickD",
+        "reason","phase",
+        "lastIdx","stuckUntil","stuckMode",
+        "speed","vx","vy",
+        "tileBase","tileDecor","tileDead","ovWall",
+        "hitAny","hitBase","hitDecor","hitDead","hitCap",
+        "candsN"
+    ].join("\t")
+}
+
+function _enemyNavCandFlags(c: any): number {
+    let flags = 0
+    if (c && c.blocked) flags |= 1       // blocked
+    if (c && c.back) flags |= 2          // backtrack
+    if (c && c.diag) flags |= 4          // diagonal
+    if (c && c.blockReason === "fit") flags |= 8  // fitFail
+    if (c && c.chosen) flags |= 16       // chosen
+    return flags | 0
+}
+
+function _enemyNavFormatCandidatesCompact(cands: any[] | null, maxN: number): string {
+    if (!cands || cands.length === 0) return ""
+    const limit = Math.min(maxN | 0, cands.length | 0) | 0
+    const parts: string[] = []
+    for (let i = 0; i < limit; i++) {
+        const c = cands[i] || {}
+        const flags = _enemyNavCandFlags(c)
+        const br = c.blockReason ? `:${c.blockReason}` : ""
+        const align = (c.align == null) ? 0 : (Math.round((c.align || 0) * 100) / 100)
+        const col = c.coll ? `,col=${c.coll}` : ""
+        parts.push(`${c.r|0},${c.c|0},d=${(c.d==null?-1:c.d|0)},f=${flags}${br},a=${align}${col}`)
+    }
+    // single field; pipe-delimited candidates
+    return parts.join("|")
+}
+
+function _enemyNavFormatEntryTsv(entry: any): { line: string, cands: string } {
+    const pos = entry.pos || {}
+    const dist = entry.dist || {}
+    const nav = entry.nav || {}
+    const pick = entry.pick || {}
+    const stuck = entry.stuck || {}
+    const vel = entry.vel || {}
+    const hero = entry.hero || {}
+    const cc = entry.coll || null
+    const t = cc ? (cc.tile || {}) : {}
+    const h = cc ? (cc.hits || {}) : {}
+
+    const candsArr: any[] | null = entry.candidates || null
+    const candsN = candsArr ? (candsArr.length | 0) : 0
+
+    const line = [
+        _navNum(entry.eid), _navStr(entry.mid || ""), _navNum(entry.step), _navNum(entry.t),
+
+        _navNum(pos.r), _navNum(pos.c), _navNum(pos.idx), _navNum(pos.x), _navNum(pos.y),
+
+        _navNum(dist.cur), _navNum(dist.mask), _navNum(dist.allowUp),
+
+        _navNum(hero.r), _navNum(hero.c), _navNum(hero.ex), _navNum(hero.ey),
+
+        _navNum(pick.r), _navNum(pick.c), _navNum(pick.d, -1),
+
+        _navStr(entry.reason || ""), _navStr(entry.phase || ""),
+
+        _navNum(nav.lastIdx), _navNum(stuck.until), _navNum(stuck.mode),
+
+        _navNum(entry.speed), _navNum(vel.vx), _navNum(vel.vy),
+
+        cc ? (_navNum(t.baseBlocked)) : "", cc ? (_navNum(t.decorBlocked)) : "", cc ? (_navNum(t.deadEndBlocked)) : "", cc ? (_navNum(cc.overlapsWall)) : "",
+
+        cc ? (_navNum(h.anyBlockedHits)) : "", cc ? (_navNum(h.baseHits)) : "", cc ? (_navNum(h.decorHits)) : "", cc ? (_navNum(h.deadEndHits)) : "", cc ? (_navNum(h.capped)) : "",
+
+        candsN
+    ].join("\t")
+
+    // Candidates as ONE extra field (pipe-delimited), capped
+    const cands = _enemyNavFormatCandidatesCompact(candsArr, ENEMY_NAV_LOG_CANDS_MAX | 0)
+
+    return { line, cands }
+}
+
+
 function _enemyNavDumpLocalSnapshot(r: number, c: number, enemy: Sprite): void {
     if (!DEBUG_ENEMY_NAV_LOG) return
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
@@ -44083,36 +44213,32 @@ function _enemyNavDumpLocalSnapshot(r: number, c: number, enemy: Sprite): void {
     const tc = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_C) | 0
     const td = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_D) | 0
 
-    console.log(`[enemy][navlog][localsnap] eid=${getEnemyIndex(enemy)|0} at=(${r},${c}) target=(${tr},${tc},d=${td})`)
+    console.log(`[enemy][navlog][localsnap] eid=${getEnemyIndex(enemy)|0} at=(${r|0},${c|0}) target=(${tr|0},${tc|0},d=${td|0}) window=5x5`)
 
-    // 5x5 mask/dist snapshot centered on (r,c)
     for (let dr = -2; dr <= 2; dr++) {
-        let maskLine = ""
-        let distLine = ""
         const rr = (r + dr) | 0
+        let maskLine = ""
+        let distParts: string[] = []
         for (let dc = -2; dc <= 2; dc++) {
             const cc = (c + dc) | 0
             let blocked = 1
-            let d = -1
+            let d = ENEMY_NAV_INF
+
             if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) {
                 blocked = _enemyNavIsBaseBlocked(rr, cc) ? 1 : 0
-                if (_enemyNavDist && _enemyNavDist.length > 0) {
-                    const idx = _enemyNavIdx(rr, cc) | 0
-                    if (idx >= 0 && idx < _enemyNavDist.length) {
-                        d = _enemyNavDist[idx] | 0
-                    }
-                }
+                const idx = _enemyNavIdx(rr, cc) | 0
+                if (_enemyNavDist && idx >= 0 && idx < _enemyNavDist.length) d = _enemyNavDist[idx] | 0
             }
+
             maskLine += blocked ? "1" : "0"
-            distLine += (d >= 0 && d < ENEMY_NAV_INF) ? `${d.toString().padStart(2,"0")}` : "##"
-            if (dc !== 2) {
-                distLine += " "
-            }
+            distParts.push((d >= 0 && d < ENEMY_NAV_INF) ? d.toString() : "INF")
         }
-        console.log(`[enemy][navlog][localsnap] mask r=${rr} ${maskLine}`)
-        console.log(`[enemy][navlog][localsnap] dist r=${rr} ${distLine}`)
+
+        console.log(`[enemy][navlog][localsnap] r=${rr} mask=${maskLine} dist=${distParts.join(",")}`)
     }
 }
+
+
 function _engineSetPaused(flag: boolean, reason?: string): void {
     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
     if (flag) {
@@ -45019,7 +45145,10 @@ function _enemyNavLogAdd(enemy: Sprite, entry: any, force?: boolean): void {
 
     const step = ((e.__navLogStep | 0) + 1) | 0
     e.__navLogStep = step
+
     if (entry.step == null) entry.step = step
+    if (force) entry.force = true
+
 
     const head = (e.__navLogHead | 0)
     const size = (e.__navLogSize | 0)
@@ -45044,20 +45173,12 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
     if (!e || !e.__navLogRing) return
 
     const size = (e.__navLogSize | 0)
-
     if (size <= 0) return
 
-
-
     const now = game.runtime() | 0
-
     const lastDump = (e.__navLogLastDump | 0)
-
     if (lastDump > 0 && (now - lastDump) < (ENEMY_NAV_LOG_DUMP_COOLDOWN_MS | 0)) return
-
     e.__navLogLastDump = now
-
-
 
     const head = (e.__navLogHead | 0)
     const start = (((head - size) % ENEMY_NAV_LOG_RING_SIZE) + ENEMY_NAV_LOG_RING_SIZE) % ENEMY_NAV_LOG_RING_SIZE
@@ -45065,7 +45186,7 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 
     console.log(`[enemy][navlog][dump] reason=${reason} enemyIndex=${enemyIndex} size=${size} now=${now}`)
 
-    // Emit a simple 0/1 map snapshot once per world rev so we can correlate shape to stuck spots.
+    // Map snapshot once per worldRev (string-only)
     if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
         const rows = _engineWorldTileMap.length | 0
         const cols = _engineWorldTileMap[0].length | 0
@@ -45075,16 +45196,30 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 
         if (_enemyNavLastMapDumpRev !== worldRev) {
             console.log(`[enemy][navlog][map] rows=${rows} cols=${cols} floor=${floorIdx} worldRev=${worldRev} decorRev=${decorRev} legend:1=blocked,0=open`)
+
+            // Helpful ruler (mod 10) for visual alignment
+            let ruler = ""
+            for (let c = 0; c < cols; c++) ruler += ((c % 10) | 0).toString()
+            console.log(`[enemy][navlog][mapcol] ${ruler}`)
+
             for (let r = 0; r < rows; r++) {
                 let line = ""
-                for (let c = 0; c < cols; c++) {
-                    line += _enemyNavIsBaseBlocked(r, c) ? "1" : "0"
-                }
+                for (let c = 0; c < cols; c++) line += _enemyNavIsBaseBlocked(r, c) ? "1" : "0"
                 console.log(`[enemy][navlog][maprow] r=${r} ${line}`)
             }
+
             _enemyNavLastMapDumpRev = worldRev
         } else {
             console.log(`[enemy][navlog][map] skipped (already dumped for worldRev=${worldRev}) floor=${floorIdx}`)
+        }
+    }
+
+    // TSV header for copy/paste
+    if (ENEMY_NAV_LOG_FORMAT_TSV) {
+        if (ENEMY_NAV_LOG_TSV_HEADER_EVERY_DUMP) {
+            console.log(`[enemy][navtsv][header]\n${_enemyNavTsvHeader()}`)
+        } else {
+            console.log(`[enemy][navtsv][header] ${_enemyNavTsvHeader()}`)
         }
     }
 
@@ -45093,33 +45228,105 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
         const entry = e.__navLogRing[slot]
         if (!entry) continue
 
-        const pos = entry.pos || {}
-        const dist = entry.dist || {}
-        const nav = entry.nav || {}
-        const pick = entry.pick || {}
-        const stuck = entry.stuck || {}
-        const vel = entry.vel || {}
-        const candCount = entry.candidates ? entry.candidates.length : 0
-        let candsCompact = ""
-        if (entry.candidates && entry.candidates.length > 0) {
-            const parts: string[] = []
-            for (let j = 0; j < entry.candidates.length; j++) {
-                const c = entry.candidates[j] || {}
-                let flags = 0
-                if (c.blocked) flags |= 1   // blocked
-                if (c.back) flags |= 2      // backtrack
-                if (c.diag) flags |= 4      // diagonal
-                if (c.blockReason === "fit") flags |= 8 // footprint fail
-                if (c.chosen) flags |= 16   // chosen step
-                const align = (c.align == null) ? 0 : Math.round((c.align || 0) * 100) / 100
-                const br = c.blockReason ? `:${c.blockReason}` : ""
-                parts.push(`(${c.r|0},${c.c|0},d=${c.d==null?-1:c.d|0},f=${flags}${br},a=${align})`)
-            }
-            candsCompact = parts.join(" ")
-        }
+        const out = _enemyNavFormatEntryTsv(entry)
+        const line = out.line
+        const cands = out.cands
 
-        console.log(`[enemy][navlog][entry] [${i}] eid=${entry.eid|0} mid=${entry.mid||""} step=${entry.step|0} t=${entry.t|0} pos=(${pos.r|0},${pos.c|0})@${pos.x|0},${pos.y|0} idx=${pos.idx|0} d=${dist.cur|0} mask=${dist.mask|0} allowUp=${dist.allowUp|0} pick=(${pick.r|0},${pick.c|0},d=${pick.d==null?-1:pick.d|0}) hero=(${(entry.hero&&entry.hero.r)||0},${(entry.hero&&entry.hero.c)||0}) reason=${entry.reason||""} phase=${entry.phase||""} lastIdx=${nav.lastIdx|0} stuckUntil=${stuck.until|0} stuckMode=${stuck.mode|0} speed=${entry.speed|0} vel=(${vel.vx|0},${vel.vy|0}) cands=${candCount}${candsCompact ? " candFlags(1=blk,2=back,4=diag,8=fitFail,16=chosen) cands=" + candsCompact : ""}`)
+        // Always print one TSV line per entry (copy/paste friendly)
+        if (ENEMY_NAV_LOG_FORMAT_TSV) {
+            _navPrint(`[enemy][navtsv] `, line)
+
+            // Print candidates only when useful (force/stuck), unless you disable this knob.
+            const shouldShowCands =
+                !ENEMY_NAV_LOG_CANDS_ON_FORCE_ONLY ||
+                entry.reason === "no_neighbor" ||
+                entry.reason === "stay" ||
+                entry.reason === "curDistInf" ||
+                entry.reason === "stuck" ||
+                entry.force === true
+
+            if (cands && shouldShowCands) {
+                _navPrint(`[enemy][navtsv][cands] `, `eid=${_navNum(entry.eid)} step=${_navNum(entry.step)} ${cands}`)
+            }
+        } else {
+            // fallback (shouldn't be used if TSV is on)
+            console.log(`[enemy][navlog][entry] ${line}`)
+        }
     }
+}
+
+function _enemyNavGetEnemyFeetPoint(enemy: Sprite, cw: number, ch: number) {
+    const img: any = (enemy as any).image
+    const dispH = (((img && img.height) ? (img.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || (ch | 0)
+
+    let offY = Math.idiv((dispH - (ch | 0)) | 0, 2) | 0
+    if (offY < 0) offY = 0
+
+    const footX = enemy.x | 0
+    const footY = (((enemy.y | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0)
+    return { footX, footY, offY, dispH }
+}
+
+function _enemyNavClampTileRC(r: number, c: number) {
+    const rr = r | 0
+    const cc = c | 0
+    if (rr < 0 || cc < 0 || rr >= (_enemyNavRows | 0) || cc >= (_enemyNavCols | 0)) return null
+    return { r: rr, c: cc }
+}
+
+function _enemyNavClearNavTargetData(enemy: Sprite): void {
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
+}
+
+function _enemyNavGetAllowUp(nowMs: number, enemy: Sprite) {
+    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
+    const allowUp = (stuckUntil > 0 && (nowMs | 0) < stuckUntil) ? 1 : 0
+    return { stuckUntil, allowUp }
+}
+
+function _enemyNavGetLastIdx(enemy: Sprite, curIdx: number) {
+    let lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX)
+    if (lastNavIdx === 0 && (curIdx | 0) !== 0) lastNavIdx = -1
+    return lastNavIdx | 0
+}
+
+function _enemyNavComputeAlign(dr: number, dc: number, vx: number, vy: number) {
+    const vMag = Math.abs(vx) + Math.abs(vy)
+    if (vMag <= 0.001) return 0
+    return (((dr | 0) * vx) + ((dc | 0) * vy)) / vMag
+}
+
+function _enemyNavIsDiagBlockedForFootprint(r: number, c: number, nr: number, nc: number, cw: number, ch: number) {
+    // diag corner-cut guard (+ footprint guard on adjacent cardinals)
+    if (_enemyNavIsBlocked(r | 0, nc | 0) || _enemyNavIsBlocked(nr | 0, c | 0)) return true
+    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, r | 0, nc | 0)) return true
+    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, nr | 0, c | 0)) return true
+    return false
+}
+
+function _enemyNavMarkChosenCandidate(candidates: any[] | null, bestR: number, bestC: number): void {
+    if (!candidates) return
+    for (let i = 0; i < candidates.length; i++) {
+        const cand = candidates[i]
+        if (cand && (cand.r | 0) === (bestR | 0) && (cand.c | 0) === (bestC | 0)) cand.chosen = 1
+    }
+}
+
+function _enemyNavApplyVelocityTowardTileCenter(enemy: Sprite, speed: number, footX: number, footY: number, bestR: number, bestC: number): void {
+    const tileSize = WORLD_TILE_SIZE | 0
+    const tx = (bestC * tileSize + (tileSize >> 1)) | 0
+    const ty = (bestR * tileSize + (tileSize >> 1)) | 0
+
+    const dx = (tx - (footX | 0)) | 0
+    const dy = (ty - (footY | 0)) | 0
+
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag <= 0.001) mag = 1
+
+    enemy.vx = Math.idiv(dx * (speed | 0), mag)
+    enemy.vy = Math.idiv(dy * (speed | 0), mag)
 }
 
 
@@ -45133,21 +45340,18 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     const dims = _enemyGetColliderDims(enemy)
     const cw = dims.w | 0
     const ch = dims.h | 0
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
 
-    const img: any = (enemy as any).image
-    const dispH = (((img && img.height) ? (img.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
+    const footX = feet.footX | 0
+    const footY = feet.footY | 0
 
-    // Offset that places the collider's bottom near the sprite's bottom (feet-like).
-    let offY = Math.idiv((dispH - ch) | 0, 2) | 0
-    if (offY < 0) offY = 0
+    const r0 = Math.idiv(footY, tileSize) | 0
+    const c0 = Math.idiv(footX, tileSize) | 0
+    const rc = _enemyNavClampTileRC(r0, c0)
+    if (!rc) return false
 
-    const footX = enemy.x | 0
-    const footY = (((enemy.y | 0) + offY + (Math.idiv(ch, 2) | 0) - 1) | 0)
-
-    let r = Math.idiv(footY, tileSize) | 0
-    let c = Math.idiv(footX, tileSize) | 0
-
-    if (r < 0 || c < 0 || r >= _enemyNavRows || c >= _enemyNavCols) return false
+    const r = rc.r | 0
+    const c = rc.c | 0
 
     const curIdx = _enemyNavIdx(r, c) | 0
     const curD = _enemyNavDist[curIdx] | 0
@@ -45168,14 +45372,15 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, curIdx, footX, footY, false)
     const candidates: any[] = DEBUG_ENEMY_NAV_LOG ? [] : null
 
+    const collHere = _enemyNavMakeCollisionDebug(enemy, footX, footY, cw, ch, r, c)
+
     let pickReason = "descent"
     let logForce = false
 
+    // --- Early INF bailout (kept) ---
     if (curD >= ENEMY_NAV_INF) {
 
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
+        _enemyNavClearNavTargetData(enemy)
 
         if (DEBUG_ENEMY_NAV_LOG) {
             _enemyNavLogAdd(enemy, {
@@ -45185,28 +45390,26 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
                 dist: { cur: curD, mask: curMask, allowUp: 0 },
                 nav: { lastIdx: sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0 },
                 vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-                candidates
+                candidates,
+                coll: collHere
             }, true)
         }
 
         return false
     }
 
-    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
-    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
-    sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, ENEMY_NAV_INF)
+    _enemyNavClearNavTargetData(enemy)
 
-    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
-    const allowUp = (stuckUntil > 0 && nowMs < stuckUntil) ? 1 : 0
+    const allowUpInfo = _enemyNavGetAllowUp(nowMs, enemy)
+    const stuckUntil = allowUpInfo.stuckUntil | 0
+    const allowUp = allowUpInfo.allowUp | 0
 
-    let lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX)
-    if (lastNavIdx === 0 && curIdx !== 0) lastNavIdx = -1
+    const lastNavIdx = _enemyNavGetLastIdx(enemy, curIdx) | 0
 
     const vx = enemy.vx
     const vy = enemy.vy
-    const vMag = Math.abs(vx) + Math.abs(vy)
 
-    // Pick best neighbor by dist that ALSO fits this enemy's collider footprint.
+    // --- Pick best neighbor by dist (same logic, factored by structure only) ---
     let bestR = r
     let bestC = c
     let bestD = ENEMY_NAV_INF
@@ -45228,11 +45431,16 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         let cand: any = null
         if (candidates) cand = { r: nr, c: nc }
 
+        const nIdx0 = _enemyNavIdx(nr, nc) | 0
+        const baseBlocked = _enemyNavIsBaseBlocked(nr, nc) ? 1 : 0
+        const deadBlocked = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > nIdx0 && (_enemyNavDeadEnd[nIdx0] | 0) !== 0) ? 1 : 0
+
         if (_enemyNavIsBlocked(nr, nc)) {
             if (cand) {
                 cand.blocked = 1
-                cand.blockReason = "blocked"
+                cand.blockReason = baseBlocked ? "base" : (deadBlocked ? "deadEnd" : "blocked")
                 cand.d = ENEMY_NAV_INF
+                cand.coll = `B${cand.blockReason}`
                 candidates.push(cand)
             }
             continue
@@ -45241,18 +45449,13 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         const dr = _NAV8_DR[k] | 0
         const dc = _NAV8_DC[k] | 0
 
-        // Diagonal corner-cut guard (+ footprint guard on adjacent cardinals)
         if (dr !== 0 && dc !== 0) {
-
-            let diagBlocked = false
-            if (_enemyNavIsBlocked(r, nc) || _enemyNavIsBlocked(nr, c)) diagBlocked = true
-            else if (!_enemyNavCanOccupyCellForDims(cw, ch, r, nc) || !_enemyNavCanOccupyCellForDims(cw, ch, nr, c)) diagBlocked = true
-
-            if (diagBlocked) {
+            if (_enemyNavIsDiagBlockedForFootprint(r, c, nr, nc, cw, ch)) {
                 if (cand) {
                     cand.blocked = 1
                     cand.blockReason = "diag"
                     cand.diag = 1
+                    cand.coll = "Bdiag"
                     candidates.push(cand)
                 }
                 continue
@@ -45263,6 +45466,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "fit"
+                cand.coll = "Bfit"
                 candidates.push(cand)
             }
             continue
@@ -45277,19 +45481,25 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "inf"
+                cand.coll = "Binf"
                 candidates.push(cand)
             }
             continue
         }
 
         const isBacktrack = (nIdx === lastNavIdx)
-        let align = 0
-        if (vMag > 0.001) align = ((dr * vx) + (dc * vy)) / vMag
+        const align = _enemyNavComputeAlign(dr, dc, vx, vy)
 
         if (cand) {
             cand.back = isBacktrack ? 1 : 0
             cand.align = align
             cand.diag = (dr !== 0 && dc !== 0) ? 1 : 0
+
+            const probe = _enemyNavCandidateCollisionProbe(nr, nc, cw, ch)
+            if (probe) {
+                const h = probe.hits
+                cand.coll = `H(any=${h.anyBlockedHits|0},base=${h.baseHits|0},dead=${h.deadEndHits|0},cap=${h.capped|0})`
+            }
         }
 
         // best-any (fallback)
@@ -45360,12 +45570,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         pickReason = "uphill"
     }
 
-    if (candidates) {
-        for (let i = 0; i < candidates.length; i++) {
-            const cand = candidates[i]
-            if (cand && (cand.r | 0) === (bestR | 0) && (cand.c | 0) === (bestC | 0)) cand.chosen = 1
-        }
-    }
+    _enemyNavMarkChosenCandidate(candidates, bestR, bestC)
 
     const makeNavLogEntry = () => ({
         eid,
@@ -45381,7 +45586,8 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         stuck: { until: stuckUntil, mode: stuckMode },
         speed,
         vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-        candidates
+        candidates,
+        coll: collHere
     })
 
     if (bestD >= ENEMY_NAV_INF) {
@@ -45401,18 +45607,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, bestC)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, bestD)
 
-    // Target FEET point = tile center
-    const tx = (bestC * tileSize + (tileSize >> 1)) | 0
-    const ty = (bestR * tileSize + (tileSize >> 1)) | 0
-
-    const dx = (tx - footX) | 0
-    const dy = (ty - footY) | 0
-
-    let mag = Math.sqrt(dx * dx + dy * dy)
-    if (mag <= 0.001) mag = 1
-
-    enemy.vx = Math.idiv(dx * speed, mag)
-    enemy.vy = Math.idiv(dy * speed, mag)
+    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, bestR, bestC)
 
     if (DEBUG_ENEMY_NAV_LOG) _enemyNavLogAdd(enemy, makeNavLogEntry(), (logForce || wantLog))
 
@@ -45768,6 +45963,8 @@ const ENEMY_AI_NAV_HERO_EX = "__aiNavHeroEX"
 
 const ENEMY_AI_NAV_HERO_EY = "__aiNavHeroEY"
 
+const DEBUG_ENEMY_NAV_COLLISION = true
+const ENEMY_NAV_COLLISION_SCAN_MAX_TILES = 128  // safety cap; avoids runaway scans if something goes weird
 
 
 interface EnemyEdgePick {
@@ -45784,6 +45981,95 @@ interface EnemyEdgePick {
 
     edgeY: number
 
+}
+
+
+function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: number) {
+    const halfW = Math.idiv(cw | 0, 2) | 0
+    const bottom = footY | 0
+    const top = (bottom - (ch | 0) + 1) | 0
+    const left = ((footX | 0) - halfW) | 0
+    const right = ((footX | 0) + halfW - 1) | 0
+    return { left, right, top, bottom }
+}
+
+function _enemyNavScanBlockedTilesOverAabb(left: number, right: number, top: number, bottom: number) {
+    const tile = WORLD_TILE_SIZE | 0
+    const rows = _enemyNavRows | 0
+    const cols = _enemyNavCols | 0
+
+    let r0 = Math.idiv(top | 0, tile) | 0
+    let r1 = Math.idiv(bottom | 0, tile) | 0
+    let c0 = Math.idiv(left | 0, tile) | 0
+    let c1 = Math.idiv(right | 0, tile) | 0
+
+    if (r0 < 0) r0 = 0
+    if (c0 < 0) c0 = 0
+    if (r1 >= rows) r1 = rows - 1
+    if (c1 >= cols) c1 = cols - 1
+
+    let baseHits = 0
+    let decorHits = 0
+    let deadEndHits = 0
+    let anyBlockedHits = 0
+    let scanned = 0
+
+    for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+            scanned++
+            if (scanned > (ENEMY_NAV_COLLISION_SCAN_MAX_TILES | 0)) {
+                return { baseHits, decorHits, deadEndHits, anyBlockedHits, scanned, capped: 1 }
+            }
+
+            const idx = _enemyNavIdx(r | 0, c | 0) | 0
+            const isBase = _enemyNavIsBaseBlocked(r | 0, c | 0)
+            const isDead = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > idx) ? ((_enemyNavDeadEnd[idx] | 0) !== 0) : false
+            const isDecor = (_enemyNavDecorBlock && _enemyNavDecorBlock.length > idx) ? ((_enemyNavDecorBlock[idx] | 0) !== 0) : false
+
+            if (isBase) baseHits++
+            if (isDecor && !isBase) decorHits++
+            if (isDead && !isBase) deadEndHits++
+            if (isBase || isDecor || isDead) anyBlockedHits++
+        }
+    }
+
+    return { baseHits, decorHits, deadEndHits, anyBlockedHits, scanned, capped: 0 }
+}
+
+function _enemyNavMakeCollisionDebug(enemy: Sprite, footX: number, footY: number, cw: number, ch: number, r: number, c: number) {
+    if (!DEBUG_ENEMY_NAV_COLLISION) return null
+
+    const idx = _enemyNavIdx(r | 0, c | 0) | 0
+    const baseBlocked = _enemyNavIsBaseBlocked(r | 0, c | 0) ? 1 : 0
+    const decorBlocked = (_enemyNavDecorBlock && _enemyNavDecorBlock.length > idx && (_enemyNavDecorBlock[idx] | 0) !== 0) ? 1 : 0
+    const deadEndBlocked = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > idx && (_enemyNavDeadEnd[idx] | 0) !== 0) ? 1 : 0
+
+    const aabb = _enemyNavAabbFromFoot(footX | 0, footY | 0, cw | 0, ch | 0)
+
+    // wall-only overlap (engine wall grid)
+    const overlapsWall = _boxOverlapsWallBounds(aabb.left, aabb.right, aabb.top, aabb.bottom) ? 1 : 0
+
+    // full nav-block overlap scan (base + decor + deadEnd)
+    const hits = _enemyNavScanBlockedTilesOverAabb(aabb.left, aabb.right, aabb.top, aabb.bottom)
+
+    return {
+        foot: { x: footX | 0, y: footY | 0 },
+        wh: { w: cw | 0, h: ch | 0 },
+        tile: { r: r | 0, c: c | 0, idx: idx | 0, baseBlocked, decorBlocked, deadEndBlocked },
+        aabb,
+        overlapsWall,
+        hits
+    }
+}
+
+function _enemyNavCandidateCollisionProbe(nr: number, nc: number, cw: number, ch: number) {
+    if (!DEBUG_ENEMY_NAV_COLLISION) return null
+    const tileSize = WORLD_TILE_SIZE | 0
+    const tfx = (nc * tileSize + (tileSize >> 1)) | 0
+    const tfy = (nr * tileSize + (tileSize >> 1)) | 0
+    const aabb = _enemyNavAabbFromFoot(tfx, tfy, cw | 0, ch | 0)
+    const hits = _enemyNavScanBlockedTilesOverAabb(aabb.left, aabb.right, aabb.top, aabb.bottom)
+    return { aabb, hits }
 }
 
 

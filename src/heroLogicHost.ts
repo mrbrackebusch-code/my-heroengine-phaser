@@ -16,7 +16,7 @@ type HeroLogicFn = (
 ) => any[];
 
 
-const DEBUG_HOST_LOGIC = true;
+const DEBUG_HOST_LOGIC = false;
 
 // ==========================================
 // Registries (kept global for debugging)
@@ -332,15 +332,16 @@ if (typeof setResolver === "function") {
 
         // Keep this in sync with blocklyHeroLogicRuntime's fallback ("Default")
         const FALLBACK_PROFILE = "Default";
-        const effectiveProfile = (profile && String(profile).trim()) ? String(profile).trim() : FALLBACK_PROFILE;
+        const localProf = (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim()) ? g.__localHeroProfileName.trim() : null;
+        const argProf = (profile && String(profile).trim()) ? String(profile).trim() : null;
+        const effectiveProfile = argProf || localProf || FALLBACK_PROFILE;
 
         // Try profile candidates in case of mismatches
         const cand: string[] = [];
+        if (localProf) cand.push(localProf);
+        if (argProf) cand.push(argProf);
+        // Always include the effective/fallback
         cand.push(effectiveProfile);
-
-        if (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim()) {
-            cand.push(g.__localHeroProfileName.trim());
-        }
 
         // If you ever use __heroProfiles, try that too (P1 is slot 0)
         if (g.__heroProfiles && typeof g.__heroProfiles[0] === "string" && g.__heroProfiles[0].trim()) {
@@ -385,6 +386,7 @@ if (typeof setResolver === "function") {
                 const dbg = (() => { try { return dbgBlocklyHeroLogic(p); } catch { return null; } })();
                 const reason = (!hasXml) ? "no-xml" : (dbg?.lastErrByButton?.[button] || dbg?.lastErr || "null-out");
                 const rawSample = dbg?.lastRawByButton ? dbg.lastRawByButton[button] : (dbg && ("lastRaw" in (dbg as any)) ? (dbg as any).lastRaw : undefined);
+                const codePreview = dbg && (dbg as any).codePreview ? String((dbg as any).codePreview) : null;
                 _trace("[heroLogicHost] Blockly MISS", {
                     profile: p,
                     button,
@@ -394,6 +396,7 @@ if (typeof setResolver === "function") {
                     lastRaw: rawSample,
                     lastRawType: rawSample === undefined ? "undefined" : (rawSample === null ? "null" : typeof rawSample),
                     lastRawJson: (() => { try { return JSON.stringify(rawSample); } catch { return "<unserializable>"; } })(),
+                    codePreview,
                     dbg,
                 });
 
