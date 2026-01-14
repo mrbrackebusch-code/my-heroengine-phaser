@@ -66,7 +66,7 @@ const PROP_FOCUS_AURA_FORCE_BOX_BORDER = false;
 // Trim interior edges on multi-tile props to prevent overlapping aura brightening.
 const PROP_FOCUS_AURA_INNER_TRIM_PX = 2;
 // Extra trim applied on one side only (right/bottom) to allow 2+1px tuning.
-const PROP_FOCUS_AURA_INNER_TRIM_EXTRA_PX = 1;
+const PROP_FOCUS_AURA_INNER_TRIM_EXTRA_PX = 2;
 const PROP_FOCUS_AURA_INNER_TRIM_ONE_SIDE = true;
 
 // Depth tuning: keep aura behind the prop but above tile layers.
