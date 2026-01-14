@@ -1,4 +1,4 @@
-// src/blocklyHeroLogicEditor.ts
+﻿// src/blocklyHeroLogicEditor.ts
 import * as Blockly from "blockly";
 import "blockly/blocks";
 
@@ -97,19 +97,17 @@ const TOOLBOX: any = {
       name: "Sensing",
       colour: "#5CB1D6",
       contents: [
-        { kind: "block", type: "he_ro_my_hp" },
-        { kind: "block", type: "he_ro_my_mp" },
-        { kind: "block", type: "he_ro_my_x" },
-        { kind: "block", type: "he_ro_my_y" },
-
+        { kind: "block", type: "he_ro_my_field" },
+        { kind: "block", type: "he_ro_my_ids" },
+        { kind: "block", type: "he_ro_closest_enemy_field" },
+        { kind: "block", type: "he_ro_enemy_field" },
+        { kind: "block", type: "he_ro_hero_field" },
+        { kind: "block", type: "he_ro_reach_px" },
         { kind: "block", type: "he_ro_enemy_count" },
-        { kind: "block", type: "he_ro_closest_enemy_exists" },
-        { kind: "block", type: "he_ro_closest_enemy_hp" },
-        { kind: "block", type: "he_ro_closest_enemy_dist" },
-        { kind: "block", type: "he_ro_enemy_hp_at" },
-        { kind: "block", type: "he_ro_enemy_dist_at" },
-        { kind: "block", type: "he_ro_weakest_enemy_index" },
         { kind: "block", type: "he_ro_enemies_within_radius" },
+        { kind: "block", type: "he_ro_my_weapon_bonuses" },
+        { kind: "block", type: "he_ro_enemies_list" },
+        { kind: "block", type: "he_ro_heroes_list" },
       ],
     },
 
@@ -120,17 +118,17 @@ const TOOLBOX: any = {
       contents: [
         { kind: "block", type: "math_number" },
         { kind: "block", type: "math_arithmetic" },
-        { kind: "block", type: "he_math_min2" },
-        { kind: "block", type: "he_math_max2" },
-        { kind: "block", type: "he_math_clamp" },
-        { kind: "block", type: "math_modulo" },
-        { kind: "block", type: "math_round" },
-        { kind: "block", type: "math_random_int" },
-
         { kind: "block", type: "logic_compare" },
         { kind: "block", type: "logic_operation" },
         { kind: "block", type: "logic_negate" },
         { kind: "block", type: "logic_boolean" },
+
+        { kind: "block", type: "math_modulo" },
+        { kind: "block", type: "math_round" },
+        { kind: "block", type: "math_random_int" },
+
+        { kind: "block", type: "he_math_min2" },
+        { kind: "block", type: "he_math_max2" },
       ],
     },
 
@@ -626,6 +624,7 @@ function _heEnsureBlocksRegistered(): void {
   _mkSensor("he_ro_my_mp", "my MP", "Number");
   _mkSensor("he_ro_my_x", "my X", "Number");
   _mkSensor("he_ro_my_y", "my Y", "Number");
+  _mkSensor("he_ro_my_level", "my level", "Number");
 
   _mkSensor("he_ro_enemy_count", "enemy count", "Number");
   _mkSensor("he_ro_closest_enemy_exists", "closest enemy exists?", "Boolean");
@@ -649,6 +648,72 @@ function _heEnsureBlocksRegistered(): void {
   };
 
   _mkSensor("he_ro_weakest_enemy_index", "index of weakest enemy", "Number");
+  _mkSensor("he_ro_enemy_hp_all", "enemy HP list", null);
+  _mkSensor("he_ro_enemy_dist2_all", "enemy distance^2 list", null);
+  _mkSensor("he_ro_enemy_dist_all", "enemy distance list", null);
+  _mkSensor("he_ro_ally_hp_all", "ally HP list", null);
+  _mkSensor("he_ro_ally_level_all", "ally level list", null);
+  _mkSensor("he_ro_my_relics", "my relic ids", null);
+  _mkSensor("he_ro_my_weapons", "my weapon ids", null);
+  _mkSensor("he_ro_my_weapon_bonuses", "my weapon bonuses", null);
+  _mkSensor("he_ro_enemies_list", "enemies (list)", null);
+  _mkSensor("he_ro_heroes_list", "heroes (list)", null);
+
+  (Blockly as any).Blocks["he_ro_enemy_field"] = {
+    init: function () {
+      this.setColour("#5CB1D6");
+      this.appendValueInput("I").setCheck("Number").appendField("enemy at index");
+      this.appendDummyInput().appendField("field").appendField(new (Blockly as any).FieldDropdown([
+        ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+        ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"], ["distSq", "distSq"],
+      ]), "FIELD");
+      this.setOutput(true, "Number");
+    },
+  };
+
+  (Blockly as any).Blocks["he_ro_hero_field"] = {
+    init: function () {
+      this.setColour("#5CB1D6");
+      this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown([
+        ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+        ["level", "lvl"], ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"],
+      ]), "FIELD").appendField("of hero at index");
+      this.appendValueInput("I").setCheck("Number");
+      this.setOutput(true, "Number");
+    },
+  };
+
+  (Blockly as any).Blocks["he_ro_my_field"] = {
+    init: function () {
+      this.setColour("#5CB1D6");
+      this.appendDummyInput().appendField("my").appendField(new (Blockly as any).FieldDropdown([
+        ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+        ["level", "lvl"], ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"],
+      ]), "FIELD");
+      this.setOutput(true, "Number");
+    },
+  };
+
+  (Blockly as any).Blocks["he_ro_my_ids"] = {
+    init: function () {
+      this.setColour("#5CB1D6");
+      this.appendDummyInput().appendField("my").appendField(new (Blockly as any).FieldDropdown([
+        ["relic ids", "relics"], ["weapon ids", "weapons"],
+      ]), "KIND");
+      this.setOutput(true, null);
+    },
+  };
+
+  (Blockly as any).Blocks["he_ro_closest_enemy_field"] = {
+    init: function () {
+      this.setColour("#5CB1D6");
+      this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown([
+        ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+        ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"], ["distSq", "distSq"],
+      ]), "FIELD").appendField("of closest enemy");
+      this.setOutput(true, "Number");
+    },
+  };
 
   (Blockly as any).Blocks["he_ro_enemies_within_radius"] = {
     init: function () {
@@ -706,16 +771,6 @@ function _heEnsureBlocksRegistered(): void {
       this.setColour("#59C059");
       this.appendValueInput("A").setCheck("Number").appendField("max");
       this.appendValueInput("B").setCheck("Number").appendField("and");
-      this.setOutput(true, "Number");
-    },
-  };
-
-  (Blockly as any).Blocks["he_math_clamp"] = {
-    init: function () {
-      this.setColour("#59C059");
-      this.appendValueInput("V").setCheck("Number").appendField("clamp");
-      this.appendValueInput("MIN").setCheck("Number").appendField("min");
-      this.appendValueInput("MAX").setCheck("Number").appendField("max");
       this.setOutput(true, "Number");
     },
   };
@@ -1361,7 +1416,30 @@ function _ensureWorkspace(): Blockly.WorkspaceSvg {
   // Block illegal variable renames (reserved output vars)
   _heInstallReservedVariableGuards(_workspace);
 
+  // Allow interacting with dropdowns while blocks are still in the flyout/toolbox
+  try {
+    const fly: any = (_workspace as any).getFlyout?.();
+    if (fly) {
+      if (typeof fly.setAutoClose === "function") fly.setAutoClose(false);
+      if (typeof fly.autoClose === "boolean") fly.autoClose = false;
+    }
+  } catch {}
+
   _workspace.addChangeListener((e: any) => {
+    // Auto-remove stray Return blocks pulled out of entry blocks
+    try {
+      if (e?.type === (Blockly as any).Events?.MOVE) {
+        const entryTypes = new Set(["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"]);
+        const blk = _workspace.getBlockById(e.blockId || e.newParentId || e.oldParentId);
+        let cur: any = blk, underEntry = false;
+        while (cur) { if (entryTypes.has(cur.type)) { underEntry = true; break; } cur = cur.getParent?.(); }
+        if (blk && blk.type === "he_return_move" && !underEntry && !(blk as any).isInFlyout?.()) {
+          try { blk.dispose(true); } catch {}
+          return;
+        }
+      }
+    } catch {}
+
     // Keep required template intact (ignore UI-only events)
     try {
       if (!_heRepairing && !_heIsUiEvent(e)) {
@@ -1502,3 +1580,4 @@ export function installBlocklyHeroLogicEditor(): void {
     _ensureDomInstalled();
   }
 }
+

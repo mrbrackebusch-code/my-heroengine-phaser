@@ -1,5 +1,7 @@
 ﻿
 
+import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDiagonalMovement, Heuristic as PFHeuristic } from "pathfinding";
+
 // -----------------------------------------------------
 
 // MakeCode-compatible randint helper for Phaser build
@@ -1398,8 +1400,8 @@ let _shopEntered = false
 
 const DEBUG_WORLD_SNAPSHOT = true; //debug flag ????????????????????
 
-
-
+const DEBUG_FORCE_TEST_WORLD_KIND = "PF_PAD_CAGE_TOP3" as "" | "PF_MIDWALL" | "PF_SINGLE_DOOR" | "PF_PAD_CAGE_TOP3" //Testing the enemy nav debug world 
+const DEBUG_FORCE_TEST_WORLD_LOG = true
 
 
 // --------------------------------------------------------------
@@ -19840,6 +19842,155 @@ function _shopBuildStatsPreview(heroIndex: number): string {
 
 
 
+function _createTileMap2D_TestWorld(kind: "" | "PF_MIDWALL" | "PF_SINGLE_DOOR" | "PF_PAD_CAGE_TOP3"): number[][] {
+
+    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W) | 0
+    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H) | 0
+    if (cols < 16) cols = 16
+    if (rows < 12) rows = 12
+
+    // start fully open
+    const map: number[][] = []
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = []
+        for (let c = 0; c < cols; c++) row.push(TILE_EMPTY)
+        map.push(row)
+    }
+
+    // solid outer border
+    for (let r = 0; r < rows; r++) {
+        map[r][0] = TILE_WALL
+        map[r][cols - 1] = TILE_WALL
+    }
+    for (let c = 0; c < cols; c++) {
+        map[0][c] = TILE_WALL
+        map[rows - 1][c] = TILE_WALL
+    }
+
+    // helper carve
+    const carveRect = (r0: number, c0: number, rh: number, cw: number) => {
+        const r1 = Math.min(rows - 2, (r0 + rh - 1) | 0) | 0
+        const c1 = Math.min(cols - 2, (c0 + cw - 1) | 0) | 0
+        for (let r = Math.max(1, r0 | 0); r <= r1; r++) {
+            for (let c = Math.max(1, c0 | 0); c <= c1; c++) map[r][c] = TILE_EMPTY
+        }
+    }
+
+    // Helpful centers
+    const centerR = Math.idiv(rows, 2) | 0
+    const centerC = Math.idiv(cols, 2) | 0
+
+    // Big open arena around center (keeps hero/enemies far from walls by default)
+    carveRect((centerR - 4) | 0, (centerC - 7) | 0, 9, 15)
+
+    if (kind === "PF_MIDWALL") {
+
+        const wallC = (centerC - 4) | 0
+        const topGapR = 1
+        const botGapR = (rows - 2) | 0
+
+        for (let r = 1; r <= (rows - 2); r++) {
+            if (r === topGapR || r === botGapR) continue
+            if (r >= (centerR - 4) && r <= (centerR + 4)) continue
+            map[r][wallC] = TILE_WALL
+        }
+
+        // tiny nub to catch “wall-hugging”
+        const nubR = (centerR + 2) | 0
+        if (nubR >= 2 && nubR <= rows - 3 && (wallC - 2) >= 2) {
+            map[nubR][(wallC - 1) | 0] = TILE_WALL
+            map[nubR][(wallC - 2) | 0] = TILE_WALL
+        }
+
+    } else if (kind === "PF_SINGLE_DOOR") {
+
+        const splitC = (centerC - 2) | 0
+        const doorR = centerR | 0
+
+        for (let r = 1; r <= rows - 2; r++) map[r][splitC] = TILE_WALL
+        map[doorR][splitC] = TILE_EMPTY
+
+        // keep spawn arena open
+        carveRect((centerR - 4) | 0, (centerC - 7) | 0, 9, 15)
+
+    } else if (kind === "PF_PAD_CAGE_TOP3") {
+
+        // Goal: two *double-thick* vertical pillars flanking the teleport pad area.
+        // Only bypass is at the TOP, with a 3-tile-tall open band.
+
+        // Define the "top open band" height (3 tiles tall, excluding the border wall row=0)
+        const openTopH = 3
+        const wallStartR = (1 + openTopH) | 0     // walls begin below the open band
+        const wallEndR = (rows - 2) | 0           // down to inner border
+
+        // Put the “pad” notionally at the center of the arena.
+        // We build pillars around it with a clear gap between pillars.
+        const gapHalf = 3                        // gap half-width around pad
+        const leftPillarC0 = (centerC - gapHalf - 2) | 0   // 2-thick
+        const leftPillarC1 = (leftPillarC0 + 1) | 0
+        const rightPillarC0 = (centerC + gapHalf + 1) | 0  // 2-thick
+        const rightPillarC1 = (rightPillarC0 + 1) | 0
+
+        // Sanity clamp into interior
+        const clampC = (c: number) => {
+            if (c < 1) return 1
+            if (c > (cols - 2)) return (cols - 2) | 0
+            return c | 0
+        }
+
+        const l0 = clampC(leftPillarC0)
+        const l1 = clampC(leftPillarC1)
+        const r0 = clampC(rightPillarC0)
+        const r1 = clampC(rightPillarC1)
+
+        // Build the pillars from wallStartR..wallEndR (so the top band is the ONLY bypass).
+        for (let r = wallStartR; r <= wallEndR; r++) {
+            map[r][l0] = TILE_WALL
+            map[r][l1] = TILE_WALL
+            map[r][r0] = TILE_WALL
+            map[r][r1] = TILE_WALL
+        }
+
+        // Make the “pad plaza” inside the pillars extra open (so nobody can claim tightness).
+        // This is just openness; your real telepad is placed by other logic.
+        const plazaR0 = (centerR - 3) | 0
+        const plazaC0 = (l1 + 1) | 0
+        const plazaW = ((r0 - 1) - plazaC0 + 1) | 0
+        carveRect(plazaR0, plazaC0, 7, plazaW)
+
+        // Also ensure the entire top band is open across the arena width.
+        carveRect(1, 1, openTopH, (cols - 2) | 0)
+
+        // Optional: add a “tempting indentation” near the left pillar face to expose bad steering.
+        // This makes a little notch that a dumb “push-right” behavior would jam into.
+        const notchR = (centerR + 1) | 0
+        const notchC = (l0 - 1) | 0
+        if (notchR >= 2 && notchR <= rows - 3 && notchC >= 2) {
+            map[notchR][notchC] = TILE_WALL
+        }
+    }
+
+    return map
+}
+
+
+function _debugWorldSig01(map: number[][]): { rows: number, cols: number, walls: number, floors: number, sig: number } {
+    const rows = (map && map.length) ? (map.length | 0) : 0
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0
+    let walls = 0, floors = 0, sig = 0
+    for (let r = 0; r < rows; r++) {
+        const row = map[r]
+        for (let c = 0; c < cols; c++) {
+            const v = row[c] | 0
+            if (v === (TILE_WALL | 0)) walls++
+            else floors++
+            sig = (((sig << 5) - sig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0
+        }
+    }
+    return { rows, cols, walls, floors, sig }
+}
+
+
 function _createTileMap2D(): number[][] {
 
     // Just use the basic cave generator in ALL runtimes.
@@ -21067,109 +21218,70 @@ function initWorldDecorPostPass(): void {
 function initWorldTileMap(): void {
 
     // Always build the numeric world grid (used by Phaser renderer + collision).
+    if (DEBUG_FORCE_TEST_WORLD_KIND) {
+        _engineWorldTileMap = _createTileMap2D_TestWorld(DEBUG_FORCE_TEST_WORLD_KIND as any)
 
-    _engineWorldTileMap = _createTileMap2D()
-
-
+        if (DEBUG_FORCE_TEST_WORLD_LOG) {
+            const s = _debugWorldSig01(_engineWorldTileMap)
+            console.log("[WORLD][TEST]", {
+                kind: DEBUG_FORCE_TEST_WORLD_KIND,
+                worldRevNext: (_engineWorldRev + 1) | 0,
+                floorIndex: _dunFloorIndex | 0,
+                floorKind: _dunFloorKind || "",
+                rows: s.rows, cols: s.cols, walls: s.walls, floors: s.floors, sig: s.sig
+            })
+        }
+    } else {
+        _engineWorldTileMap = _createTileMap2D()
+    }
 
     // Decor post-pass (decals + trigger/solid colliders), art-agnostic.
-
     initWorldDecorPostPass()
 
-
-
     // NEW: bump world revision any time the world grid is rebuilt
-
     _engineWorldRev = (_engineWorldRev + 1) | 0
 
-
-
     // WORLD SNAPSHOT (high-level, low spam)
-
     if (DEBUG_WORLD_SNAPSHOT) {
-
         const map = _engineWorldTileMap
-
         const rows = (map && map.length) ? (map.length | 0) : 0
-
         const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0
 
-
-
         let walls = 0
-
         let floors = 0
-
         let sig = 0
 
-
-
         for (let r = 0; r < rows; r++) {
-
             const row = map[r]
-
             if (!row) continue
-
             for (let c = 0; c < cols; c++) {
-
                 const v = (row[c] | 0)
-
                 if (v === (TILE_WALL | 0)) walls++
-
                 else floors++
-
-
-
-                // cheap deterministic signature
-
                 sig = (((sig << 5) - sig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0
-
             }
-
         }
 
-
-
         console.log("[WORLD][MAP]", {
-
             worldRev: _engineWorldRev | 0,
-
             floorIndex: _dunFloorIndex | 0,
-
             floorKind: _dunFloorKind || "",
-
             baseFamily: _dunBaseFamily || "",
-
             wallFamily: _dunWallFamily || "",
-
             rows,
-
             cols,
-
             walls,
-
             floors,
-
             sig,
-
             decorRev: _engineDecorRev | 0,
-
         })
-
     }
-
-
 
     // Only the MakeCode Arcade runtime needs "walls as sprites".
-
     // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
-
     if (isMakeCodeArcadeRuntime()) {
-
         _buildTilesIntoSprites(_engineWorldTileMap)
-
     }
-
 }
 
 
@@ -44043,7 +44155,8 @@ const ENEMY_NAV_LOG_MAX_LINE_CHARS = 500         // split long lines determinist
 
 const ENEMY_NAV_INF = 0x3fff
 const ENEMY_NAV_REBUILD_MS = 200   // KNOB: lower = more responsive, higher = cheaper
-const DEBUG_ENEMY_NAV_LOG = true   // Set false to silence nav logs without removing code
+const ENEMY_PATHFINDING_FORCE = true // if true: use pathfinding.js A* only (no fallbacks)
+const DEBUG_ENEMY_NAV_LOG = false   // Set false to silence nav logs without removing code
 const ENEMY_NAV_LOG_RING_SIZE = 192 // Bounded history per enemy
 const ENEMY_NAV_LOG_MIN_MOVE_PX = 4
 const ENEMY_NAV_LOG_MIN_MOVE_PX2 = ENEMY_NAV_LOG_MIN_MOVE_PX * ENEMY_NAV_LOG_MIN_MOVE_PX
@@ -44094,6 +44207,13 @@ let _enemyAstarSeen: number[] = []
 let _enemyAstarClosed: number[] = []
 let _enemyAstarSeenList: number[] = []
 let _enemyAstarClosedList: number[] = []
+
+// pathfinding.js cache
+let _enemyPFGrid: PFGrid | null = null
+let _enemyPFFinder: PFAStarFinder | null = null
+let _enemyPFWorldRev = -1
+let _enemyPFDecorRev = -1
+let _enemyPFHeroHash = -1
 
 
 function _navStr(v: any): string {
@@ -44522,6 +44642,41 @@ function _enemyAstarRebuildBlocked(rows: number, cols: number, heroHash: number)
     _enemyAstarWorldRev = _engineWorldRev | 0
     _enemyAstarDecorRev = _engineDecorRev | 0
     _enemyAstarHeroHash = heroHash | 0
+}
+
+function _enemyPfEnsureGrid(): void {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0].length | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const worldRev = _engineWorldRev | 0
+    const decorRev = _engineDecorRev | 0
+    const heroHash = _enemyNavBuiltHeroHash | 0
+
+    if (_enemyPFGrid && _enemyPFFinder && _enemyPFWorldRev === worldRev && _enemyPFDecorRev === decorRev && _enemyPFHeroHash === heroHash) {
+        // Keep if dimensions still match
+        const gw: any = (_enemyPFGrid as any)
+        if (gw && (gw.width | 0) === (cols | 0) && (gw.height | 0) === (rows | 0)) return
+    }
+
+    const matrix: number[][] = []
+    for (let r = 0; r < rows; r++) {
+        const line: number[] = []
+        for (let c = 0; c < cols; c++) {
+            line.push(_enemyNavIsBlocked(r, c) ? 1 : 0)
+        }
+        matrix.push(line)
+    }
+
+    _enemyPFGrid = new PFGrid(matrix)
+    _enemyPFWorldRev = worldRev
+    _enemyPFDecorRev = decorRev
+    _enemyPFHeroHash = heroHash
+    _enemyPFFinder = new PFAStarFinder({
+        diagonalMovement: PFDiagonalMovement.IfAtMostOneObstacle,
+        heuristic: PFHeuristic.octile
+    })
 }
 
 
@@ -45394,7 +45549,7 @@ function _enemyNavApplyVelocityTowardTileCenter(enemy: Sprite, speed: number, fo
 
 
 function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number, speed: number): boolean {
-
+    
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
     const rows = _engineWorldTileMap.length | 0
     const cols = _engineWorldTileMap[0].length | 0
@@ -45423,8 +45578,6 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     else if (gc >= cols) gc = cols - 1
 
     const startIdx = ((sr * cols) + sc) | 0
-    const goalIdx = ((gr * cols) + gc) | 0
-
     const heroR = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_R) | 0
     const heroC = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_C) | 0
     const heroEX = sprites.readDataNumber(enemy, ENEMY_AI_NAV_HERO_EX) | 0
@@ -45438,199 +45591,29 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
     const curMask = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > startIdx) ? (_enemyNavDeadEnd[startIdx] | 0) : 0
 
-    const heroHash = _enemyNavBuiltHeroHash | 0
-    const need = (rows * cols) | 0
-
-    // Keep the cached blocked grid in sync with the nav rebuilds (world/decor/hero hash).
-    if (_enemyNavRows !== rows || _enemyNavCols !== cols || !_enemyAstarBlocked || _enemyAstarBlocked.length !== need ||
-        _enemyAstarWorldRev !== (_engineWorldRev | 0) || _enemyAstarDecorRev !== (_engineDecorRev | 0) ||
-        _enemyAstarHeroHash !== heroHash) {
-        if (_enemyNavRows !== rows || _enemyNavCols !== cols) _enemyNavEnsureCapacity(rows, cols)
-        _enemyAstarRebuildBlocked(rows, cols, heroHash)
-    }
-
     const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, startIdx, footX, footY, false)
 
-    // Already in goal tile? Still steer to the exact edge point to avoid jitter.
-    if (startIdx === goalIdx) {
-        _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, gr, gc)
-        sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, startIdx)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, gr)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, gc)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, 0)
+    _enemyPfEnsureGrid()
+    if (!_enemyPFGrid || !_enemyPFFinder) return false
 
-        if (wantLog) {
-            _enemyNavLogAdd(enemy, {
-                eid,
-                mid: monsterId,
-                t: nowMs,
-                reason: "astar_here",
-                pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
-                dist: { cur: 0, mask: curMask, allowUp: 0 },
-                nav: { lastIdx: lastNavIdx },
-                pick: { r: gr, c: gc, d: 0 },
-                hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
-                phase: phaseStr,
-                stuck: { until: stuckUntil, mode: stuckMode },
-                speed,
-                vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 }
-            }, true)
-        }
+    const grid = _enemyPFGrid.clone()
+    grid.setWalkableAt(sc, sr, true)
+    grid.setWalkableAt(gc, gr, true)
 
-        return true
-    }
+    const path = _enemyPFFinder.findPath(sc, sr, gc, gr, grid) as number[][]
+    const pathLen = path ? (path.length | 0) : 0
 
-    _enemyAstarEnsureScratch(need)
-    _enemyAstarResetScratch()
-
-    const heapIdx: number[] = []
-    const heapF: number[] = []
-
-    const heapPush = (idx: number, f: number) => {
-        let i = heapIdx.length | 0
-        heapIdx.push(idx | 0)
-        heapF.push(f | 0)
-        while (i > 0) {
-            const p = ((i - 1) >> 1) | 0
-            if ((heapF[p] | 0) <= (f | 0)) break
-            heapIdx[i] = heapIdx[p] | 0
-            heapF[i] = heapF[p] | 0
-            i = p
-        }
-        heapIdx[i] = idx | 0
-        heapF[i] = f | 0
-    }
-
-    const heapPop = (): number => {
-        const n = heapIdx.length | 0
-        if (n === 0) return -1
-        const res = heapIdx[0] | 0
-        const lastIdx = heapIdx.pop()
-        const lastF = heapF.pop()
-        if ((heapIdx.length | 0) === 0 || lastIdx == null || lastF == null) return res
-
-        let i = 0
-        while (true) {
-            const l = ((i << 1) + 1) | 0
-            const r = (l + 1) | 0
-            if (l >= (heapIdx.length | 0)) break
-            let child = l
-            if (r < (heapIdx.length | 0) && (heapF[r] | 0) < (heapF[l] | 0)) child = r
-            if ((heapF[child] | 0) >= (lastF | 0)) break
-            heapIdx[i] = heapIdx[child] | 0
-            heapF[i] = heapF[child] | 0
-            i = child
-        }
-
-        heapIdx[i] = lastIdx | 0
-        heapF[i] = lastF | 0
-        return res
-    }
-
-    const markSeen = (idx: number) => {
-        if ((_enemyAstarSeen[idx] | 0) === 0) {
-            _enemyAstarSeen[idx] = 1
-            _enemyAstarSeenList.push(idx | 0)
-        }
-    }
-    const markClosed = (idx: number) => {
-        if ((_enemyAstarClosed[idx] | 0) === 0) {
-            _enemyAstarClosed[idx] = 1
-            _enemyAstarClosedList.push(idx | 0)
-        }
-    }
-
-    const heuristic = (r: number, c: number): number => {
-        const dr = Math.abs((r | 0) - (gr | 0))
-        const dc = Math.abs((c | 0) - (gc | 0))
-        const mn = dr < dc ? dr : dc
-        const mx = dr < dc ? dc : dr
-        return ((14 * mn) + (10 * (mx - mn))) | 0
-    }
-
-    markSeen(startIdx)
-    _enemyAstarG[startIdx] = 0
-    _enemyAstarCameFrom[startIdx] = -1
-    heapPush(startIdx, heuristic(sr, sc))
-
-    let found = false
-    let foundIdx = -1
-    let expanded = 0
-
-    while ((heapIdx.length | 0) > 0 && expanded < (ENEMY_ASTAR_MAX_NODES | 0)) {
-        const curIdx = heapPop()
-        if (curIdx < 0) break
-        if ((_enemyAstarClosed[curIdx] | 0) !== 0) continue
-
-        markClosed(curIdx)
-        if ((curIdx | 0) === (goalIdx | 0)) { found = true; foundIdx = curIdx; break }
-
-        const cr = Math.idiv(curIdx, cols) | 0
-        const cc = (curIdx % cols) | 0
-        const baseG = _enemyAstarG[curIdx] | 0
-
-        for (let k = 0; k < 8; k++) {
-            const nr = (cr + _NAV8_DR[k]) | 0
-            const nc = (cc + _NAV8_DC[k]) | 0
-
-            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
-
-            const nIdx = ((nr * cols) + nc) | 0
-            if ((_enemyAstarClosed[nIdx] | 0) !== 0) continue
-
-            const blocked = (_enemyAstarBlocked && _enemyAstarBlocked.length > nIdx && (_enemyAstarBlocked[nIdx] | 0) !== 0)
-            if (blocked && (nIdx | 0) !== (goalIdx | 0)) continue
-
-            const dr = _NAV8_DR[k] | 0
-            const dc = _NAV8_DC[k] | 0
-            if (dr !== 0 && dc !== 0 && _enemyNavIsDiagBlockedForFootprint(cr, cc, nr, nc, cw, ch)) continue
-            if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) continue
-
-            const stepCost = (dr !== 0 && dc !== 0) ? 14 : 10
-            const tentativeG = (baseG + stepCost) | 0
-
-            const seen = (_enemyAstarSeen[nIdx] | 0) !== 0
-            const prevG = seen ? (_enemyAstarG[nIdx] | 0) : 0x3fffffff
-            if (!seen || tentativeG < prevG) {
-                markSeen(nIdx)
-                _enemyAstarG[nIdx] = tentativeG
-                _enemyAstarCameFrom[nIdx] = curIdx
-                heapPush(nIdx, (tentativeG + heuristic(nr, nc)) | 0)
-            }
-        }
-
-        expanded++
-    }
-
-    let nextIdx = -1
-    let pathLen = 0
-    if (found && foundIdx >= 0) {
-        let walk = foundIdx | 0
-        while (walk >= 0 && (walk | 0) !== (startIdx | 0)) {
-            pathLen++
-            const prev = _enemyAstarCameFrom[walk] | 0
-            if ((prev | 0) === (startIdx | 0)) {
-                nextIdx = walk | 0
-                break
-            }
-            walk = prev
-        }
-    }
-
-    _enemyAstarResetScratch()
-
-    if (!found || nextIdx < 0 || (nextIdx | 0) === (startIdx | 0)) {
+    if (!path || pathLen === 0) {
         _enemyNavClearNavTargetData(enemy)
-
-        if (DEBUG_ENEMY_NAV_LOG && (wantLog || !found)) {
+        if (DEBUG_ENEMY_NAV_LOG && wantLog) {
             _enemyNavLogAdd(enemy, {
                 eid,
                 mid: monsterId,
                 t: nowMs,
-                reason: "astar_fail",
+                reason: "pf_astar_fail",
                 pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
                 dist: { cur: 0, mask: curMask, allowUp: 0 },
-                nav: { lastIdx: lastNavIdx, astar: { nodes: expanded | 0, goalR: gr, goalC: gc } },
+                nav: { lastIdx: lastNavIdx, astar: { path: 0, goalR: gr, goalC: gc } },
                 hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
                 phase: phaseStr,
                 stuck: { until: stuckUntil, mode: stuckMode },
@@ -45638,12 +45621,21 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
                 vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 }
             }, true)
         }
-
         return false
     }
 
-    const nextR = Math.idiv(nextIdx, cols) | 0
-    const nextC = (nextIdx % cols) | 0
+    let nextC = gc | 0
+    let nextR = gr | 0
+    if (pathLen >= 2) {
+        nextC = path[1][0] | 0
+        nextR = path[1][1] | 0
+    }
+
+    // Footprint guard for the chosen next tile; fall back if too tight.
+    if (!_enemyNavCanOccupyCellForDims(cw, ch, nextR, nextC)) {
+        _enemyNavClearNavTargetData(enemy)
+        return false
+    }
 
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX, startIdx)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, nextR)
@@ -45657,10 +45649,10 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
             eid,
             mid: monsterId,
             t: nowMs,
-            reason: "astar",
+            reason: "pf_astar",
             pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
             dist: { cur: 0, mask: curMask, allowUp: 0 },
-            nav: { lastIdx: lastNavIdx, astar: { nodes: expanded | 0, path: pathLen | 0, goalR: gr, goalC: gc } },
+            nav: { lastIdx: lastNavIdx, astar: { path: pathLen | 0, goalR: gr, goalC: gc } },
             pick: { r: nextR, c: nextC, d: pathLen | 0 },
             hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
             phase: phaseStr,
@@ -46781,6 +46773,13 @@ function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number
     // Prefer A* path steering (tile-aware) when available
     if (_enemySteerTowardAStar(enemy, edgeX, edgeY, speed)) return
 
+    if (ENEMY_PATHFINDING_FORCE) {
+        // If forced and A* failed, halt so the failure is visible (and logged) instead of hiding via fallbacks.
+        enemy.vx = 0
+        enemy.vy = 0
+        return
+    }
+
     // Prefer shared nav-field (tile-aware, scalable)
     if (_enemySteerTowardNavField(enemy, speed)) return
 
@@ -46808,184 +46807,124 @@ function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number
 }
 
 
+const ENEMY_AI_LAST_POS_INIT = "__enemy_ai_last_pos_init"
+
 
 function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: number, nowMs: number): boolean {
+    return false //This function is busted. It acts even when enemies are not stuck. This needs a rework
 
-    // If already in a "stuck resolution" window, keep strafing for the remainder.
+    // IMPORTANT: We do NOT use pick.dx/pick.dy for steering.
+    // Anti-stuck must operate relative to the *already-chosen* steering (A*),
+    // otherwise it will overwrite path intent and look like “push into wall + oscillate”.
 
     const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
 
+    // If already in a "stuck resolution" window, keep strafing for the remainder.
     if (stuckUntil > 0 && nowMs < stuckUntil) {
 
         const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-
         const mode = (mode0 === 0 ? 1 : mode0)
 
+        // Forward direction = current intended velocity (set by A* earlier in the tick)
+        const vx0 = enemy.vx | 0
+        const vy0 = enemy.vy | 0
 
+        // If we have no intended direction, we can’t meaningfully strafe.
+        if ((vx0 | 0) === 0 && (vy0 | 0) === 0) return false
 
-        // Strafe perpendicular to desired direction, but keep a little "forward" component.
+        const fwd = Math.idiv((speed * 35) | 0, 100) | 0 // keep small forward component
 
-        const dx = pick.dx
-
-        const dy = pick.dy
-
-
-
-        const fwd = Math.idiv(speed * 35, 100) // 35% forward helps progress while sliding
-
-        if (Math.abs(dx) > Math.abs(dy)) {
-
-            // Intended horizontal ? strafe vertical
-
-            enemy.vx = dx >= 0 ? fwd : -fwd
-
-            const s = (dy !== 0) ? (dy >= 0 ? 1 : -1) : mode
-
-            enemy.vy = s * speed
-
+        // Strafe perpendicular to intended motion (not hero vector).
+        if (Math.abs(vx0) >= Math.abs(vy0)) {
+            // Intended horizontal => strafe vertical
+            enemy.vx = (vx0 >= 0) ? fwd : -fwd
+            enemy.vy = (mode >= 0 ? 1 : -1) * (speed | 0)
         } else {
-
-            // Intended vertical ? strafe horizontal
-
-            enemy.vy = dy >= 0 ? fwd : -fwd
-
-            const s = (dx !== 0) ? (dx >= 0 ? 1 : -1) : mode
-
-            enemy.vx = s * speed
-
+            // Intended vertical => strafe horizontal
+            enemy.vy = (vy0 >= 0) ? fwd : -fwd
+            enemy.vx = (mode >= 0 ? 1 : -1) * (speed | 0)
         }
 
-
-
-        sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
-
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
         return true
-
     }
-
-
 
     // Detect "stuck": didn't move since last tick, but had non-trivial velocity last tick.
-
-    const lastX = sprites.readDataNumber(enemy, ENEMY_AI_LAST_X)
-
-    const lastY = sprites.readDataNumber(enemy, ENEMY_AI_LAST_Y)
-
-
-
-    // If never initialized, seed and don't flag stuck
-
-    if (!lastX && !lastY) {
-
+    const lastInit = sprites.readDataNumber(enemy, ENEMY_AI_LAST_POS_INIT) | 0
+    if (!lastInit) {
         sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
-
         sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
-
+        sprites.setDataNumber(enemy, ENEMY_AI_LAST_POS_INIT, 1)
         return false
-
     }
 
-
+    const lastX = sprites.readDataNumber(enemy, ENEMY_AI_LAST_X)
+    const lastY = sprites.readDataNumber(enemy, ENEMY_AI_LAST_Y)
 
     const dxMove = enemy.x - lastX
-
     const dyMove = enemy.y - lastY
-
     const moved2 = dxMove * dxMove + dyMove * dyMove
 
-
+    // Save current position for next tick’s stuck check
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
+    sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
 
     const prevV = Math.abs(enemy.vx) + Math.abs(enemy.vy)
 
-
-
     // Tune thresholds: moved < ~0.5px^2 while pushing with velocity => stuck
-
     if (moved2 < 0.25 && prevV > 0.5) {
 
         // Flip strafe mode each time we get stuck to try the opposite side next
-
         const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-
         const mode = (mode0 === 0 ? 1 : -mode0) || 1
-
         sprites.setDataNumber(enemy, ENEMY_AI_STUCK_MODE, mode)
 
-
-
-
-
         if (DEBUG_ENEMY_STUCK_LOG) {
-
             const logUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL) | 0
-
             if ((nowMs | 0) >= (logUntil | 0)) {
-
                 const tileSize = WORLD_TILE_SIZE | 0
-
                 const r = Math.idiv(enemy.y | 0, tileSize) | 0
-
                 const c = Math.idiv(enemy.x | 0, tileSize) | 0
 
-                let curD = -1
+                console.log("[enemy][stuck] " + JSON.stringify({
+                    eid: getEnemyIndex(enemy) | 0,
+                    pos: { x: enemy.x | 0, y: enemy.y | 0 },
+                    move: { dx: dxMove, dy: dyMove, moved2: moved2 },
+                    v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
+                    stuckMode: mode,
+                    stuckUntil: (nowMs + 260) | 0
+                }))
 
-                if (_enemyNavDist && _enemyNavRows > 0 && _enemyNavCols > 0 && r >= 0 && c >= 0 && r < _enemyNavRows && c < _enemyNavCols) {
-
-                    curD = _enemyNavDist[_enemyNavIdx(r, c)] | 0
-
-                }
-
-
-
-                const tr = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_R) | 0
-                const tc = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_C) | 0
-                const td = sprites.readDataNumber(enemy, ENEMY_AI_NAV_TARGET_D) | 0
-                const lastNavIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0
-
-                const curIdx = _enemyNavIdx(r, c) | 0
-                const lastStuckIdx = sprites.readDataNumber(enemy, ENEMY_AI_LAST_STUCK_IDX) | 0
-                const lastStuckMs = sprites.readDataNumber(enemy, ENEMY_AI_LAST_STUCK_MS) | 0
-
-                const now = nowMs | 0
-                const dedupTile = (curIdx === (lastStuckIdx | 0))
-                const dedupTime = (lastStuckMs > 0 && (now - lastStuckMs) < (ENEMY_STUCK_DEDUP_MS | 0))
-
-                if (!(dedupTile && dedupTime)) {
-                    console.log("[enemy][stuck] " + JSON.stringify({
-                        eid: getEnemyIndex(enemy) | 0,
-                        pos: { x: enemy.x | 0, y: enemy.y | 0 },
-                        tile: { r, c, idx: curIdx, d: curD },
-                        target: { tr, tc, td },
-                        lastNavIdx,
-                        lastStuck: { idx: lastStuckIdx, ms: lastStuckMs },
-                        move: { dx: dxMove, dy: dyMove, moved2: moved2 },
-                        v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-                    }))
-                    sprites.setDataNumber(enemy, ENEMY_AI_LAST_STUCK_IDX, curIdx)
-                    sprites.setDataNumber(enemy, ENEMY_AI_LAST_STUCK_MS, now)
-
-                    if (DEBUG_ENEMY_NAV_LOG) {
-                        _enemyNavDump(enemy, "stuck")
-                        _enemyNavDumpLocalSnapshot(r, c, enemy)
-                    }
-                    sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
-                }
+                sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
             }
         }
+
         // Hold the "anti-stuck" behavior briefly
         sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, (nowMs + 260) | 0)
 
+        // Apply it immediately this tick (no recursion)
+        const modeNow = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
+        const modeApply = (modeNow === 0 ? 1 : modeNow)
 
-        // Apply it immediately this tick
+        const vx0 = enemy.vx | 0
+        const vy0 = enemy.vy | 0
+        if ((vx0 | 0) === 0 && (vy0 | 0) === 0) return false
 
-        return _enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)
+        const fwd = Math.idiv((speed * 35) | 0, 100) | 0
 
+        if (Math.abs(vx0) >= Math.abs(vy0)) {
+            enemy.vx = (vx0 >= 0) ? fwd : -fwd
+            enemy.vy = (modeApply >= 0 ? 1 : -1) * (speed | 0)
+        } else {
+            enemy.vy = (vy0 >= 0) ? fwd : -fwd
+            enemy.vx = (modeApply >= 0 ? 1 : -1) * (speed | 0)
+        }
+
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
+        return true
     }
 
-
-
     return false
-
 }
 
 

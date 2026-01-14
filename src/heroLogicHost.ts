@@ -165,6 +165,10 @@ function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], 
   const enemyY: number[] = [];
   const enemyHp: number[] = [];
   const enemyDistSq: number[] = [];
+  const enemyObjs: any[] = [];
+  let relicIds: string[] = [];
+  let weaponIds: string[] = [];
+  let weaponBonuses: any[] = [];
 
   for (let i = 0; i < (enemiesArr ? enemiesArr.length : 0); i++) {
     const e: any = enemiesArr[i];
@@ -174,30 +178,100 @@ function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], 
     const dx = (ex - meX) | 0;
     const dy = (ey - meY) | 0;
 
+    const hp = _he_readDataNumber(e, "hp", 0) | 0;
+    const maxHp = _he_readDataNumber(e, "maxHp", hp) | 0;
+    const mana = _he_readDataNumber(e, "mana", 0) | 0;
+    const maxMana = _he_readDataNumber(e, "maxMana", mana) | 0;
+    const vx = _he_readDataNumber(e, "vx", 0);
+    const vy = _he_readDataNumber(e, "vy", 0);
+    const dmg = _he_readDataNumber(e, "dmg", _he_readDataNumber(e, "damage", 0));
+
     enemyX.push(ex);
     enemyY.push(ey);
-    enemyHp.push(_he_readDataNumber(e, "hp", 0) | 0);
-    enemyDistSq.push(((dx * dx) + (dy * dy)) | 0);
+    enemyHp.push(hp);
+    const d2 = ((dx * dx) + (dy * dy)) | 0;
+    enemyDistSq.push(d2);
+    enemyObjs.push(Object.freeze({
+      hp,
+      maxHp,
+      mana,
+      maxMana,
+      x: ex | 0,
+      y: ey | 0,
+      vx,
+      vy,
+      dmg,
+      distSq: d2,
+    }));
   }
 
   const heroX: number[] = [];
   const heroY: number[] = [];
   const heroHp: number[] = [];
+  const heroLvl: number[] = [];
+  const heroObjs: any[] = [];
 
   for (let i = 0; i < (heroesArr ? heroesArr.length : 0); i++) {
     const h: any = heroesArr[i];
+    const hp = _he_readDataNumber(h, "hp", 0) | 0;
+    const maxHp = _he_readDataNumber(h, "maxHp", hp) | 0;
+    const mana = _he_readDataNumber(h, "mana", 0) | 0;
+    const maxMana = _he_readDataNumber(h, "maxMana", mana) | 0;
+    const lvl = _he_readDataNumber(h, "lvl", 1) | 0;
+    const vx = _he_readDataNumber(h, "vx", 0);
+    const vy = _he_readDataNumber(h, "vy", 0);
+    const dmg = _he_readDataNumber(h, "dmg", _he_readDataNumber(h, "damage", 0));
+
     heroX.push(_he_posX(h));
     heroY.push(_he_posY(h));
-    heroHp.push(_he_readDataNumber(h, "hp", 0) | 0);
+    heroHp.push(hp);
+    heroLvl.push(lvl);
+    heroObjs.push(Object.freeze({
+      hp,
+      maxHp,
+      mana,
+      maxMana,
+      lvl,
+      x: _he_posX(h) | 0,
+      y: _he_posY(h) | 0,
+      vx,
+      vy,
+      dmg,
+    }));
   }
 
   Object.freeze(enemyX);
   Object.freeze(enemyY);
   Object.freeze(enemyHp);
   Object.freeze(enemyDistSq);
+  Object.freeze(enemyObjs);
   Object.freeze(heroX);
   Object.freeze(heroY);
   Object.freeze(heroHp);
+  Object.freeze(heroLvl);
+  Object.freeze(heroObjs);
+
+  // Try to surface relics / weapons from UI snapshot (best-effort; may be empty)
+  try {
+    const g: any = globalThis as any;
+    const getter = g && g.__heGetUiSnapshot;
+    const pid = (heroIndex | 0) + 1;
+    const snap = (typeof getter === "function") ? getter(pid) : null;
+    if (snap && snap.relics && Array.isArray(snap.relics.ownedRelicIds)) {
+      relicIds = (snap.relics.ownedRelicIds || []).slice();
+    }
+    // If weapon data exists, surface ids/bonuses arrays (structure may vary by build)
+    if (snap && snap.weapons) {
+      const w = snap.weapons as any;
+      if (Array.isArray(w.ids)) weaponIds = w.ids.slice();
+      else if (Array.isArray(w.weaponIds)) weaponIds = w.weaponIds.slice();
+      if (Array.isArray(w.bonuses)) weaponBonuses = w.bonuses.slice();
+    }
+  } catch {}
+
+  Object.freeze(relicIds);
+  Object.freeze(weaponIds);
+  Object.freeze(weaponBonuses);
 
   const ctx = {
     heroIndex: heroIndex | 0,
@@ -205,6 +279,7 @@ function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], 
     meX: meX | 0,
     meY: meY | 0,
     meHp: _he_readDataNumber(me, "hp", 0) | 0,
+    meLvl: _he_readDataNumber(me, "lvl", 1) | 0,
 
     enemyCount: enemyX.length | 0,
     enemyX,
@@ -216,6 +291,15 @@ function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], 
     heroX,
     heroY,
     heroHp,
+
+    heroLvl,
+    heroes: heroObjs,
+
+    relicIds,
+    weaponIds,
+    weaponBonuses,
+
+    enemies: enemyObjs,
   };
 
   return Object.freeze(ctx);

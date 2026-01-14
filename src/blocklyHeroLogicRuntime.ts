@@ -66,6 +66,100 @@ function _ensureHeBlocksRegistered(): void {
   _mkEntry("he_on_button_ab", "When A+B Button Pressed");
   _mkEntry("he_choose_move", "Choose My Move");
 
+  // Enemy/Hero property accessors with dropdown fields
+  const enemyFieldOptions = [
+    ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+    ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"], ["distSq", "distSq"],
+  ];
+  if (!Blocks["he_ro_enemy_field"]) {
+    (Blockly as any).Blocks["he_ro_enemy_field"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown(enemyFieldOptions), "FIELD").appendField("of enemy at index");
+        this.appendValueInput("I").setCheck("Number");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+  const heroFieldOptions = [
+    ["hp", "hp"], ["maxHp", "maxHp"], ["mana", "mana"], ["maxMana", "maxMana"],
+    ["level", "lvl"], ["x", "x"], ["y", "y"], ["vx", "vx"], ["vy", "vy"], ["damage", "dmg"],
+  ];
+  if (!Blocks["he_ro_hero_field"]) {
+    (Blockly as any).Blocks["he_ro_hero_field"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown(heroFieldOptions), "FIELD").appendField("of hero at index");
+        this.appendValueInput("I").setCheck("Number");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+  if (!Blocks["he_ro_my_field"]) {
+    (Blockly as any).Blocks["he_ro_my_field"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField("my").appendField(new (Blockly as any).FieldDropdown(heroFieldOptions), "FIELD");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+  if (!Blocks["he_ro_my_ids"]) {
+    (Blockly as any).Blocks["he_ro_my_ids"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField("my").appendField(new (Blockly as any).FieldDropdown([
+          ["relic ids", "relics"], ["weapon ids", "weapons"],
+        ]), "KIND");
+        this.setOutput(true);
+      },
+    };
+  }
+  if (!Blocks["he_ro_closest_enemy_field"]) {
+    (Blockly as any).Blocks["he_ro_closest_enemy_field"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown(enemyFieldOptions), "FIELD").appendField("of closest enemy");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+  if (!Blocks["he_ro_reach_px"]) {
+    (Blockly as any).Blocks["he_ro_reach_px"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput()
+          .appendField("range of")
+          .appendField(new (Blockly as any).FieldDropdown([
+            ["strength", "strength"], ["agility", "agility"], ["intelligence", "intelligence"], ["wisdom", "wisdom"],
+          ]), "FAM")
+          .appendField("move with reach");
+        this.appendValueInput("REACH").setCheck("Number");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+  if (!Blocks["he_ro_my_ids"]) {
+    (Blockly as any).Blocks["he_ro_my_ids"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField("my").appendField(new (Blockly as any).FieldDropdown([
+          ["relic ids", "relics"], ["weapon ids", "weapons"],
+        ]), "KIND");
+        this.setOutput(true);
+      },
+    };
+  }
+  if (!Blocks["he_ro_closest_enemy_field"]) {
+    (Blockly as any).Blocks["he_ro_closest_enemy_field"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField(new (Blockly as any).FieldDropdown(enemyFieldOptions), "FIELD").appendField("of closest enemy");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+
 
   _mkDropdownSetter("he_set_family", "set family to", "FAM", [
     ["strength", "strength"], ["agility", "agility"], ["intelligence", "intelligence"], ["wisdom", "wisdom"],
@@ -147,11 +241,28 @@ function _ensureHeBlocksRegistered(): void {
   _mkSensor("he_ro_my_x", "my X", "Number");
   _mkSensor("he_ro_my_y", "my Y", "Number");
 
-  _mkSensor("he_ro_enemy_count", "enemy count", "Number");
-  _mkSensor("he_ro_closest_enemy_exists", "closest enemy exists?", "Boolean");
-  _mkSensor("he_ro_closest_enemy_hp", "closest enemy HP", "Number");
-  _mkSensor("he_ro_closest_enemy_dist", "closest enemy distance", "Number");
+  _mkSensor("he_ro_enemy_count", "total enemy count", "Number");
   _mkSensor("he_ro_weakest_enemy_index", "index of weakest enemy", "Number");
+  _mkSensor("he_ro_enemy_hp_all", "enemy HP list", null);
+  _mkSensor("he_ro_enemy_dist2_all", "enemy distance^2 list", null);
+  _mkSensor("he_ro_enemy_dist_all", "enemy distance list", null);
+  _mkSensor("he_ro_ally_hp_all", "ally HP list", null);
+  _mkSensor("he_ro_ally_level_all", "ally level list", null);
+  _mkSensor("he_ro_my_level", "my level", "Number");
+  _mkSensor("he_ro_my_relics", "my relic ids", null);
+  _mkSensor("he_ro_my_weapons", "my weapon ids", null);
+  _mkSensor("he_ro_my_weapon_bonuses", "my weapon bonuses", null);
+  _mkSensor("he_ro_enemies_list", "enemies (list)", null);
+  _mkSensor("he_ro_heroes_list", "heroes (list)", null);
+  _mkSensor("he_ro_my_level", "my level", "Number");
+  _mkSensor("he_ro_enemy_hp_all", "enemy HP list", null);
+  _mkSensor("he_ro_enemy_dist2_all", "enemy distance^2 list", null);
+  _mkSensor("he_ro_enemy_dist_all", "enemy distance list", null);
+  _mkSensor("he_ro_ally_hp_all", "ally HP list", null);
+  _mkSensor("he_ro_ally_level_all", "ally level list", null);
+  _mkSensor("he_ro_my_relics", "my relic ids", null);
+  _mkSensor("he_ro_my_weapons", "my weapon ids", null);
+  _mkSensor("he_ro_my_weapon_bonuses", "my weapon bonuses", null);
 
   if (!Blocks["he_ro_enemy_hp_at"]) {
     (Blockly as any).Blocks["he_ro_enemy_hp_at"] = {
@@ -233,17 +344,7 @@ function _ensureHeBlocksRegistered(): void {
     };
   }
 
-  if (!Blocks["he_math_max2"]) {
-    (Blockly as any).Blocks["he_math_max2"] = {
-      init: function () {
-        this.setColour("#ffd54a");
-        this.appendValueInput("A").appendField("max");
-        this.appendValueInput("B").appendField("and");
-        this.setOutput(true, "Number");
-      },
-    };
-  }
-
+  // Back-compat: clamp block (kept for existing XML even if not shown in toolbox)
   if (!Blocks["he_math_clamp"]) {
     (Blockly as any).Blocks["he_math_clamp"] = {
       init: function () {
@@ -251,6 +352,17 @@ function _ensureHeBlocksRegistered(): void {
         this.appendValueInput("V").appendField("clamp");
         this.appendValueInput("MIN").appendField("min");
         this.appendValueInput("MAX").appendField("max");
+        this.setOutput(true, "Number");
+      },
+    };
+  }
+
+  if (!Blocks["he_math_max2"]) {
+    (Blockly as any).Blocks["he_math_max2"] = {
+      init: function () {
+        this.setColour("#ffd54a");
+        this.appendValueInput("A").appendField("max");
+        this.appendValueInput("B").appendField("and");
         this.setOutput(true, "Number");
       },
     };
@@ -424,25 +536,42 @@ status2 = ${v};
   _sensor("he_ro_my_mp", "__heRO_myMp()");
   _sensor("he_ro_my_x", "__heRO_myX()");
   _sensor("he_ro_my_y", "__heRO_myY()");
+  _sensor("he_ro_my_level", "__heRO_myLevel()");
   _sensor("he_ro_enemy_count", "__heRO_enemyCount()");
-  _sensor("he_ro_closest_enemy_exists", "__heRO_enemyCount() > 0");
-  _sensor("he_ro_closest_enemy_hp", "__heRO_closestEnemyHp()");
-  _sensor("he_ro_closest_enemy_dist", "__heRO_closestEnemyDist()");
-  _sensor("he_ro_weakest_enemy_index", "__heRO_weakestEnemyIndex()");
+  _sensor("he_ro_enemies_list", "__heEnemies()");
+  _sensor("he_ro_heroes_list", "__heHeroes()");
 
   G.forBlock["he_ro_enemies_within_radius"] = function (block: any, generator: any) {
     const r = generator.valueToCode(block, "R", generator.ORDER_NONE) || "0";
     return [`__heRO_enemiesWithinRadius(${r})`, G.ORDER_FUNCTION_CALL];
   };
 
-  G.forBlock["he_ro_enemy_hp_at"] = function (block: any, generator: any) {
+  G.forBlock["he_ro_enemy_field"] = function (block: any, generator: any) {
     const i = generator.valueToCode(block, "I", generator.ORDER_NONE) || "0";
-    return [`__heRO_enemyHpAt(${i})`, G.ORDER_FUNCTION_CALL];
+    const field = block.getFieldValue("FIELD") || "hp";
+    return [`__heEnemyField(${i}, ${JSON.stringify(field)})`, G.ORDER_FUNCTION_CALL];
   };
-
-  G.forBlock["he_ro_enemy_dist_at"] = function (block: any, generator: any) {
+  G.forBlock["he_ro_hero_field"] = function (block: any, generator: any) {
     const i = generator.valueToCode(block, "I", generator.ORDER_NONE) || "0";
-    return [`__heRO_enemyDistAt(${i})`, G.ORDER_FUNCTION_CALL];
+    const field = block.getFieldValue("FIELD") || "hp";
+    return [`__heHeroField(${i}, ${JSON.stringify(field)})`, G.ORDER_FUNCTION_CALL];
+  };
+  G.forBlock["he_ro_my_field"] = function (block: any) {
+    const field = block.getFieldValue("FIELD") || "hp";
+    return [`__heMyField(${JSON.stringify(field)})`, G.ORDER_FUNCTION_CALL];
+  };
+  G.forBlock["he_ro_my_ids"] = function (block: any) {
+    const kind = block.getFieldValue("KIND") || "relics";
+    return [`__heMyIds(${JSON.stringify(kind)})`, G.ORDER_FUNCTION_CALL];
+  };
+  G.forBlock["he_ro_closest_enemy_field"] = function (block: any) {
+    const field = block.getFieldValue("FIELD") || "hp";
+    return [`__heClosestEnemyField(${JSON.stringify(field)})`, G.ORDER_FUNCTION_CALL];
+  };
+  G.forBlock["he_ro_reach_px"] = function (block: any, generator: any) {
+    const fam = block.getFieldValue("FAM") || "strength";
+    const reach = generator.valueToCode(block, "REACH", generator.ORDER_NONE) || "0";
+    return [`__heReachPx(${JSON.stringify(fam)}, ${reach})`, G.ORDER_FUNCTION_CALL];
   };
 
   // 2D list helpers
@@ -479,14 +608,6 @@ status2 = ${v};
     const a = generator.valueToCode(block, "A", generator.ORDER_NONE) || "0";
     const b = generator.valueToCode(block, "B", generator.ORDER_NONE) || "0";
     return [`Math.max(${a}, ${b})`, generator.ORDER_FUNCTION_CALL];
-  };
-
-  G.forBlock["he_math_clamp"] = function (block: any, generator: any) {
-    const v = generator.valueToCode(block, "V", generator.ORDER_NONE) || "0";
-    const mn = generator.valueToCode(block, "MIN", generator.ORDER_NONE) || "0";
-    const mx = generator.valueToCode(block, "MAX", generator.ORDER_NONE) || "0";
-    // clamp(v, mn, mx) => min(max(v, mn), mx)
-    return [`Math.min(Math.max(${v}, ${mn}), ${mx})`, generator.ORDER_FUNCTION_CALL];
   };
 
   G.forBlock["he_list_min"] = function (block: any, generator: any) {
@@ -579,11 +700,10 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
 
     (Blockly as any).Xml.domToWorkspace(dom, ws);
 
-    // Drop any loose top-level blocks that are NOT entry blocks to avoid stray returns.
-    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
+    // Drop only stray top-level Return blocks; keep helper/procedure blocks intact.
     const tops: any[] = ws.getTopBlocks(false) || [];
     for (const b of tops) {
-      if (entryTypes.indexOf(b.type) < 0) {
+      if (b.type === "he_return_move") {
         try { b.dispose(false, true); } catch { }
       }
     }
@@ -625,6 +745,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         try { tail.nextConnection?.connect(ret.previousConnection); } catch { }
       }
     };
+    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
     const allBlocks: any[] = ws.getAllBlocks(false) || [];
     for (const b of allBlocks) {
       if (entryTypes.indexOf(b.type) >= 0) ensureReturn(b);
@@ -679,8 +800,11 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         const hasGT = (typeof globalThis !== "undefined");
         const ro = (hasGT && globalThis.__heBlocklyRO) ? globalThis.__heBlocklyRO : null;
         return ro || {
-          meHp: 0, meMp: 0, meX: 0, meY: 0,
-          enemyCount: 0, enemyHp: [], enemyDistSq: []
+          heroIndex: 0,
+          meHp: 0, meMp: 0, meX: 0, meY: 0, meLvl: 1,
+          enemyCount: 0, enemyHp: [], enemyDistSq: [], enemies: [],
+          heroCount: 0, heroHp: [], heroX: [], heroY: [], heroLvl: [], heroes: [],
+          relicIds: [], weaponIds: [], weaponBonuses: [],
         };
       }
       function __heNum(v) { const n = Number(v); return (typeof n === "number" && isFinite(n)) ? n : 0; }
@@ -699,6 +823,11 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         const v = a[idx];
         return (typeof v === "number") ? (v|0) : 0;
       }
+      function __heRO_enemyHpAll() {
+        const ro = __heRO();
+        const a = (ro.enemyHp && ro.enemyHp.length) ? ro.enemyHp : [];
+        return a.slice(0);
+      }
       function __heRO_enemyDistSqAt(i) {
         const ro = __heRO();
         const a = (ro.enemyDistSq && ro.enemyDistSq.length) ? ro.enemyDistSq : [];
@@ -707,9 +836,19 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         const v = a[idx];
         return (typeof v === "number") ? (+v) : 0;
       }
+      function __heRO_enemyDistSqAll() {
+        const ro = __heRO();
+        const a = (ro.enemyDistSq && ro.enemyDistSq.length) ? ro.enemyDistSq : [];
+        return a.slice(0);
+      }
       function __heRO_enemyDistAt(i) {
         const ds = __heRO_enemyDistSqAt(i);
         return Math.sqrt(Math.max(0, ds));
+      }
+      function __heRO_enemyDistAll() {
+        const ro = __heRO();
+        const a = (ro.enemyDistSq && ro.enemyDistSq.length) ? ro.enemyDistSq : [];
+        return a.map(v => Math.sqrt(Math.max(0, Number(v) || 0)));
       }
       function __heRO_closestEnemyIndex() {
         const ro = __heRO();
@@ -742,6 +881,143 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
           if (hp < best) { best = hp; bestI = i; }
         }
         return bestI;
+      }
+      function __heRO_allyHpAll() {
+        const ro = __heRO();
+        const a = (ro.heroHp && ro.heroHp.length) ? ro.heroHp : [];
+        return a.slice(0);
+      }
+      function __heRO_allyLevelAll() {
+        const ro = __heRO();
+        const a = (ro.heroLvl && ro.heroLvl.length) ? ro.heroLvl : [];
+        return a.slice(0);
+      }
+      function __heRO_myLevel() {
+        const ro = __heRO();
+        return (ro.meLvl | 0) || 0;
+      }
+      function __heRO_myRelics() {
+        const ro = __heRO();
+        const a = (ro.relicIds && ro.relicIds.length) ? ro.relicIds : [];
+        return a.slice(0);
+      }
+      function __heRO_myWeapons() {
+        const ro = __heRO();
+        const a = (ro.weaponIds && ro.weaponIds.length) ? ro.weaponIds : [];
+        return a.slice(0);
+      }
+      function __heRO_myWeaponBonuses() {
+        const ro = __heRO();
+        const a = (ro.weaponBonuses && ro.weaponBonuses.length) ? ro.weaponBonuses : [];
+        return a.slice(0);
+      }
+      function __heEnemies() {
+        const ro = __heRO();
+        const a = Array.isArray(ro.enemies) ? ro.enemies : [];
+        return a.slice(0);
+      }
+      function __heHeroes() {
+        const ro = __heRO();
+        const a = Array.isArray(ro.heroes) ? ro.heroes : [];
+        return a.slice(0);
+      }
+      function __heEnemyField(i, field) {
+        const arr = __heEnemies();
+        const obj = arr[i|0];
+        if (!obj) return 0;
+        switch (field) {
+          case "hp": return obj.hp | 0;
+          case "maxHp": return obj.maxHp | 0;
+          case "mana": return obj.mana | 0;
+          case "maxMana": return obj.maxMana | 0;
+          case "x": return obj.x | 0;
+          case "y": return obj.y | 0;
+          case "vx": return +obj.vx || 0;
+          case "vy": return +obj.vy || 0;
+          case "dmg": return obj.dmg | 0;
+          case "distSq": return obj.distSq | 0;
+          default: return 0;
+        }
+      }
+      function __heHeroField(i, field) {
+        const arr = __heHeroes();
+        const obj = arr[i|0];
+        if (!obj) return 0;
+        switch (field) {
+          case "hp": return obj.hp | 0;
+          case "maxHp": return obj.maxHp | 0;
+          case "mana": return obj.mana | 0;
+          case "maxMana": return obj.maxMana | 0;
+          case "lvl": return obj.lvl | 0;
+          case "x": return obj.x | 0;
+          case "y": return obj.y | 0;
+          case "vx": return +obj.vx || 0;
+          case "vy": return +obj.vy || 0;
+          case "dmg": return obj.dmg | 0;
+          default: return 0;
+        }
+      }
+      function __heMyField(field) {
+        const ro = __heRO();
+        const idx = (ro.heroIndex | 0) || 0;
+        return __heHeroField(idx, field);
+      }
+      function __heMyIds(kind) {
+        const ro = __heRO();
+        if (kind === "relics") return __heRO_myRelics();
+        if (kind === "weapons") return __heRO_myWeapons();
+        return [];
+      }
+      function __heClosestEnemyField(field) {
+        const idx = __heRO_closestEnemyIndex();
+        if (idx < 0) return 0;
+        return __heEnemyField(idx, field);
+      }
+      function __heReachPx(family, reachVal) {
+        const famStr = ("" + family).toLowerCase();
+        const famNum = Number(family);
+        const famName = (() => {
+          if (famStr === "strength" || famNum === 0) return "strength";
+          if (famStr === "agility" || famNum === 1) return "agility";
+          if (famStr === "intelligence" || famStr === "intellect" || famNum === 2) return "intelligence";
+          if (famStr === "wisdom" || famStr === "support" || famNum === 3) return "wisdom";
+          return "strength";
+        })();
+        const BAL: any = (typeof globalThis !== "undefined" && (globalThis as any).BALANCE) ? (globalThis as any).BALANCE : null;
+        const mv = BAL && BAL.MOVES ? BAL.MOVES : null;
+        const rv = Number(reachVal) || 0;
+        if (famName === "strength" && mv && mv.STRENGTH) {
+          const base = Number(mv.STRENGTH.REACH_BASE_PX) || 0;
+          const per = Number(mv.STRENGTH.REACH_PER_POINT_PX) || 0;
+          return base + rv * per;
+        }
+        if (famName === "agility" && mv && mv.AGILITY) {
+          const base = Number(mv.AGILITY.REACH_BASE_PX) || 0;
+          const per = Number(mv.AGILITY.REACH_PER_POINT_PX) || 0;
+          return base + rv * per;
+        }
+        if (famName === "intelligence" && mv && mv.INTELLECT) {
+          const base = Number(mv.INTELLECT.REACH_BASE_PX) || 0;
+          const per = Number(mv.INTELLECT.REACH_PER_POINT_PX) || 0;
+          return base + rv * per;
+        }
+        if (famName === "wisdom" && mv && mv.SUPPORT) {
+          const base = Number(mv.SUPPORT.REACH_BASE_PX) || 0;
+          const per = Number(mv.SUPPORT.REACH_PER_POINT_PX) || 0;
+          return base + rv * per;
+        }
+        return rv;
+      }
+      function __heMyIds(kind) {
+        const ro = __heRO();
+        if (kind === "relics") return __heRO_myRelics();
+        if (kind === "weapons") return __heRO_myWeapons();
+        return [];
+      }
+      function __heClosestEnemyField(field) {
+        const idx = __heRO_closestEnemyIndex();
+        if (idx < 0) return 0;
+        return __heEnemyField(idx, field);
       }
       function __heRO_enemiesWithinRadius(r) {
         const n = __heRO_enemyCount();
