@@ -55,8 +55,8 @@ const PROP_FOCUS_AURA_BASE_SCALE = 1.12;
 const PROP_FOCUS_AURA_RADIUS_SCALE = 0.06; // each radius step adds this much scale
 
 // Gentle alpha pulse for interactable outlines.
-const PROP_FOCUS_AURA_PULSE_PERIOD_MS = 1800;
-const PROP_FOCUS_AURA_PULSE_ALPHA_MIN = 0.35;
+const PROP_FOCUS_AURA_PULSE_PERIOD_MS = 5000;
+const PROP_FOCUS_AURA_PULSE_ALPHA_MIN = 0;
 const PROP_FOCUS_AURA_PULSE_ALPHA_MAX = 0.9;
 
 // If an aura tile is fully opaque (no transparency), inflate it so a border shows.
@@ -114,7 +114,7 @@ const DEBUG_PROP_FOCUS_AURA_OVERRIDE = {
 const DEBUG_PROP_FOCUS_AURA_VERBOSE = false;
 const CHEST_AURA_PAD_PX = 2;
 const CHEST_AURA_PAD_KEY = "__chestAuraPadBox__";
-const DEBUG_PROP_FOCUS_AURA_BLINK = true;
+const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 
 
 type ParsedPropKey = {
@@ -2307,9 +2307,18 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         for (let i = 0; i < children.length; i++) {
           const ch: any = children[i];
           if (!ch) continue;
+          const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
+          const isEdge = !!(ch as any).__auraIsEdge;
           const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
           const padBaked = !!(ch as any).__auraPadBaked;
+          const blendMode = padBaked
+            ? (((Phaser as any)?.BlendModes?.LIGHTEN ?? (Phaser as any)?.BlendModes?.SCREEN) ?? 0)
+            : (((Phaser as any)?.BlendModes?.NORMAL) ?? 0);
           let finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
+          if (isMulti && finalScale > 1 && !isEdge) {
+            // Avoid overlaps between adjacent aura tiles on multi-tile props; keep padding on perimeter.
+            finalScale = 1;
+          }
           // For chests, we want the pad box to stay exactly its authored size (no extra scale).
           if (String(inst.baseName || "") === "chest") {
             finalScale = 1;
@@ -2319,6 +2328,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           ch.setScale?.(finalScale);
           ch.setDepth?.(depth);
           ch.setAlpha?.(auraAlpha);
+          try { ch.setBlendMode?.(blendMode); } catch { /* ignore */ }
           if (String(inst.baseName || "") === "chest") {
             try { ch.setTint?.(0xffffff); } catch { /* ignore */ }
             try { ch.setBlendMode?.((Phaser as any).BlendModes?.ADD ?? 1); } catch { /* ignore */ }
@@ -3359,6 +3369,12 @@ private _propCreateFocusAuraContainer(args: {
       if (!this.map) continue;
       if (worldR < 0 || worldC < 0 || worldR >= (this.map.height | 0) || worldC >= (this.map.width | 0)) continue;
 
+      const isEdge =
+        (dx === 0) ||
+        (dy === 0) ||
+        (dx === ((wTiles | 0) - 1)) ||
+        (dy === ((hTiles | 0) - 1));
+
       let atlasCol = (baseRef.col + dx) | 0;
       let atlasRow = (baseRef.row - ((hTiles | 0) - 1) + dy) | 0;
       let auraFi = ((atlasRow * auraCols + atlasCol) | 0);
@@ -3690,6 +3706,7 @@ private _propCreateFocusAuraContainer(args: {
       (img as any).__auraPadPx = padPxApplied;
       (img as any).__auraPadTexKey = padTexKey;
       (img as any).__auraPadMode = padMode;
+      (img as any).__auraIsEdge = isEdge;
       if (DEBUG_PROP_FOCUS_AURA_TRACE && String(baseName || "") === "chest" && padTexKey) {
         try {
           const g: any = (globalThis as any);

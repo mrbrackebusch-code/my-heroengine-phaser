@@ -1477,10 +1477,16 @@
             const pid = getPid();
             if (!pid) return;
             _lvlui.pendingOpen = true;
+            _lvlui_log("btn click -> openLevelUp");
             _lvlui_setShown(true);
             _lvlui_cmd(pid, { type: "openLevelUp" });
           });
         }
+
+        // Debug helper: returns recent LevelUp UI show/hide log as a string
+        window.__dumpLvlUiLog = function () {
+          return (_lvlui.log || []).join("\n");
+        };
 
         function setTitle(el, t) {
           if (!el) return;
@@ -1795,7 +1801,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
           selIdx: 0,
           btns: [],
           pendingOpen: false,
+          log: [],
         };
+
+        function _lvlui_log(msg) {
+          const ts = Date.now();
+          const line = `${ts} ${msg}`;
+          _lvlui.log.push(line);
+          if (_lvlui.log.length > 50) _lvlui.log.shift();
+        }
 
         // Add new options later by appending to this list ONLY.
         // Engine must also recognize the key in trySpendLevelUpPointOnCore.
@@ -1824,9 +1838,11 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (want) {
             R.lvlLayer.classList.add("he-show");
             R.lvlLayer.setAttribute("aria-hidden", "false");
+            _lvlui_log("show");
           } else {
             R.lvlLayer.classList.remove("he-show");
             R.lvlLayer.setAttribute("aria-hidden", "true");
+            _lvlui_log("hide");
           }
         }
 
@@ -1959,17 +1975,23 @@ function _readTeamCoins(pid, hero, spritesNS) {
         }
 
         function _lvlui_applySnapshot(snap) {
-          if (!snap || !snap.ready) {
+          const ready = !!(snap && snap.ready);
+          const uiMode = ready ? (snap.uiMode | 0) : 0;
+          const pts = ready ? Math.max(0, (snap.lvlPts | 0)) : 0;
+          const safe = ready && !!snap.safeForSpend;
+
+          // If we're waiting for the engine to flip uiMode, keep the layer up and skip hides.
+          if (_lvlui.pendingOpen) {
+            _lvlui_log(`pendingOpen uiMode=${uiMode} ready=${ready}`);
+            _lvlui_setShown(true);
+            if (uiMode !== 1) return;
+          }
+
+          if (!ready) {
+            _lvlui_log("snapshot not ready -> hide");
             _lvlui_setShown(false);
             return;
           }
-
-          const open = ((snap.uiMode | 0) === 1);
-          _lvlui_setShown(open);
-          if (!open) return;
-
-          const pts = Math.max(0, (snap.lvlPts | 0));
-          const safe = !!snap.safeForSpend;
 
           if (R.lvlPoints) {
             setText(R.lvlPoints, `Points: ${pts}`);
@@ -1978,10 +2000,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           if (pts <= 0) {
+            _lvlui.pendingOpen = false;
+            _lvlui_log("pts<=0 hide");
+            _lvlui_setShown(false);
             const pid = (snap.playerId | 0);
             if (pid > 0) _lvlui_cmd(pid, { type: "closeUI" });
             return;
           }
+
+          const open = (uiMode === 1);
+          _lvlui.pendingOpen = false;
+          _lvlui_log(`apply uiMode=${uiMode} open=${open} pts=${pts} safe=${safe}`);
+          _lvlui_setShown(open);
+          if (!open) return;
 
           for (const opt of LVLUI_MENU_ITEMS) {
             const v = document.getElementById(`lvlui-val-${opt.key}`);
@@ -2014,6 +2045,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
                 return;
               }
               const key = String(b.getAttribute("data-key") || "");
+              _lvlui.pendingOpen = true;
+              _lvlui_log(`spend click key=${key}`);
               _lvlui_cmd(pid, { type: "spendCore", key });
             });
           }

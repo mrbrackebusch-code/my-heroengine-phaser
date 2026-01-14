@@ -1718,7 +1718,7 @@ const BALANCE = {
 
     WAVES: {
 
-        SPAWN_INTERVAL_MS: 1200,
+        SPAWN_TICK_MS: 200,
 
         INITIAL_PHASE_DELAY_MS: 1000,
 
@@ -1727,6 +1727,24 @@ const BALANCE = {
         DANGER_BASE: 25,
 
         DANGER_PER_FLOOR: 6,
+
+        POOL_TARGET_COUNT_BASE: 8,
+
+        POOL_TARGET_COUNT_FLOOR_DIV: 12,
+
+        POOL_TARGET_COUNT_MIN: 6,
+
+        POOL_TARGET_COUNT_MAX: 20,
+
+        POOL_DURATION_BASE_MS: 22000,
+
+        POOL_DURATION_PER_FLOOR_MS: 120,
+
+        POOL_DURATION_PER_DANGER_MS: 14,
+
+        SPAWN_INTERVAL_MIN_MS: 600,
+
+        SPAWN_INTERVAL_MAX_MS: 2600,
 
         WAVE_COUNT_BASE: 3,
 
@@ -2392,6 +2410,8 @@ const ENEMY_DATA = {
     ADVANCE_RANGE_PX: "advRangePx",
 
     PROJECTILE_ID: "enemyProjId",
+
+    SPAWNER_ID: "spawnerId",
 
 
 
@@ -7887,19 +7907,16 @@ function _dunClearTransientFloorEntities(): void {
 
 
 
-    // Finite combat waves: reset per-floor state
-
+    // Combat spawn state: reset per-floor state
     _dunCombatWavesActive = false
-
     _dunCombatWavesComplete = false
-
-    currentWaveIndex = 0
-
-    currentWaveIsBreak = true
-
-    debugMonsterIndex = 0
-
-    wavePhaseUntilMs = (game.runtime() | 0) + 1000
+    _dunMonsterPool = []
+    _dunMonsterPoolTotalCount = 0
+    _dunMonsterPoolDanger = 0
+    _dunSpawnIntervalMs = 0
+    _dunNextEnemySpawnAtMs = 0
+    _enemySpawnerBag = []
+    _enemySpawnerLast = -1
 
 
 
@@ -41861,11 +41878,8 @@ function completeSupportPuzzleForHero(heroIndex: number) {
 
 
 
-// Wave spawns — scripted waves with short breaks between them.
-
-// The interval below is the *tick* rate; WAVE_DEFS controls spawn density + types.
-
-const ENEMY_SPAWN_INTERVAL_MS = BALANCE.WAVES.SPAWN_INTERVAL_MS // Wave sapwn knob
+// Enemy spawn driver tick (actual release cadence is per-floor).
+const ENEMY_SPAWN_TICK_MS = BALANCE.WAVES.SPAWN_TICK_MS
 
 
 
@@ -43852,14 +43866,8 @@ function setupEnemySpawners() {
 
 
 // --------------------------------------------------------------
-
-// Wave configuration
-
+// Wave configuration (legacy / debug-only)
 // --------------------------------------------------------------
-
-
-
-let currentWaveIndex = 0
 
 
 
@@ -44018,58 +44026,53 @@ function startEnemyWaves() {
     if (SHOP_MODE_ACTIVE) return
 
 
-
-    // Reset per-floor wave state
-
+    // Reset per-floor spawn state
     _dunCombatWavesActive = false
-
     _dunCombatWavesComplete = false
-
-    currentWaveIndex = 0
-
-    currentWaveIsBreak = true
-
-    debugMonsterIndex = 0
-
-    wavePhaseUntilMs = (game.runtime() | 0) + BALANCE.WAVES.RESET_START_DELAY_MS // faster start for testing
-
-
-
-    // Build procedural plan for THIS FLOOR (NO WAVE_DEFS)
-
-    _dunWavePlan = _buildWavePlanForFloor((_dunFloorIndex | 0), (ENEMY_SPAWN_INTERVAL_MS | 0))
-
-
+    _dunMonsterPool = []
+    _dunMonsterPoolTotalCount = 0
+    _dunMonsterPoolDanger = 0
+    _dunSpawnIntervalMs = 0
+    _dunNextEnemySpawnAtMs = 0
+    _enemySpawnerBag = []
+    _enemySpawnerLast = -1
 
     // If no spawners, treat as complete (combat clears when enemies are dead)
-
     if (!enemySpawners || enemySpawners.length == 0) {
-
         _dunCombatWavesComplete = true
-
         return
-
     }
-
-
-
-    if (!_dunWavePlan || _dunWavePlan.length == 0) {
-
-        _dunCombatWavesComplete = true
-
-        return
-
-    }
-
-
-
-    _dunCombatWavesActive = true
-
-
 
     const floorNum = Math.max(1, (_dunFloorIndex | 0)) | 0
+    const built = _buildMonsterPoolForFloor(_dunFloorIndex | 0)
+    _dunMonsterPool = built.monsters || []
+    _dunMonsterPoolTotalCount = _dunMonsterPool.length | 0
+    _dunMonsterPoolDanger = built.totalDanger | 0
 
-    console.log(`[waves] floor=${floorNum} planWaves=${_dunWavePlan.length} baseDanger=${_floorDangerBase(floorNum)}`)
+    if (!_dunMonsterPool || _dunMonsterPool.length == 0) {
+        _dunCombatWavesComplete = true
+        return
+    }
+
+    // Initial spawn: one per spawner on floor entry
+    for (let i = 0; i < enemySpawners.length; i++) {
+        if (!_spawnFromMonsterPool(i)) break
+    }
+
+    // Start release rotation fresh after the entry burst
+    _enemySpawnerBag = []
+    _enemySpawnerLast = -1
+
+    if (_dunMonsterPool.length == 0) {
+        _dunCombatWavesComplete = true
+        return
+    }
+
+    _dunSpawnIntervalMs = _calcSpawnIntervalMs(_dunMonsterPoolTotalCount | 0, floorNum, _dunMonsterPoolDanger)
+    _dunNextEnemySpawnAtMs = (game.runtime() | 0) + (_dunSpawnIntervalMs | 0)
+    _dunCombatWavesActive = true
+
+    console.log(`[spawns] floor=${floorNum} pool=${_dunMonsterPool.length} danger=${_dunMonsterPoolDanger} intervalMs=${_dunSpawnIntervalMs}`)
 
 }
 
@@ -50015,11 +50018,7 @@ game.onUpdateInterval(500, function () {
 
 
 
-// Wave spawns — scripted waves with short breaks between them.
-
-// The interval below is the *tick* rate for the spawner; the wave table
-
-// controls when we are allowed to spawn and which kinds appear.
+// Legacy wave UI + defs (unused by pool-based spawns).
 
 
 
@@ -50259,29 +50258,16 @@ const POSSIBLE_MONSTERS = [
 
 
 
-// Wave state
-
-//let currentWaveIndex = 0
-
-let currentWaveIsBreak = true
-
-let wavePhaseUntilMs = game.runtime() + BALANCE.WAVES.INITIAL_PHASE_DELAY_MS // short delay before first wave
-
-
-
-// Finite combat waves: per-floor bookkeeping
-
+// Spawn pool state (per combat floor)
 let _dunCombatWavesActive = false
-
 let _dunCombatWavesComplete = false
-
-
-
-
-
-// Debug: cycle through all POSSIBLE_MONSTERS on Wave 1
-
-let debugMonsterIndex = 0
+let _dunMonsterPool: string[] = []
+let _dunMonsterPoolTotalCount = 0
+let _dunMonsterPoolDanger = 0
+let _dunSpawnIntervalMs = 0
+let _dunNextEnemySpawnAtMs = 0
+let _enemySpawnerBag: number[] = []
+let _enemySpawnerLast = -1
 
 
 
@@ -50709,6 +50695,133 @@ function _pickFromPool(pool: { id: string, w: number }[]): string {
 
 }
 
+function _minMonsterDanger(slimeOnly: boolean): number {
+    let min = 999999
+    for (let i = 0; i < MONSTER_CATALOG.length; i++) {
+        const m = MONSTER_CATALOG[i]
+        if (slimeOnly && m.id !== "slime") continue
+        if ((m.danger | 0) <= 0) continue
+        if ((m.danger | 0) < min) min = m.danger | 0
+    }
+    if (min === 999999) return 1
+    return min | 0
+}
+
+function _cheapestMonsterId(slimeOnly: boolean): string {
+    let min = 999999
+    let id = MONSTER_CATALOG[0]?.id || "eyeball"
+    for (let i = 0; i < MONSTER_CATALOG.length; i++) {
+        const m = MONSTER_CATALOG[i]
+        if (slimeOnly && m.id !== "slime") continue
+        if ((m.danger | 0) <= 0) continue
+        if ((m.danger | 0) < min) {
+            min = m.danger | 0
+            id = m.id
+        }
+    }
+    return id
+}
+
+function _buildMonsterPoolForFloor(floorIndex0: number): { monsters: string[], totalDanger: number } {
+    const floor1 = Math.max(1, floorIndex0 | 0) | 0
+    const slimeOnly = (floor1 | 0) == 1
+    const baseDanger = _floorDangerBase(floor1) | 0
+    const targetCount = _clamp(
+        BALANCE.WAVES.POOL_TARGET_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.POOL_TARGET_COUNT_FLOOR_DIV),
+        BALANCE.WAVES.POOL_TARGET_COUNT_MIN,
+        BALANCE.WAVES.POOL_TARGET_COUNT_MAX
+    )
+
+    const minDanger = _minMonsterDanger(slimeOnly) | 0
+    let remaining = baseDanger | 0
+    let totalDanger = 0
+    const monsters: string[] = []
+
+    let safety = 0
+    while ((remaining | 0) >= (minDanger | 0) && safety < 1000) {
+        const remainingSlots = Math.max(1, (targetCount | 0) - monsters.length) | 0
+        const targetAvgDanger = _clamp(
+            Math.idiv(remaining | 0, remainingSlots | 0),
+            BALANCE.WAVES.TARGET_AVG_DANGER_MIN,
+            BALANCE.WAVES.TARGET_AVG_DANGER_MAX
+        )
+
+        const pool = slimeOnly ? [{ id: "slime", w: 1 }] : _buildPoolForTarget(targetAvgDanger, remaining)
+        if (!pool || pool.length == 0) break
+
+        const id = _pickFromPool(pool)
+        const md = _monsterDefById(id)
+        const danger = Math.max(1, md.danger | 0) | 0
+
+        monsters.push(id)
+        totalDanger = (totalDanger + danger) | 0
+        remaining = (remaining - danger) | 0
+        safety++
+    }
+
+    const minCount = Math.max(1, enemySpawners.length | 0) | 0
+    if (monsters.length < minCount) {
+        const fillerId = _cheapestMonsterId(slimeOnly)
+        const fillerDanger = Math.max(1, _monsterDefById(fillerId).danger | 0) | 0
+        while (monsters.length < minCount) {
+            monsters.push(fillerId)
+            totalDanger = (totalDanger + fillerDanger) | 0
+        }
+    }
+
+    return { monsters, totalDanger }
+}
+
+function _calcSpawnIntervalMs(totalCount: number, floor1: number, dangerBudget: number): number {
+    const count = Math.max(1, totalCount | 0) | 0
+    const f1 = Math.max(1, floor1 | 0) | 0
+    const danger = Math.max(1, dangerBudget | 0) | 0
+
+    const durationMs =
+        (BALANCE.WAVES.POOL_DURATION_BASE_MS | 0) +
+        Math.idiv((f1 | 0) * (BALANCE.WAVES.POOL_DURATION_PER_FLOOR_MS | 0), 1) +
+        Math.idiv((danger | 0) * (BALANCE.WAVES.POOL_DURATION_PER_DANGER_MS | 0), 1)
+
+    const interval = Math.idiv(durationMs | 0, count | 0) | 0
+    return _clamp(interval, BALANCE.WAVES.SPAWN_INTERVAL_MIN_MS, BALANCE.WAVES.SPAWN_INTERVAL_MAX_MS) | 0
+}
+
+function _pickNextSpawnerIndex(): number {
+    const n = enemySpawners ? enemySpawners.length | 0 : 0
+    if (n <= 0) return -1
+
+    if (_enemySpawnerBag.length == 0) {
+        for (let i = 0; i < n; i++) {
+            if ((i | 0) === (_enemySpawnerLast | 0)) continue
+            _enemySpawnerBag.push(i | 0)
+        }
+        if (_enemySpawnerBag.length == 0) {
+            _enemySpawnerBag.push(0)
+        }
+    }
+
+    const pick = randint(0, _enemySpawnerBag.length - 1) | 0
+    const spawnerId = _enemySpawnerBag[pick] | 0
+    _enemySpawnerBag.splice(pick, 1)
+    _enemySpawnerLast = spawnerId | 0
+    return spawnerId | 0
+}
+
+function _spawnFromMonsterPool(spawnerIndex: number): boolean {
+    if (!_dunMonsterPool || _dunMonsterPool.length == 0) return false
+    if (!enemySpawners || enemySpawners.length == 0) return false
+    if (spawnerIndex < 0 || spawnerIndex >= enemySpawners.length) return false
+
+    const pick = randint(0, _dunMonsterPool.length - 1) | 0
+    const monsterId = _dunMonsterPool[pick]
+    _dunMonsterPool.splice(pick, 1)
+
+    const spawner = enemySpawners[spawnerIndex]
+    const enemy = spawnEnemyOfKind(monsterId, spawner.x, spawner.y, /*elite=*/ false)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPAWNER_ID, spawnerIndex | 0)
+    return true
+}
+
 
 
 function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): GenWaveDef[] {
@@ -50891,158 +51004,41 @@ function pickEnemyKindForWave(waveIndex: number): string {
 
 
 
-game.onUpdateInterval(ENEMY_SPAWN_INTERVAL_MS, function () {
+game.onUpdateInterval(ENEMY_SPAWN_TICK_MS, function () {
 
     if (!HeroEngine._isStarted()) return
-
     if (_engineIsPaused()) return
-
     if (SHOP_MODE_ACTIVE) return
-
     if (!enemySpawners || enemySpawners.length == 0) return
-
-
-
-    // Finite waves run only when a combat floor has started them.
 
     if (!_dunCombatWavesActive || _dunCombatWavesComplete) return
 
-
+    if (!_dunMonsterPool || _dunMonsterPool.length == 0) {
+        _dunCombatWavesActive = false
+        _dunCombatWavesComplete = true
+        return
+    }
 
     const now = game.runtime() | 0
+    if ((now | 0) < (_dunNextEnemySpawnAtMs | 0)) return
 
+    const spawnerIdx = _pickNextSpawnerIndex() | 0
+    if (spawnerIdx < 0) return
 
-
-    // No procedural plan? then stop the wave driver (combat clears once enemies are dead)
-
-    if (!_dunWavePlan || _dunWavePlan.length == 0) {
-
+    const spawned = _spawnFromMonsterPool(spawnerIdx | 0)
+    if (!spawned) {
         _dunCombatWavesActive = false
-
         _dunCombatWavesComplete = true
-
         return
-
     }
 
-
-
-    // Phase transitions (break <-> wave)
-
-    if ((now | 0) >= (wavePhaseUntilMs | 0)) {
-
-        if (currentWaveIsBreak) {
-
-            // Start / resume a wave
-
-            currentWaveIsBreak = false
-
-
-
-            const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
-
-            const w = _dunWavePlan[wi]
-
-
-
-            wavePhaseUntilMs = (now + (w.durationMs | 0)) | 0
-
-            showWaveBanner(wi)
-
-        } else {
-
-            // Wave just ended
-
-            if ((currentWaveIndex | 0) >= (_dunWavePlan.length - 1)) {
-
-                currentWaveIsBreak = true
-
-                _dunCombatWavesActive = false
-
-                _dunCombatWavesComplete = true
-
-                wavePhaseUntilMs = (now + 999999999) | 0
-
-                console.log(`[waves] complete; finalWave=${currentWaveIndex} t=${now}`)
-
-                return
-
-            }
-
-
-
-            // Schedule next break, then next wave
-
-            currentWaveIsBreak = true
-
-            currentWaveIndex = ((currentWaveIndex | 0) + 1) | 0
-
-
-
-            const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
-
-            const w = _dunWavePlan[wi]
-
-
-
-            wavePhaseUntilMs = (now + (w.breakMs | 0)) | 0
-
-        }
-
+    if (!_dunMonsterPool || _dunMonsterPool.length == 0) {
+        _dunCombatWavesActive = false
+        _dunCombatWavesComplete = true
         return
-
     }
 
-
-
-    if (currentWaveIsBreak) {
-
-        // Rest window: no spawns
-
-        return
-
-    }
-
-
-
-    // Active wave
-
-    const wi = _clamp(currentWaveIndex | 0, 0, _dunWavePlan.length - 1) | 0
-
-    const wave = _dunWavePlan[wi]
-
-
-
-    // NEW: Cap alive enemies per-wave (prevents runaway spawns while testing)
-
-    const live = _dunCountLiveEnemies() | 0
-
-    const cap = (wave.maxAlive | 0) || 9999
-
-    if ((cap | 0) > 0 && (live | 0) >= (cap | 0)) return
-
-
-
-    // Wave-specific spawn chance
-
-    const chance = (wave.spawnChance | 0) === 0 ? 0 : (wave.spawnChance as any as number)
-
-    if (chance < 1 && Math.random() > chance) return
-
-
-
-    // Pick a spawner + pick a monster from THIS wave's pool
-
-    const idx = randint(0, enemySpawners.length - 1)
-
-    const s = enemySpawners[idx]
-
-
-
-    const kind = _pickFromPool(wave.pool)
-
-    spawnEnemyOfKind(kind, s.x, s.y, /*elite=*/ (wave.archetype === "elites"))
-
+    _dunNextEnemySpawnAtMs = (now + (_dunSpawnIntervalMs | 0)) | 0
 })
 
 
