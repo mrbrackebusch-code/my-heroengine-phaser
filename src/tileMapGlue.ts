@@ -54,6 +54,11 @@ const PROP_FOCUS_AURA_TEXTURE_SUFFIXES = [
 const PROP_FOCUS_AURA_BASE_SCALE = 1.12;
 const PROP_FOCUS_AURA_RADIUS_SCALE = 0.06; // each radius step adds this much scale
 
+// Gentle alpha pulse for interactable outlines.
+const PROP_FOCUS_AURA_PULSE_PERIOD_MS = 1800;
+const PROP_FOCUS_AURA_PULSE_ALPHA_MIN = 0.35;
+const PROP_FOCUS_AURA_PULSE_ALPHA_MAX = 0.9;
+
 // If an aura tile is fully opaque (no transparency), inflate it so a border shows.
 // This helps props like chests that fill the entire 32x32 tile.
 const PROP_FOCUS_AURA_FULL_OPAQUE_PAD_PX = 4;
@@ -149,6 +154,22 @@ function _parsePropKey(raw: string): ParsedPropKey {
 
 function _frameIndexFromTileRef(cols: number, ref: { row: number; col: number }): number {
   return ((ref.row | 0) * (cols | 0) + (ref.col | 0)) | 0;
+}
+
+function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number): number {
+  const t = (typeof nowMs === "number")
+    ? nowMs
+    : (((scene as any)?.time?.now ?? Date.now()) | 0);
+
+  const minA = Math.max(0, Math.min(1, PROP_FOCUS_AURA_PULSE_ALPHA_MIN));
+  const maxA = Math.max(minA, Math.min(1, PROP_FOCUS_AURA_PULSE_ALPHA_MAX));
+  const span = Math.max(0, maxA - minA);
+  const period = Math.max(500, PROP_FOCUS_AURA_PULSE_PERIOD_MS | 0);
+
+  const phase = ((t % period) / period) * Math.PI * 2;
+  const wave = (Math.sin(phase) + 1) * 0.5; // 0..1
+
+  return minA + span * wave;
 }
 
 
@@ -2190,6 +2211,8 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     return true;
   }
 
+  const auraAlpha = _propFocusAuraPulseAlpha(this.scene, now);
+
   // Compute scale/depth
   const rad = Math.max(0, (radius | 0));
   const scale = Math.max(
@@ -2263,6 +2286,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
   try {
     cont?.setVisible?.(true);
     cont?.setDepth?.(depth);
+    cont?.setAlpha?.(auraAlpha);
   } catch { /* ignore */ }
     // Chest: force a simple solid pad texture sized slightly larger than the tile
     if (active && String(inst.baseName || "") === "chest" && children.length) {
@@ -2294,8 +2318,8 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           ch.setVisible?.(true);
           ch.setScale?.(finalScale);
           ch.setDepth?.(depth);
+          ch.setAlpha?.(auraAlpha);
           if (String(inst.baseName || "") === "chest") {
-            ch.setAlpha?.(1);
             try { ch.setTint?.(0xffffff); } catch { /* ignore */ }
             try { ch.setBlendMode?.((Phaser as any).BlendModes?.ADD ?? 1); } catch { /* ignore */ }
           }

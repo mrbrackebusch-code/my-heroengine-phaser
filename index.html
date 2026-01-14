@@ -736,15 +736,43 @@
         text-overflow: ellipsis;
       }
 
-      #xp-panel .xp-bonus {
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.85);
-        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
+        #xp-panel .xp-levelup-btn {
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.4px;
+          color: rgba(255, 255, 255, 0.95);
+          text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+          background: linear-gradient(135deg, rgba(74,163,255,0.9), rgba(255,184,74,0.9));
+          border: 2px solid rgba(255,255,255,0.18);
+          border-radius: 8px;
+          padding: 6px 8px;
+          text-align: center;
+          width: 100%;
+          min-height: 28px;
+          box-sizing: border-box;
+          cursor: pointer;
+          transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+          display: block;
+          visibility: hidden;
+          opacity: 0;
+          pointer-events: none;
+        }
+        #xp-panel .xp-levelup-btn.ready {
+          visibility: visible;
+          opacity: 1;
+          pointer-events: auto;
+        }
+        #xp-panel .xp-levelup-btn.flash {
+          animation: xpLevelFlash 0.8s infinite alternate;
+        }
+        #xp-panel .xp-levelup-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+        }
+        @keyframes xpLevelFlash {
+          from { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); }
+          to   { box-shadow: 0 0 12px 2px rgba(255,255,255,0.55); }
+        }
 
       #xp-level-top {
         font-size: 12px;
@@ -1218,7 +1246,7 @@
             <div class="xp-title" id="xp-level-top">Level ...</div>
             <div class="xp-line" id="xp-left-progress">...</div>
             <div id="xp-bar"><div id="xp-bar-fill"></div></div>
-            <div class="xp-bonus" id="xp-bonus-pts">Points: ...</div>
+            <button class="xp-levelup-btn" id="xp-levelup-btn" type="button">LEVEL UP (0)</button>
 
             <div class="xp-stats" id="xp-stats">
               <div class="xp-stats-grid">
@@ -1418,11 +1446,11 @@
           abTime: document.getElementById("hud-ab-time"),
           abStatus: document.getElementById("hud-ab-status"),
           abElem: document.getElementById("hud-ab-elem"),
-          
+
           xpLeftProgress: document.getElementById("xp-left-progress"),
           xpLevelTop: document.getElementById("xp-level-top"),
           xpBarFill: document.getElementById("xp-bar-fill"),
-          xpBonusPts: document.getElementById("xp-bonus-pts"),
+          xpLevelupBtn: document.getElementById("xp-levelup-btn"),
           xpStatDmgLvl: document.getElementById("xp-stat-dmg-lvl"),
           xpStatReachLvl: document.getElementById("xp-stat-reach-lvl"),
           xpStatTimeLvl: document.getElementById("xp-stat-time-lvl"),
@@ -1442,6 +1470,16 @@
         function setText(el, txt) {
           if (!el) return;
           if (el.textContent !== txt) el.textContent = txt;
+        }
+
+        if (R.xpLevelupBtn) {
+          R.xpLevelupBtn.addEventListener("click", () => {
+            const pid = getPid();
+            if (!pid) return;
+            _lvlui.pendingOpen = true;
+            _lvlui_setShown(true);
+            _lvlui_cmd(pid, { type: "openLevelUp" });
+          });
         }
 
         function setTitle(el, t) {
@@ -1670,6 +1708,13 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _xp_wrapCount = 0;
           _xp_lastLevelSeen = 0;
           _xp_setBarHeight(0);
+          if (R.xpLevelupBtn) {
+            R.xpLevelupBtn.classList.remove("ready", "flash");
+            R.xpLevelupBtn.style.visibility = "hidden";
+            R.xpLevelupBtn.style.opacity = "0";
+            R.xpLevelupBtn.style.pointerEvents = "none";
+            setText(R.xpLevelupBtn, "LEVEL UP (0)");
+          }
         }
 
         function _xp_setTargetFrom(levelNow, pctNow) {
@@ -1749,6 +1794,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           inited: false,
           selIdx: 0,
           btns: [],
+          pendingOpen: false,
         };
 
         // Add new options later by appending to this list ONLY.
@@ -2916,9 +2962,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const xpTot = Math.max(0, readNum(spritesNS, hero, "xpTot"));
           setText(R.xpLevelTop, `Level ${lvl}`);
           setText(R.xpLeftProgress, `${xp}/${xpNext} XP`);
-          setText(R.xpBonusPts, `Points: ${lvlPts}`);
-
           const snap = _getUiSnapshotCached(pid);
+          const safeToSpend = !snap || !!snap.safeForSpend;
+          const hasLevelPoints = lvlPts > 0;
+          const canLevelUp = hasLevelPoints && safeToSpend;
+          if (R.xpLevelupBtn) {
+            setText(R.xpLevelupBtn, `LEVEL UP (${lvlPts})`);
+            R.xpLevelupBtn.classList.toggle("ready", hasLevelPoints);
+            R.xpLevelupBtn.classList.toggle("flash", canLevelUp);
+            R.xpLevelupBtn.style.visibility = hasLevelPoints ? "visible" : "hidden";
+            R.xpLevelupBtn.style.opacity = hasLevelPoints ? "1" : "0";
+            R.xpLevelupBtn.style.pointerEvents = canLevelUp ? "auto" : "none";
+          }
+
           _hud_renderRelics(document.getElementById("xp-relics-box"), snap);
 
           const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
@@ -2927,9 +2983,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _shopui_initOnce();
           _shopui_applySnapshot(snap);
           _relicTip_initOnce();
-
-          const flash = (lvlPts | 0) > 1;
-          if (R.xpBonusPts) R.xpBonusPts.classList.toggle("xp-pts-ready", flash);
 
           const lvlBonuses = (snap && snap.lvlBonuses) ? snap.lvlBonuses : null;
           const fmt = (v) => `+${(v | 0)}`;

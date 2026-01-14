@@ -27232,41 +27232,6 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-    // Toggle using intent chord
-
-    if (button === "A+B") {
-
-        if (uiMode0 === HERO_UI_MODE.LEVELUP || uiMode0 === HERO_UI_MODE.SHOP) {
-
-            _uiCloseAnyUi(heroIndex, playerId, "intent:A+B")
-
-            _doHeroMoveDbgReset(playerId)
-
-            return
-
-        }
-
-
-
-        const r = _uiTryOpenLevelUpUi(heroIndex, playerId, "intent:A+B")
-
-        if (r.ok) {
-
-            _doHeroMoveDbgReset(playerId)
-
-            return
-
-        }
-
-
-
-        // If UI can't open, fall through so A+B can still be a move input.
-
-        console.log("[UI] open denied", { pid: playerId, hi: heroIndex, reason: r.reason })
-
-    }
-
-
 
     // If UI is open, consume A/B so we never fire moves while the DOM menu is up later
 
@@ -44166,6 +44131,7 @@ const ENEMY_NAV_LOG_TILE_CHANGE_ONLY = true
 const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
 const ENEMY_ASTAR_MAX_NODES = 5000
+const ENEMY_STUCK_NUDGE_PX = 1
 
 let _enginePaused = false
 let _enginePausedReason = ""
@@ -46811,45 +46777,19 @@ const ENEMY_AI_LAST_POS_INIT = "__enemy_ai_last_pos_init"
 
 
 function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: number, nowMs: number): boolean {
-    return false //This function is busted. It acts even when enemies are not stuck. This needs a rework
-
-    // IMPORTANT: We do NOT use pick.dx/pick.dy for steering.
-    // Anti-stuck must operate relative to the *already-chosen* steering (A*),
-    // otherwise it will overwrite path intent and look like “push into wall + oscillate”.
-
-    const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
-
-    // If already in a "stuck resolution" window, keep strafing for the remainder.
-    if (stuckUntil > 0 && nowMs < stuckUntil) {
-
-        const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-        const mode = (mode0 === 0 ? 1 : mode0)
-
-        // Forward direction = current intended velocity (set by A* earlier in the tick)
-        const vx0 = enemy.vx | 0
-        const vy0 = enemy.vy | 0
-
-        // If we have no intended direction, we can’t meaningfully strafe.
-        if ((vx0 | 0) === 0 && (vy0 | 0) === 0) return false
-
-        const fwd = Math.idiv((speed * 35) | 0, 100) | 0 // keep small forward component
-
-        // Strafe perpendicular to intended motion (not hero vector).
-        if (Math.abs(vx0) >= Math.abs(vy0)) {
-            // Intended horizontal => strafe vertical
-            enemy.vx = (vx0 >= 0) ? fwd : -fwd
-            enemy.vy = (mode >= 0 ? 1 : -1) * (speed | 0)
-        } else {
-            // Intended vertical => strafe horizontal
-            enemy.vy = (vy0 >= 0) ? fwd : -fwd
-            enemy.vx = (mode >= 0 ? 1 : -1) * (speed | 0)
-        }
-
-        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
-        return true
+    // Only intervene when physically overlapping walls; nudge position instead of touching velocity.
+    const dims = _enemyGetColliderDims(enemy)
+    const cw = dims.w | 0
+    const ch = dims.h | 0
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
+    const aabb = _enemyNavAabbFromFoot(feet.footX | 0, feet.footY | 0, cw, ch)
+    const touchingWall = _boxOverlapsWallBounds(aabb.left, aabb.right, aabb.top, aabb.bottom)
+    if (!touchingWall) {
+        sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, 0)
+        return false
     }
 
-    // Detect "stuck": didn't move since last tick, but had non-trivial velocity last tick.
+    // Track last position to see if we failed to move along intended axes.
     const lastInit = sprites.readDataNumber(enemy, ENEMY_AI_LAST_POS_INIT) | 0
     if (!lastInit) {
         sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
@@ -46860,71 +46800,47 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
 
     const lastX = sprites.readDataNumber(enemy, ENEMY_AI_LAST_X)
     const lastY = sprites.readDataNumber(enemy, ENEMY_AI_LAST_Y)
-
     const dxMove = enemy.x - lastX
     const dyMove = enemy.y - lastY
-    const moved2 = dxMove * dxMove + dyMove * dyMove
-
-    // Save current position for next tick’s stuck check
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
 
-    const prevV = Math.abs(enemy.vx) + Math.abs(enemy.vy)
+    const vx0 = enemy.vx | 0
+    const vy0 = enemy.vy | 0
+    if (Math.abs(vx0) + Math.abs(vy0) < 0.001) return false
 
-    // Tune thresholds: moved < ~0.5px^2 while pushing with velocity => stuck
-    if (moved2 < 0.25 && prevV > 0.5) {
+    // Axis considered blocked if we intended motion but barely moved along it.
+    const tol = 0.2
+    const vxBlocked = Math.abs(vx0) > 0 && Math.abs(dxMove) < tol
+    const vyBlocked = Math.abs(vy0) > 0 && Math.abs(dyMove) < tol
 
-        // Flip strafe mode each time we get stuck to try the opposite side next
-        const mode0 = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-        const mode = (mode0 === 0 ? 1 : -mode0) || 1
-        sprites.setDataNumber(enemy, ENEMY_AI_STUCK_MODE, mode)
+    if (!vxBlocked && !vyBlocked) return false
 
-        if (DEBUG_ENEMY_STUCK_LOG) {
-            const logUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL) | 0
-            if ((nowMs | 0) >= (logUntil | 0)) {
-                const tileSize = WORLD_TILE_SIZE | 0
-                const r = Math.idiv(enemy.y | 0, tileSize) | 0
-                const c = Math.idiv(enemy.x | 0, tileSize) | 0
+    // Gating: only nudge every other detection to soften frequency.
+    let nudgeGate = sprites.readDataNumber(enemy, "__aiStuckNudgeGate") | 0
+    nudgeGate = (nudgeGate ^ 1) | 0 // flip 0/1
+    sprites.setDataNumber(enemy, "__aiStuckNudgeGate", nudgeGate)
+    if (nudgeGate !== 0) return false
 
-                console.log("[enemy][stuck] " + JSON.stringify({
-                    eid: getEnemyIndex(enemy) | 0,
-                    pos: { x: enemy.x | 0, y: enemy.y | 0 },
-                    move: { dx: dxMove, dy: dyMove, moved2: moved2 },
-                    v: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
-                    stuckMode: mode,
-                    stuckUntil: (nowMs + 260) | 0
-                }))
+    const targetX = (pick && pick.edgeX != null) ? (pick.edgeX | 0) : ((pick && pick.target) ? (pick.target.x | 0) : enemy.x | 0)
+    const targetY = (pick && pick.edgeY != null) ? (pick.edgeY | 0) : ((pick && pick.target) ? (pick.target.y | 0) : enemy.y | 0)
+    const nudge = ENEMY_STUCK_NUDGE_PX | 0
+    let nudged = false
 
-                sprites.setDataNumber(enemy, ENEMY_AI_STUCK_LOG_UNTIL, (nowMs + 800) | 0)
-            }
-        }
-
-        // Hold the "anti-stuck" behavior briefly
-        sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, (nowMs + 260) | 0)
-
-        // Apply it immediately this tick (no recursion)
-        const modeNow = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_MODE) | 0
-        const modeApply = (modeNow === 0 ? 1 : modeNow)
-
-        const vx0 = enemy.vx | 0
-        const vy0 = enemy.vy | 0
-        if ((vx0 | 0) === 0 && (vy0 | 0) === 0) return false
-
-        const fwd = Math.idiv((speed * 35) | 0, 100) | 0
-
-        if (Math.abs(vx0) >= Math.abs(vy0)) {
-            enemy.vx = (vx0 >= 0) ? fwd : -fwd
-            enemy.vy = (modeApply >= 0 ? 1 : -1) * (speed | 0)
-        } else {
-            enemy.vy = (vy0 >= 0) ? fwd : -fwd
-            enemy.vx = (modeApply >= 0 ? 1 : -1) * (speed | 0)
-        }
-
-        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
-        return true
+    if (vxBlocked) {
+        if (targetX > (enemy.x | 0)) { enemy.x = (enemy.x | 0) + nudge; nudged = true }
+        else if (targetX < (enemy.x | 0)) { enemy.x = (enemy.x | 0) - nudge; nudged = true }
+    }
+    if (vyBlocked) {
+        if (targetY > (enemy.y | 0)) { enemy.y = (enemy.y | 0) + nudge; nudged = true }
+        else if (targetY < (enemy.y | 0)) { enemy.y = (enemy.y | 0) - nudge; nudged = true }
     }
 
-    return false
+    if (nudged) {
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
+    }
+
+    return nudged
 }
 
 
