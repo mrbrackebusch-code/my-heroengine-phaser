@@ -5787,7 +5787,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -5952,6 +5952,15 @@ const INTERACT_DATA = {
     KIND: "dun_i_kind",
 
     OPENED: "dun_i_opened",
+    CHEST_ROLE: "dun_i_chest_role",
+    RELIC_POOL: "dun_i_relic_pool",
+    RELIC_FIXED: "dun_i_relic_fixed",
+    RELIC_MIN_RARITY: "dun_i_relic_min",
+    RELIC_MAX_RARITY: "dun_i_relic_max",
+    RELIC_TITLE: "dun_i_relic_title",
+    RELIC_FLAVOR: "dun_i_relic_flavor",
+    RELIC_THEME: "dun_i_relic_theme",
+    RELIC_COUNT: "dun_i_relic_count",
 
 }
 
@@ -7887,6 +7896,8 @@ function _dunClearTransientFloorEntities(): void {
 
     console.log(`[DUN][CLEAR] shop: trigger=${trigger01} npc=${npc01} npcsCleared=${npcsCleared} itemsCleared=${itemsCleared}`)
 
+    _shopClearRelicOffers()
+
 
 
     // NOTE: V10 does NOT declare _dunWallCollider anywhere.
@@ -8210,6 +8221,61 @@ function _dunEnterFloor_spawnRandomChest(nowMs: number): void {
 
 }
 
+function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
+    const rcChest = _dunPickRandomWalkableTile({
+        avoidR: _dunPadTileR,
+        avoidC: _dunPadTileC,
+        minManhattan: 2,
+        maxTries: 250
+    })
+    const chest = _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
+    if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "starter_relic")
+        _dunConfigureChestRelicOffer(chest, {
+            poolIds: _relicStarterOfferPool(),
+            title: "Starter Relic",
+            flavorText: "Choose your first relic.",
+            theme: "starter",
+            count: RELIC_STARTER_OFFER_COUNT | 0,
+        })
+    }
+}
+
+function _dunConfigureChestRelicOffer(chest: Sprite, cfg: RelicChestOfferConfig): void {
+    if (!chest || (chest.flags & sprites.Flag.Destroyed)) return
+    const poolIds = cfg.poolIds || []
+    if (poolIds.length > 0) sprites.setDataString(chest, INTERACT_DATA.RELIC_POOL, poolIds.join(","))
+    if (cfg.fixedRelicId) sprites.setDataString(chest, INTERACT_DATA.RELIC_FIXED, String(cfg.fixedRelicId || ""))
+    if (cfg.minRarity) sprites.setDataString(chest, INTERACT_DATA.RELIC_MIN_RARITY, String(cfg.minRarity || ""))
+    if (cfg.maxRarity) sprites.setDataString(chest, INTERACT_DATA.RELIC_MAX_RARITY, String(cfg.maxRarity || ""))
+    if (cfg.title) sprites.setDataString(chest, INTERACT_DATA.RELIC_TITLE, String(cfg.title || ""))
+    if (cfg.flavorText) sprites.setDataString(chest, INTERACT_DATA.RELIC_FLAVOR, String(cfg.flavorText || ""))
+    if (cfg.theme) sprites.setDataString(chest, INTERACT_DATA.RELIC_THEME, String(cfg.theme || ""))
+    if (cfg.count != null) sprites.setDataNumber(chest, INTERACT_DATA.RELIC_COUNT, cfg.count | 0)
+}
+
+function _dunConfigureChestRelicOfferBoss(chest: Sprite): void {
+    _dunConfigureChestRelicOffer(chest, {
+        poolIds: _relicBossOfferPool(),
+        title: "Boss Relic",
+        flavorText: "Claim a trophy of power.",
+        theme: "boss",
+        count: 3,
+    })
+}
+
+function _dunConfigureChestRelicOfferRandom(chest: Sprite, minRarity: string, maxRarity: string): void {
+    _dunConfigureChestRelicOffer(chest, {
+        poolIds: _relicCatalogIds(),
+        minRarity: minRarity,
+        maxRarity: maxRarity,
+        title: "Relic Cache",
+        flavorText: "Choose one relic from the cache.",
+        theme: "random",
+        count: 3,
+    })
+}
+
 
 
 function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
@@ -8221,6 +8287,7 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
     _dunSetPadPowered(true)
 
     _dunRuneSetName("teleport_rune")
+    _dunEnterFloor_spawnStarterChest(nowMs)
 
 }
 
@@ -8598,6 +8665,14 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
                 sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
 
+                const chestRole = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE)
+                let offerStarted = false
+                if (chestRole) {
+                    offerStarted = _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
+                } else {
+                    offerStarted = _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
+                }
+
 
 
                 // Capture pop coords BEFORE destroy so VFX has a stable origin.
@@ -8661,6 +8736,10 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 } catch { }
 
 
+
+                if (!offerStarted && _dunFloorKind === DUNGEON_KIND_ENTRANCE && chestRole === "starter_relic") {
+                    try { _relicOfferStartStarterChoice(pid | 0, hi | 0, nowMs | 0, "entrance-chest") } catch { }
+                }
 
                 addHeroCoins(hi, coinsReward, popX, popY)
 
@@ -51448,6 +51527,7 @@ type RelicDefinition = {
     effectText: string
 
     flavorText?: string
+    rarity?: string
 
     iconPrimary: RelicIconSpec
 
@@ -52203,6 +52283,8 @@ const RELIC_IDS = {
 
 }
 
+const RELIC_STARTER_OFFER_COUNT = 3
+
 
 
 const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
@@ -52216,6 +52298,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "Once every 10 seconds you become insubstantial upon the next time you would take damage",
 
         flavorText: "Ghost! I'm a ghost I say!",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 61, y: 35 }, //Column 61, row 35
 
@@ -52236,6 +52319,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "Each time you use exactly one of each type of move Strength/Agility/Intelligence/Wisdom consecutively, the damage trait of your next move is multiplied by 4",
 
         flavorText: "The end of a rainbow of moves has a pot of...damage!",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 61, y: 47}, //Column 61, row 47
 
@@ -52256,6 +52340,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "The next time you would die, you instead heal back to half HP. This relic will only work ONCE.",
 
         flavorText: "The light of my life!",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 11, y: 41 }, //Column 11, row 41
 
@@ -52278,6 +52363,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "Block up to 10 points of damage every 10 seconds",
 
         flavorText: "I guess I'm getting hit then",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 27, y: 31 }, //Column 27, row 31
 
@@ -52298,6 +52384,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "Release a wave of defensive fire the first time you take damage each floor",
 
         flavorText: "Burn baby burn!",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 29, y: 31 }, //Column 29, row 31
 
@@ -52318,6 +52405,7 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
         effectText: "+10 HP",
 
         flavorText: "Fluffy!",
+        rarity: "common",
 
         iconPrimary: { sheet: "ProjectUtumno_full", x: 9, y: 40 }, //Column 9, row 40
 
@@ -52325,6 +52413,57 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
 
     },
 
+}
+
+const RELIC_SHOP_OFFER_COUNT = 3
+const RELIC_SHOP_PRICE_DEFAULT = 10
+
+const RELIC_RARITY_RANK: { [key: string]: number } = {
+    common: 1,
+    uncommon: 2,
+    rare: 3,
+    boss: 4,
+    legendary: 5,
+}
+
+function _relicRarityRank(rarity: string): number {
+    const key = String(rarity || "").toLowerCase()
+    return (RELIC_RARITY_RANK[key] | 0) || 0
+}
+
+function _relicCatalogIds(): string[] {
+    const out: string[] = []
+    for (const k of Object.keys(RELIC_CATALOG)) {
+        if (!k) continue
+        out.push(String(k))
+    }
+    return out
+}
+
+function _relicStarterOfferPool(): string[] {
+    return _relicCatalogIds()
+}
+
+function _relicBossOfferPool(): string[] {
+    return _relicCatalogIds()
+}
+
+function _relicFilterIdsByRarity(ids: string[], minRarity: string, maxRarity: string): string[] {
+    const minRank = _relicRarityRank(String(minRarity || ""))
+    const maxRank = _relicRarityRank(String(maxRarity || ""))
+    if (minRank <= 0 && maxRank <= 0) return ids.slice(0)
+
+    const out: string[] = []
+    for (let i = 0; i < ids.length; i++) {
+        const rid = String(ids[i] || "")
+        if (!rid) continue
+        const def = RELIC_CATALOG[rid]
+        const rank = _relicRarityRank(def && def.rarity ? def.rarity : "")
+        if (minRank > 0 && rank < minRank) continue
+        if (maxRank > 0 && rank > maxRank) continue
+        out.push(rid)
+    }
+    return out
 }
 
 
@@ -52727,6 +52866,212 @@ const _relicNextFloorChoice: RelicNextFloorChoiceSession = {
 
     chosenKind: "",
 
+}
+
+type RelicOfferSession = {
+    active: boolean
+    activePid: number
+    title: string
+    flavorText: string
+    theme: string
+    source: string
+    options: string[]
+    openedAtMs: number
+}
+
+const _relicOfferSession: RelicOfferSession = {
+    active: false,
+    activePid: 0,
+    title: "Choose a Relic",
+    flavorText: "",
+    theme: "",
+    source: "",
+    options: [],
+    openedAtMs: 0,
+}
+
+function _relicOfferClear(reason: string, pidMaybe?: number): void {
+    if (!_relicOfferSession.active) return
+    if ((pidMaybe | 0) > 0 && (_relicOfferSession.activePid | 0) !== (pidMaybe | 0)) return
+
+    const pid = _relicOfferSession.activePid | 0
+    _relicOfferSession.active = false
+    _relicOfferSession.activePid = 0
+    _relicOfferSession.options = []
+    _relicOfferSession.title = "Choose a Relic"
+    _relicOfferSession.flavorText = ""
+    _relicOfferSession.theme = ""
+    _relicOfferSession.source = ""
+    _relicOfferSession.openedAtMs = 0
+
+    if (pid > 0) {
+        const hi = _relicResolveHeroIndexForPid(pid | 0)
+        if (hi >= 0 && hi < heroes.length) {
+            const hero = heroes[hi]
+            if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                const uiMode = sprites.readDataNumber(hero, HERO_UI_DATA.MODE) | 0
+                if ((uiMode | 0) === (HERO_UI_MODE.RELIC_PICKUP | 0)) {
+                    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE)
+                    sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, 0)
+                    unlockHeroControls(hi)
+                }
+            }
+        }
+    }
+
+    console.log("[RELIC][OFFER] clear", { reason, pid })
+}
+
+function _relicOfferPickRandomOptions(pool: string[], count: number): string[] {
+    const work: string[] = []
+    for (let i = 0; i < pool.length; i++) {
+        const rid = String(pool[i] || "")
+        if (rid) work.push(rid)
+    }
+    const out: string[] = []
+    let remaining = Math.min(count | 0, work.length | 0) | 0
+    while (remaining > 0 && work.length > 0) {
+        // TODO: add weighted rolls per relic/rarity here.
+        const idx = randint(0, (work.length - 1) | 0) | 0
+        out.push(work[idx])
+        work.splice(idx, 1)
+        remaining--
+    }
+    return out
+}
+
+type RelicChestOfferConfig = {
+    poolIds?: string[]
+    fixedRelicId?: string
+    minRarity?: string
+    maxRarity?: string
+    title?: string
+    flavorText?: string
+    theme?: string
+    count?: number
+}
+
+function _relicOfferOptionsFromPool(pid: number, pool: string[], count: number, minRarity: string, maxRarity: string): string[] {
+    const filtered = _relicFilterIdsByRarity(pool || [], minRarity, maxRarity)
+    const available: string[] = []
+    for (let i = 0; i < filtered.length; i++) {
+        const rid = String(filtered[i] || "")
+        if (!rid) continue
+        if (_relicHasPid(pid | 0, rid)) continue
+        available.push(rid)
+    }
+    return _relicOfferPickRandomOptions(available, count | 0)
+}
+
+function _relicStarterOfferOptions(pid: number, count: number): string[] {
+    return _relicOfferOptionsFromPool(pid | 0, _relicStarterOfferPool(), count | 0, "", "")
+}
+
+function _relicOfferStart(pid: number, hi: number, options: string[], nowMs: number, title: string, flavorText: string, theme: string, source: string): boolean {
+    if (!options || options.length <= 0) return false
+    if (_relicOfferSession.active) return false
+
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+
+    _relicOfferSession.active = true
+    _relicOfferSession.activePid = pid | 0
+    _relicOfferSession.options = options.slice(0, options.length)
+    _relicOfferSession.title = String(title || "Choose a Relic")
+    _relicOfferSession.flavorText = String(flavorText || "")
+    _relicOfferSession.theme = String(theme || "")
+    _relicOfferSession.source = String(source || "")
+    _relicOfferSession.openedAtMs = nowMs | 0
+
+    sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.RELIC_PICKUP)
+    sprites.setDataNumber(hero, HERO_UI_DATA.SEL, 0)
+    sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, nowMs | 0)
+    lockHeroControls(hi)
+
+    console.log("[RELIC][OFFER] open", { pid: pid | 0, options: _relicOfferSession.options.slice(0), title: _relicOfferSession.title, theme: _relicOfferSession.theme, source: _relicOfferSession.source })
+    return true
+}
+
+function _relicOfferStartStarterChoice(pid: number, hi: number, nowMs: number, source: string): boolean {
+    const options = _relicStarterOfferOptions(pid | 0, RELIC_STARTER_OFFER_COUNT | 0)
+    return _relicOfferStart(pid | 0, hi | 0, options, nowMs | 0, "Choose Your Relic", "Choose one to begin your journey.", "starter", source)
+}
+
+function _relicOfferConfigFromChest(chest: Sprite): RelicChestOfferConfig | null {
+    if (!chest || (chest.flags & sprites.Flag.Destroyed)) return null
+    const poolRaw = sprites.readDataString(chest, INTERACT_DATA.RELIC_POOL)
+    const fixed = sprites.readDataString(chest, INTERACT_DATA.RELIC_FIXED)
+    const minRarity = sprites.readDataString(chest, INTERACT_DATA.RELIC_MIN_RARITY)
+    const maxRarity = sprites.readDataString(chest, INTERACT_DATA.RELIC_MAX_RARITY)
+    const title = sprites.readDataString(chest, INTERACT_DATA.RELIC_TITLE)
+    const flavorText = sprites.readDataString(chest, INTERACT_DATA.RELIC_FLAVOR)
+    const theme = sprites.readDataString(chest, INTERACT_DATA.RELIC_THEME)
+    const count = sprites.readDataNumber(chest, INTERACT_DATA.RELIC_COUNT) | 0
+
+    let poolIds: string[] = []
+    if (poolRaw) {
+        const parts = String(poolRaw || "").split(",")
+        for (let i = 0; i < parts.length; i++) {
+            const rid = String(parts[i] || "").trim()
+            if (rid) poolIds.push(rid)
+        }
+    }
+
+    if (!fixed && poolIds.length === 0 && !minRarity && !maxRarity && !title && !flavorText && !theme && count <= 0) {
+        return null
+    }
+
+    return {
+        poolIds: poolIds.length ? poolIds : undefined,
+        fixedRelicId: fixed || undefined,
+        minRarity: minRarity || undefined,
+        maxRarity: maxRarity || undefined,
+        title: title || undefined,
+        flavorText: flavorText || undefined,
+        theme: theme || undefined,
+        count: count > 0 ? count : undefined,
+    }
+}
+
+function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest: Sprite, source: string): boolean {
+    const cfg = _relicOfferConfigFromChest(chest)
+    if (!cfg) return false
+
+    const count = (cfg.count != null ? (cfg.count | 0) : (RELIC_STARTER_OFFER_COUNT | 0)) | 0
+    const title = String(cfg.title || "Choose a Relic")
+    const flavorText = String(cfg.flavorText || "")
+    const theme = String(cfg.theme || "")
+
+    let options: string[] = []
+    if (cfg.fixedRelicId) {
+        const rid = String(cfg.fixedRelicId || "")
+        if (rid && !_relicHasPid(pid | 0, rid)) options = [rid]
+    } else {
+        const pool = (cfg.poolIds && cfg.poolIds.length) ? cfg.poolIds : _relicCatalogIds()
+        options = _relicOfferOptionsFromPool(pid | 0, pool, count | 0, String(cfg.minRarity || ""), String(cfg.maxRarity || ""))
+    }
+
+    return _relicOfferStart(pid | 0, hi | 0, options, nowMs | 0, title, flavorText, theme, source)
+}
+
+function _relicOfferTryPickIndex(hi: number, pid: number, index: number, where: string): { ok: boolean, reason: string } {
+    if (!_relicOfferSession.active) return { ok: false, reason: "no-offer" }
+    if ((_relicOfferSession.activePid | 0) !== (pid | 0)) return { ok: false, reason: "not-your-offer" }
+    const opts = _relicOfferSession.options || []
+    if (opts.length <= 0) return { ok: false, reason: "no-options" }
+
+    let idx = index | 0
+    if (idx < 0) idx = 0
+    if (idx >= opts.length) idx = (opts.length - 1) | 0
+    const relicId = String(opts[idx] || "")
+    if (!relicId) return { ok: false, reason: "bad-relic" }
+    if (_relicHasPid(pid | 0, relicId)) return { ok: false, reason: "owned" }
+
+    const granted = _relicGrantToPid(pid | 0, relicId, "relic-offer")
+    if (!granted) return { ok: false, reason: "grant-failed" }
+
+    _relicOfferClear("picked:" + String(where || ""), pid | 0)
+    return { ok: true, reason: "picked" }
 }
 
 
@@ -53421,29 +53766,7 @@ type RelicRuntimeState = {
 
 
 
-const _relicRuntimeByPid: { [pid: string]: RelicRuntimeState } = {
-
-    // Dev default: player 1 has the starter relics
-
-    "1": {
-
-        shroudReadyAtMs: 0,
-
-        lanternCharges: 1,
-
-        energyShieldValue: RELIC_ENERGY_SHIELD_MAX,
-
-        energyShieldLastMs: 0,
-
-        ringOfFireReady: true,
-
-        rainbowStep: 0,
-
-        rainbowArmed: false,
-
-    },
-
-}
+const _relicRuntimeByPid: { [pid: string]: RelicRuntimeState } = {}
 
 
 
@@ -53783,35 +54106,11 @@ function _relicUiCeilSeconds(remainMs: number): number {
 
 
 
-const _relicOwnedByPid: { [pid: string]: string[] } = {
-
-    // Dev default: player 1 has all starter relics so the DOM can render/test
-
-    "1": [
-
-        RELIC_IDS.ENERGY_SHIELD,
-
-        RELIC_IDS.RING_OF_FIRE,
-
-        RELIC_IDS.ETHEREAL_SHROUD,
-
-        RELIC_IDS.RAINBOW_SCEPTER,
-
-        RELIC_IDS.LANTERN_OF_LIFE,
-
-    ],
-
-}
+const _relicOwnedByPid: { [pid: string]: string[] } = {}
 
 
 
-const _relicUiStateByPid: { [pid: string]: { [relicId: string]: RelicUiState } } = {
-
-    // Runtime-derived UI state is computed on snapshot build; leave this empty by default.
-
-    "1": {},
-
-}
+const _relicUiStateByPid: { [pid: string]: { [relicId: string]: RelicUiState } } = {}
 
 
 
@@ -54107,9 +54406,30 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
 
 
 
-    // Offer session will be added later; keep field stable for DOM.
-
-    if (snap.offer == null) snap.offer = null
+    if (_relicOfferSession.active) {
+        let selectedIndex = 0
+        if ((pid | 0) === (_relicOfferSession.activePid | 0)) {
+            const hi = _relicResolveHeroIndexForPid(pid | 0)
+            if (hi >= 0 && hi < heroes.length) {
+                const hero = heroes[hi]
+                if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                    selectedIndex = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
+                }
+            }
+        }
+        snap.offer = {
+            activePlayerId: _relicOfferSession.activePid | 0,
+            title: String(_relicOfferSession.title || "Choose a Relic"),
+            flavorText: String(_relicOfferSession.flavorText || ""),
+            theme: String(_relicOfferSession.theme || ""),
+            options: (_relicOfferSession.options || []).slice(0, 3),
+            selectedIndex: selectedIndex | 0,
+            canControl: ((pid | 0) === (_relicOfferSession.activePid | 0)),
+            source: String(_relicOfferSession.source || ""),
+        }
+    } else {
+        if (snap.offer == null) snap.offer = null
+    }
 
 
 
@@ -54899,6 +55219,10 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
 
 
     const prevMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+    if ((prevMode | 0) === (HERO_UI_MODE.RELIC_PICKUP | 0)) {
+        _relicOfferClear("ui-close:" + String(where || ""), pid | 0)
+        return
+    }
 
     sprites.setDataNumber(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE)
     sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, 0)
@@ -54921,6 +55245,33 @@ function _uiCloseAnyUi(hi: number, pid: number, where: string): void {
 }
 
 
+let _shopRelicOfferFloorIndex = -1
+const _shopRelicOffersByPid: { [pid: string]: string[] } = {}
+
+function _shopClearRelicOffers(): void {
+    _shopRelicOfferFloorIndex = -1
+    for (const k of Object.keys(_shopRelicOffersByPid)) delete _shopRelicOffersByPid[k]
+}
+
+function _shopEnsureRelicOffers(pid: number): string[] {
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_SHOP) return []
+    if ((_shopRelicOfferFloorIndex | 0) !== (_dunFloorIndex | 0)) {
+        _shopRelicOfferFloorIndex = _dunFloorIndex | 0
+        _shopClearRelicOffers()
+        _shopRelicOfferFloorIndex = _dunFloorIndex | 0
+    }
+
+    const key = String(pid | 0)
+    let list = _shopRelicOffersByPid[key]
+    if (list && list.length > 0) return list.slice(0)
+
+    const pool = _relicCatalogIds()
+    const offers = _relicOfferOptionsFromPool(pid | 0, pool, RELIC_SHOP_OFFER_COUNT | 0, "", "")
+    _shopRelicOffersByPid[key] = offers.slice(0)
+    return offers.slice(0)
+}
+
+
 
 
 
@@ -54928,27 +55279,23 @@ function _shopUiBuildItemsForPid(pid: number, hi: number): any[] {
 
     const items: any[] = []
 
-    const relicId = RELIC_IDS.LOAF_OF_BREAD
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_SHOP) return items
 
-    if (relicId) {
-
+    const offers = _shopEnsureRelicOffers(pid | 0)
+    for (let i = 0; i < offers.length; i++) {
+        const relicId = String(offers[i] || "")
+        if (!relicId) continue
         const owned = _relicHasPid(pid | 0, relicId)
+        if (owned) continue
 
-        if (!owned) {
-
-            const price = RELIC_LOAF_OF_BREAD_SHOP_PRICE | 0
-
-            const canAfford = (getHeroCoins(hi) | 0) >= (price | 0)
-
-            items.push({
-                relicId,
-                price: price | 0,
-                owned: false,
-                canAfford: !!canAfford,
-            })
-
-        }
-
+        const price = RELIC_SHOP_PRICE_DEFAULT | 0
+        const canAfford = (getHeroCoins(hi) | 0) >= (price | 0)
+        items.push({
+            relicId,
+            price: price | 0,
+            owned: false,
+            canAfford: !!canAfford,
+        })
     }
 
     return items
@@ -55243,6 +55590,12 @@ g.__heUiCommand = function (cmd: any): any {
 
         return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
 
+    }
+
+    if (t === "relicPick") {
+        const index = cmd && typeof cmd.index === "number" ? (cmd.index | 0) : _uiReadNum(hero, HERO_UI_DATA.SEL, 0)
+        const r = _relicOfferTryPickIndex(hi, pid, index | 0, "__heUiCommand")
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
     }
 
 

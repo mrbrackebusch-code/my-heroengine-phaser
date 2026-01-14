@@ -451,6 +451,85 @@
         opacity: 0.75;
       }
 
+      /* -----------------------------
+        Relic offer overlay (DOM)
+        ----------------------------- */
+      #relic-offer-layer {
+        position: absolute;
+        inset: 0;
+
+        display: none;
+        pointer-events: none;
+        z-index: 14;
+
+        padding: 12px;
+        box-sizing: border-box;
+        background: rgba(0, 0, 0, 0.45);
+      }
+
+      #relic-offer-layer.he-show {
+        display: flex;
+        pointer-events: auto;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #relic-offer-box {
+        width: clamp(260px, 32vw, 420px);
+        max-height: min(88vh, 760px);
+        overflow: auto;
+
+        background: rgba(14, 12, 14, 0.98);
+        border: 2px solid #000;
+        border-radius: 14px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.40);
+
+        color: rgba(255, 255, 255, 0.92);
+        padding: 12px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #relic-offer-box[data-theme="starter"] {
+        box-shadow: 0 0 0 2px rgba(168, 214, 178, 0.35);
+      }
+      #relic-offer-box[data-theme="boss"] {
+        box-shadow: 0 0 0 2px rgba(220, 130, 130, 0.35);
+      }
+      #relic-offer-box[data-theme="random"] {
+        box-shadow: 0 0 0 2px rgba(132, 178, 220, 0.35);
+      }
+
+      #relic-offer-title {
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        font-size: 18px;
+      }
+
+      #relic-offer-flavor {
+        font-size: 12px;
+        opacity: 0.75;
+      }
+
+      #relic-offer-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      #relic-offer-hint {
+        font-size: 12px;
+        opacity: 0.75;
+      }
+
+      .relic-offer-item .shopui-price {
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
 
       /* -----------------------------
          HUD (4 boxes)
@@ -764,6 +843,12 @@
         }
         #xp-panel .xp-levelup-btn.flash {
           animation: xpLevelFlash 0.8s infinite alternate;
+        }
+        #xp-panel .xp-levelup-btn.blocked {
+          background: linear-gradient(135deg, rgba(120,120,120,0.85), rgba(70,70,70,0.85));
+          color: rgba(235, 235, 235, 0.8);
+          border-color: rgba(255,255,255,0.12);
+          text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.65);
         }
         #xp-panel .xp-levelup-btn:hover {
           transform: translateY(-1px);
@@ -1296,6 +1381,14 @@
               <div id="shop-hint">A: Buy  B: Close</div>
             </div>
           </div>
+          <div id="relic-offer-layer" aria-hidden="true">
+            <div id="relic-offer-box" data-theme="">
+              <div id="relic-offer-title">Relic Offer</div>
+              <div id="relic-offer-flavor"></div>
+              <div id="relic-offer-items"></div>
+              <div id="relic-offer-hint">A: Choose  B: Close</div>
+            </div>
+          </div>
 
           <div id="dialog-layer" aria-hidden="true">
             <div id="dialog-box">
@@ -1464,6 +1557,12 @@
           shopTitle: document.getElementById("shop-title"),
           shopItems: document.getElementById("shop-items"),
           shopHint: document.getElementById("shop-hint"),
+          relicOfferLayer: document.getElementById("relic-offer-layer"),
+          relicOfferBox: document.getElementById("relic-offer-box"),
+          relicOfferTitle: document.getElementById("relic-offer-title"),
+          relicOfferFlavor: document.getElementById("relic-offer-flavor"),
+          relicOfferItems: document.getElementById("relic-offer-items"),
+          relicOfferHint: document.getElementById("relic-offer-hint"),
 
         };
 
@@ -2317,6 +2416,231 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }, true);
         }
 
+        // ------------------------------------------------------------
+        // Relic offer window (uiMode===2 + snap.offer)
+        // Controls while open:
+        //   arrows = move selection
+        //   Enter/Space/Z = choose (A)
+        //   Esc/X = close (B)
+        // ------------------------------------------------------------
+        const _relicoffer = {
+          inited: false,
+          selIdx: 0,
+          btns: [],
+          lastKey: "",
+          canControl: false,
+        };
+
+        function _relicoffer_setShown(show) {
+          if (!R.relicOfferLayer) return;
+          const want = !!show;
+          const has = R.relicOfferLayer.classList.contains("he-show");
+          if (want === has) return;
+
+          if (want) {
+            R.relicOfferLayer.classList.add("he-show");
+            R.relicOfferLayer.setAttribute("aria-hidden", "false");
+          } else {
+            R.relicOfferLayer.classList.remove("he-show");
+            R.relicOfferLayer.setAttribute("aria-hidden", "true");
+          }
+        }
+
+        function _relicoffer_cmd(pid, payload) {
+          const fn = window.__heUiCommand;
+          if (typeof fn !== "function") return null;
+
+          const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
+          const r = fn(cmd);
+
+          try {
+            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
+            if (snap2 && snap2.ready) _relicoffer_applySnapshot(snap2);
+          } catch (_e) {}
+
+          return r;
+        }
+
+        function _relicoffer_setSel(idx) {
+          const n = _relicoffer.btns.length | 0;
+          if (n <= 0) return;
+          let i = idx | 0;
+          while (i < 0) i += n;
+          i = i % n;
+
+          const prev = _relicoffer.selIdx | 0;
+          _relicoffer.selIdx = i;
+          for (let k = 0; k < n; k++) {
+            const b = _relicoffer.btns[k];
+            if (!b) continue;
+            if (k === i) b.classList.add("shopui-sel");
+            else b.classList.remove("shopui-sel");
+          }
+
+          if (i !== prev && _relicoffer.canControl) {
+            const pid = getPid();
+            if (pid) _relicoffer_cmd(pid, { type: "setSel", sel: i });
+          }
+        }
+
+        function _relicoffer_iconStyleForRelic(relicId) {
+          if (typeof _shopui_iconStyleForRelic === "function") {
+            return _shopui_iconStyleForRelic(relicId);
+          }
+          const cat = _hud_getRelicCatalogOnce();
+          const def = cat ? (cat[String(relicId)] || null) : null;
+          const iconSpec = def ? def.iconPrimary : null;
+          const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
+          const x = iconSpec ? (iconSpec.x | 0) : 0;
+          const y = iconSpec ? (iconSpec.y | 0) : 0;
+          const url = RELIC_SHEET_URL[sheetName] || "";
+          return url ? `background-image:url('${url}'); background-position:${-(x * 32)}px ${-(y * 32)}px;` : "";
+        }
+
+        function _relicoffer_buildList(options, canControl) {
+          if (!R.relicOfferItems) return;
+          const list = R.relicOfferItems;
+          list.innerHTML = "";
+          _relicoffer.btns = [];
+
+          const cat = _hud_getRelicCatalogOnce();
+
+          if (!options || options.length <= 0) {
+            const sold = document.createElement("div");
+            sold.className = "shopui-soldout";
+            sold.textContent = "No relics available";
+            list.appendChild(sold);
+            return;
+          }
+
+          for (let i = 0; i < options.length; i++) {
+            const relicId = String(options[i] || "");
+            const def = cat ? (cat[relicId] || null) : null;
+
+            const name = (def && def.name) ? String(def.name) : (relicId || "Relic");
+            const desc = (def && def.effectText) ? String(def.effectText) : "";
+            const flavor = (def && def.flavorText) ? String(def.flavorText) : "";
+
+            const btn = document.createElement("button");
+            btn.className = "shopui-item relic-offer-item";
+            btn.type = "button";
+            btn.setAttribute("data-index", String(i));
+            if (!canControl) btn.disabled = true;
+
+            const icon = document.createElement("div");
+            icon.className = "xp-relic-icon shopui-icon";
+            icon.setAttribute("style", _relicoffer_iconStyleForRelic(relicId));
+
+            const info = document.createElement("div");
+            info.className = "shopui-info";
+
+            const nameEl = document.createElement("div");
+            nameEl.className = "shopui-name";
+            nameEl.textContent = name;
+
+            const descEl = document.createElement("div");
+            descEl.className = "shopui-desc";
+            descEl.textContent = desc;
+
+            info.appendChild(nameEl);
+            info.appendChild(descEl);
+
+            if (flavor) {
+              const flavorEl = document.createElement("div");
+              flavorEl.className = "shopui-flavor";
+              flavorEl.textContent = flavor;
+              info.appendChild(flavorEl);
+            }
+
+            const pickEl = document.createElement("div");
+            pickEl.className = "shopui-price";
+            pickEl.textContent = "Pick";
+
+            btn.appendChild(icon);
+            btn.appendChild(info);
+            btn.appendChild(pickEl);
+
+            btn.addEventListener("click", () => {
+              const pid = getPid();
+              if (!pid) return;
+              _relicoffer_setSel(i);
+              if (btn.disabled) return;
+              _relicoffer_cmd(pid, { type: "relicPick", index: i });
+            });
+
+            list.appendChild(btn);
+            _relicoffer.btns.push(btn);
+          }
+        }
+
+        function _relicoffer_applySnapshot(snap) {
+          if (!snap || !snap.ready) {
+            _relicoffer_setShown(false);
+            return;
+          }
+
+          const offer = snap.offer || null;
+          const open = !!(offer && offer.options && offer.options.length > 0);
+          _relicoffer_setShown(open);
+          if (!open) return;
+
+          if (R.relicOfferTitle) setText(R.relicOfferTitle, String(offer.title || "Relic Offer"));
+          if (R.relicOfferFlavor) setText(R.relicOfferFlavor, String(offer.flavorText || ""));
+          if (R.relicOfferBox) R.relicOfferBox.setAttribute("data-theme", String(offer.theme || ""));
+          if (R.relicOfferHint) setText(R.relicOfferHint, "A: Choose  B: Close");
+
+          const options = Array.isArray(offer.options) ? offer.options : [];
+          const canControl = !!offer.canControl;
+          _relicoffer.canControl = canControl;
+          const key = JSON.stringify({ options, canControl, theme: offer.theme || "" });
+          if (key !== _relicoffer.lastKey) {
+            _relicoffer.lastKey = key;
+            _relicoffer_buildList(options, canControl);
+          }
+
+          if (options && options.length > 0) _relicoffer_setSel((offer.selectedIndex | 0));
+        }
+
+        function _relicoffer_initOnce() {
+          if (_relicoffer.inited) return;
+          _relicoffer.inited = true;
+
+          window.addEventListener("keydown", (e) => {
+            if (!R.relicOfferLayer || !R.relicOfferLayer.classList.contains("he-show")) return;
+            if (_lvlui_isDialogOpen()) return;
+            if (!_relicoffer.canControl) return;
+
+            const k = e.key;
+
+            if (k === "ArrowDown" || k === "ArrowRight") {
+              e.preventDefault(); e.stopPropagation();
+              _relicoffer_setSel((_relicoffer.selIdx + 1) | 0);
+              return;
+            }
+            if (k === "ArrowUp" || k === "ArrowLeft") {
+              e.preventDefault(); e.stopPropagation();
+              _relicoffer_setSel((_relicoffer.selIdx - 1) | 0);
+              return;
+            }
+
+            if (k === "Enter" || k === " " || k === "z" || k === "Z") {
+              e.preventDefault(); e.stopPropagation();
+              const pid = getPid();
+              if (!pid) return;
+              _relicoffer_cmd(pid, { type: "relicPick", index: _relicoffer.selIdx | 0 });
+              return;
+            }
+
+            if (k === "Escape" || k === "x" || k === "X") {
+              e.preventDefault(); e.stopPropagation();
+              const pid = getPid();
+              if (!pid) return;
+              _relicoffer_cmd(pid, { type: "closeUI" });
+              return;
+            }
+          }, true);
+        }
+
         const _relicTip = {
           inited: false,
           activeEl: null,
@@ -2999,10 +3323,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const safeToSpend = !snap || !!snap.safeForSpend;
           const hasLevelPoints = lvlPts > 0;
           const canLevelUp = hasLevelPoints && safeToSpend;
+          const blocked = hasLevelPoints && !safeToSpend;
           if (R.xpLevelupBtn) {
             setText(R.xpLevelupBtn, `LEVEL UP (${lvlPts})`);
             R.xpLevelupBtn.classList.toggle("ready", hasLevelPoints);
             R.xpLevelupBtn.classList.toggle("flash", canLevelUp);
+            R.xpLevelupBtn.classList.toggle("blocked", blocked);
             R.xpLevelupBtn.style.visibility = hasLevelPoints ? "visible" : "hidden";
             R.xpLevelupBtn.style.opacity = hasLevelPoints ? "1" : "0";
             R.xpLevelupBtn.style.pointerEvents = canLevelUp ? "auto" : "none";
@@ -3015,6 +3341,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _lvlui_applySnapshot(snap);
           _shopui_initOnce();
           _shopui_applySnapshot(snap);
+          _relicoffer_initOnce();
+          _relicoffer_applySnapshot(snap);
           _relicTip_initOnce();
 
           const lvlBonuses = (snap && snap.lvlBonuses) ? snap.lvlBonuses : null;

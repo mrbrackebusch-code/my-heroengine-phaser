@@ -63,6 +63,11 @@ const PROP_FOCUS_AURA_PULSE_ALPHA_MAX = 0.9;
 // This helps props like chests that fill the entire 32x32 tile.
 const PROP_FOCUS_AURA_FULL_OPAQUE_PAD_PX = 4;
 const PROP_FOCUS_AURA_FORCE_BOX_BORDER = false;
+// Trim interior edges on multi-tile props to prevent overlapping aura brightening.
+const PROP_FOCUS_AURA_INNER_TRIM_PX = 2;
+// Extra trim applied on one side only (right/bottom) to allow 2+1px tuning.
+const PROP_FOCUS_AURA_INNER_TRIM_EXTRA_PX = 1;
+const PROP_FOCUS_AURA_INNER_TRIM_ONE_SIDE = true;
 
 // Depth tuning: keep aura behind the prop but above tile layers.
 const PROP_FOCUS_AURA_DEPTH_BEHIND_PROP = 2;
@@ -2311,9 +2316,11 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           const isEdge = !!(ch as any).__auraIsEdge;
           const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
           const padBaked = !!(ch as any).__auraPadBaked;
-          const blendMode = padBaked
-            ? (((Phaser as any)?.BlendModes?.LIGHTEN ?? (Phaser as any)?.BlendModes?.SCREEN) ?? 0)
-            : (((Phaser as any)?.BlendModes?.NORMAL) ?? 0);
+          const blendMode =
+            ((Phaser as any)?.BlendModes?.LIGHTEN ??
+              (Phaser as any)?.BlendModes?.SCREEN ??
+              (Phaser as any)?.BlendModes?.NORMAL ??
+              0);
           let finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
           if (isMulti && finalScale > 1 && !isEdge) {
             // Avoid overlaps between adjacent aura tiles on multi-tile props; keep padding on perimeter.
@@ -2326,6 +2333,19 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           }
           ch.setVisible?.(true);
           ch.setScale?.(finalScale);
+          const trimMask: any = (ch as any).__auraTrimMask;
+          if (trimMask) {
+            const trim = (ch as any).__auraTrim || { left: 0, right: 0, top: 0, bottom: 0 };
+            const baseTile = (ch as any).__auraTrimTile ?? tileSize;
+            const maskW = Math.max(1, (baseTile - (trim.left | 0) - (trim.right | 0)) * finalScale);
+            const maskH = Math.max(1, (baseTile - (trim.top | 0) - (trim.bottom | 0)) * finalScale);
+            const maskX = (ch.x ?? 0) - (baseTile * finalScale) / 2 + ((trim.left | 0) * finalScale);
+            const maskY = (ch.y ?? 0) - (baseTile * finalScale) / 2 + ((trim.top | 0) * finalScale);
+            try { trimMask.clear(); } catch { /* ignore */ }
+            try { trimMask.fillStyle(0xffffff, 1); } catch { /* ignore */ }
+            try { trimMask.fillRect(maskX, maskY, maskW, maskH); } catch { /* ignore */ }
+            try { trimMask.setVisible(false); } catch { /* ignore */ }
+          }
           ch.setDepth?.(depth);
           ch.setAlpha?.(auraAlpha);
           try { ch.setBlendMode?.(blendMode); } catch { /* ignore */ }
@@ -3374,6 +3394,18 @@ private _propCreateFocusAuraContainer(args: {
         (dy === 0) ||
         (dx === ((wTiles | 0) - 1)) ||
         (dy === ((hTiles | 0) - 1));
+      const multi = ((wTiles | 0) > 1 || (hTiles | 0) > 1);
+      const trimPx = multi ? Math.max(0, PROP_FOCUS_AURA_INNER_TRIM_PX) : 0;
+      const extraPx = (trimPx > 0) ? Math.max(0, PROP_FOCUS_AURA_INNER_TRIM_EXTRA_PX) : 0;
+      const oneSide = !!PROP_FOCUS_AURA_INNER_TRIM_ONE_SIDE;
+      const baseLeft = (trimPx > 0 && dx > 0) ? trimPx : 0;
+      const baseRight = (trimPx > 0 && dx < ((wTiles | 0) - 1)) ? trimPx : 0;
+      const baseTop = (trimPx > 0 && dy > 0) ? trimPx : 0;
+      const baseBottom = (trimPx > 0 && dy < ((hTiles | 0) - 1)) ? trimPx : 0;
+      const trimLeft = baseLeft;
+      const trimRight = (oneSide && baseRight > 0) ? (baseRight + extraPx) : baseRight;
+      const trimTop = baseTop;
+      const trimBottom = (oneSide && baseBottom > 0) ? (baseBottom + extraPx) : baseBottom;
 
       let atlasCol = (baseRef.col + dx) | 0;
       let atlasRow = (baseRef.row - ((hTiles | 0) - 1) + dy) | 0;
@@ -3424,6 +3456,20 @@ private _propCreateFocusAuraContainer(args: {
         img.setCrop(cropX, cropY, tile, tile);
       }
       img.setDisplaySize(tile, tile);
+      if (trimLeft || trimRight || trimTop || trimBottom) {
+        const maskG = this.scene.add.graphics();
+        const maskW = Math.max(1, tile - trimLeft - trimRight);
+        const maskH = Math.max(1, tile - trimTop - trimBottom);
+        maskG.fillStyle(0xffffff, 1);
+        maskG.fillRect(worldX - half + trimLeft, worldY - half + trimTop, maskW, maskH);
+        maskG.setVisible(false);
+        const geomMask = maskG.createGeometryMask();
+        img.setMask(geomMask);
+        (img as any).__auraTrimMask = maskG;
+        (img as any).__auraTrim = { left: trimLeft, right: trimRight, top: trimTop, bottom: trimBottom };
+        (img as any).__auraTrimTile = tile;
+        (st.anyThis.__propImgs as any[]).push(maskG);
+      }
 
       // Clear camera filters on the child too
       try { (img as any).cameraFilter = 0; } catch { /* ignore */ }
@@ -3846,6 +3892,7 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
   try { oldCont?.destroy?.(); } catch { /* ignore */ }
   for (let i = 0; i < oldKids.length; i++) {
     try { oldKids[i]?.destroy?.(); } catch { /* ignore */ }
+    try { (oldKids[i] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
   }
 
   const aura = this._propCreateFocusAuraContainer({
