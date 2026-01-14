@@ -687,6 +687,23 @@ function _xmlTextToDom(xmlText: string): Element {
   throw new Error("no-xml-textToDom");
 }
 
+function _fixConstWithoutInit(src: string): string {
+  return src.replace(/const\s+([^;]+);/g, (full, decls) => {
+    const parts = decls.split(",").map((raw: string) => {
+      const t = raw.trim();
+      if (!t) return t;
+      if (t.includes("=")) return t;
+      // For any declarator with no initializer, default to undefined.
+      return `${t} = undefined`;
+    });
+    const fixed = parts.join(", ");
+    if (fixed !== decls.trim()) {
+      console.warn("[BlocklyHeroLogic] fixed const without initializer", { before: full, after: `let ${fixed};` });
+    }
+    return `let ${fixed};`;
+  });
+}
+
 
 function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => any; code: string } | { ok: false; err: string } {
   try {
@@ -752,7 +769,8 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
     }
 
     // Generate JS from blocks
-    const code = javascriptGenerator.workspaceToCode(ws);
+    const codeRaw = javascriptGenerator.workspaceToCode(ws);
+    const code = _fixConstWithoutInit(codeRaw);
 
     // Helpers are available inside heroLogic().
     const helpers = `
@@ -1107,6 +1125,12 @@ if (typeof status2 === "undefined" && typeof status !== "undefined") { status2 =
     const safeFn = (typeof fn === "function") ? fn : (() => null);
     return { ok: true, fn: safeFn, code };
   } catch (e: any) {
+    try {
+      console.error("[BlocklyHeroLogic] compile debug", {
+        err: String(e?.message || e),
+        codePreview: (typeof code === "string") ? code.slice(0, 1000) : "",
+      });
+    } catch {}
     return { ok: false, err: String(e?.message || e) };
   }
 }

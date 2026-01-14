@@ -162,6 +162,22 @@ function parseMonsterFilename(baseName: string, url: string): ParsedSheet | null
 
 const PARSED_SHEETS: ParsedSheet[] = [];
 
+type FrameOverride = {
+    phase: Phase;
+    dir?: Dir;
+    maxFrames?: number;
+    trimTail?: number;
+};
+
+// Special-case per-sheet frame overrides for irregular sheets.
+const SHEET_FRAME_OVERRIDES: Record<string, FrameOverride[]> = {
+    // "slime 64x64 ULDR 1Walk.png" – rows 0 (U) and 2 (D) have 2 fewer frames.
+    "slime 64x64 ULDR 1Walk": [
+        { phase: "walk", dir: "up", trimTail: 2 },
+        { phase: "walk", dir: "down", trimTail: 2 }
+    ]
+};
+
 for (const [path, url] of Object.entries(monsterPngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "";
     if (!fileNameWithExt.toLowerCase().endsWith(".png")) continue;
@@ -172,6 +188,35 @@ for (const [path, url] of Object.entries(monsterPngs)) {
 
 function isFrameEmpty(): boolean {
     return false;
+}
+
+function applyFrameOverrides(
+    sheet: ParsedSheet,
+    phase: Phase,
+    dirFrames: PhaseDirFrames
+): void {
+    const overrides =
+        SHEET_FRAME_OVERRIDES[sheet.textureKey] ||
+        SHEET_FRAME_OVERRIDES[sheet.id];
+    if (!overrides || overrides.length === 0) return;
+
+    for (const ov of overrides) {
+        if (ov.phase !== phase) continue;
+        const dirs: Dir[] = ov.dir ? [ov.dir] : (Object.keys(dirFrames) as Dir[]);
+        for (const d of dirs) {
+            const frames = dirFrames[d];
+            if (!frames || frames.length === 0) continue;
+
+            let out = frames;
+            if (typeof ov.maxFrames === "number") {
+                out = out.slice(0, Math.max(0, ov.maxFrames));
+            }
+            if (typeof ov.trimTail === "number" && ov.trimTail > 0) {
+                out = out.slice(0, Math.max(0, out.length - ov.trimTail));
+            }
+            dirFrames[d] = out;
+        }
+    }
 }
 
 function buildFramesForSheet(
@@ -255,6 +300,8 @@ function buildFramesForSheet(
             dirFrames[dir] = frames.slice();
         }
     }
+
+    applyFrameOverrides(sheet, phase, dirFrames);
 
     return dirFrames;
 }

@@ -374,15 +374,15 @@
         gap: 8px;
       }
 
-      .shopui-item {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(255, 255, 255, 0.06);
+.shopui-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
         color: rgba(255, 255, 255, 0.95);
         font: inherit;
         text-align: left;
@@ -399,11 +399,13 @@
         background: rgba(255, 255, 255, 0.12);
       }
 
-      .shopui-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
+.shopui-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
 
       .shopui-name {
         font-weight: 800;
@@ -418,6 +420,7 @@
       .shopui-flavor {
         font-size: 11px;
         opacity: 0.65;
+        font-style: italic;
       }
 
       .shopui-price {
@@ -513,22 +516,35 @@
         opacity: 0.75;
       }
 
-      #relic-offer-items {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
+#relic-offer-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
       #relic-offer-hint {
         font-size: 12px;
         opacity: 0.75;
       }
 
-      .relic-offer-item .shopui-price {
-        font-size: 11px;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-      }
+.relic-offer-item .shopui-price {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.shopui-icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  box-sizing: border-box;
+}
+
+.relic-offer-item .shopui-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
 
 
       /* -----------------------------
@@ -1076,7 +1092,7 @@
 }
 
 #relic-tooltip .relic-tip-flavor {
-  font-size: 10px;
+  font-size: 11px;
   opacity: 0.7;
   font-style: italic;
   margin-top: 4px;
@@ -1577,7 +1593,7 @@
             if (!pid) return;
             _lvlui.pendingOpen = true;
             _lvlui_log("btn click -> openLevelUp");
-            _lvlui_setShown(true);
+            _lvlui_setShown(true, "btn openLevelUp");
             _lvlui_cmd(pid, { type: "openLevelUp" });
           });
         }
@@ -1760,6 +1776,11 @@ function _getUiSnapshotCached(pid) {
   return null;
 }
 
+function _invalidateUiSnapshotCache() {
+  _hud_lastSnap = null;
+  _hud_lastSnapAt = 0;
+}
+
 
 function _readTeamCoins(pid, hero, spritesNS) {
   const p = (pid | 0) || getPid();
@@ -1900,6 +1921,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           selIdx: 0,
           btns: [],
           pendingOpen: false,
+          closeSentForZero: false,
+          lastState: null,
           log: [],
         };
 
@@ -1908,6 +1931,21 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const line = `${ts} ${msg}`;
           _lvlui.log.push(line);
           if (_lvlui.log.length > 50) _lvlui.log.shift();
+        }
+
+        function _lvlui_logChain(action, why, ctx) {
+          const info = Object.assign({
+            action,
+            why,
+            pendingOpen: _lvlui.pendingOpen,
+            closeSentForZero: _lvlui.closeSentForZero,
+            lastState: _lvlui.lastState,
+          }, ctx || {});
+          try {
+            const stack = new Error().stack ? String(new Error().stack).split("\n").slice(2, 5).map(s => s.trim()).join(" | ") : "";
+            if (stack) info.stack = stack;
+          } catch (_e) {}
+          console.log("[LVLUI_CHAIN]", info);
         }
 
         // Add new options later by appending to this list ONLY.
@@ -1928,7 +1966,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           } catch (_e) { return false; }
         }
 
-        function _lvlui_setShown(show) {
+        function _lvlui_setShown(show, why, ctx) {
           if (!R.lvlLayer) return;
           const want = !!show;
           const has = R.lvlLayer.classList.contains("he-show");
@@ -1937,11 +1975,11 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (want) {
             R.lvlLayer.classList.add("he-show");
             R.lvlLayer.setAttribute("aria-hidden", "false");
-            _lvlui_log("show");
+            _lvlui_logChain("show", why || "unknown", ctx);
           } else {
             R.lvlLayer.classList.remove("he-show");
             R.lvlLayer.setAttribute("aria-hidden", "true");
-            _lvlui_log("hide");
+            _lvlui_logChain("hide", why || "unknown", ctx);
           }
         }
 
@@ -2028,6 +2066,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
           const r = fn(cmd);
+          _invalidateUiSnapshotCache();
 
           // refresh immediately
           try {
@@ -2078,17 +2117,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const uiMode = ready ? (snap.uiMode | 0) : 0;
           const pts = ready ? Math.max(0, (snap.lvlPts | 0)) : 0;
           const safe = ready && !!snap.safeForSpend;
-
-          // If we're waiting for the engine to flip uiMode, keep the layer up and skip hides.
-          if (_lvlui.pendingOpen) {
-            _lvlui_log(`pendingOpen uiMode=${uiMode} ready=${ready}`);
-            _lvlui_setShown(true);
-            if (uiMode !== 1) return;
-          }
+          _lvlui.lastState = { ready, uiMode, pts, safe };
 
           if (!ready) {
             _lvlui_log("snapshot not ready -> hide");
-            _lvlui_setShown(false);
+            _lvlui_setShown(false, "snapshot not ready", { ready, uiMode, pts, safe });
+            _lvlui.closeSentForZero = false;
             return;
           }
 
@@ -2098,19 +2132,27 @@ function _readTeamCoins(pid, hero, spritesNS) {
             R.lvlPoints.classList.toggle("lvlui-points-ready", glow);
           }
 
+          if (pts > 0) {
+            _lvlui.closeSentForZero = false;
+          }
+
           if (pts <= 0) {
             _lvlui.pendingOpen = false;
             _lvlui_log("pts<=0 hide");
-            _lvlui_setShown(false);
+            _lvlui_setShown(false, "pts<=0", { ready, uiMode, pts, safe });
             const pid = (snap.playerId | 0);
-            if (pid > 0) _lvlui_cmd(pid, { type: "closeUI" });
+            if (pid > 0 && !_lvlui.closeSentForZero) {
+              _lvlui.closeSentForZero = true;
+              _lvlui_cmd(pid, { type: "closeUI" });
+            }
+            _invalidateUiSnapshotCache();
             return;
           }
 
           const open = (uiMode === 1);
           _lvlui.pendingOpen = false;
           _lvlui_log(`apply uiMode=${uiMode} open=${open} pts=${pts} safe=${safe}`);
-          _lvlui_setShown(open);
+          _lvlui_setShown(open, "applySnapshot", { ready, uiMode, pts, safe });
           if (!open) return;
 
           for (const opt of LVLUI_MENU_ITEMS) {
@@ -2154,6 +2196,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           window.addEventListener("keydown", (e) => {
             if (!R.lvlLayer || !R.lvlLayer.classList.contains("he-show")) return;
             if (_lvlui_isDialogOpen()) return;
+            if (R.relicOfferLayer && R.relicOfferLayer.classList.contains("he-show")) return;
 
             const k = e.key;
 
@@ -2382,6 +2425,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           window.addEventListener("keydown", (e) => {
             if (!R.shopLayer || !R.shopLayer.classList.contains("he-show")) return;
             if (_lvlui_isDialogOpen()) return;
+            if (R.relicOfferLayer && R.relicOfferLayer.classList.contains("he-show")) return;
 
             const k = e.key;
 
@@ -2429,6 +2473,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           btns: [],
           lastKey: "",
           canControl: false,
+          ignoreSelUntil: 0,
         };
 
         function _relicoffer_setShown(show) {
@@ -2452,6 +2497,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
           const r = fn(cmd);
+          _invalidateUiSnapshotCache();
 
           try {
             const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
@@ -2461,7 +2507,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return r;
         }
 
-        function _relicoffer_setSel(idx) {
+        function _relicoffer_setSel(idx, opts) {
           const n = _relicoffer.btns.length | 0;
           if (n <= 0) return;
           let i = idx | 0;
@@ -2470,6 +2516,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const prev = _relicoffer.selIdx | 0;
           _relicoffer.selIdx = i;
+          if (!opts || !opts.silent) {
+            _relicoffer.ignoreSelUntil = (Date.now() | 0) + 400; // avoid immediate snap-back from stale snapshot
+          }
           for (let k = 0; k < n; k++) {
             const b = _relicoffer.btns[k];
             if (!b) continue;
@@ -2595,10 +2644,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const key = JSON.stringify({ options, canControl, theme: offer.theme || "" });
           if (key !== _relicoffer.lastKey) {
             _relicoffer.lastKey = key;
+            console.log("[RELIC][OFFER][UI] render", { options, canControl, theme: offer.theme || "", title: offer.title || "" });
             _relicoffer_buildList(options, canControl);
           }
 
-          if (options && options.length > 0) _relicoffer_setSel((offer.selectedIndex | 0));
+          const now = Date.now() | 0;
+          if (options && options.length > 0 && (now >= _relicoffer.ignoreSelUntil)) {
+            const targetSel = (offer.selectedIndex | 0);
+            if (targetSel !== _relicoffer.selIdx) _relicoffer_setSel(targetSel, { silent: true });
+          }
         }
 
         function _relicoffer_initOnce() {
@@ -3488,9 +3542,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
     </script>
   </body>
 </html>
-
-
-
 
 
 

@@ -1264,7 +1264,7 @@ const DBG_INT_INTERVAL_MS = 50
 
 
 
-const DEBUG_HERO_LOGIC = false //debug flag ????????????????????v
+const DEBUG_HERO_LOGIC = true //debug flag ????????????????????v
 
 
 
@@ -5787,7 +5787,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -8222,13 +8222,10 @@ function _dunEnterFloor_spawnRandomChest(nowMs: number): void {
 }
 
 function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
-    const rcChest = _dunPickRandomWalkableTile({
-        avoidR: _dunPadTileR,
-        avoidC: _dunPadTileC,
-        minManhattan: 2,
-        maxTries: 250
-    })
-    const chest = _dunSpawnChest(nowMs, _dunColToX(rcChest.c), _dunRowToY(rcChest.r))
+    // Place 3 tiles below the teleport rune (entrance pad).
+    const targetR = Math.max(0, (_dunPadTileR | 0) + 3) | 0
+    const targetC = Math.max(0, _dunPadTileC | 0) | 0
+    const chest = _dunSpawnChest(nowMs, _dunColToX(targetC), _dunRowToY(targetR))
     if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
         sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "starter_relic")
         _dunConfigureChestRelicOffer(chest, {
@@ -8282,7 +8279,7 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
 
     DUNGEON_BLOCK_INTENTS = false
 
-    _dunObjectiveDone = true
+    _dunObjectiveDone = false
 
     _dunSetPadPowered(true)
 
@@ -8571,6 +8568,14 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
     if (_dunObjectiveDone) return
 
+    if (DEBUG_FOCUS_DIRECT_LOGS) {
+        console.log("[CHEST][INTERACT] tick start", {
+            floorKind: _dunFloorKind,
+            objectiveDone: _dunObjectiveDone ? 1 : 0,
+            blockIntents: !!DUNGEON_BLOCK_INTENTS,
+        })
+    }
+
 
 
     if (_dunFloorKind == DUNGEON_KIND_COMBAT) {
@@ -8639,6 +8644,14 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
         if (!aEdge) continue
 
+        console.log("[CHEST][INTERACT] A edge", {
+            pid: pid | 0,
+            hi: hi | 0,
+            hero: { x: hero.x | 0, y: hero.y | 0 },
+            interactables: (_dunInteractables && _dunInteractables.length) ? _dunInteractables.length : 0,
+            intentBlocked: !!DUNGEON_BLOCK_INTENTS,
+        })
+
 
 
         // Try interactables first
@@ -8649,15 +8662,35 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
             if (!it || (it.flags & sprites.Flag.Destroyed)) continue
 
-            if (!_isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)) continue
-
-
-
             const k = sprites.readDataString(it, INTERACT_DATA.KIND)
+            const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+
+            console.log("[CHEST][INTERACT] scan", {
+                pid: pid | 0,
+                hi: hi | 0,
+                kind: k || "",
+                inRange: inRange ? 1 : 0,
+                opened: sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0,
+                role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
+                x: it.x | 0,
+                y: it.y | 0,
+                intentBlocked: !!DUNGEON_BLOCK_INTENTS,
+            })
+
+            if (!inRange) continue
 
             if (k == "chest") {
 
                 const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+
+                console.log("[CHEST][INTERACT] chest candidate", {
+                    pid: pid | 0,
+                    hi: hi | 0,
+                    opened: opened ? 1 : 0,
+                    role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
+                    x: it.x | 0,
+                    y: it.y | 0,
+                })
 
                 if (opened) continue
 
@@ -8667,10 +8700,24 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
                 const chestRole = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE)
                 let offerStarted = false
-                if (chestRole) {
-                    offerStarted = _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
+                const offerResult = chestRole
+                    ? _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
+                    : _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
+
+                if (offerResult.ok) {
+                    console.log("[RELIC][OFFER] chest handoff -> DOM", {
+                        pid: pid | 0,
+                        hi: hi | 0,
+                        role: chestRole || "",
+                        source: (_relicOfferSession && _relicOfferSession.source) ? _relicOfferSession.source : "chest",
+                    })
                 } else {
-                    offerStarted = _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
+                    console.log("[RELIC][OFFER] chest handoff skipped", {
+                        pid: pid | 0,
+                        hi: hi | 0,
+                        role: chestRole || "",
+                        reason: offerResult.reason || "unknown",
+                    })
                 }
 
 
@@ -8702,6 +8749,12 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 // Reward + complete objective (this triggers COINFX enqueue)
 
                 let coinsReward = 10
+
+                // Relic chests: no coins; relic offer only.
+                const chestRoleRaw = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || ""
+                const chestRoleLower = chestRoleRaw.toLowerCase()
+                const noCoins = chestRoleLower.indexOf("starter") >= 0 || chestRoleLower.indexOf("boss") >= 0 || chestRoleLower.indexOf("relic") >= 0
+                if (noCoins) coinsReward = 0
 
 
 
@@ -8737,11 +8790,11 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
 
-                if (!offerStarted && _dunFloorKind === DUNGEON_KIND_ENTRANCE && chestRole === "starter_relic") {
+                if (!offerResult.ok && _dunFloorKind === DUNGEON_KIND_ENTRANCE && chestRole === "starter_relic") {
                     try { _relicOfferStartStarterChoice(pid | 0, hi | 0, nowMs | 0, "entrance-chest") } catch { }
                 }
 
-                addHeroCoins(hi, coinsReward, popX, popY)
+                if (coinsReward > 0) addHeroCoins(hi, coinsReward, popX, popY)
 
 
 
@@ -23151,8 +23204,8 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 }
 
 
-
-
+const DEBUG_HERO_LOGIC_OUT = false;
+const DEBUG_HERO_LOGIC_ENTER = false;
 
 function runHeroLogicForHero(heroIndex: number, button: string) {
 
@@ -23194,7 +23247,7 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
 
 
-    if (DEBUG_HERO_LOGIC) {
+    if (DEBUG_HERO_LOGIC && DEBUG_HERO_LOGIC_ENTER) {
 
         console.log(
 
@@ -23278,7 +23331,7 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
 
 
-    if (DEBUG_HERO_LOGIC) {
+    if (DEBUG_HERO_LOGIC && DEBUG_HERO_LOGIC_OUT) {
 
         console.log(
 
@@ -43182,7 +43235,7 @@ function trySpendHeroCoins(hi: number, cost: number): boolean {
 
 
 
-    const next = (cur - c) | 0
+    const next = Math.max(0, (cur - c) | 0) | 0
 
     setHeroCoins(hi, next)
 
@@ -52974,6 +53027,15 @@ function _relicOfferStart(pid: number, hi: number, options: string[], nowMs: num
     const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
 
+    console.log("[RELIC][OFFER] start request", {
+        pid: pid | 0,
+        hi: hi | 0,
+        options: options.slice(0),
+        title: title || "",
+        theme: theme || "",
+        source: source || "",
+    })
+
     _relicOfferSession.active = true
     _relicOfferSession.activePid = pid | 0
     _relicOfferSession.options = options.slice(0, options.length)
@@ -53033,9 +53095,12 @@ function _relicOfferConfigFromChest(chest: Sprite): RelicChestOfferConfig | null
     }
 }
 
-function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest: Sprite, source: string): boolean {
+function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest: Sprite, source: string): { ok: boolean, reason: string } {
     const cfg = _relicOfferConfigFromChest(chest)
-    if (!cfg) return false
+    if (!cfg) {
+        console.log("[RELIC][OFFER] chest config missing", { pid: pid | 0, hi: hi | 0, source })
+        return { ok: false, reason: "no-config" }
+    }
 
     const count = (cfg.count != null ? (cfg.count | 0) : (RELIC_STARTER_OFFER_COUNT | 0)) | 0
     const title = String(cfg.title || "Choose a Relic")
@@ -53046,12 +53111,25 @@ function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest
     if (cfg.fixedRelicId) {
         const rid = String(cfg.fixedRelicId || "")
         if (rid && !_relicHasPid(pid | 0, rid)) options = [rid]
+        else {
+            console.log("[RELIC][OFFER] chest fixed relic skipped", { pid: pid | 0, hi: hi | 0, rid, reason: rid ? "owned-fixed" : "bad-fixed" })
+            return { ok: false, reason: rid ? "owned-fixed" : "bad-fixed" }
+        }
     } else {
         const pool = (cfg.poolIds && cfg.poolIds.length) ? cfg.poolIds : _relicCatalogIds()
         options = _relicOfferOptionsFromPool(pid | 0, pool, count | 0, String(cfg.minRarity || ""), String(cfg.maxRarity || ""))
     }
 
-    return _relicOfferStart(pid | 0, hi | 0, options, nowMs | 0, title, flavorText, theme, source)
+    if (!options || options.length <= 0) {
+        console.log("[RELIC][OFFER] chest had no options", { pid: pid | 0, hi: hi | 0, source, pool: cfg.poolIds, min: cfg.minRarity, max: cfg.maxRarity })
+        return { ok: false, reason: "no-options" }
+    }
+
+    const started = _relicOfferStart(pid | 0, hi | 0, options, nowMs | 0, title, flavorText, theme, source)
+    if (!started) {
+        console.log("[RELIC][OFFER] start failed", { pid: pid | 0, hi: hi | 0, source, reason: "start-failed" })
+    }
+    return { ok: !!started, reason: started ? "started" : "start-failed" }
 }
 
 function _relicOfferTryPickIndex(hi: number, pid: number, index: number, where: string): { ok: boolean, reason: string } {

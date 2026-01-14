@@ -1360,11 +1360,12 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
     return name
 }
 
+const DEBUG_BLOCKLY_LOGIC = false;
 
 function runHeroLogicForHero(heroIndex: number, button: string) {
     const hero = heroes[heroIndex];
     if (!hero) {
-        if (DEBUG_HERO_LOGIC) {
+        if (DEBUG_HERO_LOGIC && DEBUG_BLOCKLY_LOGIC) {
             console.log("[runHeroLogicForHero] NO HERO heroIndex=" + heroIndex + " button=" + button);
         }
         return null;
