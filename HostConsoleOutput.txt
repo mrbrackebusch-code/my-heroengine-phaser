@@ -1,120 +1,122 @@
 main.ts:4 >>> [main.ts] dynamic-import version loaded
-main.ts:2351 [main] profile found in URL; starting Phaser game.
-main.ts:2276      Phaser v3.90.0 (WebGL | Web Audio)  https://phaser.io/v390
-main.ts:856 >>> [HeroScene.preload] loading LPC monster sheets
-main.ts:859 >>> [HeroScene.preload] loading hero spritesheets
-main.ts:862 >>> [HeroScene.preload] loading tile sheets
-main.ts:865 >>> [HeroScene.preload] loading weapon sheets
-main.ts:868 >>> [HeroScene.preload] loading effect sheets
-main.ts:876 >>> [HeroScene.create] running (refactored)
-main.ts:1218 >>> [HeroScene.create] running
-main.ts:1222 >>> [HeroScene.create] __phaserScene set = true
-main.ts:598 [main] URL profile override for P1: LongBlond
-main.ts:1799 >>> [HeroScene.create] building tile atlas
-main.ts:1820 >>> [HeroScene.create] no host flag yet; defaulting to follower
-main.ts:1826 >>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)
+main.ts:2640 [main] profile found in URL; starting Phaser game.
+main.ts:2565      Phaser v3.90.0 (WebGL | Web Audio)  https://phaser.io/v390
+main.ts:923 >>> [HeroScene.preload] loading LPC monster sheets
+main.ts:926 >>> [HeroScene.preload] loading hero spritesheets
+main.ts:929 >>> [HeroScene.preload] loading tile sheets
+main.ts:932 >>> [HeroScene.preload] loading weapon sheets
+main.ts:935 >>> [HeroScene.preload] loading effect sheets
+main.ts:943 >>> [HeroScene.create] running (refactored)
+main.ts:1288 >>> [HeroScene.create] running
+main.ts:1292 >>> [HeroScene.create] __phaserScene set = true
+main.ts:643 [main] URL profile override for P1: LongBlond
+main.ts:2088 >>> [HeroScene.create] building tile atlas
+main.ts:2109 >>> [HeroScene.create] no host flag yet; defaulting to follower
+main.ts:2115 >>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)
 arcadeCompat.ts:2429 >>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)
 arcadeCompat.ts:581 [DECOR][BOOT] no __HeroEnginePhaserInternals.getDecorRev() yet; skipping
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 1 scenePresent= true spriteCount= 0
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 2 scenePresent= true spriteCount= 0
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 3 scenePresent= true spriteCount= 0
-main.ts:2127 >>> [HeroScene.create] initNetwork()
-arcadeCompat.net.ts:1211 [net] initNetwork: connecting... {token: 'd51d6962…', desiredProfile: null}
-main.ts:2137 >>> [HeroScene.create] wiring keyboard to controller (network-aware)
-arcadeCompat.ts:10283 [controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)
-main.ts:926 >>> [HeroScene.create] complete (refactored)
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 4 scenePresent= true spriteCount= 0
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 5 scenePresent= true spriteCount= 0
-arcadeCompat.net.ts:309 [net] connected to ws://localhost:8080
-arcadeCompat.net.ts:331 [net] hello sent {token: 'd51d6962…', desiredProfile: null}
-arcadeCompat.net.ts:519 [net] assigned playerId = 2 name= Player2 profile= null
-arcadeCompat.net.ts:524 [net.assign.debug] {playerId: 2, token: 'd51d6962…', desiredProfile: null, serverProfile: null, controlSlot: 2}
-arcadeCompat.ts:10220 [controller] local player slot set to 2
-arcadeCompat.net.ts:855 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 5, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
-tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_void', …}
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 1 scenePresent= true spriteCount= 0
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 2 scenePresent= true spriteCount= 0
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 3 scenePresent= true spriteCount= 0
+main.ts:2416 >>> [HeroScene.create] initNetwork()
+arcadeCompat.net.ts:1334 [net] initNetwork: connecting... {token: 't_e430ac…', desiredProfile: 'LongBlond'}
+main.ts:2426 >>> [HeroScene.create] wiring keyboard to controller (network-aware)
+arcadeCompat.ts:10328 [controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)
+main.ts:996 >>> [HeroScene.create] complete (refactored)
+arcadeCompat.net.ts:311 [net] connected to ws://192.168.68.66:8080
+arcadeCompat.net.ts:333 [net] hello sent {token: 't_e430ac…', desiredProfile: 'LongBlond'}
+arcadeCompat.net.ts:571 [net] assigned playerId = 1 name= Player1 profile= LongBlond
+arcadeCompat.net.ts:576 [net.assign.debug] {playerId: 1, token: 't_e430ac…', desiredProfile: 'LongBlond', serverProfile: 'LongBlond', controlSlot: 1}
+arcadeCompat.ts:10265 [controller] local player slot set to 1
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 17, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_light', …}
 arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
-arcadeCompat.net.ts:687 [net.playerState.debug] {pid: 2, slotIndex: 1, connected: true, prevConnected: true, profile: 'Default', …}
-arcadeCompat.net.ts:745 [net] hostStatus = true hostPlayerId= 2
-main.ts:1841 >>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser
-arcadeCompat.net.ts:765 [net] hostStatus change {isHost: true, hostPlayerId: 2, myPlayerId: 2, token: 'd51d6962…', profile: null}
-arcadeCompat.net.ts:603 [net.rosterSnapshot] applied {hostToken: 'd51d6962…', hostLeaseUntilMs: 0, players: Array(2)}
-arcadeCompat.net.ts:1157 [net.host] snapshot # 1 sprites= 0 dtMs= 372
-arcadeCompat.net.ts:1157 [net.host] snapshot # 2 sprites= 0 dtMs= 30
-arcadeCompat.net.ts:1157 [net.host] snapshot # 3 sprites= 0 dtMs= 18
-arcadeCompat.ts:9558 [sprites.onOverlap] registered kindA= 1 kindB= 57 totalHandlers= 1
-arcadeCompat.ts:9558 [sprites.onOverlap] registered kindA= 51 kindB= 2 totalHandlers= 2
-HeroEngineInPhaser.ts:51252 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (before): []
-HeroEngineInPhaser.ts:51254 [DECOR][ENGINE] has getDecorRev? (before) undefined
-HeroEngineInPhaser.ts:51565 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (after): (18) ['getWorldTileMap', 'getWorldTileSize', 'getWorldRev', 'getHeroCollisionOffsetY', 'getCollisionBoundsForSprite', 'getFloorBaseFamily', 'getFloorWallFamily', 'getFloorIndex', 'getFloorKind', 'getDecorRev', 'getDecalGrid', 'getDecorGrid', 'getDecorTriggerSprites', 'getDecorSolidSprites', 'getWorldDecorRev', 'getWorldDecorCells', 'getWorldDecorDecals', 'ensureHeroForPlayer']
-HeroEngineInPhaser.ts:51567 [DECOR][ENGINE] has getDecorRev? (after) function
-HeroEngineInPhaser.ts:51569 >>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)
-HeroEngineInPhaser.ts:55994 [UIAPI] installed: __heGetUiSnapshot / __heUiCommand
-HeroEngineInPhaser.ts:56048 [LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts
+main.ts:1579 [net.decor.apply] {rev: 14, propCount: 3, decalRows: 20, byName: {…}}
+arcadeCompat.net.ts:767 [net.playerState.debug] {pid: 1, slotIndex: 0, connected: true, prevConnected: true, profile: 'LongBlond', …}
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 4 scenePresent= true spriteCount= 0
+arcadeCompat.net.ts:825 [net] hostStatus = true hostPlayerId= 1
+main.ts:2130 >>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser
+arcadeCompat.net.ts:845 [net] hostStatus change {isHost: true, hostPlayerId: 1, myPlayerId: 1, token: 't_e430ac…', profile: 'LongBlond'}
+arcadeCompat.net.ts:655 [net.rosterSnapshot] applied {hostToken: 't_e430ac…', hostLeaseUntilMs: 0, players: Array(1)}
+arcadeCompat.net.ts:1275 [net.host] snapshot # 1 sprites= 0 dtMs= 69
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 5 scenePresent= true spriteCount= 0
+arcadeCompat.net.ts:1275 [net.host] snapshot # 2 sprites= 0 dtMs= 29
+arcadeCompat.net.ts:1275 [net.host] snapshot # 3 sprites= 0 dtMs= 17
+arcadeCompat.ts:9603 [sprites.onOverlap] registered kindA= 1 kindB= 57 totalHandlers= 1
+arcadeCompat.ts:9603 [sprites.onOverlap] registered kindA= 51 kindB= 2 totalHandlers= 2
+HeroEngineInPhaser.ts:51286 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (before): []
+HeroEngineInPhaser.ts:51288 [DECOR][ENGINE] has getDecorRev? (before) undefined
+HeroEngineInPhaser.ts:51614 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (after): (19) ['getWorldTileMap', 'getWorldTileSize', 'getWorldRev', 'getHeroCollisionOffsetY', 'getCollisionBoundsForSprite', 'getFloorBaseFamily', 'getFloorWallFamily', 'getFloorIndex', 'getFloorKind', 'getDecorRev', 'getDecalGrid', 'getDecorGrid', 'getDecorTriggerSprites', 'getDecorSolidSprites', 'getWorldDecorRev', 'getWorldDecorCells', 'getWorldDecorDecals', 'ensureHeroForPlayer', 'despawnHeroForPlayer']
+HeroEngineInPhaser.ts:51616 [DECOR][ENGINE] has getDecorRev? (after) function
+HeroEngineInPhaser.ts:51618 >>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)
+HeroEngineInPhaser.ts:56047 [UIAPI] installed: __heGetUiSnapshot / __heUiCommand
+HeroEngineInPhaser.ts:56101 [LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts
+main.ts:1945 [net.decor.capture] {decorRev: 0, worldRev: 0, floorIndex: -1, triggerCount: 0, solidCount: 0, …}
 arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=0
 arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
 arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 0, cols: 0, triggers: 0, solids: 0}
 arcadeCompat.ts:580 [DECOR][OVERLAP-PROOF] armed {kindPlayer: 1, kindTrigger: 60, kindSolid: 61, cooldownMs: 600}
 arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=0
 arcadeCompat.ts:581 [DECOR][BOOT] end
-main.ts:2105 >>> [HeroScene.create] starting HeroEngine from host
-HeroEngineInPhaser.ts:21384 [WORLD][TEST] {kind: 'PF_PAD_CAGE_TOP3', worldRevNext: 1, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
-arcadeCompat.ts:6520 [sprites.create] id 1 | argKind 66 | finalKind 66 (66) | w,h 32 32
-arcadeCompat.ts:6360 [_attachNativeSprite] START spriteId= 1 w,h= 32 32 pixelsLen= 1024
-arcadeCompat.ts:6062 [WRAP-NATIVE] create sprite | id 1 | kind 66 | texKey sprite_1 | native.width 32 | native.height 32
-arcadeCompat.ts:5791 [attach] created {g: 3, dtA: 1.8999999985098839}
-arcadeCompat.ts:6520 [sprites.create] id 2 | argKind 67 | finalKind 67 (67) | w,h 32 32
-arcadeCompat.ts:6360 [_attachNativeSprite] START spriteId= 2 w,h= 32 32 pixelsLen= 1024
-arcadeCompat.ts:6062 [WRAP-NATIVE] create sprite | id 2 | kind 67 | texKey sprite_2 | native.width 32 | native.height 32
-arcadeCompat.ts:5791 [attach] created {g: 3, dtA: 0.5}
-HeroEngineInPhaser.ts:21423 [WORLD][MAP] {worldRev: 1, floorIndex: 0, floorKind: 'entrance', baseFamily: 'ground_light', wallFamily: 'chasm_light', …}
-arcadeCompat.ts:9820 [scene.setBackgroundColor] index= 1 rgb= (3) [255, 255, 255] hex= ffffff
-arcadeCompat.ts:9876 [tilemap] (stub) requested map id = level1 expr = []
-arcadeCompat.ts:9855 [tiles.setCurrentTilemap] (stub) current = {id: 'level1'}
-HeroEngineInPhaser.ts:24399 [setupHeroes] using WORLD center from tilemap {rows: 20, cols: 40, tileSize: 32, W: 1280, H: 640}
-HeroEngineInPhaser.ts:24463 [setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)
-arcadeCompat.ts:6520 [sprites.create] id 3 | argKind 1 | finalKind 1 (Player) | w,h 64 64
-HeroEngineInPhaser.ts:24777 [WPN-FCO-CLEAR] {heroIndex: 0, prev: 0, v: -1, phase: 'idle', dir: 'right', …}
-HeroEngineInPhaser.ts:7897 [DUN][CLEAR] shop: trigger=0 npc=0 npcsCleared=0 itemsCleared=0
-HeroEngineInPhaser.ts:21384 [WORLD][TEST] {kind: 'PF_PAD_CAGE_TOP3', worldRevNext: 2, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
-HeroEngineInPhaser.ts:21423 [WORLD][MAP] {worldRev: 2, floorIndex: 0, floorKind: 'entrance', baseFamily: 'sand', wallFamily: 'lava', …}
-HeroEngineInPhaser.ts:24777 [WPN-FCO-CLEAR] {heroIndex: 1, prev: 0, v: -1, phase: 'idle', dir: 'right', …}
-HeroEngineInPhaser.ts:6609 [DUNGEON] enter floor=0 kind=entrance theme=sand/lava players=2
-tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+main.ts:2394 >>> [HeroScene.create] starting HeroEngine from host
+HeroEngineInPhaser.ts:20835 >>> [HeroEngine.worldgen] map size 20 x 40 arena= {topR: 8, bottomR: 12, leftC: 15, rightC: 25}
+arcadeCompat.ts:6527 [sprites.create] id 1 | argKind 66 | finalKind 66 (66) | w,h 32 32
+arcadeCompat.ts:6367 [_attachNativeSprite] START spriteId= 1 w,h= 32 32 pixelsLen= 1024
+arcadeCompat.ts:6069 [WRAP-NATIVE] create sprite | id 1 | kind 66 | texKey sprite_1 | native.width 32 | native.height 32
+arcadeCompat.ts:5798 [attach] created {g: 3, dtA: 1.2999999970197678}
+arcadeCompat.ts:6527 [sprites.create] id 2 | argKind 67 | finalKind 67 (67) | w,h 32 32
+arcadeCompat.ts:6367 [_attachNativeSprite] START spriteId= 2 w,h= 32 32 pixelsLen= 1024
+arcadeCompat.ts:6069 [WRAP-NATIVE] create sprite | id 2 | kind 67 | texKey sprite_2 | native.width 32 | native.height 32
+arcadeCompat.ts:5798 [attach] created {g: 3, dtA: 0.29999999701976776}
+HeroEngineInPhaser.ts:21440 [WORLD][MAP] {worldRev: 1, floorIndex: 0, floorKind: 'entrance', baseFamily: 'ground_light', wallFamily: 'chasm_light', …}
+arcadeCompat.ts:9865 [scene.setBackgroundColor] index= 1 rgb= (3) [255, 255, 255] hex= ffffff
+arcadeCompat.ts:9921 [tilemap] (stub) requested map id = level1 expr = []
+arcadeCompat.ts:9900 [tiles.setCurrentTilemap] (stub) current = {id: 'level1'}
+HeroEngineInPhaser.ts:24416 [setupHeroes] using WORLD center from tilemap {rows: 20, cols: 40, tileSize: 32, W: 1280, H: 640}
+HeroEngineInPhaser.ts:24480 [setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)
+arcadeCompat.ts:6527 [sprites.create] id 3 | argKind 1 | finalKind 1 (Player) | w,h 64 64
+HeroEngineInPhaser.ts:24839 [WPN-FCO-CLEAR] {heroIndex: 0, prev: 0, v: -1, phase: 'idle', dir: 'right', …}
+HeroEngineInPhaser.ts:7914 [DUN][CLEAR] shop: trigger=0 npc=0 npcsCleared=0 itemsCleared=0
+HeroEngineInPhaser.ts:20835 >>> [HeroEngine.worldgen] map size 20 x 40 arena= {topR: 8, bottomR: 12, leftC: 15, rightC: 25}
+HeroEngineInPhaser.ts:21440 [WORLD][MAP] {worldRev: 2, floorIndex: 0, floorKind: 'entrance', baseFamily: 'grass_sparse_light', wallFamily: 'chasm_light', …}
+HeroEngineInPhaser.ts:6626 [DUNGEON] enter floor=0 kind=entrance theme=grass_sparse_light/chasm_light players=1
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
 arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
 arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
 arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
 arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
 tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
-arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
 arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
 arcadeCompat.ts:581 [DECOR][BOOT] end
-main.ts:2051 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 6, worldRev: 2, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
-main.ts:2074 >>> [HeroScene.create] scheduling sprite dump (host only)
-tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+main.ts:2340 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 18, worldRev: 2, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
+main.ts:2363 >>> [HeroScene.create] scheduling sprite dump (host only)
+main.ts:1945 [net.decor.capture] {decorRev: 6, worldRev: 2, floorIndex: -1, triggerCount: 2, solidCount: 3, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
 arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
 arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
 arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
 arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
 tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
-arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
 arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
 arcadeCompat.ts:581 [DECOR][BOOT] end
-HeroEngineInPhaser.ts:8513 [FOCUS][PILLAR] focus on (runeActive=1, rune="teleport_rune")
+HeroEngineInPhaser.ts:8530 [FOCUS][PILLAR] focus on (runeActive=1, rune="teleport_rune")
 tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
 tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
-arcadeCompat.ts:9425 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 13, c: 20, active: 0, radius: 0, …}
-arcadeCompat.ts:9425 [FOCUS][DECOR][SYNC] {name: 'teleport_rune', r: 10, c: 20, active: 0, radius: 0, …}
-arcadeCompat.ts:9674 [sprites._processEvents] checking handler kindA= 1 kindB= 57
-arcadeCompat.ts:9674 [sprites._processEvents] checking handler kindA= 51 kindB= 2
-?profile=LongBlond:2814 [RELICTIP] init {hasBox: true}
-arcadeCompat.net.ts:855 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 7, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
-tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 13, c: 20, active: 0, radius: 0, …}
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'teleport_rune', r: 10, c: 20, active: 0, radius: 0, …}
+arcadeCompat.ts:9719 [sprites._processEvents] checking handler kindA= 1 kindB= 57
+arcadeCompat.ts:9719 [sprites._processEvents] checking handler kindA= 51 kindB= 2
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 18, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 19, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
 arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
 arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
 arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
@@ -122,29 +124,633 @@ arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, soli
 tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
 tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
 tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
-arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
 arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
 arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
 arcadeCompat.ts:581 [DECOR][BOOT] end
-main.ts:2076 >>> [HeroScene.create] RUNNING SPRITE DUMP
-main.ts:2082 [HeroScene.create] dumpAllSprites not found on arcadeCompat
-HeroEngineInPhaser.ts:55632 [SAFE] hi=1 ok=1 reason=entrance floor=entrance
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 52.6 KB/s≈ 431.92 latestSprites= 17
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 58.6 KB/s≈ 547.01 latestSprites= 17
-arcadeCompat.net.ts:652 [net.playerState] slot 1 connected true profile Jason prevProfile Jason prevConnected false
-arcadeCompat.net.ts:687 [net.playerState.debug] {pid: 1, slotIndex: 0, connected: true, prevConnected: false, profile: 'Jason', …}
-arcadeCompat.net.ts:716 [net.playerState] ensureHeroForPlayer ok playerId 1 heroIndex 0 profileNow Jason
-arcadeCompat.net.ts:745 [net] hostStatus = true hostPlayerId= 2
-arcadeCompat.net.ts:765 [net] hostStatus change {isHost: true, hostPlayerId: 2, myPlayerId: 2, token: 'd51d6962…', profile: null}
-arcadeCompat.net.ts:603 [net.rosterSnapshot] applied {hostToken: 'd51d6962…', hostLeaseUntilMs: 0, players: Array(2)}
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 300 scenePresent= true spriteCount= 17
-arcadeCompat.net.ts:1157 [net.host] snapshot # 300 sprites= 17 dtMs= 17
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 59.0 KB/s≈ 551.11 latestSprites= 17
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 59.3 KB/s≈ 553.56 latestSprites= 17
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 600 scenePresent= true spriteCount= 17
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 60.0 KB/s≈ 560.45 latestSprites= 17
-arcadeCompat.net.ts:1157 [net.host] snapshot # 600 sprites= 17 dtMs= 16
-arcadeCompat.ts:6768 [_syncNativeSprites] call# 900 scenePresent= true spriteCount= 17
-arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 53.5 KB/s≈ 499.73 latestSprites= 17
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 6, propCount: 5, decalRows: 20, byName: {…}}
+?profile=LongBlond:2940 [RELICTIP] init {hasBox: true}
+HeroEngineInPhaser.ts:21704 [FOCUS][CHEST] highlight set {id: 12, x: 656, y: 432}
+tileMapGlue.ts:2091 [PROPAURA][CHEST-STATE] {"baseName":"chest","rawKey":"chest#closed","visPadAlways":true,"visPadPx":4,"kids":1,"padBaked":false,"padScale":1}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"chest","rawKey":"chest#closed","anchor":{"r":13,"c":20},"tiles":{"w":1,"h":1},"textureKey":"tiles.build_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499]}
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 13, c: 20, active: 1, radius: 2, …}
+main.ts:2365 >>> [HeroScene.create] RUNNING SPRITE DUMP
+main.ts:2371 [HeroScene.create] dumpAllSprites not found on arcadeCompat
+HeroEngineInPhaser.ts:48678 [P1 intent] EDGE timeMs=1497 intent=A (prev= prevDurMs=0) aNow=1 bNow=0 aEdge=1 bEdge=0 pending=A pending2=
+HeroEngineInPhaser.ts:8664 [CHEST][INTERACT] A edge {pid: 1, hi: 0, hero: {…}, interactables: 1, intentBlocked: false}
+HeroEngineInPhaser.ts:8685 [CHEST][INTERACT] scan {pid: 1, hi: 0, kind: 'chest', inRange: 1, opened: 0, …}
+HeroEngineInPhaser.ts:8703 [CHEST][INTERACT] chest candidate {pid: 1, hi: 0, opened: 0, role: 'starter_relic', x: 656, …}
+HeroEngineInPhaser.ts:53146 [RELIC][OFFER] start request {pid: 1, hi: 0, options: Array(3), title: 'Starter Relic', theme: 'starter', …}
+HeroEngineInPhaser.ts:53169 [RELIC][OFFER] open {pid: 1, options: Array(3), title: 'Starter Relic', theme: 'starter', source: 'chest:starter_relic'}
+HeroEngineInPhaser.ts:8725 [RELIC][OFFER] chest handoff -> DOM {pid: 1, hi: 0, role: 'starter_relic', source: 'chest:starter_relic'}
+HeroEngineInPhaser.ts:6626 [DUNGEON] chest opened by P1; pad powered
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=7
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#open', r: 13, c: 20, active: 0, radius: 0, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=7
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 20, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=7
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 7, propCount: 5, decalRows: 20, byName: {…}}
+HeroEngineInPhaser.ts:49834 [TIMER80] BEFORE P1 intent=A timeMs=1546
+HeroEngineInPhaser.ts:26961 [P1 intent] ENTER doHeroMove timeMs=1546 button=A heroIndex=0 busyUntil=0 dtBusy=-1546 agiState=0 agiChain=0 dashUntil=0 dtDash=-1546 lastPressMs=0 meterStartMs=0 vx=0 vy=0
+HeroEngineInPhaser.ts:27628 [UI] blocked intent (ui open) {pid: 1, hi: 0, button: 'A'}
+HeroEngineInPhaser.ts:49838 [TIMER80] AFTER P1 intent=A timeMs=1546
+HeroEngineInPhaser.ts:48678 [P1 intent] EDGE timeMs=1612 intent= (prev=A prevDurMs=115) aNow=0 bNow=0 aEdge=0 bEdge=0 pending= pending2=
+HeroEngineInPhaser.ts:55685 [SAFE] hi=0 ok=1 reason=entrance floor=entrance
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 48.3 KB/s≈ 380.33 latestSprites= 11
+?profile=LongBlond:2835 [RELIC][OFFER][UI] render {options: Array(3), canControl: true, theme: 'starter', title: 'Starter Relic'}
+HeroEngineInPhaser.ts:54397 [RELIC][GRANT] {pid: 1, relicId: 'lantern_of_life', source: 'relic-offer'}
+HeroEngineInPhaser.ts:53091 [RELIC][OFFER] clear {reason: 'picked:__heUiCommand', pid: 1}
+?profile=LongBlond:1  Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <button.shopui-item relic-offer-item shopui-sel>
+Ancestor with aria-hidden: <div.#relic-offer-layer> <div id=​"relic-offer-layer" aria-hidden=​"true" class>​…​</div>​
+?profile=LongBlond:3496 [RELICTIP] render {count: 1}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=8
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'teleport_rune_spin1', r: 10, c: 20, active: 0, radius: 0, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=8
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 21, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=8
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 8, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 54.5 KB/s≈ 476.77 latestSprites= 11
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=9
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'teleport_rune_spin2', r: 10, c: 20, active: 0, radius: 0, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=9
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 22, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=9
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 9, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=10
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'teleport_rune_spin3', r: 10, c: 20, active: 0, radius: 0, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=10
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 23, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=10
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 10, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=11
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'teleport_rune_flash', r: 10, c: 20, active: 0, radius: 0, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=11
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 24, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=11
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 11, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 300 scenePresent= true spriteCount= 11
+main.ts:744 [save] sent autosave {type: 'heroesSaveV1', savedAt: 1768489584660, profiles: Array(1), floor: {…}, worldSnapshot: {…}, …}
+HeroEngineInPhaser.ts:7914 [DUN][CLEAR] shop: trigger=0 npc=0 npcsCleared=0 itemsCleared=0
+HeroEngineInPhaser.ts:20835 >>> [HeroEngine.worldgen] map size 20 x 40 arena= {topR: 8, bottomR: 12, leftC: 15, rightC: 25}
+HeroEngineInPhaser.ts:21440 [WORLD][MAP] {worldRev: 3, floorIndex: 1, floorKind: 'treasure', baseFamily: 'ground_black', wallFamily: 'chasm_light', …}
+HeroEngineInPhaser.ts:6626 [DUNGEON] enter floor=1 kind=treasure theme=ground_black/chasm_light players=1
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=15
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=4
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 3, c: 13, active: 0, radius: 0, …}
+main.ts:1945 [net.decor.capture] {decorRev: 15, worldRev: 3, floorIndex: 1, triggerCount: 2, solidCount: 3, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=15
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=4
+arcadeCompat.ts:581 [DECOR][BOOT] end
+HeroEngineInPhaser.ts:8530 [FOCUS][PILLAR] focus off (runeActive=0, rune="")
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 25, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=15
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=4
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 15, propCount: 4, decalRows: 20, byName: {…}}
+arcadeCompat.net.ts:1275 [net.host] snapshot # 300 sprites= 12 dtMs= 17
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 53.6 KB/s≈ 473.67 latestSprites= 12
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 52.0 KB/s≈ 456.04 latestSprites= 12
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 600 scenePresent= true spriteCount= 12
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 55.1 KB/s≈ 483.12 latestSprites= 12
+arcadeCompat.net.ts:1275 [net.host] snapshot # 600 sprites= 12 dtMs= 17
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 900 scenePresent= true spriteCount= 12
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.3 KB/s≈ 520.00 latestSprites= 12
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 58.8 KB/s≈ 515.63 latestSprites= 12
+HeroEngineInPhaser.ts:21704 [FOCUS][CHEST] highlight set {id: 21, x: 432, y: 112}
+tileMapGlue.ts:2091 [PROPAURA][CHEST-STATE] {"baseName":"chest","rawKey":"chest#closed","visPadAlways":true,"visPadPx":4,"kids":1,"padBaked":false,"padScale":1}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"chest","rawKey":"chest#closed","anchor":{"r":3,"c":13},"tiles":{"w":1,"h":1},"textureKey":"tiles.build_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499]}
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 3, c: 13, active: 1, radius: 2, …}
+HeroEngineInPhaser.ts:48678 [P1 intent] EDGE timeMs=15761 intent=A (prev= prevDurMs=0) aNow=1 bNow=0 aEdge=1 bEdge=0 pending=A pending2=
+HeroEngineInPhaser.ts:8664 [CHEST][INTERACT] A edge {pid: 1, hi: 0, hero: {…}, interactables: 1, intentBlocked: true}
+HeroEngineInPhaser.ts:8685 [CHEST][INTERACT] scan {pid: 1, hi: 0, kind: 'chest', inRange: 1, opened: 0, …}
+HeroEngineInPhaser.ts:8703 [CHEST][INTERACT] chest candidate {pid: 1, hi: 0, opened: 0, role: '', x: 432, …}
+HeroEngineInPhaser.ts:53217 [RELIC][OFFER] chest config missing {pid: 1, hi: 0, source: 'chest'}
+HeroEngineInPhaser.ts:8732 [RELIC][OFFER] chest handoff skipped {pid: 1, hi: 0, role: '', reason: 'no-config'}
+HeroEngineInPhaser.ts:43054 [COINFX enqueue] {d: 10, popX: 432, popY: 100, pid: 1, qLen: 1}
+HeroEngineInPhaser.ts:43074 [COINS] add {hi: 0, delta: 10, total: 10}
+HeroEngineInPhaser.ts:6626 [DUNGEON] chest opened by P1; pad powered
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=17
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+arcadeCompat.ts:9470 [FOCUS][DECOR][SYNC] {name: 'chest#open', r: 3, c: 13, active: 0, radius: 0, …}
+main.ts:1632 [COINFX drain] {n: 1, isHost: true}
+main.ts:1672 [COINFX] created anim {key: '__coinSpin', end: 6}
+main.ts:1685 [COINFX spawnBurst] {sx: 432, sy: 100, countRaw: 10, hasTex: true}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=17
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+HeroEngineInPhaser.ts:8530 [FOCUS][PILLAR] focus on (runeActive=1, rune="teleport_rune")
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 26, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=17
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 17, propCount: 5, decalRows: 20, byName: {…}}
+HeroEngineInPhaser.ts:48678 [P1 intent] EDGE timeMs=15845 intent= (prev=A prevDurMs=84) aNow=0 bNow=0 aEdge=0 bEdge=0 pending= pending2=
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 56.5 KB/s≈ 495.76 latestSprites= 12
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 1200 scenePresent= true spriteCount= 12
+arcadeCompat.net.ts:1275 [net.host] snapshot # 900 sprites= 12 dtMs= 17
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 58.0 KB/s≈ 507.50 latestSprites= 11
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 1500 scenePresent= true spriteCount= 11
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.2 KB/s≈ 517.83 latestSprites= 11
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=18
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=18
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 27, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=18
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 18, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=19
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=19
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 28, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=19
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 19, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=20
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=20
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 29, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=20
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 20, propCount: 5, decalRows: 20, byName: {…}}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=21
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=21
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 30, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=21
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#open', tileR: 3, tileC: 13, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+main.ts:1579 [net.decor.apply] {rev: 21, propCount: 5, decalRows: 20, byName: {…}}
+main.ts:744 [save] sent autosave {type: 'heroesSaveV1', savedAt: 1768489601434, profiles: Array(1), floor: {…}, worldSnapshot: {…}, …}
+HeroEngineInPhaser.ts:7914 [DUN][CLEAR] shop: trigger=0 npc=0 npcsCleared=0 itemsCleared=0
+HeroEngineInPhaser.ts:20835 >>> [HeroEngine.worldgen] map size 20 x 40 arena= {topR: 8, bottomR: 12, leftC: 15, rightC: 25}
+HeroEngineInPhaser.ts:21440 [WORLD][MAP] {worldRev: 4, floorIndex: 2, floorKind: 'combat', baseFamily: 'grass_dense_light', wallFamily: 'chasm_medium', …}
+HeroEngineInPhaser.ts:43802 [setupEnemySpawners] using WORLD size from _engineWorldTileMap: {rows: 20, cols: 40, tileSize: 32, W: 1280, H: 640}
+HeroEngineInPhaser.ts:44109 [spawns] floor=2 pool=1 danger=36 intervalMs=2600
+HeroEngineInPhaser.ts:6626 [DUNGEON] enter floor=2 kind=combat theme=grass_dense_light/chasm_medium players=1
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=24
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 2}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=3
+arcadeCompat.ts:581 [DECOR][BOOT] end
+main.ts:1945 [net.decor.capture] {decorRev: 24, worldRev: 4, floorIndex: 2, triggerCount: 2, solidCount: 2, …}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_dense_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=24
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 2}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=3
+arcadeCompat.ts:581 [DECOR][BOOT] end
+HeroEngineInPhaser.ts:8530 [FOCUS][PILLAR] focus off (runeActive=0, rune="")
+arcadeCompat.net.ts:935 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 31, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_dense_light', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=24
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 2}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 13, tileC: 17, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=3
+arcadeCompat.ts:581 [DECOR][BOOT] end
+main.ts:1579 [net.decor.apply] {rev: 24, propCount: 3, decalRows: 20, byName: {…}}
+arcadeCompat.net.ts:1275 [net.host] snapshot # 1200 sprites= 22 dtMs= 24
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 56.5 KB/s≈ 512.85 latestSprites= 22
+HeroEngineInPhaser.ts:55685 [SAFE] hi=0 ok=0 reason=combat-not-cleared floor=combat
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 1800 scenePresent= true spriteCount= 22
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.3 KB/s≈ 573.18 latestSprites= 22
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 58.5 KB/s≈ 577.42 latestSprites= 24
+arcadeCompat.net.ts:1275 [net.host] snapshot # 1500 sprites= 24 dtMs= 17
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 2100 scenePresent= true spriteCount= 24
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.0 KB/s≈ 584.17 latestSprites= 24
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.7 KB/s≈ 591.13 latestSprites= 24
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 2400 scenePresent= true spriteCount= 24
+arcadeCompat.net.ts:1275 [net.host] snapshot # 1800 sprites= 24 dtMs= 17
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.0 KB/s≈ 584.17 latestSprites= 24
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.5 KB/s≈ 588.84 latestSprites= 24
+arcadeCompat.ts:6775 [_syncNativeSprites] call# 2700 scenePresent= true spriteCount= 24
+arcadeCompat.net.ts:1257 [net.host] PERF Hz≈ 59.5 KB/s≈ 588.84 latestSprites= 24

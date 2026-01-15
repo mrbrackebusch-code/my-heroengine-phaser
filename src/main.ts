@@ -1462,14 +1462,27 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     g.__floorBaseFamily = baseFamily;
     g.__floorWallFamily = wallFamily;
 
-    // Only skip if we've applied this signature already
-    if (
-        rev === (this._tilemapAppliedRev | 0) &&
-        rows === (this._tilemapAppliedRows | 0) &&
-        cols === (this._tilemapAppliedCols | 0) &&
-        tileSize === (this._tilemapAppliedTileSize | 0)
-    ) {
-        return;
+    // If we are the host, ignore echoed tilemaps we originally sent; we already applied locally.
+    const gAny: any = globalThis as any;
+    if (gAny.__isHost) {
+        // Compare against the last host-applied worldRev/floorIndex signature.
+        const lastHostWorldRev = (gAny.__hostWorldRevApplied | 0);
+        const lastHostFloorIdx = (gAny.__hostFloorIndexApplied | 0);
+        if ((worldRev | 0) === lastHostWorldRev && (floorIndex | 0) === lastHostFloorIdx) {
+            return;
+        }
+    }
+
+    // Only skip if we've applied this signature already (for followers)
+    if (!gAny.__isHost) {
+        if (
+            rev === (this._tilemapAppliedRev | 0) &&
+            rows === (this._tilemapAppliedRows | 0) &&
+            cols === (this._tilemapAppliedCols | 0) &&
+            tileSize === (this._tilemapAppliedTileSize | 0)
+        ) {
+            return;
+        }
     }
 
     this._tilemapAppliedRev = rev;
@@ -1859,6 +1872,19 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
     const wallFamily =
         (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
 
+    // Best-effort detect new floor and trigger a one-time decor resync after engine init.
+    const lastFloorSig = g.__lastDecorResyncFloorSig as string | undefined;
+    const floorSig = `${worldRev}|${floorIndex}`;
+    if (g.__isHost && floorSig !== lastFloorSig) {
+        try {
+            const decorNS = (globalThis as any).__HeroEnginePhaserDecor;
+            if (decorNS && typeof decorNS.forceResync === "function") {
+                decorNS.forceResync("floor-change");
+            }
+        } catch (_e) { /* ignore */ }
+        g.__lastDecorResyncFloorSig = floorSig;
+    }
+
     // Decor payload (decals + prop entries) from engine internals
     let decorPayload: DecorPayload | null = null;
     let decorRev = -1;
@@ -2003,8 +2029,12 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         g.__tilemapAppliedThemeKey = themeKey;
     }
 
-    if (decorPayload) {
-        this._tilemapAppliedDecorRev = (decorPayload.rev | 0);
+        if (decorPayload) {
+            this._tilemapAppliedDecorRev = (decorPayload.rev | 0);
+            // Record floor signature for host-side "ignore echoed tilemap" guard
+            const gAny: any = globalThis as any;
+            gAny.__hostWorldRevApplied = worldRev | 0;
+            gAny.__hostFloorIndexApplied = floorIndex | 0;
     }
 
     if (DEBUG_TILEMAP) {

@@ -2797,7 +2797,7 @@ let heroAuras: Sprite[] = []
 
 
 
-const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
+const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 //The master debug turn on and turn off
 
@@ -8002,7 +8002,7 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     if (roll < 10) return DUNGEON_KIND_STORY
 
-    if (roll < 20) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
+    if (roll < 11) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
 
     return DUNGEON_KIND_COMBAT
 
@@ -44169,6 +44169,7 @@ const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
 const ENEMY_ASTAR_MAX_NODES = 5000
 const ENEMY_STUCK_NUDGE_PX = 1
+const ENEMY_NAV_FOOTPRINT_MAX_PX = 30  // clamp nav/wall footprint so large sprites don't brick paths
 const ENEMY_STUCK_SLIDE_ENABLED = false  // toggle anti-stuck nudge if it interferes with A*
 
 let _enginePaused = false
@@ -44453,13 +44454,16 @@ function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: 
 
     const tile = WORLD_TILE_SIZE | 0
 
+    const navW = Math.min(colliderW | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const navH = Math.min(colliderH | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+
     // Interpret (r,c) as the tile containing the enemy's FEET point.
     // Use the tile center as the desired feet point.
     const footX = (c * tile + (tile >> 1)) | 0
     const footY = (r * tile + (tile >> 1)) | 0
 
-    const halfW = Math.idiv(colliderW | 0, 2) | 0
-    const h = (colliderH | 0)
+    const halfW = Math.idiv(navW, 2) | 0
+    const h = (navH | 0)
 
     const left = (footX - halfW) | 0
     const right = (footX + halfW - 1) | 0
@@ -46325,9 +46329,11 @@ interface EnemyEdgePick {
 
 
 function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: number) {
-    const halfW = Math.idiv(cw | 0, 2) | 0
+    const fw = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const fh = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const halfW = Math.idiv(fw, 2) | 0
     const bottom = footY | 0
-    const top = (bottom - (ch | 0) + 1) | 0
+    const top = (bottom - fh + 1) | 0
     const left = ((footX | 0) - halfW) | 0
     const right = ((footX | 0) + halfW - 1) | 0
     return { left, right, top, bottom }
@@ -46711,25 +46717,31 @@ function _monsterDominantColor(enemy: Sprite): number {
 function _makeSlashImage(dx: number, dy: number, color: number): Image {
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
+    const outline = 0; // black outline for contrast
+    const pad = 1;
     if (adx > ady * 1.25) {
-        // horizontal streak
-        const img = image.create(12, 4);
-        img.fill(color);
+        // horizontal streak with 1px outline
+        const img = image.create(12 + pad * 2, 4 + pad * 2);
+        img.fill(outline);
+        img.fillRect(pad, pad, 12, 4, color);
         return img;
     } else if (ady > adx * 1.25) {
-        // vertical streak
-        const img = image.create(4, 12);
-        img.fill(color);
+        // vertical streak with 1px outline
+        const img = image.create(4 + pad * 2, 12 + pad * 2);
+        img.fill(outline);
+        img.fillRect(pad, pad, 4, 12, color);
         return img;
     } else {
-        // diagonal
-        const img = image.create(10, 10);
+        // diagonal with outline
+        const size = 10 + pad * 2;
+        const img = image.create(size, size);
+        img.fill(outline);
         for (let i = 0; i < 10; i++) {
-            const x = dx >= 0 ? i : 9 - i;
-            const y = dy >= 0 ? i : 9 - i;
+            const x = (dx >= 0 ? i : 9 - i) + pad;
+            const y = (dy >= 0 ? i : 9 - i) + pad;
             for (let t = -1; t <= 1; t++) {
                 const yy = y + t;
-                if (yy >= 0 && yy < 10) img.setPixel(x, yy, color);
+                if (yy >= 0 && yy < size) img.setPixel(x, yy, color);
             }
         }
         return img;
@@ -46757,7 +46769,7 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
 
     const fx = sprites.create(img, SpriteKind.MonsterEffect);
     fx.setFlag(SpriteFlag.Ghost, true);
-    fx.z = enemy.z + 1;
+    fx.z = enemy.z + 50; // ensure above heroes/monsters
     fx.x = enemy.x + offX;
     fx.y = enemy.y + offY;
 
