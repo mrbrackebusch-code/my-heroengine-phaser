@@ -813,6 +813,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (p === "slash" || p === "sword") return "slash";
         if (p === "shoot" || p === "bow") return "shoot";
         if (p === "hurt" || p === "hit") return "hurt";
+        if (p === "death" || p === "dead") return "hurt";
         if (p === "climb" || p === "climbing") return "climb";
         if (p === "idle") return "idle";
         if (p === "jump") return "jump";
@@ -1266,16 +1267,19 @@ function _playDefaultAnimPath(
     _publishHeroFollowFrameKeys(sprite, def);
 
     _detachPrevAnimCompleteHandler(sprite);
-    _attachAnimCompleteHandler(
-        sprite,
-        req,
-        animKey,
-        restPhase,
-        /*phaseAtApply*/ req.phase,
-        effectivePhase,
-        def,
-        shouldProve
-    );
+    const actionKind = (req.actionKind || "").toLowerCase();
+    if (actionKind !== "death") {
+        _attachAnimCompleteHandler(
+            sprite,
+            req,
+            animKey,
+            restPhase,
+            /*phaseAtApply*/ req.phase,
+            effectivePhase,
+            def,
+            shouldProve
+        );
+    }
 }
 
 

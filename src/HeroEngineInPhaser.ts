@@ -2797,7 +2797,7 @@ let heroAuras: Sprite[] = []
 
 
 
-const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
+const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 //The master debug turn on and turn off
 
@@ -5804,7 +5804,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 100 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -15395,9 +15395,45 @@ function shopHandleControls(nowMs: number): void {
 
         if (ctrl.A_edge) {
 
-            if (_isHeroInInteractRange(hero, shopkeeperNpc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)) {
+            const inRange = _isHeroInInteractRange(hero, shopkeeperNpc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
 
-                _uiTryOpenShopUi(hi, pid, "shopkeeper:A")
+            const focusActive = sprites.readDataNumber(hero, HERO_FOCUS_ACTIVE_KEY) | 0
+
+            const shopFocusActive = sprites.readDataNumber(hero, HERO_SHOP_FOCUS_ACTIVE_KEY) | 0
+
+            console.log("[SHOP][INTERACT] A edge", {
+                pid: pid | 0,
+                hi: hi | 0,
+                hero: { x: hero.x | 0, y: hero.y | 0 },
+                shopkeeper: { x: shopkeeperNpc.x | 0, y: shopkeeperNpc.y | 0 },
+                inRange: inRange ? 1 : 0,
+                focusActive: focusActive | 0,
+                shopFocusActive: shopFocusActive | 0,
+                uiMode: uiMode | 0,
+                intentBlocked: !!DUNGEON_BLOCK_INTENTS,
+            })
+
+            if (inRange) {
+
+                const busyUntil = _uiReadNum(hero, HERO_DATA.BUSY_UNTIL, 0) | 0
+
+                const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+
+                const result = _uiTryOpenShopUi(hi, pid, "shopkeeper:A")
+
+                console.log("[SHOP][INTERACT] shopkeeper open", {
+                    pid: pid | 0,
+                    hi: hi | 0,
+                    ok: result.ok ? 1 : 0,
+                    reason: result.reason || "",
+                    uiMode: uiMode | 0,
+                    busyUntil: busyUntil | 0,
+                    now: now | 0,
+                    locked: locked ? 1 : 0,
+                    floorKind: _dunFloorKind || "",
+                    dungeonMode: !!DUNGEON_MODE_ACTIVE,
+                })
+
                 _shopUnlockExitPadIfInShopFloor(now)
 
             }
@@ -18583,7 +18619,7 @@ function _stampHumanoidPhaseForSprite(s: Sprite, phaseName: string, nowMs: numbe
 
     // Keep it non-segmented
 
-    _animKeys_clearPhasePart(s as any)
+    _animKeys_clearPhasePart(-1, s, now)
 
 }
 
@@ -28632,9 +28668,9 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
 
 
 
-    _animKeys_clearPhasePart(hero);
+    _animKeys_clearPhasePart(heroIndex, hero, now, "HERO_DEATH_BEGIN", "applyDamageToHeroIndex");
 
-    _animEvent_clear(hero);
+    _animEvent_clear(heroIndex, hero, "HERO_DEATH_BEGIN", "applyDamageToHeroIndex");
 
 
 
@@ -49130,6 +49166,13 @@ function updateHeroDeaths(now: number) {
         if (!hero) continue;
 
 
+
+        if (!sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+            const hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0;
+            if (hp <= 0) {
+                applyDamageToHeroIndex(i, 0);
+            }
+        }
 
         if (!sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue;
 
