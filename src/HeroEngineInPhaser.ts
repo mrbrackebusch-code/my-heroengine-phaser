@@ -8869,7 +8869,7 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
     const rc = _dunReadyMaskAndCountInPadZone()
 
-    const allReady = (needed > 0 && rc.ready >= needed && anyOn)
+    const allReady = (needed > 0 && rc.ready >= needed)
 
 
 
@@ -8896,11 +8896,6 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
 
     if ((nowMs | 0) < (_dunTeleportCommitAtMs | 0)) return true
-
-    // Flash once at the irreversible commit moment.
-    _dunRuneSetName("teleport_rune_flash")
-
-
 
     const next = (_dunFloorIndex + 1) | 0
 
@@ -8970,7 +8965,7 @@ function _dunTickPadHoldTeleport(nowMs: number): boolean {
 
     const anyOn = ((rc.ready | 0) > 0)
 
-    const allReady = (needed > 0 && rc.ready >= needed && anyOn)
+    const allReady = (needed > 0 && rc.ready >= needed)
 
 
 
@@ -9034,12 +9029,14 @@ function _dunTickPadHoldTeleport(nowMs: number): boolean {
 
 
 
-    // If all players are ready and held long enough: queue teleport (flash later at commit)
+    // If all players are ready and held long enough: flash
+    if (allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0)) {
+        desired = "teleport_rune_flash"
+    }
 
     _dunRuneSetName(desired)
 
     // If we haven't met the all-ready hold, we keep spinning but do not teleport.
-
     if (!(allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0))) return true
 
 
@@ -22537,23 +22534,35 @@ function resolveEnemyTilemapCollisions(): void {
     function resolveForEnemy(e: Sprite) {
         if (!e) return
 
-        // Use feet-aligned collider bounds (already bottom-anchored).
-        // Reuse the existing helper to get current bounds.
+        // Use feet-aligned collider bounds (bottom-anchored) with a fixed wall footprint.
         const dims = _enemyGetColliderDims(e)
         const cw = dims.w | 0
         const ch = dims.h | 0
-        const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
-        const halfW = Math.idiv(cw, 2) | 0
-        const halfH = Math.idiv(ch, 2) | 0
+        const auraFoot = sprites.readDataNumber(e, "__monsterAuraFootBottom") | 0
+        const auraH = sprites.readDataNumber(e, "__monsterAuraFrameH") | 0
+        const wallW = ENEMY_WALL_COLLIDER_PX | 0
+        const wallH = ENEMY_WALL_COLLIDER_PX | 0
+        const halfW = Math.idiv(wallW, 2) | 0
+        const halfH = Math.idiv(wallH, 2) | 0
 
         // Run a couple of passes in case we overlap more than one tile
         for (let iter = 0; iter < 3; iter++) {
-            const cx = feet.footX | 0
-            const cy = feet.footY | 0
+            let footX = e.x | 0
+            let footY = 0
+            if (auraFoot > 0 && auraH > 0) {
+                const halfAuraH = Math.idiv(auraH | 0, 2) | 0
+                footY = (((e.y | 0) - halfAuraH + (auraFoot | 0)) | 0)
+            } else {
+                const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
+                footY = feet.footY | 0
+            }
+
+            const cx = footX | 0
+            const cy = footY | 0
             const left = (cx - halfW) | 0
             const right = (cx + halfW - 1) | 0
             const bottom = cy | 0
-            const top = (bottom - ch + 1) | 0
+            const top = (bottom - wallH + 1) | 0
 
             const minCol = Math.idiv(left, tileSize)
             const maxCol = Math.idiv(right, tileSize)
@@ -30549,6 +30558,20 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, he
 
 
 
+
+// MonsterEffect -> Hero (enemy slashes/projectiles). Single hit then destroy.
+sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, hero) {
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const hi = heroes.indexOf(hero)
+    if (hi < 0) return
+
+    const dmg = sprites.readDataNumber(fx, "dmg") | 0
+    if (dmg > 0) applyDamageToHeroIndex(hi, dmg)
+
+    fx.destroy()
+})
 
 
 function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: number): boolean {
@@ -42006,6 +42029,7 @@ const ENEMY_MIN_HOLD_RANGE_PX = 25  // minimum “stop” range so enemies don�
 const ENEMY_ATTACK_BASE_RANGE_PX = 25
 const ENEMY_STUCK_WALL_MARGIN_PX = 2
 const RANGED_ADVANCE_RANGE_CAP_PX = 140
+const ENEMY_WALL_COLLIDER_PX = 32
 
 
 
@@ -45573,6 +45597,16 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 }
 
 function _enemyNavGetEnemyFeetPoint(enemy: Sprite, cw: number, ch: number) {
+    // If aura foot data exists, anchor feet to the aura visual bottom.
+    const auraFoot = sprites.readDataNumber(enemy, "__monsterAuraFootBottom") | 0
+    const auraH = sprites.readDataNumber(enemy, "__monsterAuraFrameH") | 0
+    if (auraFoot > 0 && auraH > 0) {
+        const halfH = Math.idiv(auraH | 0, 2) | 0
+        const footY = (((enemy.y | 0) - halfH + (auraFoot | 0)) | 0)
+        const footX = enemy.x | 0
+        return { footX, footY, offY: 0, dispH: auraH | 0 }
+    }
+
     const img: any = (enemy as any).image
     const dispH = (((img && img.height) ? (img.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || (ch | 0)
 
@@ -46866,6 +46900,10 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
 
     // Decide melee vs ranged by advanceRangePx (<=0 melee)
     const rangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0;
+    const dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0;
+    sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0);
+    sprites.setDataNumber(fx, "dmg", dmg);
+
     if (rangePx > 0) {
         const speed = 70;
         fx.vx = (vx * speed) | 0;

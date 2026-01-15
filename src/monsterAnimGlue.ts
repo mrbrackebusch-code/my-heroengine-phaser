@@ -1,6 +1,7 @@
 // monsterAnimGlue.ts
 import type Phaser from "phaser";
 import type { MonsterAtlas } from "./monsterAtlas";
+import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 
 type Dir = "up" | "down" | "left" | "right";
 type Phase = "walk" | "attack" | "death";
@@ -197,6 +198,10 @@ export function applyMonsterAnimationForSprite(
         data.set("__monsterAuraTex", animSet.auraTextureKey);
         data.set("__monsterAuraFrameW", animSet.frameWidth | 0);
         data.set("__monsterAuraFrameH", animSet.frameHeight | 0);
+        const foot = MONSTER_AURA_FEET[animSet.id];
+        if (foot && typeof foot.footBottom === "number") {
+            data.set("__monsterAuraFootBottom", foot.footBottom | 0);
+        }
     }
 
     const mgr = scene.anims;

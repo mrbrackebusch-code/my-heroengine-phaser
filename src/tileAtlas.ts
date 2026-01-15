@@ -226,8 +226,8 @@ teleport_rune_flash: {
     anim: {
         key: "flash",
         frames: [0, 1, 2, 3],
-        frameRate: 18,
-        repeat: 0
+        frameRate: 28,
+        repeat: -1
     }
 },
 

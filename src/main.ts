@@ -1997,6 +1997,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         decorPayload &&
         ((decorPayload.rev | 0) !== (this._tilemapAppliedDecorRev | 0));
 
+    const prevFloor = this._tilemapAppliedFloorIndex | 0;
     const needApply =
         (worldRev | 0) !== (this._tilemapAppliedWorldRev | 0) ||
         (floorIndex | 0) !== (this._tilemapAppliedFloorIndex | 0) ||
@@ -2054,7 +2055,10 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         });
     }
 
-    this.cameras?.main?.flash(140);
+    // Only flash the screen on true floor changes (not decor updates/chest opens).
+    if ((floorIndex | 0) !== (prevFloor | 0)) {
+      this.cameras?.main?.flash(140);
+    }
 
     // Broadcast to clients (monotonic net rev)
     const wsAny: WebSocket | null = g.__net?.ws ?? null;
