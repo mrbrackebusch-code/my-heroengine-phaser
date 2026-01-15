@@ -5804,7 +5804,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
