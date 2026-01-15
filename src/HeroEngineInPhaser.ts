@@ -2712,6 +2712,7 @@ let heroDamageAmpMult: number[] = [1, 1, 1, 1]   // damage amp from buffs (hooke
 let heroHPBars: StatusBarSprite[] = []
 
 let heroManaBars: StatusBarSprite[] = []
+let heroManaFlashUntil: number[] = []
 
 
 
@@ -25807,12 +25808,8 @@ function _doHeroMoveTrySpendMana(
 
 ): boolean {
 
-    // Mana (skip Strength)
-
-    if (family == FAMILY.STRENGTH) return true
-
-
-
+    // Base mana cost: sum of traits; Strength is included (no special skip).
+    // Incremental Strength charge drain is handled separately; this is the up-front cost.
     let manaCost = (t1 + t2 + t3 + t4) | 0
 
     if (manaCost < 0) manaCost = 0
@@ -25822,6 +25819,19 @@ function _doHeroMoveTrySpendMana(
     let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
 
     const maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+
+    // Trace mana checks once per unique scenario (cost>0) to confirm we entered spend logic.
+    if (DEBUG_MANA_FAIL_LOG_ONCE && manaCost > 0) {
+        try {
+            const gAny: any = globalThis as any;
+            const seen: Set<string> = gAny.__dbgManaCheckOnce || (gAny.__dbgManaCheckOnce = new Set<string>());
+            const key = `chk:${heroIndex}:${button}:${mana}:${manaCost}:${family}:max${maxMana}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                console.log(`[MANA][CHECK] hi=${heroIndex} btn=${button} fam=${family} mana=${mana} max=${maxMana} cost=${manaCost}`);
+            }
+        } catch { /* ignore */ }
+    }
 
 
 
@@ -25874,7 +25884,7 @@ function _doHeroMoveTrySpendMana(
     const tooExpensive = manaCost > maxMana && manaCost > 0;
     if (tooExpensive || mana < manaCost) {
 
-        flashHeroManaBar(heroIndex)
+        flashHeroManaBar(heroIndex, SPECIAL_EMOTE_PHASE_DUR_MS)
         if (DEBUG_MANA_FAIL_LOG_ONCE) {
             try {
                 const gAny: any = globalThis as any;
@@ -27704,37 +27714,9 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-    if (family === FAMILY.STRENGTH) {
+    if (!_doHeroMoveTrySpendMana(heroIndex, hero, family, t1, t2, t3, t4)) {
 
-        // RELIC HOOK: move committed
-
-        try {
-
-            const ctx: RelicMoveCommittedContext = {
-
-                now: now | 0,
-
-                hi: heroIndex | 0,
-
-                hero,
-
-                family: family | 0,
-
-                button,
-
-            }
-
-            relic_onMoveCommitted(ctx)
-
-        } catch { }
-
-
-
-        executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
-
-
-
-        _doHeroMoveDbgReset(playerId)
+        _doHeroMoveDbgLogNoManaAndReset(playerId, heroIndex, button, now, family)
 
         return
 
@@ -27742,12 +27724,24 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-    if (!_doHeroMoveTrySpendMana(heroIndex, hero, family, t1, t2, t3, t4)) {
+    // Strength: execute after mana spend (skip AGI execute logic)
+    if (family === FAMILY.STRENGTH) {
 
-        _doHeroMoveDbgLogNoManaAndReset(playerId, heroIndex, button, now, family)
+        // RELIC HOOK: move committed
+        try {
+            const ctx: RelicMoveCommittedContext = {
+                now: now | 0,
+                hi: heroIndex | 0,
+                hero,
+                family: family | 0,
+                button,
+            }
+            relic_onMoveCommitted(ctx)
+        } catch { }
 
+        executeStrengthMove(heroIndex, hero, button, traitsFinal, stats, animKey)
+        _doHeroMoveDbgReset(playerId)
         return
-
     }
 
 
@@ -28191,6 +28185,7 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 
 
     bar.max = 100; bar.value = 100; bar.setColor(9, 1)
+    heroManaFlashUntil[heroIndex] = 0
 
     heroManaBars[heroIndex] = bar
 
@@ -28211,17 +28206,32 @@ function updateHeroManaBar(heroIndex: number) {
     let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxMana <= 0) maxMana = 1
 
     bar.value = Math.max(0, Math.min(100, Math.idiv(mana * 100, maxMana)))
-
-    bar.setColor(9, 1)
+    const now = game.runtime() | 0
+    const flashUntil = heroManaFlashUntil[heroIndex] | 0
+    const flashing = flashUntil > 0 && now < flashUntil
+    if (flashing) {
+        // High-contrast flash: alternate glaring red / base blue rapidly.
+        const phase = ((now / 80) | 0) & 1
+        const fill = phase ? 2 : 9   // red / blue
+        const bg = 1                 // dark background
+        bar.setColor(fill, bg)
+    } else {
+        heroManaFlashUntil[heroIndex] = 0
+        bar.setColor(9, 1)
+    }
 
 }
 
 
 
-function flashHeroManaBar(heroIndex: number) {
+function flashHeroManaBar(heroIndex: number, durationMs?: number) {
 
     const bar = heroManaBars[heroIndex]; if (!bar) return
 
+    const dur = (durationMs != null && durationMs > 0) ? (durationMs | 0) : 500
+    heroManaFlashUntil[heroIndex] = (game.runtime() | 0) + dur
+    // Overlay flash handled in arcadeCompat via flashOverlayUntil on the statusbar sprite.
+    try { sprites.setDataNumber(bar, "flashOverlayUntil", heroManaFlashUntil[heroIndex]); } catch { /* ignore */ }
     bar.setColor(2, 1)
 
 }
@@ -31822,104 +31832,8 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
 
 
-    // Incremental mana drain tied to degrees gained
-
-    let manaToSpend = 0
-
-    if (mpdX1000 > 0) {
-
-        let costX1000 = dDeg * mpdX1000 + remX1000
-
-        manaToSpend = Math.idiv(costX1000, 1000)
-
-        remX1000 = costX1000 - manaToSpend * 1000
-
-    }
-
-
-
-    // Spend mana; if mana hits 0, force-release
-
-    if (manaToSpend > 0) {
-
-        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
-
-        if (mana <= 0) {
-
-            releaseStrengthCharge(heroIndex, hero, nowMs)
-
-            return
-
-        }
-
-
-
-        if (mana < manaToSpend) {
-
-            const affordableMana = mana
-
-            mana = 0
-
-            sprites.setDataNumber(hero, HERO_DATA.MANA, 0)
-
-            updateHeroManaBar(heroIndex)
-
-
-
-            let degAff = 0
-
-            if (mpdX1000 > 0) degAff = Math.idiv(affordableMana * 1000, mpdX1000)
-
-            else degAff = dDeg
-
-
-
-            arcDeg += degAff
-
-            if (arcDeg > arcMaxDeg) arcDeg = arcMaxDeg
-
-            sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, arcDeg)
-
-
-
-            const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + affordableMana
-
-            sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
-
-
-
-            const pct = clampInt(Math.idiv(arcDeg * 100, Math.max(1, arcMaxDeg)), 0, 100)
-
-            setStrengthChargeBarPct(heroIndex, hero, pct)
-
-
-
-            releaseStrengthCharge(heroIndex, hero, nowMs)
-
-            return
-
-        }
-
-
-
-        mana -= manaToSpend
-
-        if (mana < 0) mana = 0
-
-        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
-
-        updateHeroManaBar(heroIndex)
-
-
-
-        const spent = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT) | 0) + manaToSpend
-
-        sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, spent)
-
-    }
-
-
-
+    // No incremental mana drain during charge (base cost handled up-front).
+    // Just advance the arc based on time.
     arcDeg += dDeg
 
     if (arcDeg > arcMaxDeg) arcDeg = arcMaxDeg

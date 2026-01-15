@@ -5427,6 +5427,11 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     const fillRect = sc.add.rectangle(leftX, 0, innerW, innerH, onHex, 1);
     fillRect.setOrigin(0, 0.5);
 
+    // Flash overlay (visible only when flashOverlayUntil is set on the sprite)
+    const flashRect = sc.add.rectangle(0, 0, barW, barH, onHex, 1);
+    flashRect.setOrigin(0.5, 0.5);
+    flashRect.setVisible(false);
+
     // IMPORTANT: initialize fill width based on current/max (prevents “full red forever”)
     const cur = (sb.current | 0);
     const max = Math.max(1, (sb.max | 0));
@@ -5436,10 +5441,12 @@ function _attachCreateStatusBar(ctx: AttachContext, ui: UiDetect): boolean {
     container.add(borderRect);
     container.add(bgRect);
     container.add(fillRect);
+    container.add(flashRect);
 
     (container as any).setData("sb_border", borderRect);
     (container as any).setData("sb_bg", bgRect);
     (container as any).setData("sb_fill", fillRect);
+    (container as any).setData("sb_flash", flashRect);
 
     // Depth + scroll factor
     try { (container as any).setDepth(s.z | 0); } catch { /* ignore */ }
@@ -7100,7 +7107,7 @@ function _syncUiManagedFastPath(
     try { (native as any).setScrollFactor?.(relToCam ? 0 : 1, relToCam ? 0 : 1); } catch { /* ignore */ }
 
     if (uiKind === UI_KIND_STATUSBAR) {
-        return _syncUiManagedStatusBar(ctx, s, native);
+        return _syncUiManagedStatusBar(ctx, s, native, mcToHex);
     }
 
     if (uiKind === UI_KIND_COMBO_METER) {
@@ -7134,7 +7141,8 @@ function _syncUiManagedFastPath(
 function _syncUiManagedStatusBar(
     ctx: SyncContext,
     s: Sprite,
-    native: Phaser.GameObjects.GameObject
+    native: Phaser.GameObjects.GameObject,
+    mcToHex: (p: number) => number
 ): boolean {
     const anyNative: any = native;
 
@@ -7181,6 +7189,7 @@ function _syncUiManagedStatusBar(
     const borderRect = anyNative.getData?.("sb_border") as Phaser.GameObjects.Rectangle | undefined;
     const bgRect = anyNative.getData?.("sb_bg") as Phaser.GameObjects.Rectangle | undefined;
     const fillRect = anyNative.getData?.("sb_fill") as Phaser.GameObjects.Rectangle | undefined;
+    const flashRect = anyNative.getData?.("sb_flash") as Phaser.GameObjects.Rectangle | undefined;
 
     if (!borderRect || !bgRect || !fillRect) {
         (s as any)._lastNonZeroPixels = 1;
@@ -7211,10 +7220,46 @@ function _syncUiManagedStatusBar(
     const max = Math.max(1, (sb.max | 0));
     const pct = Math.max(0, Math.min(1, cur / max));
 
+    // Colors: reflect current sb state (HeroEngine updates onColor/offColor directly).
+    try {
+        const onHex = mcToHex((sb.onColor | 0) || 0);
+        const offHex = mcToHex((sb.offColor | 0) || 0);
+        const borderColorIdx =
+            (sb.borderColor === undefined || sb.borderColor === null)
+                ? (sb.offColor | 0)
+                : (sb.borderColor | 0);
+        const borderHex = mcToHex(borderColorIdx | 0);
+
+        borderRect.fillColor = borderHex;
+        bgRect.fillColor = offHex;
+        fillRect.fillColor = onHex;
+    } catch { /* ignore color update errors */ }
+
     fillRect.x = leftX;
     fillRect.y = 0;
     fillRect.width = Math.floor(innerW * pct);
     fillRect.height = innerH;
+
+    // Flash overlay: visible only while flashOverlayUntil is in the future.
+    if (flashRect) {
+        const now = _hostPerfNowMs();
+        const flashUntil = sprites.readDataNumber(s, "flashOverlayUntil") | 0;
+        const flashing = flashUntil > 0 && now < flashUntil;
+        if (flashing) {
+            const phase = ((now / 60) | 0) & 1;
+            const onHex = mcToHex(phase ? 2 : 9); // red / blue
+            flashRect.x = 0;
+            flashRect.y = 0;
+            flashRect.width = barW;
+            flashRect.height = barH;
+            flashRect.fillColor = onHex;
+            flashRect.setVisible(true);
+        } else {
+            flashRect.setVisible(false);
+            // Clear the data key to avoid stale checks
+            try { sprites.setDataNumber(s, "flashOverlayUntil", 0); } catch { /* ignore */ }
+        }
+    }
 
     // Prevent pixel-death logic from hiding/removing it
     (s as any)._lastNonZeroPixels = 1;
