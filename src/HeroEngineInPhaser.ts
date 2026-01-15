@@ -5804,7 +5804,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 100 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -42024,7 +42024,7 @@ const ENEMY_SPAWN_TICK_MS = BALANCE.WAVES.SPAWN_TICK_MS
 
 
 
-const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
+const ENEMY_MELEE_RANGE_PX = 40 // melee slash travel distance for overlap reliability
 const ENEMY_MIN_HOLD_RANGE_PX = 25  // minimum “stop” range so enemies don’t chase inside hero center
 const ENEMY_ATTACK_BASE_RANGE_PX = 25
 const ENEMY_STUCK_WALL_MARGIN_PX = 2
@@ -46893,7 +46893,6 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
     const img = _makeSlashImage(vx, vy, color);
 
     const fx = sprites.create(img, SpriteKind.MonsterEffect);
-    fx.setFlag(SpriteFlag.Ghost, true);
     fx.z = enemy.z + 2000; // ensure above heroes/monsters/aura
     fx.x = enemy.x + offX;
     fx.y = enemy.y + offY;
@@ -46911,10 +46910,12 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
         const life = Math.max(120, Math.idiv(rangePx * 1000, speed));
         fx.lifespan = life;
     } else {
-        // melee: short nudge so it feels alive
-        fx.vx = (vx * 30) | 0;
-        fx.vy = (vy * 30) | 0;
-        fx.lifespan = Math.max(attackMs, 150);
+        // melee: push the slash far enough to overlap the hero
+        const speed = 90;
+        fx.vx = (vx * speed) | 0;
+        fx.vy = (vy * speed) | 0;
+        const life = Math.max(attackMs, Math.idiv(ENEMY_MELEE_RANGE_PX * 1000, speed));
+        fx.lifespan = life;
     }
 }
 
