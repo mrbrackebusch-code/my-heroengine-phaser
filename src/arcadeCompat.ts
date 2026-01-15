@@ -94,8 +94,8 @@ const DEBUG_NET = false;
 const DEBUG_TILEMAP = true;
 
 // Collider debug overlays (Phaser-only). Heavy when enabled; keep OFF by default.
-const DEBUG_DRAW_WALL_COLLIDERS = true;
-const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = true;
+const DEBUG_DRAW_WALL_COLLIDERS = false;
+const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = false;
 const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
 const DEBUG_COLLIDER_ALPHA = 0.35;

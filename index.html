@@ -1522,6 +1522,11 @@
 
         const hasProfile = !!params.get("profile");
 
+        const loadingOverlay = document.getElementById("loading-overlay");
+        if (!hasProfile && loadingOverlay) {
+          loadingOverlay.classList.add("hidden");
+        }
+
         // Expose WS port to client (matches vite config)
         window.__GAME_WS_PORT = 8080;
 
