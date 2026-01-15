@@ -3979,6 +3979,7 @@ private _propPlaceOneAnchor(
   // Optional per-prop offsets (safe even if undefined)
   const ox = ((vis.offsetXPx ?? 0) | 0);
   const oy = ((vis.offsetYPx ?? 0) | 0);
+  const depthBias = (vis.depthBias ?? 0) | 0;
 
   const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
 
@@ -3987,7 +3988,7 @@ private _propPlaceOneAnchor(
   // Depth based on anchor (bottom tile) so whole prop sorts as ONE object.
   // Include oy so y-sort matches visual when offsets are used.
   const anchorYpx = (((anchorR | 0) * st.tileSize + (st.tileSize >> 1) + oy) | 0);
-  const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + 0) | 0;
+  const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + depthBias) | 0;
 
   const anchorKey = String(anchorR | 0) + "," + String(anchorC | 0);
   const objs: any[] = [];

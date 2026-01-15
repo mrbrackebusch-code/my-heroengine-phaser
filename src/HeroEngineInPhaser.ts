@@ -1683,7 +1683,11 @@ const BALANCE = {
 
         HP_PER_PICK: 6,
 
-        MANA_PER_PICK: 4
+        MANA_PER_PICK: 4,
+
+        // Free core stats granted automatically per level (before spendable points)
+        FREE_HP_PER_LEVEL: 5,
+        FREE_MANA_PER_LEVEL: 5
 
     },
 
@@ -1805,8 +1809,26 @@ const BALANCE = {
 
         ARCHETYPE_ELITES_WEIGHT_BASE: 0.10,
 
-        ARCHETYPE_ELITES_WEIGHT_DELTA: 0.25
+        ARCHETYPE_ELITES_WEIGHT_DELTA: 0.25,
 
+        // Enemy stat ramp (per floor beyond 1)
+        ENEMY_POWER_PER_FLOOR_PCT: 8,
+        ENEMY_SPEED_PER_FLOOR_PCT: 2
+
+    },
+
+    SHOP: {
+        WEAPON_PRICE_BASE: 10,
+        WEAPON_PRICE_PER_FLOOR: 6,
+        WEAPON_PRICE_RING_DELTA_PCT: 12, // price bump per ring slot index
+        WEAPON_PRICE_SCALE_PER_FLOOR_PCT: 12,
+
+        TRAIT_BASE_MIN: 15,
+        TRAIT_BASE_MAX: 120,
+        TRAIT_SCALE_PER_FLOOR_PCT: 12,
+        TRAIT_SCALE_PCT_MAX: 400, // cap so late floors don't explode
+        TRAIT_MIN_ABS: 5,
+        TRAIT_MAX_ABS: 400
     }
 
 }
@@ -3865,6 +3887,8 @@ const CONTRACT_WHY_TABLE: Record<string, string> = {
 
     INTELLECT_DETONATE_REQUEST_HIT_WALL: "detonateIntellectSpellForHero",
 
+    INTELLECT_DETONATE_REQUEST_INTERRUPT: "detonateIntellectSpellForHero",
+
     INTELLECT_SPELL_CLEANUP: "updateIntellectSpellsControl",
 
     INTELLECT_CAST_TICK: "updateIntellectSpellsControl",
@@ -5804,7 +5828,7 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -7755,7 +7779,8 @@ function _dunClearTransientFloorEntities(): void {
 
     shopItemPedestal = null
 
-
+    // Platform visuals/colliders
+    _shopPlatformDestroy()
 
     // 4b) Phaser: purge any lingering weapon overlay sprites
 
@@ -12288,7 +12313,7 @@ let shopTriggerZone: Sprite = null
 
 // Shop layout (tile-driven placement for shopkeeper + statues)
 
-// kind: 0=none, 2=2x5 slots (2 rows), 1=1x5 slots (1 row)
+// kind: 0=none, 3=platform, 2=2x5 slots (2 rows), 1=1x5 slots (1 row)
 
 // baseR/baseC are BASE TILE coords (32px tiles), top-left of the slots-rect
 
@@ -12302,7 +12327,18 @@ let _shopLayout_baseC = -1
 
 let _shopLayout_worldRev = -1
 
+// Shop platform placement (visual + collision)
+const SHOP_PLATFORM_SIZE_TILES = 7
+const SHOP_PLATFORM_INNER_MIN = 1
+const SHOP_PLATFORM_INNER_MAX = 5
+const SHOP_PLATFORM_SHOP_COL = 3 // tiles, relative to platform origin (col 0 = outermost left)
+const SHOP_PLATFORM_SHOP_ROW = 2.5 // between tiles [3][2] and [3][3]
+const SHOP_PLATFORM_SHOP_OFFSET_X_PX = -16
+const SHOP_PLATFORM_SHOP_OFFSET_Y_PX = -32
 
+let _shopPlatformAnchor: Sprite = null
+let _shopPlatformStairs: Sprite = null
+let _shopPlatformSolids: Sprite[] = []
 
 
 
@@ -12707,6 +12743,100 @@ function _shopSlotCenterY(baseTileR: number): number {
 }
 
 
+function _shopPlatformDestroy(): void {
+    if (_shopPlatformAnchor && !(_shopPlatformAnchor.flags & sprites.Flag.Destroyed)) {
+        _dunDestroySprite(_shopPlatformAnchor)
+    }
+    _shopPlatformAnchor = null
+
+    if (_shopPlatformStairs && !(_shopPlatformStairs.flags & sprites.Flag.Destroyed)) {
+        _dunDestroySprite(_shopPlatformStairs)
+    }
+    _shopPlatformStairs = null
+
+    if (_shopPlatformSolids && _shopPlatformSolids.length) {
+        for (let i = 0; i < _shopPlatformSolids.length; i++) {
+            const s = _shopPlatformSolids[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) _dunDestroySprite(s)
+        }
+    }
+    _shopPlatformSolids = []
+
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        _engineDecorSolids = _engineDecorSolids.filter(s => s && !(s.flags & sprites.Flag.Destroyed))
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        _engineDecorTriggers = _engineDecorTriggers.filter(s => s && !(s.flags & sprites.Flag.Destroyed))
+    }
+
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+}
+
+
+function _shopPlatformPlace(baseR: number, baseC: number): void {
+    _shopPlatformDestroy()
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const anchorR = (baseR + (SHOP_PLATFORM_SIZE_TILES - 1)) | 0 // bottom-left tile of the 7x7 sheet
+    const anchorC = baseC | 0
+
+    _shopPlatformAnchor = _dunDecor_spawnAtTile({
+        name: "shop_platform",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: anchorR,
+        tileC: anchorC,
+        pxW: tileSize,
+        pxH: tileSize,
+    })
+
+    const solids: Sprite[] = []
+    const topR = (baseR + SHOP_PLATFORM_INNER_MIN) | 0
+    const bottomR = (baseR + SHOP_PLATFORM_INNER_MAX) | 0
+    const leftC = (baseC + SHOP_PLATFORM_INNER_MIN) | 0
+    const rightC = (baseC + SHOP_PLATFORM_INNER_MAX) | 0
+    const gapC = (baseC + SHOP_PLATFORM_SHOP_COL) | 0
+
+    function addSolid(r: number, c: number): void {
+        const s = _dunDecor_spawnAtTile({
+            name: "", // collision only; no prop visual
+            role: DECOR_ROLE.SOLID,
+            tileR: r,
+            tileC: c,
+            pxW: tileSize,
+            pxH: tileSize,
+        })
+        if (s) solids.push(s)
+    }
+
+    // Top edge
+    for (let c = leftC; c <= rightC; c++) addSolid(topR, c)
+    // Bottom edge (leave center gap for stairs)
+    for (let c = leftC; c <= rightC; c++) {
+        if (c === gapC) continue
+        addSolid(bottomR, c)
+    }
+    // Vertical edges (skip corners already covered)
+    for (let r = (topR + 1); r <= (bottomR - 1); r++) {
+        addSolid(r, leftC)
+        addSolid(r, rightC)
+    }
+
+    _shopPlatformSolids = solids
+
+    // Stairs visual overlay (3 tiles wide, centered)
+    const stairAnchorR = bottomR | 0
+    const stairAnchorC = (baseC + 2) | 0 // covers cols 2,3,4 of the platform
+    _shopPlatformStairs = _dunDecor_spawnAtTile({
+        name: "shop_stairs",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: stairAnchorR,
+        tileC: stairAnchorC,
+        pxW: tileSize,
+        pxH: tileSize,
+    })
+}
+
+
 
 function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowMs: number): void {
 
@@ -12721,6 +12851,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
     } else {
 
         _shopLayout_worldRev = wr
+        _shopPlatformDestroy()
 
 
 
@@ -12762,12 +12893,14 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
 
 
-        function consider(kind: number, slotsH: number, slotsW: number): void {
+        function consider(kind: number, baseH: number, baseW: number, shopROffset: number, shopCOffset: number, step: number): void {
 
-            const baseH = (slotsH * 2) | 0
+            baseH = baseH | 0
 
-            const baseW = (slotsW * 2) | 0
-            const safeH = (baseH + SHOP_LAYOUT_SAFE_EXTRA_ROWS) | 0
+            baseW = baseW | 0
+
+            const safeH = ((baseH | 0) + SHOP_LAYOUT_SAFE_EXTRA_ROWS) | 0
+            const stepSize = Math.max(1, step | 0)
 
 
 
@@ -12779,9 +12912,9 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
 
 
-            for (let baseR = 0; baseR <= maxBaseR; baseR += 2) {
+            for (let baseR = 0; baseR <= maxBaseR; baseR += stepSize) {
 
-                for (let baseC = 0; baseC <= maxBaseC; baseC += 2) {
+                for (let baseC = 0; baseC <= maxBaseC; baseC += stepSize) {
 
                     tried++
 
@@ -12807,15 +12940,13 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
                     // Score by distance from SHOPKEEPER slot to pad center (in base-tile space)
 
-                    const shopRowSlot = (kind === 2) ? 1 : 0
+                    const shopBaseR = baseR + shopROffset
 
-                    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
-
-                    const shopBaseC = (baseC + (2 * 2)) | 0 // col=2 in slot-space => +4 base tiles
+                    const shopBaseC = baseC + shopCOffset
 
 
 
-                    const score = (Math.abs(shopBaseR - padR) + Math.abs(shopBaseC - padC)) | 0
+                    const score = (Math.abs(shopBaseR - padR) + Math.abs(shopBaseC - padC))
 
                     if (score < bestScore) {
 
@@ -12839,9 +12970,13 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
         if (rows > 0 && cols > 0) {
 
-            consider(2, 2, 5) // 2x5 slots => 4x10 base tiles
+            // Preferred: dedicated platform (7x7 tiles)
+            consider(3, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SHOP_ROW, SHOP_PLATFORM_SHOP_COL, 1)
 
-            if (bestKind === 0) consider(1, 1, 5) // fallback 1x5 slots => 2x10 base tiles
+            // Legacy fallbacks
+            if (bestKind === 0) consider(2, 4, 10, 2, 4, 2) // 2x5 slots => 4x10 base tiles
+
+            if (bestKind === 0) consider(1, 2, 10, 0, 4, 2) // fallback 1x5 slots => 2x10 base tiles
 
         }
 
@@ -12893,15 +13028,23 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
 
 
-    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
+    let shopBaseR = (baseR + (shopRowSlot * 2)) | 0
 
-    const shopBaseC = (baseC + (shopColSlot * 2)) | 0
+    let shopBaseC = (baseC + (shopColSlot * 2)) | 0
+
+    if (kind === 3) {
+
+        shopBaseR = (baseR + SHOP_PLATFORM_SHOP_ROW)
+
+        shopBaseC = (baseC + SHOP_PLATFORM_SHOP_COL)
+
+    }
 
 
 
-    const shopX = _shopSlotCenterX(shopBaseC)
+    const shopX = (_shopSlotCenterX(shopBaseC) + SHOP_PLATFORM_SHOP_OFFSET_X_PX) | 0
 
-    const shopY = _shopSlotCenterY(shopBaseR)
+    const shopY = (_shopSlotCenterY(shopBaseR) + SHOP_PLATFORM_SHOP_OFFSET_Y_PX) | 0
 
 
 
@@ -12922,6 +13065,10 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
     sprites.setDataString(shopkeeperNpc, "dir", "down")
 
     sprites.setDataString(shopkeeperNpc, HERO_DATA.DIR, "down")
+
+
+
+    if (kind === 3) _shopPlatformPlace(baseR, baseC)
 
 
 
@@ -13041,7 +13188,7 @@ function _shopLayoutPlaceShopkeeperAndTriggerIfPresent(): void {
 
     const baseC = _shopLayout_baseC | 0
 
-    const haveLayout = (kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
+    const haveLayout = (kind === 3 || kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
 
     if (!haveLayout) return
 
@@ -13053,9 +13200,25 @@ function _shopLayoutPlaceShopkeeperAndTriggerIfPresent(): void {
 
 
 
-    const shopBaseR = (baseR + (shopRowSlot * 2)) | 0
+    let shopBaseR = (baseR + (shopRowSlot * 2)) | 0
 
-    const shopBaseC = (baseC + (shopColSlot * 2)) | 0
+    let shopBaseC = (baseC + (shopColSlot * 2)) | 0
+
+
+
+    if (kind === 3) {
+
+        shopBaseR = (baseR + SHOP_PLATFORM_SHOP_ROW)
+
+        shopBaseC = (baseC + SHOP_PLATFORM_SHOP_COL)
+
+        if (!_shopPlatformAnchor || (_shopPlatformAnchor.flags & sprites.Flag.Destroyed)) {
+
+            _shopPlatformPlace(baseR, baseC)
+
+        }
+
+    }
 
 
 
@@ -13321,13 +13484,31 @@ function _shopStatueRow_getLayoutState(): any {
 
     const baseC = _shopLayout_baseC | 0
 
-    const haveLayout = (kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
+    const haveLayout = (kind === 3 || kind === 2 || kind === 1) && baseR >= 0 && baseC >= 0
 
     // Statue columns in 5-col layout: two left, gap, two right
 
     const statueCols = [0, 1, 3, 4]
 
-    return { haveLayout, baseR, baseC, statueCols }
+    let statueCenters: { r: number, c: number }[] | null = null
+
+    if (kind === 3 && haveLayout) {
+
+        statueCenters = [
+
+            { r: (baseR + 1.5), c: (baseC + 1.5) }, // top-left
+
+            { r: (baseR + 3.5), c: (baseC + 1.5) }, // bottom-left
+
+            { r: (baseR + 1.5), c: (baseC + 4.5) }, // top-right
+
+            { r: (baseR + 3.5), c: (baseC + 4.5) }, // bottom-right
+
+        ]
+
+    }
+
+    return { haveLayout, baseR, baseC, statueCols, kind, statueCenters }
 
 }
 
@@ -13703,7 +13884,7 @@ function _shopPedestalEnsureLen4(): void {
 
 
 
-function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number): void {
+function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number, offX: number = 0, offY: number = 0, nameOverride: string = ""): void {
 
     const r = tileR | 0
 
@@ -13745,7 +13926,7 @@ function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number): voi
 
         sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
-        sprites.setDataString(s, DECOR_DATA.NAME, "pedestal")
+        sprites.setDataString(s, DECOR_DATA.NAME, nameOverride || "pedestal")
 
 
 
@@ -13773,7 +13954,7 @@ function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number): voi
 
         sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
-        sprites.setDataString(s, DECOR_DATA.NAME, "pedestal")
+        sprites.setDataString(s, DECOR_DATA.NAME, nameOverride || "pedestal")
 
     }
 
@@ -13783,17 +13964,27 @@ function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number): voi
 
     const prevC = sprites.readDataNumber(s, "decorTileC") | 0
 
-    if (dead || prevR !== r || prevC !== c) {
+    const prevOffX = sprites.readDataNumber(s, "decorOffX") | 0
+
+    const prevOffY = sprites.readDataNumber(s, "decorOffY") | 0
+
+    const moved = dead || prevR !== r || prevC !== c || prevOffX !== (offX | 0) || prevOffY !== (offY | 0)
+
+    if (moved) {
 
         sprites.setDataNumber(s, "decorTileR", r)
 
         sprites.setDataNumber(s, "decorTileC", c)
 
+        sprites.setDataNumber(s, "decorOffX", offX | 0)
+
+        sprites.setDataNumber(s, "decorOffY", offY | 0)
 
 
-        s.left = (c * tileSize) | 0
 
-        s.top = (r * tileSize) | 0
+        s.left = ((c * tileSize) + offX) | 0
+
+        s.top = ((r * tileSize) + offY) | 0
 
 
 
@@ -13811,23 +14002,67 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
     let pedC = -1
 
+    let pedX = 0
 
+    let pedY = 0
+
+    let stY = 0
+
+    // Per-statue pixel offsets (row/col order TL, TR, BL, BR)
+    const STATUE_OFFSET: { x: number; y: number }[] = [
+        { x: -16, y: -16 }, // idx0: top-left
+        { x: -16, y: -16 }, // idx1: bottom-left
+        { x: 16, y: -16 },  // idx2: top-right
+        { x: 16, y: -16 },  // idx3: bottom-right
+    ]
 
     if (layout.haveLayout) {
 
-        const rowSlot = 0
+        if ((layout.kind | 0) === 3 && layout.statueCenters && layout.statueCenters[si]) {
 
-        const colSlot = layout.statueCols[si] | 0
+            const center = layout.statueCenters[si]
+
+            pedR = Math.round(center.r)
+
+            pedC = Math.round(center.c)
+
+            const clampRMin = (layout.baseR + SHOP_PLATFORM_INNER_MIN) | 0
+
+            const clampRMax = (layout.baseR + SHOP_PLATFORM_INNER_MAX - 1) | 0
+
+            const clampCMin = (layout.baseC + SHOP_PLATFORM_INNER_MIN) | 0
+
+            const clampCMax = (layout.baseC + SHOP_PLATFORM_INNER_MAX - 1) | 0
+
+            pedR = Math.max(clampRMin, Math.min(clampRMax, pedR))
+
+            pedC = Math.max(clampCMin, Math.min(clampCMax, pedC))
+
+            pedX = _dunColToX(pedC)
+
+            pedY = _dunRowToY(pedR)
+
+            const stR = Math.max(0, (pedR - 1) | 0)
+
+            stY = _dunRowToY(stR)
+
+        } else {
+
+            const rowSlot = 0
+
+            const colSlot = layout.statueCols[si] | 0
 
 
 
-        const slotBaseR = (layout.baseR + (rowSlot * 2)) | 0
+            const slotBaseR = (layout.baseR + (rowSlot * 2)) | 0
 
-        const slotBaseC = (layout.baseC + (colSlot * 2)) | 0
+            const slotBaseC = (layout.baseC + (colSlot * 2)) | 0
 
-        pedR = (slotBaseR + 1) | 0
+            pedR = (slotBaseR + 1) | 0
 
-        pedC = (slotBaseC + 1) | 0
+            pedC = (slotBaseC + 1) | 0
+
+        }
 
     } else {
 
@@ -13861,17 +14096,29 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
         // Statues should sit ON the pedestal tile center (not the 2x2 slot center).
 
-        const pedX = _dunColToX(pedC)
+        if ((layout.kind | 0) !== 3 || !layout.statueCenters) {
 
-        const pedY = _dunRowToY(pedR)
+            pedX = _dunColToX(pedC)
 
-        const stR = Math.max(0, (pedR - 1) | 0)
+            pedY = _dunRowToY(pedR)
 
-        const stY = _dunRowToY(stR)
+            const stR = Math.max(0, (pedR - 1) | 0)
 
-        st.setPosition(pedX, stY)
+            stY = _dunRowToY(stR)
 
-        _shopUpsertPedestalSolid(si, pedR, pedC)
+        }
+
+        const off = STATUE_OFFSET[si] || { x: 0, y: 0 }
+
+        st.setPosition((pedX + off.x) | 0, (stY + off.y) | 0)
+
+        const pedName =
+            (si === 0) ? "pedestal_tl" :
+            (si === 1) ? "pedestal_bl" :
+            (si === 2) ? "pedestal_tr" :
+            "pedestal_br"
+
+        _shopUpsertPedestalSolid(si, pedR, pedC, off.x | 0, off.y | 0, pedName)
 
 
 
@@ -14075,6 +14322,23 @@ function _shopFamilyFromEquipSlot(slot: string): number {
 
 }
 
+// Estimate the highest mana a hero could have if all current level points were dumped into mana.
+// Used to bound weapon trait bonuses so gear scales with player progression (~25% of potential mana).
+function _shopWeaponTraitMaxManaForTeam(): number {
+    let cap = 0
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        let maxMana = sprites.readDataNumber(h, HERO_DATA.MAX_MANA) | 0
+        if (maxMana <= 0) maxMana = BALANCE.HERO.START_MANA | 0
+        const unspentPts = Math.max(0, sprites.readDataNumber(h, HERO_XP_DATA.LVL_PTS) | 0)
+        const potentialMana = (maxMana + unspentPts * (LVLUP_MANA_PER_PICK | 0)) | 0
+        if (potentialMana > cap) cap = potentialMana
+    }
+    if (cap <= 0) cap = BALANCE.HERO.START_MANA | 0
+    return cap | 0
+}
+
 
 
 function _shopEquipSlotFromFamily(fam: number): string {
@@ -14205,6 +14469,25 @@ function _shopRollBonusForOffer(it: Sprite): void {
 
     const fam = _shopFamilyFromGameplayKind(gameplayKind);
 
+    const floorIdx = Math.max(1, (_dunFloorIndex | 0)) | 0;
+    const scaleBaseX100 = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.SHOP.TRAIT_SCALE_PER_FLOOR_PCT | 0));
+    const scaleX100 = Math.min(scaleBaseX100, BALANCE.SHOP.TRAIT_SCALE_PCT_MAX | 0);
+    const traitLoAbs = BALANCE.SHOP.TRAIT_MIN_ABS | 0;
+    const traitHiAbs = BALANCE.SHOP.TRAIT_MAX_ABS | 0;
+    const baseMinScaled = _clamp(Math.idiv((BALANCE.SHOP.TRAIT_BASE_MIN | 0) * scaleX100, 100), traitLoAbs, traitHiAbs);
+    const baseMaxScaled = _clamp(Math.idiv((BALANCE.SHOP.TRAIT_BASE_MAX | 0) * scaleX100, 100), traitLoAbs, traitHiAbs);
+    const manaCap = Math.max(traitLoAbs, Math.idiv(_shopWeaponTraitMaxManaForTeam() * 25, 100));
+
+    const rollScaled = (lo: number, hi: number): number => {
+        const loS = _clamp(Math.idiv(lo * scaleX100, 100), traitLoAbs, traitHiAbs);
+        const hiS = _clamp(Math.idiv(hi * scaleX100, 100), traitLoAbs, traitHiAbs);
+        const min = Math.min(loS, hiS);
+        const max = Math.max(loS, hiS);
+        const floorMin = Math.max(min, baseMinScaled);
+        const floorMax = Math.max(floorMin, Math.min(Math.min(max, baseMaxScaled), manaCap));
+        return randint(floorMin, floorMax);
+    };
+
 
 
     // 3 simple “knobs” patterns (big single, spread, duo)
@@ -14219,19 +14502,19 @@ function _shopRollBonusForOffer(it: Sprite): void {
 
     if (p === 0) {
 
-        t1 = randint(80, 120); // ~"+100 Trait 1"
+        t1 = rollScaled(80, 120); // ~"+100 Trait 1"
 
     } else if (p === 1) {
 
-        const v = randint(15, 30); // ~"+20 all traits"
+        const v = rollScaled(15, 30); // ~"+20 all traits"
 
         t1 = v; t2 = v; t3 = v; t4 = v;
 
     } else {
 
-        t1 = randint(25, 60);
+        t1 = rollScaled(25, 60);
 
-        t2 = randint(25, 60);
+        t2 = rollScaled(25, 60);
 
         // leave t3/t4 at 0 (easy to see the change)
 
@@ -16672,17 +16955,18 @@ function _shopGameplayKindForRingIndex(i: number): string {
 
 function _shopPriceForRingIndex(i: number): number {
 
-    // Placeholder pricing – adjust later
+    const floorIdx = Math.max(1, (_dunFloorIndex | 0)) | 0
+    const base = BALANCE.SHOP.WEAPON_PRICE_BASE | 0
+    const perFloor = BALANCE.SHOP.WEAPON_PRICE_PER_FLOOR | 0
+    const scalePct = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.SHOP.WEAPON_PRICE_SCALE_PER_FLOOR_PCT | 0))
+    const ringBumpPct = 100 + Math.max(0, (i | 0) * (BALANCE.SHOP.WEAPON_PRICE_RING_DELTA_PCT | 0))
 
-    if (i === 0) return 10
+    let price = base + Math.max(0, (floorIdx - 1) * perFloor)
+    price = Math.idiv(price * scalePct, 100)
+    price = Math.idiv(price * ringBumpPct, 100)
 
-    if (i === 1) return 10
-
-    if (i === 2) return 10
-
-    if (i === 3) return 10
-
-    return 10
+    if (price < 1) price = 1
+    return price
 
 }
 
@@ -20212,12 +20496,35 @@ function _debugWorldSig01(map: number[][]): { rows: number, cols: number, walls:
 
 function _createTileMap2D(): number[][] {
 
-    // Just use the basic cave generator in ALL runtimes.
+    // Shop floors use a deterministic open layout so we can place the platform + stairs cleanly.
+    if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
+        return _createShopFloorMap();
+    }
 
     // MakeCode and Phaser both see the same 0/1 logic grid.
-
     return _createBasicCaveMap();
 
+}
+
+
+
+function _createShopFloorMap(): number[][] {
+
+    // Simple open box with border walls. Keeps the entire interior walkable for platform placement.
+    const cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
+    const rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
+
+    const map: number[][] = []
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = []
+        for (let c = 0; c < cols; c++) {
+            const isBorder = (r === 0 || c === 0 || r === (rows - 1) || c === (cols - 1))
+            row.push(isBorder ? TILE_WALL : TILE_EMPTY)
+        }
+        map.push(row)
+    }
+
+    return map
 }
 
 
@@ -28469,6 +28776,21 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
     updateHeroHPBar(heroIndex);
 
     flashHeroOnDamage(hero);
+
+    // Interrupt Intellect casts: taking damage detonates the current spell
+    if (dmg > 0) {
+        const isControllingSpell = sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL);
+        const actionKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || "";
+        const castFam = sprites.readDataNumber(hero, INT_CAST_FAMILY_KEY) | 0;
+        if (isControllingSpell && actionKind === "intellect_cast" && castFam === (FAMILY.INTELLECT | 0)) {
+            const spell = sprites.readDataSprite(hero, INT_SPELL_SPRITE_KEY);
+            if (spell && !(spell.flags & sprites.Flag.Destroyed) && !sprites.readDataNumber(spell, INT_DETONATED_KEY)) {
+                detonateIntellectSpellForHero(heroIndex, spell, now, "INTELLECT_DETONATE_REQUEST_INTERRUPT", "applyDamageToHeroIndex");
+            } else {
+                finishIntellectSpellForHero(heroIndex);
+            }
+        }
+    }
 
 
 
@@ -42394,6 +42716,15 @@ function enemyStatsForMonsterId(monsterId: string) {
 
     const touchDamage = hasCatalog ? (md.damage | 0) : ((spec as any).touchDamage | 0)
 
+    // Scale enemy power with floor so level/floor progression matters
+    const floorIdx = Math.max(1, (_dunFloorIndex | 0)) | 0
+    const powerPct = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.WAVES.ENEMY_POWER_PER_FLOOR_PCT | 0))
+    const speedPct = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.WAVES.ENEMY_SPEED_PER_FLOOR_PCT | 0))
+
+    const maxHPScaled = Math.max(1, Math.idiv(maxHP * powerPct, 100))
+    const touchDamageScaled = Math.max(1, Math.idiv(touchDamage * powerPct, 100))
+    const speedScaled = Math.max(1, Math.idiv(speed * speedPct, 100))
+
 
 
     // Optional knobs (catalog can override, otherwise spec defaults)
@@ -42418,11 +42749,11 @@ function enemyStatsForMonsterId(monsterId: string) {
 
     return {
 
-        maxHP,
+        maxHP: maxHPScaled,
 
-        speed,
+        speed: speedScaled,
 
-        touchDamage,
+        touchDamage: touchDamageScaled,
 
         regenPct,
 
@@ -43400,6 +43731,9 @@ function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, po
 
     let pts = sprites.readDataNumber(hero, HERO_XP_DATA.LVL_PTS) | 0
 
+    let freeHpGain = 0
+    let freeManaGain = 0
+
 
 
     xp += d
@@ -43428,6 +43762,10 @@ function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, po
 
         leveled++
 
+        freeHpGain += (BALANCE.LEVEL.FREE_HP_PER_LEVEL | 0)
+
+        freeManaGain += (BALANCE.LEVEL.FREE_MANA_PER_LEVEL | 0)
+
     }
 
 
@@ -43441,6 +43779,29 @@ function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, po
     sprites.setDataNumber(hero, HERO_XP_DATA.XP_TOTAL, xpTot)
 
     sprites.setDataNumber(hero, HERO_XP_DATA.LVL_PTS, pts)
+
+    // Free HP/MP granted automatically per level (helps pace survival)
+    if (freeHpGain > 0) {
+        let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+        if (maxHp <= 0) maxHp = 1
+        maxHp = (maxHp + freeHpGain) | 0
+        sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHp)
+        let hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+        hp = Math.min(maxHp, (hp + freeHpGain) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.HP, hp)
+        updateHeroHPBar(heroIndex)
+    }
+
+    if (freeManaGain > 0) {
+        let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+        if (maxMana <= 0) maxMana = 1
+        maxMana = (maxMana + freeManaGain) | 0
+        sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxMana)
+        let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+        mana = Math.min(maxMana, (mana + freeManaGain) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+        updateHeroManaBar(heroIndex)
+    }
 
 
 
@@ -56308,20 +56669,3 @@ try {
     }
 
 } catch (_e) { }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

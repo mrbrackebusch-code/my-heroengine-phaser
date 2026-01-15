@@ -107,6 +107,9 @@ export interface DecorVisualRef {
     focusAuraPadAlways?: boolean;
     auraPadPx?: number;
     auraPadAlways?: boolean;
+
+    // Optional depth offset applied after y-sort (use negative to force behind).
+    depthBias?: number;
 }
 
 
@@ -149,6 +152,24 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
 
+    // Shop platform (full 7x7 sheet, anchor = bottom-left tile)
+    shop_platform: {
+        atlas: "shopPlatform",
+        ref: { row: 6, col: 0 },
+        wTiles: 7,
+        hTiles: 7,
+        depthBias: -1000000, // ensure it renders under all actors/props
+    },
+
+    // Shop stairs (3-wide, single row) from build_atlas col 18..20, row 4
+    shop_stairs: {
+        atlas: "build_atlas",
+        ref: { row: 4, col: 18 },
+        wTiles: 3,
+        hTiles: 1,
+        depthBias: -500000, // above platform (–1e6) but behind heroes/statues
+    },
+
     // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
     // ref MUST be bottom-left of the whole visual => row 17, col 19
     stairs_statue: {
@@ -161,6 +182,10 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     },
 
     pedestal: { atlas: "terrain_atlas", ref: { row: 14, col: 19 } },
+    pedestal_tl: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: -16, offsetYPx: -16 },
+    pedestal_tr: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: 16, offsetYPx: -16 },
+    pedestal_bl: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: -16, offsetYPx: -16 },
+    pedestal_br: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: 16, offsetYPx: -16 },
 
     chest: {
         atlas: "build_atlas",
