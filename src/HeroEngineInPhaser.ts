@@ -70,6 +70,9 @@ namespace SpriteKind {
 
     export let RelicEffect: number
 
+    // Monster-only VFX (slashes/projectiles)
+    export let MonsterEffect: number
+
 }
 
 
@@ -120,6 +123,8 @@ namespace SpriteKind {
 
     if (SK.Wall == null) SK.Wall = 56;
 
+    // Monster-only VFX kind (fixed id)
+    if (SK.MonsterEffect == null) SK.MonsterEffect = 65;
 
 
     // NEW: Shop skeleton kinds (fixed ids)
@@ -10579,7 +10584,7 @@ function ensureHeroSpriteKinds(): void {
 
         if (SK.StoryNpc == null) SK.StoryNpc = 64
 
-
+        if (SK.MonsterEffect == null) SK.MonsterEffect = 66
 
         // Relic-only VFX kinds (fixed ids)
 
@@ -10609,7 +10614,7 @@ function ensureHeroSpriteKinds(): void {
 
     if (!SpriteKind.Wall) SpriteKind.Wall = SpriteKind.create()
 
-
+    if (!SpriteKind.MonsterEffect) SpriteKind.MonsterEffect = SpriteKind.create()
 
     if (!SpriteKind.ShopNpc) SpriteKind.ShopNpc = SpriteKind.create()
 
@@ -30477,62 +30482,13 @@ function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: numb
 
 
 
-// Player ? Enemy contact (with agility invuln & weaken on enemy attacks)
-
+// Player ? Enemy contact: block movement instead of touch-damaging.
 sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (hero, enemy) {
-
-    const heroIndex = getHeroIndex(hero); if (heroIndex < 0) return
-
+    if (!hero || !enemy) return
+    // Keep the significant-overlap gate so tiny sprite jitter doesn't trigger pushes constantly.
     if (!hasSignificantOverlap(hero, enemy, HERO_CONTACT_MIN_OVERLAP_PCT)) return
-
-    const now = game.runtime()
-
-    const iframeUntil = sprites.readDataNumber(hero, HERO_DATA.IFRAME_UNTIL)
-
-    if (iframeUntil > 0 && now < iframeUntil) return
-
-    const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
-
-    if (family == FAMILY.AGILITY) {
-
-        const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL)
-
-        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
-
-        if (locked && dashUntil > 0 && now < dashUntil) return
-
-    }
-
-    let dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE); if (dmg <= 0) dmg = 5
-
-    let weakenPct = sprites.readDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT)
-
-    const weakenUntil = sprites.readDataNumber(enemy, ENEMY_DATA.WEAKEN_UNTIL)
-
-    if (weakenPct > 0 && weakenUntil <= now) { weakenPct = 0; sprites.setDataNumber(enemy, ENEMY_DATA.WEAKEN_PCT, 0) }
-
-    if (weakenPct > 0) { const factor = 100 - weakenPct; dmg = (factor <= 0) ? 0 : Math.idiv(dmg * factor, 100) }
-
-    if (dmg <= 0) return
-
-    const atkIntervalMs = sprites.readDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS) | 0
-
-    if (atkIntervalMs > 0) {
-
-        const lastAtk = sprites.readDataNumber(enemy, ENEMY_DATA.LAST_ATTACK_MS) | 0
-
-        if (lastAtk > 0 && now < (lastAtk + atkIntervalMs)) return
-
-        sprites.setDataNumber(enemy, ENEMY_DATA.LAST_ATTACK_MS, now)
-
-    }
-
-    applyDamageToHeroIndex(heroIndex, dmg)
-
-    showDamageNumber(hero.x, hero.y - 6, dmg)
-
-    sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, now + HERO_IFRAME_MS)
-
+    // Treat enemies like walls: move only the hero out of penetration; enemies stay put.
+    _resolveSpriteOverlap(hero, enemy, true, false)
 })
 
 
@@ -41955,8 +41911,8 @@ const ENEMY_SPAWN_TICK_MS = BALANCE.WAVES.SPAWN_TICK_MS
 
 
 const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
-const ENEMY_MIN_HOLD_RANGE_PX = 18  // minimum “stop” range so enemies don’t chase inside hero center
-const ENEMY_ATTACK_BASE_RANGE_PX = 20
+const ENEMY_MIN_HOLD_RANGE_PX = 25  // minimum “stop” range so enemies don’t chase inside hero center
+const ENEMY_ATTACK_BASE_RANGE_PX = 25
 const ENEMY_STUCK_WALL_MARGIN_PX = 2
 const RANGED_ADVANCE_RANGE_CAP_PX = 140
 
@@ -44213,6 +44169,7 @@ const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
 const ENEMY_ASTAR_MAX_NODES = 5000
 const ENEMY_STUCK_NUDGE_PX = 1
+const ENEMY_STUCK_SLIDE_ENABLED = false  // toggle anti-stuck nudge if it interferes with A*
 
 let _enginePaused = false
 let _enginePausedReason = ""
@@ -46720,6 +46677,106 @@ function _enemyDirFromVector(dx: number, dy: number): string {
 }
 
 
+// ------------------------------------------------------------
+// Monster attack VFX (slash/projectile)
+// ------------------------------------------------------------
+
+const MONSTER_SLASH_COLOR_CACHE: { [id: string]: number } = {};
+
+function _monsterDominantColor(enemy: Sprite): number {
+    const id = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "";
+    if (id && MONSTER_SLASH_COLOR_CACHE[id] != null) return MONSTER_SLASH_COLOR_CACHE[id];
+
+    const img = enemy.image;
+    const counts = new Array(16).fill(0);
+    let best = 1;
+    if (img) {
+        const w = img.width;
+        const h = img.height;
+        const step = Math.max(1, Math.min(w, h) / 8) | 0;
+        const s = step < 1 ? 1 : step;
+        for (let y = 0; y < h; y += s) {
+            for (let x = 0; x < w; x += s) {
+                const c = img.getPixel(x, y) & 0xf;
+                if (c === 0) continue;
+                counts[c] = (counts[c] | 0) + 1;
+                if (counts[c] > counts[best]) best = c;
+            }
+        }
+    }
+    MONSTER_SLASH_COLOR_CACHE[id || "_"] = best;
+    return best;
+}
+
+function _makeSlashImage(dx: number, dy: number, color: number): Image {
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+    if (adx > ady * 1.25) {
+        // horizontal streak
+        const img = image.create(12, 4);
+        img.fill(color);
+        return img;
+    } else if (ady > adx * 1.25) {
+        // vertical streak
+        const img = image.create(4, 12);
+        img.fill(color);
+        return img;
+    } else {
+        // diagonal
+        const img = image.create(10, 10);
+        for (let i = 0; i < 10; i++) {
+            const x = dx >= 0 ? i : 9 - i;
+            const y = dy >= 0 ? i : 9 - i;
+            for (let t = -1; t <= 1; t++) {
+                const yy = y + t;
+                if (yy >= 0 && yy < 10) img.setPixel(x, yy, color);
+            }
+        }
+        return img;
+    }
+}
+
+function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, attackMs: number): void {
+    if (!enemy) return;
+
+    // Normalize direction (allow diagonal)
+    let vx = dx;
+    let vy = dy;
+    const mag = Math.sqrt(vx * vx + vy * vy) || 1;
+    vx /= mag;
+    vy /= mag;
+
+    const w = enemy.image ? enemy.image.width : 16;
+    const h = enemy.image ? enemy.image.height : 16;
+    const pad = 2;
+    const offX = vx * ((w / 2) + pad);
+    const offY = vy * ((h / 2) + pad);
+
+    const color = _monsterDominantColor(enemy);
+    const img = _makeSlashImage(vx, vy, color);
+
+    const fx = sprites.create(img, SpriteKind.MonsterEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.z = enemy.z + 1;
+    fx.x = enemy.x + offX;
+    fx.y = enemy.y + offY;
+
+    // Decide melee vs ranged by advanceRangePx (<=0 melee)
+    const rangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0;
+    if (rangePx > 0) {
+        const speed = 70;
+        fx.vx = (vx * speed) | 0;
+        fx.vy = (vy * speed) | 0;
+        const life = Math.max(120, Math.idiv(rangePx * 1000, speed));
+        fx.lifespan = life;
+    } else {
+        // melee: short nudge so it feels alive
+        fx.vx = (vx * 30) | 0;
+        fx.vy = (vy * 30) | 0;
+        fx.lifespan = Math.max(attackMs, 150);
+    }
+}
+
 
 function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs: number, ei: number): boolean {
 
@@ -46769,6 +46826,9 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackMs)
 
     sprites.setDataString(enemy, "dir", attackDir)
+
+    // VFX: slash/projectile telegraph from the monster
+    _spawnMonsterSlashOrProjectile(enemy, pick.dx, pick.dy, attackMs)
 
 
 
@@ -47131,7 +47191,7 @@ function updateEnemyHoming(nowMs: number) {
 
         // Anti-stuck wall sliding
 
-        if (_enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)) {
+        if (ENEMY_STUCK_SLIDE_ENABLED && _enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)) {
 
             // dir already set in anti-stuck path
 
@@ -50624,9 +50684,14 @@ function _monsterSizingForId(monsterId: string): MonsterSizing {
 
     const defCol = _defaultColliderFromFrame(frameW, frameH)
 
-    const colliderW = ((md && md.colliderW) ? (md.colliderW | 0) : (defCol.cw | 0)) | 0
+    // Use aura/base frame size for collisions so monsters block at their visible footprint.
+    let colliderW = ((md && md.colliderW) ? (md.colliderW | 0) : (frameW | 0)) | 0
 
-    const colliderH = ((md && md.colliderH) ? (md.colliderH | 0) : (defCol.ch | 0)) | 0
+    let colliderH = ((md && md.colliderH) ? (md.colliderH | 0) : (frameH | 0)) | 0
+
+    if (colliderW <= 0) colliderW = defCol.cw | 0
+
+    if (colliderH <= 0) colliderH = defCol.ch | 0
 
 
 

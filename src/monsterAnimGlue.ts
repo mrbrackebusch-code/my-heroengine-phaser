@@ -192,6 +192,13 @@ export function applyMonsterAnimationForSprite(
     const dirKey   = dir.toString().toLowerCase() as Dir;
     const animKey  = `${safeMonsterId}_${phaseKey}_${dirKey}`;
 
+    // Expose aura info for downstream consumers (telegraphs/projectile origins).
+    if (animSet.auraTextureKey) {
+        data.set("__monsterAuraTex", animSet.auraTextureKey);
+        data.set("__monsterAuraFrameW", animSet.frameWidth | 0);
+        data.set("__monsterAuraFrameH", animSet.frameHeight | 0);
+    }
+
     const mgr = scene.anims;
 
     if (!mgr.exists(animKey)) {

@@ -900,6 +900,12 @@ class HeroScene extends Phaser.Scene {
     private _tilemapAppliedFloorIndex: number = -1;
     private _tilemapAppliedDecorRev: number = -1;
 
+    // Debug throttles for decor logging
+    private _debugPropLastCaptureRev: number = -1;
+    private _debugPropLastCaptureAt: number = 0;
+    private _debugPropLastApplyRev: number = -1;
+    private _debugPropLastApplyAt: number = 0;
+
 
     constructor() {
         super("hero");
@@ -1551,18 +1557,27 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 }
             }
 
-            const debugProps = DEBUG_TILEMAP_APPLY_NET || DEBUG_PROP_SYNC || !!((globalThis as any).__DEBUG_PROP_SYNC);
+            const debugProps = DEBUG_PROP_SYNC || !!((globalThis as any).__DEBUG_PROP_SYNC);
             if (debugProps) {
-                const propCount = Array.isArray(decor.props) ? decor.props.length : 0;
-                const decalCount = Array.isArray(decor.decals) ? decor.decals.length : 0;
-                const byName: Record<string, number> = {};
-                if (Array.isArray(decor.props)) {
-                    for (const p of decor.props) {
-                        if (!p || !p.name) continue;
-                        byName[p.name] = (byName[p.name] || 0) + 1;
+                const revNow = decor.rev ?? null;
+                const nowMs = Date.now();
+                const gDbg: any = (globalThis as any);
+                if (!gDbg.__propLogThrottles) gDbg.__propLogThrottles = {};
+                const prev = gDbg.__propLogThrottles.apply || { rev: -1, at: 0 };
+                const shouldLog = (revNow !== (prev.rev | 0)) || (nowMs - (prev.at | 0) > 3000);
+                if (shouldLog) {
+                    gDbg.__propLogThrottles.apply = { rev: (revNow as any) | 0, at: nowMs };
+                    const propCount = Array.isArray(decor.props) ? decor.props.length : 0;
+                    const decalCount = Array.isArray(decor.decals) ? decor.decals.length : 0;
+                    const byName: Record<string, number> = {};
+                    if (Array.isArray(decor.props)) {
+                        for (const p of decor.props) {
+                            if (!p || !p.name) continue;
+                            byName[p.name] = (byName[p.name] || 0) + 1;
+                        }
                     }
+                    console.log("[net.decor.apply]", { rev: revNow, propCount, decalRows: decalCount, byName });
                 }
-                console.log("[net.decor.apply]", { rev: decor.rev ?? null, propCount, decalRows: decalCount, byName });
             }
         } catch (e) {
             console.warn("[net.decor.apply] failed", e);
@@ -1913,21 +1928,31 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         decorPayload = { rev: decorRev, decals: decals || undefined, props: props.length ? props : undefined };
         g.__lastDecorPayload = decorPayload;
 
-        const debugProps = DEBUG_TILEMAP_APPLY_NET || DEBUG_PROP_SYNC || !!(g.__DEBUG_PROP_SYNC);
+        const debugProps = DEBUG_PROP_SYNC || !!(g.__DEBUG_PROP_SYNC);
         if (debugProps) {
-            const byName: Record<string, number> = {};
-            for (const p of props) {
-                if (!p || !p.name) continue;
-                byName[p.name] = (byName[p.name] || 0) + 1;
+            const gDbg: any = (globalThis as any);
+            if (!gDbg.__propLogThrottles) gDbg.__propLogThrottles = {};
+            const floorSig = `${worldRev}|${floorIndex}`;
+            const prevSig = gDbg.__propLogThrottles.captureFloorSig;
+            const shouldLog = prevSig !== floorSig;
+            if (shouldLog) {
+                gDbg.__propLogThrottles.captureFloorSig = floorSig;
+                const byName: Record<string, number> = {};
+                for (const p of props) {
+                    if (!p || !p.name) continue;
+                    byName[p.name] = (byName[p.name] || 0) + 1;
+                }
+                console.log("[net.decor.capture]", {
+                    decorRev,
+                    worldRev,
+                    floorIndex,
+                    triggerCount: triggers.length,
+                    solidCount: solids.length,
+                    props: props.length,
+                    byName,
+                    decalRows: decals ? decals.length : 0
+                });
             }
-            console.log("[net.decor.capture]", {
-                decorRev,
-                triggerCount: triggers.length,
-                solidCount: solids.length,
-                props: props.length,
-                byName,
-                decalRows: decals ? decals.length : 0
-            });
         }
     } catch (e) {
         console.warn("[tilemap] failed to capture decor payload", e);
@@ -2627,7 +2652,7 @@ _hud_installOnce();
 
 // Verbose network tilemap/decor logging; set to true when debugging sync issues.
 const DEBUG_TILEMAP_APPLY_NET = false;
-const DEBUG_PROP_SYNC = false; // extra decor/prop logs (or set globalThis.__DEBUG_PROP_SYNC = true at runtime)
+const DEBUG_PROP_SYNC = true; // extra decor/prop logs (or set globalThis.__DEBUG_PROP_SYNC = true at runtime)
 
 type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
 type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };

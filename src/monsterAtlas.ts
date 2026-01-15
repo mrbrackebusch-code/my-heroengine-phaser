@@ -17,6 +17,8 @@ export interface MonsterAnimSet {
     frameHeight: number;
     /** All Phaser texture keys used for this monster (one per sheet) */
     textureKeys: string[];
+    /** Optional aura spritesheet texture key (same frame grid) */
+    auraTextureKey?: string;
     /** Frames per phase + direction */
     phases: {
         walk?: PhaseDirFrames;
@@ -31,6 +33,11 @@ export type MonsterAtlas = Record<string, MonsterAnimSet>;
 
 const monsterPngs = import.meta.glob(
     "../assets/monsters/*.png",
+    { as: "url", eager: true }
+) as Record<string, string>;
+
+const monsterAuraPngs = import.meta.glob(
+    "../assets/monsters/monster_auras/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
@@ -347,12 +354,31 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
         )
     );
     }
+
+    // Build aura lookup by baseName (filename without .png) from monster_auras.
+    const auraUrlByBase = new Map<string, string>();
+    for (const [p, url] of Object.entries(monsterAuraPngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4); // strip .png
+        auraUrlByBase.set(base, url);
+    }
     
     for (const sheet of PARSED_SHEETS) {
         scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: sheet.width,
             frameHeight: sheet.height
         });
+
+        // Optional: matching aura sheet (same grid), if present.
+        const auraBase = `${sheet.textureKey}_aura_r2`;
+        const auraUrl = auraUrlByBase.get(auraBase);
+        if (auraUrl) {
+            scene.load.spritesheet(auraBase, auraUrl, {
+                frameWidth: sheet.width,
+                frameHeight: sheet.height
+            });
+        }
     }
 }
 
@@ -364,6 +390,15 @@ const DEBUG_MONSTER_SPRITES = false //Debug flag
 
 export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
     const byMonster = new Map<string, ParsedSheet[]>();
+
+    // Aura lookup (baseName -> url) for optional attachment.
+    const auraUrlByBase = new Map<string, string>();
+    for (const [p, url] of Object.entries(monsterAuraPngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4); // strip .png
+        auraUrlByBase.set(base, url);
+    }
 
     for (const sheet of PARSED_SHEETS) {
         if (sheet.skip) continue;
@@ -412,10 +447,9 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
             frameWidth: first.width,
             frameHeight: first.height,
             textureKeys: orderedSheets.map(s => s.textureKey),
+            auraTextureKey: undefined,
             phases: {}
         };
-
-
 
         // NEW: remember which sheet we picked for each phase
         const phaseTexture: Partial<Record<Phase, string>> = {};
@@ -423,6 +457,15 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
         if (attackSheets[0]) phaseTexture.attack = attackSheets[0].textureKey;
         if (deathSheets[0])  phaseTexture.death  = deathSheets[0].textureKey;
         animSet.phaseTexture = phaseTexture;
+
+        // Optional aura spritesheet (matches any of the chosen sheet bases).
+        const auraCandidate =
+            auraUrlByBase.get(`${orderedSheets[0].textureKey}_aura_r2`) ||
+            auraUrlByBase.get(`${id}_aura_r2`);
+        if (auraCandidate) {
+            // Texture key matches the load key in preloadMonsterSheets.
+            animSet.auraTextureKey = `${orderedSheets[0].textureKey}_aura_r2`;
+        }
 
 
         // Build phases only from selected sheets
