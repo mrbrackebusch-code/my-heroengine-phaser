@@ -2807,6 +2807,7 @@ let DEBUG_CONTRACT_THROTTLE_MS = 0        // 0 = no extra throttle beyond change
 
 // Debug: log special feedback phases (sit/emote) at most once per hero/why.
 const DEBUG_SPECIAL_PHASE_LOG_ONCE = true
+const DEBUG_MANA_FAIL_LOG_ONCE = true
 
 
 
@@ -25870,9 +25871,21 @@ function _doHeroMoveTrySpendMana(
 
 
 
-    if (mana < manaCost) {
+    const tooExpensive = manaCost > maxMana && manaCost > 0;
+    if (tooExpensive || mana < manaCost) {
 
         flashHeroManaBar(heroIndex)
+        if (DEBUG_MANA_FAIL_LOG_ONCE) {
+            try {
+                const gAny: any = globalThis as any;
+                const seen: Set<string> = gAny.__dbgManaFailOnce || (gAny.__dbgManaFailOnce = new Set<string>());
+                const key = `${heroIndex}:${button}:${mana}:${manaCost}:${family}:max${maxMana}:tooExp${tooExpensive ? 1 : 0}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    console.log(`[MANA][FAIL] hi=${heroIndex} btn=${button} fam=${family} mana=${mana} max=${maxMana} cost=${manaCost} tooExp=${tooExpensive}`);
+                }
+            } catch { /* ignore */ }
+        }
 
         // Feedback: play emote when cast is unaffordable.
         publishHeroSpecialPhase(heroIndex, "emote", SPECIAL_EMOTE_PHASE_DUR_MS, "SPECIAL_EMOTE", "_doHeroMoveTrySpendMana")
@@ -49318,6 +49331,12 @@ function updateHeroMovementPhase(now: number) {
         const curStart = sprites.readDataNumber(hero, HERO_DATA.PhaseStartMs) | 0
 
         const curDur = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+
+        // Let special feedback phases (sit/emote) live out their stamped window without being stomped.
+        if ((curPhaseName === "sit" || curPhaseName === "emote") && curStart > 0 && curDur > 0 && nowMs < (curStart + curDur)) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_SPECIAL", "updateHeroMovementPhase")
+            continue
+        }
 
 
 

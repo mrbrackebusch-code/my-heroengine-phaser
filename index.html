@@ -2123,18 +2123,33 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
         }
 
-        function _lvlui_cmd(pid, payload) {
-          const fn = window.__heUiCommand;
-          if (typeof fn !== "function") return null;
-
+        async function _lvlui_cmd(pid, payload) {
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
-          const r = fn(cmd);
+          let r = null;
+
+          const fn = window.__heUiCommand;
+          if (typeof fn === "function") {
+            r = fn(cmd);
+          } else {
+            try {
+              const net = (typeof globalThis !== "undefined" && (globalThis).__net) ? (globalThis).__net : null;
+              if (net && typeof net.sendUiCommand === "function") {
+                r = await net.sendUiCommand(cmd);
+              }
+            } catch (_e) {}
+          }
+
           _invalidateUiSnapshotCache();
 
-          // refresh immediately
+          // refresh immediately with returned snapshot if present, else fall back to getter
           try {
-            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
-            if (snap2 && snap2.ready) _lvlui_applySnapshot(snap2);
+            const snap2 = (r && r.snapshot) ? r.snapshot
+              : (typeof window.__heGetUiSnapshot === "function" ? window.__heGetUiSnapshot(pid | 0) : null);
+            if (snap2 && snap2.ready) {
+              _hud_lastSnap = snap2;
+              _hud_lastSnapAt = Date.now() | 0;
+              _lvlui_applySnapshot(snap2);
+            }
           } catch (_e) {}
 
           return r;
@@ -3605,5 +3620,3 @@ function _readTeamCoins(pid, hero, spritesNS) {
     </script>
   </body>
 </html>
-
-

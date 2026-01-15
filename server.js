@@ -76,6 +76,10 @@ let hostToken = null;       // string|null
 let hostLeaseUntilMs = 0;   // number
 let hostLeaseTimer = null;  // NodeJS.Timeout|null
 
+// ============================================================
+// UI command routing (follower -> host)
+// ============================================================
+
 // Cached last tilemap for late joiners
 let lastTilemapMsg = null;
 
@@ -481,6 +485,57 @@ function handleInputMessage(ws, info, msg) {
   broadcast(msg);
 }
 
+function handleUiCommand(ws, info, msg) {
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  if (!requestId) {
+    console.warn("[server] uiCommand missing requestId from playerId", info.playerId);
+    return;
+  }
+
+  const hostWs = getHostWsLeased();
+  if (!hostWs) {
+    sendJson(ws, {
+      type: "uiCommandResult",
+      requestId,
+      playerId: info.playerId,
+      ok: false,
+      reason: "no-host",
+      snapshot: null,
+    });
+    return;
+  }
+
+  const payload = {
+    type: "uiCommandForward",
+    requestId,
+    fromToken: info.token,
+    playerId: (typeof msg.playerId === "number") ? (msg.playerId | 0) : (info.playerId | 0),
+    cmd: msg.cmd || msg.payload || null,
+  };
+
+  sendJson(hostWs, payload);
+}
+
+function handleUiCommandResult(ws, info, msg) {
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  const toToken = (msg && typeof msg.toToken === "string") ? msg.toToken : "";
+  if (!requestId || !toToken) return;
+
+  const targetWs = tokenToWs.get(toToken) || null;
+  if (!targetWs) return;
+
+  const payload = {
+    type: "uiCommandResult",
+    requestId,
+    playerId: (typeof msg.playerId === "number") ? (msg.playerId | 0) : null,
+    ok: !!msg.ok,
+    reason: (typeof msg.reason === "string") ? msg.reason : null,
+    snapshot: msg.snapshot ?? null,
+  };
+
+  sendJson(targetWs, payload);
+}
+
 function handleStateMessage(ws, info, msg) {
   // Only current host can broadcast world snapshots
   const hostWs = getHostWsLeased();
@@ -706,8 +761,6 @@ function onSocketMessage(ws, data) {
     return;
   }
 
-  if (msg.type === "coinBurst") return handleCoinBurstMessage(ws, info, msg);
-
   const info = clients.get(ws) || null;
   if (!info) {
     // Ignore pre-HELLO chatter from pending sockets
@@ -718,7 +771,10 @@ function onSocketMessage(ws, data) {
     return;
   }
 
+  if (msg.type === "coinBurst") return handleCoinBurstMessage(ws, info, msg);
   if (msg.type === "input") return handleInputMessage(ws, info, msg);
+  if (msg.type === "uiCommand") return handleUiCommand(ws, info, msg);
+  if (msg.type === "uiCommandResult") return handleUiCommandResult(ws, info, msg);
   if (msg.type === "state") return handleStateMessage(ws, info, msg);
   if (msg.type === "tilemap") return handleTilemapMessage(ws, info, msg);
   if (msg.type === "saveGame") return handleSaveGameMessage(ws, info, msg);
@@ -745,15 +801,9 @@ function onSocketClose(ws, code, reason) {
 
     // Release profile ownership if no live socket for this token
     const prof = tokenToProfile.get(token) || null;
-    if (prof && profileToToken.get(prof) === token) {
+    if (prof && profileToToken.get(prof) === token && !tokenToWs.has(token)) {
+      // Keep token→profile so reconnects retain identity; only release ownership map
       profileToToken.delete(prof);
-    }
-
-    // If no live socket holds this token, clean up limbo state
-    if (!tokenToWs.has(token)) {
-      tokenToControlSlot.delete(token);
-      tokenToProfile.delete(token);
-      tokenToPlayerId.delete(token);
     }
 
     console.log(

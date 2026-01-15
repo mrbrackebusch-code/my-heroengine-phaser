@@ -157,6 +157,9 @@ type NetMessage =
     | { type: "helloError"; reason: string; profile?: string | null }
     | { type: "saveGame"; payload: any }
     | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
+    | { type: "uiCommand"; requestId: string; playerId: number; cmd: any }
+    | { type: "uiCommandForward"; requestId: string; fromToken: string; playerId: number; cmd: any }
+    | { type: "uiCommandResult"; requestId: string; toToken?: string | null; playerId?: number | null; ok?: boolean; reason?: string | null; snapshot?: any }
     | {
           type: "playerState";
           playerId: number;
@@ -227,6 +230,9 @@ class NetworkClient {
 
     // Host flag as reported by the server (authoritative)
     private _isHostFromServer: boolean = false;
+
+    // Pending UI command resolvers (follower -> host RPC)
+    private uiCmdResolvers: Map<string, (res: any) => void> = new Map();
 
     // Latest tilemap revision we've accepted (monotonic)
     private _tilemapRev: number = 0;
@@ -450,6 +456,48 @@ class NetworkClient {
         this.ws.send(JSON.stringify(msg));
     }
 
+    // Followers (and host if desired) can issue UI commands via host
+    sendUiCommand(cmd: any): Promise<any> {
+        const requestId = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const playerId = (this.playerId == null) ? 0 : (this.playerId | 0);
+
+        const msg: NetMessage = {
+            type: "uiCommand",
+            requestId,
+            playerId,
+            cmd: cmd || {},
+        };
+
+        return new Promise((resolve) => {
+            // Resolve on timeout to avoid dangling promises
+            const timeout = setTimeout(() => {
+                if (this.uiCmdResolvers.has(requestId)) {
+                    this.uiCmdResolvers.delete(requestId);
+                    resolve({ ok: false, reason: "timeout" });
+                }
+            }, 2000);
+
+            this.uiCmdResolvers.set(requestId, (res: any) => {
+                clearTimeout(timeout);
+                resolve(res);
+            });
+
+            try {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(msg));
+                } else {
+                    this.uiCmdResolvers.delete(requestId);
+                    clearTimeout(timeout);
+                    resolve({ ok: false, reason: "ws-closed" });
+                }
+            } catch (e: any) {
+                this.uiCmdResolvers.delete(requestId);
+                clearTimeout(timeout);
+                resolve({ ok: false, reason: String(e?.message || "send-failed") });
+            }
+        });
+    }
+
 
         private isHostNow(): boolean {
         // Central source of truth for "hostness" inside NetworkClient.
@@ -494,6 +542,14 @@ private handleMessage(msg: NetMessage) {
 
         case "input":
             this.onInput(msg as any);
+            return;
+
+        case "uiCommandForward":
+            this.onUiCommandForward(msg as any);
+            return;
+
+        case "uiCommandResult":
+            this.onUiCommandResult(msg as any);
             return;
 
         case "tilemap":
@@ -919,6 +975,46 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
             if (count <= 0) continue;
 
             g.__coinBurstQueue.push({ x, y, count, pid });
+        }
+    }
+
+    private onUiCommandForward(msg: any) {
+        // Only host should handle forwarded UI commands
+        if (!this.isHostNow()) return;
+
+        const g: any = (globalThis as any);
+        const fn = (g && typeof g.__heUiCommand === "function") ? g.__heUiCommand : null;
+
+        let out: any = { ok: false, reason: "no-handler", snapshot: null };
+        try {
+            if (fn) {
+                const res = fn(Object.assign({ playerId: msg.playerId | 0 }, msg.cmd || {}));
+                if (res) out = res;
+            }
+        } catch (e: any) {
+            out = { ok: false, reason: String(e?.message || "ui-error"), snapshot: null };
+        }
+
+        const reply: NetMessage = {
+            type: "uiCommandResult",
+            requestId: msg.requestId,
+            toToken: msg.fromToken || null,
+            playerId: msg.playerId || null,
+            ok: !!out.ok,
+            reason: (typeof out.reason === "string") ? out.reason : null,
+            snapshot: out.snapshot ?? null,
+        };
+
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try { this.ws.send(JSON.stringify(reply)); } catch (_e) { /* ignore */ }
+        }
+    }
+
+    private onUiCommandResult(msg: any) {
+        const resolver = this.uiCmdResolvers.get(msg.requestId);
+        if (resolver) {
+            this.uiCmdResolvers.delete(msg.requestId);
+            resolver(msg);
         }
     }
 

@@ -10381,6 +10381,7 @@ namespace netWorld {
     let _applyPerfTimeMs = 0;
     let _applyPerfLastReportMs = 0;
     let _applyPerfLastSpriteCount = 0;
+    const DEBUG_NET_APPLY_FOLLOWER = false; // gate follower apply logs
 
 
 
@@ -10472,7 +10473,7 @@ namespace netWorld {
     const perfStart = Date.now();
 
     // Only care about "choppiness" on followers
-    if (!isHost) {
+    if (!isHost && DEBUG_NET_APPLY_FOLLOWER) {
         _applyCount++;
         const dt = _lastApplyRuntimeMs === 0 ? 0 : now - _lastApplyRuntimeMs;
         _lastApplyRuntimeMs = now;
@@ -10495,7 +10496,7 @@ namespace netWorld {
     const all = typeof allFn === "function" ? (allFn.call(sprites) as any[]) : [];
 
         const snapSprites = snap.sprites || [];
-        if (!isHost) {
+        if (!isHost && DEBUG_NET_APPLY_FOLLOWER) {
             try {
                 console.log("[netWorld.apply.follower]", {
                     sprites: snapSprites.length,

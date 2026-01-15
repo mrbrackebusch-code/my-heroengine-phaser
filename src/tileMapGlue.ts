@@ -4129,11 +4129,22 @@ syncPropGridByName(propNameGrid: string[][]): void {
   const st = this._propBeginSync();
 
   const rows = (propNameGrid.length | 0);
-  const cols = rows > 0 ? (propNameGrid[0].length | 0) : 0;
+  // Some callers may provide sparse rows; find the first populated row to size cols defensively.
+  let cols = 0;
+  for (let i = 0; i < rows; i++) {
+    const row = propNameGrid[i];
+    if (Array.isArray(row)) {
+      cols = (row.length | 0);
+      break;
+    }
+  }
 
   for (let r = 0; r < rows; r++) {
+    const row = propNameGrid[r];
+    if (!Array.isArray(row)) continue;
+
     for (let c = 0; c < cols; c++) {
-      const rawKey = propNameGrid[r]?.[c] ?? "";
+      const rawKey = row[c] ?? "";
       if (!rawKey) continue;
 
       this._propPlaceOneAnchor(st, r | 0, c | 0, rawKey);

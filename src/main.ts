@@ -2552,7 +2552,8 @@ if (shouldStartGameFromUrl()) {
 _hud_installOnce();
 
 
-const DEBUG_TILEMAP_APPLY_NET = true;
+// Verbose network tilemap/decor logging; set to true when debugging sync issues.
+const DEBUG_TILEMAP_APPLY_NET = false;
 
 type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
 type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };
