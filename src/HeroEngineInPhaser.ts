@@ -12591,6 +12591,21 @@ function _shopPixToTile(x: number): number {
 
 }
 
+// Extra empty row below the layout to account for hero collision Y offset.
+const SHOP_LAYOUT_SAFE_EXTRA_ROWS = 1
+
+function _shopTileHasDecorSolid(r: number, c: number): boolean {
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return false
+    for (let i = 0; i < _engineDecorSolids.length; i++) {
+        const s = _engineDecorSolids[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const sr = sprites.readDataNumber(s, "decorTileR") | 0
+        const sc = sprites.readDataNumber(s, "decorTileC") | 0
+        if ((sr | 0) === (r | 0) && (sc | 0) === (c | 0)) return true
+    }
+    return false
+}
+
 
 
 function _shopTileIsEmpty(r: number, c: number): boolean {
@@ -12603,7 +12618,9 @@ function _shopTileIsEmpty(r: number, c: number): boolean {
 
     if (r < 0 || c < 0 || r >= rows || c >= cols) return false
 
-    return ((_engineWorldTileMap[r][c] | 0) === (TILE_EMPTY | 0))
+    if ((_engineWorldTileMap[r][c] | 0) !== (TILE_EMPTY | 0)) return false
+    if (_shopTileHasDecorSolid(r | 0, c | 0)) return false
+    return true
 
 }
 
@@ -12750,12 +12767,13 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
             const baseH = (slotsH * 2) | 0
 
             const baseW = (slotsW * 2) | 0
+            const safeH = (baseH + SHOP_LAYOUT_SAFE_EXTRA_ROWS) | 0
 
 
 
             // scan slot-grid (top-lefts aligned on even base tiles)
 
-            const maxBaseR = (rows - 1 - baseH) | 0
+            const maxBaseR = (rows - 1 - safeH) | 0
 
             const maxBaseC = (cols - 1 - baseW) | 0
 
@@ -12783,7 +12801,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
                     // must be fully empty
 
-                    if (!_shopRectAllEmpty(baseR, baseC, baseH, baseW)) continue
+                    if (!_shopRectAllEmpty(baseR, baseC, safeH, baseW)) continue
 
 
 
@@ -46977,7 +46995,9 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
 
 
 
-    const attackDir = _enemyDirFromVector(pick.dx, pick.dy)
+    const attackDx = (pick.edgeX | 0) - (enemy.x | 0)
+    const attackDy = (pick.edgeY | 0) - (enemy.y | 0)
+    const attackDir = _enemyDirFromVector(attackDx, attackDy)
 
 
 
@@ -47006,7 +47026,7 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
     sprites.setDataString(enemy, "dir", attackDir)
 
     // VFX: slash/projectile telegraph from the monster
-    _spawnMonsterSlashOrProjectile(enemy, pick.dx, pick.dy, attackMs)
+    _spawnMonsterSlashOrProjectile(enemy, attackDx, attackDy, attackMs)
 
 
 
