@@ -93,6 +93,14 @@ const DEBUG_NET = false;
 
 const DEBUG_TILEMAP = true;
 
+// Collider debug overlays (Phaser-only). Heavy when enabled; keep OFF by default.
+const DEBUG_DRAW_WALL_COLLIDERS = false;
+const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = false;
+const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
+const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
+const DEBUG_COLLIDER_ALPHA = 0.35;
+const DEBUG_ENEMY_FOOTPRINT_MAX_PX = 30; // match nav clamp used in HeroEngine
+
 
 // ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
 // 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮 ────── 🪻 ────── 🔮  SECTION  🔮 ────── 🪻 ────── 🔮
@@ -9208,6 +9216,9 @@ function _syncEndFrame(ctx: SyncContext): void {
     const spriteCount = all.length;
     _hostPerfLastSpriteCount = spriteCount;
 
+    // Debug collider overlay (independent of perf logging)
+    if (ctx.sc) _debugDrawEnemyWallColliders(ctx.sc);
+
     if (!ctx.shouldLog) return;
 
     const totalMs = t1 - ctx.t0;
@@ -9428,6 +9439,9 @@ const MAX_OVERLAP_DEBUG_LOGS = 40;
 let _overlapDebugCount = 0;
 let _processEventsCallCount = 0;
 
+let _dbgColliderGfxWalls: Phaser.GameObjects.Graphics | null = null;
+let _dbgColliderGfxEnemies: Phaser.GameObjects.Graphics | null = null;
+
 function _heroCollisionOffsetY(s: Sprite): number {
     if (!s) return 0;
     if (!isHeroSprite(s)) return 0;
@@ -9439,6 +9453,75 @@ function _heroCollisionOffsetY(s: Sprite): number {
         }
     } catch { /* ignore */ }
     return 0;
+}
+
+function _debugEnsureColliderGfx(sc: Phaser.Scene): void {
+    if (!_dbgColliderGfxWalls) {
+        _dbgColliderGfxWalls = sc.add.graphics();
+        try { (_dbgColliderGfxWalls as any).setDepth?.(999999); } catch { }
+    }
+    if (!_dbgColliderGfxEnemies) {
+        _dbgColliderGfxEnemies = sc.add.graphics();
+        try { (_dbgColliderGfxEnemies as any).setDepth?.(999999); } catch { }
+    }
+}
+
+function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
+    if (!DEBUG_DRAW_WALL_COLLIDERS && !DEBUG_DRAW_ENEMY_WALL_COLLIDERS) return;
+    _debugEnsureColliderGfx(sc);
+    const gWalls = _dbgColliderGfxWalls!;
+    const gEnemies = _dbgColliderGfxEnemies!;
+    gWalls.clear();
+    gEnemies.clear();
+
+    const g: any = globalThis as any;
+    const internals: any = g ? g.__HeroEnginePhaserInternals : null;
+
+    // Walls: outline solid tiles as best-effort (assume non-zero tile id is solid for debug).
+    if (DEBUG_DRAW_WALL_COLLIDERS && internals && typeof internals.getWorldTileMap === "function" && typeof internals.getWorldTileSize === "function") {
+        const map = internals.getWorldTileMap() as number[][] | null;
+        const tileSize = internals.getWorldTileSize() | 0;
+        if (map && tileSize > 0) {
+            gWalls.lineStyle(1, DEBUG_COLLIDER_WALL_COLOR, DEBUG_COLLIDER_ALPHA);
+            for (let r = 0; r < map.length; r++) {
+                const row = map[r];
+                if (!row) continue;
+                for (let c = 0; c < row.length; c++) {
+                    const v = row[c] | 0;
+                    if (v === 0) continue;
+                    const x = c * tileSize;
+                    const y = r * tileSize;
+                    gWalls.strokeRect(x, y, tileSize, tileSize);
+                }
+            }
+        }
+    }
+
+    // Enemies: outline the feet-based collision footprint used for wall checks.
+    if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+        gEnemies.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
+        for (let i = 0; i < _allSprites.length; i++) {
+            const s = _allSprites[i];
+            if (!s) continue;
+            const role = _classifySpriteRole((s.kind as number) || 0, Object.keys((s as any).data || {}));
+            if (role !== "ENEMY") continue;
+
+            const cw = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
+            const ch = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
+            const img: any = (s as any).image;
+            const dispH = (((img && img.height) ? (img.height | 0) : ((s.height | 0) || 0)) | 0) || (ch | 0);
+            let offY = Math.idiv((dispH - (ch | 0)) | 0, 2) | 0;
+            if (offY < 0) offY = 0;
+
+            const footX = s.x | 0;
+            const footY = (((s.y | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0);
+            const fw = Math.min(cw | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
+            const fh = Math.min(ch | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
+            const left = (footX - (fw >> 1)) | 0;
+            const top = (footY - fh + 1) | 0;
+            gEnemies.strokeRect(left, top, fw, fh);
+        }
+    }
 }
 
 

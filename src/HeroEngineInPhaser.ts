@@ -124,7 +124,7 @@ namespace SpriteKind {
     if (SK.Wall == null) SK.Wall = 56;
 
     // Monster-only VFX kind (fixed id)
-    if (SK.MonsterEffect == null) SK.MonsterEffect = 65;
+    if (SK.MonsterEffect == null) SK.MonsterEffect = 66;
 
 
     // NEW: Shop skeleton kinds (fixed ids)
@@ -8869,7 +8869,7 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
     const rc = _dunReadyMaskAndCountInPadZone()
 
-    const allReady = (needed > 0 && rc.ready >= needed)
+    const allReady = (needed > 0 && rc.ready >= needed && anyOn)
 
 
 
@@ -8896,6 +8896,9 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
 
     if ((nowMs | 0) < (_dunTeleportCommitAtMs | 0)) return true
+
+    // Flash once at the irreversible commit moment.
+    _dunRuneSetName("teleport_rune_flash")
 
 
 
@@ -8967,7 +8970,7 @@ function _dunTickPadHoldTeleport(nowMs: number): boolean {
 
     const anyOn = ((rc.ready | 0) > 0)
 
-    const allReady = (needed > 0 && rc.ready >= needed)
+    const allReady = (needed > 0 && rc.ready >= needed && anyOn)
 
 
 
@@ -9031,19 +9034,9 @@ function _dunTickPadHoldTeleport(nowMs: number): boolean {
 
 
 
-    // If all players are ready and held long enough: flash
-
-    if (allReady && (allHeld | 0) >= (DUNGEON_PAD_HOLD_MS | 0)) {
-
-        desired = "teleport_rune_flash"
-
-    }
-
-
+    // If all players are ready and held long enough: queue teleport (flash later at commit)
 
     _dunRuneSetName(desired)
-
-
 
     // If we haven't met the all-ready hold, we keep spinning but do not teleport.
 
@@ -22525,18 +22518,115 @@ function resolveHeroTilemapCollisions(): void {
 
     }
 
+}
 
 
-    // Apply to all enemies
 
-    for (let ei = 0; ei < enemies.length; ei++) {
+function resolveEnemyTilemapCollisions(): void {
 
-        const e = enemies[ei]
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
 
-        if (e) resolveForSprite(e)
 
+
+    const map = _engineWorldTileMap
+    const rows = map.length
+    const cols = map[0].length
+    const tileSize = WORLD_TILE_SIZE
+
+    // Resolve collision for a single enemy using feet collider
+    function resolveForEnemy(e: Sprite) {
+        if (!e) return
+
+        // Use feet-aligned collider bounds (already bottom-anchored).
+        // Reuse the existing helper to get current bounds.
+        const dims = _enemyGetColliderDims(e)
+        const cw = dims.w | 0
+        const ch = dims.h | 0
+        const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
+        const halfW = Math.idiv(cw, 2) | 0
+        const halfH = Math.idiv(ch, 2) | 0
+
+        // Run a couple of passes in case we overlap more than one tile
+        for (let iter = 0; iter < 3; iter++) {
+            const cx = feet.footX | 0
+            const cy = feet.footY | 0
+            const left = (cx - halfW) | 0
+            const right = (cx + halfW - 1) | 0
+            const bottom = cy | 0
+            const top = (bottom - ch + 1) | 0
+
+            const minCol = Math.idiv(left, tileSize)
+            const maxCol = Math.idiv(right, tileSize)
+            const minRow = Math.idiv(top, tileSize)
+            const maxRow = Math.idiv(bottom, tileSize)
+
+            let moved = false
+
+            for (let r = minRow; r <= maxRow; r++) {
+                if (r < 0 || r >= rows) continue
+                const rowArr = map[r]
+                for (let c = minCol; c <= maxCol; c++) {
+                    const type = rowArr[c] | 0 // force 0 if undefined
+                    const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
+                    if (!def.solid) continue
+
+                    // Build the tile's collision rect in WORLD space, using per-type offsets and size.
+                    const shapeLeft = c * tileSize + def.offsetX
+                    const shapeRight = shapeLeft + def.width
+                    const shapeTop = r * tileSize + def.offsetY
+                    const shapeBottom = shapeTop + def.height
+
+                    // Compute overlaps on each side (sprite vs collision shape)
+                    const overlapLeft = right - shapeLeft
+                    const overlapRight = shapeRight - left
+                    const overlapTop = bottom - shapeTop
+                    const overlapBottom = shapeBottom - top
+
+                    // If any are <= 0, AABBs don't overlap on that axis
+                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
+                        continue
+                    }
+
+                    // Minimal penetration on each axis
+                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
+                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+
+                    if (penX < penY) {
+                        // Push in X
+                        const shapeCenterX = shapeLeft + def.width / 2
+                        if (cx < shapeCenterX) {
+                            e.x -= penX
+                        } else {
+                            e.x += penX
+                        }
+                        // Soft slide: kill only X velocity
+                        e.vx = 0
+                    } else {
+                        // Push in Y
+                        const shapeCenterY = shapeTop + def.height / 2
+                        if (cy < shapeCenterY) {
+                            e.y -= penY
+                        } else {
+                            e.y += penY
+                        }
+                        // Soft slide: kill only Y velocity
+                        e.vy = 0
+                    }
+
+                    moved = true
+                }
+            }
+
+            // If we didn't adjust position this pass, we are out of walls
+            if (!moved) break
+        }
     }
 
+    // Apply to all enemies
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const e = enemies[ei]
+        if (e) resolveForEnemy(e)
+    }
 }
 
 
@@ -22548,6 +22638,7 @@ function resolveTilemapCollisions(): void {
     _tileCollFrame++
 
     resolveHeroTilemapCollisions()
+    resolveEnemyTilemapCollisions()
 
     //_resolveTilemapCollisionsForGroup(heroes, "Hero")
 
@@ -46718,7 +46809,7 @@ function _makeSlashImage(dx: number, dy: number, color: number): Image {
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
     const outline = 0; // black outline for contrast
-    const pad = 1;
+    const pad = 2;
     if (adx > ady * 1.25) {
         // horizontal streak with 1px outline
         const img = image.create(12 + pad * 2, 4 + pad * 2);
@@ -46769,7 +46860,7 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
 
     const fx = sprites.create(img, SpriteKind.MonsterEffect);
     fx.setFlag(SpriteFlag.Ghost, true);
-    fx.z = enemy.z + 50; // ensure above heroes/monsters
+    fx.z = enemy.z + 2000; // ensure above heroes/monsters/aura
     fx.x = enemy.x + offX;
     fx.y = enemy.y + offY;
 

@@ -1462,6 +1462,9 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     g.__floorBaseFamily = baseFamily;
     g.__floorWallFamily = wallFamily;
 
+    const worldRev = (msg.worldRev | 0) || 0;
+    const floorIndex = (msg.floorIndex | 0) ?? -1;
+
     // If we are the host, ignore echoed tilemaps we originally sent; we already applied locally.
     const gAny: any = globalThis as any;
     if (gAny.__isHost) {
