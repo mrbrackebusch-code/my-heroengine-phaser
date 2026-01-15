@@ -421,7 +421,7 @@ export interface TileAtlas {
 // ---------------------------------------------------------------------------
 
 const TILE_SIZE = 32;
-const DEBUG_TILES_GLOBAL = true;
+const DEBUG_TILES_GLOBAL = false;
 
 
 
@@ -657,7 +657,7 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
     // Reset url map each preload so logs always reflect current load set.
     __SHEET_URL_BY_KEY.clear();
 
-    const DEBUG_TILES = true;
+    const DEBUG_TILES = false;
 
     const auraUrlById = new Map<string, string>();
     for (const [p, url] of Object.entries(tileAuraPngs)) {

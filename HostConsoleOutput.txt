@@ -1,0 +1,150 @@
+main.ts:4 >>> [main.ts] dynamic-import version loaded
+main.ts:2351 [main] profile found in URL; starting Phaser game.
+main.ts:2276      Phaser v3.90.0 (WebGL | Web Audio)  https://phaser.io/v390
+main.ts:856 >>> [HeroScene.preload] loading LPC monster sheets
+main.ts:859 >>> [HeroScene.preload] loading hero spritesheets
+main.ts:862 >>> [HeroScene.preload] loading tile sheets
+main.ts:865 >>> [HeroScene.preload] loading weapon sheets
+main.ts:868 >>> [HeroScene.preload] loading effect sheets
+main.ts:876 >>> [HeroScene.create] running (refactored)
+main.ts:1218 >>> [HeroScene.create] running
+main.ts:1222 >>> [HeroScene.create] __phaserScene set = true
+main.ts:598 [main] URL profile override for P1: LongBlond
+main.ts:1799 >>> [HeroScene.create] building tile atlas
+main.ts:1820 >>> [HeroScene.create] no host flag yet; defaulting to follower
+main.ts:1826 >>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)
+arcadeCompat.ts:2429 >>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)
+arcadeCompat.ts:581 [DECOR][BOOT] no __HeroEnginePhaserInternals.getDecorRev() yet; skipping
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 1 scenePresent= true spriteCount= 0
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 2 scenePresent= true spriteCount= 0
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 3 scenePresent= true spriteCount= 0
+main.ts:2127 >>> [HeroScene.create] initNetwork()
+arcadeCompat.net.ts:1211 [net] initNetwork: connecting... {token: 'd51d6962…', desiredProfile: null}
+main.ts:2137 >>> [HeroScene.create] wiring keyboard to controller (network-aware)
+arcadeCompat.ts:10283 [controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)
+main.ts:926 >>> [HeroScene.create] complete (refactored)
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 4 scenePresent= true spriteCount= 0
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 5 scenePresent= true spriteCount= 0
+arcadeCompat.net.ts:309 [net] connected to ws://localhost:8080
+arcadeCompat.net.ts:331 [net] hello sent {token: 'd51d6962…', desiredProfile: null}
+arcadeCompat.net.ts:519 [net] assigned playerId = 2 name= Player2 profile= null
+arcadeCompat.net.ts:524 [net.assign.debug] {playerId: 2, token: 'd51d6962…', desiredProfile: null, serverProfile: null, controlSlot: 2}
+arcadeCompat.ts:10220 [controller] local player slot set to 2
+arcadeCompat.net.ts:855 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 5, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_void', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.net.ts:687 [net.playerState.debug] {pid: 2, slotIndex: 1, connected: true, prevConnected: true, profile: 'Default', …}
+arcadeCompat.net.ts:745 [net] hostStatus = true hostPlayerId= 2
+main.ts:1841 >>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser
+arcadeCompat.net.ts:765 [net] hostStatus change {isHost: true, hostPlayerId: 2, myPlayerId: 2, token: 'd51d6962…', profile: null}
+arcadeCompat.net.ts:603 [net.rosterSnapshot] applied {hostToken: 'd51d6962…', hostLeaseUntilMs: 0, players: Array(2)}
+arcadeCompat.net.ts:1157 [net.host] snapshot # 1 sprites= 0 dtMs= 372
+arcadeCompat.net.ts:1157 [net.host] snapshot # 2 sprites= 0 dtMs= 30
+arcadeCompat.net.ts:1157 [net.host] snapshot # 3 sprites= 0 dtMs= 18
+arcadeCompat.ts:9558 [sprites.onOverlap] registered kindA= 1 kindB= 57 totalHandlers= 1
+arcadeCompat.ts:9558 [sprites.onOverlap] registered kindA= 51 kindB= 2 totalHandlers= 2
+HeroEngineInPhaser.ts:51252 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (before): []
+HeroEngineInPhaser.ts:51254 [DECOR][ENGINE] has getDecorRev? (before) undefined
+HeroEngineInPhaser.ts:51565 [DECOR][ENGINE] __HeroEnginePhaserInternals keys (after): (18) ['getWorldTileMap', 'getWorldTileSize', 'getWorldRev', 'getHeroCollisionOffsetY', 'getCollisionBoundsForSprite', 'getFloorBaseFamily', 'getFloorWallFamily', 'getFloorIndex', 'getFloorKind', 'getDecorRev', 'getDecalGrid', 'getDecorGrid', 'getDecorTriggerSprites', 'getDecorSolidSprites', 'getWorldDecorRev', 'getWorldDecorCells', 'getWorldDecorDecals', 'ensureHeroForPlayer']
+HeroEngineInPhaser.ts:51567 [DECOR][ENGINE] has getDecorRev? (after) function
+HeroEngineInPhaser.ts:51569 >>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)
+HeroEngineInPhaser.ts:55994 [UIAPI] installed: __heGetUiSnapshot / __heUiCommand
+HeroEngineInPhaser.ts:56048 [LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=0
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 0, cols: 0, triggers: 0, solids: 0}
+arcadeCompat.ts:580 [DECOR][OVERLAP-PROOF] armed {kindPlayer: 1, kindTrigger: 60, kindSolid: 61, cooldownMs: 600}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=0
+arcadeCompat.ts:581 [DECOR][BOOT] end
+main.ts:2105 >>> [HeroScene.create] starting HeroEngine from host
+HeroEngineInPhaser.ts:21384 [WORLD][TEST] {kind: 'PF_PAD_CAGE_TOP3', worldRevNext: 1, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
+arcadeCompat.ts:6520 [sprites.create] id 1 | argKind 66 | finalKind 66 (66) | w,h 32 32
+arcadeCompat.ts:6360 [_attachNativeSprite] START spriteId= 1 w,h= 32 32 pixelsLen= 1024
+arcadeCompat.ts:6062 [WRAP-NATIVE] create sprite | id 1 | kind 66 | texKey sprite_1 | native.width 32 | native.height 32
+arcadeCompat.ts:5791 [attach] created {g: 3, dtA: 1.8999999985098839}
+arcadeCompat.ts:6520 [sprites.create] id 2 | argKind 67 | finalKind 67 (67) | w,h 32 32
+arcadeCompat.ts:6360 [_attachNativeSprite] START spriteId= 2 w,h= 32 32 pixelsLen= 1024
+arcadeCompat.ts:6062 [WRAP-NATIVE] create sprite | id 2 | kind 67 | texKey sprite_2 | native.width 32 | native.height 32
+arcadeCompat.ts:5791 [attach] created {g: 3, dtA: 0.5}
+HeroEngineInPhaser.ts:21423 [WORLD][MAP] {worldRev: 1, floorIndex: 0, floorKind: 'entrance', baseFamily: 'ground_light', wallFamily: 'chasm_light', …}
+arcadeCompat.ts:9820 [scene.setBackgroundColor] index= 1 rgb= (3) [255, 255, 255] hex= ffffff
+arcadeCompat.ts:9876 [tilemap] (stub) requested map id = level1 expr = []
+arcadeCompat.ts:9855 [tiles.setCurrentTilemap] (stub) current = {id: 'level1'}
+HeroEngineInPhaser.ts:24399 [setupHeroes] using WORLD center from tilemap {rows: 20, cols: 40, tileSize: 32, W: 1280, H: 640}
+HeroEngineInPhaser.ts:24463 [setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)
+arcadeCompat.ts:6520 [sprites.create] id 3 | argKind 1 | finalKind 1 (Player) | w,h 64 64
+HeroEngineInPhaser.ts:24777 [WPN-FCO-CLEAR] {heroIndex: 0, prev: 0, v: -1, phase: 'idle', dir: 'right', …}
+HeroEngineInPhaser.ts:7897 [DUN][CLEAR] shop: trigger=0 npc=0 npcsCleared=0 itemsCleared=0
+HeroEngineInPhaser.ts:21384 [WORLD][TEST] {kind: 'PF_PAD_CAGE_TOP3', worldRevNext: 2, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
+HeroEngineInPhaser.ts:21423 [WORLD][MAP] {worldRev: 2, floorIndex: 0, floorKind: 'entrance', baseFamily: 'sand', wallFamily: 'lava', …}
+HeroEngineInPhaser.ts:24777 [WPN-FCO-CLEAR] {heroIndex: 1, prev: 0, v: -1, phase: 'idle', dir: 'right', …}
+HeroEngineInPhaser.ts:6609 [DUNGEON] enter floor=0 kind=entrance theme=sand/lava players=2
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+main.ts:2051 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 6, worldRev: 2, floorIndex: 0, floorKind: 'entrance', rows: 20, …}
+main.ts:2074 >>> [HeroScene.create] scheduling sprite dump (host only)
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+HeroEngineInPhaser.ts:8513 [FOCUS][PILLAR] focus on (runeActive=1, rune="teleport_rune")
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:9425 [FOCUS][DECOR][SYNC] {name: 'chest#closed', r: 13, c: 20, active: 0, radius: 0, …}
+arcadeCompat.ts:9425 [FOCUS][DECOR][SYNC] {name: 'teleport_rune', r: 10, c: 20, active: 0, radius: 0, …}
+arcadeCompat.ts:9674 [sprites._processEvents] checking handler kindA= 1 kindB= 57
+arcadeCompat.ts:9674 [sprites._processEvents] checking handler kindA= 51 kindB= 2
+?profile=LongBlond:2814 [RELICTIP] init {hasBox: true}
+arcadeCompat.net.ts:855 >>> [net.tilemap] received; forwarding to Phaser hook {rev: 7, rows: 20, cols: 40, tileSize: 32, encoding: 'raw'}
+tileMapGlue.ts:873 [tileMapGlue] base render done {rows: 20, cols: 40, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'sand', …}
+arcadeCompat.ts:580 [DECOR][FORCE] decor_forceResyncFromEngine {reason: 'applyTilemapToScene'}
+arcadeCompat.ts:581 [DECOR][BOOT] begin v=1 decorRev=6
+arcadeCompat.ts:580 [DECOR][GATES] feature gates {tier2: false, solidBlocking: false}
+arcadeCompat.ts:580 [DECOR][VALID] counts {rows: 20, cols: 40, triggers: 2, solids: 3}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+tileMapGlue.ts:2278 [PROPAURA][FOCUS-NAME] {"baseName":"stairs_statue","rawKey":"stairs_statue","anchor":{"r":9,"c":20},"tiles":{"w":1,"h":3},"textureKey":"tiles.terrain_atlas","auraTextureKey":"tiles.terrain_atlas_aura_r2","frameIndices":[499,531,563]}
+tileMapGlue.ts:3340 [PROPAURA][OVERRIDE] {"baseName":"chest","auraTk":"tiles.terrain_atlas_aura_r2","frameIndex":499}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'rock_mountain', tileR: 12, tileC: 18, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'stairs_statue', tileR: 9, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:580 [DECOR][AABB] tightened solid {name: 'chest#closed', tileR: 13, tileC: 20, info: {…}, bb: {…}}
+arcadeCompat.ts:581 [DECOR][DECAL] rendered overlay tiles count=11
+arcadeCompat.ts:581 [DECOR][PROPS] rendered prop tiles count=5
+arcadeCompat.ts:581 [DECOR][BOOT] end
+main.ts:2076 >>> [HeroScene.create] RUNNING SPRITE DUMP
+main.ts:2082 [HeroScene.create] dumpAllSprites not found on arcadeCompat
+HeroEngineInPhaser.ts:55632 [SAFE] hi=1 ok=1 reason=entrance floor=entrance
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 52.6 KB/s≈ 431.92 latestSprites= 17
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 58.6 KB/s≈ 547.01 latestSprites= 17
+arcadeCompat.net.ts:652 [net.playerState] slot 1 connected true profile Jason prevProfile Jason prevConnected false
+arcadeCompat.net.ts:687 [net.playerState.debug] {pid: 1, slotIndex: 0, connected: true, prevConnected: false, profile: 'Jason', …}
+arcadeCompat.net.ts:716 [net.playerState] ensureHeroForPlayer ok playerId 1 heroIndex 0 profileNow Jason
+arcadeCompat.net.ts:745 [net] hostStatus = true hostPlayerId= 2
+arcadeCompat.net.ts:765 [net] hostStatus change {isHost: true, hostPlayerId: 2, myPlayerId: 2, token: 'd51d6962…', profile: null}
+arcadeCompat.net.ts:603 [net.rosterSnapshot] applied {hostToken: 'd51d6962…', hostLeaseUntilMs: 0, players: Array(2)}
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 300 scenePresent= true spriteCount= 17
+arcadeCompat.net.ts:1157 [net.host] snapshot # 300 sprites= 17 dtMs= 17
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 59.0 KB/s≈ 551.11 latestSprites= 17
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 59.3 KB/s≈ 553.56 latestSprites= 17
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 600 scenePresent= true spriteCount= 17
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 60.0 KB/s≈ 560.45 latestSprites= 17
+arcadeCompat.net.ts:1157 [net.host] snapshot # 600 sprites= 17 dtMs= 16
+arcadeCompat.ts:6768 [_syncNativeSprites] call# 900 scenePresent= true spriteCount= 17
+arcadeCompat.net.ts:1139 [net.host] PERF Hz≈ 53.5 KB/s≈ 499.73 latestSprites= 17

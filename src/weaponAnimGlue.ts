@@ -73,7 +73,7 @@ const _WEAPON_HIDDEN_ONCE = new Set<string>();
 // WEAPON DEBUG FLAGS (code switch — no browser console toggles)
 // ------------------------------------------------------------
 // Turn this on to print weapon placement logs.
-const WEAPON_DEBUG = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const WEAPON_DEBUG = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 // Turn this on to log placement every time it changes (otherwise “once per signature”).
 const WEAPON_DEBUG_VERBOSE = false;

@@ -79,6 +79,12 @@
         cursor: pointer;
       }
 
+      #lan-ip-hint {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #666;
+      }
+
       /* -----------------------------
          Game + HUD wrapper
          ----------------------------- */
@@ -1243,6 +1249,10 @@
           required
         />
         <button type="submit">Start</button>
+        <button type="button" id="load-save-btn">Load a save</button>
+        <input type="file" id="load-save-file" accept=".json" style="display:none" />
+        <div id="load-save-status" style="font-size:0.9rem;color:#666;"></div>
+        <div id="lan-ip-hint"></div>
       </form>
     </div>
 
@@ -1436,6 +1446,9 @@
 
         const hasProfile = !!params.get("profile");
 
+        // Expose WS port to client (matches vite config)
+        window.__GAME_WS_PORT = 8080;
+
         if (hasProfile) {
           landing.style.display = "none";
           gameWrap.style.display = "flex";
@@ -1446,6 +1459,10 @@
 
         const form = document.getElementById("join-form");
         const nameInput = document.getElementById("player-name");
+        const loadBtn = document.getElementById("load-save-btn");
+        const loadFile = document.getElementById("load-save-file");
+        const loadStatus = document.getElementById("load-save-status");
+        const lanHintEl = document.getElementById("lan-ip-hint");
         if (!form || !nameInput) return;
 
         form.addEventListener("submit", function (e) {
@@ -1463,6 +1480,52 @@
 
           window.location.href = newUrl;
         });
+
+        const loadInput = (loadFile && loadFile.tagName === "INPUT") ? loadFile : null;
+
+        if (loadBtn && loadInput) {
+          loadBtn.addEventListener("click", () => {
+            loadInput.value = "";
+            loadInput.click();
+          });
+
+          loadInput.addEventListener("change", () => {
+            const file = loadInput.files && loadInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const text = String(reader.result || "");
+                const parsed = JSON.parse(text);
+                window.__pendingSaveFromFile = { name: file.name, text, parsed };
+                if (loadStatus) loadStatus.textContent = `Loaded save: ${file.name}`;
+                console.log("[landing] loaded save file", file.name, parsed);
+              } catch (err) {
+                console.warn("[landing] failed to parse save", err);
+                if (loadStatus) loadStatus.textContent = "Failed to load save (invalid JSON)";
+              }
+            };
+            reader.readAsText(file);
+          });
+        }
+
+        if (lanHintEl) {
+          try {
+            const host = window.location.hostname || "localhost";
+            const port = window.location.port || "5173";
+            const is192 = /^192\./.test(host);
+            const is10 = /^10\./.test(host);
+            const is172 = /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
+            if (is192 || is10 || is172) {
+              lanHintEl.textContent = `LAN IP: ${host}:${port}`;
+            } else {
+              lanHintEl.textContent = `LAN IP: (use your 192.168.x.x):${port}`;
+            }
+          } catch (_e) {
+            lanHintEl.textContent = "LAN IP: (use your 192.168.x.x)";
+          }
+        }
       })();
     </script>
 
@@ -3542,17 +3605,5 @@ function _readTeamCoins(pid, hero, spritesNS) {
     </script>
   </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -33,9 +33,9 @@ declare const globalThis: any;
 
 const ENABLE_HERO_ANIM_DEBUG = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
-const DEBUG_TILEMAP = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const DEBUG_TILEMAP = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
-const DEBUG_COINFX = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const DEBUG_COINFX = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
 
 // ------------------------------------------------------------
@@ -43,8 +43,8 @@ const DEBUG_COINFX = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 // ------------------------------------------------------------
 const ENABLE_WEAPON_DEBUG = false;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 const ENABLE_WEAPON_DEBUG_VERBOSE = false; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_ON_START = true; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = true; // huge log; leave false Debug flag
+const ENABLE_WEAPON_AUDIT_ON_START = false; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false; // huge log; leave false Debug flag
 
 // ------------------------------------------------------------
 // Host visibility pause (prevents jumps/teleports on tab blur)
@@ -601,6 +601,215 @@ function applyUrlProfileToGlobals() {
     }
 }
 
+// ------------------------------------------------------------
+// Save building + send (host-only)
+// ------------------------------------------------------------
+
+type HeroSavePayload = {
+  type: "heroesSaveV1";
+  savedAt: number;
+  profiles: string[];
+  floor: { index: number; kind: string; baseFamily: string; wallFamily: string };
+  worldSnapshot: any;
+  heroSprites: any[];
+  blocklyXmlByProfile: any;
+  tilemap?: any;
+  next: { index: number; kind: string };
+};
+
+function _captureWorldSnapshot(): any {
+  const g: any = globalThis as any;
+  const nw = (g as any).netWorld;
+  if (!nw || typeof nw.capture !== "function") return null;
+
+  return nw.capture();
+}
+
+function _isHeroSnapshotSprite(s: any): boolean {
+  if (!s || !s.data) return false;
+  const owner = (typeof s.data.owner === "number") ? (s.data.owner | 0) : 0;
+  if (owner > 0) return true;
+  const name = (typeof s.data.name === "string") ? s.data.name.toLowerCase() : "";
+  const heroName = (typeof s.data.heroName === "string") ? s.data.heroName.toLowerCase() : "";
+  if (name.includes("hero") || heroName) return true;
+  return false;
+}
+
+function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePayload | null {
+  const g: any = globalThis as any;
+  const profilesArr = Array.isArray(g.__heroProfiles) ? g.__heroProfiles : [];
+  const connected = Array.isArray(g.__netSlotConnected) ? g.__netSlotConnected : [];
+
+  const profiles: string[] = [];
+  for (let i = 0; i < Math.min(4, profilesArr.length); i++) {
+    if (!connected[i]) continue;
+    const p = (typeof profilesArr[i] === "string" && profilesArr[i].trim()) ? profilesArr[i].trim() : null;
+    if (p) profiles.push(p);
+  }
+
+  const internals = g.__HeroEnginePhaserInternals || {};
+  const floorIndex = (typeof internals.getFloorIndex === "function") ? (internals.getFloorIndex() | 0) : 0;
+  const floorKind = (typeof internals.getFloorKind === "function") ? String(internals.getFloorKind()) : "";
+  const baseFamily = (typeof internals.getFloorBaseFamily === "function")
+    ? String(internals.getFloorBaseFamily())
+    : (g.__floorBaseFamily || "ground_light");
+  const wallFamily = (typeof internals.getFloorWallFamily === "function")
+    ? String(internals.getFloorWallFamily())
+    : (g.__floorWallFamily || "chasm_light");
+
+  const worldSnapshot = _captureWorldSnapshot();
+  const heroSprites: any[] = [];
+  if (worldSnapshot && Array.isArray(worldSnapshot.sprites)) {
+    for (const s of worldSnapshot.sprites) {
+      if (_isHeroSnapshotSprite(s)) heroSprites.push(s);
+    }
+    // Strip heroes from worldSnapshot to avoid double-apply on load
+    worldSnapshot.sprites = worldSnapshot.sprites.filter((s: any) => !_isHeroSnapshotSprite(s));
+  }
+  const blocklyXmlByProfile = g.__heBlocklyXmlByProfile || {};
+  const tilemap = g.__lastTilemapMsg || null;
+  const decor = g.__lastDecorPayload || null;
+
+  const payload: HeroSavePayload = {
+    type: "heroesSaveV1",
+    savedAt: Date.now(),
+    profiles,
+    floor: { index: floorIndex, kind: floorKind, baseFamily, wallFamily },
+    worldSnapshot,
+    heroSprites,
+    blocklyXmlByProfile,
+    tilemap,
+    decor,
+    next: { index: nextIndex, kind: nextKind }
+  };
+
+  return payload;
+}
+
+function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
+  const g: any = globalThis as any;
+  const net: any = g.__net;
+  if (!net || typeof net.sendSaveGame !== "function") return;
+
+  const payload = _buildHeroSavePayload(nextIndex, nextKind);
+  if (!payload) return;
+
+  try {
+    net.sendSaveGame(payload);
+    console.log("[save] sent autosave", payload);
+  } catch (e) {
+    console.warn("[save] failed to send autosave", e);
+  }
+}
+
+// Expose hook for engine teleport commit
+(globalThis as any).__hero_saveBeforeTeleport = _sendHeroSavePayload;
+
+// ------------------------------------------------------------
+// Load save (host) when available from landing page
+// ------------------------------------------------------------
+let _pendingSaveApplied = false;
+
+function _applyPendingSaveIfAny(): void {
+  if (_pendingSaveApplied) return;
+  const g: any = globalThis as any;
+  if (!g.__isHost) return;
+
+  const pending = g.__pendingSaveFromFile;
+  if (!pending || !pending.parsed) return;
+
+  const save = pending.parsed;
+  if (!save || save.type !== "heroesSaveV1") {
+    console.warn("[save] pending save has unknown type");
+    return;
+  }
+
+  _pendingSaveApplied = true;
+
+  console.log("[save] applying save from file", pending.name || "");
+
+  // Install profiles (up to 4)
+  if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
+  const profs: string[] = Array.isArray(save.profiles) ? save.profiles : [];
+  for (let i = 0; i < Math.min(4, profs.length); i++) {
+    const p = (typeof profs[i] === "string" && profs[i].trim()) ? profs[i].trim() : null;
+    if (p) g.__heroProfiles[i] = p;
+  }
+
+  // Install blockly XML map
+  if (!g.__heBlocklyXmlByProfile) g.__heBlocklyXmlByProfile = {};
+  if (save.blocklyXmlByProfile && typeof save.blocklyXmlByProfile === "object") {
+    for (const k of Object.keys(save.blocklyXmlByProfile)) {
+      g.__heBlocklyXmlByProfile[k] = save.blocklyXmlByProfile[k];
+    }
+  }
+
+  const worldSnapRaw = save.worldSnapshot || save.heroSnapshot || null;
+  const decorFromSave = save.decor || null;
+
+  // Apply world (non-hero) snapshot if netWorld is ready; otherwise stash for later.
+  const applyWorldSnapshot = (snap: any) => {
+    if (!snap || !snap.sprites) return false;
+    try {
+      const nw: any = g.netWorld;
+      if (!nw || typeof nw.apply !== "function") return false;
+      const filtered = {
+        ...snap,
+        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s))
+      };
+      nw.apply(filtered);
+      console.log("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
+      return true;
+    } catch (e) {
+      console.warn("[save] apply world snapshot failed", e);
+      return false;
+    }
+  };
+
+  if (worldSnapRaw) {
+    const applied = applyWorldSnapshot(worldSnapRaw);
+    if (!applied) {
+      g.__pendingWorldSnapshotForSave = worldSnapRaw;
+      setTimeout(() => {
+        try { applyWorldSnapshot(worldSnapRaw); } catch {}
+      }, 500);
+    }
+  }
+
+  if (decorFromSave) {
+    g.__pendingDecorPayload = decorFromSave;
+  }
+
+  // Prepare hero snapshots by profile (owner maps to slot index)
+  const heroArr = Array.isArray(save.heroSprites)
+    ? save.heroSprites
+    : (worldSnapRaw && Array.isArray(worldSnapRaw.sprites) ? worldSnapRaw.sprites : []);
+  const map: any = {};
+  for (const s of heroArr) {
+    if (!s || !s.data) continue;
+    const owner = (typeof s.data.owner === "number") ? (s.data.owner | 0) : 0;
+    if (owner <= 0 || owner > 4) continue;
+    const prof = profs[owner - 1];
+    if (prof) map[prof] = s;
+  }
+  g.__heroSavedSnapshotByProfile = map;
+
+  // Floor theme hints
+  if (save.floor) {
+    if (typeof save.floor.baseFamily === "string") g.__floorBaseFamily = save.floor.baseFamily;
+    if (typeof save.floor.wallFamily === "string") g.__floorWallFamily = save.floor.wallFamily;
+  }
+
+  // Tilemap cache (optional; host will resend on change)
+  if (save.tilemap) {
+    g.__lastTilemapMsg = save.tilemap;
+  }
+
+  console.log("[save] pending save installed; will apply on next hero spawn for matching profiles");
+}
+
+(globalThis as any).__onHostBecameHost = _applyPendingSaveIfAny;
+
 
 
 
@@ -644,6 +853,7 @@ class HeroScene extends Phaser.Scene {
     private _tilemapAppliedTileSize: number = 0;
 
     private _tilemapAppliedFloorIndex: number = -1;
+    private _tilemapAppliedDecorRev: number = -1;
 
 
     constructor() {
@@ -1207,6 +1417,92 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
     this.applyTilemapToScene(grid, tileSize);
 
+    if (DEBUG_TILEMAP_APPLY_NET) {
+        // Cheap counts to prove we applied a non-empty grid
+        let rawWalls = 0;
+        let rawFloors = 0;
+        for (let r = 0; r < rows; r++) {
+            const row = grid[r];
+            for (let c = 0; c < cols; c++) {
+                const v = row[c] | 0;
+                if (v === 1) rawWalls++;
+                else rawFloors++;
+            }
+        }
+        console.log("[net.tilemap.apply]", {
+            rev,
+            rows,
+            cols,
+            tileSize,
+            baseFamily,
+            wallFamily,
+            rawWalls,
+            rawFloors
+        });
+    }
+
+    // Apply decor payload (follower-safe)
+    const decor: DecorPayload | undefined = msg.decor;
+    if (decor && this.tileAtlas) {
+        try {
+            const renderer = this.ensureWorldTileRenderer(this.tileAtlas);
+            if (decor.decals && Array.isArray(decor.decals)) {
+                const rCount = Math.min(decor.decals.length, rows);
+                const cCount = rCount > 0 ? Math.min(decor.decals[0].length, cols) : 0;
+                const keyGrid: string[][] = new Array(rCount);
+                for (let r = 0; r < rCount; r++) {
+                    const srcRow = decor.decals[r] || [];
+                    const outRow: string[] = new Array(cCount);
+                    for (let c = 0; c < cCount; c++) {
+                        const id = (srcRow[c] | 0);
+                        outRow[c] = _mapDecalIdToKey(id);
+                    }
+                    keyGrid[r] = outRow;
+                }
+                if (renderer && typeof renderer.syncDecalGridByName === "function") {
+                    renderer.syncDecalGridByName(keyGrid);
+                }
+            }
+
+            const mapPropName = (p: DecorPropEntry): string => {
+                if (!p) return "";
+                if (p.name) return p.name;
+                switch ((p.id as number) | 0) {
+                    case 1: return "rock_mountain";
+                    case 2: return "stairs_statue";
+                    case 3: return "chest#closed";
+                    case 4: return "pedestal";
+                    default: return "";
+                }
+            };
+
+            if (decor.props && Array.isArray(decor.props)) {
+                const propGrid: string[][] = [];
+                for (const p of decor.props) {
+                    if (!p) continue;
+                    const r = (p.r | 0);
+                    const c = (p.c | 0);
+                    if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
+                    const propName = mapPropName(p);
+                    if (!propName) continue;
+                    if (!propGrid[r]) propGrid[r] = [];
+                    propGrid[r][c] = propName;
+                }
+                if (renderer && typeof renderer.syncPropGridByName === "function") {
+                    renderer.syncPropGridByName(propGrid);
+                }
+            }
+
+            if (DEBUG_TILEMAP_APPLY_NET) {
+                const propCount = Array.isArray(decor.props) ? decor.props.length : 0;
+                const decalCount = Array.isArray(decor.decals) ? decor.decals.length : 0;
+                console.log("[net.decor.apply]", { rev: decor.rev ?? null, propCount, decalRows: decalCount });
+            }
+        } catch (e) {
+            console.warn("[net.decor.apply] failed", e);
+        }
+    }
+
     if (DEBUG_TILEMAP) {
         console.log(">>> [HeroScene.tilemap] applied tilemap from net", {
             rev,
@@ -1464,12 +1760,12 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
     } catch { /* ignore */ }
 }
 
-private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
+  private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
     const internals = g.__HeroEnginePhaserInternals;
     if (!internals?.getWorldTileMap || !internals?.getWorldTileSize) return;
 
     const worldRev = (internals.getWorldRev?.() | 0) || 0;
-    const floorIndex = (internals.getFloorIndex?.() | 0) ?? -1;
+    const floorIndex = (internals.getFloorIndex?.() | 0) || -1;
 
     const grid: number[][] = internals.getWorldTileMap();
     const tileSize = (internals.getWorldTileSize() | 0) || 16;
@@ -1482,11 +1778,97 @@ private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
     const wallFamily =
         (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
 
+    // Decor payload (decals + prop entries) from engine internals
+    let decorPayload: DecorPayload | null = null;
+    let decorRev = -1;
+    try {
+        const spritesNS: any = g.sprites;
+        decorRev = (internals.getWorldDecorRev?.() | 0) || (internals.getDecorRev?.() | 0) || 0;
+        const decals = (typeof internals.getDecalGrid === "function") ? internals.getDecalGrid() : null;
+
+        const triggers: any[] = (typeof internals.getDecorTriggerSprites === "function") ? (internals.getDecorTriggerSprites() || []) : [];
+        const solids: any[] = (typeof internals.getDecorSolidSprites === "function") ? (internals.getDecorSolidSprites() || []) : [];
+
+        const props: DecorPropEntry[] = [];
+        const readDataNum = (s: any, key: string, fallback = 0) => {
+            try {
+                if (spritesNS && typeof spritesNS.readDataNumber === "function") {
+                    const v = spritesNS.readDataNumber(s, key);
+                    if (typeof v === "number") return v | 0;
+                }
+            } catch {}
+            const d: any = s && s.data ? s.data : {};
+            const v2 = d ? d[key] : undefined;
+            return (typeof v2 === "number") ? (v2 | 0) : fallback;
+        };
+
+        const readDataStr = (s: any, key: string) => {
+            try {
+                if (spritesNS && typeof spritesNS.readDataString === "function") {
+                    const v = spritesNS.readDataString(s, key);
+                    if (typeof v === "string") return v;
+                }
+            } catch {}
+            const d: any = s && s.data ? s.data : {};
+            const v2 = d ? d[key] : undefined;
+            return (typeof v2 === "string") ? v2 : "";
+        };
+
+        const collectProps = (arr: any[]) => {
+            for (const s of arr) {
+                if (!s) continue;
+                const id =
+                    readDataNum(s, "decorId", readDataNum(s, "id", -1));
+                const r = readDataNum(s, "decorTileR", readDataNum(s, "tileR", -1));
+                const c = readDataNum(s, "decorTileC", readDataNum(s, "tileC", -1));
+                let name =
+                    readDataStr(s, "decorName") ||
+                    readDataStr(s, "name");
+                // Fallback: derive a render key from known decor ids when the name is missing/empty
+                if (!name) {
+                    switch (id | 0) {
+                        case 1: name = "rock_mountain"; break;
+                        case 2: name = "stairs_statue"; break;
+                        case 3: name = "chest#closed"; break;
+                        case 4: name = "pedestal"; break;
+                        default: break;
+                    }
+                }
+                const role =
+                    readDataNum(s, "decorRole", readDataNum(s, "role", 0));
+                if (r >= 0 && c >= 0 && name) {
+                    props.push({ r, c, name, role, id });
+                }
+            }
+        };
+        collectProps(triggers);
+        collectProps(solids);
+
+        decorPayload = { rev: decorRev, decals: decals || undefined, props: props.length ? props : undefined };
+        g.__lastDecorPayload = decorPayload;
+
+        if (DEBUG_TILEMAP_APPLY_NET) {
+            console.log("[net.decor.capture]", {
+                decorRev,
+                triggerCount: triggers.length,
+                solidCount: solids.length,
+                props: props.length,
+                decalRows: decals ? decals.length : 0
+            });
+        }
+    } catch (e) {
+        console.warn("[tilemap] failed to capture decor payload", e);
+    }
+
     g.__floorBaseFamily = baseFamily;
     g.__floorWallFamily = wallFamily;
 
     const themeKey = `${baseFamily}|${wallFamily}`;
     const lastThemeKey = (g.__tilemapAppliedThemeKey as string) || "";
+
+    const decorNeedsApply =
+        decorPayload &&
+        ((decorPayload.rev | 0) !== (this._tilemapAppliedDecorRev | 0));
 
     const needApply =
         (worldRev | 0) !== (this._tilemapAppliedWorldRev | 0) ||
@@ -1494,9 +1876,10 @@ private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
         rows !== (this._tilemapAppliedRows | 0) ||
         cols !== (this._tilemapAppliedCols | 0) ||
         tileSize !== (this._tilemapAppliedTileSize | 0) ||
-        themeKey !== lastThemeKey;
+        themeKey !== lastThemeKey ||
+        !!decorNeedsApply;
 
-    if (!needApply || rows <= 0 || cols <= 0) return;
+    if ((!needApply && !decorNeedsApply) || rows <= 0 || cols <= 0) return;
 
     // Cheap high-level counts (helps confirm “grid changed” at a glance)
     let rawWalls = 0;
@@ -1510,15 +1893,21 @@ private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
         }
     }
 
-    this.applyTilemapToScene(grid, tileSize);
+    if (needApply) {
+        this.applyTilemapToScene(grid, tileSize);
 
-    this._tilemapAppliedWorldRev = worldRev;
-    this._tilemapAppliedFloorIndex = floorIndex;
-    this._tilemapAppliedRows = rows;
-    this._tilemapAppliedCols = cols;
-    this._tilemapAppliedTileSize = tileSize;
+        this._tilemapAppliedWorldRev = worldRev;
+        this._tilemapAppliedFloorIndex = floorIndex;
+        this._tilemapAppliedRows = rows;
+        this._tilemapAppliedCols = cols;
+        this._tilemapAppliedTileSize = tileSize;
 
-    g.__tilemapAppliedThemeKey = themeKey;
+        g.__tilemapAppliedThemeKey = themeKey;
+    }
+
+    if (decorPayload) {
+        this._tilemapAppliedDecorRev = (decorPayload.rev | 0);
+    }
 
     if (DEBUG_TILEMAP) {
         console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
@@ -1567,6 +1956,10 @@ private _tilemap_hostSyncFromEngineAndBroadcastIfNeeded(g: any): void {
         data: grid,
         baseFamily,
         wallFamily,
+        worldRev,
+        floorIndex,
+        floorKind: (internals.getFloorKind?.() || g.__floorKind || ""),
+        decor: decorPayload || undefined,
     };
 
     // queue for retry (even if ws is open, we still retry a couple times to de-flake)
@@ -2159,3 +2552,18 @@ if (shouldStartGameFromUrl()) {
 _hud_installOnce();
 
 
+const DEBUG_TILEMAP_APPLY_NET = true;
+
+type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
+type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };
+
+function _mapDecalIdToKey(id: number): string {
+  const v = id | 0;
+  if (v === 1) return "sand_patch";
+  if (v >= 100 && v <= 104) return `telepad${v - 100}_top`;
+  if (v >= 110 && v <= 114) return `telepad${v - 110}_bot`;
+  if (v === 120) return "stairs_statue_top";
+  if (v === 121) return "stairs_statue_mid";
+  if (v === 122) return "stairs_statue_bot";
+  return "";
+}

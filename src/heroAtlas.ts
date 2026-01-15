@@ -762,19 +762,19 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         addPhaseDir("jump", "down",  28, jumpCols, 10, 0, false);
         addPhaseDir("jump", "right", 29, jumpCols, 10, 0, false);
 
-        // Sit – rows 30–33, 3 frames
-        const sitCols = cols0to(2); // 3 frames (0–2)
+        // Sit – rows 30–33, ONLY frames 0–1 (no frame 2)
+        const sitCols = [0, 1]; // 2 frames (0–1)
         addPhaseDir("sit", "up",    30, sitCols, 4, -1, false);
         addPhaseDir("sit", "left",  31, sitCols, 4, -1, false);
         addPhaseDir("sit", "down",  32, sitCols, 4, -1, false);
         addPhaseDir("sit", "right", 33, sitCols, 4, -1, false);
 
-        // Emote – rows 34–37, 3 frames
+        // Emote – rows 34–37, 3 frames; play as 0-1-2-1-0 (yoyo)
         const emoteCols = cols0to(2); // 3 frames (0–2)
-        addPhaseDir("emote", "up",    34, emoteCols, 6, 0, false);
-        addPhaseDir("emote", "left",  35, emoteCols, 6, 0, false);
-        addPhaseDir("emote", "down",  36, emoteCols, 6, 0, false);
-        addPhaseDir("emote", "right", 37, emoteCols, 6, 0, false);
+        addPhaseDir("emote", "up",    34, emoteCols, 6, 0, true);
+        addPhaseDir("emote", "left",  35, emoteCols, 6, 0, true);
+        addPhaseDir("emote", "down",  36, emoteCols, 6, 0, true);
+        addPhaseDir("emote", "right", 37, emoteCols, 6, 0, true);
 
         // Run – rows 38–41, 8 frames
         const runCols = cols0to(7); // 8 frames (0–7)

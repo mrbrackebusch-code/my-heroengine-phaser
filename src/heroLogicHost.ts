@@ -17,6 +17,8 @@ type HeroLogicFn = (
 
 
 const DEBUG_HOST_LOGIC = false;
+const INVALID_MOVE_OUT: any[] = [-1, 0, 0, 0, 0, -1, "INVALID"];
+const DEBUG_HOST_LOGIC_BLOCKLY = false;
 
 // ==========================================
 // Registries (kept global for debugging)
@@ -460,17 +462,18 @@ if (typeof setResolver === "function") {
 
                 const out = _he_normOut(p, button, raw);
 
-                if (out && out.length) {
-                    _trace("[heroLogicHost] USING Blockly", { profile: p, button, out });
-                    _setLogicSource("blockly", p);
-                    return out;
-                }
+        if (out && out.length) {
+            _trace("[heroLogicHost] USING Blockly", { profile: p, button, out });
+            _setLogicSource("blockly", p);
+            return out;
+        }
 
                 // Miss: collect detailed diagnostics and, if XML exists, stop (no TS fallback).
                 const dbg = (() => { try { return dbgBlocklyHeroLogic(p); } catch { return null; } })();
                 const reason = (!hasXml) ? "no-xml" : (dbg?.lastErrByButton?.[button] || dbg?.lastErr || "null-out");
                 const rawSample = dbg?.lastRawByButton ? dbg.lastRawByButton[button] : (dbg && ("lastRaw" in (dbg as any)) ? (dbg as any).lastRaw : undefined);
                 const codePreview = dbg && (dbg as any).codePreview ? String((dbg as any).codePreview) : null;
+                if (DEBUG_HOST_LOGIC_BLOCKLY) {
                 _trace("[heroLogicHost] Blockly MISS", {
                     profile: p,
                     button,
@@ -483,18 +486,18 @@ if (typeof setResolver === "function") {
                     codePreview,
                     dbg,
                 });
-
+                }
                 if (hasXml) {
                     _setLogicSource("blockly:invalid", p);
-                    return null; // per-move hard stop: do not fall back to TS for this button
+                    return INVALID_MOVE_OUT; // per-move hard stop: emit sentinel instead of falling back
                 }
             }
 
             // If forced, do NOT fall back to TS
             if (mode === "forceBlockly") {
-                _trace("[heroLogicHost] FORCE Blockly: returning null (no move)");
+                _trace("[heroLogicHost] FORCE Blockly: returning sentinel (no move)");
                 _setLogicSource("blockly:miss", effectiveProfile);
-                return null;
+                return INVALID_MOVE_OUT;
             }
 
             // If Blockly XML exists but failed to run, mark it and fall back to TS/Demo.

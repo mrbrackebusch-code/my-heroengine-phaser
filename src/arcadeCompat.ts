@@ -10461,11 +10461,11 @@ namespace netWorld {
 // SAFETY:
 //   - Must validate payload fields; tolerate partial/old clients
 // ---------------------------------------------------------------------
-export function apply(snap: WorldSnapshot): void {
-    if (!snap) return;
+    export function apply(snap: WorldSnapshot): void {
+        if (!snap) return;
 
-    const g: any = (globalThis as any);
-    const isHost = !!g.__isHost;
+        const g: any = (globalThis as any);
+        const isHost = !!g.__isHost;
     const now = game.runtime();
 
     // Wall-clock timer for perf (per snapshot apply)
@@ -10494,7 +10494,17 @@ export function apply(snap: WorldSnapshot): void {
     const allFn = (sprites as any)._getAllSprites;
     const all = typeof allFn === "function" ? (allFn.call(sprites) as any[]) : [];
 
-    const snapSprites = snap.sprites || [];
+        const snapSprites = snap.sprites || [];
+        if (!isHost) {
+            try {
+                console.log("[netWorld.apply.follower]", {
+                    sprites: snapSprites.length,
+                    timeMs: snap.timeMs,
+                    runtimeMs: snap.runtimeMs,
+                    bgIndex: (snap as any).bgIndex ?? null
+                });
+            } catch (_e) { /* ignore */ }
+        }
 
     // Track which IDs are present in the snapshot so we can prune leftovers
     const keepIds: { [id: number]: 1 } = {};

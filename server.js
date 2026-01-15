@@ -1,5 +1,7 @@
 // server.js (ESM version, compatible with "type": "module")
 import WebSocket, { WebSocketServer } from "ws";
+import fs from "fs";
+import path from "path";
 
 // ------------------------------------------------------------
 // Debug / logging
@@ -8,7 +10,7 @@ const SERVER_LAG_WARN_MS = 30;
 const SERVER_LAG_HARD_MS = 100;
 
 const DEBUG_NET = false;
-const DEBUG_TILEMAP = true;
+const DEBUG_TILEMAP = false;
 
 // ------------------------------------------------------------
 // Host lease (grace window to allow host refresh without migration)
@@ -25,8 +27,10 @@ const CONTROL_SLOTS = 4;
 // ------------------------------------------------------------
 // Server config
 // ------------------------------------------------------------
-const PORT = 8080;
-const HOST = "0.0.0.0";
+const PORT = Number(process.env.GAME_WS_PORT || 8080);
+const HOST = process.env.GAME_HOST || "0.0.0.0";
+const SAVE_DIR = path.resolve("saves");
+const HERO_ASSETS_DIR = path.resolve("assets", "heroes");
 
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 
@@ -35,6 +39,14 @@ console.log("[server] *** MULTIPLAYER SERVER STARTED ***");
 console.log("[server] PID:", process.pid);
 console.log(`[server] Listening on ws://${HOST}:${PORT}`);
 console.log("==================================================");
+
+// Global crash reporting (so the process doesn't die silently)
+process.on("uncaughtException", (err) => {
+  console.error("[server] UNCAUGHT EXCEPTION", err && err.stack ? err.stack : err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("[server] UNHANDLED REJECTION", err && err.stack ? err.stack : err);
+});
 
 // ============================================================
 // State
@@ -54,6 +66,7 @@ const wsToToken = new Map(); // Map<WebSocket, string>
 const tokenToPlayerId = new Map();     // Map<string, number>
 const tokenToControlSlot = new Map();  // Map<string, number> (0|1..CONTROL_SLOTS)
 const tokenToProfile = new Map();      // Map<string, string>
+const profileToToken = new Map();      // Map<string, string> (authoritative owner of a profile)
 
 // For allocating new identity playerIds
 let nextPlayerId = 1;
@@ -66,9 +79,23 @@ let hostLeaseTimer = null;  // NodeJS.Timeout|null
 // Cached last tilemap for late joiners
 let lastTilemapMsg = null;
 
+// Allowed profiles derived from hero sprite assets
+const allowedProfiles = new Set();
+
 // ============================================================
 // Utilities
 // ============================================================
+
+function wsStateName(ws) {
+  if (!ws) return "null";
+  switch (ws.readyState) {
+    case WebSocket.CONNECTING: return "CONNECTING";
+    case WebSocket.OPEN: return "OPEN";
+    case WebSocket.CLOSING: return "CLOSING";
+    case WebSocket.CLOSED: return "CLOSED";
+    default: return String(ws.readyState);
+  }
+}
 
 function parseJsonOrNull(data) {
   try {
@@ -286,6 +313,17 @@ function bindHello(ws, msg) {
     return;
   }
 
+  // Normalize + validate desired profile (trim only; keep case as provided)
+  const desiredProfileRaw = (msg && typeof msg.desiredProfile === "string") ? msg.desiredProfile.trim() : "";
+  const desiredProfile = desiredProfileRaw || null;
+
+  if (!desiredProfile) {
+    console.warn("[server] HELLO missing profile; closing");
+    sendJson(ws, { type: "helloError", reason: "missingProfile" });
+    ws.close(1008, "Profile required");
+    return;
+  }
+
   // If this token already has a live socket, replace it (refresh-safe).
   const oldWs = tokenToWs.get(token);
   if (oldWs && oldWs !== ws) {
@@ -318,10 +356,38 @@ function bindHello(ws, msg) {
     }
   }
 
-  // Store desired profile if provided
-  if (typeof msg.desiredProfile === "string") {
-    const p = msg.desiredProfile.trim();
-    if (p) tokenToProfile.set(token, p);
+  // Determine profile for this token (sticky once set)
+  const existingProfile = tokenToProfile.get(token) || null;
+  const profile = existingProfile || desiredProfile || null;
+
+  // Validate profile against assets
+  if (profile && !allowedProfiles.has(profile)) {
+    console.warn("[server] HELLO rejected: profile not found in assets", profile, "allowed:", Array.from(allowedProfiles).sort());
+    sendJson(ws, { type: "helloError", reason: "profileUnknown", profile, allowed: Array.from(allowedProfiles) });
+    ws.close(1008, "Profile not available");
+    return;
+  }
+
+  // Enforce "only one of each profile"
+  if (profile) {
+    const ownerTok = profileToToken.get(profile);
+    if (ownerTok && ownerTok !== token) {
+      console.warn("[server] HELLO rejected: profile already in use", {
+        profile,
+        existingOwnerToken: ownerTok.slice(0, 8) + "…",
+        incomingToken: token.slice(0, 8) + "…"
+      });
+      sendJson(ws, { type: "helloError", reason: "profileInUse", profile });
+      ws.close(1008, "Profile already in use");
+      return;
+    }
+    // Claim ownership (idempotent for same token)
+    profileToToken.set(profile, token);
+    tokenToProfile.set(token, profile);
+  } else if (!existingProfile && desiredProfile) {
+    // Persist the desired profile even if blank ownership checks didn't fire
+    tokenToProfile.set(token, desiredProfile);
+    profileToToken.set(desiredProfile, token);
   }
 
   pending.delete(ws);
@@ -344,7 +410,7 @@ function bindHello(ws, msg) {
     _clearHostLeaseTimer();
   }
 
-  const profile = tokenToProfile.get(token) || null;
+  const profileNow = tokenToProfile.get(token) || null;
   const controlSlot = tokenToControlSlot.get(token) || 0;
   const name = `Player${playerId}`;
 
@@ -356,11 +422,11 @@ function bindHello(ws, msg) {
     "controlSlot",
     controlSlot,
     "profile=",
-    profile
+    profileNow
   );
 
   // Send assign (includes optional fields; clients can ignore what they don't use)
-  sendJson(ws, { type: "assign", playerId, name, token, profile, controlSlot });
+  sendJson(ws, { type: "assign", playerId, name, token, profile: profileNow, controlSlot });
 
   // Send authoritative roster snapshot immediately (Step 10)
   sendJson(ws, buildRosterSnapshot());
@@ -446,19 +512,44 @@ function handleTilemapMessage(ws, info, msg) {
     return;
   }
 
-  if (
+  // Normalize possible field names (data vs grid)
+  if (!msg.data && Array.isArray(msg.grid)) {
+    msg.data = msg.grid;
+  }
+
+  if (typeof msg.encoding !== "string") {
+    msg.encoding = "raw";
+  }
+
+  const malformed =
     typeof msg.rev !== "number" ||
     typeof msg.tileSize !== "number" ||
     typeof msg.rows !== "number" ||
     typeof msg.cols !== "number" ||
-    typeof msg.encoding !== "string"
-  ) {
-    console.warn("[server] malformed tilemap from host:", msg);
+    !msg.data;
+
+  if (malformed) {
+    console.warn("[server] malformed tilemap from host:", {
+      rev: msg.rev,
+      rows: msg.rows,
+      cols: msg.cols,
+      tileSize: msg.tileSize,
+      encoding: msg.encoding,
+      hasData: !!msg.data,
+      hasGrid: !!msg.grid
+    });
     return;
   }
 
   // Cache and broadcast
   lastTilemapMsg = msg;
+  if (msg.decor) {
+    const props = Array.isArray(msg.decor.props) ? msg.decor.props.length : 0;
+    const decals = Array.isArray(msg.decor.decals) ? msg.decor.decals.length : 0;
+    if (DEBUG_TILEMAP) {
+      console.log("[server] tilemap decor payload", { decorRev: msg.decor.rev ?? null, props, decalRows: decals });
+    }
+  }
 
   if (DEBUG_TILEMAP) {
     console.log("[server] cached tilemap", {
@@ -471,6 +562,98 @@ function handleTilemapMessage(ws, info, msg) {
   }
 
   broadcast(msg);
+}
+
+function sanitizeProfilesKey(profiles) {
+  const key = Array.isArray(profiles)
+    ? profiles.map((p) => String(p || "").trim()).filter(Boolean).join("_")
+    : "";
+  const sanitized = key.replace(/[^a-z0-9_-]/gi, "") || "unknown";
+  return sanitized.slice(0, 64);
+}
+
+function pruneOldSaves(prefix) {
+  try {
+    const files = fs.readdirSync(SAVE_DIR);
+    const matched = files
+      .filter((f) => f.startsWith(prefix))
+      .map((f) => {
+        const full = path.join(SAVE_DIR, f);
+        let mtime = 0;
+        try {
+          mtime = fs.statSync(full).mtimeMs || 0;
+        } catch (_e) {}
+        return { f, full, mtime };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+
+    for (let i = 3; i < matched.length; i++) {
+      try { fs.unlinkSync(matched[i].full); } catch (_e) {}
+    }
+  } catch (e) {
+    console.warn("[server.save] prune failed", e);
+  }
+}
+
+function loadAllowedProfilesFromAssets() {
+  allowedProfiles.clear();
+  try {
+    const files = fs.readdirSync(HERO_ASSETS_DIR);
+    for (const f of files) {
+      if (!f || typeof f !== "string") continue;
+      if (!f.toLowerCase().endsWith(".png")) continue;
+      const m = f.match(/^(.+?)Hero\.png$/i);
+      if (!m || !m[1]) continue;
+      const prof = m[1].trim();
+      if (prof) allowedProfiles.add(prof);
+    }
+    console.log("[server] allowed profiles from assets:", Array.from(allowedProfiles).sort());
+  } catch (e) {
+    console.warn("[server] failed to load allowed profiles from assets", HERO_ASSETS_DIR, e);
+  }
+}
+
+// Ensure saves directory exists (repo-local, gitignored)
+try {
+  fs.mkdirSync(SAVE_DIR, { recursive: true });
+  console.log("[server] saves dir:", SAVE_DIR);
+} catch (e) {
+  console.warn("[server] could not create saves dir", SAVE_DIR, e);
+}
+loadAllowedProfilesFromAssets();
+
+function writeSaveFile(payload) {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("invalid payload");
+  }
+
+  const profilesKey = sanitizeProfilesKey(payload.profiles);
+  const ts = new Date();
+  const timestamp = ts.toISOString().replace(/[:.]/g, "").replace("T", "_").replace("Z", "");
+  const fname = `autosave_${profilesKey}_${timestamp}.json`;
+  const full = path.join(SAVE_DIR, fname);
+
+  const toWrite = JSON.stringify(payload, null, 2);
+  fs.writeFileSync(full, toWrite, "utf8");
+  pruneOldSaves(`autosave_${profilesKey}_`);
+
+  console.log("[server.save] wrote", full, "bytes=", toWrite.length);
+}
+
+function handleSaveGameMessage(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs || ws !== hostWs) return;
+
+  if (!msg.payload) {
+    console.warn("[server.save] missing payload");
+    return;
+  }
+
+  try {
+    writeSaveFile(msg.payload);
+  } catch (e) {
+    console.warn("[server.save] write failed", e);
+  }
 }
 
 
@@ -538,6 +721,7 @@ function onSocketMessage(ws, data) {
   if (msg.type === "input") return handleInputMessage(ws, info, msg);
   if (msg.type === "state") return handleStateMessage(ws, info, msg);
   if (msg.type === "tilemap") return handleTilemapMessage(ws, info, msg);
+  if (msg.type === "saveGame") return handleSaveGameMessage(ws, info, msg);
 
   // Unknown message types are ignored for forward-compat
 }
@@ -558,6 +742,19 @@ function onSocketClose(ws, code, reason) {
   if (token) {
     const cur = tokenToWs.get(token);
     if (cur === ws) tokenToWs.delete(token);
+
+    // Release profile ownership if no live socket for this token
+    const prof = tokenToProfile.get(token) || null;
+    if (prof && profileToToken.get(prof) === token) {
+      profileToToken.delete(prof);
+    }
+
+    // If no live socket holds this token, clean up limbo state
+    if (!tokenToWs.has(token)) {
+      tokenToControlSlot.delete(token);
+      tokenToProfile.delete(token);
+      tokenToPlayerId.delete(token);
+    }
 
     console.log(
       "[server] disconnected token",
@@ -593,14 +790,23 @@ function onSocketClose(ws, code, reason) {
 }
 
 function acceptConnection(ws) {
-  console.log("[server] new client connecting...");
+  const sock = ws && ws._socket;
+  const remote = sock ? `${sock.remoteAddress || "?"}:${sock.remotePort || "?"}` : "?";
+  console.log("[server] new client connecting...", remote);
   pending.add(ws);
 
   ws.on("message", (data) => onSocketMessage(ws, data));
   ws.on("close", (code, reason) => onSocketClose(ws, code, reason));
   ws.on("error", (err) => {
     const info = clients.get(ws) || null;
-    console.warn("[server] ws error", info ? `(playerId ${info.playerId})` : "(unbound)", err);
+    const token = info ? info.token : (wsToToken.get(ws) || null);
+    console.warn(
+      "[server] ws error",
+      info ? `(playerId ${info.playerId})` : "(unbound)",
+      token ? `token=${token.slice(0, 8)}…` : "",
+      "state=" + wsStateName(ws),
+      err && err.stack ? err.stack : err
+    );
   });
 }
 
@@ -608,6 +814,16 @@ function acceptConnection(ws) {
 // Entry
 // ============================================================
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  const remote = req?.socket ? `${req.socket.remoteAddress || "?"}:${req.socket.remotePort || "?"}` : "?";
+  console.log("[server] connection established", remote);
   acceptConnection(ws);
+});
+
+wss.on("error", (err) => {
+  console.error("[server] wss error", err && err.stack ? err.stack : err);
+});
+
+wss.on("close", () => {
+  console.warn("[server] WebSocketServer closed");
 });

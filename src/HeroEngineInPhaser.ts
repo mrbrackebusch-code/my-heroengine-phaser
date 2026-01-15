@@ -2791,7 +2791,7 @@ let heroAuras: Sprite[] = []
 
 
 
-const DEBUG_CONTRACT_SNAPSHOT = false //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
+const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
 //The master debug turn on and turn off
 
@@ -2804,6 +2804,9 @@ let DEBUG_CONTRACT_PLAYER_ID = 0          // match HERO_DATA.OWNER
 let DEBUG_CONTRACT_HERO_INDEX = -1        // match heroIndex
 
 let DEBUG_CONTRACT_THROTTLE_MS = 0        // 0 = no extra throttle beyond change-gate
+
+// Debug: log special feedback phases (sit/emote) at most once per hero/why.
+const DEBUG_SPECIAL_PHASE_LOG_ONCE = true
 
 
 
@@ -3868,6 +3871,13 @@ const CONTRACT_WHY_TABLE: Record<string, string> = {
     INTELLECT_DETONATE_REQUEST_EXPIRE: "detonateIntellectSpellForHero",
 
     INTELLECT_DETONATE_REQUEST_UNKNOWN: "detonateIntellectSpellForHero",
+
+
+    // Special non-action feedback phases
+
+    SPECIAL_SIT: "publishHeroSpecialPhase(sit)",
+
+    SPECIAL_EMOTE: "publishHeroSpecialPhase(emote)",
 
 
 
@@ -8915,6 +8925,12 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
 
     // Teleport: destroy pad and enter next floor
+    try {
+        const g: any = (globalThis as any);
+        if (g && typeof g.__hero_saveBeforeTeleport === "function") {
+            g.__hero_saveBeforeTeleport(next, String(r.kind || defaultKind || ""));
+        }
+    } catch (_e) { }
 
     _dunDestroySprite(_dunExitPad)
 
@@ -9177,6 +9193,9 @@ const AMBIENT_IDLE_PHASE_DUR_MS = 700
 const AMBIENT_RUN_PHASE_DUR_MS = 320
 
 const AMBIENT_COMBATIDLE_PHASE_DUR_MS = 520
+
+const SPECIAL_SIT_PHASE_DUR_MS = 800   // ambient-paced loop for “sit” feedback
+const SPECIAL_EMOTE_PHASE_DUR_MS = 650 // short one-shot for “emote” feedback
 
 
 
@@ -23204,7 +23223,7 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 }
 
 
-const DEBUG_HERO_LOGIC_OUT = false;
+const DEBUG_HERO_LOGIC_OUT = true;   // log OUT once per call (safe volume)
 const DEBUG_HERO_LOGIC_ENTER = false;
 
 function runHeroLogicForHero(heroIndex: number, button: string) {
@@ -24737,6 +24756,51 @@ function setHeroPhaseString(heroIndex: number, phase: string, where: string = ""
 
 
 
+// Publish a non-action ambient feedback phase (sit/emote) without touching Action keys.
+// Writes a valid Phase window and clears PhasePart to keep the contract coherent.
+function publishHeroSpecialPhase(
+    heroIndex: number,
+    phase: "sit" | "emote",
+    durationMs?: number,
+    whyId: string = (phase === "sit" ? "SPECIAL_SIT" : "SPECIAL_EMOTE"),
+    where: string = "publishHeroSpecialPhase"
+): void {
+    const hero = heroes[heroIndex];
+    if (!hero) return;
+
+    const nowMs = Math.max(1, game.runtime() | 0);
+    const dur = Math.max(
+        1,
+        durationMs != null
+            ? (durationMs | 0)
+            : (phase === "sit" ? SPECIAL_SIT_PHASE_DUR_MS : SPECIAL_EMOTE_PHASE_DUR_MS)
+    );
+
+    // Mirror legacy phase key and stamp a fresh window.
+    setHeroPhaseString(heroIndex, phase, where);
+    _animKeys_stampPhaseWindow(heroIndex, hero, phase, nowMs, dur, whyId, where);
+
+    // Clear PhasePart so there is no stale segmentation during ambient feedback.
+    sprites.setDataString(hero, HERO_DATA.PhasePartName, "");
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartStartMs, 0);
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartDurationMs, 0);
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, 0);
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartFlags, 0);
+
+    if (DEBUG_SPECIAL_PHASE_LOG_ONCE) {
+        try {
+            const key = `${heroIndex}:${phase}:${whyId}`;
+            const gAny: any = globalThis as any;
+            const seen: Set<string> = gAny.__dbgSpecialPhaseOnce || (gAny.__dbgSpecialPhaseOnce = new Set<string>());
+            if (!seen.has(key)) {
+                seen.add(key);
+                console.log(`[SPECIAL-PHASE] hero=${heroIndex} phase=${phase} why=${whyId} where=${where} dur=${dur} now=${nowMs}`);
+            }
+        } catch { /* ignore */ }
+    }
+}
+
+
 function clearHeroFrameColOverride(heroIndex: number): void {
 
     const hero = heroes[heroIndex]; if (!hero) return
@@ -25254,6 +25318,9 @@ function _doHeroMoveValidateHookOut(heroIndex: number, button: string, out: any[
             " INVALID OUT=" + (out ? "[" + out.join(",") + "]" : "null")
 
         )
+
+        // Feedback: play sit when blockly output is missing/invalid so player sees the failure.
+        publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "_doHeroMoveValidateHookOut")
 
         return false
 
@@ -25806,6 +25873,9 @@ function _doHeroMoveTrySpendMana(
     if (mana < manaCost) {
 
         flashHeroManaBar(heroIndex)
+
+        // Feedback: play emote when cast is unaffordable.
+        publishHeroSpecialPhase(heroIndex, "emote", SPECIAL_EMOTE_PHASE_DUR_MS, "SPECIAL_EMOTE", "_doHeroMoveTrySpendMana")
 
         return false
 
@@ -27039,6 +27109,8 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
     const out = _doHeroMoveCallLogicHook(heroIndex, button)
 
     if (!out) {
+        // Invalid/missing blockly output: play sit feedback instead of falling through to defaults.
+        publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.logicNull")
 
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
 
@@ -27055,6 +27127,8 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
 
 
     if (!_doHeroMoveValidateHookOut(heroIndex, button, out)) {
+        // Invalid blockly output (or defaulted fields): play sit feedback and stop.
+        publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.invalidOut")
 
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
 
@@ -27068,6 +27142,19 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
 
     }
 
+
+
+    // Sentinel array from host/Blockly indicating "invalid move; show sit".
+    const isInvalidSentinel =
+        typeof out[0] === "number" && (out[0] | 0) < 0 &&
+        typeof out[5] === "number" && (out[5] | 0) < 0 &&
+        typeof out[6] === "string" && out[6].trim().toLowerCase() === "invalid";
+    if (isInvalidSentinel) {
+        publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.invalidSentinel");
+        console.log(DEBUG_FILTER_PHRASE + " INVALID_SENTINEL timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex);
+        _doHeroMoveDbgReset(playerId);
+        return null;
+    }
 
 
     const parsed = _doHeroMoveParseHookOut(out)
@@ -32036,9 +32123,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     const damageMult = stats[STAT.DAMAGE_MULT] | 0
 
-    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
-
-    if (dmg < 1) dmg = 1
+    let dmg = Math.max(0, Math.idiv(baseDamage * damageMult, 100))
 
 
 
@@ -32422,7 +32507,9 @@ function calculateStrengthStats(baseTimeMs: number, traits: number[]) {
 
     // -----------------------------------
 
-    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.STRENGTH.DAMAGE_BASE + tDmg * BALANCE.MOVES.STRENGTH.DAMAGE_PER_POINT
+    stats[STAT.DAMAGE_MULT] = (tDmg > 0)
+        ? (BALANCE.MOVES.STRENGTH.DAMAGE_BASE + tDmg * BALANCE.MOVES.STRENGTH.DAMAGE_PER_POINT)
+        : 0
 
 
 
@@ -36344,7 +36431,9 @@ function calculateAgilityStats(
 
     // ----------------------------------------------------
 
-    stats[STAT.DAMAGE_MULT] = BALANCE.MOVES.AGILITY.DAMAGE_BASE + tDmg * BALANCE.MOVES.AGILITY.DAMAGE_PER_POINT
+    stats[STAT.DAMAGE_MULT] = (tDmg > 0)
+        ? (BALANCE.MOVES.AGILITY.DAMAGE_BASE + tDmg * BALANCE.MOVES.AGILITY.DAMAGE_PER_POINT)
+        : 0
 
 
 
@@ -36488,9 +36577,7 @@ function executeAgilityMove(
 
     const damageMult = stats[STAT.DAMAGE_MULT] | 0
 
-    let dmg = Math.idiv(baseDamage * (damageMult || 100), 100)
-
-    if (dmg < 1) dmg = 1
+    let dmg = Math.max(0, Math.idiv(baseDamage * damageMult, 100))
 
 
 
@@ -37688,7 +37775,7 @@ function calculateIntellectStats(baseTimeMs: number, traits: number[]) {
 
     )
 
-    stats[STAT.DAMAGE_MULT] = dmgBase + dmgBonus
+    stats[STAT.DAMAGE_MULT] = (tEnergy > 0) ? (dmgBase + dmgBonus) : 0
 
 
 
@@ -37916,9 +38003,7 @@ function executeIntellectMove(
 
     const dmgMult = stats[STAT.DAMAGE_MULT] | 0
 
-    let castDmg = Math.idiv(baseDmg * (dmgMult || 100), 100)
-
-    if (castDmg < 1) castDmg = 1
+    let castDmg = Math.max(0, Math.idiv(baseDmg * dmgMult, 100))
 
 
 
@@ -37950,9 +38035,10 @@ function executeIntellectMove(
 
 
 
-    let perPulseDmg = Math.idiv(castDmg * BALANCE.MOVES.INTELLECT.PULSE_DAMAGE_PCT_X1000, 1000)
-
-    if (perPulseDmg < 1) perPulseDmg = 1
+    let perPulseDmg = Math.max(
+        0,
+        Math.idiv(castDmg * BALANCE.MOVES.INTELLECT.PULSE_DAMAGE_PCT_X1000, 1000)
+    )
 
 
 
@@ -38342,9 +38428,7 @@ function beginIntellectTargeting(heroIndex: number): void {
 
 
 
-    const baseDmg = getBasePower((family | 0) || FAMILY.INTELLECT) | 0
-
-    const dmg = (castDmg > 0 ? castDmg : Math.max(1, baseDmg) | 0) | 0
+    const dmg = Math.max(0, castDmg | 0)
 
 
 
@@ -38352,9 +38436,9 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     if (pulseCount < 1) pulseCount = 1
 
-    let pulseDmg = (castPulseDmg > 0 ? castPulseDmg : dmg) | 0
+    let pulseDmg = castPulseDmg > 0 ? castPulseDmg : dmg
 
-    if (pulseDmg < 1) pulseDmg = 1
+    pulseDmg = Math.max(0, pulseDmg | 0)
 
 
 
@@ -41408,13 +41492,7 @@ function executeHealMove(
 
     // (so amp-focused traits matter more)
 
-    let buffPower = Math.idiv(totalSupport * dmgMult, 100)
-
-    if (buffPower < BALANCE.BUFFS.SUPPORT_BUFF_POWER_MIN) {
-
-        buffPower = BALANCE.BUFFS.SUPPORT_BUFF_POWER_MIN
-
-    }
+    let buffPower = Math.max(0, Math.idiv(totalSupport * dmgMult, 100))
 
 
 
@@ -42045,8 +42123,6 @@ const ENEMY_KIND = {
 
         "big worm",
 
-        "dragon red",
-
         "eyeball",
 
         "ghost",
@@ -42070,6 +42146,9 @@ const ENEMY_KIND = {
         "minotaur red",
 
         "pumpking",
+        "pegasus",
+        "treeEnt",
+        "plantEnt",
 
         "slime",
 
@@ -42143,8 +42222,6 @@ const ENEMY_KIND = {
 
         "big worm": ["UNDERGROUND", "SLOWSTRONG", "STRONG", "STATIONARY"],
 
-        "dragon red": ["BOSS", "STRONG", "FLYING"],
-
         "eyeball": ["FLYING", "RANGED", "STRONG"],
 
         "ghost": ["FLYING", "AVERAGE", "MEDIUM"],
@@ -42168,6 +42245,7 @@ const ENEMY_KIND = {
         "minotaur red": ["HUMANOID", "MEDIUM", "AVERAGE", "STRONG"],
 
         "pumpking": ["FLYING", "SLOW", "AVERAGE", "SPECIAL"],
+        "pegasus": ["FLYING", "AVERAGE", "FAST"],
 
         "slime": ["SLIMES", "WEAK", "SLOW"],
 
@@ -42215,7 +42293,10 @@ const ENEMY_KIND = {
 
         "spider silver red": ["SPIDERS", "AVERAGE", "MEDIUM"],
 
-        "wolf light brown": ["CRITTER", "AVERAGE", "FAST"]
+        "wolf light brown": ["CRITTER", "AVERAGE", "FAST"],
+
+        "plantEnt": ["STATIONARY", "STRONG", "SLOW", "TANK"],
+        "treeEnt": ["STATIONARY", "STRONG", "SLOW", "TANK"]
 
     }
 
@@ -50222,8 +50303,6 @@ const POSSIBLE_MONSTERS = [
 
         "big worm",
 
-        "dragon red",
-
         "eyeball",
 
         "ghost",
@@ -50243,12 +50322,15 @@ const POSSIBLE_MONSTERS = [
         "imp red",
 
         "man eater flower",
+        "plantEnt",
 
         "minotaur red",
 
         "pumpking",
+        "pegasus",
 
         "slime",
+        "slime projectile",
 
         "slime black",
 
@@ -50293,6 +50375,8 @@ const POSSIBLE_MONSTERS = [
         "spider red yellow",
 
         "spider silver red",
+
+        "treeEnt",
 
         "wolf light brown"
 
@@ -50378,7 +50462,7 @@ const POSSIBLE_MONSTERS = [
 
         spawnChance: 1.0,
 
-        kinds: ["imp blue", "spider green", "big worm"],//, "dragon red"],
+        kinds: ["imp blue", "spider green", "big worm"],
 
         weights: [3, 3, 2, 2]
 
@@ -50499,33 +50583,41 @@ interface GenWaveDef {
 
 const MONSTER_CATALOG: MonsterDef[] = [
 
-    // Start with advanceRangePx=0 everywhere until we wire enemy ranged attacks.
-
-    // projectileId can be left undefined for now.
-
-
-
-    // Baseline weak enemy (balance anchor).
-
-    { id: "slime",         danger: 4,  hp: 25,  damage: 10, speed: 18, xp: 6,  advanceRangePx: 0, attackIntervalMs: 5000 },
-
-
-
-    { id: "eyeball",       danger: 6,  hp: 25,  damage: 5,  speed: 35, xp: 8,  advanceRangePx: 0 },
-
-    { id: "bat",           danger: 7,  hp: 22,  damage: 6,  speed: 45, xp: 9,  advanceRangePx: 0 },
-
-    { id: "pumpking",      danger: 10, hp: 40,  damage: 8,  speed: 28, xp: 12, advanceRangePx: 0 },
-
-
-
-    { id: "imp blue",      danger: 14, hp: 55,  damage: 10, speed: 38, xp: 16, advanceRangePx: 0 },
-
-    { id: "spider green",  danger: 16, hp: 60,  damage: 11, speed: 32, xp: 18, advanceRangePx: 0 },
-
-
-
-    { id: "big worm",      danger: 28, hp: 120, damage: 18, speed: 22, xp: 30, advanceRangePx: 0 },
+    // All melee for now; advanceRangePx=0 until ranged is wired.
+    { id: "slime projectile", danger: 2,  hp: 10,  damage: 4,  speed: 22, xp: 4,  advanceRangePx: 0 },
+    { id: "bee",              danger: 4,  hp: 18,  damage: 6,  speed: 42, xp: 7,  advanceRangePx: 0 },
+    { id: "bat",              danger: 5,  hp: 22,  damage: 7,  speed: 38, xp: 8,  advanceRangePx: 0 },
+    { id: "beetle",           danger: 6,  hp: 30,  damage: 8,  speed: 26, xp: 9,  advanceRangePx: 0 },
+    { id: "wolf light brown", danger: 7,  hp: 34,  damage: 9,  speed: 34, xp: 10, advanceRangePx: 0 },
+    { id: "spider black",     danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider black yellow", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider blue",      danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider blue orange", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider blue silver", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider green",     danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider green yellow dot", danger: 8, hp: 40, damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider green yellow stripe", danger: 8, hp: 40, damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider red",       danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider red yellow", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "spider silver red", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "minotaur red",     danger: 12, hp: 72,  damage: 15, speed: 26, xp: 17, advanceRangePx: 0 },
+    { id: "imp blue",         danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
+    { id: "imp green",        danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
+    { id: "imp red",          danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
+    { id: "small worm",       danger: 14, hp: 56,  damage: 13, speed: 28, xp: 15, advanceRangePx: 0 },
+    { id: "golem",            danger: 15, hp: 85,  damage: 17, speed: 20, xp: 20, advanceRangePx: 0 },
+    { id: "slime",            danger: 16, hp: 60,  damage: 12, speed: 20, xp: 16, advanceRangePx: 0 },
+    { id: "golem white",      danger: 17, hp: 95,  damage: 18, speed: 18, xp: 21, advanceRangePx: 0 },
+    { id: "eyeball",          danger: 18, hp: 65,  damage: 14, speed: 36, xp: 17, advanceRangePx: 0 },
+    { id: "goblin",           danger: 19, hp: 70,  damage: 15, speed: 30, xp: 18, advanceRangePx: 0 },
+    { id: "snake",            danger: 20, hp: 68,  damage: 16, speed: 32, xp: 19, advanceRangePx: 0 },
+    { id: "big worm",         danger: 21, hp: 90,  damage: 18, speed: 22, xp: 22, advanceRangePx: 0 },
+    { id: "ghost",            danger: 22, hp: 95,  damage: 19, speed: 24, xp: 23, advanceRangePx: 0 },
+    { id: "pumpking",         danger: 23, hp: 100, damage: 20, speed: 26, xp: 24, advanceRangePx: 0 },
+    { id: "pegasus",          danger: 24, hp: 110, damage: 22, speed: 34, xp: 26, advanceRangePx: 0 },
+    { id: "plantEnt",         danger: 30, hp: 160, damage: 26, speed: 18, xp: 32, advanceRangePx: 0 },
+    { id: "treeEnt",          danger: 32, hp: 175, damage: 28, speed: 16, xp: 34, advanceRangePx: 0 },
+    { id: "man eater flower", danger: 35, hp: 200, damage: 32, speed: 14, xp: 38, advanceRangePx: 0 },
 
 ]
 
@@ -51411,6 +51503,46 @@ if (typeof globalThis !== "undefined") {
 
 
 
+        // Helper to restore a hero sprite from a saved snapshot (position/data/image)
+        function _applyHeroSnapshotToSprite(hero: Sprite, snap: any) {
+            if (!hero || !snap) return
+            try {
+                hero.x = snap.x || 0
+                hero.y = snap.y || 0
+                hero.vx = snap.vx || 0
+                hero.vy = snap.vy || 0
+                if (typeof (snap as any).flags === "number") {
+                    hero.flags = (snap as any).flags | 0
+                }
+
+                if (!(hero as any).data) (hero as any).data = {}
+                const d: any = (hero as any).data
+                for (const k of Object.keys(d)) delete d[k]
+                if (snap.data) {
+                    for (const k of Object.keys(snap.data)) {
+                        d[k] = (snap.data as any)[k]
+                    }
+                }
+
+                if (snap.pixels && snap.width > 0 && snap.height > 0) {
+                    const w = snap.width | 0
+                    const h = snap.height | 0
+                    let img: any = (hero as any).image
+                    if (!img || img.width !== w || img.height !== h) {
+                        img = Image.fromJSON(w, h, snap.pixels)
+                        if (typeof (hero as any).setImage === "function") {
+                            (hero as any).setImage(img)
+                        } else {
+                            (hero as any).image = img
+                        }
+                    } else if (typeof (img as any).fromJSONPixels === "function") {
+                        img.fromJSONPixels(snap.pixels)
+                    }
+                }
+            } catch { }
+        }
+
+
         // ------------------------------------------------------------
 
         // STEP 6: spawn-on-demand hook for the Phaser host.
@@ -51424,13 +51556,14 @@ if (typeof globalThis !== "undefined") {
             if (pid < 1 || pid > 4) return -1
 
 
-
             const existing = playerToHeroIndex[pid] | 0
 
             if (existing >= 0 && existing < heroes.length && heroes[existing]) {
-
-                return existing
-
+                const h = heroes[existing]
+                if (h && !(h.flags & sprites.Flag.Destroyed)) {
+                    return existing
+                }
+                // existing hero is destroyed; treat as absent
             }
 
 
@@ -51489,8 +51622,35 @@ if (typeof globalThis !== "undefined") {
 
             const after = playerToHeroIndex[pid] | 0
 
+            // If saved snapshot exists for this profile, restore it once.
+            try {
+                const g: any = (globalThis as any)
+                const restore: any = g.__heroSavedSnapshotByProfile
+                const prof = getHeroProfileForHeroIndex(after | 0)
+                if (restore && prof && restore[prof]) {
+                    const hero = heroes[after]
+                    _applyHeroSnapshotToSprite(hero, restore[prof])
+                    delete restore[prof]
+                    console.log(">>> [HeroEngineInPhaser] restored hero from save profile=", prof)
+                }
+            } catch { }
+
             return after >= 0 && after < heroes.length && heroes[after] ? after : -1
 
+        }
+
+        // Despawn hero for a player (used when profile disconnects)
+        internals.despawnHeroForPlayer = function (playerId: number): boolean {
+            const pid = playerId | 0
+            if (pid < 1 || pid > 4) return false
+            const hi = playerToHeroIndex[pid] | 0
+            if (hi < 0 || hi >= heroes.length) return false
+            const hero = heroes[hi]
+            if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                hero.destroy()
+            }
+            playerToHeroIndex[pid] = -1
+            return true
         }
 
 

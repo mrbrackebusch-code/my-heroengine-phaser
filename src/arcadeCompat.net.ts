@@ -110,12 +110,8 @@ function _normalizeProfileKey(raw: any): string | null {
     s = s.replace(/HeroLogic$/i, "").trim();
     s = s.replace(/Hero$/i, "").trim();
 
-    if (KNOWN_PROFILE_KEYS.has(s)) return s;
-
-    const first = s.split(" ")[0].trim();
-    if (KNOWN_PROFILE_KEYS.has(first)) return first;
-
-    return null;
+    // Allow any non-empty profile name; server will validate against assets.
+    return s;
 }
 
 function _getDesiredProfileForHello(): string | null {
@@ -158,6 +154,8 @@ function _flushEnsureHeroesIfPossible() {
 ------------------------------------------------------- */
 type NetMessage =
     | { type: "assign"; playerId: number; name?: string; token?: string | null; profile?: string | null }
+    | { type: "helloError"; reason: string; profile?: string | null }
+    | { type: "saveGame"; payload: any }
     | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
     | {
           type: "playerState";
@@ -238,6 +236,63 @@ class NetworkClient {
         this.url = url;
     }
 
+    private _wsStateName(s: number | null): string {
+        if (s === WebSocket.CONNECTING) return "CONNECTING";
+        if (s === WebSocket.OPEN) return "OPEN";
+        if (s === WebSocket.CLOSING) return "CLOSING";
+        if (s === WebSocket.CLOSED) return "CLOSED";
+        return "UNKNOWN";
+    }
+
+    private _logNetDiagnostic(tag: string, detail: string, ev?: any) {
+        const g: any = (globalThis as any);
+        const token: string = (typeof g.__netHelloToken === "string") ? g.__netHelloToken : "";
+        const profile: string | null = (typeof g.__netHelloProfile === "string") ? g.__netHelloProfile : null;
+        const pid = (this.playerId == null) ? "n/a" : String(this.playerId);
+        const ws = this.ws;
+        const state = ws ? ws.readyState : -1;
+        const stateName = this._wsStateName(state);
+        const url = ws ? ws.url : this.url;
+        const ts = new Date().toISOString();
+        const pageOrigin = (typeof location !== "undefined" && (location as any).origin) ? (location as any).origin : "";
+        const pageHost = (typeof location !== "undefined" && (location as any).hostname) ? (location as any).hostname : "";
+
+        let evMsg = "";
+        try {
+            if (ev && (ev as any).message) evMsg = String((ev as any).message);
+            else if (ev && (ev as any).reason) evMsg = String((ev as any).reason);
+            else if (ev && typeof (ev as any).type === "string") evMsg = String((ev as any).type);
+        } catch (_e) { evMsg = ""; }
+
+        const summary =
+            `[net.${tag}] ts=${ts} url=${url} state=${state}(${stateName})` +
+            ` pid=${pid} token=${token ? token.slice(0, 8) + "…" : "none"}` +
+            ` profile=${profile || "none"} detail=${detail}` +
+            (pageOrigin ? ` origin=${pageOrigin}` : "") +
+            (pageHost ? ` pageHost=${pageHost}` : "") +
+            (evMsg ? ` evMsg=${evMsg}` : "");
+
+        console.warn(summary);
+    }
+
+    private onHelloError(msg: Extract<NetMessage, { type: "helloError" }>) {
+        const g: any = (globalThis as any);
+        g.__netHelloError = msg;
+
+        const profile = (typeof msg.profile === "string" && msg.profile.trim()) ? msg.profile.trim() : null;
+        const reason = msg.reason || "unknown";
+        const txt = profile
+            ? `Profile "${profile}" is already in use. (${reason})`
+            : `HELLO rejected: ${reason}`;
+
+        console.error("[net] helloError", msg);
+        try { alert(txt); } catch (_e) {}
+
+        if (this.ws) {
+            try { this.ws.close(1008, "helloError"); } catch (_e) {}
+        }
+    }
+
 
 
     connect() {
@@ -289,13 +344,36 @@ class NetworkClient {
             this.handleMessage(msg);
         };
 
-        ws.onclose = () => {
-            console.log("[net] disconnected");
+        ws.onclose = (evt: any) => {
+            const code = (evt && typeof evt.code === "number") ? evt.code : null;
+            const reason = (evt && typeof evt.reason === "string") ? evt.reason : "";
+            const clean = (evt && typeof evt.wasClean === "boolean") ? evt.wasClean : null;
+            this._logNetDiagnostic(
+                "close",
+                `code=${code} clean=${clean} reason=${reason || "(none)"}`,
+                evt
+            );
             this.ws = null;
         };
 
-        ws.onerror = (ev) => {
-            console.warn("[net] error", ev);
+        ws.onerror = (ev: any) => {
+            const ready = this.ws ? this.ws.readyState : -1;
+            const url = this.ws ? this.ws.url : this.url;
+            const type = ev && typeof ev.type === "string" ? ev.type : "";
+            const msg = ev && (ev as any).message ? String((ev as any).message) : "";
+            const pageHost = (typeof location !== "undefined" && (location as any).hostname) ? (location as any).hostname : "";
+            const pagePort = (typeof location !== "undefined" && (location as any).port) ? (location as any).port : "";
+            // Compose a verbose, single-string diagnostic for refusals / network errors.
+            const detail = [
+                `wsState=${ready}(${this._wsStateName(ready)})`,
+                `url=${url}`,
+                pageHost ? `pageHost=${pageHost}` : "",
+                pagePort ? `pagePort=${pagePort}` : "",
+                type ? `type=${type}` : "",
+                msg ? `msg=${msg}` : "",
+                "hint=If ERR_CONNECTION_REFUSED: no listener on host:port, or firewall/WSL port-forwarding blocking 8080.",
+            ].filter(Boolean).join(" ");
+            this._logNetDiagnostic("error", detail, ev);
         };
     }
 
@@ -364,6 +442,14 @@ class NetworkClient {
         this.ws.send(JSON.stringify(payload));
     }
 
+    // Host uses this to persist saves on the server
+    sendSaveGame(payload: any) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (!this.isHostNow()) return;
+        const msg: NetMessage = { type: "saveGame", payload };
+        this.ws.send(JSON.stringify(msg));
+    }
+
 
         private isHostNow(): boolean {
         // Central source of truth for "hostness" inside NetworkClient.
@@ -380,6 +466,10 @@ private handleMessage(msg: NetMessage) {
     switch (msg.type) {
         case "assign":
             this.onAssign(msg);
+            return;
+
+        case "helloError":
+            this.onHelloError(msg);
             return;
 
         case "coinBurst":
@@ -423,6 +513,19 @@ private handleMessage(msg: NetMessage) {
         const g: any = (globalThis as any);
 
         console.log("[net] assigned playerId =", this.playerId, "name=", msg.name, "profile=", msg.profile);
+        if (DEBUG_NET || true) {
+            try {
+                const token = typeof g.__netHelloToken === "string" ? g.__netHelloToken : "";
+                const desiredProfile = typeof g.__netHelloProfile === "string" ? g.__netHelloProfile : null;
+                console.log("[net.assign.debug]", {
+                    playerId: this.playerId,
+                    token: token ? token.slice(0, 8) + "…" : null,
+                    desiredProfile,
+                    serverProfile: msg.profile || null,
+                    controlSlot: msg.controlSlot ?? null
+                });
+            } catch (_e) { /* ignore */ }
+        }
 
         // Tie this client to that global player slot
         const ctrlNS: any = g.controller;
@@ -570,10 +673,50 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
     // ------------------------------------------------------------
     g.__netSlotConnected[slotIndex] = connected;
 
-    // Host-side hygiene: release held keys on BOTH disconnect and reconnect.
-    // (Reconnect can otherwise inherit stale host-side pressed state.)
-    if (isHost && (prevConnected !== connected)) {
-        this._releaseAllButtonsForPlayer(playerId);
+        // Host-side hygiene: release held keys on BOTH disconnect and reconnect.
+        // (Reconnect can otherwise inherit stale host-side pressed state.)
+        if (isHost && (prevConnected !== connected)) {
+            this._releaseAllButtonsForPlayer(playerId);
+        }
+
+        // Host-only: despawn hero when disconnected; respawn handled by ensureHeroForPlayer on connect
+        if (isHost && !connected) {
+            try {
+                const internals = g.__HeroEnginePhaserInternals;
+                const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
+                if (despawnFn) {
+                    const ok = despawnFn(playerId);
+                    if (ok) console.log("[net.playerState] despawned hero for pid", playerId);
+                }
+            } catch (e) {
+                console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
+            }
+        }
+
+    // Host-only: despawn hero when disconnected; respawn handled by ensureHeroForPlayer on connect
+    if (isHost && !connected) {
+        try {
+            const internals = g.__HeroEnginePhaserInternals;
+            const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
+            if (despawnFn) {
+                const ok = despawnFn(playerId);
+                if (ok) console.log("[net.playerState] despawned hero for pid", playerId);
+            }
+        } catch (e) {
+            console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
+        }
+    }
+
+    if (DEBUG_NET || true) {
+        console.log("[net.playerState.debug]", {
+            pid: playerId,
+            slotIndex,
+            connected,
+            prevConnected,
+            profile: profile || prevProfile || null,
+            controlSlot: msg.controlSlot ?? null,
+            host: isHost
+        });
     }
 
     // ------------------------------------------------------------
@@ -625,6 +768,14 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
         console.log("[net] hostStatus =", isHost, "hostPlayerId=", (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null);
 
+        // Host-only hook (e.g., apply pending save)
+        if (isHost) {
+            const hook = (g as any).__onHostBecameHost;
+            if (typeof hook === "function") {
+                try { hook(); } catch (e) { console.warn("[net] __onHostBecameHost error", e); }
+            }
+        }
+
         // If this client is host, kick off the HeroEngine host loop
         if (isHost && typeof g.__startHeroEngineHost === "function") {
             g.__startHeroEngineHost();
@@ -632,6 +783,24 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
             // playerState may have arrived before HeroEngineInPhaser internals exist
             _flushEnsureHeroesIfPossible();
             setTimeout(() => _flushEnsureHeroesIfPossible(), 0);
+        }
+
+        if (DEBUG_NET || true) {
+            console.log("[net] hostStatus change", {
+                isHost,
+                hostPlayerId: (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null,
+                myPlayerId: this.playerId,
+                token: (() => {
+                    const gAny: any = (globalThis as any);
+                    const t = typeof gAny.__netHelloToken === "string" ? gAny.__netHelloToken : "";
+                    return t ? t.slice(0, 8) + "…" : null;
+                })(),
+                profile: (() => {
+                    const gAny: any = (globalThis as any);
+                    const p = typeof gAny.__netHelloProfile === "string" ? gAny.__netHelloProfile : null;
+                    return p;
+                })()
+            });
         }
     }
 
@@ -919,10 +1088,8 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
 
 const host = window.location.hostname || "localhost";
-
-
-
-const _netClient = new NetworkClient(`ws://${host}:8080`);
+const wsPort = (window as any).__GAME_WS_PORT || 8080;
+const _netClient = new NetworkClient(`ws://${host}:${wsPort}`);
 
 let _lastSnapshotSentMs = 0;
 let _snapshotSentCount = 0;
@@ -1053,9 +1220,14 @@ function _maybeSendWorldSnapshotTick() {
 export function initNetwork() {
     const g: any = (globalThis as any);
 
+    const desiredProfile = _getDesiredProfileForHello();
+    if (!desiredProfile) {
+        console.warn("[net] profile missing; network not started (set ?profile= first)");
+        return;
+    }
+
     // HELLO identity once per tab session
     const token = _getOrCreateSessionToken();
-    const desiredProfile = _getDesiredProfileForHello();
 
     g.__netHelloToken = token;
     g.__netHelloProfile = desiredProfile;
@@ -1075,3 +1247,6 @@ export function initNetwork() {
 
 
 ;(globalThis as any).__net_initNetwork = initNetwork;
+(globalThis as any).__net_sendSaveGame = function (payload: any) {
+    try { _netClient.sendSaveGame(payload); } catch (_e) {}
+};

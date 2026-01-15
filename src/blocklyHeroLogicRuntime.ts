@@ -6,11 +6,20 @@ import { javascriptGenerator } from "blockly/javascript";
 const STORAGE_PREFIX = "he_blockly_ws_v1:";
 const STEP_LIMIT = 20000;
 const FALLBACK_PROFILE = "Default";
-
+const DEBUG_BLOCKLY_CODE_DUMP = false;
+const DEBUG_BLOCKLY_INVALID_MOVES = false;
 
 const HE_OUTPUT_VARS = ["family", "damage", "reach", "time", "status", "element", "id"] as const;
 
 let _heBlocksRegistered = false;
+
+function _shouldDumpBlocklyCode(): boolean {
+  try {
+    const g: any = (typeof globalThis !== "undefined") ? (globalThis as any) : null;
+    if (g && typeof g.__heBlocklyDumpCode === "boolean") return !!g.__heBlocklyDumpCode;
+  } catch {}
+  return DEBUG_BLOCKLY_CODE_DUMP;
+}
 
 function _ensureHeBlocksRegistered(): void {
   if (_heBlocksRegistered) return;
@@ -688,24 +697,21 @@ function _xmlTextToDom(xmlText: string): Element {
 }
 
 function _fixConstWithoutInit(src: string): string {
-  return src.replace(/const\s+([^;]+);/g, (full, decls) => {
-    const parts = decls.split(",").map((raw: string) => {
-      const t = raw.trim();
-      if (!t) return t;
-      if (t.includes("=")) return t;
-      // For any declarator with no initializer, default to undefined.
-      return `${t} = undefined`;
-    });
-    const fixed = parts.join(", ");
-    if (fixed !== decls.trim()) {
-      console.warn("[BlocklyHeroLogic] fixed const without initializer", { before: full, after: `let ${fixed};` });
-    }
-    return `let ${fixed};`;
-  });
+  // Simplest safe fix: downgrade all const declarations to let, preserving initializers and commas.
+  // Example: "const a = 1, b;" -> "let a = 1, b;"
+  return src.replace(/(^|[\s;])const\b/g, (_m, pre) => `${pre}let`);
+}
+
+function _stripTsCasts(src: string): string {
+  // Remove simple TypeScript "as any" / "as Something" casts from generated JS.
+  return src.replace(/\s+as\s+[A-Za-z0-9_.$]+/g, "");
 }
 
 
 function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => any; code: string } | { ok: false; err: string } {
+  let codeRaw = "";
+  let code = "";
+  let factorySrc = "";
   try {
     _ensureHeBlocksRegistered();
 
@@ -769,8 +775,8 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
     }
 
     // Generate JS from blocks
-    const codeRaw = javascriptGenerator.workspaceToCode(ws);
-    const code = _fixConstWithoutInit(codeRaw);
+    codeRaw = javascriptGenerator.workspaceToCode(ws);
+    code = _fixConstWithoutInit(codeRaw);
 
     // Helpers are available inside heroLogic().
     const helpers = `
@@ -1001,7 +1007,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
           if (famStr === "wisdom" || famStr === "support" || famNum === 3) return "wisdom";
           return "strength";
         })();
-        const BAL: any = (typeof globalThis !== "undefined" && (globalThis as any).BALANCE) ? (globalThis as any).BALANCE : null;
+        const BAL = (typeof globalThis !== "undefined" && (globalThis as any).BALANCE) ? (globalThis as any).BALANCE : null;
         const mv = BAL && BAL.MOVES ? BAL.MOVES : null;
         const rv = Number(reachVal) || 0;
         if (famName === "strength" && mv && mv.STRENGTH) {
@@ -1103,7 +1109,7 @@ if (typeof status === "undefined" && typeof status2 !== "undefined") { status = 
 if (typeof status2 === "undefined" && typeof status !== "undefined") { status2 = status; }
 `;
 
-    const factorySrc = `
+    factorySrc = `
       "use strict";
       ${helpers}
       ${bindings}
@@ -1119,6 +1125,7 @@ if (typeof status2 === "undefined" && typeof status !== "undefined") { status2 =
       return (typeof chooseMyMove === "function") ? chooseMyMove : ((typeof heroLogic === "function") ? heroLogic : null);
     `;
 
+    factorySrc = _stripTsCasts(_fixConstWithoutInit(factorySrc));
     const factory = new Function(factorySrc) as any;
     const fn = factory();
     // If no entry blocks were present, fall back to a harmless no-op so we don't spam errors.
@@ -1128,7 +1135,12 @@ if (typeof status2 === "undefined" && typeof status !== "undefined") { status2 =
     try {
       console.error("[BlocklyHeroLogic] compile debug", {
         err: String(e?.message || e),
-        codePreview: (typeof code === "string") ? code.slice(0, 1000) : "",
+        stack: String(e?.stack || ""),
+        codePreview: (typeof code === "string" && code.length) ? code.slice(0, 1200) : "(empty)",
+        codeRawPreview: (typeof codeRaw === "string" && codeRaw.length) ? codeRaw.slice(0, 1200) : "(empty)",
+        factoryPreview: (typeof factorySrc === "string" && factorySrc.length) ? factorySrc.slice(0, 1200) : "(empty)",
+        factoryTail: (typeof factorySrc === "string" && factorySrc.length > 1200) ? factorySrc.slice(-1200) : "(short)",
+        factoryLen: (typeof factorySrc === "string") ? factorySrc.length : 0,
       });
     } catch {}
     return { ok: false, err: String(e?.message || e) };
@@ -1217,17 +1229,21 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
 
     const ok = _validateOut(rawOut);
     const usedDefaults = !!(defaultsUsed && Object.values(defaultsUsed).some(Boolean));
+    const errMsg = !ok ? "invalid-out" : "default-out";
     if (!ok || usedDefaults) {
-      const errMsg = !ok ? "invalid-out" : "default-out";
-      entry.lastErr = errMsg;
-      entry.lastErrByButton[button] = errMsg;
+      if (DEBUG_BLOCKLY_INVALID_MOVES) {
+        entry.lastErr = errMsg;
+        entry.lastErrByButton[button] = errMsg;
+      }
       if (defaultsUsed) {
         entry.lastDefaultsUsed = defaultsUsed;
         entry.lastDefaultsUsedByButton[button] = defaultsUsed;
       }
       try {
+        if (DEBUG_BLOCKLY_INVALID_MOVES) {
         console.warn(`[BlocklyHeroLogic] raw (${errMsg}) profile=${effectiveProfile} button=${button} out=`, rawOut, "defaultsUsed=", defaultsUsed);
-        if (entry.lastCode) {
+        }
+        if (_shouldDumpBlocklyCode() && entry.lastCode) {
           console.warn(`[BlocklyHeroLogic] code profile=${effectiveProfile} code=`, entry.lastCode);
         }
       } catch {}
