@@ -1400,8 +1400,8 @@ let _shopEntered = false
 
 const DEBUG_WORLD_SNAPSHOT = true; //debug flag ????????????????????
 
-const DEBUG_FORCE_TEST_WORLD_KIND = "PF_PAD_CAGE_TOP3" as "" | "PF_MIDWALL" | "PF_SINGLE_DOOR" | "PF_PAD_CAGE_TOP3" //Testing the enemy nav debug world 
-const DEBUG_FORCE_TEST_WORLD_LOG = true
+const DEBUG_FORCE_TEST_WORLD_KIND = false //"PF_PAD_CAGE_TOP3" as "" | "PF_MIDWALL" | "PF_SINGLE_DOOR" | "PF_PAD_CAGE_TOP3" //Testing the enemy nav debug world 
+const DEBUG_FORCE_TEST_WORLD_LOG = false
 
 
 // --------------------------------------------------------------
@@ -28206,19 +28206,13 @@ function updateHeroManaBar(heroIndex: number) {
     let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA); if (maxMana <= 0) maxMana = 1
 
     bar.value = Math.max(0, Math.min(100, Math.idiv(mana * 100, maxMana)))
+    // Keep the base bar colors stable; flashing is handled by an overlay in arcadeCompat.ts.
+    bar.setColor(9, 1)
+
+    // Clear stale flash timers (bookkeeping only)
     const now = game.runtime() | 0
     const flashUntil = heroManaFlashUntil[heroIndex] | 0
-    const flashing = flashUntil > 0 && now < flashUntil
-    if (flashing) {
-        // High-contrast flash: alternate glaring red / base blue rapidly.
-        const phase = ((now / 80) | 0) & 1
-        const fill = phase ? 2 : 9   // red / blue
-        const bg = 1                 // dark background
-        bar.setColor(fill, bg)
-    } else {
-        heroManaFlashUntil[heroIndex] = 0
-        bar.setColor(9, 1)
-    }
+    if (flashUntil > 0 && now >= flashUntil) heroManaFlashUntil[heroIndex] = 0
 
 }
 
@@ -28228,11 +28222,14 @@ function flashHeroManaBar(heroIndex: number, durationMs?: number) {
 
     const bar = heroManaBars[heroIndex]; if (!bar) return
 
+    const now = game.runtime() | 0
     const dur = (durationMs != null && durationMs > 0) ? (durationMs | 0) : 500
-    heroManaFlashUntil[heroIndex] = (game.runtime() | 0) + dur
+    const until = now + dur
+    heroManaFlashUntil[heroIndex] = until
     // Overlay flash handled in arcadeCompat via flashOverlayUntil on the statusbar sprite.
-    try { sprites.setDataNumber(bar, "flashOverlayUntil", heroManaFlashUntil[heroIndex]); } catch { /* ignore */ }
-    bar.setColor(2, 1)
+    try { sprites.setDataNumber(bar, "flashOverlayUntil", until); } catch { /* ignore */ }
+    // Leave base colors untouched; overlay does the visual flashing.
+    bar.setColor(9, 1)
 
 }
 
@@ -31336,33 +31333,6 @@ function strengthChargeMaxMsFromTrait3(t3: number): number {
 
 
 
-function strengthBaseManaCostFromTraits(t1: number, t2: number, t4: number): number {
-
-    // Base mana is paid immediately: traits 1,2,4 only
-
-    let cost = (t1 | 0) + (t2 | 0) + (t4 | 0)
-
-    if (cost < 0) cost = 0
-
-    return cost
-
-}
-
-
-
-function strengthExtraManaForFullCharge(baseCost: number): number {
-
-    // Extra mana is paid incrementally as arc grows (0..360)
-
-    const extra = Math.idiv((baseCost | 0) * STR_CHARGE_EXTRA_MANA_PCT, 100)
-
-    return extra < 0 ? 0 : extra
-
-}
-
-
-
-
 
 function beginStrengthCharge(
 
@@ -31404,36 +31374,6 @@ function beginStrengthCharge(
 
 
 
-    const baseCost = strengthBaseManaCostFromTraits(t1, t2, t4)
-
-    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
-
-    if (mana < baseCost) {
-
-        flashHeroManaBar(heroIndex)
-
-        return
-
-    }
-
-
-
-    if (baseCost > 0) {
-
-        mana -= baseCost
-
-        if (mana < 0) mana = 0
-
-        sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
-
-        updateHeroManaBar(heroIndex)
-
-        showDamageNumber(hero.x, hero.y - 10, -baseCost, "mana")
-
-    }
-
-
-
     // Action edge only after real commit (base mana paid)
 
     _doHeroMoveBeginActionTimeline(heroIndex, hero, FAMILY.STRENGTH, button, t1, t2, t3, t4, element | 0, now | 0)
@@ -31453,12 +31393,6 @@ function beginStrengthCharge(
     let arcMaxDeg = stats[STAT.STRENGTH_TOTAL_ARC_DEG] | 0
 
     if (arcMaxDeg <= 0) arcMaxDeg = 360
-
-
-
-    const extraCost = strengthExtraManaForFullCharge(baseCost)
-
-    const mpdX1000 = (extraCost <= 0) ? 0 : Math.idiv(extraCost * 1000, arcMaxDeg)
 
 
 
@@ -31482,11 +31416,11 @@ function beginStrengthCharge(
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, mpdX1000)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_MPD_X1000, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
 
-    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, baseCost)
+    sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, 0)
 
 
 
@@ -42021,6 +41955,10 @@ const ENEMY_SPAWN_TICK_MS = BALANCE.WAVES.SPAWN_TICK_MS
 
 
 const ENEMY_MELEE_RANGE_PX = 16 // or 20 or whatever feels right. THIS SHOULD BE CONVERTED TO AN ENEMY_DATA KEY CHATGPT. THIS IS LAZY AND IF YOU SCAN THIS REMIND ME THIS NEEDS TO BE DONE
+const ENEMY_MIN_HOLD_RANGE_PX = 18  // minimum “stop” range so enemies don’t chase inside hero center
+const ENEMY_ATTACK_BASE_RANGE_PX = 20
+const ENEMY_STUCK_WALL_MARGIN_PX = 2
+const RANGED_ADVANCE_RANGE_CAP_PX = 140
 
 
 
@@ -46788,9 +46726,14 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
     const atkCooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
 
 
+    const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+    const holdRangePx = _clamp(
+        (advRangePx > 0 ? advRangePx : ENEMY_MIN_HOLD_RANGE_PX),
+        ENEMY_MIN_HOLD_RANGE_PX,
+        RANGED_ADVANCE_RANGE_CAP_PX
+    )
 
-    const atkRangePx = 20
-
+    const atkRangePx = Math.max(ENEMY_ATTACK_BASE_RANGE_PX, holdRangePx)
     const atkRange2 = atkRangePx * atkRangePx
 
     if (pick.d2 > atkRange2) return false
@@ -46849,16 +46792,15 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
 
 function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boolean {
 
-    // If key doesn't exist in your ENEMY_DATA, readDataNumber will return 0 => behaves melee
-
+    // Default to a small hold range so enemies don't chase into hero center
     const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+    const holdRangePx = _clamp(
+        (advRangePx > 0 ? advRangePx : ENEMY_MIN_HOLD_RANGE_PX),
+        ENEMY_MIN_HOLD_RANGE_PX,
+        RANGED_ADVANCE_RANGE_CAP_PX
+    )
 
-    if (advRangePx <= 0) return false
-
-
-
-    const adv2 = advRangePx * advRangePx
-
+    const adv2 = holdRangePx * holdRangePx
     if (pick.d2 > adv2) return false
 
 
@@ -46926,7 +46868,18 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
     const ch = dims.h | 0
     const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
     const aabb = _enemyNavAabbFromFoot(feet.footX | 0, feet.footY | 0, cw, ch)
-    const touchingWall = _boxOverlapsWallBounds(aabb.left, aabb.right, aabb.top, aabb.bottom)
+    let touchingWall = _boxOverlapsWallBounds(aabb.left, aabb.right, aabb.top, aabb.bottom)
+    if (!touchingWall) {
+        const m = ENEMY_STUCK_WALL_MARGIN_PX | 0
+        if (m > 0) {
+            touchingWall = _boxOverlapsWallBounds(
+                aabb.left - m,
+                aabb.right + m,
+                aabb.top - m,
+                aabb.bottom + m
+            )
+        }
+    }
     if (!touchingWall) {
         sprites.setDataNumber(enemy, ENEMY_AI_STUCK_UNTIL, 0)
         return false
@@ -50510,16 +50463,12 @@ interface GenWaveDef {
 
 }
 
-
-
-
-
 const MONSTER_CATALOG: MonsterDef[] = [
 
-    // All melee for now; advanceRangePx=0 until ranged is wired.
-    { id: "slime projectile", danger: 2,  hp: 10,  damage: 4,  speed: 22, xp: 4,  advanceRangePx: 0 },
-    { id: "bee",              danger: 4,  hp: 18,  damage: 6,  speed: 42, xp: 7,  advanceRangePx: 0 },
-    { id: "bat",              danger: 5,  hp: 22,  damage: 7,  speed: 38, xp: 8,  advanceRangePx: 0 },
+    // Advance ranges increase gradually by danger (capped) for ranged attackers.
+    { id: "slime projectile", danger: 2,  hp: 10,  damage: 4,  speed: 22, xp: 4,  advanceRangePx: _calcAdvanceRangePxForDanger(2) },
+    { id: "bee",              danger: 4,  hp: 18,  damage: 6,  speed: 42, xp: 7,  advanceRangePx: _calcAdvanceRangePxForDanger(4) },
+    { id: "bat",              danger: 5,  hp: 22,  damage: 7,  speed: 38, xp: 8,  advanceRangePx: _calcAdvanceRangePxForDanger(5) },
     { id: "beetle",           danger: 6,  hp: 30,  damage: 8,  speed: 26, xp: 9,  advanceRangePx: 0 },
     { id: "wolf light brown", danger: 7,  hp: 34,  damage: 9,  speed: 34, xp: 10, advanceRangePx: 0 },
     { id: "spider black",     danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
@@ -50533,24 +50482,25 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "spider red",       danger: 8,  hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
     { id: "spider red yellow", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
     { id: "spider silver red", danger: 8, hp: 40,  damage: 10, speed: 30, xp: 11, advanceRangePx: 0 },
+    { id: "googon",           danger: 9,  hp: 44,  damage: 11, speed: 16, xp: 12, advanceRangePx: _calcAdvanceRangePxForDanger(9) },
     { id: "minotaur red",     danger: 12, hp: 72,  damage: 15, speed: 26, xp: 17, advanceRangePx: 0 },
-    { id: "imp blue",         danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
-    { id: "imp green",        danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
-    { id: "imp red",          danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: 0 },
+    { id: "imp blue",         danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
+    { id: "imp green",        danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
+    { id: "imp red",          danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
     { id: "small worm",       danger: 14, hp: 56,  damage: 13, speed: 28, xp: 15, advanceRangePx: 0 },
     { id: "golem",            danger: 15, hp: 85,  damage: 17, speed: 20, xp: 20, advanceRangePx: 0 },
     { id: "slime",            danger: 16, hp: 60,  damage: 12, speed: 20, xp: 16, advanceRangePx: 0 },
     { id: "golem white",      danger: 17, hp: 95,  damage: 18, speed: 18, xp: 21, advanceRangePx: 0 },
-    { id: "eyeball",          danger: 18, hp: 65,  damage: 14, speed: 36, xp: 17, advanceRangePx: 0 },
+    { id: "eyeball",          danger: 18, hp: 65,  damage: 14, speed: 36, xp: 17, advanceRangePx: _calcAdvanceRangePxForDanger(18) },
     { id: "goblin",           danger: 19, hp: 70,  damage: 15, speed: 30, xp: 18, advanceRangePx: 0 },
-    { id: "snake",            danger: 20, hp: 68,  damage: 16, speed: 32, xp: 19, advanceRangePx: 0 },
+    { id: "snake",            danger: 20, hp: 68,  damage: 16, speed: 32, xp: 19, advanceRangePx: _calcAdvanceRangePxForDanger(20) },
     { id: "big worm",         danger: 21, hp: 90,  damage: 18, speed: 22, xp: 22, advanceRangePx: 0 },
-    { id: "ghost",            danger: 22, hp: 95,  damage: 19, speed: 24, xp: 23, advanceRangePx: 0 },
-    { id: "pumpking",         danger: 23, hp: 100, damage: 20, speed: 26, xp: 24, advanceRangePx: 0 },
+    { id: "ghost",            danger: 22, hp: 95,  damage: 19, speed: 24, xp: 23, advanceRangePx: _calcAdvanceRangePxForDanger(22) },
+    { id: "pumpking",         danger: 23, hp: 100, damage: 20, speed: 26, xp: 24, advanceRangePx: _calcAdvanceRangePxForDanger(23) },
     { id: "pegasus",          danger: 24, hp: 110, damage: 22, speed: 34, xp: 26, advanceRangePx: 0 },
-    { id: "plantEnt",         danger: 30, hp: 160, damage: 26, speed: 18, xp: 32, advanceRangePx: 0 },
-    { id: "treeEnt",          danger: 32, hp: 175, damage: 28, speed: 16, xp: 34, advanceRangePx: 0 },
-    { id: "man eater flower", danger: 35, hp: 200, damage: 32, speed: 14, xp: 38, advanceRangePx: 0 },
+    { id: "plantEnt",         danger: 30, hp: 160, damage: 26, speed: 18, xp: 32, advanceRangePx: _calcAdvanceRangePxForDanger(30) },
+    { id: "treeEnt",          danger: 32, hp: 175, damage: 28, speed: 16, xp: 34, advanceRangePx: _calcAdvanceRangePxForDanger(32) },
+    { id: "man eater flower", danger: 35, hp: 200, damage: 32, speed: 14, xp: 38, advanceRangePx: _calcAdvanceRangePxForDanger(35) },
 
 ]
 
@@ -50749,6 +50699,14 @@ function _clamp(n: number, lo: number, hi: number): number {
 }
 
 
+
+function _calcAdvanceRangePxForDanger(danger: number): number {
+    const base = 60
+    const step = 2
+    const d = Math.max(0, danger | 0)
+    const range = base + (step * d)
+    return _clamp(range, 32, RANGED_ADVANCE_RANGE_CAP_PX)
+}
 
 function _floorDangerBase(floor1: number): number {
 
@@ -54977,6 +54935,8 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
     const mana = _uiReadNum(hero, HERO_DATA.MANA, 0) | 0
 
     const maxMana = _uiReadNum(hero, HERO_DATA.MAX_MANA, 0) | 0
+    const manaFlashUntil = (heroManaFlashUntil[hi] | 0)
+    const manaFlash = manaFlashUntil > 0 && (game.runtime() | 0) < manaFlashUntil
 
 
 
@@ -55235,6 +55195,8 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
         mana: mana | 0,
 
         maxMana: maxMana | 0,
+        manaFlash: !!manaFlash,
+        manaFlashUntil: manaFlashUntil | 0,
 
 
 

@@ -264,14 +264,22 @@ function buildFramesForSheet(
             const dirRows = sheet.dirs.length;
             const totalSharedRows = sheet.sharedDeathRows;
 
-            let sharedDeath: number[] = [];
+            // Death sheets often have shared rows at the bottom; use only those
+            // when present so we skip the non-death rows at the top.
             if (phase === "death" && totalSharedRows > 0) {
                 const sharedStart = dirRows;
+                const sharedFrames: number[] = [];
                 for (let r = 0; r < totalSharedRows; r++) {
                     const row = sharedStart + r;
                     for (let c = colStart0; c < colEnd0; c++) {
-                        sharedDeath.push(row * cols + c);
+                        sharedFrames.push(row * cols + c);
                     }
+                }
+                if (sharedFrames.length > 0) {
+                    for (const dir of sheet.dirs) {
+                        dirFrames[dir] = sharedFrames.slice();
+                    }
+                    return dirFrames;
                 }
             }
 
@@ -281,9 +289,6 @@ function buildFramesForSheet(
                 const frames: number[] = [];
                 for (let c = colStart0; c < colEnd0; c++) {
                     frames.push(row * cols + c);
-                }
-                if (phase === "death" && sharedDeath.length > 0) {
-                    frames.push(...sharedDeath);
                 }
                 if (frames.length > 0) dirFrames[dir] = frames;
             }

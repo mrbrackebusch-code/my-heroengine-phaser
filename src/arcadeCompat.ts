@@ -7242,7 +7242,7 @@ function _syncUiManagedStatusBar(
 
     // Flash overlay: visible only while flashOverlayUntil is in the future.
     if (flashRect) {
-        const now = _hostPerfNowMs();
+        const now = game.runtime() | 0;
         const flashUntil = sprites.readDataNumber(s, "flashOverlayUntil") | 0;
         const flashing = flashUntil > 0 && now < flashUntil;
         if (flashing) {

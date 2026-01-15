@@ -37,6 +37,50 @@ const DEBUG_TILEMAP = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥�
 
 const DEBUG_COINFX = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 
+// ------------------------------------------------------------
+// UI loading overlay (DOM-defined in index.html)
+// ------------------------------------------------------------
+function _uiLoadingUi(): any {
+  try {
+    return (globalThis as any).__heLoadingUI || null;
+  } catch { return null; }
+}
+function _uiLoadingSet(pct?: number, msg?: string): void {
+  try {
+    const ui = _uiLoadingUi();
+    if (ui && typeof ui.set === "function") ui.set(pct, msg);
+  } catch {}
+}
+function _uiLoadingDone(): void {
+  try {
+    const ui = _uiLoadingUi();
+    if (ui && typeof ui.done === "function") ui.done();
+  } catch {}
+}
+function _uiLoadingShow(msg?: string): void {
+  try {
+    const ui = _uiLoadingUi();
+    if (ui && typeof ui.show === "function") ui.show(msg);
+  } catch {}
+}
+let _uiLoadingTilemapReady = false;
+let _uiLoadingHeroReady = false;
+function _uiLoadingMarkTilemap(): void {
+  _uiLoadingTilemapReady = true;
+  _uiLoadingMaybeDone();
+}
+function _uiLoadingMarkHero(): void {
+  if (_uiLoadingHeroReady) return;
+  _uiLoadingHeroReady = true;
+  _uiLoadingMaybeDone();
+}
+function _uiLoadingMaybeDone(): void {
+  if (_uiLoadingTilemapReady && _uiLoadingHeroReady) {
+    _uiLoadingSet(100, "Ready");
+    _uiLoadingDone();
+  }
+}
+
 
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
@@ -367,6 +411,7 @@ function _hud_tick(): void {
     }
     return;
   }
+  _uiLoadingMarkHero();
 
   const cells = _hud_buildCellsForHero(pid, hero);
 
@@ -861,6 +906,14 @@ class HeroScene extends Phaser.Scene {
     }
 
     preload() {
+        _uiLoadingShow("Loading assets…");
+        _uiLoadingSet(5, "Loading assets…");
+        this.load.on("progress", (v: number) => {
+            _uiLoadingSet(Math.round(v * 40), "Loading assets…");
+        });
+        this.load.once("complete", () => {
+            _uiLoadingSet(50, "Assets loaded");
+        });
         console.log(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
 
@@ -895,10 +948,12 @@ async create() {
 
     // 2) Loading indicator
     const loadingText = this.createLoadingText();
+    _uiLoadingSet(55, "Preparing world…");
 
     // 3) Hero atlas + aura validation
     buildHeroAtlas(this);
     this.validateHeroAuras(loadingText);
+    _uiLoadingSet(65, "Building effects…");
     loadingText.destroy();
 
     // 3b) Effect atlas
@@ -906,6 +961,7 @@ async create() {
 
     // 4) Tile atlas + net tilemap hook (+ apply pending cached tilemap)
     this.initTileAtlasAndInstallTilemapHook();
+    _uiLoadingSet(75, "Waiting for tilemap…");
 
     // 5) Host flag / role
     this.ensureHostFlagInitialized();
@@ -1416,6 +1472,8 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     this._tilemapAppliedTileSize = tileSize;
 
     this.applyTilemapToScene(grid, tileSize);
+    _uiLoadingSet(85, "Tilemap ready");
+    _uiLoadingMarkTilemap();
 
     if (DEBUG_TILEMAP_APPLY_NET) {
         // Cheap counts to prove we applied a non-empty grid
@@ -1493,10 +1551,18 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 }
             }
 
-            if (DEBUG_TILEMAP_APPLY_NET) {
+            const debugProps = DEBUG_TILEMAP_APPLY_NET || DEBUG_PROP_SYNC || !!((globalThis as any).__DEBUG_PROP_SYNC);
+            if (debugProps) {
                 const propCount = Array.isArray(decor.props) ? decor.props.length : 0;
                 const decalCount = Array.isArray(decor.decals) ? decor.decals.length : 0;
-                console.log("[net.decor.apply]", { rev: decor.rev ?? null, propCount, decalRows: decalCount });
+                const byName: Record<string, number> = {};
+                if (Array.isArray(decor.props)) {
+                    for (const p of decor.props) {
+                        if (!p || !p.name) continue;
+                        byName[p.name] = (byName[p.name] || 0) + 1;
+                    }
+                }
+                console.log("[net.decor.apply]", { rev: decor.rev ?? null, propCount, decalRows: decalCount, byName });
             }
         } catch (e) {
             console.warn("[net.decor.apply] failed", e);
@@ -1847,12 +1913,19 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         decorPayload = { rev: decorRev, decals: decals || undefined, props: props.length ? props : undefined };
         g.__lastDecorPayload = decorPayload;
 
-        if (DEBUG_TILEMAP_APPLY_NET) {
+        const debugProps = DEBUG_TILEMAP_APPLY_NET || DEBUG_PROP_SYNC || !!(g.__DEBUG_PROP_SYNC);
+        if (debugProps) {
+            const byName: Record<string, number> = {};
+            for (const p of props) {
+                if (!p || !p.name) continue;
+                byName[p.name] = (byName[p.name] || 0) + 1;
+            }
             console.log("[net.decor.capture]", {
                 decorRev,
                 triggerCount: triggers.length,
                 solidCount: solids.length,
                 props: props.length,
+                byName,
                 decalRows: decals ? decals.length : 0
             });
         }
@@ -2554,6 +2627,7 @@ _hud_installOnce();
 
 // Verbose network tilemap/decor logging; set to true when debugging sync issues.
 const DEBUG_TILEMAP_APPLY_NET = false;
+const DEBUG_PROP_SYNC = false; // extra decor/prop logs (or set globalThis.__DEBUG_PROP_SYNC = true at runtime)
 
 type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
 type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };

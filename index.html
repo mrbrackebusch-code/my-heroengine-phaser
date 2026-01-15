@@ -118,6 +118,64 @@
     }
 
       /* -----------------------------
+         Loading overlay
+         ----------------------------- */
+      #loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at 30% 20%, rgba(74,163,255,0.22), transparent 45%), radial-gradient(ellipse at 80% 10%, rgba(255,184,74,0.2), transparent 40%), rgba(8, 10, 14, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+      }
+      #loading-overlay.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      #loading-card {
+        width: min(360px, 92vw);
+        padding: 18px 20px;
+        border-radius: 14px;
+        background: rgba(18, 20, 26, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        color: rgba(255, 255, 255, 0.92);
+        text-align: center;
+      }
+      #loading-title {
+        font-weight: 900;
+        letter-spacing: 0.4px;
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      #loading-msg {
+        font-size: 13px;
+        opacity: 0.82;
+        min-height: 16px;
+        margin-bottom: 10px;
+      }
+      #loading-bar {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+      }
+      #loading-bar-fill {
+        position: absolute;
+        inset: 0;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(74,163,255,0.9), rgba(76,255,136,0.9));
+        transition: width 0.2s ease;
+      }
+
+      /* -----------------------------
         Dialog overlay (DOM, crisp text)
         ----------------------------- */
       #viewport {
@@ -760,6 +818,15 @@
         color: rgba(255, 255, 255, 0.84);
         font-size: 11.5px;
       }
+
+      @keyframes hudManaFlash {
+        0%   { color: #ff3b3b; text-shadow: 0 0 6px rgba(255, 59, 59, 0.9); }
+        50%  { color: #4ac4ff; text-shadow: 0 0 6px rgba(74, 196, 255, 0.9); }
+        100% { color: #ff3b3b; text-shadow: 0 0 6px rgba(255, 59, 59, 0.9); }
+      }
+      .hud-mana-flash {
+        animation: hudManaFlash 0.14s steps(1, end) infinite;
+      }
          
       /* -----------------------------
          XP panel (left of canvas)
@@ -1235,6 +1302,15 @@
 
 
   <body>
+    <div id="loading-overlay">
+      <div id="loading-card">
+        <div id="loading-title">Loading...</div>
+        <div id="loading-msg">Preparing assets</div>
+        <div id="loading-bar">
+          <div id="loading-bar-fill"></div>
+        </div>
+      </div>
+    </div>
     <!-- LANDING PAGE -->
     <div id="landing">
       <h1>Hero Engine</h1>
@@ -1642,6 +1718,9 @@
           relicOfferFlavor: document.getElementById("relic-offer-flavor"),
           relicOfferItems: document.getElementById("relic-offer-items"),
           relicOfferHint: document.getElementById("relic-offer-hint"),
+          loadingOverlay: document.getElementById("loading-overlay"),
+          loadingMsg: document.getElementById("loading-msg"),
+          loadingBar: document.getElementById("loading-bar-fill"),
 
         };
 
@@ -1670,6 +1749,35 @@
           if (!el) return;
           if (el.title !== t) el.title = t;
         }
+
+        // Loading overlay controller (DOM-based; Phaser/main updates via globals)
+        (function () {
+          const overlay = R.loadingOverlay;
+          const msgEl = R.loadingMsg;
+          const bar = R.loadingBar;
+          let hidden = false;
+          const clampPct = (p) => Math.max(0, Math.min(100, +p || 0));
+
+          const set = (pct, msg) => {
+            if (hidden) return;
+            const hasPct = typeof pct === "number" && isFinite(pct);
+            if (hasPct && bar) bar.style.width = clampPct(pct).toFixed(1) + "%";
+            if (msgEl && typeof msg === "string" && msg.trim()) msgEl.textContent = msg;
+          };
+          const show = (msg) => {
+            hidden = false;
+            if (overlay) overlay.classList.remove("hidden");
+            if (msg) set(undefined, msg);
+          };
+          const done = () => {
+            if (hidden) return;
+            hidden = true;
+            if (overlay) overlay.classList.add("hidden");
+            setTimeout(() => overlay && overlay.remove && overlay.remove(), 800);
+          };
+
+          (globalThis).__heLoadingUI = { set, show, done };
+        })();
 
 
         // Pick your emojis here
@@ -3396,6 +3504,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youName, "Waiting for serverâ€¦");
             setText(R.youHealth, "");
             setText(R.youMana, "");
+            if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
             setText(R.youCoins, "");
 
             renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
@@ -3415,6 +3524,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (!hero || !spritesNS) {
             setText(R.youHealth, "Waiting");
             setText(R.youMana, "For");
+            if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
             setText(R.youCoins, "A Hero");
 
             renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
@@ -3431,6 +3541,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const maxMana = readNum(spritesNS, hero, "maxMana");
           setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
           setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
+          const snap = _getUiSnapshotCached(pid);
+          const manaFlash = snap && snap.ready && !!snap.manaFlash;
+          if (R.youMana) {
+            if (manaFlash) R.youMana.classList.add("hud-mana-flash");
+            else R.youMana.classList.remove("hud-mana-flash");
+          }
 
           const coinsActual = _readTeamCoins(pid, hero, spritesNS);
           const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
@@ -3451,7 +3567,6 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const xpTot = Math.max(0, readNum(spritesNS, hero, "xpTot"));
           setText(R.xpLevelTop, `Level ${lvl}`);
           setText(R.xpLeftProgress, `${xp}/${xpNext} XP`);
-          const snap = _getUiSnapshotCached(pid);
           const safeToSpend = !snap || !!snap.safeForSpend;
           const hasLevelPoints = lvlPts > 0;
           const canLevelUp = hasLevelPoints && safeToSpend;

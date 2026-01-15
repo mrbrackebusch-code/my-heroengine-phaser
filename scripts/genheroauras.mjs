@@ -10,14 +10,26 @@ const FRAME_W = 64;
 const FRAME_H = 64;
 const SHEET_COLS = 13;
 
-// 192-grid (oversize view)
-const FRAME_W_192 = 192;
-const FRAME_H_192 = 192;
+// Default behavior (toggle here)
+const SKIP_EXISTING = true; // flip to false if you always want rebuilds
 
 const RADIUS = 2;
 
 const HERO_DIR = path.join(ROOT, "assets", "heroes");
 const OUT_DIR = path.join(ROOT, "assets", "auras");
+
+function _isTruthy(v) {
+  if (v === undefined || v === null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === "1" || s === "true" || s === "yes" || s === "y" || s === "on";
+}
+function _isFalsy(v) {
+  if (v === undefined || v === null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === "0" || s === "false" || s === "no" || s === "n" || s === "off";
+}
+
+// SKIP_EXISTING is controlled solely by the constant above.
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -163,7 +175,9 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`[gen-auras] heroes=${heroFiles.length} radius=${RADIUS}`);
+  console.log(
+    `[gen-auras] heroes=${heroFiles.length} radius=${RADIUS} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
+  );
 
   for (const heroPath of heroFiles) {
     const baseName = path.basename(heroPath, ".png");
@@ -181,18 +195,9 @@ async function main() {
         );
       }
       const outPath64 = path.join(OUT_DIR, `${baseName}_aura_r${RADIUS}.png`);
+    if (SKIP_EXISTING && fs.existsSync(outPath64)) continue;
       await writePng(r64.out, outPath64);
       console.log(`[gen-auras] wrote ${path.relative(ROOT, outPath64)}`);
-    }
-
-    // 192-grid aura (oversize view)
-    const r192 = buildAuraSheetForGrid(src, FRAME_W_192, FRAME_H_192, null);
-    if (!r192.ok) {
-      console.warn(`[gen-auras] SKIP ${baseName} (192): ${r192.reason}`);
-    } else {
-      const outPath192 = path.join(OUT_DIR, `${baseName}_192_aura_r${RADIUS}.png`);
-      await writePng(r192.out, outPath192);
-      console.log(`[gen-auras] wrote ${path.relative(ROOT, outPath192)}`);
     }
   }
 
