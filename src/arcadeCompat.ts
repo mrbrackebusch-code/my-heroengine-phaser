@@ -78,6 +78,10 @@ import {
     DEBUG_COLLIDER_ALPHA,
     DEBUG_COLLIDER_ENEMY_COLOR,
     DEBUG_COLLIDER_WALL_COLOR,
+    DEBUG_COMPAT_BACKGROUND,
+    DEBUG_COMPAT_BOOT,
+    DEBUG_COMPAT_CONTROLLER,
+    DEBUG_COMPAT_TILEMAP_STUB,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
     DEBUG_DRAW_WALL_COLLIDERS,
     DEBUG_ENEMY_FOOTPRINT_MAX_PX,
@@ -103,6 +107,7 @@ import {
     DEBUG_SPRITE_ATTACH,
     DEBUG_SPRITE_PIXELS,
     DEBUG_SPRITE_PIXELS_ALL,
+    DEBUG_SPRITE_SYNC,
     DEBUG_WEAPON_SYNC,
     DEBUG_WRAP_TEX,
     FORCE_PROP_PREBAKED_OUTLINE,
@@ -2380,7 +2385,9 @@ function __installHeroVisualInfoHookOnce(): void {
         };
 
 
-        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
+        if (DEBUG_COMPAT_BOOT) {
+            console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
+        }
     } catch (e) {
         console.warn("[arcadeCompat] failed to install hero visual hook", e);
     }
@@ -2446,7 +2453,9 @@ function __installHeroVisualInfoHookOnce(): void {
             return [innerR, leadEdge, wTipX, wTipY];
         };
 
-        console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)");
+        if (DEBUG_COMPAT_BOOT) {
+            console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo (silhouette)");
+        }
     } catch (e) {
         console.warn("[arcadeCompat] hero visual hook install failed", e);
     }
@@ -5220,7 +5229,7 @@ function _attachNativeSprite(s: Sprite): void {
     const ui = _attachDetectUi(ctx);
 
     // DEBUG: one-time attach classification for projectiles
-    if ((ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProj) {
+    if (DEBUG_SPRITE_ATTACH && (ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProj) {
         (ctx.s as any).__loggedAttachProj = true;
         const dataKeys = Object.keys(((ctx.s as any).data) || {});
         console.log("[ATTACH][PROJ] begin",
@@ -5233,7 +5242,7 @@ function _attachNativeSprite(s: Sprite): void {
 
     // If we've already attached a UI-managed native (Container), early-out.
     if (_attachUiEarlyUpdateIfExisting(ctx)) {
-        if ((ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProjEarlyOut) {
+        if (DEBUG_SPRITE_ATTACH && (ctx.s as any).kind === 51 && !(ctx.s as any).__loggedAttachProjEarlyOut) {
             (ctx.s as any).__loggedAttachProjEarlyOut = true;
             console.log("[ATTACH][PROJ] early-out: existing UI native",
                 "| id", (ctx.s as any).id
@@ -5255,7 +5264,7 @@ function _attachNativeSprite(s: Sprite): void {
     _attachEnsureIntellectProjectileVisual(ctx);
 
     // DEBUG: post-create snapshot for projectile
-    if ((ctx.s as any).kind === 51 && (ctx.s as any).native && !(ctx.s as any).__loggedAttachProjAfter) {
+    if (DEBUG_SPRITE_ATTACH && (ctx.s as any).kind === 51 && (ctx.s as any).native && !(ctx.s as any).__loggedAttachProjAfter) {
         (ctx.s as any).__loggedAttachProjAfter = true;
         const n: any = (ctx.s as any).native;
         const sfx = n.scrollFactorX ?? 1;
@@ -5292,7 +5301,7 @@ function _attachBegin(s: Sprite): AttachContext {
         s,
         g,
         tA0,
-        shouldLog: (_attachCallCount <= MAX_ATTACH_VERBOSE),
+        shouldLog: (DEBUG_SPRITE_ATTACH && _attachCallCount <= MAX_ATTACH_VERBOSE),
         dataAny,
     };
 }
@@ -5893,7 +5902,7 @@ function _attachNativeSpriteNonUiPath(sc: Phaser.Scene, s: Sprite, g: number, tA
         s,
         g,
         tA0,
-        shouldLog: (_attachCallCount <= MAX_ATTACH_VERBOSE),
+        shouldLog: (DEBUG_SPRITE_ATTACH && _attachCallCount <= MAX_ATTACH_VERBOSE),
         dataAny: (s as any).data || {},
     };
 
@@ -6103,7 +6112,7 @@ function _attachGetOrCreateNative(
         native = n;
         didCreate = true;
 
-        if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+        if (DEBUG_SPRITE_ATTACH && _attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log(
                 isEnemyLike ? "[WRAP-NATIVE] create enemy sprite" : "[WRAP-NATIVE] create sprite",
                 "| id", s.id,
@@ -6416,7 +6425,7 @@ function _attachValidateImageDims(ctx: AttachContext, w: number, h: number): boo
 
 function _attachVerboseStart(ctx: AttachContext, id: number, kind: number, kindName: string, w: number, h: number): void {
     void id; void kind; void kindName;
-    if (_attachCallCount <= MAX_ATTACH_VERBOSE) {
+    if (DEBUG_SPRITE_ATTACH && _attachCallCount <= MAX_ATTACH_VERBOSE) {
         console.log(
             "[_attachNativeSprite] START",
             "spriteId=", ctx.s.id,
@@ -6576,7 +6585,7 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
         _allSprites.push(s);
 
         // Optional: creation log (ties into the kind-name helper)
-        if (DEBUG_SPRITE_ATTACH || _attachCallCount <= MAX_ATTACH_VERBOSE) {
+        if (DEBUG_SPRITE_ATTACH) {
             console.log(
                 "[sprites.create]",
                 "id", s.id,
@@ -6608,7 +6617,9 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
 
         // AFTER you've counted nonZero pixels for s.image
         if (s.kind === 12 && nonZeroCreate === 0 && s.native) {
-            console.log(`[AURA] id=${s.id} image went fully blank -> hiding native sprite`);
+            if (DEBUG_SPRITE_ATTACH) {
+                console.log(`[AURA] id=${s.id} image went fully blank -> hiding native sprite`);
+            }
             s.native.visible = false;
             return; // don't reattach a texture for an empty image
         }
@@ -6630,14 +6641,16 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
         s.vy = vy;
         _allSprites.push(s);
 
-        console.log(
-            "[createProjectileFromSprite] from kind=",
-            source.kind,
-            "proj w=",
-            img?.width,
-            "h=",
-            img?.height
-        );
+        if (DEBUG_PROJECTILE_NATIVE) {
+            console.log(
+                "[createProjectileFromSprite] from kind=",
+                source.kind,
+                "proj w=",
+                img?.width,
+                "h=",
+                img?.height
+            );
+        }
 
         // Debug: if this path ever creates kind56, trace it too (first N only)
         if (DEBUG_KIND56_CREATE_TRACE && s.kind === 56 && _kind56CreateTraceRemaining > 0) {
@@ -6824,7 +6837,7 @@ function _syncBeginFrame(): SyncContext {
         shouldLog = true;
     }
 
-    if (shouldLog) {
+    if (DEBUG_SPRITE_SYNC && shouldLog) {
         console.log(
             "[_syncNativeSprites]",
             "call#", _syncCallCount,
@@ -6902,7 +6915,7 @@ function _syncBeginFrame(): SyncContext {
 // ---------------------------------------------------------------------
 function _syncEarlySceneGuard(ctx: SyncContext): boolean {
     if (!ctx.sc) {
-        if (ctx.shouldLog) console.log("[_syncNativeSprites] no scene yet");
+        if (DEBUG_SPRITE_SYNC && ctx.shouldLog) console.log("[_syncNativeSprites] no scene yet");
         return false;
     }
     return true;
@@ -6966,7 +6979,7 @@ function _syncSpriteLoop(ctx: SyncContext): void {
         if (hasDestroyedFlag || engineDestroyed || imageGone) {
             ctx.removedHard++;
 
-            if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
+            if (DEBUG_SPRITE_SYNC && ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
                 console.log(
                     "[SYNC] HARD-DESTROY",
                     "| id", s.id,
@@ -7019,7 +7032,7 @@ function _syncSpriteLoop(ctx: SyncContext): void {
 
         const native = s.native as any;
         if (!native) {
-            if (ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
+            if (DEBUG_SPRITE_SYNC && ctx.shouldLog && (s.kind === 11 || s.kind === 12)) {
                 console.log(
                     "[SYNC] no native after attach",
                     "| id", s.id,
@@ -7094,20 +7107,22 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 }
 
 
-                console.log("[SYNC][PROJ]",
-                    "| s.id", s.id,
-                    "| kind", s.kind,
-                    "| flags", flags,
-                    "| world", (native.x | 0), (native.y | 0),
-                    "| screen", (sx | 0), (sy | 0),
-                    "| cam.scroll", (camScrollX | 0), (camScrollY | 0),
-                    "| cam.zoom", camZoom,
-                    "| inView", inView,
-                    "| nativeScrollFactor", sfx, sfy,
-                    "| relToCamFlag", !!(flags & SpriteFlag.RelativeToCamera),
-                    "| tex", (native as any).texture?.key ?? "",
-                    "| depth", (native as any).depth ?? 0
-                );
+                if (DEBUG_PROJECTILE_NATIVE) {
+                    console.log("[SYNC][PROJ]",
+                        "| s.id", s.id,
+                        "| kind", s.kind,
+                        "| flags", flags,
+                        "| world", (native.x | 0), (native.y | 0),
+                        "| screen", (sx | 0), (sy | 0),
+                        "| cam.scroll", (camScrollX | 0), (camScrollY | 0),
+                        "| cam.zoom", camZoom,
+                        "| inView", inView,
+                        "| nativeScrollFactor", sfx, sfy,
+                        "| relToCamFlag", !!(flags & SpriteFlag.RelativeToCamera),
+                        "| tex", (native as any).texture?.key ?? "",
+                        "| depth", (native as any).depth ?? 0
+                    );
+                }
             }
 
             _syncIntellectSpellProjectileCrystal(ctx, s, native, flags);
@@ -9065,7 +9080,7 @@ function _syncPixelDeathRemoval(
 
     ctx.removedByPixels++;
 
-    if (ctx.shouldLog) {
+    if (DEBUG_SPRITE_SYNC && ctx.shouldLog) {
         console.log(
             "[SYNC] PIXEL-DESTROY",
             "| id", s.id,
@@ -9772,7 +9787,7 @@ let _checkHandlerLogCount = 0;
             _overlapHandlers.push({ a: kindA, b: kindB, handler });
 
             // Always log the first couple registrations so we can sanity-check kinds
-            if (_onOverlapLogCount < MAX_ON_OVERLAP_LOGS) {
+            if (DEBUG_OVERLAPS && _onOverlapLogCount < MAX_ON_OVERLAP_LOGS) {
                 _onOverlapLogCount++;
                 console.log(
                     "[sprites.onOverlap] registered",
@@ -9888,7 +9903,7 @@ if (_overlapHandlers.length && spritesSnapshot.length > 1) {
     for (const { a: kindA, b: kindB, handler } of _overlapHandlers) {
 
         // Log "checking handler" only twice per run, independent of DEBUG_OVERLAPS
-        if (_checkHandlerLogCount < MAX_CHECK_HANDLER_LOGS) {
+        if (DEBUG_OVERLAPS && _checkHandlerLogCount < MAX_CHECK_HANDLER_LOGS) {
             _checkHandlerLogCount++;
             console.log(
                 "[sprites._processEvents] checking handler",
@@ -10020,12 +10035,14 @@ export function setBackgroundColor(colorIndex: number): void {
     if (!sc || !sc.cameras || !sc.cameras.main) {
         // Only complain once per index to avoid spam if scene isn't ready
         if (idx !== _lastBgIndexLogged) {
-            console.log(
-                "[scene.setBackgroundColor] no Phaser scene yet, colorIndex=",
-                colorIndex,
-                "clampedIdx=",
-                idx
-            );
+            if (DEBUG_COMPAT_BACKGROUND) {
+                console.log(
+                    "[scene.setBackgroundColor] no Phaser scene yet, colorIndex=",
+                    colorIndex,
+                    "clampedIdx=",
+                    idx
+                );
+            }
             _lastBgIndexLogged = idx;
         }
         return;
@@ -10036,14 +10053,16 @@ export function setBackgroundColor(colorIndex: number): void {
 
     // Only log when the background index actually changes
     if (idx !== _lastBgIndexLogged) {
-        console.log(
-            "[scene.setBackgroundColor] index=",
-            idx,
-            "rgb=",
-            rgb,
-            "hex=",
-            hex.toString(16)
-        );
+        if (DEBUG_COMPAT_BACKGROUND) {
+            console.log(
+                "[scene.setBackgroundColor] index=",
+                idx,
+                "rgb=",
+                rgb,
+                "hex=",
+                hex.toString(16)
+            );
+        }
         _lastBgIndexLogged = idx;
     }
 
@@ -10071,7 +10090,9 @@ namespace tiles {
 
     export function setCurrentTilemap(tm: TileMapData): void {
         _current = tm;
-        console.log("[tiles.setCurrentTilemap] (stub) current =", tm);
+        if (DEBUG_COMPAT_TILEMAP_STUB) {
+            console.log("[tiles.setCurrentTilemap] (stub) current =", tm);
+        }
     }
 
     export function currentTilemap(): TileMapData | null {
@@ -10092,7 +10113,9 @@ function tilemap(
     // In MakeCode, this is compile-time. Here we just
     // turn `tilemap`level1`` into an object with id "level1".
     const id = strings.join("${}");
-    console.log("[tilemap] (stub) requested map id =", id, "expr =", expr);
+    if (DEBUG_COMPAT_TILEMAP_STUB) {
+        console.log("[tilemap] (stub) requested map id =", id, "expr =", expr);
+    }
     return { id };
 }
 
@@ -10435,8 +10458,10 @@ namespace controller {
                 return;
             }
 
-            _localPlayerSlot = slot;
-            console.log("[controller] local player slot set to", _localPlayerSlot);
+        _localPlayerSlot = slot;
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.log("[controller] local player slot set to", _localPlayerSlot);
+            }
         }
 
 
@@ -10489,7 +10514,9 @@ namespace controller {
     // SAME keys on every client: arrows + Q/E.
     export function _wireKeyboard(scene: any): void {
         if (_keyboardWired) {
-            console.log("[controller._wireKeyboard] already wired, skipping");
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.log("[controller._wireKeyboard] already wired, skipping");
+            }
             return;
         }
         _keyboardWired = true;
@@ -10500,7 +10527,9 @@ namespace controller {
             return;
         }
 
-        console.log("[controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)");
+        if (DEBUG_COMPAT_CONTROLLER) {
+            console.log("[controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)");
+        }
 
         function bindKeyToButtonName(key: string, buttonName: string) {
             kb.on("keydown-" + key, () => _sendLocalInput(buttonName, true));
@@ -10522,7 +10551,9 @@ namespace controller {
     // Maps: A/B buttons -> A/B, D-pad and left stick -> arrows.
     export function _wireGamepad(scene: any): void {
         if (_gamepadWired) {
-            console.log("[controller._wireGamepad] already wired, skipping");
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.log("[controller._wireGamepad] already wired, skipping");
+            }
             return;
         }
         _gamepadWired = true;
@@ -10533,7 +10564,9 @@ namespace controller {
             return;
         }
 
-        console.log("[controller._wireGamepad] wiring first gamepad for LOCAL player (network-aware)");
+        if (DEBUG_COMPAT_CONTROLLER) {
+            console.log("[controller._wireGamepad] wiring first gamepad for LOCAL player (network-aware)");
+        }
 
         const DEADZONE = 0.35;
         let pad: any = null;

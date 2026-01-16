@@ -1,8 +1,6 @@
 
 import Phaser from "phaser";
 
-console.log(">>> [main.ts] dynamic-import version loaded");
-
 import { installBlocklyHeroLogicEditor } from "./blocklyHeroLogicEditor";
 import { installBlocklyTrapEditor } from "./blocklyTrapEditor";
 
@@ -27,8 +25,12 @@ import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
 import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
 import {
   DEBUG_COINFX,
+  DEBUG_MAIN_LIFECYCLE,
   DEBUG_MONSTER_SPRITES,
   DEBUG_PROP_SYNC,
+  DEBUG_RELIC_LOGS,
+  DEBUG_RELICTIP_LOGS,
+  DEBUG_SAVE_LOGS,
   DEBUG_TILEMAP_APPLY_NET,
   DEBUG_TILEMAP_MAIN,
   ENABLE_HERO_ANIM_DEBUG,
@@ -38,6 +40,14 @@ import {
   WEAPON_DEBUG_VERBOSE,
 } from "./debugFlags";
 
+const logMain = (...args: any[]) => {
+  if (DEBUG_MAIN_LIFECYCLE) console.log(...args);
+};
+const logSave = (...args: any[]) => {
+  if (DEBUG_SAVE_LOGS) console.log(...args);
+};
+
+logMain(">>> [main.ts] dynamic-import version loaded");
 
 
 // Somewhere near the top of main.ts:
@@ -646,9 +656,9 @@ function applyUrlProfileToGlobals() {
     if (profile && typeof profile === "string") {
         // Apply to slot 0 (player 1)
         g.__heroProfiles[0] = profile;
-        console.log("[main] URL profile override for P1:", profile);
+        logMain("[main] URL profile override for P1:", profile);
     } else {
-        console.log("[main] no ?profile= URL param; using defaults");
+        logMain("[main] no ?profile= URL param; using defaults");
     }
 }
 
@@ -747,7 +757,7 @@ function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
 
   try {
     net.sendSaveGame(payload);
-    console.log("[save] sent autosave", payload);
+    logSave("[save] sent autosave", payload);
   } catch (e) {
     console.warn("[save] failed to send autosave", e);
   }
@@ -777,7 +787,7 @@ function _applyPendingSaveIfAny(): void {
 
   _pendingSaveApplied = true;
 
-  console.log("[save] applying save from file", pending.name || "");
+  logSave("[save] applying save from file", pending.name || "");
 
   // Install profiles (up to 4)
   if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
@@ -809,7 +819,7 @@ function _applyPendingSaveIfAny(): void {
         sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s))
       };
       nw.apply(filtered);
-      console.log("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
+      logSave("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
       return true;
     } catch (e) {
       console.warn("[save] apply world snapshot failed", e);
@@ -856,7 +866,7 @@ function _applyPendingSaveIfAny(): void {
     g.__lastTilemapMsg = save.tilemap;
   }
 
-  console.log("[save] pending save installed; will apply on next hero spawn for matching profiles");
+  logSave("[save] pending save installed; will apply on next hero spawn for matching profiles");
 }
 
 (globalThis as any).__onHostBecameHost = _applyPendingSaveIfAny;
@@ -926,19 +936,19 @@ class HeroScene extends Phaser.Scene {
         this.load.once("complete", () => {
             _uiLoadingSet(50, "Assets loaded");
         });
-        console.log(">>> [HeroScene.preload] loading LPC monster sheets");
+        logMain(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
 
-        console.log(">>> [HeroScene.preload] loading hero spritesheets");
+        logMain(">>> [HeroScene.preload] loading hero spritesheets");
         preloadHeroSheets(this);
 
-        console.log(">>> [HeroScene.preload] loading tile sheets");
+        logMain(">>> [HeroScene.preload] loading tile sheets");
         preloadTileSheets(this);
 
-        console.log(">>> [HeroScene.preload] loading weapon sheets");
+        logMain(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
 
-        console.log(">>> [HeroScene.preload] loading effect sheets");
+        logMain(">>> [HeroScene.preload] loading effect sheets");
         preloadEffectSheets(this);
 
     }
@@ -946,7 +956,7 @@ class HeroScene extends Phaser.Scene {
 
 
 async create() {
-    console.log(">>> [HeroScene.create] running (refactored)");
+    logMain(">>> [HeroScene.create] running (refactored)");
 
     // 1) Globals + debug flags (weapon flags come from constants, not URL)
     this.setupGlobalsAndDebug();
@@ -1002,7 +1012,7 @@ async create() {
     // 12) DOM dialog test (timed splash)
     this.runStartupDialogTest();
 
-    console.log(">>> [HeroScene.create] complete (refactored)");
+    logMain(">>> [HeroScene.create] complete (refactored)");
     
 
 }
@@ -1294,11 +1304,11 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
 private setupGlobalsAndDebug() {
     const g = globalThis as any;
 
-    console.log(">>> [HeroScene.create] running");
+    logMain(">>> [HeroScene.create] running");
 
     // Make this scene globally accessible to arcadeCompat
     (globalThis as any).__phaserScene = this;
-    console.log(
+    logMain(
         ">>> [HeroScene.create] __phaserScene set =",
         !!(globalThis as any).__phaserScene
     );
@@ -1320,6 +1330,8 @@ private setupGlobalsAndDebug() {
     // ------------------------------------------------------------
     (g as any).__weaponDebug = WEAPON_DEBUG;
     (g as any).__weaponDebugVerbose = WEAPON_DEBUG_VERBOSE;
+    (g as any).__DEBUG_RELIC_LOGS = DEBUG_RELIC_LOGS;
+    (g as any).__DEBUG_RELICTIP_LOGS = DEBUG_RELICTIP_LOGS;
 
     // Optional: expose audit runner (you never have to call it)
     (g as any).runWeaponAudit = (opts?: any) => runWeaponAudit(opts);
@@ -1655,7 +1667,9 @@ private _updateCoinFx(g: any): void {
         if (q && q.length) {
             const bursts = q.splice(0, q.length);
 
-            console.log("[COINFX drain]", { n: bursts.length, isHost: !!g.__isHost });
+            if (DEBUG_COINFX) {
+                console.log("[COINFX drain]", { n: bursts.length, isHost: !!g.__isHost });
+            }
 
             // Ensure animation exists (once). This is intentionally self-contained.
             const animKey = "__coinSpin";
@@ -1695,7 +1709,9 @@ private _updateCoinFx(g: any): void {
                         repeat: -1,
                     });
 
-                    console.log("[COINFX] created anim", { key: animKey, end });
+                    if (DEBUG_COINFX) {
+                        console.log("[COINFX] created anim", { key: animKey, end });
+                    }
                 }
             }
 
@@ -1708,7 +1724,9 @@ private _updateCoinFx(g: any): void {
                 if (!Number.isFinite(sx) || !Number.isFinite(sy) || countRaw <= 0) continue;
 
                 const hasTex = this.textures.exists("anims.coins");
-                console.log("[COINFX spawnBurst]", { sx, sy, countRaw, hasTex });
+                if (DEBUG_COINFX) {
+                    console.log("[COINFX spawnBurst]", { sx, sy, countRaw, hasTex });
+                }
                 if (!hasTex) continue;
 
                 // Target point = canvas border aligned to DOM #hud-you-coins.
@@ -2132,7 +2150,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
 }
 
 private initTileAtlasAndInstallTilemapHook() {
-    console.log(">>> [HeroScene.create] building tile atlas");
+    logMain(">>> [HeroScene.create] building tile atlas");
 
     // Build atlas once
     this.tileAtlas = buildTileAtlas(this);
@@ -2151,15 +2169,15 @@ private ensureHostFlagInitialized() {
     const g: any = globalThis as any;
 
     if (typeof g.__isHost === "boolean") {
-        console.log(">>> [HeroScene.create] host flag from network =", g.__isHost);
+        logMain(">>> [HeroScene.create] host flag from network =", g.__isHost);
     } else {
-        console.log(">>> [HeroScene.create] no host flag yet; defaulting to follower");
+        logMain(">>> [HeroScene.create] no host flag yet; defaulting to follower");
         g.__isHost = false;
     }
 }
 
 private async importMakeCodeModules(): Promise<any> {
-    console.log(">>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)");
+    logMain(">>> [HeroScene.create] importing compat + extensions (+ HeroEngine via host hook)");
 
     // IMPORTANT: load modules in MakeCode-like order
     const compatMod = await import("./arcadeCompat");
@@ -2174,7 +2192,7 @@ private async importMakeCodeModules(): Promise<any> {
 
 
 private async _host_importEngineAndGlue(): Promise<any> {
-    console.log(">>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser");
+    logMain(">>> [HeroScene.create] __startHeroEngineHost: importing HeroEngineInPhaser");
 
     // 1) Load the wrapped HeroEngine module (with Phaser shims)
     const engineMod: any = await import("./HeroEngineInPhaser");
@@ -2384,9 +2402,11 @@ private _host_trySyncTilesAndPublishOnceFromInternals(): void {
                 ws.send(JSON.stringify(tilemapMsg));
                 gAny.__tilemapLastActuallySentRev = netRev;
                 gAny.__netTilemapLatestRev = Math.max(((gAny.__netTilemapLatestRev | 0) || 0), netRev);
-                console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
-                    rev: netRev, worldRev, floorIndex, floorKind, rows, cols, tileSize
-                });
+                if (DEBUG_TILEMAP_MAIN) {
+                    console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
+                        rev: netRev, worldRev, floorIndex, floorKind, rows, cols, tileSize
+                    });
+                }
             } else {
                 console.warn(">>> [HeroScene.tilemap] ws not open; cached initial tilemapMsg", {
                     rev: netRev, worldRev, floorIndex, floorKind
@@ -2407,19 +2427,19 @@ private _host_trySyncTilesAndPublishOnceFromInternals(): void {
 }
 
 private _host_scheduleSpriteDump(): void {
-    console.log(">>> [HeroScene.create] scheduling sprite dump (host only)");
+    logMain(">>> [HeroScene.create] scheduling sprite dump (host only)");
     setTimeout(() => {
-        console.log(">>> [HeroScene.create] RUNNING SPRITE DUMP");
+        logMain(">>> [HeroScene.create] RUNNING SPRITE DUMP");
         import("./arcadeCompat")
             .then((compat: any) => {
                 if (compat && typeof compat.dumpAllSprites === "function") {
                     compat.dumpAllSprites();
                 } else {
-                    console.log("[HeroScene.create] dumpAllSprites not found on arcadeCompat");
+                    logMain("[HeroScene.create] dumpAllSprites not found on arcadeCompat");
                 }
             })
             .catch((e: any) => {
-                console.log("[HeroScene.create] sprite dump import error: " + e);
+                logMain("[HeroScene.create] sprite dump import error: " + e);
             });
     }, 1000);
 }
@@ -2438,7 +2458,7 @@ private installStartHeroEngineHostHook() {
         // 5) Start the HeroEngine world
         const HE: any = this._host_getHeroEngine(engineMod);
         if (HE && typeof HE.start === "function") {
-            console.log(">>> [HeroScene.create] starting HeroEngine from host");
+            logMain(">>> [HeroScene.create] starting HeroEngine from host");
             HE.start();
 
             // TILES: sync from HeroEngine and publish to server once
@@ -2460,7 +2480,7 @@ private installStartHeroEngineHostHook() {
 
 private initNetwork(compatMod: any) {
     if (typeof (compatMod as any).initNetwork === "function") {
-        console.log(">>> [HeroScene.create] initNetwork()");
+        logMain(">>> [HeroScene.create] initNetwork()");
         (compatMod as any).initNetwork();
     } else {
         console.warn(">>> [HeroScene.create] compat.initNetwork missing");
@@ -2470,7 +2490,7 @@ private initNetwork(compatMod: any) {
 private wireKeyboardToController() {
     const controllerNS: any = (globalThis as any).controller;
     if (controllerNS && typeof controllerNS._wireKeyboard === "function") {
-        console.log(">>> [HeroScene.create] wiring keyboard to controller (network-aware)");
+        logMain(">>> [HeroScene.create] wiring keyboard to controller (network-aware)");
         controllerNS._wireKeyboard(this);
     } else {
         console.warn(">>> [HeroScene.create] controller._wireKeyboard missing", controllerNS);
@@ -2480,7 +2500,7 @@ private wireKeyboardToController() {
 private wireGamepadToController() {
     const controllerNS: any = (globalThis as any).controller;
     if (controllerNS && typeof controllerNS._wireGamepad === "function") {
-        console.log(">>> [HeroScene.create] wiring gamepad to controller (network-aware)");
+        logMain(">>> [HeroScene.create] wiring gamepad to controller (network-aware)");
         controllerNS._wireGamepad(this);
     } else {
         console.warn(">>> [HeroScene.create] controller._wireGamepad missing", controllerNS);
@@ -2697,12 +2717,12 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 };
 
 if (shouldStartGameFromUrl()) {
-    console.log("[main] profile found in URL; starting Phaser game.");
+    logMain("[main] profile found in URL; starting Phaser game.");
 
     _startPhaserGameSingleton(gameConfig);
 
 } else {
-    console.log("[main] no ?profile= URL param; waiting for landing page redirect.");
+    logMain("[main] no ?profile= URL param; waiting for landing page redirect.");
 }
 
 

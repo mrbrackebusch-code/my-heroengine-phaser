@@ -6,7 +6,7 @@
 
 // Type-only shim: WorldSnapshot type is defined in arcadeCompat.ts; we keep this file decoupled.
 
-import { DEBUG_NET, DEBUG_TILEMAP_COMPAT } from "./debugFlags";
+import { DEBUG_NET, DEBUG_NET_SNAPSHOT, DEBUG_TILEMAP_COMPAT } from "./debugFlags";
 
 
 type NetWorldSnapshot = any
@@ -308,7 +308,9 @@ class NetworkClient {
         this.ws = ws;
 
         ws.onopen = () => {
-            console.log("[net] connected to", this.url);
+            if (DEBUG_NET) {
+                console.log("[net] connected to", this.url);
+            }
 
             // Required by server Step 3+: HELLO binds token -> playerId
             try {
@@ -330,10 +332,12 @@ class NetworkClient {
 
                 ws.send(JSON.stringify(hello));
 
-                console.log("[net] hello sent", {
-                    token: token.slice(0, 8) + "…",
-                    desiredProfile: desiredProfile || null
-                });
+                if (DEBUG_NET) {
+                    console.log("[net] hello sent", {
+                        token: token.slice(0, 8) + "…",
+                        desiredProfile: desiredProfile || null
+                    });
+                }
             } catch (e) {
                 console.warn("[net] failed to send hello:", e);
             }
@@ -568,8 +572,8 @@ private handleMessage(msg: NetMessage) {
 
         const g: any = (globalThis as any);
 
-        console.log("[net] assigned playerId =", this.playerId, "name=", msg.name, "profile=", msg.profile);
-        if (DEBUG_NET || true) {
+        if (DEBUG_NET) {
+            console.log("[net] assigned playerId =", this.playerId, "name=", msg.name, "profile=", msg.profile);
             try {
                 const token = typeof g.__netHelloToken === "string" ? g.__netHelloToken : "";
                 const desiredProfile = typeof g.__netHelloProfile === "string" ? g.__netHelloProfile : null;
@@ -651,7 +655,7 @@ private onRosterSnapshot(msg: Extract<NetMessage, { type: "rosterSnapshot" }>) {
         }
     }
 
-    if (DEBUG_NET || isHost) {
+    if (DEBUG_NET) {
         console.log("[net.rosterSnapshot] applied", {
             hostToken: (msg.hostToken ? (msg.hostToken.slice(0, 8) + "…") : null),
             hostLeaseUntilMs: msg.hostLeaseUntilMs ?? null,
@@ -700,7 +704,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         const changed = (prevProfile !== profile);
         const isReconnect = (!prevConnected && connected);
 
-        if (changed || isReconnect || isHost) {
+        if (DEBUG_NET && (changed || isReconnect || isHost)) {
             console.log(
                 "[net.playerState]",
                 "slot", slotIndex + 1,
@@ -742,7 +746,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
                 const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
                 if (despawnFn) {
                     const ok = despawnFn(playerId);
-                    if (ok) console.log("[net.playerState] despawned hero for pid", playerId);
+                    if (ok && DEBUG_NET) console.log("[net.playerState] despawned hero for pid", playerId);
                 }
             } catch (e) {
                 console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
@@ -756,14 +760,14 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
             const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
             if (despawnFn) {
                 const ok = despawnFn(playerId);
-                if (ok) console.log("[net.playerState] despawned hero for pid", playerId);
+                if (ok && DEBUG_NET) console.log("[net.playerState] despawned hero for pid", playerId);
             }
         } catch (e) {
             console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
         }
     }
 
-    if (DEBUG_NET || true) {
+    if (DEBUG_NET) {
         console.log("[net.playerState.debug]", {
             pid: playerId,
             slotIndex,
@@ -792,7 +796,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         if (ensureFn) {
             try {
                 const heroIndex = ensureFn(playerId);
-                if (heroIndex >= 0) {
+                if (DEBUG_NET && heroIndex >= 0) {
                     console.log(
                         "[net.playerState] ensureHeroForPlayer ok",
                         "playerId", playerId,
@@ -822,7 +826,9 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         // Keep legacy global in sync (other files read it)
         g.__isHost = isHost;
 
-        console.log("[net] hostStatus =", isHost, "hostPlayerId=", (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null);
+        if (DEBUG_NET) {
+            console.log("[net] hostStatus =", isHost, "hostPlayerId=", (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null);
+        }
 
         // Host-only hook (e.g., apply pending save)
         if (isHost) {
@@ -841,7 +847,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
             setTimeout(() => _flushEnsureHeroesIfPossible(), 0);
         }
 
-        if (DEBUG_NET || true) {
+        if (DEBUG_NET) {
             console.log("[net] hostStatus change", {
                 isHost,
                 hostPlayerId: (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null,
@@ -1254,15 +1260,17 @@ function _maybeSendWorldSnapshotTick() {
         const kbPerSec =
             (_snapshotPerfAccumBytes * 1000) / Math.max(1, sinceReport) / 1024;
 
-        console.log(
-            "[net.host] PERF",
-            "Hz≈",
-            snapsPerSec.toFixed(1),
-            "KB/s≈",
-            kbPerSec.toFixed(2),
-            "latestSprites=",
-            sprites
-        );
+        if (DEBUG_NET_SNAPSHOT) {
+            console.log(
+                "[net.host] PERF",
+                "Hz≈",
+                snapsPerSec.toFixed(1),
+                "KB/s≈",
+                kbPerSec.toFixed(2),
+                "latestSprites=",
+                sprites
+            );
+        }
 
         _snapshotPerfAccumSnaps = 0;
         _snapshotPerfAccumBytes = 0;
@@ -1271,7 +1279,7 @@ function _maybeSendWorldSnapshotTick() {
 
 
     // Light cadence log so you can correlate with follower if needed
-    if (_snapshotSentCount <= 3 || _snapshotSentCount % 300 === 0) {
+    if (DEBUG_NET_SNAPSHOT && (_snapshotSentCount <= 3 || _snapshotSentCount % 300 === 0)) {
         console.log(
             "[net.host] snapshot #",
             _snapshotSentCount,
@@ -1331,10 +1339,12 @@ export function initNetwork() {
     // Step 8: host uses this to gate inputs for disconnected slots
     if (!g.__netSlotConnected) g.__netSlotConnected = [false, false, false, false];
 
-    console.log("[net] initNetwork: connecting...", {
-        token: token.slice(0, 8) + "…",
-        desiredProfile: desiredProfile || null
-    });
+    if (DEBUG_NET) {
+        console.log("[net] initNetwork: connecting...", {
+            token: token.slice(0, 8) + "…",
+            desiredProfile: desiredProfile || null
+        });
+    }
 
     _netClient.connect();
     (globalThis as any).__net = _netClient;

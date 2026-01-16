@@ -21,6 +21,8 @@ import {
     DEBUG_ANIM_KEYS_PLAYER_ID,
     DEBUG_CHEST_ROUTE_TO_PILLAR,
     DEBUG_CHEST_SCAN_LOGS,
+    DEBUG_CHEST_INTERACT_LOGS,
+    DEBUG_COINS_LOGS,
     DEBUG_CONTRACT_ENT_MOVE_EVERY_MS,
     DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT,
     DEBUG_CONTRACT_HERO_INDEX,
@@ -31,11 +33,13 @@ import {
     DEBUG_CONTRACT_THROTTLE_MS,
     DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
     DEBUG_DECOR_ENGINE_LOGS,
+    DEBUG_DUNGEON_LOGS,
     DEBUG_ENEMY_NAV_COLLISION,
     DEBUG_ENEMY_NAV_LOG,
     DEBUG_ENEMY_STUCK_LOG,
     DEBUG_FILTER_LOGS,
     DEBUG_FILTER_PHRASE,
+    DEBUG_FOCUS_LOGS,
     DEBUG_FOCUS_DIRECT_LOGS,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
@@ -52,11 +56,17 @@ import {
     DEBUG_MOVE_PIPE_THROTTLE_MS,
     DEBUG_NPC_PIPELINE,
     DEBUG_PHASE_CHANGES,
+    DEBUG_RELIC_LOGS,
+    DEBUG_SETUP_HEROES_LOGS,
+    DEBUG_SHOP_LOGS,
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
     DEBUG_STATUE_STAMP,
+    DEBUG_UI_LOGS,
+    DEBUG_UIAPI_LOGS,
     DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE,
     DEBUG_WAVE_ENABLED,
+    DEBUG_WORLDGEN_LOGS,
     DEBUG_WORLD_SNAPSHOT,
 } from "./debugFlags";
 
@@ -72,6 +82,14 @@ function randint(min: number, max: number): number {
 
     return Math.floor(Math.random() * (max - min + 1)) + min;
 
+}
+
+function logShop(...args: any[]): void {
+    if (DEBUG_SHOP_LOGS) console.log(...args);
+}
+
+function logCoins(...args: any[]): void {
+    if (DEBUG_COINS_LOGS) console.log(...args);
 }
 
 
@@ -3070,7 +3088,7 @@ function _dbgContract_printWhyLegend(): void {
 
 
 
-    console.log(
+    logShop(
 
         `[CONTRACT-WHY-LEGEND v=${CONTRACT_SCHEMA_VERSION} schema=${CONTRACT_SCHEMA_NAME}] ` +
 
@@ -5735,7 +5753,7 @@ const MIN_WORLD_TILES_H = 5;
 
 
 
-const DUNGEON_DEBUG = true
+const DUNGEON_DEBUG = DEBUG_DUNGEON_LOGS
 
 const DUNGEON_SUPPRESS_FLOOR_BANNER = true
 
@@ -5763,11 +5781,39 @@ const STORY_ANNOUNCER_NAME = "Announcer"
 const STORY_ANNOUNCER_FAMILY = "wisdom"
 const STORY_BLESS_MULT = 2
 const STORY_DIALOG_MS = 2800
+const STORY_DIALOG_HINT = "Press A >"
+const STORY_DIALOG_LINE1 = "Why hello there! What a surprise to find someone besides myself climbing this tower"
+const STORY_DIALOG_LINE2 = "Let me bless you for your journey, hero"
+const STORY_BLESS_GLOW_MS = 900
+const STORY_BLESS_ANIM_MS = 900
+const STORY_BLESS_RISE_PX = 14
+const STORY_BLESS_FLASH_MS = 90
+const STORY_BLESS_EMOTE_MS = 650
+const STORY_BLESS_EMOTE_HOLD_COL = 2
+const STORY_BLESS_RAINBOW_COLORS = [2, 4, 5, 7, 9, 8, 10]
+const STORY_NPC_WANDER_SPEED_PX = 22
+const STORY_NPC_WANDER_IDLE_MIN_MS = 500
+const STORY_NPC_WANDER_IDLE_MAX_MS = 1400
+const STORY_NPC_MIN_DIST_FROM_PAD = 4
 const HERO_STORY_BLESS_FLOOR_KEY = "storyBlessFloor"
+const HERO_STORY_DIALOG_STATE_KEY = "storyDialogState"
+const HERO_STORY_BLESS_ANIM_START_KEY = "storyBlessAnimStart"
+const HERO_STORY_BLESS_ANIM_BASE_Y_KEY = "storyBlessAnimBaseY"
+const HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY = "storyBlessAnimPrevInvis"
+const HERO_STORY_BLESS_ANIM_PREV_FCO_KEY = "storyBlessPrevFco"
+const HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY = "storyBlessPrevFaceX"
+const HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY = "storyBlessPrevFaceY"
+const STORY_NPC_WANDER_NEXT_MS_KEY = "storyWanderNextMs"
+const STORY_NPC_WANDER_TARGET_R_KEY = "storyWanderTargetR"
+const STORY_NPC_WANDER_TARGET_C_KEY = "storyWanderTargetC"
+const STORY_NPC_WANDER_STATE_KEY = "storyWanderState"
+const STORY_NPC_WANDER_LAST_MS_KEY = "storyWanderLastMs"
+const STORY_NPC_TALK_UNTIL_MS_KEY = "storyTalkUntilMs"
+const STORY_NPC_EMOTE_UNTIL_MS_KEY = "storyEmoteUntilMs"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -6581,13 +6627,14 @@ function _dunDialog_tickFloorBanner(nowMs: number): void {
 
 
 
-function _dunDialog_showStoryBlessing(nowMs: number, text: string, hint: string): void {
+function _dunDialog_showStoryLine(nowMs: number, text: string, hint: string, autoHideMs?: number): void {
     const g: any = globalThis as any
     const dlg = g ? g.__heDialog : null
     if (!dlg || typeof dlg.show !== "function") return
 
     _dunStoryDialogSpeaker = STORY_ANNOUNCER_NAME
-    _dunStoryDialogHideAtMs = ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0
+    const hideMs = (autoHideMs == null) ? 0 : (autoHideMs | 0)
+    _dunStoryDialogHideAtMs = hideMs > 0 ? ((nowMs | 0) + hideMs) : 0
 
     try {
         dlg.show({
@@ -6596,6 +6643,20 @@ function _dunDialog_showStoryBlessing(nowMs: number, text: string, hint: string)
             hint: hint || "",
         })
     } catch { }
+}
+
+function _dunDialog_hideStoryLine(): void {
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (dlg && typeof dlg.hide === "function") {
+        try { dlg.hide() } catch { }
+    }
+    _dunStoryDialogHideAtMs = 0
+    _dunStoryDialogSpeaker = ""
+}
+
+function _dunDialog_showStoryBlessing(nowMs: number, text: string, hint: string): void {
+    _dunDialog_showStoryLine(nowMs, text, hint, 0)
 }
 
 function _dunDialog_tickStoryBlessing(nowMs: number): void {
@@ -7773,6 +7834,7 @@ function _dunClearTransientFloorEntities(): void {
         }
     }
     _dunStoryNpcs = []
+    _dunDialog_hideStoryLine()
 
 
 
@@ -8021,7 +8083,9 @@ function _dunClearTransientFloorEntities(): void {
 
     // Required single-line debug log (once per floor clear)
 
-    console.log(`[DUN][CLEAR] shop: trigger=${trigger01} npc=${npc01} npcsCleared=${npcsCleared} itemsCleared=${itemsCleared}`)
+    if (DEBUG_DUNGEON_LOGS) {
+        console.log(`[DUN][CLEAR] shop: trigger=${trigger01} npc=${npc01} npcsCleared=${npcsCleared} itemsCleared=${itemsCleared}`)
+    }
 
     _shopClearRelicOffers()
 
@@ -8110,7 +8174,7 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     const roll = Math.randomRange(0, 99)
 
-    if (roll < 10) return DUNGEON_KIND_STORY
+    if (roll < 90) return DUNGEON_KIND_STORY
 
     if (roll < 11) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
 
@@ -8195,6 +8259,12 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
     _dunFloorStartedMs = nowMs | 0
 
     _dunAllReadySinceMs = 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        sprites.setDataNumber(h, HERO_STORY_DIALOG_STATE_KEY, 0)
+    }
 
 
 
@@ -8434,13 +8504,31 @@ function _dunEnterFloor_setupStoryFloor(nowMs: number, padX: number, padY: numbe
     _dunObjectiveDone = false
     _dunSetPadPowered(false)
 
-    _dunSpawnStoryNpc(
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    let avoidR = _dunPadPlacedLastR | 0
+    let avoidC = _dunPadPlacedLastC | 0
+    if (avoidR < 0 || avoidR >= rows) avoidR = Math.idiv(rows, 2) | 0
+    if (avoidC < 0 || avoidC >= cols) avoidC = Math.idiv(cols, 2) | 0
+
+    const pick = _dunPickRandomWalkableTile({
+        avoidR,
+        avoidC,
+        minManhattan: STORY_NPC_MIN_DIST_FROM_PAD | 0,
+        maxTries: 200
+    })
+
+    const npc = _dunSpawnStoryNpc(
         nowMs,
         STORY_ANNOUNCER_NAME,
         STORY_ANNOUNCER_FAMILY,
-        (padX + 40) | 0,
-        (padY + 10) | 0
+        _dunColToX(pick.c | 0),
+        _dunRowToY(pick.r | 0)
     )
+    const idleMs = Math.randomRange(STORY_NPC_WANDER_IDLE_MIN_MS, STORY_NPC_WANDER_IDLE_MAX_MS) | 0
+    sprites.setDataNumber(npc, STORY_NPC_WANDER_STATE_KEY, 0)
+    sprites.setDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY, (nowMs + idleMs) | 0)
+    sprites.setDataNumber(npc, STORY_NPC_WANDER_LAST_MS_KEY, nowMs | 0)
 
 }
 
@@ -8643,8 +8731,9 @@ function _dunTickPadContractRefresh(): void {
         if (_dunStairsStatueFocusActive !== want) {
 
             _dunStairsStatueFocusActive = want
-
-            console.log(`[FOCUS][PILLAR] focus ${want ? "on" : "off"} (runeActive=${runeActive ? 1 : 0}, rune="${_dunTeleportRuneName}")`)
+            if (DEBUG_FOCUS_LOGS) {
+                console.log(`[FOCUS][PILLAR] focus ${want ? "on" : "off"} (runeActive=${runeActive ? 1 : 0}, rune="${_dunTeleportRuneName}")`)
+            }
 
         }
 
@@ -8778,13 +8867,15 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
         if (!aEdge) continue
 
-        console.log("[CHEST][INTERACT] A edge", {
-            pid: pid | 0,
-            hi: hi | 0,
-            hero: { x: hero.x | 0, y: hero.y | 0 },
-            interactables: (_dunInteractables && _dunInteractables.length) ? _dunInteractables.length : 0,
-            intentBlocked: !!DUNGEON_BLOCK_INTENTS,
-        })
+        if (DEBUG_CHEST_INTERACT_LOGS) {
+            console.log("[CHEST][INTERACT] A edge", {
+                pid: pid | 0,
+                hi: hi | 0,
+                hero: { x: hero.x | 0, y: hero.y | 0 },
+                interactables: (_dunInteractables && _dunInteractables.length) ? _dunInteractables.length : 0,
+                intentBlocked: !!DUNGEON_BLOCK_INTENTS,
+            })
+        }
 
 
 
@@ -8799,17 +8890,19 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
             const k = sprites.readDataString(it, INTERACT_DATA.KIND)
             const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
 
-            console.log("[CHEST][INTERACT] scan", {
-                pid: pid | 0,
-                hi: hi | 0,
-                kind: k || "",
-                inRange: inRange ? 1 : 0,
-                opened: sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0,
-                role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
-                x: it.x | 0,
-                y: it.y | 0,
-                intentBlocked: !!DUNGEON_BLOCK_INTENTS,
-            })
+            if (DEBUG_CHEST_INTERACT_LOGS) {
+                console.log("[CHEST][INTERACT] scan", {
+                    pid: pid | 0,
+                    hi: hi | 0,
+                    kind: k || "",
+                    inRange: inRange ? 1 : 0,
+                    opened: sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0,
+                    role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
+                    x: it.x | 0,
+                    y: it.y | 0,
+                    intentBlocked: !!DUNGEON_BLOCK_INTENTS,
+                })
+            }
 
             if (!inRange) continue
 
@@ -8817,14 +8910,16 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
                 const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
 
-                console.log("[CHEST][INTERACT] chest candidate", {
-                    pid: pid | 0,
-                    hi: hi | 0,
-                    opened: opened ? 1 : 0,
-                    role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
-                    x: it.x | 0,
-                    y: it.y | 0,
-                })
+                if (DEBUG_CHEST_INTERACT_LOGS) {
+                    console.log("[CHEST][INTERACT] chest candidate", {
+                        pid: pid | 0,
+                        hi: hi | 0,
+                        opened: opened ? 1 : 0,
+                        role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
+                        x: it.x | 0,
+                        y: it.y | 0,
+                    })
+                }
 
                 if (opened) continue
 
@@ -8838,20 +8933,22 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                     ? _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
                     : _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
 
-                if (offerResult.ok) {
-                    console.log("[RELIC][OFFER] chest handoff -> DOM", {
-                        pid: pid | 0,
-                        hi: hi | 0,
-                        role: chestRole || "",
-                        source: (_relicOfferSession && _relicOfferSession.source) ? _relicOfferSession.source : "chest",
-                    })
-                } else {
-                    console.log("[RELIC][OFFER] chest handoff skipped", {
-                        pid: pid | 0,
-                        hi: hi | 0,
-                        role: chestRole || "",
-                        reason: offerResult.reason || "unknown",
-                    })
+                if (DEBUG_RELIC_LOGS) {
+                    if (offerResult.ok) {
+                        console.log("[RELIC][OFFER] chest handoff -> DOM", {
+                            pid: pid | 0,
+                            hi: hi | 0,
+                            role: chestRole || "",
+                            source: (_relicOfferSession && _relicOfferSession.source) ? _relicOfferSession.source : "chest",
+                        })
+                    } else {
+                        console.log("[RELIC][OFFER] chest handoff skipped", {
+                            pid: pid | 0,
+                            hi: hi | 0,
+                            role: chestRole || "",
+                            reason: offerResult.reason || "unknown",
+                        })
+                    }
                 }
 
 
@@ -8960,21 +9057,46 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 if (!inRange) continue
 
                 const blessedFloor = sprites.readDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY) | 0
+                let state = sprites.readDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY) | 0
+                if ((blessedFloor | 0) !== (_dunFloorIndex | 0) && state >= 3) {
+                    state = 0
+                    sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 0)
+                }
                 if ((blessedFloor | 0) === (_dunFloorIndex | 0)) continue
 
-                const res = _storyBlessApplyRandom(hi)
-                if (!res.ok) continue
-
-                sprites.setDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY, _dunFloorIndex | 0)
-                _dunDialog_showStoryBlessing(nowMs, "Let me bless you for your journey, hero", res.hint)
-
-                if (!_dunObjectiveDone) {
-                    _dunObjectiveDone = true
-                    _dunSetPadPowered(true)
-                    _dunLog(`story blessing by P${pid}; pad powered`)
+                if (state <= 0) {
+                    _storyNpcFaceHero(npc, hero, nowMs | 0)
+                    sprites.setDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY, ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0)
+                    _dunDialog_showStoryLine(nowMs, STORY_DIALOG_LINE1, STORY_DIALOG_HINT, 0)
+                    sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 1)
+                    break
                 }
 
-                break
+                if (state === 1) {
+                    _storyNpcFaceHero(npc, hero, nowMs | 0)
+                    sprites.setDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY, ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0)
+                    _dunDialog_showStoryLine(nowMs, STORY_DIALOG_LINE2, STORY_DIALOG_HINT, 0)
+                    sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 2)
+                    break
+                }
+
+                if (state === 2) {
+                    const res = _storyBlessApplyRandom(hi)
+                    if (!res.ok) break
+
+                    sprites.setDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY, _dunFloorIndex | 0)
+                    sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 3)
+                    _dunDialog_hideStoryLine()
+                    _storyBlessStartAllHeroes(nowMs | 0)
+
+                    if (!_dunObjectiveDone) {
+                        _dunObjectiveDone = true
+                        _dunSetPadPowered(true)
+                        _dunLog(`story blessing by P${pid}; pad powered`)
+                    }
+
+                    break
+                }
             }
         }
 
@@ -8982,6 +9104,19 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
     }
 
+}
+
+
+
+function _dunStoryTick(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_STORY) return
+    for (let i = 0; i < _dunStoryNpcs.length; i++) {
+        const npc = _dunStoryNpcs[i]
+        if (!npc || (npc.flags & sprites.Flag.Destroyed)) continue
+        const role = sprites.readDataString(npc, "_npcRole") || ""
+        if (role && role !== "storyNpc") continue
+        _storyNpcTickWander(npc, nowMs | 0)
+    }
 }
 
 
@@ -9213,6 +9348,8 @@ function dungeonTick(nowMs: number): void {
     _dunDialog_tickFloorBanner(now)
 
     _dunDialog_tickStoryBlessing(now)
+
+    _dunStoryTick(now)
 
 
 
@@ -12340,6 +12477,295 @@ function _storyBlessApplyRandom(hi: number): { ok: boolean; key: string; hint: s
 
 
 
+function _storyNpcDirFromDelta(dx: number, dy: number): string {
+    if (Math.abs(dx) >= Math.abs(dy)) return (dx >= 0) ? "right" : "left"
+    return (dy >= 0) ? "down" : "up"
+}
+
+function _storyNpcSetDir(npc: Sprite, dir: string): void {
+    const d = (dir || "down").toLowerCase()
+    const prev = sprites.readDataString(npc, HERO_DATA.DIR) || sprites.readDataString(npc, "dir") || ""
+    if (prev === d) return
+    sprites.setDataString(npc, HERO_DATA.DIR, d)
+    sprites.setDataString(npc, "dir", d)
+}
+
+function _storyNpcStampPhase(npc: Sprite, phase: string, nowMs: number, durMs: number, force?: boolean): void {
+    const p = (phase || "idle").toLowerCase()
+    const cur = sprites.readDataString(npc, HERO_DATA.PhaseName) || sprites.readDataString(npc, "phase") || ""
+    if (!force && cur === p) return
+
+    _stampHumanoidPhaseForSprite(npc, p, nowMs | 0, durMs | 0)
+    sprites.setDataString(npc, HERO_DATA.PHASE, p)
+    sprites.setDataString(npc, "phase", p)
+}
+
+function _storyNpcFaceHero(npc: Sprite, hero: Sprite, nowMs: number): void {
+    const dx = ((hero.x | 0) - (npc.x | 0)) | 0
+    const dy = ((hero.y | 0) - (npc.y | 0)) | 0
+    const dir = _storyNpcDirFromDelta(dx, dy)
+    _storyNpcSetDir(npc, dir)
+    _storyNpcStampPhase(npc, "emote", nowMs | 0, SPECIAL_EMOTE_PHASE_DUR_MS | 0, true)
+    sprites.setDataNumber(npc, STORY_NPC_EMOTE_UNTIL_MS_KEY, (nowMs | 0) + (SPECIAL_EMOTE_PHASE_DUR_MS | 0))
+}
+
+function _storyNpcAnyHeroTalking(npc: Sprite): boolean {
+    if (!npc) return false
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+        const state = sprites.readDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY) | 0
+        if (state <= 0 || state >= 3) continue
+        if (_isHeroInInteractRange(hero, npc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)) return true
+    }
+    return false
+}
+
+function _storyNpcPickNeighborTile(r: number, c: number): { r: number; c: number } {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return { r: r | 0, c: c | 0 }
+
+    const dirs = [
+        { dr: -1, dc: 0 },
+        { dr: 1, dc: 0 },
+        { dr: 0, dc: -1 },
+        { dr: 0, dc: 1 },
+    ]
+
+    for (let tries = 0; tries < dirs.length; tries++) {
+        const idx = Math.randomRange(0, (dirs.length - 1) | 0) | 0
+        const d = dirs.splice(idx, 1)[0]
+        const nr = (r + (d.dr | 0)) | 0
+        const nc = (c + (d.dc | 0)) | 0
+        if (nr <= 0 || nc <= 0 || nr >= (rows - 1) || nc >= (cols - 1)) continue
+        if ((_engineWorldTileMap[nr][nc] | 0) === (TILE_WALL | 0)) continue
+        return { r: nr, c: nc }
+    }
+
+    return { r: r | 0, c: c | 0 }
+}
+
+function _storyNpcTickWander(npc: Sprite, nowMs: number): void {
+    if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+
+    const now = nowMs | 0
+    const last = sprites.readDataNumber(npc, STORY_NPC_WANDER_LAST_MS_KEY) | 0
+    const dt = (last > 0) ? Math.max(1, Math.min(80, (now - last) | 0)) : 16
+    sprites.setDataNumber(npc, STORY_NPC_WANDER_LAST_MS_KEY, now)
+
+    const talkUntil = sprites.readDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY) | 0
+    const emoteUntil = sprites.readDataNumber(npc, STORY_NPC_EMOTE_UNTIL_MS_KEY) | 0
+    const isTalking = (talkUntil > now) || _storyNpcAnyHeroTalking(npc)
+
+    if (isTalking || (emoteUntil > now)) {
+        try { (npc.vx as any) = 0 } catch { }
+        try { (npc.vy as any) = 0 } catch { }
+        if (emoteUntil > now) _storyNpcStampPhase(npc, "emote", now, SPECIAL_EMOTE_PHASE_DUR_MS | 0, false)
+        else _storyNpcStampPhase(npc, "idle", now, 999999, false)
+        return
+    }
+
+    const state = sprites.readDataNumber(npc, STORY_NPC_WANDER_STATE_KEY) | 0
+    let nextAt = sprites.readDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY) | 0
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0 || tileSize <= 0) return
+
+    if (state <= 0) {
+        if (nextAt == 0 || now >= nextAt) {
+            const curR = Math.max(0, Math.min(rows - 1, Math.idiv(npc.y, tileSize))) | 0
+            const curC = Math.max(0, Math.min(cols - 1, Math.idiv(npc.x, tileSize))) | 0
+            const pick = _storyNpcPickNeighborTile(curR, curC)
+            if (pick.r === curR && pick.c === curC) {
+                const idleMs = Math.randomRange(STORY_NPC_WANDER_IDLE_MIN_MS, STORY_NPC_WANDER_IDLE_MAX_MS) | 0
+                sprites.setDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY, (now + idleMs) | 0)
+                _storyNpcStampPhase(npc, "idle", now, 999999, false)
+                return
+            }
+
+            sprites.setDataNumber(npc, STORY_NPC_WANDER_TARGET_R_KEY, pick.r | 0)
+            sprites.setDataNumber(npc, STORY_NPC_WANDER_TARGET_C_KEY, pick.c | 0)
+            sprites.setDataNumber(npc, STORY_NPC_WANDER_STATE_KEY, 1)
+        } else {
+            _storyNpcStampPhase(npc, "idle", now, 999999, false)
+            return
+        }
+    }
+
+    const tr = sprites.readDataNumber(npc, STORY_NPC_WANDER_TARGET_R_KEY) | 0
+    const tc = sprites.readDataNumber(npc, STORY_NPC_WANDER_TARGET_C_KEY) | 0
+    if (tr <= 0 && tc <= 0) {
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_STATE_KEY, 0)
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY, (now + STORY_NPC_WANDER_IDLE_MIN_MS) | 0)
+        _storyNpcStampPhase(npc, "idle", now, 999999, false)
+        return
+    }
+
+    const tx = _dunColToX(tc)
+    const ty = _dunRowToY(tr)
+    const dx = (tx - npc.x)
+    const dy = (ty - npc.y)
+    const dist = Math.sqrt((dx * dx) + (dy * dy)) || 0
+
+    if (dist <= 1) {
+        npc.setPosition(tx, ty)
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_STATE_KEY, 0)
+        const idleMs = Math.randomRange(STORY_NPC_WANDER_IDLE_MIN_MS, STORY_NPC_WANDER_IDLE_MAX_MS) | 0
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY, (now + idleMs) | 0)
+        _storyNpcStampPhase(npc, "idle", now, 999999, true)
+        return
+    }
+
+    if (dt <= 0) return
+
+    const step = (STORY_NPC_WANDER_SPEED_PX * dt) / 1000
+    if (step >= dist) {
+        npc.setPosition(tx, ty)
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_STATE_KEY, 0)
+        const idleMs = Math.randomRange(STORY_NPC_WANDER_IDLE_MIN_MS, STORY_NPC_WANDER_IDLE_MAX_MS) | 0
+        sprites.setDataNumber(npc, STORY_NPC_WANDER_NEXT_MS_KEY, (now + idleMs) | 0)
+        _storyNpcStampPhase(npc, "idle", now, 999999, true)
+        return
+    }
+
+    const nx = (npc.x + ((dx / dist) * step))
+    const ny = (npc.y + ((dy / dist) * step))
+    npc.setPosition(nx, ny)
+
+    const dir = _storyNpcDirFromDelta(dx, dy)
+    _storyNpcSetDir(npc, dir)
+    _storyNpcStampPhase(npc, "walk", now, 999999, false)
+}
+
+function _storyBlessGlowAllHeroes(nowMs: number): void {
+    const until = (nowMs | 0) + (STORY_BLESS_GLOW_MS | 0)
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+        heroHealGlowUntil[hi] = until | 0
+    }
+}
+
+function _storyBlessStartForHero(hi: number, nowMs: number): void {
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) return
+
+    const now = nowMs | 0
+    const prevInvis = (hero.flags & sprites.Flag.Invisible) ? 1 : 0
+    const prevFco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_START_KEY, now)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY, hero.y)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY, prevInvis)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FCO_KEY, prevFco)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY, heroFacingX[hi] || 0)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY, heroFacingY[hi] || 0)
+
+    lockHeroControls(hi)
+    setHeroBusyUntil(hi, (now + (STORY_BLESS_ANIM_MS | 0)) | 0)
+    try { (hero.vx as any) = 0 } catch { }
+    try { (hero.vy as any) = 0 } catch { }
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+    // Force facing down + play emote once before hold.
+    heroFacingX[hi] = 0
+    heroFacingY[hi] = 1
+    syncHeroDirData(hi)
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+    publishHeroSpecialPhase(hi, "emote", STORY_BLESS_EMOTE_MS | 0, "STORY_BLESS", "_storyBlessStartForHero")
+}
+
+function _storyBlessStartAllHeroes(nowMs: number): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        _storyBlessStartForHero(hi, nowMs | 0)
+    }
+    _storyBlessGlowAllHeroes(nowMs | 0)
+}
+
+function _storyBlessPreTick(nowMs: number): void {
+    const now = nowMs | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const start = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_START_KEY) | 0
+        if (start <= 0) continue
+        if ((now - start) >= (STORY_BLESS_ANIM_MS | 0)) continue
+        const baseY = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY)
+        if (baseY || baseY === 0) hero.y = baseY
+    }
+}
+
+function _storyBlessPostTick(nowMs: number): void {
+    const now = nowMs | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const start = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_START_KEY) | 0
+        if (start <= 0) continue
+
+        const elapsed = (now - start) | 0
+        const baseY = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY)
+
+        if (elapsed >= (STORY_BLESS_ANIM_MS | 0)) {
+            if (baseY || baseY === 0) hero.y = baseY
+            const prevInvis = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY) | 0
+            hero.setFlag(SpriteFlag.Invisible, !!prevInvis)
+            const prevFco = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FCO_KEY) | 0
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, prevFco | 0)
+            const prevFx = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY)
+            const prevFy = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY)
+            if (prevFx || prevFx === 0) heroFacingX[hi] = prevFx | 0
+            if (prevFy || prevFy === 0) heroFacingY[hi] = prevFy | 0
+            syncHeroDirData(hi)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_START_KEY, 0)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY, 0)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY, 0)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FCO_KEY, 0)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY, 0)
+            sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY, 0)
+            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, false)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, 0)
+            continue
+        }
+
+        const t = Math.max(0, Math.min(1, elapsed / (STORY_BLESS_ANIM_MS | 0)))
+        const rise = (t < 0.5)
+            ? (STORY_BLESS_RISE_PX * (t * 2))
+            : (STORY_BLESS_RISE_PX * (2 - (t * 2)))
+        if (baseY || baseY === 0) hero.y = baseY - rise
+
+        // Keep facing down while blessing plays.
+        heroFacingX[hi] = 0
+        heroFacingY[hi] = 1
+        syncHeroDirData(hi)
+
+        // Hold the last emote frame after the initial emote window.
+        if (elapsed >= (STORY_BLESS_EMOTE_MS | 0)) {
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, STORY_BLESS_EMOTE_HOLD_COL | 0)
+        }
+
+        // Rainbow flash via aura color cycling.
+        const idx = (Math.idiv(elapsed, STORY_BLESS_FLASH_MS | 0) | 0) % STORY_BLESS_RAINBOW_COLORS.length
+        const color = STORY_BLESS_RAINBOW_COLORS[idx] | 0
+        sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, true)
+        sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+        sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, 1)
+
+        const prevInvis = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY) | 0
+        hero.setFlag(SpriteFlag.Invisible, !!prevInvis)
+    }
+}
+
+
+
 
 
 
@@ -13071,7 +13497,7 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
 
     const solids: Sprite[] = []
     const topR = (baseR + SHOP_PLATFORM_WALL_MIN) | 0
-    const bottomR = (baseR + SHOP_PLATFORM_WALL_MAX) | 0
+    const bottomR = (baseR + SHOP_PLATFORM_FLOOR_MAX) | 0
     const leftC = (baseC + SHOP_PLATFORM_WALL_MIN) | 0
     const rightC = (baseC + SHOP_PLATFORM_WALL_MAX) | 0
     const gapC = (baseC + SHOP_PLATFORM_SHOP_COL) | 0
@@ -13270,7 +13696,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
 
 
-        console.log(
+        logShop(
 
             `[SHOP][LAYOUT] worldRev=${wr} tried=${tried} padRC=${padR},${padC} ` +
 
@@ -13278,7 +13704,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
         )
         const pathLabel = (bestKind | 0) === 3 ? "platform" : ((bestKind | 0) === 0 ? "none" : "fallback")
-        console.log(`[SHOP][LAYOUT_PATH] ${pathLabel} kind=${bestKind}`)
+        logShop(`[SHOP][LAYOUT_PATH] ${pathLabel} kind=${bestKind}`)
 
     }
 
@@ -13789,7 +14215,7 @@ function _shopStatueRow_createStatue(si: number, familyNum: number): any {
 
 
 
-    console.log(
+    logShop(
 
         `[SHOP][STEP2][STATUE_CREATE] i=${si} heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
 
@@ -13904,7 +14330,7 @@ function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids
 
         sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
 
-        console.log(`[SHOP][STATUE_CONTRACT][FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
+        logShop(`[SHOP][STATUE_CONTRACT][FILL] idx=${si} slot=${rdSlot} weapon=${weaponId}`)
 
     }
 
@@ -13920,7 +14346,7 @@ function _shopStatueRow_ensureWeaponIdInContract(si: number, rdSlot: string, ids
 
         sprites.setDataString(shopkeeperNpc, SHOP_STATUE_OFFER_SLOTS_KEY, slots.join("|"))
 
-        console.log(`[SHOP][STATUE_CONTRACT][FIX_SLOT] idx=${si} ${curSlot} -> ${rdSlot} weapon=${weaponId}`)
+        logShop(`[SHOP][STATUE_CONTRACT][FIX_SLOT] idx=${si} ${curSlot} -> ${rdSlot} weapon=${weaponId}`)
 
     }
 
@@ -14007,16 +14433,11 @@ function _shopStatueRow_debugStamp(st: Sprite, nowMs: number, si: number, ctx: a
         sprites.setDataNumber(st, _kStamp, nowMs | 0)
 
         if (DEBUG_STATUE_STAMP) {
-
-        console.log(
-
-            `[SHOP][STEP3][STATUE_STAMP] i=${si} pid=${ctx.pid} kind=${ctx.gameplayKind} ` +
-
-            `equip=${ctx.eqSlot} render=${ctx.rdSlot} weapon=${weaponId} family=${ctx.familyStr} hi=${stHi}`
-
-        )
-
-    }
+            logShop(
+                `[SHOP][STEP3][STATUE_STAMP] i=${si} pid=${ctx.pid} kind=${ctx.gameplayKind} ` +
+                `equip=${ctx.eqSlot} render=${ctx.rdSlot} weapon=${weaponId} family=${ctx.familyStr} hi=${stHi}`
+            )
+        }
 
     }
 
@@ -14325,16 +14746,11 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
             }
 
             if (DEBUG_STATUE_PEDESTAL) {
-
-            console.log(
-
-                `[SHOP][PED] i=${si} stXY=${st.x|0},${st.y|0} pedRC=${pedR},${pedC} pedXY=${pedX|0},${pedY|0} d=${dx},${dy} ` +
-
-                `heroHi=${stHi} heroXY=${heroXY} heroTile=${heroTile} heroOwner=${heroOwner} nativeXY=${nativeXY} renderOffsY=${renderOffsY}`
-
-            )
-
-        }
+                logShop(
+                    `[SHOP][PED] i=${si} stXY=${st.x|0},${st.y|0} pedRC=${pedR},${pedC} pedXY=${pedX|0},${pedY|0} d=${dx},${dy} ` +
+                    `heroHi=${stHi} heroXY=${heroXY} heroTile=${heroTile} heroOwner=${heroOwner} nativeXY=${nativeXY} renderOffsY=${renderOffsY}`
+                )
+            }
 
         }
 
@@ -14852,7 +15268,7 @@ function _shopSetRingWeaponAndSlotAtIndex(sk: Sprite, idx: number, weaponId: str
 
     if (use !== before) {
 
-        console.log(`[SHOP][RING][SET_SAN] idx=${i} bad=${before} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[i]}`)
+        logShop(`[SHOP][RING][SET_SAN] idx=${i} bad=${before} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[i]}`)
 
     }
 
@@ -14978,7 +15394,7 @@ function enterShopMode(): void {
 
     // Optional: immediate debug
 
-    console.log("[SHOP] ENTER shop mode t=" + (game.runtime() | 0))
+    logShop("[SHOP] ENTER shop mode t=" + (game.runtime() | 0))
 
 }
 
@@ -15608,7 +16024,7 @@ function shopHandleControls(nowMs: number): void {
 
             if (sameWeapon && sameBonus) {
 
-                console.log(`[SHOP][SWAP_SKIP] hi=${hi} pid=${pid} ring=${si} reason=same_weapon weapon=${takeId}`)
+                logShop(`[SHOP][SWAP_SKIP] hi=${hi} pid=${pid} ring=${si} reason=same_weapon weapon=${takeId}`)
 
                 continue
 
@@ -15620,7 +16036,7 @@ function shopHandleControls(nowMs: number): void {
 
             if (!_shopIsWeaponAllowedForStatueIndex(si, takeId)) {
 
-                console.log(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=offer_illegal take=${takeId} give=${giveId}`)
+                logShop(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=offer_illegal take=${takeId} give=${giveId}`)
 
 
 
@@ -15708,7 +16124,7 @@ function shopHandleControls(nowMs: number): void {
 
 
 
-                console.log(`[SHOP][SWAP_REPAIR_OFFER] ring=${si} newOffer=${pick} slot=${renderSlot}`)
+                logShop(`[SHOP][SWAP_REPAIR_OFFER] ring=${si} newOffer=${pick} slot=${renderSlot}`)
 
                 _shopEnsureStatueRow(now)
 
@@ -15720,7 +16136,7 @@ function shopHandleControls(nowMs: number): void {
 
             if (!_shopIsWeaponAllowedForStatueIndex(si, giveId)) {
 
-                console.log(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=hero_illegal take=${takeId} give=${giveId}`)
+                logShop(`[SHOP][SWAP_DENY] hi=${hi} pid=${pid} ring=${si} reason=hero_illegal take=${takeId} give=${giveId}`)
 
                 continue
 
@@ -15732,7 +16148,7 @@ function shopHandleControls(nowMs: number): void {
 
             if (!trySpendHeroCoins(hi, price)) {
 
-                console.log(`[SHOP][BUY_DENY] hi=${hi} pid=${pid} ring=${si} price=${price} coins=${getHeroCoins(hi) | 0}`)
+                logShop(`[SHOP][BUY_DENY] hi=${hi} pid=${pid} ring=${si} price=${price} coins=${getHeroCoins(hi) | 0}`)
 
                 continue
 
@@ -15806,7 +16222,7 @@ function shopHandleControls(nowMs: number): void {
 
 
 
-            console.log(
+            logShop(
 
                 `[SHOP][SWAP] hi=${hi} pid=${pid} ring=${si} ` +
 
@@ -15852,7 +16268,7 @@ function shopHandleControls(nowMs: number): void {
 
             const shopFocusActive = sprites.readDataNumber(hero, HERO_SHOP_FOCUS_ACTIVE_KEY) | 0
 
-            console.log("[SHOP][INTERACT] A edge", {
+            logShop("[SHOP][INTERACT] A edge", {
                 pid: pid | 0,
                 hi: hi | 0,
                 hero: { x: hero.x | 0, y: hero.y | 0 },
@@ -15872,7 +16288,7 @@ function shopHandleControls(nowMs: number): void {
 
                 const result = _uiTryOpenShopUi(hi, pid, "shopkeeper:A")
 
-                console.log("[SHOP][INTERACT] shopkeeper open", {
+                logShop("[SHOP][INTERACT] shopkeeper open", {
                     pid: pid | 0,
                     hi: hi | 0,
                     ok: result.ok ? 1 : 0,
@@ -16791,7 +17207,7 @@ function _shopPublishTouchStateOnShopkeeper(nowMs: number): void {
 
         _shopPrevTouchByHero = touchByHeroStr
 
-        console.log("[SHOP][FOCUS] mask=" + mask + " byHero=" + touchByHeroStr)
+        logShop("[SHOP][FOCUS] mask=" + mask + " byHero=" + touchByHeroStr)
 
     }
 
@@ -17067,7 +17483,7 @@ function _shopPublishWeaponRingContractOnShopkeeper(sk: Sprite): void {
 
             sprites.setDataNumber(sk, _k, nowMs)
 
-            console.log(`[SHOP][STATUE_CONTRACT][SEED/SAN] ids=${ids.join("|")} slots=${slots.join("|")}`)
+            logShop(`[SHOP][STATUE_CONTRACT][SEED/SAN] ids=${ids.join("|")} slots=${slots.join("|")}`)
 
         }
 
@@ -17772,7 +18188,7 @@ function addTeamCoins(delta: number, popX: number, popY: number): void {
 
     if (d > 0) showCoinPop(popX, popY, d)
 
-    console.log("[COINS] addTeam fallback (no hero)", { delta: d, total: teamCoins, popX, popY })
+    logCoins("[COINS] addTeam fallback (no hero)", { delta: d, total: teamCoins, popX, popY })
 
 }
 
@@ -18083,7 +18499,7 @@ function _shopSanitizeHeroWeaponsAgainstAllowedSets(hi: number): void {
 
 
 
-        console.log(`[SHOP][HERO_SAN] hi=${hi} slot=${eqSlot} bad=${cur} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[si]}`)
+        logShop(`[SHOP][HERO_SAN] hi=${hi} slot=${eqSlot} bad=${cur} -> use=${use} kind=${SHOP_STATUE_ORDER_GAMEPLAY[si]}`)
 
         _shopEquipWeaponToHeroSlot(hero, eqSlot, use)
 
@@ -18831,7 +19247,7 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
 
     // If you hate spam, delete this log once confirmed
 
-    console.log("[SHOP] overlap hero=" + heroIndex + " itemId=" + (sprites.readDataNumber(npc, SHOP_DATA_ITEM_ID) | 0))
+    logShop("[SHOP] overlap hero=" + heroIndex + " itemId=" + (sprites.readDataNumber(npc, SHOP_DATA_ITEM_ID) | 0))
 
 
 
@@ -18971,7 +19387,7 @@ function _shopToggleForPlayer(playerId: number): void {
 
 
 
-    console.log("[SHOP] TOGGLE pid=" + pid + " hero=" + hi + " bought=" + bought1)
+    logShop("[SHOP] TOGGLE pid=" + pid + " hero=" + hi + " bought=" + bought1)
 
 
 
@@ -19101,7 +19517,7 @@ function _shopInit_grantCoinsOnce(): void {
 
     }
 
-    console.log("[COINS] granted shop init--this is where the free coins are coming from", { perHero: 999 })
+    logCoins("[COINS] granted shop init--this is where the free coins are coming from", { perHero: 999 })
 
 }
 
@@ -19319,7 +19735,7 @@ function _shopInit_publishRingContractAndDestroyLegacyOffers(): void {
 
     if (_shopRingOfferItems && _shopRingOfferItems.length > 0) {
 
-        console.log(`[SHOP][INIT] destroying legacy ring offer sprites count=${_shopRingOfferItems.length | 0}`)
+        logShop(`[SHOP][INIT] destroying legacy ring offer sprites count=${_shopRingOfferItems.length | 0}`)
 
     }
 
@@ -19421,7 +19837,7 @@ function _shopInit_rollStatueWeaponsOncePerFloor(floor: number): boolean {
 
 
 
-    console.log(`[SHOP][INIT][ROLL] floor=${floor | 0} ids=${ids.join("|")} slots=${slots.join("|")}`)
+    logShop(`[SHOP][INIT][ROLL] floor=${floor | 0} ids=${ids.join("|")} slots=${slots.join("|")}`)
 
     return true
 
@@ -19539,7 +19955,7 @@ function _shopInit_sanitizeHeroesOnEntry(): void {
 
             _shopEquipWeaponToHeroSlot(hero, eqSlot, fix)
 
-            console.log(`[SHOP][INIT][HERO_SANITIZE] hi=${hi} slot=${eqSlot} old=${cur || "(empty)"} new=${fix} si=${si}`)
+            logShop(`[SHOP][INIT][HERO_SANITIZE] hi=${hi} slot=${eqSlot} old=${cur || "(empty)"} new=${fix} si=${si}`)
 
         }
 
@@ -19821,13 +20237,13 @@ function _shopInputs_handleBuyIfEdge(
 
     if (boughtBy0 === pid) {
 
-        console.log("[SHOP][BUY] already-owned pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot)
+        logShop("[SHOP][BUY] already-owned pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + renderSlot)
 
     } else if (boughtBy0 !== 0) {
 
         // Owned by someone else => deny for now
 
-        console.log("[SHOP][BUY] denied-owned-by-other pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+        logShop("[SHOP][BUY] denied-owned-by-other pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
 
     } else {
 
@@ -19835,7 +20251,7 @@ function _shopInputs_handleBuyIfEdge(
 
         if (!trySpendHeroCoins(hi, price | 0)) {
 
-            console.log("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+            logShop("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
 
         } else {
 
@@ -19849,7 +20265,7 @@ function _shopInputs_handleBuyIfEdge(
 
 
 
-            console.log("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+            logShop("[SHOP][BUY] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
 
 
 
@@ -19907,7 +20323,7 @@ function _shopInputs_handleReturnIfEdge(
 
     if (boughtBy0 !== pid) {
 
-        console.log("[SHOP][RETURN] no-op pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
+        logShop("[SHOP][RETURN] no-op pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " ownedBy=" + boughtBy0)
 
     } else {
 
@@ -19927,7 +20343,7 @@ function _shopInputs_handleReturnIfEdge(
 
 
 
-        console.log("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " refund=" + price + " coins=" + (getHeroCoins(hi) | 0))
+        logShop("[SHOP][RETURN] ok pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " wid=" + weaponId + " slot=" + equipSlot + " refund=" + price + " coins=" + (getHeroCoins(hi) | 0))
 
 
 
@@ -21299,21 +21715,16 @@ function _createBasicCaveMap(): number[][] {
 
 
 
-    console.log(
-
-        ">>> [HeroEngine.worldgen] map size",
-
-        rows,
-
-        "x",
-
-        cols,
-
-        "arena=",
-
-        { topR, bottomR, leftC, rightC }
-
-    )
+    if (DEBUG_WORLDGEN_LOGS) {
+        console.log(
+            ">>> [HeroEngine.worldgen] map size",
+            rows,
+            "x",
+            cols,
+            "arena=",
+            { topR, bottomR, leftC, rightC }
+        )
+    }
 
 
 
@@ -22168,7 +22579,9 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
                         g[k] = 1;
 
-                        console.log("[FOCUS][CHEST] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
+                        if (DEBUG_FOCUS_LOGS) {
+                            console.log("[FOCUS][CHEST] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
+                        }
 
                     }
 
@@ -24989,23 +25402,21 @@ function setupHeroes() {
 
 
 
-        console.log(
-
-            "[setupHeroes] using WORLD center from tilemap",
-
-            { rows, cols, tileSize: WORLD_TILE_SIZE, W, H }
-
-        );
+        if (DEBUG_SETUP_HEROES_LOGS) {
+            console.log(
+                "[setupHeroes] using WORLD center from tilemap",
+                { rows, cols, tileSize: WORLD_TILE_SIZE, W, H }
+            );
+        }
 
     } else {
 
-        console.log(
-
-            "[setupHeroes] using SCREEN center (no world tilemap yet)",
-
-            { W, H }
-
-        );
+        if (DEBUG_SETUP_HEROES_LOGS) {
+            console.log(
+                "[setupHeroes] using SCREEN center (no world tilemap yet)",
+                { W, H }
+            );
+        }
 
     }
 
@@ -25053,7 +25464,9 @@ function setupHeroes() {
 
     if (isPhaserRuntime()) {
 
-        console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
+        if (DEBUG_SETUP_HEROES_LOGS) {
+            console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
+        }
 
         createHeroForPlayer(1, coords[0][0], coords[0][1]);
 
@@ -28187,7 +28600,7 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
                 if (!r.ok) {
 
-                    console.log("[SHOP][UI_BUY] denied", { pid: playerId, hi: heroIndex, reason: r.reason })
+                    logShop("[SHOP][UI_BUY] denied", { pid: playerId, hi: heroIndex, reason: r.reason })
 
                 }
 
@@ -28201,7 +28614,9 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
 
 
-        console.log("[UI] blocked intent (ui open)", { pid: playerId, hi: heroIndex, button })
+        if (DEBUG_UI_LOGS) {
+            console.log("[UI] blocked intent (ui open)", { pid: playerId, hi: heroIndex, button })
+        }
 
         _doHeroMoveDbgReset(playerId)
 
@@ -43709,11 +44124,11 @@ function addHeroCoins(hi: number, delta: number, popX: number, popY: number): nu
 
     if ((d | 0) !== (baseDelta | 0)) {
 
-        console.log("[COINS] add (modified)", { hi, baseDelta: baseDelta | 0, delta: d | 0, total: next })
+        logCoins("[COINS] add (modified)", { hi, baseDelta: baseDelta | 0, delta: d | 0, total: next })
 
     } else {
 
-        console.log("[COINS] add", { hi, delta: d | 0, total: next })
+        logCoins("[COINS] add", { hi, delta: d | 0, total: next })
 
     }
 
@@ -43771,7 +44186,7 @@ function trySpendHeroCoins(hi: number, cost: number): boolean {
 
     if (!ok) {
 
-        console.log("[COINS] spend denied", { hi, cost: c | 0, total: cur | 0 })
+        logCoins("[COINS] spend denied", { hi, cost: c | 0, total: cur | 0 })
 
         return false
 
@@ -43819,11 +44234,11 @@ function trySpendHeroCoins(hi: number, cost: number): boolean {
 
     if ((c | 0) !== (baseCost | 0)) {
 
-        console.log("[COINS] spend ok (modified)", { hi, baseCost: baseCost | 0, cost: c | 0, total: next | 0 })
+        logCoins("[COINS] spend ok (modified)", { hi, baseCost: baseCost | 0, cost: c | 0, total: next | 0 })
 
     } else {
 
-        console.log("[COINS] spend ok", { hi, cost: c | 0, total: next | 0 })
+        logCoins("[COINS] spend ok", { hi, cost: c | 0, total: next | 0 })
 
     }
 
@@ -48349,7 +48764,7 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
 
     } else {
 
-        console.log("[COINS] kill reward dropped (no hero)", { eIndex, srcHi: (srcHi == null ? -1 : (srcHi | 0)), lastHit: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
+        logCoins("[COINS] kill reward dropped (no hero)", { eIndex, srcHi: (srcHi == null ? -1 : (srcHi | 0)), lastHit: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
 
     }
 
@@ -50610,6 +51025,8 @@ game.onUpdate(function () {
 
     if (_engineIsPaused()) return
 
+    const now = game.runtime() | 0
+    _storyBlessPreTick(now)
 
 
     // snapshot previous positions for all heroes
@@ -50633,10 +51050,6 @@ game.onUpdate(function () {
     updateHeroFacingsFromVelocity()
 
     updatePlayerInputs()
-
-
-
-    const now = game.runtime() | 0
 
 
 
@@ -50817,6 +51230,8 @@ if (SHOP_MODE_ACTIVE) {
     decorSolids_blockingHook(now)
 
     updateGenericFocus(now)
+
+    _storyBlessPostTick(now)
 
 
 
@@ -53794,7 +54209,9 @@ function _relicOfferClear(reason: string, pidMaybe?: number): void {
         }
     }
 
-    console.log("[RELIC][OFFER] clear", { reason, pid })
+    if (DEBUG_RELIC_LOGS) {
+        console.log("[RELIC][OFFER] clear", { reason, pid })
+    }
 }
 
 function _relicOfferPickRandomOptions(pool: string[], count: number): string[] {
@@ -53849,14 +54266,16 @@ function _relicOfferStart(pid: number, hi: number, options: string[], nowMs: num
     const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
 
-    console.log("[RELIC][OFFER] start request", {
-        pid: pid | 0,
-        hi: hi | 0,
-        options: options.slice(0),
-        title: title || "",
-        theme: theme || "",
-        source: source || "",
-    })
+    if (DEBUG_RELIC_LOGS) {
+        console.log("[RELIC][OFFER] start request", {
+            pid: pid | 0,
+            hi: hi | 0,
+            options: options.slice(0),
+            title: title || "",
+            theme: theme || "",
+            source: source || "",
+        })
+    }
 
     _relicOfferSession.active = true
     _relicOfferSession.activePid = pid | 0
@@ -53872,7 +54291,9 @@ function _relicOfferStart(pid: number, hi: number, options: string[], nowMs: num
     sprites.setDataNumber(hero, HERO_UI_DATA.OPENED_AT, nowMs | 0)
     lockHeroControls(hi)
 
-    console.log("[RELIC][OFFER] open", { pid: pid | 0, options: _relicOfferSession.options.slice(0), title: _relicOfferSession.title, theme: _relicOfferSession.theme, source: _relicOfferSession.source })
+    if (DEBUG_RELIC_LOGS) {
+        console.log("[RELIC][OFFER] open", { pid: pid | 0, options: _relicOfferSession.options.slice(0), title: _relicOfferSession.title, theme: _relicOfferSession.theme, source: _relicOfferSession.source })
+    }
     return true
 }
 
@@ -53920,7 +54341,9 @@ function _relicOfferConfigFromChest(chest: Sprite): RelicChestOfferConfig | null
 function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest: Sprite, source: string): { ok: boolean, reason: string } {
     const cfg = _relicOfferConfigFromChest(chest)
     if (!cfg) {
-        console.log("[RELIC][OFFER] chest config missing", { pid: pid | 0, hi: hi | 0, source })
+        if (DEBUG_RELIC_LOGS) {
+            console.log("[RELIC][OFFER] chest config missing", { pid: pid | 0, hi: hi | 0, source })
+        }
         return { ok: false, reason: "no-config" }
     }
 
@@ -53934,7 +54357,9 @@ function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest
         const rid = String(cfg.fixedRelicId || "")
         if (rid && !_relicHasPid(pid | 0, rid)) options = [rid]
         else {
-            console.log("[RELIC][OFFER] chest fixed relic skipped", { pid: pid | 0, hi: hi | 0, rid, reason: rid ? "owned-fixed" : "bad-fixed" })
+            if (DEBUG_RELIC_LOGS) {
+                console.log("[RELIC][OFFER] chest fixed relic skipped", { pid: pid | 0, hi: hi | 0, rid, reason: rid ? "owned-fixed" : "bad-fixed" })
+            }
             return { ok: false, reason: rid ? "owned-fixed" : "bad-fixed" }
         }
     } else {
@@ -53943,13 +54368,17 @@ function _relicOfferStartFromChest(pid: number, hi: number, nowMs: number, chest
     }
 
     if (!options || options.length <= 0) {
-        console.log("[RELIC][OFFER] chest had no options", { pid: pid | 0, hi: hi | 0, source, pool: cfg.poolIds, min: cfg.minRarity, max: cfg.maxRarity })
+        if (DEBUG_RELIC_LOGS) {
+            console.log("[RELIC][OFFER] chest had no options", { pid: pid | 0, hi: hi | 0, source, pool: cfg.poolIds, min: cfg.minRarity, max: cfg.maxRarity })
+        }
         return { ok: false, reason: "no-options" }
     }
 
     const started = _relicOfferStart(pid | 0, hi | 0, options, nowMs | 0, title, flavorText, theme, source)
     if (!started) {
-        console.log("[RELIC][OFFER] start failed", { pid: pid | 0, hi: hi | 0, source, reason: "start-failed" })
+        if (DEBUG_RELIC_LOGS) {
+            console.log("[RELIC][OFFER] start failed", { pid: pid | 0, hi: hi | 0, source, reason: "start-failed" })
+        }
     }
     return { ok: !!started, reason: started ? "started" : "start-failed" }
 }
@@ -55100,7 +55529,9 @@ function _relicGrantToPid(pid: number, relicId: string, source: string): boolean
 
     }
 
-    console.log("[RELIC][GRANT]", { pid: pid | 0, relicId: rid, source: String(source || "") })
+    if (DEBUG_RELIC_LOGS) {
+        console.log("[RELIC][GRANT]", { pid: pid | 0, relicId: rid, source: String(source || "") })
+    }
 
     return true
 
@@ -56231,7 +56662,9 @@ function _uiTryOpenShopUi(hi: number, pid: number, where: string): { ok: boolean
 
     lockHeroControls(hi)
 
-    console.log("[UI] open shop", { pid, hi, where })
+    if (DEBUG_UI_LOGS) {
+        console.log("[UI] open shop", { pid, hi, where })
+    }
 
     return { ok: true, reason: "opened" }
 
@@ -56283,7 +56716,7 @@ function _uiShopTryBuyIndex(hi: number, pid: number, index: number, where: strin
 
     }
 
-    console.log("[SHOP][BUY_UI]", { pid: pid | 0, hi, relicId: item.relicId, price, where })
+    logShop("[SHOP][BUY_UI]", { pid: pid | 0, hi, relicId: item.relicId, price, where })
 
     return { ok: true, reason: "bought" }
 
@@ -56375,7 +56808,9 @@ function _uiShopTryBuySelected(hi: number, pid: number, where: string): { ok: bo
 
                         arr[snap.heroIndex] = cur
 
-                        console.log("[SAFE] hi=" + snap.heroIndex + " ok=" + cur + " reason=" + snap.safeReason + " floor=" + snap.floorKind)
+                        if (DEBUG_UI_LOGS) {
+                            console.log("[SAFE] hi=" + snap.heroIndex + " ok=" + cur + " reason=" + snap.safeReason + " floor=" + snap.floorKind)
+                        }
 
                     }
 
@@ -56737,7 +57172,9 @@ g.__heUiCommand = function (cmd: any): any {
 
 
 
-        console.log("[UIAPI] installed: __heGetUiSnapshot / __heUiCommand")
+        if (DEBUG_UIAPI_LOGS) {
+            console.log("[UIAPI] installed: __heGetUiSnapshot / __heUiCommand")
+        }
 
     } catch {
 
@@ -56791,7 +57228,9 @@ try {
 
 
 
-        console.log("[LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts")
+        if (DEBUG_UIAPI_LOGS) {
+            console.log("[LVLUP] global hooks installed: __heLvlSpendAxis / __heLvlSpendHp / __heLvlSpendMana / __heLvlPts")
+        }
 
     }
 

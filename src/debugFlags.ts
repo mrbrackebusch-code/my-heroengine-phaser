@@ -17,6 +17,7 @@ export const DEBUG_FILTER_LOGS = true;      // gate input/move filter logs
 export const DEBUG_FILTER_PHRASE = "[P1 intent]"; // must include "P1 intent" per filtering workflow
 export const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = false;
 export const DEBUG_PHASE_CHANGES = false;
+export const DEBUG_SETUP_HEROES_LOGS = false;
 
 // Anim keys logging (HeroEngineInPhaser.ts)
 export const DEBUG_ANIM_KEYS = false;
@@ -48,6 +49,7 @@ export const DEBUG_MOVE_PIPE_THROTTLE_MS = 500;
 // Worldgen / wave debug
 export const DEBUG_WAVE_ENABLED = false;
 export const DEBUG_MONSTER_ID = "imp blue";
+export const DEBUG_WORLDGEN_LOGS = false;
 export const DEBUG_WORLD_SNAPSHOT = true;
 export const DEBUG_FORCE_TEST_WORLD_KIND = false;
 export const DEBUG_FORCE_TEST_WORLD_LOG = false;
@@ -73,6 +75,16 @@ export const DEBUG_DECOR_ENGINE_LOGS = false;
 export const DEBUG_STATUE_STAMP = false;
 export const DEBUG_STATUE_PEDESTAL = false;
 
+// Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
+export const DEBUG_DUNGEON_LOGS = false;
+export const DEBUG_FOCUS_LOGS = false;
+export const DEBUG_CHEST_INTERACT_LOGS = false;
+export const DEBUG_RELIC_LOGS = false;
+export const DEBUG_UI_LOGS = false;
+export const DEBUG_UIAPI_LOGS = false;
+export const DEBUG_SHOP_LOGS = false;
+export const DEBUG_COINS_LOGS = false;
+
 // Intellect debug (HeroEngineInPhaser.ts)
 export const DEBUG_INT_DET = true;
 export const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = true;
@@ -91,6 +103,11 @@ export const DEBUG_SETFLAG = false;
 export const DEBUG_WRAP_TEX = false;
 export const DEBUG_NET = false;
 export const DEBUG_TILEMAP_COMPAT = true;
+export const DEBUG_COMPAT_BOOT = false;
+export const DEBUG_COMPAT_CONTROLLER = false;
+export const DEBUG_COMPAT_BACKGROUND = false;
+export const DEBUG_COMPAT_TILEMAP_STUB = false;
+export const DEBUG_SPRITE_SYNC = false;
 export const DEBUG_DRAW_WALL_COLLIDERS = false;
 export const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = false;
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
@@ -199,6 +216,9 @@ export const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false;
 // Main/host/editor helpers
 // ------------------------------------------------------------
 export const ENABLE_HERO_ANIM_DEBUG = false;
+export const DEBUG_MAIN_LIFECYCLE = false;
+export const DEBUG_SAVE_LOGS = false;
+export const DEBUG_RELICTIP_LOGS = false;
 export const DEBUG_COINFX = false;
 export const DEBUG_HOST_LOGIC = false;
 export const DEBUG_HOST_LOGIC_BLOCKLY = false;

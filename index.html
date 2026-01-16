@@ -2835,7 +2835,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const key = JSON.stringify({ options, canControl, theme: offer.theme || "" });
           if (key !== _relicoffer.lastKey) {
             _relicoffer.lastKey = key;
-            console.log("[RELIC][OFFER][UI] render", { options, canControl, theme: offer.theme || "", title: offer.title || "" });
+            if (window.__DEBUG_RELIC_LOGS) {
+              console.log("[RELIC][OFFER][UI] render", { options, canControl, theme: offer.theme || "", title: offer.title || "" });
+            }
             _relicoffer_buildList(options, canControl);
           }
 
@@ -2940,14 +2942,18 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _relicTip.inited = true;
 
           const box = document.getElementById("xp-relics-box");
-          console.log("[RELICTIP] init", { hasBox: !!box });
+          if (window.__DEBUG_RELICTIP_LOGS) {
+            console.log("[RELICTIP] init", { hasBox: !!box });
+          }
           if (!box) return;
 
           box.addEventListener("mousemove", (e) => {
             const target = e.target && e.target.closest ? e.target.closest(".xp-relic") : null;
             if (!target) {
               if (_relicTip.activeEl) {
-                console.log("[RELICTIP] leave");
+                if (window.__DEBUG_RELICTIP_LOGS) {
+                  console.log("[RELICTIP] leave");
+                }
               }
               _relicTip.activeEl = null;
               _relicTip_setShown(false);
@@ -2962,10 +2968,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
                 target.getAttribute("data-flavor")
               );
               _relicTip_setShown(true);
-              console.log("[RELICTIP] hover", {
-                name: target.getAttribute("data-name") || "",
-                effect: target.getAttribute("data-effect") || ""
-              });
+              if (window.__DEBUG_RELICTIP_LOGS) {
+                console.log("[RELICTIP] hover", {
+                  name: target.getAttribute("data-name") || "",
+                  effect: target.getAttribute("data-effect") || ""
+                });
+              }
             }
 
             _relicTip_position(e);
@@ -2973,7 +2981,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           box.addEventListener("mouseleave", () => {
             if (_relicTip.activeEl) {
-              console.log("[RELICTIP] leave");
+              if (window.__DEBUG_RELICTIP_LOGS) {
+                console.log("[RELICTIP] leave");
+              }
             }
             _relicTip.activeEl = null;
             _relicTip_setShown(false);
@@ -3496,7 +3506,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           boxEl.innerHTML = html;
-          console.log("[RELICTIP] render", { count: owned.length });
+          if (window.__DEBUG_RELICTIP_LOGS) {
+            console.log("[RELICTIP] render", { count: owned.length });
+          }
         }
 
 
