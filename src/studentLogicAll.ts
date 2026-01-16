@@ -1,3 +1,5 @@
+import { DEBUG_HERO_LOGIC_STUDENT } from "./debugFlags";
+
 // ----------------------------------------------------------
 // Phaser host shims for HeroEngine constants & helpers
 // This file is only used in the Phaser wrapper, so it's safe
@@ -84,7 +86,7 @@ function demo_strengthDamageEqualsMinEnemyHpInRange(
 }
 
 
-const DEBUG_HERO_LOGIC_STUDENT = false
+// Debug flag lives in src/debugFlags.ts
 
 
 let DEMO_HERO1_IDLE: Image = null

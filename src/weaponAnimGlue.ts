@@ -3,6 +3,7 @@
 // and deterministic frame resolution utilities.
 
 import type Phaser from "phaser";
+import { DEBUG_NPC_PIPELINE, WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
 
 import {
   type Dir4,
@@ -72,11 +73,10 @@ const _WEAPON_HIDDEN_ONCE = new Set<string>();
 // ------------------------------------------------------------
 // WEAPON DEBUG FLAGS (code switch — no browser console toggles)
 // ------------------------------------------------------------
-// Turn this on to print weapon placement logs.
-const WEAPON_DEBUG = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+// Debug flags live in src/debugFlags.ts
 
-// Turn this on to log placement every time it changes (otherwise “once per signature”).
-const WEAPON_DEBUG_VERBOSE = false;
+// NPC-specific logging (off by default)
+const NPC_WEAPON_LOG_ONCE_KEY = "__npcWeaponLogged";
 
 function _weaponDebugEnabled(): boolean {
   // Code flag wins (no console commands needed).
@@ -98,6 +98,17 @@ function _weaponDebugVerbose(): boolean {
   } catch {
     return false;
   }
+}
+
+function isNpcHeroSprite(sprite: Phaser.GameObjects.Sprite): boolean {
+  const anySprite: any = sprite as any;
+  const getData = (anySprite && typeof anySprite.getData === "function") ? anySprite.getData.bind(anySprite) : null;
+  if (!getData) return false;
+  const isNpc = !!getData("isNpc") || !!getData("npcLpc");
+  const role = String(getData("_npcRole") || "");
+  const heroName = String(getData("heroName") || "");
+  if (isNpc || role) return true;
+  return heroName === "Shopkeeper" || heroName === "Statue";
 }
 
 const _WPN_PLACE_ONCE = new Set<string>();
@@ -849,6 +860,28 @@ export function syncWeaponLayersToHero(args: {
   const fgDepth = heroDepth + 1;
   const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
   const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
+
+  if (DEBUG_NPC_PIPELINE && isNpcHeroSprite(args.heroSprite)) {
+    const already = heroAny.getData ? heroAny.getData(NPC_WEAPON_LOG_ONCE_KEY) : 0;
+    if (!already && (bg || fg)) {
+      try { heroAny.setData?.(NPC_WEAPON_LOG_ONCE_KEY, 1); } catch { /* ignore */ }
+      const heroName = String(heroAny.getData?.("heroName") || "");
+      const heroFamily = String(heroAny.getData?.("heroFamily") || "");
+      const npcRole = String(heroAny.getData?.("_npcRole") || "");
+      console.log("[NPC-PIPE][weapon.map]", {
+        heroName,
+        heroFamily,
+        npcRole,
+        weaponId: args.weaponId,
+        heroPhase: args.heroPhase,
+        usedPhase,
+        dir: args.dir,
+        heroFrameIndex: args.heroFrameIndex,
+        bg: bg?.key ?? null,
+        fg: fg?.key ?? null
+      });
+    }
+  }
 
   // ---------------------------------
   // DEBUG: placement log (once per key)

@@ -4,6 +4,7 @@ import Phaser from "phaser";
 console.log(">>> [main.ts] dynamic-import version loaded");
 
 import { installBlocklyHeroLogicEditor } from "./blocklyHeroLogicEditor";
+import { installBlocklyTrapEditor } from "./blocklyTrapEditor";
 
 
 import { preloadMonsterSheets, buildMonsterAtlas, type MonsterAtlas } from "./monsterAtlas";
@@ -24,6 +25,18 @@ import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
+import {
+  DEBUG_COINFX,
+  DEBUG_MONSTER_SPRITES,
+  DEBUG_PROP_SYNC,
+  DEBUG_TILEMAP_APPLY_NET,
+  DEBUG_TILEMAP_MAIN,
+  ENABLE_HERO_ANIM_DEBUG,
+  ENABLE_WEAPON_AUDIT_ON_START,
+  ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS,
+  WEAPON_DEBUG,
+  WEAPON_DEBUG_VERBOSE,
+} from "./debugFlags";
 
 
 
@@ -31,11 +44,7 @@ import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
 declare const globalThis: any;
 
 
-const ENABLE_HERO_ANIM_DEBUG = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-const DEBUG_TILEMAP = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-const DEBUG_COINFX = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+// Debug flags live in src/debugFlags.ts
 
 // ------------------------------------------------------------
 // UI loading overlay (DOM-defined in index.html)
@@ -85,10 +94,7 @@ function _uiLoadingMaybeDone(): void {
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
 // ------------------------------------------------------------
-const ENABLE_WEAPON_DEBUG = false;          // logs missing weapon resolves (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_DEBUG_VERBOSE = false; // also logs first successful resolve (once per key) Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_ON_START = false; // prints model support summary at startup Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false; // huge log; leave false Debug flag
+// Debug flags live in src/debugFlags.ts
 
 // ------------------------------------------------------------
 // Host visibility pause (prevents jumps/teleports on tab blur)
@@ -984,6 +990,9 @@ async create() {
     // 9) Keyboard -> controller wiring (all clients)
     this.wireKeyboardToController();
 
+    // 9b) Gamepad -> controller wiring (all clients)
+    this.wireGamepadToController();
+
     // 10) Monster atlas + registry exposure
     this.buildMonsterAtlasAndRegistry();
 
@@ -1207,7 +1216,7 @@ private _updateCameraFollowLocalHero(): void {
 public applyTilemapToScene(grid: number[][], tileSize: number) {
     const atlas = this.tileAtlas;
     if (!atlas) {
-        if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] applyTilemapToScene: missing tileAtlas");
+        if (DEBUG_TILEMAP_MAIN) console.warn(">>> [HeroScene.tilemap] applyTilemapToScene: missing tileAtlas");
         return;
     }
 
@@ -1232,7 +1241,7 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
         }
     }
 
-    if (DEBUG_TILEMAP) {
+    if (DEBUG_TILEMAP_MAIN) {
         console.log(">>> [HeroScene.tilemap] syncing from grid", {
             rows: rows0,
             cols: cols0,
@@ -1253,7 +1262,7 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
             g.__HeroEnginePhaserDecor.forceResync("applyTilemapToScene");
         }
     } catch (e) {
-        if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] decor forceResync failed", e);
+        if (DEBUG_TILEMAP_MAIN) console.warn(">>> [HeroScene.tilemap] decor forceResync failed", e);
     }
 
     const rows = grid.length;
@@ -1270,7 +1279,7 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     // This is what enables camera-follow / scrolling.
     this._resizeGameToDomViewport("applyTilemapToScene");
 
-    if (DEBUG_TILEMAP) {
+    if (DEBUG_TILEMAP_MAIN) {
         console.log(">>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM)", {
             worldWidth,
             worldHeight,
@@ -1300,6 +1309,7 @@ private setupGlobalsAndDebug() {
 
     // ✅ Install Blockly editor button + overlay (editor only; no execution yet)
     installBlocklyHeroLogicEditor();
+    installBlocklyTrapEditor();
 
     // Existing hero anim debug registry flag
     this.registry.set("heroAnimDebug", ENABLE_HERO_ANIM_DEBUG);
@@ -1308,8 +1318,8 @@ private setupGlobalsAndDebug() {
     // WEAPON DEBUG (flag-driven; no URL params / no console toggles)
     // These globals are consumed by weaponAnimGlue.ts
     // ------------------------------------------------------------
-    (g as any).__weaponDebug = ENABLE_WEAPON_DEBUG;
-    (g as any).__weaponDebugVerbose = ENABLE_WEAPON_DEBUG_VERBOSE;
+    (g as any).__weaponDebug = WEAPON_DEBUG;
+    (g as any).__weaponDebugVerbose = WEAPON_DEBUG_VERBOSE;
 
     // Optional: expose audit runner (you never have to call it)
     (g as any).runWeaponAudit = (opts?: any) => runWeaponAudit(opts);
@@ -1424,7 +1434,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     const cols = (msg.cols | 0) || ((grid && grid[0]) ? (grid[0].length | 0) : 0);
 
     if (rev <= 0 || tileSize <= 0 || rows <= 0 || cols <= 0) {
-        if (DEBUG_TILEMAP) {
+        if (DEBUG_TILEMAP_MAIN) {
             console.warn(">>> [HeroScene.tilemap] ignoring malformed tilemap msg", {
                 rev,
                 tileSize,
@@ -1437,7 +1447,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     }
 
     if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
-        if (DEBUG_TILEMAP) {
+        if (DEBUG_TILEMAP_MAIN) {
             console.warn(">>> [HeroScene.tilemap] ignoring tilemap msg with non-2D data", {
                 rev,
                 tileSize,
@@ -1600,7 +1610,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
         }
     }
 
-    if (DEBUG_TILEMAP) {
+    if (DEBUG_TILEMAP_MAIN) {
         console.log(">>> [HeroScene.tilemap] applied tilemap from net", {
             rev,
             rows,
@@ -1839,14 +1849,14 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
                     g.__pendingTilemapToSendTriesLeft = triesLeft - 1;
                     g.__pendingTilemapToSendNextAtMs = nowMs + 250;
 
-                    if (DEBUG_TILEMAP) {
+                    if (DEBUG_TILEMAP_MAIN) {
                         console.log(">>> [HeroScene.tilemap] resent pending tilemap", {
                             rev: pending.rev,
                             triesLeft: g.__pendingTilemapToSendTriesLeft
                         });
                     }
                 } catch (e: any) {
-                    if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] resend failed", e);
+                    if (DEBUG_TILEMAP_MAIN) console.warn(">>> [HeroScene.tilemap] resend failed", e);
                 }
 
                 if ((g.__pendingTilemapToSendTriesLeft | 0) <= 0) {
@@ -2041,7 +2051,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
             gAny.__hostFloorIndexApplied = floorIndex | 0;
     }
 
-    if (DEBUG_TILEMAP) {
+    if (DEBUG_TILEMAP_MAIN) {
         console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
             worldRev,
             floorIndex,
@@ -2106,7 +2116,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
     if (wsAny && wsAny.readyState === WebSocket.OPEN) {
         try {
             wsAny.send(JSON.stringify(msg));
-            if (DEBUG_TILEMAP) {
+            if (DEBUG_TILEMAP_MAIN) {
                 console.log(">>> [HeroScene.tilemap] host sent tilemap to server", {
                     rev: netRev,
                     rows,
@@ -2116,7 +2126,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
                 });
             }
         } catch (e: any) {
-            if (DEBUG_TILEMAP) console.warn(">>> [HeroScene.tilemap] send failed (will retry)", e);
+            if (DEBUG_TILEMAP_MAIN) console.warn(">>> [HeroScene.tilemap] send failed (will retry)", e);
         }
     }
 }
@@ -2467,6 +2477,16 @@ private wireKeyboardToController() {
     }
 }
 
+private wireGamepadToController() {
+    const controllerNS: any = (globalThis as any).controller;
+    if (controllerNS && typeof controllerNS._wireGamepad === "function") {
+        console.log(">>> [HeroScene.create] wiring gamepad to controller (network-aware)");
+        controllerNS._wireGamepad(this);
+    } else {
+        console.warn(">>> [HeroScene.create] controller._wireGamepad missing", controllerNS);
+    }
+}
+
 private buildMonsterAtlasAndRegistry() {
     try {
         this.monsterAtlas = buildMonsterAtlas(this);
@@ -2476,7 +2496,6 @@ private buildMonsterAtlasAndRegistry() {
 
         this.registry.set("monsterAtlas", this.monsterAtlas);
 
-        const DEBUG_MONSTER_SPRITES = false;
         if (DEBUG_MONSTER_SPRITES) {
         console.log(
             ">>> [HeroScene.create] monster atlas built; ids =",
@@ -2664,6 +2683,10 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
         arcade: { debug: false }
     },
 
+    input: {
+        gamepad: true,
+    },
+
     fps: {
         target: 60,
         min: 30,
@@ -2688,8 +2711,7 @@ _hud_installOnce();
 
 
 // Verbose network tilemap/decor logging; set to true when debugging sync issues.
-const DEBUG_TILEMAP_APPLY_NET = false;
-const DEBUG_PROP_SYNC = true; // extra decor/prop logs (or set globalThis.__DEBUG_PROP_SYNC = true at runtime)
+// Debug flags live in src/debugFlags.ts
 
 type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
 type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };

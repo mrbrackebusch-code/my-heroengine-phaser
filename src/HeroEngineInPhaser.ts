@@ -1,6 +1,64 @@
 ﻿
 
 import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDiagonalMovement, Heuristic as PFHeuristic } from "pathfinding";
+import {
+    DBG_INT_INTERVAL_MS,
+    DBG_INTERVAL_MS,
+    DEBUG_AGI_AIM,
+    DEBUG_AGI_AIM_HERO_INDEX,
+    DEBUG_AGI_AIM_THROTTLE_MS,
+    DEBUG_AGI_COMBO,
+    DEBUG_AGI_COMBO_BUILD,
+    DEBUG_AGI_COMBO_EXIT,
+    DEBUG_AGI_COMBO_LANDING,
+    DEBUG_AGILITY,
+    DEBUG_ANIM_KEYS,
+    DEBUG_ANIM_KEYS_HERO_INDEX,
+    DEBUG_ANIM_KEYS_INT_FINISH,
+    DEBUG_ANIM_KEYS_PHASE_EDGE,
+    DEBUG_ANIM_KEYS_PHASE_PART,
+    DEBUG_ANIM_KEYS_PHASE_STAMP,
+    DEBUG_ANIM_KEYS_PLAYER_ID,
+    DEBUG_CHEST_ROUTE_TO_PILLAR,
+    DEBUG_CHEST_SCAN_LOGS,
+    DEBUG_CONTRACT_ENT_MOVE_EVERY_MS,
+    DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT,
+    DEBUG_CONTRACT_HERO_INDEX,
+    DEBUG_CONTRACT_MAX_PRINTS_PER_SEC,
+    DEBUG_CONTRACT_PLAYER_ID,
+    DEBUG_CONTRACT_RUN_THROTTLE_MS,
+    DEBUG_CONTRACT_SNAPSHOT,
+    DEBUG_CONTRACT_THROTTLE_MS,
+    DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
+    DEBUG_DECOR_ENGINE_LOGS,
+    DEBUG_ENEMY_NAV_COLLISION,
+    DEBUG_ENEMY_NAV_LOG,
+    DEBUG_ENEMY_STUCK_LOG,
+    DEBUG_FILTER_LOGS,
+    DEBUG_FILTER_PHRASE,
+    DEBUG_FOCUS_DIRECT_LOGS,
+    DEBUG_FORCE_TEST_WORLD_KIND,
+    DEBUG_FORCE_TEST_WORLD_LOG,
+    DEBUG_HERO_LOGIC,
+    DEBUG_HERO_LOGIC_ENTER,
+    DEBUG_HERO_LOGIC_OUT,
+    DEBUG_INT_DET,
+    DEBUG_INT_DET_FORCE_VISIBLE_IMAGE,
+    DEBUG_INTEGRATOR,
+    DEBUG_MANA_FAIL_LOG_ONCE,
+    DEBUG_MONSTER_ID,
+    DEBUG_MOVE_PIPE,
+    DEBUG_MOVE_PIPE_PLAYER,
+    DEBUG_MOVE_PIPE_THROTTLE_MS,
+    DEBUG_NPC_PIPELINE,
+    DEBUG_PHASE_CHANGES,
+    DEBUG_SPECIAL_PHASE_LOG_ONCE,
+    DEBUG_STATUE_PEDESTAL,
+    DEBUG_STATUE_STAMP,
+    DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE,
+    DEBUG_WAVE_ENABLED,
+    DEBUG_WORLD_SNAPSHOT,
+} from "./debugFlags";
 
 // -----------------------------------------------------
 
@@ -63,6 +121,9 @@ namespace SpriteKind {
     export let FloorInteractable: number
 
     export let StoryNpc: number
+
+    // LPC NPC actors (hero-like render without being heroes)
+    export let NpcLpc: number
 
 
 
@@ -134,6 +195,9 @@ namespace SpriteKind {
     if (SK.ShopItem == null) SK.ShopItem = 58;
 
     if (SK.ShopUI == null) SK.ShopUI = 59;
+
+    // LPC NPC actors (hero-like render without being heroes)
+    if (SK.NpcLpc == null) SK.NpcLpc = 60;
 
 
 
@@ -1241,89 +1305,6 @@ function isMakeCodeArcadeRuntime(): boolean {
 
 
 
-const DEBUG_AGI_COMBO = false  //debug flag ????????????????????v
-
-const DEBUG_AGI_COMBO_LANDING = false  //debug flag ????????????????????v
-
-const DEBUG_AGI_COMBO_EXIT = false  //debug flag ????????????????????v
-
-const DEBUG_AGI_COMBO_BUILD = false  //debug flag ????????????????????v
-
-
-
-// --------------------------------------------------------------
-
-// Debug flags
-
-// Used by: agility / integrator debug logging & probes
-
-// --------------------------------------------------------------
-
-const DEBUG_AGILITY = false //debug flag ????????????????????v
-
-const DBG_INTERVAL_MS = 50
-
-const DEBUG_INTEGRATOR = true
-
-const DBG_INT_INTERVAL_MS = 50
-
-
-
-const DEBUG_HERO_LOGIC = true //debug flag ????????????????????v
-
-
-
-
-
-const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = true //debug flag ????????????????????v
-
-
-
-
-
-const DEBUG_ANIM_KEYS = false //debug flag ????????????????????v
-
-
-
-
-
-const DEBUG_PHASE_CHANGES = false //debug flag ????????????????????v 
-
-
-
-// Change this string to whatever you want to grep for.
-
-// Must contain "P1 intent" per your filtering workflow.
-
-const DEBUG_FILTER_PHRASE = "[P1 intent]"
-
-
-
-// --------------------------------------------------------------
-
-// Debug filter (input/move gating probes)
-
-// --------------------------------------------------------------
-
-const DEBUG_FILTER_LOGS = true  //debug flag ????????????????????
-
-
-
-
-
-// --------------------------------------------------------------
-
-// Move pipeline debug (engine-only). Off by default.
-
-// --------------------------------------------------------------
-
-const DEBUG_MOVE_PIPE = false //debug flag ????????????????????v
-
-
-
-const DEBUG_MOVE_PIPE_PLAYER = 0      // 0 = all players, else only that player index (1-based)
-
-const DEBUG_MOVE_PIPE_THROTTLE_MS = 500  // rate limit per hero for tick-style logs
 
 let _dbgMovePipeLastMsByHero: number[] = []
 
@@ -1334,14 +1315,6 @@ let _dbgMovePipeLastMsByHero: number[] = []
 // Debug-only; do not use for gameplay logic.
 
 let _dbgMoveCurrentPlayerId = 0
-
-
-
-const DEBUG_AGI_AIM = false //debug flag ????????????????????v
-
-const DEBUG_AGI_AIM_HERO_INDEX = 0          // 0 = hero 0, 1 = hero 1, etc.
-
-const DEBUG_AGI_AIM_THROTTLE_MS = 250
 
 
 
@@ -1368,10 +1341,6 @@ let _dbg_prevP1B = false
 // debug flag
 
 const TEST_WAVE_ENABLED = false     // show ALL monsters once //debug flag ????????????????????
-
-const DEBUG_WAVE_ENABLED = false     // focus on a single monster type //debug flag ????????????????????
-
-const DEBUG_MONSTER_ID = "imp blue"  // which monster for debug waves
 
 
 
@@ -1400,35 +1369,11 @@ const SHOP_AFTER_WAVE = 10   // you asked for 0 for now Debug Flag turn the shop
 let _shopEntered = false
 
 
-
-
-
-const DEBUG_WORLD_SNAPSHOT = true; //debug flag ????????????????????
-
-const DEBUG_FORCE_TEST_WORLD_KIND = false //"PF_PAD_CAGE_TOP3" as "" | "PF_MIDWALL" | "PF_SINGLE_DOOR" | "PF_PAD_CAGE_TOP3" //Testing the enemy nav debug world 
-const DEBUG_FORCE_TEST_WORLD_LOG = false
-
-
 // --------------------------------------------------------------
 
 // ANIMKEYS logging helpers (one-line, copy/paste friendly)
 
 // --------------------------------------------------------------
-
-const DEBUG_ANIM_KEYS_HERO_INDEX = -1   // -1 = all heroes, else only this heroIndex
-
-const DEBUG_ANIM_KEYS_PLAYER_ID = 0     // 0 = all, else only this OWNER/player id
-
-const DEBUG_ANIM_KEYS_PHASE_EDGE = true
-
-const DEBUG_ANIM_KEYS_PHASE_STAMP = true
-
-const DEBUG_ANIM_KEYS_PHASE_PART = false
-
-const DEBUG_ANIM_KEYS_INT_FINISH = true
-
-
-
 
 
 
@@ -2133,6 +2078,7 @@ const HERO_DATA = {
     STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
 
     OWNER: "owner",                    // which player "owns" this hero
+    IS_NPC: "isNpc",                   // hero-like sprite that should be excluded from hero loops
 
 
 
@@ -2708,6 +2654,9 @@ let enemies: Sprite[] = []
 
 let heroProjectiles: Sprite[] = []
 
+// LPC NPC actors (hero-like rendering; not part of heroes[])
+let npcActors: Sprite[] = []
+
 
 
 // NEW (Agility): stored-hit counter text + future packet bank UI
@@ -2740,6 +2689,7 @@ let heroHPBars: StatusBarSprite[] = []
 
 let heroManaBars: StatusBarSprite[] = []
 let heroManaFlashUntil: number[] = []
+let heroHealGlowUntil: number[] = []
 
 
 
@@ -2761,6 +2711,14 @@ let heroAgiAimIndicators: Sprite[] = []
 
 
 
+// Profile-centric identity (primary). Maps profile -> hero index and back.
+const profileToHeroIndex: Record<string, number> = Object.create(null)
+const heroIndexToProfile: Record<number, string> = Object.create(null)
+
+// Legacy pid->profile bridge (secondary; used by network/UI surfaces)
+const playerIdToProfile: Record<number, string> = Object.create(null)
+
+// Deprecated pid mapping (kept for transitional compatibility)
 let playerToHeroIndex: number[] = [-1, -1, -1, -1, -1]
 
 
@@ -2819,23 +2777,6 @@ let heroAuras: Sprite[] = []
 
 
 
-const DEBUG_CONTRACT_SNAPSHOT = true //Debug flag ??????????????????????????????????????????????????????????????????????????????????????????????????????????????
-
-//The master debug turn on and turn off
-
-
-
-// Filters (0 = all players; -1 = all heroes; set to reduce noise)
-
-let DEBUG_CONTRACT_PLAYER_ID = 0          // match HERO_DATA.OWNER
-
-let DEBUG_CONTRACT_HERO_INDEX = -1        // match heroIndex
-
-let DEBUG_CONTRACT_THROTTLE_MS = 0        // 0 = no extra throttle beyond change-gate
-
-// Debug: log special feedback phases (sit/emote) at most once per hero/why.
-const DEBUG_SPECIAL_PHASE_LOG_ONCE = true
-const DEBUG_MANA_FAIL_LOG_ONCE = true
 
 
 
@@ -2863,7 +2804,6 @@ const _dbgContract_pendingCoreLineByHero: string[] = []
 
 // These should NOT be part of the "core identity" signature.
 
-const DEBUG_CONTRACT_VOLATILE_PART_WINDOWS: string[] = ["drive", "beat"]
 
 
 
@@ -2891,7 +2831,6 @@ const CONTRACT_SCHEMA_NAME = "HeroRuntimeContract"
 
 // - If exceeded, we suppress additional lines and print a summary.
 
-let DEBUG_CONTRACT_MAX_PRINTS_PER_SEC = 60
 
 
 
@@ -2921,7 +2860,6 @@ let _dbgContract_suppressedInWindow = 0
 
 
 
-let DEBUG_CONTRACT_RUN_THROTTLE_MS = 1000 // RUN lines only (when no core change), per hero
 
 
 
@@ -2995,13 +2933,6 @@ const TOUCH_ACTION_BEGIN_HYGIENE = "PhaseFlags," + TOUCH_EVENT_CLEAR + "," + TOU
 
 // How often we allow a "movement-only" EDGE line (ms)
 
-const DEBUG_CONTRACT_ENT_MOVE_EVERY_MS = 100
-
-
-
-// Quantize XY so tiny jitter doesn't spam (pixels). 2 = (x>>1).
-
-const DEBUG_CONTRACT_ENT_MOVE_QUANTUM_PX_SHIFT = 1
 
 
 
@@ -5828,6 +5759,14 @@ const DUNGEON_KIND_STORY = "story"
 
 
 
+const STORY_ANNOUNCER_NAME = "Announcer"
+const STORY_ANNOUNCER_FAMILY = "wisdom"
+const STORY_BLESS_MULT = 2
+const STORY_DIALOG_MS = 2800
+const HERO_STORY_BLESS_FLOOR_KEY = "storyBlessFloor"
+
+
+
 const DUNGEON_SHOP_EVERY_N_FLOORS = 1 //Shop knob
 
 const DUNGEON_PAD_HOLD_MS = 650
@@ -6208,6 +6147,11 @@ const DUNGEON_FLOOR_BANNER_MS = 2200
 let _dunFloorBannerHideAtMs = 0
 
 let _dunFloorBannerLabel = ""
+
+
+
+let _dunStoryDialogHideAtMs = 0
+let _dunStoryDialogSpeaker = ""
 
 
 
@@ -6637,6 +6581,51 @@ function _dunDialog_tickFloorBanner(nowMs: number): void {
 
 
 
+function _dunDialog_showStoryBlessing(nowMs: number, text: string, hint: string): void {
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (!dlg || typeof dlg.show !== "function") return
+
+    _dunStoryDialogSpeaker = STORY_ANNOUNCER_NAME
+    _dunStoryDialogHideAtMs = ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0
+
+    try {
+        dlg.show({
+            speaker: STORY_ANNOUNCER_NAME,
+            text: text || "",
+            hint: hint || "",
+        })
+    } catch { }
+}
+
+function _dunDialog_tickStoryBlessing(nowMs: number): void {
+    const hideAt = _dunStoryDialogHideAtMs | 0
+    if (!hideAt) return
+    if (((nowMs | 0) < hideAt)) return
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+
+    let okToHide = true
+    try {
+        const doc: any = g ? g.document : null
+        if (doc && typeof doc.getElementById === "function" && _dunStoryDialogSpeaker) {
+            const el = doc.getElementById("dialog-speaker")
+            const cur = (el && typeof el.textContent === "string") ? el.textContent : ""
+            if (cur !== _dunStoryDialogSpeaker) okToHide = false
+        }
+    } catch { }
+
+    if (okToHide && dlg && typeof dlg.hide === "function") {
+        try { dlg.hide() } catch { }
+    }
+
+    _dunStoryDialogHideAtMs = 0
+    _dunStoryDialogSpeaker = ""
+}
+
+
+
 
 
 
@@ -6719,11 +6708,6 @@ let _dunChestSolid: Sprite = null as any
 
 let _dunChestFocusActive = 0
 
-const DEBUG_CHEST_ROUTE_TO_PILLAR = false
-
-const DEBUG_FOCUS_DIRECT_LOGS = false
-
-const DEBUG_CHEST_SCAN_LOGS = false
 
 
 
@@ -7623,44 +7607,137 @@ function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
 
 function _dunSpawnStoryNpc(nowMs: number, profileName: string, heroFamily: string, x: number, y: number): Sprite {
 
-    // Option B: hero-like NPC sprite (NOT in heroes[], not Player kind)
+    // Story NPCs now go through the LPC NPC pipeline so anim + weapons work consistently.
 
-    const npc = sprites.create(image.create(64, 64), (SpriteKind as any).StoryNpc)
-
-    npc.setFlag(SpriteFlag.Ghost, false)
-
-    npc.setPosition(x, y)
-
-    npc.z = 8
-
-
-
-    sprites.setDataString(npc, "heroName", profileName)
-
-    sprites.setDataString(npc, "heroFamily", heroFamily)
+    const npc = _spawnNpcLpcActor(profileName, 0, x, y, {
+        family: heroFamily,
+        dir: "down",
+        phase: "idle",
+        frameColOverride: -1,
+        npcRole: "storyNpc",
+        ghost: false,
+        z: 8
+    })
 
 
 
-    sprites.setDataString(npc, "phase", "idle")
-
-    sprites.setDataString(npc, "dir", "down")
-
-
-
-    // Canonical phase keys (so anim glue stays happy)
-
-    sprites.setDataString(npc, HERO_DATA.PhaseName, "idle")
-
-    sprites.setDataNumber(npc, HERO_DATA.PhaseStartMs, nowMs | 0)
-
-    sprites.setDataNumber(npc, HERO_DATA.PhaseDurationMs, 0)
-
-
+    // Preserve the story NPC registry for future cleanup hooks.
 
     _dunStoryNpcs.push(npc)
 
     return npc
 
+}
+
+// ---------------------------------------------------------------------------
+// NPC LPC ACTORS (shopkeeper/statues/enemies that share hero spritesheets)
+// ---------------------------------------------------------------------------
+type NpcLpcOptions = {
+    family?: number | string
+    dir?: string
+    phase?: string
+    frameColOverride?: number
+    ghost?: boolean
+    z?: number
+    ownerPid?: number
+    npcRole?: string
+    weapons?: {
+        slash?: string
+        thrust?: string
+        cast?: string
+        exec?: string
+        combo?: string
+        int?: string
+        sup?: string
+    }
+}
+
+const NPC_LPC_FLAG_KEY = "npcLpc"
+const NPC_LPC_HERO_INDEX_BASE = 1000
+
+function _markNpcLpcSprite(s: Sprite, role: string): void {
+    if (!s) return
+    sprites.setDataBoolean(s, HERO_DATA.IS_NPC, true)
+    sprites.setDataBoolean(s, NPC_LPC_FLAG_KEY, true)
+    if (role) sprites.setDataString(s, "_npcRole", role)
+}
+
+function _spawnNpcLpcActor(profileName: string, familyNum: number, x: number, y: number, opts?: NpcLpcOptions): Sprite {
+    const famStr = (typeof opts?.family === "string")
+        ? String(opts.family || "")
+        : heroFamilyNumberToString((familyNum | 0))
+
+    const dir = ((opts?.dir || "down") as string).toLowerCase()
+    const phase = ((opts?.phase || "idle") as string).toLowerCase()
+    const frameCol = (opts?.frameColOverride == null) ? -1 : (opts.frameColOverride | 0)
+    const nowMs = Math.max(1, game.runtime() | 0)
+
+    const npc = sprites.create(image.create(64, 64), (SpriteKind as any).NpcLpc)
+    npc.setPosition(x | 0, y | 0)
+    npc.z = (opts?.z == null) ? 20 : (opts.z | 0)
+    npc.setFlag(SpriteFlag.Ghost, !!opts?.ghost)
+
+    // Identity + family for hero/weapon render glue
+    sprites.setDataBoolean(npc, NPC_LPC_FLAG_KEY, true)
+    sprites.setDataBoolean(npc, HERO_DATA.IS_NPC, true)
+    sprites.setDataString(npc, HERO_DATA.NAME, profileName || "")
+    sprites.setDataString(npc, "heroName", profileName || "")
+    sprites.setDataString(npc, HERO_DATA.FAMILY, famStr)
+    sprites.setDataString(npc, "heroFamily", famStr)
+    sprites.setDataNumber(npc, "heroIndex", NPC_LPC_HERO_INDEX_BASE + (npcActors.length | 0))
+    sprites.setDataString(npc, HERO_DATA.DIR, dir)
+    sprites.setDataString(npc, "dir", dir)
+    sprites.setDataString(npc, HERO_DATA.PHASE, phase)
+    sprites.setDataString(npc, HERO_DATA.PhaseName, phase)
+    sprites.setDataString(npc, "phase", phase)
+    sprites.setDataNumber(npc, HERO_DATA.FRAME_COL_OVERRIDE, frameCol)
+
+    // Minimal action timeline defaults so Phaser glue has sane numbers
+    sprites.setDataNumber(npc, HERO_DATA.ActionSequence, 1)
+    sprites.setDataString(npc, HERO_DATA.ActionKind, opts?.npcRole || "npc")
+    sprites.setDataNumber(npc, HERO_DATA.ActionVariant, 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionSeed, nowMs | 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionP0, 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionP1, 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionP2, 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionP3, 0)
+    sprites.setDataNumber(npc, HERO_DATA.ActionTargetId, 0)
+    sprites.setDataNumber(npc, HERO_DATA.PhaseStartMs, nowMs | 0)
+    sprites.setDataNumber(npc, HERO_DATA.PhaseDurationMs, 0)
+    sprites.setDataNumber(npc, HERO_DATA.PhaseProgressInt, 0)
+
+    // Optional owner is informational only; do NOT add to playerToHeroIndex.
+    if (opts?.ownerPid != null) {
+        sprites.setDataNumber(npc, HERO_DATA.OWNER, opts.ownerPid | 0)
+    }
+
+    // Weapon overlay slots (so weaponAnimGlue can render)
+    const w = opts?.weapons || {}
+    if (w.slash != null) sprites.setDataString(npc, HERO_DATA.WEAPON_SLASH_ID, w.slash || "")
+    if (w.thrust != null) sprites.setDataString(npc, HERO_DATA.WEAPON_THRUST_ID, w.thrust || "")
+    if (w.cast != null) sprites.setDataString(npc, HERO_DATA.WEAPON_CAST_ID, w.cast || "")
+    if (w.exec != null) sprites.setDataString(npc, HERO_DATA.WEAPON_EXEC_ID, w.exec || "")
+    if (w.combo != null) sprites.setDataString(npc, HERO_DATA.WEAPON_COMBO_ID, w.combo || "")
+    if (w.int != null) sprites.setDataString(npc, HERO_DATA_WEAPON_INTELLIGENCE_ID, w.int || "")
+    if (w.sup != null) sprites.setDataString(npc, HERO_DATA_WEAPON_SUPPORT_ID, w.sup || "")
+
+    if (opts?.npcRole) sprites.setDataString(npc, "_npcRole", opts.npcRole)
+
+    if (DEBUG_NPC_PIPELINE) {
+        console.log("[NPC-PIPE][engine.spawn]", {
+            heroName: profileName || "",
+            heroFamily: famStr,
+            phase,
+            dir,
+            frameColOverride: frameCol,
+            npcRole: opts?.npcRole || "",
+            x: npc.x | 0,
+            y: npc.y | 0
+        })
+    }
+
+    npcActors.push(npc)
+    return npc
 }
 
 
@@ -7688,6 +7765,14 @@ function _dunClearTransientFloorEntities(): void {
     _dunClearList(_dunInteractables)
 
     _dunInteractables = []
+
+    if (_dunStoryNpcs && _dunStoryNpcs.length) {
+        for (let i = 0; i < _dunStoryNpcs.length; i++) {
+            const s = _dunStoryNpcs[i]
+            if (s && !(s.flags & sprites.Flag.Destroyed)) _dunDestroySprite(s)
+        }
+    }
+    _dunStoryNpcs = []
 
 
 
@@ -8346,9 +8431,16 @@ function _dunEnterFloor_setupStoryFloor(nowMs: number, padX: number, padY: numbe
 
     DUNGEON_BLOCK_INTENTS = true
 
-    _dunSpawnStoryNpc(nowMs, "Shopkeeper", "humans", (padX + 40) | 0, (padY + 10) | 0)
+    _dunObjectiveDone = false
+    _dunSetPadPowered(false)
 
-    _dunEnterFloor_spawnRandomChest(nowMs)
+    _dunSpawnStoryNpc(
+        nowMs,
+        STORY_ANNOUNCER_NAME,
+        STORY_ANNOUNCER_FAMILY,
+        (padX + 40) | 0,
+        (padY + 10) | 0
+    )
 
 }
 
@@ -8608,7 +8700,7 @@ function _dunTickPadContractRefresh(): void {
 
 function _dunTickObjectiveEvaluation(nowMs: number): void {
 
-    if (_dunObjectiveDone) return
+    if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY) return
 
     if (DEBUG_FOCUS_DIRECT_LOGS) {
         console.log("[CHEST][INTERACT] tick start", {
@@ -8856,7 +8948,37 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
 
-        if (_dunObjectiveDone) return
+        if (_dunFloorKind === DUNGEON_KIND_STORY) {
+            for (let i = 0; i < _dunStoryNpcs.length; i++) {
+                const npc = _dunStoryNpcs[i]
+                if (!npc || (npc.flags & sprites.Flag.Destroyed)) continue
+
+                const role = sprites.readDataString(npc, "_npcRole") || ""
+                if (role && role !== "storyNpc") continue
+
+                const inRange = _isHeroInInteractRange(hero, npc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
+                if (!inRange) continue
+
+                const blessedFloor = sprites.readDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY) | 0
+                if ((blessedFloor | 0) === (_dunFloorIndex | 0)) continue
+
+                const res = _storyBlessApplyRandom(hi)
+                if (!res.ok) continue
+
+                sprites.setDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY, _dunFloorIndex | 0)
+                _dunDialog_showStoryBlessing(nowMs, "Let me bless you for your journey, hero", res.hint)
+
+                if (!_dunObjectiveDone) {
+                    _dunObjectiveDone = true
+                    _dunSetPadPowered(true)
+                    _dunLog(`story blessing by P${pid}; pad powered`)
+                }
+
+                break
+            }
+        }
+
+        if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY) return
 
     }
 
@@ -9089,6 +9211,8 @@ function dungeonTick(nowMs: number): void {
     // Floor banner timer
 
     _dunDialog_tickFloorBanner(now)
+
+    _dunDialog_tickStoryBlessing(now)
 
 
 
@@ -12087,6 +12211,135 @@ function trySpendLevelUpPointOnMaxMana(hi: number): boolean {
 
 
 
+const STORY_BLESS_KEYS: string[] = ["dmg", "reach", "time", "status", "hp", "mp"]
+
+function _storyBlessApplyAxisGlobal(hi: number, traitIndex: number, rankDelta: number): boolean {
+    const hero = heroes[hi]
+    if (!hero) return false
+    ensureHeroXpInitialized(hi)
+
+    const fams: number[] = [
+        (FAMILY.STRENGTH | 0),
+        (FAMILY.AGILITY | 0),
+        (FAMILY.INTELLECT | 0),
+        (FAMILY.HEAL | 0),
+    ]
+    if (typeof (FAMILY as any).SUPPORT === "number") {
+        const sup = ((FAMILY as any).SUPPORT | 0)
+        if (fams.indexOf(sup) < 0) fams.push(sup)
+    }
+
+    let changed = 0
+    for (let i = 0; i < fams.length; i++) {
+        const f = fams[i] | 0
+        const r = getHeroLevelUpAxisRank(hi, f, traitIndex) | 0
+        if (r >= (LVLUP_AXIS_RANK_MAX | 0)) continue
+        const next = clampInt((r + (rankDelta | 0)) | 0, 0, LVLUP_AXIS_RANK_MAX | 0) | 0
+        if (next !== r) {
+            setHeroLevelUpAxisRank(hi, f, traitIndex, next)
+            changed++
+        }
+    }
+
+    return changed > 0
+}
+
+function _storyBlessApplyHp(hi: number, mult: number): number {
+    const hero = heroes[hi]
+    if (!hero) return 0
+    ensureHeroXpInitialized(hi)
+
+    let picks = sprites.readDataNumber(hero, HERO_LVLUP_HP_PICKS_KEY) | 0
+    picks = (picks + (mult | 0)) | 0
+    sprites.setDataNumber(hero, HERO_LVLUP_HP_PICKS_KEY, picks)
+
+    const add = (LVLUP_HP_PER_PICK * (mult | 0)) | 0
+
+    let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+    if (maxHp <= 0) maxHp = 1
+    maxHp = (maxHp + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHp)
+
+    let hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+    hp = (hp + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.HP, hp)
+
+    updateHeroHPBar(hi)
+    return add | 0
+}
+
+function _storyBlessApplyMana(hi: number, mult: number): number {
+    const hero = heroes[hi]
+    if (!hero) return 0
+    ensureHeroXpInitialized(hi)
+
+    let picks = sprites.readDataNumber(hero, HERO_LVLUP_MANA_PICKS_KEY) | 0
+    picks = (picks + (mult | 0)) | 0
+    sprites.setDataNumber(hero, HERO_LVLUP_MANA_PICKS_KEY, picks)
+
+    const add = (LVLUP_MANA_PER_PICK * (mult | 0)) | 0
+
+    let maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+    if (maxMana <= 0) maxMana = 1
+    maxMana = (maxMana + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxMana)
+
+    let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
+    mana = (mana + add) | 0
+    sprites.setDataNumber(hero, HERO_DATA.MANA, mana)
+
+    updateHeroManaBar(hi)
+    return add | 0
+}
+
+function _storyBlessApplyKey(hi: number, key: string): { ok: boolean; hint: string } {
+    const k = (key || "").trim().toLowerCase()
+    const mult = STORY_BLESS_MULT | 0
+
+    if (k === "dmg") {
+        const ok = _storyBlessApplyAxisGlobal(hi, OUT.TRAIT1, mult)
+        return { ok, hint: "Blessing: DMG +" + ((LVLUP_UI_BONUS_BY_KEY.dmg | 0) * mult) }
+    }
+    if (k === "reach") {
+        const ok = _storyBlessApplyAxisGlobal(hi, OUT.TRAIT2, mult)
+        return { ok, hint: "Blessing: REACH +" + ((LVLUP_UI_BONUS_BY_KEY.reach | 0) * mult) }
+    }
+    if (k === "time") {
+        const ok = _storyBlessApplyAxisGlobal(hi, OUT.TRAIT3, mult)
+        return { ok, hint: "Blessing: TIME +" + ((LVLUP_UI_BONUS_BY_KEY.time | 0) * mult) }
+    }
+    if (k === "status") {
+        const ok = _storyBlessApplyAxisGlobal(hi, OUT.TRAIT4, mult)
+        return { ok, hint: "Blessing: STATUS +" + ((LVLUP_UI_BONUS_BY_KEY.status | 0) * mult) }
+    }
+    if (k === "hp") {
+        const add = _storyBlessApplyHp(hi, mult)
+        return { ok: add > 0, hint: "Blessing: HP +" + (add | 0) }
+    }
+    if (k === "mp" || k === "mana") {
+        const add = _storyBlessApplyMana(hi, mult)
+        return { ok: add > 0, hint: "Blessing: MP +" + (add | 0) }
+    }
+
+    return { ok: false, hint: "" }
+}
+
+function _storyBlessApplyRandom(hi: number): { ok: boolean; key: string; hint: string } {
+    const keys = STORY_BLESS_KEYS.slice()
+    while (keys.length > 0) {
+        const idx = Math.randomRange(0, (keys.length - 1) | 0) | 0
+        const key = keys[idx] || ""
+        keys.splice(idx, 1)
+
+        const res = _storyBlessApplyKey(hi, key)
+        if (res.ok) return { ok: true, key, hint: res.hint }
+    }
+
+    return { ok: false, key: "", hint: "" }
+}
+
+
+
 
 
 
@@ -12328,13 +12581,40 @@ let _shopLayout_baseC = -1
 let _shopLayout_worldRev = -1
 
 // Shop platform placement (visual + collision)
-const SHOP_PLATFORM_SIZE_TILES = 7
-const SHOP_PLATFORM_INNER_MIN = 1
-const SHOP_PLATFORM_INNER_MAX = 5
-const SHOP_PLATFORM_SHOP_COL = 3 // tiles, relative to platform origin (col 0 = outermost left)
-const SHOP_PLATFORM_SHOP_ROW = 2.5 // between tiles [3][2] and [3][3]
+const SHOP_PLATFORM_SIZE_TILES = 9
+const SHOP_PLATFORM_WALL_MIN = 0
+const SHOP_PLATFORM_WALL_MAX = SHOP_PLATFORM_SIZE_TILES - 1
+const SHOP_PLATFORM_FLOOR_MIN = 1
+const SHOP_PLATFORM_FLOOR_MAX = SHOP_PLATFORM_SIZE_TILES - 2
+const SHOP_PLATFORM_SHOP_COL = 4 // tiles, relative to platform origin (col 0 = outermost left)
+const SHOP_PLATFORM_SHOP_ROW = 3.5 // between tiles [4][3] and [4][4]
 const SHOP_PLATFORM_SHOP_OFFSET_X_PX = -16
-const SHOP_PLATFORM_SHOP_OFFSET_Y_PX = -32
+const SHOP_PLATFORM_SHOP_OFFSET_Y_PX = -64
+
+function _isShopActor(hero: Sprite): boolean {
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) {
+        const role = sprites.readDataString(hero, "_npcRole") || ""
+        if (role === "shopkeeper" || role === "shopStatue") return true
+        const name = sprites.readDataString(hero, "heroName") || sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        if (name === SHOPKEEPER_HERO_NAME || name === SHOP_STATUE_PROFILE_NAME) return true
+    }
+
+    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+
+    if (owner === (SHOPKEEPER_PLAYER_ID | 0)) return true
+
+    for (let i = 0; i < SHOP_STATUE_PLAYER_IDS.length; i++) {
+
+        if ((SHOP_STATUE_PLAYER_IDS[i] | 0) === owner) return true
+
+    }
+
+    return false
+
+}
 
 let _shopPlatformAnchor: Sprite = null
 let _shopPlatformStairs: Sprite = null
@@ -12777,7 +13057,7 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
     _shopPlatformDestroy()
 
     const tileSize = WORLD_TILE_SIZE | 0
-    const anchorR = (baseR + (SHOP_PLATFORM_SIZE_TILES - 1)) | 0 // bottom-left tile of the 7x7 sheet
+    const anchorR = (baseR + (SHOP_PLATFORM_SIZE_TILES - 1)) | 0 // bottom-left tile of the 9x9 sheet
     const anchorC = baseC | 0
 
     _shopPlatformAnchor = _dunDecor_spawnAtTile({
@@ -12790,10 +13070,10 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
     })
 
     const solids: Sprite[] = []
-    const topR = (baseR + SHOP_PLATFORM_INNER_MIN) | 0
-    const bottomR = (baseR + SHOP_PLATFORM_INNER_MAX) | 0
-    const leftC = (baseC + SHOP_PLATFORM_INNER_MIN) | 0
-    const rightC = (baseC + SHOP_PLATFORM_INNER_MAX) | 0
+    const topR = (baseR + SHOP_PLATFORM_WALL_MIN) | 0
+    const bottomR = (baseR + SHOP_PLATFORM_WALL_MAX) | 0
+    const leftC = (baseC + SHOP_PLATFORM_WALL_MIN) | 0
+    const rightC = (baseC + SHOP_PLATFORM_WALL_MAX) | 0
     const gapC = (baseC + SHOP_PLATFORM_SHOP_COL) | 0
 
     function addSolid(r: number, c: number): void {
@@ -12825,7 +13105,7 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
 
     // Stairs visual overlay (3 tiles wide, centered)
     const stairAnchorR = bottomR | 0
-    const stairAnchorC = (baseC + 2) | 0 // covers cols 2,3,4 of the platform
+    const stairAnchorC = (baseC + (SHOP_PLATFORM_SHOP_COL - 1)) | 0 // covers cols 3,4,5 of the platform
     _shopPlatformStairs = _dunDecor_spawnAtTile({
         name: "shop_stairs",
         role: DECOR_ROLE.TRIGGER,
@@ -12970,7 +13250,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
         if (rows > 0 && cols > 0) {
 
-            // Preferred: dedicated platform (7x7 tiles)
+            // Preferred: dedicated platform (9x9 tiles)
             consider(3, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SHOP_ROW, SHOP_PLATFORM_SHOP_COL, 1)
 
             // Legacy fallbacks
@@ -12997,6 +13277,8 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
             `pickKind=${bestKind} baseRC=${bestBaseR},${bestBaseC} score=${bestScore}`
 
         )
+        const pathLabel = (bestKind | 0) === 3 ? "platform" : ((bestKind | 0) === 0 ? "none" : "fallback")
+        console.log(`[SHOP][LAYOUT_PATH] ${pathLabel} kind=${bestKind}`)
 
     }
 
@@ -13222,9 +13504,9 @@ function _shopLayoutPlaceShopkeeperAndTriggerIfPresent(): void {
 
 
 
-    const shopX = _shopSlotCenterX(shopBaseC)
+    const shopX = _shopSlotCenterX(shopBaseC) + (kind === 3 ? SHOP_PLATFORM_SHOP_OFFSET_X_PX : 0)
 
-    const shopY = _shopSlotCenterY(shopBaseR)
+    const shopY = _shopSlotCenterY(shopBaseR) + (kind === 3 ? SHOP_PLATFORM_SHOP_OFFSET_Y_PX : 0)
 
 
 
@@ -13254,64 +13536,25 @@ function _shopStatueGetOrCreate(si: number, pid: number, familyNum: number, spaw
 
     if (!st) {
 
-        // Find existing hero by OWNER pid
+        st = _spawnNpcLpcActor(
 
-        for (let i = 0; i < heroes.length; i++) {
+            SHOP_STATUE_PROFILE_NAME,
 
-            const h = heroes[i]
+            familyNum | 0,
 
-            if (!h) continue
+            spawnX | 0,
 
-            if (h.flags & sprites.Flag.Destroyed) continue
+            spawnY | 0,
 
-            const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+            { dir: "down", phase: "idle", frameColOverride: 0, npcRole: "shopStatue", weapons: { slash: "", thrust: "", cast: "" } }
 
-            if (owner === (pid | 0)) { st = h; stHi = i; break }
-
-        }
-
-
-
-        if (!st) {
-
-            createHeroForPlayer(
-
-                pid | 0,
-
-                spawnX | 0,
-
-                spawnY | 0,
-
-                SHOP_STATUE_PROFILE_NAME,
-
-                familyNum | 0,
-
-                true,   // isNpc
-
-                false   // forcePlayerToHeroIndexMapping
-
-            )
-
-            stHi = heroes.length - 1
-
-            st = heroes[stHi]
-
-
-
-            console.log(
-
-                `[SHOP][STEP2][STATUE_CREATE] i=${si} pid=${pid} hi=${stHi} ` +
-
-                `heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
-
-            )
-
-        }
+        )
 
 
 
         if (st) {
 
+            _markNpcLpcSprite(st, "shopStatue")
             _shopRegisterNpc(st)
 
             st.setFlag(SpriteFlag.Ghost, true)
@@ -13326,11 +13569,8 @@ function _shopStatueGetOrCreate(si: number, pid: number, familyNum: number, spaw
 
     } else {
 
-        for (let i = 0; i < heroes.length; i++) {
-
-            if (heroes[i] === st) { stHi = i; break }
-
-        }
+        _markNpcLpcSprite(st, "shopStatue")
+        stHi = -1
 
     }
 
@@ -13362,57 +13602,19 @@ function _shopStatueForceFrozenPose(st: Sprite, stHi: number, nowMs: number, pha
 
 
 
-    // Only re-trigger anim if phase changed (prevents constant restart)
+    // Ensure underlying phase fields match (no hero index required)
 
-    const prev = (sprites.readDataString(st, HERO_DATA.PHASE) || sprites.readDataString(st, "phase") || "").toLowerCase()
+    sprites.setDataString(st, "phase", desired)
 
-    const changed = prev !== desired
+    sprites.setDataString(st, HERO_DATA.PHASE, desired)
 
+    sprites.setDataString(st, HERO_DATA.PhaseName, desired)
 
+    sprites.setDataNumber(st, HERO_DATA.PhaseStartMs, nowMs | 0)
 
-    if (stHi >= 0) {
+    sprites.setDataNumber(st, HERO_DATA.PhaseDurationMs, 0)
 
-        heroFacingX[stHi] = 0
-
-        heroFacingY[stHi] = 1
-
-        syncHeroDirData(stHi)
-
-
-
-        if (changed) {
-
-            setHeroPhaseString(stHi, desired, "shopStatuePose")
-
-            callHeroAnim(stHi, desired, 0)
-
-        } else {
-
-            // still ensure underlying phase fields match
-
-            sprites.setDataString(st, "phase", desired)
-
-            sprites.setDataString(st, HERO_DATA.PHASE, desired)
-
-            sprites.setDataString(st, HERO_DATA.PhaseName, desired)
-
-        }
-
-    } else {
-
-        sprites.setDataString(st, "phase", desired)
-
-        sprites.setDataString(st, HERO_DATA.PHASE, desired)
-
-        sprites.setDataString(st, HERO_DATA.PhaseName, desired)
-
-        sprites.setDataNumber(st, HERO_DATA.PhaseStartMs, nowMs | 0)
-
-        sprites.setDataNumber(st, HERO_DATA.PhaseDurationMs, 0)
-
-        sprites.setDataNumber(st, HERO_DATA.PhaseProgressInt, 0)
-
-    }
+    sprites.setDataNumber(st, HERO_DATA.PhaseProgressInt, 0)
 
 }
 
@@ -13498,11 +13700,11 @@ function _shopStatueRow_getLayoutState(): any {
 
             { r: (baseR + 1.5), c: (baseC + 1.5) }, // top-left
 
-            { r: (baseR + 3.5), c: (baseC + 1.5) }, // bottom-left
+            { r: (baseR + 5.5), c: (baseC + 1.5) }, // bottom-left
 
-            { r: (baseR + 1.5), c: (baseC + 4.5) }, // top-right
+            { r: (baseR + 1.5), c: (baseC + 6.5) }, // top-right
 
-            { r: (baseR + 3.5), c: (baseC + 4.5) }, // bottom-right
+            { r: (baseR + 5.5), c: (baseC + 6.5) }, // bottom-right
 
         ]
 
@@ -13552,45 +13754,18 @@ function _shopStatueRow_buildCtx(si: number): any {
 
 }
 
-
-
+// Legacy helper retained for debug-only logs; NPC statues should not map to heroes.
 function _shopStatueRow_findHeroIndexForSprite(st: Sprite): number {
-
+    if (!st) return -1
+    if (sprites.readDataBoolean(st, HERO_DATA.IS_NPC)) return -1
     for (let i = 0; i < heroes.length; i++) {
-
         if (heroes[i] === st) return i
-
     }
-
     return -1
-
 }
 
 
-
-function _shopStatueRow_findHeroByOwner(pid: number): any {
-
-    for (let i = 0; i < heroes.length; i++) {
-
-        const h = heroes[i]
-
-        if (!h) continue
-
-        if (h.flags & sprites.Flag.Destroyed) continue
-
-        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-        if (owner === (pid | 0)) return { st: h, stHi: i }
-
-    }
-
-    return { st: null, stHi: -1 }
-
-}
-
-
-
-function _shopStatueRow_createStatue(si: number, pid: number, familyNum: number): any {
+function _shopStatueRow_createStatue(si: number, familyNum: number): any {
 
     const sx = shopkeeperNpc.x | 0
 
@@ -13598,43 +13773,31 @@ function _shopStatueRow_createStatue(si: number, pid: number, familyNum: number)
 
 
 
-    createHeroForPlayer(
-
-        pid,
-
-        sx,
-
-        sy,
+    const st = _spawnNpcLpcActor(
 
         SHOP_STATUE_PROFILE_NAME,
 
         familyNum,
 
-        true,   // isNpc
+        sx,
 
-        false   // forcePlayerToHeroIndexMapping
+        sy,
+
+        { dir: "down", phase: "idle", frameColOverride: 0, npcRole: "shopStatue", weapons: { slash: "", thrust: "", cast: "" } }
 
     )
-
-
-
-    const stHi = heroes.length - 1
-
-    const st = heroes[stHi]
 
 
 
     console.log(
 
-        `[SHOP][STEP2][STATUE_CREATE] i=${si} pid=${pid} hi=${stHi} ` +
-
-        `heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
+        `[SHOP][STEP2][STATUE_CREATE] i=${si} heroName=${sprites.readDataString(st, "heroName")} heroFamily=${sprites.readDataString(st, "heroFamily")}`
 
     )
 
 
 
-    return { st, stHi }
+    return { st, stHi: -1 }
 
 }
 
@@ -13650,28 +13813,17 @@ function _shopStatueRow_getOrCreateStatue(si: number, ctx: any): any {
 
     if (!st) {
 
-        const found = _shopStatueRow_findHeroByOwner(ctx.pid | 0)
+        const created = _shopStatueRow_createStatue(si, ctx.familyNum | 0)
 
-        st = found.st
+        st = created.st
 
-        stHi = found.stHi
-
-
-
-        if (!st) {
-
-            const created = _shopStatueRow_createStatue(si, ctx.pid | 0, ctx.familyNum | 0)
-
-            st = created.st
-
-            stHi = created.stHi
-
-        }
+        stHi = created.stHi
 
 
 
         if (st) {
 
+            _markNpcLpcSprite(st, "shopStatue")
             _shopRegisterNpc(st)
 
             st.setFlag(SpriteFlag.Ghost, true)
@@ -13686,7 +13838,8 @@ function _shopStatueRow_getOrCreateStatue(si: number, ctx: any): any {
 
     } else {
 
-        stHi = _shopStatueRow_findHeroIndexForSprite(st)
+        _markNpcLpcSprite(st, "shopStatue")
+        stHi = -1
 
     }
 
@@ -13707,6 +13860,7 @@ function _shopStatueRow_stampIdentityAndOverlay(st: Sprite, familyStr: string): 
     sprites.setDataString(st, "heroName", SHOP_STATUE_PROFILE_NAME)
 
     sprites.setDataString(st, "heroFamily", familyStr)
+    _markNpcLpcSprite(st, "shopStatue")
 
 
 
@@ -13851,8 +14005,6 @@ function _shopStatueRow_debugStamp(st: Sprite, nowMs: number, si: number, ctx: a
     if (((nowMs | 0) - lastStamp) >= 750) {
 
         sprites.setDataNumber(st, _kStamp, nowMs | 0)
-
-        const DEBUG_STATUE_STAMP = false
 
         if (DEBUG_STATUE_STAMP) {
 
@@ -14026,13 +14178,13 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
             pedC = Math.round(center.c)
 
-            const clampRMin = (layout.baseR + SHOP_PLATFORM_INNER_MIN) | 0
+            const clampRMin = (layout.baseR + SHOP_PLATFORM_FLOOR_MIN) | 0
 
-            const clampRMax = (layout.baseR + SHOP_PLATFORM_INNER_MAX - 1) | 0
+            const clampRMax = (layout.baseR + SHOP_PLATFORM_FLOOR_MAX - 1) | 0
 
-            const clampCMin = (layout.baseC + SHOP_PLATFORM_INNER_MIN) | 0
+            const clampCMin = (layout.baseC + SHOP_PLATFORM_FLOOR_MIN) | 0
 
-            const clampCMax = (layout.baseC + SHOP_PLATFORM_INNER_MAX - 1) | 0
+            const clampCMax = (layout.baseC + SHOP_PLATFORM_FLOOR_MAX - 1) | 0
 
             pedR = Math.max(clampRMin, Math.min(clampRMax, pedR))
 
@@ -14171,8 +14323,6 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
                 nativeXY = `${nat.x | 0},${nat.y | 0}`
 
             }
-
-            const DEBUG_STATUE_PEDESTAL = false
 
             if (DEBUG_STATUE_PEDESTAL) {
 
@@ -18995,29 +19145,7 @@ function _shopInit_ensureTriggerZone(): void {
 
 
 
-function _shopInit_findHeroIndexByOwner(ownerPid: number): number {
-
-    for (let i = 0; i < heroes.length; i++) {
-
-        const h = heroes[i]
-
-        if (!h) continue
-
-        if (h.flags & sprites.Flag.Destroyed) continue
-
-        const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-        if (owner === (ownerPid | 0)) return i
-
-    }
-
-    return -1
-
-}
-
-
-
-function _shopInit_spawnShopkeeperFromPipeline(): number {
+function _shopInit_spawnShopkeeperFromPipeline(): Sprite {
 
     const sx = (shopTriggerZone.x + 22) | 0
 
@@ -19025,29 +19153,33 @@ function _shopInit_spawnShopkeeperFromPipeline(): number {
 
 
 
-    createHeroForPlayer(
+    return _spawnNpcLpcActor(
 
-        SHOPKEEPER_PLAYER_ID,
+        SHOPKEEPER_HERO_NAME,
+
+        FAMILY.WISDOM,
 
         sx,
 
         sy,
 
-        SHOPKEEPER_HERO_NAME,     // profileNameOverride -> "Shopkeeper"
+        {
 
-        FAMILY.SUPPORT,           // familyOverride
+            dir: "down",
 
-        true,                     // isNpc
+            phase: "idle",
 
-        false,                    // forcePlayerToHeroIndexMapping
+            frameColOverride: -1,
 
-        false
+            ownerPid: SHOPKEEPER_PLAYER_ID,
+
+            npcRole: "shopkeeper",
+
+            weapons: { slash: "", thrust: "", cast: "" }
+
+        }
 
     )
-
-
-
-    return (heroes.length - 1) | 0
 
 }
 
@@ -19067,31 +19199,17 @@ function _shopInit_unarmShopkeeper(s: Sprite): void {
 
 
 
-function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
+function _shopInit_setupShopkeeper(nowMs: number): void {
 
-    if (shopHi < 0 || shopHi >= heroes.length) return
-
-    shopkeeperNpc = heroes[shopHi]
-
-    if (!shopkeeperNpc) return
+    if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) return
 
 
 
     // Force shopkeeper to face DOWN on spawn (Arcade: +Y is down)
 
-    heroFacingX[shopHi] = 0
-
-    heroFacingY[shopHi] = 1
-
     shopkeeperNpc.vx = 0
 
     shopkeeperNpc.vy = 0
-
-
-
-    syncHeroDirData(shopHi)
-
-    callHeroAnim(shopHi, "idle", 0)
 
 
 
@@ -19103,9 +19221,8 @@ function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
 
     sprites.setDataString(shopkeeperNpc, HERO_DATA.NAME, SHOPKEEPER_HERO_NAME)
 
-
-
-    _shopInit_unarmShopkeeper(shopkeeperNpc)
+    sprites.setDataBoolean(shopkeeperNpc, HERO_DATA.IS_NPC, true)
+    _markNpcLpcSprite(shopkeeperNpc, "shopkeeper")
 
 
 
@@ -19125,23 +19242,24 @@ function _shopInit_setupShopkeeper(shopHi: number, nowMs: number): void {
 
 
 
-    setHeroPhaseString(shopHi, "idle")
+    // Phase + direction stamp for Phaser glue (no heroIndex needed)
 
-    _animKeys_stampPhaseWindow(
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.DIR, "down")
 
-        shopHi,
+    sprites.setDataString(shopkeeperNpc, "dir", "down")
 
-        shopkeeperNpc,
+    _stampHumanoidPhaseForSprite(shopkeeperNpc, "idle", nowMs | 0, 999999)
+    sprites.setDataNumber(shopkeeperNpc, HERO_DATA.PhaseDurationMs, 0)
+    sprites.setDataNumber(shopkeeperNpc, HERO_DATA.PhaseProgressInt, 0)
+    sprites.setDataNumber(shopkeeperNpc, HERO_DATA.FRAME_COL_OVERRIDE, -1)
 
-        "idle",
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.PHASE, "idle")
 
-        nowMs | 0,
+    sprites.setDataString(shopkeeperNpc, HERO_DATA.PhaseName, "idle")
 
-        999999,
 
-        "shopInitPOC(shopkeeper)"
 
-    )
+    _shopInit_unarmShopkeeper(shopkeeperNpc)
 
 
 
@@ -19157,11 +19275,9 @@ function _shopInit_ensureShopkeeper(nowMs: number): void {
 
     if (!shopkeeperNpc || (shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
 
-        let shopHi = _shopInit_findHeroIndexByOwner(SHOPKEEPER_PLAYER_ID)
+        shopkeeperNpc = _shopInit_spawnShopkeeperFromPipeline()
 
-        if (shopHi < 0) shopHi = _shopInit_spawnShopkeeperFromPipeline()
-
-        _shopInit_setupShopkeeper(shopHi, nowMs)
+        _shopInit_setupShopkeeper(nowMs)
 
     } else {
 
@@ -23691,8 +23807,6 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 }
 
 
-const DEBUG_HERO_LOGIC_OUT = true;   // log OUT once per call (safe volume)
-const DEBUG_HERO_LOGIC_ENTER = false;
 
 function runHeroLogicForHero(heroIndex: number, button: string) {
 
@@ -24273,6 +24387,7 @@ function createHeroForPlayer(
 
 
     sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
+    if (isNpc) sprites.setDataBoolean(hero, HERO_DATA.IS_NPC, true)
 
     if (!isNpc && (pid | 0) > 0) {
 
@@ -28466,6 +28581,11 @@ const AURA_COLOR_GRAY = 11
 
 function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSprite {
 
+    if (_isShopActor(hero)) {
+        heroStrengthChargeBars[heroIndex] = null
+        return null
+    }
+
     let bar = heroStrengthChargeBars[heroIndex]
 
     if (bar) return bar
@@ -28554,6 +28674,12 @@ function showStrengthChargeBar(heroIndex: number, hero: Sprite, show: boolean): 
 
 function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 
+    if (_isShopActor(hero)) {
+        // Avoid HP bars for shopkeeper/statues
+        heroHPBars[heroIndex] = null
+        return
+    }
+
     sprites.setDataNumber(hero, HERO_DATA.MAX_HP, maxHPVal)
 
     sprites.setDataNumber(hero, HERO_DATA.HP, maxHPVal)
@@ -28615,6 +28741,12 @@ function updateHeroHPBar(heroIndex: number) {
 
 
 function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
+
+    if (_isShopActor(hero)) {
+        // Avoid mana bars for shopkeeper/statues
+        heroManaBars[heroIndex] = null
+        return
+    }
 
     sprites.setDataNumber(hero, HERO_DATA.MAX_MANA, maxManaVal)
 
@@ -30409,6 +30541,8 @@ function updateHeroAuras(now: number, phaser: boolean) {
         let color = 0
 
         let auraGlow = 0
+        const glowUntil = heroHealGlowUntil[i] | 0
+        if (glowUntil > 0 && now < glowUntil) auraGlow = 1
 
         const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
 
@@ -30476,6 +30610,12 @@ function updateHeroAuras(now: number, phaser: boolean) {
 
                 color = AURA_COLOR_HEAL
 
+            }
+
+            // Wisdom/support puzzle: keep heal aura on while puzzle UI is active (self-cast guaranteed)
+            if (supportPuzzleActive && supportPuzzleActive[i]) {
+                showAura = true;
+                color = AURA_COLOR_HEAL;
             }
 
         }
@@ -31133,7 +31273,11 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.StoryNpc, function (hero, npc) {
 
 })
 
-
+sprites.onOverlap(SpriteKind.Player, (SpriteKind as any).NpcLpc, function (hero, npc) {
+    const role = sprites.readDataString(npc, "_npcRole") || ""
+    if (role !== "storyNpc") return
+    _resolveSpriteOverlap(hero, npc, true, false)
+})
 
 sprites.onOverlap(SpriteKind.Player, SpriteKind.ShopNpc, function (hero, npc) {
 
@@ -37744,8 +37888,6 @@ function updateAgilityProjectilesMotionFor(
 
         const dbgLast = sprites.readDataNumber(proj, "dbgLast") | 0
 
-        const DBG_INTERVAL_MS = 50
-
         if (dbgId && nowMs - dbgLast >= DBG_INTERVAL_MS) {
 
             sprites.setDataNumber(proj, "dbgLast", nowMs)
@@ -37948,9 +38090,6 @@ const INT_SPELL_EXPIRES_AT_MS_KEY = "intSpellExpiresAtMs"
 
 
 
-const DEBUG_INT_DET = true
-
-const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = true
 
 
 
@@ -41198,6 +41337,9 @@ function applyHealToHeroIndex(heroIndex: number, amount: number) {
     if (applied > 0) {
 
         showDamageNumber(hero.x, hero.y - 6, applied, "heal")
+        // Pulse aura glow for brief heal feedback (self included)
+        const now = game.runtime() | 0
+        heroHealGlowUntil[hi] = now + 700
 
     }
 
@@ -44688,7 +44830,6 @@ const ENEMY_NAV_LOG_MAX_LINE_CHARS = 500         // split long lines determinist
 const ENEMY_NAV_INF = 0x3fff
 const ENEMY_NAV_REBUILD_MS = 200   // KNOB: lower = more responsive, higher = cheaper
 const ENEMY_PATHFINDING_FORCE = true // if true: use pathfinding.js A* only (no fallbacks)
-const DEBUG_ENEMY_NAV_LOG = false   // Set false to silence nav logs without removing code
 const ENEMY_NAV_LOG_RING_SIZE = 192 // Bounded history per enemy
 const ENEMY_NAV_LOG_MIN_MOVE_PX = 4
 const ENEMY_NAV_LOG_MIN_MOVE_PX2 = ENEMY_NAV_LOG_MIN_MOVE_PX * ENEMY_NAV_LOG_MIN_MOVE_PX
@@ -46813,7 +46954,6 @@ let _lastEnemyHomingLogMs = 0
 
 
 
-const DEBUG_ENEMY_STUCK_LOG = true //Debug flag
 
 
 
@@ -46847,7 +46987,6 @@ const ENEMY_AI_NAV_HERO_EX = "__aiNavHeroEX"
 
 const ENEMY_AI_NAV_HERO_EY = "__aiNavHeroEY"
 
-const DEBUG_ENEMY_NAV_COLLISION = true
 const ENEMY_NAV_COLLISION_SCAN_MAX_TILES = 128  // safety cap; avoids runaway scans if something goes weird
 
 
@@ -51849,9 +51988,10 @@ if (typeof globalThis !== "undefined") {
 
 
 
-        console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (before):", Object.keys(internals || {}))
-
-        console.log("[DECOR][ENGINE] has getDecorRev? (before)", typeof internals?.getDecorRev)
+        if (DEBUG_DECOR_ENGINE_LOGS) {
+            console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (before):", Object.keys(internals || {}))
+            console.log("[DECOR][ENGINE] has getDecorRev? (before)", typeof internals?.getDecorRev)
+        }
 
 
 
@@ -52177,11 +52317,11 @@ if (typeof globalThis !== "undefined") {
 
 
 
-        console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (after):", Object.keys(internals || {}))
-
-        console.log("[DECOR][ENGINE] has getDecorRev? (after)", typeof internals?.getDecorRev)
-
-        console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)")
+        if (DEBUG_DECOR_ENGINE_LOGS) {
+            console.log("[DECOR][ENGINE] __HeroEnginePhaserInternals keys (after):", Object.keys(internals || {}))
+            console.log("[DECOR][ENGINE] has getDecorRev? (after)", typeof internals?.getDecorRev)
+            console.log(">>> [HeroEngineInPhaser] exposed __HeroEnginePhaserInternals (tile map + size + decor + ensureHeroForPlayer)")
+        }
 
     } catch {
 
@@ -55347,10 +55487,19 @@ function _uiResolveHeroIndexForPid(pid: number): number {
 
     if ((pid | 0) <= 0) return -1
 
+    // Preferred: profile mapping (pid -> profile -> hero)
+    try {
+        const prof = playerIdToProfile[pid] || ""
+        if (prof) {
+            const hi = profileToHeroIndex[prof]
+            if (hi != null && hi >= 0 && hi < heroes.length) {
+                const h = heroes[hi]
+                if (h && !(h.flags & sprites.Flag.Destroyed)) return hi | 0
+            }
+        }
+    } catch { }
 
-
-    // Preferred: playerToHeroIndex (validate owner matches pid)
-
+    // Fallback: legacy playerToHeroIndex (validate owner matches pid)
     try {
 
         const idx = playerToHeroIndex[pid] | 0
@@ -55370,28 +55519,6 @@ function _uiResolveHeroIndexForPid(pid: number): number {
         }
 
     } catch { }
-
-
-
-    // Fallback: scan heroes[] for matching owner
-
-    for (let i = 0; i < heroes.length; i++) {
-
-        const h = heroes[i]
-
-        if (!h) continue
-
-        if (h.flags & sprites.Flag.Destroyed) continue
-
-        let owner = 0
-
-        try { owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0 } catch { owner = 0 }
-
-        if ((owner | 0) === (pid | 0)) return i | 0
-
-    }
-
-
 
     return -1
 

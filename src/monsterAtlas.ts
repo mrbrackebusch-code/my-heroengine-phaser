@@ -1,5 +1,6 @@
 // src/monsterAtlas.ts
 import type Phaser from "phaser";
+import { DEBUG_MONSTER_SPRITES } from "./debugFlags";
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Phase = "walk" | "attack" | "death";
@@ -386,7 +387,7 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
    5. FULLY PATCHED buildMonsterAtlas
 ------------------------------------------------------------------ */
 
-const DEBUG_MONSTER_SPRITES = false //Debug flag
+// Debug flag lives in src/debugFlags.ts
 
 export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
     const byMonster = new Map<string, ParsedSheet[]>();

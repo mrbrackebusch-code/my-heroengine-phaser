@@ -11,6 +11,24 @@ import {
     type HeroFrameDef,
     type HeroPhase
 } from "./heroAtlas";
+import {
+    DEBUG_HERO_ANIM_GLUE,
+    DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT,
+    DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS,
+    DEBUG_INT_HERO_ANIM,
+    DEBUG_INT_HERO_NAME_FILTER,
+    DEBUG_NPC_PIPELINE,
+    DEBUG_PROP_OUTLINE_EXAGGERATE,
+    DEBUG_PROP_OUTLINE_EXAGGERATE_TINT,
+    DEBUG_PROP_OUTLINE_ONELOG,
+    DEBUG_PROP_OUTLINE_PREFER_CAMERA_SNAPSHOT,
+    DEBUG_PROP_OUTLINE_PREFER_PIXEL_PROBE,
+    DEBUG_PROP_OUTLINE_VERBOSE,
+    DEBUG_PROVE_HERO_CAST_ANIM,
+    DEBUG_PROVE_HERO_NAME_FILTER,
+    DEBUG_TURN_SHOULD_PROVE_ON,
+    FORCE_PROP_SCALE_OUTLINE,
+} from "./debugFlags";
 
 
 // Data keys we will use on hero sprites.
@@ -55,26 +73,7 @@ const HERO_BASE_SCALE_Y_KEY = "__heroBaseScaleY";
 const HERO_PHASE_NAME_KEY = "PhaseName"
 const HERO_PHASE_START_MS_KEY = "PhaseStartMs"
 
-// Debug toggles
-const DEBUG_HERO_ANIM_GLUE = false
-const DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS = true  // if true: logs only when something is missing/invalid
-const DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT = false // reduces spam by focusing on intellect/cast
-
-//const HERO_PHASE_NAME_KEY = "PhaseName" // authoritative phase window key from HeroEngineInPhaser
-
-// Prop outline debug controls
-const DEBUG_PROP_OUTLINE_ONELOG = true;
-const DEBUG_PROP_OUTLINE_PREFER_CAMERA_SNAPSHOT = true;
-const DEBUG_PROP_OUTLINE_PREFER_PIXEL_PROBE = true;
-const DEBUG_PROP_OUTLINE_EXAGGERATE = true;
-const DEBUG_PROP_OUTLINE_EXAGGERATE_TINT = 0xff00ff;
-const DEBUG_PROP_OUTLINE_VERBOSE = false;
-
-// ============================================================
-// DEBUG: Prove hero animation application during cast
-// ============================================================
-const DEBUG_INT_HERO_ANIM = false; //Debug flag
-const DEBUG_INT_HERO_NAME_FILTER = "Jason"; // "" = all
+// Debug flags live in src/debugFlags.ts
 
 // Strength swing segmentation (engine publishes these as an addon channel)
 const STR_SEG_NAME_KEY = "STR_SEG_NAME";
@@ -83,17 +82,7 @@ const STR_SEG_DUR_MS_KEY = "STR_SEG_DUR_MS";
 const STR_SEG_PROGRESS_INT_KEY = "STR_SEG_PROGRESS_INT";
 
 
-// ============================================================
-// DEBUG: Prove hero animation application / restart / looping
-// ============================================================
-const DEBUG_PROVE_HERO_CAST_ANIM = false; //Debug flag
-// "" logs all heroes; set to "Jason" to filter.
-const DEBUG_PROVE_HERO_NAME_FILTER = "Jason";
-
-const DEBUG_TURN_SHOULD_PROVE_ON = false; //Debug flag
-
-// Debug override: use scaled base texture as prop outline.
-const FORCE_PROP_SCALE_OUTLINE = false;
+// Debug flags live in src/debugFlags.ts
 
 
 // --- ADD: canonical frame contract keys (additive; do NOT replace existing follow keys) ---
@@ -125,10 +114,24 @@ const HERO_GLUE_DEBUG = {
     enabled: true //Debug flag
 };
 
+// NPC-specific logging (off by default)
+const NPC_ANIM_LOG_ONCE_KEY = "__npcAnimLogged";
+
 
 function heroGlueDebug(scene: Phaser.Scene): boolean {
     // Global master switch lives in the registry (same as atlas).
     return !!scene.registry.get("heroAnimDebug") && HERO_GLUE_DEBUG.enabled;
+}
+
+function isNpcHeroSprite(sprite: Phaser.GameObjects.Sprite): boolean {
+    const anySprite: any = sprite as any;
+    const getData = anySprite && typeof anySprite.getData === "function" ? anySprite.getData.bind(anySprite) : null;
+    if (!getData) return false;
+    const isNpc = !!getData("isNpc") || !!getData("npcLpc");
+    const role = String(getData("_npcRole") || "");
+    const heroName = String(getData("heroName") || "");
+    if (isNpc || role) return true;
+    return heroName === "Shopkeeper" || heroName === "Statue";
 }
 
 // Always output a single wall-of-text string.
@@ -1361,6 +1364,26 @@ function applyHeroAnimationForSpriteInternal(
     if (!def) return;
 
     if (shouldProve) _proveLogDef(req, def);
+
+    if (DEBUG_NPC_PIPELINE && isNpcHeroSprite(sprite)) {
+        const anySprite: any = sprite as any;
+        const already = anySprite.getData ? anySprite.getData(NPC_ANIM_LOG_ONCE_KEY) : 0;
+        if (!already) {
+            try { anySprite.setData?.(NPC_ANIM_LOG_ONCE_KEY, 1); } catch { /* ignore */ }
+            console.log("[NPC-PIPE][anim.map]", {
+                heroName: req.heroName,
+                family: req.family,
+                phase: req.phase,
+                dir: req.dir,
+                actionKind: req.actionKind,
+                frameColOverride: req.frameColOverride,
+                textureKey: def.textureKey,
+                defPhase: def.phase,
+                defDir: def.dir,
+                npcRole: anySprite.getData ? (anySprite.getData("_npcRole") || "") : ""
+            });
+        }
+    }
 
     // ------------------------------------------------------------
     // Strength charge throb (early return on success)

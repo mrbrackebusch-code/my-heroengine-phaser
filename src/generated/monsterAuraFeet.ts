@@ -2,273 +2,273 @@
 export const MONSTER_AURA_FOOT_LIFT_PX = 2;
 export const MONSTER_AURA_FEET: Record<string, { frameW: number; frameH: number; footBottom: number; }> = {
   "bat": {
-    "frameW": 128,
-    "frameH": 320,
-    "footBottom": 204
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "bat death": {
-    "frameW": 96,
-    "frameH": 192,
-    "footBottom": 189
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "bee": {
-    "frameW": 192,
-    "frameH": 128,
-    "footBottom": 125
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "bee death": {
-    "frameW": 96,
-    "frameH": 192,
-    "footBottom": 189
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "beetle": {
-    "frameW": 160,
-    "frameH": 128,
-    "footBottom": 125
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "big worm": {
-    "frameW": 384,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "big worm death": {
-    "frameW": 105,
-    "frameH": 300,
-    "footBottom": 297
+    "frameW": 35,
+    "frameH": 50,
+    "footBottom": 47
   },
   "eyeball": {
-    "frameW": 448,
-    "frameH": 256,
-    "footBottom": 242
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "eyeball death": {
-    "frameW": 96,
-    "frameH": 228,
-    "footBottom": 225
+    "frameW": 32,
+    "frameH": 38,
+    "footBottom": 35
   },
   "ghost": {
-    "frameW": 384,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "ghost death": {
-    "frameW": 120,
-    "frameH": 276,
-    "footBottom": 273
+    "frameW": 40,
+    "frameH": 46,
+    "footBottom": 43
   },
   "goblin": {
-    "frameW": 704,
-    "frameH": 320,
-    "footBottom": 247
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "golem": {
-    "frameW": 448,
-    "frameH": 384,
-    "footBottom": 381
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "golem death": {
-    "frameW": 448,
-    "frameH": 128,
-    "footBottom": 119
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "golem white": {
-    "frameW": 4032,
+    "frameW": 64,
     "frameH": 76,
     "footBottom": 73
   },
   "googon": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "imp blue": {
-    "frameW": 448,
+    "frameW": 64,
     "frameH": 64,
-    "footBottom": 37
+    "footBottom": 61
   },
   "imp green": {
-    "frameW": 448,
+    "frameW": 64,
     "frameH": 64,
-    "footBottom": 37
+    "footBottom": 61
   },
   "imp red": {
-    "frameW": 448,
+    "frameW": 64,
     "frameH": 64,
-    "footBottom": 37
+    "footBottom": 61
   },
   "man eater flower": {
-    "frameW": 768,
-    "frameH": 512,
-    "footBottom": 509
+    "frameW": 128,
+    "frameH": 128,
+    "footBottom": 125
   },
   "man eater flower death": {
-    "frameW": 180,
-    "frameH": 456,
-    "footBottom": 453
+    "frameW": 60,
+    "frameH": 76,
+    "footBottom": 73
   },
   "minotaur red": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 237
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "pegasus": {
-    "frameW": 192,
-    "frameH": 340,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 85,
+    "footBottom": 82
   },
   "plantEnt": {
-    "frameW": 336,
-    "frameH": 448,
-    "footBottom": 445
+    "frameW": 112,
+    "frameH": 112,
+    "footBottom": 109
   },
   "pumpking": {
-    "frameW": 384,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "pumpking death": {
-    "frameW": 138,
-    "frameH": 276,
-    "footBottom": 273
+    "frameW": 46,
+    "frameH": 46,
+    "footBottom": 43
   },
   "slime": {
-    "frameW": 512,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime black": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime blue": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime brown": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime death": {
-    "frameW": 96,
-    "frameH": 192,
-    "footBottom": 189
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "slime green": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime lightblue": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime projectile": {
-    "frameW": 64,
+    "frameW": 16,
     "frameH": 16,
     "footBottom": 13
   },
   "slime red": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime violet": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "slime yellow": {
-    "frameW": 144,
-    "frameH": 256,
-    "footBottom": 253
+    "frameW": 48,
+    "frameH": 64,
+    "footBottom": 61
   },
   "small worm": {
-    "frameW": 704,
-    "frameH": 256,
-    "footBottom": 240
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "small worm death": {
-    "frameW": 96,
-    "frameH": 192,
-    "footBottom": 189
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "snake": {
-    "frameW": 448,
-    "frameH": 256,
-    "footBottom": 237
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "snake death": {
-    "frameW": 96,
-    "frameH": 192,
-    "footBottom": 189
+    "frameW": 32,
+    "frameH": 32,
+    "footBottom": 29
   },
   "spider black": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider black yellow": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider blue": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider blue orange": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider blue silver": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider green": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider green yellow dot": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider green yellow stripe": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider red": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider red yellow": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "spider silver red": {
-    "frameW": 640,
-    "frameH": 320,
-    "footBottom": 317
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61
   },
   "treeEnt": {
-    "frameW": 240,
-    "frameH": 512,
-    "footBottom": 504
+    "frameW": 96,
+    "frameH": 128,
+    "footBottom": 125
   },
   "wolf light brown": {
-    "frameW": 320,
-    "frameH": 384,
-    "footBottom": 381
+    "frameW": 64,
+    "frameH": 32,
+    "footBottom": 29
   }
 };

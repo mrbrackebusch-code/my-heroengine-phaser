@@ -4,6 +4,7 @@ declare const globalThis: any;
 import * as StudentLogic from "./studentLogicAll";
 
 import { tryRunBlocklyHeroLogic, dbgBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
+import { DEBUG_HOST_LOGIC, DEBUG_HOST_LOGIC_BLOCKLY } from "./debugFlags";
 
 // ==========================================
 // Types
@@ -16,9 +17,8 @@ type HeroLogicFn = (
 ) => any[];
 
 
-const DEBUG_HOST_LOGIC = false;
 const INVALID_MOVE_OUT: any[] = [-1, 0, 0, 0, 0, -1, "INVALID"];
-const DEBUG_HOST_LOGIC_BLOCKLY = false;
+// Debug flags live in src/debugFlags.ts
 
 // ==========================================
 // Registries (kept global for debugging)

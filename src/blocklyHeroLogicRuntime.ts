@@ -2,12 +2,12 @@
 import * as Blockly from "blockly";
 import "blockly/blocks";
 import { javascriptGenerator } from "blockly/javascript";
+import { DEBUG_BLOCKLY_CODE_DUMP, DEBUG_BLOCKLY_INVALID_MOVES } from "./debugFlags";
 
 const STORAGE_PREFIX = "he_blockly_ws_v1:";
 const STEP_LIMIT = 20000;
 const FALLBACK_PROFILE = "Default";
-const DEBUG_BLOCKLY_CODE_DUMP = false;
-const DEBUG_BLOCKLY_INVALID_MOVES = false;
+// Debug flags live in src/debugFlags.ts
 
 const HE_OUTPUT_VARS = ["family", "damage", "reach", "time", "status", "element", "id"] as const;
 

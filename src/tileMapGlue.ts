@@ -7,16 +7,40 @@ import {
   DECAL_VISUALS_BY_NAME,
   PROP_VISUALS_BY_NAME,
 } from "./tileAtlas";
+import {
+  DEBUG_PROP_FOCUS_AURA,
+  DEBUG_PROP_FOCUS_AURA_BLINK,
+  DEBUG_PROP_FOCUS_AURA_DEPTH,
+  DEBUG_PROP_FOCUS_AURA_FORCE_FRONT,
+  DEBUG_PROP_FOCUS_AURA_FORCE_FRONT_BUMP,
+  DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES,
+  DEBUG_PROP_FOCUS_AURA_HUD_PREVIEW,
+  DEBUG_PROP_FOCUS_AURA_LOGS,
+  DEBUG_PROP_FOCUS_AURA_NEON,
+  DEBUG_PROP_FOCUS_AURA_OVERRIDE,
+  DEBUG_PROP_FOCUS_AURA_PIN_SCREEN,
+  DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE,
+  DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_ENTER_LOG,
+  DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_LOG_NO_SNAPSHOT,
+  DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_TIMEOUT_MS,
+  DEBUG_PROP_FOCUS_AURA_POSTRENDER_PROBE,
+  DEBUG_PROP_FOCUS_AURA_PROP_TINT,
+  DEBUG_PROP_FOCUS_AURA_SCENE_DIAG,
+  DEBUG_PROP_FOCUS_AURA_SCREEN_SAMPLE,
+  DEBUG_PROP_FOCUS_AURA_TRACE,
+  DEBUG_PROP_FOCUS_AURA_VERBOSE,
+  DEBUG_PROP_FOCUS_AURA_WORLD_MARKER,
+  DEBUG_TILEMAP_GLUE,
+  LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE,
+  LOG_PROP_FOCUS_AURA_RENDER_ONCE,
+  LOG_PROP_FOCUS_AURA_SCENE_DIAG_ONCE,
+} from "./debugFlags";
 
 
 // ----------------------------------------------------------
 // Debug
 // ----------------------------------------------------------
-
-const DEBUG_TILES_GLOBAL = true;
-
-
-
+// Debug flags live in src/debugFlags.ts
 // ----------------------------------------------------------
 // Depth model
 // ----------------------------------------------------------
@@ -74,52 +98,18 @@ const PROP_FOCUS_AURA_DEPTH_BEHIND_PROP = 2;
 const PROP_FOCUS_AURA_HIDE_DELAY_MS = 250;
 
 // Debug: log missing aura sheets only once per base texture.
-const DEBUG_PROP_FOCUS_AURA = true;
-
 const __warnedMissingPropAuraSheet: Record<string, 1> = Object.create(null);
-
-// Log once per prop instance the first time its focus aura is actually shown.
-const LOG_PROP_FOCUS_AURA_RENDER_ONCE = true;
 
 // Cache last focus state per prop anchor so aura can be re-applied after decor resyncs.
 const PROP_FOCUS_AURA_CACHE_STATE = true;
 
-const DEBUG_PROP_FOCUS_AURA_DEPTH = true;
-
 // Debug-only: if true, shove aura in front of *everything* (including prop) to prove depth is the issue.
 // If you still can't see it when forced front, it's NOT a depth problem.
-const DEBUG_PROP_FOCUS_AURA_FORCE_FRONT = false;
 
 // If forcing front, how far in front of the prop to push it.
-const DEBUG_PROP_FOCUS_AURA_FORCE_FRONT_BUMP = 2000000;
 
-
-const DEBUG_PROP_FOCUS_AURA_WORLD_MARKER = false;
-const DEBUG_PROP_FOCUS_AURA_NEON = false;
-const DEBUG_PROP_FOCUS_AURA_SCENE_DIAG = false;
-const LOG_PROP_FOCUS_AURA_SCENE_DIAG_ONCE = false;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE = false;
-const LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE = false;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_LOG_NO_SNAPSHOT = false;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_ENTER_LOG = false;
-const DEBUG_PROP_FOCUS_AURA_PIXEL_PROBE_TIMEOUT_MS = 250;
-const DEBUG_PROP_FOCUS_AURA_PROP_TINT = false;
-const DEBUG_PROP_FOCUS_AURA_POSTRENDER_PROBE = false;
-const DEBUG_PROP_FOCUS_AURA_SCREEN_SAMPLE = false;
-const DEBUG_PROP_FOCUS_AURA_PIN_SCREEN = false;
-const DEBUG_PROP_FOCUS_AURA_HUD_PREVIEW = false;
-const DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES = new Set<string>();
-const DEBUG_PROP_FOCUS_AURA_TRACE = false;
-const DEBUG_PROP_FOCUS_AURA_OVERRIDE = {
-  enabled: true,
-  fromBaseName: "chest",
-  auraTextureKey: "tiles.terrain_atlas_aura_r2",
-  frameIndex: 499,
-};
-const DEBUG_PROP_FOCUS_AURA_VERBOSE = false;
 const CHEST_AURA_PAD_PX = 2;
 const CHEST_AURA_PAD_KEY = "__chestAuraPadBox__";
-const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 
 
 type ParsedPropKey = {
@@ -869,7 +859,7 @@ function _ensurePropAnim(
 
 
 function logTiles(localDebug: boolean, ...args: any[]) {
-    if (!DEBUG_TILES_GLOBAL || !localDebug) return;
+    if (!DEBUG_TILEMAP_GLUE || !localDebug) return;
     console.log(...args);
 }
 
@@ -2086,36 +2076,42 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
       const baseName = String(inst.baseName ?? "");
       if (active && baseName === "chest" && !(inst as any).__loggedChestAuraState) {
         (inst as any).__loggedChestAuraState = 1;
-        const kids: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
-        const k0: any = kids.length ? kids[0] : null;
-        console.log(`[PROPAURA][CHEST-STATE] ${JSON.stringify({
-          baseName,
-          rawKey: inst.rawKey ?? "",
-          visPadAlways: !!(inst.vis as any)?.focusAuraPadAlways || !!(inst.vis as any)?.auraPadAlways,
-          visPadPx: (inst.vis as any)?.focusAuraPadPx ?? (inst.vis as any)?.auraPadPx ?? null,
-          kids: kids.length,
-          padBaked: !!(k0 as any)?.__auraPadBaked,
-          padScale: (typeof (k0 as any)?.__auraPadScale === "number") ? (k0 as any).__auraPadScale : null
-        })}`);
+        if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+          const kids: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
+          const k0: any = kids.length ? kids[0] : null;
+          console.log(`[PROPAURA][CHEST-STATE] ${JSON.stringify({
+            baseName,
+            rawKey: inst.rawKey ?? "",
+            visPadAlways: !!(inst.vis as any)?.focusAuraPadAlways || !!(inst.vis as any)?.auraPadAlways,
+            visPadPx: (inst.vis as any)?.focusAuraPadPx ?? (inst.vis as any)?.auraPadPx ?? null,
+            kids: kids.length,
+            padBaked: !!(k0 as any)?.__auraPadBaked,
+            padScale: (typeof (k0 as any)?.__auraPadScale === "number") ? (k0 as any).__auraPadScale : null
+          })}`);
+        }
       }
       if (active && baseName === "chest" && !(inst as any).__forceChestAuraRebuild) {
         (inst as any).__forceChestAuraRebuild = 1;
         const rebuilt = this._propRebuildFocusAuraForInstance(inst);
-        console.log(`[PROPAURA][CHEST-REBUILD] ${JSON.stringify({
-          baseName,
-          rawKey: inst.rawKey ?? "",
-          rebuilt
-        })}`);
+        if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+          console.log(`[PROPAURA][CHEST-REBUILD] ${JSON.stringify({
+            baseName,
+            rawKey: inst.rawKey ?? "",
+            rebuilt
+          })}`);
+        }
       }
       if (DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES.has(baseName) && !active) {
         active = true;
         if (!(inst as any).__loggedFocusAuraForceVisible) {
           (inst as any).__loggedFocusAuraForceVisible = 1;
-          console.log(`[PROPAURA][FORCE-VISIBLE] ${JSON.stringify({
-            baseName,
-            rawKey: inst.rawKey ?? "",
-            anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
-          })}`);
+          if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+            console.log(`[PROPAURA][FORCE-VISIBLE] ${JSON.stringify({
+              baseName,
+              rawKey: inst.rawKey ?? "",
+              anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
+            })}`);
+          }
         }
       }
     } catch { /* ignore */ }
@@ -2149,12 +2145,14 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           const rebuilt = this._propRebuildFocusAuraForInstance(inst);
           if (rebuilt && !(inst as any).__loggedFocusAuraRebuild) {
             (inst as any).__loggedFocusAuraRebuild = 1;
-            console.log(`[PROPAURA][REBUILD] ${JSON.stringify({
-              baseName: inst.baseName ?? "",
-              rawKey: inst.rawKey ?? "",
-              padBaked,
-              padScale
-            })}`);
+            if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+              console.log(`[PROPAURA][REBUILD] ${JSON.stringify({
+                baseName: inst.baseName ?? "",
+                rawKey: inst.rawKey ?? "",
+                padBaked,
+                padScale
+              })}`);
+            }
           }
         }
       }
@@ -2163,12 +2161,14 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         if ((inst as any).__dbgAuraOverrideKey !== key) {
           (inst as any).__dbgAuraOverrideKey = key;
           const rebuilt = this._propRebuildFocusAuraForInstance(inst);
-          console.log(`[PROPAURA][OVERRIDE-REBUILD] ${JSON.stringify({
-            baseName: inst.baseName ?? "",
-            rawKey: inst.rawKey ?? "",
-            key,
-            rebuilt
-          })}`);
+          if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+            console.log(`[PROPAURA][OVERRIDE-REBUILD] ${JSON.stringify({
+              baseName: inst.baseName ?? "",
+              rawKey: inst.rawKey ?? "",
+              key,
+              rebuilt
+            })}`);
+          }
         }
       }
     } catch { /* ignore */ }
@@ -2273,7 +2273,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
   const wasVisible = !!cont?.visible;
 
   try {
-    if (!(inst as any).__loggedFocusAuraName) {
+    if (DEBUG_PROP_FOCUS_AURA_LOGS && !(inst as any).__loggedFocusAuraName) {
       (inst as any).__loggedFocusAuraName = 1;
       console.log(`[PROPAURA][FOCUS-NAME] ${JSON.stringify({
         baseName: inst.baseName ?? "",
@@ -3335,7 +3335,7 @@ private _propCreateFocusAuraContainer(args: {
   const auraCols = (auraInfo?.cols ?? 0) | 0;
   if (!auraInfo || auraCols <= 0) return null;
 
-  if (override) {
+  if (override && DEBUG_PROP_FOCUS_AURA_LOGS) {
     try {
       console.log(`[PROPAURA][OVERRIDE] ${JSON.stringify({
         baseName,

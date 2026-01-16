@@ -68,38 +68,63 @@ import * as heroAnimGlue from "./heroAnimGlue";
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
 import * as effectAnimGlue from "./effectAnimGlue";
+import {
+    DECOR_ENABLED,
+    DECOR_DEBUG,
+    DECOR_ENABLE_SOLID_BLOCKING,
+    DECOR_ENABLE_TIER2,
+    DEBUG_CATEGORY_X,
+    DEBUG_CATEGORY_X_SAMPLES,
+    DEBUG_COLLIDER_ALPHA,
+    DEBUG_COLLIDER_ENEMY_COLOR,
+    DEBUG_COLLIDER_WALL_COLOR,
+    DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
+    DEBUG_DRAW_WALL_COLLIDERS,
+    DEBUG_ENEMY_FOOTPRINT_MAX_PX,
+    DEBUG_HERO_NATIVE_FEET_ANCHOR,
+    DEBUG_INT_HERO_NAME_FILTER,
+    DEBUG_INT_HERO_VIS,
+    DEBUG_KIND56_CREATE_TRACE,
+    DEBUG_NET,
+    DEBUG_NET_APPLY_FOLLOWER,
+    DEBUG_NET_SNAPSHOT,
+    DEBUG_NPC_PIPELINE,
+    DEBUG_OVERLAPS,
+    DEBUG_PROJECTILE_NATIVE,
+    DEBUG_PROP_OUTLINE_VERBOSE,
+    DEBUG_ROLE_ACTOR,
+    DEBUG_ROLE_AURA,
+    DEBUG_ROLE_EFFECT,
+    DEBUG_ROLE_ENEMY,
+    DEBUG_ROLE_HERO,
+    DEBUG_ROLE_OTHER,
+    DEBUG_ROLE_PROJECTILE,
+    DEBUG_SETFLAG,
+    DEBUG_SPRITE_ATTACH,
+    DEBUG_SPRITE_PIXELS,
+    DEBUG_SPRITE_PIXELS_ALL,
+    DEBUG_WEAPON_SYNC,
+    DEBUG_WRAP_TEX,
+    FORCE_PROP_PREBAKED_OUTLINE,
+    MAX_OVERLAP_DEBUG_LOGS,
+} from "./debugFlags";
 
 
 
 // ============================================================
 // DEBUG: Prove why hero disappears during intellect cast
 // ============================================================
-const DEBUG_INT_HERO_VIS = false; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
 // Empty string = log all heroes; otherwise only log this heroName (e.g. "Jason")
-const DEBUG_INT_HERO_NAME_FILTER = "Jason";
-
-
 
 // Put this near the top of arcadeCompat.ts with your other debug toggles
-const DEBUG_SETFLAG = false;
-
 let _setFlagLogCount = 0;
 
-// GLOBAL DEBUG FLAGS
-const DEBUG_WRAP_TEX = false;   // 👈 disable spam
-
-// MASTER NETWORK DEBUG FLAG
-const DEBUG_NET = false;
-
-const DEBUG_TILEMAP = true;
+// NPC pipeline debug (code-only)
+const NPC_PIPE_COMPAT_LOG_ONCE_KEY = "__npcPipeCompatLogged";
+const NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY = "__npcPipeWeaponCallLogged";
 
 // Collider debug overlays (Phaser-only). Heavy when enabled; keep OFF by default.
-const DEBUG_DRAW_WALL_COLLIDERS = false;
-const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = false;
-const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
-const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
-const DEBUG_COLLIDER_ALPHA = 0.35;
-const DEBUG_ENEMY_FOOTPRINT_MAX_PX = 30; // match nav clamp used in HeroEngine
+// (flags live in src/debugFlags.ts)
 
 
 // ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️ ────── 💧 ────── ❄️  SECTION  ❄️ ────── 💧 ────── ❄️
@@ -109,15 +134,7 @@ const DEBUG_ENEMY_FOOTPRINT_MAX_PX = 30; // match nav clamp used in HeroEngine
 // DECOR PIPELINE (Phaser wrapper) — centralized + safe
 // --------------------------------------------------------------
 // Master switch: if false, ALL decor ingestion/rendering is disabled (no-op).
-const DECOR_ENABLED = true;
-const DEBUG_PROP_OUTLINE_VERBOSE = false;
-const FORCE_PROP_PREBAKED_OUTLINE = false;
-// Centralized debug logging for decor pipeline.
-const DECOR_DEBUG = true; //Debug flag 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-// Reserved switches (Tier2 polygons + solid blocking), intentionally OFF for now.
-const DECOR_ENABLE_TIER2 = false;
-const DECOR_ENABLE_SOLID_BLOCKING = false;
+// (flags live in src/debugFlags.ts)
 
 // We only apply when decorRev changes AND the renderer is ready.
 // This keeps per-tick overhead near-zero.
@@ -1854,9 +1871,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
 //Debug functions debug section section debug
 
-// Debug the "Extra" category
-const DEBUG_CATEGORY_X = false;
-
+// Debug the "Extra" category (flag in src/debugFlags.ts)
 let _heroAnimNoAtlasLogged = false;
 
 
@@ -2073,9 +2088,6 @@ function dumpImagePixels(tag: string, img: Image) {
 
 
 function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
-    const DEBUG_CATEGORY_X = false;
-    const DEBUG_CATEGORY_X_SAMPLES = false;
-
     if (!DEBUG_CATEGORY_X || !ctx.shouldLog) return;
 
     // ---- helpers (NO external UI constants) ----
@@ -2216,7 +2228,7 @@ function _debugDumpCategoryX(ctx: SyncContext, allSprites: Sprite[]): void {
 
 
 // Optional debug (leave false)
-const DEBUG_WEAPON_SYNC = false; //Debug flag
+// DEBUG_WEAPON_SYNC flag is defined in src/debugFlags.ts
 
 
 // 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃 ────── 🌿 ────── 🍃  SECTION  🍃 ────── 🌿 ────── 🍃
@@ -3828,6 +3840,15 @@ function _agiWeaponSheenStart(nativeHero: any, sc: any, weaponBg: any, weaponFg:
     if (nativeHero.__agiSheenOn) return
     nativeHero.__agiSheenOn = 1
 
+    const isNpc = !!(
+        nativeHero.getData?.("isNpc")
+        || nativeHero.getData?.("npcLpc")
+        || (nativeHero as any).__isNpc
+        || (nativeHero as any).__npcLpc
+    );
+    const pulseMs = AGI_WPN_SHEEN_PULSE_MS * (isNpc ? 10 : 1);
+    const alphaMin = isNpc ? 0.4 : AGI_WPN_SHEEN_ALPHA_MIN;
+
     // kill any leftovers (defensive)
     try { sc.tweens.killTweensOf(weaponBg) } catch { }
     try { sc.tweens.killTweensOf(weaponFg) } catch { }
@@ -3842,8 +3863,8 @@ function _agiWeaponSheenStart(nativeHero: any, sc: any, weaponBg: any, weaponFg:
     try {
         sc.tweens.add({
             targets: weaponBg,
-            alpha: { from: AGI_WPN_SHEEN_ALPHA_MAX, to: AGI_WPN_SHEEN_ALPHA_MIN },
-            duration: AGI_WPN_SHEEN_PULSE_MS,
+            alpha: { from: AGI_WPN_SHEEN_ALPHA_MAX, to: alphaMin },
+            duration: pulseMs,
             yoyo: true,
             repeat: -1
         })
@@ -3852,8 +3873,8 @@ function _agiWeaponSheenStart(nativeHero: any, sc: any, weaponBg: any, weaponFg:
     try {
         sc.tweens.add({
             targets: weaponFg,
-            alpha: { from: AGI_WPN_SHEEN_ALPHA_MAX, to: AGI_WPN_SHEEN_ALPHA_MIN },
-            duration: AGI_WPN_SHEEN_PULSE_MS,
+            alpha: { from: AGI_WPN_SHEEN_ALPHA_MAX, to: alphaMin },
+            duration: pulseMs,
             yoyo: true,
             repeat: -1
         })
@@ -4509,17 +4530,6 @@ namespace sprites {
     const SPRITE_SYNC_LOG_MOD = 300;   // log every 300th frame *after* that
 
     const MAX_ATTACH_VERBOSE = 2;    // log first 20 sprite attach attempts
-    const DEBUG_SPRITE_ATTACH = false; // master switch for attach logging
-
-    const DEBUG_PROJECTILE_NATIVE = false;  // flip off when done debugging
-
-
-    const DEBUG_NET_SNAPSHOT = false;  // master switch for per-snapshot logs
-
-
-    // Extra per-sprite pixel introspection (second full scan per sprite).
-    // Leave this false for normal play; turn on only when debugging pixel issues.
-    const DEBUG_SPRITE_PIXELS = false;
 
 
 
@@ -4532,18 +4542,7 @@ namespace sprites {
     // Master switch
     //const DEBUG_SPRITE_PIXELS = false;
 
-    // If true, log *everything* (ignores per-role toggles & limits)
-    const DEBUG_SPRITE_PIXELS_ALL = false;
-
-    // Per-role toggles
-    // Turn HERO/ENEMY off so you can see PROJECTILE/AURA noise-free.
-    const DEBUG_ROLE_HERO        = false;
-    const DEBUG_ROLE_ENEMY       = false;
-    const DEBUG_ROLE_PROJECTILE  = false;
-    const DEBUG_ROLE_AURA        = false;
-    const DEBUG_ROLE_ACTOR       = false;  // generic combat actors (if not clearly hero/enemy)
-    const DEBUG_ROLE_EFFECT      = false;
-    const DEBUG_ROLE_OTHER       = false;
+    // Debug flags are defined in src/debugFlags.ts
     
     // Per-role log limits (so even when enabled, they don't spam forever)
     const ROLE_LOG_LIMITS: { [role: string]: number } = {
@@ -4591,13 +4590,14 @@ namespace sprites {
         if (kindName === "HeroAura" || kindName.indexOf("Aura") >= 0) return "AURA";
         if (kindName === "RelicEffect" || kindName.indexOf("Effect") >= 0) return "EFFECT";
         if (kindName === "HeroWeapon" || kindName.indexOf("Weapon") >= 0) return "PROJECTILE";
-        if (kindName === "Player" || kindName === "Hero") return "HERO";
+        if (kindName === "Player" || kindName === "Hero" || kindName === "NpcLpc") return "HERO";
         if (kindName.indexOf("Enemy") >= 0) return "ENEMY";
 
         // Use data flags as heuristics (engine-specific)
         if (dataKeys.indexOf(EFFECT_SKIN_DATA_KEY) >= 0 || dataKeys.indexOf("effectSkinId") >= 0) {
             return "EFFECT";
         }
+        if (dataKeys.indexOf("npcLpc") >= 0) return "HERO";
         if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
             return "ACTOR";
         }
@@ -4893,6 +4893,12 @@ function _copyHeroIdentityToNative(
     };
 
     const readStr = (v: any, def: string): string => (typeof v === "string") ? v : def;
+    const readBool = (v: any, def: boolean): boolean => {
+        if (typeof v === "boolean") return v;
+        if (typeof v === "number") return !!v;
+        if (typeof v === "string") return v === "1" || v.toLowerCase() === "true";
+        return def;
+    };
 
     // ------------------------
     // Legacy identity
@@ -4915,6 +4921,30 @@ function _copyHeroIdentityToNative(
 
     const fco = readInt(dataAny.frameColOverride, -1);
     native.setData("frameColOverride", fco);
+
+    // ------------------------
+    // NPC flags (so glue can identify NPCs without hero arrays)
+    // ------------------------
+    const isNpc = readBool(dataAny.isNpc, false) || readBool(dataAny.npcLpc, false);
+    native.setData("isNpc", isNpc);
+    native.setData("npcLpc", readBool(dataAny.npcLpc, false));
+    const npcRole = readStr(dataAny._npcRole, "");
+    if (npcRole) native.setData("_npcRole", npcRole);
+    if (DEBUG_NPC_PIPELINE && isNpc) {
+        const already = native.getData ? native.getData(NPC_PIPE_COMPAT_LOG_ONCE_KEY) : 0;
+        if (!already) {
+            try { native.setData?.(NPC_PIPE_COMPAT_LOG_ONCE_KEY, 1); } catch { /* ignore */ }
+            console.log("[NPC-PIPE][compat.identity]", {
+                arcadeSpriteId: (s as any)?.id ?? 0,
+                heroName,
+                heroFamily,
+                phase,
+                dir,
+                frameColOverride: fco,
+                npcRole
+            });
+        }
+    }
 
     // ------------------------
     // Universal Action keys
@@ -6182,7 +6212,7 @@ const HERO_NATIVE_ORIGIN_Y = 0.5; // bottom-center
 const HERO_NATIVE_FEET_LIFT_PX = 0;
 
 // Optional debug
-const DEBUG_HERO_NATIVE_FEET_ANCHOR = false;
+// DEBUG_HERO_NATIVE_FEET_ANCHOR flag is defined in src/debugFlags.ts
 
 
 // PURPOSE: Optional policy: skip non-UI pixel attach for hero-native sprites handled elsewhere.
@@ -6273,6 +6303,20 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     };
 
     let native: any = (s as any).native;
+    if (native && (!native.anims || typeof native.anims.play !== "function")) {
+        if (DEBUG_NPC_PIPELINE) {
+            try {
+                console.log("[NPC-PIPE][compat.upgrade_native]", {
+                    arcadeSpriteId: (s as any)?.id ?? 0,
+                    hadNative: true,
+                    reason: "native has no anims; replacing with hero-native sprite"
+                });
+            } catch { /* ignore */ }
+        }
+        try { native.destroy(); } catch { /* ignore */ }
+        native = null;
+        (s as any).native = null;
+    }
 
     if (!native) {
         const bootTexKey = pickBootHeroTexKey();
@@ -6321,6 +6365,7 @@ function _attachHeroSkipPath(ctx: AttachContext): boolean {
     } else {
         // Keep origin stable in case something else reset it
         try { native.setOrigin(HERO_NATIVE_ORIGIN_X, HERO_NATIVE_ORIGIN_Y); } catch { /* ignore */ }
+        try { native.setData("isHeroNative", true); } catch { /* ignore */ }
         native.setPosition(nx, ny);
 
         // Keep identity in sync + re-apply animation if phase/dir/family changed.
@@ -6511,7 +6556,7 @@ function _attachFinalizeUpdate(ctx: AttachContext): void {
     // ======================================================
     // KIND56 CREATION TRACE (debug)
     // ======================================================
-    const DEBUG_KIND56_CREATE_TRACE = true;
+    // DEBUG_KIND56_CREATE_TRACE flag is defined in src/debugFlags.ts
     const KIND56_CREATE_TRACE_MAX = 10;
     let _kind56CreateTraceRemaining = KIND56_CREATE_TRACE_MAX;
 
@@ -8306,11 +8351,13 @@ function _wpnStep6_7_8_Effects(sc: any, dataAny: any, nativeHero: Phaser.GameObj
     const anyHero: any = nativeHero as any;
 
     // Step 6/7/8 ... (UNCHANGED)
+    const isNpc = !!(dataAny && (dataAny.isNpc || dataAny.npcLpc || dataAny._npcRole));
+
     const chgActive = ((dataAny["aChgOn"] as any | 0) !== 0)
     const pendingAdd = (dataAny["aPend"] as any | 0)
     const isExecW = ((dataAny["aExW"] as any | 0) !== 0)
 
-    const ghostCount = (chgActive && !isExecW) ? Math.max(0, pendingAdd | 0) : 0;
+    const ghostCount = (isNpc ? 0 : ((chgActive && !isExecW) ? Math.max(0, pendingAdd | 0) : 0));
     try {
         const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
         glueAny.setWeaponGhostCountExact({
@@ -8788,6 +8835,30 @@ function _syncHeroPath(
         }
     } catch { /* ignore */ }
     _applyHeroAuraGlow(nativeAny, auraActive, auraGlow, ctx.sc);
+
+    if (DEBUG_NPC_PIPELINE) {
+        const dataAny: any = (s as any).data || {};
+        const isNpc = !!dataAny.isNpc || !!dataAny.npcLpc || !!dataAny._npcRole;
+        if (isNpc) {
+            const already = (s as any).getData ? (s as any).getData(NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY) : (dataAny[NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY] as any);
+            if (!already) {
+                try { (s as any).setData?.(NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY, 1); } catch { dataAny[NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY] = 1; }
+                console.log("[NPC-PIPE][weapon.call]", {
+                    heroName: String(dataAny.heroName || ""),
+                    heroFamily: String(dataAny.heroFamily || ""),
+                    phase: String(dataAny.phase || ""),
+                    dir: String(dataAny.dir || ""),
+                    wSlash: String(dataAny[HERO_WPN_SLASH_KEY] || ""),
+                    wThrust: String(dataAny[HERO_WPN_THRUST_KEY] || ""),
+                    wCast: String(dataAny[HERO_WPN_CAST_KEY] || ""),
+                    wExec: String(dataAny[HERO_WPN_EXEC_KEY] || ""),
+                    wCombo: String(dataAny[HERO_WPN_COMBO_KEY] || ""),
+                    wInt: String(dataAny[HERO_WPN_INT_KEY] || ""),
+                    wSup: String(dataAny[HERO_WPN_SUP_KEY] || "")
+                });
+            }
+        }
+    }
 
     try {
         const dataAny: any = (s as any).data || {};
@@ -9434,13 +9505,13 @@ function _syncEndFrame(ctx: SyncContext): void {
 
 // --- collision helpers ---
 
-const DEBUG_OVERLAPS = false;          // controls per-frame + overlap logging
-const MAX_OVERLAP_DEBUG_LOGS = 40;
+// DEBUG_OVERLAPS and MAX_OVERLAP_DEBUG_LOGS are defined in src/debugFlags.ts
 let _overlapDebugCount = 0;
 let _processEventsCallCount = 0;
 
 let _dbgColliderGfxWalls: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxEnemies: Phaser.GameObjects.Graphics | null = null;
+let _dbgLoggedEnemyColliderOnce = false;
 
 function _heroCollisionOffsetY(s: Sprite): number {
     if (!s) return 0;
@@ -9505,6 +9576,8 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
             if (!s) continue;
             const role = _classifySpriteRole((s.kind as number) || 0, Object.keys((s as any).data || {}));
             if (role !== "ENEMY") continue;
+            const auraH = sprites.readDataNumber(s, "__monsterAuraFrameH") | 0;
+            const auraFoot = sprites.readDataNumber(s, "__monsterAuraFootBottom") | 0;
 
             const cw = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
             const ch = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
@@ -9520,6 +9593,20 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
             const left = (footX - (fw >> 1)) | 0;
             const top = (footY - fh + 1) | 0;
             gEnemies.strokeRect(left, top, fw, fh);
+
+            if (!_dbgLoggedEnemyColliderOnce) {
+                _dbgLoggedEnemyColliderOnce = true;
+                console.log("[DEBUG][ENEMY_COLLIDER]", {
+                    id: sprites.readDataString(s, "monsterId") || sprites.readDataString(s, "id") || s.id,
+                    pos: { x: s.x | 0, y: s.y | 0 },
+                    aura: {
+                        frameH: auraH | 0,
+                        footBottom: auraFoot | 0,
+                    },
+                    collider: { w: cw | 0, h: ch | 0 },
+                    footprint: { left, top, right: left + fw - 1, bottom: top + fh - 1, fw, fh },
+                });
+            }
         }
     }
 }
@@ -9550,15 +9637,17 @@ function _syncFocusOutlineForNative(
                 const g: any = globalThis as any;
                 if (!g[k]) {
                     g[k] = 1;
-                    console.log("[FOCUS][DECOR][SYNC]", {
-                        name: decorName,
-                        r,
-                        c,
-                        active,
-                        radius,
-                        depthBias,
-                        renderer: !!renderer
-                    });
+                    if (DECOR_DEBUG) {
+                        console.log("[FOCUS][DECOR][SYNC]", {
+                            name: decorName,
+                            r,
+                            c,
+                            active,
+                            radius,
+                            depthBias,
+                            renderer: !!renderer
+                        });
+                    }
                 }
             } catch { /* ignore */ }
             if (renderer && typeof renderer.setPropFocusAuraAt === "function") {
@@ -9625,7 +9714,9 @@ function _syncFocusOutlineForNativeOLDCODETODELETE(
                       const g: any = globalThis as any;
                     if (!g[k]) {
                         g[k] = 1;
-                        console.log("[FOCUS][DECOR] outline target resolved", { name, r, c, tex: propObj.texture?.key ?? "" });
+                        if (DECOR_DEBUG) {
+                            console.log("[FOCUS][DECOR] outline target resolved", { name, r, c, tex: propObj.texture?.key ?? "" });
+                        }
                     }
                 } else {
                     console.log("[AURA][PROPS] no prop display for decor", { name, r, c });
@@ -10377,6 +10468,7 @@ namespace controller {
 
 
     let _keyboardWired = false;
+    let _gamepadWired = false;
 
     // Send a local input event (button pressed/released) to the network.
     function _sendLocalInput(button: string, pressed: boolean) {
@@ -10424,6 +10516,110 @@ namespace controller {
         // Moves: Q/E → A/B
         bindKeyToButtonName("Q", "A");
         bindKeyToButtonName("E", "B");
+    }
+
+    // Hook Phaser gamepad into the "local" player (first connected pad).
+    // Maps: A/B buttons -> A/B, D-pad and left stick -> arrows.
+    export function _wireGamepad(scene: any): void {
+        if (_gamepadWired) {
+            console.log("[controller._wireGamepad] already wired, skipping");
+            return;
+        }
+        _gamepadWired = true;
+
+        const gp = scene && scene.input && scene.input.gamepad;
+        if (!gp || typeof gp.on !== "function") {
+            console.warn("[controller._wireGamepad] no gamepad plugin on scene", scene);
+            return;
+        }
+
+        console.log("[controller._wireGamepad] wiring first gamepad for LOCAL player (network-aware)");
+
+        const DEADZONE = 0.35;
+        let pad: any = null;
+        let updateHandler: (() => void) | null = null;
+
+        const axisState = { left: false, right: false, up: false, down: false };
+        const btnNames: Record<number, string> = {
+            0: "A",  // South
+            1: "B",  // East
+            12: "up",
+            13: "down",
+            14: "left",
+            15: "right",
+        };
+
+        const emit = (name: string, pressed: boolean) => _sendLocalInput(name, pressed);
+
+        const releaseAll = () => {
+            emit("A", false);
+            emit("B", false);
+            emit("up", false);
+            emit("down", false);
+            emit("left", false);
+            emit("right", false);
+            axisState.left = axisState.right = axisState.up = axisState.down = false;
+            if (updateHandler && scene?.events?.off) {
+                scene.events.off("update", updateHandler);
+                updateHandler = null;
+            }
+        };
+
+        const syncAxes = () => {
+            if (!pad || !pad.axes) return;
+            const ax = pad.axes[0] && typeof pad.axes[0].getValue === "function" ? pad.axes[0].getValue() : 0;
+            const ay = pad.axes[1] && typeof pad.axes[1].getValue === "function" ? pad.axes[1].getValue() : 0;
+
+            const next = {
+                left: ax < -DEADZONE,
+                right: ax > DEADZONE,
+                up: ay < -DEADZONE,
+                down: ay > DEADZONE,
+            };
+
+            (["left", "right", "up", "down"] as const).forEach((k) => {
+                if (axisState[k] !== next[k]) {
+                    axisState[k] = next[k];
+                    emit(k, next[k]);
+                }
+            });
+        };
+
+        const attachPad = (p: any) => {
+            if (!p) return;
+            pad = p;
+
+            p.on("down", (index: number) => {
+                const name = btnNames[index];
+                if (name) emit(name, true);
+            });
+            p.on("up", (index: number) => {
+                const name = btnNames[index];
+                if (name) emit(name, false);
+                // In case the D-pad shares axes, re-sync to avoid stuck states.
+                syncAxes();
+            });
+            p.on("disconnected", () => {
+                releaseAll();
+                pad = null;
+            });
+
+            updateHandler = () => syncAxes();
+            if (scene && scene.events && typeof scene.events.on === "function") {
+                scene.events.on("update", updateHandler);
+            }
+
+            // Prime axis state immediately.
+            syncAxes();
+        };
+
+        if (typeof gp.getPad === "function" && gp.total > 0) {
+            attachPad(gp.getPad(0));
+        }
+
+        gp.on("connected", (p: any) => {
+            if (!pad) attachPad(p);
+        });
     }
 
 
@@ -10509,7 +10705,7 @@ namespace netWorld {
     let _applyPerfTimeMs = 0;
     let _applyPerfLastReportMs = 0;
     let _applyPerfLastSpriteCount = 0;
-    const DEBUG_NET_APPLY_FOLLOWER = false; // gate follower apply logs
+    // DEBUG_NET_APPLY_FOLLOWER flag is defined in src/debugFlags.ts
 
 
 

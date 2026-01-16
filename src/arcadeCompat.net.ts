@@ -6,6 +6,8 @@
 
 // Type-only shim: WorldSnapshot type is defined in arcadeCompat.ts; we keep this file decoupled.
 
+import { DEBUG_NET, DEBUG_TILEMAP_COMPAT } from "./debugFlags";
+
 
 type NetWorldSnapshot = any
 
@@ -50,10 +52,8 @@ const KNOWN_PROFILE_KEYS = new Set<string>(["Chris", "Demo", "Jason", "Kyle"]);
 
 
 // ------------------------------------------------------------
-// Net module local debug + thresholds (moved from arcadeCompat.ts)
+// Net module local debug + thresholds (from src/debugFlags.ts)
 // ------------------------------------------------------------
-const DEBUG_NET = false;
-const DEBUG_TILEMAP = true;
 
 const INPUT_LAG_WARN_MS = 120;
 const INPUT_LAG_WARN_EXCESS_MS = 80;
@@ -931,7 +931,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         const hook = g.__onNetTilemap;
         if (typeof hook === "function") {
             try {
-                if (DEBUG_TILEMAP) {
+                if (DEBUG_TILEMAP_COMPAT) {
                     console.log(">>> [net.tilemap] received; forwarding to Phaser hook", info);
                 }
                 hook(msg);
@@ -939,7 +939,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
                 console.error(">>> [net.tilemap] __onNetTilemap ERROR:", e);
             }
         } else {
-            if (DEBUG_TILEMAP) {
+            if (DEBUG_TILEMAP_COMPAT) {
                 console.warn(
                     ">>> [net.tilemap] received but __onNetTilemap not installed yet; cached in globalThis.__lastTilemapMsg",
                     info

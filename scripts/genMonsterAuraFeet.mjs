@@ -24,7 +24,7 @@ const ROOT = path.resolve(path.join(__dirname, ".."));
 const AURA_DIR = path.join(ROOT, "assets/monsters/monster_auras");
 const OUT_TS = path.join(ROOT, "src/generated/monsterAuraFeet.ts");
 const FOOT_LIFT_PX = 2;       // lift the foot a bit to avoid grabbing trailing pixels
-const OVERWRITE_ALL = false;  // set true to recompute all entries; false fills only missing ids
+const OVERWRITE_ALL = (process.env.OVERWRITE_AURA_FEET === "true");  // true to recompute all entries; false fills only missing ids
 
 function paeth(a, b, c) {
   const p = a + b - c;
@@ -177,16 +177,38 @@ function parseAuraId(baseName) {
 }
 
 function findFoot(baseName, filePath) {
-  const { w, h, rows } = parsePng(filePath);
-  const cx = Math.floor(w / 2);
-  let foot = h - 1;
-  for (let y = h - 1; y >= 0; y--) {
-    const a = rows[y][cx * 4 + 3];
-    if (a > 0) { foot = y; break; }
+  const sizeMatch = baseName.match(/(\d+)x(\d+)/i);
+  const declaredW = sizeMatch ? parseInt(sizeMatch[1], 10) : null;
+  const declaredH = sizeMatch ? parseInt(sizeMatch[2], 10) : null;
+
+  const { w: sheetW, h: sheetH, rows } = parsePng(filePath);
+  const frameW = declaredW && declaredW > 0 ? declaredW : sheetW;
+  const frameH = declaredH && declaredH > 0 ? declaredH : sheetH;
+  const cols = Math.max(1, Math.floor(sheetW / frameW));
+  const rowsCount = Math.max(1, Math.floor(sheetH / frameH));
+
+  let bestFoot = frameH - 1;
+
+  for (let ry = 0; ry < rowsCount; ry++) {
+    for (let rx = 0; rx < cols; rx++) {
+      const x0 = rx * frameW;
+      const y0 = ry * frameH;
+      const cx = Math.floor(frameW / 2);
+      for (let y = frameH - 1; y >= 0; y--) {
+        const ay = y0 + y;
+        const ax = (x0 + cx) * 4;
+        const a = rows[ay][ax + 3];
+        if (a > 0) {
+          if (y > bestFoot) bestFoot = y;
+          break;
+        }
+      }
+    }
   }
-  let lifted = foot - FOOT_LIFT_PX;
+
+  let lifted = bestFoot - FOOT_LIFT_PX;
   if (lifted < 0) lifted = 0;
-  return { frameW: w, frameH: h, footBottom: lifted };
+  return { frameW, frameH, footBottom: lifted };
 }
 
 function main() {

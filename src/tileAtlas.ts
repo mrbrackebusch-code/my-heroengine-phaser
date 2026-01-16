@@ -1,5 +1,6 @@
 // tileAtlas.ts
 import type Phaser from "phaser";
+import { DEBUG_TILE_ATLAS_GLOBAL, DEBUG_TILES } from "./debugFlags";
 
 // ---------------------------------------------------------------------------
 // Tile / terrain data
@@ -152,12 +153,12 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
 
-    // Shop platform (full 7x7 sheet, anchor = bottom-left tile)
+    // Shop platform (full 9x9 sheet, anchor = bottom-left tile)
     shop_platform: {
         atlas: "shopPlatform",
-        ref: { row: 6, col: 0 },
-        wTiles: 7,
-        hTiles: 7,
+        ref: { row: 8, col: 0 },
+        wTiles: 9,
+        hTiles: 9,
         depthBias: -1000000, // ensure it renders under all actors/props
     },
 
@@ -446,7 +447,6 @@ export interface TileAtlas {
 // ---------------------------------------------------------------------------
 
 const TILE_SIZE = 32;
-const DEBUG_TILES_GLOBAL = false;
 
 
 
@@ -554,7 +554,7 @@ export function decorAtlasTextureKey(aliasOrTextureKey: string): string {
 }
 
 function logTiles(...args: any[]) {
-    if (!DEBUG_TILES_GLOBAL) return;
+    if (!DEBUG_TILE_ATLAS_GLOBAL) return;
     console.log(...args);
 }
 
@@ -682,7 +682,7 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
     // Reset url map each preload so logs always reflect current load set.
     __SHEET_URL_BY_KEY.clear();
 
-    const DEBUG_TILES = false;
+    // DEBUG_TILES flag is defined in src/debugFlags.ts
 
     const auraUrlById = new Map<string, string>();
     for (const [p, url] of Object.entries(tileAuraPngs)) {
@@ -924,7 +924,7 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         `${baseDef.textureKey} (${baseInfo.cols}x${baseInfo.rows} tiles)`
     );
 
-    if (DEBUG_TILES_GLOBAL) {
+    if (DEBUG_TILE_ATLAS_GLOBAL) {
         logTiles("[tileAtlas.build] atlas alias map:", {
             base: keys.baseTextureKey,
             decor: keys.decorTextureKey,
