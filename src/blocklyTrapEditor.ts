@@ -582,6 +582,13 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
       _setStatus(res.ok ? "Valid" : `Invalid: ${res.errors[0] || "error"}`);
       const g: any = (globalThis as any);
       g.__heTrapLastResult = res;
+      try {
+        const detail = { trapId: spec.id, ok: res.ok, value: res.value, errors: res.errors, inputs: _activeInputs || {} };
+        if (typeof (globalThis as any).dispatchEvent === "function") {
+          (globalThis as any).dispatchEvent(new CustomEvent("he:trapResult", { detail }));
+          if (res.ok) (globalThis as any).dispatchEvent(new CustomEvent("he:trapSolved", { detail }));
+        }
+      } catch { }
     };
   }
   if (resetBtn) {
@@ -603,6 +610,12 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
 export function closeBlocklyTrapEditor(): void {
   const overlay = document.getElementById(OVERLAY_ID);
   if (overlay) overlay.style.display = "none";
+  try {
+    const detail = { trapId: _activeSpec ? _activeSpec.id : "" };
+    if (typeof (globalThis as any).dispatchEvent === "function") {
+      (globalThis as any).dispatchEvent(new CustomEvent("he:trapEditorClosed", { detail }));
+    }
+  } catch { }
 }
 
 export function installBlocklyTrapEditor(): void {

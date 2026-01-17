@@ -122,6 +122,41 @@ function _makeInputDecls(spec: TrapSpec): string {
   return out;
 }
 
+function _deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!_deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const aKeys = Object.keys(a as Record<string, unknown>);
+    const bKeys = Object.keys(b as Record<string, unknown>);
+    if (aKeys.length !== bKeys.length) return false;
+    for (let i = 0; i < aKeys.length; i++) {
+      const k = aKeys[i];
+      if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+      if (!_deepEqual((a as any)[k], (b as any)[k])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function _hasExpectedOutput(spec: TrapSpec): boolean {
+  if (spec.validator.expectedOutputFromInputs) return true;
+  return Object.prototype.hasOwnProperty.call(spec.validator, "expectedOutput");
+}
+
+function _resolveExpectedOutput(spec: TrapSpec, inputs: Record<string, unknown>): unknown {
+  if (typeof spec.validator.expectedOutputFromInputs === "function") {
+    return spec.validator.expectedOutputFromInputs(inputs);
+  }
+  return spec.validator.expectedOutput;
+}
+
 export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>): TrapRunResult {
   const errors: string[] = [];
   const xmlText = getTrapXmlForId(spec.id) || spec.starterBlocks.xml;
@@ -160,6 +195,17 @@ export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>):
 
   const outRes = validateTrapOutput(spec.output, value);
   if (!outRes.ok) errors.push(...outRes.errors);
+
+  if (errors.length === 0 && _hasExpectedOutput(spec)) {
+    const expected = _resolveExpectedOutput(spec, inputs);
+    if (typeof spec.validator.matchOutput === "function") {
+      if (!spec.validator.matchOutput(value, inputs)) {
+        errors.push("Output does not match expected result");
+      }
+    } else if (!_deepEqual(value, expected)) {
+      errors.push("Output does not match expected result");
+    }
+  }
 
   return { ok: errors.length === 0, value, errors, code, codeLines };
 }

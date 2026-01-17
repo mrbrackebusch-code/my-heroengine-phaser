@@ -76,15 +76,30 @@ import {
     DEBUG_CATEGORY_X,
     DEBUG_CATEGORY_X_SAMPLES,
     DEBUG_COLLIDER_ALPHA,
+    DEBUG_COLLIDER_BODY_COLOR,
     DEBUG_COLLIDER_ENEMY_COLOR,
+    DEBUG_COLLIDER_HIT_COLOR,
+    DEBUG_COLLIDER_AURA_COLOR,
+    DEBUG_COLLIDER_NAV_COLOR,
+    DEBUG_COLLIDER_NATIVE_COLOR,
+    DEBUG_COLLIDER_SPRITE_COLOR,
     DEBUG_COLLIDER_WALL_COLOR,
     DEBUG_COMPAT_BACKGROUND,
     DEBUG_COMPAT_BOOT,
     DEBUG_COMPAT_CONTROLLER,
     DEBUG_COMPAT_TILEMAP_STUB,
+    DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS,
+    DEBUG_DRAW_ENEMY_HITBOX,
+    DEBUG_DRAW_ENEMY_AURA_BOUNDS,
+    DEBUG_DRAW_ENEMY_NAV_FOOTPRINT,
+    DEBUG_DRAW_ENEMY_NATIVE_BOUNDS,
+    DEBUG_DRAW_ENEMY_SPRITE_BOUNDS,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
+    DEBUG_ENEMY_POS_GUARD,
+    DEBUG_ENEMY_POS_GUARD_THROW,
     DEBUG_DRAW_WALL_COLLIDERS,
     DEBUG_ENEMY_FOOTPRINT_MAX_PX,
+    DEBUG_ENEMY_WALL_FOOTPRINT_PX,
     DEBUG_HERO_NATIVE_FEET_ANCHOR,
     DEBUG_INT_HERO_NAME_FILTER,
     DEBUG_INT_HERO_VIS,
@@ -160,7 +175,8 @@ const DECOR_DATA_ROLE = "decorRole";
 const DECOR_DATA_NAME = "decorName";
 
 
-import { getPropTileRefByName } from "./tileAtlas";
+import { getPropTileRefByName, PROP_VISUALS_BY_NAME } from "./tileAtlas";
+import { getPropSpec, propBaseNameFromKey } from "./propSpecs";
 
 
 const DECOR_DATA_TILE_R = "decorTileR";
@@ -168,6 +184,8 @@ const DECOR_DATA_TILE_C = "decorTileC";
 
 type OpaqueAabb = { ox: number; oy: number; w: number; h: number };
 const _decorOpaqueAabbCache: Record<string, OpaqueAabb> = Object.create(null);
+type OpaqueBaseBounds = { minX: number; maxX: number; frameW: number; frameH: number; baseH: number };
+const _decorOpaqueBaseCache: Record<string, OpaqueBaseBounds> = Object.create(null);
 
 let _decorTmpCanvas: HTMLCanvasElement | null = null;
 let _decorTmpCtx: CanvasRenderingContext2D | null = null;
@@ -240,6 +258,91 @@ function _decor_tryGetPropFrameIndexAt(renderer: any, r: number, c: number): num
     } catch { /* ignore */ }
 
     return 0;
+}
+
+function _decor_computeOpaqueBaseBounds(
+    scene: any,
+    textureKey: string,
+    frameIndex: number,
+    baseHeightPx: number
+): OpaqueBaseBounds | null {
+    const baseH = Math.max(1, (baseHeightPx | 0));
+    const cacheKey =
+        textureKey + ":" + (frameIndex | 0) +
+        ":base:" + (baseH | 0) +
+        ":" + (DECOR_SOLID_ALPHA_THRESHOLD | 0) +
+        ":" + (DECOR_SOLID_INSET_PX | 0);
+    const hit = _decorOpaqueBaseCache[cacheKey];
+    if (hit) return hit;
+
+    try {
+        const tex = scene && scene.textures ? scene.textures.get(textureKey) : null;
+        if (!tex) return null;
+
+        const frame: any = tex.get(frameIndex);
+        const src: any = tex.getSourceImage ? tex.getSourceImage() : null;
+        if (!frame || !src) return null;
+
+        const sx = ((frame.cutX ?? frame.x) | 0);
+        const sy = ((frame.cutY ?? frame.y) | 0);
+        const sw = ((frame.cutWidth ?? frame.width ?? 0) | 0);
+        const sh = ((frame.cutHeight ?? frame.height ?? 0) | 0);
+
+        if (sw <= 0 || sh <= 0) return null;
+
+        const useH = Math.max(1, Math.min(baseH | 0, sh | 0)) | 0;
+
+        if (!_decorTmpCanvas) _decorTmpCanvas = document.createElement("canvas");
+        if (!_decorTmpCtx) _decorTmpCtx = _decorTmpCanvas.getContext("2d", { willReadFrequently: true } as any);
+
+        const cnv = _decorTmpCanvas!;
+        const ctx = _decorTmpCtx!;
+        cnv.width = sw | 0;
+        cnv.height = useH | 0;
+
+        ctx.clearRect(0, 0, sw, useH);
+
+        const cropY = Math.max(0, (sh - useH) | 0);
+        ctx.drawImage(src, sx, sy + cropY, sw, useH, 0, 0, sw, useH);
+
+        const img = ctx.getImageData(0, 0, sw, useH);
+        const data = img.data;
+
+        let minX = 9999;
+        let maxX = -1;
+
+        for (let y = 0; y < useH; y++) {
+            for (let x = 0; x < sw; x++) {
+                const a = data[(((y * sw + x) * 4) + 3) | 0] | 0;
+                if (a > (DECOR_SOLID_ALPHA_THRESHOLD | 0)) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                }
+            }
+        }
+
+        if (maxX < minX) {
+            minX = 0;
+            maxX = (sw - 1) | 0;
+        }
+
+        const inset = (DECOR_SOLID_INSET_PX | 0);
+        minX = Math.min(sw - 1, Math.max(0, (minX + inset) | 0));
+        maxX = Math.min(sw - 1, Math.max(minX, (maxX - inset) | 0));
+
+        const out: OpaqueBaseBounds = {
+            minX: minX | 0,
+            maxX: maxX | 0,
+            frameW: sw | 0,
+            frameH: sh | 0,
+            baseH: useH | 0,
+        };
+
+        _decorOpaqueBaseCache[cacheKey] = out;
+        return out;
+    } catch {
+        return null;
+    }
 }
 
 function _decor_computeOpaqueAabbForFrame(scene: any, textureKey: string, frameIndex: number, tileSize: number): OpaqueAabb {
@@ -499,7 +602,80 @@ function decor_applyTightOpaqueAabbToSolids(args: {
             continue;
         }
 
-        const bb = _decor_computeOpaqueAabbForFrame(scene, info.textureKey, info.frameIndex, tileSize);
+        const baseName = propBaseNameFromKey(name);
+        const spec = baseName ? getPropSpec(baseName) : null;
+        const vis: any = baseName ? (PROP_VISUALS_BY_NAME as any)[baseName] : null;
+
+        const collision = spec?.collision;
+        const collisionMode = (collision?.mode || "").trim();
+        let baseHeightPx = 0;
+        let useAura = false;
+        let forceAura = false;
+
+        if (collisionMode === "base") {
+            baseHeightPx = (collision?.baseHeightPx ?? vis?.collisionBaseHeightPx ?? 0) | 0;
+            useAura = !!(collision?.useAura ?? vis?.collisionUseAura);
+        } else if (collisionMode === "aura") {
+            baseHeightPx = 0;
+            useAura = !!(collision?.useAura ?? true);
+            forceAura = true;
+        } else if (collisionMode === "opaque") {
+            baseHeightPx = 0;
+            useAura = false;
+        } else if (collisionMode === "none" || collisionMode === "polygon") {
+            baseHeightPx = 0;
+            useAura = false;
+        } else {
+            baseHeightPx = (collision?.baseHeightPx ?? vis?.collisionBaseHeightPx ?? 0) | 0;
+            useAura = !!(collision?.useAura ?? vis?.collisionUseAura);
+        }
+
+        if ((baseHeightPx | 0) > 0) {
+            let srcKey = info.textureKey;
+            if (useAura) {
+                const auraKey = `${info.textureKey}_aura_r2`;
+                if (scene?.textures?.exists?.(auraKey)) srcKey = auraKey;
+            }
+
+            const bbBase = _decor_computeOpaqueBaseBounds(scene, srcKey, info.frameIndex, baseHeightPx | 0);
+            if (bbBase) {
+                const offX = (vis?.offsetXPx ?? 0) | 0;
+                const offY = (vis?.offsetYPx ?? 0) | 0;
+
+                const centerX = (((c * tileSize) + (tileSize >> 1) + offX) | 0);
+                const centerY = (((r * tileSize) + (tileSize >> 1) + offY) | 0);
+
+                const halfW = Math.idiv((bbBase.frameW | 0), 2) | 0;
+                const halfH = Math.idiv((bbBase.frameH | 0), 2) | 0;
+                const spriteLeft = ((centerX - halfW) | 0);
+                const spriteTop = ((centerY - halfH) | 0);
+
+                const left = ((spriteLeft + (bbBase.minX | 0)) | 0);
+                const top = ((spriteTop + ((bbBase.frameH | 0) - (bbBase.baseH | 0))) | 0);
+                const w = Math.max(1, (((bbBase.maxX | 0) - (bbBase.minX | 0) + 1) | 0)) | 0;
+                const h = Math.max(1, (bbBase.baseH | 0)) | 0;
+
+                const img = image.create(w | 0, h | 0);
+                if (typeof s.setImage === "function") s.setImage(img);
+                else s.image = img;
+
+                s.left = (left | 0);
+                s.top = (top | 0);
+
+                if (DECOR_DEBUG) {
+                    _decor_dbg("AABB", "tightened base-only solid", { name, tileR: r, tileC: c, info, bbBase });
+                }
+                continue;
+            }
+        }
+
+        let fullKey = info.textureKey;
+        if (forceAura && useAura) {
+            const auraKey = `${info.textureKey}_aura_r2`;
+            if (scene?.textures?.exists?.(auraKey)) fullKey = auraKey;
+        }
+
+        const bb = _decor_computeOpaqueAabbForFrame(scene, fullKey, info.frameIndex, tileSize);
 
         // Resize Arcade collider sprite to tight bounds
         const img = image.create((bb.w | 0), (bb.h | 0));
@@ -4301,8 +4477,8 @@ class Sprite {
     private static _nextId = 1;
     id: number;
     
-    x: number = 0;
-    y: number = 0;
+    private _x: number = 0;
+    private _y: number = 0;
     vx: number = 0;
     vy: number = 0;
     z: number = 0;
@@ -4317,6 +4493,30 @@ class Sprite {
 
     get height(): number {
         return this.image ? this.image.height : 0;
+    }
+
+    get x(): number {
+        return this._x;
+    }
+
+    set x(v: number) {
+        this._setAxis("x", v);
+    }
+
+    get y(): number {
+        return this._y;
+    }
+
+    set y(v: number) {
+        this._setAxis("y", v);
+    }
+
+    private _setAxis(axis: "x" | "y", v: number): void {
+        const oldVal = axis === "x" ? this._x : this._y;
+        if (oldVal === v) return;
+        if (DEBUG_ENEMY_POS_GUARD) _debugEnemyPosGuardOnSet(this, axis, oldVal, v);
+        if (axis === "x") this._x = v;
+        else this._y = v;
     }
 
 
@@ -4458,6 +4658,72 @@ destroy(effect?: number, durationMs?: number): void {
 
     // internal destroyed flag – not part of MakeCode API but handy.
     _destroyed: boolean = false;
+}
+
+const ENEMY_POS_GUARD_ALLOWLIST: string[] = [
+    "_physicsStep",
+    "resolveEnemyTilemapCollisions",
+    "resolveForEnemy",
+    "_enemyHitRunEffects",
+    "_enemyApplyAntiStuckSlide",
+    "_resolveSpriteOverlap",
+    "spawnEnemyOfKind",
+    "spawnDummyEnemy",
+    "setPosition"
+];
+
+const ENEMY_POS_GUARD_LOG_LIMIT = 200;
+let _enemyPosGuardLogCount = 0;
+const _enemyPosGuardSeen = new Set<string>();
+
+function _debugEnemyPosGuardPickFrame(stack: string): string {
+    if (!stack) return "(no stack)";
+    const lines = stack.split("\n").map((l) => l.trim());
+    for (const line of lines) {
+        if (!line) continue;
+        if (line.includes("_debugEnemyPosGuardOnSet")) continue;
+        if (line.includes("Sprite._setAxis")) continue;
+        if (line.includes("Sprite.set x")) continue;
+        if (line.includes("Sprite.set y")) continue;
+        if (line.startsWith("Error")) continue;
+        return line;
+    }
+    return lines[0] || "(no stack)";
+}
+
+function _debugEnemyPosGuardIsAllowed(stack: string): boolean {
+    for (const allow of ENEMY_POS_GUARD_ALLOWLIST) {
+        if (stack.includes(allow)) return true;
+    }
+    return false;
+}
+
+function _debugEnemyPosGuardOnSet(s: Sprite, axis: "x" | "y", fromVal: number, toVal: number): void {
+    if (!DEBUG_ENEMY_POS_GUARD) return;
+    if (!s || !s.data || !(s.data as any).__posGuardEnemy) return;
+
+    const stack = (new Error("[ENEMY_POS_GUARD] stack")).stack || "";
+    const frame = _debugEnemyPosGuardPickFrame(stack);
+    const allowed = _debugEnemyPosGuardIsAllowed(stack);
+    const key = `${axis}|${frame}`;
+
+    if (!_enemyPosGuardSeen.has(key) && _enemyPosGuardLogCount < ENEMY_POS_GUARD_LOG_LIMIT) {
+        _enemyPosGuardSeen.add(key);
+        _enemyPosGuardLogCount++;
+        console.log("[DEBUG][ENEMY_POS_GUARD]", {
+            id: s.id,
+            axis,
+            from: fromVal,
+            to: toVal,
+            allowed,
+            frame
+        });
+    }
+
+    if (!allowed && DEBUG_ENEMY_POS_GUARD_THROW) {
+        console.log(stack);
+        throw new Error(`[ENEMY_POS_GUARD] ${axis} set by unregistered call site: ${frame}`);
+    }
 }
 
 
@@ -4934,9 +5200,11 @@ function _copyHeroIdentityToNative(
     // ------------------------
     // NPC flags (so glue can identify NPCs without hero arrays)
     // ------------------------
-    const isNpc = readBool(dataAny.isNpc, false) || readBool(dataAny.npcLpc, false);
+    const isEnemyLpc = readBool(dataAny.enemyLpc, false);
+    const isNpc = readBool(dataAny.isNpc, false) || readBool(dataAny.npcLpc, false) || isEnemyLpc;
     native.setData("isNpc", isNpc);
     native.setData("npcLpc", readBool(dataAny.npcLpc, false));
+    native.setData("enemyLpc", isEnemyLpc);
     const npcRole = readStr(dataAny._npcRole, "");
     if (npcRole) native.setData("_npcRole", npcRole);
     if (DEBUG_NPC_PIPELINE && isNpc) {
@@ -6095,6 +6363,15 @@ function _attachGetOrCreateNative(
 ): { native: any; didCreate: boolean } {
     const sc = ctx.sc;
     const s = ctx.s;
+    const dataAny: any = ctx.dataAny || {};
+    const readInt = (v: any, def: number): number => {
+        if (typeof v === "number" && Number.isFinite(v)) return v | 0;
+        if (typeof v === "string") {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n)) return n | 0;
+        }
+        return def | 0;
+    };
 
     let native: any = s.native;
     let didCreate = false;
@@ -6102,9 +6379,11 @@ function _attachGetOrCreateNative(
     if (!native) {
         const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
         const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
+        const offX = isEnemyLike ? readInt(dataAny.renderOffsX, 0) : 0;
+        const offY = isEnemyLike ? readInt(dataAny.renderOffsY, 0) : 0;
 
         const n = isEnemyLike
-            ? sc.add.sprite(s.x, s.y, texKey)
+            ? sc.add.sprite(s.x + offX, s.y + offY, texKey)
             : sc.add.image(s.x, s.y, texKey);
 
         n.setOrigin(0.5, 0.5);
@@ -6123,7 +6402,14 @@ function _attachGetOrCreateNative(
             );
         }
     } else {
-        native.setPosition(s.x, s.y);
+        const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
+        if (role === "ENEMY" || role === "ACTOR") {
+            const offX = readInt(dataAny.renderOffsX, 0);
+            const offY = readInt(dataAny.renderOffsY, 0);
+            native.setPosition(s.x + offX, s.y + offY);
+        } else {
+            native.setPosition(s.x, s.y);
+        }
     }
 
     return { native, didCreate };
@@ -8366,7 +8652,7 @@ function _wpnStep6_7_8_Effects(sc: any, dataAny: any, nativeHero: Phaser.GameObj
     const anyHero: any = nativeHero as any;
 
     // Step 6/7/8 ... (UNCHANGED)
-    const isNpc = !!(dataAny && (dataAny.isNpc || dataAny.npcLpc || dataAny._npcRole));
+    const isNpc = !!(dataAny && (dataAny.isNpc || dataAny.npcLpc || dataAny.enemyLpc || dataAny._npcRole));
 
     const chgActive = ((dataAny["aChgOn"] as any | 0) !== 0)
     const pendingAdd = (dataAny["aPend"] as any | 0)
@@ -8803,7 +9089,9 @@ function _syncHeroPath(
     const dataKeys = Object.keys(s.data || {});
     const role = _classifySpriteRole(s.kind, dataKeys);
 
-    if (role !== "HERO") return;
+    const dataAny: any = (s as any).data || {};
+    const isEnemyLpc = !!dataAny.enemyLpc;
+    if (role !== "HERO" && !isEnemyLpc) return;
 
     const nativeAny: any = s.native;
     if (!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"))) return;
@@ -8852,7 +9140,6 @@ function _syncHeroPath(
     _applyHeroAuraGlow(nativeAny, auraActive, auraGlow, ctx.sc);
 
     if (DEBUG_NPC_PIPELINE) {
-        const dataAny: any = (s as any).data || {};
         const isNpc = !!dataAny.isNpc || !!dataAny.npcLpc || !!dataAny._npcRole;
         if (isNpc) {
             const already = (s as any).getData ? (s as any).getData(NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY) : (dataAny[NPC_PIPE_WEAPON_CALL_LOG_ONCE_KEY] as any);
@@ -8925,6 +9212,7 @@ function _syncEnemyActorPath(
 
     if (!(s as any).data) (s as any).data = {};
     const data: any = (s as any).data;
+    const isEnemyLpc = !!data.enemyLpc;
 
     const monsterId =
         sprites.readDataString(s, "monsterId") ||
@@ -8965,14 +9253,110 @@ function _syncEnemyActorPath(
     nativeAny.setData("phase",     phase);
     nativeAny.setData("dir",       dir);
 
-    const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
-    const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
+    if (!isEnemyLpc) {
+        const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
+        const enemySprite = nativeAny as Phaser.GameObjects.Sprite;
 
-    if (glueAny && typeof glueAny.tryAttachMonsterSprite === "function") {
-        glueAny.tryAttachMonsterSprite(enemySprite);
-    } else if (glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
-        glueAny.applyMonsterAnimationForSprite(enemySprite);
+        if (glueAny && typeof glueAny.tryAttachMonsterSprite === "function") {
+            glueAny.tryAttachMonsterSprite(enemySprite);
+        } else if (glueAny && typeof glueAny.applyMonsterAnimationForSprite === "function") {
+            glueAny.applyMonsterAnimationForSprite(enemySprite);
+        }
+
+        // Mirror aura sizing/foot data from native sprite onto Arcade sprite data
+        // so engine-side nav/collision can anchor to the rendered feet.
+        try {
+            const dataAny: any = (s as any).data || {};
+            const nativeData: any = nativeAny?.data;
+            if (nativeData && typeof nativeData.get === "function") {
+                const auraFrameW = nativeData.get("__monsterAuraFrameW");
+                const auraFrameH = nativeData.get("__monsterAuraFrameH");
+                const auraFoot = nativeData.get("__monsterAuraFootBottom");
+                const auraOutline = nativeData.get("__monsterAuraOutline");
+                const auraOutlineSides = nativeData.get("__monsterAuraOutlineSides");
+                const auraMinX = nativeData.get("__monsterAuraMinX");
+                const auraMinY = nativeData.get("__monsterAuraMinY");
+                const auraMaxX = nativeData.get("__monsterAuraMaxX");
+                const auraMaxY = nativeData.get("__monsterAuraMaxY");
+                const auraCenterX = nativeData.get("__monsterAuraCenterX");
+                const auraCenterY = nativeData.get("__monsterAuraCenterY");
+                if (typeof auraFrameW === "number" && auraFrameW > 0 && dataAny.__monsterAuraFrameW !== (auraFrameW | 0)) {
+                    dataAny.__monsterAuraFrameW = auraFrameW | 0;
+                }
+                if (typeof auraFrameH === "number" && auraFrameH > 0 && dataAny.__monsterAuraFrameH !== (auraFrameH | 0)) {
+                    dataAny.__monsterAuraFrameH = auraFrameH | 0;
+                }
+                if (typeof auraFoot === "number" && auraFoot > 0 && dataAny.__monsterAuraFootBottom !== (auraFoot | 0)) {
+                    dataAny.__monsterAuraFootBottom = auraFoot | 0;
+                }
+                if (Array.isArray(auraOutline) && dataAny.__monsterAuraOutline !== auraOutline) {
+                    dataAny.__monsterAuraOutline = auraOutline;
+                }
+                if (typeof auraOutlineSides === "number" && dataAny.__monsterAuraOutlineSides !== (auraOutlineSides | 0)) {
+                    dataAny.__monsterAuraOutlineSides = auraOutlineSides | 0;
+                }
+                if (typeof auraMinX === "number" && dataAny.__monsterAuraMinX !== (auraMinX | 0)) {
+                    dataAny.__monsterAuraMinX = auraMinX | 0;
+                }
+                if (typeof auraMinY === "number" && dataAny.__monsterAuraMinY !== (auraMinY | 0)) {
+                    dataAny.__monsterAuraMinY = auraMinY | 0;
+                }
+                if (typeof auraMaxX === "number" && dataAny.__monsterAuraMaxX !== (auraMaxX | 0)) {
+                    dataAny.__monsterAuraMaxX = auraMaxX | 0;
+                }
+                if (typeof auraMaxY === "number" && dataAny.__monsterAuraMaxY !== (auraMaxY | 0)) {
+                    dataAny.__monsterAuraMaxY = auraMaxY | 0;
+                }
+                if (typeof auraCenterX === "number" && dataAny.__monsterAuraCenterX !== (auraCenterX | 0)) {
+                    dataAny.__monsterAuraCenterX = auraCenterX | 0;
+                }
+                if (typeof auraCenterY === "number" && dataAny.__monsterAuraCenterY !== (auraCenterY | 0)) {
+                    dataAny.__monsterAuraCenterY = auraCenterY | 0;
+                }
+            }
+        } catch { /* ignore */ }
     }
+
+    // Enemy hit flash/punch (purely visual).
+    try {
+        const now = game.runtime() | 0;
+        const flashUntil = sprites.readDataNumber(s, "__hitFlashUntil") | 0;
+        const punchUntil = sprites.readDataNumber(s, "__hitPunchUntil") | 0;
+        const punchMs = sprites.readDataNumber(s, "__hitPunchMs") | 0;
+        const punchScaleX1000 = sprites.readDataNumber(s, "__hitPunchScaleX1000") | 0;
+
+        if (typeof nativeAny.__hitBaseScaleX !== "number") {
+            nativeAny.__hitBaseScaleX = (typeof nativeAny.scaleX === "number") ? nativeAny.scaleX : 1;
+            nativeAny.__hitBaseScaleY = (typeof nativeAny.scaleY === "number") ? nativeAny.scaleY : 1;
+        }
+
+        const baseX = nativeAny.__hitBaseScaleX || 1;
+        const baseY = nativeAny.__hitBaseScaleY || 1;
+
+        if (punchUntil > now && punchMs > 0 && punchScaleX1000 > 0) {
+            const t = (punchUntil - now) / punchMs;
+            const amp = punchScaleX1000 / 1000;
+            const pulse = 1 + amp * Math.sin(t * Math.PI);
+            if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX * pulse, baseY * pulse);
+            else { nativeAny.scaleX = baseX * pulse; nativeAny.scaleY = baseY * pulse; }
+            nativeAny.__hitPunchActive = true;
+        } else if (nativeAny.__hitPunchActive) {
+            if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX, baseY);
+            else { nativeAny.scaleX = baseX; nativeAny.scaleY = baseY; }
+            nativeAny.__hitPunchActive = false;
+        }
+
+        if (flashUntil > now) {
+            if (!nativeAny.__hitFlashActive) {
+                if (typeof nativeAny.setTintFill === "function") nativeAny.setTintFill(0xffffff);
+                else if (typeof nativeAny.setTint === "function") nativeAny.setTint(0xffffff);
+                nativeAny.__hitFlashActive = true;
+            }
+        } else if (nativeAny.__hitFlashActive) {
+            if (typeof nativeAny.clearTint === "function") nativeAny.clearTint();
+            nativeAny.__hitFlashActive = false;
+        }
+    } catch { /* ignore */ }
 
     return true;
 }
@@ -9530,6 +9914,8 @@ let _dbgLoggedEnemyColliderOnce = false;
 
 function _heroCollisionOffsetY(s: Sprite): number {
     if (!s) return 0;
+    const dataAny: any = (s as any).data || {};
+    if (dataAny.enemyLpc) return 0;
     if (!isHeroSprite(s)) return 0;
     try {
         const g: any = (globalThis as any);
@@ -9553,7 +9939,16 @@ function _debugEnsureColliderGfx(sc: Phaser.Scene): void {
 }
 
 function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
-    if (!DEBUG_DRAW_WALL_COLLIDERS && !DEBUG_DRAW_ENEMY_WALL_COLLIDERS) return;
+    if (
+        !DEBUG_DRAW_WALL_COLLIDERS &&
+        !DEBUG_DRAW_ENEMY_WALL_COLLIDERS &&
+        !DEBUG_DRAW_ENEMY_SPRITE_BOUNDS &&
+        !DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS &&
+        !DEBUG_DRAW_ENEMY_HITBOX &&
+        !DEBUG_DRAW_ENEMY_NATIVE_BOUNDS &&
+        !DEBUG_DRAW_ENEMY_NAV_FOOTPRINT &&
+        !DEBUG_DRAW_ENEMY_AURA_BOUNDS
+    ) return;
     _debugEnsureColliderGfx(sc);
     const gWalls = _dbgColliderGfxWalls!;
     const gEnemies = _dbgColliderGfxEnemies!;
@@ -9584,8 +9979,15 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
     }
 
     // Enemies: outline the feet-based collision footprint used for wall checks.
-    if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
-        gEnemies.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
+    if (
+        DEBUG_DRAW_ENEMY_WALL_COLLIDERS ||
+        DEBUG_DRAW_ENEMY_SPRITE_BOUNDS ||
+        DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS ||
+        DEBUG_DRAW_ENEMY_HITBOX ||
+        DEBUG_DRAW_ENEMY_NATIVE_BOUNDS ||
+        DEBUG_DRAW_ENEMY_NAV_FOOTPRINT ||
+        DEBUG_DRAW_ENEMY_AURA_BOUNDS
+    ) {
         for (let i = 0; i < _allSprites.length; i++) {
             const s = _allSprites[i];
             if (!s) continue;
@@ -9593,6 +9995,10 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
             if (role !== "ENEMY") continue;
             const auraH = sprites.readDataNumber(s, "__monsterAuraFrameH") | 0;
             const auraFoot = sprites.readDataNumber(s, "__monsterAuraFootBottom") | 0;
+            const auraW = sprites.readDataNumber(s, "__monsterAuraFrameW") | 0;
+            const auraCenterX = sprites.readDataNumber(s, "__monsterAuraCenterX") | 0;
+            const auraCenterY = sprites.readDataNumber(s, "__monsterAuraCenterY") | 0;
+            const auraMaxY = sprites.readDataNumber(s, "__monsterAuraMaxY") | 0;
 
             const cw = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
             const ch = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
@@ -9602,12 +10008,102 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
             if (offY < 0) offY = 0;
 
             const footX = s.x | 0;
-            const footY = (((s.y | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0);
-            const fw = Math.min(cw | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
-            const fh = Math.min(ch | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
-            const left = (footX - (fw >> 1)) | 0;
-            const top = (footY - fh + 1) | 0;
-            gEnemies.strokeRect(left, top, fw, fh);
+            let footY = 0;
+            if (auraMaxY > 0 && auraH > 0) {
+                const centerY = (auraCenterY || Math.idiv(auraH | 0, 2) | 0) | 0;
+                footY = (((s.y | 0) - centerY + (auraMaxY | 0)) | 0);
+            } else if (auraFoot > 0 && auraH > 0) {
+                const halfAuraH = Math.idiv(auraH | 0, 2) | 0;
+                footY = (((s.y | 0) - halfAuraH + (auraFoot | 0)) | 0);
+            } else {
+                footY = (((s.y | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0);
+            }
+
+            const spriteW = s.width | 0;
+            const spriteH = s.height | 0;
+            const spriteLeft = ((s.x | 0) - (spriteW >> 1)) | 0;
+            const spriteTop = ((s.y | 0) - (spriteH >> 1)) | 0;
+
+            const colW = cw | 0;
+            const colH = ch | 0;
+            const colLeft = ((s.x | 0) - (colW >> 1)) | 0;
+            const colTop = ((s.y | 0) - (colH >> 1)) | 0;
+
+            const hitBounds = _getEngineCollisionBounds(s);
+            const hitLeft = hitBounds ? (hitBounds.left | 0) : spriteLeft;
+            const hitTop = hitBounds ? (hitBounds.top | 0) : spriteTop;
+            const hitRight = hitBounds ? (hitBounds.right | 0) : ((spriteLeft + spriteW - 1) | 0);
+            const hitBottom = hitBounds ? (hitBounds.bottom | 0) : ((spriteTop + spriteH - 1) | 0);
+            const hitW = ((hitRight - hitLeft + 1) | 0);
+            const hitH = ((hitBottom - hitTop + 1) | 0);
+
+            const fw = Math.min(cw | 0, DEBUG_ENEMY_WALL_FOOTPRINT_PX | 0) | 0;
+            const fh = Math.min(ch | 0, DEBUG_ENEMY_WALL_FOOTPRINT_PX | 0) | 0;
+            const wallLeft = (footX - (fw >> 1)) | 0;
+            const wallTop = (footY - fh + 1) | 0;
+
+            const navW = Math.min(cw | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
+            const navH = Math.min(ch | 0, DEBUG_ENEMY_FOOTPRINT_MAX_PX | 0) | 0;
+            const navLeft = (footX - (navW >> 1)) | 0;
+            const navTop = (footY - navH + 1) | 0;
+
+            const auraLeft = (auraW > 0 ? ((s.x | 0) - ((auraCenterX || (auraW >> 1)) | 0)) : 0) | 0;
+            const auraTop = (auraH > 0 ? ((s.y | 0) - ((auraCenterY || (auraH >> 1)) | 0)) : 0) | 0;
+
+            if (DEBUG_DRAW_ENEMY_SPRITE_BOUNDS) {
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_SPRITE_COLOR, DEBUG_COLLIDER_ALPHA);
+                gEnemies.strokeRect(spriteLeft, spriteTop, spriteW, spriteH);
+            }
+            if (DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS) {
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_BODY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gEnemies.strokeRect(colLeft, colTop, colW, colH);
+            }
+            if (DEBUG_DRAW_ENEMY_HITBOX) {
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_HIT_COLOR, DEBUG_COLLIDER_ALPHA);
+                gEnemies.strokeRect(hitLeft, hitTop, hitW, hitH);
+            }
+            if (DEBUG_DRAW_ENEMY_NATIVE_BOUNDS) {
+                const native: any = (s as any).native;
+                if (native && typeof native.getBounds === "function") {
+                    const b = native.getBounds();
+                    gEnemies.lineStyle(1, DEBUG_COLLIDER_NATIVE_COLOR, DEBUG_COLLIDER_ALPHA);
+                    gEnemies.strokeRect(b.x, b.y, b.width, b.height);
+                }
+            }
+            if (DEBUG_DRAW_ENEMY_AURA_BOUNDS && auraW > 0 && auraH > 0) {
+                const auraOutline = (s as any).data ? (s as any).data.__monsterAuraOutline : null;
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_AURA_COLOR, DEBUG_COLLIDER_ALPHA);
+                if (Array.isArray(auraOutline) && auraOutline.length >= 3) {
+                    let moved = false;
+                    gEnemies.beginPath();
+                    for (let p = 0; p < auraOutline.length; p++) {
+                        const pt = auraOutline[p];
+                        if (!Array.isArray(pt) || pt.length < 2) continue;
+                        const px = (auraLeft + (pt[0] | 0)) | 0;
+                        const py = (auraTop + (pt[1] | 0)) | 0;
+                        if (!moved) {
+                            gEnemies.moveTo(px, py);
+                            moved = true;
+                        } else {
+                            gEnemies.lineTo(px, py);
+                        }
+                    }
+                    if (moved) {
+                        gEnemies.closePath();
+                        gEnemies.strokePath();
+                    }
+                } else {
+                    gEnemies.strokeRect(auraLeft, auraTop, auraW, auraH);
+                }
+            }
+            if (DEBUG_DRAW_ENEMY_NAV_FOOTPRINT && navW > 0 && navH > 0) {
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_NAV_COLOR, DEBUG_COLLIDER_ALPHA);
+                gEnemies.strokeRect(navLeft, navTop, navW, navH);
+            }
+            if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+                gEnemies.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gEnemies.strokeRect(wallLeft, wallTop, fw, fh);
+            }
 
             if (!_dbgLoggedEnemyColliderOnce) {
                 _dbgLoggedEnemyColliderOnce = true;
@@ -9615,11 +10111,21 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
                     id: sprites.readDataString(s, "monsterId") || sprites.readDataString(s, "id") || s.id,
                     pos: { x: s.x | 0, y: s.y | 0 },
                     aura: {
+                        frameW: auraW | 0,
                         frameH: auraH | 0,
                         footBottom: auraFoot | 0,
+                        centerX: auraCenterX | 0,
+                        centerY: auraCenterY | 0,
+                        minX: sprites.readDataNumber(s, "__monsterAuraMinX") | 0,
+                        minY: sprites.readDataNumber(s, "__monsterAuraMinY") | 0,
+                        maxX: sprites.readDataNumber(s, "__monsterAuraMaxX") | 0,
+                        maxY: auraMaxY | 0,
                     },
-                    collider: { w: cw | 0, h: ch | 0 },
-                    footprint: { left, top, right: left + fw - 1, bottom: top + fh - 1, fw, fh },
+                    sprite: { left: spriteLeft, top: spriteTop, right: spriteLeft + spriteW - 1, bottom: spriteTop + spriteH - 1, w: spriteW, h: spriteH },
+                    collider: { left: colLeft, top: colTop, right: colLeft + colW - 1, bottom: colTop + colH - 1, w: colW, h: colH },
+                    hitbox: { left: hitLeft, top: hitTop, right: hitRight, bottom: hitBottom, w: hitW, h: hitH },
+                    nav: { left: navLeft, top: navTop, right: navLeft + navW - 1, bottom: navTop + navH - 1, w: navW, h: navH },
+                    wall: { left: wallLeft, top: wallTop, right: wallLeft + fw - 1, bottom: wallTop + fh - 1, w: fw, h: fh },
                 });
             }
         }

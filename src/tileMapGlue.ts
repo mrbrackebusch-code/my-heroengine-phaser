@@ -118,6 +118,14 @@ type ParsedPropKey = {
   explicitFrameIndex: number | null;
 };
 
+type PropFocusAuraOpts = {
+  tint?: number;
+  alphaMin?: number;
+  alphaMax?: number;
+  pulseMs?: number;
+  blendMode?: number | "add" | "lighten" | "normal";
+};
+
 function _hashString(s: string): number {
   let h = 0;
   const str = s || "";
@@ -167,19 +175,31 @@ function _parsePropKey(raw: string): ParsedPropKey {
   return { baseName: s, state: null, explicitFrameIndex: null };
 }
 
+function _parseBridgeSpan(state: string | null): number {
+  if (!state) return 0;
+  const m = /^len(\d+)$/i.exec(state.trim());
+  if (!m) return 0;
+  const n = (parseInt(m[1], 10) | 0);
+  return (n > 0) ? n : 0;
+}
+
 function _frameIndexFromTileRef(cols: number, ref: { row: number; col: number }): number {
   return ((ref.row | 0) * (cols | 0) + (ref.col | 0)) | 0;
 }
 
-function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number): number {
+function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number, opts?: PropFocusAuraOpts): number {
   const t = (typeof nowMs === "number")
     ? nowMs
     : (((scene as any)?.time?.now ?? Date.now()) | 0);
 
-  const minA = Math.max(0, Math.min(1, PROP_FOCUS_AURA_PULSE_ALPHA_MIN));
-  const maxA = Math.max(minA, Math.min(1, PROP_FOCUS_AURA_PULSE_ALPHA_MAX));
+  const minA = Math.max(0, Math.min(1,
+    (opts && typeof opts.alphaMin === "number") ? opts.alphaMin : PROP_FOCUS_AURA_PULSE_ALPHA_MIN
+  ));
+  const maxA = Math.max(minA, Math.min(1,
+    (opts && typeof opts.alphaMax === "number") ? opts.alphaMax : PROP_FOCUS_AURA_PULSE_ALPHA_MAX
+  ));
   const span = Math.max(0, maxA - minA);
-  const period = Math.max(500, PROP_FOCUS_AURA_PULSE_PERIOD_MS | 0);
+  const period = Math.max(200, ((opts && typeof opts.pulseMs === "number") ? opts.pulseMs : PROP_FOCUS_AURA_PULSE_PERIOD_MS) | 0);
 
   const phase = ((t % period) / period) * Math.PI * 2;
   const wave = (Math.sin(phase) + 1) * 0.5; // 0..1
@@ -187,6 +207,14 @@ function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number): number {
   return minA + span * wave;
 }
 
+function _resolveAuraBlendMode(blendMode: any, fallback: number): number {
+  if (typeof blendMode === "number") return blendMode | 0;
+  const modes: any = (Phaser as any)?.BlendModes ?? {};
+  if (blendMode === "add") return ((modes.ADD ?? fallback) | 0);
+  if (blendMode === "lighten") return ((modes.LIGHTEN ?? modes.SCREEN ?? fallback) | 0);
+  if (blendMode === "normal") return ((modes.NORMAL ?? fallback) | 0);
+  return fallback | 0;
+}
 
 function _dbgCameraRenderStatus(scene: Phaser.Scene, obj: any): string {
   try {
@@ -2042,7 +2070,7 @@ tryGetPropDisplayAt(r: number, c: number): any | null {
  */
 
 
-setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthBias: number): boolean {
+setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthBias: number, opts?: PropFocusAuraOpts): boolean {
   const anyThis: any = this as any;
   const instByAnchor: any = anyThis.__propInstancesByAnchor || null;
   if (!instByAnchor) return false;
@@ -2237,7 +2265,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     return true;
   }
 
-  const auraAlpha = _propFocusAuraPulseAlpha(this.scene, now);
+  const auraAlpha = _propFocusAuraPulseAlpha(this.scene, now, opts);
 
   // Compute scale/depth
   const rad = Math.max(0, (radius | 0));
@@ -2293,6 +2321,9 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
 
   const wasVisible = !!cont?.visible;
 
+  const isChest = (String(inst.baseName || "") === "chest");
+  const tint = (opts && typeof opts.tint === "number") ? (opts.tint | 0) : null;
+
   try {
     if (DEBUG_PROP_FOCUS_AURA_LOGS && !(inst as any).__loggedFocusAuraName) {
       (inst as any).__loggedFocusAuraName = 1;
@@ -2337,18 +2368,19 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           const isEdge = !!(ch as any).__auraIsEdge;
           const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
           const padBaked = !!(ch as any).__auraPadBaked;
-          const blendMode =
+          const defaultBlend =
             ((Phaser as any)?.BlendModes?.LIGHTEN ??
               (Phaser as any)?.BlendModes?.SCREEN ??
               (Phaser as any)?.BlendModes?.NORMAL ??
               0);
+          const blendMode = _resolveAuraBlendMode(opts?.blendMode, defaultBlend | 0);
           let finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
           if (isMulti && finalScale > 1 && !isEdge) {
             // Avoid overlaps between adjacent aura tiles on multi-tile props; keep padding on perimeter.
             finalScale = 1;
           }
           // For chests, we want the pad box to stay exactly its authored size (no extra scale).
-          if (String(inst.baseName || "") === "chest") {
+          if (isChest) {
             finalScale = 1;
             try { ch.setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
           }
@@ -2370,7 +2402,14 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
           ch.setDepth?.(depth);
           ch.setAlpha?.(auraAlpha);
           try { ch.setBlendMode?.(blendMode); } catch { /* ignore */ }
-          if (String(inst.baseName || "") === "chest") {
+          if (!isChest && tint != null) {
+            try { ch.setTint?.(tint); } catch { /* ignore */ }
+            try { ch.setStrokeStyle?.(2, tint, 1); } catch { /* ignore */ }
+          } else if (!isChest) {
+            try { ch.clearTint?.(); } catch { /* ignore */ }
+            try { ch.setStrokeStyle?.(2, 0xffffff, 1); } catch { /* ignore */ }
+          }
+          if (isChest) {
             try { ch.setTint?.(0xffffff); } catch { /* ignore */ }
             try { ch.setBlendMode?.((Phaser as any).BlendModes?.ADD ?? 1); } catch { /* ignore */ }
           }
@@ -3338,7 +3377,62 @@ private _propCreateFocusAuraContainer(args: {
   const { st, anchorR, anchorC, baseName, vis, textureKey, baseRef, wTiles, hTiles, ox, oy, baseDepth } = args;
 
   let auraTk = this._propResolveFocusAuraTextureKey(textureKey, vis);
-  if (!auraTk) return null;
+
+  const tile = (st.tileSize | 0);
+  const half = (tile >> 1);
+
+  const aox = ((vis?.auraOffsetXPx ?? vis?.focusAuraOffsetXPx ?? 0) | 0);
+  const aoy = ((vis?.auraOffsetYPx ?? vis?.focusAuraOffsetYPx ?? 0) | 0);
+
+  const centerC = (anchorC + (Math.max(1, wTiles | 0) - 1) / 2);
+  const centerR = (anchorR - (Math.max(1, hTiles | 0) - 1) / 2);
+  const centerX = ((centerC * tile + half + ox + aox) | 0);
+  const centerY = ((centerR * tile + half + oy + aoy) | 0);
+
+  const baseScale = Math.max(
+    0.01,
+    (typeof vis?.auraScale === "number"
+      ? vis.auraScale
+      : (typeof vis?.focusAuraScale === "number"
+        ? vis.focusAuraScale
+        : PROP_FOCUS_AURA_BASE_SCALE))
+  );
+
+  if (!auraTk) {
+    const cont = this.scene.add.container(0, 0);
+    cont.setVisible(false);
+    try { (cont as any).setScale?.(baseScale); } catch { /* ignore */ }
+    try { (cont as any).cameraFilter = 0; } catch { /* ignore */ }
+
+    const padPx =
+      (typeof (vis as any)?.focusAuraPadPx === "number")
+        ? ((vis as any).focusAuraPadPx | 0)
+        : (typeof (vis as any)?.auraPadPx === "number")
+          ? ((vis as any).auraPadPx | 0)
+          : (PROP_FOCUS_AURA_FULL_OPAQUE_PAD_PX | 0);
+
+    const wPx = Math.max(1, ((Math.max(1, wTiles | 0) * tile) + (padPx * 2)) | 0);
+    const hPx = Math.max(1, ((Math.max(1, hTiles | 0) * tile) + (padPx * 2)) | 0);
+
+    const rect = this.scene.add.rectangle(centerX, centerY, wPx, hPx, 0xffffff, 0);
+    rect.setOrigin(0.5, 0.5);
+    rect.setVisible(false);
+    try { rect.setStrokeStyle(2, 0xffffff, 1); } catch { /* ignore */ }
+    try { (rect as any).__auraIsEdge = true; } catch { /* ignore */ }
+    try { (rect as any).cameraFilter = 0; } catch { /* ignore */ }
+
+    (st.anyThis.__propImgs as any[]).push(rect);
+    (st.anyThis.__propImgs as any[]).push(cont);
+
+    return {
+      cont,
+      baseScale,
+      auraTextureKey: textureKey,
+      auraPngUrl: "",
+      frameIndices: [],
+      children: [rect],
+    };
+  }
 
   const override =
     DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
@@ -3380,29 +3474,10 @@ private _propCreateFocusAuraContainer(args: {
       ? ((this.atlas as any).getSheetUrl(auraTk) ?? "")
       : "";
 
-  const tile = (st.tileSize | 0);
-  const half = (tile >> 1);
-
-  const aox = ((vis?.auraOffsetXPx ?? vis?.focusAuraOffsetXPx ?? 0) | 0);
-  const aoy = ((vis?.auraOffsetYPx ?? vis?.focusAuraOffsetYPx ?? 0) | 0);
-
-  const centerC = (anchorC + (Math.max(1, wTiles | 0) - 1) / 2);
-  const centerR = (anchorR - (Math.max(1, hTiles | 0) - 1) / 2);
-  const centerX = ((centerC * tile + half + ox + aox) | 0);
-  const centerY = ((centerR * tile + half + oy + aoy) | 0);
-
   // Use a controller container (not used for rendering) so we have a stable handle.
   const cont = this.scene.add.container(0, 0);
   cont.setVisible(false);
 
-  const baseScale = Math.max(
-    0.01,
-    (typeof vis?.auraScale === "number"
-      ? vis.auraScale
-      : (typeof vis?.focusAuraScale === "number"
-        ? vis.focusAuraScale
-        : PROP_FOCUS_AURA_BASE_SCALE))
-  );
   try { (cont as any).setScale?.(baseScale); } catch { /* ignore */ }
 
   // Clear camera filters (debug: eliminates “not on this camera” issues)
@@ -3531,6 +3606,9 @@ private _propCreateFocusAuraContainer(args: {
             const forcePad =
               !!(vis as any)?.focusAuraPadAlways ||
               !!(vis as any)?.auraPadAlways;
+            const allowInset =
+              !!(vis as any)?.focusAuraAllowInset ||
+              !!(vis as any)?.auraAllowInset;
             let padPx =
               (typeof (vis as any)?.focusAuraPadPx === "number")
                 ? ((vis as any).focusAuraPadPx | 0)
@@ -3566,12 +3644,19 @@ private _propCreateFocusAuraContainer(args: {
             padMode = (typeof cached.padMode === "string") ? cached.padMode : null;
             padTexKey = (typeof cached.padTexKey === "string") ? cached.padTexKey : null;
             padPxApplied = (cached.padPxApplied | 0) || 0;
+            if (allowInset) {
+              padScale = 1;
+              padBaked = false;
+              padMode = null;
+              padTexKey = null;
+              padPxApplied = 0;
+            }
             if (forcedCrop && usedFrame) {
               try { img.setFrame("__BASE"); } catch { /* ignore */ }
               img.setCrop(cropX, cropY, tile, tile);
               usedFrame = false;
             }
-            if (padBaked && padTexKey) {
+            if (!allowInset && padBaked && padTexKey) {
               try {
                 img.setTexture(padTexKey, "__BASE" as any);
                 img.clearCrop?.();
@@ -3610,7 +3695,12 @@ private _propCreateFocusAuraContainer(args: {
             edgeOk = !!(stats.edgeOk);
             const forceSolidPad = String(baseName || "") === "chest";
             const skipPad = String(baseName || "") === "stairs_statue";
-            const needsPad = forcePad || fullOpaque || !boxOk || !edgeOk || forceBoxRing || forceSolidPad;
+            const needsPad =
+              forcePad ||
+              fullOpaque ||
+              forceBoxRing ||
+              forceSolidPad ||
+              (!allowInset && (!boxOk || !edgeOk));
             if (skipPad) {
               padScale = 1;
               padBaked = false;
@@ -3646,7 +3736,8 @@ private _propCreateFocusAuraContainer(args: {
               }
               padScale = 1 + ((solidPadPx * 2) / tile);
               const makeRing = forceBoxRing ? true : !!(fullOpaque || !boxOk || !edgeOk || forceSolidPad);
-              const ringMode: "aura" | "box" | "solid" = forceSolidPad ? "solid" : (forceBoxRing ? "box" : (edgeOk ? "aura" : "box"));
+              const ringMode: "aura" | "box" | "solid" =
+                forceSolidPad ? "solid" : (forceBoxRing ? "box" : ((edgeOk || allowInset) ? "aura" : "box"));
               let baked = _buildPaddedAuraTextureRT(
                 this.scene,
                 auraTk,
@@ -4003,8 +4094,23 @@ private _propPlaceOneAnchor(
   const textureKey = resolved.textureKey;
   const cols = resolved.cols;
 
-  const wTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
-  const hTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
+  const origWTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
+  const origHTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
+  const isBridgeH = baseName === "bridge_h";
+  const isBridgeV = baseName === "bridge_v";
+  const bridgeSpan = _parseBridgeSpan(parsed.state);
+  let span = 0;
+  let wTiles = origWTiles;
+  let hTiles = origHTiles;
+  if (isBridgeH) {
+    span = Math.max(3, (bridgeSpan > 0 ? bridgeSpan : origWTiles));
+    wTiles = span | 0;
+    hTiles = origHTiles | 0;
+  } else if (isBridgeV) {
+    span = Math.max(3, (bridgeSpan > 0 ? bridgeSpan : origHTiles));
+    wTiles = origWTiles | 0;
+    hTiles = ((span + 1) | 0);
+  }
 
   // Optional per-prop offsets (safe even if undefined)
   const ox = ((vis.offsetXPx ?? 0) | 0);
@@ -4023,6 +4129,130 @@ private _propPlaceOneAnchor(
 
   const anchorKey = String(anchorR | 0) + "," + String(anchorC | 0);
   const objs: any[] = [];
+
+  if (isBridgeH || isBridgeV) {
+    if (!this.map) return;
+
+    if (isBridgeH) {
+      const topRow = (baseRef.row - ((origHTiles | 0) - 1)) | 0;
+      const leftCol = (baseRef.col | 0);
+      const rightCol = ((baseRef.col | 0) + ((origWTiles | 0) - 1)) | 0;
+      const midCol = ((origWTiles | 0) >= 3) ? ((baseRef.col | 0) + 1) : leftCol;
+
+      for (let dy = 0; dy < (origHTiles | 0); dy++) {
+        const worldR = ((anchorR | 0) - ((origHTiles | 0) - 1) + (dy | 0)) | 0;
+        if (worldR < 0 || worldR >= (this.map.height | 0)) continue;
+
+        const atlasRow = (topRow + dy) | 0;
+
+        for (let dx = 0; dx < (wTiles | 0); dx++) {
+          const worldC = ((anchorC | 0) + (dx | 0)) | 0;
+          if (worldC < 0 || worldC >= (this.map.width | 0)) continue;
+
+          const atlasCol =
+            (dx === 0) ? leftCol :
+            (dx === ((wTiles | 0) - 1)) ? rightCol :
+            midCol;
+
+          const frameIndex = ((atlasRow * (cols | 0) + (atlasCol | 0)) | 0);
+          const rcKey = String(worldR) + "," + String(worldC);
+
+          st.byRc[rcKey] = { textureKey, frameIndex };
+          st.anchorKeyByRc[rcKey] = anchorKey;
+
+          const x = ((worldC * st.tileSize + (st.tileSize >> 1) + ox) | 0);
+          const y = ((worldR * st.tileSize + (st.tileSize >> 1) + oy) | 0);
+
+          const obj = this._propCreateDisplayObj({
+            x,
+            y,
+            textureKey,
+            frameIndex,
+            depth: baseDepth,
+            animKey,
+            isAnimAnchorCell: (dx === 0 && dy === 0),
+          });
+
+          objs.push(obj);
+          (st.anyThis.__propImgs as any[]).push(obj);
+        }
+      }
+    } else {
+      const topRow = (baseRef.row - ((origHTiles | 0) - 1)) | 0;
+      const midRow = ((baseRef.row | 0) - 1) | 0;
+      const botRow = (baseRef.row | 0);
+
+      const tileSize = (st.tileSize | 0);
+      const topWalkR = ((anchorR | 0) - ((span | 0) - 1)) | 0;
+      const topCenterY = ((topWalkR * tileSize) + (tileSize >> 1)) | 0;
+      const botCenterY = (((anchorR | 0) * tileSize) + (tileSize >> 1)) | 0;
+      const centerY = Math.idiv(((topCenterY + botCenterY) | 0), 2);
+      const halfSpanPx = Math.idiv((((hTiles | 0) - 1) * tileSize) | 0, 2);
+      const startCenterY = ((centerY - halfSpanPx) | 0);
+      const baseX = (((anchorC | 0) * tileSize + (tileSize >> 1) + ox) | 0);
+
+      for (let i = 0; i < (hTiles | 0); i++) {
+        const tileCenterY = ((startCenterY + ((i | 0) * tileSize)) | 0);
+        const worldR = Math.idiv(tileCenterY | 0, tileSize);
+        const worldC = (anchorC | 0);
+        if (worldR < 0 || worldC < 0 || worldR >= (this.map.height | 0) || worldC >= (this.map.width | 0)) continue;
+
+        const atlasRow =
+          (i === 0) ? topRow :
+          (i === ((hTiles | 0) - 1)) ? botRow :
+          midRow;
+
+        const frameIndex = ((atlasRow * (cols | 0) + (baseRef.col | 0)) | 0);
+        const rcKey = String(worldR) + "," + String(worldC);
+
+        st.byRc[rcKey] = { textureKey, frameIndex };
+        st.anchorKeyByRc[rcKey] = anchorKey;
+
+        const obj = this._propCreateDisplayObj({
+          x: baseX,
+          y: ((tileCenterY + oy) | 0),
+          textureKey,
+          frameIndex,
+          depth: baseDepth,
+          animKey,
+          isAnimAnchorCell: (i === 0),
+        });
+
+        objs.push(obj);
+        (st.anyThis.__propImgs as any[]).push(obj);
+      }
+    }
+
+    st.instByAnchor[anchorKey] = {
+      anchorR: anchorR | 0,
+      anchorC: anchorC | 0,
+      rawKey: String(rawKey || ""),
+      focusAuraComposition: String(rawKey || ""),
+
+      baseName,
+      textureKey,
+      sheetCols: cols | 0,
+      wTiles,
+      hTiles,
+      baseRefRow: baseRef.row | 0,
+      baseRefCol: baseRef.col | 0,
+
+      objs,
+      vis,
+      byRc: st.byRc,
+      state: usedState,
+      baseDepth: baseDepth | 0,
+
+      focusAura: null,
+      focusAuraChildren: null,
+      focusAuraBaseScale: PROP_FOCUS_AURA_BASE_SCALE,
+
+      focusAuraTextureKey: "",
+      focusAuraPngUrl: "",
+      focusAuraFrameIndices: null,
+    };
+    return;
+  }
 
   // Expand upward and rightward from anchor.
   for (let dy = 0; dy < (hTiles | 0); dy++) {

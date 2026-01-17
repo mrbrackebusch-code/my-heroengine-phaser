@@ -1,6 +1,7 @@
 ﻿
 
 import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDiagonalMovement, Heuristic as PFHeuristic } from "pathfinding";
+import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 import {
     DBG_INT_INTERVAL_MS,
     DBG_INTERVAL_MS,
@@ -34,12 +35,17 @@ import {
     DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
     DEBUG_DECOR_ENGINE_LOGS,
     DEBUG_DUNGEON_LOGS,
+    DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
+    DEBUG_DISABLE_ENEMY_WALL_COLLISIONS,
     DEBUG_ENEMY_NAV_COLLISION,
     DEBUG_ENEMY_NAV_LOG,
     DEBUG_ENEMY_STUCK_LOG,
     DEBUG_FILTER_LOGS,
     DEBUG_FILTER_PHRASE,
     DEBUG_FOCUS_LOGS,
+    DEBUG_INTERACT_LOGS,
+    DEBUG_PROP_INTERACT_LOGS,
+    DEBUG_TRAP_LOGS,
     DEBUG_FOCUS_DIRECT_LOGS,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
@@ -72,6 +78,15 @@ import {
     DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL,
     DEBUG_WORLD_SNAPSHOT,
 } from "./debugFlags";
+import {
+    getPropSpec,
+    propBaseNameFromKey,
+    propSpecAllowsFloor,
+    propSpecDefaultState,
+    propSpecStateForDir,
+    type PropDirection,
+    type PropSpec,
+} from "./propSpecs";
 
 // -----------------------------------------------------
 
@@ -2418,6 +2433,8 @@ const ENEMY_DATA = {
     COLLIDER_W: "colW",
 
     COLLIDER_H: "colH",
+
+    RENDER_OFFS_X: "renderOffsX", // how much Phaser should shift X to align art to collider center
 
     RENDER_OFFS_Y: "renderOffsY", // how much Phaser should shift UP if art is taller than collider
 
@@ -5998,8 +6015,11 @@ const PAD_DATA = {
 const INTERACT_DATA = {
 
     KIND: "dun_i_kind",
+    ACTION: "dun_i_action",
+    USED: "dun_i_used",
+    FOCUSABLE: "dun_i_focusable",
 
-    OPENED: "dun_i_opened",
+    OPENED: "dun_i_opened", // legacy alias for USED (kept for older debug paths)
     CHEST_ROLE: "dun_i_chest_role",
     RELIC_POOL: "dun_i_relic_pool",
     RELIC_FIXED: "dun_i_relic_fixed",
@@ -6010,6 +6030,601 @@ const INTERACT_DATA = {
     RELIC_THEME: "dun_i_relic_theme",
     RELIC_COUNT: "dun_i_relic_count",
 
+}
+
+const INTERACT_ACTION_PROP = "prop"
+const INTERACT_ACTION_RELIC_OFFER = "relic_offer"
+
+type PropAuraStyle = {
+    radius?: number
+    depthBias?: number
+    tint?: number
+    alphaMin?: number
+    alphaMax?: number
+    pulseMs?: number
+    blendMode?: "add" | "lighten" | "normal"
+}
+
+const FIRE_TOTEM_ACTIVE_AURA_MS = 1400
+const FIRE_TOTEM_ANIM_MS = 900
+
+const FIRE_TOTEM_AURA_FOCUS: PropAuraStyle = {
+    radius: 2,
+    depthBias: 1,
+    tint: 0xffe2a1,
+    alphaMin: 0.15,
+    alphaMax: 0.6,
+    pulseMs: 1800,
+    blendMode: "add",
+}
+
+const FIRE_TOTEM_AURA_ACTIVE: PropAuraStyle = {
+    radius: 3,
+    depthBias: 1,
+    tint: 0xff3b1a,
+    alphaMin: 0.4,
+    alphaMax: 0.95,
+    pulseMs: 600,
+    blendMode: "add",
+}
+
+const FIRE_TOTEM_AURA_MENU: PropAuraStyle = {
+    radius: 2,
+    depthBias: 1,
+    tint: 0xff6b32,
+    alphaMin: 0.2,
+    alphaMax: 0.6,
+    pulseMs: 2400,
+    blendMode: "add",
+}
+
+const TRAP_FIRE_TOTEM_BASE = "fire_totem"
+const TRAP_FIRE_TRAP_ID = "trap.disassembled.number.v1"
+const TRAP_FIRE_GIVEN_VALUE_KEY = "trapGivenValue"
+const TRAP_FIRE_SOLVED_KEY = "trapSolved"
+const TRAP_FIRE_DMG_KEY = "trapFireDmg"
+const TRAP_FIRE_HIT_MASK_KEY = "trapFireHitMask"
+const TRAP_FIRE_EFFECT_SKIN_ID = "flames"
+const TRAP_FIRE_DAMAGE = 12 // tune later
+const TRAP_FIRE_SPEED = 70
+const TRAP_FIRE_LIFESPAN_MS = 900
+const TRAP_FIRE_MAX_VALUE = 5
+const TRAP_FIRE_MIN_VALUE = 0
+
+function _dunReadInteractAction(it: Sprite): string {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return ""
+    const action = (sprites.readDataString(it, INTERACT_DATA.ACTION) || "").trim()
+    if (action) return action
+    const kind = (sprites.readDataString(it, INTERACT_DATA.KIND) || "").trim()
+    return kind
+}
+
+function _dunReadInteractUsed(it: Sprite): number {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return 0
+    const used = sprites.readDataNumber(it, INTERACT_DATA.USED) | 0
+    const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+    return ((used | 0) !== 0 || (opened | 0) !== 0) ? 1 : 0
+}
+
+function _dunSetInteractUsed(it: Sprite, used: boolean): void {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return
+    const v = used ? 1 : 0
+    sprites.setDataNumber(it, INTERACT_DATA.USED, v)
+    sprites.setDataNumber(it, INTERACT_DATA.OPENED, v)
+}
+
+function _dunHandleInteractable(it: Sprite, hero: Sprite, pid: number, hi: number, nowMs: number): boolean {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    let action = _dunReadInteractAction(it)
+    if (!action) return false
+    if (action === "chest") action = INTERACT_ACTION_RELIC_OFFER
+
+    if (action === INTERACT_ACTION_RELIC_OFFER) {
+        return _dunHandleInteractRelicOffer(it, hero, pid | 0, hi | 0, nowMs | 0)
+    }
+
+    return _dunHandleInteractProp(it, hero, pid | 0, hi | 0, nowMs | 0, action)
+}
+
+function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: number, nowMs: number, action: string): boolean {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    const name = sprites.readDataString(it, DECOR_DATA.NAME) || ""
+    const baseName = propBaseNameFromKey(name)
+    const logInteract = (DEBUG_INTERACT_LOGS || DEBUG_CHEST_INTERACT_LOGS)
+    const logProp = (DEBUG_PROP_INTERACT_LOGS || logInteract)
+    if (logProp) {
+        console.log("[INTERACT][PROP] trigger", {
+            pid: pid | 0,
+            hi: hi | 0,
+            action: String(action || ""),
+            name: String(name || ""),
+            base: String(baseName || ""),
+            x: it.x | 0,
+            y: it.y | 0,
+        })
+    }
+    if (baseName === "fire_totem") {
+        _dunFireTotemTriggerActivation(nowMs | 0)
+    }
+
+    try {
+        const g: any = globalThis as any
+        const hook = g?.dun_onPropInteract
+        if (typeof hook === "function") {
+            hook({
+                pid: pid | 0,
+                hi: hi | 0,
+                hero,
+                target: it,
+                action: String(action || ""),
+                name: String(name || ""),
+                now: nowMs | 0,
+            })
+            if (logProp) {
+                console.log("[INTERACT][PROP] hook", {
+                    pid: pid | 0,
+                    hi: hi | 0,
+                    action: String(action || ""),
+                    name: String(name || ""),
+                })
+            }
+        } else if (logProp) {
+            console.log("[INTERACT][PROP] no hook", {
+                pid: pid | 0,
+                hi: hi | 0,
+                action: String(action || ""),
+                name: String(name || ""),
+                x: it.x | 0,
+                y: it.y | 0,
+            })
+        }
+    } catch (err) {
+        if (logProp) {
+            console.log("[INTERACT][PROP] hook error", {
+                pid: pid | 0,
+                hi: hi | 0,
+                action: String(action || ""),
+                name: String(name || ""),
+                err: String((err as any) || ""),
+            })
+        }
+    }
+
+    return true
+}
+
+type TrapInteractState = {
+    mode: "prompt" | "editing"
+    trapId: string
+    target: Sprite
+    targetId: number
+    inputs: Record<string, unknown>
+    pid: number
+    heroIndex: number
+    prevLocked: boolean
+    blockIntentsOwned: boolean
+}
+
+function _trapGetState(): TrapInteractState | null {
+    const g: any = globalThis as any
+    return (g && g.__heTrapInteractState) ? (g.__heTrapInteractState as TrapInteractState) : null
+}
+
+function _trapSetState(state: TrapInteractState | null): void {
+    const g: any = globalThis as any
+    if (!g) return
+    g.__heTrapInteractState = state
+}
+
+function _trapClearState(): void {
+    const state = _trapGetState()
+    if (state) {
+        if (!state.prevLocked && state.heroIndex >= 0) {
+            unlockHeroControls(state.heroIndex)
+        }
+        if (state.blockIntentsOwned) {
+            DUNGEON_BLOCK_INTENTS = false
+        }
+    }
+    _trapSetState(null)
+}
+
+function _trapIsFireTotem(name: string): boolean {
+    return propBaseNameFromKey(name) === TRAP_FIRE_TOTEM_BASE
+}
+
+function _trapFireGetInputs(it: Sprite): Record<string, unknown> {
+    let v = sprites.readDataNumber(it, TRAP_FIRE_GIVEN_VALUE_KEY) | 0
+    if (v < TRAP_FIRE_MIN_VALUE || v > TRAP_FIRE_MAX_VALUE) {
+        v = Math.randomRange(TRAP_FIRE_MIN_VALUE, TRAP_FIRE_MAX_VALUE) | 0
+        sprites.setDataNumber(it, TRAP_FIRE_GIVEN_VALUE_KEY, v | 0)
+    }
+    return { givenValue: v | 0 }
+}
+
+function _trapFireSpawnProjectile(x: number, y: number, dir: string): void {
+    const img = image.create(16, 24)
+    img.fill(0)
+
+    const flame = sprites.create(img, SpriteKind.RelicEffect)
+    flame.x = x
+    flame.y = y
+    flame.z = 200
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][FIRE_TOTEM] projectile", {
+            x: flame.x | 0,
+            y: flame.y | 0,
+            dir: String(dir || ""),
+        })
+    }
+
+    let vx = 0
+    let vy = 0
+    if (dir === "up") vy = -TRAP_FIRE_SPEED
+    else if (dir === "down") vy = TRAP_FIRE_SPEED
+    else if (dir === "left") vx = -TRAP_FIRE_SPEED
+    else if (dir === "right") vx = TRAP_FIRE_SPEED
+
+    flame.vx = vx
+    flame.vy = vy
+    flame.lifespan = TRAP_FIRE_LIFESPAN_MS | 0
+
+    sprites.setDataString(flame, "effectSkin", TRAP_FIRE_EFFECT_SKIN_ID)
+    sprites.setDataString(flame, "effectDir", dir)
+    sprites.setDataNumber(flame, TRAP_FIRE_DMG_KEY, TRAP_FIRE_DAMAGE | 0)
+    sprites.setDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY, 0)
+}
+
+function _trapFireActivate(it: Sprite): void {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return
+
+    const cx = it.x
+    const cy = it.y
+    const offset = Math.max(8, (WORLD_TILE_SIZE | 0) >> 1)
+
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][FIRE_TOTEM] activate", {
+            x: cx | 0,
+            y: cy | 0,
+            offset: offset | 0,
+        })
+    }
+
+    _trapFireSpawnProjectile(cx, cy - offset, "up")
+    _trapFireSpawnProjectile(cx, cy + offset, "down")
+    _trapFireSpawnProjectile(cx - offset, cy, "left")
+    _trapFireSpawnProjectile(cx + offset, cy, "right")
+
+    const txt = textsprite.create("FIRE", 0, 2)
+    txt.setMaxFontHeight(9)
+    txt.setOutline(1, 15)
+    txt.setPosition(cx, cy - 12)
+    txt.lifespan = 800
+    txt.vy = -8
+}
+
+function _trapShowPrompt(it: Sprite, pid: number, hi: number): boolean {
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (!dlg || typeof dlg.show !== "function") {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: no dialog")
+        return false
+    }
+
+    // Ensure any prior dialog is closed before we set trap state.
+    try { if (typeof dlg.hide === "function") dlg.hide() } catch { }
+
+    // Clear any previous trap state before we show the dialog.
+    _trapClearState()
+
+    const net: any = g ? g.__net : null
+    if (net && typeof net.playerId === "number" && (net.playerId | 0) > 0 && (net.playerId | 0) !== (pid | 0)) {
+        if (DEBUG_TRAP_LOGS) {
+            console.log("[TRAP][PROMPT] skip: not local", {
+                pid: pid | 0,
+                localPid: net.playerId | 0,
+            })
+        }
+        return false
+    }
+
+    if (sprites.readDataNumber(it, TRAP_FIRE_SOLVED_KEY) | 0) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: solved")
+        return false
+    }
+
+    const wasLocked = (hi >= 0 && hi < heroes.length)
+        ? !!sprites.readDataBoolean(heroes[hi], HERO_DATA.INPUT_LOCKED)
+        : false
+    if (hi >= 0 && !wasLocked) lockHeroControls(hi)
+
+    const blockOwned = !DUNGEON_BLOCK_INTENTS
+    if (blockOwned) DUNGEON_BLOCK_INTENTS = true
+
+    const state: TrapInteractState = {
+        mode: "prompt",
+        trapId: TRAP_FIRE_TRAP_ID,
+        target: it,
+        targetId: it.id | 0,
+        inputs: _trapFireGetInputs(it),
+        pid: pid | 0,
+        heroIndex: hi | 0,
+        prevLocked: wasLocked,
+        blockIntentsOwned: blockOwned,
+    }
+
+    _trapSetState(state)
+
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] show", {
+            pid: pid | 0,
+            trapId: state.trapId,
+            inputs: state.inputs,
+            x: it.x | 0,
+            y: it.y | 0,
+        })
+    }
+
+    dlg.show({
+        speaker: "Trap",
+        text: "It's a trap! What do you want to do?",
+        choices: [
+            { id: "fix_trap", label: "Fix trap" },
+            { id: "quit", label: "Quit" },
+        ],
+        hint: "A: Fix trap  |  B: Quit",
+    })
+
+    return true
+}
+
+function _trapHandleDialogChoice(choiceId: string, choiceIndex?: number): void {
+    const state = _trapGetState()
+    if (!state || state.mode !== "prompt") return
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] choice", {
+            choice: String(choiceId || ""),
+            trapId: state.trapId,
+        })
+    }
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    try { if (dlg && typeof dlg.hide === "function") dlg.hide() } catch { }
+
+    const key = String(choiceId || "").trim().toLowerCase().replace(/\s+/g, "_")
+    const isFix = key === "fix_trap" || key === "fix" || key === "fixtrap" || choiceIndex === 0
+    const isQuit = key === "quit" || key === "cancel" || choiceIndex === 1
+
+    if (isFix) {
+        state.mode = "editing"
+        _trapSetState(state)
+        const open = g ? g.__heOpenTrapBlocklyEditor : null
+        if (typeof open === "function") {
+            if (DEBUG_TRAP_LOGS) {
+                console.log("[TRAP][PROMPT] handoff -> blockly", {
+                    trapId: state.trapId,
+                    inputs: state.inputs,
+                })
+            }
+            try {
+                open(state.trapId, state.inputs)
+            } catch (err) {
+                if (DEBUG_TRAP_LOGS) {
+                    console.log("[TRAP][PROMPT] blockly open failed", { err: String((err as any) || "") })
+                }
+                _trapClearState()
+            }
+        } else {
+            if (DEBUG_TRAP_LOGS) {
+                console.log("[TRAP][PROMPT] missing blockly hook", { trapId: state.trapId })
+            }
+            _trapClearState()
+        }
+        return
+    }
+
+    if (isQuit) {
+        _trapClearState()
+        return
+    }
+
+    _trapClearState()
+}
+
+function _trapHandleSolved(detail: any): void {
+    const state = _trapGetState()
+    if (!state || state.mode !== "editing") return
+    if (!detail || String(detail.trapId || "") !== state.trapId) return
+
+    const target = state.target
+    if (!target || (target.flags & sprites.Flag.Destroyed)) {
+        _trapClearState()
+        return
+    }
+
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] solved", {
+            trapId: state.trapId,
+            targetId: state.targetId | 0,
+        })
+    }
+
+    _trapFireActivate(target)
+    sprites.setDataNumber(target, TRAP_FIRE_SOLVED_KEY, 1)
+    _dunSetInteractUsed(target, true)
+
+    const g: any = globalThis as any
+    const close = g ? g.__heCloseTrapBlocklyEditor : null
+    if (typeof close === "function") {
+        try { close() } catch { }
+    }
+
+    _trapClearState()
+}
+
+function _trapOnPropInteract(payload: any): boolean {
+    if (!payload) return false
+    const name = String(payload.name || "")
+    if (!_trapIsFireTotem(name)) return false
+    const it = payload.target as Sprite
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] interact", {
+            pid: payload.pid | 0,
+            hi: payload.hi | 0,
+            name: String(name || ""),
+            x: it.x | 0,
+            y: it.y | 0,
+        })
+    }
+    return _trapShowPrompt(it, payload.pid | 0, payload.hi | 0)
+}
+
+function _trapPromptInputTick(): void {
+    const state = _trapGetState()
+    if (!state || state.mode !== "prompt") return
+
+    const pid = state.pid | 0
+    if (pid <= 0 || pid > 4) return
+
+    const btnA = (controller as any)[`player${pid}`]?.A
+    const btnB = (controller as any)[`player${pid}`]?.B
+    if (!btnA || !btnB) return
+
+    const prevKeyA = `__trapPrevA_${pid}`
+    const prevKeyB = `__trapPrevB_${pid}`
+    const wasA = (globalThis as any)[prevKeyA] ? 1 : 0
+    const wasB = (globalThis as any)[prevKeyB] ? 1 : 0
+    const isA = btnA.isPressed() ? 1 : 0
+    const isB = btnB.isPressed() ? 1 : 0
+    ;(globalThis as any)[prevKeyA] = (isA != 0)
+    ;(globalThis as any)[prevKeyB] = (isB != 0)
+
+    if (isA && !wasA) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] A pressed")
+        _trapHandleDialogChoice("fix_trap", 0)
+        return
+    }
+    if (isB && !wasB) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] B pressed")
+        _trapHandleDialogChoice("quit", 1)
+    }
+}
+
+function _dunHandleInteractRelicOffer(it: Sprite, hero: Sprite, pid: number, hi: number, nowMs: number): boolean {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    if (_dunReadInteractUsed(it)) return false
+
+    _dunSetInteractUsed(it, true)
+
+    const chestRole = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || ""
+    const offerResult = chestRole
+        ? _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
+        : _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
+
+    if (DEBUG_RELIC_LOGS) {
+        if (offerResult.ok) {
+            console.log("[RELIC][OFFER] chest handoff -> DOM", {
+                pid: pid | 0,
+                hi: hi | 0,
+                role: chestRole || "",
+                source: (_relicOfferSession && _relicOfferSession.source) ? _relicOfferSession.source : "chest",
+            })
+        } else {
+            console.log("[RELIC][OFFER] chest handoff skipped", {
+                pid: pid | 0,
+                hi: hi | 0,
+                role: chestRole || "",
+                reason: offerResult.reason || "unknown",
+            })
+        }
+    }
+
+
+
+    // Capture pop coords BEFORE destroy so VFX has a stable origin.
+
+    const popX = it.x
+
+    const popY = it.y - 12
+
+
+
+    _dunDestroySprite(it)
+
+
+
+    // Flip the prop state so Phaser stamps the "open" frame.
+
+    if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
+
+        _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
+
+        _engineDecorRev = (_engineDecorRev + 1) | 0
+
+    }
+
+
+
+    // Reward + complete objective (this triggers COINFX enqueue)
+
+    let coinsReward = 10
+
+    // Relic chests: no coins; relic offer only.
+    const chestRoleLower = (chestRole || "").toLowerCase()
+    const noCoins = chestRoleLower.indexOf("starter") >= 0 || chestRoleLower.indexOf("boss") >= 0 || chestRoleLower.indexOf("relic") >= 0
+    if (noCoins) coinsReward = 0
+
+
+
+    // RELIC HOOK: chest opened (may modify reward / later open offers)
+
+    try {
+
+        const chestCtx: RelicChestOpenedContext = {
+
+            now: nowMs | 0,
+
+            pid: pid | 0,
+
+            hi: hi | 0,
+
+            hero,
+
+            coinsReward: coinsReward | 0,
+
+            popX: popX | 0,
+
+            popY: popY | 0,
+
+        }
+
+        relic_onChestOpened(chestCtx)
+
+        coinsReward = (chestCtx.coinsReward | 0)
+
+        if (coinsReward < 0) coinsReward = 0
+
+    } catch { }
+
+
+
+    if (!offerResult.ok && _dunFloorKind === DUNGEON_KIND_ENTRANCE && chestRole === "starter_relic") {
+        try { _relicOfferStartStarterChoice(pid | 0, hi | 0, nowMs | 0, "entrance-chest") } catch { }
+    }
+
+    if (coinsReward > 0) addHeroCoins(hi, coinsReward, popX, popY)
+
+
+
+    _dunObjectiveDone = true
+
+    _dunSetPadPowered(true)
+
+    _dunLog(`chest opened by P${pid}; pad powered`)
+
+    return true
 }
 
 
@@ -6415,6 +7030,96 @@ function _dunDecor_spawnAtRandomWalkable(args: {
 
     })
 
+}
+
+function _dunPropNameHasVariant(name: string): boolean {
+    const s = String(name || "");
+    return (
+        s.indexOf("#") >= 0 ||
+        s.indexOf("@") >= 0 ||
+        s.indexOf("|") >= 0 ||
+        s.indexOf(":") >= 0
+    );
+}
+
+function _dunResolvePropNameForSpec(rawName: string, spec: PropSpec | null, dir?: PropDirection): string {
+    const name = String(rawName || "").trim();
+    if (!name) return "";
+    if (_dunPropNameHasVariant(name)) return name;
+
+    const base = propBaseNameFromKey(name);
+    if (!base) return name;
+
+    let state = "";
+    if (dir) state = propSpecStateForDir(spec, dir);
+    if (!state) state = propSpecDefaultState(spec);
+    if (!state) return name;
+
+    return `${base}#${state}`;
+}
+
+function _dunSpawnInteractableProp(args: {
+    name: string
+    tileR: number
+    tileC: number
+    action?: string
+    role?: number
+    pxW?: number
+    pxH?: number
+    dir?: PropDirection
+}): Sprite | null {
+    const rawName = String(args.name || "")
+    if (!rawName) return null
+
+    const spec = getPropSpec(rawName)
+    if (!propSpecAllowsFloor(spec, _dunFloorKind || "", _dunFloorIndex | 0)) return null
+
+    const name = _dunResolvePropNameForSpec(rawName, spec, args.dir)
+    if (!name) return null
+
+    const tileR = args.tileR | 0
+    const tileC = args.tileC | 0
+    const role = (args.role == null ? DECOR_ROLE.TRIGGER : (args.role | 0)) | 0
+    const pxW = (args.pxW == null ? (WORLD_TILE_SIZE | 0) : (args.pxW | 0)) | 0
+    const pxH = (args.pxH == null ? (WORLD_TILE_SIZE | 0) : (args.pxH | 0)) | 0
+
+    const decor = _dunDecor_spawnAtTile({
+        name,
+        role,
+        tileR,
+        tileC,
+        pxW,
+        pxH,
+    })
+
+    const allowInteract = (spec?.interact?.interactable == null) ? true : !!spec.interact.interactable
+    if (!allowInteract) return decor
+
+    const img = image.create(1, 1)
+    img.fill(0)
+
+    const it = sprites.create(img, (SpriteKind as any).FloorInteractable)
+    it.setFlag(SpriteFlag.Ghost, true)
+    it.setFlag(SpriteFlag.Invisible, true)
+    it.setPosition(_dunColToX(tileC), _dunRowToY(tileR))
+    it.z = 6
+
+    sprites.setDataString(it, DECOR_DATA.NAME, name)
+    sprites.setDataNumber(it, "decorTileR", tileR)
+    sprites.setDataNumber(it, "decorTileC", tileC)
+
+    const action = (args.action && String(args.action).trim())
+        ? String(args.action).trim()
+        : (spec?.interact?.action || INTERACT_ACTION_PROP)
+    const focusable = (spec?.interact?.focusable == null) ? true : !!spec.interact.focusable
+    sprites.setDataString(it, INTERACT_DATA.KIND, INTERACT_ACTION_PROP)
+    sprites.setDataString(it, INTERACT_DATA.ACTION, action)
+    sprites.setDataNumber(it, INTERACT_DATA.USED, 0)
+    sprites.setDataNumber(it, INTERACT_DATA.OPENED, 0)
+    sprites.setDataNumber(it, INTERACT_DATA.FOCUSABLE, focusable ? 1 : 0)
+
+    _dunInteractables.push(it)
+    return it
 }
 
 
@@ -6844,7 +7549,18 @@ let _dunChestTileC = -1
 
 let _dunChestSolid: Sprite = null as any
 
-let _dunChestFocusActive = 0
+let _dunInteractFocusActive = 0
+let _dunInteractFocusR = -1
+let _dunInteractFocusC = -1
+
+let _dunFireTotemDecor: Sprite = null as any
+let _dunFireTotemInteractable: Sprite = null as any
+let _dunFireTotemTileR = -1
+let _dunFireTotemTileC = -1
+let _dunFireTotemState = ""
+let _dunFireTotemActiveUntilMs = 0
+let _dunFireTotemAnimUntilMs = 0
+let _dunFireTotemMenuActive = false
 
 
 
@@ -7667,9 +8383,14 @@ function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
 
         chest.z = 6
 
-        sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
+        sprites.setDataString(chest, INTERACT_DATA.KIND, INTERACT_ACTION_PROP)
+
+        sprites.setDataString(chest, INTERACT_DATA.ACTION, INTERACT_ACTION_RELIC_OFFER)
+
+        sprites.setDataNumber(chest, INTERACT_DATA.USED, 0)
 
         sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
+        sprites.setDataNumber(chest, INTERACT_DATA.FOCUSABLE, 1)
 
         _dunInteractables.push(chest)
 
@@ -7729,9 +8450,14 @@ function _dunSpawnChest(nowMs: number, x: number, y: number): Sprite {
 
 
 
-    sprites.setDataString(chest, INTERACT_DATA.KIND, "chest")
+    sprites.setDataString(chest, INTERACT_DATA.KIND, INTERACT_ACTION_PROP)
+
+    sprites.setDataString(chest, INTERACT_DATA.ACTION, INTERACT_ACTION_RELIC_OFFER)
+
+    sprites.setDataNumber(chest, INTERACT_DATA.USED, 0)
 
     sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
+    sprites.setDataNumber(chest, INTERACT_DATA.FOCUSABLE, 1)
 
 
 
@@ -8027,6 +8753,7 @@ function _dunClearTransientFloorEntities(): void {
     _dunClearList(_dunInteractables)
 
     _dunInteractables = []
+    _dunResetFireTotemState()
 
     if (_dunStoryNpcs && _dunStoryNpcs.length) {
         for (let i = 0; i < _dunStoryNpcs.length; i++) {
@@ -8375,9 +9102,9 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
     const roll = Math.randomRange(0, 99)
 
-    if (roll < 90) return DUNGEON_KIND_STORY
+    if (roll < 10) return DUNGEON_KIND_STORY
 
-    if (roll < 11) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
+    if (roll < 15) return DUNGEON_KIND_TREASURE //Knob for floor odds and event odds and floor kind shop knob odds knob event knob
 
     return DUNGEON_KIND_COMBAT
 
@@ -8636,6 +9363,146 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     }
 }
 
+function _dunResetFireTotemState(): void {
+    _dunFireTotemDecor = null
+    _dunFireTotemInteractable = null
+    _dunFireTotemTileR = -1
+    _dunFireTotemTileC = -1
+    _dunFireTotemState = ""
+    _dunFireTotemActiveUntilMs = 0
+    _dunFireTotemAnimUntilMs = 0
+    _dunFireTotemMenuActive = false
+}
+
+function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): Sprite | null {
+    const r = tileR | 0
+    const c = tileC | 0
+    const wantBase = (baseName || "").trim()
+
+    function match(list: Sprite[] | null): Sprite | null {
+        if (!list || list.length <= 0) return null
+        for (let i = 0; i < list.length; i++) {
+            const s = list[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const sr = sprites.readDataNumber(s, "decorTileR") | 0
+            const sc = sprites.readDataNumber(s, "decorTileC") | 0
+            if ((sr | 0) !== (r | 0) || (sc | 0) !== (c | 0)) continue
+            if (!wantBase) return s
+            const nm = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            if (propBaseNameFromKey(nm) === wantBase) return s
+        }
+        return null
+    }
+
+    return match(_engineDecorSolids) || match(_engineDecorTriggers) || null
+}
+
+function _dunFireTotemSetState(state: string): void {
+    if (!_dunFireTotemDecor || (_dunFireTotemDecor.flags & sprites.Flag.Destroyed)) {
+        if ((_dunFireTotemTileR | 0) >= 0 && (_dunFireTotemTileC | 0) >= 0) {
+            _dunFireTotemDecor = _dunFindDecorAtTile(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, "fire_totem")
+        }
+    }
+    if (!_dunFireTotemDecor || (_dunFireTotemDecor.flags & sprites.Flag.Destroyed)) return
+    const st = String(state || "").trim()
+    if (!st) return
+    if (_dunFireTotemState === st) return
+    _dunFireTotemState = st
+    _dunDecor_setName(_dunFireTotemDecor, `fire_totem#${st}`)
+}
+
+function _dunFireTotemTriggerActivation(nowMs: number): void {
+    if ((_dunFireTotemTileR | 0) < 0 || (_dunFireTotemTileC | 0) < 0) return
+    const now = nowMs | 0
+    _dunFireTotemActiveUntilMs = Math.max(_dunFireTotemActiveUntilMs | 0, (now + (FIRE_TOTEM_ACTIVE_AURA_MS | 0)) | 0)
+    _dunFireTotemAnimUntilMs = Math.max(_dunFireTotemAnimUntilMs | 0, (now + (FIRE_TOTEM_ANIM_MS | 0)) | 0)
+    _dunFireTotemSetState("diag")
+    if (DEBUG_TRAP_LOGS || DEBUG_PROP_INTERACT_LOGS) {
+        console.log("[TRAP][FIRE_TOTEM] activation", {
+            r: _dunFireTotemTileR | 0,
+            c: _dunFireTotemTileC | 0,
+            activeUntilMs: _dunFireTotemActiveUntilMs | 0,
+            animUntilMs: _dunFireTotemAnimUntilMs | 0,
+        })
+    }
+}
+
+function _dunSetFireTotemMenuActive(active: boolean): void {
+    _dunFireTotemMenuActive = !!active
+}
+
+try { (globalThis as any).dun_setFireTotemMenuActive = _dunSetFireTotemMenuActive } catch { /* ignore */ }
+
+function _dunEnterFloor_spawnStarterFireTotem(): void {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    let r = Math.max(0, Math.min(rows - 1, (_dunPadTileR | 0) + 3)) | 0
+    let c = Math.max(0, Math.min(cols - 1, (_dunPadTileC | 0) + 2)) | 0
+
+    function hasDecorAt(rr: number, cc: number): boolean {
+        if (_engineDecorSolids && _engineDecorSolids.length) {
+            for (let i = 0; i < _engineDecorSolids.length; i++) {
+                const s = _engineDecorSolids[i]
+                if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+                const sr = sprites.readDataNumber(s, "decorTileR") | 0
+                const sc = sprites.readDataNumber(s, "decorTileC") | 0
+                if ((sr | 0) === (rr | 0) && (sc | 0) === (cc | 0)) return true
+            }
+        }
+        if (_engineDecorTriggers && _engineDecorTriggers.length) {
+            for (let i = 0; i < _engineDecorTriggers.length; i++) {
+                const s = _engineDecorTriggers[i]
+                if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+                const sr = sprites.readDataNumber(s, "decorTileR") | 0
+                const sc = sprites.readDataNumber(s, "decorTileC") | 0
+                if ((sr | 0) === (rr | 0) && (sc | 0) === (cc | 0)) return true
+            }
+        }
+        return false
+    }
+
+    function isTileFree(rr: number, cc: number): boolean {
+        if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
+        if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
+        if (hasDecorAt(rr, cc)) return false
+        return true
+    }
+
+    if (!isTileFree(r, c)) {
+        const pick = _dunPickRandomWalkableTile({
+            avoidR: _dunPadTileR | 0,
+            avoidC: _dunPadTileC | 0,
+            minManhattan: 4,
+            maxTries: 250
+        })
+        r = pick.r | 0
+        c = pick.c | 0
+    }
+
+    if (!isTileFree(r, c)) return
+
+    const it = _dunSpawnInteractableProp({
+        name: "fire_totem",
+        tileR: r | 0,
+        tileC: c | 0,
+        action: INTERACT_ACTION_PROP,
+        role: DECOR_ROLE.SOLID,
+        pxW: WORLD_TILE_SIZE,
+        pxH: WORLD_TILE_SIZE,
+    })
+
+    if (it && !(it.flags & sprites.Flag.Destroyed)) {
+        _dunFireTotemInteractable = it
+        _dunFireTotemTileR = r | 0
+        _dunFireTotemTileC = c | 0
+        _dunFireTotemDecor = _dunFindDecorAtTile(r, c, "fire_totem")
+        _dunFireTotemSetState("idle")
+    }
+}
+
 function _dunConfigureChestRelicOffer(chest: Sprite, cfg: RelicChestOfferConfig): void {
     if (!chest || (chest.flags & sprites.Flag.Destroyed)) return
     const poolIds = cfg.poolIds || []
@@ -8784,6 +9651,7 @@ function _dunEnterFloor_setupCombatFloor(): void {
     setupEnemySpawners()
 
     startEnemyWaves()
+    _dunEnterFloor_spawnStarterFireTotem()
 
 }
 
@@ -8992,8 +9860,9 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
     if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY) return
 
-    if (DEBUG_FOCUS_DIRECT_LOGS) {
-        console.log("[CHEST][INTERACT] tick start", {
+    const logInteract = (DEBUG_INTERACT_LOGS || DEBUG_CHEST_INTERACT_LOGS)
+    if (logInteract) {
+        console.log("[INTERACT] tick start", {
             floorKind: _dunFloorKind,
             objectiveDone: _dunObjectiveDone ? 1 : 0,
             blockIntents: !!DUNGEON_BLOCK_INTENTS,
@@ -9002,7 +9871,8 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
 
-    if (_dunFloorKind == DUNGEON_KIND_COMBAT) {
+    const isCombat = (_dunFloorKind == DUNGEON_KIND_COMBAT)
+    if (isCombat) {
 
         // FINITE WAVES FIX:
 
@@ -9026,13 +9896,11 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
         }
 
-        return
-
     }
 
 
 
-    // Interaction-based floors: A to interact near chest/NPC
+    // Interaction-based floors: A to interact near props/NPC
 
     for (let pid = 1; pid <= 4; pid++) {
 
@@ -9068,8 +9936,8 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
         if (!aEdge) continue
 
-        if (DEBUG_CHEST_INTERACT_LOGS) {
-            console.log("[CHEST][INTERACT] A edge", {
+        if (logInteract) {
+            console.log("[INTERACT] A edge", {
                 pid: pid | 0,
                 hi: hi | 0,
                 hero: { x: hero.x | 0, y: hero.y | 0 },
@@ -9088,16 +9956,19 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
             if (!it || (it.flags & sprites.Flag.Destroyed)) continue
 
-            const k = sprites.readDataString(it, INTERACT_DATA.KIND)
+            const action = _dunReadInteractAction(it)
+            const name = sprites.readDataString(it, DECOR_DATA.NAME) || ""
             const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+            const used = _dunReadInteractUsed(it)
 
-            if (DEBUG_CHEST_INTERACT_LOGS) {
-                console.log("[CHEST][INTERACT] scan", {
+            if (logInteract) {
+                console.log("[INTERACT] scan", {
                     pid: pid | 0,
                     hi: hi | 0,
-                    kind: k || "",
+                    action: action || "",
+                    name: name || "",
                     inRange: inRange ? 1 : 0,
-                    opened: sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0,
+                    used: used ? 1 : 0,
                     role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
                     x: it.x | 0,
                     y: it.y | 0,
@@ -9106,141 +9977,11 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
             }
 
             if (!inRange) continue
+            if (!action) continue
+            if (used) continue
 
-            if (k == "chest") {
-
-                const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
-
-                if (DEBUG_CHEST_INTERACT_LOGS) {
-                    console.log("[CHEST][INTERACT] chest candidate", {
-                        pid: pid | 0,
-                        hi: hi | 0,
-                        opened: opened ? 1 : 0,
-                        role: sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "",
-                        x: it.x | 0,
-                        y: it.y | 0,
-                    })
-                }
-
-                if (opened) continue
-
-
-
-                sprites.setDataNumber(it, INTERACT_DATA.OPENED, 1)
-
-                const chestRole = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE)
-                let offerStarted = false
-                const offerResult = chestRole
-                    ? _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest:" + String(chestRole || ""))
-                    : _relicOfferStartFromChest(pid | 0, hi | 0, nowMs | 0, it, "chest")
-
-                if (DEBUG_RELIC_LOGS) {
-                    if (offerResult.ok) {
-                        console.log("[RELIC][OFFER] chest handoff -> DOM", {
-                            pid: pid | 0,
-                            hi: hi | 0,
-                            role: chestRole || "",
-                            source: (_relicOfferSession && _relicOfferSession.source) ? _relicOfferSession.source : "chest",
-                        })
-                    } else {
-                        console.log("[RELIC][OFFER] chest handoff skipped", {
-                            pid: pid | 0,
-                            hi: hi | 0,
-                            role: chestRole || "",
-                            reason: offerResult.reason || "unknown",
-                        })
-                    }
-                }
-
-
-
-                // Capture pop coords BEFORE destroy so VFX has a stable origin.
-
-                const popX = it.x
-
-                const popY = it.y - 12
-
-
-
-                _dunDestroySprite(it)
-
-
-
-                // Flip the prop state so Phaser stamps the "open" frame.
-
-                if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
-
-                    _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
-
-                    _engineDecorRev = (_engineDecorRev + 1) | 0
-
-                }
-
-
-
-                // Reward + complete objective (this triggers COINFX enqueue)
-
-                let coinsReward = 10
-
-                // Relic chests: no coins; relic offer only.
-                const chestRoleRaw = sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || ""
-                const chestRoleLower = chestRoleRaw.toLowerCase()
-                const noCoins = chestRoleLower.indexOf("starter") >= 0 || chestRoleLower.indexOf("boss") >= 0 || chestRoleLower.indexOf("relic") >= 0
-                if (noCoins) coinsReward = 0
-
-
-
-                // RELIC HOOK: chest opened (may modify reward / later open offers)
-
-                try {
-
-                    const chestCtx: RelicChestOpenedContext = {
-
-                        now: nowMs | 0,
-
-                        pid: pid | 0,
-
-                        hi: hi | 0,
-
-                        hero,
-
-                        coinsReward: coinsReward | 0,
-
-                        popX: popX | 0,
-
-                        popY: popY | 0,
-
-                    }
-
-                    relic_onChestOpened(chestCtx)
-
-                    coinsReward = (chestCtx.coinsReward | 0)
-
-                    if (coinsReward < 0) coinsReward = 0
-
-                } catch { }
-
-
-
-                if (!offerResult.ok && _dunFloorKind === DUNGEON_KIND_ENTRANCE && chestRole === "starter_relic") {
-                    try { _relicOfferStartStarterChoice(pid | 0, hi | 0, nowMs | 0, "entrance-chest") } catch { }
-                }
-
-                if (coinsReward > 0) addHeroCoins(hi, coinsReward, popX, popY)
-
-
-
-                _dunObjectiveDone = true
-
-                _dunSetPadPowered(true)
-
-                _dunLog(`chest opened by P${pid}; pad powered`)
-
-                break
-
-
-
-            }
+            const handled = _dunHandleInteractable(it, hero, pid | 0, hi | 0, nowMs | 0)
+            if (handled) break
 
         }
 
@@ -21243,9 +21984,9 @@ function _debugWorldSig01(map: number[][]): { rows: number, cols: number, walls:
 }
 
 
-type _WorldgenBridgePlacement = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v" };
+type _WorldgenBridgePlacement = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v"; span: number };
 type _WorldgenPathCell = { r: number; c: number; dir: "h" | "v"; wasWall: boolean };
-type _WorldgenBridgeCandidate = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v"; score: number };
+type _WorldgenBridgeCandidate = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v"; score: number; span: number };
 
 let _worldgenBridgePlacements: _WorldgenBridgePlacement[] = [];
 
@@ -21505,37 +22246,92 @@ function _worldgen_findBridgeCandidate(
         if (len >= 3) {
             if (dir === "h") {
                 const row = path[i].r | 0;
-                for (let start = i; start <= (j - 3); start++) {
-                    const c0 = path[start].c | 0;
-                    const c2 = path[start + 2].c | 0;
-                    const left = Math.min(c0, c2) | 0;
-                    if (requireBottomRowWalls) {
-                        if (!_worldgen_isWallAt(map, row + 1, left)) continue;
-                        if (!_worldgen_isWallAt(map, row + 1, left + 1)) continue;
-                        if (!_worldgen_isWallAt(map, row + 1, left + 2)) continue;
+                let leftMost = 999999;
+                let rightMost = -999999;
+                for (let k = i; k < j; k++) {
+                    const c = path[k].c | 0;
+                    if (c < leftMost) leftMost = c;
+                    if (c > rightMost) rightMost = c;
+                }
+
+                let segLeft = leftMost;
+                let segRight = rightMost;
+                let segLen = (rightMost - leftMost + 1) | 0;
+
+                if (requireBottomRowWalls) {
+                    let bestLen = 0;
+                    let bestMin = 0;
+                    let bestMax = 0;
+                    let curLen = 0;
+                    let curMin = 0;
+                    let curMax = 0;
+
+                    for (let k = i; k < j; k++) {
+                        const c = path[k].c | 0;
+                        const ok = _worldgen_isWallAt(map, row + 1, c);
+                        if (ok) {
+                            if (curLen === 0) {
+                                curLen = 1;
+                                curMin = c;
+                                curMax = c;
+                            } else {
+                                curLen = (curLen + 1) | 0;
+                                if (c < curMin) curMin = c;
+                                if (c > curMax) curMax = c;
+                            }
+                        } else if (curLen > 0) {
+                            if (curLen > bestLen) {
+                                bestLen = curLen;
+                                bestMin = curMin;
+                                bestMax = curMax;
+                            }
+                            curLen = 0;
+                        }
                     }
+
+                    if (curLen > 0 && curLen > bestLen) {
+                        bestLen = curLen;
+                        bestMin = curMin;
+                        bestMax = curMax;
+                    }
+
+                    if (bestLen >= 3) {
+                        segLeft = bestMin;
+                        segRight = bestMax;
+                        segLen = (bestMax - bestMin + 1) | 0;
+                    } else {
+                        segLen = 0;
+                    }
+                }
+
+                if (segLen >= 3) {
                     const cand: _WorldgenBridgeCandidate = {
                         kind: "bridge_h",
                         anchorR: (row + 1) | 0,
-                        anchorC: left | 0,
-                        score: len | 0
+                        anchorC: segLeft | 0,
+                        score: segLen | 0,
+                        span: segLen | 0
                     };
                     if (!best || (cand.score | 0) > (best.score | 0)) best = cand;
                 }
             } else {
                 const col = path[i].c | 0;
-                for (let start = i; start <= (j - 3); start++) {
-                    const r0 = path[start].r | 0;
-                    const r2 = path[start + 2].r | 0;
-                    const top = Math.min(r0, r2) | 0;
-                    const cand: _WorldgenBridgeCandidate = {
-                        kind: "bridge_v",
-                        anchorR: (top + 2) | 0,
-                        anchorC: col | 0,
-                        score: len | 0
-                    };
-                    if (!best || (cand.score | 0) > (best.score | 0)) best = cand;
+                let topMost = 999999;
+                let botMost = -999999;
+                for (let k = i; k < j; k++) {
+                    const r = path[k].r | 0;
+                    if (r < topMost) topMost = r;
+                    if (r > botMost) botMost = r;
                 }
+                const span = (botMost - topMost + 1) | 0;
+                const cand: _WorldgenBridgeCandidate = {
+                    kind: "bridge_v",
+                    anchorR: botMost | 0,
+                    anchorC: col | 0,
+                    score: span | 0,
+                    span: span | 0
+                };
+                if (!best || (cand.score | 0) > (best.score | 0)) best = cand;
             }
         }
 
@@ -21551,14 +22347,15 @@ function _worldgen_isBridgeWalkwayTile(
     bridge: _WorldgenBridgeCandidate | null
 ): boolean {
     if (!bridge) return false;
+    const span = Math.max(3, ((bridge.span | 0) || (bridge.score | 0) || 3));
     if (bridge.kind === "bridge_h") {
         const br = (bridge.anchorR - 1) | 0;
         const bc = bridge.anchorC | 0;
-        return ((r | 0) === br && (c | 0) >= bc && (c | 0) <= (bc + 2));
+        return ((r | 0) === br && (c | 0) >= bc && (c | 0) <= (bc + (span - 1)));
     }
     const bc = bridge.anchorC | 0;
-    const br0 = (bridge.anchorR - 2) | 0;
-    return ((c | 0) === bc && (r | 0) >= br0 && (r | 0) <= (br0 + 2));
+    const br0 = (bridge.anchorR - (span - 1)) | 0;
+    return ((c | 0) === bc && (r | 0) >= br0 && (r | 0) <= (br0 + (span - 1)));
 }
 
 function _worldgen_carvePath(
@@ -21655,7 +22452,8 @@ function _worldgen_connectIslandsWithBridges(map: number[][]): _WorldgenBridgePl
                 placements.push({
                     anchorR: chosenCand.anchorR | 0,
                     anchorC: chosenCand.anchorC | 0,
-                    kind: chosenCand.kind
+                    kind: chosenCand.kind,
+                    span: chosenCand.span | 0
                 });
             }
         }
@@ -21665,6 +22463,7 @@ function _worldgen_connectIslandsWithBridges(map: number[][]): _WorldgenBridgePl
                 islandSize: island.size | 0,
                 mainId: mainId | 0,
                 pathLen: chosenPath.length | 0,
+                span: chosenCand ? (chosenCand.span | 0) : 0,
                 bridge: chosenCand ? { kind: chosenCand.kind, r: chosenCand.anchorR | 0, c: chosenCand.anchorC | 0 } : null
             });
         }
@@ -22912,9 +23711,10 @@ function initWorldDecorPostPass(): void {
             const bp = _worldgenBridgePlacements[i];
             const br = bp.anchorR | 0;
             const bc = bp.anchorC | 0;
+            const span = Math.max(3, (bp.span | 0) || 3);
             if (br <= 0 || bc <= 0 || br >= rows || bc >= cols) continue;
             _dunDecor_spawnAtTile({
-                name: bp.kind,
+                name: String(bp.kind) + "@len" + String(span | 0),
                 role: DECOR_ROLE.TRIGGER,
                 tileR: br,
                 tileC: bc,
@@ -23060,9 +23860,18 @@ function _heroCollisionOffsetY(s: Sprite): number {
 
 function _boundsWithOffset(s: Sprite, offY: number) {
 
-    const halfW = s.width >> 1
+    let w = s.width | 0
+    let h = s.height | 0
+    if (s.kind === SpriteKind.Enemy) {
+        const cw = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_W) | 0
+        const ch = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_H) | 0
+        if (cw > 0) w = cw | 0
+        if (ch > 0) h = ch | 0
+    }
 
-    const halfH = s.height >> 1
+    const halfW = w >> 1
+
+    const halfH = h >> 1
 
     const cx = s.x | 0
 
@@ -23114,6 +23923,17 @@ function _boxOverlapsWall(
 
 }
 
+function _dunAuraStyleToOpts(style: PropAuraStyle | null): any {
+    if (!style) return undefined
+    return {
+        tint: style.tint,
+        alphaMin: style.alphaMin,
+        alphaMax: style.alphaMax,
+        pulseMs: style.pulseMs,
+        blendMode: style.blendMode,
+    }
+}
+
 
 
 function _dunUpdateInteractableFocus(nowMs: number): void {
@@ -23138,11 +23958,12 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
 
 
-    let chestFocusThisTick = false
+    let focusThisTick = false
 
-    let chestFocusR = -1
+    let focusR = -1
 
-    let chestFocusC = -1
+    let focusC = -1
+    let focusName = ""
 
 
 
@@ -23165,56 +23986,50 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             const it = _dunInteractables[i]
 
             if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+            const focusable = sprites.readDataNumber(it, INTERACT_DATA.FOCUSABLE) | 0
+            if (!focusable) continue
 
+            const used = _dunReadInteractUsed(it)
 
+            try {
 
-            const kind = sprites.readDataString(it, INTERACT_DATA.KIND)
+                const last = (it as any).__dbgInteractScanMs ?? -999999
 
-            if (kind === "chest") {
+                if (DEBUG_CHEST_SCAN_LOGS && nowMs - last > 1000) {
 
-                const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
+                    (it as any).__dbgInteractScanMs = nowMs
 
-                try {
+                    const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
 
-                    const g: any = globalThis as any
+                    console.log("[FOCUS][INTERACT][SCAN]", {
 
-                    const last = (it as any).__dbgChestScanMs ?? -999999
+                        used: used ? 1 : 0,
 
-                    if (DEBUG_CHEST_SCAN_LOGS && nowMs - last > 1000) {
+                        inRange: inRange ? 1 : 0,
 
-                        (it as any).__dbgChestScanMs = nowMs
+                        action: _dunReadInteractAction(it) || "",
 
-                        const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+                        name: sprites.readDataString(it, DECOR_DATA.NAME) || "",
 
-                        console.log("[FOCUS][CHEST][SCAN]", {
+                        hero: { x: hero.x | 0, y: hero.y | 0 },
 
-                            opened: opened ? 1 : 0,
+                        target: { x: it.x | 0, y: it.y | 0 },
 
-                            inRange: inRange ? 1 : 0,
+                        decor: {
 
-                            hero: { x: hero.x | 0, y: hero.y | 0 },
+                            r: (sprites.readDataNumber(it, "decorTileR") | 0),
 
-                            chest: { x: it.x | 0, y: it.y | 0 },
+                            c: (sprites.readDataNumber(it, "decorTileC") | 0),
 
-                            decor: {
+                        }
 
-                                r: (sprites.readDataNumber(it, "decorTileR") | 0),
+                    })
 
-                                c: (sprites.readDataNumber(it, "decorTileC") | 0),
+                }
 
-                            }
+            } catch { }
 
-                        })
-
-                    }
-
-                } catch { }
-
-                if (opened) continue
-
-            }
-
-
+            if (used) continue
 
             if (_isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)) {
 
@@ -23234,28 +24049,23 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
             _setFocusOutline(found, true)
 
+            focusThisTick = true
+            focusR = sprites.readDataNumber(found, "decorTileR") | 0
+            focusC = sprites.readDataNumber(found, "decorTileC") | 0
+            focusName = sprites.readDataString(found, DECOR_DATA.NAME) || ""
+
             try {
 
-                if (sprites.readDataString(found, INTERACT_DATA.KIND) === "chest") {
+                const k = "__focusInteractOnce_" + (found.id | 0);
 
-                    chestFocusThisTick = true
+                const g: any = globalThis as any;
 
-                    chestFocusR = sprites.readDataNumber(found, "decorTileR") | 0
+                if (!g[k]) {
 
-                    chestFocusC = sprites.readDataNumber(found, "decorTileC") | 0
+                    g[k] = 1;
 
-                    const k = "__focusChestOnce_" + (found.id | 0);
-
-                    const g: any = globalThis as any;
-
-                    if (!g[k]) {
-
-                        g[k] = 1;
-
-                        if (DEBUG_FOCUS_LOGS) {
-                            console.log("[FOCUS][CHEST] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
-                        }
-
+                    if (DEBUG_FOCUS_LOGS) {
+                        console.log("[FOCUS][INTERACT] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
                     }
 
                 }
@@ -23268,106 +24078,123 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
 
 
-    // Directly drive the chest aura using the same path as the pillar.
+    // Directly drive the prop aura using the same path as the pillar.
 
     try {
 
-        const want = chestFocusThisTick ? 1 : 0
+        const prevR = _dunInteractFocusR | 0
+        const prevC = _dunInteractFocusC | 0
+        const prevActive = _dunInteractFocusActive | 0
 
-        if (_dunChestFocusActive !== want) {
+        const want = focusThisTick ? 1 : 0
+        const nextR = focusThisTick ? (focusR | 0) : -1
+        const nextC = focusThisTick ? (focusC | 0) : -1
 
-            _dunChestFocusActive = want
+        _dunInteractFocusActive = want
+        _dunInteractFocusR = nextR
+        _dunInteractFocusC = nextC
 
-        }
+        const g: any = globalThis as any
+        const sc: any = g ? g.__phaserScene : null
+        const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+        const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
 
-        if (_dunChestFocusActive || (_dunChestTileR >= 0 && _dunChestTileC >= 0)) {
+        if (ok) {
+            if (prevActive && (prevR >= 0 && prevC >= 0) && (!focusThisTick || prevR !== nextR || prevC !== nextC)) {
+                renderer.setPropFocusAuraAt(prevR, prevC, false, 2, 1)
+            }
 
-            const r = (chestFocusR >= 0) ? chestFocusR : (_dunChestTileR | 0)
-
-            const c = (chestFocusC >= 0) ? chestFocusC : (_dunChestTileC | 0)
-
-            if (r >= 0 && c >= 0) {
-
-                const g: any = globalThis as any
-
-                const sc: any = g ? g.__phaserScene : null
-
-                const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
-
-                const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
-
-                let targetR = r
-
-                let targetC = c
+            if (focusThisTick && nextR >= 0 && nextC >= 0) {
+                let targetR = nextR
+                let targetC = nextC
 
                 if (DEBUG_CHEST_ROUTE_TO_PILLAR && _dunStairsStatueSolid) {
-
                     const sr = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileR") | 0
-
                     const sc2 = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileC") | 0
-
                     if (sr >= 0 && sc2 >= 0) {
-
                         targetR = sr
-
                         targetC = sc2
-
                     }
-
                 }
 
                 if (DEBUG_CHEST_ROUTE_TO_PILLAR && renderer) {
-
                     try {
-
-                        (renderer as any).__dbgAuraOverrideTarget = { r: (r | 0), c: (c | 0) }
-
+                        (renderer as any).__dbgAuraOverrideTarget = { r: (nextR | 0), c: (nextC | 0) }
                     } catch { /* ignore */ }
-
                 } else if (renderer) {
-
                     try { (renderer as any).__dbgAuraOverrideTarget = null } catch { /* ignore */ }
-
                 }
 
-                if (ok) renderer.setPropFocusAuraAt(targetR, targetC, !!_dunChestFocusActive, 2, 1)
-
-                if (DEBUG_FOCUS_DIRECT_LOGS) {
-
-                    if (!(_dunChestSolid as any)?.__loggedChestDirect || !_dunChestFocusActive) {
-
-                        if (_dunChestSolid) (_dunChestSolid as any).__loggedChestDirect = 1
-
-                        console.log("[FOCUS][CHEST][DIRECT]", {
-
-                            r,
-
-                            c,
-
-                            active: _dunChestFocusActive ? 1 : 0,
-
-                            renderer: ok,
-
-                            target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "chest",
-
-                            targetR,
-
-                            targetC,
-
-                            overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: r | 0, c: c | 0 } : null
-
-                        })
-
-                    }
-
+                let auraStyle: PropAuraStyle = null as any
+                if (focusThisTick && focusName) {
+                    const base = propBaseNameFromKey(focusName)
+                    if (base === "fire_totem") auraStyle = FIRE_TOTEM_AURA_FOCUS
                 }
 
+                const auraRadius = auraStyle ? (auraStyle.radius ?? 2) : 2
+                const auraDepth = auraStyle ? (auraStyle.depthBias ?? 1) : 1
+                const auraOpts = _dunAuraStyleToOpts(auraStyle)
+
+                renderer.setPropFocusAuraAt(targetR, targetC, true, auraRadius | 0, auraDepth | 0, auraOpts)
+
+                if (DEBUG_FOCUS_DIRECT_LOGS && (!prevActive || prevR !== nextR || prevC !== nextC)) {
+                    console.log("[FOCUS][INTERACT][DIRECT]", {
+                        r: nextR,
+                        c: nextC,
+                        active: want ? 1 : 0,
+                        renderer: ok,
+                        target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "prop",
+                        targetR,
+                        targetC,
+                        overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: nextR | 0, c: nextC | 0 } : null
+                    })
+                }
             }
-
         }
 
     } catch { /* ignore */ }
 
+}
+
+function _dunUpdatePropAuraOverrides(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    if ((_dunFireTotemTileR | 0) < 0 || (_dunFireTotemTileC | 0) < 0) return
+
+    if (!_dunFireTotemDecor || (_dunFireTotemDecor.flags & sprites.Flag.Destroyed)) {
+        _dunFireTotemDecor = _dunFindDecorAtTile(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, "fire_totem")
+    }
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+    if (!renderer || typeof renderer.setPropFocusAuraAt !== "function") return
+
+    const now = nowMs | 0
+    let mode = ""
+    if ((_dunFireTotemActiveUntilMs | 0) > now) mode = "active"
+    else if (_dunFireTotemMenuActive) mode = "menu"
+
+    if ((_dunFireTotemAnimUntilMs | 0) > now) {
+        _dunFireTotemSetState("diag")
+    } else if (mode !== "active") {
+        _dunFireTotemSetState("idle")
+    }
+
+    if (mode === "active" || mode === "menu") {
+        const style = (mode === "active") ? FIRE_TOTEM_AURA_ACTIVE : FIRE_TOTEM_AURA_MENU
+        const radius = (style.radius ?? 2) | 0
+        const depth = (style.depthBias ?? 1) | 0
+        renderer.setPropFocusAuraAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, true, radius, depth, _dunAuraStyleToOpts(style))
+        return
+    }
+
+    if ((_dunInteractFocusActive | 0) &&
+        (_dunInteractFocusR | 0) === (_dunFireTotemTileR | 0) &&
+        (_dunInteractFocusC | 0) === (_dunFireTotemTileC | 0)) {
+        return
+    }
+
+    renderer.setPropFocusAuraAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, false, 0, 0)
 }
 
 
@@ -23585,7 +24412,7 @@ function updateGenericFocus(nowMs: number): void {
 
 
     _dunUpdateInteractableFocus(nowMs)
-
+    _dunUpdatePropAuraOverrides(nowMs)
     _shopUpdateFocusHighlights(nowMs)
 
 }
@@ -24082,6 +24909,7 @@ function resolveHeroTilemapCollisions(): void {
 function resolveEnemyTilemapCollisions(): void {
 
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+    if (DEBUG_DISABLE_ENEMY_WALL_COLLISIONS) return
 
 
 
@@ -24098,24 +24926,22 @@ function resolveEnemyTilemapCollisions(): void {
         const dims = _enemyGetColliderDims(e)
         const cw = dims.w | 0
         const ch = dims.h | 0
-        const auraFoot = sprites.readDataNumber(e, "__monsterAuraFootBottom") | 0
-        const auraH = sprites.readDataNumber(e, "__monsterAuraFrameH") | 0
         const wallW = ENEMY_WALL_COLLIDER_PX | 0
         const wallH = ENEMY_WALL_COLLIDER_PX | 0
         const halfW = Math.idiv(wallW, 2) | 0
-        const halfH = Math.idiv(wallH, 2) | 0
+        let diagCheatPx = Math.round(Math.min(cw | 0, ch | 0) * 0.5 * ENEMY_WALL_DIAG_CHEAT_RADIUS_PCT) | 0
+        if (diagCheatPx < (ENEMY_WALL_DIAG_CHEAT_MIN_PX | 0)) diagCheatPx = ENEMY_WALL_DIAG_CHEAT_MIN_PX | 0
+        const diagCheatMax = ENEMY_WALL_DIAG_CHEAT_MAX_PX | 0
+        if (diagCheatMax > 0 && diagCheatPx > diagCheatMax) diagCheatPx = diagCheatMax
+        const diagNudgePx = ENEMY_WALL_DIAG_NUDGE_PX | 0
+        const diagNudgeTicks = ENEMY_WALL_DIAG_NUDGE_TICKS | 0
+        let didSlideAdjust = false
 
         // Run a couple of passes in case we overlap more than one tile
         for (let iter = 0; iter < 3; iter++) {
-            let footX = e.x | 0
-            let footY = 0
-            if (auraFoot > 0 && auraH > 0) {
-                const halfAuraH = Math.idiv(auraH | 0, 2) | 0
-                footY = (((e.y | 0) - halfAuraH + (auraFoot | 0)) | 0)
-            } else {
-                const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
-                footY = feet.footY | 0
-            }
+            const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
+            const footX = feet.footX | 0
+            const footY = feet.footY | 0
 
             const cx = footX | 0
             const cy = footY | 0
@@ -24130,59 +24956,203 @@ function resolveEnemyTilemapCollisions(): void {
             const maxRow = Math.idiv(bottom, tileSize)
 
             let moved = false
+            const vx0 = e.vx
+            const vy0 = e.vy
+            const movingDiag = Math.abs(vx0) > 0.001 && Math.abs(vy0) > 0.001
 
+            let bestCheat: {
+                r: number
+                c: number
+                type: number
+                shapeLeft: number
+                shapeTop: number
+                shapeW: number
+                shapeH: number
+                penX: number
+                penY: number
+                approachX: number
+                approachY: number
+                minApproach: number
+            } | null = null
+
+            // First pass: find a diagonal-cheat candidate (if any).
             for (let r = minRow; r <= maxRow; r++) {
                 if (r < 0 || r >= rows) continue
                 const rowArr = map[r]
                 for (let c = minCol; c <= maxCol; c++) {
-                    const type = rowArr[c] | 0 // force 0 if undefined
+                    const type = rowArr[c] | 0
                     const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
                     if (!def.solid) continue
 
-                    // Build the tile's collision rect in WORLD space, using per-type offsets and size.
                     const shapeLeft = c * tileSize + def.offsetX
                     const shapeRight = shapeLeft + def.width
                     const shapeTop = r * tileSize + def.offsetY
                     const shapeBottom = shapeTop + def.height
 
-                    // Compute overlaps on each side (sprite vs collision shape)
                     const overlapLeft = right - shapeLeft
                     const overlapRight = shapeRight - left
                     const overlapTop = bottom - shapeTop
                     const overlapBottom = shapeBottom - top
+                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) continue
 
-                    // If any are <= 0, AABBs don't overlap on that axis
-                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
-                        continue
-                    }
-
-                    // Minimal penetration on each axis
                     const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
                     const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                    const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
+                    const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
+                    const fullTile =
+                        def.offsetX === 0 &&
+                        def.offsetY === 0 &&
+                        def.width === tileSize &&
+                        def.height === tileSize
+                    const minApproach = Math.min(approachX, approachY)
+                    if (!movingDiag || !fullTile || (diagCheatPx <= 0) || (minApproach > diagCheatPx)) continue
 
-                    if (penX < penY) {
-                        // Push in X
-                        const shapeCenterX = shapeLeft + def.width / 2
-                        if (cx < shapeCenterX) {
-                            e.x -= penX
-                        } else {
-                            e.x += penX
+                    if (!bestCheat || minApproach < bestCheat.minApproach) {
+                        bestCheat = {
+                            r,
+                            c,
+                            type,
+                            shapeLeft,
+                            shapeTop,
+                            shapeW: def.width,
+                            shapeH: def.height,
+                            penX,
+                            penY,
+                            approachX,
+                            approachY,
+                            minApproach
                         }
-                        // Soft slide: kill only X velocity
-                        e.vx = 0
-                    } else {
-                        // Push in Y
-                        const shapeCenterY = shapeTop + def.height / 2
-                        if (cy < shapeCenterY) {
-                            e.y -= penY
-                        } else {
-                            e.y += penY
-                        }
-                        // Soft slide: kill only Y velocity
-                        e.vy = 0
                     }
+                }
+            }
 
-                    moved = true
+            if (bestCheat) {
+                if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+                    const logged = sprites.readDataNumber(e, "__dbgWallCheatLogged") | 0
+                    if (!logged) {
+                        sprites.setDataNumber(e, "__dbgWallCheatLogged", 1)
+                        const eid = getEnemyIndex(e)
+                        const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
+                        console.log("[DEBUG][ENEMY_WALL_CHEAT]", {
+                            eid,
+                            id: mid,
+                            pos: { x: e.x | 0, y: e.y | 0 },
+                            vel: { vx: vx0, vy: vy0 },
+                            pen: { x: bestCheat.penX | 0, y: bestCheat.penY | 0 },
+                            approach: { x: bestCheat.approachX | 0, y: bestCheat.approachY | 0 },
+                            tile: { r: bestCheat.r, c: bestCheat.c, type: bestCheat.type }
+                        })
+                    }
+                }
+
+                let nudged = false
+                if (diagNudgePx > 0 && diagNudgeTicks > 0) {
+                    let gate = sprites.readDataNumber(e, "__wallDiagNudgeGate") | 0
+                    gate = (gate + 1) | 0
+                    if ((gate % diagNudgeTicks) === 0) {
+                        if (bestCheat.approachX < bestCheat.approachY) {
+                            const shapeCenterX = bestCheat.shapeLeft + bestCheat.shapeW / 2
+                            if (cx < shapeCenterX) e.x -= diagNudgePx
+                            else e.x += diagNudgePx
+                        } else {
+                            const shapeCenterY = bestCheat.shapeTop + bestCheat.shapeH / 2
+                            if (cy < shapeCenterY) e.y -= diagNudgePx
+                            else e.y += diagNudgePx
+                        }
+                        nudged = true
+                    }
+                    sprites.setDataNumber(e, "__wallDiagNudgeGate", gate)
+                }
+
+                if (!didSlideAdjust) {
+                    const speed = Math.sqrt(vx0 * vx0 + vy0 * vy0)
+                    if (speed > 0.001) {
+                        if (bestCheat.approachX < bestCheat.approachY) {
+                            e.vx = 0
+                            e.vy = (vy0 >= 0 ? speed : -speed)
+                        } else {
+                            e.vy = 0
+                            e.vx = (vx0 >= 0 ? speed : -speed)
+                        }
+                        didSlideAdjust = true
+                    }
+                }
+
+                if (nudged) moved = true
+            } else {
+                for (let r = minRow; r <= maxRow; r++) {
+                    if (r < 0 || r >= rows) continue
+                    const rowArr = map[r]
+                    for (let c = minCol; c <= maxCol; c++) {
+                        const type = rowArr[c] | 0 // force 0 if undefined
+                        const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
+                        if (!def.solid) continue
+
+                        // Build the tile's collision rect in WORLD space, using per-type offsets and size.
+                        const shapeLeft = c * tileSize + def.offsetX
+                        const shapeRight = shapeLeft + def.width
+                        const shapeTop = r * tileSize + def.offsetY
+                        const shapeBottom = shapeTop + def.height
+
+                        // Compute overlaps on each side (sprite vs collision shape)
+                        const overlapLeft = right - shapeLeft
+                        const overlapRight = shapeRight - left
+                        const overlapTop = bottom - shapeTop
+                        const overlapBottom = shapeBottom - top
+
+                        // If any are <= 0, AABBs don't overlap on that axis
+                        if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
+                            continue
+                        }
+
+                        // Minimal penetration on each axis
+                        const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
+                        const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                        const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
+                        const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
+
+                        if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+                            const logged = sprites.readDataNumber(e, "__dbgWallHoldLogged") | 0
+                            if (!logged) {
+                                sprites.setDataNumber(e, "__dbgWallHoldLogged", 1)
+                                const eid = getEnemyIndex(e)
+                                const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
+                                console.log("[DEBUG][ENEMY_WALL_HOLD]", {
+                                    eid,
+                                    id: mid,
+                                    pos: { x: e.x | 0, y: e.y | 0 },
+                                    vel: { vx: vx0, vy: vy0 },
+                                    pen: { x: penX | 0, y: penY | 0 },
+                                    approach: { x: approachX | 0, y: approachY | 0 },
+                                    tile: { r, c, type }
+                                })
+                            }
+                        }
+
+                        if (penX < penY) {
+                            // Push in X
+                            const shapeCenterX = shapeLeft + def.width / 2
+                            if (cx < shapeCenterX) {
+                                e.x -= penX
+                            } else {
+                                e.x += penX
+                            }
+                            // Soft slide: kill only X velocity
+                            e.vx = 0
+                        } else {
+                            // Push in Y
+                            const shapeCenterY = shapeTop + def.height / 2
+                            if (cy < shapeCenterY) {
+                                e.y -= penY
+                            } else {
+                                e.y += penY
+                            }
+                            // Soft slide: kill only Y velocity
+                            e.vy = 0
+                        }
+
+                        moved = true
+                    }
                 }
             }
 
@@ -32117,6 +33087,24 @@ sprites.onOverlap(SpriteKind.RelicEffect, SpriteKind.Enemy, function (flame, ene
 
     if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
 
+    const trapDmg = sprites.readDataNumber(flame, TRAP_FIRE_DMG_KEY) | 0
+    if (trapDmg > 0) {
+        const eIndex = getEnemyIndex(enemy)
+        if (eIndex < 0) return
+
+        let mask = sprites.readDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY) | 0
+        const bit = 1 << eIndex
+        if (mask & bit) return
+        sprites.setDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY, mask | bit)
+
+        const hit: EnemyHitPacket = {
+            family: FAMILY.INTELLECT,
+            sourceTag: "TRAP_FIRE",
+        }
+        applyDamageToEnemyIndex(eIndex, trapDmg | 0, -1, hit)
+        return
+    }
+
 
 
     const ringId = sprites.readDataNumber(flame, RELIC_EFFECT_RING_RING_ID_KEY) | 0
@@ -32177,7 +33165,15 @@ sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, her
 
 function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: number): boolean {
 
-    const heroW = hero.width, heroH = hero.height, enemyW = enemy.width, enemyH = enemy.height
+    const heroW = hero.width | 0
+    const heroH = hero.height | 0
+    let enemyW = enemy.width | 0
+    let enemyH = enemy.height | 0
+    if (enemy.kind === SpriteKind.Enemy) {
+        const dims = _enemyGetColliderDims(enemy)
+        enemyW = dims.w | 0
+        enemyH = dims.h | 0
+    }
 
     const halfHW = Math.idiv(heroW, 2), halfHH = Math.idiv(heroH, 2), halfEW = Math.idiv(enemyW, 2), halfEH = Math.idiv(enemyH, 2)
 
@@ -43627,12 +44623,65 @@ const ENEMY_SPAWN_TICK_MS = BALANCE.WAVES.SPAWN_TICK_MS
 
 
 
+const ENEMY_LPC_FLAG_KEY = "enemyLpc"
+const ENEMY_LPC_HERO_INDEX_BASE = 2000
+
+type EnemyLpcWeaponSlots = {
+    slash?: string
+    thrust?: string
+    cast?: string
+    exec?: string
+    combo?: string
+    int?: string
+    sup?: string
+}
+
+type EnemyLpcDef = {
+    heroName: string
+    family?: string
+    attackPhase?: "slash" | "thrust" | "cast"
+    weapons?: EnemyLpcWeaponSlots
+}
+
+const ENEMY_LPC_DEFS: { [id: string]: EnemyLpcDef } = {
+    skeleton: {
+        heroName: "Skeleton",
+        family: "base",
+        attackPhase: "slash",
+        weapons: { slash: "longsword", thrust: "spear" }
+    },
+    zombie: {
+        heroName: "Zombie",
+        family: "base",
+        attackPhase: "slash",
+        weapons: { slash: "club", thrust: "club" }
+    }
+}
+
+function _enemyLpcDefForId(monsterId: string): EnemyLpcDef | null {
+    const raw = (monsterId || "").trim().toLowerCase()
+    const key = raw.endsWith("enemy") ? raw.slice(0, -5).trim() : raw
+    return ENEMY_LPC_DEFS[key] || null
+}
+
+function _enemyIsLpc(enemy: Sprite): boolean {
+    return !!sprites.readDataBoolean(enemy, ENEMY_LPC_FLAG_KEY)
+}
+
 const ENEMY_MELEE_RANGE_PX = 40 // melee slash travel distance for overlap reliability
 const ENEMY_MIN_HOLD_RANGE_PX = 25  // minimum “stop” range so enemies don’t chase inside hero center
 const ENEMY_ATTACK_BASE_RANGE_PX = 25
 const ENEMY_STUCK_WALL_MARGIN_PX = 2
 const RANGED_ADVANCE_RANGE_CAP_PX = 140
-const ENEMY_WALL_COLLIDER_PX = 32
+const ENEMY_WALL_COLLIDER_PX = 30
+const ENEMY_WALL_DIAG_CHEAT_RADIUS_PCT = 5.0
+const ENEMY_WALL_DIAG_CHEAT_MIN_PX = 60
+const ENEMY_WALL_DIAG_CHEAT_MAX_PX = -1 // <=0 disables cap; use to limit extreme overlap
+const ENEMY_WALL_DIAG_NUDGE_PX = 1
+const ENEMY_WALL_DIAG_NUDGE_TICKS = 3
+const ENEMY_HIT_FLASH_MS = 120
+const ENEMY_HIT_PUNCH_MS = 120
+const ENEMY_HIT_PUNCH_SCALE_X1000 = 120
 
 
 
@@ -43667,6 +44716,8 @@ const ENEMY_KIND = {
         "ghost",
 
         "goblin",
+        "skeleton",
+        "zombie",
 
         "golem",
 
@@ -43766,6 +44817,8 @@ const ENEMY_KIND = {
         "ghost": ["FLYING", "AVERAGE", "MEDIUM"],
 
         "goblin": ["HUMANOID", "AVERAGE", "MEDIUM"],
+        "skeleton": ["HUMANOID", "AVERAGE", "MEDIUM"],
+        "zombie": ["HUMANOID", "SLOW", "STRONG", "TANK"],
 
         "golem": ["HUMANOID", "SLOW", "TANK", "STRONG"],
 
@@ -45384,17 +46437,22 @@ function applyPctKnockbackToEnemy(
 
 function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boolean): Sprite {
 
-    const stats = enemyStatsForMonsterId(monsterId)
+    const lpcDef = _enemyLpcDefForId(monsterId)
+    const monsterIdNorm = lpcDef
+        ? (monsterId || "").trim().toLowerCase().replace(/enemy$/i, "").trim()
+        : monsterId
 
-    const sizing = _monsterSizingForId(monsterId)
+    const stats = enemyStatsForMonsterId(monsterIdNorm)
+
+    const sizing = _monsterSizingForId(monsterIdNorm)
 
 
 
-    const img = enemyPlaceholderImageForMonster(monsterId)
+    const img = enemyPlaceholderImageForMonster(monsterIdNorm)
 
     const enemy = sprites.create(img, SpriteKind.Enemy)
 
-
+    enemy.data.__posGuardEnemy = 1
 
     enemy.x = x
 
@@ -45412,7 +46470,31 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
 
     sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_H, sizing.colliderH | 0)
 
+    sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_X, sizing.renderOffsX | 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, sizing.renderOffsY | 0)
+
+    sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterIdNorm)
+
+    _enemyApplyAuraForDir(enemy, "down")
+
+    if (lpcDef) {
+        const nowMs = game.runtime() | 0
+        _enemyInitLpcVisuals(enemy, lpcDef, nowMs)
+    }
+
+    // Snap feet to the spawner's tile center so nav/footprint starts aligned.
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize > 0) {
+        const targetX = (Math.idiv(x | 0, tileSize) * tileSize + (tileSize >> 1)) | 0
+        const targetY = (Math.idiv(y | 0, tileSize) * tileSize + (tileSize >> 1)) | 0
+        const feet = _enemyNavGetEnemyFeetPoint(enemy, sizing.colliderW | 0, sizing.colliderH | 0)
+        const dx = (targetX - (feet.footX | 0)) | 0
+        const dy = (targetY - (feet.footY | 0)) | 0
+        if (dx || dy) {
+            enemy.x = ((enemy.x | 0) + dx) | 0
+            enemy.y = ((enemy.y | 0) + dy) | 0
+        }
+    }
 
 
 
@@ -45463,10 +46545,6 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, (stats as any).advanceRangePx || 0)
 
     sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, (stats as any).projectileId || "")
-
-
-
-    sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterId)
 
 
 
@@ -46213,20 +47291,17 @@ function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: 
     const navW = Math.min(colliderW | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
     const navH = Math.min(colliderH | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
 
-    // Interpret (r,c) as the tile containing the enemy's FEET point.
-    // Use the tile center as the desired feet point.
-    const footX = (c * tile + (tile >> 1)) | 0
-    const footY = (r * tile + (tile >> 1)) | 0
+    // Interpret (r,c) as the tile containing the enemy's FOOTPRINT CENTER.
+    const centerX = (c * tile + (tile >> 1)) | 0
+    const centerY = (r * tile + (tile >> 1)) | 0
 
     const halfW = Math.idiv(navW, 2) | 0
-    const h = (navH | 0)
+    const halfH = Math.idiv(navH, 2) | 0
 
-    const left = (footX - halfW) | 0
-    const right = (footX + halfW - 1) | 0
-
-    // Feet point is the bottom of the collider.
-    const bottom = footY | 0
-    const top = (bottom - h + 1) | 0
+    const left = (centerX - halfW) | 0
+    const top = (centerY - halfH) | 0
+    const right = (left + navW - 1) | 0
+    const bottom = (top + navH - 1) | 0
 
     let c0 = Math.idiv(left, tile) | 0
     let c1 = Math.idiv(right, tile) | 0
@@ -46247,6 +47322,19 @@ function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: 
 
 
 function _enemyGetColliderDims(enemy: Sprite): { w: number, h: number } {
+
+    // Prefer aura bounds (direction-aware) if available.
+    const auraFrameW = sprites.readDataNumber(enemy, "__monsterAuraFrameW") | 0
+    const auraFrameH = sprites.readDataNumber(enemy, "__monsterAuraFrameH") | 0
+    const auraMinX = sprites.readDataNumber(enemy, "__monsterAuraMinX") | 0
+    const auraMinY = sprites.readDataNumber(enemy, "__monsterAuraMinY") | 0
+    const auraMaxX = sprites.readDataNumber(enemy, "__monsterAuraMaxX") | 0
+    const auraMaxY = sprites.readDataNumber(enemy, "__monsterAuraMaxY") | 0
+    if (auraFrameW > 0 && auraFrameH > 0 && auraMaxX >= auraMinX && auraMaxY >= auraMinY) {
+        const aw = ((auraMaxX - auraMinX + 1) | 0)
+        const ah = ((auraMaxY - auraMinY + 1) | 0)
+        if (aw > 0 && ah > 0) return { w: aw | 0, h: ah | 0 }
+    }
 
     // Prefer the explicit collider dimensions so large art frames don't inflate nav footprint.
 
@@ -47238,14 +48326,23 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 }
 
 function _enemyNavGetEnemyFeetPoint(enemy: Sprite, cw: number, ch: number) {
-    // If aura foot data exists, anchor feet to the aura visual bottom.
-    const auraFoot = sprites.readDataNumber(enemy, "__monsterAuraFootBottom") | 0
-    const auraH = sprites.readDataNumber(enemy, "__monsterAuraFrameH") | 0
-    if (auraFoot > 0 && auraH > 0) {
-        const halfH = Math.idiv(auraH | 0, 2) | 0
-        const footY = (((enemy.y | 0) - halfH + (auraFoot | 0)) | 0)
+    const footW = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const footH = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+
+    const auraFrameH = sprites.readDataNumber(enemy, "__monsterAuraFrameH") | 0
+    if (auraFrameH > 0) {
+        const auraMaxY = sprites.readDataNumber(enemy, "__monsterAuraMaxY") | 0
+        const auraCenterY = sprites.readDataNumber(enemy, "__monsterAuraCenterY") | 0
+        const auraFoot = sprites.readDataNumber(enemy, "__monsterAuraFootBottom") | 0
+
+        const maxY = (auraMaxY > 0) ? (auraMaxY | 0) : ((auraFoot > 0) ? (auraFoot | 0) : ((auraFrameH - 1) | 0))
+        const centerY = (auraCenterY > 0) ? (auraCenterY | 0) : (Math.round((auraFrameH - 1) / 2) | 0)
+
         const footX = enemy.x | 0
-        return { footX, footY, offY: 0, dispH: auraH | 0 }
+        const footY = (((enemy.y | 0) + (maxY - centerY)) | 0)
+        const centerX = footX | 0
+        const centerYWorld = ((footY - Math.idiv((footH - 1) | 0, 2)) | 0)
+        return { footX, footY, centerX, centerY: centerYWorld, offY: 0, dispH: auraFrameH | 0, footW, footH }
     }
 
     const img: any = (enemy as any).image
@@ -47256,7 +48353,9 @@ function _enemyNavGetEnemyFeetPoint(enemy: Sprite, cw: number, ch: number) {
 
     const footX = enemy.x | 0
     const footY = (((enemy.y | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0)
-    return { footX, footY, offY, dispH }
+    const centerX = footX | 0
+    const centerY = ((footY - Math.idiv((footH - 1) | 0, 2)) | 0)
+    return { footX, footY, centerX, centerY, offY, dispH, footW, footH }
 }
 
 function _enemyNavClampTileRC(r: number, c: number) {
@@ -47306,13 +48405,13 @@ function _enemyNavMarkChosenCandidate(candidates: any[] | null, bestR: number, b
     }
 }
 
-function _enemyNavApplyVelocityTowardTileCenter(enemy: Sprite, speed: number, footX: number, footY: number, bestR: number, bestC: number): void {
+function _enemyNavApplyVelocityTowardTileCenter(enemy: Sprite, speed: number, originX: number, originY: number, bestR: number, bestC: number): void {
     const tileSize = WORLD_TILE_SIZE | 0
     const tx = (bestC * tileSize + (tileSize >> 1)) | 0
     const ty = (bestR * tileSize + (tileSize >> 1)) | 0
 
-    const dx = (tx - (footX | 0)) | 0
-    const dy = (ty - (footY | 0)) | 0
+    const dx = (tx - (originX | 0)) | 0
+    const dy = (ty - (originY | 0)) | 0
 
     let mag = Math.sqrt(dx * dx + dy * dy)
     if (mag <= 0.001) mag = 1
@@ -47336,9 +48435,11 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
     const footX = feet.footX | 0
     const footY = feet.footY | 0
+    const navX = (feet.centerX != null) ? (feet.centerX | 0) : footX
+    const navY = (feet.centerY != null) ? (feet.centerY | 0) : footY
 
-    let sr = Math.idiv(footY, tileSize) | 0
-    let sc = Math.idiv(footX, tileSize) | 0
+    let sr = Math.idiv(navY, tileSize) | 0
+    let sc = Math.idiv(navX, tileSize) | 0
     if (sr < 0) sr = 0
     else if (sr >= rows) sr = rows - 1
     if (sc < 0) sc = 0
@@ -47365,7 +48466,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     const stuckUntil = sprites.readDataNumber(enemy, ENEMY_AI_STUCK_UNTIL) | 0
     const curMask = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > startIdx) ? (_enemyNavDeadEnd[startIdx] | 0) : 0
 
-    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, startIdx, footX, footY, false)
+    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, startIdx, navX, navY, false)
 
     _enemyPfEnsureGrid()
     if (!_enemyPFGrid || !_enemyPFFinder) return false
@@ -47385,7 +48486,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
                 mid: monsterId,
                 t: nowMs,
                 reason: "pf_astar_fail",
-                pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
+                pos: { x: navX, y: navY, r: sr, c: sc, idx: startIdx },
                 dist: { cur: 0, mask: curMask, allowUp: 0 },
                 nav: { lastIdx: lastNavIdx, astar: { path: 0, goalR: gr, goalC: gc } },
                 hero: { r: heroR || gr, c: heroC || gc, ex: heroEX || (targetX | 0), ey: heroEY || (targetY | 0) },
@@ -47416,7 +48517,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, nextC)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, pathLen | 0)
 
-    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, nextR, nextC)
+    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, navX, navY, nextR, nextC)
 
     if (DEBUG_ENEMY_NAV_LOG && wantLog) {
         _enemyNavLogAdd(enemy, {
@@ -47424,7 +48525,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
             mid: monsterId,
             t: nowMs,
             reason: "pf_astar",
-            pos: { x: footX, y: footY, r: sr, c: sc, idx: startIdx },
+            pos: { x: navX, y: navY, r: sr, c: sc, idx: startIdx },
             dist: { cur: 0, mask: curMask, allowUp: 0 },
             nav: { lastIdx: lastNavIdx, astar: { path: pathLen | 0, goalR: gr, goalC: gc } },
             pick: { r: nextR, c: nextC, d: pathLen | 0 },
@@ -47454,9 +48555,11 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
 
     const footX = feet.footX | 0
     const footY = feet.footY | 0
+    const navX = (feet.centerX != null) ? (feet.centerX | 0) : footX
+    const navY = (feet.centerY != null) ? (feet.centerY | 0) : footY
 
-    const r0 = Math.idiv(footY, tileSize) | 0
-    const c0 = Math.idiv(footX, tileSize) | 0
+    const r0 = Math.idiv(navY, tileSize) | 0
+    const c0 = Math.idiv(navX, tileSize) | 0
     const rc = _enemyNavClampTileRC(r0, c0)
     if (!rc) return false
 
@@ -47479,7 +48582,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     const monsterId = sprites.readDataString(enemy, "monsterId") || sprites.readDataString(enemy, "id") || ""
     const eid = getEnemyIndex(enemy) | 0
 
-    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, curIdx, footX, footY, false)
+    const wantLog = DEBUG_ENEMY_NAV_LOG && _enemyNavShouldLog(enemy, curIdx, navX, navY, false)
     const candidates: any[] = DEBUG_ENEMY_NAV_LOG ? [] : null
 
     const collHere = _enemyNavMakeCollisionDebug(enemy, footX, footY, cw, ch, r, c)
@@ -47496,7 +48599,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             _enemyNavLogAdd(enemy, {
                 t: nowMs,
                 reason: "curDistInf",
-                pos: { x: footX, y: footY, r, c, idx: curIdx },
+                pos: { x: navX, y: navY, r, c, idx: curIdx },
                 dist: { cur: curD, mask: curMask, allowUp: 0 },
                 nav: { lastIdx: sprites.readDataNumber(enemy, ENEMY_AI_LAST_NAV_IDX) | 0 },
                 vel: { vx: enemy.vx | 0, vy: enemy.vy | 0 },
@@ -47687,7 +48790,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         mid: monsterId,
         t: nowMs,
         reason: pickReason,
-        pos: { x: footX, y: footY, r, c, idx: curIdx },
+        pos: { x: navX, y: navY, r, c, idx: curIdx },
         dist: { cur: curD, best: bestD, mask: curMask, allowUp },
         nav: { lastIdx: lastNavIdx, bestAny: { r: bestAnyR, c: bestAnyC, d: bestAnyD } },
         pick: { r: bestR, c: bestC, d: bestD },
@@ -47717,7 +48820,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, bestC)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_D, bestD)
 
-    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, footX, footY, bestR, bestC)
+    _enemyNavApplyVelocityTowardTileCenter(enemy, speed, navX, navY, bestR, bestC)
 
     if (DEBUG_ENEMY_NAV_LOG) _enemyNavLogAdd(enemy, makeNavLogEntry(), (logForce || wantLog))
 
@@ -48103,6 +49206,18 @@ function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: num
     return { left, right, top, bottom }
 }
 
+function _enemyNavAabbFromCenter(centerX: number, centerY: number, cw: number, ch: number) {
+    const fw = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const fh = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const halfW = Math.idiv(fw, 2) | 0
+    const halfH = Math.idiv(fh, 2) | 0
+    const left = ((centerX | 0) - halfW) | 0
+    const top = ((centerY | 0) - halfH) | 0
+    const right = (left + fw - 1) | 0
+    const bottom = (top + fh - 1) | 0
+    return { left, right, top, bottom }
+}
+
 function _enemyNavScanBlockedTilesOverAabb(left: number, right: number, top: number, bottom: number) {
     const tile = WORLD_TILE_SIZE | 0
     const rows = _enemyNavRows | 0
@@ -48177,7 +49292,7 @@ function _enemyNavCandidateCollisionProbe(nr: number, nc: number, cw: number, ch
     const tileSize = WORLD_TILE_SIZE | 0
     const tfx = (nc * tileSize + (tileSize >> 1)) | 0
     const tfy = (nr * tileSize + (tileSize >> 1)) | 0
-    const aabb = _enemyNavAabbFromFoot(tfx, tfy, cw | 0, ch | 0)
+    const aabb = _enemyNavAabbFromCenter(tfx, tfy, cw | 0, ch | 0)
     const hits = _enemyNavScanBlockedTilesOverAabb(aabb.left, aabb.right, aabb.top, aabb.bottom)
     return { aabb, hits }
 }
@@ -48393,16 +49508,9 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
 
     // Enemy FEET point (based on collider dims + feet alignment)
     const dims = _enemyGetColliderDims(enemy)
-    const ch = dims.h | 0
-
-    const eImg: any = (enemy as any).image
-    const eDispH = (((eImg && eImg.height) ? (eImg.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
-
-    let eOffY = Math.idiv((eDispH - ch) | 0, 2) | 0
-    if (eOffY < 0) eOffY = 0
-
-    const eFootX = enemy.x | 0
-    const eFootY = (((enemy.y | 0) + eOffY + (Math.idiv(ch, 2) | 0) - 1) | 0)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const eFootX = feet.footX | 0
+    const eFootY = feet.footY | 0
 
     for (let hi = 0; hi < heroTargets.length; hi++) {
 
@@ -48679,16 +49787,9 @@ function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number
 
     // Fallback: straight-line to the HERO FEET point, using ENEMY FEET point.
     const dims = _enemyGetColliderDims(enemy)
-    const ch = dims.h | 0
-
-    const eImg: any = (enemy as any).image
-    const eDispH = (((eImg && eImg.height) ? (eImg.height | 0) : (((enemy as any).height | 0) || 0)) | 0) || ch
-
-    let eOffY = Math.idiv((eDispH - ch) | 0, 2) | 0
-    if (eOffY < 0) eOffY = 0
-
-    const eFootX = enemy.x | 0
-    const eFootY = (((enemy.y | 0) + eOffY + (Math.idiv(ch, 2) | 0) - 1) | 0)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const eFootX = feet.footX | 0
+    const eFootY = feet.footY | 0
 
     const dx0 = (edgeX | 0) - eFootX
     const dy0 = (edgeY | 0) - eFootY
@@ -48790,6 +49891,8 @@ function _enemyAiUpdateLastPos(enemy: Sprite): void {
 
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
 
+    _enemySyncLpcRenderPhase(enemy, game.runtime() | 0)
+
 }
 
 
@@ -48800,6 +49903,8 @@ function _enemySetDirFromVelocityOrFacing(enemy: Sprite, pick: EnemyEdgePick): v
 
     const vy = enemy.vy
 
+    const prevDir = sprites.readDataString(enemy, "dir") || ""
+
     if (Math.abs(vx) + Math.abs(vy) > 0.001) {
 
         let dir = "down"
@@ -48809,10 +49914,13 @@ function _enemySetDirFromVelocityOrFacing(enemy: Sprite, pick: EnemyEdgePick): v
         else dir = vy >= 0 ? "down" : "up"
 
         sprites.setDataString(enemy, "dir", dir)
+        if (dir !== prevDir) _enemyApplyAuraForDir(enemy, dir)
 
     } else {
 
-        sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+        const dir = _enemyDirFromVector(pick.dx, pick.dy)
+        sprites.setDataString(enemy, "dir", dir)
+        if (dir !== prevDir) _enemyApplyAuraForDir(enemy, dir)
 
     }
 
@@ -48972,17 +50080,7 @@ function updateEnemyHoming(nowMs: number) {
 
 
 
-        // Anti-stuck wall sliding
-
-        if (ENEMY_STUCK_SLIDE_ENABLED && _enemyApplyAntiStuckSlide(enemy, pick, speed, nowMs)) {
-
-            // dir already set in anti-stuck path
-
-        } else {
-
-            _enemySetDirFromVelocityOrFacing(enemy, pick)
-
-        }
+        _enemySetDirFromVelocityOrFacing(enemy, pick)
 
 
 
@@ -49025,6 +50123,8 @@ function spawnDummyEnemy(x: number, y: number) {
         . . . . c c 6 6 6 6 c c . . . .
 
     `, SpriteKind.Enemy)
+
+    enemy.data.__posGuardEnemy = 1
 
     enemy.x = x; enemy.y = y; enemy.z = 10
 
@@ -49738,25 +50838,12 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
 function flashEnemyOnDamage(enemy: Sprite) {
 
-    const flashDuration = 150, flashInterval = 50
-
-    const start = game.runtime()
-
-    game.onUpdate(function () {
-
-        if (!HeroEngine._isStarted()) return
-
-        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
-
-        const elapsed = game.runtime() - start
-
-        if (elapsed >= flashDuration) { enemy.setFlag(SpriteFlag.Invisible, false); return }
-
-        const phase = Math.idiv(elapsed, flashInterval)
-
-        enemy.setFlag(SpriteFlag.Invisible, phase % 2 == 0)
-
-    })
+    const now = game.runtime() | 0
+    sprites.setDataNumber(enemy, "__hitFlashUntil", (now + ENEMY_HIT_FLASH_MS) | 0)
+    sprites.setDataNumber(enemy, "__hitFlashMs", ENEMY_HIT_FLASH_MS | 0)
+    sprites.setDataNumber(enemy, "__hitPunchUntil", (now + ENEMY_HIT_PUNCH_MS) | 0)
+    sprites.setDataNumber(enemy, "__hitPunchMs", ENEMY_HIT_PUNCH_MS | 0)
+    sprites.setDataNumber(enemy, "__hitPunchScaleX1000", ENEMY_HIT_PUNCH_SCALE_X1000 | 0)
 
 }
 
@@ -51720,6 +52807,7 @@ game.onUpdate(function () {
     updateHeroFacingsFromVelocity()
 
     updatePlayerInputs()
+    _trapPromptInputTick()
 
 
 
@@ -52044,6 +53132,8 @@ const POSSIBLE_MONSTERS = [
         "ghost",
 
         "goblin",
+        "skeleton",
+        "zombie",
 
         "golem",
 
@@ -52343,6 +53433,8 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "golem white",      danger: 17, hp: 95,  damage: 18, speed: 18, xp: 21, advanceRangePx: 0 },
     { id: "eyeball",          danger: 18, hp: 65,  damage: 14, speed: 36, xp: 17, advanceRangePx: _calcAdvanceRangePxForDanger(18) },
     { id: "goblin",           danger: 19, hp: 70,  damage: 15, speed: 30, xp: 18, advanceRangePx: 0 },
+    { id: "skeleton",         danger: 18, hp: 62,  damage: 14, speed: 26, xp: 17, advanceRangePx: 0 },
+    { id: "zombie",           danger: 20, hp: 80,  damage: 16, speed: 18, xp: 19, advanceRangePx: 0 },
     { id: "snake",            danger: 20, hp: 68,  damage: 16, speed: 32, xp: 19, advanceRangePx: _calcAdvanceRangePxForDanger(20) },
     { id: "big worm",         danger: 21, hp: 90,  damage: 18, speed: 22, xp: 22, advanceRangePx: 0 },
     { id: "ghost",            danger: 22, hp: 95,  damage: 19, speed: 24, xp: 23, advanceRangePx: _calcAdvanceRangePxForDanger(22) },
@@ -52353,6 +53445,8 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "man eater flower", danger: 35, hp: 200, damage: 32, speed: 14, xp: 38, advanceRangePx: _calcAdvanceRangePxForDanger(35) },
 
 ]
+
+const _monsterMissingWarned = new Set<string>()
 
 
 
@@ -52391,6 +53485,8 @@ interface MonsterSizing {
     colliderW: number
 
     colliderH: number
+
+    renderOffsX: number
 
     renderOffsY: number
 
@@ -52458,6 +53554,128 @@ function _defaultColliderFromFrame(frameW: number, frameH: number): { cw: number
 
 }
 
+function _monsterAuraForDir(monsterId: string, dir: string): any {
+    const aura = (MONSTER_AURA_FEET as any)[monsterId] as any
+    if (!aura) return null
+    const key = (dir || "").toLowerCase()
+    const byDir = aura && aura.dirs
+    if (byDir && byDir[key]) return byDir[key]
+    return aura
+}
+
+function _enemyApplyAuraForDir(enemy: Sprite, dir: string): void {
+    const monsterId = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    if (!monsterId) return
+    const aura = _monsterAuraForDir(monsterId, dir)
+    if (!aura) return
+
+    sprites.setDataNumber(enemy, "__monsterAuraFrameW", (aura.frameW | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraFrameH", (aura.frameH | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraFootBottom", (aura.footBottom | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraOutlineSides", (aura.outlineSides | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMinX", (aura.minX | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMinY", (aura.minY | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMaxX", (aura.maxX | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMaxY", (aura.maxY | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraCenterX", (aura.centerX | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraCenterY", (aura.centerY | 0) || 0)
+    if (Array.isArray(aura.outline)) {
+        const anyEnemy: any = enemy as any
+        if (!anyEnemy.data) anyEnemy.data = {}
+        anyEnemy.data.__monsterAuraOutline = aura.outline
+    }
+
+    const auraW = ((aura.maxX | 0) - (aura.minX | 0) + 1) | 0
+    const auraH = ((aura.maxY | 0) - (aura.minY | 0) + 1) | 0
+    if (auraW > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_W, auraW | 0)
+    if (auraH > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_H, auraH | 0)
+
+    const frameW = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_W) | 0
+    const frameH = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_H) | 0
+    if (frameW > 0 && frameH > 0) {
+        const frameCenterX = Math.round((frameW - 1) / 2) | 0
+        const frameCenterY = Math.round((frameH - 1) / 2) | 0
+        const renderOffsX = (frameCenterX - (aura.centerX | 0)) | 0
+        const renderOffsY = (frameCenterY - (aura.centerY | 0)) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_X, renderOffsX)
+        sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, renderOffsY)
+    }
+}
+
+const ENEMY_LPC_WALK_MS = 800
+const ENEMY_LPC_IDLE_MS = 1100
+const ENEMY_LPC_HURT_MS = 350
+
+function _enemyInitLpcVisuals(enemy: Sprite, def: EnemyLpcDef, nowMs: number): void {
+    if (!enemy || !def) return
+
+    const heroName = String(def.heroName || "")
+    const fam = String(def.family || "base").toLowerCase()
+
+    sprites.setDataBoolean(enemy, ENEMY_LPC_FLAG_KEY, true)
+    sprites.setDataString(enemy, HERO_DATA.NAME, heroName)
+    sprites.setDataString(enemy, "heroName", heroName)
+    sprites.setDataString(enemy, HERO_DATA.FAMILY, fam)
+    sprites.setDataString(enemy, "heroFamily", fam)
+    sprites.setDataNumber(enemy, "heroIndex", ENEMY_LPC_HERO_INDEX_BASE + ((enemy.id | 0) & 0xffff))
+
+    sprites.setDataString(enemy, HERO_DATA.DIR, "down")
+    sprites.setDataString(enemy, "dir", "down")
+    sprites.setDataString(enemy, HERO_DATA.PHASE, "walk")
+    sprites.setDataString(enemy, "phase", "walk")
+    sprites.setDataNumber(enemy, HERO_DATA.FRAME_COL_OVERRIDE, -1)
+
+    // Weapon overlay slots (match NPC pipeline shape)
+    const w = def.weapons || {}
+    if (w.slash != null) sprites.setDataString(enemy, HERO_DATA.WEAPON_SLASH_ID, w.slash || "")
+    if (w.thrust != null) sprites.setDataString(enemy, HERO_DATA.WEAPON_THRUST_ID, w.thrust || "")
+    if (w.cast != null) sprites.setDataString(enemy, HERO_DATA.WEAPON_CAST_ID, w.cast || "")
+    if (w.exec != null) sprites.setDataString(enemy, HERO_DATA.WEAPON_EXEC_ID, w.exec || "")
+    if (w.combo != null) sprites.setDataString(enemy, HERO_DATA.WEAPON_COMBO_ID, w.combo || "")
+    if (w.int != null) sprites.setDataString(enemy, HERO_DATA_WEAPON_INTELLIGENCE_ID, w.int || "")
+    if (w.sup != null) sprites.setDataString(enemy, HERO_DATA_WEAPON_SUPPORT_ID, w.sup || "")
+
+    // LPC enemies should align to their collider feet; ignore monster render offsets.
+    sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_X, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, 0)
+
+    _stampHumanoidPhaseForSprite(enemy, "walk", nowMs, ENEMY_LPC_WALK_MS)
+}
+
+function _enemySyncLpcRenderPhase(enemy: Sprite, nowMs: number): void {
+    if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
+    if (!_enemyIsLpc(enemy)) return
+
+    const monsterId = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    const def = _enemyLpcDefForId(monsterId)
+    const attackPhase = (def && def.attackPhase) ? def.attackPhase : "slash"
+
+    const deathUntil = sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0
+    const aiPhase = (sprites.readDataString(enemy, "phase") || "walk").toLowerCase()
+
+    let renderPhase = "idle"
+    let durMs = ENEMY_LPC_IDLE_MS | 0
+
+    if (deathUntil > 0) {
+        renderPhase = "hurt"
+        const deathMs = (sprites.readDataNumber(enemy, "deathAnimMs") | 0) || ENEMY_LPC_HURT_MS
+        durMs = Math.max(1, deathMs | 0)
+    } else if (aiPhase === "attack") {
+        renderPhase = attackPhase
+        const atkMs = (sprites.readDataNumber(enemy, "attackAnimMs") | 0) || 350
+        durMs = Math.max(1, atkMs | 0)
+    } else {
+        const moving = (Math.abs(enemy.vx) + Math.abs(enemy.vy)) > 0.01
+        renderPhase = moving ? "walk" : "idle"
+        durMs = moving ? ENEMY_LPC_WALK_MS : ENEMY_LPC_IDLE_MS
+    }
+
+    const cur = (sprites.readDataString(enemy, HERO_DATA.PhaseName) || "").toLowerCase()
+    if (cur !== renderPhase) {
+        _stampHumanoidPhaseForSprite(enemy, renderPhase, nowMs, durMs | 0)
+    }
+}
+
 
 
 function _monsterSizingForId(monsterId: string): MonsterSizing {
@@ -52470,6 +53688,15 @@ function _monsterSizingForId(monsterId: string): MonsterSizing {
 
     const frameH = fs.h | 0
 
+    const aura = _monsterAuraForDir(monsterId, "down")
+    const auraMinX = aura && typeof aura.minX === "number" ? (aura.minX | 0) : 0
+    const auraMinY = aura && typeof aura.minY === "number" ? (aura.minY | 0) : 0
+    const auraMaxX = aura && typeof aura.maxX === "number" ? (aura.maxX | 0) : (frameW - 1)
+    const auraMaxY = aura && typeof aura.maxY === "number" ? (aura.maxY | 0) : (frameH - 1)
+    const auraCenterX = aura && typeof aura.centerX === "number" ? (aura.centerX | 0) : Math.round((frameW - 1) / 2)
+    const auraCenterY = aura && typeof aura.centerY === "number" ? (aura.centerY | 0) : Math.round((frameH - 1) / 2)
+    const hasAuraBounds = aura && typeof aura.minX === "number" && typeof aura.maxX === "number" && typeof aura.minY === "number" && typeof aura.maxY === "number"
+
 
 
     const defCol = _defaultColliderFromFrame(frameW, frameH)
@@ -52478,6 +53705,11 @@ function _monsterSizingForId(monsterId: string): MonsterSizing {
     let colliderW = ((md && md.colliderW) ? (md.colliderW | 0) : (frameW | 0)) | 0
 
     let colliderH = ((md && md.colliderH) ? (md.colliderH | 0) : (frameH | 0)) | 0
+
+    if (hasAuraBounds) {
+        colliderW = ((auraMaxX - auraMinX + 1) | 0)
+        colliderH = ((auraMaxY - auraMinY + 1) | 0)
+    }
 
     if (colliderW <= 0) colliderW = defCol.cw | 0
 
@@ -52489,17 +53721,21 @@ function _monsterSizingForId(monsterId: string): MonsterSizing {
 
     // (centered collider vs centered art)
 
+    let renderOffsX = 0
     let renderOffsY = 0
 
-    if ((frameH | 0) > (colliderH | 0)) {
-
+    if (hasAuraBounds) {
+        const frameCenterX = Math.round((frameW - 1) / 2) | 0
+        const frameCenterY = Math.round((frameH - 1) / 2) | 0
+        renderOffsX = (frameCenterX - auraCenterX) | 0
+        renderOffsY = (frameCenterY - auraCenterY) | 0
+    } else if ((frameH | 0) > (colliderH | 0)) {
         renderOffsY = Math.idiv((frameH - colliderH) | 0, 2) | 0
-
     }
 
 
 
-    return { frameW, frameH, colliderW, colliderH, renderOffsY }
+    return { frameW, frameH, colliderW, colliderH, renderOffsX, renderOffsY }
 
 }
 
@@ -52517,6 +53753,10 @@ function _monsterDefById(id: string): MonsterDef {
 
     }
 
+    if (!_monsterMissingWarned.has(id)) {
+        _monsterMissingWarned.add(id)
+        console.warn(`[MONSTER] new monster "${id}" missing catalog entry (NEED TO CODE)`)
+    }
 
 
     // fallback: unknown monsters still spawn but have "danger" = 999 so generator won't pick them
@@ -57938,4 +59178,46 @@ try {
 
     }
 
+} catch (_e) { }
+
+
+try {
+    const g: any = globalThis as any
+    if (g && !g.__heTrapInteractInstalled) {
+        g.__heTrapInteractInstalled = true
+
+        const prev = g.dun_onPropInteract
+        g.dun_onPropInteract = (payload: any) => {
+            let handled = false
+            try { handled = _trapOnPropInteract(payload) } catch { }
+            if (!handled && typeof prev === "function") {
+                try { prev(payload) } catch { }
+            }
+        }
+
+        if (typeof g.addEventListener === "function") {
+            g.addEventListener("he:dialogChoice", (ev: any) => {
+                const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
+                const idx = (ev && ev.detail && typeof ev.detail.index === "number") ? (ev.detail.index | 0) : undefined
+                if (DEBUG_TRAP_LOGS) {
+                    console.log("[TRAP][PROMPT] dialogChoice", { id: String(id || ""), idx })
+                }
+                _trapHandleDialogChoice(String(id || ""), idx)
+            })
+            g.addEventListener("he:dialogHide", () => {
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] dialogHide")
+                const state = _trapGetState()
+                if (state && state.mode === "prompt") _trapClearState()
+            })
+            g.addEventListener("he:trapSolved", (ev: any) => {
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] trapSolved event")
+                _trapHandleSolved(ev ? ev.detail : null)
+            })
+            g.addEventListener("he:trapEditorClosed", (ev: any) => {
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] trapEditorClosed")
+                const state = _trapGetState()
+                if (state && state.mode === "editing") _trapClearState()
+            })
+        }
+    }
 } catch (_e) { }

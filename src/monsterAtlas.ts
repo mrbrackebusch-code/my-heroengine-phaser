@@ -152,6 +152,22 @@ function parseMonsterFilename(baseName: string, url: string): ParsedSheet | null
                 if (ph) phaseStarts[ph] = num;
             }
         }
+
+        // Also accept split tokens like "1 Walk"
+        if (/^\d+$/.test(token)) {
+            const next = restTokens[i + 1];
+            if (next && /^(walk|attack|death|row)$/i.test(next)) {
+                const num = parseInt(token, 10);
+                const label = next;
+                if (label.toLowerCase() === "row") {
+                    rowCountOverride = num;
+                } else {
+                    const ph = toPhase(label);
+                    if (ph) phaseStarts[ph] = num;
+                }
+                i += 1;
+            }
+        }
     }
 
     return {
@@ -440,6 +456,10 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
         if (deathSheets.length > 0) selected.add(deathSheets[0]);
 
         const orderedSheets = Array.from(selected);
+        if (orderedSheets.length === 0) {
+            console.warn("[monsterAtlas.build] no usable sheets for monster id:", id, "sheets=", sheets.map(s => s.textureKey));
+            continue;
+        }
 
         const first = orderedSheets[0];
 

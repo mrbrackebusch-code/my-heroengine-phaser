@@ -78,6 +78,9 @@ export interface TrapValidatorSpec {
   outputContract: TrapOutputContract;
   gradingMode?: "strict" | "rule";
   ruleId?: string;
+  expectedOutput?: unknown;
+  expectedOutputFromInputs?: (inputs: Record<string, unknown>) => unknown;
+  matchOutput?: (value: unknown, inputs: Record<string, unknown>) => boolean;
 }
 
 export interface TrapRuntimeBinding {

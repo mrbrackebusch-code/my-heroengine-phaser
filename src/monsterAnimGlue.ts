@@ -199,8 +199,33 @@ export function applyMonsterAnimationForSprite(
         data.set("__monsterAuraFrameW", animSet.frameWidth | 0);
         data.set("__monsterAuraFrameH", animSet.frameHeight | 0);
         const foot = MONSTER_AURA_FEET[animSet.id];
-        if (foot && typeof foot.footBottom === "number") {
-            data.set("__monsterAuraFootBottom", foot.footBottom | 0);
+        const dirFoot = (foot && (foot as any).dirs && (foot as any).dirs[dir]) ? (foot as any).dirs[dir] : foot;
+        if (dirFoot && typeof dirFoot.footBottom === "number") {
+            data.set("__monsterAuraFootBottom", dirFoot.footBottom | 0);
+        }
+        if (dirFoot && Array.isArray(dirFoot.outline)) {
+            data.set("__monsterAuraOutline", dirFoot.outline);
+        }
+        if (dirFoot && typeof dirFoot.outlineSides === "number") {
+            data.set("__monsterAuraOutlineSides", dirFoot.outlineSides | 0);
+        }
+        if (dirFoot && typeof dirFoot.minX === "number") {
+            data.set("__monsterAuraMinX", dirFoot.minX | 0);
+        }
+        if (dirFoot && typeof dirFoot.minY === "number") {
+            data.set("__monsterAuraMinY", dirFoot.minY | 0);
+        }
+        if (dirFoot && typeof dirFoot.maxX === "number") {
+            data.set("__monsterAuraMaxX", dirFoot.maxX | 0);
+        }
+        if (dirFoot && typeof dirFoot.maxY === "number") {
+            data.set("__monsterAuraMaxY", dirFoot.maxY | 0);
+        }
+        if (dirFoot && typeof dirFoot.centerX === "number") {
+            data.set("__monsterAuraCenterX", dirFoot.centerX | 0);
+        }
+        if (dirFoot && typeof dirFoot.centerY === "number") {
+            data.set("__monsterAuraCenterY", dirFoot.centerY | 0);
         }
     }
 

@@ -25,6 +25,33 @@ const AURA_DIR = path.join(ROOT, "assets/monsters/monster_auras");
 const OUT_TS = path.join(ROOT, "src/generated/monsterAuraFeet.ts");
 const FOOT_LIFT_PX = 2;       // lift the foot a bit to avoid grabbing trailing pixels
 const OVERWRITE_ALL = (process.env.OVERWRITE_AURA_FEET === "true");  // true to recompute all entries; false fills only missing ids
+const OUTLINE_SIDES_PRIMARY = 8; // octagon candidate
+const OUTLINE_SIDES_ALT = 6; // hexagon fallback when 8-sides isn't meaningfully different
+const OUTLINE_SIMILARITY_PCT = 0.04; // choose 6 if |area8-area6|/area8 <= this
+const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
+
+function mapLetterToDir(ch) {
+  switch (ch) {
+    case "U":
+    case "N": return "up";
+    case "D":
+    case "S": return "down";
+    case "L":
+    case "W": return "left";
+    case "R":
+    case "E": return "right";
+    default: return "down";
+  }
+}
+
+function makeDirs(sides) {
+  const dirs = [];
+  for (let i = 0; i < sides; i++) {
+    const ang = (Math.PI * 2 * i) / sides;
+    dirs.push({ x: Math.cos(ang), y: Math.sin(ang) });
+  }
+  return dirs;
+}
 
 function paeth(a, b, c) {
   const p = a + b - c;
@@ -166,17 +193,72 @@ function parsePng(filePath) {
   return { w, h, rows: rgbaRows };
 }
 
-function parseAuraId(baseName) {
-  // baseName example: "bat 64x64 ULDR 1Walk_aura_r2"
+function parseAuraMeta(baseName) {
   const cleaned = baseName.replace(/_aura_r2$/i, "").replace(/_/g, " ").trim();
-  const tokens = cleaned.split(/\s+/);
+  const tokens = cleaned.split(/\s+/).filter(t => t.length > 0);
   const sizeIdx = tokens.findIndex(t => /^\d+x\d+$/i.test(t));
-  const idTokens = sizeIdx >= 0 ? tokens.slice(0, sizeIdx) : tokens;
-  const id = idTokens.join(" ").trim();
-  return id;
+  if (sizeIdx === -1) return null;
+  const id = tokens.slice(0, sizeIdx).join(" ").trim();
+  const rest = tokens.slice(sizeIdx + 1);
+
+  let hasDirs = false;
+  let dirs = undefined;
+  if (rest[0] && /^[A-Z]+/.test(rest[0])) {
+    const dirToken = rest[0];
+    const letters = [];
+    for (const ch of dirToken) {
+      if (DIR_LETTERS.has(ch)) {
+        letters.push(ch);
+        hasDirs = true;
+      } else {
+        break;
+      }
+    }
+    if (letters.length > 0) {
+      dirs = letters.map(mapLetterToDir);
+    }
+  }
+
+  let hasWalk = false;
+  let hasAttack = false;
+  let hasDeath = false;
+  for (const token of rest) {
+    const re = /(\d+)(Walk|Attack|Death|Row)/gi;
+    let m;
+    while ((m = re.exec(token)) !== null) {
+      const label = String(m[2] || "").toLowerCase();
+      if (label === "walk") hasWalk = true;
+      else if (label === "attack") hasAttack = true;
+      else if (label === "death") hasDeath = true;
+    }
+    if (!hasDeath && /death/i.test(token)) hasDeath = true;
+  }
+
+  return { id, hasDirs, hasWalk, hasAttack, hasDeath, baseName, dirs };
 }
 
-function findFoot(baseName, filePath) {
+function polygonArea(points) {
+  if (!points || points.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    sum += (a[0] * b[1]) - (b[0] * a[1]);
+  }
+  return Math.abs(sum) / 2;
+}
+
+function initOutlineState(sides, centerX, centerY) {
+  return {
+    sides,
+    dirs: makeDirs(sides),
+    maxProj: new Array(sides).fill(-Infinity),
+    bestX: new Array(sides).fill(Math.round(centerX)),
+    bestY: new Array(sides).fill(Math.round(centerY)),
+  };
+}
+
+function findFoot(baseName, filePath, meta) {
   const sizeMatch = baseName.match(/(\d+)x(\d+)/i);
   const declaredW = sizeMatch ? parseInt(sizeMatch[1], 10) : null;
   const declaredH = sizeMatch ? parseInt(sizeMatch[2], 10) : null;
@@ -188,8 +270,39 @@ function findFoot(baseName, filePath) {
   const rowsCount = Math.max(1, Math.floor(sheetH / frameH));
 
   let bestFoot = frameH - 1;
+  const centerX = (frameW - 1) / 2;
+  const centerY = (frameH - 1) / 2;
+  const outline8 = initOutlineState(OUTLINE_SIDES_PRIMARY, centerX, centerY);
+  const outline6 = initOutlineState(OUTLINE_SIDES_ALT, centerX, centerY);
+  let minX = frameW - 1;
+  let minY = frameH - 1;
+  let maxX = 0;
+  let maxY = 0;
+  let anyPixel = false;
+
+  const dirOrder = (meta && Array.isArray(meta.dirs)) ? meta.dirs : [];
+  const dirCount = dirOrder.length | 0;
+  const dirStates = {};
+  const dirAny = {};
+
+  function initDirState() {
+    return {
+      outline8: initOutlineState(OUTLINE_SIDES_PRIMARY, centerX, centerY),
+      outline6: initOutlineState(OUTLINE_SIDES_ALT, centerX, centerY),
+      minX: frameW - 1,
+      minY: frameH - 1,
+      maxX: 0,
+      maxY: 0
+    };
+  }
+
+  for (const d of dirOrder) {
+    dirStates[d] = initDirState();
+    dirAny[d] = false;
+  }
 
   for (let ry = 0; ry < rowsCount; ry++) {
+    const rowDir = (dirCount > 0 && ry >= 0 && ry < dirCount) ? dirOrder[ry] : null;
     for (let rx = 0; rx < cols; rx++) {
       const x0 = rx * frameW;
       const y0 = ry * frameH;
@@ -203,12 +316,162 @@ function findFoot(baseName, filePath) {
           break;
         }
       }
+
+      for (let y = 0; y < frameH; y++) {
+        const ay = y0 + y;
+        const row = rows[ay];
+        for (let x = 0; x < frameW; x++) {
+          const ax = (x0 + x) * 4;
+          const a = row[ax + 3];
+          if (a <= 0) continue;
+          anyPixel = true;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+          const dx = x - centerX;
+          const dy = y - centerY;
+          for (let k = 0; k < outline8.sides; k++) {
+            const dir = outline8.dirs[k];
+            const proj = dx * dir.x + dy * dir.y;
+            if (proj > outline8.maxProj[k]) {
+              outline8.maxProj[k] = proj;
+              outline8.bestX[k] = x;
+              outline8.bestY[k] = y;
+            }
+          }
+          for (let k = 0; k < outline6.sides; k++) {
+            const dir = outline6.dirs[k];
+            const proj = dx * dir.x + dy * dir.y;
+            if (proj > outline6.maxProj[k]) {
+              outline6.maxProj[k] = proj;
+              outline6.bestX[k] = x;
+              outline6.bestY[k] = y;
+            }
+          }
+          if (rowDir && dirStates[rowDir]) {
+            const st = dirStates[rowDir];
+            dirAny[rowDir] = true;
+            if (x < st.minX) st.minX = x;
+            if (y < st.minY) st.minY = y;
+            if (x > st.maxX) st.maxX = x;
+            if (y > st.maxY) st.maxY = y;
+            for (let k = 0; k < st.outline8.sides; k++) {
+              const d0 = st.outline8.dirs[k];
+              const proj0 = dx * d0.x + dy * d0.y;
+              if (proj0 > st.outline8.maxProj[k]) {
+                st.outline8.maxProj[k] = proj0;
+                st.outline8.bestX[k] = x;
+                st.outline8.bestY[k] = y;
+              }
+            }
+            for (let k = 0; k < st.outline6.sides; k++) {
+              const d1 = st.outline6.dirs[k];
+              const proj1 = dx * d1.x + dy * d1.y;
+              if (proj1 > st.outline6.maxProj[k]) {
+                st.outline6.maxProj[k] = proj1;
+                st.outline6.bestX[k] = x;
+                st.outline6.bestY[k] = y;
+              }
+            }
+          }
+        }
+      }
     }
   }
 
-  let lifted = bestFoot - FOOT_LIFT_PX;
+  if (!anyPixel) {
+    minX = 0;
+    minY = 0;
+    maxX = frameW - 1;
+    maxY = frameH - 1;
+  }
+
+  let lifted = maxY - FOOT_LIFT_PX;
   if (lifted < 0) lifted = 0;
-  return { frameW, frameH, footBottom: lifted };
+
+  function chooseOutline(st) {
+    const outline8Pts = [];
+    for (let k = 0; k < st.outline8.sides; k++) {
+      outline8Pts.push([st.outline8.bestX[k] | 0, st.outline8.bestY[k] | 0]);
+    }
+    const outline6Pts = [];
+    for (let k = 0; k < st.outline6.sides; k++) {
+      outline6Pts.push([st.outline6.bestX[k] | 0, st.outline6.bestY[k] | 0]);
+    }
+
+    const area8 = polygonArea(outline8Pts);
+    const area6 = polygonArea(outline6Pts);
+    let outline = outline8Pts;
+    let outlineSides = OUTLINE_SIDES_PRIMARY;
+    if (area8 > 0) {
+      const diffPct = Math.abs(area8 - area6) / area8;
+      if (diffPct <= OUTLINE_SIMILARITY_PCT) {
+        outline = outline6Pts;
+        outlineSides = OUTLINE_SIDES_ALT;
+      }
+    } else if (outline6Pts.length >= 3) {
+      outline = outline6Pts;
+      outlineSides = OUTLINE_SIDES_ALT;
+    }
+
+    return { outline, outlineSides };
+  }
+
+  const picked = chooseOutline({ outline8, outline6 });
+  const outline = picked.outline;
+  const outlineSides = picked.outlineSides;
+
+  const centerOutX = Math.round((minX + maxX) / 2);
+  const centerOutY = Math.round((minY + maxY) / 2);
+
+  const out = {
+    frameW,
+    frameH,
+    footBottom: lifted,
+    outline,
+    outlineSides,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    centerX: centerOutX,
+    centerY: centerOutY
+  };
+
+  const dirsOut = {};
+  for (const dir of dirOrder) {
+    if (!dirAny[dir]) continue;
+    const st = dirStates[dir];
+    const dMinX = st.minX;
+    const dMinY = st.minY;
+    const dMaxX = st.maxX;
+    const dMaxY = st.maxY;
+    const dCenterX = Math.round((dMinX + dMaxX) / 2);
+    const dCenterY = Math.round((dMinY + dMaxY) / 2);
+    let dLifted = dMaxY - FOOT_LIFT_PX;
+    if (dLifted < 0) dLifted = 0;
+    const pickedDir = chooseOutline(st);
+    dirsOut[dir] = {
+      frameW,
+      frameH,
+      footBottom: dLifted,
+      outline: pickedDir.outline,
+      outlineSides: pickedDir.outlineSides,
+      minX: dMinX,
+      minY: dMinY,
+      maxX: dMaxX,
+      maxY: dMaxY,
+      centerX: dCenterX,
+      centerY: dCenterY
+    };
+  }
+
+  if (Object.keys(dirsOut).length > 0) {
+    out.dirs = dirsOut;
+  }
+
+  return out;
 }
 
 function main() {
@@ -228,26 +491,51 @@ function main() {
     }
   }
 
+  const byId = new Map();
   for (const f of files) {
-    const full = path.join(AURA_DIR, f);
     const base = f.replace(/\.png$/i, "");
-    const id = parseAuraId(base);
-    if (!OVERWRITE_ALL && out[id]) {
-      continue; // already have entry
+    const meta = parseAuraMeta(base);
+    if (!meta) continue;
+    const full = path.join(AURA_DIR, f);
+    const list = byId.get(meta.id) || [];
+    list.push({ ...meta, file: f, full });
+    byId.set(meta.id, list);
+  }
+
+  const phaseRank = (m) => (m.hasWalk ? 0 : (m.hasAttack ? 1 : (m.hasDeath ? 2 : 3)));
+  const compareEntry = (a, b) => {
+    const pa = phaseRank(a);
+    const pb = phaseRank(b);
+    if (pa !== pb) return pa - pb;
+    const da = a.hasDirs ? 0 : 1;
+    const db = b.hasDirs ? 0 : 1;
+    if (da !== db) return da - db;
+    return a.baseName.localeCompare(b.baseName);
+  };
+
+  for (const [id, list] of byId.entries()) {
+    if (!list || list.length === 0) continue;
+    list.sort(compareEntry);
+    const chosen = list[0];
+    if (!OVERWRITE_ALL && out[id] && Array.isArray(out[id].outline)) {
+      continue; // already have entry with outline
     }
     try {
-      const info = findFoot(base, full);
+      const info = findFoot(chosen.baseName, chosen.full, chosen);
       out[id] = info;
       console.log("[genMonsterAuraFeet] ", id, "->", info);
     } catch (e) {
-      console.warn("[genMonsterAuraFeet] failed for", f, e);
+      console.warn("[genMonsterAuraFeet] failed for", chosen.file, e);
     }
   }
 
   const lines = [];
   lines.push("// AUTO-GENERATED by scripts/genMonsterAuraFeet.mjs");
   lines.push("export const MONSTER_AURA_FOOT_LIFT_PX = " + FOOT_LIFT_PX + ";");
-  lines.push("export const MONSTER_AURA_FEET: Record<string, { frameW: number; frameH: number; footBottom: number; }> = " + JSON.stringify(out, null, 2) + ";");
+  lines.push("export const MONSTER_AURA_OUTLINE_SIDES_PRIMARY = " + OUTLINE_SIDES_PRIMARY + ";");
+  lines.push("export const MONSTER_AURA_OUTLINE_SIDES_ALT = " + OUTLINE_SIDES_ALT + ";");
+  lines.push("export const MONSTER_AURA_OUTLINE_SIMILARITY_PCT = " + OUTLINE_SIMILARITY_PCT + ";");
+  lines.push("export const MONSTER_AURA_FEET: Record<string, { frameW: number; frameH: number; footBottom: number; outline: number[][]; outlineSides: number; minX: number; minY: number; maxX: number; maxY: number; centerX: number; centerY: number; dirs?: Record<string, { frameW: number; frameH: number; footBottom: number; outline: number[][]; outlineSides: number; minX: number; minY: number; maxX: number; maxY: number; centerX: number; centerY: number; }>; }> = " + JSON.stringify(out, null, 2) + ";");
   fs.mkdirSync(path.dirname(OUT_TS), { recursive: true });
   fs.writeFileSync(OUT_TS, lines.join("\n") + "\n", "utf8");
   console.log("Wrote", OUT_TS);

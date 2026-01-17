@@ -35,6 +35,7 @@ export const DISASSEMBLED_NUMBER_TRAP_SPEC: TrapSpec = {
       type: "Number",
       number: { integerOnly: true, min: 0, max: 5 },
     },
+    expectedOutputFromInputs: (inputs: Record<string, unknown>) => inputs.givenValue,
   },
   runtimeBinding: {
     effectId: "trap.disassembled.number",

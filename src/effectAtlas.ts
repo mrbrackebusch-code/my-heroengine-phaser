@@ -75,7 +75,14 @@ const EFFECT_SHEETS: Record<string, EffectSheetDef> = {
     firelion_right: { id: "firelion_right", file: "firelion_right.png", frameW: 64, frameH: 64 },
     firelion_up: { id: "firelion_up", file: "firelion_up.png", frameW: 64, frameH: 64 },
     spikes: { id: "spikes", file: "spikes.png", frameW: 64, frameH: 64 },
-    lightningclaw: { id: "lightningclaw", file: "lightningclaw.png", frameW: 64, frameH: 64 }
+    lightningclaw: { id: "lightningclaw", file: "lightningclaw.png", frameW: 64, frameH: 64 },
+    flames_16x24: { id: "flames_16x24", file: "flames 16x24.png", frameW: 16, frameH: 24 }
+};
+
+const FLAMES_CLIP: EffectClipDef = {
+    layout: { kind: "grid", startRow: 0, startCol: 0, rows: 3, cols: 4, count: 9, order: "row" },
+    frameRate: 12,
+    repeat: -1
 };
 
 const EFFECT_SKINS: EffectSkinDef[] = [
@@ -101,6 +108,16 @@ const EFFECT_SKINS: EffectSkinDef[] = [
         defaultDir: "down",
         dirs: {
             down: { sheetId: "lightningclaw", clip: { layout: { kind: "sheet" }, frameRate: 14, repeat: 0 } }
+        }
+    },
+    {
+        id: "flames",
+        defaultDir: "right",
+        dirs: {
+            up: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
+            down: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
+            left: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
+            right: { sheetId: "flames_16x24", clip: FLAMES_CLIP }
         }
     },
     {

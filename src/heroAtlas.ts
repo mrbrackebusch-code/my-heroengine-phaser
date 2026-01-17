@@ -250,10 +250,10 @@ const heroAuraPngs = import.meta.glob(
 
 
 // Mirrors monsterAtlas: we eagerly glob all hero PNGs in ../assets/heroes.
-const heroPngs = import.meta.glob(
-    "../assets/heroes/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
+const heroPngs = {
+    ...import.meta.glob("../assets/heroes/*.png", { as: "url", eager: true }),
+    ...import.meta.glob("../assets/enemies/*.png", { as: "url", eager: true })
+} as Record<string, string>;
 
 interface ParsedHeroSheet {
     /** Full id / base name, e.g. "JasonHeroStrength" */
@@ -266,6 +266,8 @@ interface ParsedHeroSheet {
     textureKey: string;
     /** URL from Vite */
     url: string;
+    /** Enemy sheet (no required aura) */
+    isEnemy?: boolean;
 }
 
 export const HERO_FRAME_W = 64;
@@ -285,12 +287,49 @@ const HERO_OVERSIZE_FRAME_H = HERO_FRAME_H * HERO_OVERSIZE_SCALE; // 192;
 function parseHeroFilename(baseName: string, url: string): ParsedHeroSheet | null {
     // Expect pattern "<Name>Hero" OR "<Name>Hero<Family>"
     const heroIndex = baseName.indexOf("Hero");
-    if (heroIndex <= 0) return null;
+    if (heroIndex > 0) {
+        const heroName = baseName.slice(0, heroIndex);
+        if (!heroName) return null;
 
-    const heroName = baseName.slice(0, heroIndex);
+        const familyPart = baseName.slice(heroIndex + 4); // after "Hero" (may be "")
+
+        let family: HeroFamily | null = null;
+
+        if (!familyPart) {
+            // New single-sheet naming: "JasonHero" => family="base"
+            family = "base";
+        } else {
+            const famLower = familyPart.toLowerCase();
+
+            if (famLower.startsWith("base")) family = "base";
+            else if (famLower.startsWith("strength")) family = "strength";
+            else if (famLower.startsWith("agility")) family = "agility";
+            else if (famLower.startsWith("intelligence")) family = "intelligence";
+            else if (famLower.startsWith("support")) family = "support";
+            else if (famLower.startsWith("wisdom")) family = "wisdom";
+            else return null;
+        }
+
+        const textureKey = baseName;
+
+        return {
+            id: baseName,
+            heroName,
+            family,
+            textureKey,
+            url,
+            isEnemy: false
+        };
+    }
+
+    // Enemy sheets: "<Name>Enemy" OR "<Name>Enemy<Family>"
+    const enemyIndex = baseName.indexOf("Enemy");
+    if (enemyIndex <= 0) return null;
+
+    const heroName = baseName.slice(0, enemyIndex);
     if (!heroName) return null;
 
-    const familyPart = baseName.slice(heroIndex + 4); // after "Hero" (may be "")
+    const familyPart = baseName.slice(enemyIndex + 5); // after "Enemy" (may be "")
 
     let family: HeroFamily | null = null;
 
@@ -316,7 +355,8 @@ function parseHeroFilename(baseName: string, url: string): ParsedHeroSheet | nul
         heroName,
         family,
         textureKey,
-        url
+        url,
+        isEnemy: true
     };
 }
 
@@ -386,6 +426,10 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
         const auraBase64 = `${sheet.id}_aura_r2`;
         const auraUrl64 = auraUrlById.get(auraBase64);
         if (!auraUrl64) {
+            if (sheet.isEnemy) {
+                heroLog(scene, "discoverSheets", `[heroAtlas.preloadHeroSheets] no aura for enemy sheet ${sheet.id}`);
+                continue;
+            }
             throw new Error(
                 `[AURA-MISSING] Missing aura spritesheet for ${sheet.id}. ` +
                 `Expected assets/auras/${auraBase64}.png. ` +

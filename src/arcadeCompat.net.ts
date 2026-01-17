@@ -209,6 +209,16 @@ type NetMessage =
           cols: number;
           encoding: "raw";
           data: number[][];
+          worldRev?: number;
+          floorIndex?: number;
+          floorKind?: string;
+          baseFamily?: string;
+          wallFamily?: string;
+          decorOnly?: boolean;
+          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number }> };
+          baseSig?: number;
+          decorSig?: number;
+          worldSig?: number;
       }
     | {
           type: "tilemap";
@@ -218,6 +228,16 @@ type NetMessage =
           cols: number;
           encoding: "rle" | "u8b64";
           data: string;
+          worldRev?: number;
+          floorIndex?: number;
+          floorKind?: string;
+          baseFamily?: string;
+          wallFamily?: string;
+          decorOnly?: boolean;
+          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number }> };
+          baseSig?: number;
+          decorSig?: number;
+          worldSig?: number;
       };
     
 

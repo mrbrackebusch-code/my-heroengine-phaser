@@ -34,6 +34,7 @@ import {
   DEBUG_SAVE_LOGS,
   DEBUG_TILEMAP_APPLY_NET,
   DEBUG_TILEMAP_MAIN,
+  WORLD_SYNC_HASH_WARN_THRESHOLD_MS,
   ENABLE_HERO_ANIM_DEBUG,
   ENABLE_WEAPON_AUDIT_ON_START,
   ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS,
@@ -46,6 +47,29 @@ const logMain = (...args: any[]) => {
 };
 const logSave = (...args: any[]) => {
   if (DEBUG_SAVE_LOGS) console.log(...args);
+};
+
+const _hashMix = (h: number, v: number) => (((h << 5) - h + (v | 0)) | 0);
+const _hashString = (s: string) => {
+  let h = 0;
+  const str = s || "";
+  for (let i = 0; i < str.length; i++) {
+    h = ((h * 31) + str.charCodeAt(i)) | 0;
+  }
+  return h | 0;
+};
+
+const _hashTileLayer = (layer: any, rows: number, cols: number) => {
+  if (!layer || rows <= 0 || cols <= 0) return 0;
+  let h = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const t = layer.getTileAt(c, r);
+      const idx = t ? (t.index | 0) : -1;
+      h = _hashMix(h, idx);
+    }
+  }
+  return h | 0;
 };
 
 logMain(">>> [main.ts] dynamic-import version loaded");
@@ -690,6 +714,7 @@ function _captureWorldSnapshot(): any {
 
 function _isHeroSnapshotSprite(s: any): boolean {
   if (!s || !s.data) return false;
+  if (_isEnemySnapshotSprite(s)) return false;
   if (_isNpcSnapshotSprite(s)) return false;
   const owner = (typeof s.data.owner === "number") ? (s.data.owner | 0) : 0;
   if (owner > 0) return true;
@@ -701,6 +726,7 @@ function _isHeroSnapshotSprite(s: any): boolean {
 
 function _isNpcSnapshotSprite(s: any): boolean {
   if (!s || !s.data) return false;
+  if (_isEnemySnapshotSprite(s)) return false;
   const d: any = s.data;
   if (!!d.isNpc || !!d.npcLpc) return true;
   if (typeof d._npcRole === "string" && d._npcRole.trim()) return true;
@@ -708,6 +734,14 @@ function _isNpcSnapshotSprite(s: any): boolean {
   const owner = (typeof d.owner === "number") ? (d.owner | 0) : 0;
   if (owner <= 0 && heroName) return true;
   return false;
+}
+
+function _isEnemySnapshotSprite(s: any): boolean {
+  if (!s || !s.data) return false;
+  const d: any = s.data;
+  if (!!d.enemyLpc) return true;
+  const monsterId = (typeof d.monsterId === "string") ? d.monsterId.trim() : "";
+  return !!monsterId;
 }
 
 function _npcSnapshotKey(s: any): string {
@@ -747,11 +781,12 @@ function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePay
   const npcSprites: any[] = [];
   if (worldSnapshot && Array.isArray(worldSnapshot.sprites)) {
     for (const s of worldSnapshot.sprites) {
+      if (_isEnemySnapshotSprite(s)) continue;
       if (_isHeroSnapshotSprite(s)) heroSprites.push(s);
       else if (_isNpcSnapshotSprite(s)) npcSprites.push(s);
     }
     // Strip heroes from worldSnapshot to avoid double-apply on load
-    worldSnapshot.sprites = worldSnapshot.sprites.filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s));
+    worldSnapshot.sprites = worldSnapshot.sprites.filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s) && !_isEnemySnapshotSprite(s));
   }
   const blocklyXmlByProfile = g.__heBlocklyXmlByProfile || {};
   const tilemap = g.__lastTilemapMsg || null;
@@ -843,7 +878,7 @@ function _applyPendingSaveIfAny(): void {
       if (!nw || typeof nw.apply !== "function") return false;
       const filtered = {
         ...snap,
-        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s))
+        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s) && !_isEnemySnapshotSprite(s))
       };
       nw.apply(filtered);
       logSave("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
@@ -972,6 +1007,9 @@ class HeroScene extends Phaser.Scene {
     private _tilemapAppliedFloorIndex: number = -1;
     private _tilemapAppliedDecorRev: number = -1;
     private _tilemapAppliedPropByAnchor: Record<string, string> | null = null;
+    private _worldSyncHashMismatchSinceMs: number = 0;
+    private _worldSyncHashMismatchExpected: number = 0;
+    private _worldSyncHashMismatchWarned: boolean = false;
 
     // Debug throttles for decor logging
     private _debugPropLastCaptureRev: number = -1;
@@ -1095,6 +1133,76 @@ private ensureWorldTileRenderer(atlas: TileAtlas) {
     });
 
     return this.tileRenderer;
+}
+
+private _computeWorldSyncHashFromRenderer(renderer?: WorldTileRenderer | null): { baseSig: number; decorSig: number; worldSig: number } | null {
+    if (!renderer) return null;
+
+    const anyRenderer: any = renderer as any;
+    const baseSig = (anyRenderer.__lastGridSig | 0) || 0;
+
+    const instByAnchor: Record<string, any> = anyRenderer.__propInstancesByAnchor || {};
+    const propKeys = Object.keys(instByAnchor);
+    propKeys.sort();
+    let propSig = 0;
+    for (const k of propKeys) {
+        const inst = instByAnchor[k];
+        const rawKey = String(inst?.rawKey ?? inst?.baseName ?? "");
+        propSig = _hashMix(propSig, _hashString(k));
+        propSig = _hashMix(propSig, _hashString(rawKey));
+    }
+
+    const map = anyRenderer.map as any;
+    const rows = map ? (map.height | 0) : 0;
+    const cols = map ? (map.width | 0) : 0;
+    const decalSig = _hashTileLayer(anyRenderer.decalLayer, rows, cols);
+
+    const decorSig = _hashMix(_hashMix(0, propSig), decalSig);
+    const worldSig = _hashMix(_hashMix(0, baseSig), decorSig);
+
+    return { baseSig, decorSig, worldSig };
+}
+
+private _checkWorldSyncHashFromMsg(msg: any): void {
+    const thresholdMs = (WORLD_SYNC_HASH_WARN_THRESHOLD_MS | 0) || 0;
+    if (thresholdMs <= 0) return;
+    if (!msg || typeof msg.worldSig !== "number") return;
+
+    const expected = (msg.worldSig | 0);
+    const sync = this._computeWorldSyncHashFromRenderer(this.tileRenderer);
+    if (!sync) return;
+
+    const local = (sync.worldSig | 0);
+    if (local === expected) {
+        this._worldSyncHashMismatchSinceMs = 0;
+        this._worldSyncHashMismatchExpected = expected;
+        this._worldSyncHashMismatchWarned = false;
+        return;
+    }
+
+    const nowMs = Date.now();
+    if (this._worldSyncHashMismatchExpected !== expected || this._worldSyncHashMismatchSinceMs === 0) {
+        this._worldSyncHashMismatchExpected = expected;
+        this._worldSyncHashMismatchSinceMs = nowMs;
+        this._worldSyncHashMismatchWarned = false;
+    }
+
+    if (!this._worldSyncHashMismatchWarned && (nowMs - this._worldSyncHashMismatchSinceMs) >= thresholdMs) {
+        console.warn("[tilemap.hash] mismatch > threshold", {
+            expectedWorldSig: expected,
+            localWorldSig: local,
+            expectedBaseSig: (typeof msg.baseSig === "number") ? (msg.baseSig | 0) : null,
+            expectedDecorSig: (typeof msg.decorSig === "number") ? (msg.decorSig | 0) : null,
+            localBaseSig: sync.baseSig | 0,
+            localDecorSig: sync.decorSig | 0,
+            rev: msg.rev ?? null,
+            worldRev: msg.worldRev ?? null,
+            floorIndex: msg.floorIndex ?? null,
+            decorRev: msg.decor?.rev ?? null,
+            decorOnly: !!msg.decorOnly,
+        });
+        this._worldSyncHashMismatchWarned = true;
+    }
 }
 
 
@@ -1447,6 +1555,10 @@ private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
     loadingText.setText("Loading… validating auras");
 
     for (const sheet of parsedSheets) {
+        if (sheet.isEnemy) {
+            // Enemy LPC sheets do not require hero aura textures.
+            continue;
+        }
         const baseKey = sheet.textureKey;
         const auraBaseKey = `${baseKey}_aura_r${AURA_R}`;
 
@@ -1572,12 +1684,17 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
         (decorRev | 0) >= 0 && (decorRev | 0) === (this._tilemapAppliedDecorRev | 0);
 
     // Only skip if we've applied this signature already (for followers)
+    let shouldSkip = false;
     if (!gAny.__isHost) {
         if (decorOnly) {
-            if (baseSigMatches && worldSigMatches && decorSigMatches) return;
+            shouldSkip = baseSigMatches && worldSigMatches && decorSigMatches;
         } else {
-            if (baseSigMatches && worldSigMatches && (!decor || decorSigMatches)) return;
+            shouldSkip = baseSigMatches && worldSigMatches && (!decor || decorSigMatches);
         }
+    }
+    if (shouldSkip) {
+        this._checkWorldSyncHashFromMsg(msg);
+        return;
     }
 
     this._tilemapAppliedRev = rev;
@@ -1600,6 +1717,23 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
     if (shouldApplyBase) {
         this._tilemapAppliedPropByAnchor = null;
+    }
+
+    if (shouldApplyBase && !decor && this.tileAtlas) {
+        try {
+            const renderer = this.ensureWorldTileRenderer(this.tileAtlas);
+            if (renderer && typeof (renderer as any).syncDecalGridByName === "function") {
+                (renderer as any).syncDecalGridByName([]);
+            }
+            if (renderer && typeof (renderer as any).syncPropGridByName === "function") {
+                (renderer as any).syncPropGridByName([]);
+            }
+            this._tilemapAppliedDecorRev = -1;
+        } catch (e) {
+            if (DEBUG_TILEMAP_MAIN) {
+                console.warn(">>> [HeroScene.tilemap] failed to clear decor on base-only update", e);
+            }
+        }
     }
 
     if (DEBUG_TILEMAP_APPLY_NET) {
@@ -1754,6 +1888,8 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
             wallFamily,
         });
     }
+
+    this._checkWorldSyncHashFromMsg(msg);
 }
 
 private _tilemap_applyPendingCachedNetTilemapIfAny(): void {
@@ -2239,6 +2375,8 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
     g.__tilemapNetRevBase = base;
     g.__tilemapLastSentNetRev = netRev;
 
+    const syncHash = this._computeWorldSyncHashFromRenderer(this.tileRenderer);
+
     const msg = {
         type: "tilemap",
         rev: netRev,
@@ -2254,6 +2392,9 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         floorKind: (internals.getFloorKind?.() || g.__floorKind || ""),
         decorOnly: (!baseChanged && !!decorNeedsApply),
         decor: decorPayload || undefined,
+        baseSig: syncHash ? (syncHash.baseSig | 0) : undefined,
+        decorSig: syncHash ? (syncHash.decorSig | 0) : undefined,
+        worldSig: syncHash ? (syncHash.worldSig | 0) : undefined,
     };
 
     // queue for retry (even if ws is open, we still retry a couple times to de-flake)
@@ -2424,6 +2565,7 @@ private _host_trySyncTilesAndPublishOnceFromInternals(): void {
 
         // Sync locally first
         scene.applyTilemapToScene(grid, tileSize);
+        const syncHash = this._computeWorldSyncHashFromRenderer(scene.tileRenderer);
 
         // NETWORK: publish tilemap once (host authoritative)
         const gAny: any = globalThis as any;
@@ -2515,7 +2657,10 @@ private _host_trySyncTilesAndPublishOnceFromInternals(): void {
             rawWalls,
             rawFloors,
             baseFamily,
-            wallFamily
+            wallFamily,
+            baseSig: syncHash ? (syncHash.baseSig | 0) : undefined,
+            decorSig: syncHash ? (syncHash.decorSig | 0) : undefined,
+            worldSig: syncHash ? (syncHash.worldSig | 0) : undefined,
         };
 
         // Cache the latest tilemap msg so update() can re-send if ws isn’t open yet

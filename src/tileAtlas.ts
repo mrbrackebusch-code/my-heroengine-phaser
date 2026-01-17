@@ -108,11 +108,19 @@ export interface DecorVisualRef {
     focusAuraPadAlways?: boolean;
     auraPadPx?: number;
     auraPadAlways?: boolean;
+    // If true, allow inset auras without forcing a box ring.
+    focusAuraAllowInset?: boolean;
+    auraAllowInset?: boolean;
 
     // Optional depth offset applied after y-sort (use negative to force behind).
     depthBias?: number;
     // Optional depth offset in tiles (scaled by tileSize * WORLD_DEPTH_Y_SCALE).
     depthBiasTiles?: number;
+
+    // Optional collision tuning for decor solids (Phaser only).
+    // When set, collision uses the bottom N pixels of the frame as a base-only box.
+    collisionBaseHeightPx?: number;
+    collisionUseAura?: boolean;
 }
 
 
@@ -220,7 +228,24 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
                 open:   { row: 22, col: 15 }
             }
         }
-},
+    },
+
+    fire_totem: {
+        atlas: "anims.FireTotem 96x96",
+        ref: { row: 0, col: 0 },
+        offsetYPx: -32,
+        depthBiasTiles: 1,
+        collisionBaseHeightPx: 32,
+        collisionUseAura: true,
+        focusAuraAllowInset: true,
+        anim: {
+            key: "unusedForStates",
+            states: {
+                idle: { row: 0, col: 0 },
+                diag: { row: 0, col: 1 },
+            }
+        }
+    },
 
 teleport_rune: {
     // IDLE: static (no anim) so it does NOT spin unless someone stands on it
@@ -637,23 +662,21 @@ const tileAuraPngs = import.meta.glob(
     { as: "url", eager: true }
 ) as Record<string, string>;
 
-const animAura32Pngs = import.meta.glob(
-    "../assets/auras_32x32/animations/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
-
-const animAura64Pngs = import.meta.glob(
-    "../assets/auras_64x64/animations/*.png",
+const animAuraPngs = import.meta.glob(
+    "../assets/auras_*x*/animations/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
 
 const ANIM_FRAME_OVERRIDES: Record<string, { frameW: number; frameH: number }> = {
     coins: { frameW: 16, frameH: 16 },
+    "flameball-32x32": { frameW: 32, frameH: 32 },
+    "mage-bullet-13x13": { frameW: 13, frameH: 13 },
 
     // keep these if you want the system to stay generalized:
     teleport_rune: { frameW: 64, frameH: 64 },
-    water_fountain: { frameW: 64, frameH: 96 },
+    "WaterFountain 64x96": { frameW: 64, frameH: 96 },
+    "FireTotem 96x96": { frameW: 96, frameH: 96 },
 };
 
 
@@ -720,20 +743,19 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         auraUrlById.set(base, url);
     }
 
-    const animAura32ById = new Map<string, string>();
-    for (const [p, url] of Object.entries(animAura32Pngs)) {
-        const file = p.split(/[\\/]/).pop() || "";
-        if (!file.toLowerCase().endsWith(".png")) continue;
-        const base = file.slice(0, -4);
-        animAura32ById.set(base, url);
-    }
-
-    const animAura64ById = new Map<string, string>();
-    for (const [p, url] of Object.entries(animAura64Pngs)) {
-        const file = p.split(/[\\/]/).pop() || "";
-        if (!file.toLowerCase().endsWith(".png")) continue;
-        const base = file.slice(0, -4);
-        animAura64ById.set(base, url);
+    const animAuraBySize = new Map<string, Map<string, string>>();
+    for (const [p, url] of Object.entries(animAuraPngs)) {
+        const match = /auras_(\d+)x(\d+)[\\/]+animations[\\/]+([^\\/]+)\.png$/i.exec(p);
+        if (!match) continue;
+        const sizeKey = `${match[1]}x${match[2]}`;
+        const base = match[3] || "";
+        if (!base) continue;
+        let byId = animAuraBySize.get(sizeKey);
+        if (!byId) {
+            byId = new Map<string, string>();
+            animAuraBySize.set(sizeKey, byId);
+        }
+        byId.set(base, url);
     }
 
     if (DEBUG_TILES) {
@@ -765,13 +787,10 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         if (isAnim) {
             const fw = sheet.frameW | 0;
             const fh = sheet.frameH | 0;
-            if (fw === 32 && fh === 32) {
-                auraUrl = animAura32ById.get(auraBase);
-                shouldLogMissing = true;
-            } else if (fw === 64 && fh === 64) {
-                auraUrl = animAura64ById.get(auraBase);
-                shouldLogMissing = true;
-            }
+            const sizeKey = `${fw}x${fh}`;
+            const animById = animAuraBySize.get(sizeKey);
+            if (animById) auraUrl = animById.get(auraBase);
+            shouldLogMissing = animAuraBySize.size > 0;
         } else {
             auraUrl = auraUrlById.get(auraBase);
             shouldLogMissing = true;
