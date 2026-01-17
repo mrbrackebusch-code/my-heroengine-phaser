@@ -17,10 +17,9 @@ export const DISASSEMBLED_NUMBER_TRAP_SPEC: TrapSpec = {
   },
   valueKindsUsed: ["procedure", "order", "target"],
   palette: {
-    categories: ["Procedures", "Variables"],
+    categories: ["Functions", "Variables"],
     blocksAllowed: [
       "procedures_defreturn",
-      "procedures_return",
       "variables_set",
       "variables_get",
     ],
@@ -56,12 +55,8 @@ export const DISASSEMBLED_NUMBER_TRAP_SPEC: TrapSpec = {
             </block>
           </value>
         </block>
-        <block type="procedures_return" x="20" y="220">
-          <value name="VALUE">
-            <block type="variables_get">
-              <field name="VAR">target</field>
-            </block>
-          </value>
+        <block type="variables_get" x="20" y="220">
+          <field name="VAR">target</field>
         </block>
       </xml>
     `,

@@ -129,6 +129,29 @@ function broadcast(obj) {
   }
 }
 
+function broadcastExcept(exceptWs, obj) {
+  const s = JSON.stringify(obj);
+  for (const ws of clients.keys()) {
+    if (ws === exceptWs) continue;
+    try {
+      if (ws.readyState === WebSocket.OPEN) ws.send(s);
+    } catch (_e) {
+      // ignore
+    }
+  }
+}
+
+function sendToPlayerId(playerId, obj) {
+  const pid = playerId | 0;
+  if (pid <= 0) return;
+  for (const [ws, info] of clients.entries()) {
+    if ((info.playerId | 0) === pid) {
+      sendJson(ws, obj);
+      return;
+    }
+  }
+}
+
 function dumpClients(tag) {
   const rows = Array.from(clients.entries()).map(([ws, info]) => ({
     playerId: info.playerId,
@@ -536,6 +559,30 @@ function handleUiCommandResult(ws, info, msg) {
   sendJson(targetWs, payload);
 }
 
+function handleDialogMessage(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs) return;
+  if (ws !== hostWs) return;
+
+  const action = (msg && typeof msg.action === "string") ? msg.action : "";
+  if (action !== "show" && action !== "hide") return;
+
+  const payload = {
+    type: "dialog",
+    action,
+    dialog: msg.dialog ?? null,
+    targetPlayerId: (typeof msg.targetPlayerId === "number") ? (msg.targetPlayerId | 0) : null
+  };
+
+  if ((payload.targetPlayerId | 0) > 0) {
+    sendToPlayerId(payload.targetPlayerId, payload);
+    return;
+  }
+
+  // Host already showed the dialog locally; send to everyone else.
+  broadcastExcept(hostWs, payload);
+}
+
 function handleStateMessage(ws, info, msg) {
   // Only current host can broadcast world snapshots
   const hostWs = getHostWsLeased();
@@ -775,6 +822,7 @@ function onSocketMessage(ws, data) {
   if (msg.type === "input") return handleInputMessage(ws, info, msg);
   if (msg.type === "uiCommand") return handleUiCommand(ws, info, msg);
   if (msg.type === "uiCommandResult") return handleUiCommandResult(ws, info, msg);
+  if (msg.type === "dialog") return handleDialogMessage(ws, info, msg);
   if (msg.type === "state") return handleStateMessage(ws, info, msg);
   if (msg.type === "tilemap") return handleTilemapMessage(ws, info, msg);
   if (msg.type === "saveGame") return handleSaveGameMessage(ws, info, msg);

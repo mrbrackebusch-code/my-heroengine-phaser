@@ -10867,11 +10867,23 @@ namespace netWorld {
     // Track which IDs are present in the snapshot so we can prune leftovers
     const keepIds: { [id: number]: 1 } = {};
 
+    const _snapIsNpc = (snap: any): boolean => {
+        if (!snap || !snap.data) return false;
+        const d: any = snap.data;
+        if (!!d.isNpc || !!d.npcLpc) return true;
+        if (typeof d._npcRole === "string" && d._npcRole.trim()) return true;
+        return false;
+    };
+
     for (const s of snapSprites) {
         if (!s) continue;
 
         const id = s.id | 0;
         keepIds[id] = 1;
+
+        const isNpcSnap = _snapIsNpc(s);
+        const npcKind = ((SpriteKind as any).NpcLpc != null) ? ((SpriteKind as any).NpcLpc | 0) : 0;
+        const desiredKind = (isNpcSnap && npcKind) ? npcKind : (s.kind | 0);
 
         let target: any = null;
 
@@ -10890,7 +10902,7 @@ namespace netWorld {
                 target = ensureFn.call(
                     sprites,
                     s.id,
-                    s.kind,
+                    desiredKind,
                     s.width || 16,
                     s.height || 16
                 );
@@ -10905,7 +10917,7 @@ namespace netWorld {
         }
 
         // Update basic fields
-        target.kind = s.kind | 0;
+        target.kind = desiredKind;
         target.x = s.x;
         target.y = s.y;
         target.vx = s.vx;
@@ -10958,6 +10970,15 @@ namespace netWorld {
         const d = target.data;
         for (const k of Object.keys(d)) delete d[k];
         for (const k of Object.keys(s.data)) d[k] = s.data[k];
+
+        if (isNpcSnap) {
+            try {
+                const he: any = (globalThis as any).HeroEngine;
+                if (he && typeof he.registerNpcLpc === "function") {
+                    he.registerNpcLpc(target);
+                }
+            } catch { /* ignore */ }
+        }
     }
 
     // 🔥 Follower-only: destroy any local sprites that vanished from the snapshot.

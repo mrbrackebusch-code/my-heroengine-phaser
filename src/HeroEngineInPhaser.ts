@@ -67,6 +67,9 @@ import {
     DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE,
     DEBUG_WAVE_ENABLED,
     DEBUG_WORLDGEN_LOGS,
+    DEBUG_WORLDGEN_FORCE_ISLAND,
+    DEBUG_WORLDGEN_BRIDGE_LOGS,
+    DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL,
     DEBUG_WORLD_SNAPSHOT,
 } from "./debugFlags";
 
@@ -5520,6 +5523,7 @@ const WORLD_TILE_SIZE = 32          // private
 const TILE_EMPTY = 0                // private
 
 const TILE_WALL = 1                 // private
+const TILE_BRIDGE = 2               // private
 
 
 
@@ -5653,9 +5657,16 @@ const TILE_COLLISION_DEFS: TileCollisionShape[] = [
 
     },
 
+    // 2: bridge walkway (renders as wall but not solid)
+    {
+        solid: false,
+        offsetX: 0,
+        offsetY: 0,
+        width: 0,
+        height: 0,
+    },
 
-
-    // 2+: reserved for later (half-height walls, ledges, etc.)
+    // 3+: reserved for later (half-height walls, ledges, etc.)
 
     // Example (commented out for now):
 
@@ -5675,7 +5686,11 @@ const TILE_COLLISION_DEFS: TileCollisionShape[] = [
 
 ];
 
-
+function _tileIsSolidType(type: number): boolean {
+    const t = type | 0
+    const def = TILE_COLLISION_DEFS[t] || TILE_COLLISION_DEFS[0]
+    return !!def.solid
+}
 
 // 2D array of numbers for engine-internal use only
 
@@ -5784,8 +5799,15 @@ const STORY_DIALOG_MS = 2800
 const STORY_DIALOG_HINT = "Press A >"
 const STORY_DIALOG_LINE1 = "Why hello there! What a surprise to find someone besides myself climbing this tower"
 const STORY_DIALOG_LINE2 = "Let me bless you for your journey, hero"
-const STORY_BLESS_GLOW_MS = 900
-const STORY_BLESS_ANIM_MS = 900
+const STORY_DIALOG_AUDIENCE_ALL = "all"
+const STORY_DIALOG_AUDIENCE_PLAYER = "player"
+const STORY_DIALOG_AUDIENCE_LOCAL = "local"
+const STORY_DIALOG_AUDIENCE: "all" | "player" | "local" = "all"
+const STORY_BLESS_RISE_MS = 2000
+const STORY_BLESS_FLASH_WINDOW_MS = 2000
+const STORY_BLESS_DROP_MS = 200
+const STORY_BLESS_ANIM_MS = STORY_BLESS_RISE_MS + STORY_BLESS_FLASH_WINDOW_MS + STORY_BLESS_DROP_MS
+const STORY_BLESS_GLOW_MS = STORY_BLESS_ANIM_MS
 const STORY_BLESS_RISE_PX = 14
 const STORY_BLESS_FLASH_MS = 90
 const STORY_BLESS_EMOTE_MS = 650
@@ -6429,7 +6451,7 @@ function _dunPickRandomWalkableTile(args: {
 
         if (r <= 0 || c <= 0 || r >= (rows - 1) || c >= (cols - 1)) return false
 
-        if (!_engineWorldTileMap || !_engineWorldTileMap[r] || (_engineWorldTileMap[r][c] | 0) === (TILE_WALL | 0)) return false
+        if (!_engineWorldTileMap || !_engineWorldTileMap[r] || _tileIsSolidType(_engineWorldTileMap[r][c] | 0)) return false
 
         const dist = (Math.abs((r | 0) - avoidR) + Math.abs((c | 0) - avoidC)) | 0
 
@@ -6643,6 +6665,61 @@ function _dunDialog_showStoryLine(nowMs: number, text: string, hint: string, aut
             hint: hint || "",
         })
     } catch { }
+}
+
+function _dunDialog_localPlayerMatchesPid(pid: number): boolean {
+    const g: any = globalThis as any
+    const net: any = g ? g.__net : null
+    const localPid = (net && typeof net.playerId === "number") ? (net.playerId | 0) : 0
+    return localPid > 0 && localPid === (pid | 0)
+}
+
+function _dunDialog_shouldShowLocal(audience: string, targetPid: number): boolean {
+    if (audience === STORY_DIALOG_AUDIENCE_ALL) return true
+    if (audience === STORY_DIALOG_AUDIENCE_LOCAL) return true
+    if (audience === STORY_DIALOG_AUDIENCE_PLAYER) return _dunDialog_localPlayerMatchesPid(targetPid | 0)
+    return true
+}
+
+function _dunDialog_sendNet(
+    action: "show" | "hide",
+    text: string,
+    hint: string,
+    autoHideMs: number,
+    audience: string,
+    targetPid: number
+): void {
+    if (audience === STORY_DIALOG_AUDIENCE_LOCAL) return
+    if (audience === STORY_DIALOG_AUDIENCE_PLAYER && _dunDialog_localPlayerMatchesPid(targetPid | 0)) return
+    const g: any = globalThis as any
+    const net: any = g ? g.__net : null
+    if (!net || typeof net.sendDialog !== "function") return
+    const dialog = (action === "show")
+        ? { speaker: STORY_ANNOUNCER_NAME, text: text || "", hint: hint || "", autoHideMs: autoHideMs | 0 }
+        : null
+    const pid = (audience === STORY_DIALOG_AUDIENCE_PLAYER) ? (targetPid | 0) : 0
+    try { net.sendDialog(action, dialog, pid) } catch { }
+}
+
+function _dunDialog_showStoryLineAudience(
+    nowMs: number,
+    text: string,
+    hint: string,
+    autoHideMs: number,
+    audience: string,
+    targetPid: number
+): void {
+    if (_dunDialog_shouldShowLocal(audience, targetPid | 0)) {
+        _dunDialog_showStoryLine(nowMs, text, hint, autoHideMs)
+    }
+    _dunDialog_sendNet("show", text, hint, autoHideMs, audience, targetPid | 0)
+}
+
+function _dunDialog_hideStoryLineAudience(audience: string, targetPid: number): void {
+    if (_dunDialog_shouldShowLocal(audience, targetPid | 0)) {
+        _dunDialog_hideStoryLine()
+    }
+    _dunDialog_sendNet("hide", "", "", 0, audience, targetPid | 0)
 }
 
 function _dunDialog_hideStoryLine(): void {
@@ -7716,6 +7793,14 @@ type NpcLpcOptions = {
 const NPC_LPC_FLAG_KEY = "npcLpc"
 const NPC_LPC_HERO_INDEX_BASE = 1000
 
+function _npcSnapshotKeyFromParts(role: string, heroName: string, family: string): string {
+    const r = (role || "").trim()
+    const n = (heroName || "").trim()
+    const f = (family || "").trim().toLowerCase()
+    if (!n && !r) return ""
+    return `${r}|${n}|${f}`
+}
+
 function _markNpcLpcSprite(s: Sprite, role: string): void {
     if (!s) return
     sprites.setDataBoolean(s, HERO_DATA.IS_NPC, true)
@@ -7784,6 +7869,20 @@ function _spawnNpcLpcActor(profileName: string, familyNum: number, x: number, y:
 
     if (opts?.npcRole) sprites.setDataString(npc, "_npcRole", opts.npcRole)
 
+    // Apply any pending saved snapshot for this NPC (role+name+family keyed).
+    try {
+        const g: any = globalThis as any
+        const saved = g && g.__npcSavedSnapshotByKey
+        if (saved) {
+            const key = _npcSnapshotKeyFromParts(opts?.npcRole || "", profileName || "", famStr || "")
+            const snap = saved[key]
+            if (snap) {
+                _applySnapshotToSprite(npc, snap)
+                delete saved[key]
+            }
+        }
+    } catch { }
+
     if (DEBUG_NPC_PIPELINE) {
         console.log("[NPC-PIPE][engine.spawn]", {
             heroName: profileName || "",
@@ -7797,8 +7896,110 @@ function _spawnNpcLpcActor(profileName: string, familyNum: number, x: number, y:
         })
     }
 
-    npcActors.push(npc)
+    HeroEngine.registerNpcLpc(npc)
     return npc
+}
+
+// -----------------------------------------------------------
+// PUBLIC NPC API (LPC pipeline)
+// -----------------------------------------------------------
+namespace HeroEngine {
+    export type NpcLpcWeaponSlots = {
+        slash?: string
+        thrust?: string
+        cast?: string
+        exec?: string
+        combo?: string
+        int?: string
+        sup?: string
+    }
+
+    export type NpcLpcSpawnOptions = {
+        family?: number | string
+        dir?: string
+        phase?: string
+        frameColOverride?: number
+        ghost?: boolean
+        z?: number
+        ownerPid?: number
+        npcRole?: string
+        weapons?: NpcLpcWeaponSlots
+    }
+
+    export function spawnNpcLpc(profileName: string, x: number, y: number, opts?: NpcLpcSpawnOptions): Sprite {
+        const famNum = (opts && typeof opts.family === "number") ? (opts.family | 0) : 0
+        return _spawnNpcLpcActor(profileName, famNum, x, y, opts as any)
+    }
+
+    export function registerNpcLpc(npc: Sprite): void {
+        if (!npc) return
+        if (!isNpcLpc(npc)) return
+        if (npcActors.indexOf(npc) >= 0) return
+        npcActors.push(npc)
+    }
+
+    export function despawnNpcLpc(npc: Sprite): boolean {
+        if (!npc) return false
+        try { npc.destroy() } catch { }
+        const idx = npcActors.indexOf(npc)
+        if (idx >= 0) npcActors.splice(idx, 1)
+        return true
+    }
+
+    export function isNpcLpc(npc: Sprite): boolean {
+        if (!npc) return false
+        if (sprites.readDataBoolean(npc, HERO_DATA.IS_NPC)) return true
+        if (sprites.readDataBoolean(npc, NPC_LPC_FLAG_KEY)) return true
+        const role = sprites.readDataString(npc, "_npcRole") || ""
+        return !!role
+    }
+
+    export function listNpcLpc(aliveOnly: boolean = true): Sprite[] {
+        const out: Sprite[] = []
+        for (let i = 0; i < npcActors.length; i++) {
+            const s = npcActors[i]
+            if (!s) continue
+            if (aliveOnly && (s.flags & sprites.Flag.Destroyed)) continue
+            out.push(s)
+        }
+        return out
+    }
+
+    export function findNpcLpcByRole(role: string): Sprite {
+        const want = (role || "").trim()
+        if (!want) return null
+        for (let i = 0; i < npcActors.length; i++) {
+            const s = npcActors[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const r = sprites.readDataString(s, "_npcRole") || ""
+            if (r === want) return s
+        }
+        return null
+    }
+
+    export function setNpcLpcDir(npc: Sprite, dir: string): void {
+        if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+        _storyNpcSetDir(npc, dir || "down")
+    }
+
+    export function setNpcLpcPhase(npc: Sprite, phase: string, durationMs?: number, force?: boolean): void {
+        if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+        const nowMs = Math.max(1, game.runtime() | 0)
+        const dur = Math.max(1, (durationMs == null ? 999999 : (durationMs | 0)))
+        _storyNpcStampPhase(npc, phase || "idle", nowMs, dur, !!force)
+    }
+
+    export function setNpcLpcWeapons(npc: Sprite, weapons: NpcLpcWeaponSlots): void {
+        if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+        const w = weapons || {}
+        if (w.slash != null) sprites.setDataString(npc, HERO_DATA.WEAPON_SLASH_ID, w.slash || "")
+        if (w.thrust != null) sprites.setDataString(npc, HERO_DATA.WEAPON_THRUST_ID, w.thrust || "")
+        if (w.cast != null) sprites.setDataString(npc, HERO_DATA.WEAPON_CAST_ID, w.cast || "")
+        if (w.exec != null) sprites.setDataString(npc, HERO_DATA.WEAPON_EXEC_ID, w.exec || "")
+        if (w.combo != null) sprites.setDataString(npc, HERO_DATA.WEAPON_COMBO_ID, w.combo || "")
+        if (w.int != null) sprites.setDataString(npc, HERO_DATA_WEAPON_INTELLIGENCE_ID, w.int || "")
+        if (w.sup != null) sprites.setDataString(npc, HERO_DATA_WEAPON_SUPPORT_ID, w.sup || "")
+    }
 }
 
 
@@ -9067,7 +9268,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 if (state <= 0) {
                     _storyNpcFaceHero(npc, hero, nowMs | 0)
                     sprites.setDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY, ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0)
-                    _dunDialog_showStoryLine(nowMs, STORY_DIALOG_LINE1, STORY_DIALOG_HINT, 0)
+                    _dunDialog_showStoryLineAudience(nowMs, STORY_DIALOG_LINE1, STORY_DIALOG_HINT, 0, STORY_DIALOG_AUDIENCE, pid | 0)
                     sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 1)
                     break
                 }
@@ -9075,7 +9276,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
                 if (state === 1) {
                     _storyNpcFaceHero(npc, hero, nowMs | 0)
                     sprites.setDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY, ((nowMs | 0) + (STORY_DIALOG_MS | 0)) | 0)
-                    _dunDialog_showStoryLine(nowMs, STORY_DIALOG_LINE2, STORY_DIALOG_HINT, 0)
+                    _dunDialog_showStoryLineAudience(nowMs, STORY_DIALOG_LINE2, STORY_DIALOG_HINT, 0, STORY_DIALOG_AUDIENCE, pid | 0)
                     sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 2)
                     break
                 }
@@ -9086,7 +9287,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
                     sprites.setDataNumber(hero, HERO_STORY_BLESS_FLOOR_KEY, _dunFloorIndex | 0)
                     sprites.setDataNumber(hero, HERO_STORY_DIALOG_STATE_KEY, 3)
-                    _dunDialog_hideStoryLine()
+                    _dunDialog_hideStoryLineAudience(STORY_DIALOG_AUDIENCE, pid | 0)
                     _storyBlessStartAllHeroes(nowMs | 0)
 
                     if (!_dunObjectiveDone) {
@@ -12540,7 +12741,7 @@ function _storyNpcPickNeighborTile(r: number, c: number): { r: number; c: number
         const nr = (r + (d.dr | 0)) | 0
         const nc = (c + (d.dc | 0)) | 0
         if (nr <= 0 || nc <= 0 || nr >= (rows - 1) || nc >= (cols - 1)) continue
-        if ((_engineWorldTileMap[nr][nc] | 0) === (TILE_WALL | 0)) continue
+        if (_tileIsSolidType(_engineWorldTileMap[nr][nc] | 0)) continue
         return { r: nr, c: nc }
     }
 
@@ -12736,10 +12937,22 @@ function _storyBlessPostTick(nowMs: number): void {
             continue
         }
 
-        const t = Math.max(0, Math.min(1, elapsed / (STORY_BLESS_ANIM_MS | 0)))
-        const rise = (t < 0.5)
-            ? (STORY_BLESS_RISE_PX * (t * 2))
-            : (STORY_BLESS_RISE_PX * (2 - (t * 2)))
+        const riseMs = STORY_BLESS_RISE_MS | 0
+        const flashMs = STORY_BLESS_FLASH_WINDOW_MS | 0
+        const dropMs = Math.max(1, STORY_BLESS_DROP_MS | 0)
+        const riseEnd = riseMs
+        const flashEnd = (riseMs + flashMs) | 0
+
+        let rise = 0
+        if (elapsed < riseEnd) {
+            const t = Math.max(0, Math.min(1, elapsed / Math.max(1, riseMs)))
+            rise = STORY_BLESS_RISE_PX * t
+        } else if (elapsed < flashEnd) {
+            rise = STORY_BLESS_RISE_PX
+        } else {
+            const t = Math.max(0, Math.min(1, (elapsed - flashEnd) / dropMs))
+            rise = STORY_BLESS_RISE_PX * (1 - t)
+        }
         if (baseY || baseY === 0) hero.y = baseY - rise
 
         // Keep facing down while blessing plays.
@@ -12753,8 +12966,12 @@ function _storyBlessPostTick(nowMs: number): void {
         }
 
         // Rainbow flash via aura color cycling.
-        const idx = (Math.idiv(elapsed, STORY_BLESS_FLASH_MS | 0) | 0) % STORY_BLESS_RAINBOW_COLORS.length
-        const color = STORY_BLESS_RAINBOW_COLORS[idx] | 0
+        let color = AURA_COLOR_WHITE
+        if (elapsed >= riseEnd) {
+            const flashElapsed = (elapsed < flashEnd) ? (elapsed - riseEnd) : Math.max(0, flashMs - 1)
+            const idx = (Math.idiv(flashElapsed, STORY_BLESS_FLASH_MS | 0) | 0) % STORY_BLESS_RAINBOW_COLORS.length
+            color = STORY_BLESS_RAINBOW_COLORS[idx] | 0
+        }
         sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, true)
         sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
         sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, 1)
@@ -21026,10 +21243,441 @@ function _debugWorldSig01(map: number[][]): { rows: number, cols: number, walls:
 }
 
 
+type _WorldgenBridgePlacement = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v" };
+type _WorldgenPathCell = { r: number; c: number; dir: "h" | "v"; wasWall: boolean };
+type _WorldgenBridgeCandidate = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v"; score: number };
+
+let _worldgenBridgePlacements: _WorldgenBridgePlacement[] = [];
+
+function _worldgen_isFloor(v: number): boolean {
+    return ((v | 0) !== (TILE_WALL | 0));
+}
+
+function _worldgen_forceIsland(map: number[][]): void {
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    const islandH = 3;
+    const islandW = 3;
+    const moat = 3; // ensure a 3-tile wall span for bridge testing
+    const minRows = islandH + (moat * 2) + 2;
+    const minCols = islandW + (moat * 2) + 2;
+    if (rows < minRows || cols < minCols) return;
+
+    const minR0 = (moat + 1) | 0;
+    const maxR0 = (rows - islandH - moat - 1) | 0;
+    const minC0 = (moat + 1) | 0;
+    const maxC0 = (cols - islandW - moat - 1) | 0;
+    if (maxR0 < minR0 || maxC0 < minC0) return;
+
+    const targetR0 = Math.max(minR0, Math.min(maxR0, (Math.idiv(rows, 4) | 0)));
+    const targetC0 = Math.max(minC0, Math.min(maxC0, (Math.idiv(cols, 4) | 0)));
+    let r0 = targetR0 | 0;
+    let c0 = targetC0 | 0;
+    // Prefer carving the island out of the main floor mass so it is clearly visible.
+    const comp = _worldgen_computeFloorComponents(map);
+    if (comp.comps.length) {
+        const mainId = _worldgen_pickMainComponentId(comp.compId, comp.comps, rows, cols);
+        if (mainId >= 0) {
+            let bestScore = 999999;
+            for (let rr = minR0; rr <= maxR0; rr++) {
+                for (let cc = minC0; cc <= maxC0; cc++) {
+                    let ok = true;
+                    for (let r = (rr - moat); r <= (rr + islandH + moat - 1); r++) {
+                        for (let c = (cc - moat); c <= (cc + islandW + moat - 1); c++) {
+                            if ((map[r][c] | 0) === (TILE_WALL | 0)) { ok = false; break; }
+                            if ((comp.compId[r][c] | 0) !== (mainId | 0)) { ok = false; break; }
+                        }
+                        if (!ok) break;
+                    }
+                    if (!ok) continue;
+                    const score = (Math.abs((rr | 0) - (targetR0 | 0)) + Math.abs((cc | 0) - (targetC0 | 0))) | 0;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        r0 = rr | 0;
+                        c0 = cc | 0;
+                    }
+                }
+            }
+        }
+    }
+
+    // Ring of walls around the island (keep inside border).
+    for (let r = (r0 - moat); r <= (r0 + islandH + moat - 1); r++) {
+        if (r <= 0 || r >= rows - 1) continue;
+        for (let c = (c0 - moat); c <= (c0 + islandW + moat - 1); c++) {
+            if (c <= 0 || c >= cols - 1) continue;
+            map[r][c] = TILE_WALL;
+        }
+    }
+
+    // Carve the island interior back to floor.
+    for (let r = r0; r < (r0 + islandH); r++) {
+        for (let c = c0; c < (c0 + islandW); c++) {
+            map[r][c] = TILE_EMPTY;
+        }
+    }
+}
+
+function _worldgen_computeFloorComponents(map: number[][]): {
+    compId: number[][];
+    comps: { id: number; tiles: { r: number; c: number }[]; size: number }[];
+} {
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    const compId: number[][] = [];
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = [];
+        for (let c = 0; c < cols; c++) row.push(-1);
+        compId.push(row);
+    }
+
+    const comps: { id: number; tiles: { r: number; c: number }[]; size: number }[] = [];
+    let nextId = 0;
+
+    for (let r0 = 0; r0 < rows; r0++) {
+        for (let c0 = 0; c0 < cols; c0++) {
+            if (!_worldgen_isFloor(map[r0][c0] | 0)) continue;
+            if (compId[r0][c0] >= 0) continue;
+
+            const tiles: { r: number; c: number }[] = [];
+            const qR: number[] = [r0];
+            const qC: number[] = [c0];
+            compId[r0][c0] = nextId;
+
+            let head = 0;
+            while (head < qR.length) {
+                const r = qR[head];
+                const c = qC[head];
+                head++;
+                tiles.push({ r, c });
+
+                if (r > 0 && _worldgen_isFloor(map[r - 1][c] | 0) && compId[r - 1][c] < 0) {
+                    compId[r - 1][c] = nextId; qR.push(r - 1); qC.push(c);
+                }
+                if (r < rows - 1 && _worldgen_isFloor(map[r + 1][c] | 0) && compId[r + 1][c] < 0) {
+                    compId[r + 1][c] = nextId; qR.push(r + 1); qC.push(c);
+                }
+                if (c > 0 && _worldgen_isFloor(map[r][c - 1] | 0) && compId[r][c - 1] < 0) {
+                    compId[r][c - 1] = nextId; qR.push(r); qC.push(c - 1);
+                }
+                if (c < cols - 1 && _worldgen_isFloor(map[r][c + 1] | 0) && compId[r][c + 1] < 0) {
+                    compId[r][c + 1] = nextId; qR.push(r); qC.push(c + 1);
+                }
+            }
+
+            comps.push({ id: nextId, tiles, size: tiles.length | 0 });
+            nextId++;
+        }
+    }
+
+    return { compId, comps };
+}
+
+function _worldgen_pickMainComponentId(
+    compId: number[][],
+    comps: { id: number; tiles: { r: number; c: number }[]; size: number }[],
+    rows: number,
+    cols: number
+): number {
+    if (!comps.length) return -1;
+    const centerR = Math.idiv(rows, 2) | 0;
+    const centerC = Math.idiv(cols, 2) | 0;
+    const centerId = (compId[centerR] && compId[centerR][centerC] != null) ? (compId[centerR][centerC] | 0) : -1;
+    if (centerId >= 0) return centerId;
+
+    let bestId = comps[0].id | 0;
+    let bestSize = comps[0].size | 0;
+    for (let i = 1; i < comps.length; i++) {
+        if ((comps[i].size | 0) > (bestSize | 0)) {
+            bestSize = comps[i].size | 0;
+            bestId = comps[i].id | 0;
+        }
+    }
+    return bestId | 0;
+}
+
+function _worldgen_findNearestPair(
+    tilesA: { r: number; c: number }[],
+    tilesB: { r: number; c: number }[],
+    rows: number,
+    cols: number,
+    preferAxis: "h" | "v" | "" = ""
+): { r0: number; c0: number; r1: number; c1: number } | null {
+    if (!tilesA.length || !tilesB.length) return null;
+
+    const isInterior = (t: { r: number; c: number }) =>
+        (t.r > 0 && t.c > 0 && t.r < (rows - 1) && t.c < (cols - 1));
+
+    const aTiles = tilesA.filter(isInterior);
+    const bTiles = tilesB.filter(isInterior);
+    const aa = aTiles.length ? aTiles : tilesA;
+    const bb = bTiles.length ? bTiles : tilesB;
+
+    let bestDist = 999999;
+    let bestAxisDelta = 999999;
+    let best: { r0: number; c0: number; r1: number; c1: number } | null = null;
+
+    for (let i = 0; i < aa.length; i++) {
+        const a = aa[i];
+        for (let j = 0; j < bb.length; j++) {
+            const b = bb[j];
+            const dr = Math.abs((a.r | 0) - (b.r | 0));
+            const dc = Math.abs((a.c | 0) - (b.c | 0));
+            const d = (dr + dc) | 0;
+            if (d < bestDist) {
+                bestDist = d;
+                bestAxisDelta = (preferAxis === "v") ? dc : (preferAxis === "h") ? dr : 999999;
+                best = { r0: a.r | 0, c0: a.c | 0, r1: b.r | 0, c1: b.c | 0 };
+            } else if (preferAxis && d === bestDist) {
+                const axisDelta = (preferAxis === "v") ? dc : dr;
+                if (axisDelta < bestAxisDelta) {
+                    bestAxisDelta = axisDelta;
+                    best = { r0: a.r | 0, c0: a.c | 0, r1: b.r | 0, c1: b.c | 0 };
+                }
+            }
+        }
+    }
+
+    return best;
+}
+
+function _worldgen_buildPath(
+    map: number[][],
+    r0: number,
+    c0: number,
+    r1: number,
+    c1: number,
+    order: "hv" | "vh"
+): _WorldgenPathCell[] {
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    const cells: _WorldgenPathCell[] = [];
+
+    let r = r0 | 0;
+    let c = c0 | 0;
+
+    const step = (dr: number, dc: number, dir: "h" | "v"): void => {
+        r = (r + dr) | 0;
+        c = (c + dc) | 0;
+        if (r < 0 || c < 0 || r >= rows || c >= cols) return;
+        const wasWall = ((map[r][c] | 0) === (TILE_WALL | 0));
+        cells.push({ r, c, dir, wasWall });
+    };
+
+    const dc = Math.sign((c1 | 0) - (c | 0));
+    const dr = Math.sign((r1 | 0) - (r | 0));
+
+    if (order === "hv") {
+        while ((c | 0) !== (c1 | 0)) step(0, dc, "h");
+        while ((r | 0) !== (r1 | 0)) step(dr, 0, "v");
+    } else {
+        while ((r | 0) !== (r1 | 0)) step(dr, 0, "v");
+        while ((c | 0) !== (c1 | 0)) step(0, dc, "h");
+    }
+
+    return cells;
+}
+
+function _worldgen_isWallAt(map: number[][], r: number, c: number): boolean {
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    if (r < 0 || c < 0 || r >= rows || c >= cols) return true;
+    return ((map[r][c] | 0) === (TILE_WALL | 0));
+}
+
+function _worldgen_findBridgeCandidate(
+    path: _WorldgenPathCell[],
+    map: number[][],
+    requireBottomRowWalls: boolean
+): _WorldgenBridgeCandidate | null {
+    let best: _WorldgenBridgeCandidate | null = null;
+
+    let i = 0;
+    while (i < path.length) {
+        const cell = path[i];
+        if (!cell.wasWall) { i++; continue; }
+
+        const dir = cell.dir;
+        let j = i;
+        while (j < path.length && path[j].dir === dir && path[j].wasWall) j++;
+        const len = (j - i) | 0;
+
+        if (len >= 3) {
+            if (dir === "h") {
+                const row = path[i].r | 0;
+                for (let start = i; start <= (j - 3); start++) {
+                    const c0 = path[start].c | 0;
+                    const c2 = path[start + 2].c | 0;
+                    const left = Math.min(c0, c2) | 0;
+                    if (requireBottomRowWalls) {
+                        if (!_worldgen_isWallAt(map, row + 1, left)) continue;
+                        if (!_worldgen_isWallAt(map, row + 1, left + 1)) continue;
+                        if (!_worldgen_isWallAt(map, row + 1, left + 2)) continue;
+                    }
+                    const cand: _WorldgenBridgeCandidate = {
+                        kind: "bridge_h",
+                        anchorR: (row + 1) | 0,
+                        anchorC: left | 0,
+                        score: len | 0
+                    };
+                    if (!best || (cand.score | 0) > (best.score | 0)) best = cand;
+                }
+            } else {
+                const col = path[i].c | 0;
+                for (let start = i; start <= (j - 3); start++) {
+                    const r0 = path[start].r | 0;
+                    const r2 = path[start + 2].r | 0;
+                    const top = Math.min(r0, r2) | 0;
+                    const cand: _WorldgenBridgeCandidate = {
+                        kind: "bridge_v",
+                        anchorR: (top + 2) | 0,
+                        anchorC: col | 0,
+                        score: len | 0
+                    };
+                    if (!best || (cand.score | 0) > (best.score | 0)) best = cand;
+                }
+            }
+        }
+
+        i = j;
+    }
+
+    return best;
+}
+
+function _worldgen_isBridgeWalkwayTile(
+    r: number,
+    c: number,
+    bridge: _WorldgenBridgeCandidate | null
+): boolean {
+    if (!bridge) return false;
+    if (bridge.kind === "bridge_h") {
+        const br = (bridge.anchorR - 1) | 0;
+        const bc = bridge.anchorC | 0;
+        return ((r | 0) === br && (c | 0) >= bc && (c | 0) <= (bc + 2));
+    }
+    const bc = bridge.anchorC | 0;
+    const br0 = (bridge.anchorR - 2) | 0;
+    return ((c | 0) === bc && (r | 0) >= br0 && (r | 0) <= (br0 + 2));
+}
+
+function _worldgen_carvePath(
+    map: number[][],
+    path: _WorldgenPathCell[],
+    bridge: _WorldgenBridgeCandidate | null
+): void {
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    for (let i = 0; i < path.length; i++) {
+        const r = path[i].r | 0;
+        const c = path[i].c | 0;
+        if (r <= 0 || c <= 0 || r >= rows - 1 || c >= cols - 1) continue;
+        if (_worldgen_isBridgeWalkwayTile(r, c, bridge)) {
+            if ((map[r][c] | 0) === (TILE_WALL | 0)) {
+                map[r][c] = TILE_BRIDGE;
+            }
+            continue;
+        }
+        map[r][c] = TILE_EMPTY;
+    }
+}
+
+function _worldgen_connectIslandsWithBridges(map: number[][]): _WorldgenBridgePlacement[] {
+    const placements: _WorldgenBridgePlacement[] = [];
+    const rows = (map && map.length) ? (map.length | 0) : 0;
+    const cols = (rows > 0 && map[0]) ? (map[0].length | 0) : 0;
+    if (rows <= 0 || cols <= 0) return placements;
+
+    const usedAnchors = new Set<string>();
+    let guard = 0;
+
+    while (guard++ < 100) {
+        const comp = _worldgen_computeFloorComponents(map);
+        if (comp.comps.length <= 1) break;
+
+        const mainId = _worldgen_pickMainComponentId(comp.compId, comp.comps, rows, cols);
+        const main = comp.comps.find(c => (c.id | 0) === (mainId | 0)) || null;
+        if (!main) break;
+
+        let island: { id: number; tiles: { r: number; c: number }[]; size: number } | null = null;
+        for (let i = 0; i < comp.comps.length; i++) {
+            const c = comp.comps[i];
+            if ((c.id | 0) === (mainId | 0)) continue;
+            if (!island || ((c.size | 0) > (island.size | 0))) island = c;
+        }
+        if (!island) break;
+
+        const preferAxis = DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL ? "v" : "";
+        const pair = _worldgen_findNearestPair(island.tiles, main.tiles, rows, cols, preferAxis);
+        if (!pair) break;
+
+        const pathHV = _worldgen_buildPath(map, pair.r0, pair.c0, pair.r1, pair.c1, "hv");
+        const pathVH = _worldgen_buildPath(map, pair.r0, pair.c0, pair.r1, pair.c1, "vh");
+
+        const candHV = _worldgen_findBridgeCandidate(pathHV, map, true);
+        const candVH = _worldgen_findBridgeCandidate(pathVH, map, true);
+
+        let chosenPath = pathHV;
+        let chosenCand = candHV;
+
+        if (DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL) {
+            if (candVH) {
+                chosenPath = pathVH; chosenCand = candVH;
+            } else if (candHV) {
+                chosenPath = pathHV; chosenCand = candHV;
+            } else {
+                chosenPath = (pathHV.length <= pathVH.length) ? pathHV : pathVH;
+                chosenCand = null;
+            }
+        } else {
+            if (candHV && candVH) {
+                if ((candVH.score | 0) > (candHV.score | 0)) {
+                    chosenPath = pathVH; chosenCand = candVH;
+                } else if ((candVH.score | 0) === (candHV.score | 0)) {
+                    if ((pathVH.length | 0) < (pathHV.length | 0)) {
+                        chosenPath = pathVH; chosenCand = candVH;
+                    }
+                }
+            } else if (!candHV && candVH) {
+                chosenPath = pathVH; chosenCand = candVH;
+            } else if (!candHV && !candVH) {
+                chosenPath = (pathHV.length <= pathVH.length) ? pathHV : pathVH;
+                chosenCand = null;
+            }
+        }
+
+        _worldgen_carvePath(map, chosenPath, chosenCand);
+
+        if (chosenCand) {
+            const key = String(chosenCand.anchorR | 0) + "," + String(chosenCand.anchorC | 0);
+            if (!usedAnchors.has(key)) {
+                usedAnchors.add(key);
+                placements.push({
+                    anchorR: chosenCand.anchorR | 0,
+                    anchorC: chosenCand.anchorC | 0,
+                    kind: chosenCand.kind
+                });
+            }
+        }
+
+        if (DEBUG_WORLDGEN_BRIDGE_LOGS) {
+            console.log("[WORLDGEN][BRIDGE]", {
+                islandSize: island.size | 0,
+                mainId: mainId | 0,
+                pathLen: chosenPath.length | 0,
+                bridge: chosenCand ? { kind: chosenCand.kind, r: chosenCand.anchorR | 0, c: chosenCand.anchorC | 0 } : null
+            });
+        }
+    }
+
+    return placements;
+}
+
 function _createTileMap2D(): number[][] {
 
     // Shop floors use a deterministic open layout so we can place the platform + stairs cleanly.
     if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
+        _worldgenBridgePlacements = [];
         return _createShopFloorMap();
     }
 
@@ -21043,6 +21691,7 @@ function _createTileMap2D(): number[][] {
 function _createShopFloorMap(): number[][] {
 
     // Simple open box with border walls. Keeps the entire interior walkable for platform placement.
+    _worldgenBridgePlacements = [];
     const cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
     const rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
 
@@ -21715,6 +22364,9 @@ function _createBasicCaveMap(): number[][] {
 
 
 
+    if (DEBUG_WORLDGEN_FORCE_ISLAND) _worldgen_forceIsland(map);
+    _worldgenBridgePlacements = _worldgen_connectIslandsWithBridges(map);
+
     if (DEBUG_WORLDGEN_LOGS) {
         console.log(
             ">>> [HeroEngine.worldgen] map size",
@@ -22084,7 +22736,7 @@ function initWorldDecorPostPass(): void {
 
         if (r < 0 || c < 0 || r >= rows || c >= cols) return false
 
-        return ((_engineWorldTileMap[r][c] | 0) !== TILE_WALL)
+        return !_tileIsSolidType(_engineWorldTileMap[r][c] | 0)
 
     }
 
@@ -22252,6 +22904,26 @@ function initWorldDecorPostPass(): void {
 
     _engineDecorSolids.push(rockSolid)
 
+    // ----------------------------------------------------------
+    // Bridge props (visuals only; collision handled by world grid)
+    // ----------------------------------------------------------
+    if (_worldgenBridgePlacements && _worldgenBridgePlacements.length) {
+        for (let i = 0; i < _worldgenBridgePlacements.length; i++) {
+            const bp = _worldgenBridgePlacements[i];
+            const br = bp.anchorR | 0;
+            const bc = bp.anchorC | 0;
+            if (br <= 0 || bc <= 0 || br >= rows || bc >= cols) continue;
+            _dunDecor_spawnAtTile({
+                name: bp.kind,
+                role: DECOR_ROLE.TRIGGER,
+                tileR: br,
+                tileC: bc,
+                pxW: WORLD_TILE_SIZE,
+                pxH: WORLD_TILE_SIZE,
+            });
+        }
+    }
+
 
 
     // Revision bumps any time decor layout is (re)built
@@ -22273,6 +22945,7 @@ function initWorldTileMap(): void {
     // Always build the numeric world grid (used by Phaser renderer + collision).
     if (DEBUG_FORCE_TEST_WORLD_KIND) {
         _engineWorldTileMap = _createTileMap2D_TestWorld(DEBUG_FORCE_TEST_WORLD_KIND as any)
+        _worldgenBridgePlacements = [];
 
         if (DEBUG_FORCE_TEST_WORLD_LOG) {
             const s = _debugWorldSig01(_engineWorldTileMap)
@@ -22415,7 +23088,7 @@ function _boundsWithOffset(s: Sprite, offY: number) {
 
 
 
-// Check if an axis-aligned box overlaps any TILE_WALL
+// Check if an axis-aligned box overlaps any solid tile.
 
 function _boxOverlapsWall(
 
@@ -22783,7 +23456,7 @@ function _shopRescueShopkeeperFromWalls(): void {
 
                 if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue
 
-                if ((_engineWorldTileMap[rr][cc] | 0) === TILE_WALL) continue
+                if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) continue
 
                 const px = _dunColToX(cc)
 
@@ -22965,11 +23638,8 @@ function _boxOverlapsWallBounds(
 
             if (c < 0 || c >= cols) continue
 
-            if (rowArr[c] === TILE_WALL) {
-
-                return true
-
-            }
+            const type = rowArr[c] | 0
+            if (_tileIsSolidType(type)) return true
 
         }
 
@@ -45908,7 +46578,7 @@ function _enemyNavIsBaseBlocked(r: number, c: number): boolean {
 
 
 
-    if (((_engineWorldTileMap[r][c] | 0) === (TILE_WALL | 0))) return true
+    if (_tileIsSolidType(_engineWorldTileMap[r][c] | 0)) return true
 
     const idx = _enemyNavIdx(r, c)
 
@@ -47249,7 +47919,7 @@ function _enemySteerTowardHero(e: Sprite, h: Sprite, speed: number): void {
 
             // Treat walls as blocked, but allow goal tile even if hero is standing in/near it.
 
-            if (map[nr][nc] === TILE_WALL && !(nr === goalR && nc === goalC)) continue
+            if (_tileIsSolidType(map[nr][nc] | 0) && !(nr === goalR && nc === goalC)) continue
 
 
 
@@ -52357,6 +53027,45 @@ game.onUpdateInterval(ENEMY_SPAWN_TICK_MS, function () {
 
 
 
+// Apply a saved snapshot to any sprite (position/data/image).
+function _applySnapshotToSprite(target: Sprite, snap: any): void {
+    if (!target || !snap) return
+    try {
+        target.x = snap.x || 0
+        target.y = snap.y || 0
+        target.vx = snap.vx || 0
+        target.vy = snap.vy || 0
+        if (typeof (snap as any).flags === "number") {
+            target.flags = (snap as any).flags | 0
+        }
+
+        if (!(target as any).data) (target as any).data = {}
+        const d: any = (target as any).data
+        for (const k of Object.keys(d)) delete d[k]
+        if (snap.data) {
+            for (const k of Object.keys(snap.data)) {
+                d[k] = (snap.data as any)[k]
+            }
+        }
+
+        if (snap.pixels && snap.width > 0 && snap.height > 0) {
+            const w = snap.width | 0
+            const h = snap.height | 0
+            let img: any = (target as any).image
+            if (!img || img.width !== w || img.height !== h) {
+                img = Image.fromJSON(w, h, snap.pixels)
+                if (typeof (target as any).setImage === "function") {
+                    (target as any).setImage(img)
+                } else {
+                    (target as any).image = img
+                }
+            } else if (typeof (img as any).fromJSONPixels === "function") {
+                img.fromJSONPixels(snap.pixels)
+            }
+        }
+    } catch { }
+}
+
 // --------------------------------------------------------------
 
 // Phaser-only glue: expose HeroEngine namespace on globalThis
@@ -52369,6 +53078,24 @@ if (typeof globalThis !== "undefined") {
 
     (globalThis as any).HeroEngine = HeroEngine;
 
+}
+
+// Phaser-only: allow net layer to drive DOM dialog locally (no re-broadcast).
+if (typeof globalThis !== "undefined") {
+    (globalThis as any).__heDialogFromNet = function (msg: any) {
+        if (!msg || typeof msg.action !== "string") return;
+        const action = String(msg.action || "");
+        if (action === "show") {
+            const d = msg.dialog || {};
+            const text = (typeof d.text === "string") ? d.text : "";
+            const hint = (typeof d.hint === "string") ? d.hint : "";
+            const autoHideMs = (typeof d.autoHideMs === "number") ? (d.autoHideMs | 0) : 0;
+            const now = game.runtime() | 0;
+            _dunDialog_showStoryLine(now, text, hint, autoHideMs);
+        } else if (action === "hide") {
+            _dunDialog_hideStoryLine();
+        }
+    };
 }
 
 
@@ -52582,41 +53309,7 @@ if (typeof globalThis !== "undefined") {
 
         // Helper to restore a hero sprite from a saved snapshot (position/data/image)
         function _applyHeroSnapshotToSprite(hero: Sprite, snap: any) {
-            if (!hero || !snap) return
-            try {
-                hero.x = snap.x || 0
-                hero.y = snap.y || 0
-                hero.vx = snap.vx || 0
-                hero.vy = snap.vy || 0
-                if (typeof (snap as any).flags === "number") {
-                    hero.flags = (snap as any).flags | 0
-                }
-
-                if (!(hero as any).data) (hero as any).data = {}
-                const d: any = (hero as any).data
-                for (const k of Object.keys(d)) delete d[k]
-                if (snap.data) {
-                    for (const k of Object.keys(snap.data)) {
-                        d[k] = (snap.data as any)[k]
-                    }
-                }
-
-                if (snap.pixels && snap.width > 0 && snap.height > 0) {
-                    const w = snap.width | 0
-                    const h = snap.height | 0
-                    let img: any = (hero as any).image
-                    if (!img || img.width !== w || img.height !== h) {
-                        img = Image.fromJSON(w, h, snap.pixels)
-                        if (typeof (hero as any).setImage === "function") {
-                            (hero as any).setImage(img)
-                        } else {
-                            (hero as any).image = img
-                        }
-                    } else if (typeof (img as any).fromJSONPixels === "function") {
-                        img.fromJSONPixels(snap.pixels)
-                    }
-                }
-            } catch { }
+            _applySnapshotToSprite(hero, snap)
         }
 
 
@@ -52729,6 +53422,17 @@ if (typeof globalThis !== "undefined") {
             playerToHeroIndex[pid] = -1
             return true
         }
+
+        // NPC LPC helpers (Phaser-only convenience API)
+        internals.spawnNpcLpc = HeroEngine.spawnNpcLpc
+        internals.registerNpcLpc = HeroEngine.registerNpcLpc
+        internals.despawnNpcLpc = HeroEngine.despawnNpcLpc
+        internals.listNpcLpc = HeroEngine.listNpcLpc
+        internals.findNpcLpcByRole = HeroEngine.findNpcLpcByRole
+        internals.setNpcLpcDir = HeroEngine.setNpcLpcDir
+        internals.setNpcLpcPhase = HeroEngine.setNpcLpcPhase
+        internals.setNpcLpcWeapons = HeroEngine.setNpcLpcWeapons
+        internals.isNpcLpc = HeroEngine.isNpcLpc
 
 
 

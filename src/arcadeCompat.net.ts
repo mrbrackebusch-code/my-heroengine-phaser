@@ -157,6 +157,12 @@ type NetMessage =
     | { type: "helloError"; reason: string; profile?: string | null }
     | { type: "saveGame"; payload: any }
     | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
+    | {
+          type: "dialog";
+          action: "show" | "hide";
+          dialog?: { speaker?: string; text?: string; hint?: string; autoHideMs?: number } | null;
+          targetPlayerId?: number | null;
+      }
     | { type: "uiCommand"; requestId: string; playerId: number; cmd: any }
     | { type: "uiCommandForward"; requestId: string; fromToken: string; playerId: number; cmd: any }
     | { type: "uiCommandResult"; requestId: string; toToken?: string | null; playerId?: number | null; ok?: boolean; reason?: string | null; snapshot?: any }
@@ -460,6 +466,19 @@ class NetworkClient {
         this.ws.send(JSON.stringify(msg));
     }
 
+    // Host uses this to broadcast dialog to followers
+    sendDialog(action: "show" | "hide", dialog?: any, targetPlayerId?: number | null) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (!this.isHostNow()) return;
+        const msg: NetMessage = {
+            type: "dialog",
+            action,
+            dialog: dialog ?? null,
+            targetPlayerId: targetPlayerId ?? null
+        };
+        this.ws.send(JSON.stringify(msg));
+    }
+
     // Followers (and host if desired) can issue UI commands via host
     sendUiCommand(cmd: any): Promise<any> {
         const requestId = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -554,6 +573,10 @@ private handleMessage(msg: NetMessage) {
 
         case "uiCommandResult":
             this.onUiCommandResult(msg as any);
+            return;
+
+        case "dialog":
+            this.onDialog(msg as any);
             return;
 
         case "tilemap":
@@ -1022,6 +1045,31 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
             this.uiCmdResolvers.delete(msg.requestId);
             resolver(msg);
         }
+    }
+
+    private onDialog(msg: any) {
+        const g: any = (globalThis as any);
+        const fn = (g && typeof g.__heDialogFromNet === "function") ? g.__heDialogFromNet : null;
+        if (fn) {
+            try { fn(msg); } catch { /* ignore */ }
+            return;
+        }
+
+        const dlg = g ? g.__heDialog : null;
+        const action = (msg && typeof msg.action === "string") ? msg.action : "";
+        if (!dlg) return;
+        try {
+            if (action === "show" && typeof dlg.show === "function") {
+                const d = msg.dialog || {};
+                dlg.show({
+                    speaker: d.speaker || "",
+                    text: d.text || "",
+                    hint: d.hint || ""
+                });
+            } else if (action === "hide" && typeof dlg.hide === "function") {
+                dlg.hide();
+            }
+        } catch { /* ignore */ }
     }
 
 

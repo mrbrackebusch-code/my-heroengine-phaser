@@ -111,6 +111,8 @@ export interface DecorVisualRef {
 
     // Optional depth offset applied after y-sort (use negative to force behind).
     depthBias?: number;
+    // Optional depth offset in tiles (scaled by tileSize * WORLD_DEPTH_Y_SCALE).
+    depthBiasTiles?: number;
 }
 
 
@@ -169,6 +171,24 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         wTiles: 3,
         hTiles: 1,
         depthBias: -500000, // above platform (–1e6) but behind heroes/statues
+    },
+
+    // Bridges (visuals only; collision comes from world grid)
+    bridge_h: {
+        atlas: "base_out_atlas",
+        ref: { row: 17, col: 13 }, // cols 13..15, rows 16..17
+        wTiles: 3,
+        hTiles: 2,
+        depthBiasTiles: -1.5,
+        depthBias: -1,
+    },
+    bridge_v: {
+        atlas: "base_out_atlas",
+        ref: { row: 20, col: 13 }, // col 13, rows 18..20
+        wTiles: 1,
+        hTiles: 3,
+        depthBiasTiles: -3.0,
+        depthBias: -1,
     },
 
     // Stairs statue: terrain_atlas col 19, rows 15/16/17 (1x3)
@@ -280,6 +300,8 @@ export const PROP_CATALOG: {
     // bottom-left tile in atlas
     { name: "stairs_statue", atlas: "terrain_atlas", atlasRow: 17, atlasCol: 19, wTiles: 1, hTiles: 3 },
     { name: "pedestal", atlas: "terrain_atlas", atlasRow: 14, atlasCol: 19, wTiles: 1, hTiles: 1 },
+    { name: "bridge_h", atlas: "base_out_atlas", atlasRow: 17, atlasCol: 13, wTiles: 3, hTiles: 2 },
+    { name: "bridge_v", atlas: "base_out_atlas", atlasRow: 20, atlasCol: 13, wTiles: 1, hTiles: 3 },
 ];
 
 
@@ -435,8 +457,14 @@ export interface TileAtlas {
     /** Return the first tile matching family+shape. */
     getAutoTile(family: TileFamily, shape: AutoShape): AutoTileDef | undefined;
 
+    /** Return a deterministic variant by index for family+shape. */
+    getVariantByIndex(family: TileFamily, shape: AutoShape, index: number): AutoTileDef | undefined;
+
     /** Return a random variant for family+shape if we have several to choose from. */
     getRandomVariant(family: TileFamily, shape: AutoShape): AutoTileDef | undefined;
+
+    /** Return a deterministic decoration tile by index for the given family, if any. */
+    getDecorByIndex(family: TileFamily, index: number): SingleTileDef | undefined;
 
     /** Return a random decoration tile for the given family, if any. */
     getRandomDecorForFamily(family: TileFamily): SingleTileDef | undefined;
@@ -1076,12 +1104,26 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
             const arr = autoByKey.get(key);
             return arr && arr.length > 0 ? arr[0] : undefined;
         },
+        getVariantByIndex(family: TileFamily, shape: AutoShape, index: number): AutoTileDef | undefined {
+            const key = `${family}|${shape}`;
+            const arr = autoByKey.get(key);
+            if (!arr || arr.length === 0) return undefined;
+            if (arr.length === 1) return arr[0];
+            const i = Math.abs(index | 0) % arr.length;
+            return arr[i];
+        },
         getRandomVariant(family: TileFamily, shape: AutoShape): AutoTileDef | undefined {
             const key = `${family}|${shape}`;
             const arr = autoByKey.get(key);
             if (!arr || arr.length === 0) return undefined;
             if (arr.length === 1) return arr[0];
             const i = Math.floor(Math.random() * arr.length);
+            return arr[i];
+        },
+        getDecorByIndex(family: TileFamily, index: number): SingleTileDef | undefined {
+            const arr = decorByFamily.get(family);
+            if (!arr || arr.length === 0) return undefined;
+            const i = Math.abs(index | 0) % arr.length;
             return arr[i];
         },
         getRandomDecorForFamily(family: TileFamily): SingleTileDef | undefined {

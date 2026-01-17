@@ -118,6 +118,26 @@ type ParsedPropKey = {
   explicitFrameIndex: number | null;
 };
 
+function _hashString(s: string): number {
+  let h = 0;
+  const str = s || "";
+  for (let i = 0; i < str.length; i++) {
+    h = ((h * 31) + str.charCodeAt(i)) | 0;
+  }
+  return h | 0;
+}
+
+function _mixSeed(seed: number, r: number, c: number, familyHash: number, shapeHash: number): number {
+  let h = seed | 0;
+  h ^= ((r + 1) * 374761393) | 0;
+  h ^= ((c + 1) * 668265263) | 0;
+  h ^= familyHash | 0;
+  h ^= shapeHash | 0;
+  h = Math.imul(h ^ (h >>> 16), 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 3266489917);
+  return (h >>> 0);
+}
+
 function _parsePropKey(raw: string): ParsedPropKey {
   const s = (raw ?? "").trim();
   if (!s) return { baseName: "", state: null, explicitFrameIndex: null };
@@ -1636,8 +1656,9 @@ function defaultTileValueToFamily(v: number): TileFamily | "" {
     // In HeroEngineInPhaser.ts:
     // const TILE_EMPTY = 0
     // const TILE_WALL  = 1
+    // const TILE_BRIDGE = 2
 
-    if (v === 1) {
+    if (v === 1 || v === 2) {
         // walls → chasm rim family
         return "chasm_light";
     }
@@ -2934,7 +2955,8 @@ private _paintFloorUnderlayEverywhere(
   rows: number,
   cols: number,
   valueToFamily: (v: number) => TileFamily | "",
-  fallbackFloorFamily: TileFamily
+  fallbackFloorFamily: TileFamily,
+  seedSalt: number
 ): void {
   if (!this.groundLayer) return;
 
@@ -2949,8 +2971,9 @@ private _paintFloorUnderlayEverywhere(
       const floorFamily =
         (fam0 && !isChasmLikeFamily(fam0 as TileFamily)) ? (fam0 as TileFamily) : fallbackFloorFamily;
 
+      const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(floorFamily), _hashString("center"));
       const def =
-        this.atlas.getRandomVariant(floorFamily, "center") ||
+        this.atlas.getVariantByIndex(floorFamily, "center", seed) ||
         this.atlas.getAutoTile(floorFamily, "center");
 
       if (!def) continue;
@@ -2965,7 +2988,8 @@ private _paintChasmLike(
   grid: number[][],
   rows: number,
   cols: number,
-  valueToFamily: (v: number) => TileFamily | ""
+  valueToFamily: (v: number) => TileFamily | "",
+  seedSalt: number
 ): void {
   if (!this.chasmLayer || !this.chasmOverlayLayer) return;
 
@@ -2988,8 +3012,9 @@ private _paintChasmLike(
 
       // Prefer inner-corner as a BASE replacement tile if it exists
       if (inner !== "none") {
+        const innerSeed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString(inner));
         const innerDef =
-          this.atlas.getRandomVariant(family as TileFamily, inner as any) ||
+          this.atlas.getVariantByIndex(family as TileFamily, inner as any, innerSeed) ||
           this.atlas.getAutoTile(family as TileFamily, inner as any);
 
         if (innerDef) {
@@ -3000,16 +3025,19 @@ private _paintChasmLike(
 
       // Singleton: use decor slots
       if (!baseDef && shape === "single") {
-        const deco = this.atlas.getRandomDecorForFamily(family as TileFamily);
+        const decoSeed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString("decor"));
+        const deco = this.atlas.getDecorByIndex(family as TileFamily, decoSeed);
         if (deco) baseDef = deco;
       }
 
       // Normal shape lookup
       if (!baseDef) {
+        const shapeSeed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString(shape));
+        const centerSeed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString("center"));
         baseDef =
-          this.atlas.getRandomVariant(family as TileFamily, shape) ||
+          this.atlas.getVariantByIndex(family as TileFamily, shape, shapeSeed) ||
           this.atlas.getAutoTile(family as TileFamily, shape) ||
-          this.atlas.getRandomVariant(family as TileFamily, "center") ||
+          this.atlas.getVariantByIndex(family as TileFamily, "center", centerSeed) ||
           this.atlas.getAutoTile(family as TileFamily, "center") ||
           null;
       }
@@ -3021,8 +3049,9 @@ private _paintChasmLike(
 
       // ---- overlay ONLY if we did NOT use inner as base ----
       if (inner !== "none" && !usedInnerAsBase) {
+        const innerSeed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString(inner));
         const innerDef =
-          this.atlas.getRandomVariant(family as TileFamily, inner as any) ||
+          this.atlas.getVariantByIndex(family as TileFamily, inner as any, innerSeed) ||
           this.atlas.getAutoTile(family as TileFamily, inner as any);
 
         if (innerDef) {
@@ -3062,9 +3091,10 @@ syncFromEngineGrid(grid: number[][]): void {
   this.chasmOverlayLayer.fill(-1);
 
   const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily);
+  const seedSalt = (stats.rawSig | 0);
 
-  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily);
-  this._paintChasmLike(grid, rows, cols, valueToFamily);
+  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily, seedSalt);
+  this._paintChasmLike(grid, rows, cols, valueToFamily, seedSalt);
 
   // stash last snapshot for other debug consumers if needed
   try {
@@ -3979,7 +4009,8 @@ private _propPlaceOneAnchor(
   // Optional per-prop offsets (safe even if undefined)
   const ox = ((vis.offsetXPx ?? 0) | 0);
   const oy = ((vis.offsetYPx ?? 0) | 0);
-  const depthBias = (vis.depthBias ?? 0) | 0;
+  const depthBiasTiles = (vis.depthBiasTiles ?? 0);
+  const depthBias = ((vis.depthBias ?? 0) | 0) + ((depthBiasTiles * st.tileSize * WORLD_DEPTH_Y_SCALE) | 0);
 
   const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
 
@@ -4157,8 +4188,115 @@ syncPropGridByName(propNameGrid: string[][]): void {
   }
 }
 
+replacePropAt(anchorR: number, anchorC: number, rawKey: string): boolean {
+  if (!this.map) return false;
+
+  const anyThis: any = this as any;
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || (anyThis.__propInstancesByAnchor = Object.create(null));
+  const byRc: Record<string, any> = anyThis.__propTileInfoByRC || (anyThis.__propTileInfoByRC = Object.create(null));
+  const anchorKeyByRc: Record<string, string> = anyThis.__propAnchorKeyByRC || (anyThis.__propAnchorKeyByRC = Object.create(null));
+
+  const anchorKey = String((anchorR | 0)) + "," + String((anchorC | 0));
+  const inst = instByAnchor[anchorKey];
+  if (inst) {
+    this._propDestroyInstance(anchorKey, inst, anyThis, byRc, anchorKeyByRc);
+  }
+
+  if (!rawKey) return true;
+
+  const st = {
+    anyThis,
+    byRc,
+    instByAnchor,
+    anchorKeyByRc,
+    tileSize: (this.atlas.tileSize | 0),
+  };
+
+  this._propPlaceOneAnchor(st, anchorR | 0, anchorC | 0, rawKey);
+
+  if (PROP_FOCUS_AURA_CACHE_STATE) {
+    try {
+      const cache = anyThis.__propFocusAuraState || null;
+      const cached = cache ? cache[anchorKey] : null;
+      if (cached && cached.active) {
+        this.setPropFocusAuraAt(anchorR | 0, anchorC | 0, true, cached.radius | 0, cached.depthBias | 0);
+      }
+    } catch { /* ignore */ }
+  }
+
+  return true;
+}
+
+removePropAt(anchorR: number, anchorC: number): boolean {
+  const anyThis: any = this as any;
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || null;
+  if (!instByAnchor) return false;
+
+  const anchorKey = String((anchorR | 0)) + "," + String((anchorC | 0));
+  const inst = instByAnchor[anchorKey];
+  if (!inst) return false;
+
+  const byRc: Record<string, any> = anyThis.__propTileInfoByRC || (anyThis.__propTileInfoByRC = Object.create(null));
+  const anchorKeyByRc: Record<string, string> = anyThis.__propAnchorKeyByRC || (anyThis.__propAnchorKeyByRC = Object.create(null));
+  this._propDestroyInstance(anchorKey, inst, anyThis, byRc, anchorKeyByRc);
+  return true;
+}
+
 
   // ---- internal helpers ----
+
+private _propDestroyInstance(
+  anchorKey: string,
+  inst: any,
+  anyThis: any,
+  byRc: Record<string, { textureKey: string; frameIndex: number }>,
+  anchorKeyByRc: Record<string, string>
+): void {
+  const objs: any[] = Array.isArray(inst?.objs) ? inst.objs : [];
+  const objSet = new Set<any>(objs);
+
+  if (Array.isArray(anyThis.__propImgs)) {
+    anyThis.__propImgs = (anyThis.__propImgs as any[]).filter(o => !objSet.has(o));
+  }
+
+  for (let i = 0; i < objs.length; i++) {
+    const obj = objs[i];
+    try { obj?.destroy?.(); } catch { /* ignore */ }
+  }
+
+  if (inst?.focusAura) {
+    try { inst.focusAura.destroy?.(); } catch { /* ignore */ }
+  }
+  if (Array.isArray(inst?.focusAuraChildren)) {
+    for (let i = 0; i < inst.focusAuraChildren.length; i++) {
+      try { inst.focusAuraChildren[i]?.destroy?.(); } catch { /* ignore */ }
+    }
+  }
+
+  const anchorR = (inst.anchorR | 0);
+  const anchorC = (inst.anchorC | 0);
+  const wTiles = Math.max(1, (inst.wTiles | 0));
+  const hTiles = Math.max(1, (inst.hTiles | 0));
+  for (let dy = 0; dy < hTiles; dy++) {
+    for (let dx = 0; dx < wTiles; dx++) {
+      const worldR = ((anchorR | 0) - ((hTiles | 0) - 1) + (dy | 0)) | 0;
+      const worldC = ((anchorC | 0) + (dx | 0)) | 0;
+      const rcKey = String(worldR) + "," + String(worldC);
+      delete byRc[rcKey];
+      delete anchorKeyByRc[rcKey];
+    }
+  }
+
+  if (PROP_FOCUS_AURA_CACHE_STATE) {
+    try {
+      const cache = anyThis.__propFocusAuraState || null;
+      if (cache) delete cache[anchorKey];
+    } catch { /* ignore */ }
+  }
+
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
+  delete instByAnchor[anchorKey];
+}
 
 private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
   const anyThis: any = this as any;

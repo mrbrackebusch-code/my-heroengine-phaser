@@ -31,7 +31,7 @@ export const DEBUG_ANIM_KEYS_INT_FINISH = true;
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
 export const DBG_INTERVAL_MS = 50;
-export const DEBUG_INTEGRATOR = true;
+export const DEBUG_INTEGRATOR = false; // [WPN-FCO-CLEAR] and other integrator trace logs.
 export const DBG_INT_INTERVAL_MS = 50;
 export const DEBUG_AGI_COMBO = false;
 export const DEBUG_AGI_COMBO_LANDING = false;
@@ -50,7 +50,10 @@ export const DEBUG_MOVE_PIPE_THROTTLE_MS = 500;
 export const DEBUG_WAVE_ENABLED = false;
 export const DEBUG_MONSTER_ID = "imp blue";
 export const DEBUG_WORLDGEN_LOGS = false;
-export const DEBUG_WORLD_SNAPSHOT = true;
+export const DEBUG_WORLDGEN_FORCE_ISLAND = true;
+export const DEBUG_WORLDGEN_BRIDGE_LOGS = true;
+export const DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL = true;
+export const DEBUG_WORLD_SNAPSHOT = false; // [WORLD][MAP] snapshots on world rebuilds.
 export const DEBUG_FORCE_TEST_WORLD_KIND = false;
 export const DEBUG_FORCE_TEST_WORLD_LOG = false;
 
@@ -102,7 +105,7 @@ export const DEBUG_INT_HERO_NAME_FILTER = "Jason"; // empty string logs all
 export const DEBUG_SETFLAG = false;
 export const DEBUG_WRAP_TEX = false;
 export const DEBUG_NET = false;
-export const DEBUG_TILEMAP_COMPAT = true;
+export const DEBUG_TILEMAP_COMPAT = false; // [net.tilemap] receive/forward logs.
 export const DEBUG_COMPAT_BOOT = false;
 export const DEBUG_COMPAT_CONTROLLER = false;
 export const DEBUG_COMPAT_BACKGROUND = false;
@@ -167,10 +170,10 @@ export const DEBUG_TURN_SHOULD_PROVE_ON = false;
 // ------------------------------------------------------------
 export const DEBUG_TILEMAP_MAIN = false;
 export const DEBUG_TILEMAP_APPLY_NET = false;
-export const DEBUG_PROP_SYNC = true;
+export const DEBUG_PROP_SYNC = false; // [net.decor.apply]/[net.decor.capture] logs.
 export const DEBUG_TILE_ATLAS_GLOBAL = false; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
 export const DEBUG_TILES = false;
-export const DEBUG_TILEMAP_GLUE = true; // was DEBUG_TILES_GLOBAL in tileMapGlue.ts
+export const DEBUG_TILEMAP_GLUE = false; // [tileMapGlue] base render done, etc.
 
 // Prop focus aura (tileMapGlue.ts)
 export const DEBUG_PROP_FOCUS_AURA = true;
@@ -217,6 +220,7 @@ export const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false;
 // ------------------------------------------------------------
 export const ENABLE_HERO_ANIM_DEBUG = false;
 export const DEBUG_MAIN_LIFECYCLE = false;
+export const DEBUG_PHASER_BANNER = false; // Phaser startup banner/version log.
 export const DEBUG_SAVE_LOGS = false;
 export const DEBUG_RELICTIP_LOGS = false;
 export const DEBUG_COINFX = false;

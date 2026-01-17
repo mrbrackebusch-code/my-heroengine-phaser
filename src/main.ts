@@ -27,6 +27,7 @@ import {
   DEBUG_COINFX,
   DEBUG_MAIN_LIFECYCLE,
   DEBUG_MONSTER_SPRITES,
+  DEBUG_PHASER_BANNER,
   DEBUG_PROP_SYNC,
   DEBUG_RELIC_LOGS,
   DEBUG_RELICTIP_LOGS,
@@ -673,6 +674,7 @@ type HeroSavePayload = {
   floor: { index: number; kind: string; baseFamily: string; wallFamily: string };
   worldSnapshot: any;
   heroSprites: any[];
+  npcSprites?: any[];
   blocklyXmlByProfile: any;
   tilemap?: any;
   next: { index: number; kind: string };
@@ -688,12 +690,34 @@ function _captureWorldSnapshot(): any {
 
 function _isHeroSnapshotSprite(s: any): boolean {
   if (!s || !s.data) return false;
+  if (_isNpcSnapshotSprite(s)) return false;
   const owner = (typeof s.data.owner === "number") ? (s.data.owner | 0) : 0;
   if (owner > 0) return true;
   const name = (typeof s.data.name === "string") ? s.data.name.toLowerCase() : "";
   const heroName = (typeof s.data.heroName === "string") ? s.data.heroName.toLowerCase() : "";
   if (name.includes("hero") || heroName) return true;
   return false;
+}
+
+function _isNpcSnapshotSprite(s: any): boolean {
+  if (!s || !s.data) return false;
+  const d: any = s.data;
+  if (!!d.isNpc || !!d.npcLpc) return true;
+  if (typeof d._npcRole === "string" && d._npcRole.trim()) return true;
+  const heroName = (typeof d.heroName === "string") ? d.heroName.trim() : "";
+  const owner = (typeof d.owner === "number") ? (d.owner | 0) : 0;
+  if (owner <= 0 && heroName) return true;
+  return false;
+}
+
+function _npcSnapshotKey(s: any): string {
+  if (!s || !s.data) return "";
+  const d: any = s.data;
+  const role = (typeof d._npcRole === "string") ? d._npcRole.trim() : "";
+  const heroName = (typeof d.heroName === "string") ? d.heroName.trim() : "";
+  const family = (typeof d.heroFamily === "string") ? d.heroFamily.trim().toLowerCase() : "";
+  if (!heroName && !role) return "";
+  return `${role}|${heroName}|${family}`;
 }
 
 function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePayload | null {
@@ -720,12 +744,14 @@ function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePay
 
   const worldSnapshot = _captureWorldSnapshot();
   const heroSprites: any[] = [];
+  const npcSprites: any[] = [];
   if (worldSnapshot && Array.isArray(worldSnapshot.sprites)) {
     for (const s of worldSnapshot.sprites) {
       if (_isHeroSnapshotSprite(s)) heroSprites.push(s);
+      else if (_isNpcSnapshotSprite(s)) npcSprites.push(s);
     }
     // Strip heroes from worldSnapshot to avoid double-apply on load
-    worldSnapshot.sprites = worldSnapshot.sprites.filter((s: any) => !_isHeroSnapshotSprite(s));
+    worldSnapshot.sprites = worldSnapshot.sprites.filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s));
   }
   const blocklyXmlByProfile = g.__heBlocklyXmlByProfile || {};
   const tilemap = g.__lastTilemapMsg || null;
@@ -738,6 +764,7 @@ function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePay
     floor: { index: floorIndex, kind: floorKind, baseFamily, wallFamily },
     worldSnapshot,
     heroSprites,
+    npcSprites: npcSprites.length ? npcSprites : undefined,
     blocklyXmlByProfile,
     tilemap,
     decor,
@@ -816,7 +843,7 @@ function _applyPendingSaveIfAny(): void {
       if (!nw || typeof nw.apply !== "function") return false;
       const filtered = {
         ...snap,
-        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s))
+        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s))
       };
       nw.apply(filtered);
       logSave("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
@@ -827,6 +854,24 @@ function _applyPendingSaveIfAny(): void {
     }
   };
 
+  const npcSpritesRaw: any[] = [];
+  const npcSeen: any = {};
+  const pushNpc = (s: any) => {
+    if (!s) return;
+    const id = (typeof s.id === "number") ? (s.id | 0) : 0;
+    if (id && npcSeen[id]) return;
+    if (id) npcSeen[id] = 1;
+    npcSpritesRaw.push(s);
+  };
+  if (Array.isArray(save.npcSprites)) {
+    for (const s of save.npcSprites) pushNpc(s);
+  }
+  if (worldSnapRaw && Array.isArray(worldSnapRaw.sprites)) {
+    for (const s of worldSnapRaw.sprites) {
+      if (_isNpcSnapshotSprite(s)) pushNpc(s);
+    }
+  }
+
   if (worldSnapRaw) {
     const applied = applyWorldSnapshot(worldSnapRaw);
     if (!applied) {
@@ -835,6 +880,17 @@ function _applyPendingSaveIfAny(): void {
         try { applyWorldSnapshot(worldSnapRaw); } catch {}
       }, 500);
     }
+  }
+
+  if (npcSpritesRaw.length) {
+    const npcMap: any = {};
+    for (const s of npcSpritesRaw) {
+      const key = _npcSnapshotKey(s);
+      if (!key) continue;
+      npcMap[key] = s;
+    }
+    g.__npcSavedSnapshotByKey = npcMap;
+    logSave("[save] queued npc snapshots for spawn", Object.keys(npcMap).length);
   }
 
   if (decorFromSave) {
@@ -915,6 +971,7 @@ class HeroScene extends Phaser.Scene {
 
     private _tilemapAppliedFloorIndex: number = -1;
     private _tilemapAppliedDecorRev: number = -1;
+    private _tilemapAppliedPropByAnchor: Record<string, string> | null = null;
 
     // Debug throttles for decor logging
     private _debugPropLastCaptureRev: number = -1;
@@ -1028,7 +1085,7 @@ private ensureWorldTileRenderer(atlas: TileAtlas) {
         const g: any = globalThis as any;
         const base = (g.__floorBaseFamily as any) || "ground_light";
         const wall = (g.__floorWallFamily as any) || "chasm_light";
-        if (v === 1) return wall;
+        if (v === 1 || v === 2) return wall;
         return base;
     };
 
@@ -1486,6 +1543,11 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
     const worldRev = (msg.worldRev | 0) || 0;
     const floorIndex = (msg.floorIndex | 0) ?? -1;
+    const decor: DecorPayload | undefined = msg.decor;
+    const decorRev = (decor && typeof (decor as any).rev === "number") ? ((decor as any).rev | 0) : -1;
+    const decorOnly = !!msg.decorOnly;
+    const themeKey = `${baseFamily}|${wallFamily}`;
+    const lastThemeKey = (g.__tilemapAppliedThemeKey as string) || "";
 
     // If we are the host, ignore echoed tilemaps we originally sent; we already applied locally.
     const gAny: any = globalThis as any;
@@ -1498,15 +1560,23 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
         }
     }
 
+    const baseSigMatches =
+        rows === (this._tilemapAppliedRows | 0) &&
+        cols === (this._tilemapAppliedCols | 0) &&
+        tileSize === (this._tilemapAppliedTileSize | 0) &&
+        themeKey === lastThemeKey;
+    const worldSigMatches =
+        (worldRev | 0) === (this._tilemapAppliedWorldRev | 0) &&
+        (floorIndex | 0) === (this._tilemapAppliedFloorIndex | 0);
+    const decorSigMatches =
+        (decorRev | 0) >= 0 && (decorRev | 0) === (this._tilemapAppliedDecorRev | 0);
+
     // Only skip if we've applied this signature already (for followers)
     if (!gAny.__isHost) {
-        if (
-            rev === (this._tilemapAppliedRev | 0) &&
-            rows === (this._tilemapAppliedRows | 0) &&
-            cols === (this._tilemapAppliedCols | 0) &&
-            tileSize === (this._tilemapAppliedTileSize | 0)
-        ) {
-            return;
+        if (decorOnly) {
+            if (baseSigMatches && worldSigMatches && decorSigMatches) return;
+        } else {
+            if (baseSigMatches && worldSigMatches && (!decor || decorSigMatches)) return;
         }
     }
 
@@ -1515,9 +1585,22 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     this._tilemapAppliedCols = cols;
     this._tilemapAppliedTileSize = tileSize;
 
-    this.applyTilemapToScene(grid, tileSize);
-    _uiLoadingSet(85, "Tilemap ready");
-    _uiLoadingMarkTilemap();
+    const shouldApplyBase = !decorOnly || !baseSigMatches || !worldSigMatches;
+    if (shouldApplyBase) {
+        this.applyTilemapToScene(grid, tileSize);
+        this._tilemapAppliedWorldRev = worldRev;
+        this._tilemapAppliedFloorIndex = floorIndex;
+        g.__tilemapAppliedThemeKey = themeKey;
+        _uiLoadingSet(85, "Tilemap ready");
+        _uiLoadingMarkTilemap();
+    } else {
+        this._tilemapAppliedWorldRev = worldRev;
+        this._tilemapAppliedFloorIndex = floorIndex;
+    }
+
+    if (shouldApplyBase) {
+        this._tilemapAppliedPropByAnchor = null;
+    }
 
     if (DEBUG_TILEMAP_APPLY_NET) {
         // Cheap counts to prove we applied a non-empty grid
@@ -1544,7 +1627,6 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     }
 
     // Apply decor payload (follower-safe)
-    const decor: DecorPayload | undefined = msg.decor;
     if (decor && this.tileAtlas) {
         try {
             const renderer = this.ensureWorldTileRenderer(this.tileAtlas);
@@ -1578,21 +1660,60 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 }
             };
 
-            if (decor.props && Array.isArray(decor.props)) {
-                const propGrid: string[][] = [];
-                for (const p of decor.props) {
-                    if (!p) continue;
-                    const r = (p.r | 0);
-                    const c = (p.c | 0);
-                    if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
-                    const propName = mapPropName(p);
-                    if (!propName) continue;
-                    if (!propGrid[r]) propGrid[r] = [];
-                    propGrid[r][c] = propName;
+            const propsArr = Array.isArray(decor.props) ? decor.props : [];
+            const nextPropByAnchor: Record<string, string> = Object.create(null);
+            for (const p of propsArr) {
+                if (!p) continue;
+                const r = (p.r | 0);
+                const c = (p.c | 0);
+                if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
+                const propName = mapPropName(p);
+                if (!propName) continue;
+                const key = String(r) + "," + String(c);
+                nextPropByAnchor[key] = propName;
+            }
+
+            if (renderer) {
+                const canIncremental =
+                    !shouldApplyBase &&
+                    this._tilemapAppliedPropByAnchor &&
+                    (worldRev | 0) === (this._tilemapAppliedWorldRev | 0) &&
+                    (floorIndex | 0) === (this._tilemapAppliedFloorIndex | 0) &&
+                    typeof (renderer as any).replacePropAt === "function" &&
+                    typeof (renderer as any).removePropAt === "function";
+
+                if (canIncremental) {
+                    const prev = this._tilemapAppliedPropByAnchor as Record<string, string>;
+                    for (const k of Object.keys(nextPropByAnchor)) {
+                        const nextKey = nextPropByAnchor[k];
+                        const prevKey = prev[k];
+                        if (prevKey === nextKey) continue;
+                        const parts = k.split(",");
+                        const r = (parseInt(parts[0] || "0", 10) | 0);
+                        const c = (parseInt(parts[1] || "0", 10) | 0);
+                        (renderer as any).replacePropAt(r, c, nextKey);
+                    }
+
+                    for (const k of Object.keys(prev)) {
+                        if (nextPropByAnchor[k] != null) continue;
+                        const parts = k.split(",");
+                        const r = (parseInt(parts[0] || "0", 10) | 0);
+                        const c = (parseInt(parts[1] || "0", 10) | 0);
+                        (renderer as any).removePropAt(r, c);
+                    }
+                } else if (typeof (renderer as any).syncPropGridByName === "function") {
+                    const propGrid: string[][] = [];
+                    for (const k of Object.keys(nextPropByAnchor)) {
+                        const parts = k.split(",");
+                        const r = (parseInt(parts[0] || "0", 10) | 0);
+                        const c = (parseInt(parts[1] || "0", 10) | 0);
+                        if (!propGrid[r]) propGrid[r] = [];
+                        propGrid[r][c] = nextPropByAnchor[k];
+                    }
+                    (renderer as any).syncPropGridByName(propGrid);
                 }
-                if (renderer && typeof renderer.syncPropGridByName === "function") {
-                    renderer.syncPropGridByName(propGrid);
-                }
+
+                this._tilemapAppliedPropByAnchor = nextPropByAnchor;
             }
 
             const debugProps = DEBUG_PROP_SYNC || !!((globalThis as any).__DEBUG_PROP_SYNC);
@@ -1617,12 +1738,13 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                     console.log("[net.decor.apply]", { rev: revNow, propCount, decalRows: decalCount, byName });
                 }
             }
+            this._tilemapAppliedDecorRev = decorRev;
         } catch (e) {
             console.warn("[net.decor.apply] failed", e);
         }
     }
 
-    if (DEBUG_TILEMAP_MAIN) {
+    if (DEBUG_TILEMAP_MAIN && shouldApplyBase) {
         console.log(">>> [HeroScene.tilemap] applied tilemap from net", {
             rev,
             rows,
@@ -1955,6 +2077,8 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         const collectProps = (arr: any[]) => {
             for (const s of arr) {
                 if (!s) continue;
+                const destroyedFlag = spritesNS?.Flag?.Destroyed ?? 0;
+                if (destroyedFlag && (s.flags & destroyedFlag)) continue;
                 const id =
                     readDataNum(s, "decorId", readDataNum(s, "id", -1));
                 const r = readDataNum(s, "decorTileR", readDataNum(s, "tileR", -1));
@@ -2026,30 +2150,29 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         ((decorPayload.rev | 0) !== (this._tilemapAppliedDecorRev | 0));
 
     const prevFloor = this._tilemapAppliedFloorIndex | 0;
-    const needApply =
+    const baseChanged =
         (worldRev | 0) !== (this._tilemapAppliedWorldRev | 0) ||
         (floorIndex | 0) !== (this._tilemapAppliedFloorIndex | 0) ||
         rows !== (this._tilemapAppliedRows | 0) ||
         cols !== (this._tilemapAppliedCols | 0) ||
         tileSize !== (this._tilemapAppliedTileSize | 0) ||
-        themeKey !== lastThemeKey ||
-        !!decorNeedsApply;
+        themeKey !== lastThemeKey;
 
-    if ((!needApply && !decorNeedsApply) || rows <= 0 || cols <= 0) return;
+    if ((!baseChanged && !decorNeedsApply) || rows <= 0 || cols <= 0) return;
 
     // Cheap high-level counts (helps confirm “grid changed” at a glance)
     let rawWalls = 0;
     let rawFloors = 0;
-    for (let r = 0; r < rows; r++) {
-        const row = grid[r];
-        for (let c = 0; c < cols; c++) {
-            const v = row[c] | 0;
-            if (v === 1) rawWalls++;
-            else rawFloors++;
+    if (baseChanged) {
+        for (let r = 0; r < rows; r++) {
+            const row = grid[r];
+            for (let c = 0; c < cols; c++) {
+                const v = row[c] | 0;
+                if (v === 1) rawWalls++;
+                else rawFloors++;
+            }
         }
-    }
 
-    if (needApply) {
         this.applyTilemapToScene(grid, tileSize);
 
         this._tilemapAppliedWorldRev = worldRev;
@@ -2059,6 +2182,13 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         this._tilemapAppliedTileSize = tileSize;
 
         g.__tilemapAppliedThemeKey = themeKey;
+    } else if (decorNeedsApply) {
+        try {
+            const decorNS = (globalThis as any).__HeroEnginePhaserDecor;
+            if (decorNS && typeof decorNS.forceResync === "function") {
+                decorNS.forceResync("decor-only");
+            }
+        } catch { /* ignore */ }
     }
 
         if (decorPayload) {
@@ -2069,7 +2199,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
             gAny.__hostFloorIndexApplied = floorIndex | 0;
     }
 
-    if (DEBUG_TILEMAP_MAIN) {
+    if (DEBUG_TILEMAP_MAIN && baseChanged) {
         console.log(">>> [HeroScene.tilemap] host applied tilemap from engine", {
             worldRev,
             floorIndex,
@@ -2122,6 +2252,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         worldRev,
         floorIndex,
         floorKind: (internals.getFloorKind?.() || g.__floorKind || ""),
+        decorOnly: (!baseChanged && !!decorNeedsApply),
         decor: decorPayload || undefined,
     };
 
@@ -2702,6 +2833,8 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
         default: "arcade",
         arcade: { debug: false }
     },
+
+    banner: DEBUG_PHASER_BANNER,
 
     input: {
         gamepad: true,

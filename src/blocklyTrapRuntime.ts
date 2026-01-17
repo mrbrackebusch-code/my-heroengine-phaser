@@ -9,6 +9,7 @@ export interface TrapRunResult {
   value?: unknown;
   errors: string[];
   code?: string;
+  codeLines?: string[];
 }
 
 const TRAP_ENTRY_FN = "trapMain";
@@ -45,12 +46,34 @@ function _buildWorkspaceFromXml(xmlText: string): Blockly.Workspace {
 
 function _collectUsedVariableNames(ws: Blockly.Workspace): Set<string> {
   const used = new Set<string>();
+  const vm: any = (ws as any).getVariableMap?.();
   const blocks = ws.getAllBlocks(false);
   for (let i = 0; i < blocks.length; i++) {
     const b: any = blocks[i];
+    if (b && typeof b.getVarModels === "function") {
+      const models = b.getVarModels() || [];
+      for (let j = 0; j < models.length; j++) {
+        const name = models[j]?.name;
+        if (typeof name === "string" && name) used.add(name);
+      }
+    }
+
     const vars = (b && typeof b.getVars === "function") ? (b.getVars() || []) : [];
     for (let j = 0; j < vars.length; j++) {
-      if (typeof vars[j] === "string") used.add(vars[j]);
+      const v = vars[j];
+      if (typeof v !== "string") continue;
+      const model = vm?.getVariableById?.(v);
+      if (model?.name) used.add(model.name);
+      else used.add(v);
+    }
+
+    const field = b?.getField?.("VAR");
+    if (field) {
+      const text = typeof field.getText === "function" ? field.getText() : "";
+      if (text) used.add(text);
+      const value = typeof field.getValue === "function" ? field.getValue() : "";
+      const model = value ? vm?.getVariableById?.(value) : null;
+      if (model?.name) used.add(model.name);
     }
   }
   return used;
@@ -94,7 +117,7 @@ function _makeInputDecls(spec: TrapSpec): string {
   let out = "";
   for (let i = 0; i < names.length; i++) {
     const n = names[i];
-    out += `const ${n} = inputs[${JSON.stringify(n)}];\n`;
+    out += `var ${n} = inputs[${JSON.stringify(n)}];\n`;
   }
   return out;
 }
@@ -120,8 +143,9 @@ export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>):
   } catch (e) {
     errors.push("Blockly compile failed");
   }
+  const codeLines = code ? code.split("\n") : [];
 
-  if (errors.length > 0) return { ok: false, errors, code };
+  if (errors.length > 0) return { ok: false, errors, code, codeLines };
 
   let value: unknown = undefined;
   try {
@@ -137,5 +161,5 @@ export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>):
   const outRes = validateTrapOutput(spec.output, value);
   if (!outRes.ok) errors.push(...outRes.errors);
 
-  return { ok: errors.length === 0, value, errors, code };
+  return { ok: errors.length === 0, value, errors, code, codeLines };
 }
