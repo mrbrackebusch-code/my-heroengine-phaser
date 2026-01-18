@@ -1,4 +1,6 @@
-// scripts/gen-hero-auras.mjs
+// scripts/genheroauras.mjs
+// Generate aura masks for hero-style sheets (heroes + humanoid enemies).
+// Outputs <name>_aura_r{radius}.png in each parent folder's auras/ subdir.
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
@@ -13,10 +15,16 @@ const SHEET_COLS = 13;
 // Default behavior (toggle here)
 const SKIP_EXISTING = true; // flip to false if you always want rebuilds
 
-const RADIUS = 2;
+const DEFAULT_RADII = [0, 1, 2, 3];
 
 const HERO_DIR = path.join(ROOT, "assets", "heroes");
-const OUT_DIR = path.join(ROOT, "assets", "heroes", "auras");
+const HERO_OUT = path.join(ROOT, "assets", "heroes", "auras");
+const HUMANOID_DIR = path.join(ROOT, "assets", "enemies", "humanoid");
+const HUMANOID_OUT = path.join(ROOT, "assets", "enemies", "humanoid", "auras");
+const INPUTS = [
+  { label: "heroes", dir: HERO_DIR, outDir: HERO_OUT },
+  { label: "humanoid", dir: HUMANOID_DIR, outDir: HUMANOID_OUT },
+];
 
 function _isTruthy(v) {
   if (v === undefined || v === null) return false;
@@ -113,7 +121,7 @@ function writePng(png, filePath) {
   });
 }
 
-function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull) {
+function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull, radius) {
   if (src.width % frameW !== 0 || src.height % frameH !== 0) {
     return { ok: false, reason: `size ${src.width}x${src.height} not divisible by ${frameW}x${frameH}` };
   }
@@ -145,7 +153,7 @@ function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull) {
         }
       }
 
-      const bits = buildDilatedMaskBits(frame, frameW, frameH, RADIUS);
+      const bits = buildDilatedMaskBits(frame, frameW, frameH, radius);
 
       // write frame into out png (white pixels where bit=1)
       for (let y = 0; y < frameH; y++) {
@@ -166,38 +174,70 @@ function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull) {
   return { ok: true, out, rows, cols };
 }
 
-async function main() {
-  ensureDir(OUT_DIR);
+function parseRadii(args) {
+  let radii = DEFAULT_RADII.slice();
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--radius" && i + 1 < args.length) {
+      const v = parseInt(args[i + 1], 10);
+      if (Number.isFinite(v) && v >= 0) radii = [v | 0];
+      i++;
+    } else if (a === "--radii" && i + 1 < args.length) {
+      const list = String(args[i + 1] || "")
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n) && n >= 0)
+        .map((n) => n | 0);
+      if (list.length) radii = list;
+      i++;
+    }
+  }
+  radii = Array.from(new Set(radii)).sort((a, b) => a - b);
+  return radii;
+}
 
-  const heroFiles = listPngs(HERO_DIR);
-  if (heroFiles.length === 0) {
-    console.error(`[gen-auras] No PNGs found in ${HERO_DIR}`);
+async function main() {
+  const radii = parseRadii(process.argv.slice(2));
+  for (const input of INPUTS) ensureDir(input.outDir);
+
+  const batches = INPUTS.map((input) => ({
+    label: input.label,
+    outDir: input.outDir,
+    files: listPngs(input.dir),
+  }));
+  const totalFiles = batches.reduce((sum, b) => sum + b.files.length, 0);
+  if (totalFiles === 0) {
+    console.error(`[gen-auras] No PNGs found in hero inputs.`);
     process.exit(1);
   }
 
   console.log(
-    `[gen-auras] heroes=${heroFiles.length} radius=${RADIUS} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
+    `[gen-auras] heroes=${batches[0]?.files.length ?? 0} humanoid=${batches[1]?.files.length ?? 0} ` +
+    `radii=${radii.join(",")} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
   );
 
-  for (const heroPath of heroFiles) {
-    const baseName = path.basename(heroPath, ".png");
+  for (const batch of batches) {
+    for (const heroPath of batch.files) {
+      const baseName = path.basename(heroPath, ".png");
+      const src = await readPng(heroPath);
 
-    const src = await readPng(heroPath);
-
-    // 64-grid aura
-    const r64 = buildAuraSheetForGrid(src, FRAME_W, FRAME_H, SHEET_COLS);
-    if (!r64.ok) {
-      console.warn(`[gen-auras] SKIP ${baseName} (64): ${r64.reason}`);
-    } else {
-      if (r64.cols !== SHEET_COLS) {
-        console.warn(
-          `[gen-auras] WARN ${baseName} (64): cols=${r64.cols} (expected ${SHEET_COLS}). Continuing anyway.`
-        );
+      for (const radius of radii) {
+        // 64-grid aura
+        const r64 = buildAuraSheetForGrid(src, FRAME_W, FRAME_H, SHEET_COLS, radius);
+        if (!r64.ok) {
+          console.warn(`[gen-auras] SKIP ${baseName} (64): ${r64.reason}`);
+          continue;
+        }
+        if (r64.cols !== SHEET_COLS) {
+          console.warn(
+            `[gen-auras] WARN ${baseName} (64): cols=${r64.cols} (expected ${SHEET_COLS}). Continuing anyway.`
+          );
+        }
+        const outPath64 = path.join(batch.outDir, `${baseName}_aura_r${radius}.png`);
+        if (SKIP_EXISTING && fs.existsSync(outPath64)) continue;
+        await writePng(r64.out, outPath64);
+        console.log(`[gen-auras] wrote ${path.relative(ROOT, outPath64)}`);
       }
-      const outPath64 = path.join(OUT_DIR, `${baseName}_aura_r${RADIUS}.png`);
-    if (SKIP_EXISTING && fs.existsSync(outPath64)) continue;
-      await writePng(r64.out, outPath64);
-      console.log(`[gen-auras] wrote ${path.relative(ROOT, outPath64)}`);
     }
   }
 

@@ -19,6 +19,7 @@ import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
 import { WorldTileRenderer } from "./tileMapGlue";
 
 import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
+import { AURA_RADII } from "./auraConfig";
 
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
@@ -316,25 +317,6 @@ function _hud_getHeroIndexForPid(pid: number): number {
   return ((pid | 0) - 1) | 0;
 }
 
-function _hud_tryRunStudentLogic(heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
-  const g: any = globalThis as any;
-  const HE: any = g.HeroEngine;
-  if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
-
-  const prevPreview = !!g.__heroLogicPreview;
-  try {
-    // If heroLogicHost is updated to respect this flag, it suppresses spam logs.
-    g.__heroLogicPreview = true;
-
-    const out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
-    return Array.isArray(out) ? out : null;
-  } catch (_e) {
-    return null;
-  } finally {
-    g.__heroLogicPreview = prevPreview;
-  }
-}
-
 function _hud_fmtLogicOut(out: any[] | null): string {
   if (!out) return "null";
   const max = 12; // keep line readable; tooltip shows full anyway
@@ -407,6 +389,7 @@ function _hud_getProfileForHero(pid: number, hero: any): string {
   const g: any = globalThis as any;
   const spritesNS: any = g.sprites;
   const direct =
+    _hud_readStr(spritesNS, hero, "__profileKey") ||
     _hud_readStr(spritesNS, hero, "name") ||
     _hud_readStr(spritesNS, hero, "heroName");
   if (direct) return direct;
@@ -567,9 +550,9 @@ function _hud_buildCellsForHero(pid: number, hero: any): {
     };
   }
 
-  const outA = _hud_callStudentLogic(heroIndex, "A");
-  const outB = _hud_callStudentLogic(heroIndex, "B");
-  const outAB = _hud_callStudentLogic(heroIndex, "A+B");
+  const outA = _hud_callStudentLogic(profile, heroIndex, "A");
+  const outB = _hud_callStudentLogic(profile, heroIndex, "B");
+  const outAB = _hud_callStudentLogic(profile, heroIndex, "A+B");
 
   const aFull = _hud_fmtArrayFull(outA);
   const bFull = _hud_fmtArrayFull(outB);
@@ -626,6 +609,14 @@ function _hud_buildHeroesArr(): any[] {
 }
 
 function _hud_resolveHeroIndexForSprite(heroSprite: any): number {
+  const g: any = globalThis as any;
+  const finder = g.__heFindHeroIndexForSprite;
+  if (typeof finder === "function") {
+    try {
+      const hi = finder(heroSprite);
+      if (typeof hi === "number") return hi | 0;
+    } catch {}
+  }
   const heroesArr = _hud_buildHeroesArr();
   for (let i = 0; i < heroesArr.length; i++) {
     if (heroesArr[i] === heroSprite) return i | 0;
@@ -633,17 +624,20 @@ function _hud_resolveHeroIndexForSprite(heroSprite: any): number {
   return -1;
 }
 
-function _hud_callStudentLogic(heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
+function _hud_callStudentLogic(profile: string, _heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
   const g: any = globalThis as any;
-  const HE: any = g.HeroEngine;
-  if (!HE || typeof HE.runHeroLogicForHeroHook !== "function") return null;
+  const fn = g.__heBlocklyHeroLogicRun;
+  if (typeof fn !== "function") return null;
 
   const prev = !!g.__heroLogicPreview;
   try {
-    // (Optional) lets host/student code suppress side effects/log spam if you choose to honor it.
     g.__heroLogicPreview = true;
-
-    const out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+    const setRo = g.__heSetBlocklyROForHeroIndex;
+    if (typeof setRo === "function" && (_heroIndex | 0) >= 0) {
+      try { setRo(_heroIndex | 0); } catch {}
+    }
+    const prof = (typeof profile === "string" && profile.trim()) ? profile.trim() : "Default";
+    const out = fn(prof, button);
     return Array.isArray(out) ? out : null;
   } catch (_e) {
     return null;
@@ -674,9 +668,9 @@ function _hud_buildLineForHero(pid: number, hero: any): { line: string; title: s
   }
 
   // Call student logic exactly like a real press would
-  const outA = _hud_callStudentLogic(heroIndex, "A");
-  const outB = _hud_callStudentLogic(heroIndex, "B");
-  const outAB = _hud_callStudentLogic(heroIndex, "A+B");
+  const outA = _hud_callStudentLogic(profile, heroIndex, "A");
+  const outB = _hud_callStudentLogic(profile, heroIndex, "B");
+  const outAB = _hud_callStudentLogic(profile, heroIndex, "A+B");
 
   const aS = _hud_fmtArrayFull(outA);
   const bS = _hud_fmtArrayFull(outB);
@@ -1591,7 +1585,7 @@ private createLoadingText(): Phaser.GameObjects.Text {
 private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
     // AURA PIPELINE (spritesheet-only)
     // No runtime generation. We only validate required aura textures exist.
-    const AURA_R = 2;
+    const REQUIRED_AURA_RADII = AURA_RADII;
     const parsedSheets = (this.registry.get("__heroParsedSheets") || []) as any[];
 
     const isValid192Sheet = (texKey192: string): boolean => {
@@ -1616,31 +1610,31 @@ private validateHeroAuras(loadingText: Phaser.GameObjects.Text) {
     loadingText.setText("Loading… validating auras");
 
     for (const sheet of parsedSheets) {
-        if (sheet.isEnemy) {
-            // Enemy LPC sheets do not require hero aura textures.
-            continue;
-        }
         const baseKey = sheet.textureKey;
-        const auraBaseKey = `${baseKey}_aura_r${AURA_R}`;
+        for (const radius of REQUIRED_AURA_RADII) {
+            const auraBaseKey = `${baseKey}_aura_r${radius}`;
+
+            if (this.textures.exists(baseKey)) {
+                if (!this.textures.exists(auraBaseKey)) {
+                    throw new Error(
+                        `[AURA-MISSING] Texture not loaded: ${auraBaseKey}. Run: npm run gen-auras`
+                    );
+                }
+                texKeysToUseSet.add(baseKey);
+            }
+        }
 
         const key192 = baseKey + "_192";
-        const auraKey192 = `${key192}_aura_r${AURA_R}`;
-
-        if (this.textures.exists(baseKey)) {
-            if (!this.textures.exists(auraBaseKey)) {
-                throw new Error(
-                    `[AURA-MISSING] Texture not loaded: ${auraBaseKey}. Run: npm run gen-auras`
-                );
-            }
-            texKeysToUseSet.add(baseKey);
-        }
 
         const hasReal192 = isValid192Sheet(key192);
         if (hasReal192) {
-            if (!this.textures.exists(auraKey192)) {
-                throw new Error(
-                    `[AURA-MISSING] Texture not loaded: ${auraKey192}. Run: npm run gen-auras`
-                );
+            for (const radius of REQUIRED_AURA_RADII) {
+                const auraKey192 = `${key192}_aura_r${radius}`;
+                if (!this.textures.exists(auraKey192)) {
+                    throw new Error(
+                        `[AURA-MISSING] Texture not loaded: ${auraKey192}. Run: npm run gen-auras`
+                    );
+                }
             }
             texKeysToUseSet.add(key192);
         }
@@ -2538,9 +2532,6 @@ private async _host_importEngineAndGlue(): Promise<any> {
     if (glue && typeof glue.initHeroEngineHostOverrides === "function") {
         glue.initHeroEngineHostOverrides();
     }
-
-    // 3) Load heroLogicHost (auto-registers <Name>HeroLogic from studentLogicAll)
-    await import("./heroLogicHost");
 
     return engineMod;
 }

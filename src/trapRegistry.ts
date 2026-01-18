@@ -5,6 +5,7 @@ import { generateTrapInstanceById } from "./trapGenerator";
 import {
   BROKEN_NUMBER_TRAP_ID,
   DISASSEMBLED_NUMBER_TRAP_ID,
+  SHRINE_TRAP_ID,
   UNTARGETED_LIST_TRAP_ID,
   UNTARGETED_NUMBER_TRAP_ID,
   UNTARGETED_STRING_TRAP_ID,
@@ -29,6 +30,7 @@ export interface TrapDefinition {
   minFloor?: number;
   maxFloor?: number;
   weight?: number;
+  spawnable?: boolean;
   maxAttempts?: number;
   failCooldownMs?: number;
 }
@@ -52,7 +54,7 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       trapId: BROKEN_NUMBER_TRAP_ID,
       kind: "Broken",
       seedPolicy: "perProp",
-      minFloor: 1,
+      minFloor: 0,
       maxFloor: 100,
       weight: 1,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
@@ -62,7 +64,7 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       trapId: DISASSEMBLED_NUMBER_TRAP_ID,
       kind: "Disassembled",
       seedPolicy: "perProp",
-      minFloor: 1,
+      minFloor: 0,
       maxFloor: 100,
       weight: 1,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
@@ -72,7 +74,7 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       trapId: UNTARGETED_NUMBER_TRAP_ID,
       kind: "Untargeted",
       seedPolicy: "perProp",
-      minFloor: 1,
+      minFloor: 0,
       maxFloor: 100,
       weight: 33,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
@@ -82,7 +84,7 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       trapId: UNTARGETED_STRING_TRAP_ID,
       kind: "Untargeted",
       seedPolicy: "perProp",
-      minFloor: 1,
+      minFloor: 0,
       maxFloor: 100,
       weight: 33,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
@@ -92,9 +94,22 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       trapId: UNTARGETED_LIST_TRAP_ID,
       kind: "Untargeted",
       seedPolicy: "perProp",
-      minFloor: 1,
+      minFloor: 0,
       maxFloor: 100,
       weight: 32,
+      maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
+    },
+  ],
+  shrine: [
+    {
+      propBase: "shrine",
+      trapId: SHRINE_TRAP_ID,
+      kind: "Dormant",
+      seedPolicy: "perProp",
+      minFloor: 0,
+      maxFloor: 0,
+      weight: 1,
+      spawnable: false,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,
     },
   ],
@@ -426,7 +441,7 @@ export function listTrapDefinitionsForFloor(floorIndex: number): TrapDefinition[
   for (const key of Object.keys(_trapDefsByProp)) {
     const list = _trapDefsByProp[key] || [];
     if (!list.length) continue;
-    const filtered = _filterTrapDefsForFloor(list, idx | 0);
+    const filtered = _filterTrapDefsForFloor(list, idx | 0).filter(def => def.spawnable !== false);
     for (let i = 0; i < filtered.length; i++) out.push(filtered[i]);
   }
   return out;

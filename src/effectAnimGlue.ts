@@ -12,6 +12,9 @@ const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
 const LAST_EFFECT_DIR_KEY = "__effectLastDir";
 const MISSING_EFFECT_ONCE = new Set<string>();
+const MISSING_EFFECT_TEX_ONCE = new Set<string>();
+const EFFECT_PENDING_TEX_LOAD = new Set<string>();
+const EFFECT_HIDE_MISSING_TEX_KEY = "__effectHideMissingTex";
 
 function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
     const anyScene = scene as any;
@@ -89,6 +92,43 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         return;
     }
 
+    const texKey = resolved.textureKey;
+    const texExists = !!(texKey && scene.textures && scene.textures.exists(texKey));
+    if (!texExists) {
+        if (!MISSING_EFFECT_TEX_ONCE.has(texKey)) {
+            MISSING_EFFECT_TEX_ONCE.add(texKey);
+            console.error(
+                "[effectAnim] Missing texture for effect",
+                { skin: resolvedId, textureKey: texKey }
+            );
+        }
+
+        try {
+            data.set(EFFECT_HIDE_MISSING_TEX_KEY, 1);
+            sprite.setVisible(false);
+        } catch { }
+
+        if (resolved.url && scene.load && typeof scene.load.spritesheet === "function") {
+            if (!EFFECT_PENDING_TEX_LOAD.has(texKey)) {
+                EFFECT_PENDING_TEX_LOAD.add(texKey);
+                try {
+                    scene.load.spritesheet(texKey, resolved.url, {
+                        frameWidth: resolved.frameW,
+                        frameHeight: resolved.frameH
+                    });
+                } catch { }
+
+                try {
+                    scene.load.once("complete", () => {
+                        EFFECT_PENDING_TEX_LOAD.delete(texKey);
+                    });
+                    if (!scene.load.isLoading()) scene.load.start();
+                } catch { }
+            }
+        }
+        return;
+    }
+
     const lastSkin = data.get(LAST_EFFECT_SKIN_KEY) as string | undefined;
     const lastDir = data.get(LAST_EFFECT_DIR_KEY) as string | undefined;
     const lastAnim = data.get(LAST_EFFECT_ANIM_KEY) as string | undefined;
@@ -131,6 +171,14 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         played = true;
     } catch { }
 
+    const hidMissing = !!data.get(EFFECT_HIDE_MISSING_TEX_KEY);
+    if (hidMissing) {
+        try {
+            data.set(EFFECT_HIDE_MISSING_TEX_KEY, 0);
+            sprite.setVisible(true);
+        } catch { }
+    }
+
     if (DEBUG_EFFECT_ANIMS) {
         const curAnim = sprite.anims ? sprite.anims.currentAnim : null;
         console.log("[effectAnim] apply", {
@@ -138,6 +186,7 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
             dir: dirKey,
             animKey,
             textureKey: resolved.textureKey,
+            texExists,
             frameCount: resolved.frameIndices.length,
             fps: frameRate,
             repeat,

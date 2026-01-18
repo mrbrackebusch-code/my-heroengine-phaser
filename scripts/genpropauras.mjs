@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // scripts/genpropauras.mjs
 // Generate aura mask sheets for tiles and props.
-// Output files keep the "_aura_r2" suffix for loader compatibility.
-// The mask itself is the sprite silhouette; outline expansion is handled at runtime.
+// Output files keep the "_aura_r{radius}" suffix for loader compatibility.
+// The mask is the sprite silhouette; expansion is precomputed per radius.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -14,8 +14,7 @@ const PROPS_DIR = path.join(ROOT, "assets", "props");
 const OUT_TILES_DIR = path.join(ROOT, "assets", "tiles", "auras");
 const OUT_PROPS_DIR = path.join(ROOT, "assets", "props", "auras");
 
-const OUT_SUFFIX = "_aura_r2";
-const DEFAULT_PROP_FRAME = 64;
+const DEFAULT_RADII = [0, 1, 2, 3];
 
 function _isTruthy(v) {
   if (v === undefined || v === null) return false;
@@ -36,7 +35,8 @@ Options:
   --overwrite, --force   Rebuild even if the aura already exists.
   --skip-existing        Skip existing aura files (default).
   --check                Only report missing outputs (exit code 1 if missing).
-  --radius N             Dilate mask by N pixels (default 0).
+  --radius N             Generate only radius N (overrides --radii).
+  --radii a,b,c          Generate multiple radii (default ${DEFAULT_RADII.join(",")}).
   --tiles                Process tiles only.
   --props                Process props only.
   --anims                Alias for --props (deprecated).
@@ -94,6 +94,28 @@ function loadAnimOverrides() {
     out[name] = { frameW, frameH };
   }
   return out;
+}
+
+function parseRadii(args) {
+  let radii = DEFAULT_RADII.slice();
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--radius" && i + 1 < args.length) {
+      const v = parseInt(args[i + 1], 10);
+      if (Number.isFinite(v) && v >= 0) radii = [v | 0];
+      i++;
+    } else if (a === "--radii" && i + 1 < args.length) {
+      const list = String(args[i + 1] || "")
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n) && n >= 0)
+        .map((n) => n | 0);
+      if (list.length) radii = list;
+      i++;
+    }
+  }
+  radii = Array.from(new Set(radii)).sort((a, b) => a - b);
+  return radii;
 }
 
 function buildDilatedMaskBits(mask, frameW, frameH, r) {
@@ -189,10 +211,11 @@ async function main() {
   if (_isFalsy(process.env.SKIP_EXISTING)) skipExisting = false;
 
   let checkOnly = false;
-  let radius = 0;
   let wantTiles = true;
   let wantProps = true;
   let verbose = false;
+
+  const radii = parseRadii(args);
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -203,11 +226,6 @@ async function main() {
     else if (a === "--props") { wantProps = true; wantTiles = false; }
     else if (a === "--anims") { wantProps = true; wantTiles = false; }
     else if (a === "--verbose") verbose = true;
-    else if (a === "--radius" && i + 1 < args.length) {
-      const v = parseInt(args[i + 1], 10);
-      if (Number.isFinite(v) && v >= 0) radius = v | 0;
-      i++;
-    }
   }
 
   if (checkOnly) skipExisting = true;
@@ -221,20 +239,6 @@ async function main() {
     const tiles = listPngs(TILES_DIR);
     for (const file of tiles) {
       const base = path.basename(file, ".png");
-      const outPath = path.join(OUT_TILES_DIR, `${base}${OUT_SUFFIX}.png`);
-      const exists = fs.existsSync(outPath);
-      if (checkOnly) {
-        if (!exists) {
-          missing++;
-          console.log(`[prop-auras][MISS][tile] ${path.relative(ROOT, outPath)}`);
-        }
-        continue;
-      }
-      if (skipExisting && exists) {
-        skipped++;
-        if (verbose) console.log(`[prop-auras][SKIP][tile] ${path.relative(ROOT, outPath)}`);
-        continue;
-      }
       let src;
       try {
         src = readPng(file);
@@ -242,19 +246,35 @@ async function main() {
         console.warn(`[prop-auras][SKIP][tile] ${base}: read failed (${e})`);
         continue;
       }
-      const r = buildAuraSheetForGrid(src, 32, 32, radius);
-      if (!r.ok) {
-        console.warn(`[prop-auras][SKIP][tile] ${base}: ${r.reason}`);
-        continue;
+      for (const radius of radii) {
+        const outPath = path.join(OUT_TILES_DIR, `${base}_aura_r${radius}.png`);
+        const exists = fs.existsSync(outPath);
+        if (checkOnly) {
+          if (!exists) {
+            missing++;
+            console.log(`[prop-auras][MISS][tile] ${path.relative(ROOT, outPath)}`);
+          }
+          continue;
+        }
+        if (skipExisting && exists) {
+          skipped++;
+          if (verbose) console.log(`[prop-auras][SKIP][tile] ${path.relative(ROOT, outPath)}`);
+          continue;
+        }
+        const r = buildAuraSheetForGrid(src, 32, 32, radius);
+        if (!r.ok) {
+          console.warn(`[prop-auras][SKIP][tile] ${base}: ${r.reason}`);
+          continue;
+        }
+        if (r.cropped) {
+          console.warn(
+            `[prop-auras][WARN][tile] ${base}: source ${r.srcW}x${r.srcH} not divisible by 32x32; cropped to ${r.outW}x${r.outH}`
+          );
+        }
+        writePng(r.out, outPath);
+        wrote++;
+        if (verbose) console.log(`[prop-auras][WROTE][tile] ${path.relative(ROOT, outPath)}`);
       }
-      if (r.cropped) {
-        console.warn(
-          `[prop-auras][WARN][tile] ${base}: source ${r.srcW}x${r.srcH} not divisible by 32x32; cropped to ${r.outW}x${r.outH}`
-        );
-      }
-      writePng(r.out, outPath);
-      wrote++;
-      if (verbose) console.log(`[prop-auras][WROTE][tile] ${path.relative(ROOT, outPath)}`);
     }
   }
 
@@ -278,21 +298,6 @@ async function main() {
       }
 
       const outDir = propsOutDir();
-      const outPath = path.join(outDir, `${base}${OUT_SUFFIX}.png`);
-      const exists = fs.existsSync(outPath);
-      if (checkOnly) {
-        if (!exists) {
-          missing++;
-          console.log(`[prop-auras][MISS][prop] ${path.relative(ROOT, outPath)}`);
-        }
-        continue;
-      }
-      if (skipExisting && exists) {
-        skipped++;
-        if (verbose) console.log(`[prop-auras][SKIP][prop] ${path.relative(ROOT, outPath)}`);
-        continue;
-      }
-
       let src;
       try {
         src = readPng(file);
@@ -300,19 +305,36 @@ async function main() {
         console.warn(`[prop-auras][SKIP][prop] ${base}: read failed (${e})`);
         continue;
       }
-      const r = buildAuraSheetForGrid(src, frame.frameW | 0, frame.frameH | 0, radius);
-      if (!r.ok) {
-        console.warn(`[prop-auras][SKIP][prop] ${base}: ${r.reason}`);
-        continue;
+
+      for (const radius of radii) {
+        const outPath = path.join(outDir, `${base}_aura_r${radius}.png`);
+        const exists = fs.existsSync(outPath);
+        if (checkOnly) {
+          if (!exists) {
+            missing++;
+            console.log(`[prop-auras][MISS][prop] ${path.relative(ROOT, outPath)}`);
+          }
+          continue;
+        }
+        if (skipExisting && exists) {
+          skipped++;
+          if (verbose) console.log(`[prop-auras][SKIP][prop] ${path.relative(ROOT, outPath)}`);
+          continue;
+        }
+        const r = buildAuraSheetForGrid(src, frame.frameW | 0, frame.frameH | 0, radius);
+        if (!r.ok) {
+          console.warn(`[prop-auras][SKIP][prop] ${base}: ${r.reason}`);
+          continue;
+        }
+        if (r.cropped) {
+          console.warn(
+            `[prop-auras][WARN][prop] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; cropped to ${r.outW}x${r.outH}`
+          );
+        }
+        writePng(r.out, outPath);
+        wrote++;
+        if (verbose) console.log(`[prop-auras][WROTE][prop] ${path.relative(ROOT, outPath)}`);
       }
-      if (r.cropped) {
-        console.warn(
-          `[prop-auras][WARN][prop] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; cropped to ${r.outW}x${r.outH}`
-        );
-      }
-      writePng(r.out, outPath);
-      wrote++;
-      if (verbose) console.log(`[prop-auras][WROTE][prop] ${path.relative(ROOT, outPath)}`);
     }
   }
 
@@ -330,7 +352,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`[prop-auras] wrote=${wrote} skipped=${skipped} radius=${radius}`);
+  console.log(`[prop-auras] wrote=${wrote} skipped=${skipped} radii=${radii.join(",")}`);
 }
 
 main().catch((e) => {

@@ -3,6 +3,7 @@
 // Shopkeeper Wizard: https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#sex=teen&body=Body_color_fur_tan&head=Human_male_fur_tan&expression=Closing_Eyes_fur_tan&furry_ears=Wolf_Ears_fur_tan&nose=Straight_nose_fur_tan&eyebrows=Thin_Eyebrows_black&hair=Cornrows_light%20brown&sleeves=Original_Shortsleeves_Overlay_black&clothes=TShirt_Buttoned_red&cape=Tattered_lavender&belt=Leather_Belt_charcoal&legs=Cuffed_Pants_gray&shoes=Basic_Shoes_white&shoes_toe=Plated_Toe_gold&weapon=Gnarled_staff_silver
 // 
 import type Phaser from "phaser";
+import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
 
 export type HeroDir = "up" | "down" | "left" | "right";
 
@@ -242,10 +243,10 @@ export function setHeroAnimDebugSectionFlag(
 // ----------------------------------------------------------
 
 
-const heroAuraPngs = import.meta.glob(
-    "../assets/heroes/auras/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
+const heroAuraPngs = {
+    ...import.meta.glob("../assets/heroes/auras/*.png", { as: "url", eager: true }),
+    ...import.meta.glob("../assets/enemies/humanoid/auras/*.png", { as: "url", eager: true })
+} as Record<string, string>;
 
 
 
@@ -267,7 +268,7 @@ interface ParsedHeroSheet {
     textureKey: string;
     /** URL from Vite */
     url: string;
-    /** Enemy sheet (no required aura) */
+    /** Enemy sheet (humanoid LPC) */
     isEnemy?: boolean;
 }
 
@@ -431,39 +432,39 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
     }
 
     for (const sheet of parsedSheets) {
-        // --------------------------
-        // REQUIRED 64×64 aura sheet
-        // --------------------------
-        const auraBase64 = `${sheet.id}_aura_r2`;
-        const auraUrl64 = auraUrlById.get(auraBase64);
-        if (!auraUrl64) {
-            if (sheet.isEnemy) {
-                heroLog(scene, "discoverSheets", `[heroAtlas.preloadHeroSheets] no aura for enemy sheet ${sheet.id}`);
-                continue;
+        const auraFolder = sheet.isEnemy ? "assets/enemies/humanoid/auras" : "assets/heroes/auras";
+
+        for (const radius of AURA_RADII) {
+            // --------------------------
+            // REQUIRED 64×64 aura sheet
+            // --------------------------
+            const auraBase64 = `${sheet.id}${auraSuffix(radius)}`;
+            const auraUrl64 = auraUrlById.get(auraBase64);
+            if (!auraUrl64) {
+                throw new Error(
+                    `[AURA-MISSING] Missing aura spritesheet for ${sheet.id} (r${radius}). ` +
+                    `Expected ${auraFolder}/${auraBase64}.png. ` +
+                    `Run: npm run gen-auras`
+                );
             }
-            throw new Error(
-                `[AURA-MISSING] Missing aura spritesheet for ${sheet.id}. ` +
-                `Expected assets/heroes/auras/${auraBase64}.png. ` +
-                `Run: npm run gen-auras`
-            );
-        }
 
-        scene.load.spritesheet(`${sheet.textureKey}_aura_r2`, auraUrl64, {
-            frameWidth: HERO_FRAME_W,
-            frameHeight: HERO_FRAME_H
-        });
-
-        // --------------------------
-        // OPTIONAL 192×192 aura sheet
-        // (only load if present on disk)
-        // --------------------------
-        const auraBase192 = `${sheet.id}_192_aura_r2`;
-        const auraUrl192 = auraUrlById.get(auraBase192);
-        if (auraUrl192) {
-            scene.load.spritesheet(`${sheet.textureKey}_192_aura_r2`, auraUrl192, {
-                frameWidth: HERO_OVERSIZE_FRAME_W,
-                frameHeight: HERO_OVERSIZE_FRAME_H
+            scene.load.spritesheet(auraKey(sheet.textureKey, radius), auraUrl64, {
+                frameWidth: HERO_FRAME_W,
+                frameHeight: HERO_FRAME_H
             });
+
+            // --------------------------
+            // OPTIONAL 192×192 aura sheet
+            // (only load if present on disk)
+            // --------------------------
+            const auraBase192 = `${sheet.id}_192${auraSuffix(radius)}`;
+            const auraUrl192 = auraUrlById.get(auraBase192);
+            if (auraUrl192) {
+                scene.load.spritesheet(auraKey(`${sheet.textureKey}_192`, radius), auraUrl192, {
+                    frameWidth: HERO_OVERSIZE_FRAME_W,
+                    frameHeight: HERO_OVERSIZE_FRAME_H
+                });
+            }
         }
     }
 }

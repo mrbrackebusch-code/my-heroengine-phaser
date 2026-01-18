@@ -50,7 +50,7 @@ const SESSION_TOKEN_PROFILE_KEY = "heroTokenProfile_v1";
 const SESSION_TAB_ID_KEY = "heroTabId_v1";
 const SESSION_TAB_CLAIM_PREFIX = "heroTabClaim_v1:";
 
-// Must match heroLogicHost.ts registered keys
+// Known profile keys for legacy/demo compatibility (non-authoritative).
 const KNOWN_PROFILE_KEYS = new Set<string>(["Chris", "Demo", "Jason", "Kyle"]);
 
 

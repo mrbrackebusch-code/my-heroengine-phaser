@@ -11,7 +11,8 @@
     "gen-auras": "node scripts/genheroauras.mjs",
     "gen-monster-auras": "node scripts/genmonsterauras.mjs",
     "gen-monster-feet": "node scripts/genMonsterAuraFeet.mjs",
-    "gen-prop-auras": "node scripts/genpropauras.mjs --overwrite"
+    "gen-prop-auras": "node scripts/genpropauras.mjs --overwrite",
+    "check-effects": "node scripts/checkeffects.mjs"
   },
   "devDependencies": {
     "pngjs": "^7.0.0",

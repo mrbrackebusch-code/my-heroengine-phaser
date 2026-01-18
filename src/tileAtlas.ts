@@ -1,6 +1,7 @@
 // tileAtlas.ts
 import type Phaser from "phaser";
 import { DEBUG_TILE_ATLAS_GLOBAL, DEBUG_TILES } from "./debugFlags";
+import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
 
 // ---------------------------------------------------------------------------
 // Tile / terrain data
@@ -135,6 +136,8 @@ export interface DecorVisualRef {
     // If true, allow inset auras without forcing a box ring.
     focusAuraAllowInset?: boolean;
     auraAllowInset?: boolean;
+    // If true, use heroAnimGlue's true outline for focus (not tiled aura).
+    focusAuraUseOutline?: boolean;
 
     // Optional depth offset applied after y-sort (use negative to force behind).
     depthBias?: number;
@@ -246,8 +249,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     chest: {
         atlas: "build_atlas",
         ref: { row: 21, col: 15 },
-        focusAuraPadPx: 4,
-        focusAuraPadAlways: true,
+        focusAuraAllowInset: true,
         anim: {
             key: "unusedForStates",
             states: {
@@ -278,6 +280,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         atlas: "anims.Shrine 32x64",
         ref: { row: 0, col: 0 },
         offsetYPx: -16,
+        focusAuraUseOutline: true,
         overlay: {
             frameIndex: 1,
             depthBias: 1,
@@ -830,6 +833,8 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         );
     }
 
+    const missingAuras: string[] = [];
+
     for (const sheet of TILE_SHEETS) {
         // Base sheet
         __SHEET_URL_BY_KEY.set(sheet.textureKey, sheet.url);
@@ -842,25 +847,19 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         const texKey = sheet.textureKey;
         const isAnim = texKey.startsWith("anims.");
         const baseName = texKey.replace(/^tiles\./, "").replace(/^anims\./, "");
-        const auraBase = `${baseName}_aura_r2`;
 
-        let auraUrl: string | undefined;
-        let shouldLogMissing = false;
+        for (const radius of AURA_RADII) {
+            const auraBase = `${baseName}${auraSuffix(radius)}`;
+            const auraUrl = isAnim ? propAuraById.get(auraBase) : auraUrlById.get(auraBase);
+            if (!auraUrl) {
+                const folder = isAnim ? "assets/props/auras" : "assets/tiles/auras";
+                missingAuras.push(`${texKey} -> ${folder}/${auraBase}.png`);
+                continue;
+            }
 
-        if (isAnim) {
-            auraUrl = propAuraById.get(auraBase);
-            shouldLogMissing = propAuraById.size > 0;
-        } else {
-            auraUrl = auraUrlById.get(auraBase);
-            shouldLogMissing = true;
-        }
+            const auraTexKey = auraKey(texKey, radius);
 
-        if (auraUrl) {
-            const auraTexKey = `${texKey}_aura_r2`;
-
-            // Aura sheet
             __SHEET_URL_BY_KEY.set(auraTexKey, auraUrl);
-
             scene.load.spritesheet(auraTexKey, auraUrl, {
                 frameWidth: sheet.frameW | 0,
                 frameHeight: sheet.frameH | 0
@@ -869,9 +868,15 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             if (DEBUG_TILES) {
                 logTiles("[tileAtlas.preload] aura loaded", { texKey, auraTexKey, auraUrl });
             }
-        } else if (DEBUG_TILES && shouldLogMissing && (isAnim || auraUrlById.size > 0)) {
-            logTiles(`[tileAtlas.preload] missing aura for ${texKey} (${auraBase})`);
         }
+    }
+
+    if (missingAuras.length > 0) {
+        throw new Error(
+            "[AURA-MISSING] Missing tile/prop aura sheets:\n" +
+            missingAuras.map((m) => `  - ${m}`).join("\n") +
+            "\nRun: npm run gen-prop-auras"
+        );
     }
 }
 
@@ -920,21 +925,23 @@ function _registerAuraSheetInfos(
     sheetInfoByKey: Map<string, TileSheetInfo>
 ): void {
     for (const sh of TILE_SHEETS) {
-        const auraKey = `${sh.textureKey}_aura_r2`;
+        for (const radius of AURA_RADII) {
+            const auraTexKey = auraKey(sh.textureKey, radius);
 
-        const texExists = !!((scene as any)?.textures?.exists?.(auraKey));
-        if (!texExists) continue;
+            const texExists = !!((scene as any)?.textures?.exists?.(auraTexKey));
+            if (!texExists) continue;
 
-        const info = _computeSheetInfoFromLoadedTexture(
-            scene,
-            auraKey,
-            sh.frameW | 0,
-            sh.frameH | 0,
-            sh.cols | 0,
-            sh.rows | 0
-        );
+            const info = _computeSheetInfoFromLoadedTexture(
+                scene,
+                auraTexKey,
+                sh.frameW | 0,
+                sh.frameH | 0,
+                sh.cols | 0,
+                sh.rows | 0
+            );
 
-        if (info) sheetInfoByKey.set(auraKey, info);
+            if (info) sheetInfoByKey.set(auraTexKey, info);
+        }
     }
 }
 

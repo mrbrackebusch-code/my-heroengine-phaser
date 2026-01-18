@@ -70,7 +70,7 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       action: "prop",
     },
     placement: {
-      floorKinds: ["combat"],
+      floorKinds: ["combat", "entrance"],
     },
     directions: {
       defaultState: "idle",

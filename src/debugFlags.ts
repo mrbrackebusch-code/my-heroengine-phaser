@@ -81,8 +81,9 @@ export const DEBUG_STATUE_PEDESTAL = false;
 
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
 export const DEBUG_DUNGEON_LOGS = false;
-export const DEBUG_FOCUS_LOGS = false;
+export const DEBUG_FOCUS_LOGS = true;
 export const DEBUG_INTERACT_LOGS = true; // General interact pipeline (props/NPC).
+export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
 export const DEBUG_PROP_INTERACT_LOGS = true; // Prop-specific interact/dispatch logs.
 export const DEBUG_TRAP_LOGS = true; // Trap prompt + trap effect logs.
 export const DEBUG_TRAP_FORCE_ID = ""; // Force a specific trap spec id (overrides registry).

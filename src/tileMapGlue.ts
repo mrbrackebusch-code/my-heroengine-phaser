@@ -7,6 +7,8 @@ import {
   DECAL_VISUALS_BY_NAME,
   PROP_VISUALS_BY_NAME,
 } from "./tileAtlas";
+import { DEFAULT_AURA_RADIUS, auraKey } from "./auraConfig";
+import * as heroAnimGlue from "./heroAnimGlue";
 import {
   DEBUG_PROP_FOCUS_AURA,
   DEBUG_PROP_FOCUS_AURA_BLINK,
@@ -61,15 +63,9 @@ const TILE_LAYER_DEPTH_DECALS = -997000;
 // "aura" tilesheet underneath the prop when it is in focus.
 //
 // Naming convention (auto-resolved):
-//   <propTextureKey> + one of these suffixes
-// Example:
-//   tiles.props -> tiles.props_aura
-const PROP_FOCUS_AURA_TEXTURE_SUFFIXES = [
-  "_aura_r2",
-  "_aura",
-  "_outline",
-  "_hl",
-] as const;
+//   <propTextureKey> + "_aura_r{radius}"
+const PROP_FOCUS_AURA_USE_TILED = false; // use heroAnimGlue true outline instead of tile-based aura
+const PROP_FOCUS_AURA_RADIUS = DEFAULT_AURA_RADIUS;
 
 // Scale tuning:
 // - We always scale the outline up slightly so it is visible even if the
@@ -2068,6 +2064,20 @@ tryGetPropDisplayAt(r: number, c: number): any | null {
   return (objs && objs.length) ? (objs[0] || null) : null;
 }
 
+/** Return all Phaser display objects for the prop at anchor tile r,c (best-effort). */
+tryGetPropDisplaysAtAnchor(anchorR: number, anchorC: number): any[] | null {
+  const anyThis: any = this as any;
+  const instByAnchor: any = anyThis.__propInstancesByAnchor || null;
+  if (!instByAnchor) return null;
+
+  const k = String((anchorR | 0)) + "," + String((anchorC | 0));
+  const inst: any = instByAnchor[k];
+  if (!inst) return null;
+
+  const objs: any[] | null = Array.isArray(inst.objs) ? inst.objs : null;
+  return (objs && objs.length) ? objs : null;
+}
+
 /**
  * Show/hide a prop's optional overlay at tile r,c.
  *
@@ -2241,6 +2251,43 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         delete cache[anchorKey];
       }
     } catch { /* ignore */ }
+  }
+
+  if (!PROP_FOCUS_AURA_USE_TILED) {
+    const objs: any[] = Array.isArray(inst.objs) ? inst.objs : [];
+    if (!objs.length) return false;
+
+    const isActive = !!active;
+    const tint = (opts && typeof opts.tint === "number") ? (opts.tint | 0) : null;
+    const auraAlpha = isActive ? _propFocusAuraPulseAlpha(this.scene, now, opts) : 0;
+    const blendFallback = (((Phaser as any)?.BlendModes?.NORMAL ?? 0) | 0);
+    const blendResolved = _resolveAuraBlendMode(opts?.blendMode, blendFallback);
+
+    let updated = false;
+    for (let i = 0; i < objs.length; i++) {
+      const propObj: any = objs[i];
+      if (!propObj) continue;
+      updated = true;
+      if (!isActive) {
+        try { (propObj as any).__propOutlineOverrideActive = 0; } catch { /* ignore */ }
+        heroAnimGlue.syncOutlineForNative(propObj, false, 1, radius, depthBias);
+        continue;
+      }
+
+      try { (propObj as any).__propOutlineOverrideActive = 1; } catch { /* ignore */ }
+      heroAnimGlue.syncOutlineForNative(propObj, true, 1, radius, depthBias);
+
+      const outlineImg: any = (propObj as any).__focusOutlineImage;
+      if (outlineImg && outlineImg.scene) {
+        try { outlineImg.setAlpha?.(auraAlpha); } catch { /* ignore */ }
+        if (tint != null) {
+          try { outlineImg.setTint?.(tint); } catch { /* ignore */ }
+        }
+        try { outlineImg.setBlendMode?.(blendResolved); } catch { /* ignore */ }
+      }
+    }
+
+    return updated;
   }
 
     try {
@@ -3436,34 +3483,33 @@ private _propCreateDisplayObj(args: {
 
 
 private _propResolveFocusAuraTextureKey(propTextureKey: string, vis: any): string | null {
+  const resolveKey = (raw: string): string | null => {
+    const tk = this.atlas.resolveAtlasTextureKey(raw.trim());
+    if (this.atlas.getSheetInfo(tk)) return tk;
+    const auraTk = auraKey(tk, PROP_FOCUS_AURA_RADIUS);
+    if (this.atlas.getSheetInfo(auraTk)) return auraTk;
+    return null;
+  };
+
   // 1) Explicit override (either a full textureKey or an alias supported by tileAtlas)
   const explicit = (vis?.auraTextureKey ?? vis?.focusAuraTextureKey ?? "") as any;
   if (explicit && typeof explicit === "string" && explicit.trim()) {
-    const tk = this.atlas.resolveAtlasTextureKey(explicit.trim());
-    if (this.atlas.getSheetInfo(tk)) return tk;
+    const tk = resolveKey(explicit);
+    if (tk) return tk;
   }
 
   const alias = (vis?.auraAtlas ?? vis?.focusAuraAtlas ?? "") as any;
   if (alias && typeof alias === "string" && alias.trim()) {
-    const tk = this.atlas.resolveAtlasTextureKey(alias.trim());
-    if (this.atlas.getSheetInfo(tk)) return tk;
+    const tk = resolveKey(alias);
+    if (tk) return tk;
   }
 
-  // 2) Convention: propTextureKey + suffix
-  for (const suf of PROP_FOCUS_AURA_TEXTURE_SUFFIXES) {
-    const tk = String(propTextureKey) + String(suf);
-    if (this.atlas.getSheetInfo(tk)) return tk;
-  }
-
-  // 3) Convention: tiles.<name> -> tiles.<name>_aura (etc)
-  // (already covered by suffix list, but keep a safe fallback for weird keys)
+  // 2) Convention: <propTextureKey> + "_aura_r{radius}"
   const base = String(propTextureKey || "");
-  if (base.startsWith("tiles.")) {
-    const name = base.slice("tiles.".length);
-    for (const suf of PROP_FOCUS_AURA_TEXTURE_SUFFIXES) {
-      const tk = `tiles.${name}${suf}`;
-      if (this.atlas.getSheetInfo(tk)) return tk;
-    }
+  if (base) {
+    const baseTk = this.atlas.resolveAtlasTextureKey(base);
+    const auraTk = auraKey(baseTk, PROP_FOCUS_AURA_RADIUS);
+    if (this.atlas.getSheetInfo(auraTk)) return auraTk;
   }
 
   if (!__warnedMissingPropAuraSheet[propTextureKey]) {
@@ -3498,6 +3544,8 @@ private _propCreateFocusAuraContainer(args: {
 }): { cont: any; baseScale: number; auraTextureKey: string; auraPngUrl: string; frameIndices: number[]; children: any[] } | null {
   const { st, anchorR, anchorC, baseName, vis, textureKey, baseRef, wTiles, hTiles, ox, oy, baseDepth } = args;
 
+  if (!PROP_FOCUS_AURA_USE_TILED) return null;
+
   let auraTk = this._propResolveFocusAuraTextureKey(textureKey, vis);
 
   const tile = (st.tileSize | 0);
@@ -3521,39 +3569,11 @@ private _propCreateFocusAuraContainer(args: {
   );
 
   if (!auraTk) {
-    const cont = this.scene.add.container(0, 0);
-    cont.setVisible(false);
-    try { (cont as any).setScale?.(baseScale); } catch { /* ignore */ }
-    try { (cont as any).cameraFilter = 0; } catch { /* ignore */ }
-
-    const padPx =
-      (typeof (vis as any)?.focusAuraPadPx === "number")
-        ? ((vis as any).focusAuraPadPx | 0)
-        : (typeof (vis as any)?.auraPadPx === "number")
-          ? ((vis as any).auraPadPx | 0)
-          : (PROP_FOCUS_AURA_FULL_OPAQUE_PAD_PX | 0);
-
-    const wPx = Math.max(1, ((Math.max(1, wTiles | 0) * tile) + (padPx * 2)) | 0);
-    const hPx = Math.max(1, ((Math.max(1, hTiles | 0) * tile) + (padPx * 2)) | 0);
-
-    const rect = this.scene.add.rectangle(centerX, centerY, wPx, hPx, 0xffffff, 0);
-    rect.setOrigin(0.5, 0.5);
-    rect.setVisible(false);
-    try { rect.setStrokeStyle(2, 0xffffff, 1); } catch { /* ignore */ }
-    try { (rect as any).__auraIsEdge = true; } catch { /* ignore */ }
-    try { (rect as any).cameraFilter = 0; } catch { /* ignore */ }
-
-    (st.anyThis.__propImgs as any[]).push(rect);
-    (st.anyThis.__propImgs as any[]).push(cont);
-
-    return {
-      cont,
-      baseScale,
-      auraTextureKey: textureKey,
-      auraPngUrl: "",
-      frameIndices: [],
-      children: [rect],
-    };
+    const missing = auraKey(textureKey, PROP_FOCUS_AURA_RADIUS);
+    throw new Error(
+      `[AURA-MISSING] Missing prop focus aura for ${baseName || textureKey}. ` +
+      `Expected ${missing}. Run: npm run gen-prop-auras`
+    );
   }
 
   const override =

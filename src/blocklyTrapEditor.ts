@@ -15,12 +15,36 @@ const SOLUTION_ID = "he-trap-blockly-solution";
 const ANCHOR_BTN_ID = "he-trap-blockly-anchor";
 const RESIZE_ID = "he-trap-blockly-resize";
 const TOOLBOX_BTN_ID = "he-trap-blockly-toggle-toolbox";
+const STYLE_BTN_ID = "he-trap-blockly-style";
 
 type TrapAnchor = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 const TRAP_ANCHORS: TrapAnchor[] = ["bottom-right", "bottom-left", "top-right", "top-left"];
 const DEFAULT_ANCHOR: TrapAnchor = "bottom-right";
 const DEFAULT_SIZE = { width: 520, height: 360 };
 const MIN_SIZE = { width: 320, height: 220 };
+
+type TrapBlocklyStyle = "normal" | "apcsp";
+const DEFAULT_STYLE: TrapBlocklyStyle = "normal";
+const TRAP_STYLE_OVERRIDES: Record<TrapBlocklyStyle, Record<string, string>> = {
+  normal: {
+    CONTROLS_WHILEUNTIL_OPERATOR_WHILE: "while",
+    CONTROLS_WHILEUNTIL_OPERATOR_UNTIL: "until",
+  },
+  apcsp: {
+    VARIABLES_SET: "%1 <-- %2",
+    CONTROLS_WHILEUNTIL_OPERATOR_WHILE: "repeat while",
+    CONTROLS_WHILEUNTIL_OPERATOR_UNTIL: "repeat until",
+    TEXT_PRINT_TITLE: "DISPLAY %1",
+    TEXT_PROMPT_TYPE_TEXT: "INPUT text",
+    TEXT_PROMPT_TYPE_NUMBER: "INPUT number",
+  },
+};
+const TRAP_STYLE_KEYS = Array.from(new Set([
+  ...Object.keys(TRAP_STYLE_OVERRIDES.normal),
+  ...Object.keys(TRAP_STYLE_OVERRIDES.apcsp),
+]));
+const _trapStyleBase: Record<string, string> = {};
+let _trapStyleBaseReady = false;
 
 const TRAP_TOOLBOX_BASE: any = {
   kind: "categoryToolbox",
@@ -95,6 +119,7 @@ const TRAP_TOOLBOX_BASE: any = {
         { kind: "block", type: "text_join" },
         { kind: "block", type: "text_length" },
         { kind: "block", type: "text_print" },
+        { kind: "block", type: "text_prompt_ext" },
       ],
     },
     {
@@ -137,6 +162,17 @@ function _getUiState(): { anchor: TrapAnchor; width: number; height: number; too
   return { anchor, width, height, toolboxHidden };
 }
 
+function _getTrapStyle(): TrapBlocklyStyle {
+  const g: any = (globalThis as any);
+  const raw = g.__heTrapBlocklyStyle;
+  return raw === "apcsp" ? "apcsp" : DEFAULT_STYLE;
+}
+
+function _setTrapStyle(style: TrapBlocklyStyle): void {
+  const g: any = (globalThis as any);
+  g.__heTrapBlocklyStyle = style;
+}
+
 function _setUiState(next: { anchor?: TrapAnchor; width?: number; height?: number; toolboxHidden?: boolean }): void {
   const g: any = (globalThis as any);
   if (next.anchor) g.__heTrapBlocklyAnchor = next.anchor;
@@ -157,6 +193,10 @@ function _anchorLabel(anchor: TrapAnchor): string {
     case "bottom-right": return "Corner: BR";
     default: return "Corner";
   }
+}
+
+function _styleLabel(style: TrapBlocklyStyle): string {
+  return style === "apcsp" ? "Style: AP CSP" : "Style: Normal";
 }
 
 function _toolboxLabel(hidden: boolean): string {
@@ -206,6 +246,47 @@ function _applyToolboxVisibility(overlay: HTMLElement, hidden: boolean): void {
   if (_workspace) {
     try { (_workspace as any).resizeContents?.(); } catch {}
     try { Blockly.svgResize(_workspace); } catch {}
+  }
+}
+
+function _applyReadOnlyUi(overlay: HTMLElement, readOnly: boolean): void {
+  const applyBtn = overlay.querySelector("#he-trap-blockly-apply") as HTMLButtonElement | null;
+  const resetBtn = overlay.querySelector("#he-trap-blockly-reset") as HTMLButtonElement | null;
+  const toolboxBtn = overlay.querySelector(`#${TOOLBOX_BTN_ID}`) as HTMLButtonElement | null;
+  if (applyBtn) applyBtn.style.display = readOnly ? "none" : "";
+  if (resetBtn) resetBtn.style.display = readOnly ? "none" : "";
+  if (toolboxBtn) toolboxBtn.style.display = readOnly ? "none" : "";
+}
+
+function _captureTrapStyleBase(): void {
+  if (_trapStyleBaseReady) return;
+  for (let i = 0; i < TRAP_STYLE_KEYS.length; i++) {
+    const key = TRAP_STYLE_KEYS[i];
+    const existing = (Blockly.Msg as any)[key];
+    if (typeof existing === "string") _trapStyleBase[key] = existing;
+  }
+  _trapStyleBaseReady = true;
+}
+
+function _applyTrapStyleMessages(style: TrapBlocklyStyle): void {
+  _captureTrapStyleBase();
+  const overrides = TRAP_STYLE_OVERRIDES[style] || {};
+  for (let i = 0; i < TRAP_STYLE_KEYS.length; i++) {
+    const key = TRAP_STYLE_KEYS[i];
+    const next = overrides[key];
+    if (typeof next === "string") {
+      (Blockly.Msg as any)[key] = next;
+    } else if (_trapStyleBase[key] != null) {
+      (Blockly.Msg as any)[key] = _trapStyleBase[key];
+    }
+  }
+}
+
+function _restoreTrapStyleMessages(): void {
+  if (!_trapStyleBaseReady) return;
+  for (let i = 0; i < TRAP_STYLE_KEYS.length; i++) {
+    const key = TRAP_STYLE_KEYS[i];
+    if (_trapStyleBase[key] != null) (Blockly.Msg as any)[key] = _trapStyleBase[key];
   }
 }
 function _getTrapTheme(): Blockly.Theme {
@@ -284,6 +365,7 @@ function _ensureOverlay(): HTMLElement {
           <span id="${STATUS_ID}" style="margin-left:10px; opacity:0.75; font-size:12px;"></span>
           <span id="${SOLUTION_ID}" style="margin-left:10px; opacity:0.6; font-size:11px;"></span>
         </div>
+        <button id="${STYLE_BTN_ID}">Style: Normal</button>
         <button id="${TOOLBOX_BTN_ID}">Hide Sidebar</button>
         <button id="${ANCHOR_BTN_ID}">Corner: BR</button>
         <button id="he-trap-blockly-apply">Apply</button>
@@ -368,6 +450,7 @@ function _ensureOverlay(): HTMLElement {
   const panel = overlay.querySelector(".he-trap-blockly-panel") as HTMLElement | null;
   const anchorBtn = overlay.querySelector(`#${ANCHOR_BTN_ID}`) as HTMLButtonElement | null;
   const toolboxBtn = overlay.querySelector(`#${TOOLBOX_BTN_ID}`) as HTMLButtonElement | null;
+  const styleBtn = overlay.querySelector(`#${STYLE_BTN_ID}`) as HTMLButtonElement | null;
   const resizeHandle = overlay.querySelector(`#${RESIZE_ID}`) as HTMLElement | null;
 
   if (panel) {
@@ -386,6 +469,23 @@ function _ensureOverlay(): HTMLElement {
       _setUiState({ toolboxHidden: nextHidden });
       toolboxBtn.textContent = _toolboxLabel(nextHidden);
       _applyToolboxVisibility(overlay, nextHidden);
+    };
+  }
+
+  if (styleBtn) {
+    styleBtn.onclick = () => {
+      if (!_activeSpec || !_workspace) return;
+      const next = _getTrapStyle() === "apcsp" ? "normal" : "apcsp";
+      _setTrapStyle(next);
+      styleBtn.textContent = _styleLabel(next);
+      _applyTrapStyleMessages(next);
+      const dom = Blockly.Xml.workspaceToDom(_workspace);
+      Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, _workspace);
+      _ensureTrapVariables(_workspace, _activeSpec);
+      _lockProcedureName(_workspace);
+      _applyToolboxVisibility(overlay, _getUiState().toolboxHidden);
+      try { (_workspace as any).resizeContents?.(); } catch {}
+      try { Blockly.svgResize(_workspace); } catch {}
     };
   }
 
@@ -486,7 +586,7 @@ function _filterToolboxBySpec(base: any, spec: TrapSpec): any {
   return clone(base);
 }
 
-function _ensureWorkspace(spec: TrapSpec): Blockly.WorkspaceSvg {
+function _ensureWorkspace(spec: TrapSpec, readOnly: boolean): Blockly.WorkspaceSvg {
   const host = document.getElementById(HOST_ID);
   if (!host) throw new Error("[trap-blockly] missing host");
 
@@ -495,10 +595,11 @@ function _ensureWorkspace(spec: TrapSpec): Blockly.WorkspaceSvg {
     _workspace = null;
   }
 
-  const toolbox = _filterToolboxBySpec(TRAP_TOOLBOX_BASE, spec);
+  const toolbox = readOnly ? undefined : _filterToolboxBySpec(TRAP_TOOLBOX_BASE, spec);
   _workspace = Blockly.inject(host, {
     toolbox,
     trashcan: false,
+    readOnly,
     renderer: "zelos",
     theme: _getTrapTheme(),
     oneBasedIndex: true,
@@ -592,10 +693,12 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   _activeSpec = spec;
   _activeInputs = inputs || spec.preview.inputs || {};
   _activeInstance = instance || null;
+  const readOnly = !!spec.starterBlocks?.readOnly;
 
   const panel = overlay.querySelector(".he-trap-blockly-panel") as HTMLElement | null;
   const anchorBtn = overlay.querySelector(`#${ANCHOR_BTN_ID}`) as HTMLButtonElement | null;
   const toolboxBtn = overlay.querySelector(`#${TOOLBOX_BTN_ID}`) as HTMLButtonElement | null;
+  const styleBtn = overlay.querySelector(`#${STYLE_BTN_ID}`) as HTMLButtonElement | null;
   const resizeHandle = overlay.querySelector(`#${RESIZE_ID}`) as HTMLElement | null;
   if (panel) {
     const ui = _getUiState();
@@ -605,10 +708,14 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
     if (toolboxBtn) toolboxBtn.textContent = _toolboxLabel(ui.toolboxHidden);
     if (resizeHandle) _updateResizeHandle(resizeHandle, ui.anchor);
   }
+  const style = _getTrapStyle();
+  if (styleBtn) styleBtn.textContent = _styleLabel(style);
+  _applyTrapStyleMessages(style);
+  _applyReadOnlyUi(overlay, readOnly);
 
   overlay.style.display = "block";
 
-  const ws = _ensureWorkspace(spec);
+  const ws = _ensureWorkspace(spec, readOnly);
   const xml = getTrapXmlForId(spec.id) || spec.starterBlocks.xml;
   try {
     _loadXmlIntoWorkspace(ws, xml);
@@ -619,7 +726,11 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   }
   _ensureTrapVariables(ws, spec);
   _lockProcedureName(ws);
-  _applyToolboxVisibility(overlay, _getUiState().toolboxHidden);
+  if (readOnly) {
+    _applyToolboxVisibility(overlay, true);
+  } else {
+    _applyToolboxVisibility(overlay, _getUiState().toolboxHidden);
+  }
 
   const titleEl = document.getElementById(TITLE_ID);
   if (titleEl) titleEl.textContent = spec.ui.title || "Trap Blockly";
@@ -691,6 +802,7 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
 export function closeBlocklyTrapEditor(): void {
   const overlay = document.getElementById(OVERLAY_ID);
   if (overlay) overlay.style.display = "none";
+  _restoreTrapStyleMessages();
   try {
     const detail = {
       trapId: _activeSpec ? _activeSpec.id : "",

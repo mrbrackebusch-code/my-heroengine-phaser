@@ -2,6 +2,7 @@ import type {
   ApCspType,
   TrapAxes,
   TrapEffectAxis,
+  TrapComparator,
   TrapMathOp,
   TrapTargetingAxis,
   TrapTriggeringAxis,
@@ -19,6 +20,9 @@ const DEFAULT_STRINGS = ["alpha", "beta", "gamma", "delta", "ember", "spark"];
 const DEFAULT_CHARS = ["A", "B", "C", "D", "E", "F"];
 const DISASSEMBLED_MATH_OPS: TrapMathOp[] = ["ADD", "MINUS", "MULTIPLY"];
 const DISASSEMBLED_OPERANDS = [1, 2, 3, 4, 5, 10];
+const DISASSEMBLED_THRESHOLDS = [2, 3, 4, 5, 6, 7, 8];
+const DISASSEMBLED_COMPARATORS: TrapComparator[] = [">", "<", ">=", "<="];
+const DISASSEMBLED_STRING_SUFFIXES = ["!", "_x", "-ok", "_v2"];
 const BROKEN_GIVEN_VALUES = [2, 3, 4, 5, 6, 7, 8, 9];
 const BROKEN_ADD_VALUES = [1, 2, 3, 4, 5];
 const BROKEN_MULT_VALUES = [2, 3, 4, 5];
@@ -47,6 +51,20 @@ const UNTARGETED_ENEMY_NAMES = [
 const DISASSEMBLED_EFFECT_ELEMENTS: TrapEffectAxis["element"][] = ["fire", "poison", "ice", "arcane"];
 const DISASSEMBLED_EFFECT_PATTERNS: TrapEffectAxis["pattern"][] = ["radial", "line", "burst", "single"];
 const BASE_PROC_BLOCKS = ["procedures_defreturn", "variables_set", "variables_get"];
+
+type DisassembledNumberStyle = "identity" | "math_single" | "math_double" | "gated";
+const DISASSEMBLED_NUMBER_STYLES: DisassembledNumberStyle[] = [
+  "identity",
+  "math_single",
+  "math_double",
+  "gated",
+];
+
+type DisassembledBooleanStyle = "identity" | "negate";
+const DISASSEMBLED_BOOLEAN_STYLES: DisassembledBooleanStyle[] = ["identity", "negate"];
+
+type DisassembledStringStyle = "identity" | "concat";
+const DISASSEMBLED_STRING_STYLES: DisassembledStringStyle[] = ["identity", "concat"];
 
 function _mulberry32(seed: number): () => number {
   let t = seed | 0;
@@ -202,6 +220,25 @@ function _computeMath(op: TrapMathOp, a: number, b: number): number {
   }
 }
 
+function _compareNumber(a: number, comparator: TrapComparator, b: number): boolean {
+  switch (comparator) {
+    case "==":
+      return a === b;
+    case "!=":
+      return a !== b;
+    case "<":
+      return a < b;
+    case "<=":
+      return a <= b;
+    case ">":
+      return a > b;
+    case ">=":
+      return a >= b;
+    default:
+      return a === b;
+  }
+}
+
 function _buildDisassembledMathStarterBlocks(op: TrapMathOp, operand: number): TrapStarterBlocks {
   const opField = String(op || "ADD");
   const num = Number.isFinite(operand) ? (operand | 0) : 1;
@@ -230,6 +267,185 @@ function _buildDisassembledMathStarterBlocks(op: TrapMathOp, operand: number): T
           </value>
         </block>
         <block type="variables_get" x="20" y="250">
+          <field name="VAR">target</field>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _buildDisassembledDoubleMathStarterBlocks(
+  opA: TrapMathOp,
+  operandA: number,
+  opB: TrapMathOp,
+  operandB: number
+): TrapStarterBlocks {
+  const opFieldA = String(opA || "ADD");
+  const opFieldB = String(opB || "ADD");
+  const numA = Number.isFinite(operandA) ? (operandA | 0) : 1;
+  const numB = Number.isFinite(operandB) ? (operandB | 0) : 1;
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">trapMain</field>
+        </block>
+        <block type="variables_set" x="20" y="120">
+          <field name="VAR">target</field>
+          <value name="VALUE">
+            <block type="math_arithmetic">
+              <field name="OP">${opFieldB}</field>
+              <value name="A">
+                <block type="math_arithmetic">
+                  <field name="OP">${opFieldA}</field>
+                  <value name="A">
+                    <block type="variables_get">
+                      <field name="VAR">givenValue</field>
+                    </block>
+                  </value>
+                  <value name="B">
+                    <block type="math_number">
+                      <field name="NUM">${numA}</field>
+                    </block>
+                  </value>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">${numB}</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="variables_get" x="20" y="280">
+          <field name="VAR">target</field>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _buildDisassembledGatedStarterBlocks(
+  comparator: TrapComparator,
+  threshold: number,
+  op: TrapMathOp,
+  operand: number
+): TrapStarterBlocks {
+  const cmp = String(comparator || ">");
+  const opField = String(op || "ADD");
+  const num = Number.isFinite(operand) ? (operand | 0) : 1;
+  const thresh = Number.isFinite(threshold) ? (threshold | 0) : 1;
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">trapMain</field>
+        </block>
+        <block type="controls_ifelse" x="20" y="120">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">${cmp}</field>
+              <value name="A">
+                <block type="variables_get">
+                  <field name="VAR">givenValue</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">${thresh}</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="variables_set" x="300" y="120">
+          <field name="VAR">target</field>
+          <value name="VALUE">
+            <block type="math_arithmetic">
+              <field name="OP">${opField}</field>
+              <value name="A">
+                <block type="variables_get">
+                  <field name="VAR">givenValue</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">${num}</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="variables_set" x="300" y="240">
+          <field name="VAR">target</field>
+          <value name="VALUE">
+            <block type="variables_get">
+              <field name="VAR">givenValue</field>
+            </block>
+          </value>
+        </block>
+        <block type="variables_get" x="20" y="320">
+          <field name="VAR">target</field>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _buildDisassembledBooleanNegateStarterBlocks(): TrapStarterBlocks {
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">trapMain</field>
+        </block>
+        <block type="variables_set" x="20" y="120">
+          <field name="VAR">target</field>
+          <value name="VALUE">
+            <block type="logic_negate">
+              <value name="BOOL">
+                <block type="variables_get">
+                  <field name="VAR">givenValue</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="variables_get" x="20" y="240">
+          <field name="VAR">target</field>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _buildDisassembledStringConcatStarterBlocks(suffix: string): TrapStarterBlocks {
+  const text = _escapeXml(suffix || "");
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">trapMain</field>
+        </block>
+        <block type="variables_set" x="20" y="120">
+          <field name="VAR">target</field>
+          <value name="VALUE">
+            <block type="text_join">
+              <value name="ADD0">
+                <block type="variables_get">
+                  <field name="VAR">givenValue</field>
+                </block>
+              </value>
+              <value name="ADD1">
+                <block type="text">
+                  <field name="TEXT">${text}</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="variables_get" x="20" y="260">
           <field name="VAR">target</field>
         </block>
       </xml>
@@ -674,36 +890,81 @@ function _generateValueForContract(contract: TrapOutputContract, rng: () => numb
 
 function _generateDisassembledNumberInstance(spec: TrapSpec, seed: number): TrapInstance {
   const rng = _mulberry32(seed | 0);
-  const op = _pick(rng, DISASSEMBLED_MATH_OPS, "ADD");
-  const operand = _pick(rng, DISASSEMBLED_OPERANDS, 1);
+  const style = _pick(rng, DISASSEMBLED_NUMBER_STYLES, "identity");
+  const opA = _pick(rng, DISASSEMBLED_MATH_OPS, "ADD");
+  const operandA = _pick(rng, DISASSEMBLED_OPERANDS, 1);
+  const opB = _pick(rng, DISASSEMBLED_MATH_OPS, "ADD");
+  const operandB = _pick(rng, DISASSEMBLED_OPERANDS, 1);
+  const comparator = _pick(rng, DISASSEMBLED_COMPARATORS, ">");
+  const threshold = _pick(rng, DISASSEMBLED_THRESHOLDS, 5);
 
   const numCfg = spec.output?.number || {};
   const outMin = (typeof numCfg.min === "number") ? numCfg.min : -9999;
   const outMax = (typeof numCfg.max === "number") ? numCfg.max : 9999;
 
   let givenValue = _rngInt(rng, 0, 9);
-  let result = _computeMath(op, givenValue | 0, operand | 0);
-  for (let i = 0; i < 20; i++) {
-    if (op === "MINUS" && givenValue < operand) {
-      givenValue = (operand + _rngInt(rng, 0, 5)) | 0;
-    } else if (op === "MULTIPLY" && givenValue === 0) {
-      givenValue = _rngInt(rng, 1, 6);
-    } else if (op === "ADD" || op === "MULTIPLY") {
-      givenValue = _rngInt(rng, 0, 9);
+  let result = givenValue | 0;
+  const computeResult = (val: number): number => {
+    if (style === "math_single") return _computeMath(opA, val | 0, operandA | 0);
+    if (style === "math_double") return _computeMath(opB, _computeMath(opA, val | 0, operandA | 0), operandB | 0);
+    if (style === "gated") {
+      const shouldCompute = _compareNumber(val | 0, comparator, threshold | 0);
+      const computed = _computeMath(opA, val | 0, operandA | 0);
+      return shouldCompute ? computed : (val | 0);
     }
-    result = _computeMath(op, givenValue | 0, operand | 0);
+    return val | 0;
+  };
+  for (let i = 0; i < 20; i++) {
+    if (style !== "identity") {
+      if (opA === "MINUS" && givenValue < operandA) {
+        givenValue = (operandA + _rngInt(rng, 0, 5)) | 0;
+      } else if (opA === "MULTIPLY" && givenValue === 0) {
+        givenValue = _rngInt(rng, 1, 6);
+      } else if (opA === "ADD" || opA === "MULTIPLY") {
+        givenValue = _rngInt(rng, 0, 9);
+      }
+    }
+    result = computeResult(givenValue | 0);
     if (result >= outMin && result <= outMax) break;
     givenValue = _rngInt(rng, 0, 9);
   }
 
-  const instructions = `Assemble the blocks so the procedure returns the given number ${_mathOpToSymbol(op)} ${operand}.`;
-  const axes = _buildDisassembledAxes("Number", rng, op, operand | 0);
-  const starterBlocksOverride = _buildDisassembledMathStarterBlocks(op, operand | 0);
-  const paletteOverride = _paletteBlocks([
-    ...BASE_PROC_BLOCKS,
-    "math_arithmetic",
-    "math_number",
-  ]);
+  let instructions = "Assemble the blocks so the procedure returns the given number.";
+  let starterBlocksOverride: TrapStarterBlocks | undefined = undefined;
+  let paletteOverride = {
+    categories: ["Functions", "Variables"],
+    blocksAllowed: [...BASE_PROC_BLOCKS],
+  };
+  if (style === "math_single") {
+    instructions = `Assemble the blocks so the procedure returns the given number ${_mathOpToSymbol(opA)} ${operandA}.`;
+    starterBlocksOverride = _buildDisassembledMathStarterBlocks(opA, operandA | 0);
+    paletteOverride = {
+      categories: ["Functions", "Variables", "Operators"],
+      blocksAllowed: [...BASE_PROC_BLOCKS, "math_arithmetic", "math_number"],
+    };
+  } else if (style === "math_double") {
+    instructions = `Assemble the blocks so the procedure returns (given number ${_mathOpToSymbol(opA)} ${operandA}) ${_mathOpToSymbol(opB)} ${operandB}.`;
+    starterBlocksOverride = _buildDisassembledDoubleMathStarterBlocks(opA, operandA | 0, opB, operandB | 0);
+    paletteOverride = {
+      categories: ["Functions", "Variables", "Operators"],
+      blocksAllowed: [...BASE_PROC_BLOCKS, "math_arithmetic", "math_number"],
+    };
+  } else if (style === "gated") {
+    instructions = `Assemble the blocks so the procedure returns the given number ${_mathOpToSymbol(opA)} ${operandA} when the given number ${comparator} ${threshold}, otherwise return the given number.`;
+    starterBlocksOverride = _buildDisassembledGatedStarterBlocks(comparator, threshold | 0, opA, operandA | 0);
+    paletteOverride = {
+      categories: ["Functions", "Variables", "Operators", "Logic"],
+      blocksAllowed: [
+        ...BASE_PROC_BLOCKS,
+        "math_arithmetic",
+        "math_number",
+        "logic_compare",
+        "controls_ifelse",
+      ],
+    };
+  }
+
+  const axes = _buildDisassembledAxes("Number", rng, opA, operandA | 0);
 
   return createTrapInstance({
     spec,
@@ -727,16 +988,50 @@ function _generateDisassembledInstance(spec: TrapSpec, seed: number): TrapInstan
   const value = _generateValueForContract(spec.output, rng);
   const inputs: Record<string, unknown> = { [inputName]: value };
   const axes = _buildDisassembledAxes(spec.output.type as ApCspType, rng);
-  const paletteOverride = _paletteBlocks([
-    ...BASE_PROC_BLOCKS,
-  ]);
+  let paletteOverride = {
+    categories: ["Functions", "Variables"],
+    blocksAllowed: [...BASE_PROC_BLOCKS],
+  };
+  let starterBlocksOverride: TrapStarterBlocks | undefined = undefined;
+  let uiOverride: Partial<TrapSpec["ui"]> | undefined = undefined;
+  let expectedOutput: unknown = value;
+
+  if (spec.output?.type === "Boolean") {
+    const style = _pick(rng, DISASSEMBLED_BOOLEAN_STYLES, "identity");
+    if (style === "negate") {
+      expectedOutput = !Boolean(value);
+      starterBlocksOverride = _buildDisassembledBooleanNegateStarterBlocks();
+      paletteOverride = {
+        categories: ["Functions", "Variables", "Operators"],
+        blocksAllowed: [...BASE_PROC_BLOCKS, "logic_negate"],
+      };
+      uiOverride = { instructions: "Assemble the blocks so the procedure returns the opposite Boolean." };
+    }
+  }
+
+  if (spec.output?.type === "String") {
+    const style = _pick(rng, DISASSEMBLED_STRING_STYLES, "identity");
+    if (style === "concat") {
+      const suffix = _pick(rng, DISASSEMBLED_STRING_SUFFIXES, "!");
+      expectedOutput = String(value || "") + suffix;
+      starterBlocksOverride = _buildDisassembledStringConcatStarterBlocks(suffix);
+      paletteOverride = {
+        categories: ["Functions", "Variables", "Text"],
+        blocksAllowed: [...BASE_PROC_BLOCKS, "text", "text_join"],
+      };
+      uiOverride = { instructions: "Assemble the blocks so the procedure returns the given text with a suffix added." };
+    }
+  }
+
   return createTrapInstance({
     spec,
     seed: seed | 0,
     inputs,
-    expectedOutput: value,
+    expectedOutput,
     outputContract: spec.output,
     paletteOverride,
+    uiOverride,
+    starterBlocksOverride,
     axes,
   });
 }

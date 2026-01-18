@@ -12,6 +12,7 @@ export type EffectPalette = {
 export interface EffectResolved {
     id: string;
     textureKey: string;
+    url: string;
     frameIndices: number[];
     frameRate: number;
     repeat: number;
@@ -49,7 +50,7 @@ function basenameNoExt(p: string): string {
 }
 
 function parseSizeFromName(name: string): { id: string; frameW: number; frameH: number } | null {
-    const match = /^(.*?)(?:[ _-])(\d+)x(\d+)$/i.exec(name);
+    const match = /^(.*?)(?:\s+)(\d+)x(\d+)$/i.exec(name);
     if (!match) return null;
     const id = String(match[1] || "").trim();
     if (!id) return null;
@@ -303,6 +304,7 @@ export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
         atlas[sheet.id] = {
             id: sheet.id,
             textureKey: sheet.textureKey,
+            url: sheet.url,
             frameIndices,
             frameRate: EFFECT_DEFAULT_FPS,
             repeat: EFFECT_DEFAULT_REPEAT,

@@ -2,6 +2,7 @@
 
 import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDiagonalMovement, Heuristic as PFHeuristic } from "pathfinding";
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
+import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 import {
     DBG_INT_INTERVAL_MS,
     DBG_INTERVAL_MS,
@@ -20,7 +21,6 @@ import {
     DEBUG_ANIM_KEYS_PHASE_PART,
     DEBUG_ANIM_KEYS_PHASE_STAMP,
     DEBUG_ANIM_KEYS_PLAYER_ID,
-    DEBUG_CHEST_ROUTE_TO_PILLAR,
     DEBUG_CHEST_SCAN_LOGS,
     DEBUG_CHEST_INTERACT_LOGS,
     DEBUG_COINS_LOGS,
@@ -48,9 +48,9 @@ import {
     DEBUG_FILTER_PHRASE,
     DEBUG_FOCUS_LOGS,
     DEBUG_INTERACT_LOGS,
+    DEBUG_INTERACT_TICK_LOGS,
     DEBUG_PROP_INTERACT_LOGS,
     DEBUG_TRAP_LOGS,
-    DEBUG_FOCUS_DIRECT_LOGS,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
     DEBUG_HERO_LOGIC,
@@ -109,9 +109,8 @@ import type { TrapDefinition } from "./trapRegistry";
 
 // -----------------------------------------------------
 
-// MakeCode-compatible randint helper for Phaser build
-
-// (safe in Arcade too; just shadows the built-in)
+// Simple randint helper for the Phaser build.
+// (Safe to shadow a built-in if present.)
 
 // -----------------------------------------------------
 
@@ -314,63 +313,6 @@ namespace SpriteKind {
 
 
 
-(function phaserSpriteKindShim() {
-
-    const SK: any = SpriteKind as any;
-
-
-
-    if (SK.Player == null) SK.Player = 1;
-
-    if (SK.Enemy == null) SK.Enemy = 2;
-
-
-
-    SK.Hero = 50;
-
-    SK.HeroWeapon = 51;
-
-    SK.HeroAura = 52;
-
-    SK.EnemySpawner = 53;
-
-    SK.SupportBeam = 54;
-
-    SK.SupportIcon = 55;
-
-    SK.Wall = 56;
-
-
-
-    // NEW: shop phase kinds (fixed ids in Phaser build)
-
-    SK.ShopNpc = 57;
-
-    SK.ShopItem = 58;
-
-    SK.ShopUI = 59;
-
-
-
-    // Relic-only VFX kinds (fixed ids)
-
-    SK.RelicEffect = 65;
-
-})();
-
-
-
-
-
-// =====================================================================
-
-// END PHASER-ONLY SHIM
-
-// =====================================================================
-
-
-
-
 
 // --------------------------------------------------------------
 
@@ -426,9 +368,6 @@ namespace SpriteKind {
 
 //    createTileMap2D() - Makes the tilemap array
 
-//    createWallTileImage() - Makes an image for the walls in the tilemap array
-
-//    buildTilesIntoSprites() - Makes walls where they are supposed to be in the tilemap
 
 //    readTile() - Accesses the array and determines what tile is there
 
@@ -436,23 +375,9 @@ namespace SpriteKind {
 
 //
 
-// SECTION 3 - STUDENT HOOKS: HERO LOGIC & ANIMATION - NO LONGER HERE. THEY ARE GONE. They have been moved to a project that uses the Hero Engine extension.
-
-//   hero1Logic() – Student-editable logic for Hero 1's behavior each frame.
-
-//   hero2Logic() – Student-editable logic for Hero 2's behavior each frame.
-
-//   hero3Logic() – Student-editable logic for Hero 3's behavior each frame.
-
-//   hero4Logic() – Student-editable logic for Hero 4's behavior each frame.
-
-//   animateHero1() – Student-editable animation for Hero 1 based on state/facing.
-
-//   animateHero2() – Student-editable animation for Hero 2 based on state/facing.
-
-//   animateHero3() – Student-editable animation for Hero 3 based on state/facing.
-
-//   animateHero4() – Student-editable animation for Hero 4 based on state/facing.
+// SECTION 3 - HERO LOGIC & ANIMATION
+//   Hero logic is Blockly-only and profile-driven.
+//   Legacy hero1..4 logic hooks are removed.
 
 //
 
@@ -463,8 +388,6 @@ namespace SpriteKind {
 //   calculateMoveStatsForFamily() – Dispatch to calculateXStats() for the chosen family/button.
 
 //   doHeroMoveForPlayer() – Entry point when a player presses a move button; resolves family, spends mana, and executes the move.
-
-//   heroImageForPlayer() – Return the base sprite image for the hero controlled by a given player.
 
 //   createHeroForPlayer() – Create and initialize a hero sprite for a specific player index.
 
@@ -504,9 +427,6 @@ namespace SpriteKind {
 
 //   showDamageNumber() – Spawn a floating text sprite showing damage dealt at a position.
 
-//   createAuraImageFromHero() – Generate an aura outline image based on a hero's sprite bitmap.
-
-//   ensureHeroAuraSprite() – Ensure a hero has an attached aura sprite and create it if missing.
 
 //   updateHeroOverlays() – Update aura and combo meter and agility indicator sprites (position, visibility, style) for all heroes.
 
@@ -524,9 +444,9 @@ namespace SpriteKind {
 
 //   executeStrengthMove() – Perform a Strength move: spend mana, lock hero, and schedule the smash.
 
-//   getStrengthInnerRadiusForHero() – Return the inner radius for the Strength smash hit area around a hero.
+//   getStrengthInnerRadiusForHero() – Return size-based inner radius for the Strength smash hit area.
 
-//   findHeroLeadingEdgeDistance() – Compute distance from hero center to leading edge in facing direction.
+//   findHeroLeadingEdgeDistance() – Estimate leading-edge distance using sprite size.
 
 //   spawnStrengthSwingProjectile() – Spawn the visual Strength smash projectile attached to a hero.
 
@@ -782,69 +702,8 @@ namespace SpriteKind {
 
 
 
-// ?? ------ ?? ------ ?? SECTION ?? ------ ?? ------ ?? ------ ?? ------ ?? ------ ?? ------ ?? SECTION ?? ------ ?? ------ ??
-
-//These are the things that need to be present for this code to work in MakeCode Arcade
-
-
-
-
-
-// --------------------------------------------------------------
-
-// Sprite kinds - type declarations for TS (no top-level create()) DON'T COPY THIS OVER TO PHASER! It is already there
-
-// --------------------------------------------------------------
-
-namespace SpriteKindArcade {
-
-    export let Hero: number
-
-    export let HeroWeapon: number
-
-    export let HeroAura: number
-
-    export let EnemySpawner: number
-
-    export let SupportBeam: number
-
-    export let SupportIcon: number
-
-    export let Wall: number
-
-    export let ShopNpc: number
-
-    export let ShopItem: number
-
-    export let ShopUI: number
-
-
-
-    // Decor collider kinds (already used elsewhere in this file)
-
-    export let DecorTrigger: number
-
-    export let DecorSolid: number
-
-
-
-    // NEW: Dungeon / story kinds
-
-    export let FloorPad: number
-
-    export let FloorInteractable: number
-
-    export let StoryNpc: number
-
-}
-
-
-
 // Allow referring to globalThis when a host (like Phaser) provides it.
-
-// In MakeCode Arcade this is just a type declaration; the try/catch below
-
-// will swallow any runtime issue if it's missing.
+// If a host doesn't provide it, the try/catch below swallows the runtime issue.
 
 
 
@@ -966,214 +825,13 @@ namespace HeroEngine {
 
 
 
-    // Helper: wrap a small hero idle sprite (e.g. 16x16) into a 64x64 image
-
-    function _wrapIdleInto64(src: any) {
-
-        const result = image.create(64, 64);
-
-        const offX = (result.width - src.width) >> 1;
-
-        const offY = (result.height - src.height) >> 1;
-
-        result.drawTransparentImage(src, offX, offY);
-
-        return result;
-
-    }
-
-
-
-
-
     function defaultHeroAnim(
-
         hero: Sprite,
-
         animKey: string,
-
         timeMs: number,
-
         direction: string
-
     ): void {
-
-
-
-        // OWNER, not index, determines which hero it is
-
-        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER);
-
-
-
-        // Hardcoded idle sprites for each hero
-
-        // These NEVER appear in student project, so Blocks stays clean.
-
-
-
-        const idle1 = _wrapIdleInto64(img`
-
-        . . . . . . f f f f . . . . . .
-
-        . . . . f f f 2 2 f f f . . . .
-
-        . . . f f f 2 2 2 2 f f f . . .
-
-        . . f f f e e e e e e f f f . .
-
-        . . f f e 2 2 2 2 2 2 e e f . .
-
-        . . f e 2 f f f f f f 2 e f . .
-
-        . . f f f f e e e e f f f f . .
-
-        . f f e f b f 4 4 f b f e f f .
-
-        . f e e 4 1 f d d f 1 4 e e f .
-
-        . . f e e d d d d d d e e f . .
-
-        . . . f e e 4 4 4 4 e e f . . .
-
-        . . e 4 f 2 2 2 2 2 2 f 4 e . .
-
-        . . 4 d f 2 2 2 2 2 2 f d 4 . .
-
-        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
-
-        . . . . . f f f f f f . . . . .
-
-        . . . . . f f . . f f . . . . .
-
-    `);
-
-
-
-        const idle2 = _wrapIdleInto64(img`
-
-        . . . . . . f f f f . . . . . .
-
-        . . . . f f f a a f f f . . . .
-
-        . . . f f f a a a a f f f . . .
-
-        . . f f f e e e e e e f f f . .
-
-        . . f f e a a a a a a e e f . .
-
-        . . f e a f f f f f f a e f . .
-
-        . . f f f f e e e e f f f f . .
-
-        . f f e f b f 6 6 f b f e f f .
-
-        . f e e a 6 f d d f 6 a e e f .
-
-        . . f e e d d d d d d e e f . .
-
-        . . . f e e 4 4 4 4 e e f . . .
-
-        . . e 4 f 4 4 4 4 4 4 f 4 e . .
-
-        . . 4 d f 4 4 4 4 4 4 f d 4 . .
-
-        . . 4 4 f a a a a a a f 4 4 . .
-
-        . . . . . f f f f f f . . . . .
-
-        . . . . . f f . . f f . . . . .
-
-    `);
-
-
-
-        const idle3 = _wrapIdleInto64(img`
-
-        . . . . . . f f f f . . . . . .
-
-        . . . . f f f 7 7 f f f . . . .
-
-        . . . f f f 7 7 7 7 f f f . . .
-
-        . . f f f e e e e e e f f f . .
-
-        . . f f e 7 7 7 7 7 7 e e f . .
-
-        . . f e 7 f f f f f f 7 e f . .
-
-        . . f f f f e e e e f f f f . .
-
-        . f f e f b f 8 8 f b f e f f .
-
-        . f e e 4 8 f d d f 8 4 e e f .
-
-        . . f e e d d d d d d e e f . .
-
-        . . . f e e 4 4 4 4 e e f . . .
-
-        . . e 4 f 7 7 7 7 7 7 f 4 e . .
-
-        . . 4 d f 7 7 7 7 7 7 f d 4 . .
-
-        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
-
-        . . . . . f f f f f f . . . . .
-
-        . . . . . f f . . f f . . . . .
-
-    `);
-
-
-
-        const idle4 = _wrapIdleInto64(img`
-
-        . . . . . . f f f f . . . . . .
-
-        . . . . f f f 8 8 f f f . . . .
-
-        . . . f f f 8 8 8 8 f f f . . .
-
-        . . f f f e e e e e e f f f . .
-
-        . . f f e 8 8 8 8 8 8 e e f . .
-
-        . . f e 8 f f f f f f 8 e f . .
-
-        . . f f f f e e e e f f f f . .
-
-        . f f e f b f 1 1 f b f e f f .
-
-        . f e e 4 1 f d d f 1 4 e e f .
-
-        . . f e e d d d d d d e e f . .
-
-        . . . f e e 4 4 4 4 e e f . . .
-
-        . . e 4 f 8 8 8 8 8 8 f 4 e . .
-
-        . . 4 d f 8 8 8 8 8 8 f d 4 . .
-
-        . . 4 4 f 4 4 9 9 4 4 f 4 4 . .
-
-        . . . . . f f f f f f . . . . .
-
-        . . . . . f f . . f f . . . . .
-
-    `);
-
-
-
-        if (owner === 1) hero.setImage(idle1);
-
-        else if (owner === 2) hero.setImage(idle2);
-
-        else if (owner === 3) hero.setImage(idle3);
-
-        else if (owner === 4) hero.setImage(idle4);
-
-        else hero.setImage(idle1);
-
+        // Phaser handles hero visuals; keep a no-op default to avoid Arcade placeholders.
     }
 
 
@@ -1182,25 +840,7 @@ namespace HeroEngine {
 
 
 
-    // Strongly typed hooks now
-
-    export let hero1LogicHook: any = defaultHeroLogic;
-
-    export let hero2LogicHook: any = defaultHeroLogic;
-
-    export let hero3LogicHook: any = defaultHeroLogic;
-
-    export let hero4LogicHook: any = defaultHeroLogic;
-
-    export type HeroLogicByProfileHook = (
-        profile: string,
-        button: string,
-        heroIndex: number,
-        enemiesArr: any[],
-        heroesArr: any[]
-    ) => number[] | null;
-
-    export let heroLogicByProfileHook: HeroLogicByProfileHook = null;
+    // Blockly-only logic (profile-driven). Legacy hero1..4 hooks removed.
 
     export type HeroAnimByProfileHook = (
         profile: string,
@@ -1225,18 +865,6 @@ namespace HeroEngine {
     export let animateHero4Hook: HeroAnimFn = defaultHeroAnim;
 
 
-
-
-
-    // Overridable hook for hero logic.
-
-    // Arcade: stays null ? we fall back to runHeroLogicForHero.
-
-    // Phaser: heroEnginePhaserGlue.ts overrides this.
-
-    export type RunHeroLogicForHeroHook = (heroIndex: number, button: string) => number[] | null;
-
-    export let runHeroLogicForHeroHook: RunHeroLogicForHeroHook = null;
 
 
 
@@ -1326,8 +954,6 @@ namespace HeroEngine {
 
     }
 
-
-
 }
 
 
@@ -1336,7 +962,7 @@ namespace HeroEngine {
 
 // ?? ------ ?? ------ ?? SECTION ?? ------ ?? ------ ?? ------ ?? ------ ?? ------ ?? ------ ?? SECTION ?? ------ ?? ------ ??
 
-//This section is for how we check if we are in Phaser or MakeCode Arcade. I am putting these in their own section because other than this there shouldn't be a place the engine "knows" whether it is in MakeCode Arcade or not
+//This section is for runtime checks. Keep host awareness isolated here.
 
 //This is also for debug flags so they are easy to spot
 
@@ -1353,14 +979,6 @@ function isPhaserRuntime(): boolean {
     if (typeof globalThis === "undefined") return false
 
     return !!globalThis.__phaserScene
-
-}
-
-
-
-function isMakeCodeArcadeRuntime(): boolean {
-
-    return !isPhaserRuntime()
 
 }
 
@@ -2078,12 +1696,21 @@ function _applyHeroSpellElementEffect(
     const nextDir = pick.dir || "";
     if (curSkin === pick.skinId && curDir === nextDir) return true;
     if (!pick.dir && curDir) sprites.setDataString(spell, "effectDir", "");
-    if (pick.dir) applyEffectToSprite(spell, pick.skinId, { dir: pick.dir });
-    else applyEffectToSprite(spell, pick.skinId);
+    const fitRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0;
+    const opts: EffectApplyOpts = { mode: "full" };
+    if (fitRadius > 0) opts.fitRadiusPx = fitRadius | 0;
+    if (pick.dir) applyEffectToSprite(spell, pick.skinId, { ...opts, dir: pick.dir });
+    else applyEffectToSprite(spell, pick.skinId, opts);
     return true;
 }
 
 const EFFECT_TINT_DATA_KEY = "effectTint";
+const EFFECT_MODE_DATA_KEY = "effectMode";
+const EFFECT_SCALE_DATA_KEY = "effectScale";
+const EFFECT_BRUSH_PX_DATA_KEY = "effectBrushPx";
+const EFFECT_POP_MS_DATA_KEY = "effectPopMs";
+const EFFECT_POP_SCALE_DATA_KEY = "effectPopScale";
+const EFFECT_POP_START_MS_DATA_KEY = "effectPopStartMs";
 const _elementTintCache: { [k: string]: number } = Object.create(null);
 
 function _getEffectAtlasAny(): any {
@@ -2110,6 +1737,42 @@ function _resolveEffectEntry(atlas: any, skinId: string, dir?: string): any {
         }
     }
     return resolved;
+}
+
+const EFFECT_SCALE_STEPS: number[] = [0.25, 0.5, 1, 2, 3];
+
+function _effectPickScaleForRadius(skinId: string, dir: string | undefined, radiusPx: number): number {
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) return 1;
+    const resolved = _resolveEffectEntry(atlas, skinId, dir);
+    if (!resolved) return 1;
+    const frameW = resolved.frameW | 0;
+    const frameH = resolved.frameH | 0;
+    if (frameW <= 0 || frameH <= 0) return 1;
+    if (!Number.isFinite(radiusPx) || radiusPx <= 0) return 1;
+    const maxDim = Math.max(frameW, frameH);
+    const targetScale = (radiusPx * 2) / Math.max(1, maxDim);
+    let best = EFFECT_SCALE_STEPS[0] || 1;
+    for (const s of EFFECT_SCALE_STEPS) {
+        if (s <= targetScale + 1e-6) best = s;
+    }
+    if (!Number.isFinite(best) || best <= 0) best = 1;
+    return best;
+}
+
+function _effectPickRadiusForSkin(skinId: string, dir: string | undefined, targetRadiusPx: number): number {
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) return targetRadiusPx | 0;
+    const resolved = _resolveEffectEntry(atlas, skinId, dir);
+    if (!resolved) return targetRadiusPx | 0;
+    const frameW = resolved.frameW | 0;
+    const frameH = resolved.frameH | 0;
+    if (frameW <= 0 || frameH <= 0) return targetRadiusPx | 0;
+    const baseRadius = Math.max(1, targetRadiusPx | 0);
+    const scale = _effectPickScaleForRadius(skinId, dir, baseRadius);
+    const maxDim = Math.max(frameW, frameH);
+    const radius = Math.round((maxDim * scale) / 2);
+    return Math.max(1, radius | 0);
 }
 
 function _effectTintForSkinInAtlas(atlas: any, skinId: string, dir?: string): number {
@@ -2188,6 +1851,7 @@ function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanM
     const mode: HeroElementEffectMode = (isHeal || family === FAMILY.HEAL) ? "defense" : "offense";
     const pick = _heroSpellEffectPick(element | 0, "down", mode);
     if (!pick || !pick.skinId) return false;
+    const fitRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0;
     const img = image.create(2, 2);
     img.fill(0);
     const fx = sprites.create(img, SpriteKind.RelicEffect);
@@ -2196,8 +1860,15 @@ function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanM
     fx.y = spell.y;
     fx.z = spell.z + 2;
     fx.lifespan = Math.max(200, lifespanMs | 0) | 0;
-    if (pick.dir) applyEffectToSprite(fx, pick.skinId, { dir: pick.dir });
-    else applyEffectToSprite(fx, pick.skinId);
+    const opts: EffectApplyOpts = { mode: "full" };
+    if (fitRadius > 0) opts.fitRadiusPx = fitRadius | 0;
+    if (family === (FAMILY.INTELLECT | 0)) {
+        const popMs = Math.max(80, Math.min(320, lifespanMs | 0));
+        opts.popMs = popMs | 0;
+        opts.popScale = 0.25;
+    }
+    if (pick.dir) applyEffectToSprite(fx, pick.skinId, { ...opts, dir: pick.dir });
+    else applyEffectToSprite(fx, pick.skinId, opts);
     return true;
 }
 
@@ -2682,6 +2353,7 @@ const HERO_DATA = {
     AURA_COLOR: "auraColor",
 
     AURA_GLOW: "auraGlow",
+    AURA_RADIUS: "auraRadius",
 
 
 
@@ -2768,7 +2440,7 @@ const ENEMY_DATA = {
 
 
     ATK_PHASE: "atkPhase",
-
+    ATTACK_INDEX: "atkIndex",
     ATK_UNTIL: "atkUntil",
 
     ATK_COOLDOWN_UNTIL: "atkCd",
@@ -3641,15 +3313,6 @@ function _setHeroControlledSpell(heroIndex: number, spell: Sprite): void {
     _heroStateSetSprite(heroControlledSpellsByProfile as any, heroIndex, spell as any)
 }
 
-function _getHeroAura(heroIndex: number): Sprite {
-    return _heroStateGetSprite(heroAurasByProfile as any, heroIndex)
-}
-
-function _setHeroAura(heroIndex: number, aura: Sprite): void {
-    _heroStateSetSprite(heroAurasByProfile as any, heroIndex, aura as any)
-}
-
-
 // Hero-facing and targeting helpers (profile-keyed)
 
 let heroFacingXByProfile: Record<string, number> = Object.create(null)
@@ -3659,8 +3322,6 @@ let heroFacingYByProfile: Record<string, number> = Object.create(null)
 let heroTargetCirclesByProfile: Record<string, Sprite> = Object.create(null)
 
 let heroControlledSpellsByProfile: Record<string, Sprite> = Object.create(null)
-
-let heroAurasByProfile: Record<string, Sprite> = Object.create(null)
 
 
 
@@ -6979,6 +6640,16 @@ const FIRE_TOTEM_AURA_FOCUS: PropAuraStyle = {
     blendMode: "add",
 }
 
+const CHEST_AURA_FOCUS: PropAuraStyle = {
+    radius: 2,
+    depthBias: 1,
+    tint: 0xffd27a,
+    alphaMin: 0.15,
+    alphaMax: 0.6,
+    pulseMs: 1800,
+    blendMode: "add",
+}
+
 const FIRE_TOTEM_AURA_ACTIVE: PropAuraStyle = {
     radius: 3,
     depthBias: 1,
@@ -7019,6 +6690,8 @@ const SHRINE_OVERLAY_SAT = 0.72
 const SHRINE_OVERLAY_LIGHT = 0.18
 const SHRINE_OVERLAY_ALPHA = 0.7
 const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "add"
+const SHRINE_INTERACT_RESCAN_MS = 1000
+let _dunShrineInteractRescanAtMs = 0
 
 function _hslToRgbHex(h: number, s: number, l: number): number {
     const hue = ((h % 360) + 360) % 360
@@ -7105,6 +6778,13 @@ type EffectApplyOpts = {
     fps?: number
     repeat?: number
     tint?: number
+    mode?: "full" | "paint"
+    scale?: number
+    fitRadiusPx?: number
+    brushPx?: number
+    popMs?: number
+    popScale?: number
+    popStartMs?: number
 }
 
 function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts): void {
@@ -7116,6 +6796,41 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     if (typeof opts?.fps === "number") sprites.setDataNumber(s, "effectFps", opts.fps)
     if (typeof opts?.repeat === "number") sprites.setDataNumber(s, "effectRepeat", opts.repeat)
     if (typeof opts?.tint === "number") sprites.setDataNumber(s, EFFECT_TINT_DATA_KEY, opts.tint | 0)
+
+    const family = sprites.readDataNumber(s, PROJ_DATA.FAMILY) | 0
+    let mode = (opts?.mode || "") as string
+    if (!mode) {
+        if (family === (FAMILY.STRENGTH | 0) || family === (FAMILY.AGILITY | 0)) mode = "paint"
+        else mode = "full"
+    }
+    sprites.setDataString(s, EFFECT_MODE_DATA_KEY, mode)
+
+    let scale = (typeof opts?.scale === "number") ? opts?.scale : NaN
+    if (!Number.isFinite(scale)) {
+        const fitRadius = opts?.fitRadiusPx
+        if (typeof fitRadius === "number" && fitRadius > 0) {
+            scale = _effectPickScaleForRadius(skinId, opts?.dir || "", fitRadius)
+        }
+    }
+    if (Number.isFinite(scale)) sprites.setDataNumber(s, EFFECT_SCALE_DATA_KEY, scale as number)
+    else sprites.setDataNumber(s, EFFECT_SCALE_DATA_KEY, 0)
+
+    if (typeof opts?.brushPx === "number") sprites.setDataNumber(s, EFFECT_BRUSH_PX_DATA_KEY, opts.brushPx)
+    else sprites.setDataNumber(s, EFFECT_BRUSH_PX_DATA_KEY, 0)
+
+    if (typeof opts?.popMs === "number") sprites.setDataNumber(s, EFFECT_POP_MS_DATA_KEY, opts.popMs)
+    else sprites.setDataNumber(s, EFFECT_POP_MS_DATA_KEY, 0)
+
+    if (typeof opts?.popScale === "number") sprites.setDataNumber(s, EFFECT_POP_SCALE_DATA_KEY, opts.popScale)
+    else sprites.setDataNumber(s, EFFECT_POP_SCALE_DATA_KEY, 0)
+
+    if (typeof opts?.popStartMs === "number") {
+        sprites.setDataNumber(s, EFFECT_POP_START_MS_DATA_KEY, opts.popStartMs | 0)
+    } else if (typeof opts?.popMs === "number" && opts.popMs > 0) {
+        sprites.setDataNumber(s, EFFECT_POP_START_MS_DATA_KEY, game.runtime() | 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_POP_START_MS_DATA_KEY, 0)
+    }
 }
 const TRAP_PROMPT_INPUT_DEBOUNCE_MS = 200
 
@@ -10531,6 +10246,7 @@ function _dunEnterFloor_placeHeroesAtSpawn(
         const pid = activePids[i] | 0
 
         const xy = coords[i % coords.length]
+        const spawn = _heroSpawnFindClearXY(xy[0], xy[1])
 
 
 
@@ -10554,11 +10270,15 @@ function _dunEnterFloor_placeHeroesAtSpawn(
 
 
 
-        hero.setPosition(xy[0], xy[1])
+        hero.setPosition(spawn.x, spawn.y)
 
         hero.vx = 0
 
         hero.vy = 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y)
 
 
 
@@ -10619,6 +10339,22 @@ function _dunEnterFloor_spawnStarterShrine(): void {
     const rows = _dunWorldRows() | 0
     const cols = _dunWorldCols() | 0
     if (rows <= 0 || cols <= 0) return
+
+    let foundExisting = false
+    const checkList = (list: Sprite[] | null): void => {
+        if (!list || list.length <= 0) return
+        for (let i = 0; i < list.length; i++) {
+            const s = list[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            if (propBaseNameFromKey(name) !== SHRINE_BASE) continue
+            foundExisting = true
+            return
+        }
+    }
+    checkList(_engineDecorSolids)
+    checkList(_engineDecorTriggers)
+    if (foundExisting) return
 
     let r = Math.max(0, Math.min(rows - 1, (_dunPadTileR | 0) + 2)) | 0
     let c = Math.max(0, Math.min(cols - 1, (_dunPadTileC | 0) - 2)) | 0
@@ -11088,6 +10824,15 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
     _dunEnterFloor_setupKind(_dunFloorKind, nowMs, pad.padX, pad.padY)
 
+    for (let i = 0; i < activePids.length; i++) {
+        const pid = activePids[i] | 0
+        const hi = playerToHeroIndex[pid] | 0
+        if (hi < 0 || hi >= heroes.length) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        _heroSpawnRescueIfBlocked(hero)
+    }
+
     _dunEnterFloor_finish(nowMs, activePids.length | 0)
 
 }
@@ -11151,46 +10896,6 @@ function _dunTickPadContractRefresh(): void {
 
         _setFocusOutline(_dunStairsStatueSolid, runeActive)
 
-        if (_dunStairsStatueFocusActive === want) {
-
-            try {
-
-                const r = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileR") | 0
-
-                const c = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileC") | 0
-
-                const g: any = globalThis as any
-
-                const sc: any = g ? g.__phaserScene : null
-
-                const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
-
-                const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
-
-                if (ok) renderer.setPropFocusAuraAt(r, c, runeActive, 2, 1)
-
-                if (_dunStairsStatueFocusActive !== want || !_dunStairsStatueSolid) {
-
-                    // no-op; guard for lint
-
-                }
-
-                if (DEBUG_FOCUS_DIRECT_LOGS) {
-
-                    if (!(_dunStairsStatueSolid as any).__loggedPillarDirect || want === 0) {
-
-                        ;(_dunStairsStatueSolid as any).__loggedPillarDirect = 1
-
-                        console.log("[FOCUS][PILLAR][DIRECT]", { r, c, active: runeActive ? 1 : 0, renderer: ok })
-
-                    }
-
-                }
-
-            } catch { /* ignore */ }
-
-        }
-
     }
 
 }
@@ -11201,10 +10906,12 @@ function _dunTickPadContractRefresh(): void {
 
 function _dunTickObjectiveEvaluation(nowMs: number): void {
 
-    if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY) return
+    const allowInteractAfterObjective = (_dunFloorKind === DUNGEON_KIND_ENTRANCE)
+    if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY && !allowInteractAfterObjective) return
 
     const logInteract = (DEBUG_INTERACT_LOGS || DEBUG_CHEST_INTERACT_LOGS)
-    if (logInteract) {
+    const logInteractTick = logInteract && DEBUG_INTERACT_TICK_LOGS
+    if (logInteractTick) {
         console.log("[INTERACT] tick start", {
             floorKind: _dunFloorKind,
             objectiveDone: _dunObjectiveDone ? 1 : 0,
@@ -11372,7 +11079,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
             }
         }
 
-        if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY) return
+        if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY && !allowInteractAfterObjective) return
 
     }
 
@@ -13080,120 +12787,30 @@ function ensureHeroSpriteKinds(): void {
 
     const SK: any = SpriteKind as any
 
-
-
-    // Phaser/compat build: SpriteKind.create() does not exist.
-
-    // Rely on phaserSpriteKindShim() numeric ids instead.
-
-    if (typeof SK.create !== "function") {
-
-        // Defensive: ensure the fields exist (ids assigned in the shim).
-
-        if (SK.Hero == null) SK.Hero = 50
-
-        if (SK.HeroWeapon == null) SK.HeroWeapon = 51
-
-        if (SK.HeroAura == null) SK.HeroAura = 52
-
-        if (SK.EnemySpawner == null) SK.EnemySpawner = 53
-
-        if (SK.SupportBeam == null) SK.SupportBeam = 54
-
-        if (SK.SupportIcon == null) SK.SupportIcon = 55
-
-        if (SK.Wall == null) SK.Wall = 56
-
-
-
-        // Shop kinds (fixed ids)
-
-        if (SK.ShopNpc == null) SK.ShopNpc = 57
-
-        if (SK.ShopItem == null) SK.ShopItem = 58
-
-        if (SK.ShopUI == null) SK.ShopUI = 59
-
-
-
-        // Decor collider kinds (fixed ids)
-
-        if (SK.DecorTrigger == null) SK.DecorTrigger = 60
-
-        if (SK.DecorSolid == null) SK.DecorSolid = 61
-
-
-
-        // NEW: Dungeon/story kinds (fixed ids)
-
-        if (SK.FloorPad == null) SK.FloorPad = 62
-
-        if (SK.FloorInteractable == null) SK.FloorInteractable = 63
-
-        if (SK.StoryNpc == null) SK.StoryNpc = 64
-
-        if (SK.MonsterEffect == null) SK.MonsterEffect = 66
-
-        // Relic-only VFX kinds (fixed ids)
-
-        if (SK.RelicEffect == null) SK.RelicEffect = 65
-
-
-
-        return
-
-    }
-
-
-
-    // MakeCode Arcade runtime: create missing kinds normally
-
-    if (!SpriteKind.Hero) SpriteKind.Hero = SpriteKind.create()
-
-    if (!SpriteKind.HeroWeapon) SpriteKind.HeroWeapon = SpriteKind.create()
-
-    if (!SpriteKind.HeroAura) SpriteKind.HeroAura = SpriteKind.create()
-
-    if (!SpriteKind.EnemySpawner) SpriteKind.EnemySpawner = SpriteKind.create()
-
-    if (!SpriteKind.SupportBeam) SpriteKind.SupportBeam = SpriteKind.create()
-
-    if (!SpriteKind.SupportIcon) SpriteKind.SupportIcon = SpriteKind.create()
-
-    if (!SpriteKind.Wall) SpriteKind.Wall = SpriteKind.create()
-
-    if (!SpriteKind.MonsterEffect) SpriteKind.MonsterEffect = SpriteKind.create()
-
-    if (!SpriteKind.ShopNpc) SpriteKind.ShopNpc = SpriteKind.create()
-
-    if (!SpriteKind.ShopItem) SpriteKind.ShopItem = SpriteKind.create()
-
-    if (!SpriteKind.ShopUI) SpriteKind.ShopUI = SpriteKind.create()
-
-
-
-    // Decor collider kinds (new)
-
-    if (!SpriteKind.DecorTrigger) SpriteKind.DecorTrigger = SpriteKind.create()
-
-    if (!SpriteKind.DecorSolid) SpriteKind.DecorSolid = SpriteKind.create()
-
-
-
-    // NEW: Dungeon/story kinds
-
-    if (!SpriteKind.FloorPad) SpriteKind.FloorPad = SpriteKind.create()
-
-    if (!SpriteKind.FloorInteractable) SpriteKind.FloorInteractable = SpriteKind.create()
-
-    if (!SpriteKind.StoryNpc) SpriteKind.StoryNpc = SpriteKind.create()
-
-
-
-    // Relic-only VFX kinds
-
-    if (!SpriteKind.RelicEffect) SpriteKind.RelicEffect = SpriteKind.create()
-
+    if (SK.Player == null) SK.Player = 1
+    if (SK.Enemy == null) SK.Enemy = 2
+
+    if (SK.Hero == null) SK.Hero = 50
+    if (SK.HeroWeapon == null) SK.HeroWeapon = 51
+    if (SK.HeroAura == null) SK.HeroAura = 52
+    if (SK.EnemySpawner == null) SK.EnemySpawner = 53
+    if (SK.SupportBeam == null) SK.SupportBeam = 54
+    if (SK.SupportIcon == null) SK.SupportIcon = 55
+    if (SK.Wall == null) SK.Wall = 56
+
+    if (SK.ShopNpc == null) SK.ShopNpc = 57
+    if (SK.ShopItem == null) SK.ShopItem = 58
+    if (SK.ShopUI == null) SK.ShopUI = 59
+    if (SK.NpcLpc == null) SK.NpcLpc = 60
+
+    if (SK.DecorTrigger == null) SK.DecorTrigger = 60
+    if (SK.DecorSolid == null) SK.DecorSolid = 61
+
+    if (SK.FloorPad == null) SK.FloorPad = 62
+    if (SK.FloorInteractable == null) SK.FloorInteractable = 63
+    if (SK.StoryNpc == null) SK.StoryNpc = 64
+    if (SK.RelicEffect == null) SK.RelicEffect = 65
+    if (SK.MonsterEffect == null) SK.MonsterEffect = 66
 }
 
 
@@ -24598,96 +24215,6 @@ function _countWallNeighbors(map: number[][], r: number, c: number): number {
 
 
 
-function _createWallTileImage(): Image {
-
-    const s = WORLD_TILE_SIZE
-
-    const img = image.create(s, s)
-
-
-
-    // Black base
-
-    img.fill(15)
-
-
-
-    // Gray speckles
-
-    for (let y = 0; y < s; y++) {
-
-        for (let x = 0; x < s; x++) {
-
-            if (randint(0, 7) === 0) img.setPixel(x, y, 13)
-
-        }
-
-    }
-
-
-
-    // Stripes
-
-    for (let x = 0; x < s; x += 4) {
-
-        for (let y = 0; y < s; y++) img.setPixel(x, y, 1)
-
-    }
-
-
-
-    return img
-
-}
-
-
-
-
-
-
-
-function _buildTilesIntoSprites(map: number[][]): void {
-
-    // Phaser runtime: NEVER represent wall tiles as Arcade sprites.
-
-    // Rendering is handled by tileMapGlue/WorldTileRenderer using Phaser tilemap layers,
-
-    // and collisions are handled by the engine's grid-based solver.
-
-    if (isPhaserRuntime()) return
-
-
-
-    const tile = WORLD_TILE_SIZE
-
-    const wallImg = _createWallTileImage()
-
-
-
-    for (let r = 0; r < map.length; r++) {
-
-        const row = map[r]
-
-        for (let c = 0; c < row.length; c++) {
-
-            if (row[c] !== TILE_WALL) continue
-
-
-
-            const s = sprites.create(wallImg, SpriteKind.Wall)
-
-            s.left = c * tile
-
-            s.top = r * tile
-
-        }
-
-    }
-
-}
-
-
-
 function _destroyAllInPlace(list: Sprite[]): void {
 
     for (let i = 0; i < list.length; i++) {
@@ -25052,11 +24579,7 @@ function initWorldTileMap(): void {
         })
     }
 
-    // Only the MakeCode Arcade runtime needs "walls as sprites".
-    // Phaser renders walls as a Phaser tilemap layer, not sprite objects.
-    if (isMakeCodeArcadeRuntime()) {
-        _buildTilesIntoSprites(_engineWorldTileMap)
-    }
+    // Walls are rendered as Phaser tilemap layers, not sprite objects.
 }
 
 
@@ -25214,8 +24737,6 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
     }
 
-
-
     let focusThisTick = false
 
     let focusR = -1
@@ -25334,9 +24855,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
     }
 
-
-
-    // Directly drive the prop aura using the same path as the pillar.
+    // Drive prop focus outlines (true silhouette path via renderer).
 
     try {
 
@@ -25359,54 +24878,22 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
         if (ok) {
             if (prevActive && (prevR >= 0 && prevC >= 0) && (!focusThisTick || prevR !== nextR || prevC !== nextC)) {
-                renderer.setPropFocusAuraAt(prevR, prevC, false, 2, 1)
+                renderer.setPropFocusAuraAt(prevR, prevC, false, 0, 0)
             }
 
             if (focusThisTick && nextR >= 0 && nextC >= 0) {
-                let targetR = nextR
-                let targetC = nextC
-
-                if (DEBUG_CHEST_ROUTE_TO_PILLAR && _dunStairsStatueSolid) {
-                    const sr = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileR") | 0
-                    const sc2 = sprites.readDataNumber(_dunStairsStatueSolid, "decorTileC") | 0
-                    if (sr >= 0 && sc2 >= 0) {
-                        targetR = sr
-                        targetC = sc2
-                    }
-                }
-
-                if (DEBUG_CHEST_ROUTE_TO_PILLAR && renderer) {
-                    try {
-                        (renderer as any).__dbgAuraOverrideTarget = { r: (nextR | 0), c: (nextC | 0) }
-                    } catch { /* ignore */ }
-                } else if (renderer) {
-                    try { (renderer as any).__dbgAuraOverrideTarget = null } catch { /* ignore */ }
-                }
-
                 let auraStyle: PropAuraStyle = null as any
-                if (focusThisTick && focusName) {
+                if (focusName) {
                     const base = propBaseNameFromKey(focusName)
                     if (base === "fire_totem") auraStyle = _trapTotemAuraStyle(FIRE_TOTEM_AURA_FOCUS)
+                    else if (base === "chest") auraStyle = CHEST_AURA_FOCUS
                 }
 
                 const auraRadius = auraStyle ? (auraStyle.radius ?? 2) : 2
                 const auraDepth = auraStyle ? (auraStyle.depthBias ?? 1) : 1
                 const auraOpts = _dunAuraStyleToOpts(auraStyle)
 
-                renderer.setPropFocusAuraAt(targetR, targetC, true, auraRadius | 0, auraDepth | 0, auraOpts)
-
-                if (DEBUG_FOCUS_DIRECT_LOGS && (!prevActive || prevR !== nextR || prevC !== nextC)) {
-                    console.log("[FOCUS][INTERACT][DIRECT]", {
-                        r: nextR,
-                        c: nextC,
-                        active: want ? 1 : 0,
-                        renderer: ok,
-                        target: DEBUG_CHEST_ROUTE_TO_PILLAR ? "pillar" : "prop",
-                        targetR,
-                        targetC,
-                        overridePos: DEBUG_CHEST_ROUTE_TO_PILLAR ? { r: nextR | 0, c: nextC | 0 } : null
-                    })
-                }
+                renderer.setPropFocusAuraAt(nextR, nextC, true, auraRadius | 0, auraDepth | 0, auraOpts)
             }
         }
 
@@ -25455,6 +24942,78 @@ function _dunUpdatePropAuraOverrides(nowMs: number): void {
     }
 
     renderer.setPropFocusAuraAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, false, 0, 0)
+}
+
+function _dunEnsureShrineInteractables(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    const now = nowMs | 0
+    if ((now | 0) < (_dunShrineInteractRescanAtMs | 0)) return
+    _dunShrineInteractRescanAtMs = (now + (SHRINE_INTERACT_RESCAN_MS | 0)) | 0
+
+    const spec = getPropSpec(SHRINE_BASE)
+    if (!propSpecAllowsFloor(spec, _dunFloorKind || "", _dunFloorIndex | 0)) return
+
+    const seen: Record<string, 1> = Object.create(null)
+
+    const hasInteractableAt = (r: number, c: number): boolean => {
+        if (!_dunInteractables || !_dunInteractables.length) return false
+        for (let i = 0; i < _dunInteractables.length; i++) {
+            const it = _dunInteractables[i]
+            if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+            const ir = sprites.readDataNumber(it, "decorTileR") | 0
+            const ic = sprites.readDataNumber(it, "decorTileC") | 0
+            if ((ir | 0) !== (r | 0) || (ic | 0) !== (c | 0)) continue
+            const nm = sprites.readDataString(it, DECOR_DATA.NAME) || ""
+            if (propBaseNameFromKey(nm) === SHRINE_BASE) return true
+        }
+        return false
+    }
+
+    const ensureForDecor = (s: Sprite): void => {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+        const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+        if (propBaseNameFromKey(name) !== SHRINE_BASE) return
+        const r = sprites.readDataNumber(s, "decorTileR") | 0
+        const c = sprites.readDataNumber(s, "decorTileC") | 0
+        if (r < 0 || c < 0) return
+        const key = String(r | 0) + "," + String(c | 0)
+        if (seen[key]) return
+        seen[key] = 1
+        if (hasInteractableAt(r, c)) return
+
+        const img = image.create(1, 1)
+        img.fill(0)
+
+        const it = sprites.create(img, (SpriteKind as any).FloorInteractable)
+        it.setFlag(SpriteFlag.Ghost, true)
+        it.setFlag(SpriteFlag.Invisible, true)
+        it.setPosition(_dunColToX(c | 0), _dunRowToY(r | 0))
+
+        const action = (spec?.interact?.action || INTERACT_ACTION_PROP)
+        const focusable = (spec?.interact?.focusable == null) ? true : !!spec.interact.focusable
+
+        sprites.setDataString(it, DECOR_DATA.NAME, name || SHRINE_BASE)
+        sprites.setDataNumber(it, "decorTileR", r | 0)
+        sprites.setDataNumber(it, "decorTileC", c | 0)
+        sprites.setDataString(it, INTERACT_DATA.KIND, INTERACT_ACTION_PROP)
+        sprites.setDataString(it, INTERACT_DATA.ACTION, action)
+        sprites.setDataNumber(it, INTERACT_DATA.USED, 0)
+        sprites.setDataNumber(it, INTERACT_DATA.OPENED, 0)
+        sprites.setDataNumber(it, INTERACT_DATA.FOCUSABLE, focusable ? 1 : 0)
+
+        _dunInteractables.push(it)
+    }
+
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            ensureForDecor(_engineDecorSolids[i])
+        }
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = 0; i < _engineDecorTriggers.length; i++) {
+            ensureForDecor(_engineDecorTriggers[i])
+        }
+    }
 }
 
 function _dunUpdateShrineOverlays(nowMs: number): void {
@@ -25721,6 +25280,7 @@ function updateGenericFocus(nowMs: number): void {
 
 
 
+    _dunEnsureShrineInteractables(nowMs)
     _dunUpdateInteractableFocus(nowMs)
     _dunUpdatePropAuraOverrides(nowMs)
     _dunUpdateShrineOverlays(nowMs)
@@ -26712,367 +26272,222 @@ function updateHeroUnderfootTilesAndDecals(nowMs: number): void {
 // --------------------------------------------------------------
 
 let DECOR_SOLID_BLOCKING_ENABLED = true
+const DECOR_SOLID_RESCUE_AFTER_MS = 250
+const DECOR_SOLID_MAX_PUSH_PX = 8
+const DECOR_SOLID_RESCUE_RADIUS_TILES = 3
+const HERO_SAFE_POS_OK_KEY = "__heSafeOk"
+const HERO_SAFE_POS_X_KEY = "__heSafeX"
+const HERO_SAFE_POS_Y_KEY = "__heSafeY"
+const HERO_BLOCKED_SINCE_MS_KEY = "__heBlockedSinceMs"
 
 
 
 function decorSolids_blockingHook(nowMs: number): void {
 
     if (!DECOR_SOLID_BLOCKING_ENABLED) return
-
-    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return
-
+    if (!_engineDecorSolids) return
 
 
-    // Local helpers: AABB overlap using Arcade sprite bounds
 
-    function overlaps(a: Sprite, b: Sprite): boolean {
-
-        const ab = _boundsWithOffset(a, _heroCollisionOffsetY(a))
-
-        const bb = _boundsWithOffset(b, _heroCollisionOffsetY(b))
-
-        return (ab.left < bb.right) && (ab.right > bb.left) && (ab.top < bb.bottom) && (ab.bottom > bb.top)
-
+    function heroBoundsAt(h: Sprite, x: number, y: number) {
+        const dims = _readSpriteColliderDims(h)
+        const halfW = (dims.w | 0) >> 1
+        const halfH = (dims.h | 0) >> 1
+        const offY = _heroCollisionOffsetY(h) | 0
+        const cx = x | 0
+        const cy = ((y | 0) + offY) | 0
+        return {
+            left: (cx - halfW) | 0,
+            right: (cx + halfW - 1) | 0,
+            top: (cy - halfH) | 0,
+            bottom: (cy + halfH - 1) | 0,
+            centerX: cx | 0,
+            centerY: cy | 0,
+        }
     }
 
+    function heroOverlapsDecorAt(h: Sprite, x: number, y: number): boolean {
+        const b = heroBoundsAt(h, x, y)
+        return _boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)
+    }
 
+    function heroMarkSafe(h: Sprite, x: number, y: number): void {
+        sprites.setDataNumber(h, HERO_SAFE_POS_OK_KEY, 1)
+        sprites.setDataNumber(h, HERO_SAFE_POS_X_KEY, x | 0)
+        sprites.setDataNumber(h, HERO_SAFE_POS_Y_KEY, y | 0)
+        sprites.setDataNumber(h, HERO_BLOCKED_SINCE_MS_KEY, 0)
+    }
 
-    function anySolidOverlap(h: Sprite): boolean {
+    function heroTryRescueIfBlocked(h: Sprite, now: number): boolean {
+        if (!_heroSpawnIsBlockedAt(h.x | 0, h.y | 0)) return false
 
-        for (let i = 0; i < _engineDecorSolids.length; i++) {
+        let since = sprites.readDataNumber(h, HERO_BLOCKED_SINCE_MS_KEY) | 0
+        if (!since) {
+            sprites.setDataNumber(h, HERO_BLOCKED_SINCE_MS_KEY, now | 0)
+            return false
+        }
+        if (((now | 0) - since) < (DECOR_SOLID_RESCUE_AFTER_MS | 0)) return false
 
-            const s = _engineDecorSolids[i]
-
-            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
-
-            if (overlaps(h, s)) return true
-
+        let rescued = false
+        const hasSafe = sprites.readDataNumber(h, HERO_SAFE_POS_OK_KEY) | 0
+        if (hasSafe) {
+            const safeX = sprites.readDataNumber(h, HERO_SAFE_POS_X_KEY) | 0
+            const safeY = sprites.readDataNumber(h, HERO_SAFE_POS_Y_KEY) | 0
+            if (!_heroSpawnIsBlockedAt(safeX, safeY)) {
+                h.setPosition(safeX, safeY)
+                rescued = true
+            }
         }
 
+        if (!rescued) {
+            const pick = _heroSpawnFindClearXY(h.x | 0, h.y | 0, DECOR_SOLID_RESCUE_RADIUS_TILES | 0)
+            if (!_heroSpawnIsBlockedAt(pick.x, pick.y)) {
+                h.setPosition(pick.x, pick.y)
+                rescued = true
+            }
+        }
+
+        if (rescued) {
+            h.vx = 0
+            h.vy = 0
+            sprites.setDataNumber(h, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(h, HERO_DATA.STORED_VY, 0)
+            sprites.setDataNumber(h, HERO_DATA.PREV_X, h.x | 0)
+            sprites.setDataNumber(h, HERO_DATA.PREV_Y, h.y | 0)
+            heroMarkSafe(h, h.x | 0, h.y | 0)
+            return true
+        }
+
+        sprites.setDataNumber(h, HERO_BLOCKED_SINCE_MS_KEY, now | 0)
         return false
-
     }
-
-
-
-    // Fallback: resolve overlap by minimal penetration (tight AABB already applied in Phaser wrapper).
-
-    // This is only used when rollback cannot resolve (bad/unstable PREV_*).
 
     function resolveByPenetrationOnce(h: Sprite): boolean {
-
-        let bestAxis = 0 // 1 = x, 2 = y
-
+        let bestAxis = 0
         let bestPush = 0
-
         let bestMag = 1 << 30
 
-
-
+        const hb = heroBoundsAt(h, h.x | 0, h.y | 0)
         for (let i = 0; i < _engineDecorSolids.length; i++) {
-
             const s = _engineDecorSolids[i]
-
             if (!s || (s.flags & sprites.Flag.Destroyed)) continue
 
-            const hb = _boundsWithOffset(h, _heroCollisionOffsetY(h))
+            const img: any = (s as any).image
+            let w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) | 0
+            let hgt = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) | 0
+            if (w <= 0) w = WORLD_TILE_SIZE | 0
+            if (hgt <= 0) hgt = WORLD_TILE_SIZE | 0
 
-            const sb = _boundsWithOffset(s, _heroCollisionOffsetY(s))
+            let l = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+            let t = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (hgt >> 1))
+            let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
+            let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + hgt - 1) | 0)
 
-            if (!((hb.left < sb.right) && (hb.right > sb.left) && (hb.top < sb.bottom) && (hb.bottom > sb.top))) continue
-
-
+            if (!((hb.left < r) && (hb.right > l) && (hb.top < b) && (hb.bottom > t))) continue
 
             const hcx = ((hb.left + hb.right) >> 1) | 0
-
             const hcy = ((hb.top + hb.bottom) >> 1) | 0
+            const scx = ((l + r) >> 1) | 0
+            const scy = ((t + b) >> 1) | 0
 
-            const scx = ((sb.left + sb.right) >> 1) | 0
-
-            const scy = ((sb.top + sb.bottom) >> 1) | 0
-
-
-
-            // Penetrations (positive when overlapping)
-
-            const penLeft = (hb.right - sb.left) | 0   // push left by this (negative)
-
-            const penRight = (sb.right - hb.left) | 0  // push right by this (positive)
-
-            const penUp = (hb.bottom - sb.top) | 0     // push up by this (negative)
-
-            const penDown = (sb.bottom - hb.top) | 0   // push down by this (positive)
-
-
-
-            // Candidate pushes based on relative centers (stable direction choice)
+            const penLeft = (hb.right - l) | 0
+            const penRight = (r - hb.left) | 0
+            const penUp = (hb.bottom - t) | 0
+            const penDown = (b - hb.top) | 0
 
             const pushX = (hcx < scx) ? (-(penLeft | 0)) : (penRight | 0)
-
             const pushY = (hcy < scy) ? (-(penUp | 0)) : (penDown | 0)
 
-
-
             const magX = Math.abs(pushX) | 0
-
             const magY = Math.abs(pushY) | 0
 
-
-
-            // Choose minimal axis for THIS solid
-
             let axis = 1
-
             let push = pushX
-
             let mag = magX
-
-
-
             if (magY < magX) {
-
                 axis = 2
-
                 push = pushY
-
                 mag = magY
-
             }
-
-
 
             if (mag > 0 && mag < bestMag) {
-
                 bestMag = mag
-
                 bestAxis = axis
-
                 bestPush = push
-
             }
-
         }
-
-
 
         if (!bestAxis || bestMag >= (1 << 29)) return false
 
-
+        const maxPush = (DECOR_SOLID_MAX_PUSH_PX | 0)
+        let push = bestPush | 0
+        if (maxPush > 0 && Math.abs(push) > maxPush) {
+            push = (push < 0) ? (-maxPush | 0) : (maxPush | 0)
+        }
 
         if (bestAxis === 1) {
-
-            h.x = ((h.x | 0) + (bestPush | 0)) | 0
-
+            h.x = ((h.x | 0) + (push | 0)) | 0
             try { (h.vx as any) = 0 } catch { }
-
         } else {
-
-            h.y = ((h.y | 0) + (bestPush | 0)) | 0
-
+            h.y = ((h.y | 0) + (push | 0)) | 0
             try { (h.vy as any) = 0 } catch { }
-
         }
-
-
 
         return true
-
     }
 
-
-
     const MAX_FALLBACK_ITERS = 6
-
-
-
-    // Resolve per hero
+    const now = nowMs | 0
 
     for (let hi = 0; hi < heroes.length; hi++) {
-
         const h = heroes[hi]
-
         if (!h) continue
-
         if (h.flags & sprites.Flag.Ghost) continue
 
-
-
-        if (!anySolidOverlap(h)) continue
-
-
-
-        // Read "prev" position (set earlier each tick for tile rollback).
-
-        let px = sprites.readDataNumber(h, HERO_DATA.PREV_X) | 0
-
-        let py = sprites.readDataNumber(h, HERO_DATA.PREV_Y) | 0
-
-
-
         const cx = h.x | 0
-
         const cy = h.y | 0
 
-
-
-        if ((px === 0 && py === 0) && (cx !== 0 || cy !== 0)) {
-
-            px = cx
-
-            py = cy
-
+        if (!_heroSpawnIsBlockedAt(cx, cy)) {
+            heroMarkSafe(h, cx, cy)
+            continue
         }
 
+        if (heroOverlapsDecorAt(h, cx, cy)) {
+            const px = sprites.readDataNumber(h, HERO_DATA.PREV_X) | 0
+            const py = sprites.readDataNumber(h, HERO_DATA.PREV_Y) | 0
 
+            let finalX = cx
+            let finalY = cy
+            let blockedX = false
+            let blockedY = false
 
-        let dx = (cx - px) | 0
-
-        let dy = (cy - py) | 0
-
-
-
-        // If PREV_* is stale/overwritten, dx/dy can be 0 even while overlapping.
-
-        // Use velocity direction only for axis preference in that case.
-
-        if (dx === 0 && dy === 0) {
-
-            try { dx = (h.vx as any) | 0 } catch { dx = 0 }
-
-            try { dy = (h.vy as any) | 0 } catch { dy = 0 }
-
-        }
-
-
-
-        const preferX = (Math.abs(dx) >= Math.abs(dy))
-
-
-
-        const ox = cx
-
-        const oy = cy
-
-
-
-        let resolved = false
-
-
-
-        if (preferX) {
-
-            if (dx !== 0) {
-
-                h.x = px
-
-                if (!anySolidOverlap(h)) {
-
-                    try { (h.vx as any) = 0 } catch { }
-
-                    resolved = true
-
-                } else {
-
-                    h.x = ox
-
-                }
-
+            if (heroOverlapsDecorAt(h, cx, py)) {
+                blockedX = true
+                finalX = px | 0
+            }
+            if (heroOverlapsDecorAt(h, finalX, cy)) {
+                blockedY = true
+                finalY = py | 0
             }
 
-
-
-            if (!resolved && dy !== 0) {
-
-                h.y = py
-
-                if (!anySolidOverlap(h)) {
-
-                    try { (h.vy as any) = 0 } catch { }
-
-                    resolved = true
-
-                } else {
-
-                    h.y = oy
-
-                }
-
+            if (blockedX || blockedY) {
+                h.x = finalX | 0
+                h.y = finalY | 0
+                if (blockedX) h.vx = 0
+                if (blockedY) h.vy = 0
             }
-
-        } else {
-
-            if (dy !== 0) {
-
-                h.y = py
-
-                if (!anySolidOverlap(h)) {
-
-                    try { (h.vy as any) = 0 } catch { }
-
-                    resolved = true
-
-                } else {
-
-                    h.y = oy
-
-                }
-
-            }
-
-
-
-            if (!resolved && dx !== 0) {
-
-                h.x = px
-
-                if (!anySolidOverlap(h)) {
-
-                    try { (h.vx as any) = 0 } catch { }
-
-                    resolved = true
-
-                } else {
-
-                    h.x = ox
-
-                }
-
-            }
-
-        }
-
-
-
-        // Fallback: if rollback didn't resolve (or dx/dy were useless), push out by penetration.
-
-        if (!resolved) {
 
             for (let it = 0; it < MAX_FALLBACK_ITERS; it++) {
-
-                if (!anySolidOverlap(h)) { resolved = true; break }
-
+                if (!heroOverlapsDecorAt(h, h.x | 0, h.y | 0)) break
                 if (!resolveByPenetrationOnce(h)) break
-
             }
-
         }
 
-
-
-        // Last resort: revert fully
-
-        if (!resolved) {
-
-            h.x = px
-
-            h.y = py
-
-            try { (h.vx as any) = 0 } catch { }
-
-            try { (h.vy as any) = 0 } catch { }
-
+        if (_heroSpawnIsBlockedAt(h.x | 0, h.y | 0)) {
+            heroTryRescueIfBlocked(h, now)
+        } else {
+            heroMarkSafe(h, h.x | 0, h.y | 0)
         }
-
     }
 
 }
@@ -27165,6 +26580,206 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 
 }
 
+const BLOCKLY_FALLBACK_PROFILE = "Default"
+
+function _he_posX(s: any): number {
+    const v = (s && typeof s.x === "number") ? s.x : 0
+    return (v | 0)
+}
+
+function _he_posY(s: any): number {
+    const v = (s && typeof s.y === "number") ? s.y : 0
+    return (v | 0)
+}
+
+function _he_readDataNumber(s: any, key: string, fallback = 0): number {
+    try {
+        const v = sprites.readDataNumber(s, key)
+        if (typeof v === "number" && Number.isFinite(v)) return v
+    } catch { }
+    const v2 = s ? (s as any)[key] : undefined
+    if (typeof v2 === "number" && Number.isFinite(v2)) return v2
+    return fallback
+}
+
+function _resolvePidForProfile(profileRaw: any): number {
+    const key = (typeof profileRaw === "string") ? profileRaw.trim() : ""
+    if (!key) return 0
+    try {
+        for (const pidStr of Object.keys(playerIdToProfile)) {
+            const pid = pidStr | 0
+            if (pid > 0 && playerIdToProfile[pid] === key) return pid
+        }
+    } catch { }
+    return 0
+}
+
+function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[], profileKey: string) {
+    const me = heroesArr && heroesArr[heroIndex] ? (heroesArr[heroIndex] as any) : null
+    const meX = _he_posX(me)
+    const meY = _he_posY(me)
+
+    const enemyX: number[] = []
+    const enemyY: number[] = []
+    const enemyHp: number[] = []
+    const enemyDistSq: number[] = []
+    const enemyObjs: any[] = []
+    let relicIds: string[] = []
+    let weaponIds: string[] = []
+    let weaponBonuses: any[] = []
+
+    for (let i = 0; i < (enemiesArr ? enemiesArr.length : 0); i++) {
+        const e: any = enemiesArr[i]
+        const ex = _he_posX(e)
+        const ey = _he_posY(e)
+
+        const dx = (ex - meX) | 0
+        const dy = (ey - meY) | 0
+
+        const hp = _he_readDataNumber(e, "hp", 0) | 0
+        const maxHp = _he_readDataNumber(e, "maxHp", hp) | 0
+        const mana = _he_readDataNumber(e, "mana", 0) | 0
+        const maxMana = _he_readDataNumber(e, "maxMana", mana) | 0
+        const vx = _he_readDataNumber(e, "vx", 0)
+        const vy = _he_readDataNumber(e, "vy", 0)
+        const dmg = _he_readDataNumber(e, "dmg", _he_readDataNumber(e, "damage", 0))
+
+        enemyX.push(ex)
+        enemyY.push(ey)
+        enemyHp.push(hp)
+        const d2 = ((dx * dx) + (dy * dy)) | 0
+        enemyDistSq.push(d2)
+        enemyObjs.push(Object.freeze({
+            hp,
+            maxHp,
+            mana,
+            maxMana,
+            x: ex | 0,
+            y: ey | 0,
+            vx,
+            vy,
+            dmg,
+            distSq: d2,
+        }))
+    }
+
+    const heroX: number[] = []
+    const heroY: number[] = []
+    const heroHp: number[] = []
+    const heroLvl: number[] = []
+    const heroObjs: any[] = []
+
+    for (let i = 0; i < (heroesArr ? heroesArr.length : 0); i++) {
+        const h: any = heroesArr[i]
+        const hp = _he_readDataNumber(h, "hp", 0) | 0
+        const maxHp = _he_readDataNumber(h, "maxHp", hp) | 0
+        const mana = _he_readDataNumber(h, "mana", 0) | 0
+        const maxMana = _he_readDataNumber(h, "maxMana", mana) | 0
+        const lvl = _he_readDataNumber(h, "lvl", 1) | 0
+        const vx = _he_readDataNumber(h, "vx", 0)
+        const vy = _he_readDataNumber(h, "vy", 0)
+        const dmg = _he_readDataNumber(h, "dmg", _he_readDataNumber(h, "damage", 0))
+
+        heroX.push(_he_posX(h))
+        heroY.push(_he_posY(h))
+        heroHp.push(hp)
+        heroLvl.push(lvl)
+        heroObjs.push(Object.freeze({
+            hp,
+            maxHp,
+            mana,
+            maxMana,
+            lvl,
+            x: _he_posX(h) | 0,
+            y: _he_posY(h) | 0,
+            vx,
+            vy,
+            dmg,
+        }))
+    }
+
+    Object.freeze(enemyX)
+    Object.freeze(enemyY)
+    Object.freeze(enemyHp)
+    Object.freeze(enemyDistSq)
+    Object.freeze(enemyObjs)
+    Object.freeze(heroX)
+    Object.freeze(heroY)
+    Object.freeze(heroHp)
+    Object.freeze(heroLvl)
+    Object.freeze(heroObjs)
+
+    try {
+        const g: any = globalThis as any
+        const getter = g && g.__heGetUiSnapshot
+        const pid = _resolvePidForProfile(profileKey) || ((heroIndex | 0) + 1)
+        const snap = (typeof getter === "function") ? getter(pid) : null
+        if (snap && snap.relics && Array.isArray(snap.relics.ownedRelicIds)) {
+            relicIds = (snap.relics.ownedRelicIds || []).slice()
+        }
+        if (snap && snap.weapons) {
+            const w = snap.weapons as any
+            if (Array.isArray(w.ids)) weaponIds = w.ids.slice()
+            else if (Array.isArray(w.weaponIds)) weaponIds = w.weaponIds.slice()
+            if (Array.isArray(w.bonuses)) weaponBonuses = w.bonuses.slice()
+        }
+    } catch { }
+
+    Object.freeze(relicIds)
+    Object.freeze(weaponIds)
+    Object.freeze(weaponBonuses)
+
+    const ctx = {
+        heroIndex: heroIndex | 0,
+        meX: meX | 0,
+        meY: meY | 0,
+        meHp: _he_readDataNumber(me, "hp", 0) | 0,
+        meLvl: _he_readDataNumber(me, "lvl", 1) | 0,
+        enemyCount: enemyX.length | 0,
+        enemyX,
+        enemyY,
+        enemyHp,
+        enemyDistSq,
+        heroCount: heroX.length | 0,
+        heroX,
+        heroY,
+        heroHp,
+        heroLvl,
+        heroes: heroObjs,
+        relicIds,
+        weaponIds,
+        weaponBonuses,
+        enemies: enemyObjs,
+    }
+
+    return Object.freeze(ctx)
+}
+
+function _he_setBlocklyReadonlyCtx(heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[], profileKey: string): void {
+    try {
+        (globalThis as any).__heBlocklyRO = _he_buildReadonlyHeroLogicCtx(heroIndex, enemiesArr, heroesArr, profileKey)
+    } catch { }
+}
+
+function _he_setBlocklyReadonlyCtxForHeroIndex(heroIndex: number): void {
+    if (heroIndex < 0 || heroIndex >= heroes.length) return
+    const profile = getHeroProfileForHeroIndex(heroIndex) || BLOCKLY_FALLBACK_PROFILE
+    _he_setBlocklyReadonlyCtx(heroIndex, enemies as any[], heroes as any[], profile)
+}
+
+function _he_findHeroIndexForSprite(hero: Sprite): number {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        if (heroes[hi] === hero) return hi
+    }
+    return -1
+}
+
+if (typeof globalThis !== "undefined") {
+    const g: any = globalThis as any
+    g.__heSetBlocklyROForHeroIndex = _he_setBlocklyReadonlyCtxForHeroIndex
+    g.__heFindHeroIndexForSprite = _he_findHeroIndexForSprite
+}
+
 
 
 function runHeroLogicForHero(heroIndex: number, button: string) {
@@ -27193,97 +26808,39 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
     const profile = getHeroProfileForHeroIndex(heroIndex);
 
-    const fn: any = HeroEngine.heroLogicByProfileHook;
-
-
-
     if (DEBUG_HERO_LOGIC && DEBUG_HERO_LOGIC_ENTER) {
-
         console.log(
-
             "[runHeroLogicForHero] ENTER heroIndex=" + heroIndex +
-
             " profile=" + profile +
-
             " button=" + button +
-
-            " fnType=" + (typeof fn)
-
+            " logic=blockly"
         );
-
     }
 
-
-
-    // Guard: do not let the VM try to call a non-function (this is what leads to 'iface')
-
-    if (!fn || typeof fn !== "function") {
-
-        console.log(
-
-            "[runHeroLogicForHero] INVALID HOOK heroIndex=" + heroIndex +
-
-            " profile=" + profile +
-
-            " button=" + button +
-
-            " fn=" + fn
-
-        );
-
-        return defaultHeroLogic(button, heroIndex, localEnemies, localHeroes);
-
-    }
-
-
-
-    //let out: number[];
-
-    let out: any[];
-
-
+    let out: any[] | null = null;
 
     try {
-
-        out = fn(profile, button, heroIndex, localEnemies, localHeroes);
-
+        const prof = profile || BLOCKLY_FALLBACK_PROFILE;
+        _he_setBlocklyReadonlyCtx(heroIndex, localEnemies, localHeroes, prof);
+        out = tryRunBlocklyHeroLogic(prof, button) as any[] | null;
     } catch (e) {
-
         console.log(
-
             "[runHeroLogicForHero] ERROR heroIndex=" + heroIndex +
-
             " profile=" + profile +
-
             " button=" + button +
-
             " error=" + e
-
         );
-
-        return defaultHeroLogic(button, heroIndex, localEnemies, localHeroes);
-
+        return null;
     }
-
-
 
     if (DEBUG_HERO_LOGIC && DEBUG_HERO_LOGIC_OUT) {
-
         console.log(
-
             "[runHeroLogicForHero] OUT heroIndex=" + heroIndex +
-
             " profile=" + profile +
-
             " button=" + button +
-
             " out=" + (out ? "[" + out.join(",") + "]" : "null")
-
         );
-
     }
-
-
 
     return out;
 
@@ -27291,13 +26848,7 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
 
 
-// Wire default implementation into overridable hook
-
-HeroEngine.runHeroLogicForHeroHook = runHeroLogicForHero;
-
-
-
-
+// Blockly-only logic is wired directly through runHeroLogicForHero.
 
 
 
@@ -27451,162 +27002,6 @@ function calculateMoveStatsForFamily(family: number, button: string, traits: num
 
 
 
-function heroImageForPlayer(playerId: number) { /* (same 4 tiny images as before) */
-
-
-
-    if (playerId == 1) return img`
-
-        . . . . . . f f f f . . . . . .
-
-        . . . . f f f 2 2 f f f . . . .
-
-        . . . f f f 2 2 2 2 f f f . . .
-
-        . . f f f e e e e e e f f f . .
-
-        . . f f e 2 2 2 2 2 2 e e f . .
-
-        . . f e 2 f f f f f f 2 e f . .
-
-        . . f f f f e e e e f f f f . .
-
-        . f f e f b f 4 4 f b f e f f .
-
-        . f e e 4 1 f d d f 1 4 e e f .
-
-        . . f e e d d d d d d e e f . .
-
-        . . . f e e 4 4 4 4 e e f . . .
-
-        . . e 4 f 2 2 2 2 2 2 f 4 e . .
-
-        . . 4 d f 2 2 2 2 2 2 f d 4 . .
-
-        . . 4 4 f 4 4 5 5 4 4 f 4 4 . .
-
-        . . . . . f f f f f f . . . . .
-
-        . . . . . f f . . f f . . . . .
-
-    `
-
-    if (playerId == 2) return img`
-
-        . . . . . . c c c c . . . . . .
-
-        . . . . c c c 5 5 c c c . . . .
-
-        . . . c c c 5 5 5 5 c c c . . .
-
-        . . c c c e e e e e e c c c . .
-
-        . . c c e 5 5 5 5 5 5 e e c . .
-
-        . . c e 5 c c c c c c 5 e c . .
-
-        . . c c c c e e e e c c c c . .
-
-        . c c e c b c 4 4 c b c e c c .
-
-        . c e e 4 1 c d d c 1 4 e e c .
-
-        . . c e e d d d d d d e e c . .
-
-        . . . c e e 4 4 4 4 e e c . . .
-
-        . . e 4 c 5 5 5 5 5 5 c 4 e . .
-
-        . . 4 d c 5 5 5 5 5 5 c d 4 . .
-
-        . . 4 4 c 4 4 7 7 4 4 c 4 4 . .
-
-        . . . . . c c c c c c . . . . .
-
-        . . . . . c c . . c c . . . . .
-
-    `
-
-    if (playerId == 3) return img`
-
-        . . . . . . 6 6 6 6 . . . . . .
-
-        . . . . 6 6 6 3 3 6 6 6 . . . .
-
-        . . . 6 6 6 3 3 3 3 6 6 6 . . .
-
-        . . 6 6 6 e e e e e e 6 6 6 . .
-
-        . . 6 6 e 3 3 3 3 3 3 e e 6 . .
-
-        . . 6 e 3 6 6 6 6 6 6 3 e 6 . .
-
-        . . 6 6 6 6 e e e e 6 6 6 6 . .
-
-        . 6 6 e 6 b 6 4 4 6 b 6 e 6 6 .
-
-        . 6 e e 4 1 6 d d 6 1 4 e e 6 .
-
-        . . 6 e e d d d d d d e e 6 . .
-
-        . . . 6 e e 4 4 4 4 e e 6 . . .
-
-        . . e 4 6 3 3 3 3 3 3 6 4 e . .
-
-        . . 4 d 6 3 3 3 3 3 3 6 d 4 . .
-
-        . . 4 4 6 4 4 9 9 4 4 6 4 4 . .
-
-        . . . . . 6 6 6 6 6 6 . . . . .
-
-        . . . . . 6 6 . . 6 6 . . . . .
-
-    `
-
-    return img`
-
-        . . . . . . 8 8 8 8 . . . . . .
-
-        . . . . 8 8 8 7 7 8 8 8 . . . .
-
-        . . . 8 8 8 7 7 7 7 8 8 8 . . .
-
-        . . 8 8 8 e e e e e e 8 8 8 . .
-
-        . . 8 8 e 7 7 7 7 7 7 e e 8 . .
-
-        . . 8 e 7 8 8 8 8 8 8 7 e 8 . .
-
-        . . 8 8 8 8 e e e e 8 8 8 8 . .
-
-        . 8 8 e 8 b 8 4 4 8 b 8 e 8 8 .
-
-        . 8 e e 4 1 8 d d 8 1 4 e e 8 .
-
-        . . 8 e e d d d d d d e e 8 . .
-
-        . . . 8 e e 4 4 4 4 e e 8 . . .
-
-        . . e 4 8 7 7 7 7 7 7 8 4 e . .
-
-        . . 4 d 8 7 7 7 7 7 7 8 d 4 . .
-
-        . . 4 4 8 4 4 9 9 4 4 8 4 4 . .
-
-        . . . . . 8 8 8 8 8 8 . . . . .
-
-        . . . . . 8 8 . . 8 8 . . . . .
-
-    `
-
-
-
-}
-
-
-
-
-
 function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, familyNumber: number) {
 
     const existingVer = sprites.readDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER) | 0
@@ -27653,6 +27048,195 @@ function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, family
 
 
 
+function _heroSpawnBoundsAt(x: number, y: number, colliderW: number, colliderH: number) {
+
+    const halfW = (colliderW | 0) >> 1
+    const halfH = (colliderH | 0) >> 1
+
+    const cx = x | 0
+    const cy = ((y | 0) + (HERO_COLLISION_Y_OFFSET_PX | 0)) | 0
+
+    const left = (cx - halfW) | 0
+    const right = (cx + halfW - 1) | 0
+    const top = (cy - halfH) | 0
+    const bottom = (cy + halfH - 1) | 0
+
+    return { left, right, top, bottom }
+
+}
+
+
+
+function _boxOverlapsDecorSolidsBounds(left: number, right: number, top: number, bottom: number): boolean {
+
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return false
+
+    for (let i = 0; i < _engineDecorSolids.length; i++) {
+
+        const s = _engineDecorSolids[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+
+        const img: any = (s as any).image
+
+        let w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) | 0
+        let h = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) | 0
+
+        if (w <= 0) w = WORLD_TILE_SIZE | 0
+        if (h <= 0) h = WORLD_TILE_SIZE | 0
+
+        let l = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+        let t = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (h >> 1))
+        let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
+        let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
+
+        if (left <= r && right >= l && top <= b && bottom >= t) return true
+
+    }
+
+    return false
+
+}
+
+
+
+function _heroSpawnIsBlockedAt(x: number, y: number): boolean {
+
+    const bx = x | 0
+    const by = y | 0
+
+    const hasMap = !!(_engineWorldTileMap && _engineWorldTileMap.length > 0)
+
+    if (!hasMap && (!_engineDecorSolids || _engineDecorSolids.length === 0)) return false
+
+    const b = _heroSpawnBoundsAt(bx, by, HERO_COLLIDER_PX, HERO_COLLIDER_PX)
+
+    if (hasMap) {
+
+        const rows = _engineWorldTileMap.length | 0
+        const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+        const tile = WORLD_TILE_SIZE | 0
+
+        if (rows > 0 && cols > 0 && tile > 0) {
+
+            const worldW = (cols * tile) | 0
+            const worldH = (rows * tile) | 0
+
+            if (b.left < 0 || b.top < 0 || b.right >= worldW || b.bottom >= worldH) return true
+            if (_boxOverlapsWallBounds(b.left, b.right, b.top, b.bottom)) return true
+
+        }
+
+    }
+
+    if (_boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)) return true
+
+    return false
+
+}
+
+
+
+function _heroSpawnFindClearXY(startX: number, startY: number, maxRadiusTiles?: number): { x: number; y: number } {
+
+    const x0 = startX | 0
+    const y0 = startY | 0
+
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return { x: x0, y: y0 }
+
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+    const tile = WORLD_TILE_SIZE | 0
+
+    if (rows <= 0 || cols <= 0 || tile <= 0) return { x: x0, y: y0 }
+
+    if (!_heroSpawnIsBlockedAt(x0, y0)) return { x: x0, y: y0 }
+
+    let startR = Math.idiv(y0, tile) | 0
+    let startC = Math.idiv(x0, tile) | 0
+
+    if (startR < 0) startR = 0
+    else if (startR >= rows) startR = (rows - 1) | 0
+
+    if (startC < 0) startC = 0
+    else if (startC >= cols) startC = (cols - 1) | 0
+
+    const baseX = _dunColToX(startC)
+    const baseY = _dunRowToY(startR)
+    const offsetX = (x0 - baseX) | 0
+    const offsetY = (y0 - baseY) | 0
+
+    const maxR = (maxRadiusTiles == null ? 6 : (maxRadiusTiles | 0)) | 0
+
+    function tryFind(useOffset: boolean): { x: number; y: number } | null {
+
+        for (let r = 0; r <= maxR; r++) {
+
+            for (let dr = -r; dr <= r; dr++) {
+
+                for (let dc = -r; dc <= r; dc++) {
+
+                    if (Math.abs(dr) !== r && Math.abs(dc) !== r) continue
+
+                    const rr = (startR + dr) | 0
+                    const cc = (startC + dc) | 0
+
+                    if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) continue
+
+                    let px = _dunColToX(cc)
+                    let py = _dunRowToY(rr)
+
+                    if (useOffset) {
+                        px = (px + offsetX) | 0
+                        py = (py + offsetY) | 0
+                    }
+
+                    if (!_heroSpawnIsBlockedAt(px, py)) return { x: px, y: py }
+
+                }
+
+            }
+
+        }
+
+        return null
+
+    }
+
+    const withOffset = tryFind(true)
+    if (withOffset) return withOffset
+
+    const centered = tryFind(false)
+    if (centered) return centered
+
+    return { x: x0, y: y0 }
+
+}
+
+
+
+function _heroSpawnRescueIfBlocked(hero: Sprite, maxRadiusTiles?: number): boolean {
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+
+    const x0 = hero.x | 0
+    const y0 = hero.y | 0
+
+    if (!_heroSpawnIsBlockedAt(x0, y0)) return false
+
+    const pick = _heroSpawnFindClearXY(x0, y0, maxRadiusTiles)
+    hero.setPosition(pick.x, pick.y)
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x)
+    sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y)
+    return true
+
+}
+
+
+
 function createHeroForPlayer(
 
     playerId: number,
@@ -27678,10 +27262,7 @@ function createHeroForPlayer(
 ) {
 
     // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
-
     // In Phaser, the native LPC sprite uses the same footprint; we skip pixel uploads.
-
-    // In pure Arcade, students will just see big, chunky heroes.
 
     const hero = sprites.create(image.create(64, 64), SpriteKind.Player)
     sprites.setDataNumber(hero, ENEMY_DATA.COLLIDER_W, HERO_COLLIDER_PX | 0)
@@ -27689,7 +27270,8 @@ function createHeroForPlayer(
 
 
 
-    hero.x = startX; hero.y = startY; hero.z = 20
+    const spawn = _heroSpawnFindClearXY(startX, startY)
+    hero.x = spawn.x; hero.y = spawn.y; hero.z = 20
 
 
 
@@ -28383,75 +27965,43 @@ function setupHeroes() {
 
 
 
-    // ------------------------------------------------------------
-
-    // STEP 6: Phaser runtime spawn-on-demand
-
-    // - Phaser host starts with ONLY Player 1.
-
-    // - Players 2..4 are spawned later (on-demand) when they actually act/join.
-
-    // - MakeCode Arcade runtime keeps the original 4-player behavior.
-
-    // TODO_NPLAYER_BRIDGE: later we’ll remove 4-player assumptions entirely.
-
-    // ------------------------------------------------------------
-
-    if (isPhaserRuntime()) {
-
-        if (DEBUG_SETUP_HEROES_LOGS) {
-            console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
-        }
-
-        // Prefer local player id/profile if the network assigned one before boot.
-        let pid = 1
-        let profileOverride = ""
-        try {
-            const g: any = globalThis as any
-            const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
-            if (netPid > 0) pid = netPid
-            if (playerIdToProfile[pid]) {
-                profileOverride = playerIdToProfile[pid]
-            } else if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
-                profileOverride = g.__netProfileByPid[pid]
-            }
-        } catch { }
-        if (!profileOverride) profileOverride = _getLocalProfileKey()
-        const slotIndex = (pid | 0) > 0 ? (pid - 1) : 0
-        const coordIndex = (slotIndex >= 0 && slotIndex < coords.length) ? slotIndex : 0
-        if (DEBUG_SETUP_HEROES_LOGS) {
-            console.log("[setupHeroes] Phaser runtime: local spawn", {
-                pid,
-                profileOverride: profileOverride || null,
-                coordIndex
-            })
-        }
-        createHeroForPlayer(
-            pid,
-            coords[coordIndex][0],
-            coords[coordIndex][1],
-            profileOverride || undefined,
-            undefined,
-            undefined,
-            undefined,
-            "setupHeroes:phaser"
-        );
-
-        return;
-
+    if (DEBUG_SETUP_HEROES_LOGS) {
+        console.log("[setupHeroes] spawning ONLY Player 1 (spawn-on-demand enabled)");
     }
 
-
-
-    // MakeCode Arcade behavior (unchanged)
-
-    createHeroForPlayer(1, coords[0][0], coords[0][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p1");
-
-    createHeroForPlayer(2, coords[1][0], coords[1][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p2");
-
-    createHeroForPlayer(3, coords[2][0], coords[2][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p3");
-
-    createHeroForPlayer(4, coords[3][0], coords[3][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p4");
+    // Prefer local player id/profile if the network assigned one before boot.
+    let pid = 1
+    let profileOverride = ""
+    try {
+        const g: any = globalThis as any
+        const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+        if (netPid > 0) pid = netPid
+        if (playerIdToProfile[pid]) {
+            profileOverride = playerIdToProfile[pid]
+        } else if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+            profileOverride = g.__netProfileByPid[pid]
+        }
+    } catch { }
+    if (!profileOverride) profileOverride = _getLocalProfileKey()
+    const slotIndex = (pid | 0) > 0 ? (pid - 1) : 0
+    const coordIndex = (slotIndex >= 0 && slotIndex < coords.length) ? slotIndex : 0
+    if (DEBUG_SETUP_HEROES_LOGS) {
+        console.log("[setupHeroes] local spawn", {
+            pid,
+            profileOverride: profileOverride || null,
+            coordIndex
+        })
+    }
+    createHeroForPlayer(
+        pid,
+        coords[coordIndex][0],
+        coords[coordIndex][1],
+        profileOverride || undefined,
+        undefined,
+        undefined,
+        undefined,
+        "setupHeroes"
+    );
 
 }
 
@@ -29286,13 +28836,9 @@ function _doHeroMoveShouldIgnoreDueToBusy(heroIndex: number, hero: Sprite, now: 
 
 function _doHeroMoveCallLogicHook(heroIndex: number, button: string): any[] | null {
 
-    const hook = HeroEngine.runHeroLogicForHeroHook || runHeroLogicForHero
-
-
-
     try {
 
-        const out = hook(heroIndex, button)
+        const out = runHeroLogicForHero(heroIndex, button)
 
         return out
 
@@ -31962,8 +31508,7 @@ const STATUS_KIND_STRENGTH_CHARGE = StatusBarKind.create()
 // --------------------------------------------------------------
 
 // Aura colors – by family
-
-// Used by: createAuraImageFromHero(), updateHeroAuras()
+// Used by: updateHeroAuras()
 
 // --------------------------------------------------------------
 
@@ -31978,6 +31523,13 @@ const AURA_COLOR_HEAL = 7 // green-ish
 const AURA_COLOR_WHITE = 1
 
 const AURA_COLOR_GRAY = 11
+
+// Aura radius – r0..r3 mapping (used by Phaser aura sheets)
+const AURA_RADIUS_STRENGTH = 0
+const AURA_RADIUS_AGILITY = 1
+const AURA_RADIUS_INTELLECT = 2
+const AURA_RADIUS_HEAL = 3
+const AURA_RADIUS_NEUTRAL = 2
 
 
 
@@ -32006,23 +31558,8 @@ function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSpri
 
 
 
-    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
-
-    // So we push the bar DOWN much further in Phaser only.
-
-    if (isMakeCodeArcadeRuntime()) {
-
-        // Tuned for Arcade's fake 16x16 anchor
-
-        bar.setOffsetPadding(0, 2)
-
-    } else {
-
-        // Phaser: small, sane padding under the real sprite
-
-        bar.setOffsetPadding(0, 25)
-
-    }
+    // Phaser: small, sane padding under the real sprite
+    bar.setOffsetPadding(0, 25)
 
 
 
@@ -32100,23 +31637,8 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 
 
 
-    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
-
-    // So we push the bar DOWN much further in Arcade only.
-
-    if (isMakeCodeArcadeRuntime()) {
-
-        // Tuned for Arcade's fake 16x16 anchor
-
-        bar.setOffsetPadding(0, 2)
-
-    } else {
-
-        // Phaser: LARGE padding to actually get above the real sprite
-
-        bar.setOffsetPadding(0, 18)
-
-    }
+    // Phaser: LARGE padding to actually get above the real sprite
+    bar.setOffsetPadding(0, 18)
 
 
 
@@ -32168,23 +31690,8 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 
 
 
-    // Arcade assumes a 16x16 sprite; Phaser uses the real 64x64 silhouette.
-
-    // So we push the bar DOWN much further in Arcade only.
-
-    if (isMakeCodeArcadeRuntime()) {
-
-        // Tuned for Arcade's fake 16x16 anchor
-
-        bar.setOffsetPadding(0, 1)
-
-    } else {
-
-        // Phaser: LARGE padding on top of the real sprite
-
-        bar.setOffsetPadding(0, 14)
-
-    }
+    // Phaser: LARGE padding on top of the real sprite
+    bar.setOffsetPadding(0, 14)
 
 
 
@@ -32792,124 +32299,6 @@ function showDamageNumber(x: number, y: number, amount: number, kind?: string) {
 
 
 
-function createAuraImageFromHero(hero: Sprite, color: number): Image {
-
-    const base = hero.image;
-
-    const w = base.width;
-
-    const h = base.height;
-
-
-
-    // Output is same size as hero image.
-
-    const aura = image.create(w, h);
-
-
-
-    // How far out the aura should extend from the sprite's solid pixels.
-
-    // 2 ? roughly "2 pixels wider" halo.
-
-    const MAX_RADIUS = 2;
-
-
-
-    // For every transparent pixel, check if it's within MAX_RADIUS of any solid pixel.
-
-    // If so, draw aura there. This creates a halo around the hero's silhouette without
-
-    // filling inside the sprite.
-
-    for (let y = 0; y < h; y++) {
-
-        for (let x = 0; x < w; x++) {
-
-            // Only draw aura in originally transparent pixels
-
-            if (base.getPixel(x, y) != 0) continue;
-
-
-
-            let nearSolid = false;
-
-
-
-            for (let dy = -MAX_RADIUS; dy <= MAX_RADIUS && !nearSolid; dy++) {
-
-                for (let dx = -MAX_RADIUS; dx <= MAX_RADIUS && !nearSolid; dx++) {
-
-                    if (dx == 0 && dy == 0) continue;
-
-                    const xx = x + dx;
-
-                    const yy = y + dy;
-
-                    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-
-
-
-                    if (base.getPixel(xx, yy) != 0) {
-
-                        nearSolid = true;
-
-                    }
-
-                }
-
-            }
-
-
-
-            if (nearSolid) {
-
-                aura.setPixel(x, y, color);
-
-            }
-
-        }
-
-    }
-
-
-
-    return aura;
-
-}
-
-
-
-
-
-
-
-function ensureHeroAuraSprite(heroIndex: number): Sprite {
-
-    let aura = _getHeroAura(heroIndex)
-
-    const hero = heroes[heroIndex]; if (!hero) return null
-
-    if (!aura) {
-
-        aura = sprites.create(image.create(hero.image.width, hero.image.height), SpriteKind.HeroAura)
-
-        _setHeroAura(heroIndex, aura)
-
-    }
-
-    aura.z = hero.z + 1
-
-    return aura
-
-}
-
-
-
-
-
-
-
 function agiPendulumPeriodMsForHero(hero: Sprite): number {
 
     // Mirror the existing C6 pendulum-speed logic used by agiMeterPosX1000()
@@ -33395,23 +32784,13 @@ function updateAgiChargeV4PublishedKeys(nowMs: number): void {
 //
 
 // Example:
-
 // function updateHeroOverlays() {
-
 //     const now = game.runtime() | 0
-
-//     const phaser = isPhaserRuntime()
-
 //     updateAgiChargeV4PublishedKeys(now)
-
-//     updateHeroAuras(now, phaser)
-
-//     updateHeroAimIndicators(now, phaser)
-
-//     updateHeroMeters(now, phaser)
-
+//     updateHeroAuras(now)
+//     updateHeroAimIndicators(now)
+//     updateHeroMeters(now)
 //     updateShopUi(now)   // <-- ADD THIS
-
 // }
 
 //
@@ -33430,21 +32809,17 @@ function updateHeroOverlays() {
 
     const now = game.runtime() | 0
 
-    const phaser = isPhaserRuntime()
-
-
-
     // NEW (v4): publish weapon-as-meter contract keys (engine-side authoritative data)
 
     updateAgiChargeV4PublishedKeys(now)
 
 
 
-    updateHeroAuras(now, phaser)
+    updateHeroAuras(now)
 
-    updateHeroAimIndicators(now, phaser)
+    updateHeroAimIndicators(now)
 
-    updateHeroMeters(now, phaser)
+    updateHeroMeters(now)
 
     updateShopUi(now)   // <-- ADD THIS
 
@@ -33460,7 +32835,7 @@ function updateHeroOverlays() {
 
 
 
-function updateHeroAimIndicators(now: number, phaser: boolean) {
+function updateHeroAimIndicators(now: number) {
 
     for (let i = 0; i < heroes.length; i++) {
 
@@ -33540,13 +32915,12 @@ function updateHeroAimIndicators(now: number, phaser: boolean) {
 
 
 
-        // Arcade fallback (or safety fallback if hook fails)
+        // Size fallback if hook fails
 
         if (edgeDist <= 0) {
 
             edgeDist = findHeroLeadingEdgeDistance(hero, aim.nx, aim.ny) | 0
-
-            if (edgeDist > 0) edgeSrc = "scan"
+            if (edgeDist > 0) edgeSrc = "size"
 
         }
 
@@ -33694,95 +33068,7 @@ function updateHeroAimIndicators(now: number, phaser: boolean) {
 
 
 
-function updateHeroMeters(now: number, phaser: boolean) {
-
-    // Arcade-only fallback: compact pips (pending add amount) + optional EXEC sparkle.
-
-    function drawAgiPipsImage(pendingAdd: number, isExecWindow: boolean): Image {
-
-        const pipW = 2
-
-        const pipH = 2
-
-        const gap = 1
-
-        const pad = 1
-
-        const maxPips = 8
-
-
-
-        let n = pendingAdd | 0
-
-        if (n < 0) n = 0
-
-        if (n > maxPips) n = maxPips
-
-
-
-        const wInner = (n > 0) ? ((n * pipW) + ((n - 1) * gap)) : 4
-
-        const w = (wInner + pad * 2) | 0
-
-        const h = 6
-
-
-
-        const img = image.create(w, h)
-
-        img.fill(0)
-
-
-
-        // Border
-
-        img.drawRect(0, 0, w, h, 1)
-
-
-
-        // Pips
-
-        let x = pad
-
-        const y = 2
-
-        for (let i = 0; i < n; i++) {
-
-            img.fillRect(x, y, pipW, pipH, 7)
-
-            x += pipW + gap
-
-        }
-
-
-
-        // EXEC sparkle (tiny cross)
-
-        if (isExecWindow) {
-
-            const cx = (w >> 1) | 0
-
-            const cy = (h >> 1) | 0
-
-            img.setPixel(cx, cy, 5)
-
-            if (cx - 1 >= 0) img.setPixel(cx - 1, cy, 5)
-
-            if (cx + 1 < w) img.setPixel(cx + 1, cy, 5)
-
-            if (cy - 1 >= 0) img.setPixel(cx, cy - 1, 5)
-
-            if (cy + 1 < h) img.setPixel(cx, cy + 1, 5)
-
-        }
-
-
-
-        return img
-
-    }
-
-
+function updateHeroMeters(now: number) {
 
     for (let i = 0; i < heroes.length; i++) {
 
@@ -33820,64 +33106,9 @@ function updateHeroMeters(now: number, phaser: boolean) {
 
 
 
-        // ------------------------------------------------------------
-
-        // Phaser runtime: completely disable the old combo-bar path.
-
-        // (No ensureComboMeter, no UI_KIND_COMBO_METER publishing.)
-
-        // ------------------------------------------------------------
-
-        if (phaser) {
-
-            if (meter) {
-
-                meter.setFlag(SpriteFlag.Invisible, true)
-
-                sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
-
-            }
-
-        } else {
-
-            // --------------------------------------------------------
-
-            // Arcade fallback: show compact pips while charge relevant.
-
-            // --------------------------------------------------------
-
-            if (!chargeRelevant) {
-
-                if (meter) meter.setFlag(SpriteFlag.Invisible, true)
-
-            } else {
-
-                const m = ensureComboMeter(i); if (!m) continue
-
-
-
-                const pendingAdd = sprites.readDataNumber(hero, HERO_DATA.AGI_PENDING_ADD) | 0
-
-                const isExecW = (sprites.readDataNumber(hero, HERO_DATA.AGI_IS_EXEC_WINDOW) | 0) ? true : false
-
-
-
-                const img = drawAgiPipsImage(pendingAdd, isExecW)
-
-                m.setImage(img)
-
-
-
-                m.z = hero.z + 2
-
-                m.x = hero.x
-
-                m.y = hero.y + (hero.height >> 1) + 5
-
-                m.setFlag(SpriteFlag.Invisible, false)
-
-            }
-
+        if (meter) {
+            meter.setFlag(SpriteFlag.Invisible, true)
+            sprites.setDataNumber(meter, UI_COMBO_VISIBLE_KEY, 0)
         }
 
 
@@ -33934,7 +33165,7 @@ function updateHeroMeters(now: number, phaser: boolean) {
 
 
 
-function updateHeroAuras(now: number, phaser: boolean) {
+function updateHeroAuras(now: number) {
 
     for (let i = 0; i < heroes.length; i++) {
 
@@ -33947,6 +33178,7 @@ function updateHeroAuras(now: number, phaser: boolean) {
         let color = 0
 
         let auraGlow = 0
+        let auraRadius = AURA_RADIUS_NEUTRAL
         const glowUntil = _heroStateGetNum(heroHealGlowUntilByProfile, i, 0)
         if (glowUntil > 0 && now < glowUntil) auraGlow = 1
 
@@ -33954,11 +33186,17 @@ function updateHeroAuras(now: number, phaser: boolean) {
 
         const isStatue = _shopIsStatueHero(hero)
 
+        if (family == FAMILY.STRENGTH) auraRadius = AURA_RADIUS_STRENGTH
+        else if (family == FAMILY.AGILITY) auraRadius = AURA_RADIUS_AGILITY
+        else if (family == FAMILY.INTELLECT) auraRadius = AURA_RADIUS_INTELLECT
+        else if (family == FAMILY.HEAL) auraRadius = AURA_RADIUS_HEAL
+
 
 
         if (isStatue) {
+            auraRadius = AURA_RADIUS_NEUTRAL
 
-            if (phaser && DUNGEON_MODE_ACTIVE && _dunFloorKind === DUNGEON_KIND_SHOP) {
+            if (DUNGEON_MODE_ACTIVE && _dunFloorKind === DUNGEON_KIND_SHOP) {
 
                 if (_shopIsStatueFocused(hero, now)) {
 
@@ -34022,51 +33260,23 @@ function updateHeroAuras(now: number, phaser: boolean) {
             if (supportPuzzleActive && supportPuzzleActive[i]) {
                 showAura = true;
                 color = AURA_COLOR_HEAL;
+                auraRadius = AURA_RADIUS_HEAL
             }
 
         }
 
 
 
-        // Phaser: publish aura state; hide Arcade aura sprite
-
-        if (phaser) {
-
-            sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
-
-            sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
-
-            sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, auraGlow)
-
-            const aura = _getHeroAura(i)
-
-            if (aura) aura.setFlag(SpriteFlag.Invisible, true)
-
-        } else {
-
-            const aura = _getHeroAura(i)
-
-            if (!showAura) {
-
-                if (aura) aura.setFlag(SpriteFlag.Invisible, true)
-
-            } else {
-
-                const active = ensureHeroAuraSprite(i)
-
-                if (active) {
-
-                    active.setImage(createAuraImageFromHero(hero, color))
-
-                    active.setFlag(SpriteFlag.Invisible, false)
-
-                    active.x = hero.x; active.y = hero.y; active.z = hero.z + 1
-
-                }
-
-            }
-
+        if (auraGlow && !showAura) {
+            showAura = true
+            if (!color) color = AURA_COLOR_HEAL
+            auraRadius = AURA_RADIUS_HEAL
         }
+
+        sprites.setDataBoolean(hero, HERO_DATA.AURA_ACTIVE, showAura)
+        sprites.setDataNumber(hero, HERO_DATA.AURA_COLOR, color)
+        sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, auraGlow)
+        sprites.setDataNumber(hero, HERO_DATA.AURA_RADIUS, auraRadius)
 
     }
 
@@ -34100,79 +33310,8 @@ function triggerSupportGlowPulse(heroIndex: number) {
 
     }
 
-
-
-    console.log("SUPPORT GLOW: creating aura for hero " + heroIndex);
-
-
-
-    // Use the same silhouette halo as the normal auras, but locked to HEAL color.
-
-    const auraImg = createAuraImageFromHero(hero, AURA_COLOR_HEAL);
-
-
-
-    const aura = sprites.create(auraImg, SpriteKind.HeroAura);
-
-    aura.setFlag(SpriteFlag.Ghost, true);
-
-    aura.setFlag(SpriteFlag.AutoDestroy, true);
-
-
-
-    // Draw ABOVE hero so it's not hidden by the hero sprite
-
-    aura.z = hero.z + 1;
-
-    aura.x = hero.x;
-
-    aura.y = hero.y;
-
-
-
-    let ticks = 0;
-
-    const flashInterval = 60; // ms
-
-
-
-
-
-
-
-    game.onUpdateInterval(flashInterval, function () {
-
-        if (!HeroEngine._isStarted()) return;
-
-        if (!aura || (aura.flags & sprites.Flag.Destroyed)) return;
-
-
-
-        // Follow the hero so the aura stays centered if they move
-
-        aura.x = hero.x;
-
-        aura.y = hero.y;
-
-
-
-        ticks++;
-
-        // even ticks visible, odd ticks invisible
-
-        aura.setFlag(SpriteFlag.Invisible, (ticks % 2 != 0));
-
-
-
-        if (ticks >= 8) {
-
-            console.log("SUPPORT GLOW: destroying aura for hero " + heroIndex);
-
-            aura.destroy();
-
-        }
-
-    });
+    const now = game.runtime() | 0
+    _heroStateSetNum(heroHealGlowUntilByProfile, heroIndex, now + 700)
 
 }
 
@@ -36557,257 +35696,46 @@ function executeStrengthMove(
 
 
 // Cached strength inner radius for this hero.
-
 // - Computed lazily on first Strength use
-
-// - Based on a circular bound that fully contains the hero sprite
-
+// - Based on sprite size (bounds), not pixel data
 // - Adds a small margin so the Strength arc will sit outside the aura/outline.
 
 
 
 function getStrengthInnerRadiusForHero(hero: Sprite): number {
-
     // Check cache first
-
     let cached = sprites.readDataNumber(hero, HERO_DATA.STR_INNER_RADIUS)
-
     if (cached > 0) return cached
 
-
-
-    const img = hero.image
-
-    if (!img) return 0
-
-
-
-    const w = img.width
-
-    const h = img.height
-
-
-
-    // Center of the sprite in image-space
-
-    const cx = w / 2
-
-    const cy = h / 2
-
-
-
-    // Find the furthest non-transparent pixel from the center.
-
-    // This gives us a silhouette-based radius that ignores blank padding.
-
-    let maxR = 0
-
-    let sawOpaque = false
-
-
-
-    for (let y = 0; y < h; y++) {
-
-        for (let x = 0; x < w; x++) {
-
-            const p = img.getPixel(x, y)
-
-            if (p == 0) continue
-
-
-
-            sawOpaque = true
-
-            const dx = x - cx
-
-            const dy = y - cy
-
-            const r = Math.sqrt(dx * dx + dy * dy)
-
-            if (r > maxR) maxR = r
-
-        }
-
-    }
-
-
-
-    let heroRadius: number
-
-    if (sawOpaque) {
-
-        heroRadius = maxR
-
-    } else {
-
-        // Fallback: no pixels? fall back to old "full sprite" radius
-
-        heroRadius = Math.sqrt(cx * cx + cy * cy)
-
-    }
-
-
+    const w = (hero.width | 0) || (hero.image ? (hero.image.width | 0) : 0) || 64
+    const h = (hero.height | 0) || (hero.image ? (hero.image.height | 0) : 0) || 64
+    const halfW = w / 2
+    const halfH = h / 2
+    const heroRadius = Math.max(halfW, halfH)
 
     // Aura thickness (~1px) plus a tiny spacing gap so the Strength arc
-
     // will appear just outside the aura outline.
-
     const auraThickness = 1
-
     const spacing = 1
-
-
-
     const inner0 = heroRadius + auraThickness + spacing
 
-
-
     // Cache on the hero for all future Strength uses
-
     sprites.setDataNumber(hero, HERO_DATA.STR_INNER_RADIUS, inner0)
 
-
-
     return inner0
-
 }
 
 
 
-// Find the hero's true leading edge along (nx, ny) in *image* space.
-
-// We start at the hero's center pixel and march outward, tracking the last
-
-// non-transparent pixel before we hit transparency or leave the sprite.
+// Estimate the hero's leading edge along (nx, ny) using sprite size.
 
 function findHeroLeadingEdgeDistance(hero: Sprite, nx: number, ny: number): number {
-
-    const img = hero.image
-
-    if (!img) {
-
-        console.log("S-EDGE: no image on hero")
-
-        return 0
-
-    }
-
-
-
-    const w = img.width
-
-    const h = img.height
-
-
-
-    // Center of the sprite in image coordinates
-
-    const cx = w / 2
-
-    const cy = h / 2
-
-
-
-    //console.log("S-EDGE: img " + w + "x" + h + " cx=" + cx + " cy=" + cy +
-
-    //    " dir=(" + nx + "," + ny + ")")
-
-
-
-    let lastOpaqueDist = 0
-
-    let sawOpaque = false
-
-
-
-    // Max distance we could possibly need: diagonal of the sprite
-
-    const maxDist = Math.sqrt(w * w + h * h)
-
-    const maxSteps = Math.ceil(maxDist)
-
-
-
-    // March in 1px steps from center outward
-
-    for (let step = 0; step <= maxSteps; step++) {
-
-        const d = step
-
-        const px = Math.round(cx + nx * d)
-
-        const py = Math.round(cy + ny * d)
-
-
-
-        // Leaving the sprite bounds counts as "transparent"
-
-        if (px < 0 || py < 0 || px >= w || py >= h) {
-
-            if (sawOpaque) {
-
-                //console.log("S-EDGE: out of bounds after opaque at d=" + d +
-
-                //    " lastOpaque=" + lastOpaqueDist)
-
-            } else {
-
-                //console.log("S-EDGE: out of bounds before any opaque at d=" + d)
-
-            }
-
-            break
-
-        }
-
-
-
-        const p = img.getPixel(px, py)
-
-
-
-        if (p != 0) {
-
-            // Solid pixel – keep extending the edge
-
-            if (!sawOpaque) {
-
-                //console.log("S-EDGE: first opaque at d=" + d +
-
-                //    " px=" + px + " py=" + py + " color=" + p)
-
-            }
-
-            lastOpaqueDist = d
-
-            sawOpaque = true
-
-        } else if (sawOpaque) {
-
-            // First transparent after at least one solid pixel -> stop
-
-            //console.log("S-EDGE: first transparent after opaque at d=" + d +
-
-            //    " lastOpaque=" + lastOpaqueDist)
-
-            break
-
-        }
-
-    }
-
-
-
-    //console.log("S-EDGE: result sawOpaque=" + sawOpaque +
-
-    //    " lastOpaqueDist=" + lastOpaqueDist)
-
-
-
-    if (!sawOpaque) return 0
-
-    return lastOpaqueDist
-
+    const w = (hero.width | 0) || (hero.image ? (hero.image.width | 0) : 0) || 64
+    const h = (hero.height | 0) || (hero.image ? (hero.image.height | 0) : 0) || 64
+    const halfW = w / 2
+    const halfH = h / 2
+    const edge = (Math.abs(nx) * halfW) + (Math.abs(ny) * halfH)
+    return edge > 0 ? edge : 0
 }
 
 
@@ -36836,9 +35764,7 @@ function getHeroVisualInfoForStrength(hero: Sprite, nx: number, ny: number): num
 
 
 
-    // Fallback: engine-side default (Arcade pixel scan)
-
-    // You already added this in the HeroEngine namespace.
+    // Fallback: engine-side size estimate
 
     return (HeroEngine as any).__getHeroVisualInfo(hero, nx, ny)
 
@@ -36904,7 +35830,7 @@ function spawnStrengthSwingProjectile(
 
 
 
-    // Pull silhouette-derived geometry via hook (Phaser override) or fallback (Arcade scan)
+    // Pull silhouette-derived geometry via hook (Phaser override) or size fallback.
 
     const vis = getHeroVisualInfoForStrength(hero, nx, ny)
 
@@ -37868,10 +36794,7 @@ const UI_COMBO_PKT_COUNT_KEY = "__comboPktCount"; // optional
 
 
 // === Agility aim indicator (UI-managed sprite) ===
-
-// Arcade runtime: render a simple procedural arrow image for the indicator.
-
-// Phaser runtime: hide sprite pixels and publish aim params via data keys; Phaser draws natively.
+// Phaser runtime: hide sprite pixels and publish aim params via data keys; host draws natively.
 
 const UI_KIND_AGI_STORED_COUNTER = "agiStoredCounter";
 
@@ -37899,7 +36822,7 @@ const UI_AIM_LEN_KEY = "__aimLen";              // optional (pixels)
 
 
 
-// Arcade-only indicator render constants (pixels). Phaser uses native rendering.
+// Indicator render constants (pixels).
 
 const AGI_AIM_INDICATOR_LEN = 14;
 
@@ -38074,67 +36997,21 @@ function agiSelectBestEnemyInRadius(cx: number, cy: number, radius: number): num
 // IMPORTANT: Only emitters increment EventSequence.
 
 function agiSpawnExecuteSlashVfx(hero: Sprite, x: number, y: number): void {
-
-    const phaser = isPhaserRuntime()
-
     const heroIndex = sprites.readDataNumber(hero, HERO_DATA.HERO_INDEX) | 0
 
-    
-
-    // Phaser: emit an event beat instead of spawning an Arcade-side placeholder sprite.
-
-    if (phaser) {
-
-        _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_TICK", "agiSpawnExecuteSlashVfx")
-
-        _animEvent_emit(
-
-            heroIndex,
-
-            hero,
-
-            EVENT_MASK_AGI_EXEC_SLASH,
-
-            x | 0,
-
-            y | 0,
-
-            0,
-
-            0,
-
-            "AGILITY_EXEC_TICK",
-
-            "agiSpawnExecuteSlashVfx"
-
-        )
-
-        if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(-1, hero, "EVENT_EMIT"))
-
-        return
-
-    }
-
-
-
-    // Pure Arcade fallback (unchanged behavior)
-
-    const v = sprites.create(image.create(10, 10), SpriteKind.HeroWeapon)
-
-    v.image.fill(0)
-
-    v.image.drawRect(0, 0, 10, 10, 5)
-
-    v.image.drawLine(1, 8, 8, 1, 5)
-
-    v.x = x; v.y = y
-
-    v.z = 999
-
-    sprites.setDataNumber(v, PROJ_DATA.DESTROY_AT, (game.runtime() | 0) + 120)
-
-    heroProjectiles.push(v)
-
+    _dbgContract_noteWhy(heroIndex, "AGILITY_EXEC_TICK", "agiSpawnExecuteSlashVfx")
+    _animEvent_emit(
+        heroIndex,
+        hero,
+        EVENT_MASK_AGI_EXEC_SLASH,
+        x | 0,
+        y | 0,
+        0,
+        0,
+        "AGILITY_EXEC_TICK",
+        "agiSpawnExecuteSlashVfx"
+    )
+    if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(-1, hero, "EVENT_EMIT"))
 }
 
 
@@ -38953,25 +37830,10 @@ function ensureComboMeter(heroIndex: number): Sprite {
 
     if (!m) {
 
-        const phaser = isPhaserRuntime()
-
-
-
-        // In Arcade: meter is a real pixel image sprite.
-
-        // In Phaser: meter is drawn as native rectangles; this sprite is just a logical anchor + data carrier.
-
+        // Phaser: meter is drawn as native rectangles; this sprite is just a logical anchor + data carrier.
         const w = (AGI_METER_W_E * 2) + (AGI_METER_W_1 * 2) + (AGI_METER_W_2 * 2) + AGI_METER_W_3
-
         const h = AGI_METER_H
-
-
-
-        const img = phaser
-
-            ? image.create(2, 2)      // tiny dummy; Phaser uses rectangles
-
-            : image.create(w, h)      // full size; Arcade uses pixels
+        const img = image.create(2, 2)
 
 
 
@@ -39031,10 +37893,7 @@ function ensureAgiAimIndicator(heroIndex: number): Sprite {
 
     if (!ind) {
 
-        // In Arcade: we will setImage() during the ARMED tick.
-
-        // In Phaser: this is only a logical anchor + data carrier; Phaser renders natively.
-
+        // Logical anchor + data carrier; Phaser renders natively.
         const img = image.create(2, 2)
 
 
@@ -39090,22 +37949,7 @@ function setAgiAimIndicatorVisible(heroIndex: number, vis: boolean): void {
 
 
     sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, vis ? 1 : 0)
-
-
-
-    if (isPhaserRuntime()) {
-
-        // Never allow Arcade pixels for this in Phaser; host draws natively.
-
-        ind.setFlag(SpriteFlag.Invisible, true)
-
-    } else {
-
-        // Arcade fallback: show/hide pixels normally.
-
-        ind.setFlag(SpriteFlag.Invisible, !vis)
-
-    }
+    ind.setFlag(SpriteFlag.Invisible, true)
 
 }
 
@@ -39121,27 +37965,8 @@ function destroyAgiAimIndicator(heroIndex: number): void {
 
 
 
-    // In Phaser, UI sprites are represented by native Containers/Graphics.
-
-    // Hard-destroying them can race the renderer and produce glTexture-null
-
-    // if a texture/frame is removed mid-batch. So: soft-hide instead.
-
-    if (isPhaserRuntime()) {
-
-        sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 0) //UI_VIS_KEY reference error
-
-        ind.setFlag(SpriteFlag.Invisible, true)
-
-        return
-
-    }
-
-
-
-    ind.destroy()
-
-    _setHeroAgiAimIndicator(heroIndex, null)
+    sprites.setDataNumber(ind, UI_AIM_VISIBLE_KEY, 0)
+    ind.setFlag(SpriteFlag.Invisible, true)
 
 }
 
@@ -41064,8 +39889,7 @@ function updateAgilityProjectilesMotionFor(
 
 
     // Distance from hero center to the FRONT EDGE in the dash direction.
-
-    // Prefer the real silhouette edge; fall back to size-based estimate.
+    // Size-based estimate (Phaser provides native visuals separately).
 
     let attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
 
@@ -41509,6 +40333,13 @@ const INT_PRODUCE_DUR_MS = 1000
 
 const INT_LAND_DUR_MS = 500
 
+// Detonation visual controls (animation does NOT drive damage timing)
+const INT_DET_MIN_SIZE_PX = 64
+const INT_DET_MIN_SHOW_MS = 1000
+const INT_DET_EXTRA_RADIUS_PX = 6
+const INT_DET_LIFT_PX = 6
+const INT_DET_LIFT_PX_KEY = "INT_DET_LIFT_PX"
+
 
 
 // Hero data keys to stage delayed projectile spawn + landing window
@@ -41893,7 +40724,11 @@ function executeIntellectMove(
 
 
 
-    const radiusPx = Math.max(1, stats[STAT.RING_RADIUS] | 0)
+    let radiusPx = Math.max(1, stats[STAT.RING_RADIUS] | 0)
+    const effectPick = _heroSpellEffectPick(element | 0, "down", "offense")
+    if (effectPick && effectPick.skinId) {
+        radiusPx = _effectPickRadiusForSkin(effectPick.skinId, effectPick.dir, radiusPx | 0)
+    }
 
     const weakenPct = stats[STAT.WEAKEN_PCT] | 0
 
@@ -42412,25 +41247,25 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
 
     const baseLinger = lingerMs | 0
 
-    const totalLinger = Math.max(200, baseLinger, pulseLinger) | 0
+    const totalLinger = Math.max(200, baseLinger, pulseLinger, INT_DET_MIN_SHOW_MS) | 0
+
+    // Pull max radius from traits; fall back to something sane
+    let maxRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
+    if (maxRadius <= 0) maxRadius = 16
+
+    const minRadius = Math.max(1, (INT_DET_MIN_SIZE_PX >> 1) | 0)
+    const liftPx = Math.max(0, INT_DET_LIFT_PX | 0)
+    maxRadius = Math.max(((maxRadius | 0) + (INT_DET_EXTRA_RADIUS_PX | 0)) | 0, minRadius) | 0
+
+    sprites.setDataNumber(spell, INT_RADIUS_KEY, maxRadius | 0)
+    sprites.setDataNumber(spell, INT_DET_LIFT_PX_KEY, liftPx | 0)
 
     const element = sprites.readDataNumber(spell, PROJ_DATA.ELEMENT) | 0
     const useElemFx = _spawnHeroElementDetonationFx(spell, element | 0, totalLinger | 0)
     sprites.setDataNumber(spell, INT_DETONATE_USE_ELEMENT_FX_KEY, useElemFx ? 1 : 0)
 
-
-
-    // Pull max radius from traits; fall back to something sane
-
-    let maxRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0
-
-    if (maxRadius <= 0) maxRadius = 16
-
-
-
     // Make the sprite's image large enough to contain the full explosion
-
-    const size = (maxRadius * 2 + 2) | 0
+    const size = Math.max(INT_DET_MIN_SIZE_PX, ((maxRadius * 2 + 2 + (liftPx * 2)) | 0)) | 0
 
     const img = image.create(size, size)
 
@@ -43557,8 +42392,6 @@ function processIntellectLingers() {
 
         if (startMs <= 0 || endMs <= startMs) continue
 
-        const useElemFx = sprites.readDataNumber(proj, INT_DETONATE_USE_ELEMENT_FX_KEY) | 0
-        if (useElemFx) continue
 
 
 
@@ -43579,6 +42412,8 @@ function processIntellectLingers() {
         // Clamp animation progress [0, 1] within the current pulse
 
         let t = total > 0 ? (elapsed / total) : 1
+        const pulseT = Math.sin(Math.PI * t)
+        const detProgress = Math.max(0, Math.min(1, (now - startMs) / Math.max(1, (endMs - startMs) | 0)))
 
 
 
@@ -43596,41 +42431,8 @@ function processIntellectLingers() {
 
 
 
-        // Out -> spin -> contraction across a single pulse
-
-        let radiusT = 1
-
-        if (growthFrac > 0) {
-
-            if (t < growthFrac) {
-
-                radiusT = 0.2 + 0.8 * (t / growthFrac)
-
-            } else if (t > (1 - growthFrac)) {
-
-                radiusT = 0.2 + 0.8 * ((1 - t) / growthFrac)
-
-            }
-
-        }
-
-
-
-        const currentLongRadius = Math.max(
-
-            1,
-
-            Math.floor(longMax * radiusT)
-
-        )
-
-        const currentShortRadius = Math.max(
-
-            1,
-
-            Math.floor(shortMax * radiusT)
-
-        )
+        const currentLongRadius = Math.max(1, longMax | 0)
+        const currentShortRadius = Math.max(1, shortMax | 0)
 
 
 
@@ -43645,8 +42447,9 @@ function processIntellectLingers() {
         const h = img.height
 
         const cx = w >> 1
-
-        const cy = h >> 1
+        const liftBase = Math.max(0, sprites.readDataNumber(proj, INT_DET_LIFT_PX_KEY) | 0)
+        const liftNow = (liftBase > 0) ? Math.round(liftBase * Math.min(1, detProgress * 2)) : 0
+        const cy = Math.max(0, Math.min((h - 1) | 0, ((h >> 1) - liftNow) | 0))
 
 
 
@@ -43662,13 +42465,15 @@ function processIntellectLingers() {
 
         const glowInner = Math.max(1, (currentLongRadius - 2) | 0)
 
-        _img_fillCircleCompat(img, cx, cy, glowOuter, 1)
+        const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+        const baseGlow = _heroElementParticleColor(element | 0) | 0
+        const pulseBase = (baseGlow > 0) ? baseGlow : 8
+        const glowColor = (pulseT > 0.6) ? 1 : pulseBase
+        _img_fillCircleCompat(img, cx, cy, glowOuter, glowColor)
 
         if (glowInner < glowOuter) _img_fillCircleCompat(img, cx, cy, glowInner, 0)
 
-
-
-        const colorIndex = 8
+        const tendrilColor = (element === (ELEM.NONE | 0)) ? ((pulseT > 0.6) ? 9 : 8) : 0
 
         const twoPi = 2 * Math.PI
 
@@ -43694,7 +42499,7 @@ function processIntellectLingers() {
 
 
 
-        for (let k = 0; k < totalTendrils; k++) {
+        if (tendrilColor > 0) for (let k = 0; k < totalTendrils; k++) {
 
             const isLong = k < longCount
 
@@ -43772,7 +42577,7 @@ function processIntellectLingers() {
 
                 // Draw thicker tendril: main line + a slight perpendicular offset
 
-                img.drawLine(prevX, prevY, ex, ey, colorIndex)
+                img.drawLine(prevX, prevY, ex, ey, tendrilColor)
 
 
 
@@ -43800,7 +42605,7 @@ function processIntellectLingers() {
 
                         py = Math.idiv(py, mag)
 
-                        img.drawLine(prevX + px, prevY + py, ex + px, ey + py, colorIndex)
+                        img.drawLine(prevX + px, prevY + py, ex + px, ey + py, tendrilColor)
 
                     }
 
@@ -43819,8 +42624,8 @@ function processIntellectLingers() {
 
 
         // Tiny core so center isn't empty
-
-        img.setPixel(cx, cy, colorIndex)
+        const coreColor = (tendrilColor > 0) ? tendrilColor : glowColor
+        img.setPixel(cx, cy, coreColor)
 
 
 
@@ -46037,7 +44842,7 @@ const ENEMY_ATTACK_STRIKE_SCALE_X1000 = 1140
 const ENEMY_ATTACK_RECOVER_SCALE_X1000 = 1020
 const ENEMY_ATTACK_STRIKE_LUNGE_PX = 3
 const ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID = "flameball"
-const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "mage-bullet"
+const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "magebullet"
 const ENEMY_PROJECTILE_SKIN_DIMENSIONS: { [id: string]: { w: number; h: number } } = {
     [ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID]: { w: 32, h: 32 },
     [ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID]: { w: 13, h: 13 }
@@ -46065,6 +44870,21 @@ const ENEMY_WALL_DIAG_NUDGE_TICKS = 3
 const ENEMY_HIT_FLASH_MS = 120
 const ENEMY_HIT_PUNCH_MS = 120
 const ENEMY_HIT_PUNCH_SCALE_X1000 = 120
+const WORM_SMALL_JUMP_CHANCE_PCT = 40
+const WORM_SMALL_JUMP_DIST_PCT = 50
+const WORM_SMALL_JUMP_STEP_PX = 4
+const WOLF_HOWL_CHANCE_PCT = 20
+const WOLF_RUN_CHANCE_PCT = 30
+const WOLF_RUN_SPEED_PCT = 170
+const WOLF_HOWL_PUNCH_MS = 220
+const WOLF_HOWL_PUNCH_SCALE_X1000 = 110
+const WOLF_IDLE_WALK_MIN_MS = 1200
+const WOLF_IDLE_WALK_MAX_MS = 2600
+const WOLF_IDLE_SLEEP_MIN_MS = 1500
+const WOLF_IDLE_SLEEP_MAX_MS = 3200
+const WOLF_IDLE_WAKE_MS = 700
+const WOLF_IDLE_WALK_SPEED_PCT = 60
+const WOLF_SLEEP_ANIM_MS = 700
 
 
 
@@ -46092,7 +44912,7 @@ const ENEMY_KIND = {
 
         "beetle",
 
-        "big worm",
+        "worm big",
 
         "eyeball",
 
@@ -46143,7 +44963,7 @@ const ENEMY_KIND = {
 
         "slime yellow",
 
-        "small worm",
+        "worm small",
 
         "snake",
 
@@ -46193,7 +45013,7 @@ const ENEMY_KIND = {
 
         "beetle": ["CRITTER", "WEAK", "SLOW", "TANK"],
 
-        "big worm": ["UNDERGROUND", "SLOWSTRONG", "STRONG", "STATIONARY"],
+        "worm big": ["UNDERGROUND", "SLOWSTRONG", "STRONG", "STATIONARY"],
 
         "eyeball": ["FLYING", "RANGED", "STRONG"],
 
@@ -46242,7 +45062,7 @@ const ENEMY_KIND = {
 
         "slime yellow": ["SLIMES", "WEAK", "SLOW"],
 
-        "small worm": ["UNDERGROUND", "WEAK", "FAST"],
+        "worm small": ["UNDERGROUND", "WEAK", "FAST"],
 
         "snake": ["CRITTER", "WEAK", "FAST"],
 
@@ -46279,7 +45099,7 @@ const ENEMY_KIND = {
         "bat": [ELEM.AIR],
         "bee": [ELEM.AIR],
         "beetle": [ELEM.EARTH],
-        "big worm": [ELEM.EARTH],
+        "worm big": [ELEM.EARTH],
         "eyeball": [ELEM.ELECTRIC],
         "ghost": [ELEM.AIR],
         "goblin": [],
@@ -46305,7 +45125,7 @@ const ENEMY_KIND = {
         "slime red": [ELEM.FIRE],
         "slime violet": [ELEM.ELECTRIC],
         "slime yellow": [ELEM.ELECTRIC],
-        "small worm": [ELEM.EARTH],
+        "worm small": [ELEM.EARTH],
         "snake": [ELEM.EARTH],
         "spider black": [ELEM.EARTH],
         "spider black yellow": [ELEM.EARTH, ELEM.ELECTRIC],
@@ -47992,6 +46812,7 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
 
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, 1)
 
     sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
 
@@ -50904,8 +49725,36 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
     const burstGapMs = sprites.readDataNumber(enemy, "__atkBurstGapMs") | 0
     let burstFired = sprites.readDataNumber(enemy, "__atkBurstFired") | 0
     let nextStrikeAt = sprites.readDataNumber(enemy, "__atkNextStrikeAt") | 0
+    const noHit = (sprites.readDataNumber(enemy, "__atkNoHit") | 0) !== 0
+    const strikeFx = sprites.readDataString(enemy, "__atkStrikeFx") || ""
+    const moveSpeedPct = sprites.readDataNumber(enemy, "__atkMoveSpeedPct") | 0
+    const jumpOnEnd = (sprites.readDataNumber(enemy, "__atkJumpOnEnd") | 0) !== 0
 
     if (atkUntil > 0 && nowMs >= atkUntil) {
+        const queued = _enemyConsumeQueuedPlan(enemy)
+        if (queued) {
+            const heroTargets = _enemyBuildLiveHeroTargets()
+            let attackDx = 0
+            let attackDy = 1
+            let attackDir = queued.dir || ""
+            if (heroTargets.length > 0 && !attackDir) {
+                const pick = _enemyPickNearestHeroEdge(enemy, heroTargets)
+                attackDx = (pick.edgeX | 0) - (enemy.x | 0)
+                attackDy = (pick.edgeY | 0) - (enemy.y | 0)
+                attackDir = _enemyDirFromVector(attackDx, attackDy)
+            }
+            if (!attackDir) attackDir = "down"
+            if (queued.dir) {
+                if (attackDir === "left") { attackDx = -1; attackDy = 0 }
+                else if (attackDir === "right") { attackDx = 1; attackDy = 0 }
+                else if (attackDir === "up") { attackDx = 0; attackDy = -1 }
+                else { attackDx = 0; attackDy = 1 }
+            }
+            _enemyStartAttackWithPlan(enemy, attackDx, attackDy, attackDir, nowMs, queued)
+            return true
+        }
+
+        if (jumpOnEnd) _enemyApplyJumpForward(enemy)
 
         sprites.setDataString(enemy, "phase", "walk")
 
@@ -50915,6 +49764,12 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
         const cdMs = Math.max(ENEMY_ATTACK_COOLDOWN_BASE_MS, atkIntervalMs | 0) | 0
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + cdMs)
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+
+        sprites.setDataString(enemy, "__atkKind", "")
+        sprites.setDataNumber(enemy, "__atkNoHit", 0)
+        sprites.setDataNumber(enemy, "__atkMoveSpeedPct", 0)
+        sprites.setDataString(enemy, "__atkStrikeFx", "")
+        sprites.setDataNumber(enemy, "__atkJumpOnEnd", 0)
 
         _enemyClearAttackCadenceState(enemy)
         _enemySetIntent(enemy, "cooldown")
@@ -50933,7 +49788,8 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
             const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
             const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
             const strikeMs = sprites.readDataNumber(enemy, "__atkStrikeMs") | 0
-            _spawnMonsterSlashOrProjectile(enemy, dirX, dirY, strikeMs)
+            if (strikeFx === "howl") _enemyHowlShakeHeroes(nowMs)
+            if (!noHit) _spawnMonsterSlashOrProjectile(enemy, dirX, dirY, strikeMs)
             burstFired = (burstFired + 1) | 0
             sprites.setDataNumber(enemy, "__atkBurstFired", burstFired)
             sprites.setDataNumber(enemy, "__atkStrikeDone", 1)
@@ -50966,6 +49822,15 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
             vx -= perpX * peekSpeed
             vy -= perpY * peekSpeed
         }
+    }
+
+    if (moveSpeedPct > 0) {
+        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const moveSpeed = Math.max(1, Math.idiv(baseSpeed * (moveSpeedPct | 0), 100)) | 0
+        const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
+        const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
+        vx += dirX * moveSpeed
+        vy += dirY * moveSpeed
     }
 
     enemy.vx = Math.round(vx) | 0
@@ -51066,6 +49931,362 @@ function _enemyDirFromVector(dx: number, dy: number): string {
 
 }
 
+function _enemyApplyJumpForward(enemy: Sprite): void {
+    const dims = _enemyGetColliderDims(enemy)
+    const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
+    const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
+    if (dirX === 0 && dirY === 0) return
+
+    const useWidth = Math.abs(dirX) >= Math.abs(dirY)
+    const bodyLen = useWidth ? (dims.w | 0) : (dims.h | 0)
+    let dist = Math.max(1, Math.idiv((bodyLen * (WORM_SMALL_JUMP_DIST_PCT | 0)) | 0, 100)) | 0
+
+    const foot = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const footX = foot.footX | 0
+    const footY = foot.footY | 0
+    const tile = WORLD_TILE_SIZE | 0
+
+    if (tile <= 0 || !_engineWorldTileMap || _engineWorldTileMap.length === 0) {
+        enemy.x = ((enemy.x | 0) + Math.round(dirX * dist)) | 0
+        enemy.y = ((enemy.y | 0) + Math.round(dirY * dist)) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x)
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, enemy.y)
+        return
+    }
+
+    const step = Math.max(1, WORM_SMALL_JUMP_STEP_PX | 0) | 0
+    for (let d = dist; d > 0; d = (d - step) | 0) {
+        const nx = (footX + Math.round(dirX * d)) | 0
+        const ny = (footY + Math.round(dirY * d)) | 0
+        const r = Math.idiv(ny | 0, tile) | 0
+        const c = Math.idiv(nx | 0, tile) | 0
+        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0)) continue
+        enemy.x = ((enemy.x | 0) + (nx - footX)) | 0
+        enemy.y = ((enemy.y | 0) + (ny - footY)) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x)
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, enemy.y)
+        return
+    }
+}
+
+function _enemyHowlShakeHeroes(nowMs: number): void {
+    const until = (nowMs + WOLF_HOWL_PUNCH_MS) | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        sprites.setDataNumber(h, "__hitPunchUntil", until)
+        sprites.setDataNumber(h, "__hitPunchMs", WOLF_HOWL_PUNCH_MS | 0)
+        sprites.setDataNumber(h, "__hitPunchScaleX1000", WOLF_HOWL_PUNCH_SCALE_X1000 | 0)
+    }
+}
+
+function _enemyPickAttackPlan(enemy: Sprite, attackDir: string): EnemyAttackPlan {
+    const id = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").trim().toLowerCase()
+
+    if (id === "worm small") {
+        const jump = (Math.random() * 100) < (WORM_SMALL_JUMP_CHANCE_PCT | 0)
+        const plan: EnemyAttackPlan = { index: 2, kind: "hit" }
+        if (jump) {
+            plan.queue = { index: 1, kind: "jump", noHit: true, jumpOnEnd: true }
+        }
+        return plan
+    }
+
+    if (id === "wolf light brown") {
+        const roll = Math.random() * 100
+        if (roll < (WOLF_HOWL_CHANCE_PCT | 0)) {
+            return { index: 1, kind: "howl", noHit: true, strikeFx: "howl" }
+        }
+        if (roll < ((WOLF_HOWL_CHANCE_PCT + WOLF_RUN_CHANCE_PCT) | 0)) {
+            return {
+                index: 2,
+                kind: "run",
+                noHit: true,
+                moveSpeedPct: WOLF_RUN_SPEED_PCT | 0,
+                queue: { index: 3, kind: "hit" }
+            }
+        }
+        return { index: 3, kind: "hit" }
+    }
+
+    if (id === "andromalius") {
+        if (attackDir === "left" || attackDir === "right") {
+            return {
+                index: 2,
+                kind: "transition",
+                noHit: true,
+                queue: { index: 1, kind: "hit" }
+            }
+        }
+        return { index: 1, kind: "hit" }
+    }
+
+    return { index: 1, kind: "hit" }
+}
+
+function _enemyWolfIdleEnterWalk(enemy: Sprite, nowMs: number): void {
+    const dur = WOLF_IDLE_WALK_MIN_MS + Math.random() * Math.max(0, WOLF_IDLE_WALK_MAX_MS - WOLF_IDLE_WALK_MIN_MS)
+    const ang = Math.random() * Math.PI * 2
+    const dirX = Math.cos(ang)
+    const dirY = Math.sin(ang)
+    sprites.setDataString(enemy, "__wolfIdleState", "walk")
+    sprites.setDataNumber(enemy, "__wolfIdleUntil", (nowMs + dur) | 0)
+    sprites.setDataNumber(enemy, "__wolfIdleDirX1000", Math.round(dirX * 1000))
+    sprites.setDataNumber(enemy, "__wolfIdleDirY1000", Math.round(dirY * 1000))
+    sprites.setDataNumber(enemy, "__attackReverse", 0)
+    sprites.setDataNumber(enemy, "__attackOneShot", 0)
+    sprites.setDataNumber(enemy, "__animNoRandomStart", 0)
+    sprites.setDataString(enemy, "phase", "walk")
+}
+
+function _enemyWolfIdleEnterSleep(enemy: Sprite, nowMs: number): void {
+    const dur = WOLF_IDLE_SLEEP_MIN_MS + Math.random() * Math.max(0, WOLF_IDLE_SLEEP_MAX_MS - WOLF_IDLE_SLEEP_MIN_MS)
+    sprites.setDataString(enemy, "__wolfIdleState", "sleep")
+    sprites.setDataNumber(enemy, "__wolfIdleUntil", (nowMs + dur) | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, 4)
+    sprites.setDataNumber(enemy, "__attackReverse", 0)
+    sprites.setDataNumber(enemy, "__attackOneShot", 1)
+    sprites.setDataNumber(enemy, "__animNoRandomStart", 1)
+    sprites.setDataNumber(enemy, "attackAnimMs", WOLF_SLEEP_ANIM_MS | 0)
+    sprites.setDataString(enemy, "phase", "attack")
+    enemy.vx = 0
+    enemy.vy = 0
+}
+
+function _enemyWolfIdleEnterWake(enemy: Sprite, nowMs: number): void {
+    sprites.setDataString(enemy, "__wolfIdleState", "wake")
+    sprites.setDataNumber(enemy, "__wolfIdleUntil", (nowMs + WOLF_IDLE_WAKE_MS) | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, 4)
+    sprites.setDataNumber(enemy, "__attackReverse", 1)
+    sprites.setDataNumber(enemy, "__attackOneShot", 1)
+    sprites.setDataNumber(enemy, "__animNoRandomStart", 1)
+    sprites.setDataNumber(enemy, "attackAnimMs", WOLF_SLEEP_ANIM_MS | 0)
+    sprites.setDataString(enemy, "phase", "attack")
+    enemy.vx = 0
+    enemy.vy = 0
+}
+
+function _enemyTickWolfIdle(enemy: Sprite, nowMs: number): void {
+    const state = sprites.readDataString(enemy, "__wolfIdleState") || ""
+    const until = sprites.readDataNumber(enemy, "__wolfIdleUntil") | 0
+
+    if (!state || nowMs >= until) {
+        if (state === "sleep") {
+            _enemyWolfIdleEnterWake(enemy, nowMs)
+            return
+        }
+        if (state === "wake") {
+            _enemyWolfIdleEnterWalk(enemy, nowMs)
+            return
+        }
+        if (Math.random() < 0.5) _enemyWolfIdleEnterSleep(enemy, nowMs)
+        else _enemyWolfIdleEnterWalk(enemy, nowMs)
+    }
+
+    const cur = sprites.readDataString(enemy, "__wolfIdleState") || ""
+    if (cur === "walk") {
+        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const idleSpeed = Math.max(1, Math.idiv(baseSpeed * (WOLF_IDLE_WALK_SPEED_PCT | 0), 100)) | 0
+        const dirX = (sprites.readDataNumber(enemy, "__wolfIdleDirX1000") | 0) / 1000
+        const dirY = (sprites.readDataNumber(enemy, "__wolfIdleDirY1000") | 0) / 1000
+        enemy.vx = Math.round(dirX * idleSpeed) | 0
+        enemy.vy = Math.round(dirY * idleSpeed) | 0
+        sprites.setDataString(enemy, "dir", _enemyDirFromVector(enemy.vx, enemy.vy))
+    } else {
+        enemy.vx = 0
+        enemy.vy = 0
+    }
+}
+
+function _enemyUpdateIdleNoHeroes(nowMs: number): void {
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const enemy = enemies[ei]
+        if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) continue
+        if (!_enemyIsInitialized(enemy)) continue
+        if (_enemyTickDeathCleanupIfNeeded(ei, enemy, nowMs)) continue
+
+        const id = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").toLowerCase()
+        if (id.indexOf("wolf") >= 0) {
+            _enemyTickWolfIdle(enemy, nowMs)
+            _enemySetIntent(enemy, "idle")
+        } else {
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataString(enemy, "phase", "walk")
+            _enemySetIntent(enemy, "idle")
+        }
+    }
+}
+
+function _enemyClearWolfIdleIfAggro(enemy: Sprite): void {
+    const id = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").toLowerCase()
+    if (id.indexOf("wolf") < 0) return
+    const state = sprites.readDataString(enemy, "__wolfIdleState") || ""
+    if (!state) return
+    sprites.setDataString(enemy, "__wolfIdleState", "")
+    sprites.setDataNumber(enemy, "__wolfIdleUntil", 0)
+    sprites.setDataNumber(enemy, "__attackReverse", 0)
+    sprites.setDataNumber(enemy, "__attackOneShot", 0)
+    sprites.setDataNumber(enemy, "__animNoRandomStart", 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, 1)
+    if ((sprites.readDataString(enemy, "phase") || "") === "attack") {
+        sprites.setDataString(enemy, "phase", "walk")
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+    }
+}
+
+function _enemyQueueAttackPlan(enemy: Sprite, plan: EnemyAttackPlan, attackDir: string): void {
+    sprites.setDataNumber(enemy, "__atkQueuedIndex", plan.index | 0)
+    sprites.setDataString(enemy, "__atkQueuedKind", plan.kind || "")
+    sprites.setDataNumber(enemy, "__atkQueuedNoHit", plan.noHit ? 1 : 0)
+    sprites.setDataNumber(enemy, "__atkQueuedMoveSpeedPct", plan.moveSpeedPct ? (plan.moveSpeedPct | 0) : 0)
+    sprites.setDataString(enemy, "__atkQueuedStrikeFx", plan.strikeFx || "")
+    sprites.setDataNumber(enemy, "__atkQueuedJumpOnEnd", plan.jumpOnEnd ? 1 : 0)
+    sprites.setDataString(enemy, "__atkQueuedDir", attackDir || "")
+}
+
+function _enemyConsumeQueuedPlan(enemy: Sprite): EnemyAttackPlan | null {
+    const idx = sprites.readDataNumber(enemy, "__atkQueuedIndex") | 0
+    if (idx <= 0) return null
+    const kind = (sprites.readDataString(enemy, "__atkQueuedKind") || "hit") as EnemyAttackKind
+    const noHit = (sprites.readDataNumber(enemy, "__atkQueuedNoHit") | 0) !== 0
+    const moveSpeedPct = sprites.readDataNumber(enemy, "__atkQueuedMoveSpeedPct") | 0
+    const strikeFx = (sprites.readDataString(enemy, "__atkQueuedStrikeFx") || "") as any
+    const jumpOnEnd = (sprites.readDataNumber(enemy, "__atkQueuedJumpOnEnd") | 0) !== 0
+    const queuedDir = sprites.readDataString(enemy, "__atkQueuedDir") || ""
+
+    sprites.setDataNumber(enemy, "__atkQueuedIndex", 0)
+    sprites.setDataString(enemy, "__atkQueuedKind", "")
+    sprites.setDataNumber(enemy, "__atkQueuedNoHit", 0)
+    sprites.setDataNumber(enemy, "__atkQueuedMoveSpeedPct", 0)
+    sprites.setDataString(enemy, "__atkQueuedStrikeFx", "")
+    sprites.setDataNumber(enemy, "__atkQueuedJumpOnEnd", 0)
+    sprites.setDataString(enemy, "__atkQueuedDir", "")
+    return {
+        index: idx,
+        kind,
+        noHit,
+        moveSpeedPct: moveSpeedPct > 0 ? moveSpeedPct : undefined,
+        strikeFx: strikeFx ? strikeFx : undefined,
+        jumpOnEnd,
+        dir: queuedDir || undefined
+    }
+}
+
+function _enemyStartAttackWithPlan(
+    enemy: Sprite,
+    attackDx: number,
+    attackDy: number,
+    attackDir: string,
+    nowMs: number,
+    plan: EnemyAttackPlan
+): void {
+    const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
+    const baseAttackDurationMs = ENEMY_ATTACK_BASE_MS
+    let attackMs = baseAttackDurationMs
+    if (atkRatePct !== 100) attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
+
+    const cadence = _enemyComputeAttackCadenceMs(attackMs)
+    const totalMs = cadence.totalMs | 0
+    const windupMs = cadence.windupMs | 0
+    const strikeMs = cadence.strikeMs | 0
+    const recoverMs = cadence.recoverMs | 0
+
+    let mag = Math.sqrt(attackDx * attackDx + attackDy * attackDy)
+    if (mag === 0) mag = 1
+    const dirX1000 = Math.round((attackDx / mag) * 1000) | 0
+    const dirY1000 = Math.round((attackDy / mag) * 1000) | 0
+
+    const windupUntil = (nowMs + windupMs) | 0
+    const strikeUntil = (windupUntil + strikeMs) | 0
+    const endAt = (strikeUntil + recoverMs) | 0
+
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, plan.index | 0)
+    sprites.setDataNumber(enemy, "attackAnimMs", totalMs)
+    sprites.setDataString(enemy, "__atkKind", plan.kind || "hit")
+    sprites.setDataNumber(enemy, "__atkNoHit", plan.noHit ? 1 : 0)
+    sprites.setDataNumber(enemy, "__atkMoveSpeedPct", plan.moveSpeedPct ? (plan.moveSpeedPct | 0) : 0)
+    sprites.setDataString(enemy, "__atkStrikeFx", plan.strikeFx || "")
+    sprites.setDataNumber(enemy, "__atkJumpOnEnd", plan.jumpOnEnd ? 1 : 0)
+    sprites.setDataNumber(enemy, "__attackReverse", 0)
+    sprites.setDataNumber(enemy, "__attackOneShot", 0)
+    sprites.setDataNumber(enemy, "__animNoRandomStart", 0)
+
+    sprites.setDataNumber(enemy, "__atkStartMs", nowMs | 0)
+    sprites.setDataNumber(enemy, "__atkWindupMs", windupMs)
+    sprites.setDataNumber(enemy, "__atkStrikeMs", strikeMs)
+    sprites.setDataNumber(enemy, "__atkRecoverMs", recoverMs)
+    sprites.setDataNumber(enemy, "__atkStrikeAt", windupUntil)
+    sprites.setDataNumber(enemy, "__atkRecoverAt", strikeUntil)
+    sprites.setDataNumber(enemy, "__atkEndAt", endAt)
+    sprites.setDataNumber(enemy, "__atkStrikeDone", 0)
+    sprites.setDataNumber(enemy, "__atkDirX1000", dirX1000)
+    sprites.setDataNumber(enemy, "__atkDirY1000", dirY1000)
+
+    const move = _enemyGetMoveProfile(enemy)
+    let burstCount = Math.max(1, move.burstCount | 0) | 0
+    if (plan.kind === "run" || plan.kind === "jump" || plan.kind === "transition") {
+        burstCount = 0
+    } else if (plan.kind === "howl") {
+        burstCount = 1
+    }
+    const burstGapMs = Math.max(40, move.burstGapMs | 0) | 0
+    sprites.setDataNumber(enemy, "__atkBurstCount", burstCount)
+    sprites.setDataNumber(enemy, "__atkBurstGapMs", burstGapMs)
+    sprites.setDataNumber(enemy, "__atkBurstFired", 0)
+    sprites.setDataNumber(enemy, "__atkNextStrikeAt", windupUntil)
+
+    let peekSide = 0
+    if (_enemyIsRanged(enemy) && move.preferCover && (move.coverPeekSpeedPct | 0) > 0) {
+        const dims = _enemyGetColliderDims(enemy)
+        const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+        const footX = feet.footX | 0
+        const footY = feet.footY | 0
+        const heroX = (enemy.x | 0) + attackDx
+        const heroY = (enemy.y | 0) + attackDy
+        const inCover = _enemyHasCoverAtPos(footX, footY, heroX, heroY)
+        if (inCover) {
+            const stepTiles = Math.max(1, move.coverPeekStepTiles | 0) | 0
+            const step = (WORLD_TILE_SIZE | 0) * stepTiles
+            const nx = attackDx / mag
+            const ny = attackDy / mag
+            const perpX = -ny
+            const perpY = nx
+            const coverSide1 = _enemyHasCoverAtPos(footX + perpX * step, footY + perpY * step, heroX, heroY)
+            const coverSide2 = _enemyHasCoverAtPos(footX - perpX * step, footY - perpY * step, heroX, heroY)
+            if (coverSide1 !== coverSide2) {
+                peekSide = coverSide1 ? -1 : 1
+            } else {
+                peekSide = Math.random() < 0.5 ? 1 : -1
+            }
+        }
+    }
+    sprites.setDataNumber(enemy, "__peekSide", peekSide)
+    sprites.setDataNumber(enemy, "__peekSpeedPct", move.coverPeekSpeedPct | 0)
+
+    if (plan.queue) {
+        _enemyQueueAttackPlan(enemy, plan.queue, attackDir)
+    } else {
+        sprites.setDataNumber(enemy, "__atkQueuedIndex", 0)
+        sprites.setDataString(enemy, "__atkQueuedKind", "")
+        sprites.setDataNumber(enemy, "__atkQueuedNoHit", 0)
+        sprites.setDataNumber(enemy, "__atkQueuedMoveSpeedPct", 0)
+        sprites.setDataString(enemy, "__atkQueuedStrikeFx", "")
+        sprites.setDataNumber(enemy, "__atkQueuedJumpOnEnd", 0)
+        sprites.setDataString(enemy, "__atkQueuedDir", "")
+    }
+
+    sprites.setDataString(enemy, "phase", "attack")
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_WINDUP)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, endAt)
+    sprites.setDataString(enemy, "dir", attackDir)
+    _enemySetIntent(enemy, "attack")
+
+    enemy.vx = 0
+    enemy.vy = 0
+}
+
 function _enemySetIntent(enemy: Sprite, intent: string): void {
     sprites.setDataString(enemy, "__aiIntent", intent || "")
 }
@@ -51091,6 +50312,19 @@ function _enemyAiLogDecision(enemy: Sprite, nowMs: number, trace: string[] | nul
     console.log(
         `[AI][${enemy.id}|${monsterId}] action=${action} trace=${trace.join(" ")}`
     )
+}
+
+type EnemyAttackKind = "hit" | "howl" | "run" | "jump" | "transition"
+
+interface EnemyAttackPlan {
+    index: number
+    kind: EnemyAttackKind
+    noHit?: boolean
+    moveSpeedPct?: number
+    strikeFx?: "howl"
+    jumpOnEnd?: boolean
+    queue?: EnemyAttackPlan
+    dir?: string
 }
 
 type EnemyAttackMotionId = "default" | "bite" | "slam" | "slime_crush" | "worm_spit"
@@ -51362,6 +50596,20 @@ function _enemyClearAttackCadenceState(enemy: Sprite): void {
     sprites.setDataNumber(enemy, "__atkNextStrikeAt", 0)
     sprites.setDataNumber(enemy, "__peekSide", 0)
     sprites.setDataNumber(enemy, "__peekSpeedPct", 0)
+    sprites.setDataString(enemy, "__atkKind", "")
+    sprites.setDataNumber(enemy, "__atkNoHit", 0)
+    sprites.setDataNumber(enemy, "__atkMoveSpeedPct", 0)
+    sprites.setDataString(enemy, "__atkStrikeFx", "")
+    sprites.setDataNumber(enemy, "__atkJumpOnEnd", 0)
+    sprites.setDataNumber(enemy, "__atkQueuedIndex", 0)
+    sprites.setDataString(enemy, "__atkQueuedKind", "")
+    sprites.setDataNumber(enemy, "__atkQueuedNoHit", 0)
+    sprites.setDataNumber(enemy, "__atkQueuedMoveSpeedPct", 0)
+    sprites.setDataString(enemy, "__atkQueuedStrikeFx", "")
+    sprites.setDataNumber(enemy, "__atkQueuedJumpOnEnd", 0)
+    sprites.setDataString(enemy, "__atkQueuedDir", "")
+    sprites.setDataNumber(enemy, "__attackReverse", 0)
+    sprites.setDataNumber(enemy, "__attackOneShot", 0)
 }
 
 function _enemyUpdateAttackCadenceVisuals(enemy: Sprite, nowMs: number): void {
@@ -51603,99 +50851,11 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
     const attackDx = (pick.edgeX | 0) - (enemy.x | 0)
     const attackDy = (pick.edgeY | 0) - (enemy.y | 0)
     const attackDir = _enemyDirFromVector(attackDx, attackDy)
-
-
-
-    const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
-
-    const baseAttackDurationMs = ENEMY_ATTACK_BASE_MS
-
-    let attackMs = baseAttackDurationMs
-
-    if (atkRatePct !== 100) attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
-
-    const cadence = _enemyComputeAttackCadenceMs(attackMs)
-    const totalMs = cadence.totalMs | 0
-    const windupMs = cadence.windupMs | 0
-    const strikeMs = cadence.strikeMs | 0
-    const recoverMs = cadence.recoverMs | 0
-
-    let mag = Math.sqrt(attackDx * attackDx + attackDy * attackDy)
-    if (mag === 0) mag = 1
-    const dirX1000 = Math.round((attackDx / mag) * 1000) | 0
-    const dirY1000 = Math.round((attackDy / mag) * 1000) | 0
-
-    const windupUntil = (nowMs + windupMs) | 0
-    const strikeUntil = (windupUntil + strikeMs) | 0
-    const endAt = (strikeUntil + recoverMs) | 0
-
-    sprites.setDataNumber(enemy, "attackAnimMs", totalMs)
-
-    sprites.setDataNumber(enemy, "__atkStartMs", nowMs | 0)
-    sprites.setDataNumber(enemy, "__atkWindupMs", windupMs)
-    sprites.setDataNumber(enemy, "__atkStrikeMs", strikeMs)
-    sprites.setDataNumber(enemy, "__atkRecoverMs", recoverMs)
-    sprites.setDataNumber(enemy, "__atkStrikeAt", windupUntil)
-    sprites.setDataNumber(enemy, "__atkRecoverAt", strikeUntil)
-    sprites.setDataNumber(enemy, "__atkEndAt", endAt)
-    sprites.setDataNumber(enemy, "__atkStrikeDone", 0)
-    sprites.setDataNumber(enemy, "__atkDirX1000", dirX1000)
-    sprites.setDataNumber(enemy, "__atkDirY1000", dirY1000)
-
-    const move = _enemyGetMoveProfile(enemy)
-    const burstCount = Math.max(1, move.burstCount | 0) | 0
-    const burstGapMs = Math.max(40, move.burstGapMs | 0) | 0
-    sprites.setDataNumber(enemy, "__atkBurstCount", burstCount)
-    sprites.setDataNumber(enemy, "__atkBurstGapMs", burstGapMs)
-    sprites.setDataNumber(enemy, "__atkBurstFired", 0)
-    sprites.setDataNumber(enemy, "__atkNextStrikeAt", windupUntil)
-
-    let peekSide = 0
-    if (_enemyIsRanged(enemy) && move.preferCover && (move.coverPeekSpeedPct | 0) > 0) {
-        const dims = _enemyGetColliderDims(enemy)
-        const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
-        const footX = feet.footX | 0
-        const footY = feet.footY | 0
-        const heroX = pick.edgeX | 0
-        const heroY = pick.edgeY | 0
-        const inCover = _enemyHasCoverAtPos(footX, footY, heroX, heroY)
-        if (inCover) {
-            const stepTiles = Math.max(1, move.coverPeekStepTiles | 0) | 0
-            const step = (WORLD_TILE_SIZE | 0) * stepTiles
-            const nx = attackDx / mag
-            const ny = attackDy / mag
-            const perpX = -ny
-            const perpY = nx
-            const coverSide1 = _enemyHasCoverAtPos(footX + perpX * step, footY + perpY * step, heroX, heroY)
-            const coverSide2 = _enemyHasCoverAtPos(footX - perpX * step, footY - perpY * step, heroX, heroY)
-            if (coverSide1 !== coverSide2) {
-                peekSide = coverSide1 ? -1 : 1
-            } else {
-                peekSide = Math.random() < 0.5 ? 1 : -1
-            }
-        }
-    }
-    sprites.setDataNumber(enemy, "__peekSide", peekSide)
-    sprites.setDataNumber(enemy, "__peekSpeedPct", move.coverPeekSpeedPct | 0)
-
-    sprites.setDataString(enemy, "phase", "attack")
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_WINDUP)
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, endAt)
-    sprites.setDataString(enemy, "dir", attackDir)
-    _enemySetIntent(enemy, "attack")
-
-
-
-    enemy.vx = 0
-
-    enemy.vy = 0
-
-
+    const plan = _enemyPickAttackPlan(enemy, attackDir)
+    _enemyStartAttackWithPlan(enemy, attackDx, attackDy, attackDir, nowMs, plan)
 
     if (ei === 0) {
-
         // optional debug hook left intact
-
     }
 
     return true
@@ -52121,11 +51281,11 @@ function updateEnemyHoming(nowMs: number) {
 
 
 
-    // If there are no heroes, zero out enemy velocities and bail
+    // If there are no heroes, run idle behavior and bail
 
     if (heroTargets.length == 0) {
 
-        _enemyZeroVelocitiesAll()
+        _enemyUpdateIdleNoHeroes(nowMs)
 
         return
 
@@ -52148,6 +51308,8 @@ function updateEnemyHoming(nowMs: number) {
         if (!_enemyIsInitialized(enemy)) continue
 
         const trace = DEBUG_ENEMY_AI_DECISIONS ? [] as string[] : null
+
+        _enemyClearWolfIdleIfAggro(enemy)
 
 
 
@@ -54780,7 +53942,7 @@ const POSSIBLE_MONSTERS = [
 
         "beetle",
 
-        "big worm",
+        "worm big",
 
         "eyeball",
 
@@ -54831,7 +53993,7 @@ const POSSIBLE_MONSTERS = [
 
         "slime yellow",
 
-        "small worm",
+        "worm small",
 
         "snake",
 
@@ -54927,7 +54089,7 @@ const POSSIBLE_MONSTERS = [
 
         spawnChance: 1.0,
 
-        kinds: ["imp blue", "spider green", "big worm"],
+        kinds: ["imp blue", "spider green", "worm big"],
 
         weights: [2, 2, 2]
 
@@ -54943,7 +54105,7 @@ const POSSIBLE_MONSTERS = [
 
         spawnChance: 1.0,
 
-        kinds: ["imp blue", "spider green", "big worm"],
+        kinds: ["imp blue", "spider green", "worm big"],
 
         weights: [3, 3, 2, 2]
 
@@ -55082,7 +54244,7 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "imp blue",         danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
     { id: "imp green",        danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
     { id: "imp red",          danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
-    { id: "small worm",       danger: 14, hp: 56,  damage: 13, speed: 28, xp: 15, advanceRangePx: 0 },
+    { id: "worm small",       danger: 14, hp: 56,  damage: 13, speed: 28, xp: 15, advanceRangePx: 0 },
     { id: "golem",            danger: 15, hp: 85,  damage: 17, speed: 20, xp: 20, advanceRangePx: 0 },
     { id: "slime",            danger: 16, hp: 60,  damage: 12, speed: 20, xp: 16, advanceRangePx: 0 },
     { id: "golem white",      danger: 17, hp: 95,  damage: 18, speed: 18, xp: 21, advanceRangePx: 0 },
@@ -55091,7 +54253,7 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "skeleton",         danger: 18, hp: 62,  damage: 14, speed: 26, xp: 17, advanceRangePx: 0 },
     { id: "zombie",           danger: 20, hp: 80,  damage: 16, speed: 18, xp: 19, advanceRangePx: 0 },
     { id: "snake",            danger: 20, hp: 68,  damage: 16, speed: 32, xp: 19, advanceRangePx: _calcAdvanceRangePxForDanger(20) },
-    { id: "big worm",         danger: 21, hp: 90,  damage: 18, speed: 22, xp: 22, advanceRangePx: 0 },
+    { id: "worm big",         danger: 21, hp: 90,  damage: 18, speed: 22, xp: 22, advanceRangePx: 0 },
     { id: "ghost",            danger: 22, hp: 95,  damage: 19, speed: 24, xp: 23, advanceRangePx: _calcAdvanceRangePxForDanger(22) },
     { id: "pumpking",         danger: 23, hp: 100, damage: 20, speed: 26, xp: 24, advanceRangePx: _calcAdvanceRangePxForDanger(23) },
     { id: "pegasus",          danger: 24, hp: 110, damage: 22, speed: 34, xp: 26, advanceRangePx: 0 },
@@ -55209,8 +54371,21 @@ function _defaultColliderFromFrame(frameW: number, frameH: number): { cw: number
 
 }
 
+const MONSTER_AURA_ALIAS: Record<string, string> = {
+    // Use horse body bounds for pegasus so wings don't block collisions.
+    "pegasus": "horse-white",
+    "worm small": "small worm",
+    "worm big": "big worm"
+}
+
+function _monsterAuraAliasForId(monsterId: string): string {
+    const key = String(monsterId || "").toLowerCase()
+    return MONSTER_AURA_ALIAS[key] || key
+}
+
 function _monsterAuraForDir(monsterId: string, dir: string): any {
-    const aura = (MONSTER_AURA_FEET as any)[monsterId] as any
+    const auraId = _monsterAuraAliasForId(monsterId)
+    const aura = (MONSTER_AURA_FEET as any)[auraId] as any
     if (!aura) return null
     const key = (dir || "").toLowerCase()
     const byDir = aura && aura.dirs

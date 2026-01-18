@@ -1,8 +1,8 @@
 // scripts/genmonsterauras.mjs
 // Generate dilated aura masks for monsters. Uses frame size parsed from the
 // filename (e.g., "slime 64x64 ULDR 1Walk.png" -> 64x64 frames).
-// Writes outputs to assets/enemies/<group>/auras/<name>_aura_r2.png
-// Skips regeneration by default when the output already exists; override via flag/env.
+// Writes outputs to assets/enemies/<group>/auras/<name>_aura_r{radius}.png
+// Skips regeneration by default when the output already exists; override via args.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -14,11 +14,12 @@ const MONSTER_DIRS = [
   path.join(ROOT, "assets", "enemies", "bosses"),
 ];
 const OUT_SUBDIR = "auras";
-const RADIUS = 2;
+const DEFAULT_RADII = [0, 1, 2, 3];
+const args = process.argv.slice(2);
 const FRAME_DIM_RE = /(\d+)\s*x\s*(\d+)/i;
 
 // Default: avoid rewriting existing auras (toggle here)
-const SKIP_EXISTING = true;
+const DEFAULT_SKIP_EXISTING = true;
 
 function _isTruthy(v) {
   if (v === undefined || v === null) return false;
@@ -29,6 +30,28 @@ function _isFalsy(v) {
   if (v === undefined || v === null) return false;
   const s = String(v).trim().toLowerCase();
   return s === "0" || s === "false" || s === "no" || s === "n" || s === "off";
+}
+
+function parseRadii(args) {
+  let radii = DEFAULT_RADII.slice();
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--radius" && i + 1 < args.length) {
+      const v = parseInt(args[i + 1], 10);
+      if (Number.isFinite(v) && v >= 0) radii = [v | 0];
+      i++;
+    } else if (a === "--radii" && i + 1 < args.length) {
+      const list = String(args[i + 1] || "")
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n) && n >= 0)
+        .map((n) => n | 0);
+      if (list.length) radii = list;
+      i++;
+    }
+  }
+  radii = Array.from(new Set(radii)).sort((a, b) => a - b);
+  return radii;
 }
 
 function ensureDir(p) {
@@ -139,6 +162,11 @@ async function writePng(png, filePath) {
 }
 
 async function main() {
+  const radii = parseRadii(args);
+  let skipExisting = DEFAULT_SKIP_EXISTING;
+  if (args.includes("--overwrite") || args.includes("--force")) skipExisting = false;
+  if (args.includes("--skip-existing")) skipExisting = true;
+
   const inputs = [];
   for (const dir of MONSTER_DIRS) {
     const files = listPngs(dir);
@@ -150,7 +178,7 @@ async function main() {
   }
 
   console.log(
-    `[mon-auras] monsters=${inputs.length} radius=${RADIUS} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
+    `[mon-auras] monsters=${inputs.length} radii=${radii.join(",")} skipExisting=${skipExisting ? "yes" : "no"}`
   );
 
   let missingSize = 0;
@@ -165,9 +193,6 @@ async function main() {
       continue;
     }
     const { frameW, frameH } = dims;
-    const outName = `${name}_aura_r${RADIUS}.png`;
-    const outPath = path.join(entry.dir, OUT_SUBDIR, outName);
-    if (SKIP_EXISTING && fs.existsSync(outPath)) continue;
 
     let src;
     try {
@@ -177,16 +202,22 @@ async function main() {
       continue;
     }
 
-    const r = buildAuraSheetForGrid(src, frameW, frameH, RADIUS);
-    if (!r.ok) {
-      console.warn(`[mon-auras] SKIP ${name} (${frameW}x${frameH}): ${r.reason}`);
-      continue;
-    }
+    for (const radius of radii) {
+      const outName = `${name}_aura_r${radius}.png`;
+      const outPath = path.join(entry.dir, OUT_SUBDIR, outName);
+      if (skipExisting && fs.existsSync(outPath)) continue;
 
-    await writePng(r.out, outPath);
-    console.log(
-      `[mon-auras] wrote ${path.relative(ROOT, outPath)} (frames=${r.rows}x${r.cols}, frame=${frameW}x${frameH})`
-    );
+      const r = buildAuraSheetForGrid(src, frameW, frameH, radius);
+      if (!r.ok) {
+        console.warn(`[mon-auras] SKIP ${name} (${frameW}x${frameH}): ${r.reason}`);
+        continue;
+      }
+
+      await writePng(r.out, outPath);
+      console.log(
+        `[mon-auras] wrote ${path.relative(ROOT, outPath)} (frames=${r.rows}x${r.cols}, frame=${frameW}x${frameH})`
+      );
+    }
   }
 
   if (missingSize > 0) {

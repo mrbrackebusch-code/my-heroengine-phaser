@@ -32,6 +32,7 @@ const OUTLINE_SIDES_PRIMARY = 8; // octagon candidate
 const OUTLINE_SIDES_ALT = 6; // hexagon fallback when 8-sides isn't meaningfully different
 const OUTLINE_SIMILARITY_PCT = 0.04; // choose 6 if |area8-area6|/area8 <= this
 const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
+const AURA_RADIUS_RE = /_aura_r(\d+)$/i;
 
 function mapLetterToDir(ch) {
   switch (ch) {
@@ -197,7 +198,9 @@ function parsePng(filePath) {
 }
 
 function parseAuraMeta(baseName) {
-  const cleaned = baseName.replace(/_aura_r2$/i, "").replace(/_/g, " ").trim();
+  const radiusMatch = baseName.match(AURA_RADIUS_RE);
+  const radius = radiusMatch ? parseInt(radiusMatch[1], 10) : null;
+  const cleaned = baseName.replace(AURA_RADIUS_RE, "").replace(/_/g, " ").trim();
   const tokens = cleaned.split(/\s+/).filter(t => t.length > 0);
   const sizeIdx = tokens.findIndex(t => /^\d+x\d+$/i.test(t));
   if (sizeIdx === -1) return null;
@@ -237,7 +240,7 @@ function parseAuraMeta(baseName) {
     if (!hasDeath && /death/i.test(token)) hasDeath = true;
   }
 
-  return { id, hasDirs, hasWalk, hasAttack, hasDeath, baseName, dirs };
+  return { id, hasDirs, hasWalk, hasAttack, hasDeath, baseName: cleaned, dirs, radius };
 }
 
 function polygonArea(points) {
@@ -511,13 +514,28 @@ function main() {
   }
 
   const byId = new Map();
+  const seenAny = new Set();
+  const seenR0 = new Set();
   for (const entry of entries) {
     const base = entry.file.replace(/\.png$/i, "");
     const meta = parseAuraMeta(base);
     if (!meta) continue;
-    const list = byId.get(meta.id) || [];
-    list.push({ ...meta, file: entry.file, full: entry.full });
-    byId.set(meta.id, list);
+    seenAny.add(meta.id);
+    if (meta.radius === 0) {
+      seenR0.add(meta.id);
+      const list = byId.get(meta.id) || [];
+      list.push({ ...meta, file: entry.file, full: entry.full });
+      byId.set(meta.id, list);
+    }
+  }
+
+  const missingR0 = [];
+  for (const id of seenAny) {
+    if (!seenR0.has(id)) missingR0.push(id);
+  }
+  if (missingR0.length) {
+    console.error(`[genMonsterAuraFeet] ERROR missing r0 aura for ${missingR0.length} monster(s): ${missingR0.join(", ")}`);
+    process.exit(1);
   }
 
   const phaseRank = (m) => (m.hasWalk ? 0 : (m.hasAttack ? 1 : (m.hasDeath ? 2 : 3)));

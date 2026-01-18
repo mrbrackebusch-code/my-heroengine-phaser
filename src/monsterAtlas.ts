@@ -1,6 +1,7 @@
 // src/monsterAtlas.ts
 import type Phaser from "phaser";
 import { DEBUG_MONSTER_SHEET_PARSE, DEBUG_MONSTER_SPRITES } from "./debugFlags";
+import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Phase = "walk" | "attack" | "death";
@@ -18,7 +19,7 @@ export interface MonsterAnimSet {
     frameHeight: number;
     /** All Phaser texture keys used for this monster (one per sheet) */
     textureKeys: string[];
-    /** Optional aura spritesheet texture key (same frame grid) */
+    /** Required aura spritesheet texture key (same frame grid) */
     auraTextureKey?: string;
     /** Frames per phase + direction */
     phases: {
@@ -26,6 +27,8 @@ export interface MonsterAnimSet {
         attack?: PhaseDirFrames;
         death?: PhaseDirFrames;
     };
+    /** Optional: per-attack blocks (a1, a2, ...) */
+    attacks?: PhaseDirFrames[];
     /** Optional: which texture key to use for each phase */
     phaseTexture?: Partial<Record<Phase, string>>;
 }
@@ -72,6 +75,7 @@ interface ParsedSheet {
 
 const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
 const CANON_DIRS: Dir[] = ["up", "left", "down", "right"];
+const FRAME_EMPTY_CACHE = new Map<string, boolean[]>();
 
 function mapLetterToDir(ch: string): Dir {
     switch (ch) {
@@ -225,6 +229,7 @@ type FrameOverride = {
     dir?: Dir;
     maxFrames?: number;
     trimTail?: number;
+    attackIndex?: number;
 };
 
 // Special-case per-sheet frame overrides for irregular sheets.
@@ -247,14 +252,58 @@ for (const [path, url] of Object.entries(monsterPngs)) {
     PARSED_SHEETS.push(parsed);
 }
 
-function isFrameEmpty(): boolean {
-    return false;
+function buildFrameEmptyCache(
+    key: string,
+    source: HTMLImageElement | HTMLCanvasElement,
+    cols: number,
+    rows: number,
+    frameW: number,
+    frameH: number
+): boolean[] | null {
+    if (FRAME_EMPTY_CACHE.has(key)) return FRAME_EMPTY_CACHE.get(key) || null;
+    if (typeof document === "undefined") return null;
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width = source.width;
+        canvas.height = source.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        ctx.drawImage(source, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = img.data;
+        const w = canvas.width | 0;
+        const frameCount = (cols * rows) | 0;
+        const empty = new Array(frameCount).fill(true);
+        for (let r = 0; r < rows; r++) {
+            const y0 = r * frameH;
+            for (let c = 0; c < cols; c++) {
+                const x0 = c * frameW;
+                let isEmpty = true;
+                for (let y = y0; y < y0 + frameH && isEmpty; y++) {
+                    let idx = ((y * w + x0) * 4 + 3) | 0;
+                    for (let x = 0; x < frameW; x++) {
+                        if (data[idx] !== 0) {
+                            isEmpty = false;
+                            break;
+                        }
+                        idx = (idx + 4) | 0;
+                    }
+                }
+                empty[(r * cols + c) | 0] = isEmpty;
+            }
+        }
+        FRAME_EMPTY_CACHE.set(key, empty);
+        return empty;
+    } catch {
+        return null;
+    }
 }
 
 function applyFrameOverrides(
     sheet: ParsedSheet,
     phase: Phase,
-    dirFrames: PhaseDirFrames
+    dirFrames: PhaseDirFrames,
+    attackIndex?: number
 ): void {
     const overrides =
         SHEET_FRAME_OVERRIDES[sheet.textureKey] ||
@@ -263,6 +312,7 @@ function applyFrameOverrides(
 
     for (const ov of overrides) {
         if (ov.phase !== phase) continue;
+        if (typeof ov.attackIndex === "number" && ov.attackIndex !== attackIndex) continue;
         const dirs: Dir[] = ov.dir ? [ov.dir] : (Object.keys(dirFrames) as Dir[]);
         for (const d of dirs) {
             const frames = dirFrames[d];
@@ -341,6 +391,22 @@ function buildFramesForSheet(
         }
     }
 
+    const emptyFrames = buildFrameEmptyCache(
+        sheet.textureKey,
+        source,
+        cols,
+        rows,
+        sheet.width | 0,
+        sheet.height | 0
+    );
+
+    const trimTrailingEmptyFrames = (frames: number[]): number[] => {
+        if (!emptyFrames || frames.length <= 1) return frames;
+        let last = frames.length;
+        while (last > 1 && emptyFrames[frames[last - 1]]) last--;
+        return frames.slice(0, Math.max(1, last));
+    };
+
     const rowFrames = (row: number, frameCount: number): number[] => {
         if (row < 0 || row >= rows) return [];
         const count = frameCount > 0 ? Math.min(frameCount | 0, cols) : cols;
@@ -348,7 +414,7 @@ function buildFramesForSheet(
         for (let c = 0; c < count; c++) {
             frames.push(row * cols + c);
         }
-        return frames;
+        return trimTrailingEmptyFrames(frames);
     };
 
     const buildBlock = (rowStart: number, frameCount: number): PhaseDirFrames | undefined => {
@@ -372,24 +438,6 @@ function buildFramesForSheet(
         if (!walk) return undefined;
         applyFrameOverrides(sheet, phase, walk);
         return walk;
-    }
-
-    if (phase === "attack") {
-        if (attackCount <= 0) return undefined;
-        const out: PhaseDirFrames = {};
-        for (let i = 0; i < attackCount; i++) {
-            const framesPerRow = sheet.attackFrames[i] | 0;
-            const block = buildBlock(4 * (1 + i), framesPerRow);
-            if (!block) continue;
-            for (const [dir, arr] of Object.entries(block)) {
-                if (!arr || arr.length === 0) continue;
-                if (!out[dir]) out[dir] = [];
-                out[dir]!.push(...arr);
-            }
-        }
-        if (Object.keys(out).length === 0) return undefined;
-        applyFrameOverrides(sheet, phase, out);
-        return out;
     }
 
     if (phase === "death") {
@@ -421,6 +469,85 @@ function buildFramesForSheet(
     return undefined;
 }
 
+function buildAttackFramesForSheet(
+    scene: Phaser.Scene,
+    sheet: ParsedSheet
+): PhaseDirFrames[] | undefined {
+    const tex = scene.textures.get(sheet.textureKey);
+    if (!tex) return undefined;
+
+    const source = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const cols = Math.floor(source.width / sheet.width);
+    const rows = Math.floor(source.height / sheet.height);
+    if (cols <= 0 || rows <= 0) return undefined;
+
+    const dirOrder =
+        sheet.dirs && sheet.dirs.length >= 4
+            ? sheet.dirs.slice(0, 4)
+            : CANON_DIRS;
+
+    const attackCount = sheet.attackFrames.length | 0;
+    const deathRows = sheet.deathRows | 0;
+    const expectedRows = (4 * (1 + attackCount)) + (deathRows > 0 ? deathRows : 0);
+    if (expectedRows > 0 && rows !== expectedRows) {
+        throw new Error(
+            `[monsterAtlas.frames] row count mismatch for ${sheet.textureKey}: expected ${expectedRows}, got ${rows}`
+        );
+    }
+
+    const emptyFrames = buildFrameEmptyCache(
+        sheet.textureKey,
+        source,
+        cols,
+        rows,
+        sheet.width | 0,
+        sheet.height | 0
+    );
+
+    const trimTrailingEmptyFrames = (frames: number[]): number[] => {
+        if (!emptyFrames || frames.length <= 1) return frames;
+        let last = frames.length;
+        while (last > 1 && emptyFrames[frames[last - 1]]) last--;
+        return frames.slice(0, Math.max(1, last));
+    };
+
+    const rowFrames = (row: number, frameCount: number): number[] => {
+        if (row < 0 || row >= rows) return [];
+        const count = frameCount > 0 ? Math.min(frameCount | 0, cols) : cols;
+        const frames: number[] = [];
+        for (let c = 0; c < count; c++) {
+            frames.push(row * cols + c);
+        }
+        return trimTrailingEmptyFrames(frames);
+    };
+
+    const buildBlock = (rowStart: number, frameCount: number): PhaseDirFrames | undefined => {
+        if ((rowStart + 3) >= rows) {
+            throw new Error(
+                `[monsterAtlas.frames] row block exceeds sheet for ${sheet.textureKey}: rowStart=${rowStart}, rows=${rows}`
+            );
+        }
+        const out: PhaseDirFrames = {};
+        for (let i = 0; i < 4; i++) {
+            const row = rowStart + i;
+            const dir = dirOrder[i] || CANON_DIRS[i];
+            const frames = rowFrames(row, frameCount);
+            if (frames.length > 0) out[dir] = frames;
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+    };
+
+    const attacks: PhaseDirFrames[] = [];
+    for (let i = 0; i < attackCount; i++) {
+        const framesPerRow = sheet.attackFrames[i] | 0;
+        const block = buildBlock(4 * (1 + i), framesPerRow);
+        if (!block) continue;
+        applyFrameOverrides(sheet, "attack", block, i + 1);
+        attacks.push(block);
+    }
+    return attacks.length > 0 ? attacks : undefined;
+}
+
 function fillMissingDirections(phaseFrames: PhaseDirFrames): void {
     const order: Dir[] = ["down", "right", "left", "up"];
     const base = order.find(d => phaseFrames[d] && phaseFrames[d]!.length > 0);
@@ -434,7 +561,9 @@ function fillMissingPhases(set: MonsterAnimSet): void {
     const walk = set.phases.walk;
     if (!walk) return;
 
-    if (!set.phases.attack) {
+    if (set.attacks && set.attacks.length > 0) {
+        if (!set.phases.attack) set.phases.attack = set.attacks[0];
+    } else if (!set.phases.attack) {
         set.phases.attack = {};
         for (const dir of ["up", "down", "left", "right"] as Dir[]) {
             if (walk[dir]) set.phases.attack[dir] = walk[dir]!.slice();
@@ -467,21 +596,40 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
         auraUrlByBase.set(base, url);
     }
     
+    const missingAuras: string[] = [];
+
     for (const sheet of PARSED_SHEETS) {
+        if (sheet.skip) continue;
+
         scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: sheet.width,
             frameHeight: sheet.height
         });
 
-        // Optional: matching aura sheet (same grid), if present.
-        const auraBase = `${sheet.textureKey}_aura_r2`;
-        const auraUrl = auraUrlByBase.get(auraBase);
-        if (auraUrl) {
-            scene.load.spritesheet(auraBase, auraUrl, {
+        const isBoss = /[\\/](bosses)[\\/]/i.test(sheet.sourcePath || "");
+        const auraFolder = isBoss ? "assets/enemies/bosses/auras" : "assets/enemies/monsters/auras";
+
+        for (const radius of AURA_RADII) {
+            const auraBase = `${sheet.textureKey}${auraSuffix(radius)}`;
+            const auraUrl = auraUrlByBase.get(auraBase);
+            if (!auraUrl) {
+                missingAuras.push(`${sheet.textureKey} -> ${auraFolder}/${auraBase}.png`);
+                continue;
+            }
+
+            scene.load.spritesheet(auraKey(sheet.textureKey, radius), auraUrl, {
                 frameWidth: sheet.width,
                 frameHeight: sheet.height
             });
         }
+    }
+
+    if (missingAuras.length > 0) {
+        throw new Error(
+            "[AURA-MISSING] Missing monster aura sheets:\n" +
+            missingAuras.map((m) => `  - ${m}`).join("\n") +
+            "\nRun: npm run gen-monster-auras"
+        );
     }
 }
 
@@ -550,9 +698,10 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
             phaseTexture.walk = sheet.textureKey;
         }
 
-        const attackFrames = buildFramesForSheet(scene, sheet, "attack");
-        if (attackFrames) {
-            animSet.phases.attack = attackFrames;
+        const attackFrames = buildAttackFramesForSheet(scene, sheet);
+        if (attackFrames && attackFrames.length > 0) {
+            animSet.attacks = attackFrames;
+            animSet.phases.attack = attackFrames[0];
             phaseTexture.attack = sheet.textureKey;
         }
 
@@ -564,18 +713,24 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
 
         animSet.phaseTexture = phaseTexture;
 
-        // Optional aura spritesheet (matches any of the chosen sheet bases).
+        // Required aura spritesheet (matches any of the chosen sheet bases).
         const auraCandidate =
-            auraUrlByBase.get(`${sheet.textureKey}_aura_r2`) ||
-            auraUrlByBase.get(`${id}_aura_r2`);
-        if (auraCandidate) {
-            // Texture key matches the load key in preloadMonsterSheets.
-            animSet.auraTextureKey = `${sheet.textureKey}_aura_r2`;
+            auraUrlByBase.get(`${sheet.textureKey}${auraSuffix(0)}`) ||
+            auraUrlByBase.get(`${id}${auraSuffix(0)}`);
+        if (!auraCandidate) {
+            throw new Error(
+                `[AURA-MISSING] Missing monster aura for ${id}. ` +
+                `Expected ${sheet.textureKey}${auraSuffix(0)}.png (run gen-monster-auras)`
+            );
         }
+        animSet.auraTextureKey = auraKey(sheet.textureKey, 0);
 
         for (const phase of ["walk", "attack", "death"] as Phase[]) {
             const pf = animSet.phases[phase];
             if (pf) fillMissingDirections(pf);
+        }
+        if (animSet.attacks && animSet.attacks.length > 0) {
+            for (const block of animSet.attacks) fillMissingDirections(block);
         }
 
         fillMissingPhases(animSet);
@@ -590,10 +745,12 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
                 }
                 return best;
             };
+            const attackCounts = (animSet.attacks || []).map(a => countFrames(a));
             console.log("[monsterAtlas.build.frames]", {
                 id,
                 walk: countFrames(animSet.phases.walk),
                 attack: countFrames(animSet.phases.attack),
+                attacks: attackCounts,
                 death: countFrames(animSet.phases.death),
             });
         }

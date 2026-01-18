@@ -6,10 +6,36 @@ import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 type Dir = "up" | "down" | "left" | "right";
 type Phase = "walk" | "attack" | "death";
 
+const ATTACK_INDEX_KEY = "atkIndex";
+const ATTACK_REVERSE_KEY = "attackReverse";
+const ATTACK_ONESHOT_KEY = "attackOneShot";
+const ANIM_NO_RANDOM_KEY = "__animNoRandomStart";
+const MONSTER_AURA_ALIAS: { [id: string]: string } = {
+    "worm small": "small worm",
+    "worm big": "big worm"
+};
+
+function resolveMonsterAuraId(monsterId: string): string {
+    const key = (monsterId || "").trim().toLowerCase();
+    return MONSTER_AURA_ALIAS[key] || key;
+}
+
+function overrideAttackDir(monsterId: string, attackIndex: number, dir: Dir): Dir {
+    const id = (monsterId || "").trim().toLowerCase();
+    if (id === "andromalius" && attackIndex === 2) {
+        if (dir === "up") return "left";
+        if (dir === "down") return "right";
+    }
+    return dir;
+}
+
 // Data keys we use on the Phaser sprite
 const LAST_ANIM_KEY  = "__monsterLastAnimKey";
 const LAST_PHASE_KEY = "__monsterLastPhase";
 const LAST_DIR_KEY   = "__monsterLastDir";
+const LAST_ATK_INDEX_KEY = "__monsterLastAttackIndex";
+const LAST_ATK_REV_KEY = "__monsterLastAttackReverse";
+const LAST_ATK_ONESHOT_KEY = "__monsterLastAttackOneShot";
 
 // Fallback FPS if we don't have per-phase durations
 const FALLBACK_WALK_FPS   = 4;
@@ -108,18 +134,35 @@ export function applyMonsterAnimationForSprite(
 
     const phase = ((data.get("phase") as Phase) || "walk") as Phase;
     const dir   = ((data.get("dir")   as Dir)   || "down") as Dir;
+    const attackIndexRaw =
+        (data.get(ATTACK_INDEX_KEY) as number | undefined) ??
+        (data.get("attackIndex") as number | undefined);
+    const attackIndex = Math.max(1, Number.isFinite(attackIndexRaw as number) ? (attackIndexRaw as number) | 0 : 1);
+    const attackReverse =
+        phase === "attack" &&
+        !!((data.get(ATTACK_REVERSE_KEY) as any) || (data.get("__attackReverse") as any));
+    const attackOneShot =
+        phase === "attack" &&
+        !!((data.get(ATTACK_ONESHOT_KEY) as any) || (data.get("__attackOneShot") as any));
+    const noRandomStart = !!(data.get(ANIM_NO_RANDOM_KEY) as any);
 
     // Early-out if nothing changed since last tick
     const lastAnimKey  = data.get(LAST_ANIM_KEY)  as string | undefined;
     const lastPhase    = data.get(LAST_PHASE_KEY) as Phase  | undefined;
     const lastDir      = data.get(LAST_DIR_KEY)   as Dir    | undefined;
+    const lastAtkIndex = data.get(LAST_ATK_INDEX_KEY) as number | undefined;
+    const lastAtkRev   = data.get(LAST_ATK_REV_KEY) as number | undefined;
+    const lastAtkOnce  = data.get(LAST_ATK_ONESHOT_KEY) as number | undefined;
     const currentAnim  = sprite.anims?.currentAnim?.key;
 
     if (
         lastAnimKey &&
         lastAnimKey === currentAnim &&
         lastPhase === phase &&
-        lastDir   === dir
+        lastDir   === dir &&
+        (lastAtkIndex | 0) === (attackIndex | 0) &&
+        (lastAtkRev | 0) === (attackReverse ? 1 : 0) &&
+        (lastAtkOnce | 0) === (attackOneShot ? 1 : 0)
     ) {
         // Same animation, same phase + dir → no work
         return;
@@ -157,7 +200,12 @@ export function applyMonsterAnimationForSprite(
         death?:  Record<Dir, number[]>;
     };
 
-    const perPhase = phases[phase];
+    let perPhase = phases[phase];
+    if (phase === "attack" && Array.isArray(animSet.attacks)) {
+        const attacks = animSet.attacks as Record<Dir, number[]>[];
+        const idx = Math.min(attacks.length, Math.max(1, attackIndex)) - 1;
+        if (attacks[idx]) perPhase = attacks[idx];
+    }
     if (!perPhase) {
         console.warn(
             "[MonsterAnimGlue] no phase",
@@ -170,7 +218,8 @@ export function applyMonsterAnimationForSprite(
         return;
     }
 
-    const frames = perPhase[dir];
+    const animDir = (phase === "attack") ? overrideAttackDir(animSet.id, attackIndex, dir) : dir;
+    let frames = perPhase[animDir];
     if (!frames || frames.length === 0) {
         console.warn(
             "[MonsterAnimGlue] no frames for",
@@ -178,7 +227,7 @@ export function applyMonsterAnimationForSprite(
             "phase=",
             phase,
             "dir=",
-            dir,
+            animDir,
             "perPhase=",
             perPhase
         );
@@ -190,15 +239,26 @@ export function applyMonsterAnimationForSprite(
     // -----------------------------------------------------------------
     const safeMonsterId = monsterIdRaw.replace(/\s+/g, "_").toLowerCase();
     const phaseKey = phase.toString().toLowerCase() as Phase;
-    const dirKey   = dir.toString().toLowerCase() as Dir;
-    const animKey  = `${safeMonsterId}_${phaseKey}_${dirKey}`;
+    const dirKey   = animDir.toString().toLowerCase() as Dir;
+    const attackKey = (phase === "attack") ? `_a${attackIndex}` : "";
+    const revKey = (attackReverse ? "_rev" : "");
+    const onceKey = (attackOneShot ? "_once" : "");
+    const animKey  = `${safeMonsterId}_${phaseKey}${attackKey}_${dirKey}${revKey}${onceKey}`;
+
+    if (attackReverse) frames = frames.slice().reverse();
 
     // Expose aura info for downstream consumers (telegraphs/projectile origins).
     if (animSet.auraTextureKey) {
         data.set("__monsterAuraTex", animSet.auraTextureKey);
         data.set("__monsterAuraFrameW", animSet.frameWidth | 0);
         data.set("__monsterAuraFrameH", animSet.frameHeight | 0);
-        const foot = MONSTER_AURA_FEET[animSet.id];
+        const auraId = resolveMonsterAuraId(animSet.id);
+        const foot = MONSTER_AURA_FEET[auraId];
+        if (!foot) {
+            throw new Error(
+                `[AURA-MISSING] Missing monster aura foot data for ${animSet.id}. Run: npm run gen-monster-feet`
+            );
+        }
         const dirFoot = (foot && (foot as any).dirs && (foot as any).dirs[dir]) ? (foot as any).dirs[dir] : foot;
         if (dirFoot && typeof dirFoot.footBottom === "number") {
             data.set("__monsterAuraFootBottom", dirFoot.footBottom | 0);
@@ -243,7 +303,7 @@ export function applyMonsterAnimationForSprite(
 
         // FPS from per-sprite duration if present, otherwise fallback
         const fps = computePhaseFps(phase, frames.length, data);
-        const repeat = (phase === "death") ? 0 : -1;
+        const repeat = (phase === "death" || attackOneShot) ? 0 : -1;
 
         if (false) {
         console.log(
@@ -281,14 +341,18 @@ export function applyMonsterAnimationForSprite(
     sprite.anims.play(animKey, true);
 
     // Randomize starting phase so large groups don't look like a marching band
-    if (isNewAnim) {
+    if (isNewAnim && !noRandomStart) {
         sprite.anims.setProgress(Math.random());
     }
+    if (noRandomStart) data.set(ANIM_NO_RANDOM_KEY, 0);
 
     // Remember last state so we can early-out next tick
     data.set(LAST_ANIM_KEY,  animKey);
     data.set(LAST_PHASE_KEY, phaseKey);
     data.set(LAST_DIR_KEY,   dirKey);
+    data.set(LAST_ATK_INDEX_KEY, attackIndex | 0);
+    data.set(LAST_ATK_REV_KEY, attackReverse ? 1 : 0);
+    data.set(LAST_ATK_ONESHOT_KEY, attackOneShot ? 1 : 0);
 }
 
 // Tiny helper if you want it from arcadeCompat (returns success/fail)

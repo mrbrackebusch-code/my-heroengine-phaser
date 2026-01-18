@@ -29,6 +29,7 @@ import {
     DEBUG_TURN_SHOULD_PROVE_ON,
     FORCE_PROP_SCALE_OUTLINE,
 } from "./debugFlags";
+import { DEFAULT_AURA_RADIUS, auraKey, pickAuraRadius } from "./auraConfig";
 
 
 // Data keys we will use on hero sprites.
@@ -2841,9 +2842,9 @@ function __getOrBuildAuraWhiteTexture(scene: Phaser.Scene, texKey: string, frame
             if (lum > maxLum) maxLum = lum;
         }
         const avgLum = (sumLum / pxCount);
-        const invertLum = allOpaque && avgLum > 200;
         const isFlatLum = allOpaque && (minLum === maxLum);
-        const forceFull = isFlatLum;
+        const invertLum = allOpaque && avgLum > 200 && !isFlatLum;
+        const forceFull = false;
 
         let minX = 9999, minY = 9999, maxX = -1, maxY = -1;
         let maskCount = 0;
@@ -2878,11 +2879,12 @@ function __getOrBuildAuraWhiteTexture(scene: Phaser.Scene, texKey: string, frame
 
         const area = Math.max(1, (w * h) | 0);
         const sparseMask = (!forceFull && (maskCount / area) < 0.25);
-        const ringThickness = (forceFull || sparseMask) ? 2 : 1;
-        let ringPad = (forceFull || sparseMask) ? 2 : 1;
-        if (ringPad < ringThickness) ringPad = ringThickness;
+        const allowBoxRing = false;
+        const ringThickness = allowBoxRing ? ((forceFull || sparseMask) ? 2 : 1) : 0;
+        let ringPad = allowBoxRing ? ((forceFull || sparseMask) ? 2 : 1) : 0;
+        if (allowBoxRing && ringPad < ringThickness) ringPad = ringThickness;
 
-        const ringMode = forceFull ? "full" : (sparseMask ? "sparse" : "normal");
+        const ringMode = allowBoxRing ? (forceFull ? "full" : (sparseMask ? "sparse" : "normal")) : "none";
         const cacheKey = `${texKey}::${frameName}::white::box${ringPad}::t${ringThickness}::m${ringMode}`;
         const cached = __outlineAuraWhiteCache.get(cacheKey);
         if (cached && scene.textures.exists(cached)) return cached;
@@ -2913,7 +2915,7 @@ function __getOrBuildAuraWhiteTexture(scene: Phaser.Scene, texKey: string, frame
                 const lum = (r * 54 + g * 183 + b * 19) >> 8;
                 alpha = invertLum ? (255 - lum) : lum;
             }
-            if (alpha && !forceFull) {
+            if (alpha) {
                 const p = (i >> 2);
                 const x = (p % w) | 0;
                 const y = ((p / w) | 0);
@@ -2928,7 +2930,7 @@ function __getOrBuildAuraWhiteTexture(scene: Phaser.Scene, texKey: string, frame
             }
         }
 
-        if (forceFull || maxX >= minX) {
+        if (allowBoxRing && ringThickness > 0 && maxX >= minX) {
             const useFullBounds = forceFull || sparseMask;
             const baseLeft = (useFullBounds ? 0 : Math.max(0, minX - 1)) + ringPad;
             const baseRight = (useFullBounds ? (w - 1) : Math.min(w - 1, maxX + 1)) + ringPad;
@@ -3215,7 +3217,8 @@ export async function prewarmHeroAuraOutlinesAsync(
     if (!scene) throw new Error("[prewarmHeroAuraOutlinesAsync] missing scene");
     if (!heroTexKey) return;
 
-    const auraTexKey = `${heroTexKey}_aura_r${radius}`;
+    const auraRadius = pickAuraRadius(radius);
+    const auraTexKey = auraKey(heroTexKey, auraRadius);
 
     if (!scene.textures.exists(heroTexKey)) {
         throw new Error(`[AURA-PREWARM] Hero texture missing: ${heroTexKey}`);
@@ -3285,7 +3288,8 @@ export async function prewarmHeroAuraOutlinesAsync(
 export function syncHeroAuraForNative(
     native: any,
     auraActive: boolean,
-    auraColorIndex: number
+    auraColorIndex: number,
+    auraRadius?: number
 ): void {
     try {
         if (!native) return;
@@ -3304,8 +3308,11 @@ export function syncHeroAuraForNative(
         const heroTexKey = native.texture?.key ? String(native.texture.key) : "";
         if (!heroTexKey) return;
 
-        const radius = 2; // hard-locked to r2 in this pipeline
-        const auraTexKey = `${heroTexKey}_aura_r${radius}`;
+        const requestedRadius = (typeof auraRadius === "number" && isFinite(auraRadius))
+            ? (auraRadius | 0)
+            : DEFAULT_AURA_RADIUS;
+        const radius = pickAuraRadius(requestedRadius);
+        const auraTexKey = auraKey(heroTexKey, radius);
 
         if (!scene.textures.exists(auraTexKey)) {
             throw new Error(
@@ -3444,76 +3451,30 @@ export function syncOutlineForNative(
                 : undefined;
         if (frameName === undefined) return;
 
-          const r = (radius | 0) > 0 ? (radius | 0) : 2;
+          const requestedRadius = (radius | 0) > 0 ? (radius | 0) : DEFAULT_AURA_RADIUS;
+          const auraRadius = pickAuraRadius(requestedRadius);
           let outlineTexKey = "";
           let useFrameName = true;
           if (forceOutlineBuild) {
-              const origKey = (native as any).__outlineSwapOrigKey;
-              const origFrame = (native as any).__outlineSwapOrigFrame;
-              const baseKey = origKey ? String(origKey) : String(texKey);
-              const baseFrame = (origFrame !== undefined && origFrame !== null) ? String(origFrame) : String(frameName);
-              if (!origKey) {
-                  (native as any).__outlineSwapOrigKey = String(texKey);
-                  (native as any).__outlineSwapOrigFrame = frameName ?? null;
-                  const tintVal = (native as any).tintTopLeft ?? 0;
-                  (native as any).__outlineSwapOrigTint = tintVal;
-                  (native as any).__outlineSwapHadTint = tintVal !== 0xffffff;
-                  (native as any).__outlineSwapOrigScaleX = native.scaleX ?? 1;
-                  (native as any).__outlineSwapOrigScaleY = native.scaleY ?? 1;
-              }
-              const outTexKey = __getOrBuildPrebakedOutlineTexture(scene, baseKey, baseFrame, r, 2);
-              if (DEBUG_PROP_OUTLINE_ONELOG) {
-                  try {
-                      const g: any = globalThis as any;
-                      const k = `__propOutlineForceLog__${baseKey}::${baseFrame}`;
-                      if (!g[k]) {
-                          g[k] = 1;
-                          const payload = {
-                              baseKey,
-                              baseFrame,
-                              texKey: String(texKey),
-                              frameName: String(frameName),
-                              outTexKey,
-                              outFrame: outTexKey ? "__BASE" : null
-                          };
-                          try {
-                              console.log("[AURA][PROPS][FORCE-BUILD] " + JSON.stringify(payload));
-                          } catch {
-                              console.log("[AURA][PROPS][FORCE-BUILD] " + String(payload));
-                          }
-                      }
-                  } catch { /* ignore */ }
-              }
-              const applySwap = () => {
-                  if (!outTexKey) return;
-                  try { native.setTexture(outTexKey, "__BASE"); } catch { /* ignore */ }
-                  try { native.setTint?.(0xffffff); } catch { /* ignore */ }
-                  (native as any).__outlineSwapApplied = true;
-                  __logFrameAlphaCountOnce(scene, outTexKey, "__BASE");
-              };
-              __scheduleScreenSampleProbe(
-                  scene,
-                  native,
-                  baseKey,
-                  baseFrame,
-                  outTexKey,
-                  outTexKey ? "__BASE" : null,
-                  applySwap
+              throw new Error("[AURA] forceOutlineBuild is disabled; precomputed auras required.");
+          }
+          const canUseAuraSheet = true;
+          const auraTexKey = auraKey(texKey, auraRadius);
+          if (!scene.textures.exists(auraTexKey)) {
+              throw new Error(
+                  `[AURA-MISSING] Texture not loaded: ${auraTexKey}. Run: npm run gen-auras`
               );
-              if (outlineAny) outlineAny.setVisible(false);
-              return;
           }
-          const canUseAuraSheet = (texKey.startsWith("tiles.") || texKey.startsWith("anims."));
-          if (canUseAuraSheet && FORCE_PROP_SCALE_OUTLINE && !forceOutlineBuild) {
-              outlineTexKey = texKey;
-              useFrameName = true;
+          const auraTex = scene.textures.get(auraTexKey);
+          const auraFrame = auraTex.get(frameName as any);
+          if (!auraFrame) {
+              throw new Error(
+                  `[AURA-FRAME-MISSING] ${auraTexKey} missing frame=${String(frameName)} (baseTex=${texKey})`
+              );
           }
-          if (canUseAuraSheet && !forceOutlineBuild) {
-              const auraTexKey = `${texKey}_aura_r2`;
-              if (scene.textures.exists(auraTexKey)) {
-                const auraTex = scene.textures.get(auraTexKey);
-                const auraFrame = auraTex.get(frameName as any);
-                if (auraFrame) {
+          if (canUseAuraSheet) {
+                const auraFrameName = frameName as any;
+                if (auraFrameName !== undefined) {
                     const alphaKey = auraTexKey + "::" + String(frameName);
                     let hasAlpha = __outlineAuraFrameHasAlpha.get(alphaKey);
                     if (hasAlpha === undefined) {
@@ -3654,21 +3615,18 @@ export function syncOutlineForNative(
                               bb: stats ? { minX: stats.minX, minY: stats.minY, maxX: stats.maxX, maxY: stats.maxY } : null
                           });
                       } else {
-                          if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] empty or flat aura frame; fallback to outline build", { texKey, auraTexKey, frame: frameName });
+                          throw new Error(
+                              `[AURA-FRAME-EMPTY] ${auraTexKey} has no opaque pixels for frame=${String(frameName)}`
+                          );
                       }
                   }
-              }
-              if (!outlineTexKey && !__outlineAuraLogOnce.has(auraTexKey)) {
-                  __outlineAuraLogOnce.add(auraTexKey);
-                  if (DEBUG_PROP_OUTLINE_VERBOSE) console.log("[AURA][PROPS] missing aura sheet", { texKey, auraTexKey });
-              }
         }
 
           if (!outlineTexKey) {
-              outlineTexKey = __getOrBuildHeroOutlineTexture(scene, texKey, frameName as any, r);
-              useFrameName = false;
+              throw new Error(
+                  `[AURA-MISSING] No outline texture available for ${texKey} frame=${String(frameName)} (aura=${auraTexKey})`
+              );
           }
-          if (!outlineTexKey) return;
 
           let outlineImg: Phaser.GameObjects.Image;
           const baseFrameName = "__BASE";
@@ -3896,7 +3854,10 @@ export function syncOutlineForNative(
                   } catch { /* ignore */ }
               }
           }
-    } catch {
+    } catch (e) {
+        if (e instanceof Error && String(e.message || "").includes("[AURA-")) {
+            throw e;
+        }
         // Non-critical: focus outline should never crash the game loop.
     }
 }
@@ -3933,7 +3894,8 @@ export function getHeroAuraInnerRForNative(
     const heroTexKey = native.texture?.key ? String(native.texture.key) : "";
     if (!heroTexKey) return 0;
 
-    const auraTexKey = `${heroTexKey}_aura_r${radius}`;
+    const auraRadius = pickAuraRadius(radius);
+    const auraTexKey = auraKey(heroTexKey, auraRadius);
     if (!scene.textures.exists(auraTexKey)) return 0;
 
     const frameName = (native.frame && (native.frame.name !== undefined)) ? native.frame.name : undefined;
@@ -3945,7 +3907,7 @@ export function getHeroAuraInnerRForNative(
     const h = af.height | 0;
 
     // Inner radius ≈ half of aura frame minus the halo thickness
-    const inner = Math.floor(Math.min(w, h) / 2) - (radius | 0);
+    const inner = Math.floor(Math.min(w, h) / 2) - (auraRadius | 0);
     return inner > 0 ? inner : 0;
 }
 

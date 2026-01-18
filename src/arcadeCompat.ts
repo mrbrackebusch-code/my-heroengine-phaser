@@ -68,6 +68,7 @@ import * as heroAnimGlue from "./heroAnimGlue";
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
 import * as effectAnimGlue from "./effectAnimGlue";
+import { listWeaponVariants } from "./weaponAtlas";
 import {
     DECOR_ENABLED,
     DECOR_DEBUG,
@@ -135,6 +136,7 @@ import {
     FORCE_PROP_PREBAKED_OUTLINE,
     MAX_OVERLAP_DEBUG_LOGS,
 } from "./debugFlags";
+import { auraKey } from "./auraConfig";
 
 
 
@@ -640,8 +642,13 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         if ((baseHeightPx | 0) > 0) {
             let srcKey = info.textureKey;
             if (useAura) {
-                const auraKey = `${info.textureKey}_aura_r2`;
-                if (scene?.textures?.exists?.(auraKey)) srcKey = auraKey;
+                const auraTexKey = auraKey(info.textureKey, 0);
+                if (!scene?.textures?.exists?.(auraTexKey)) {
+                    throw new Error(
+                        `[AURA-MISSING] Missing prop aura (r0) for ${info.textureKey}. Run: npm run gen-prop-auras`
+                    );
+                }
+                srcKey = auraTexKey;
             }
 
             const bbBase = _decor_computeOpaqueBaseBounds(scene, srcKey, info.frameIndex, baseHeightPx | 0);
@@ -678,8 +685,13 @@ function decor_applyTightOpaqueAabbToSolids(args: {
 
         let fullKey = info.textureKey;
         if (forceAura && useAura) {
-            const auraKey = `${info.textureKey}_aura_r2`;
-            if (scene?.textures?.exists?.(auraKey)) fullKey = auraKey;
+            const auraTexKey = auraKey(info.textureKey, 0);
+            if (!scene?.textures?.exists?.(auraTexKey)) {
+                throw new Error(
+                    `[AURA-MISSING] Missing prop aura (r0) for ${info.textureKey}. Run: npm run gen-prop-auras`
+                );
+            }
+            fullKey = auraTexKey;
         }
 
         const bb = _decor_computeOpaqueAabbForFrame(scene, fullKey, info.frameIndex, tileSize);
@@ -1212,6 +1224,42 @@ const HERO_AGI_PKT_COUNT_FALLBACK_KEY = "aPkC"  // fallback (old stored hits)
 
 
 const DEFAULT_WEAPON_VARIANT = "base";
+const _weaponVariantByHeroIndex: Record<number, Record<string, string>> = Object.create(null);
+const _weaponVariantByKey: Record<string, string> = Object.create(null);
+
+function _pickWeaponVariantForModel(weaponId: string): string {
+    const id = String(weaponId || "").trim();
+    if (!id) return DEFAULT_WEAPON_VARIANT;
+    const variants = listWeaponVariants(id);
+    if (!variants || variants.length === 0) return DEFAULT_WEAPON_VARIANT;
+    const idx = Math.max(0, Math.min(variants.length - 1, Math.floor(Math.random() * variants.length)));
+    return variants[idx] || DEFAULT_WEAPON_VARIANT;
+}
+
+function _weaponVariantForHero(heroIndex: number, weaponId: string): string {
+    const id = String(weaponId || "").trim();
+    if (!id) return DEFAULT_WEAPON_VARIANT;
+    const hi = heroIndex | 0;
+    if (hi < 0) return _weaponVariantForKey("hero", id);
+    let map = _weaponVariantByHeroIndex[hi];
+    if (!map) _weaponVariantByHeroIndex[hi] = map = Object.create(null);
+    const hit = map[id];
+    if (hit) return hit;
+    const pick = _pickWeaponVariantForModel(id);
+    map[id] = pick;
+    return pick;
+}
+
+function _weaponVariantForKey(key: string, weaponId: string): string {
+    const id = String(weaponId || "").trim();
+    if (!id) return DEFAULT_WEAPON_VARIANT;
+    const k = `${String(key || "").trim()}|${id}`;
+    const hit = _weaponVariantByKey[k];
+    if (hit) return hit;
+    const pick = _pickWeaponVariantForModel(id);
+    _weaponVariantByKey[k] = pick;
+    return pick;
+}
 
 // Cache: heroIndex -> cast weapon model id (wCa)
 const _heroCastWeaponByIndex: { [k: number]: string } = Object.create(null);
@@ -1325,6 +1373,35 @@ const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 const EFFECT_OFFX_DATA_KEY = "effectOffX";
 const EFFECT_OFFY_DATA_KEY = "effectOffY";
 const EFFECT_TINT_DATA_KEY = "effectTint";
+const EFFECT_FPS_DATA_KEY = "effectFps";
+const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
+const EFFECT_MODE_DATA_KEY = "effectMode";
+const EFFECT_SCALE_DATA_KEY = "effectScale";
+const EFFECT_BRUSH_PX_DATA_KEY = "effectBrushPx";
+const EFFECT_POP_MS_DATA_KEY = "effectPopMs";
+const EFFECT_POP_SCALE_DATA_KEY = "effectPopScale";
+const EFFECT_POP_START_MS_DATA_KEY = "effectPopStartMs";
+
+const __heroNativeByIndex: { [idx: number]: any } = Object.create(null);
+
+function _setHeroNativeByIndex(heroIndex: number, nativeAny: any): void {
+    if (!Number.isFinite(heroIndex)) return;
+    const idx = heroIndex | 0;
+    if (idx < 0) return;
+    __heroNativeByIndex[idx] = nativeAny;
+}
+
+function _getHeroNativeByIndex(heroIndex: number): any {
+    const idx = heroIndex | 0;
+    if (idx < 0) return null;
+    return __heroNativeByIndex[idx] || null;
+}
+
+function _clearHeroNativeByIndex(heroIndex: number, nativeAny: any): void {
+    const idx = heroIndex | 0;
+    if (idx < 0) return;
+    if (__heroNativeByIndex[idx] === nativeAny) delete __heroNativeByIndex[idx];
+}
 
 // Phaser-only native data keys
 const NATIVE_FORCE_INVISIBLE_KEY = "__forceInvisible";
@@ -1480,6 +1557,7 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
     const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
     const weaponId = _heroCastWeaponByIndex[heroIndex] || (typeof dataAny[HERO_WPN_CAST_KEY] === "string" ? String(dataAny[HERO_WPN_CAST_KEY]) : "");
     if (!weaponId) return;
+    const weaponVariant = _weaponVariantForHero(heroIndex, weaponId);
 
     const dirRaw = (typeof dataAny.dir === "string" && dataAny.dir) ? dataAny.dir : "down";
     const dir = (dirRaw === "up" || dirRaw === "down" || dirRaw === "left" || dirRaw === "right") ? dirRaw : "down";
@@ -1502,7 +1580,7 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
             heroPhase: "cast",
             dir: dir as any,
             heroFrameIndex: 0,
-            variant: DEFAULT_WEAPON_VARIANT,
+            variant: weaponVariant,
             frameColOverride: 0
         });
 
@@ -2673,7 +2751,6 @@ function __installHeroVisualInfoHookOnce(): void {
         const g: any = globalThis as any;
         g.__HeroEngineHooks = g.__HeroEngineHooks || {};
 
-        const AURA_RADIUS = 2;
         const AURA_THICKNESS = 1;
         const SPACING = 1;
 
@@ -2696,9 +2773,13 @@ function __installHeroVisualInfoHookOnce(): void {
             // 2) If missing, compute from aura silhouette cache (true pixels)
             if ((innerR <= 0 || leadEdge <= 0) && native) {
                 const dir = cardinalFrom(nx, ny);
+                const auraRadiusRaw = hero?.data?.auraRadius;
+                const auraRadius = (typeof auraRadiusRaw === "number" && isFinite(auraRadiusRaw))
+                    ? (auraRadiusRaw | 0)
+                    : 2;
 
-                const baseInner = heroAnimGlue.getHeroAuraInnerRForNative(native, AURA_RADIUS);
-                const baseLead = heroAnimGlue.getHeroAuraLeadForNativeDir(native, AURA_RADIUS, dir);
+                const baseInner = heroAnimGlue.getHeroAuraInnerRForNative(native, auraRadius);
+                const baseLead = heroAnimGlue.getHeroAuraLeadForNativeDir(native, auraRadius, dir);
 
                 if (baseInner > 0) {
                     innerR = Math.ceil(baseInner + AURA_THICKNESS + SPACING);
@@ -3405,12 +3486,13 @@ function _shopRing_pickBestStaticFrameColCached(args: {
     dir: any;
     heroFrameIndex: number;
     glueAny: any;
+    variant: string;
 }): number {
     const g: any = globalThis as any
     if (!g.__shopRingBestColCache) g.__shopRingBestColCache = Object.create(null)
     const cache: Record<string, number> = g.__shopRingBestColCache
 
-    const key = `${args.weaponId}|${args.heroPhase}|${args.dir}|${DEFAULT_WEAPON_VARIANT}`
+    const key = `${args.weaponId}|${args.heroPhase}|${args.dir}|${args.variant || DEFAULT_WEAPON_VARIANT}`
     const hit = cache[key]
     if (typeof hit === "number") return hit | 0
 
@@ -3429,7 +3511,7 @@ function _shopRing_pickBestStaticFrameColCached(args: {
                 heroPhase: args.heroPhase,
                 dir: args.dir,
                 heroFrameIndex: args.heroFrameIndex,
-                variant: DEFAULT_WEAPON_VARIANT,
+                variant: args.variant,
                 frameColOverride: col
             })
         } catch {
@@ -3552,6 +3634,7 @@ function _shopRing_applyGlueOrPlaceholder(args: {
     hasGlue: boolean
     ox: number
     oy: number
+    variant: string
 }): void {
     if (!args.weaponId) {
         try { args.bg.setVisible(false) } catch { }
@@ -3572,7 +3655,7 @@ function _shopRing_applyGlueOrPlaceholder(args: {
                 heroPhase: args.heroPhase,
                 dir: args.dir,
                 heroFrameIndex: 0,               // <-- force [row][frame] = [U][0]
-                variant: DEFAULT_WEAPON_VARIANT,
+                variant: args.variant,
                 frameColOverride: 0              // <-- force col 0
             })
 
@@ -3696,6 +3779,7 @@ function _syncShopWeaponRingIfPresent(
 
         const bg = ring.bg[i] as any;
         const fg = ring.fg[i] as any;
+        const variant = _weaponVariantForKey(`shopRing:${cfg.sig}:${i}`, weaponId);
 
         if (!weaponId) {
             try { bg.setVisible(false); } catch { }
@@ -3736,7 +3820,8 @@ function _syncShopWeaponRingIfPresent(
             heroFrameIndex,
             hasGlue: cfg.hasGlue,
             ox,
-            oy
+            oy,
+            variant
         });
 
         // Debug metadata (unchanged behavior)
@@ -7423,12 +7508,22 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 );
             }
 
+            try {
+                const dataAny: any = (s as any).data || {};
+                const role = _classifySpriteRole(s.kind, Object.keys(dataAny || {}));
+                if (role === "HERO") {
+                    const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+                    _clearHeroNativeByIndex(heroIndex, s.native);
+                }
+            } catch { }
+
             if (s.native && (s.native as any).destroy) {
                 // Step 8: ensure weapon overlays are destroyed too
                 _destroyWeaponOverlaysForHeroNative(s.native);
 
                 // Intellect FX attachments (hero ring + projectile crystal)
                 _destroyIntellectFxForNative(s.native);
+                _effectClearPaintMask(s.native);
 
                 try {
                     (s.native as any).destroy();
@@ -9030,6 +9125,8 @@ function _syncWeaponOverlaysForHeroNative(
     const weaponId = sel.weaponId;
     const aState = sel.aState;
     const staffCast = sel.staffCast;
+    const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+    const weaponVariant = _weaponVariantForHero(heroIndex, weaponId);
 
     // Mirror keys for glue (unchanged)
     _wpnMirrorKeysForGlue(nativeHero, dataAny);
@@ -9098,7 +9195,7 @@ function _syncWeaponOverlaysForHeroNative(
         heroPhase: weaponPhase,
         dir: requestedDir as any,
         heroFrameIndex,
-        variant: DEFAULT_WEAPON_VARIANT,
+        variant: weaponVariant,
         frameColOverride: glueFrameColOverride,
         frameDirOverride: glueFrameDirOverride,
         posOffsetX: staffOffsetX,
@@ -9193,7 +9290,8 @@ function _applyWorldDepthForNative(s: any, native: any): void {
 export function syncHeroAuraForNative(
   native: Phaser.GameObjects.Sprite,
   auraActive: boolean,
-  auraColorIndex: number
+  auraColorIndex: number,
+  auraRadius?: number
 )
 
 function _applyHeroAuraGlow(nativeHero: any, auraActive: boolean, auraGlow: boolean, sc: any): void {
@@ -9255,14 +9353,21 @@ function _syncHeroPath(
         nativeAny as Phaser.GameObjects.Sprite
     );
 
+    if (role === "HERO" && !isEnemyLpc) {
+        const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+        _setHeroNativeByIndex(heroIndex, nativeAny);
+    }
+
     const auraActive = !!(s.data && (s.data as any)["auraActive"]);
     const auraColor = ((s.data && (s.data as any)["auraColor"]) as any | 0);
     const auraGlow = !!(s.data && (s.data as any)["auraGlow"]);
+    const auraRadius = ((s.data && (s.data as any)["auraRadius"]) as any | 0);
 
     heroAnimGlue.syncHeroAuraForNative(
         s.native,
         auraActive,
-        auraColor
+        auraColor,
+        auraRadius
     );
     try {
         if (auraActive) {
@@ -9551,6 +9656,127 @@ function _syncEnemyActorPath(
 // SAFETY:
 //   - Must tolerate missing native.setData / missing glue hook
 // ---------------------------------------------------------------------
+function _effectClearPaintMask(nativeAny: any): void {
+    if (!nativeAny) return;
+    try { nativeAny.clearMask?.(true); } catch { }
+    try {
+        const g: any = nativeAny.__effectPaintMaskG;
+        if (g && typeof g.destroy === "function") g.destroy();
+    } catch { }
+    try {
+        const m: any = nativeAny.__effectPaintMask;
+        if (m && typeof m.destroy === "function") m.destroy();
+    } catch { }
+    try { nativeAny.__effectPaintMask = undefined; } catch { }
+    try { nativeAny.__effectPaintMaskG = undefined; } catch { }
+    try { nativeAny.__effectPaintBrushPx = undefined; } catch { }
+    try { nativeAny.__effectPaintMaskType = undefined; } catch { }
+    try { nativeAny.__effectPaintMaskHeroId = undefined; } catch { }
+}
+
+function _effectAutoBrushPx(s: any, nativeAny: any): number {
+    let base = 0;
+    try {
+        const img: any = (s as any).image;
+        const w = (img?.width ?? 0) | 0;
+        const h = (img?.height ?? 0) | 0;
+        base = Math.min(w, h);
+    } catch { }
+    if (!base || base <= 0) {
+        const dw = (nativeAny?.displayWidth ?? nativeAny?.width ?? 0) as number;
+        const dh = (nativeAny?.displayHeight ?? nativeAny?.height ?? 0) as number;
+        base = Math.min(dw || 0, dh || 0) | 0;
+    }
+    let r = Math.round(base * 0.25);
+    if (!Number.isFinite(r) || r <= 0) r = 4;
+    if (r < 4) r = 4;
+    return r | 0;
+}
+
+function _effectEnsurePaintMask(sc: Phaser.Scene, nativeAny: any, brushPx: number): void {
+    if (!nativeAny || !sc) return;
+    if (nativeAny.__effectPaintMaskType === "hero") return;
+    const px = Math.max(1, brushPx | 0);
+    let g: Phaser.GameObjects.Graphics | undefined = nativeAny.__effectPaintMaskG;
+    if (!g || !(g as any).scene || (g as any).destroyed) {
+        try { _effectClearPaintMask(nativeAny); } catch { }
+        g = sc.add.graphics();
+        g.setVisible(false);
+        nativeAny.__effectPaintMaskG = g;
+    }
+    const lastPx = nativeAny.__effectPaintBrushPx | 0;
+    if ((lastPx | 0) !== (px | 0)) {
+        g.clear();
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(0, 0, px);
+        nativeAny.__effectPaintBrushPx = px | 0;
+    }
+    g.x = nativeAny.x;
+    g.y = nativeAny.y;
+
+    if (!nativeAny.__effectPaintMask) {
+        const mask = g.createGeometryMask();
+        nativeAny.setMask(mask);
+        nativeAny.__effectPaintMask = mask;
+        nativeAny.__effectPaintMaskType = "circle";
+    }
+}
+
+function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean {
+    if (!nativeAny || !heroNative) return false;
+    const auraImg: any = (heroNative as any).__heroAuraImage;
+    if (!auraImg || !(auraImg as any).scene || (auraImg as any).destroyed) return false;
+
+    const heroId = (heroNative as any).__heroNativeMaskId || (heroNative as any).name || heroNative;
+    const lastType = nativeAny.__effectPaintMaskType;
+    const lastHero = nativeAny.__effectPaintMaskHeroId;
+
+    if (lastType === "hero" && lastHero === heroId && nativeAny.__effectPaintMask) {
+        return true;
+    }
+
+    _effectClearPaintMask(nativeAny);
+
+    try {
+        const mask = auraImg.createBitmapMask();
+        nativeAny.setMask(mask);
+        nativeAny.__effectPaintMask = mask;
+        nativeAny.__effectPaintMaskType = "hero";
+        nativeAny.__effectPaintMaskHeroId = heroId;
+        return true;
+    } catch {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+}
+
+function _effectApplyScale(nativeAny: any, scale: number, hasScale: boolean, pulseMult: number): void {
+    if (!nativeAny) return;
+    if (nativeAny.__effectBaseScaleX == null) {
+        nativeAny.__effectBaseScaleX = (typeof nativeAny.scaleX === "number") ? nativeAny.scaleX : 1;
+        nativeAny.__effectBaseScaleY = (typeof nativeAny.scaleY === "number") ? nativeAny.scaleY : 1;
+    }
+    const baseX = nativeAny.__effectBaseScaleX || 1;
+    const baseY = nativeAny.__effectBaseScaleY || 1;
+    const base = (hasScale && Number.isFinite(scale) && scale > 0) ? scale : 1;
+    const pulse = (Number.isFinite(pulseMult) && pulseMult > 0) ? pulseMult : 1;
+    const finalScale = base * pulse;
+    const scaleOk = finalScale > 0 && Number.isFinite(finalScale);
+    if (scaleOk) {
+        const sx = baseX * finalScale;
+        const sy = baseY * finalScale;
+        if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
+        else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
+        nativeAny.__effectScaleApplied = finalScale;
+        return;
+    }
+    if (nativeAny.__effectScaleApplied) {
+        if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX, baseY);
+        else { nativeAny.scaleX = baseX; nativeAny.scaleY = baseY; }
+        nativeAny.__effectScaleApplied = 0;
+    }
+}
+
 function _syncEffectPath(
     ctx: SyncContext,
     s: any,
@@ -9569,6 +9795,21 @@ function _syncEffectPath(
     const offX = sprites.readDataNumber(s, EFFECT_OFFX_DATA_KEY);
     const offY = sprites.readDataNumber(s, EFFECT_OFFY_DATA_KEY);
     const tintRaw = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY);
+    const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
+    const hasRepeat = Object.prototype.hasOwnProperty.call(data, EFFECT_REPEAT_DATA_KEY);
+    const hasScale = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_DATA_KEY);
+    const hasBrush = Object.prototype.hasOwnProperty.call(data, EFFECT_BRUSH_PX_DATA_KEY);
+    const hasPopMs = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_MS_DATA_KEY);
+    const hasPopScale = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_SCALE_DATA_KEY);
+    const hasPopStart = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_START_MS_DATA_KEY);
+    const fps = hasFps ? sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY) : 0;
+    const repeat = hasRepeat ? sprites.readDataNumber(s, EFFECT_REPEAT_DATA_KEY) : 0;
+    const scale = hasScale ? sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY) : 0;
+    const brushPx = hasBrush ? sprites.readDataNumber(s, EFFECT_BRUSH_PX_DATA_KEY) : 0;
+    const popMs = hasPopMs ? sprites.readDataNumber(s, EFFECT_POP_MS_DATA_KEY) : 0;
+    const popScale = hasPopScale ? sprites.readDataNumber(s, EFFECT_POP_SCALE_DATA_KEY) : 0;
+    const popStartRaw = hasPopStart ? sprites.readDataNumber(s, EFFECT_POP_START_MS_DATA_KEY) : 0;
+    const modeRaw = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim().toLowerCase();
     const tint = Number.isFinite(tintRaw) ? (tintRaw as number) | 0 : 0;
 
     if (skin) {
@@ -9579,6 +9820,14 @@ function _syncEffectPath(
     if (Number.isFinite(offX)) data[EFFECT_OFFX_DATA_KEY] = offX;
     if (Number.isFinite(offY)) data[EFFECT_OFFY_DATA_KEY] = offY;
     if (tint) data[EFFECT_TINT_DATA_KEY] = tint;
+    if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
+    if (hasRepeat) data[EFFECT_REPEAT_DATA_KEY] = repeat;
+    if (hasScale) data[EFFECT_SCALE_DATA_KEY] = scale;
+    if (hasBrush) data[EFFECT_BRUSH_PX_DATA_KEY] = brushPx;
+    if (modeRaw) data[EFFECT_MODE_DATA_KEY] = modeRaw;
+    if (hasPopMs) data[EFFECT_POP_MS_DATA_KEY] = popMs;
+    if (hasPopScale) data[EFFECT_POP_SCALE_DATA_KEY] = popScale;
+    if (hasPopStart) data[EFFECT_POP_START_MS_DATA_KEY] = popStartRaw;
 
     const nativeAny: any = s.native;
     if (!nativeAny || typeof nativeAny.setData !== "function") {
@@ -9599,6 +9848,14 @@ function _syncEffectPath(
     if (skin) nativeAny.setData(EFFECT_SKIN_DATA_KEY, skin);
     if (dir) nativeAny.setData(EFFECT_DIR_DATA_KEY, dir);
     if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
+    if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
+    if (hasRepeat) nativeAny.setData(EFFECT_REPEAT_DATA_KEY, repeat);
+    if (hasScale) nativeAny.setData(EFFECT_SCALE_DATA_KEY, scale);
+    if (hasBrush) nativeAny.setData(EFFECT_BRUSH_PX_DATA_KEY, brushPx);
+    nativeAny.setData(EFFECT_MODE_DATA_KEY, modeRaw);
+    if (hasPopMs) nativeAny.setData(EFFECT_POP_MS_DATA_KEY, popMs);
+    if (hasPopScale) nativeAny.setData(EFFECT_POP_SCALE_DATA_KEY, popScale);
+    if (hasPopStart) nativeAny.setData(EFFECT_POP_START_MS_DATA_KEY, popStartRaw);
 
     if (offX || offY) {
         nativeAny.x = (s.x as number) + (offX || 0);
@@ -9625,6 +9882,53 @@ function _syncEffectPath(
     } else if (glueAny && typeof glueAny.applyEffectAnimationForSprite === "function") {
         glueAny.applyEffectAnimationForSprite(effectSprite);
     }
+
+    const wantsPaint =
+        modeRaw === "paint" ||
+        modeRaw === "painted" ||
+        modeRaw === "reveal" ||
+        modeRaw === "painted_reveal";
+    if (wantsPaint) {
+        let usedHeroMask = false;
+        try {
+            const dataAny = data || {};
+            const hasHeroIndex = Object.prototype.hasOwnProperty.call(dataAny, PROJ_HERO_INDEX_KEY);
+            const heroIndex = hasHeroIndex ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
+            if (hasHeroIndex) {
+                const heroNative = _getHeroNativeByIndex(heroIndex | 0);
+                if (heroNative && _effectEnsureHeroOutlineMask(nativeAny, heroNative)) {
+                    usedHeroMask = true;
+                }
+            }
+        } catch { }
+        if (!usedHeroMask) {
+            if (nativeAny.__effectPaintMaskType === "hero") {
+                _effectClearPaintMask(nativeAny);
+            }
+            const brush = (hasBrush && (brushPx | 0) > 0) ? (brushPx | 0) : _effectAutoBrushPx(s, nativeAny);
+            _effectEnsurePaintMask(ctx.sc as any, nativeAny, brush | 0);
+        }
+    } else {
+        _effectClearPaintMask(nativeAny);
+    }
+    let popMult = 1;
+    if (hasPopMs && (popMs | 0) > 0) {
+        let startMs = popStartRaw | 0;
+        const nowMs = (ctx.sc && (ctx.sc as any).time && typeof (ctx.sc as any).time.now === "number")
+            ? ((ctx.sc as any).time.now | 0)
+            : (Date.now() | 0);
+        if (!(startMs > 0)) {
+            startMs = nowMs | 0;
+            data[EFFECT_POP_START_MS_DATA_KEY] = startMs | 0;
+            try { nativeAny.setData(EFFECT_POP_START_MS_DATA_KEY, startMs | 0); } catch { }
+        }
+        const dur = Math.max(1, popMs | 0);
+        const t = Math.max(0, Math.min(1, (nowMs - startMs) / dur));
+        const pulse = Math.sin(Math.PI * t);
+        const amp = (hasPopScale && Number.isFinite(popScale)) ? popScale : 0.25;
+        popMult = 1 + (amp * pulse);
+    }
+    _effectApplyScale(nativeAny, scale, hasScale, popMult);
 
     try {
         const lastTint = (nativeAny as any).__effectTint | 0;
@@ -9671,12 +9975,22 @@ function _syncPixelDeathRemoval(
         );
     }
 
+    try {
+        const dataAny: any = (s as any).data || {};
+        const role = _classifySpriteRole(s.kind, Object.keys(dataAny || {}));
+        if (role === "HERO") {
+            const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+            _clearHeroNativeByIndex(heroIndex, s.native);
+        }
+    } catch { }
+
     if (s.native && (s.native as any).destroy) {
         // Step 8: ensure weapon overlays are destroyed too
         _destroyWeaponOverlaysForHeroNative(s.native);
 
         // Intellect FX attachments (hero ring + projectile crystal)
         _destroyIntellectFxForNative(s.native);
+        _effectClearPaintMask(s.native);
 
         try {
             (s.native as any).destroy();
@@ -10356,8 +10670,7 @@ function _syncFocusOutlineForNative(
     const radius = _readDataNumber0(s, FOCUS_OUTLINE_RADIUS_KEY, 2) | 0;
     const depthBias = _readDataNumber0(s, FOCUS_OUTLINE_DEPTH_BIAS_KEY, 1) | 0;
 
-    // Decor props: DO NOT use hero-outline logic. We render a dedicated focus aura
-    // underneath the prop using the prop's pre-baked aura tilesheet.
+    // Decor props: target the prop display object and use true outline from pre-baked aura sheets.
     try {
         const decorName = (sprites.readDataString(s, DECOR_DATA_NAME) || "");
         if (decorName) {
@@ -10382,9 +10695,33 @@ function _syncFocusOutlineForNative(
                     }
                 }
             } catch { /* ignore */ }
-            if (renderer && typeof renderer.setPropFocusAuraAt === "function") {
-                renderer.setPropFocusAuraAt(r, c, active !== 0, radius, depthBias);
-                return;
+            if (renderer) {
+                let propObjs: any[] | null =
+                    (typeof renderer.tryGetPropDisplaysAtAnchor === "function"
+                        ? renderer.tryGetPropDisplaysAtAnchor(r, c)
+                        : null);
+                if (!propObjs || !propObjs.length) {
+                    const single =
+                        (typeof renderer.tryGetPropDisplayAtAnchor === "function"
+                            ? renderer.tryGetPropDisplayAtAnchor(r, c)
+                            : null) ||
+                        (typeof renderer.tryGetPropDisplayAt === "function"
+                            ? renderer.tryGetPropDisplayAt(r, c)
+                            : null);
+                    propObjs = single ? [single] : null;
+                }
+                if (propObjs && propObjs.length) {
+                    for (let i = 0; i < propObjs.length; i++) {
+                        const obj = propObjs[i];
+                        if (obj && (obj as any).__propOutlineOverrideActive) return;
+                    }
+                    for (let i = 0; i < propObjs.length; i++) {
+                        const obj = propObjs[i];
+                        if (!obj) continue;
+                        heroAnimGlue.syncOutlineForNative(obj, active !== 0, color, radius, depthBias);
+                    }
+                    return;
+                }
             }
         }
     } catch { /* ignore */ }
@@ -10438,7 +10775,7 @@ function _syncFocusOutlineForNativeOLDCODETODELETE(
                                   propFrame,
                                   frameIndex,
                                   primaryKey,
-                                  auraTexKey: propTexKey ? `${propTexKey}_aura_r2` : ""
+                                  auraTexKey: propTexKey ? auraKey(propTexKey, 0) : ""
                               });
                           }
                       }

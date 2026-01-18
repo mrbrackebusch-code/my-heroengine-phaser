@@ -9,6 +9,7 @@ export const BROKEN_NUMBER_TRAP_ID = "trap.broken.number.v1";
 export const UNTARGETED_NUMBER_TRAP_ID = "trap.untargeted.number.v1";
 export const UNTARGETED_STRING_TRAP_ID = "trap.untargeted.string.v1";
 export const UNTARGETED_LIST_TRAP_ID = "trap.untargeted.list.v1";
+export const SHRINE_TRAP_ID = "trap.shrine.blessing.v1";
 
 function makeDisassembledTrapSpec(args: {
   id: string;
@@ -520,6 +521,63 @@ export const UNTARGETED_LIST_TRAP_SPEC: TrapSpec = makeUntargetedTrapSpec({
   valueKinds: ["target", "list", "logic", "compare", "math"],
 });
 
+export const SHRINE_TRAP_SPEC: TrapSpec = {
+  id: SHRINE_TRAP_ID,
+  version: 1,
+  kind: "Dormant",
+  seed: 0,
+
+  inputs: [],
+  output: {
+    type: "Boolean",
+    boolean: {},
+  },
+  valueKindsUsed: ["procedure"],
+  palette: {
+    categories: ["Functions"],
+    blocksAllowed: ["procedures_defreturn", "logic_boolean"],
+  },
+
+  givenInputs: [],
+  requiredInputs: [],
+
+  validator: {
+    requireAllGivenInputsUsed: false,
+    requiredInputs: [],
+    outputContract: { type: "Boolean", boolean: {} },
+    expectedOutput: true,
+  },
+  runtimeBinding: {
+    effectId: "trap.shrine.blessing",
+    outputMapping: "Boolean -> blessing",
+  },
+
+  starterBlocks: {
+    readOnly: true,
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">trapMain</field>
+          <comment pinned="true" h="160" w="360" x="10" y="10">Blessing rule: read the code and see what activates the shrine.</comment>
+          <value name="RETURN">
+            <block type="logic_boolean">
+              <field name="BOOL">TRUE</field>
+            </block>
+          </value>
+        </block>
+      </xml>
+    `,
+  },
+  blockBudget: { maxBlocks: 1, maxDepth: 1 },
+
+  preview: { inputs: {} },
+  ui: {
+    title: "Shrine Blessing",
+    instructions: "Read the blessing logic. This shrine is informational only.",
+    outputLabel: "Blessing",
+  },
+};
+
 export function getTrapSpecById(id: string): TrapSpec | null {
   switch (id) {
     case DISASSEMBLED_NUMBER_TRAP_ID:
@@ -540,6 +598,8 @@ export function getTrapSpecById(id: string): TrapSpec | null {
       return UNTARGETED_STRING_TRAP_SPEC;
     case UNTARGETED_LIST_TRAP_ID:
       return UNTARGETED_LIST_TRAP_SPEC;
+    case SHRINE_TRAP_ID:
+      return SHRINE_TRAP_SPEC;
     default:
       return null;
   }

@@ -13147,5 +13147,413 @@ export const MONSTER_AURA_FEET: Record<string, { frameW: number; frameH: number;
         "centerY": 35
       }
     }
+  },
+  "worm big": {
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61,
+    "outline": [
+      [
+        52,
+        16
+      ],
+      [
+        48,
+        63
+      ],
+      [
+        14,
+        63
+      ],
+      [
+        11,
+        16
+      ],
+      [
+        14,
+        7
+      ],
+      [
+        44,
+        4
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 11,
+    "minY": 3,
+    "maxX": 52,
+    "maxY": 63,
+    "centerX": 32,
+    "centerY": 33,
+    "dirs": {
+      "up": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 53,
+        "outline": [
+          [
+            48,
+            16
+          ],
+          [
+            41,
+            53
+          ],
+          [
+            23,
+            53
+          ],
+          [
+            16,
+            16
+          ],
+          [
+            20,
+            9
+          ],
+          [
+            44,
+            9
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 16,
+        "minY": 8,
+        "maxX": 48,
+        "maxY": 55,
+        "centerX": 32,
+        "centerY": 32
+      },
+      "left": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 54,
+        "outline": [
+          [
+            47,
+            15
+          ],
+          [
+            44,
+            51
+          ],
+          [
+            35,
+            56
+          ],
+          [
+            21,
+            49
+          ],
+          [
+            17,
+            17
+          ],
+          [
+            21,
+            7
+          ],
+          [
+            21,
+            7
+          ],
+          [
+            44,
+            9
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 17,
+        "minY": 7,
+        "maxX": 47,
+        "maxY": 56,
+        "centerX": 32,
+        "centerY": 32
+      },
+      "down": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 53,
+        "outline": [
+          [
+            48,
+            16
+          ],
+          [
+            41,
+            53
+          ],
+          [
+            23,
+            53
+          ],
+          [
+            16,
+            16
+          ],
+          [
+            20,
+            9
+          ],
+          [
+            44,
+            9
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 16,
+        "minY": 8,
+        "maxX": 48,
+        "maxY": 55,
+        "centerX": 32,
+        "centerY": 32
+      },
+      "right": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 54,
+        "outline": [
+          [
+            47,
+            17
+          ],
+          [
+            43,
+            49
+          ],
+          [
+            27,
+            56
+          ],
+          [
+            19,
+            51
+          ],
+          [
+            16,
+            42
+          ],
+          [
+            20,
+            9
+          ],
+          [
+            42,
+            7
+          ],
+          [
+            43,
+            7
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 16,
+        "minY": 7,
+        "maxX": 47,
+        "maxY": 56,
+        "centerX": 32,
+        "centerY": 32
+      }
+    }
+  },
+  "worm small": {
+    "frameW": 64,
+    "frameH": 64,
+    "footBottom": 61,
+    "outline": [
+      [
+        54,
+        20
+      ],
+      [
+        41,
+        63
+      ],
+      [
+        23,
+        63
+      ],
+      [
+        9,
+        20
+      ],
+      [
+        14,
+        12
+      ],
+      [
+        49,
+        12
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 9,
+    "minY": 12,
+    "maxX": 54,
+    "maxY": 63,
+    "centerX": 32,
+    "centerY": 38,
+    "dirs": {
+      "up": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 45,
+        "outline": [
+          [
+            40,
+            22
+          ],
+          [
+            35,
+            46
+          ],
+          [
+            29,
+            47
+          ],
+          [
+            26,
+            43
+          ],
+          [
+            29,
+            16
+          ],
+          [
+            40,
+            20
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 26,
+        "minY": 16,
+        "maxX": 40,
+        "maxY": 47,
+        "centerX": 33,
+        "centerY": 32
+      },
+      "left": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 45,
+        "outline": [
+          [
+            40,
+            22
+          ],
+          [
+            35,
+            46
+          ],
+          [
+            29,
+            47
+          ],
+          [
+            26,
+            43
+          ],
+          [
+            29,
+            16
+          ],
+          [
+            40,
+            20
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 26,
+        "minY": 16,
+        "maxX": 40,
+        "maxY": 47,
+        "centerX": 33,
+        "centerY": 32
+      },
+      "down": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 45,
+        "outline": [
+          [
+            40,
+            22
+          ],
+          [
+            35,
+            46
+          ],
+          [
+            29,
+            47
+          ],
+          [
+            26,
+            43
+          ],
+          [
+            29,
+            16
+          ],
+          [
+            40,
+            20
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 26,
+        "minY": 16,
+        "maxX": 40,
+        "maxY": 47,
+        "centerX": 33,
+        "centerY": 32
+      },
+      "right": {
+        "frameW": 64,
+        "frameH": 64,
+        "footBottom": 45,
+        "outline": [
+          [
+            37,
+            25
+          ],
+          [
+            37,
+            45
+          ],
+          [
+            30,
+            47
+          ],
+          [
+            27,
+            45
+          ],
+          [
+            23,
+            22
+          ],
+          [
+            23,
+            20
+          ],
+          [
+            32,
+            16
+          ],
+          [
+            34,
+            16
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 23,
+        "minY": 16,
+        "maxX": 37,
+        "maxY": 47,
+        "centerX": 30,
+        "centerY": 32
+      }
+    }
   }
 };
