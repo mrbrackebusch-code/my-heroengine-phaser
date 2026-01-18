@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/genpropauras.mjs
-// Generate aura mask sheets for tiles and animations (props).
+// Generate aura mask sheets for tiles and props.
 // Output files keep the "_aura_r2" suffix for loader compatibility.
 // The mask itself is the sprite silhouette; outline expansion is handled at runtime.
 
@@ -10,12 +10,12 @@ import { PNG } from "pngjs";
 
 const ROOT = process.cwd();
 const TILES_DIR = path.join(ROOT, "assets", "tiles");
-const ANIMS_DIR = path.join(ROOT, "assets", "animations");
-const OUT_TILES_DIR = path.join(ROOT, "assets", "auras_32x32", "tiles");
-const OUT_ANIM_ROOT = path.join(ROOT, "assets");
+const PROPS_DIR = path.join(ROOT, "assets", "props");
+const OUT_TILES_DIR = path.join(ROOT, "assets", "tiles", "auras");
+const OUT_PROPS_DIR = path.join(ROOT, "assets", "props", "auras");
 
 const OUT_SUFFIX = "_aura_r2";
-const DEFAULT_ANIM_FRAME = 64;
+const DEFAULT_PROP_FRAME = 64;
 
 function _isTruthy(v) {
   if (v === undefined || v === null) return false;
@@ -38,7 +38,8 @@ Options:
   --check                Only report missing outputs (exit code 1 if missing).
   --radius N             Dilate mask by N pixels (default 0).
   --tiles                Process tiles only.
-  --anims                Process animations only.
+  --props                Process props only.
+  --anims                Alias for --props (deprecated).
   --verbose              Log every file processed.
   --help                 Show this help.
 `);
@@ -172,11 +173,8 @@ function writePng(png, filePath) {
   fs.writeFileSync(filePath, buf);
 }
 
-function animOutDir(frameW, frameH) {
-  const fw = frameW | 0;
-  const fh = frameH | 0;
-  if (fw <= 0 || fh <= 0) return "";
-  return path.join(OUT_ANIM_ROOT, `auras_${fw}x${fh}`, "animations");
+function propsOutDir() {
+  return OUT_PROPS_DIR;
 }
 
 async function main() {
@@ -193,7 +191,7 @@ async function main() {
   let checkOnly = false;
   let radius = 0;
   let wantTiles = true;
-  let wantAnims = true;
+  let wantProps = true;
   let verbose = false;
 
   for (let i = 0; i < args.length; i++) {
@@ -201,8 +199,9 @@ async function main() {
     if (a === "--overwrite" || a === "--force") skipExisting = false;
     else if (a === "--skip-existing") skipExisting = true;
     else if (a === "--check") checkOnly = true;
-    else if (a === "--tiles") { wantTiles = true; wantAnims = false; }
-    else if (a === "--anims") { wantAnims = true; wantTiles = false; }
+    else if (a === "--tiles") { wantTiles = true; wantProps = false; }
+    else if (a === "--props") { wantProps = true; wantTiles = false; }
+    else if (a === "--anims") { wantProps = true; wantTiles = false; }
     else if (a === "--verbose") verbose = true;
     else if (a === "--radius" && i + 1 < args.length) {
       const v = parseInt(args[i + 1], 10);
@@ -259,32 +258,38 @@ async function main() {
     }
   }
 
-  if (wantAnims) {
-    const anims = listPngs(ANIMS_DIR);
-    for (const file of anims) {
+  if (wantProps) {
+    const props = listPngs(PROPS_DIR);
+    for (const file of props) {
       const base = path.basename(file, ".png");
-      let frame = parseFrameSizeFromName(base);
-      if (!frame && overrides[base]) frame = overrides[base];
-      if (!frame) frame = { frameW: DEFAULT_ANIM_FRAME, frameH: DEFAULT_ANIM_FRAME };
-
-      const outDir = animOutDir(frame.frameW | 0, frame.frameH | 0);
-      if (!outDir) {
-        console.warn(`[prop-auras][SKIP][anim] ${base}: invalid frame ${frame.frameW}x${frame.frameH}`);
+      const frame = parseFrameSizeFromName(base);
+      if (!frame) {
+        missing++;
+        console.error(
+          `[prop-auras][ERROR][prop] ${base}: missing WxH in filename (tiles are the only exception)`
+        );
         continue;
       }
+      const ov = overrides[base];
+      if (ov && ((ov.frameW | 0) !== (frame.frameW | 0) || (ov.frameH | 0) !== (frame.frameH | 0))) {
+        console.warn(
+          `[prop-auras][WARN][prop] ${base}: override ${ov.frameW}x${ov.frameH} != name ${frame.frameW}x${frame.frameH}`
+        );
+      }
 
+      const outDir = propsOutDir();
       const outPath = path.join(outDir, `${base}${OUT_SUFFIX}.png`);
       const exists = fs.existsSync(outPath);
       if (checkOnly) {
         if (!exists) {
           missing++;
-          console.log(`[prop-auras][MISS][anim] ${path.relative(ROOT, outPath)}`);
+          console.log(`[prop-auras][MISS][prop] ${path.relative(ROOT, outPath)}`);
         }
         continue;
       }
       if (skipExisting && exists) {
         skipped++;
-        if (verbose) console.log(`[prop-auras][SKIP][anim] ${path.relative(ROOT, outPath)}`);
+        if (verbose) console.log(`[prop-auras][SKIP][prop] ${path.relative(ROOT, outPath)}`);
         continue;
       }
 
@@ -292,22 +297,22 @@ async function main() {
       try {
         src = readPng(file);
       } catch (e) {
-        console.warn(`[prop-auras][SKIP][anim] ${base}: read failed (${e})`);
+        console.warn(`[prop-auras][SKIP][prop] ${base}: read failed (${e})`);
         continue;
       }
       const r = buildAuraSheetForGrid(src, frame.frameW | 0, frame.frameH | 0, radius);
       if (!r.ok) {
-        console.warn(`[prop-auras][SKIP][anim] ${base}: ${r.reason}`);
+        console.warn(`[prop-auras][SKIP][prop] ${base}: ${r.reason}`);
         continue;
       }
       if (r.cropped) {
         console.warn(
-          `[prop-auras][WARN][anim] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; cropped to ${r.outW}x${r.outH}`
+          `[prop-auras][WARN][prop] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; cropped to ${r.outW}x${r.outH}`
         );
       }
       writePng(r.out, outPath);
       wrote++;
-      if (verbose) console.log(`[prop-auras][WROTE][anim] ${path.relative(ROOT, outPath)}`);
+      if (verbose) console.log(`[prop-auras][WROTE][prop] ${path.relative(ROOT, outPath)}`);
     }
   }
 
@@ -318,6 +323,11 @@ async function main() {
     }
     console.log("[prop-auras][CHECK] OK");
     return;
+  }
+
+  if (missing > 0) {
+    console.error(`[prop-auras] ERROR missing size suffix in ${missing} prop file(s).`);
+    process.exit(1);
   }
 
   console.log(`[prop-auras] wrote=${wrote} skipped=${skipped} radius=${radius}`);

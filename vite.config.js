@@ -48,9 +48,8 @@ export default defineConfig({
                     `[vite] starting multiplayer server via ./server.js (GAME_PORT=${devPort} WS_PORT=${wsPort} HOST=${devHost}) ...`
                 );
 
-                const child = spawn("node", ["./server.js"], {
+                const child = spawn(process.execPath, ["./server.js"], {
                     stdio: "inherit", // pipe [server] logs into the same terminal
-                    shell: process.platform === "win32",
                     env: {
                         ...process.env,
                         GAME_PORT: String(devPort),

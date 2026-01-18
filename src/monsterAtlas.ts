@@ -1,6 +1,6 @@
 // src/monsterAtlas.ts
 import type Phaser from "phaser";
-import { DEBUG_MONSTER_SPRITES } from "./debugFlags";
+import { DEBUG_MONSTER_SHEET_PARSE, DEBUG_MONSTER_SPRITES } from "./debugFlags";
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Phase = "walk" | "attack" | "death";
@@ -32,30 +32,46 @@ export interface MonsterAnimSet {
 
 export type MonsterAtlas = Record<string, MonsterAnimSet>;
 
-const monsterPngs = import.meta.glob(
-    "../assets/monsters/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
+const monsterPngs = {
+    ...import.meta.glob(
+        "../assets/enemies/monsters/*.png",
+        { as: "url", eager: true }
+    ),
+    ...import.meta.glob(
+        "../assets/enemies/bosses/*.png",
+        { as: "url", eager: true }
+    ),
+} as Record<string, string>;
 
-const monsterAuraPngs = import.meta.glob(
-    "../assets/monsters/monster_auras/*.png",
-    { as: "url", eager: true }
-) as Record<string, string>;
+const monsterAuraPngs = {
+    ...import.meta.glob(
+        "../assets/enemies/monsters/auras/*.png",
+        { as: "url", eager: true }
+    ),
+    ...import.meta.glob(
+        "../assets/enemies/bosses/auras/*.png",
+        { as: "url", eager: true }
+    ),
+} as Record<string, string>;
 
 interface ParsedSheet {
     id: string;
     width: number;
     height: number;
     dirs?: Dir[];
-    sharedDeathRows: number;
-    phaseStarts: Partial<Record<Phase, number>>;
-    rowCountOverride?: number;
+    dirToken?: string;
+    walkFrames: number;
+    attackFrames: number[];
+    deathFrames: number;
+    deathRows: number;
     textureKey: string;
     url: string;
+    sourcePath: string;
     skip: boolean;
 }
 
 const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
+const CANON_DIRS: Dir[] = ["up", "left", "down", "right"];
 
 function mapLetterToDir(ch: string): Dir {
     switch (ch) {
@@ -71,103 +87,118 @@ function mapLetterToDir(ch: string): Dir {
     }
 }
 
-function toPhase(name: string): Phase | null {
-    const lower = name.toLowerCase();
-    if (lower === "walk") return "walk";
-    if (lower === "attack") return "attack";
-    if (lower === "death") return "death";
-    return null;
-}
+function parseMonsterFilename(baseName: string, url: string, sourcePath: string): ParsedSheet | null {
+    const fail = (msg: string): never => {
+        throw new Error(`[monsterAtlas.parse] ${msg}: ${sourcePath || baseName}`);
+    };
 
-function parseMonsterFilename(baseName: string, url: string): ParsedSheet | null {
-    if (baseName.startsWith("LPC_Monster_Death_Animations")) return null;
-
-    if (baseName.startsWith("golem death ")) {
-        return {
-            id: "golem", width: 64, height: 64,
-            dirs: undefined,
-            sharedDeathRows: 0,
-            phaseStarts: {},
-            rowCountOverride: 2,
-            textureKey: baseName,
-            url,
-            skip: true
-        };
+    if (baseName.startsWith("LPC_Monster_Death_Animations")) {
+        fail("legacy LPC monster sheet not supported in new naming scheme");
     }
 
     const tokens = baseName.split(" ").filter(t => t.length > 0);
-    if (tokens.length < 2) return null;
+    if (tokens.length < 2) fail("filename is too short to parse");
 
     const sizeIndex = tokens.findIndex(t => /^\d+x\d+$/.test(t));
-    if (sizeIndex === -1) return null;
+    if (sizeIndex === -1) fail("missing WxH token");
 
     const idTokens = tokens.slice(0, sizeIndex);
+    if (idTokens.length === 0) fail("missing monster name");
     const id = idTokens.join(" ");
 
     const [wStr, hStr] = tokens[sizeIndex].split("x");
     const width = parseInt(wStr, 10);
     const height = parseInt(hStr, 10);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        fail("invalid WxH token");
+    }
 
     const restTokens = tokens.slice(sizeIndex + 1);
+    if (restTokens.length === 0) fail("missing DIRS token");
 
     let dirs: Dir[] | undefined = undefined;
-    let sharedDeathRows = 0;
-    let rowCountOverride: number | undefined = undefined;
-    const phaseStarts: Partial<Record<Phase, number>> = {};
+    let dirToken: string | undefined = undefined;
+    let walkFrames = 0;
+    let deathFrames = 0;
+    let deathRows = 0;
+    const attackMap = new Map<number, number>();
 
     let i = 0;
-
-    if (restTokens[i] && /^[A-Z]+/.test(restTokens[i])) {
-        const dirToken = restTokens[i];
+    if (restTokens[i] && /^[A-Za-z]+$/.test(restTokens[i]) && !restTokens[i].includes("=")) {
+        const token = restTokens[i].toUpperCase();
+        const letters = token.split("").filter(ch => DIR_LETTERS.has(ch));
+        if (letters.length !== 4) fail("DIRS token must be exactly 4 letters (e.g., ULDR)");
+        const unique = new Set(letters);
+        if (unique.size !== 4) fail("DIRS token must use each direction once");
+        dirs = letters.map(mapLetterToDir);
+        dirToken = token;
         i++;
-
-        const letters: string[] = [];
-        for (const ch of dirToken) {
-            if (DIR_LETTERS.has(ch)) letters.push(ch);
-            else break;
-        }
-
-        if (letters.length > 0) {
-            dirs = letters.map(mapLetterToDir);
-
-            const suffix = dirToken.slice(letters.length);
-            if (suffix.startsWith("Death")) {
-                const nStr = suffix.slice("Death".length);
-                sharedDeathRows = nStr.length > 0 ? parseInt(nStr, 10) : 1;
-            }
-        }
+    } else {
+        fail("DIRS token missing or malformed");
     }
+
+    const seenKeys = new Set<string>();
 
     for (; i < restTokens.length; i++) {
         const token = restTokens[i];
-        const re = /(\d+)(Walk|Attack|Death|Row)/gi;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(token)) !== null) {
-            const num = parseInt(m[1], 10);
-            const label = m[2];
-            if (label.toLowerCase() === "row") {
-                rowCountOverride = num;
-            } else {
-                const ph = toPhase(label);
-                if (ph) phaseStarts[ph] = num;
-            }
+        if (!token.includes("=")) {
+            fail(`unexpected token "${token}" (expected key=value)`);
         }
+        const parts = token.split("=");
+        if (parts.length < 2) continue;
+        const key = parts[0].trim().toLowerCase();
+        const val = parseInt(parts.slice(1).join("=").trim(), 10);
+        if (!Number.isFinite(val)) continue;
+        if (seenKeys.has(key)) fail(`duplicate token "${key}"`);
+        seenKeys.add(key);
 
-        // Also accept split tokens like "1 Walk"
-        if (/^\d+$/.test(token)) {
-            const next = restTokens[i + 1];
-            if (next && /^(walk|attack|death|row)$/i.test(next)) {
-                const num = parseInt(token, 10);
-                const label = next;
-                if (label.toLowerCase() === "row") {
-                    rowCountOverride = num;
-                } else {
-                    const ph = toPhase(label);
-                    if (ph) phaseStarts[ph] = num;
-                }
-                i += 1;
+        if (key === "w") {
+            walkFrames = val;
+        } else if (key === "d") {
+            deathFrames = val;
+        } else if (key === "drows") {
+            deathRows = val;
+        } else if (key.startsWith("a")) {
+            const idxRaw = key.slice(1);
+            const idx = idxRaw.length > 0 ? parseInt(idxRaw, 10) : 1;
+            if (Number.isFinite(idx) && idx > 0) {
+                attackMap.set(idx, val);
             }
+        } else {
+            fail(`unknown token "${key}"`);
         }
+    }
+
+    if (!seenKeys.has("w")) fail("missing required w=<walkFrames>");
+    if (!seenKeys.has("drows")) fail("missing required drows=<0|1|4>");
+    if (![0, 1, 4].includes(deathRows)) fail("drows must be 0, 1, or 4");
+
+    const attackFrames: number[] = [];
+    const attackKeys = Array.from(attackMap.keys()).sort((a, b) => a - b);
+    if (attackKeys.length > 0) {
+        for (let idx = 1; idx <= attackKeys[attackKeys.length - 1]; idx++) {
+            if (!attackMap.has(idx)) fail(`missing a${idx}=<frames> token`);
+        }
+    }
+    for (const k of attackKeys) {
+        const v = attackMap.get(k);
+        if (v != null) attackFrames.push(v);
+    }
+
+    if (walkFrames <= 0) fail("walk frames must be > 0");
+
+    if (DEBUG_MONSTER_SHEET_PARSE) {
+        console.log("[monsterAtlas.parse]", {
+            base: baseName,
+            id,
+            size: `${width}x${height}`,
+            dirs: dirs && dirs.length > 0 ? dirs : CANON_DIRS,
+            dirToken,
+            walkFrames,
+            attackFrames,
+            deathFrames,
+            deathRows
+        });
     }
 
     return {
@@ -175,11 +206,14 @@ function parseMonsterFilename(baseName: string, url: string): ParsedSheet | null
         width,
         height,
         dirs,
-        sharedDeathRows,
-        phaseStarts,
-        rowCountOverride,
+        dirToken,
+        walkFrames,
+        attackFrames,
+        deathFrames,
+        deathRows,
         textureKey: baseName,
         url,
+        sourcePath,
         skip: false
     };
 }
@@ -206,8 +240,11 @@ for (const [path, url] of Object.entries(monsterPngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "";
     if (!fileNameWithExt.toLowerCase().endsWith(".png")) continue;
     const baseName = fileNameWithExt.slice(0, -4);
-    const parsed = parseMonsterFilename(baseName, url);
-    if (parsed) PARSED_SHEETS.push(parsed);
+    const parsed = parseMonsterFilename(baseName, url, path);
+    if (!parsed) {
+        throw new Error(`[monsterAtlas.parse] invalid monster sheet filename: ${path}`);
+    }
+    PARSED_SHEETS.push(parsed);
 }
 
 function isFrameEmpty(): boolean {
@@ -248,91 +285,140 @@ function buildFramesForSheet(
     sheet: ParsedSheet,
     phase: Phase
 ): PhaseDirFrames | undefined {
-    const startCol = sheet.phaseStarts[phase];
-    if (!startCol) return undefined;
-
     const tex = scene.textures.get(sheet.textureKey);
     if (!tex) return undefined;
 
     const source = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
     const cols = Math.floor(source.width / sheet.width);
+    const rows = Math.floor(source.height / sheet.height);
+    if (cols <= 0 || rows <= 0) return undefined;
 
+    const dirOrder =
+        sheet.dirs && sheet.dirs.length >= 4
+            ? sheet.dirs.slice(0, 4)
+            : CANON_DIRS;
 
+    const attackCount = sheet.attackFrames.length | 0;
+    const deathRows = sheet.deathRows | 0;
+    const expectedRows = (4 * (1 + attackCount)) + (deathRows > 0 ? deathRows : 0);
+    if (expectedRows > 0 && rows !== expectedRows) {
+        throw new Error(
+            `[monsterAtlas.frames] row count mismatch for ${sheet.textureKey}: expected ${expectedRows}, got ${rows}`
+        );
+    }
 
+    const maxTokenFrames = Math.max(
+        sheet.walkFrames | 0,
+        ...sheet.attackFrames.map(v => v | 0),
+        sheet.deathFrames | 0
+    );
+    if (maxTokenFrames > cols) {
+        throw new Error(
+            `[monsterAtlas.frames] column count too small for ${sheet.textureKey}: cols=${cols}, maxFrames=${maxTokenFrames}`
+        );
+    }
 
-
-        const starts = Object.entries(sheet.phaseStarts)
-            .map(([ph, col]) => ({ ph: ph as Phase, col: col! }))
-            .sort((a, b) => a.col - b.col);
-
-        let endCol = cols;
-        for (const s of starts) {
-            if (s.col > startCol) {
-                endCol = s.col;
-                break;
-            }
-        }
-
-        // ✅ NEW: if this sheet only has one phase (like "imp blue ... 1Walk"),
-        // treat it as running all the way to the last column.
-        const colStart0 = startCol - 1;
-        const colEnd0 =
-            starts.length === 1
-                ? cols        // use *all* columns to the end of the sheet
-                : endCol - 1; // multi-phase: [startCol .. endCol-1)
-
-        const dirFrames: PhaseDirFrames = {};
-        const allDirs: Dir[] = ["up", "down", "left", "right"];
-
-        if (sheet.dirs && sheet.dirs.length > 0 && !sheet.rowCountOverride) {
-            const dirRows = sheet.dirs.length;
-            const totalSharedRows = sheet.sharedDeathRows;
-
-            // Death sheets often have shared rows at the bottom; use only those
-            // when present so we skip the non-death rows at the top.
-            if (phase === "death" && totalSharedRows > 0) {
-                const sharedStart = dirRows;
-                const sharedFrames: number[] = [];
-                for (let r = 0; r < totalSharedRows; r++) {
-                    const row = sharedStart + r;
-                    for (let c = colStart0; c < colEnd0; c++) {
-                        sharedFrames.push(row * cols + c);
-                    }
-                }
-                if (sharedFrames.length > 0) {
-                    for (const dir of sheet.dirs) {
-                        dirFrames[dir] = sharedFrames.slice();
-                    }
-                    return dirFrames;
-                }
-            }
-
-            for (let i = 0; i < sheet.dirs.length; i++) {
-                const row = i;
-                const dir = sheet.dirs[i];
-                const frames: number[] = [];
-                for (let c = colStart0; c < colEnd0; c++) {
-                    frames.push(row * cols + c);
-                }
-                if (frames.length > 0) dirFrames[dir] = frames;
-            }
-        } else {
-    
-        const row = 0;
-        const frames: number[] = [];
-        for (let c = colStart0; c < colEnd0; c++) {
-            frames.push(row * cols + c);
-        }
-        if (frames.length === 0) return undefined;
-
-        for (const dir of allDirs) {
-            dirFrames[dir] = frames.slice();
+    if (DEBUG_MONSTER_SHEET_PARSE) {
+        console.log("[monsterAtlas.frames]", {
+            id: sheet.id,
+            phase,
+            cols,
+            rows,
+            expectedRows,
+            walkFrames: sheet.walkFrames,
+            attackFrames: sheet.attackFrames,
+            deathFrames: sheet.deathFrames,
+            deathRows: sheet.deathRows,
+            dirs: dirOrder
+        });
+        if (expectedRows > 0 && rows !== expectedRows) {
+            console.log("[monsterAtlas.frames] row mismatch", {
+                id: sheet.id,
+                phase,
+                rows,
+                expectedRows
+            });
         }
     }
 
-    applyFrameOverrides(sheet, phase, dirFrames);
+    const rowFrames = (row: number, frameCount: number): number[] => {
+        if (row < 0 || row >= rows) return [];
+        const count = frameCount > 0 ? Math.min(frameCount | 0, cols) : cols;
+        const frames: number[] = [];
+        for (let c = 0; c < count; c++) {
+            frames.push(row * cols + c);
+        }
+        return frames;
+    };
 
-    return dirFrames;
+    const buildBlock = (rowStart: number, frameCount: number): PhaseDirFrames | undefined => {
+        if ((rowStart + 3) >= rows) {
+            throw new Error(
+                `[monsterAtlas.frames] row block exceeds sheet for ${sheet.textureKey}: rowStart=${rowStart}, rows=${rows}`
+            );
+        }
+        const out: PhaseDirFrames = {};
+        for (let i = 0; i < 4; i++) {
+            const row = rowStart + i;
+            const dir = dirOrder[i] || CANON_DIRS[i];
+            const frames = rowFrames(row, frameCount);
+            if (frames.length > 0) out[dir] = frames;
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+    };
+
+    if (phase === "walk") {
+        const walk = buildBlock(0, sheet.walkFrames);
+        if (!walk) return undefined;
+        applyFrameOverrides(sheet, phase, walk);
+        return walk;
+    }
+
+    if (phase === "attack") {
+        if (attackCount <= 0) return undefined;
+        const out: PhaseDirFrames = {};
+        for (let i = 0; i < attackCount; i++) {
+            const framesPerRow = sheet.attackFrames[i] | 0;
+            const block = buildBlock(4 * (1 + i), framesPerRow);
+            if (!block) continue;
+            for (const [dir, arr] of Object.entries(block)) {
+                if (!arr || arr.length === 0) continue;
+                if (!out[dir]) out[dir] = [];
+                out[dir]!.push(...arr);
+            }
+        }
+        if (Object.keys(out).length === 0) return undefined;
+        applyFrameOverrides(sheet, phase, out);
+        return out;
+    }
+
+    if (phase === "death") {
+        if (deathRows <= 0) return undefined;
+        const baseRow = 4 * (1 + attackCount);
+        const frameCount = sheet.deathFrames > 0 ? sheet.deathFrames : cols;
+
+        if (deathRows === 1) {
+            const frames = rowFrames(baseRow, frameCount);
+            if (frames.length === 0) return undefined;
+            const out: PhaseDirFrames = {};
+            for (const dir of CANON_DIRS) {
+                out[dir] = frames.slice();
+            }
+            applyFrameOverrides(sheet, phase, out);
+            return out;
+        }
+
+        if (deathRows === 4) {
+            const block = buildBlock(baseRow, frameCount);
+            if (!block) return undefined;
+            applyFrameOverrides(sheet, phase, block);
+            return block;
+        }
+
+        return undefined;
+    }
+
+    return undefined;
 }
 
 function fillMissingDirections(phaseFrames: PhaseDirFrames): void {
@@ -372,7 +458,7 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
     );
     }
 
-    // Build aura lookup by baseName (filename without .png) from monster_auras.
+    // Build aura lookup by baseName (filename without .png) from aura subfolders.
     const auraUrlByBase = new Map<string, string>();
     for (const [p, url] of Object.entries(monsterAuraPngs)) {
         const file = p.split(/[\\/]/).pop() || "";
@@ -431,83 +517,60 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
 
     for (const [id, sheets] of byMonster.entries()) {
 
-        // ------------------------------------------------------
-        // PATCH: Select the correct sheets for each phase
-        // ------------------------------------------------------
-        const walkSheets   = sheets.filter(s => s.phaseStarts.walk);
-        const attackSheets = sheets.filter(s => s.phaseStarts.attack);
-        const deathSheets  = sheets.filter(s => s.phaseStarts.death);
+        const orderedSheets = sheets.slice().sort((a, b) => {
+            const scoreA = (a.walkFrames | 0) + (a.attackFrames.length * 10) + ((a.deathRows | 0) * 5);
+            const scoreB = (b.walkFrames | 0) + (b.attackFrames.length * 10) + ((b.deathRows | 0) * 5);
+            return scoreB - scoreA;
+        });
 
-        function preferDirectional(list: ParsedSheet[]): ParsedSheet[] {
-            return list.sort((a, b) => {
-                const aDir = a.dirs ? 1 : 0;
-                const bDir = b.dirs ? 1 : 0;
-                return bDir - aDir;
-            });
-        }
-
-        preferDirectional(walkSheets);
-        preferDirectional(attackSheets);
-        preferDirectional(deathSheets);
-
-        const selected = new Set<ParsedSheet>();
-        if (walkSheets.length > 0) selected.add(walkSheets[0]);
-        if (attackSheets.length > 0) selected.add(attackSheets[0]);
-        if (deathSheets.length > 0) selected.add(deathSheets[0]);
-
-        const orderedSheets = Array.from(selected);
-        if (orderedSheets.length === 0) {
+        const sheet = orderedSheets[0];
+        if (!sheet) {
             console.warn("[monsterAtlas.build] no usable sheets for monster id:", id, "sheets=", sheets.map(s => s.textureKey));
             continue;
         }
 
-        const first = orderedSheets[0];
+        if (DEBUG_MONSTER_SHEET_PARSE && orderedSheets.length > 1) {
+            console.log("[monsterAtlas.build] multiple sheets for", id, "picked", sheet.textureKey, "all", orderedSheets.map(s => s.textureKey));
+        }
 
         const animSet: MonsterAnimSet = {
             id,
-            frameWidth: first.width,
-            frameHeight: first.height,
+            frameWidth: sheet.width,
+            frameHeight: sheet.height,
             textureKeys: orderedSheets.map(s => s.textureKey),
             auraTextureKey: undefined,
             phases: {}
         };
 
-        // NEW: remember which sheet we picked for each phase
         const phaseTexture: Partial<Record<Phase, string>> = {};
-        if (walkSheets[0])   phaseTexture.walk   = walkSheets[0].textureKey;
-        if (attackSheets[0]) phaseTexture.attack = attackSheets[0].textureKey;
-        if (deathSheets[0])  phaseTexture.death  = deathSheets[0].textureKey;
+
+        const walkFrames = buildFramesForSheet(scene, sheet, "walk");
+        if (walkFrames) {
+            animSet.phases.walk = walkFrames;
+            phaseTexture.walk = sheet.textureKey;
+        }
+
+        const attackFrames = buildFramesForSheet(scene, sheet, "attack");
+        if (attackFrames) {
+            animSet.phases.attack = attackFrames;
+            phaseTexture.attack = sheet.textureKey;
+        }
+
+        const deathFrames = buildFramesForSheet(scene, sheet, "death");
+        if (deathFrames) {
+            animSet.phases.death = deathFrames;
+            phaseTexture.death = sheet.textureKey;
+        }
+
         animSet.phaseTexture = phaseTexture;
 
         // Optional aura spritesheet (matches any of the chosen sheet bases).
         const auraCandidate =
-            auraUrlByBase.get(`${orderedSheets[0].textureKey}_aura_r2`) ||
+            auraUrlByBase.get(`${sheet.textureKey}_aura_r2`) ||
             auraUrlByBase.get(`${id}_aura_r2`);
         if (auraCandidate) {
             // Texture key matches the load key in preloadMonsterSheets.
-            animSet.auraTextureKey = `${orderedSheets[0].textureKey}_aura_r2`;
-        }
-
-
-        // Build phases only from selected sheets
-        for (const sheet of orderedSheets) {
-            for (const phase of ["walk", "attack", "death"] as Phase[]) {
-                if (!sheet.phaseStarts[phase]) continue;
-
-                const frames = buildFramesForSheet(scene, sheet, phase);
-                if (!frames) continue;
-
-                if (!animSet.phases[phase]) {
-                    animSet.phases[phase] = {};
-                }
-                const dest = animSet.phases[phase]!;
-
-                for (const [dir, arr] of Object.entries(frames)) {
-                    if (!arr || arr.length === 0) continue;
-                    if (!dest[dir]) dest[dir] = [];
-                    dest[dir]!.push(...arr);
-                }
-            }
+            animSet.auraTextureKey = `${sheet.textureKey}_aura_r2`;
         }
 
         for (const phase of ["walk", "attack", "death"] as Phase[]) {
@@ -516,6 +579,24 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
         }
 
         fillMissingPhases(animSet);
+
+        if (DEBUG_MONSTER_SHEET_PARSE) {
+            const countFrames = (pf?: PhaseDirFrames): number => {
+                if (!pf) return 0;
+                let best = 0;
+                for (const arr of Object.values(pf)) {
+                    const len = arr ? arr.length : 0;
+                    if (len > best) best = len;
+                }
+                return best;
+            };
+            console.log("[monsterAtlas.build.frames]", {
+                id,
+                walk: countFrames(animSet.phases.walk),
+                attack: countFrames(animSet.phases.attack),
+                death: countFrames(animSet.phases.death),
+            });
+        }
 
         if (animSet.phases.walk) {
             atlas[id] = animSet;

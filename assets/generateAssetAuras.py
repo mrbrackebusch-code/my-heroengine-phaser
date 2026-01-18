@@ -5,12 +5,12 @@ gen_auras.py
 Run directly from an IDE / "Run Python File".
 
 Assumptions (per your request):
-- This script lives in a "root" folder that also contains the asset subfolders.
+- This script lives in the assets root folder.
 - We only scan whitelisted subfolders listed in INPUT_SUBFOLDERS (relative to this script's folder).
-- Aura outputs are generated for any enabled frame-grid sizes listed in OUTPUT_SIZES.
-- Each enabled size writes to: <script_dir>/auras_<WxH>/<subfolder>/<sheetname>_<suffix>_aura_r{RADIUS}.png
-  Example: auras_192x192/animations/Foo_192_aura_r2.png
-           auras_64x64/tiles/Bar_aura_r2.png  (suffix can be empty)
+- Aura outputs are written into each parent folder's auras subfolder:
+  <script_dir>/<subfolder>/auras/<sheetname>_aura_r{RADIUS}.png
+- Frame sizes are inferred from filenames when possible (e.g. "FireTotem 96x96"),
+  and tiles default to 32x32.
 - Skips regeneration if output exists and is newer than source unless FORCE_REGENERATE=True
 
 Dependency:
@@ -19,9 +19,9 @@ Dependency:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
+import re
 
 from PIL import Image
 
@@ -32,7 +32,7 @@ from PIL import Image
 # Only look inside these subfolders (relative to this script's folder)
 INPUT_SUBFOLDERS: List[str] = [
     "tiles",
-    "animations",
+    "props",
 ]
 
 # Whether to recurse into nested subfolders under each input subfolder
@@ -47,32 +47,10 @@ ALPHA_THRESHOLD: int = 1
 # Aura dilation radius (square dilation, matching your .mjs)
 RADIUS: int = 2
 
-# Enabled output sizes. The script ONLY looks at this array.
-# - enabled: toggle output
-# - frame_w/frame_h: frame grid size to slice the sheet
-# - suffix: string appended to filename before "_aura..." (e.g. "_192"); use "" for default
-# - expected_cols: warn if cols != expected, not fatal (use None for no check)
-# Output folder created per size: auras_<WxH>  (e.g., auras_192x192)
-@dataclass(frozen=True)
-class OutputSize:
-    enabled: bool
-    frame_w: int
-    frame_h: int
-    suffix: str
-    expected_cols: Optional[int] = None
-
-
-OUTPUT_SIZES: List[OutputSize] = [
-    # "canonical" style
-    OutputSize(enabled=True, frame_w=64, frame_h=64, suffix="", expected_cols=None),
-
-    # optional oversize view
-    OutputSize(enabled=True, frame_w=32, frame_h=32, suffix="", expected_cols=None),
-
-    # Add more as you want:
-    # OutputSize(enabled=False, frame_w=32, frame_h=32, suffix="_32", expected_cols=None),
-    # OutputSize(enabled=False, frame_w=96, frame_h=64, suffix="_96x64", expected_cols=None),
-]
+TILE_FRAME_W: int = 32
+TILE_FRAME_H: int = 32
+DEFAULT_FRAME_W: int = 64
+DEFAULT_FRAME_H: int = 64
 
 # ---------------------------------------------------------------------
 # Implementation
@@ -119,6 +97,26 @@ def _apply_alpha_threshold(img_rgba: Image.Image, alpha_threshold: int) -> Image
         if a < alpha_threshold:
             rgba[i * 4 + 3] = 0
     return Image.frombytes("RGBA", (w, h), bytes(rgba))
+
+
+def _parse_size_from_name(base_name: str) -> Optional[Tuple[int, int]]:
+    m = re.search(r"(?:^|[ _-])(\d+)\s*x\s*(\d+)$", base_name, flags=re.IGNORECASE)
+    if not m:
+        return None
+    w = int(m.group(1))
+    h = int(m.group(2))
+    if w <= 0 or h <= 0:
+        return None
+    return (w, h)
+
+
+def _infer_frame_size(subfolder: str, base_name: str) -> Tuple[int, int]:
+    if subfolder == "tiles":
+        return (TILE_FRAME_W, TILE_FRAME_H)
+    parsed = _parse_size_from_name(base_name)
+    if parsed:
+        return parsed
+    return (DEFAULT_FRAME_W, DEFAULT_FRAME_H)
 
 
 def _build_dilated_mask(frame_rgba: bytes, w: int, h: int, r: int) -> bytearray:
@@ -213,17 +211,8 @@ def _build_aura_sheet_for_grid(
     return (True, "ok", out_img, rows, cols)
 
 
-def _size_out_folder_name(frame_w: int, frame_h: int) -> str:
-    return f"auras_{frame_w}x{frame_h}"
-
-
 def main() -> int:
     script_dir = Path(__file__).resolve().parent
-
-    enabled_sizes = [s for s in OUTPUT_SIZES if s.enabled]
-    if not enabled_sizes:
-        print("[gen-auras] No enabled sizes in OUTPUT_SIZES. Nothing to do.")
-        return 1
 
     # Gather all PNGs across whitelisted subfolders
     sources: List[Tuple[Path, str]] = []
@@ -231,6 +220,8 @@ def main() -> int:
         d = script_dir / sub
         files = _list_pngs(d, RECURSIVE)
         for f in files:
+            if "auras" in f.parts:
+                continue
             sources.append((f, sub))
 
     if not sources:
@@ -238,19 +229,14 @@ def main() -> int:
         print(f"[gen-auras] Script dir: {script_dir}")
         return 1
 
-    sizes_str = ", ".join([f"{s.frame_w}x{s.frame_h}{s.suffix}" for s in enabled_sizes])
     print(
         f"[gen-auras] root={script_dir.name} inputs={len(INPUT_SUBFOLDERS)} pngs={len(sources)} "
-        f"radius={RADIUS} recursive={'yes' if RECURSIVE else 'no'} force={'yes' if FORCE_REGENERATE else 'no'} "
-        f"sizes=[{sizes_str}]"
+        f"radius={RADIUS} recursive={'yes' if RECURSIVE else 'no'} force={'yes' if FORCE_REGENERATE else 'no'}"
     )
-
-    # Pre-create size output folders
-    for s in enabled_sizes:
-        (script_dir / _size_out_folder_name(s.frame_w, s.frame_h)).mkdir(parents=True, exist_ok=True)
 
     for src_path, sub in sources:
         base_name = src_path.stem
+        frame_w, frame_h = _infer_frame_size(sub, base_name)
 
         # Load source
         try:
@@ -262,40 +248,26 @@ def main() -> int:
         # Apply alpha threshold if desired
         src_img = _apply_alpha_threshold(src_img, ALPHA_THRESHOLD)
 
-        for size in enabled_sizes:
-            # Output folder per size, then grouped by input subfolder to avoid collisions
-            out_base = script_dir / _size_out_folder_name(size.frame_w, size.frame_h)
-            out_dir = out_base / sub
-            out_dir.mkdir(parents=True, exist_ok=True)
+        out_dir = script_dir / sub / "auras"
+        out_path = out_dir / f"{base_name}_aura_r{RADIUS}.png"
 
-            suffix = size.suffix or ""
-            # Keep same convention you used:
-            # - base aura: <name>_aura_r2.png
-            # - optional sizes: <name>_192_aura_r2.png
-            out_path = out_dir / f"{base_name}{suffix}_aura_r{RADIUS}.png"
+        if _should_skip(src_path, out_path, FORCE_REGENERATE):
+            print(f"[gen-auras] skip {out_path.relative_to(script_dir)} (up-to-date)")
+            continue
 
-            if _should_skip(src_path, out_path, FORCE_REGENERATE):
-                print(f"[gen-auras] skip {out_path.relative_to(script_dir)} (up-to-date)")
-                continue
+        ok, reason, out_img, _rows, _cols = _build_aura_sheet_for_grid(
+            src_img,
+            frame_w,
+            frame_h,
+            RADIUS,
+        )
+        if not ok or out_img is None:
+            print(f"[gen-auras] SKIP {src_path.relative_to(script_dir)} ({frame_w}x{frame_h}): {reason}")
+            continue
 
-            ok, reason, out_img, _rows, cols = _build_aura_sheet_for_grid(
-                src_img,
-                size.frame_w,
-                size.frame_h,
-                RADIUS,
-            )
-            if not ok or out_img is None:
-                print(f"[gen-auras] SKIP {src_path.relative_to(script_dir)} ({size.frame_w}x{size.frame_h}): {reason}")
-                continue
-
-            if size.expected_cols is not None and cols != size.expected_cols:
-                print(
-                    f"[gen-auras] WARN {src_path.relative_to(script_dir)} ({size.frame_w}x{size.frame_h}): "
-                    f"cols={cols} (expected {size.expected_cols}). Continuing anyway."
-                )
-
-            out_img.save(out_path)
-            print(f"[gen-auras] wrote {out_path.relative_to(script_dir)}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_img.save(out_path)
+        print(f"[gen-auras] wrote {out_path.relative_to(script_dir)}")
 
     print("[gen-auras] done")
     return 0

@@ -6,7 +6,7 @@
 
 // Type-only shim: WorldSnapshot type is defined in arcadeCompat.ts; we keep this file decoupled.
 
-import { DEBUG_NET, DEBUG_NET_SNAPSHOT, DEBUG_TILEMAP_COMPAT } from "./debugFlags";
+import { DEBUG_NET, DEBUG_NET_IDENTITY, DEBUG_NET_SNAPSHOT, DEBUG_TILEMAP_COMPAT } from "./debugFlags";
 
 
 type NetWorldSnapshot = any
@@ -46,6 +46,9 @@ function _net_gameRuntimeMs(): number {
 
 
 const SESSION_TOKEN_KEY = "heroToken_v1";
+const SESSION_TOKEN_PROFILE_KEY = "heroTokenProfile_v1";
+const SESSION_TAB_ID_KEY = "heroTabId_v1";
+const SESSION_TAB_CLAIM_PREFIX = "heroTabClaim_v1:";
 
 // Must match heroLogicHost.ts registered keys
 const KNOWN_PROFILE_KEYS = new Set<string>(["Chris", "Demo", "Jason", "Kyle"]);
@@ -80,16 +83,105 @@ function _randToken(): string {
     return "t_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
 }
 
-function _getOrCreateSessionToken(): string {
+function _getOrCreateSessionToken(profileHint?: string): string {
     try {
         const ss: any = (typeof sessionStorage !== "undefined") ? sessionStorage : null;
         if (!ss) return _randToken();
 
+        const desiredProfile = (typeof profileHint === "string") ? profileHint.trim() : "";
+        let rotateToken = false;
+        const rotateReasons: string[] = [];
+
+        let tabId = ss.getItem(SESSION_TAB_ID_KEY);
+        if (!tabId || tabId.length < 8) {
+            tabId = _randToken();
+            ss.setItem(SESSION_TAB_ID_KEY, tabId);
+            rotateToken = true;
+            rotateReasons.push("new-tab-id");
+        }
+
+        let claimed = true;
+        try {
+            const ls: any = (typeof localStorage !== "undefined") ? localStorage : null;
+            if (ls) {
+                const key = SESSION_TAB_CLAIM_PREFIX + tabId;
+                const now = Date.now();
+                const raw = ls.getItem(key) || "";
+                const last = parseInt(raw, 10) || 0;
+                if (last && (now - last) < 4000) {
+                    claimed = false;
+                } else {
+                    ls.setItem(key, String(now));
+                }
+            }
+        } catch { /* ignore */ }
+
+        if (!claimed) {
+            tabId = _randToken();
+            ss.setItem(SESSION_TAB_ID_KEY, tabId);
+            rotateToken = true;
+            rotateReasons.push("tab-duplicate");
+            try {
+                const ls: any = (typeof localStorage !== "undefined") ? localStorage : null;
+                if (ls) {
+                    const key = SESSION_TAB_CLAIM_PREFIX + tabId;
+                    ls.setItem(key, String(Date.now()));
+                }
+            } catch { /* ignore */ }
+        }
+
+        const g: any = (globalThis as any);
+        if (g) {
+            const claimKey = SESSION_TAB_CLAIM_PREFIX + tabId;
+            if (g.__heTabClaimKey !== claimKey) {
+                g.__heTabClaimKey = claimKey;
+                if (!g.__heTabClaimTimer) {
+                    g.__heTabClaimTimer = setInterval(() => {
+                        try {
+                            if (g.__heTabClaimKey && typeof localStorage !== "undefined") {
+                                localStorage.setItem(g.__heTabClaimKey, String(Date.now()));
+                            }
+                        } catch { /* ignore */ }
+                    }, 2000);
+                    try {
+                        window.addEventListener("beforeunload", () => {
+                            try {
+                                if (g.__heTabClaimKey && typeof localStorage !== "undefined") {
+                                    localStorage.removeItem(g.__heTabClaimKey);
+                                }
+                            } catch { /* ignore */ }
+                        }, { once: true });
+                    } catch { /* ignore */ }
+                }
+            }
+        }
+
         const existing = ss.getItem(SESSION_TOKEN_KEY);
-        if (existing && typeof existing === "string" && existing.length >= 8) return existing;
+        const existingProfile = ss.getItem(SESSION_TOKEN_PROFILE_KEY) || "";
+        if (desiredProfile && existingProfile && existingProfile !== desiredProfile) {
+            rotateToken = true;
+            rotateReasons.push("profile-mismatch");
+        }
+
+        if (!rotateToken && existing && typeof existing === "string" && existing.length >= 8) {
+            if (desiredProfile && !existingProfile) {
+                ss.setItem(SESSION_TOKEN_PROFILE_KEY, desiredProfile);
+            }
+            return existing;
+        }
 
         const tok = _randToken();
         ss.setItem(SESSION_TOKEN_KEY, tok);
+        if (desiredProfile) {
+            ss.setItem(SESSION_TOKEN_PROFILE_KEY, desiredProfile);
+        }
+        if (DEBUG_NET_IDENTITY && rotateReasons.length) {
+            console.log("[net.identity] session token rotated", {
+                reasons: rotateReasons.join(","),
+                desiredProfile: desiredProfile || null,
+                existingProfile: existingProfile || null
+            });
+        }
         return tok;
     } catch (_e) {
         const g: any = (globalThis as any);
@@ -121,10 +213,12 @@ function _getDesiredProfileForHello(): string | null {
     return _normalizeProfileKey(raw);
 }
 
-function _queueEnsureHero(playerId: number) {
+function _queueEnsureHero(profile: string, playerId?: number) {
     const g: any = (globalThis as any);
+    const key = _normalizeProfileKey(profile);
+    if (!key) return;
     if (!g.__pendingEnsureHeroes) g.__pendingEnsureHeroes = [];
-    g.__pendingEnsureHeroes.push(playerId | 0);
+    g.__pendingEnsureHeroes.push({ profile: key, playerId: (playerId | 0) || 0 });
 }
 
 function _flushEnsureHeroesIfPossible() {
@@ -133,14 +227,16 @@ function _flushEnsureHeroesIfPossible() {
     if (!Array.isArray(arr) || arr.length === 0) return;
 
     const internals = g.__HeroEnginePhaserInternals;
-    const fn = internals && typeof internals.ensureHeroForPlayer === "function" ? internals.ensureHeroForPlayer : null;
+    const fn = internals && typeof internals.ensureHeroForProfile === "function" ? internals.ensureHeroForProfile : null;
     if (!fn) return;
 
     g.__pendingEnsureHeroes = [];
 
-    for (const pidAny of arr) {
-        const pid = (pidAny | 0);
-        try { fn(pid); } catch (e) { console.warn("[net] ensureHeroForPlayer failed for pid", pid, e); }
+    for (const item of arr) {
+        const profile = item && typeof item.profile === "string" ? item.profile : "";
+        const pid = item && typeof item.playerId === "number" ? (item.playerId | 0) : 0;
+        if (!profile) continue;
+        try { fn(profile, pid); } catch (e) { console.warn("[net] ensureHeroForProfile failed for profile", profile, e); }
     }
 }
 
@@ -166,6 +262,7 @@ type NetMessage =
     | { type: "uiCommand"; requestId: string; playerId: number; cmd: any }
     | { type: "uiCommandForward"; requestId: string; fromToken: string; playerId: number; cmd: any }
     | { type: "uiCommandResult"; requestId: string; toToken?: string | null; playerId?: number | null; ok?: boolean; reason?: string | null; snapshot?: any }
+    | { type: "blocklyXml"; playerId?: number; profile: string; xml: string }
     | {
           type: "playerState";
           playerId: number;
@@ -263,6 +360,13 @@ class NetworkClient {
     // Latest tilemap revision we've accepted (monotonic)
     private _tilemapRev: number = 0;
 
+    // Avoid re-sending identical Blockly XML on reconnect
+    private _lastSentBlocklyXmlByProfile: Record<string, string> = {};
+
+    // Follower-only: detect stalled snapshots and freeze enemy drift
+    private _followerLastSnapshotAtMs: number = 0;
+    private _followerSnapGuardToken: number = 0;
+
 
     constructor(url: string) {
         this.url = url;
@@ -314,10 +418,17 @@ class NetworkClient {
         const profile = (typeof msg.profile === "string" && msg.profile.trim()) ? msg.profile.trim() : null;
         const reason = msg.reason || "unknown";
         const txt = profile
-            ? `Profile "${profile}" is already in use. (${reason})`
+            ? `Profile "${profile}" is not available. (${reason})`
             : `HELLO rejected: ${reason}`;
 
         console.error("[net] helloError", msg);
+        if (DEBUG_NET_IDENTITY) {
+            console.error("[net.identity] hello rejected", {
+                reason,
+                profile,
+                allowed: (msg as any).allowed || null
+            });
+        }
         try { alert(txt); } catch (_e) {}
 
         if (this.ws) {
@@ -362,6 +473,13 @@ class NetworkClient {
                     console.log("[net] hello sent", {
                         token: token.slice(0, 8) + "…",
                         desiredProfile: desiredProfile || null
+                    });
+                }
+                if (DEBUG_NET_IDENTITY) {
+                    console.log("[net.identity] hello sent", {
+                        token: token.slice(0, 8) + "…",
+                        desiredProfile: desiredProfile || null,
+                        url: this.url
                     });
                 }
             } catch (e) {
@@ -486,6 +604,16 @@ class NetworkClient {
         this.ws.send(JSON.stringify(msg));
     }
 
+    // Any client can send their Blockly XML for their profile
+    sendBlocklyXml(profile: string, xml: string) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        const prof = (typeof profile === "string") ? profile.trim() : "";
+        const text = (typeof xml === "string") ? xml : "";
+        if (!prof || !text) return;
+        const msg: NetMessage = { type: "blocklyXml", profile: prof, xml: text };
+        this.ws.send(JSON.stringify(msg));
+    }
+
     // Host uses this to broadcast dialog to followers
     sendDialog(action: "show" | "hide", dialog?: any, targetPlayerId?: number | null) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -595,6 +723,10 @@ private handleMessage(msg: NetMessage) {
             this.onUiCommandResult(msg as any);
             return;
 
+        case "blocklyXml":
+            this.onBlocklyXml(msg as any);
+            return;
+
         case "dialog":
             this.onDialog(msg as any);
             return;
@@ -638,19 +770,46 @@ private handleMessage(msg: NetMessage) {
 
         const slotIndex = this.playerId - 1;
 
-        if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
+        if (!g.__netProfileByPid) g.__netProfileByPid = {};
+        if (!g.__netProfileConnected) g.__netProfileConnected = {};
         if (!g.__playerNames) g.__playerNames = [null, null, null, null];
-        if (!g.__netSlotConnected) g.__netSlotConnected = [false, false, false, false];
 
         // Keep name for debugging/UI
         const name = msg.name || null;
-        g.__playerNames[slotIndex] = name;
+        if (slotIndex >= 0 && slotIndex < g.__playerNames.length) {
+            g.__playerNames[slotIndex] = name;
+        }
 
         // Prefer explicit server profile if present; otherwise keep existing.
         const profile = (typeof msg.profile === "string" && msg.profile.trim()) ? msg.profile.trim() : null;
         if (profile) {
-            g.__heroProfiles[slotIndex] = profile;
+            g.__netProfileByPid[this.playerId] = profile;
+            g.__netProfileConnected[profile] = true;
         }
+
+        if (DEBUG_NET_IDENTITY) {
+            try {
+                const token = typeof g.__netHelloToken === "string" ? g.__netHelloToken : "";
+                const desiredProfile = typeof g.__netHelloProfile === "string" ? g.__netHelloProfile : null;
+                console.log("[net.identity] assigned", {
+                    playerId: this.playerId,
+                    token: token ? token.slice(0, 8) + "…" : null,
+                    desiredProfile,
+                    serverProfile: profile || null,
+                    controlSlot: msg.controlSlot ?? null
+                });
+            } catch { /* ignore */ }
+        }
+
+        const localProfile = profile
+            || ((typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+                ? g.__localHeroProfileName.trim()
+                : null)
+            || ((typeof g.__netHelloProfile === "string" && g.__netHelloProfile.trim())
+                ? g.__netHelloProfile.trim()
+                : null);
+
+        this._maybeSendLocalBlocklyXml(localProfile);
     }
 
 
@@ -658,27 +817,53 @@ private onRosterSnapshot(msg: Extract<NetMessage, { type: "rosterSnapshot" }>) {
     const g: any = (globalThis as any);
     const isHost = this.isHostNow();
 
-    if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
-    if (!g.__netSlotConnected) g.__netSlotConnected = [false, false, false, false];
+    // Fallback: trust hostToken when hostStatus is missing/delayed.
+    const myToken = (typeof g.__netHelloToken === "string") ? g.__netHelloToken : null;
+    const hostToken = (typeof msg.hostToken === "string") ? msg.hostToken : null;
+    if (hostToken && myToken) {
+        const wantHost = hostToken === myToken;
+        if (this._isHostFromServer !== wantHost) {
+            this._isHostFromServer = wantHost;
+            g.__isHost = wantHost;
+            if (DEBUG_NET_IDENTITY) {
+                console.log("[net.identity] hostStatus (from roster)", {
+                    isHost: wantHost,
+                    hostToken: hostToken.slice(0, 8) + "…",
+                    myToken: myToken.slice(0, 8) + "…",
+                    hostPlayerId: null
+                });
+            }
+            if (wantHost) {
+                const hook = (g as any).__onHostBecameHost;
+                if (typeof hook === "function") {
+                    try { hook(); } catch (e) { console.warn("[net] __onHostBecameHost error", e); }
+                }
+                if (typeof g.__startHeroEngineHost === "function") {
+                    g.__startHeroEngineHost();
+                    _flushEnsureHeroesIfPossible();
+                    setTimeout(() => _flushEnsureHeroesIfPossible(), 0);
+                }
+            }
+        }
+    }
+
+    if (!g.__netProfileConnected) g.__netProfileConnected = {};
+    if (!g.__netProfileByPid) g.__netProfileByPid = {};
 
     // Apply the snapshot to our slot-based bridge state
     for (const p of (msg.players || [])) {
         const pid = (p.playerId | 0);
-        const slotIndex = pid - 1;
-        if (slotIndex < 0 || slotIndex >= 4) continue;
-
         const connected = !!p.connected;
-        const prevConnected = !!g.__netSlotConnected[slotIndex];
-
-        g.__netSlotConnected[slotIndex] = connected;
 
         const profile =
             (typeof p.profile === "string" && p.profile.trim())
                 ? p.profile.trim()
-                : null;
+                : (g.__netProfileByPid[pid] || null);
 
+        const prevConnected = profile ? !!g.__netProfileConnected[profile] : false;
         if (profile) {
-            g.__heroProfiles[slotIndex] = profile;
+            g.__netProfileByPid[pid] = profile;
+            g.__netProfileConnected[profile] = connected;
         }
 
         // Host-side hygiene: if snapshot flips connected state, release keys
@@ -687,13 +872,13 @@ private onRosterSnapshot(msg: Extract<NetMessage, { type: "rosterSnapshot" }>) {
         }
 
         // Host: ensure hero exists for connected slots (idempotent)
-        if (isHost && connected) {
+        if (isHost && connected && profile) {
             const internals = g.__HeroEnginePhaserInternals;
-            const ensureFn = internals && typeof internals.ensureHeroForPlayer === "function" ? internals.ensureHeroForPlayer : null;
+            const ensureFn = internals && typeof internals.ensureHeroForProfile === "function" ? internals.ensureHeroForProfile : null;
             if (ensureFn) {
-                try { ensureFn(pid); } catch (_e) { /* ignore */ }
+                try { ensureFn(profile, pid); } catch (_e) { /* ignore */ }
             } else {
-                _queueEnsureHero(pid);
+                _queueEnsureHero(profile, pid);
             }
         }
     }
@@ -715,144 +900,98 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
     const isHost = this.isHostNow();
 
     const playerId = msg.playerId | 0;
-    const slotIndex = playerId - 1;
 
-    // Engine bridge only cares about slots 0..3 for now.
-    // TODO_NPLAYER_BRIDGE: later, limbo players >4 live here without dropping.
-    if (slotIndex < 0 || slotIndex >= 4) return;
-
-    if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
-    if (!g.__netSlotConnected) g.__netSlotConnected = [false, false, false, false];
+    if (!g.__netProfileConnected) g.__netProfileConnected = {};
+    if (!g.__netProfileByPid) g.__netProfileByPid = {};
 
     const connected = !!msg.connected;
 
-    const prevConnected = !!g.__netSlotConnected[slotIndex];
-    const prevProfile = g.__heroProfiles[slotIndex];
-
+    const prevProfile = g.__netProfileByPid[playerId] || null;
     const profile =
         (typeof msg.profile === "string" && msg.profile.trim())
             ? msg.profile.trim()
-            : null;
+            : prevProfile;
 
-    // ------------------------------------------------------------
-    // STEP 9: ALWAYS re-apply profile on reconnect (even if hero exists)
-    // The engine resolves profile dynamically via globalThis.__heroProfiles,
-    // so this is the authoritative switch that fixes "stays Default".
-    //
-    // TODO_NPLAYER_BRIDGE: later: drive this by controlSlot grants.
-    // ------------------------------------------------------------
+    const prevConnected = profile ? !!g.__netProfileConnected[profile] : false;
+
     if (profile) {
-        g.__heroProfiles[slotIndex] = profile;
+        g.__netProfileByPid[playerId] = profile;
+        g.__netProfileConnected[profile] = connected;
 
-        const changed = (prevProfile !== profile);
-        const isReconnect = (!prevConnected && connected);
-
-        if (DEBUG_NET && (changed || isReconnect || isHost)) {
-            console.log(
-                "[net.playerState]",
-                "slot", slotIndex + 1,
-                "connected", connected,
-                "profile", profile,
-                "prevProfile", prevProfile,
-                "prevConnected", prevConnected
-            );
+        if (DEBUG_NET && isHost) {
+            console.log("[net.playerState]", "pid", playerId, "connected", connected, "profile", profile);
         }
     } else {
-        // No profile included: keep whatever we already had.
-        // (Server SHOULD include it; this log helps catch missing propagation bugs.)
         if (connected && isHost) {
             console.warn(
                 "[net.playerState] connected but no profile provided by server; keeping existing profile",
-                "slot", slotIndex + 1,
+                "pid", playerId,
                 "existing=", prevProfile
             );
         }
     }
 
-    // ------------------------------------------------------------
-    // STEP 8/9: LIMBO STATE
-    // - connected=false => limbo (no control)
-    // - connected=true  => control enabled again
-    // ------------------------------------------------------------
-    g.__netSlotConnected[slotIndex] = connected;
+    // Host-side hygiene: release held keys on BOTH disconnect and reconnect.
+    if (isHost && (prevConnected !== connected)) {
+        this._releaseAllButtonsForPlayer(playerId);
+    }
 
-        // Host-side hygiene: release held keys on BOTH disconnect and reconnect.
-        // (Reconnect can otherwise inherit stale host-side pressed state.)
-        if (isHost && (prevConnected !== connected)) {
-            this._releaseAllButtonsForPlayer(playerId);
-        }
+    if (DEBUG_NET_IDENTITY && profile && prevConnected !== connected) {
+        console.log("[net.identity] profile", connected ? "connected" : "disconnected", {
+            playerId,
+            profile,
+            controlSlot: msg.controlSlot ?? null
+        });
+    }
 
-        // Host-only: despawn hero when disconnected; respawn handled by ensureHeroForPlayer on connect
-        if (isHost && !connected) {
-            try {
-                const internals = g.__HeroEnginePhaserInternals;
-                const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
-                if (despawnFn) {
-                    const ok = despawnFn(playerId);
-                    if (ok && DEBUG_NET) console.log("[net.playerState] despawned hero for pid", playerId);
-                }
-            } catch (e) {
-                console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
-            }
-        }
-
-    // Host-only: despawn hero when disconnected; respawn handled by ensureHeroForPlayer on connect
-    if (isHost && !connected) {
+    if (isHost && !connected && profile) {
         try {
             const internals = g.__HeroEnginePhaserInternals;
-            const despawnFn = internals && typeof internals.despawnHeroForPlayer === "function" ? internals.despawnHeroForPlayer : null;
+            const despawnFn = internals && typeof internals.despawnHeroForProfile === "function" ? internals.despawnHeroForProfile : null;
             if (despawnFn) {
-                const ok = despawnFn(playerId);
-                if (ok && DEBUG_NET) console.log("[net.playerState] despawned hero for pid", playerId);
+                const ok = despawnFn(profile);
+                if (ok && DEBUG_NET) console.log("[net.playerState] despawned hero for profile", profile);
             }
         } catch (e) {
-            console.warn("[net.playerState] despawnHeroForPlayer error pid=", playerId, e);
+            console.warn("[net.playerState] despawnHeroForProfile error profile=", profile, e);
         }
     }
 
     if (DEBUG_NET) {
         console.log("[net.playerState.debug]", {
             pid: playerId,
-            slotIndex,
+            slotIndex: -1,
             connected,
             prevConnected,
-            profile: profile || prevProfile || null,
+            profile: profile || null,
             controlSlot: msg.controlSlot ?? null,
             host: isHost
         });
     }
 
-    // ------------------------------------------------------------
-    // STEP 7/9: ensure hero exists on connect (even if already exists)
-    // Calling ensureHeroForPlayer is idempotent: it returns existing index
-    // if the hero already exists, so it doubles as a "rebind" moment.
-    //
-    // TODO_NPLAYER_BRIDGE: later replace playerId<=4 assumption with roster.
-    // ------------------------------------------------------------
-    if (isHost && connected) {
+    if (isHost && connected && profile) {
         const internals = g.__HeroEnginePhaserInternals;
         const ensureFn =
-            internals && typeof internals.ensureHeroForPlayer === "function"
-                ? internals.ensureHeroForPlayer
+            internals && typeof internals.ensureHeroForProfile === "function"
+                ? internals.ensureHeroForProfile
                 : null;
 
         if (ensureFn) {
             try {
-                const heroIndex = ensureFn(playerId);
+                const heroIndex = ensureFn(profile, playerId);
                 if (DEBUG_NET && heroIndex >= 0) {
                     console.log(
-                        "[net.playerState] ensureHeroForPlayer ok",
+                        "[net.playerState] ensureHeroForProfile ok",
                         "playerId", playerId,
                         "heroIndex", heroIndex,
-                        "profileNow", g.__heroProfiles[slotIndex]
+                        "profile", profile
                     );
                 }
             } catch (e) {
-                console.warn("[net.playerState] ensureHeroForPlayer ERROR pid=", playerId, e);
+                console.warn("[net.playerState] ensureHeroForProfile ERROR profile=", profile, e);
             }
         } else {
-            // Engine may not be imported yet; queue and flush on hostStatus/start.
-            _queueEnsureHero(playerId);
+            _queueEnsureHero(profile, playerId);
         }
     }
 }
@@ -868,6 +1007,18 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
         // Keep legacy global in sync (other files read it)
         g.__isHost = isHost;
+
+        if (DEBUG_NET_IDENTITY) {
+            const token = (typeof g.__netHelloToken === "string") ? g.__netHelloToken : "";
+            const profile = (typeof g.__netHelloProfile === "string") ? g.__netHelloProfile : "";
+            console.log("[net.identity] hostStatus", {
+                isHost,
+                hostPlayerId: (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null,
+                myPlayerId: this.playerId,
+                token: token ? token.slice(0, 8) + "…" : null,
+                profile: profile || null
+            });
+        }
 
         if (DEBUG_NET) {
             console.log("[net] hostStatus =", isHost, "hostPlayerId=", (msg && msg.hostPlayerId != null) ? msg.hostPlayerId : null);
@@ -911,32 +1062,67 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
 
 
-    private _getControllerForPlayerId(playerId: number): any {
-        const g: any = (globalThis as any);
-        const ctrlNS: any = g.controller;
-        if (!ctrlNS) return null;
-
-        if (playerId === 1) return ctrlNS.player1;
-        if (playerId === 2) return ctrlNS.player2;
-        if (playerId === 3) return ctrlNS.player3;
-        if (playerId === 4) return ctrlNS.player4;
-
-        return null;
-    }
-
     private _releaseAllButtonsForPlayer(playerId: number) {
-        const ctrl = this._getControllerForPlayerId(playerId);
-        if (!ctrl) return;
+        const g: any = (globalThis as any);
+        const profile =
+            (g.__netProfileByPid && typeof g.__netProfileByPid[playerId] === "string")
+                ? g.__netProfileByPid[playerId]
+                : null;
+        if (!profile) return;
+        const internals = g.__HeroEnginePhaserInternals;
+        const applyFn = internals && typeof internals.applyProfileInput === "function"
+            ? internals.applyProfileInput
+            : null;
+        if (!applyFn) return;
 
         // These are the only ones we currently route over the network.
         const keys = ["left", "right", "up", "down", "A", "B"];
-
         for (const k of keys) {
-            const btn: any = ctrl[k];
-            if (btn && typeof btn._setPressed === "function") {
-                btn._setPressed(false);
-            }
+            applyFn(profile, k, false);
         }
+    }
+
+    private _scheduleFollowerEnemyStaleGuard(): void {
+        const g: any = (globalThis as any);
+        const now = Date.now();
+        this._followerLastSnapshotAtMs = now;
+        const token = ++this._followerSnapGuardToken;
+        const staleMs = 450;
+
+        setTimeout(() => {
+            if (this._followerSnapGuardToken !== token) return;
+            const since = Date.now() - this._followerLastSnapshotAtMs;
+            if (since < staleMs) return;
+
+            const spritesNS: any = g && g.sprites;
+            const allFn = spritesNS && typeof spritesNS._getAllSprites === "function"
+                ? spritesNS._getAllSprites
+                : null;
+            if (!allFn) return;
+
+            const sk: any = g && g.SpriteKind;
+            const enemyKind = (sk && typeof sk.Enemy === "number") ? (sk.Enemy | 0) : -1;
+
+            const all = allFn.call(spritesNS) as any[];
+            let frozen = 0;
+            for (const s of all) {
+                if (!s) continue;
+                const d: any = s.data || null;
+                const isEnemy =
+                    (enemyKind >= 0 && ((s.kind | 0) === enemyKind)) ||
+                    !!(d && (d.enemyLpc || d.monsterId));
+                if (!isEnemy) continue;
+                if ((s.vx | 0) !== 0 || (s.vy | 0) !== 0) {
+                    s.vx = 0;
+                    s.vy = 0;
+                    frozen++;
+                }
+            }
+
+            if (frozen && DEBUG_NET) {
+                console.log("[net] follower stale snapshot: froze enemy velocities", { frozen, since });
+            }
+        }, staleMs);
     }
 
 
@@ -954,6 +1140,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
         // Followers mirror the host via snapshots.
         _net_getNetWorld().apply(msg.snapshot);
+        this._scheduleFollowerEnemyStaleGuard();
     }
 
     private onTilemap(msg: Extract<NetMessage, { type: "tilemap" }>) {
@@ -1067,6 +1254,60 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         }
     }
 
+    private onBlocklyXml(msg: any) {
+        const g: any = (globalThis as any);
+        const profile = (msg && typeof msg.profile === "string") ? msg.profile.trim() : "";
+        const xml = (msg && typeof msg.xml === "string") ? msg.xml : "";
+        if (!profile || !xml) return;
+
+        if (!g.__heBlocklyXmlByProfile) g.__heBlocklyXmlByProfile = {};
+        g.__heBlocklyXmlByProfile[profile] = xml;
+
+        try {
+            const key = "he_blockly_ws_v1:" + encodeURIComponent(profile);
+            localStorage.setItem(key, xml);
+        } catch { /* ignore */ }
+
+        if (DEBUG_NET_IDENTITY) {
+            console.log("[net.blockly] updated xml", {
+                profile,
+                playerId: (msg && typeof msg.playerId === "number") ? (msg.playerId | 0) : null,
+                len: xml.length | 0
+            });
+        }
+    }
+
+    private _maybeSendLocalBlocklyXml(profile: string | null) {
+        const prof = (typeof profile === "string") ? profile.trim() : "";
+        if (!prof) return;
+
+        let xml = "";
+        try {
+            const g: any = (globalThis as any);
+            const map = g && g.__heBlocklyXmlByProfile;
+            if (map && typeof map === "object") {
+                xml = String(map[prof] || "");
+            }
+        } catch { /* ignore */ }
+
+        if (!xml.trim()) {
+            try {
+                const key = "he_blockly_ws_v1:" + encodeURIComponent(prof);
+                xml = localStorage.getItem(key) || "";
+            } catch { /* ignore */ }
+        }
+
+        if (!xml.trim()) return;
+        if (this._lastSentBlocklyXmlByProfile[prof] === xml) return;
+        this._lastSentBlocklyXmlByProfile[prof] = xml;
+
+        this.sendBlocklyXml(prof, xml);
+
+        if (DEBUG_NET_IDENTITY) {
+            console.log("[net.blockly] sent local xml", { profile: prof, len: xml.length | 0 });
+        }
+    }
+
     private onDialog(msg: any) {
         const g: any = (globalThis as any);
         const fn = (g && typeof g.__heDialogFromNet === "function") ? g.__heDialogFromNet : null;
@@ -1103,23 +1344,22 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
 
         const playerId = (msg.playerId | 0);
 
-        // ------------------------------------------------------------
-        // STEP 8: LIMBO GATE
-        // If a player is disconnected, ignore their inputs entirely.
-        // (Heroes persist, but have no control.)
-        //
-        // TODO_NPLAYER_BRIDGE:
-        //   This is slot-based (1..4) because engine is still 4-player.
-        //   Later: gate by controlSlot grants, not playerId.
-        // ------------------------------------------------------------
-        const slotIndex = playerId - 1;
-        if (Array.isArray(g.__netSlotConnected)) {
-            const connected = !!g.__netSlotConnected[slotIndex];
-            if (!connected) return;
-        }
+        // Gate by connected profile when available.
+        const profile =
+            (typeof msg.profile === "string" && msg.profile.trim())
+                ? msg.profile.trim()
+                : ((g.__netProfileByPid && typeof g.__netProfileByPid[playerId] === "string")
+                    ? g.__netProfileByPid[playerId]
+                    : null);
+        if (!profile) return;
+        if (g.__netProfileByPid) g.__netProfileByPid[playerId] = profile;
+        if (g.__netProfileConnected && g.__netProfileConnected[profile] === false) return;
 
-        const ctrl = this._getControllerForPlayerId(playerId);
-        if (!ctrl) return;
+        const internals = g.__HeroEnginePhaserInternals;
+        const applyFn = internals && typeof internals.applyProfileInput === "function"
+            ? internals.applyProfileInput
+            : null;
+        if (!applyFn) return;
 
         const btnName = msg.button;       // "left" | "right" | "up" | "down" | "A" | "B"
         const pressed = !!msg.pressed;
@@ -1185,13 +1425,10 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         // ---------------------------------------------------------
         // 2) Measure *host processing* time for this input
         // ---------------------------------------------------------
-        const btn: any = ctrl[btnName];
-        if (!btn || typeof btn._setPressed !== "function") return;
-
         const procStartMs =
             typeof performance !== "undefined" ? performance.now() : Date.now();
 
-        btn._setPressed(pressed);    // <-- actual host-side work for this input
+        applyFn(profile, btnName, pressed);
 
         const procEndMs =
             typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -1399,13 +1636,13 @@ export function initNetwork() {
     }
 
     // HELLO identity once per tab session
-    const token = _getOrCreateSessionToken();
+    const token = _getOrCreateSessionToken(desiredProfile || "");
 
     g.__netHelloToken = token;
     g.__netHelloProfile = desiredProfile;
 
-    // Step 8: host uses this to gate inputs for disconnected slots
-    if (!g.__netSlotConnected) g.__netSlotConnected = [false, false, false, false];
+    // Initialize profile connectivity map for input gating
+    if (!g.__netProfileConnected) g.__netProfileConnected = {};
 
     if (DEBUG_NET) {
         console.log("[net] initNetwork: connecting...", {

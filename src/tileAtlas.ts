@@ -84,6 +84,30 @@ export type DecorAnimStates = {
     defaultState?: string;
 };
 
+export type PropOverlaySpec = {
+    /** Optional override textureKey (full Phaser key). */
+    textureKey?: string;
+    /** Optional atlas alias resolved via TileAtlas. */
+    atlas?: DecorAtlasKey;
+    /** Overlay frame location within the overlay sheet. */
+    ref?: TileRef;
+    /** Explicit absolute frame index within the overlay sheet. */
+    frameIndex?: number;
+    /** Optional pixel offsets applied at render time (Phaser prop rendering). */
+    offsetXPx?: number;
+    offsetYPx?: number;
+    /** Optional depth offset applied after y-sort (use positive to force in front). */
+    depthBias?: number;
+    /** Optional alpha (0..1). */
+    alpha?: number;
+    /** Optional tint color (0xRRGGBB). */
+    tint?: number;
+    /** Optional blend mode ("add", "lighten", "normal", or Phaser blend enum). */
+    blendMode?: number | "add" | "lighten" | "normal";
+    /** If true, show overlay immediately on spawn. */
+    visibleByDefault?: boolean;
+};
+
 export interface DecorVisualRef {
     // if set, use this directly. otherwise resolve from atlas (string alias)
     textureKey?: string;
@@ -116,6 +140,9 @@ export interface DecorVisualRef {
     depthBias?: number;
     // Optional depth offset in tiles (scaled by tileSize * WORLD_DEPTH_Y_SCALE).
     depthBiasTiles?: number;
+
+    // Optional overlay effect drawn above the prop (hidden by default).
+    overlay?: PropOverlaySpec;
 
     // Optional collision tuning for decor solids (Phaser only).
     // When set, collision uses the bottom N pixels of the frame as a base-only box.
@@ -247,15 +274,25 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         }
     },
 
+    shrine: {
+        atlas: "anims.Shrine 32x64",
+        ref: { row: 0, col: 0 },
+        offsetYPx: -16,
+        overlay: {
+            frameIndex: 1,
+            depthBias: 1,
+        },
+    },
+
 teleport_rune: {
     // IDLE: static (no anim) so it does NOT spin unless someone stands on it
-    atlas: "anims.teleport_rune",
+    atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },
     offsetYPx: 12,
 },
 
 teleport_rune_spin1: {
-    atlas: "anims.teleport_rune",
+    atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },
     offsetYPx: 12,
     anim: {
@@ -267,7 +304,7 @@ teleport_rune_spin1: {
 },
 
 teleport_rune_spin2: {
-    atlas: "anims.teleport_rune",
+    atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },
     offsetYPx: 12,
     anim: {
@@ -279,7 +316,7 @@ teleport_rune_spin2: {
 },
 
 teleport_rune_spin3: {
-    atlas: "anims.teleport_rune",
+    atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },
     offsetYPx: 12,
     anim: {
@@ -291,7 +328,7 @@ teleport_rune_spin3: {
 },
 
 teleport_rune_flash: {
-    atlas: "anims.teleport_rune",
+    atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },
     offsetYPx: 12,
     anim: {
@@ -643,41 +680,53 @@ const ANIM_SHEETS: AnimSheetDef[] = []
 
 // Grab all tilesets under ../assets/tiles/*.png as Vite URLs.
 
-//const animPngs = import.meta.glob("../assets/animations/*.png", { as: "url", eager: true }) as Record<string, string>
+//const propPngs = import.meta.glob("../assets/props/*.png", { as: "url", eager: true }) as Record<string, string>
 
 const tilePngs = import.meta.glob(
     "../assets/tiles/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
-// Grab animation sheets under ../assets/animations/*.png as Vite URLs.
-const animPngs = import.meta.glob(
-    "../assets/animations/*.png",
+// Grab prop sheets under ../assets/props/*.png as Vite URLs.
+const propPngs = import.meta.glob(
+    "../assets/props/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
-// Aura sheets for tiles/props/animations (precomputed outlines)
+// Aura sheets for tiles/props (precomputed outlines)
 const tileAuraPngs = import.meta.glob(
-    "../assets/auras_32x32/tiles/*.png",
+    "../assets/tiles/auras/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
-const animAuraPngs = import.meta.glob(
-    "../assets/auras_*x*/animations/*.png",
+const propAuraPngs = import.meta.glob(
+    "../assets/props/auras/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
 
 const ANIM_FRAME_OVERRIDES: Record<string, { frameW: number; frameH: number }> = {
-    coins: { frameW: 16, frameH: 16 },
+    "coins 16x16": { frameW: 16, frameH: 16 },
     "flameball-32x32": { frameW: 32, frameH: 32 },
     "mage-bullet-13x13": { frameW: 13, frameH: 13 },
 
     // keep these if you want the system to stay generalized:
-    teleport_rune: { frameW: 64, frameH: 64 },
+    "teleportrune 64x64": { frameW: 64, frameH: 64 },
     "WaterFountain 64x96": { frameW: 64, frameH: 96 },
     "FireTotem 96x96": { frameW: 96, frameH: 96 },
+    "Shrine 32x64": { frameW: 32, frameH: 64 },
 };
+
+const PROP_MISSING_SIZE: string[] = [];
+
+function _parseFrameSizeFromName(baseName: string): { frameW: number; frameH: number } | null {
+    const match = /(?:^|[ _-])(\d+)x(\d+)$/i.exec(baseName || "");
+    if (!match) return null;
+    const frameW = parseInt(match[1], 10) | 0;
+    const frameH = parseInt(match[2], 10) | 0;
+    if (frameW <= 0 || frameH <= 0) return null;
+    return { frameW, frameH };
+}
 
 
 // Tilesheets (32x32 frames)
@@ -701,16 +750,30 @@ for (const [path, url] of Object.entries(tilePngs)) {
     });
 }
 
-// Animation sheets (default 64x64 frames)
-// Animation sheets (default 64x64 frames, with per-sheet overrides)
-for (const [path, url] of Object.entries(animPngs)) {
+// Prop sheets (size must be in filename; tiles are the only exception).
+for (const [path, url] of Object.entries(propPngs)) {
     const fileNameWithExt = path.split(/[\\/]/).pop() || "anim";
     const baseName = fileNameWithExt.replace(/\.png$/i, "");
     const textureKey = `anims.${baseName}`;
 
+    const parsed = _parseFrameSizeFromName(baseName);
+    if (!parsed) {
+        PROP_MISSING_SIZE.push(baseName);
+        continue;
+    }
+
     const ov = ANIM_FRAME_OVERRIDES[baseName] || null;
-    const frameW = (ov?.frameW ?? 64) | 0;
-    const frameH = (ov?.frameH ?? 64) | 0;
+    if (ov && ((ov.frameW | 0) !== (parsed.frameW | 0) || (ov.frameH | 0) !== (parsed.frameH | 0))) {
+        console.warn(
+            "[tileAtlas] prop size override mismatch:",
+            baseName,
+            `name=${parsed.frameW}x${parsed.frameH}`,
+            `override=${ov.frameW}x${ov.frameH}`
+        );
+    }
+
+    const frameW = parsed.frameW | 0;
+    const frameH = parsed.frameH | 0;
 
     TILE_SHEETS.push({
         textureKey,
@@ -725,8 +788,14 @@ for (const [path, url] of Object.entries(animPngs)) {
 
 
 export function preloadTileSheets(scene: Phaser.Scene): void {
+    if (PROP_MISSING_SIZE.length) {
+        throw new Error(
+            `[tileAtlas] prop sheets must include WxH in filename (tiles are the only exception). Missing: ${PROP_MISSING_SIZE.join(", ")}`
+        );
+    }
+
     if (TILE_SHEETS.length === 0) {
-        logTiles("[tileAtlas.preload] no sheets found under ../assets/tiles or ../assets/animations");
+        logTiles("[tileAtlas.preload] no sheets found under ../assets/tiles or ../assets/props");
         return;
     }
 
@@ -743,19 +812,13 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         auraUrlById.set(base, url);
     }
 
-    const animAuraBySize = new Map<string, Map<string, string>>();
-    for (const [p, url] of Object.entries(animAuraPngs)) {
-        const match = /auras_(\d+)x(\d+)[\\/]+animations[\\/]+([^\\/]+)\.png$/i.exec(p);
-        if (!match) continue;
-        const sizeKey = `${match[1]}x${match[2]}`;
-        const base = match[3] || "";
+    const propAuraById = new Map<string, string>();
+    for (const [p, url] of Object.entries(propAuraPngs)) {
+        const file = p.split(/[\\/]/).pop() || "";
+        if (!file.toLowerCase().endsWith(".png")) continue;
+        const base = file.slice(0, -4);
         if (!base) continue;
-        let byId = animAuraBySize.get(sizeKey);
-        if (!byId) {
-            byId = new Map<string, string>();
-            animAuraBySize.set(sizeKey, byId);
-        }
-        byId.set(base, url);
+        propAuraById.set(base, url);
     }
 
     if (DEBUG_TILES) {
@@ -785,12 +848,8 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         let shouldLogMissing = false;
 
         if (isAnim) {
-            const fw = sheet.frameW | 0;
-            const fh = sheet.frameH | 0;
-            const sizeKey = `${fw}x${fh}`;
-            const animById = animAuraBySize.get(sizeKey);
-            if (animById) auraUrl = animById.get(auraBase);
-            shouldLogMissing = animAuraBySize.size > 0;
+            auraUrl = propAuraById.get(auraBase);
+            shouldLogMissing = propAuraById.size > 0;
         } else {
             auraUrl = auraUrlById.get(auraBase);
             shouldLogMissing = true;

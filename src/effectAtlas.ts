@@ -1,268 +1,315 @@
 // src/effectAtlas.ts
 import type Phaser from "phaser";
+import { DEBUG_EFFECT_ATLAS } from "./debugFlags";
 
 export type EffectDir = "up" | "down" | "left" | "right" | "none";
 
-export type EffectClipLayout =
-    | { kind: "frames"; frames: number[] }
-    | { kind: "row"; row: number; startCol?: number; count: number; step?: number }
-    | { kind: "grid"; startRow: number; startCol: number; rows: number; cols: number; count?: number; order?: "row" | "col" }
-    | { kind: "sheet"; order?: "row" | "col" };
+export type EffectPalette = {
+    colors: number[];
+    tint: number;
+};
 
-export interface EffectClipDef {
-    layout: EffectClipLayout;
-    frameRate: number;
-    repeat: number; // -1 loop, 0 play once
-}
-
-export interface EffectDirDef {
-    sheetId: string;
-    clip: EffectClipDef;
-}
-
-export interface EffectSkinDef {
+export interface EffectResolved {
     id: string;
-    dirs: Partial<Record<EffectDir, EffectDirDef>>;
-    defaultDir?: EffectDir;
-}
-
-export interface EffectClipResolved {
     textureKey: string;
     frameIndices: number[];
     frameRate: number;
     repeat: number;
+    frameW: number;
+    frameH: number;
+    palette?: EffectPalette;
 }
 
-export interface EffectSkinResolved {
-    id: string;
-    defaultDir: EffectDir;
-    dirs: Partial<Record<EffectDir, EffectClipResolved>>;
-}
-
-export type EffectAtlas = Record<string, EffectSkinResolved>;
+export type EffectAtlas = Record<string, EffectResolved>;
 
 export interface EffectSheetDef {
     id: string;
-    file: string;
+    baseName: string;
+    textureKey: string;
+    url: string;
     frameW: number;
     frameH: number;
 }
 
-const effectPngs = import.meta.glob("../assets/animations/*.png", {
+const effectPngs = import.meta.glob("../assets/effects/**/*.png", {
     as: "url",
     eager: true
 }) as Record<string, string>;
+
+const EFFECT_DEFAULT_FPS = 12;
+const EFFECT_DEFAULT_REPEAT = 0;
+const EFFECT_PALETTE_MAX_COLORS = 8;
+const EFFECT_PALETTE_ALPHA_MIN = 12;
+const EFFECT_SKIP_EMPTY_FRAMES = true;
+const EFFECT_EMPTY_ALPHA_MIN = 8;
 
 function basenameNoExt(p: string): string {
     const file = p.split(/[\\/]/).pop() || p;
     return file.replace(/\.png$/i, "");
 }
 
-function resolveEffectUrl(file: string): string {
-    const wanted = file.toLowerCase();
-    for (const [path, url] of Object.entries(effectPngs)) {
-        const base = basenameNoExt(path).toLowerCase();
-        if (base + ".png" === wanted || base === wanted.replace(/\.png$/i, "")) {
-            return url;
-        }
-    }
-    return "";
+function parseSizeFromName(name: string): { id: string; frameW: number; frameH: number } | null {
+    const match = /^(.*?)(?:[ _-])(\d+)x(\d+)$/i.exec(name);
+    if (!match) return null;
+    const id = String(match[1] || "").trim();
+    if (!id) return null;
+    const frameW = parseInt(match[2], 10) | 0;
+    const frameH = parseInt(match[3], 10) | 0;
+    if (frameW <= 0 || frameH <= 0) return null;
+    return { id, frameW, frameH };
 }
 
-const EFFECT_SHEETS: Record<string, EffectSheetDef> = {
-    firelion_down: { id: "firelion_down", file: "firelion_down.png", frameW: 64, frameH: 64 },
-    firelion_left: { id: "firelion_left", file: "firelion_left.png", frameW: 64, frameH: 64 },
-    firelion_right: { id: "firelion_right", file: "firelion_right.png", frameW: 64, frameH: 64 },
-    firelion_up: { id: "firelion_up", file: "firelion_up.png", frameW: 64, frameH: 64 },
-    spikes: { id: "spikes", file: "spikes.png", frameW: 64, frameH: 64 },
-    lightningclaw: { id: "lightningclaw", file: "lightningclaw.png", frameW: 64, frameH: 64 },
-    flames_16x24: { id: "flames_16x24", file: "flames 16x24.png", frameW: 16, frameH: 24 }
-};
+const EFFECT_SHEETS: EffectSheetDef[] = [];
+const EFFECT_SHEET_BY_ID = new Map<string, EffectSheetDef>();
+const EFFECT_DUPLICATE_IDS: string[] = [];
+const EFFECT_MISSING_SIZE: string[] = [];
 
-const FLAMES_CLIP: EffectClipDef = {
-    layout: { kind: "grid", startRow: 0, startCol: 0, rows: 3, cols: 4, count: 9, order: "row" },
-    frameRate: 12,
-    repeat: -1
-};
-
-const EFFECT_SKINS: EffectSkinDef[] = [
-    {
-        id: "firelion",
-        defaultDir: "down",
-        dirs: {
-            down: { sheetId: "firelion_down", clip: { layout: { kind: "sheet" }, frameRate: 12, repeat: -1 } },
-            up: { sheetId: "firelion_up", clip: { layout: { kind: "sheet" }, frameRate: 12, repeat: -1 } },
-            left: { sheetId: "firelion_left", clip: { layout: { kind: "sheet" }, frameRate: 12, repeat: -1 } },
-            right: { sheetId: "firelion_right", clip: { layout: { kind: "sheet" }, frameRate: 12, repeat: -1 } }
-        }
-    },
-    {
-        id: "lightningclaw",
-        defaultDir: "down",
-        dirs: {
-            down: { sheetId: "lightningclaw", clip: { layout: { kind: "sheet" }, frameRate: 14, repeat: 0 } }
-        }
-    },
-    {
-        id: "ring_pulse",
-        defaultDir: "down",
-        dirs: {
-            down: { sheetId: "lightningclaw", clip: { layout: { kind: "sheet" }, frameRate: 14, repeat: 0 } }
-        }
-    },
-    {
-        id: "flames",
-        defaultDir: "right",
-        dirs: {
-            up: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
-            down: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
-            left: { sheetId: "flames_16x24", clip: FLAMES_CLIP },
-            right: { sheetId: "flames_16x24", clip: FLAMES_CLIP }
-        }
-    },
-    {
-        id: "spikes_earth_single",
-        defaultDir: "none",
-        dirs: {
-            none: { sheetId: "spikes", clip: { layout: { kind: "row", row: 0, startCol: 0, count: 10 }, frameRate: 12, repeat: 0 } }
-        }
-    },
-    {
-        id: "spikes_earth_multi",
-        defaultDir: "none",
-        dirs: {
-            none: { sheetId: "spikes", clip: { layout: { kind: "row", row: 1, startCol: 0, count: 10 }, frameRate: 12, repeat: 0 } }
-        }
-    },
-    {
-        id: "spikes_ice_single",
-        defaultDir: "none",
-        dirs: {
-            none: { sheetId: "spikes", clip: { layout: { kind: "row", row: 2, startCol: 0, count: 10 }, frameRate: 12, repeat: 0 } }
-        }
-    },
-    {
-        id: "spikes_ice_multi",
-        defaultDir: "none",
-        dirs: {
-            none: { sheetId: "spikes", clip: { layout: { kind: "row", row: 3, startCol: 0, count: 10 }, frameRate: 12, repeat: 0 } }
-        }
+for (const [path, url] of Object.entries(effectPngs)) {
+    if (/[\\/](?:auras)[\\/]/i.test(path)) continue;
+    const baseName = basenameNoExt(path);
+    const size = parseSizeFromName(baseName);
+    if (!size) {
+        EFFECT_MISSING_SIZE.push(baseName);
+        continue;
     }
-];
+
+    if (EFFECT_SHEET_BY_ID.has(size.id)) {
+        EFFECT_DUPLICATE_IDS.push(size.id);
+        continue;
+    }
+
+    const sheet: EffectSheetDef = {
+        id: size.id,
+        baseName,
+        textureKey: `effects.${size.id}`,
+        url,
+        frameW: size.frameW,
+        frameH: size.frameH
+    };
+
+    EFFECT_SHEET_BY_ID.set(size.id, sheet);
+    EFFECT_SHEETS.push(sheet);
+}
+
+function _warnEffectSheetIssues(): void {
+    if (EFFECT_DUPLICATE_IDS.length) {
+        console.warn("[effectAtlas] duplicate effect ids:", EFFECT_DUPLICATE_IDS.join(", "));
+    }
+    if (EFFECT_MISSING_SIZE.length) {
+        throw new Error(
+            "[effectAtlas] effect sheets must include WxH in filename (tiles are the only exception). Missing: " +
+            EFFECT_MISSING_SIZE.join(", ")
+        );
+    }
+}
+
+function _extractPaletteFromSource(
+    source: HTMLImageElement | HTMLCanvasElement,
+    maxColors: number,
+    alphaMin: number
+): EffectPalette | null {
+    try {
+        if (typeof document === "undefined") return null;
+        const w = (source as any).width | 0;
+        const h = (source as any).height | 0;
+        if (w <= 0 || h <= 0) return null;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(source as any, 0, 0);
+
+        const img = ctx.getImageData(0, 0, w, h);
+        const data = img.data;
+        const counts = new Map<number, number>();
+        for (let i = 0; i < data.length; i += 4) {
+            const a = data[i + 3] | 0;
+            if (a < (alphaMin | 0)) continue;
+            const r = data[i] | 0;
+            const g = data[i + 1] | 0;
+            const b = data[i + 2] | 0;
+            const color = ((r << 16) | (g << 8) | b) >>> 0;
+            counts.set(color, (counts.get(color) || 0) + 1);
+        }
+
+        if (!counts.size) return null;
+
+        const entries = Array.from(counts.entries()).map(([color, count]) => ({ color, count }));
+        entries.sort((a, b) => b.count - a.count);
+
+        const colors: number[] = [];
+        const limit = Math.max(1, maxColors | 0);
+        for (let i = 0; i < entries.length && colors.length < limit; i++) {
+            colors.push(entries[i].color >>> 0);
+        }
+
+        let tint = 0;
+        for (let i = 0; i < entries.length; i++) {
+            const c = entries[i].color >>> 0;
+            const r = (c >> 16) & 0xff;
+            const g = (c >> 8) & 0xff;
+            const b = c & 0xff;
+            const luma = ((r * 299 + g * 587 + b * 114) / 1000) | 0;
+            if (luma >= 30 && luma <= 230) {
+                tint = c;
+                break;
+            }
+        }
+
+        if (!tint) tint = colors.length ? (colors[0] >>> 0) : 0xffffff;
+        return { colors, tint: tint >>> 0 };
+    } catch {
+        return null;
+    }
+}
+
+function _computeNonEmptyFrameIndices(
+    source: HTMLImageElement | HTMLCanvasElement,
+    frameW: number,
+    frameH: number,
+    alphaMin: number
+): { indices: number[]; emptyCount: number } {
+    try {
+        if (typeof document === "undefined") return { indices: [], emptyCount: 0 };
+        const w = (source as any).width | 0;
+        const h = (source as any).height | 0;
+        if (w <= 0 || h <= 0) return { indices: [], emptyCount: 0 };
+
+        const cols = Math.floor(w / frameW);
+        const rows = Math.floor(h / frameH);
+        if (cols <= 0 || rows <= 0) return { indices: [], emptyCount: 0 };
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+        if (!ctx) return { indices: [], emptyCount: 0 };
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(source as any, 0, 0);
+
+        const img = ctx.getImageData(0, 0, w, h);
+        const data = img.data;
+
+        const indices: number[] = [];
+        let emptyCount = 0;
+        const aMin = alphaMin | 0;
+
+        for (let r = 0; r < rows; r++) {
+            const baseY = r * frameH;
+            for (let c = 0; c < cols; c++) {
+                const baseX = c * frameW;
+                let hasPixel = false;
+                for (let y = 0; y < frameH && !hasPixel; y++) {
+                    const row = (baseY + y) * w + baseX;
+                    let idx = (row << 2) + 3;
+                    for (let x = 0; x < frameW; x++) {
+                        if (data[idx] >= aMin) {
+                            hasPixel = true;
+                            break;
+                        }
+                        idx += 4;
+                    }
+                }
+                if (hasPixel) indices.push(r * cols + c);
+                else emptyCount++;
+            }
+        }
+
+        return { indices, emptyCount };
+    } catch {
+        return { indices: [], emptyCount: 0 };
+    }
+}
 
 export function preloadEffectSheets(scene: Phaser.Scene): void {
-    for (const sheet of Object.values(EFFECT_SHEETS)) {
-        const url = resolveEffectUrl(sheet.file);
-        if (!url) {
-            console.warn("[effectAtlas] missing url for", sheet.file);
-            continue;
-        }
-        scene.load.spritesheet(sheet.id, url, {
+    _warnEffectSheetIssues();
+
+    if (!EFFECT_SHEETS.length) {
+        console.warn("[effectAtlas] no effect sheets found with WxH in name under assets/effects");
+        return;
+    }
+
+    for (const sheet of EFFECT_SHEETS) {
+        scene.load.spritesheet(sheet.textureKey, sheet.url, {
             frameWidth: sheet.frameW,
             frameHeight: sheet.frameH
         });
     }
 }
 
-function resolveFrames(
-    layout: EffectClipLayout,
-    cols: number,
-    rows: number
-): number[] {
-    if (layout.kind === "frames") {
-        return layout.frames.slice();
-    }
-
-    if (layout.kind === "row") {
-        const startCol = layout.startCol ?? 0;
-        const step = layout.step ?? 1;
-        const out: number[] = [];
-        for (let i = 0; i < layout.count; i++) {
-            const col = startCol + i * step;
-            if (col < 0 || col >= cols) break;
-            out.push(layout.row * cols + col);
-        }
-        return out;
-    }
-
-    if (layout.kind === "grid") {
-        const out: number[] = [];
-        const order = layout.order ?? "row";
-        const maxCount = layout.count ?? (layout.rows * layout.cols);
-        let pushed = 0;
-
-        const push = (r: number, c: number) => {
-            if (pushed >= maxCount) return;
-            const rr = layout.startRow + r;
-            const cc = layout.startCol + c;
-            if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return;
-            out.push(rr * cols + cc);
-            pushed++;
-        };
-
-        if (order === "col") {
-            for (let c = 0; c < layout.cols; c++) {
-                for (let r = 0; r < layout.rows; r++) push(r, c);
-            }
-        } else {
-            for (let r = 0; r < layout.rows; r++) {
-                for (let c = 0; c < layout.cols; c++) push(r, c);
-            }
-        }
-
-        return out;
-    }
-
-    const total = rows * cols;
-    const out: number[] = [];
-    const order = layout.order ?? "row";
-    if (order === "col") {
-        for (let c = 0; c < cols; c++) {
-            for (let r = 0; r < rows; r++) {
-                out.push(r * cols + c);
-            }
-        }
-    } else {
-        for (let i = 0; i < total; i++) out.push(i);
-    }
-    return out;
-}
-
 export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
     const atlas: EffectAtlas = {};
 
-    for (const skin of EFFECT_SKINS) {
-        const resolved: EffectSkinResolved = {
-            id: skin.id,
-            defaultDir: skin.defaultDir ?? "down",
-            dirs: {}
-        };
+    for (const sheet of EFFECT_SHEETS) {
+        const tex = scene.textures.get(sheet.textureKey);
+        const source = tex?.getSourceImage?.() as HTMLImageElement | HTMLCanvasElement | undefined;
+        if (!source) continue;
 
-        for (const [dirKey, dirDef] of Object.entries(skin.dirs)) {
-            const dir = dirKey as EffectDir;
-            const sheet = EFFECT_SHEETS[dirDef.sheetId];
-            if (!sheet) continue;
-
-            const tex = scene.textures.get(sheet.id);
-            const source = tex?.getSourceImage?.() as HTMLImageElement | HTMLCanvasElement | undefined;
-            if (!source) continue;
-
-            const cols = Math.floor(source.width / sheet.frameW);
-            const rows = Math.floor(source.height / sheet.frameH);
-            if (cols <= 0 || rows <= 0) continue;
-
-            const frameIndices = resolveFrames(dirDef.clip.layout, cols, rows);
-            if (!frameIndices.length) continue;
-
-            resolved.dirs[dir] = {
-                textureKey: sheet.id,
-                frameIndices,
-                frameRate: dirDef.clip.frameRate,
-                repeat: dirDef.clip.repeat
-            };
+        const remW = source.width % sheet.frameW;
+        const remH = source.height % sheet.frameH;
+        if (remW || remH) {
+            console.warn(
+                "[effectAtlas] sheet not divisible by frame size",
+                sheet.baseName,
+                `size=${source.width}x${source.height}`,
+                `frame=${sheet.frameW}x${sheet.frameH}`
+            );
         }
 
-        atlas[skin.id] = resolved;
+        const cols = Math.floor(source.width / sheet.frameW);
+        const rows = Math.floor(source.height / sheet.frameH);
+        if (cols <= 0 || rows <= 0) continue;
+
+        const frameCount = cols * rows;
+        let frameIndices: number[] = [];
+        for (let i = 0; i < frameCount; i++) frameIndices.push(i);
+
+        let emptySkipped = 0;
+        if (EFFECT_SKIP_EMPTY_FRAMES) {
+            const trimmed = _computeNonEmptyFrameIndices(
+                source,
+                sheet.frameW,
+                sheet.frameH,
+                EFFECT_EMPTY_ALPHA_MIN
+            );
+            if (trimmed.indices.length) {
+                frameIndices = trimmed.indices;
+                emptySkipped = trimmed.emptyCount | 0;
+            }
+        }
+
+        const palette = _extractPaletteFromSource(
+            source,
+            EFFECT_PALETTE_MAX_COLORS,
+            EFFECT_PALETTE_ALPHA_MIN
+        );
+
+        if (DEBUG_EFFECT_ATLAS) {
+            console.log("[effectAtlas] sheet", {
+                id: sheet.id,
+                tex: sheet.textureKey,
+                size: `${source.width}x${source.height}`,
+                frame: `${sheet.frameW}x${sheet.frameH}`,
+                cols,
+                rows,
+                frames: frameIndices.length,
+                emptySkipped
+            });
+        }
+
+        atlas[sheet.id] = {
+            id: sheet.id,
+            textureKey: sheet.textureKey,
+            frameIndices,
+            frameRate: EFFECT_DEFAULT_FPS,
+            repeat: EFFECT_DEFAULT_REPEAT,
+            frameW: sheet.frameW,
+            frameH: sheet.frameH,
+            palette: palette || undefined
+        };
     }
 
     try {
@@ -271,4 +318,8 @@ export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
     } catch { }
 
     return atlas;
+}
+
+export function getMissingEffectSizeNames(): string[] {
+    return EFFECT_MISSING_SIZE.slice();
 }

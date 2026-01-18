@@ -126,6 +126,12 @@ type PropFocusAuraOpts = {
   blendMode?: number | "add" | "lighten" | "normal";
 };
 
+type PropOverlayOpts = {
+  tint?: number;
+  alpha?: number;
+  blendMode?: number | "add" | "lighten" | "normal";
+};
+
 function _hashString(s: string): number {
   let h = 0;
   const str = s || "";
@@ -2062,6 +2068,60 @@ tryGetPropDisplayAt(r: number, c: number): any | null {
   return (objs && objs.length) ? (objs[0] || null) : null;
 }
 
+/**
+ * Show/hide a prop's optional overlay at tile r,c.
+ *
+ * Returns true if an overlay existed and was updated.
+ */
+setPropOverlayAt(r: number, c: number, active: boolean, opts?: PropOverlayOpts): boolean {
+  const anyThis: any = this as any;
+  const instByAnchor: any = anyThis.__propInstancesByAnchor || null;
+  if (!instByAnchor) return false;
+
+  const k0 = String((r | 0)) + "," + String((c | 0));
+
+  let inst: any = instByAnchor[k0] || null;
+  if (!inst) {
+    const anchorByRc: any = anyThis.__propAnchorKeyByRC || null;
+    const ak = anchorByRc ? anchorByRc[k0] : null;
+    if (ak) inst = instByAnchor[ak] || null;
+  }
+
+  if (!inst) return false;
+  const objs: any[] = Array.isArray(inst.overlayObjs) ? inst.overlayObjs : [];
+  if (!objs.length) return false;
+
+  const alphaBase = (typeof inst.overlayAlphaDefault === "number") ? inst.overlayAlphaDefault : 1;
+  const tintBase = (typeof inst.overlayTintDefault === "number") ? inst.overlayTintDefault : null;
+  const blendBase = (inst.overlayBlendModeDefault != null) ? inst.overlayBlendModeDefault : null;
+
+  const alpha = (opts && typeof opts.alpha === "number") ? opts.alpha : alphaBase;
+  const tint = (opts && typeof opts.tint === "number") ? opts.tint : tintBase;
+  const blendModeRaw = (opts && opts.blendMode != null) ? opts.blendMode : blendBase;
+  const blendFallback = (((Phaser as any)?.BlendModes?.NORMAL ?? 0) | 0);
+  const blendResolved =
+    (blendModeRaw != null)
+      ? _resolveAuraBlendMode(blendModeRaw, blendFallback)
+      : blendFallback;
+
+  for (let i = 0; i < objs.length; i++) {
+    const obj: any = objs[i];
+    try { obj.setVisible?.(active); } catch { /* ignore */ }
+    if (active) {
+      try { obj.setAlpha?.(alpha); } catch { /* ignore */ }
+      if (tint != null) {
+        try { obj.setTint?.(tint); } catch { /* ignore */ }
+      } else {
+        try { obj.clearTint?.(); } catch { /* ignore */ }
+      }
+      try { obj.setBlendMode?.(blendResolved); } catch { /* ignore */ }
+    }
+  }
+
+  inst.overlayActive = !!active;
+  return true;
+}
+
 
 /**
  * Show/hide the prop's pre-baked focus aura (outline) at tile r,c.
@@ -3287,6 +3347,68 @@ private _propResolveAnimKey(vis: any, parsed: { explicitFrameIndex: number | nul
   return _ensurePropAnim(this.scene, textureKey, sheetCols | 0, animDef);
 }
 
+private _propResolveOverlayInfo(
+  vis: any,
+  baseTextureKey: string
+): {
+  textureKey: string;
+  cols: number;
+  ref: { row: number; col: number };
+  offsetX: number;
+  offsetY: number;
+  depthBias: number;
+  alpha: number | null;
+  tint: number | null;
+  blendMode: number | "add" | "lighten" | "normal" | null;
+  visibleByDefault: boolean;
+} | null {
+  const spec: any = vis?.overlay || null;
+  if (!spec) return null;
+
+  let textureKey = String(baseTextureKey || "");
+  if (spec.textureKey) {
+    textureKey = String(spec.textureKey || "");
+  } else if (spec.atlas) {
+    textureKey = this.atlas.resolveAtlasTextureKey(String(spec.atlas || ""));
+  }
+  if (!textureKey) return null;
+
+  const info = this.atlas.getSheetInfo(textureKey);
+  const cols = (info?.cols ?? 0) | 0;
+  if (!info || cols <= 0) return null;
+
+  let ref: { row: number; col: number } | null = null;
+  if (spec.ref) {
+    ref = { row: (spec.ref.row | 0), col: (spec.ref.col | 0) };
+  } else if (spec.frameIndex != null && !Number.isNaN(spec.frameIndex)) {
+    const tr = _tileRefFromFrameIndex(cols, spec.frameIndex | 0);
+    ref = { row: tr.row | 0, col: tr.col | 0 };
+  }
+
+  if (!ref) return null;
+
+  const offsetX = ((spec.offsetXPx ?? 0) | 0);
+  const offsetY = ((spec.offsetYPx ?? 0) | 0);
+  const depthBias = ((spec.depthBias ?? 1) | 0);
+  const alpha = (typeof spec.alpha === "number") ? spec.alpha : null;
+  const tint = (typeof spec.tint === "number") ? spec.tint : null;
+  const blendMode = (spec.blendMode != null) ? spec.blendMode : null;
+  const visibleByDefault = !!spec.visibleByDefault;
+
+  return {
+    textureKey,
+    cols,
+    ref,
+    offsetX,
+    offsetY,
+    depthBias,
+    alpha,
+    tint,
+    blendMode,
+    visibleByDefault,
+  };
+}
+
 private _propCreateDisplayObj(args: {
   x: number;
   y: number;
@@ -4121,6 +4243,7 @@ private _propPlaceOneAnchor(
   const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
 
   const animKey = this._propResolveAnimKey(vis, parsed, usedState, wTiles, hTiles, textureKey, cols);
+  const overlayInfo = this._propResolveOverlayInfo(vis, textureKey);
 
   // Depth based on anchor (bottom tile) so whole prop sorts as ONE object.
   // Include oy so y-sort matches visual when offsets are used.
@@ -4129,6 +4252,11 @@ private _propPlaceOneAnchor(
 
   const anchorKey = String(anchorR | 0) + "," + String(anchorC | 0);
   const objs: any[] = [];
+  const overlayObjs: any[] = [];
+  let overlayActive = false;
+  let overlayAlphaDefault: number | null = null;
+  let overlayTintDefault: number | null = null;
+  let overlayBlendModeDefault: number | "add" | "lighten" | "normal" | null = null;
 
   if (isBridgeH || isBridgeV) {
     if (!this.map) return;
@@ -4243,6 +4371,12 @@ private _propPlaceOneAnchor(
       state: usedState,
       baseDepth: baseDepth | 0,
 
+      overlayObjs,
+      overlayActive,
+      overlayAlphaDefault,
+      overlayTintDefault,
+      overlayBlendModeDefault,
+
       focusAura: null,
       focusAuraChildren: null,
       focusAuraBaseScale: PROP_FOCUS_AURA_BASE_SCALE,
@@ -4293,6 +4427,63 @@ private _propPlaceOneAnchor(
     }
   }
 
+  if (overlayInfo) {
+    overlayActive = !!overlayInfo.visibleByDefault;
+    overlayAlphaDefault = (typeof overlayInfo.alpha === "number") ? overlayInfo.alpha : 1;
+    overlayTintDefault = (typeof overlayInfo.tint === "number") ? overlayInfo.tint : null;
+    overlayBlendModeDefault = (overlayInfo.blendMode != null) ? overlayInfo.blendMode : null;
+
+    const overlayDepth = ((baseDepth | 0) + (overlayInfo.depthBias | 0)) | 0;
+    const oox = (overlayInfo.offsetX | 0);
+    const ooy = (overlayInfo.offsetY | 0);
+    const blendFallback = (((Phaser as any)?.BlendModes?.NORMAL ?? 0) | 0);
+    const blendResolved =
+      (overlayBlendModeDefault != null)
+        ? _resolveAuraBlendMode(overlayBlendModeDefault, blendFallback)
+        : blendFallback;
+
+    for (let dy = 0; dy < (hTiles | 0); dy++) {
+      for (let dx = 0; dx < (wTiles | 0); dx++) {
+        const worldR = ((anchorR | 0) - ((hTiles | 0) - 1) + (dy | 0)) | 0;
+        const worldC = ((anchorC | 0) + (dx | 0)) | 0;
+
+        if (!this.map) return;
+        if (worldR < 0 || worldC < 0 || worldR >= (this.map.height | 0) || worldC >= (this.map.width | 0)) continue;
+
+        const atlasCol = (overlayInfo.ref.col + dx) | 0;
+        const atlasRow = (overlayInfo.ref.row - ((hTiles | 0) - 1) + dy) | 0;
+        const frameIndex = ((atlasRow * (overlayInfo.cols | 0) + atlasCol) | 0);
+
+        const x = ((worldC * st.tileSize + (st.tileSize >> 1) + ox + oox) | 0);
+        const y = ((worldR * st.tileSize + (st.tileSize >> 1) + oy + ooy) | 0);
+
+        const obj = this._propCreateDisplayObj({
+          x,
+          y,
+          textureKey: overlayInfo.textureKey,
+          frameIndex,
+          depth: overlayDepth,
+          animKey: null,
+          isAnimAnchorCell: false,
+        });
+
+        try { obj.setVisible(overlayActive); } catch { /* ignore */ }
+        if (overlayAlphaDefault != null) {
+          try { obj.setAlpha(overlayAlphaDefault); } catch { /* ignore */ }
+        }
+        if (overlayTintDefault != null) {
+          try { obj.setTint(overlayTintDefault); } catch { /* ignore */ }
+        }
+        if (blendResolved != null) {
+          try { obj.setBlendMode(blendResolved); } catch { /* ignore */ }
+        }
+
+        overlayObjs.push(obj);
+        (st.anyThis.__propImgs as any[]).push(obj);
+      }
+    }
+  }
+
   // Focus aura (pre-baked outline tiles), created per anchor.
   const aura = this._propCreateFocusAuraContainer({
     st,
@@ -4333,6 +4524,12 @@ private _propPlaceOneAnchor(
     byRc: st.byRc,
     state: usedState,
     baseDepth: baseDepth | 0,
+
+    overlayObjs,
+    overlayActive,
+    overlayAlphaDefault,
+    overlayTintDefault,
+    overlayBlendModeDefault,
 
     focusAura: aura ? aura.cont : null,
     focusAuraChildren: aura ? aura.children : null,
@@ -4483,7 +4680,9 @@ private _propDestroyInstance(
   anchorKeyByRc: Record<string, string>
 ): void {
   const objs: any[] = Array.isArray(inst?.objs) ? inst.objs : [];
+  const overlayObjs: any[] = Array.isArray(inst?.overlayObjs) ? inst.overlayObjs : [];
   const objSet = new Set<any>(objs);
+  for (let i = 0; i < overlayObjs.length; i++) objSet.add(overlayObjs[i]);
 
   if (Array.isArray(anyThis.__propImgs)) {
     anyThis.__propImgs = (anyThis.__propImgs as any[]).filter(o => !objSet.has(o));
@@ -4491,6 +4690,10 @@ private _propDestroyInstance(
 
   for (let i = 0; i < objs.length; i++) {
     const obj = objs[i];
+    try { obj?.destroy?.(); } catch { /* ignore */ }
+  }
+  for (let i = 0; i < overlayObjs.length; i++) {
+    const obj = overlayObjs[i];
     try { obj?.destroy?.(); } catch { /* ignore */ }
   }
 

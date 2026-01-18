@@ -90,26 +90,18 @@ export function initHeroEngineHostOverrides() {
     }
 
     function resolveProfileForHeroIndex(heroIndex: number, heroesArr: Sprite[]): string {
-        // Mirror engine logic: prefer OWNER slot if present
-        let slotIndex = heroIndex;
         try {
             const hero = heroesArr[heroIndex];
             if (hero) {
-                const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
-                if (ownerId > 0) slotIndex = ownerId - 1;
+                const v0 = sprites.readDataString(hero, "__profileKey");
+                if (typeof v0 === "string" && v0.trim()) return v0.trim();
+                const v = sprites.readDataString(hero, HERO_DATA.NAME);
+                if (typeof v === "string" && v.trim()) return v.trim();
+                const v2 = sprites.readDataString(hero, "heroName");
+                if (typeof v2 === "string" && v2.trim()) return v2.trim();
             }
         } catch (_e) {
-            // If HERO_DATA or sprites.readDataNumber are not available, just keep heroIndex
-        }
-
-        // Optional override from host (main.ts) via globalThis.__heroProfiles
-        try {
-            const gAny: any = globalThis as any;
-            if (gAny && gAny.__heroProfiles && typeof gAny.__heroProfiles[slotIndex] === "string") {
-                return gAny.__heroProfiles[slotIndex];
-            }
-        } catch (_e) {
-            // In Arcade builds, globalThis might not exist
+            // ignore
         }
 
         return "Default";

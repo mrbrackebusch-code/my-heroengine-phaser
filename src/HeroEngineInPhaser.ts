@@ -37,9 +37,13 @@ import {
     DEBUG_DUNGEON_LOGS,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
     DEBUG_DISABLE_ENEMY_WALL_COLLISIONS,
+    DEBUG_ENEMY_AI_DECISIONS,
+    DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES,
+    DEBUG_ENEMY_AI_DECISIONS_THROTTLE_MS,
     DEBUG_ENEMY_NAV_COLLISION,
     DEBUG_ENEMY_NAV_LOG,
     DEBUG_ENEMY_STUCK_LOG,
+    DEBUG_EFFECT_ANIMS,
     DEBUG_FILTER_LOGS,
     DEBUG_FILTER_PHRASE,
     DEBUG_FOCUS_LOGS,
@@ -52,11 +56,13 @@ import {
     DEBUG_HERO_LOGIC,
     DEBUG_HERO_LOGIC_ENTER,
     DEBUG_HERO_LOGIC_OUT,
+    DEBUG_HERO_SPAWN_LOGS,
     DEBUG_INT_DET,
     DEBUG_INT_DET_FORCE_VISIBLE_IMAGE,
     DEBUG_INTEGRATOR,
     DEBUG_MANA_FAIL_LOG_ONCE,
     DEBUG_MONSTER_ID,
+    DEBUG_NET_IDENTITY,
     DEBUG_MOVE_PIPE,
     DEBUG_MOVE_PIPE_PLAYER,
     DEBUG_MOVE_PIPE_THROTTLE_MS,
@@ -87,6 +93,19 @@ import {
     type PropDirection,
     type PropSpec,
 } from "./propSpecs";
+import type { TrapInstance } from "./trapInstances";
+import {
+    canAttemptTrapInstance,
+    getTrapInstance,
+    getTrapDefinitionForProp,
+    pickTrapDefinitionForFloor,
+    recordTrapAttempt,
+    registerTrapPropSpawn,
+    resetAllTrapInstances,
+    setTrapInstanceState,
+    spawnTrapInstanceForProp,
+} from "./trapRegistry";
+import type { TrapDefinition } from "./trapRegistry";
 
 // -----------------------------------------------------
 
@@ -1173,6 +1192,26 @@ namespace HeroEngine {
 
     export let hero4LogicHook: any = defaultHeroLogic;
 
+    export type HeroLogicByProfileHook = (
+        profile: string,
+        button: string,
+        heroIndex: number,
+        enemiesArr: any[],
+        heroesArr: any[]
+    ) => number[] | null;
+
+    export let heroLogicByProfileHook: HeroLogicByProfileHook = null;
+
+    export type HeroAnimByProfileHook = (
+        profile: string,
+        hero: Sprite,
+        animKey: string,
+        timeMs: number,
+        direction: string
+    ) => void;
+
+    export let animateHeroByProfileHook: HeroAnimByProfileHook = null;
+
 
 
 
@@ -1884,7 +1923,283 @@ const FAMILY = {
 
 // Elements
 
-const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5 }
+const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5, ICE: 6, AIR: 7, WIND: 7 }
+const ELEM_MAX = 7
+
+const ELEMENT_WEAK_MULT = 1.5
+const ELEMENT_RESIST_MULT = 0.5
+const ELEMENT_FIRE_VS_ICE_MULT = 4
+
+function _elementWeaknessMultiplier(attacker: number, defender: number): number {
+    const atk = attacker | 0
+    const def = defender | 0
+    if (atk <= 0 || def <= 0) return 1
+
+    if (atk === ELEM.FIRE && def === ELEM.ICE) return ELEMENT_FIRE_VS_ICE_MULT
+
+    if (atk === ELEM.FIRE && (def === ELEM.GRASS || def === ELEM.AIR)) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.WATER && (def === ELEM.FIRE || def === ELEM.EARTH)) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.GRASS && (def === ELEM.WATER || def === ELEM.EARTH)) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.ELECTRIC && (def === ELEM.WATER || def === ELEM.AIR)) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.EARTH && def === ELEM.ELECTRIC) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.AIR && def === ELEM.GRASS) return ELEMENT_WEAK_MULT
+    if (atk === ELEM.ICE && (def === ELEM.GRASS || def === ELEM.EARTH || def === ELEM.ELECTRIC)) return ELEMENT_WEAK_MULT
+
+    return 1
+}
+
+function _elementVsElementMultiplier(attacker: number, defender: number): number {
+    const atk = attacker | 0
+    const def = defender | 0
+    if (atk <= 0 || def <= 0) return 1
+
+    const weak = _elementWeaknessMultiplier(atk, def)
+    if (weak !== 1) return weak
+
+    const reverse = _elementWeaknessMultiplier(def, atk)
+    if (reverse !== 1) return ELEMENT_RESIST_MULT
+
+    return 1
+}
+
+function _elementDamageMultiplier(attacker: number, defenderElements: number[] | null | undefined): number {
+    const atk = attacker | 0
+    if (atk <= 0) return 1
+    if (!defenderElements || defenderElements.length <= 0) return 1
+
+    let mult = 1
+    for (let i = 0; i < defenderElements.length; i++) {
+        mult *= _elementVsElementMultiplier(atk, defenderElements[i] | 0)
+    }
+    return mult
+}
+
+type HeroElementEffectMode = "offense" | "defense"
+
+type HeroElementEffectConfig = {
+    baseId?: string;
+    useDir?: boolean;
+    dirIds?: {
+        up?: string;
+        down?: string;
+        left?: string;
+        right?: string;
+    };
+};
+
+const HERO_SPELL_ELEMENT_OFFENSE_EFFECTS: { [element: number]: HeroElementEffectConfig } = {
+    [ELEM.NONE]: { baseId: "tornado" },
+    [ELEM.FIRE]: { baseId: "firelion", useDir: true },
+    [ELEM.WATER]: { baseId: "torrentacle" },
+    [ELEM.ELECTRIC]: { baseId: "lightningclaw" },
+    [ELEM.EARTH]: { baseId: "spikes" },
+    [ELEM.AIR]: { baseId: "tornado" },
+    [ELEM.GRASS]: {
+        dirIds: {
+            up: "snakebite_up",
+            down: "snakebite_down",
+            left: "snakebite_side",
+            right: "snakebite_side"
+        }
+    },
+    [ELEM.ICE]: { baseId: "icetacle" },
+};
+
+const HERO_SPELL_ELEMENT_DEFENSE_EFFECTS: { [element: number]: HeroElementEffectConfig } = {
+    [ELEM.NONE]: { baseId: "tornado" },
+    [ELEM.FIRE]: { baseId: "firelion", useDir: true },
+    [ELEM.WATER]: { baseId: "torrentacle" },
+    [ELEM.ELECTRIC]: { baseId: "lightningclaw" },
+    [ELEM.EARTH]: { baseId: "spikes" },
+    [ELEM.AIR]: { baseId: "tornado" },
+    [ELEM.GRASS]: {
+        dirIds: {
+            up: "turtleshell_front",
+            down: "turtleshell_front",
+            left: "turtleshell_side",
+            right: "turtleshell_side"
+        }
+    },
+    [ELEM.ICE]: { baseId: "iceshield" },
+};
+
+function _heroElementFromRenderStyle(hero: Sprite): number {
+    if (!hero) return ELEM.NONE;
+    const mask = sprites.readDataNumber(hero, HERO_DATA.RenderStyleMask) | 0;
+    if (!mask) return ELEM.NONE;
+    for (let e = 1; e <= (ELEM_MAX | 0); e++) {
+        if (mask & (1 << e)) return e;
+    }
+    return ELEM.NONE;
+}
+
+function _heroSpellEffectPick(
+    element: number,
+    dir: string,
+    mode?: HeroElementEffectMode
+): { skinId: string; dir?: string } | null {
+    let cfg: HeroElementEffectConfig | null = null;
+    if (mode === "defense") {
+        cfg =
+            HERO_SPELL_ELEMENT_DEFENSE_EFFECTS[element] ||
+            HERO_SPELL_ELEMENT_OFFENSE_EFFECTS[element] ||
+            HERO_SPELL_ELEMENT_DEFENSE_EFFECTS[ELEM.NONE] ||
+            HERO_SPELL_ELEMENT_OFFENSE_EFFECTS[ELEM.NONE] ||
+            null;
+    } else {
+        cfg =
+            HERO_SPELL_ELEMENT_OFFENSE_EFFECTS[element] ||
+            HERO_SPELL_ELEMENT_OFFENSE_EFFECTS[ELEM.NONE] ||
+            null;
+    }
+    if (!cfg) return null;
+    const d = (dir || "down").toLowerCase();
+    if (cfg.dirIds) {
+        const pick = (cfg.dirIds as any)[d] || cfg.dirIds.down || cfg.dirIds.up || "";
+        if (!pick) return null;
+        return { skinId: pick };
+    }
+    if (!cfg.baseId) return null;
+    if (cfg.useDir) return { skinId: cfg.baseId, dir: d };
+    return { skinId: cfg.baseId };
+}
+
+function _applyHeroSpellElementEffect(
+    spell: Sprite,
+    element: number,
+    dir: string,
+    mode?: HeroElementEffectMode
+): boolean {
+    if (!spell || (spell.flags & sprites.Flag.Destroyed)) return false;
+    const pick = _heroSpellEffectPick(element | 0, dir || "", mode);
+    if (!pick || !pick.skinId) return false;
+    const curSkin = sprites.readDataString(spell, "effectSkin") || "";
+    const curDir = sprites.readDataString(spell, "effectDir") || "";
+    const nextDir = pick.dir || "";
+    if (curSkin === pick.skinId && curDir === nextDir) return true;
+    if (!pick.dir && curDir) sprites.setDataString(spell, "effectDir", "");
+    if (pick.dir) applyEffectToSprite(spell, pick.skinId, { dir: pick.dir });
+    else applyEffectToSprite(spell, pick.skinId);
+    return true;
+}
+
+const EFFECT_TINT_DATA_KEY = "effectTint";
+const _elementTintCache: { [k: string]: number } = Object.create(null);
+
+function _getEffectAtlasAny(): any {
+    const g: any = globalThis as any;
+    return (
+        (g && g.__effectAtlas) ||
+        (g && g.__phaserScene && g.__phaserScene.registry?.get?.("effectAtlas")) ||
+        null
+    );
+}
+
+function _resolveEffectEntry(atlas: any, skinId: string, dir?: string): any {
+    if (!atlas || !skinId) return null;
+    let resolved = atlas[skinId] || null;
+    if (!resolved && dir) {
+        const dirLower = String(dir || "").trim().toLowerCase();
+        const suffixes = [`_${dirLower}`, `-${dirLower}`, ` ${dirLower}`];
+        for (const suffix of suffixes) {
+            const candidate = `${skinId}${suffix}`;
+            if (atlas[candidate]) {
+                resolved = atlas[candidate];
+                break;
+            }
+        }
+    }
+    return resolved;
+}
+
+function _effectTintForSkinInAtlas(atlas: any, skinId: string, dir?: string): number {
+    const resolved = _resolveEffectEntry(atlas, skinId, dir);
+    const tint = resolved?.palette?.tint;
+    return (typeof tint === "number" && isFinite(tint) && tint > 0) ? (tint | 0) : 0;
+}
+
+function _effectTintForSkin(skinId: string, dir?: string): number {
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) return 0;
+    return _effectTintForSkinInAtlas(atlas, skinId, dir);
+}
+
+function _elementTintForMode(element: number, mode?: HeroElementEffectMode): number {
+    const key = `${element | 0}|${mode || "offense"}`;
+    if (Object.prototype.hasOwnProperty.call(_elementTintCache, key)) {
+        return (_elementTintCache[key] | 0) || 0;
+    }
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) return 0;
+    const pick = _heroSpellEffectPick(element | 0, "down", mode);
+    let tint = 0;
+    if (pick && pick.skinId) {
+        tint = _effectTintForSkinInAtlas(atlas, pick.skinId, pick.dir || "");
+    }
+    _elementTintCache[key] = tint | 0;
+    return tint | 0;
+}
+
+const HERO_ELEMENT_TRAIL_LAST_MS_KEY = "__heroElTrailAt";
+const HERO_ELEMENT_TRAIL_INTERVAL_MS = 60;
+const HERO_ELEMENT_TRAIL_LIFESPAN_MS = 220;
+const HERO_ELEMENT_TRAIL_SPEED_PX = 18;
+const HERO_ELEMENT_TRAIL_SIZE_PX = 2;
+
+function _heroElementParticleColor(element: number): number {
+    const e = element | 0;
+    if (e === ELEM.FIRE) return 2;
+    if (e === ELEM.WATER) return 9;
+    if (e === ELEM.ICE) return 8;
+    if (e === ELEM.ELECTRIC) return 5;
+    if (e === ELEM.EARTH) return 6;
+    if (e === ELEM.GRASS) return 7;
+    if (e === ELEM.AIR) return 3;
+    if (e === ELEM.NONE) return 0;
+    return 1;
+}
+
+function _spawnHeroElementTrailParticle(proj: Sprite, element: number, nowMs: number): void {
+    if (!proj || (proj.flags & sprites.Flag.Destroyed)) return;
+    const color = _heroElementParticleColor(element | 0);
+    if (color <= 0) return;
+    const lastAt = sprites.readDataNumber(proj, HERO_ELEMENT_TRAIL_LAST_MS_KEY) | 0;
+    if (lastAt > 0 && (nowMs | 0) < (lastAt + HERO_ELEMENT_TRAIL_INTERVAL_MS)) return;
+    sprites.setDataNumber(proj, HERO_ELEMENT_TRAIL_LAST_MS_KEY, nowMs | 0);
+
+    const img = image.create(HERO_ELEMENT_TRAIL_SIZE_PX, HERO_ELEMENT_TRAIL_SIZE_PX);
+    img.fill(color);
+
+    const fx = sprites.create(img, SpriteKind.RelicEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.z = proj.z - 1;
+    fx.x = proj.x + randint(-2, 2);
+    fx.y = proj.y + randint(-2, 2);
+    const sp = HERO_ELEMENT_TRAIL_SPEED_PX | 0;
+    fx.vx = randint(-sp, sp);
+    fx.vy = randint(-sp, sp);
+    fx.lifespan = HERO_ELEMENT_TRAIL_LIFESPAN_MS | 0;
+}
+
+function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanMs: number): boolean {
+    if (!spell || (spell.flags & sprites.Flag.Destroyed)) return false;
+    const isHeal = (sprites.readDataNumber(spell, PROJ_DATA.IS_HEAL) | 0) === 1;
+    const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0;
+    const mode: HeroElementEffectMode = (isHeal || family === FAMILY.HEAL) ? "defense" : "offense";
+    const pick = _heroSpellEffectPick(element | 0, "down", mode);
+    if (!pick || !pick.skinId) return false;
+    const img = image.create(2, 2);
+    img.fill(0);
+    const fx = sprites.create(img, SpriteKind.RelicEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.x = spell.x;
+    fx.y = spell.y;
+    fx.z = spell.z + 2;
+    fx.lifespan = Math.max(200, lifespanMs | 0) | 0;
+    if (pick.dir) applyEffectToSprite(fx, pick.skinId, { dir: pick.dir });
+    else applyEffectToSprite(fx, pick.skinId);
+    return true;
+}
 
 
 
@@ -1971,7 +2286,7 @@ const STAT = {
 
 const HERO_DATA = {
 
-    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana", NAME: "name",
+    HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana", NAME: "name", SPAWN_REASON: "spawnReason",
 
     FAMILY: "family", BUTTON: "btn",
 
@@ -2539,6 +2854,7 @@ const PROJ_DATA = {
     FAMILY: "family",
 
     BUTTON: "btn",
+    ELEMENT: "elem",
 
 
 
@@ -2687,6 +3003,7 @@ const HERO_DAMAGE_FLASH_MS = 150
 // --------------------------------------------------------------
 
 let heroes: Sprite[] = []
+const heroesByProfile: Record<string, Sprite> = Object.create(null)
 
 let enemies: Sprite[] = []
 
@@ -2699,7 +3016,7 @@ let npcActors: Sprite[] = []
 
 // NEW (Agility): stored-hit counter text + future packet bank UI
 
-let heroAgiStoredCounters: Sprite[] = []
+let heroAgiStoredCountersByProfile: Record<string, Sprite> = Object.create(null)
 
 
 
@@ -2715,23 +3032,23 @@ let worldRuntimeMs = 0
 
 // NEW: hero buff state (per-hero arrays)
 
-let heroBuffs: any[][] = [[], [], [], []]
+let heroBuffsByProfile: Record<string, any[]> = Object.create(null)
 
-let heroMoveSpeedMult: number[] = [1, 1, 1, 1]   // haste from buffs
+let heroMoveSpeedMultByProfile: Record<string, number> = Object.create(null)   // haste from buffs
 
-let heroDamageAmpMult: number[] = [1, 1, 1, 1]   // damage amp from buffs (hooked later)
-
-
-
-let heroHPBars: StatusBarSprite[] = []
-
-let heroManaBars: StatusBarSprite[] = []
-let heroManaFlashUntil: number[] = []
-let heroHealGlowUntil: number[] = []
+let heroDamageAmpMultByProfile: Record<string, number> = Object.create(null)   // damage amp from buffs (hooked later)
 
 
 
-let heroStrengthChargeBars: StatusBarSprite[] = []
+let heroHPBarsByProfile: Record<string, StatusBarSprite> = Object.create(null)
+
+let heroManaBarsByProfile: Record<string, StatusBarSprite> = Object.create(null)
+let heroManaFlashUntilByProfile: Record<string, number> = Object.create(null)
+let heroHealGlowUntilByProfile: Record<string, number> = Object.create(null)
+
+
+
+let heroStrengthChargeBarsByProfile: Record<string, StatusBarSprite> = Object.create(null)
 
 
 
@@ -2739,9 +3056,9 @@ let heroStrengthChargeBars: StatusBarSprite[] = []
 
 let enemyHPBars: StatusBarSprite[] = []
 
-let heroComboMeters: Sprite[] = []
+let heroComboMetersByProfile: Record<string, Sprite> = Object.create(null)
 
-let heroAgiAimIndicators: Sprite[] = []
+let heroAgiAimIndicatorsByProfile: Record<string, Sprite> = Object.create(null)
 
 
 
@@ -2752,6 +3069,7 @@ let heroAgiAimIndicators: Sprite[] = []
 // Profile-centric identity (primary). Maps profile -> hero index and back.
 const profileToHeroIndex: Record<string, number> = Object.create(null)
 const heroIndexToProfile: Record<number, string> = Object.create(null)
+const HERO_PROFILE_KEY = "__profileKey"
 
 // Legacy pid->profile bridge (secondary; used by network/UI surfaces)
 const playerIdToProfile: Record<number, string> = Object.create(null)
@@ -2759,19 +3077,590 @@ const playerIdToProfile: Record<number, string> = Object.create(null)
 // Deprecated pid mapping (kept for transitional compatibility)
 let playerToHeroIndex: number[] = [-1, -1, -1, -1, -1]
 
+function _normalizeProfileKey(raw: any): string {
+    if (typeof raw !== "string") return ""
+    return raw.trim()
+}
+
+function _getProfileFromHeroSprite(hero: Sprite): string {
+    if (!hero) return ""
+    try {
+        const v0 = sprites.readDataString(hero, HERO_PROFILE_KEY)
+        if (typeof v0 === "string" && v0.trim()) return v0.trim()
+    } catch { }
+    try {
+        const v = sprites.readDataString(hero, HERO_DATA.NAME)
+        if (typeof v === "string" && v.trim()) return v.trim()
+    } catch { }
+    try {
+        const v2 = sprites.readDataString(hero, "heroName")
+        if (typeof v2 === "string" && v2.trim()) {
+            const s = v2.trim()
+            if (s !== "idle" && s !== "run" && s !== "walk") return s
+        }
+    } catch { }
+    return ""
+}
+
+function _registerHeroProfile(profileRaw: any, heroIndex: number): string {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return ""
+    profileToHeroIndex[key] = heroIndex | 0
+    heroIndexToProfile[heroIndex | 0] = key
+    try {
+        const hero = heroes[heroIndex | 0]
+        if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+            sprites.setDataString(hero, HERO_PROFILE_KEY, key)
+        }
+    } catch { }
+    return key
+}
+
+function _clearHeroProfile(profileRaw: any, heroIndex: number): void {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return
+    if ((profileToHeroIndex[key] | 0) === (heroIndex | 0)) {
+        delete profileToHeroIndex[key]
+    }
+    if ((heroIndexToProfile[heroIndex | 0] || "") === key) {
+        delete heroIndexToProfile[heroIndex | 0]
+    }
+    try {
+        const hero = heroes[heroIndex | 0]
+        if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+            sprites.setDataString(hero, HERO_PROFILE_KEY, "")
+        }
+    } catch { }
+}
+
+function _resolveHeroIndexForProfile(profileRaw: any): number {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return -1
+    const idx = profileToHeroIndex[key]
+    if (idx == null) return -1
+    const hero = heroes[idx]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        delete profileToHeroIndex[key]
+        delete heroIndexToProfile[idx]
+        return -1
+    }
+    return idx | 0
+}
+
+function _heroProfileKeyForIndex(heroIndex: number): string {
+    return getHeroProfileForHeroIndex(heroIndex)
+}
+
+function _heroStateGetNum(map: Record<string, number>, heroIndex: number, fallback: number): number {
+    const key = _heroProfileKeyForIndex(heroIndex)
+    if (!key) return fallback
+    const v = map[key]
+    return (typeof v === "number" && isFinite(v)) ? (v | 0) : fallback
+}
+
+function _heroStateSetNum(map: Record<string, number>, heroIndex: number, value: number): void {
+    const key = _heroProfileKeyForIndex(heroIndex)
+    if (!key) return
+    map[key] = value | 0
+}
+
+function _heroStateGetSprite(map: Record<string, Sprite>, heroIndex: number): Sprite {
+    const key = _heroProfileKeyForIndex(heroIndex)
+    if (!key) return null
+    return map[key] || null
+}
+
+function _heroStateSetSprite(map: Record<string, Sprite>, heroIndex: number, value: Sprite): void {
+    const key = _heroProfileKeyForIndex(heroIndex)
+    if (!key) return
+    if (!value) {
+        delete map[key]
+        return
+    }
+    map[key] = value
+}
+
+function _heroStateGetArray<T>(map: Record<string, T[]>, heroIndex: number): T[] {
+    const key = _heroProfileKeyForIndex(heroIndex)
+    if (!key) return []
+    let arr = map[key]
+    if (!arr) {
+        arr = []
+        map[key] = arr
+    }
+    return arr
+}
+
+function _getHeroFacingX(heroIndex: number): number {
+    return _heroStateGetNum(heroFacingXByProfile, heroIndex, 0)
+}
+
+function _getHeroFacingY(heroIndex: number): number {
+    return _heroStateGetNum(heroFacingYByProfile, heroIndex, 0)
+}
+
+function _setHeroFacingX(heroIndex: number, value: number): void {
+    _heroStateSetNum(heroFacingXByProfile, heroIndex, value | 0)
+}
+
+function _setHeroFacingY(heroIndex: number, value: number): void {
+    _heroStateSetNum(heroFacingYByProfile, heroIndex, value | 0)
+}
+
+type HeroInputState = {
+    left: boolean
+    right: boolean
+    up: boolean
+    down: boolean
+    A: boolean
+    B: boolean
+}
+
+const heroInputByProfile: Record<string, HeroInputState> = Object.create(null)
+
+function _getInputStateForProfile(profileRaw: any): HeroInputState {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return { left: false, right: false, up: false, down: false, A: false, B: false }
+    let st = heroInputByProfile[key]
+    if (!st) {
+        st = { left: false, right: false, up: false, down: false, A: false, B: false }
+        heroInputByProfile[key] = st
+    }
+    return st
+}
+
+function _getInputStateForHeroIndex(heroIndex: number): HeroInputState {
+    const profile = _heroProfileKeyForIndex(heroIndex)
+    return _getInputStateForProfile(profile)
+}
+
+function _syncLocalInputState(profileRaw: any): void {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return
+    const st = _getInputStateForProfile(key)
+    let pid = 1
+    try {
+        const g: any = globalThis as any
+        const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+        if (netPid > 0) pid = netPid
+    } catch { }
+    const ctrl: any = (controller as any)[`player${pid}`] || controller.player1
+    if (!ctrl) return
+    st.left = ctrl.left.isPressed()
+    st.right = ctrl.right.isPressed()
+    st.up = ctrl.up.isPressed()
+    st.down = ctrl.down.isPressed()
+    st.A = ctrl.A.isPressed()
+    st.B = ctrl.B.isPressed()
+}
+
+function _applyNetInputForProfile(profileRaw: any, btn: string, pressed: boolean): void {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return
+    const st = _getInputStateForProfile(key)
+    if (btn === "left") st.left = !!pressed
+    else if (btn === "right") st.right = !!pressed
+    else if (btn === "up") st.up = !!pressed
+    else if (btn === "down") st.down = !!pressed
+    else if (btn === "A") st.A = !!pressed
+    else if (btn === "B") st.B = !!pressed
+    if (DEBUG_MOVE_PIPE) {
+        const hi = _resolveHeroIndexForProfile(key)
+        if (hi >= 0 && hi < heroes.length) {
+            const hero = heroes[hi]
+            if (hero) {
+                _dbgMovePipeTick("INPUT_APPLY", hi, hero, game.runtime() | 0, `profile=${key} btn=${btn} pressed=${pressed ? 1 : 0}`)
+            }
+        } else {
+            console.log(`[PIPE][INPUT_APPLY] profile=${key} btn=${btn} pressed=${pressed ? 1 : 0} heroIndex=-1`)
+        }
+    }
+}
+
+function _getIntentStateForProfile(profileRaw: any): HeroIntentState {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) {
+        return {
+            intent: "",
+            pending1: "",
+            pending2: "",
+            prevA: false,
+            prevB: false,
+            lastAEdgeMs: 0,
+            lastBEdgeMs: 0,
+        }
+    }
+    let st = heroIntentByProfile[key]
+    if (!st) {
+        st = {
+            intent: "",
+            pending1: "",
+            pending2: "",
+            prevA: false,
+            prevB: false,
+            lastAEdgeMs: 0,
+            lastBEdgeMs: 0,
+        }
+        heroIntentByProfile[key] = st
+    }
+    return st
+}
+
+function _consumeIntentForProfile(profileRaw: any): string {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return ""
+    const st = _getIntentStateForProfile(key)
+    if (st.pending1 !== "") {
+        const s = st.pending1
+        st.pending1 = st.pending2
+        st.pending2 = ""
+        return s
+    }
+    if (st.pending2 !== "") {
+        const s = st.pending2
+        st.pending2 = ""
+        return s
+    }
+    return ""
+}
+
+function _queueIntentForProfile(profileRaw: any, ev: string): void {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return
+    const st = _getIntentStateForProfile(key)
+    if (st.pending1 === "") st.pending1 = ev
+    else if (st.pending2 === "") st.pending2 = ev
+    else st.pending2 = ev
+}
+
+function _upgradePendingToAB(profileRaw: any): boolean {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return false
+    const st = _getIntentStateForProfile(key)
+    if (st.pending1 === "A" || st.pending1 === "B") { st.pending1 = "A+B"; return true }
+    if (st.pending2 === "A" || st.pending2 === "B") { st.pending2 = "A+B"; return true }
+    return false
+}
+
+function _getLocalProfileKey(): string {
+    try {
+        const g: any = globalThis as any
+        const pid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+        if (pid > 0 && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+            return _normalizeProfileKey(g.__netProfileByPid[pid])
+        }
+        const local = (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+            ? g.__localHeroProfileName.trim()
+            : (typeof g.__netHelloProfile === "string" && g.__netHelloProfile.trim())
+                ? g.__netHelloProfile.trim()
+                : ""
+        return _normalizeProfileKey(local)
+    } catch {
+        return ""
+    }
+}
+
+const HERO_TELE_FX_MODE_KEY = "__teleFxMode" // 0 none, 1=in, 2=out
+const HERO_TELE_FX_START_MS_KEY = "__teleFxStartMs"
+const HERO_TELE_FX_DUR_MS_KEY = "__teleFxDurMs"
+const HERO_TELE_FX_DIR_IDX_KEY = "__teleFxDirIdx"
+const HERO_TELE_FX_LOCKED_KEY = "__teleFxLocked"
+const HERO_TELE_FX_PROFILE_KEY = "__teleFxProfile"
+const HERO_TELE_FX_REASON_KEY = "__teleFxReason"
+const HERO_TELE_FX_IN_MS = 600
+const HERO_TELE_FX_OUT_MS = 450
+const HERO_TELE_FX_SPIN_STEP_MS = 90
+const HERO_TELE_FX_SCALE_MIN = 0.1
+
+function _setHeroTeleportScale(hero: Sprite, scale: number): void {
+    const s = Math.max(HERO_TELE_FX_SCALE_MIN, Math.min(1.2, scale))
+    sprites.setDataNumber(hero, "__atkVisScaleX1000", Math.max(1, Math.round(s * 1000)))
+}
+
+function _beginHeroTeleportFx(heroIndex: number, hero: Sprite, mode: number, profileKey: string, reason: string): void {
+    if (!hero) return
+    const nowMs = Math.max(1, game.runtime() | 0)
+    const dur = (mode === 2) ? HERO_TELE_FX_OUT_MS : HERO_TELE_FX_IN_MS
+    const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+    if (!locked) lockHeroControls(heroIndex)
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataNumber(hero, HERO_TELE_FX_MODE_KEY, mode | 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_START_MS_KEY, nowMs | 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_DUR_MS_KEY, dur | 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_DIR_IDX_KEY, -1)
+    sprites.setDataNumber(hero, HERO_TELE_FX_LOCKED_KEY, locked ? 0 : 1)
+    sprites.setDataString(hero, HERO_TELE_FX_PROFILE_KEY, profileKey || "")
+    sprites.setDataString(hero, HERO_TELE_FX_REASON_KEY, reason || "")
+
+    setHeroPhaseString(heroIndex, "emote")
+    _animKeys_stampPhaseWindow(heroIndex, hero, "emote", nowMs, dur | 0, "teleportFx")
+    setHeroBusyUntil(heroIndex, (nowMs + dur) | 0)
+    _setHeroTeleportScale(hero, mode === 2 ? 1 : HERO_TELE_FX_SCALE_MIN)
+}
+
+function _clearHeroTeleportFx(heroIndex: number, hero: Sprite): void {
+    sprites.setDataNumber(hero, HERO_TELE_FX_MODE_KEY, 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_START_MS_KEY, 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_DUR_MS_KEY, 0)
+    sprites.setDataNumber(hero, HERO_TELE_FX_DIR_IDX_KEY, -1)
+    sprites.setDataNumber(hero, HERO_TELE_FX_LOCKED_KEY, 0)
+    sprites.setDataString(hero, HERO_TELE_FX_PROFILE_KEY, "")
+    sprites.setDataString(hero, HERO_TELE_FX_REASON_KEY, "")
+    sprites.setDataNumber(hero, "__atkVisScaleX1000", 0)
+}
+
+function _finalizeHeroTeleportOut(heroIndex: number, hero: Sprite): void {
+    const profileKey = sprites.readDataString(hero, HERO_TELE_FX_PROFILE_KEY) || ""
+    const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+    hero.destroy()
+    _clearHeroProfile(profileKey, heroIndex)
+    if (pid > 0 && playerToHeroIndex[pid] === heroIndex) playerToHeroIndex[pid] = -1
+    for (const pidStr of Object.keys(playerIdToProfile)) {
+        const p = pidStr | 0
+        if (playerIdToProfile[p] === profileKey) delete playerIdToProfile[p]
+    }
+    if (DEBUG_NET_IDENTITY && profileKey) {
+        console.log("[profile] despawn complete", { profile: profileKey, pid, heroIndex })
+    }
+}
+
+function updateHeroTeleportFx(nowMs: number): void {
+    const now = nowMs | 0
+    const dirs = [
+        [1, 0],
+        [0, 1],
+        [-1, 0],
+        [0, -1],
+    ]
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const mode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+        if (!mode) continue
+
+        let start = sprites.readDataNumber(hero, HERO_TELE_FX_START_MS_KEY) | 0
+        if (start <= 0) start = now
+        const dur = Math.max(1, sprites.readDataNumber(hero, HERO_TELE_FX_DUR_MS_KEY) | 0)
+        let t = (now - start) / dur
+        if (t < 0) t = 0
+        if (t > 1) t = 1
+        const ease = t * t * (3 - 2 * t)
+        const scale = (mode === 2)
+            ? (1 - (1 - HERO_TELE_FX_SCALE_MIN) * ease)
+            : (HERO_TELE_FX_SCALE_MIN + (1 - HERO_TELE_FX_SCALE_MIN) * ease)
+        _setHeroTeleportScale(hero, scale)
+
+        const idx = Math.idiv((now - start) | 0, HERO_TELE_FX_SPIN_STEP_MS) % 4
+        const prevIdx = sprites.readDataNumber(hero, HERO_TELE_FX_DIR_IDX_KEY) | 0
+        if (idx !== prevIdx) {
+            sprites.setDataNumber(hero, HERO_TELE_FX_DIR_IDX_KEY, idx | 0)
+            const d = dirs[idx]
+            _setHeroFacingX(hi, d[0])
+            _setHeroFacingY(hi, d[1])
+            syncHeroDirData(hi)
+        }
+
+        if (t >= 1) {
+            if (mode === 2) {
+                _finalizeHeroTeleportOut(hi, hero)
+            } else {
+                const lockedByFx = sprites.readDataNumber(hero, HERO_TELE_FX_LOCKED_KEY) | 0
+                _clearHeroTeleportFx(hi, hero)
+                if (lockedByFx) unlockHeroControls(hi)
+                setHeroPhaseString(hi, "idle")
+                _animKeys_stampPhaseWindow(hi, hero, "idle", now, _ambientPhaseWindowMs("idle"), "teleportFx:end")
+            }
+        }
+    }
+}
+
+function _getInputStateForOwnerId(ownerId: number): HeroInputState | null {
+    const pid = ownerId | 0
+    if (pid <= 0) return null
+    let profile = playerIdToProfile[pid] || ""
+    if (!profile) {
+        try {
+            const g: any = globalThis as any
+            if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+                profile = g.__netProfileByPid[pid]
+            } else if (g && g.__net && (g.__net.playerId | 0) === (pid | 0)) {
+                profile = _getLocalProfileKey()
+            }
+        } catch { }
+    }
+    if (!profile) return null
+    return _getInputStateForProfile(profile)
+}
+
+function _updateIntentStateForProfile(profileKey: string, st: HeroInputState, nowMs: number, debugLocal: boolean): void {
+    if (!profileKey) return
+    const intentState = _getIntentStateForProfile(profileKey)
+    const aNow = !!st.A
+    const bNow = !!st.B
+
+    if (aNow && bNow) intentState.intent = "A+B"
+    else if (aNow) intentState.intent = "A"
+    else if (bNow) intentState.intent = "B"
+    else intentState.intent = ""
+
+    const aEdge = aNow && !intentState.prevA
+    const bEdge = bNow && !intentState.prevB
+    if (aEdge) intentState.lastAEdgeMs = nowMs | 0
+    if (bEdge) intentState.lastBEdgeMs = nowMs | 0
+
+    const abEdge =
+        (aEdge && bNow) ||
+        (bEdge && aNow) ||
+        (aEdge && (nowMs - intentState.lastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
+        (bEdge && (nowMs - intentState.lastAEdgeMs) <= AB_CHORD_WINDOW_MS)
+
+    if (aEdge || bEdge) {
+        if (abEdge) {
+            const upgraded = _upgradePendingToAB(profileKey)
+            if (!upgraded) _queueIntentForProfile(profileKey, "A+B")
+        } else {
+            _queueIntentForProfile(profileKey, aEdge ? "A" : "B")
+        }
+    }
+
+    if (debugLocal && DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS) {
+        const changed = (intentState.intent !== _dbg_prevP1Intent)
+        const abChanged = (aNow !== _dbg_prevP1A) || (bNow !== _dbg_prevP1B)
+        if (changed || abChanged || aEdge || bEdge) {
+            const dur = (_dbg_prevP1IntentMs > 0) ? (nowMs - _dbg_prevP1IntentMs) : 0
+            console.log(
+                DEBUG_FILTER_PHRASE +
+                " EDGE timeMs=" + nowMs +
+                " intent=" + intentState.intent +
+                " (prev=" + _dbg_prevP1Intent + " prevDurMs=" + dur + ")" +
+                " aNow=" + (aNow ? 1 : 0) +
+                " bNow=" + (bNow ? 1 : 0) +
+                " aEdge=" + (aEdge ? 1 : 0) +
+                " bEdge=" + (bEdge ? 1 : 0) +
+                " pending=" + intentState.pending1 +
+                " pending2=" + intentState.pending2
+            )
+
+            if (_dbg_prevP1Intent === "" && intentState.intent !== "") _dbg_prevP1IntentMs = nowMs
+            if (_dbg_prevP1Intent !== "" && intentState.intent === "") _dbg_prevP1IntentMs = 0
+
+            _dbg_prevP1Intent = intentState.intent
+            _dbg_prevP1A = aNow
+            _dbg_prevP1B = bNow
+        }
+    }
+
+    intentState.prevA = aNow
+    intentState.prevB = bNow
+}
+
+function _heroBuffsFor(heroIndex: number): any[] {
+    return _heroStateGetArray(heroBuffsByProfile, heroIndex)
+}
+
+function _getHeroMoveSpeedMult(heroIndex: number): number {
+    const v = _heroStateGetNum(heroMoveSpeedMultByProfile, heroIndex, 1)
+    return v > 0 ? v : 1
+}
+
+function _setHeroMoveSpeedMult(heroIndex: number, value: number): void {
+    _heroStateSetNum(heroMoveSpeedMultByProfile, heroIndex, value | 0)
+}
+
+function _getHeroDamageAmpMult(heroIndex: number): number {
+    const v = _heroStateGetNum(heroDamageAmpMultByProfile, heroIndex, 1)
+    return v > 0 ? v : 1
+}
+
+function _setHeroDamageAmpMult(heroIndex: number, value: number): void {
+    _heroStateSetNum(heroDamageAmpMultByProfile, heroIndex, value | 0)
+}
+
+function _getHeroHPBar(heroIndex: number): StatusBarSprite {
+    return _heroStateGetSprite(heroHPBarsByProfile as any, heroIndex) as any
+}
+
+function _setHeroHPBar(heroIndex: number, bar: StatusBarSprite): void {
+    _heroStateSetSprite(heroHPBarsByProfile as any, heroIndex, bar as any)
+}
+
+function _getHeroManaBar(heroIndex: number): StatusBarSprite {
+    return _heroStateGetSprite(heroManaBarsByProfile as any, heroIndex) as any
+}
+
+function _setHeroManaBar(heroIndex: number, bar: StatusBarSprite): void {
+    _heroStateSetSprite(heroManaBarsByProfile as any, heroIndex, bar as any)
+}
+
+function _getHeroStrengthChargeBar(heroIndex: number): StatusBarSprite {
+    return _heroStateGetSprite(heroStrengthChargeBarsByProfile as any, heroIndex) as any
+}
+
+function _setHeroStrengthChargeBar(heroIndex: number, bar: StatusBarSprite): void {
+    _heroStateSetSprite(heroStrengthChargeBarsByProfile as any, heroIndex, bar as any)
+}
+
+function _getHeroComboMeter(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroComboMetersByProfile as any, heroIndex)
+}
+
+function _setHeroComboMeter(heroIndex: number, meter: Sprite): void {
+    _heroStateSetSprite(heroComboMetersByProfile as any, heroIndex, meter as any)
+}
+
+function _getHeroAgiAimIndicator(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroAgiAimIndicatorsByProfile as any, heroIndex)
+}
+
+function _setHeroAgiAimIndicator(heroIndex: number, ind: Sprite): void {
+    _heroStateSetSprite(heroAgiAimIndicatorsByProfile as any, heroIndex, ind as any)
+}
+
+function _getHeroAgiStoredCounter(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroAgiStoredCountersByProfile as any, heroIndex)
+}
+
+function _setHeroAgiStoredCounter(heroIndex: number, counter: Sprite): void {
+    _heroStateSetSprite(heroAgiStoredCountersByProfile as any, heroIndex, counter as any)
+}
+
+function _getHeroTargetCircle(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroTargetCirclesByProfile as any, heroIndex)
+}
+
+function _setHeroTargetCircle(heroIndex: number, circle: Sprite): void {
+    _heroStateSetSprite(heroTargetCirclesByProfile as any, heroIndex, circle as any)
+}
+
+function _getHeroControlledSpell(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroControlledSpellsByProfile as any, heroIndex)
+}
+
+function _setHeroControlledSpell(heroIndex: number, spell: Sprite): void {
+    _heroStateSetSprite(heroControlledSpellsByProfile as any, heroIndex, spell as any)
+}
+
+function _getHeroAura(heroIndex: number): Sprite {
+    return _heroStateGetSprite(heroAurasByProfile as any, heroIndex)
+}
+
+function _setHeroAura(heroIndex: number, aura: Sprite): void {
+    _heroStateSetSprite(heroAurasByProfile as any, heroIndex, aura as any)
+}
 
 
-// Hero-facing and targeting helpers
+// Hero-facing and targeting helpers (profile-keyed)
 
-let heroFacingX: number[] = []
+let heroFacingXByProfile: Record<string, number> = Object.create(null)
 
-let heroFacingY: number[] = []
+let heroFacingYByProfile: Record<string, number> = Object.create(null)
 
-let heroTargetCircles: Sprite[] = []
+let heroTargetCirclesByProfile: Record<string, Sprite> = Object.create(null)
 
-let heroControlledSpells: Sprite[] = []
+let heroControlledSpellsByProfile: Record<string, Sprite> = Object.create(null)
 
-let heroAuras: Sprite[] = []
+let heroAurasByProfile: Record<string, Sprite> = Object.create(null)
 
 
 
@@ -3901,6 +4790,8 @@ const CONTRACT_WHY_TABLE: Record<string, string> = {
 
     AMBIENT_SKIP_STR_CHARGING: "updateHeroMovementPhase",
 
+    AMBIENT_SKIP_TELEPORT: "updateHeroMovementPhase",
+
     AMBIENT_SKIP_FRAME_COL_OVERRIDE: "updateHeroMovementPhase",
 
     AMBIENT_SKIP_BUSY: "updateHeroMovementPhase",
@@ -4107,7 +4998,7 @@ function _dbgContract_readHeroContractObs(nowMs: number, hi: number, hero: Sprit
 
 
 
-        const spell = heroControlledSpells[heroIndex]
+        const spell = _getHeroControlledSpell(heroIndex)
 
         if (spell && !(spell.flags & sprites.Flag.Destroyed)) {
 
@@ -4447,7 +5338,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
 
 
 
-            const spell = heroControlledSpells[hi]
+            const spell = _getHeroControlledSpell(hi)
 
             if (spell && !(spell.flags & sprites.Flag.Destroyed)) {
 
@@ -5922,6 +6813,36 @@ function _heroCollisionCenterXY(hero: Sprite): { x: number, y: number } {
 
 }
 
+function _interactableDecorForRange(target: Sprite): Sprite | null {
+    if (!target) return null
+    if (target.kind !== (SpriteKind as any).FloorInteractable) return null
+
+    const tileR = sprites.readDataNumber(target, "decorTileR") | 0
+    const tileC = sprites.readDataNumber(target, "decorTileC") | 0
+    const name = sprites.readDataString(target, DECOR_DATA.NAME) || ""
+    const base = propBaseNameFromKey(name)
+
+    const rev = _engineDecorRev | 0
+    const cached = (target as any).__decorRef as Sprite
+    const cachedRev = ((target as any).__decorRev | 0)
+    if (cached && !(cached.flags & sprites.Flag.Destroyed) && (cachedRev | 0) === (rev | 0)) return cached
+
+    let decor = _dunFindDecorAtTile(tileR, tileC, base || "")
+    if (!decor && base) decor = _dunFindDecorAtTile(tileR, tileC, "")
+
+    ;(target as any).__decorRef = decor
+    ;(target as any).__decorRev = rev | 0
+    return decor
+}
+
+function _interactableBoundsForRange(target: Sprite) {
+    const decor = _interactableDecorForRange(target)
+    if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+        return _boundsWithOffset(decor, _heroCollisionOffsetY(decor))
+    }
+    return _boundsWithOffset(target, _heroCollisionOffsetY(target))
+}
+
 
 
 function _isHeroInInteractRange(hero: Sprite, target: Sprite, extraX: number, extraY: number): boolean {
@@ -5930,11 +6851,11 @@ function _isHeroInInteractRange(hero: Sprite, target: Sprite, extraX: number, ex
 
     const h = _heroCollisionCenterXY(hero)
 
-    const t = _boundsWithOffset(target, _heroCollisionOffsetY(target))
+    const t = _interactableBoundsForRange(target)
 
-    const dx = Math.abs((t.centerX | 0) - (h.x | 0)) | 0
+    const dx = Math.max(0, (t.left | 0) - (h.x | 0), (h.x | 0) - (t.right | 0)) | 0
 
-    const dy = Math.abs((t.centerY | 0) - (h.y | 0)) | 0
+    const dy = Math.max(0, (t.top | 0) - (h.y | 0), (h.y | 0) - (t.bottom | 0)) | 0
 
     if (dx > ((DUNGEON_INTERACT_RADIUS_PX + (extraX | 0)) | 0)) return false
 
@@ -6078,18 +6999,125 @@ const FIRE_TOTEM_AURA_MENU: PropAuraStyle = {
     blendMode: "add",
 }
 
-const TRAP_FIRE_TOTEM_BASE = "fire_totem"
-const TRAP_FIRE_TRAP_ID = "trap.disassembled.number.v1"
-const TRAP_FIRE_GIVEN_VALUE_KEY = "trapGivenValue"
-const TRAP_FIRE_SOLVED_KEY = "trapSolved"
-const TRAP_FIRE_DMG_KEY = "trapFireDmg"
-const TRAP_FIRE_HIT_MASK_KEY = "trapFireHitMask"
-const TRAP_FIRE_EFFECT_SKIN_ID = "flames"
-const TRAP_FIRE_DAMAGE = 12 // tune later
-const TRAP_FIRE_SPEED = 70
-const TRAP_FIRE_LIFESPAN_MS = 900
-const TRAP_FIRE_MAX_VALUE = 5
-const TRAP_FIRE_MIN_VALUE = 0
+const TRAP_TOTEM_BASE = "fire_totem"
+const TRAP_TOTEM_ELEMENT = ELEM.ELECTRIC
+const TRAP_SOLVED_KEY = "trapSolved"
+const TRAP_DISABLED_KEY = "trapDisabled"
+const TRAP_TOTEM_DMG_KEY = "trapTotemDmg"
+const TRAP_TOTEM_HIT_MASK_KEY = "trapTotemHitMask"
+const TRAP_TOTEM_DAMAGE = 12 // tune later
+const TRAP_TOTEM_SPEED = 70
+const TRAP_TOTEM_LIFESPAN_MS = 900
+const TRAP_TOTEM_BOLT_OFFSET_PX = 12
+
+const SHRINE_BASE = "shrine"
+const SHRINE_ACTIVE_UNTIL_KEY = "shrineActiveUntil"
+const SHRINE_ACTIVE_START_KEY = "shrineActiveStart"
+const SHRINE_ACTIVE_DEFAULT_MS = 120000
+const SHRINE_OVERLAY_CYCLE_MS = 10000
+const SHRINE_OVERLAY_SAT = 0.72
+const SHRINE_OVERLAY_LIGHT = 0.18
+const SHRINE_OVERLAY_ALPHA = 0.7
+const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "add"
+
+function _hslToRgbHex(h: number, s: number, l: number): number {
+    const hue = ((h % 360) + 360) % 360
+    const sat = Math.max(0, Math.min(1, s))
+    const lit = Math.max(0, Math.min(1, l))
+    const c = (1 - Math.abs(2 * lit - 1)) * sat
+    const hp = hue / 60
+    const x = c * (1 - Math.abs((hp % 2) - 1))
+    let r1 = 0
+    let g1 = 0
+    let b1 = 0
+    if (hp >= 0 && hp < 1) { r1 = c; g1 = x; b1 = 0 }
+    else if (hp >= 1 && hp < 2) { r1 = x; g1 = c; b1 = 0 }
+    else if (hp >= 2 && hp < 3) { r1 = 0; g1 = c; b1 = x }
+    else if (hp >= 3 && hp < 4) { r1 = 0; g1 = x; b1 = c }
+    else if (hp >= 4 && hp < 5) { r1 = x; g1 = 0; b1 = c }
+    else { r1 = c; g1 = 0; b1 = x }
+    const m = lit - c / 2
+    const r = Math.max(0, Math.min(255, Math.round((r1 + m) * 255)))
+    const g = Math.max(0, Math.min(255, Math.round((g1 + m) * 255)))
+    const b = Math.max(0, Math.min(255, Math.round((b1 + m) * 255)))
+    return ((r << 16) | (g << 8) | b) >>> 0
+}
+
+function _shrineOverlayTint(nowMs: number, startMs: number): number {
+    const cycle = Math.max(1000, SHRINE_OVERLAY_CYCLE_MS | 0)
+    const delta = ((nowMs | 0) - (startMs | 0)) | 0
+    const t = ((delta % cycle) + cycle) % cycle
+    const hue = (t / cycle) * 360
+    return _hslToRgbHex(hue, SHRINE_OVERLAY_SAT, SHRINE_OVERLAY_LIGHT)
+}
+
+function _trapTotemElementTint(): number {
+    return _elementTintForMode(TRAP_TOTEM_ELEMENT, "offense");
+}
+
+function _trapTotemAuraStyle(base: PropAuraStyle): PropAuraStyle {
+    const tint = _trapTotemElementTint();
+    if (!tint) return base;
+    if ((base.tint | 0) === (tint | 0)) return base;
+    return { ...base, tint: tint | 0 };
+}
+
+function _trapTotemApplyPropTint(renderer?: any): void {
+    const tint = _trapTotemElementTint();
+    if (!tint) return;
+    if ((_dunFireTotemTileR | 0) < 0 || (_dunFireTotemTileC | 0) < 0) return;
+
+    let r: any = renderer;
+    if (!r) {
+        const g: any = globalThis as any;
+        const sc: any = g ? g.__phaserScene : null;
+        r = sc?.registry?.get?.("__worldTileRenderer");
+    }
+    if (!r || typeof r.tryGetPropDisplayAtAnchor !== "function") return;
+
+    const propObj =
+        r.tryGetPropDisplayAtAnchor(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0) ||
+        (typeof r.tryGetPropDisplayAt === "function"
+            ? r.tryGetPropDisplayAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0)
+            : null);
+
+    if (!propObj) return;
+    const last = (propObj as any).__trapTintApplied | 0;
+    if ((last | 0) === (tint | 0)) return;
+    try {
+        propObj.setTint?.(tint | 0);
+        (propObj as any).__trapTintApplied = tint | 0;
+    } catch { /* ignore */ }
+}
+
+type TrapSolveHandler = (target: Sprite, state: TrapInteractState) => void
+
+const TRAP_SOLVE_HANDLERS: Record<string, TrapSolveHandler> = {
+    [TRAP_TOTEM_BASE]: (target) => {
+        _trapTotemActivate(target)
+    },
+}
+
+type EffectApplyOpts = {
+    dir?: string
+    offsetX?: number
+    offsetY?: number
+    fps?: number
+    repeat?: number
+    tint?: number
+}
+
+function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts): void {
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return
+    sprites.setDataString(s, "effectSkin", skinId)
+    if (opts?.dir) sprites.setDataString(s, "effectDir", opts.dir)
+    if (typeof opts?.offsetX === "number") sprites.setDataNumber(s, "effectOffX", opts.offsetX)
+    if (typeof opts?.offsetY === "number") sprites.setDataNumber(s, "effectOffY", opts.offsetY)
+    if (typeof opts?.fps === "number") sprites.setDataNumber(s, "effectFps", opts.fps)
+    if (typeof opts?.repeat === "number") sprites.setDataNumber(s, "effectRepeat", opts.repeat)
+    if (typeof opts?.tint === "number") sprites.setDataNumber(s, EFFECT_TINT_DATA_KEY, opts.tint | 0)
+}
+const TRAP_PROMPT_INPUT_DEBOUNCE_MS = 200
 
 function _dunReadInteractAction(it: Sprite): string {
     if (!it || (it.flags & sprites.Flag.Destroyed)) return ""
@@ -6101,6 +7129,8 @@ function _dunReadInteractAction(it: Sprite): string {
 
 function _dunReadInteractUsed(it: Sprite): number {
     if (!it || (it.flags & sprites.Flag.Destroyed)) return 0
+    const disabled = sprites.readDataNumber(it, TRAP_DISABLED_KEY) | 0
+    if (disabled) return 1
     const used = sprites.readDataNumber(it, INTERACT_DATA.USED) | 0
     const opened = sprites.readDataNumber(it, INTERACT_DATA.OPENED) | 0
     return ((used | 0) !== 0 || (opened | 0) !== 0) ? 1 : 0
@@ -6143,8 +7173,15 @@ function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: numbe
             y: it.y | 0,
         })
     }
-    if (baseName === "fire_totem") {
+    if (baseName === TRAP_TOTEM_BASE) {
         _dunFireTotemTriggerActivation(nowMs | 0)
+    }
+    if (baseName === SHRINE_BASE) {
+        const r = sprites.readDataNumber(it, "decorTileR") | 0
+        const c = sprites.readDataNumber(it, "decorTileC") | 0
+        if (r >= 0 && c >= 0) {
+            _dunActivateShrineAt(r | 0, c | 0, nowMs | 0, SHRINE_ACTIVE_DEFAULT_MS)
+        }
     }
 
     try {
@@ -6196,6 +7233,8 @@ function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: numbe
 type TrapInteractState = {
     mode: "prompt" | "editing"
     trapId: string
+    instanceId: string
+    instance: TrapInstance | null
     target: Sprite
     targetId: number
     inputs: Record<string, unknown>
@@ -6203,6 +7242,7 @@ type TrapInteractState = {
     heroIndex: number
     prevLocked: boolean
     blockIntentsOwned: boolean
+    inputIgnoreUntilMs: number
 }
 
 function _trapGetState(): TrapInteractState | null {
@@ -6229,81 +7269,138 @@ function _trapClearState(): void {
     _trapSetState(null)
 }
 
-function _trapIsFireTotem(name: string): boolean {
-    return propBaseNameFromKey(name) === TRAP_FIRE_TOTEM_BASE
-}
 
-function _trapFireGetInputs(it: Sprite): Record<string, unknown> {
-    let v = sprites.readDataNumber(it, TRAP_FIRE_GIVEN_VALUE_KEY) | 0
-    if (v < TRAP_FIRE_MIN_VALUE || v > TRAP_FIRE_MAX_VALUE) {
-        v = Math.randomRange(TRAP_FIRE_MIN_VALUE, TRAP_FIRE_MAX_VALUE) | 0
-        sprites.setDataNumber(it, TRAP_FIRE_GIVEN_VALUE_KEY, v | 0)
+const _trapBoltImgCache: { [k: string]: Image } = Object.create(null);
+
+function _trapTotemBoltImage(dir: string): Image {
+    const key = (dir || "none").toLowerCase();
+    const cached = _trapBoltImgCache[key];
+    if (cached) return cached;
+
+    const horiz = key === "left" || key === "right";
+    const w = horiz ? 16 : 4;
+    const h = horiz ? 4 : 16;
+    const img = image.create(w, h);
+
+    if (horiz) {
+        const mid = (h >> 1) | 0;
+        for (let x = 0; x < w; x++) {
+            const jitter = (x % 4 === 0) ? 1 : ((x % 4 === 2) ? -1 : 0);
+            let y = (mid + jitter) | 0;
+            if (y < 0) y = 0;
+            if (y >= h) y = (h - 1) | 0;
+            img.setPixel(x, y, 1);
+        }
+    } else {
+        const mid = (w >> 1) | 0;
+        for (let y = 0; y < h; y++) {
+            const jitter = (y % 4 === 0) ? 1 : ((y % 4 === 2) ? -1 : 0);
+            let x = (mid + jitter) | 0;
+            if (x < 0) x = 0;
+            if (x >= w) x = (w - 1) | 0;
+            img.setPixel(x, y, 1);
+        }
     }
-    return { givenValue: v | 0 }
+
+    _trapBoltImgCache[key] = img;
+    return img;
 }
 
-function _trapFireSpawnProjectile(x: number, y: number, dir: string): void {
-    const img = image.create(16, 24)
-    img.fill(0)
+function _trapFindNearestEnemy(cx: number, cy: number): Sprite | null {
+    let best: Sprite = null as any;
+    let bestD2 = 2147483647;
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue;
+        const dx = (e.x - cx);
+        const dy = (e.y - cy);
+        const d2 = (dx * dx + dy * dy);
+        if (d2 < bestD2) {
+            bestD2 = d2;
+            best = e;
+        }
+    }
+    return best;
+}
 
-    const flame = sprites.create(img, SpriteKind.RelicEffect)
-    flame.x = x
-    flame.y = y
-    flame.z = 200
+function _trapTotemSpawnBolt(x: number, y: number, vx: number, vy: number, dir: string, tint: number): void {
+    const img = _trapTotemBoltImage(dir);
+    const bolt = sprites.create(img, SpriteKind.RelicEffect);
+    bolt.x = x;
+    bolt.y = y;
+    bolt.z = 200;
+    bolt.vx = vx;
+    bolt.vy = vy;
+    bolt.lifespan = TRAP_TOTEM_LIFESPAN_MS | 0;
+
+    if (tint) sprites.setDataNumber(bolt, EFFECT_TINT_DATA_KEY, tint | 0);
+    sprites.setDataNumber(bolt, TRAP_TOTEM_DMG_KEY, TRAP_TOTEM_DAMAGE | 0);
+    sprites.setDataNumber(bolt, TRAP_TOTEM_HIT_MASK_KEY, 0);
+
     if (DEBUG_TRAP_LOGS) {
-        console.log("[TRAP][FIRE_TOTEM] projectile", {
-            x: flame.x | 0,
-            y: flame.y | 0,
+        console.log("[TRAP][TOTEM] bolt", {
+            x: bolt.x | 0,
+            y: bolt.y | 0,
             dir: String(dir || ""),
-        })
+        });
     }
-
-    let vx = 0
-    let vy = 0
-    if (dir === "up") vy = -TRAP_FIRE_SPEED
-    else if (dir === "down") vy = TRAP_FIRE_SPEED
-    else if (dir === "left") vx = -TRAP_FIRE_SPEED
-    else if (dir === "right") vx = TRAP_FIRE_SPEED
-
-    flame.vx = vx
-    flame.vy = vy
-    flame.lifespan = TRAP_FIRE_LIFESPAN_MS | 0
-
-    sprites.setDataString(flame, "effectSkin", TRAP_FIRE_EFFECT_SKIN_ID)
-    sprites.setDataString(flame, "effectDir", dir)
-    sprites.setDataNumber(flame, TRAP_FIRE_DMG_KEY, TRAP_FIRE_DAMAGE | 0)
-    sprites.setDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY, 0)
 }
 
-function _trapFireActivate(it: Sprite): void {
-    if (!it || (it.flags & sprites.Flag.Destroyed)) return
+function _trapTotemActivate(it: Sprite): void {
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return;
 
-    const cx = it.x
-    const cy = it.y
-    const offset = Math.max(8, (WORLD_TILE_SIZE | 0) >> 1)
+    const cx = it.x;
+    const cy = it.y;
+    const tint = _trapTotemElementTint();
+    const target = _trapFindNearestEnemy(cx, cy);
 
-    if (DEBUG_TRAP_LOGS) {
-        console.log("[TRAP][FIRE_TOTEM] activate", {
-            x: cx | 0,
-            y: cy | 0,
-            offset: offset | 0,
-        })
+    if (target) {
+        const dx = (target.x - cx);
+        const dy = (target.y - cy);
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const lifeSec = Math.max(0.2, (TRAP_TOTEM_LIFESPAN_MS | 0) / 1000);
+        const speed = Math.max(TRAP_TOTEM_SPEED, dist / lifeSec);
+        const dir = _enemyDirFromVector(dx, dy);
+        const vx = (dx / dist) * speed;
+        const vy = (dy / dist) * speed;
+        const startX = cx + (dx / dist) * TRAP_TOTEM_BOLT_OFFSET_PX;
+        const startY = cy + (dy / dist) * TRAP_TOTEM_BOLT_OFFSET_PX;
+
+        if (DEBUG_TRAP_LOGS) {
+            console.log("[TRAP][TOTEM] activate", {
+                x: cx | 0,
+                y: cy | 0,
+                targetX: target.x | 0,
+                targetY: target.y | 0,
+                dir: String(dir || ""),
+            });
+        }
+
+        _trapTotemSpawnBolt(startX, startY, vx, vy, dir, tint | 0);
+    } else {
+        const offset = Math.max(8, (WORLD_TILE_SIZE | 0) >> 1);
+        if (DEBUG_TRAP_LOGS) {
+            console.log("[TRAP][TOTEM] activate (no target)", {
+                x: cx | 0,
+                y: cy | 0,
+                offset: offset | 0,
+            });
+        }
+        _trapTotemSpawnBolt(cx, cy - offset, 0, -TRAP_TOTEM_SPEED, "up", tint | 0);
+        _trapTotemSpawnBolt(cx, cy + offset, 0, TRAP_TOTEM_SPEED, "down", tint | 0);
+        _trapTotemSpawnBolt(cx - offset, cy, -TRAP_TOTEM_SPEED, 0, "left", tint | 0);
+        _trapTotemSpawnBolt(cx + offset, cy, TRAP_TOTEM_SPEED, 0, "right", tint | 0);
     }
 
-    _trapFireSpawnProjectile(cx, cy - offset, "up")
-    _trapFireSpawnProjectile(cx, cy + offset, "down")
-    _trapFireSpawnProjectile(cx - offset, cy, "left")
-    _trapFireSpawnProjectile(cx + offset, cy, "right")
-
-    const txt = textsprite.create("FIRE", 0, 2)
-    txt.setMaxFontHeight(9)
-    txt.setOutline(1, 15)
-    txt.setPosition(cx, cy - 12)
-    txt.lifespan = 800
-    txt.vy = -8
+    const txt = textsprite.create("LIGHTNING", 0, 2);
+    txt.setMaxFontHeight(9);
+    txt.setOutline(1, 15);
+    txt.setPosition(cx, cy - 12);
+    txt.lifespan = 800;
+    txt.vy = -8;
 }
 
-function _trapShowPrompt(it: Sprite, pid: number, hi: number): boolean {
+function _trapShowPrompt(it: Sprite, baseName: string, pid: number, hi: number): boolean {
     const g: any = globalThis as any
     const dlg = g ? g.__heDialog : null
     if (!dlg || typeof dlg.show !== "function") {
@@ -6328,41 +7425,39 @@ function _trapShowPrompt(it: Sprite, pid: number, hi: number): boolean {
         return false
     }
 
-    if (sprites.readDataNumber(it, TRAP_FIRE_SOLVED_KEY) | 0) {
+    if (sprites.readDataNumber(it, TRAP_SOLVED_KEY) | 0) {
         if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: solved")
         return false
     }
-
-    const wasLocked = (hi >= 0 && hi < heroes.length)
-        ? !!sprites.readDataBoolean(heroes[hi], HERO_DATA.INPUT_LOCKED)
-        : false
-    if (hi >= 0 && !wasLocked) lockHeroControls(hi)
-
-    const blockOwned = !DUNGEON_BLOCK_INTENTS
-    if (blockOwned) DUNGEON_BLOCK_INTENTS = true
-
-    const state: TrapInteractState = {
-        mode: "prompt",
-        trapId: TRAP_FIRE_TRAP_ID,
-        target: it,
-        targetId: it.id | 0,
-        inputs: _trapFireGetInputs(it),
-        pid: pid | 0,
-        heroIndex: hi | 0,
-        prevLocked: wasLocked,
-        blockIntentsOwned: blockOwned,
+    if (sprites.readDataNumber(it, TRAP_DISABLED_KEY) | 0) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: disabled")
+        return false
     }
 
-    _trapSetState(state)
+    const def = getTrapDefinitionForProp(baseName)
+    if (!def) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: no trap def", { baseName })
+        return false
+    }
 
-    if (DEBUG_TRAP_LOGS) {
-        console.log("[TRAP][PROMPT] show", {
-            pid: pid | 0,
-            trapId: state.trapId,
-            inputs: state.inputs,
-            x: it.x | 0,
-            y: it.y | 0,
-        })
+    const now = game.runtime() | 0
+    const instance = spawnTrapInstanceForProp(baseName, it, _dunFloorIndex | 0)
+    if (!instance) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: no instance", { baseName })
+        return false
+    }
+    if (!canAttemptTrapInstance(instance, now | 0)) {
+        if (DEBUG_TRAP_LOGS) {
+            console.log("[TRAP][PROMPT] skip: attempts exhausted", {
+                trapId: instance.specId,
+                instanceId: instance.instanceId,
+                attempts: instance.attempts | 0,
+                maxAttempts: instance.maxAttempts | 0,
+            })
+        }
+        sprites.setDataNumber(it, TRAP_DISABLED_KEY, 1)
+        _dunSetInteractUsed(it, true)
+        return false
     }
 
     dlg.show({
@@ -6374,6 +7469,49 @@ function _trapShowPrompt(it: Sprite, pid: number, hi: number): boolean {
         ],
         hint: "A: Fix trap  |  B: Quit",
     })
+
+    const opened = (typeof dlg.isOpen === "function") ? !!dlg.isOpen() : true
+    if (!opened) {
+        if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] skip: dialog not open")
+        return false
+    }
+
+    const wasLocked = (hi >= 0 && hi < heroes.length)
+        ? !!sprites.readDataBoolean(heroes[hi], HERO_DATA.INPUT_LOCKED)
+        : false
+    if (hi >= 0 && !wasLocked) lockHeroControls(hi)
+
+    const blockOwned = !DUNGEON_BLOCK_INTENTS
+    if (blockOwned) DUNGEON_BLOCK_INTENTS = true
+
+    const inputs = instance.inputs || {}
+    const state: TrapInteractState = {
+        mode: "prompt",
+        trapId: instance.specId,
+        instanceId: instance.instanceId,
+        instance: instance,
+        target: it,
+        targetId: it.id | 0,
+        inputs,
+        pid: pid | 0,
+        heroIndex: hi | 0,
+        prevLocked: wasLocked,
+        blockIntentsOwned: blockOwned,
+        inputIgnoreUntilMs: (now + (TRAP_PROMPT_INPUT_DEBOUNCE_MS | 0)) | 0,
+    }
+
+    _trapSetState(state)
+
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] show", {
+            pid: pid | 0,
+            trapId: state.trapId,
+            instanceId: state.instanceId,
+            inputs: state.inputs,
+            x: it.x | 0,
+            y: it.y | 0,
+        })
+    }
 
     return true
 }
@@ -6399,8 +7537,26 @@ function _trapHandleDialogChoice(choiceId: string, choiceIndex?: number): void {
     if (isFix) {
         state.mode = "editing"
         _trapSetState(state)
+        if (state.instanceId) setTrapInstanceState(state.instanceId, "editing")
         const open = g ? g.__heOpenTrapBlocklyEditor : null
-        if (typeof open === "function") {
+        const openInstance = g ? g.__heOpenTrapBlocklyEditorInstance : null
+        if (state.instance && typeof openInstance === "function") {
+            if (DEBUG_TRAP_LOGS) {
+                console.log("[TRAP][PROMPT] handoff -> blockly", {
+                    trapId: state.trapId,
+                    instanceId: state.instanceId,
+                    inputs: state.inputs,
+                })
+            }
+            try {
+                openInstance(state.instance)
+            } catch (err) {
+                if (DEBUG_TRAP_LOGS) {
+                    console.log("[TRAP][PROMPT] blockly open failed", { err: String((err as any) || "") })
+                }
+                _trapClearState()
+            }
+        } else if (typeof open === "function") {
             if (DEBUG_TRAP_LOGS) {
                 console.log("[TRAP][PROMPT] handoff -> blockly", {
                     trapId: state.trapId,
@@ -6425,6 +7581,7 @@ function _trapHandleDialogChoice(choiceId: string, choiceIndex?: number): void {
     }
 
     if (isQuit) {
+        if (state.instanceId) setTrapInstanceState(state.instanceId, "fresh")
         _trapClearState()
         return
     }
@@ -6432,10 +7589,75 @@ function _trapHandleDialogChoice(choiceId: string, choiceIndex?: number): void {
     _trapClearState()
 }
 
+function _trapDispatchSolveEffect(state: TrapInteractState): void {
+    const target = state ? state.target : null
+    if (!target || (target.flags & sprites.Flag.Destroyed)) return
+    const name = sprites.readDataString(target, DECOR_DATA.NAME) || ""
+    const base = propBaseNameFromKey(name)
+    const handler = TRAP_SOLVE_HANDLERS[base]
+    if (handler) {
+        handler(target, state)
+        return
+    }
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][SOLVE] no handler", {
+            base: String(base || ""),
+            trapId: String(state.trapId || ""),
+            instanceId: String(state.instanceId || ""),
+        })
+    }
+}
+
+function _trapHandleResult(detail: any): void {
+    const state = _trapGetState()
+    if (!state || state.mode !== "editing") return
+    if (!detail) return
+    const detailInstanceId = String(detail.instanceId || "")
+    const detailTrapId = String(detail.trapId || "")
+    if (detailInstanceId) {
+        if (detailInstanceId !== state.instanceId) return
+    } else if (detailTrapId !== state.trapId) {
+        return
+    }
+    if (detail.ok) return
+
+    const target = state.target
+    if (!target || (target.flags & sprites.Flag.Destroyed)) return
+
+    const now = game.runtime() | 0
+    const attempt = recordTrapAttempt(state.instanceId, false, now)
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][PROMPT] wrong answer", {
+            trapId: state.trapId,
+            instanceId: state.instanceId,
+            attempts: attempt ? (attempt.attempts | 0) : -1,
+            maxAttempts: attempt ? (attempt.maxAttempts | 0) : -1,
+            locked: attempt ? (attempt.locked ? 1 : 0) : 0,
+        })
+    }
+    if (attempt && attempt.locked) {
+        sprites.setDataNumber(target, TRAP_DISABLED_KEY, 1)
+        _dunSetInteractUsed(target, true)
+        const g: any = globalThis as any
+        const close = g ? g.__heCloseTrapBlocklyEditor : null
+        if (typeof close === "function") {
+            try { close() } catch { }
+        }
+        _trapClearState()
+    }
+}
+
 function _trapHandleSolved(detail: any): void {
     const state = _trapGetState()
     if (!state || state.mode !== "editing") return
-    if (!detail || String(detail.trapId || "") !== state.trapId) return
+    if (!detail) return
+    const detailTrapId = String(detail.trapId || "")
+    const detailInstanceId = String(detail.instanceId || "")
+    if (detailInstanceId) {
+        if (detailInstanceId !== state.instanceId) return
+    } else if (detailTrapId !== state.trapId) {
+        return
+    }
 
     const target = state.target
     if (!target || (target.flags & sprites.Flag.Destroyed)) {
@@ -6450,8 +7672,9 @@ function _trapHandleSolved(detail: any): void {
         })
     }
 
-    _trapFireActivate(target)
-    sprites.setDataNumber(target, TRAP_FIRE_SOLVED_KEY, 1)
+    if (state.instanceId) setTrapInstanceState(state.instanceId, "solved")
+    _trapDispatchSolveEffect(state)
+    sprites.setDataNumber(target, TRAP_SOLVED_KEY, 1)
     _dunSetInteractUsed(target, true)
 
     const g: any = globalThis as any
@@ -6466,7 +7689,8 @@ function _trapHandleSolved(detail: any): void {
 function _trapOnPropInteract(payload: any): boolean {
     if (!payload) return false
     const name = String(payload.name || "")
-    if (!_trapIsFireTotem(name)) return false
+    const baseName = propBaseNameFromKey(name)
+    if (!getTrapDefinitionForProp(baseName)) return false
     const it = payload.target as Sprite
     if (!it || (it.flags & sprites.Flag.Destroyed)) return false
     if (DEBUG_TRAP_LOGS) {
@@ -6474,11 +7698,12 @@ function _trapOnPropInteract(payload: any): boolean {
             pid: payload.pid | 0,
             hi: payload.hi | 0,
             name: String(name || ""),
+            base: String(baseName || ""),
             x: it.x | 0,
             y: it.y | 0,
         })
     }
-    return _trapShowPrompt(it, payload.pid | 0, payload.hi | 0)
+    return _trapShowPrompt(it, baseName, payload.pid | 0, payload.hi | 0)
 }
 
 function _trapPromptInputTick(): void {
@@ -6487,6 +7712,8 @@ function _trapPromptInputTick(): void {
 
     const pid = state.pid | 0
     if (pid <= 0 || pid > 4) return
+
+    const now = game.runtime() | 0
 
     const btnA = (controller as any)[`player${pid}`]?.A
     const btnB = (controller as any)[`player${pid}`]?.B
@@ -6500,6 +7727,10 @@ function _trapPromptInputTick(): void {
     const isB = btnB.isPressed() ? 1 : 0
     ;(globalThis as any)[prevKeyA] = (isA != 0)
     ;(globalThis as any)[prevKeyB] = (isB != 0)
+
+    if ((state.inputIgnoreUntilMs | 0) > (now | 0)) {
+        return
+    }
 
     if (isA && !wasA) {
         if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] A pressed")
@@ -7905,12 +9136,6 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 
 
 
-    // P1 always exists (host / single-player baseline)
-
-    if (p === 1) return true
-
-
-
     // If a hero already exists for this pid, treat it as active.
 
     const hi = (playerToHeroIndex as any)[p] | 0
@@ -7925,17 +9150,17 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 
 
 
-    // Phaser host networking uses __netSlotConnected[0..3]
-
     if (typeof globalThis !== "undefined") {
 
         const g: any = globalThis as any
 
-        const arr: any = g ? g.__netSlotConnected : null
+        const prof = (g && g.__netProfileByPid && typeof g.__netProfileByPid[p] === "string")
+            ? g.__netProfileByPid[p]
+            : (playerIdToProfile[p] || "")
 
-        if (Array.isArray(arr) && (p - 1) >= 0 && (p - 1) < arr.length) {
+        if (prof && g && g.__netProfileConnected && typeof g.__netProfileConnected[prof] !== "undefined") {
 
-            return !!arr[p - 1]
+            return !!g.__netProfileConnected[prof]
 
         }
 
@@ -7952,15 +9177,38 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 function _dunGetActivePidsUpTo4(): number[] {
 
     const out: number[] = []
+    const seen: Record<number, boolean> = Object.create(null)
 
-    for (let pid = 1; pid <= 4; pid++) {
+    if (isPhaserRuntime()) {
+        const g: any = globalThis as any
+        const byPid = g && g.__netProfileByPid ? g.__netProfileByPid : null
+        const connected = g && g.__netProfileConnected ? g.__netProfileConnected : null
+        if (byPid && connected) {
+            for (const pidStr of Object.keys(byPid)) {
+                const pid = pidStr | 0
+                const profile = byPid[pid]
+                if (!profile) continue
+                if (!connected[profile]) continue
+                if (!seen[pid]) {
+                    seen[pid] = true
+                    out.push(pid)
+                }
+            }
+        }
+    }
 
-        if (_dunIsPidActiveUpTo4(pid)) out.push(pid)
-
+    if (out.length === 0) {
+        for (let hi = 0; hi < heroes.length; hi++) {
+            const h = heroes[hi]
+            if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+            const pid = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
+            if (pid <= 0 || seen[pid]) continue
+            seen[pid] = true
+            out.push(pid)
+        }
     }
 
     // absolute fallback
-
     if (out.length === 0) out.push(1)
 
     return out
@@ -8059,15 +9307,15 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
 
 function _dunRequiredHeroCount(): number {
 
-    // Prefer “connected slots” when present; otherwise fall back to spawned heroes.
+    // Prefer “connected profiles” when present; otherwise fall back to spawned heroes.
 
-    if (isPhaserRuntime() && (globalThis as any).__netSlotConnected) {
+    if (isPhaserRuntime() && (globalThis as any).__netProfileConnected) {
 
-        const arr = (globalThis as any).__netSlotConnected as boolean[]
+        const map = (globalThis as any).__netProfileConnected as Record<string, boolean>
 
         let n = 0
 
-        for (let i = 0; i < arr.length; i++) if (arr[i]) n++
+        for (const k of Object.keys(map)) if (map[k]) n++
 
         return Math.max(1, n) | 0
 
@@ -8075,16 +9323,13 @@ function _dunRequiredHeroCount(): number {
 
 
 
-    // Fallback: count existing mapped heroes for pid 1..4
+    // Fallback: count existing spawned heroes
 
     let n = 0
 
-    for (let pid = 1; pid <= 4; pid++) {
-
-        const hi = playerToHeroIndex[pid] | 0
-
-        if (hi >= 0 && heroes[hi] && !(heroes[hi].flags & sprites.Flag.Destroyed)) n++
-
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (h && !(h.flags & sprites.Flag.Destroyed)) n++
     }
 
     return Math.max(1, n) | 0
@@ -8133,34 +9378,26 @@ function _dunReadyMaskAndCountInPadZone(): { mask: number, ready: number } {
 
 
 
-    for (let pid = 1; pid <= 4; pid++) {
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
 
-        const hi = playerToHeroIndex[pid] | 0
-
-        if (hi < 0) continue
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
-
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
-
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (connectedMap && profileKey && !connectedMap[profileKey]) continue
 
         const hx = hero.x | 0
-
         const hy = hero.y | 0
 
-
-
         const inZone = (hx >= left && hx <= right && hy >= top && hy <= bottom)
-
         if (inZone) {
-
             ready++
-
-            mask |= (1 << (pid - 1))
-
+            if (hi >= 0 && hi < 31) mask |= (1 << hi)
         }
-
     }
 
 
@@ -8754,6 +9991,7 @@ function _dunClearTransientFloorEntities(): void {
 
     _dunInteractables = []
     _dunResetFireTotemState()
+    _trapClearState()
 
     if (_dunStoryNpcs && _dunStoryNpcs.length) {
         for (let i = 0; i < _dunStoryNpcs.length; i++) {
@@ -8915,7 +10153,7 @@ function _dunClearTransientFloorEntities(): void {
 
     // 6) Kill shop UI sprites (per-hero)
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         try { _shopDestroyUiForHero(hi) } catch { }
 
@@ -8979,7 +10217,7 @@ function _dunClearTransientFloorEntities(): void {
 
     // 9) Reset per-hero shop state arrays (prevents stale UI/touch carrying across floors)
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         shopFocusOfferByHero[hi] = null
 
@@ -9110,6 +10348,18 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 
 }
 
+function _dunResetInteractInputEdges(): void {
+    for (let pid = 1; pid <= 4; pid++) {
+        const btnA = (controller as any)[`player${pid}`]?.A
+        const btnB = (controller as any)[`player${pid}`]?.B
+        const aPressed = btnA ? !!btnA.isPressed() : false
+        const bPressed = btnB ? !!btnB.isPressed() : false
+        ;(globalThis as any)[`__dun_prevA_${pid}`] = aPressed
+        ;(globalThis as any)[`__trapPrevA_${pid}`] = aPressed
+        ;(globalThis as any)[`__trapPrevB_${pid}`] = bPressed
+    }
+}
+
 
 
 
@@ -9158,18 +10408,18 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
 
 
 
-        for (let pid = 1; pid <= 4; pid++) {
+        const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+            ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+            : null
 
-            const hi = playerToHeroIndex[pid]
-
-            if (hi == null || hi < 0 || hi >= heroes.length) continue
-
+        for (let hi = 0; hi < heroes.length; hi++) {
             const hero = heroes[hi]
-
             if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-
+            const profileKey = _heroProfileKeyForIndex(hi)
+            if (connectedMap && profileKey && !connectedMap[profileKey]) continue
+            const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            if (pid <= 0) continue
             relic_onFloorExit(ctx, pid)
-
         }
 
     } catch { }
@@ -9199,6 +10449,8 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
     _dunClearTransientFloorEntities()
 
     _dunPickThemeForFloor(_dunFloorIndex, _dunFloorKind)
+    _trapClearState()
+    _dunResetInteractInputEdges()
 
 }
 
@@ -9286,7 +10538,7 @@ function _dunEnterFloor_placeHeroesAtSpawn(
 
         if (hi < 0) {
 
-            createHeroForPlayer(pid, xy[0], xy[1])
+            createHeroForPlayer(pid, xy[0], xy[1], undefined, undefined, undefined, undefined, "dungeon:enter_floor")
 
             hi = playerToHeroIndex[pid] | 0
 
@@ -9363,6 +10615,54 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     }
 }
 
+function _dunEnterFloor_spawnStarterShrine(): void {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    let r = Math.max(0, Math.min(rows - 1, (_dunPadTileR | 0) + 2)) | 0
+    let c = Math.max(0, Math.min(cols - 1, (_dunPadTileC | 0) - 2)) | 0
+
+    function isTileFree(rr: number, cc: number): boolean {
+        if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
+        if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
+        if (_dunFindDecorAtTile(rr, cc, "")) return false
+        return true
+    }
+
+    if (!isTileFree(r, c)) {
+        const pick = _dunPickRandomWalkableTile({
+            avoidR: _dunPadTileR | 0,
+            avoidC: _dunPadTileC | 0,
+            minManhattan: 4,
+            maxTries: 250
+        })
+        r = pick.r | 0
+        c = pick.c | 0
+    }
+
+    if (!isTileFree(r, c)) return
+
+    const it = _dunSpawnInteractableProp({
+        name: SHRINE_BASE,
+        tileR: r | 0,
+        tileC: c | 0,
+        action: INTERACT_ACTION_PROP,
+        role: DECOR_ROLE.SOLID,
+        pxW: WORLD_TILE_SIZE,
+        pxH: WORLD_TILE_SIZE,
+    })
+
+    if (it && !(it.flags & sprites.Flag.Destroyed)) {
+        const decor = _dunFindDecorAtTile(r, c, SHRINE_BASE)
+        if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+            sprites.setDataNumber(decor, SHRINE_ACTIVE_UNTIL_KEY, 0)
+            sprites.setDataNumber(decor, SHRINE_ACTIVE_START_KEY, 0)
+        }
+    }
+}
+
 function _dunResetFireTotemState(): void {
     _dunFireTotemDecor = null
     _dunFireTotemInteractable = null
@@ -9397,6 +10697,24 @@ function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): S
     return match(_engineDecorSolids) || match(_engineDecorTriggers) || null
 }
 
+function _dunActivateShrineDecor(decor: Sprite, nowMs: number, durationMs?: number): void {
+    if (!decor || (decor.flags & sprites.Flag.Destroyed)) return
+    const now = nowMs | 0
+    const dur = ((durationMs == null ? SHRINE_ACTIVE_DEFAULT_MS : durationMs) | 0)
+    const until = (now + Math.max(0, dur)) | 0
+    sprites.setDataNumber(decor, SHRINE_ACTIVE_UNTIL_KEY, until | 0)
+    sprites.setDataNumber(decor, SHRINE_ACTIVE_START_KEY, now | 0)
+}
+
+function _dunActivateShrineAt(tileR: number, tileC: number, nowMs: number, durationMs?: number): boolean {
+    const decor = _dunFindDecorAtTile(tileR | 0, tileC | 0, SHRINE_BASE)
+    if (!decor || (decor.flags & sprites.Flag.Destroyed)) return false
+    _dunActivateShrineDecor(decor, nowMs | 0, durationMs)
+    return true
+}
+
+try { (globalThis as any).dun_activateShrineAt = _dunActivateShrineAt } catch { /* ignore */ }
+
 function _dunFireTotemSetState(state: string): void {
     if (!_dunFireTotemDecor || (_dunFireTotemDecor.flags & sprites.Flag.Destroyed)) {
         if ((_dunFireTotemTileR | 0) >= 0 && (_dunFireTotemTileC | 0) >= 0) {
@@ -9418,7 +10736,7 @@ function _dunFireTotemTriggerActivation(nowMs: number): void {
     _dunFireTotemAnimUntilMs = Math.max(_dunFireTotemAnimUntilMs | 0, (now + (FIRE_TOTEM_ANIM_MS | 0)) | 0)
     _dunFireTotemSetState("diag")
     if (DEBUG_TRAP_LOGS || DEBUG_PROP_INTERACT_LOGS) {
-        console.log("[TRAP][FIRE_TOTEM] activation", {
+        console.log("[TRAP][TOTEM] activation", {
             r: _dunFireTotemTileR | 0,
             c: _dunFireTotemTileC | 0,
             activeUntilMs: _dunFireTotemActiveUntilMs | 0,
@@ -9433,7 +10751,7 @@ function _dunSetFireTotemMenuActive(active: boolean): void {
 
 try { (globalThis as any).dun_setFireTotemMenuActive = _dunSetFireTotemMenuActive } catch { /* ignore */ }
 
-function _dunEnterFloor_spawnStarterFireTotem(): void {
+function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | null): void {
     const rows = _dunWorldRows() | 0
     const cols = _dunWorldCols() | 0
     if (rows <= 0 || cols <= 0) return
@@ -9500,6 +10818,30 @@ function _dunEnterFloor_spawnStarterFireTotem(): void {
         _dunFireTotemTileC = c | 0
         _dunFireTotemDecor = _dunFindDecorAtTile(r, c, "fire_totem")
         _dunFireTotemSetState("idle")
+        _trapTotemApplyPropTint()
+
+        const instance = registerTrapPropSpawn(TRAP_TOTEM_BASE, _dunFloorIndex | 0, r | 0, c | 0, it, defOverride || null)
+        if (instance) {
+            if (instance.state === "solved") {
+                sprites.setDataNumber(it, TRAP_SOLVED_KEY, 1)
+                _dunSetInteractUsed(it, true)
+            } else if (!canAttemptTrapInstance(instance, game.runtime() | 0)) {
+                sprites.setDataNumber(it, TRAP_DISABLED_KEY, 1)
+                _dunSetInteractUsed(it, true)
+            }
+        }
+    }
+}
+
+function _dunEnterFloor_spawnTrapsForFloor(nowMs: number): void {
+    const def = pickTrapDefinitionForFloor(_dunFloorIndex | 0)
+    if (!def) return
+    if (def.propBase === TRAP_TOTEM_BASE) {
+        _dunEnterFloor_spawnStarterFireTotem(def)
+        return
+    }
+    if (DEBUG_TRAP_LOGS) {
+        console.log("[TRAP][SPAWN] unhandled trap prop", { propBase: String(def.propBase || "") })
     }
 }
 
@@ -9550,6 +10892,7 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
 
     _dunRuneSetName("teleport_rune")
     _dunEnterFloor_spawnStarterChest(nowMs)
+    _dunEnterFloor_spawnStarterShrine()
 
 }
 
@@ -9651,7 +10994,6 @@ function _dunEnterFloor_setupCombatFloor(): void {
     setupEnemySpawners()
 
     startEnemyWaves()
-    _dunEnterFloor_spawnStarterFireTotem()
 
 }
 
@@ -9668,6 +11010,8 @@ function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, pad
     else if (kind == DUNGEON_KIND_SHOP) _dunEnterFloor_setupShopFloor(padX, padY)
 
     else _dunEnterFloor_setupCombatFloor()
+
+    _dunEnterFloor_spawnTrapsForFloor(nowMs | 0)
 
 }
 
@@ -9703,20 +11047,19 @@ function _dunEnterFloor_finish(nowMs: number, activePidsCount: number): void {
 
 
 
-        for (let pid = 1; pid <= 4; pid++) {
+        const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+            ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+            : null
 
-            const hi = playerToHeroIndex[pid]
-
-            if (hi == null || hi < 0 || hi >= heroes.length) continue
-
+        for (let hi = 0; hi < heroes.length; hi++) {
             const hero = heroes[hi]
-
             if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-
+            const profileKey = _heroProfileKeyForIndex(hi)
+            if (connectedMap && profileKey && !connectedMap[profileKey]) continue
+            const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            if (pid <= 0) continue
             ctx.pid = pid | 0
-
             relic_onFloorEnter(ctx, pid)
-
         }
 
     } catch { }
@@ -9754,7 +11097,7 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 function dungeonStartRun(nowMs: number): void {
 
     DUNGEON_MODE_ACTIVE = true
-
+    resetAllTrapInstances()
     _dunEnterFloor(0, DUNGEON_KIND_ENTRANCE, nowMs | 0)
 
 }
@@ -9901,39 +11244,26 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
     // Interaction-based floors: A to interact near props/NPC
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
 
-    for (let pid = 1; pid <= 4; pid++) {
-
-        const hi = playerToHeroIndex[pid] | 0
-
-        if (hi < 0) continue
-
+    for (let hi = 0; hi < heroes.length; hi++) {
         const hero = heroes[hi]
-
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-
-
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (!profileKey) continue
+        if (connectedMap && !connectedMap[profileKey]) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
 
         // Edge detect A
-
-        const btnA = (controller as any)[`player${pid}`]?.A
-
-        if (!btnA) continue
-
-
-
-        const prevKey = `__dun_prevA_${pid}`
-
+        const st = _getInputStateForHeroIndex(hi)
+        const prevKey = `__dun_prevA_${profileKey}`
         const was = ((globalThis as any)[prevKey] ? 1 : 0) | 0
-
-        const is = (btnA.isPressed() ? 1 : 0) | 0
-
+        const is = (st.A ? 1 : 0) | 0
         ;(globalThis as any)[prevKey] = (is != 0)
 
-
-
         const aEdge = (is != 0 && was == 0)
-
         if (!aEdge) continue
 
         if (logInteract) {
@@ -12276,41 +13606,15 @@ function _getIntSpellImg(isDetonating: boolean, radius: number): Image {
 
 function getAimVectorForHero(heroIndex: number): number[] {
 
-    // Use MakeCode-style per-player d-pad buttons (works even if hero movement is locked)
+    const input = _getInputStateForHeroIndex(heroIndex)
 
-    let p: any = controller.player1
+    const left = input.left ? 1 : 0
 
-    if (heroIndex === 1) p = controller.player2
+    const right = input.right ? 1 : 0
 
-    else if (heroIndex === 2) p = controller.player3
+    const up = input.up ? 1 : 0
 
-    else if (heroIndex === 3) p = controller.player4
-
-
-
-    // Defensive fallback (should never hit if controller is present)
-
-    if (!p || !p.left || !p.right || !p.up || !p.down) {
-
-        let dx0 = heroFacingX[heroIndex] || 0
-
-        let dy0 = heroFacingY[heroIndex] || 0
-
-        if (dx0 === 0 && dy0 === 0) { dx0 = 1; dy0 = 0 }
-
-        return [dx0, dy0]
-
-    }
-
-
-
-    const left  = p.left.isPressed() ? 1 : 0
-
-    const right = p.right.isPressed() ? 1 : 0
-
-    const up    = p.up.isPressed() ? 1 : 0
-
-    const down  = p.down.isPressed() ? 1 : 0
+    const down = input.down ? 1 : 0
 
 
 
@@ -12324,9 +13628,9 @@ function getAimVectorForHero(heroIndex: number): number[] {
 
     if (dx === 0 && dy === 0) {
 
-        dx = heroFacingX[heroIndex] || 0
+        dx = _getHeroFacingX(heroIndex) || 0
 
-        dy = heroFacingY[heroIndex] || 0
+        dy = _getHeroFacingY(heroIndex) || 0
 
         if (dx === 0 && dy === 0) { dx = 1; dy = 0 }
 
@@ -13589,7 +14893,7 @@ function _storyBlessGlowAllHeroes(nowMs: number): void {
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
-        heroHealGlowUntil[hi] = until | 0
+        _heroStateSetNum(heroHealGlowUntilByProfile, hi, until | 0)
     }
 }
 
@@ -13606,8 +14910,8 @@ function _storyBlessStartForHero(hi: number, nowMs: number): void {
     sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY, hero.y)
     sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_INVIS_KEY, prevInvis)
     sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FCO_KEY, prevFco)
-    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY, heroFacingX[hi] || 0)
-    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY, heroFacingY[hi] || 0)
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY, _getHeroFacingX(hi))
+    sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY, _getHeroFacingY(hi))
 
     lockHeroControls(hi)
     setHeroBusyUntil(hi, (now + (STORY_BLESS_ANIM_MS | 0)) | 0)
@@ -13617,8 +14921,8 @@ function _storyBlessStartForHero(hi: number, nowMs: number): void {
     sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
 
     // Force facing down + play emote once before hold.
-    heroFacingX[hi] = 0
-    heroFacingY[hi] = 1
+    _setHeroFacingX(hi, 0)
+    _setHeroFacingY(hi, 1)
     syncHeroDirData(hi)
     sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
     publishHeroSpecialPhase(hi, "emote", STORY_BLESS_EMOTE_MS | 0, "STORY_BLESS", "_storyBlessStartForHero")
@@ -13663,8 +14967,8 @@ function _storyBlessPostTick(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, prevFco | 0)
             const prevFx = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_X_KEY)
             const prevFy = sprites.readDataNumber(hero, HERO_STORY_BLESS_ANIM_PREV_FACE_Y_KEY)
-            if (prevFx || prevFx === 0) heroFacingX[hi] = prevFx | 0
-            if (prevFy || prevFy === 0) heroFacingY[hi] = prevFy | 0
+            if (prevFx || prevFx === 0) _setHeroFacingX(hi, prevFx | 0)
+            if (prevFy || prevFy === 0) _setHeroFacingY(hi, prevFy | 0)
             syncHeroDirData(hi)
             sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_START_KEY, 0)
             sprites.setDataNumber(hero, HERO_STORY_BLESS_ANIM_BASE_Y_KEY, 0)
@@ -13697,8 +15001,8 @@ function _storyBlessPostTick(nowMs: number): void {
         if (baseY || baseY === 0) hero.y = baseY - rise
 
         // Keep facing down while blessing plays.
-        heroFacingX[hi] = 0
-        heroFacingY[hi] = 1
+        _setHeroFacingX(hi, 0)
+        _setHeroFacingY(hi, 1)
         syncHeroDirData(hi)
 
         // Hold the last emote frame after the initial emote window.
@@ -16364,7 +17668,7 @@ function enterShopMode(): void {
 
 function _shopEnsurePerHeroStateArrays(): void {
 
-    const N = 4
+    const N = Math.max(heroes.length | 0, 1)
 
 
 
@@ -16379,6 +17683,12 @@ function _shopEnsurePerHeroStateArrays(): void {
     if (shopBoughtByHero === null) shopBoughtByHero = []
 
     if (shopFocusOfferByHero === null) shopFocusOfferByHero = []
+    if (shopPrevAByPlayer === null) shopPrevAByPlayer = []
+    if (shopPrevBByPlayer === null) shopPrevBByPlayer = []
+    if (shopPrevUpByPlayer === null) shopPrevUpByPlayer = []
+    if (shopPrevDownByPlayer === null) shopPrevDownByPlayer = []
+    if (shopPrevLeftByPlayer === null) shopPrevLeftByPlayer = []
+    if (shopPrevRightByPlayer === null) shopPrevRightByPlayer = []
 
 
 
@@ -16391,6 +17701,12 @@ function _shopEnsurePerHeroStateArrays(): void {
     while (shopBoughtByHero.length < N) shopBoughtByHero.push(false)
 
     while (shopFocusOfferByHero.length < N) shopFocusOfferByHero.push(null)
+    while (shopPrevAByPlayer.length < N) shopPrevAByPlayer.push(false)
+    while (shopPrevBByPlayer.length < N) shopPrevBByPlayer.push(false)
+    while (shopPrevUpByPlayer.length < N) shopPrevUpByPlayer.push(false)
+    while (shopPrevDownByPlayer.length < N) shopPrevDownByPlayer.push(false)
+    while (shopPrevLeftByPlayer.length < N) shopPrevLeftByPlayer.push(false)
+    while (shopPrevRightByPlayer.length < N) shopPrevRightByPlayer.push(false)
 
 }
 
@@ -16452,6 +17768,8 @@ function shopTick(nowMs: number): void {
 
     }
 
+    _shopEnsurePerHeroStateArrays()
+
 
 
     shopkeeperNpc.setFlag(SpriteFlag.Ghost, false)
@@ -16488,7 +17806,7 @@ function shopTick(nowMs: number): void {
 
     let anyActive = false
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         if (now <= (shopFocusUntilMsByHero[hi] | 0)) { anyActive = true; break }
 
@@ -16524,7 +17842,7 @@ function shopPollControls(hi: number): {
 
     const i = hi | 0
 
-    if (i < 0 || i > 3) {
+    if (i < 0) {
 
         return { A_edge: false, B_edge: false, Up_edge: false, Down_edge: false, Left_edge: false, Right_edge: false }
 
@@ -16532,67 +17850,13 @@ function shopPollControls(hi: number): {
 
 
 
-    let aNow = false, bNow = false, upNow = false, downNow = false, leftNow = false, rightNow = false
-
-
-
-    if (i === 0) {
-
-        aNow = controller.player1.A.isPressed()
-
-        bNow = controller.player1.B.isPressed()
-
-        upNow = controller.player1.up.isPressed()
-
-        downNow = controller.player1.down.isPressed()
-
-        leftNow = controller.player1.left.isPressed()
-
-        rightNow = controller.player1.right.isPressed()
-
-    } else if (i === 1) {
-
-        aNow = controller.player2.A.isPressed()
-
-        bNow = controller.player2.B.isPressed()
-
-        upNow = controller.player2.up.isPressed()
-
-        downNow = controller.player2.down.isPressed()
-
-        leftNow = controller.player2.left.isPressed()
-
-        rightNow = controller.player2.right.isPressed()
-
-    } else if (i === 2) {
-
-        aNow = controller.player3.A.isPressed()
-
-        bNow = controller.player3.B.isPressed()
-
-        upNow = controller.player3.up.isPressed()
-
-        downNow = controller.player3.down.isPressed()
-
-        leftNow = controller.player3.left.isPressed()
-
-        rightNow = controller.player3.right.isPressed()
-
-    } else {
-
-        aNow = controller.player4.A.isPressed()
-
-        bNow = controller.player4.B.isPressed()
-
-        upNow = controller.player4.up.isPressed()
-
-        downNow = controller.player4.down.isPressed()
-
-        leftNow = controller.player4.left.isPressed()
-
-        rightNow = controller.player4.right.isPressed()
-
-    }
+    const st = _getInputStateForHeroIndex(i)
+    const aNow = !!st.A
+    const bNow = !!st.B
+    const upNow = !!st.up
+    const downNow = !!st.down
+    const leftNow = !!st.left
+    const rightNow = !!st.right
 
 
 
@@ -16668,7 +17932,7 @@ function shopUpdateFocus(nowMs: number): void {
 
     // Clear dead focus refs
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const cur = shopFocusOfferByHero[hi]
 
@@ -16708,7 +17972,11 @@ function shopUpdateFocus(nowMs: number): void {
 
     // (We keep the "lowest ring index wins" behavior deterministically.)
 
-    for (let hi = 0; hi < 4; hi++) {
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
+
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -16716,20 +17984,12 @@ function shopUpdateFocus(nowMs: number): void {
 
         if (hero.flags & sprites.Flag.Destroyed) continue
 
-        const pid = (hi + 1) | 0
-
-        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        if ((owner | 0) !== (pid | 0)) {
-
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (connectedMap && profileKey && !connectedMap[profileKey]) {
             shopFocusOfferByHero[hi] = null
-
             shopFocusRingIndexByHero[hi] = -1
-
             shopFocusUntilMsByHero[hi] = 0
-
             continue
-
         }
 
 
@@ -16820,7 +18080,7 @@ function shopPublishTouchedMapOnShopkeeper(nowMs: number): void {
 
 
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const pid = (hi + 1) | 0
 
@@ -16884,7 +18144,7 @@ function shopHandleControls(nowMs: number): void {
 
 
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -17503,7 +18763,7 @@ function _shopBuildDebugSignature(nowMs: number): string {
 
     sig += "|focus="
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         sig += "(" + (shopFocusRingIndexByHero[hi] | 0) + "," + (shopFocusUntilMsByHero[hi] | 0) + ")"
 
@@ -17515,7 +18775,7 @@ function _shopBuildDebugSignature(nowMs: number): string {
 
     sig += "|coins="
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         sig += "p" + ((hi + 1) | 0) + "=" + (getHeroCoins(hi) | 0) + ";"
 
@@ -18011,7 +19271,7 @@ function _shopApplyFocusGateToShopUi(nowMs: number): void {
 
     const now = nowMs | 0
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const until = shopFocusUntilMsByHero[hi] | 0
 
@@ -18121,7 +19381,7 @@ function _shopPublishTouchStateOnShopkeeper(nowMs: number): void {
 
 
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const until = shopFocusUntilMsByHero[hi] | 0
 
@@ -18185,7 +19445,7 @@ function shopControlTick(nowMs: number): void {
 
     if (!_shopIsAliveSprite(shopkeeperNpc)) {
 
-        for (let hi = 0; hi < 4; hi++) {
+        for (let hi = 0; hi < heroes.length; hi++) {
 
             shopFocusRingIndexByHero[hi] = -1
 
@@ -18237,7 +19497,7 @@ function shopControlTickOLDCODETODELETE(nowMs: number): void {
 
     if (!_shopIsAliveSprite(shopkeeperNpc)) {
 
-        for (let hi = 0; hi < 4; hi++) {
+        for (let hi = 0; hi < heroes.length; hi++) {
 
             shopFocusRingIndexByHero[hi] = -1
 
@@ -18267,7 +19527,7 @@ function shopControlTickOLDCODETODELETE(nowMs: number): void {
 
     // Touch plumbing stays in sync with focus
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const ringIndex = shopFocusRingIndexByHero[hi] | 0
 
@@ -18926,7 +20186,7 @@ function _shopIsStatueFocused(st: Sprite, nowMs: number): boolean {
 
     const now = nowMs | 0
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         if (shopFocusOfferByHero[hi] !== st) continue
 
@@ -20051,7 +21311,7 @@ function shopModeUpdate(nowMs: number): void {
 
         // Kill any lingering canvas UI + clear focus data
 
-        for (let hi = 0; hi < 4; hi++) {
+        for (let hi = 0; hi < heroes.length; hi++) {
 
             try { _shopDestroyUiForHero(hi) } catch {}
 
@@ -20075,7 +21335,7 @@ function shopModeUpdate(nowMs: number): void {
 
     // Publish focus data (DOM), no canvas UI
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         _shopUpdateUiForHero(hi, now)
 
@@ -20465,7 +21725,7 @@ function _shopInit_grantCoinsOnce(): void {
 
     _shopGrantedCoins = true
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const h = heroes[hi]
 
@@ -20831,7 +22091,7 @@ function _shopInit_clearOfferCacheIfRolled(didRoll: boolean): void {
 
 function _shopInit_sanitizeHeroesOnEntry(): void {
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -21059,7 +22319,9 @@ function _shopInputs_getHeroForIndex(hi: number): Sprite {
 
 function _shopInputs_getPidForHeroIndex(hi: number): number {
 
-    return (hi + 1) | 0
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return 0
+    return sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
 
 }
 
@@ -21112,20 +22374,8 @@ function _shopInputs_readOfferMeta(offer: Sprite): any {
 
 
 function _shopInputs_pollABNow(hi: number): any {
-
-    let aNow = false
-
-    let bNow = false
-
-    if (hi === 0) { aNow = controller.player1.A.isPressed(); bNow = controller.player1.B.isPressed() }
-
-    else if (hi === 1) { aNow = controller.player2.A.isPressed(); bNow = controller.player2.B.isPressed() }
-
-    else if (hi === 2) { aNow = controller.player3.A.isPressed(); bNow = controller.player3.B.isPressed() }
-
-    else if (hi === 3) { aNow = controller.player4.A.isPressed(); bNow = controller.player4.B.isPressed() }
-
-    return { aNow, bNow }
+    const st = _getInputStateForHeroIndex(hi | 0)
+    return { aNow: !!st.A, bNow: !!st.B }
 
 }
 
@@ -21325,9 +22575,8 @@ function shopHandleInputs(nowMs: number): void {
 
 
 
-    // Player mapping: heroIndex 0..3 -> controller.player1..player4
-
-    for (let hi = 0; hi < 4; hi++) {
+    // Profile-backed input: iterate active heroes
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         if (!_shopInputs_isShopActiveForHero(hi, now)) continue
 
@@ -23847,6 +25096,12 @@ let _tileCollFrame = 0
 // Keep visuals/projectiles aligned by only applying this to collision math.
 
 const HERO_COLLISION_Y_OFFSET_PX = 22
+const HERO_COLLIDER_PX = 30
+const HERO_WALL_DIAG_CHEAT_RADIUS_PCT = 5.0
+const HERO_WALL_DIAG_CHEAT_MIN_PX = 8
+const HERO_WALL_DIAG_CHEAT_MAX_PX = -1
+const HERO_WALL_DIAG_NUDGE_PX = 1
+const HERO_WALL_DIAG_NUDGE_TICKS = 3
 
 
 
@@ -23856,18 +25111,21 @@ function _heroCollisionOffsetY(s: Sprite): number {
 
 }
 
-
+function _readSpriteColliderDims(s: Sprite): { w: number; h: number } {
+    let w = s.width | 0
+    let h = s.height | 0
+    const cw = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_W) | 0
+    const ch = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_H) | 0
+    if (cw > 0) w = cw | 0
+    if (ch > 0) h = ch | 0
+    return { w: w | 0, h: h | 0 }
+}
 
 function _boundsWithOffset(s: Sprite, offY: number) {
 
-    let w = s.width | 0
-    let h = s.height | 0
-    if (s.kind === SpriteKind.Enemy) {
-        const cw = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_W) | 0
-        const ch = sprites.readDataNumber(s, ENEMY_DATA.COLLIDER_H) | 0
-        if (cw > 0) w = cw | 0
-        if (ch > 0) h = ch | 0
-    }
+    const dims = _readSpriteColliderDims(s)
+    const w = dims.w | 0
+    const h = dims.h | 0
 
     const halfW = w >> 1
 
@@ -23967,7 +25225,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
 
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -24128,7 +25386,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
                 let auraStyle: PropAuraStyle = null as any
                 if (focusThisTick && focusName) {
                     const base = propBaseNameFromKey(focusName)
-                    if (base === "fire_totem") auraStyle = FIRE_TOTEM_AURA_FOCUS
+                    if (base === "fire_totem") auraStyle = _trapTotemAuraStyle(FIRE_TOTEM_AURA_FOCUS)
                 }
 
                 const auraRadius = auraStyle ? (auraStyle.radius ?? 2) : 2
@@ -24168,6 +25426,7 @@ function _dunUpdatePropAuraOverrides(nowMs: number): void {
     const sc: any = g ? g.__phaserScene : null
     const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
     if (!renderer || typeof renderer.setPropFocusAuraAt !== "function") return
+    _trapTotemApplyPropTint(renderer)
 
     const now = nowMs | 0
     let mode = ""
@@ -24181,7 +25440,8 @@ function _dunUpdatePropAuraOverrides(nowMs: number): void {
     }
 
     if (mode === "active" || mode === "menu") {
-        const style = (mode === "active") ? FIRE_TOTEM_AURA_ACTIVE : FIRE_TOTEM_AURA_MENU
+        const baseStyle = (mode === "active") ? FIRE_TOTEM_AURA_ACTIVE : FIRE_TOTEM_AURA_MENU
+        const style = _trapTotemAuraStyle(baseStyle)
         const radius = (style.radius ?? 2) | 0
         const depth = (style.depthBias ?? 1) | 0
         renderer.setPropFocusAuraAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, true, radius, depth, _dunAuraStyleToOpts(style))
@@ -24195,6 +25455,56 @@ function _dunUpdatePropAuraOverrides(nowMs: number): void {
     }
 
     renderer.setPropFocusAuraAt(_dunFireTotemTileR | 0, _dunFireTotemTileC | 0, false, 0, 0)
+}
+
+function _dunUpdateShrineOverlays(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+    if (!renderer || typeof renderer.setPropOverlayAt !== "function") return
+
+    const now = nowMs | 0
+    const seen: Record<string, 1> = Object.create(null)
+
+    const lists = [_engineDecorSolids, _engineDecorTriggers]
+    for (let li = 0; li < lists.length; li++) {
+        const list = lists[li]
+        if (!list || list.length <= 0) continue
+        for (let i = 0; i < list.length; i++) {
+            const s = list[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            if (propBaseNameFromKey(name) !== SHRINE_BASE) continue
+            const r = sprites.readDataNumber(s, "decorTileR") | 0
+            const c = sprites.readDataNumber(s, "decorTileC") | 0
+            if (r < 0 || c < 0) continue
+            const key = String(r | 0) + "," + String(c | 0)
+            if (seen[key]) continue
+            seen[key] = 1
+
+            const activeUntil = sprites.readDataNumber(s, SHRINE_ACTIVE_UNTIL_KEY) | 0
+            const active = (activeUntil | 0) > (now | 0)
+            if (active) {
+                let start = sprites.readDataNumber(s, SHRINE_ACTIVE_START_KEY) | 0
+                if (start <= 0 || start > now || start > activeUntil) {
+                    start = now | 0
+                    sprites.setDataNumber(s, SHRINE_ACTIVE_START_KEY, start | 0)
+                }
+                const tint = _shrineOverlayTint(now | 0, start | 0)
+                renderer.setPropOverlayAt(r, c, true, {
+                    tint,
+                    alpha: SHRINE_OVERLAY_ALPHA,
+                    blendMode: SHRINE_OVERLAY_BLEND_MODE,
+                })
+            } else {
+                if ((sprites.readDataNumber(s, SHRINE_ACTIVE_START_KEY) | 0) !== 0) {
+                    sprites.setDataNumber(s, SHRINE_ACTIVE_START_KEY, 0)
+                }
+                renderer.setPropOverlayAt(r, c, false)
+            }
+        }
+    }
 }
 
 
@@ -24367,7 +25677,7 @@ function _shopUpdateFocusHighlights(nowMs: number): void {
 
     let keeperFocused = false
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -24399,7 +25709,7 @@ function updateGenericFocus(nowMs: number): void {
 
     // Clear generic focus for all player heroes (will re-arm below as needed)
 
-    for (let hi = 0; hi < 4; hi++) {
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
 
@@ -24413,6 +25723,7 @@ function updateGenericFocus(nowMs: number): void {
 
     _dunUpdateInteractableFocus(nowMs)
     _dunUpdatePropAuraOverrides(nowMs)
+    _dunUpdateShrineOverlays(nowMs)
     _shopUpdateFocusHighlights(nowMs)
 
 }
@@ -24544,9 +25855,12 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
 
 
 
-        const halfW = s.width >> 1
+        const dims = _readSpriteColliderDims(s)
+        const cw = dims.w | 0
+        const ch = dims.h | 0
+        const halfW = cw >> 1
 
-        const halfH = s.height >> 1
+        const halfH = ch >> 1
 
 
 
@@ -24712,9 +26026,12 @@ function resolveHeroTilemapCollisions(): void {
 
 
 
-        const halfW = s.width >> 1
+        const dims = _readSpriteColliderDims(s)
+        const cw = dims.w | 0
+        const ch = dims.h | 0
+        const halfW = cw >> 1
 
-        const halfH = s.height >> 1
+        const halfH = ch >> 1
 
         const collOffY = _heroCollisionOffsetY(s)
 
@@ -24728,15 +26045,13 @@ function resolveHeroTilemapCollisions(): void {
 
             const cy = s.y + collOffY
 
-            const b = _boundsWithOffset(s, collOffY)
+            const left = (cx - halfW) | 0
 
-            const left = b.left
+            const right = (cx + halfW - 1) | 0
 
-            const right = b.right
+            const top = (cy - halfH) | 0
 
-            const top = b.top
-
-            const bottom = b.bottom
+            const bottom = (cy + halfH - 1) | 0
 
 
 
@@ -24751,134 +26066,219 @@ function resolveHeroTilemapCollisions(): void {
 
 
             let moved = false
+            const vx0 = s.vx
+            const vy0 = s.vy
+            const movingDiag = Math.abs(vx0) > 0.001 && Math.abs(vy0) > 0.001
 
+            let bestCheat: {
+                r: number
+                c: number
+                type: number
+                shapeLeft: number
+                shapeTop: number
+                shapeW: number
+                shapeH: number
+                penX: number
+                penY: number
+                approachX: number
+                approachY: number
+                minApproach: number
+            } | null = null
 
+            if (movingDiag) {
+                let diagCheatPx = Math.round(Math.min(cw | 0, ch | 0) * 0.5 * HERO_WALL_DIAG_CHEAT_RADIUS_PCT) | 0
+                if (diagCheatPx < (HERO_WALL_DIAG_CHEAT_MIN_PX | 0)) diagCheatPx = HERO_WALL_DIAG_CHEAT_MIN_PX | 0
+                const diagCheatMax = HERO_WALL_DIAG_CHEAT_MAX_PX | 0
+                if (diagCheatMax > 0 && diagCheatPx > diagCheatMax) diagCheatPx = diagCheatMax
 
-            for (let r = minRow; r <= maxRow; r++) {
+                if (diagCheatPx > 0) {
+                    for (let r = minRow; r <= maxRow; r++) {
 
-                if (r < 0 || r >= rows) continue
+                        if (r < 0 || r >= rows) continue
 
-                const rowArr = map[r]
+                        const rowArr = map[r]
 
+                        for (let c = minCol; c <= maxCol; c++) {
 
+                            const type = rowArr[c] | 0
+                            const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
+                            if (!def.solid) continue
 
+                            const shapeLeft = c * tileSize + def.offsetX
+                            const shapeRight = shapeLeft + def.width
+                            const shapeTop = r * tileSize + def.offsetY
+                            const shapeBottom = shapeTop + def.height
 
+                            const overlapLeft = right - shapeLeft
+                            const overlapRight = shapeRight - left
+                            const overlapTop = bottom - shapeTop
+                            const overlapBottom = shapeBottom - top
+                            if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) continue
 
-                for (let c = minCol; c <= maxCol; c++) {
+                            const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
+                            const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                            const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
+                            const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
+                            const fullTile =
+                                def.offsetX === 0 &&
+                                def.offsetY === 0 &&
+                                def.width === tileSize &&
+                                def.height === tileSize
+                            const minApproach = Math.min(approachX, approachY)
+                            if (!fullTile || (minApproach > diagCheatPx)) continue
 
-                    const type = rowArr[c] | 0; // force 0 if undefined
-
-                    const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0];
-
-                    if (!def.solid) continue;
-
-
-
-                    // Build the tile's collision rect in WORLD space,
-
-                    // using per-type offsets and size.
-
-                    const shapeLeft   = c * tileSize + def.offsetX;
-
-                    const shapeRight  = shapeLeft + def.width;
-
-                    const shapeTop    = r * tileSize + def.offsetY;
-
-                    const shapeBottom = shapeTop + def.height;
-
-
-
-                    // Compute overlaps on each side (sprite vs collision shape)
-
-                    const overlapLeft   = right  - shapeLeft;
-
-                    const overlapRight  = shapeRight - left;
-
-                    const overlapTop    = bottom - shapeTop;
-
-                    const overlapBottom = shapeBottom - top;
-
-
-
-                    // If any are <= 0, AABBs don't overlap on that axis
-
-                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
-
-                        continue;
-
-                    }
-
-
-
-                    // Minimal penetration on each axis
-
-                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight;
-
-                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom;
-
-
-
-                    if (penX < penY) {
-
-                        // Push in X
-
-                        const shapeCenterX = shapeLeft + def.width / 2;
-
-                        if (s.x < shapeCenterX) {
-
-                            s.x -= penX;
-
-                        } else {
-
-                            s.x += penX;
-
+                            if (!bestCheat || minApproach < bestCheat.minApproach) {
+                                bestCheat = {
+                                    r,
+                                    c,
+                                    type,
+                                    shapeLeft,
+                                    shapeTop,
+                                    shapeW: def.width,
+                                    shapeH: def.height,
+                                    penX,
+                                    penY,
+                                    approachX,
+                                    approachY,
+                                    minApproach
+                                }
+                            }
                         }
-
-                        // Soft slide: kill only X velocity
-
-                        s.vx = 0;
-
-                    } else {
-
-                        // Push in Y
-
-                        const shapeCenterY = shapeTop + def.height / 2;
-
-                        if (cy < shapeCenterY) {
-
-                            s.y -= penY;
-
-                        } else {
-
-                            s.y += penY;
-
-                        }
-
-                        // Soft slide: kill only Y velocity
-
-                        s.vy = 0;
-
                     }
-
-
-
-                    moved = true;
-
-
-
                 }
-
-
-
-
-
-
-
             }
 
+            if (bestCheat) {
+                let nudged = false
+                if (HERO_WALL_DIAG_NUDGE_PX > 0 && HERO_WALL_DIAG_NUDGE_TICKS > 0) {
+                    let gate = sprites.readDataNumber(s, "__heroWallDiagNudgeGate") | 0
+                    gate = (gate + 1) | 0
+                    if ((gate % HERO_WALL_DIAG_NUDGE_TICKS) === 0) {
+                        if (bestCheat.approachX < bestCheat.approachY) {
+                            const shapeCenterX = bestCheat.shapeLeft + bestCheat.shapeW / 2
+                            if (cx < shapeCenterX) s.x -= HERO_WALL_DIAG_NUDGE_PX
+                            else s.x += HERO_WALL_DIAG_NUDGE_PX
+                        } else {
+                            const shapeCenterY = bestCheat.shapeTop + bestCheat.shapeH / 2
+                            if (cy < shapeCenterY) s.y -= HERO_WALL_DIAG_NUDGE_PX
+                            else s.y += HERO_WALL_DIAG_NUDGE_PX
+                        }
+                        nudged = true
+                    }
+                    sprites.setDataNumber(s, "__heroWallDiagNudgeGate", gate)
+                }
 
+                const speed = Math.sqrt(vx0 * vx0 + vy0 * vy0)
+                if (speed > 0.001) {
+                    if (bestCheat.approachX < bestCheat.approachY) {
+                        s.vx = 0
+                        s.vy = (vy0 >= 0 ? speed : -speed)
+                    } else {
+                        s.vy = 0
+                        s.vx = (vx0 >= 0 ? speed : -speed)
+                    }
+                }
 
-            // If we didn't adjust position this pass, we are out of walls
+                if (nudged) moved = true
+            } else {
+                for (let r = minRow; r <= maxRow; r++) {
+
+                    if (r < 0 || r >= rows) continue
+
+                    const rowArr = map[r]
+
+                    for (let c = minCol; c <= maxCol; c++) {
+
+                        const type = rowArr[c] | 0; // force 0 if undefined
+
+                        const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0];
+
+                        if (!def.solid) continue;
+
+                        // Build the tile's collision rect in WORLD space,
+
+                        // using per-type offsets and size.
+
+                        const shapeLeft   = c * tileSize + def.offsetX;
+
+                        const shapeRight  = shapeLeft + def.width;
+
+                        const shapeTop    = r * tileSize + def.offsetY;
+
+                        const shapeBottom = shapeTop + def.height;
+
+                        // Compute overlaps on each side (sprite vs collision shape)
+
+                        const overlapLeft   = right  - shapeLeft;
+
+                        const overlapRight  = shapeRight - left;
+
+                        const overlapTop    = bottom - shapeTop;
+
+                        const overlapBottom = shapeBottom - top;
+
+                        // If any are <= 0, AABBs don't overlap on that axis
+
+                        if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
+
+                            continue;
+
+                        }
+
+                        // Minimal penetration on each axis
+
+                        const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight;
+
+                        const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom;
+
+                        if (penX < penY) {
+
+                            // Push in X
+
+                            const shapeCenterX = shapeLeft + def.width / 2;
+
+                            if (s.x < shapeCenterX) {
+
+                                s.x -= penX;
+
+                            } else {
+
+                                s.x += penX;
+
+                            }
+
+                            // Soft slide: kill only X velocity
+
+                            s.vx = 0;
+
+                        } else {
+
+                            // Push in Y
+
+                            const shapeCenterY = shapeTop + def.height / 2;
+
+                            if (cy < shapeCenterY) {
+
+                                s.y -= penY;
+
+                            } else {
+
+                                s.y += penY;
+
+                            }
+
+                            // Soft slide: kill only Y velocity
+
+                            s.vy = 0;
+
+                        }
+
+                        moved = true;
+
+                    }
+
+                }
+            }// If we didn't adjust position this pass, we are out of walls
 
             if (!moved) break
 
@@ -25705,89 +27105,26 @@ function decorSolids_blockingHook(nowMs: number): void {
 
 // On MakeCode, this is the only thing used.
 
-// On Phaser, the wrapper can override via globalThis.__heroProfiles.
+// On Phaser, the wrapper can override via __netProfileByPid / __localHeroProfileName.
 
 const HERO_SLOT_PROFILE_DEFAULTS = ["Default", "Default", "Default", "Default"];
 
 
 
-// Simple "intent" placeholder for P1 (used by input logic)
+type HeroIntentState = {
+    intent: string
+    pending1: string
+    pending2: string
+    prevA: boolean
+    prevB: boolean
+    lastAEdgeMs: number
+    lastBEdgeMs: number
+}
 
-let p1Intent = ""
-
-
-
-// Simple "intent" placeholder for P2 (used by input logic)
-
-let p2Intent = ""
-
-
-
-// Simple "intent" placeholder for P3 (used by input logic)
-
-let p3Intent = ""
-
-
-
-// Simple "intent" placeholder for P4 (used by input logic)
-
-let p4Intent = ""
-
-
-
-
-
-// Edge-queued intents (consumed by TIMER80)
-
-let p1IntentPending = ""
-
-let p2IntentPending = ""
-
-let p3IntentPending = ""
-
-let p4IntentPending = ""
-
-
-
-// NEW: tiny 2-deep FIFO so fast taps between TIMER80 ticks don’t get dropped
-
-let p1IntentPending2 = ""
-
-let p2IntentPending2 = ""
-
-let p3IntentPending2 = ""
-
-let p4IntentPending2 = ""
-
-
+const heroIntentByProfile: Record<string, HeroIntentState> = Object.create(null)
 
 // A+B chord window (ms)
-
 const AB_CHORD_WINDOW_MS = 200
-
-
-
-// Previous raw button states (for edge detection)
-
-let _p1PrevA = false, _p1PrevB = false
-
-let _p2PrevA = false, _p2PrevB = false
-
-let _p3PrevA = false, _p3PrevB = false
-
-let _p4PrevA = false, _p4PrevB = false
-
-
-
-// Last edge timestamps (for A+B chord detection window)
-
-let _p1LastAEdgeMs = 0, _p1LastBEdgeMs = 0
-
-let _p2LastAEdgeMs = 0, _p2LastBEdgeMs = 0
-
-let _p3LastAEdgeMs = 0, _p3LastBEdgeMs = 0
-
-let _p4LastAEdgeMs = 0, _p4LastBEdgeMs = 0
 
 
 
@@ -25795,21 +27132,15 @@ let _p4LastAEdgeMs = 0, _p4LastBEdgeMs = 0
 
 // Control-lock timestamps: when each hero's inputs should unlock
 
-let heroBusyUntil: number[] = []
+let heroBusyUntilByProfile: Record<string, number> = Object.create(null)
 
 
 
 
 
-// Hook: resolve a "profile name" for this hero.
-
-// In Phaser, the wrapper may set (globalThis as any).__heroProfiles
-
-// to an array like ["Jason", "Default", "Default", "Default"].
-
-// In MakeCode, globalThis may not exist, so we swallow errors and
-
-// just fall back to the default profile.
+// Resolve a "profile name" for this hero.
+// Primary source: sprite data (HERO_DATA.Name / heroName).
+// Secondary: profile registry mapping.
 
 
 
@@ -25819,43 +27150,18 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 
     if (!hero) return "Default"
 
-
-
-    // Prefer mapping by owner/playerId so join order lines up with profiles
-
-    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-    const slotIndex = ownerId > 0 ? ownerId - 1 : heroIndex
-
-
-
-    // Default profile name from engine's own table
-
-    let name = HERO_SLOT_PROFILE_DEFAULTS[slotIndex] || "Default"
-
-
-
-    // OPTIONAL override from host (Phaser / VS / custom glue file)
-
-    try {
-
-        const g: any = globalThis
-
-        if (g && g.__heroProfiles && typeof g.__heroProfiles[slotIndex] === "string") {
-
-            name = g.__heroProfiles[slotIndex]
-
+    const direct = _getProfileFromHeroSprite(hero)
+    if (direct) {
+        if (heroIndexToProfile[heroIndex] !== direct) {
+            _registerHeroProfile(direct, heroIndex)
         }
-
-    } catch (e) {
-
-        // In MakeCode Arcade, globalThis may not exist; we just keep the default.
-
+        return direct
     }
 
+    const mapped = heroIndexToProfile[heroIndex]
+    if (mapped) return mapped
 
-
-    return name
+    return "Default"
 
 }
 
@@ -25885,19 +27191,9 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
 
 
-    // Choose the appropriate hook
+    const profile = getHeroProfileForHeroIndex(heroIndex);
 
-    let fn: any = null;
-
-    if (heroIndex == 0) fn = HeroEngine.hero1LogicHook;
-
-    else if (heroIndex == 1) fn = HeroEngine.hero2LogicHook;
-
-    else if (heroIndex == 2) fn = HeroEngine.hero3LogicHook;
-
-    else if (heroIndex == 3) fn = HeroEngine.hero4LogicHook;
-
-    else fn = HeroEngine.hero1LogicHook;
+    const fn: any = HeroEngine.heroLogicByProfileHook;
 
 
 
@@ -25906,6 +27202,8 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
         console.log(
 
             "[runHeroLogicForHero] ENTER heroIndex=" + heroIndex +
+
+            " profile=" + profile +
 
             " button=" + button +
 
@@ -25925,23 +27223,15 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
             "[runHeroLogicForHero] INVALID HOOK heroIndex=" + heroIndex +
 
+            " profile=" + profile +
+
             " button=" + button +
 
             " fn=" + fn
 
         );
 
-        return [
-
-            FAMILY.STRENGTH,
-
-            0, 0, 0, 0,
-
-            ELEM.NONE,
-
-            ANIM.ID.IDLE
-
-        ];
+        return defaultHeroLogic(button, heroIndex, localEnemies, localHeroes);
 
     }
 
@@ -25955,7 +27245,7 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
     try {
 
-        out = fn(button, heroIndex, localEnemies, localHeroes);
+        out = fn(profile, button, heroIndex, localEnemies, localHeroes);
 
     } catch (e) {
 
@@ -25963,23 +27253,15 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
 
             "[runHeroLogicForHero] ERROR heroIndex=" + heroIndex +
 
+            " profile=" + profile +
+
             " button=" + button +
 
             " error=" + e
 
         );
 
-        return [
-
-            FAMILY.STRENGTH,
-
-            0, 0, 0, 0,
-
-            ELEM.NONE,
-
-            ANIM.ID.IDLE
-
-        ];
+        return defaultHeroLogic(button, heroIndex, localEnemies, localHeroes);
 
     }
 
@@ -25990,6 +27272,8 @@ function runHeroLogicForHero(heroIndex: number, button: string) {
         console.log(
 
             "[runHeroLogicForHero] OUT heroIndex=" + heroIndex +
+
+            " profile=" + profile +
 
             " button=" + button +
 
@@ -26068,6 +27352,10 @@ function coerceElement(val: any): number {
         if (s === "fire") return ELEM.FIRE
 
         if (s === "water") return ELEM.WATER
+
+        if (s === "ice" || s === "icy") return ELEM.ICE
+
+        if (s === "air" || s === "wind") return ELEM.AIR
 
         if (s === "earth") return ELEM.EARTH
 
@@ -26383,7 +27671,9 @@ function createHeroForPlayer(
 
     // NEW (optional): if true, still map playerToHeroIndex[playerId] even for non-1..4 ids
 
-    forcePlayerToHeroIndexMapping?: boolean
+    forcePlayerToHeroIndexMapping?: boolean,
+    // NEW (optional): human-friendly creation source for debugging
+    spawnReason?: string
 
 ) {
 
@@ -26394,6 +27684,8 @@ function createHeroForPlayer(
     // In pure Arcade, students will just see big, chunky heroes.
 
     const hero = sprites.create(image.create(64, 64), SpriteKind.Player)
+    sprites.setDataNumber(hero, ENEMY_DATA.COLLIDER_W, HERO_COLLIDER_PX | 0)
+    sprites.setDataNumber(hero, ENEMY_DATA.COLLIDER_H, HERO_COLLIDER_PX | 0)
 
 
 
@@ -26414,32 +27706,19 @@ function createHeroForPlayer(
 
 
     // -------------------------------------------------
-
-    // NEW: do NOT automatically map non-1..4 ids unless requested.
-
-    // This avoids sparse playerToHeroIndex[99] unless you WANT it.
-
+    // Profile-first: always map pid -> hero index when pid is present.
+    // (Profile lookup remains primary; pid mapping is legacy bridge.)
     // -------------------------------------------------
-
     const pid = playerId | 0
-
-    const shouldMap =
-
-        (pid >= 1 && pid <= 4) ||
-
-        (forcePlayerToHeroIndexMapping ? true : false)
-
-
-
-    if (shouldMap) {
-
+    if (pid > 0) {
         playerToHeroIndex[pid] = heroIndex
-
     }
 
 
 
     sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
+    const spawnReasonKey = (typeof spawnReason === "string" && spawnReason.trim()) ? spawnReason.trim() : "unspecified"
+    sprites.setDataString(hero, HERO_DATA.SPAWN_REASON, spawnReasonKey)
     if (isNpc) sprites.setDataBoolean(hero, HERO_DATA.IS_NPC, true)
 
     if (!isNpc && (pid | 0) > 0) {
@@ -26448,7 +27727,7 @@ function createHeroForPlayer(
 
     }
 
-    heroFacingX[heroIndex] = 1; heroFacingY[heroIndex] = 0
+    _setHeroFacingX(heroIndex, 1); _setHeroFacingY(heroIndex, 0)
 
 
 
@@ -26456,9 +27735,9 @@ function createHeroForPlayer(
 
     if (playerId === SHOPKEEPER_PLAYER_ID) {
 
-        heroFacingX[heroIndex] = 0
+        _setHeroFacingX(heroIndex, 0)
 
-        heroFacingY[heroIndex] = 1
+        _setHeroFacingY(heroIndex, 1)
 
     }
 
@@ -26466,7 +27745,7 @@ function createHeroForPlayer(
 
 
 
-    heroBusyUntil[heroIndex] = 0
+    _heroStateSetNum(heroBusyUntilByProfile, heroIndex, 0)
 
 
 
@@ -26718,7 +27997,7 @@ function createHeroForPlayer(
 
     // NEW: seed hero identity strings so Phaser can resolve LPC animations
 
-    // and ALSO set your requested HERO_DATA.Name = "name"
+    // and ALSO set your requested HERO_DATA.NAME = "name"
 
     // -------------------------------------------------
 
@@ -26744,11 +28023,17 @@ function createHeroForPlayer(
 
     }
 
+    profileName = _normalizeProfileKey(profileName) || "Default"
+    const profileKey = _registerHeroProfile(profileName, heroIndex)
+    if ((pid | 0) > 0 && profileKey) {
+        playerIdToProfile[pid] = profileKey
+    }
+
 
 
     // Your requested canonical name field
 
-    sprites.setDataString(hero, HERO_DATA.Name, profileName)
+    sprites.setDataString(hero, HERO_DATA.NAME, profileName)
 
 
 
@@ -26758,13 +28043,23 @@ function createHeroForPlayer(
 
     sprites.setDataString(hero, "heroFamily", heroFamilyNumberToString(fam))
 
+    if (DEBUG_HERO_SPAWN_LOGS) {
+        console.log("[hero.spawn]", {
+            reason: spawnReasonKey,
+            pid: pid | 0,
+            heroIndex,
+            heroId: (hero as any).id ?? null,
+            profile: profileKey || profileName,
+            family: heroFamilyNumberToString(fam),
+            isNpc: !!isNpc
+        })
+    }
+
 
 
     // NEW (Step 4): seed weapon loadout onto sprite.data (primitives only; net-safe)
-
-    // Only real players (pid 1..4) should receive loadouts; NPCs (shopkeeper, etc.) do not.
-
-    if ((pid | 0) >= 1 && (pid | 0) <= 4) {
+    // Only real players should receive loadouts; NPCs (shopkeeper, etc.) do not.
+    if ((pid | 0) > 0 && !isNpc) {
 
         ensureHeroWeaponLoadoutSeeded(hero, profileName, fam)
 
@@ -26842,7 +28137,7 @@ function createHeroForPlayer(
 
 
 
-    heroTargetCircles[heroIndex] = null
+    _setHeroTargetCircle(heroIndex, null)
 
 
 
@@ -26866,9 +28161,9 @@ function createHeroForPlayer(
 
         // Face DOWN immediately (then publish dir data)
 
-        heroFacingX[heroIndex] = 0
+        _setHeroFacingX(heroIndex, 0)
 
-        heroFacingY[heroIndex] = 1
+        _setHeroFacingY(heroIndex, 1)
 
         syncHeroDirData(heroIndex)
 
@@ -26942,7 +28237,7 @@ function createHeroForPlayer(
 
     if ((playerId | 0) === 99) {
 
-        // This is the key Phaser glue reads (NOT HERO_DATA.Name)
+        // This is the key Phaser glue reads (NOT HERO_DATA.NAME)
 
         sprites.setDataString(hero, "heroName", "Shopkeeper")
 
@@ -26952,9 +28247,9 @@ function createHeroForPlayer(
 
         // Optional: give it a readable label too (your engine-side name field)
 
-        // (Use whatever key you actually defined: HERO_DATA.Name is "name")
+        // (Use whatever key you actually defined: HERO_DATA.NAME is "name")
 
-        sprites.setDataString(hero, HERO_DATA.Name, "Shopkeeper")
+        sprites.setDataString(hero, HERO_DATA.NAME, "Shopkeeper")
 
 
 
@@ -26962,9 +28257,9 @@ function createHeroForPlayer(
 
         // (down = dy=+1)
 
-        heroFacingX[heroes.length - 1] = 0
+        _setHeroFacingX(heroes.length - 1, 0)
 
-        heroFacingY[heroes.length - 1] = 1
+        _setHeroFacingY(heroes.length - 1, 1)
 
         syncHeroDirData(heroes.length - 1)
 
@@ -27108,7 +28403,39 @@ function setupHeroes() {
             console.log("[setupHeroes] Phaser runtime: spawning ONLY Player 1 (spawn-on-demand enabled)");
         }
 
-        createHeroForPlayer(1, coords[0][0], coords[0][1]);
+        // Prefer local player id/profile if the network assigned one before boot.
+        let pid = 1
+        let profileOverride = ""
+        try {
+            const g: any = globalThis as any
+            const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+            if (netPid > 0) pid = netPid
+            if (playerIdToProfile[pid]) {
+                profileOverride = playerIdToProfile[pid]
+            } else if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+                profileOverride = g.__netProfileByPid[pid]
+            }
+        } catch { }
+        if (!profileOverride) profileOverride = _getLocalProfileKey()
+        const slotIndex = (pid | 0) > 0 ? (pid - 1) : 0
+        const coordIndex = (slotIndex >= 0 && slotIndex < coords.length) ? slotIndex : 0
+        if (DEBUG_SETUP_HEROES_LOGS) {
+            console.log("[setupHeroes] Phaser runtime: local spawn", {
+                pid,
+                profileOverride: profileOverride || null,
+                coordIndex
+            })
+        }
+        createHeroForPlayer(
+            pid,
+            coords[coordIndex][0],
+            coords[coordIndex][1],
+            profileOverride || undefined,
+            undefined,
+            undefined,
+            undefined,
+            "setupHeroes:phaser"
+        );
 
         return;
 
@@ -27118,13 +28445,13 @@ function setupHeroes() {
 
     // MakeCode Arcade behavior (unchanged)
 
-    createHeroForPlayer(1, coords[0][0], coords[0][1]);
+    createHeroForPlayer(1, coords[0][0], coords[0][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p1");
 
-    createHeroForPlayer(2, coords[1][0], coords[1][1]);
+    createHeroForPlayer(2, coords[1][0], coords[1][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p2");
 
-    createHeroForPlayer(3, coords[2][0], coords[2][1]);
+    createHeroForPlayer(3, coords[2][0], coords[2][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p3");
 
-    createHeroForPlayer(4, coords[3][0], coords[3][1]);
+    createHeroForPlayer(4, coords[3][0], coords[3][1], undefined, undefined, undefined, undefined, "setupHeroes:arcade:p4");
 
 }
 
@@ -27168,9 +28495,7 @@ function unlockHeroControls(heroIndex: number) {
 
 
 
-function refreshHeroController(heroIndex: number) {
-
-    const hero = heroes[heroIndex]; if (!hero) return
+function _computeHeroMoveSpeed(heroIndex: number, hero: Sprite): number {
 
     const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
 
@@ -27178,9 +28503,9 @@ function refreshHeroController(heroIndex: number) {
 
 
 
-    const baseSpeed = BALANCE.MOVEMENT.HERO_BASE_SPEED // Knob for hero movement speed base movement speed make hero faster
+    const baseSpeed = BALANCE.MOVEMENT.HERO_BASE_SPEED
 
-    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const hasteMult = _getHeroMoveSpeedMult(heroIndex)
 
 
 
@@ -27213,7 +28538,6 @@ function refreshHeroController(heroIndex: number) {
         speed: speed0,
 
     }
-
     relic_modifyMoveSpeed(ctx)
 
 
@@ -27230,16 +28554,65 @@ function refreshHeroController(heroIndex: number) {
 
     if (locked) speed = 0
 
+    return speed
 
+}
 
-    if (playerId == 1) controller.player1.moveSprite(hero, speed, speed)
+function refreshHeroController(heroIndex: number) {
+    const hero = heroes[heroIndex]; if (!hero) return
+    _computeHeroMoveSpeed(heroIndex, hero)
+}
 
-    else if (playerId == 2) controller.player2.moveSprite(hero, speed, speed)
+function updateHeroMovementFromInputs(nowMs: number): void {
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
+    const localProfile = _getLocalProfileKey()
 
-    else if (playerId == 3) controller.player3.moveSprite(hero, speed, speed)
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const profileKey = _heroProfileKeyForIndex(hi)
+        const isLocal = !!(localProfile && profileKey && profileKey === localProfile)
+        if (connectedMap && profileKey && !isLocal && connectedMap[profileKey] === false) {
+            _dbgMovePipeTick("MOVE_SKIP_CONN", hi, hero, nowMs, `profile=${profileKey} local=${isLocal ? 1 : 0}`)
+            continue
+        }
 
-    else if (playerId == 4) controller.player4.moveSprite(hero, speed, speed)
+        const locked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (locked) {
+            _dbgMovePipeTick("MOVE_SKIP_LOCK", hi, hero, nowMs, `profile=${profileKey}`)
+            continue
+        }
 
+        const st = _getInputStateForHeroIndex(hi)
+        const dx = (st.right ? 1 : 0) + (st.left ? -1 : 0)
+        const dy = (st.down ? 1 : 0) + (st.up ? -1 : 0)
+
+        if (dx === 0 && dy === 0) {
+            hero.vx = 0
+            hero.vy = 0
+            _dbgMovePipeTick(
+                "MOVE_ZERO",
+                hi,
+                hero,
+                nowMs,
+                `profile=${profileKey} local=${isLocal ? 1 : 0} st{l=${st.left ? 1 : 0} r=${st.right ? 1 : 0} u=${st.up ? 1 : 0} d=${st.down ? 1 : 0}}`
+            )
+            continue
+        }
+
+        const speed = _computeHeroMoveSpeed(hi, hero)
+        hero.vx = dx * speed
+        hero.vy = dy * speed
+        _dbgMovePipeTick(
+            "MOVE_APPLY",
+            hi,
+            hero,
+            nowMs,
+            `profile=${profileKey} local=${isLocal ? 1 : 0} dx=${dx} dy=${dy} speed=${speed | 0}`
+        )
+    }
 }
 
 
@@ -27254,7 +28627,7 @@ function refreshHeroController(heroIndex: number) {
 
 function getHeroDirectionName(heroIndex: number) {
 
-    const dx = heroFacingX[heroIndex] || 0, dy = heroFacingY[heroIndex] || 0
+    const dx = _getHeroFacingX(heroIndex) || 0, dy = _getHeroFacingY(heroIndex) || 0
 
     if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
 
@@ -27483,7 +28856,7 @@ function getHeroBusyUntil(heroIndex: number): number {
 
     const v = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
 
-    heroBusyUntil[heroIndex] = v
+    _heroStateSetNum(heroBusyUntilByProfile, heroIndex, v)
 
     return v
 
@@ -27499,7 +28872,7 @@ function setHeroBusyUntil(heroIndex: number, untilMs: number): void {
 
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, v)
 
-    heroBusyUntil[heroIndex] = v
+    _heroStateSetNum(heroBusyUntilByProfile, heroIndex, v)
 
 }
 
@@ -27531,7 +28904,7 @@ function _updateHeroLocomotionPhaseWindow(heroIndex: number, hero: Sprite, now: 
 
     // If you're otherwise "busy" by your gates, also don't stomp phases.
 
-    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    const busyUntil0 = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
     if (busyUntil0 > 0 && (now | 0) < (busyUntil0 | 0)) return
 
@@ -27639,9 +29012,9 @@ function updateHeroFacingsFromVelocity() {
 
             if (!seeded) {
 
-                heroFacingX[i] = 0
+                _setHeroFacingX(i, 0)
 
-                heroFacingY[i] = 1
+                _setHeroFacingY(i, 1)
 
                 syncHeroDirData(i)
 
@@ -27652,6 +29025,9 @@ function updateHeroFacingsFromVelocity() {
             continue
 
         }
+
+        const teleMode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+        if (teleMode) continue
 
 
 
@@ -27667,33 +29043,27 @@ function updateHeroFacingsFromVelocity() {
 
         if (locked && state === AGI_STATE.ARMED) {
 
-            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            const input = _getInputStateForHeroIndex(i)
 
-            const ctrl = getControllerForOwnerId(ownerId)
+            let dx = 0, dy = 0
 
-            if (ctrl) {
+            if (input.left) dx = -1
 
-                let dx = 0, dy = 0
+            else if (input.right) dx = 1
 
-                if (ctrl.left.isPressed()) dx = -1
+            if (input.up) dy = -1
 
-                else if (ctrl.right.isPressed()) dx = 1
-
-                if (ctrl.up.isPressed()) dy = -1
-
-                else if (ctrl.down.isPressed()) dy = 1
+            else if (input.down) dy = 1
 
 
 
-                if (dx !== 0 || dy !== 0) {
+            if (dx !== 0 || dy !== 0) {
 
-                    heroFacingX[i] = dx
+                _setHeroFacingX(i, dx)
 
-                    heroFacingY[i] = dy
+                _setHeroFacingY(i, dy)
 
-                    syncHeroDirData(i)
-
-                }
+                syncHeroDirData(i)
 
             }
 
@@ -27721,7 +29091,7 @@ function updateHeroFacingsFromVelocity() {
 
         if (dx != 0 || dy != 0) {
 
-            heroFacingX[i] = dx; heroFacingY[i] = dy
+            _setHeroFacingX(i, dx); _setHeroFacingY(i, dy)
 
             syncHeroDirData(i)
 
@@ -27781,17 +29151,22 @@ function callHeroAnim(heroIndex: number, animKey: string, timeMs: number) {
 
     const direction = getHeroDirectionName(heroIndex)
 
-    const playerId = sprites.readDataNumber(hero, HERO_DATA.OWNER)
+    const profile = getHeroProfileForHeroIndex(heroIndex)
+    const animHook = HeroEngine.animateHeroByProfileHook
 
-
-
-    if (playerId == 1) HeroEngine.animateHero1Hook(hero, animKey, timeMs, direction)
-
-    else if (playerId == 2) HeroEngine.animateHero2Hook(hero, animKey, timeMs, direction)
-
-    else if (playerId == 3) HeroEngine.animateHero3Hook(hero, animKey, timeMs, direction)
-
-    else if (playerId == 4) HeroEngine.animateHero4Hook(hero, animKey, timeMs, direction)
+    if (animHook && typeof animHook === "function") {
+        animHook(profile, hero, animKey, timeMs, direction)
+    } else {
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        const fallback =
+            owner === 2 ? HeroEngine.animateHero2Hook :
+                owner === 3 ? HeroEngine.animateHero3Hook :
+                    owner === 4 ? HeroEngine.animateHero4Hook :
+                        HeroEngine.animateHero1Hook
+        if (typeof fallback === "function") {
+            fallback(hero, animKey, timeMs, direction)
+        }
+    }
 
 }
 
@@ -27845,7 +29220,7 @@ function _doHeroMoveShouldIgnoreDueToBusy(heroIndex: number, hero: Sprite, now: 
 
 
 
-    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    const busyUntil0 = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
 
 
@@ -29129,7 +30504,7 @@ function _doHeroMoveComputeAimUnit(heroIndex: number): [number, number] {
 
 function _doHeroMoveComputeLungeSpeedCapped(heroIndex: number, stats: number[]): number {
 
-    const hasteMult = heroMoveSpeedMult[heroIndex] || 1
+    const hasteMult = _getHeroMoveSpeedMult(heroIndex)
 
     const baseLunge = stats[STAT.LUNGE_SPEED] | 0
 
@@ -29430,65 +30805,41 @@ function _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId: number): number {
 
 
     if ((heroIndex == null || heroIndex < 0 || heroIndex >= heroes.length) && isPhaserRuntime()) {
+        let W = userconfig.ARCADE_SCREEN_WIDTH
+        let H = userconfig.ARCADE_SCREEN_HEIGHT
 
-        if (playerId >= 1 && playerId <= 4) {
-
-
-
-            let W = userconfig.ARCADE_SCREEN_WIDTH
-
-            let H = userconfig.ARCADE_SCREEN_HEIGHT
-
-
-
-            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
-
-                const rows = _engineWorldTileMap.length
-
-                const cols = _engineWorldTileMap[0].length
-
-                W = cols * WORLD_TILE_SIZE
-
-                H = rows * WORLD_TILE_SIZE
-
-            }
-
-
-
-            const centerW = W / 2
-
-            const centerH = H / 2
-
-            const offset = 40
-
-
-
-            const coords: number[][] = [
-
-                [centerW + offset, centerH + offset],
-
-                [centerW - offset, centerH + offset],
-
-                [centerW + offset, centerH - offset],
-
-                [centerW - offset, centerH - offset]
-
-            ]
-
-
-
-            const slotIndex = playerId - 1
-
-            console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId)
-
-            createHeroForPlayer(playerId, coords[slotIndex][0], coords[slotIndex][1])
-
-
-
-            heroIndex = playerToHeroIndex[playerId]
-
+        if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+            const rows = _engineWorldTileMap.length
+            const cols = _engineWorldTileMap[0].length
+            W = cols * WORLD_TILE_SIZE
+            H = rows * WORLD_TILE_SIZE
         }
 
+        const centerW = W / 2
+        const centerH = H / 2
+        const offset = 40
+
+        const coords: number[][] = [
+            [centerW + offset, centerH + offset],
+            [centerW - offset, centerH + offset],
+            [centerW + offset, centerH - offset],
+            [centerW - offset, centerH - offset]
+        ]
+
+        const slotIndex = Math.max(0, (playerId | 0) - 1) % coords.length
+        console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId)
+        createHeroForPlayer(
+            playerId,
+            coords[slotIndex][0],
+            coords[slotIndex][1],
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            "move:spawn_on_demand"
+        )
+
+        heroIndex = playerToHeroIndex[playerId]
     }
 
 
@@ -29569,7 +30920,7 @@ function _doHeroMoveDbgLogEnter(
 
 
 
-    const busyUntil0 = heroBusyUntil[heroIndex] || 0
+    const busyUntil0 = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
     const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
 
@@ -29643,7 +30994,7 @@ function _doHeroMoveGuardAndLogEarlyReturns(
 
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
 
-            const busyUntil0 = heroBusyUntil[heroIndex] || 0
+            const busyUntil0 = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
             const state0 = (sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0)
 
@@ -30049,7 +31400,7 @@ function _doHeroMoveDbgLogDashPath(
 
 
 
-    const busyUntil1 = heroBusyUntil[heroIndex] || 0
+    const busyUntil1 = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
     const dashUntil1 = (sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0)
 
@@ -30637,11 +31988,11 @@ const AURA_COLOR_GRAY = 11
 function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSprite {
 
     if (_isShopActor(hero)) {
-        heroStrengthChargeBars[heroIndex] = null
+        _setHeroStrengthChargeBar(heroIndex, null)
         return null
     }
 
-    let bar = heroStrengthChargeBars[heroIndex]
+    let bar = _getHeroStrengthChargeBar(heroIndex)
 
     if (bar) return bar
 
@@ -30685,7 +32036,7 @@ function ensureStrengthChargeBar(heroIndex: number, hero: Sprite): StatusBarSpri
 
     bar.setFlag(SpriteFlag.Invisible, true)
 
-    heroStrengthChargeBars[heroIndex] = bar
+    _setHeroStrengthChargeBar(heroIndex, bar)
 
     return bar
 
@@ -30731,7 +32082,7 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 
     if (_isShopActor(hero)) {
         // Avoid HP bars for shopkeeper/statues
-        heroHPBars[heroIndex] = null
+        _setHeroHPBar(heroIndex, null)
         return
     }
 
@@ -30771,7 +32122,7 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 
     bar.max = 100; bar.value = 100
 
-    heroHPBars[heroIndex] = bar
+    _setHeroHPBar(heroIndex, bar)
 
 }
 
@@ -30781,7 +32132,7 @@ function updateHeroHPBar(heroIndex: number) {
 
     const hero = heroes[heroIndex]; if (!hero) return
 
-    const bar = heroHPBars[heroIndex]; if (!bar) return
+    const bar = _getHeroHPBar(heroIndex); if (!bar) return
 
     const hp = sprites.readDataNumber(hero, HERO_DATA.HP)
 
@@ -30799,7 +32150,7 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 
     if (_isShopActor(hero)) {
         // Avoid mana bars for shopkeeper/statues
-        heroManaBars[heroIndex] = null
+        _setHeroManaBar(heroIndex, null)
         return
     }
 
@@ -30838,9 +32189,9 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 
 
     bar.max = 100; bar.value = 100; bar.setColor(9, 1)
-    heroManaFlashUntil[heroIndex] = 0
+    _heroStateSetNum(heroManaFlashUntilByProfile, heroIndex, 0)
 
-    heroManaBars[heroIndex] = bar
+    _setHeroManaBar(heroIndex, bar)
 
 }
 
@@ -30852,7 +32203,7 @@ function updateHeroManaBar(heroIndex: number) {
 
     const hero = heroes[heroIndex]; if (!hero) return
 
-    const bar = heroManaBars[heroIndex]; if (!bar) return
+    const bar = _getHeroManaBar(heroIndex); if (!bar) return
 
     const mana = sprites.readDataNumber(hero, HERO_DATA.MANA)
 
@@ -30864,8 +32215,8 @@ function updateHeroManaBar(heroIndex: number) {
 
     // Clear stale flash timers (bookkeeping only)
     const now = game.runtime() | 0
-    const flashUntil = heroManaFlashUntil[heroIndex] | 0
-    if (flashUntil > 0 && now >= flashUntil) heroManaFlashUntil[heroIndex] = 0
+    const flashUntil = _heroStateGetNum(heroManaFlashUntilByProfile, heroIndex, 0)
+    if (flashUntil > 0 && now >= flashUntil) _heroStateSetNum(heroManaFlashUntilByProfile, heroIndex, 0)
 
 }
 
@@ -30873,12 +32224,12 @@ function updateHeroManaBar(heroIndex: number) {
 
 function flashHeroManaBar(heroIndex: number, durationMs?: number) {
 
-    const bar = heroManaBars[heroIndex]; if (!bar) return
+    const bar = _getHeroManaBar(heroIndex); if (!bar) return
 
     const now = game.runtime() | 0
     const dur = (durationMs != null && durationMs > 0) ? (durationMs | 0) : 500
     const until = now + dur
-    heroManaFlashUntil[heroIndex] = until
+    _heroStateSetNum(heroManaFlashUntilByProfile, heroIndex, until)
     // Overlay flash handled in arcadeCompat via flashOverlayUntil on the statusbar sprite.
     try { sprites.setDataNumber(bar, "flashOverlayUntil", until); } catch { /* ignore */ }
     // Leave base colors untouched; overlay does the visual flashing.
@@ -31219,7 +32570,7 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number) {
 
 
 
-    heroBusyUntil[heroIndex] = deathUntil;
+    setHeroBusyUntil(heroIndex, deathUntil);
 
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, deathUntil);
 
@@ -31535,7 +32886,7 @@ function createAuraImageFromHero(hero: Sprite, color: number): Image {
 
 function ensureHeroAuraSprite(heroIndex: number): Sprite {
 
-    let aura = heroAuras[heroIndex]
+    let aura = _getHeroAura(heroIndex)
 
     const hero = heroes[heroIndex]; if (!hero) return null
 
@@ -31543,7 +32894,7 @@ function ensureHeroAuraSprite(heroIndex: number): Sprite {
 
         aura = sprites.create(image.create(hero.image.width, hero.image.height), SpriteKind.HeroAura)
 
-        heroAuras[heroIndex] = aura
+        _setHeroAura(heroIndex, aura)
 
     }
 
@@ -32449,9 +33800,9 @@ function updateHeroMeters(now: number, phaser: boolean) {
 
 
 
-        const meter = heroComboMeters[i]
+        const meter = _getHeroComboMeter(i)
 
-        const counter = heroAgiStoredCounters[i]
+        const counter = _getHeroAgiStoredCounter(i)
 
 
 
@@ -32596,7 +33947,7 @@ function updateHeroAuras(now: number, phaser: boolean) {
         let color = 0
 
         let auraGlow = 0
-        const glowUntil = heroHealGlowUntil[i] | 0
+        const glowUntil = _heroStateGetNum(heroHealGlowUntilByProfile, i, 0)
         if (glowUntil > 0 && now < glowUntil) auraGlow = 1
 
         const family = sprites.readDataNumber(hero, HERO_DATA.FAMILY)
@@ -32627,7 +33978,7 @@ function updateHeroAuras(now: number, phaser: boolean) {
 
             const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
 
-            if (family == FAMILY.STRENGTH && (strCharging || (heroBusyUntil[i] || 0) > now)) {
+            if (family == FAMILY.STRENGTH && (strCharging || (_heroStateGetNum(heroBusyUntilByProfile, i, 0) > now))) {
 
                 showAura = true
 
@@ -32687,13 +34038,13 @@ function updateHeroAuras(now: number, phaser: boolean) {
 
             sprites.setDataNumber(hero, HERO_DATA.AURA_GLOW, auraGlow)
 
-            const aura = heroAuras[i]
+            const aura = _getHeroAura(i)
 
             if (aura) aura.setFlag(SpriteFlag.Invisible, true)
 
         } else {
 
-            const aura = heroAuras[i]
+            const aura = _getHeroAura(i)
 
             if (!showAura) {
 
@@ -32969,6 +34320,8 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
 
         const weakenMs = sprites.readDataNumber(weapon, PROJ_DATA.WEAKEN_DURATION_MS) | 0
 
+        const element = sprites.readDataNumber(weapon, PROJ_DATA.ELEMENT) | 0
+
         if (dmg <= 0 && (weakenPct <= 0 || weakenMs <= 0)) return
 
 
@@ -32978,6 +34331,8 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
             family: FAMILY.INTELLECT,
 
             sourceTag: "INT_PULSE",
+
+            element,
 
             weakenPct,
 
@@ -33010,6 +34365,8 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
     const weakenDurationMs = sprites.readDataNumber(weapon, PROJ_DATA.WEAKEN_DURATION_MS) | 0
 
     const knockbackPct = sprites.readDataNumber(weapon, PROJ_DATA.KNOCKBACK_PCT) | 0
+
+    const element = sprites.readDataNumber(weapon, PROJ_DATA.ELEMENT) | 0
 
     const eIndex = getEnemyIndex(enemy); if (eIndex < 0 || heroIndex < 0 || heroIndex >= heroes.length) return
 
@@ -33057,7 +34414,9 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
 
         weakenMs: weakenDurationMs,
 
-        knockbackPct
+        knockbackPct,
+
+        element
 
     }
 
@@ -33087,19 +34446,19 @@ sprites.onOverlap(SpriteKind.RelicEffect, SpriteKind.Enemy, function (flame, ene
 
     if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
 
-    const trapDmg = sprites.readDataNumber(flame, TRAP_FIRE_DMG_KEY) | 0
+    const trapDmg = sprites.readDataNumber(flame, TRAP_TOTEM_DMG_KEY) | 0
     if (trapDmg > 0) {
         const eIndex = getEnemyIndex(enemy)
         if (eIndex < 0) return
 
-        let mask = sprites.readDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY) | 0
+        let mask = sprites.readDataNumber(flame, TRAP_TOTEM_HIT_MASK_KEY) | 0
         const bit = 1 << eIndex
         if (mask & bit) return
-        sprites.setDataNumber(flame, TRAP_FIRE_HIT_MASK_KEY, mask | bit)
+        sprites.setDataNumber(flame, TRAP_TOTEM_HIT_MASK_KEY, mask | bit)
 
         const hit: EnemyHitPacket = {
             family: FAMILY.INTELLECT,
-            sourceTag: "TRAP_FIRE",
+            sourceTag: "TRAP_TOTEM",
         }
         applyDamageToEnemyIndex(eIndex, trapDmg | 0, -1, hit)
         return
@@ -33165,8 +34524,9 @@ sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, her
 
 function hasSignificantOverlap(hero: Sprite, enemy: Sprite, minHeroAreaPct: number): boolean {
 
-    const heroW = hero.width | 0
-    const heroH = hero.height | 0
+    const heroDims = _readSpriteColliderDims(hero)
+    const heroW = heroDims.w | 0
+    const heroH = heroDims.h | 0
     let enemyW = enemy.width | 0
     let enemyH = enemy.height | 0
     if (enemy.kind === SpriteKind.Enemy) {
@@ -33591,6 +34951,7 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     const swingMs = sprites.readDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY) | 0
 
     const arcDeg  = sprites.readDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY) | 0
+    const element = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
 
 
 
@@ -33652,7 +35013,9 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
 
         arcDeg,
 
-        reachExtraPx
+        reachExtraPx,
+
+        element
 
     )
 
@@ -34641,7 +36004,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     const until = (now + swingDurationMs) | 0
 
-    heroBusyUntil[heroIndex] = until
+    setHeroBusyUntil(heroIndex, until)
 
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, until)
 
@@ -35511,7 +36874,9 @@ function spawnStrengthSwingProjectile(
 
     totalArcDeg: number,
 
-    reachExtraPx: number
+    reachExtraPx: number,
+
+    element: number
 
 ) {
 
@@ -35646,6 +37011,8 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.STRENGTH)
 
     sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
+
+    sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0)
 
     sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, dmg)
 
@@ -35794,6 +37161,9 @@ function updateStrengthProjectilesMotionFor(
     proj.setImage(buildStrengthSmashBitmap(nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg, t))
 
     proj.setPosition(hero.x, hero.y)  // center-anchored
+
+    const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+    _spawnHeroElementTrailParticle(proj, element | 0, nowMs | 0)
 
 
 
@@ -36827,7 +38197,7 @@ function agiBeginExecute(heroIndex: number, hero: Sprite, execRadius: number, sl
 
 
 
-        heroBusyUntil[heroIndex] = 0
+        clearHeroBusyUntil(heroIndex)
 
         sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
 
@@ -37063,7 +38433,7 @@ function agiFinishExecute(heroIndex: number, hero: Sprite): void {
 
 
 
-    heroBusyUntil[heroIndex] = 0
+    clearHeroBusyUntil(heroIndex)
 
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
 
@@ -37441,9 +38811,9 @@ function updateAgilityExecuteAll(nowMs: number): void {
 
         if (AGI_EXEC_FORCE_FACING_DOWN) {
 
-            heroFacingX[heroIndex] = 0
+            _setHeroFacingX(heroIndex, 0)
 
-            heroFacingY[heroIndex] = 1
+            _setHeroFacingY(heroIndex, 1)
 
             syncHeroDirData(heroIndex)
 
@@ -37527,7 +38897,7 @@ function showComboPop(hero: Sprite, multX: number) {
 
 function ensureAgiStoredCounter(heroIndex: number): Sprite {
 
-    let t = heroAgiStoredCounters[heroIndex]
+    let t = _getHeroAgiStoredCounter(heroIndex)
 
     const hero = heroes[heroIndex]; if (!hero) return null
 
@@ -37541,7 +38911,7 @@ function ensureAgiStoredCounter(heroIndex: number): Sprite {
 
         t.z = hero.z + 3
 
-        heroAgiStoredCounters[heroIndex] = t
+        _setHeroAgiStoredCounter(heroIndex, t)
 
 
 
@@ -37575,7 +38945,7 @@ function ensureAgiStoredCounter(heroIndex: number): Sprite {
 
 function ensureComboMeter(heroIndex: number): Sprite {
 
-    let m = heroComboMeters[heroIndex]
+    let m = _getHeroComboMeter(heroIndex)
 
     const hero = heroes[heroIndex]; if (!hero) return null
 
@@ -37609,7 +38979,7 @@ function ensureComboMeter(heroIndex: number): Sprite {
 
         m.z = hero.z + 2
 
-        heroComboMeters[heroIndex] = m
+        _setHeroComboMeter(heroIndex, m)
 
 
 
@@ -37653,7 +39023,7 @@ function ensureComboMeter(heroIndex: number): Sprite {
 
 function ensureAgiAimIndicator(heroIndex: number): Sprite {
 
-    let ind = heroAgiAimIndicators[heroIndex]
+    let ind = _getHeroAgiAimIndicator(heroIndex)
 
     const hero = heroes[heroIndex]; if (!hero) return null
 
@@ -37673,7 +39043,7 @@ function ensureAgiAimIndicator(heroIndex: number): Sprite {
 
         ind.z = hero.z + 2
 
-        heroAgiAimIndicators[heroIndex] = ind
+        _setHeroAgiAimIndicator(heroIndex, ind)
 
 
 
@@ -37745,7 +39115,7 @@ function setAgiAimIndicatorVisible(heroIndex: number, vis: boolean): void {
 
 function destroyAgiAimIndicator(heroIndex: number): void {
 
-    const ind = heroAgiAimIndicators[heroIndex]
+    const ind = _getHeroAgiAimIndicator(heroIndex)
 
     if (!ind) return
 
@@ -37771,7 +39141,7 @@ function destroyAgiAimIndicator(heroIndex: number): void {
 
     ind.destroy()
 
-    heroAgiAimIndicators[heroIndex] = null
+    _setHeroAgiAimIndicator(heroIndex, null)
 
 }
 
@@ -38315,24 +39685,6 @@ function agiMeterPosX1000(hero: Sprite, nowMs: number): number {
 
 
 
-function getControllerForOwnerId(ownerId: number): controller.Controller {
-
-    if (ownerId === 1) return controller.player1
-
-    if (ownerId === 2) return controller.player2
-
-    if (ownerId === 3) return controller.player3
-
-    if (ownerId === 4) return controller.player4
-
-    return null
-
-}
-
-
-
-
-
 function cancelAgilityComboNow(heroIndex: number, hero: Sprite) {
 
     if (!hero) return
@@ -38547,7 +39899,7 @@ function updateAgilityComboLandingTransitions(nowMs: number): void {
 
             // Critical: clear busy so movement-phase can enter combatIdle while ARMED
 
-            heroBusyUntil[hi] = 0
+            clearHeroBusyUntil(hi)
 
             sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
 
@@ -38633,7 +39985,7 @@ function updateAgilityComboLandingTransitions(nowMs: number): void {
 
 
 
-                heroBusyUntil[hi] = 0
+                clearHeroBusyUntil(hi)
 
                 sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
 
@@ -38764,10 +40116,8 @@ function updateAgilityManualCancelAllHeroes(nowMs: number): void {
 
 
         const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        const ctrl = getControllerForOwnerId(ownerId)
-
-        if (!ctrl) continue
+        const st = _getInputStateForOwnerId(ownerId)
+        if (!st) continue
 
 
 
@@ -38775,13 +40125,10 @@ function updateAgilityManualCancelAllHeroes(nowMs: number): void {
 
         let dx = 0, dy = 0
 
-        if (ctrl.left.isPressed()) dx = -1
-
-        else if (ctrl.right.isPressed()) dx = 1
-
-        if (ctrl.up.isPressed()) dy = -1
-
-        else if (ctrl.down.isPressed()) dy = 1
+        if (st.left) dx = -1
+        else if (st.right) dx = 1
+        if (st.up) dy = -1
+        else if (st.down) dy = 1
 
 
 
@@ -39239,7 +40586,9 @@ function spawnAgilityThrustProjectile(
 
     weakenDurationMs: number,
 
-    knockbackPct: number
+    knockbackPct: number,
+
+    element: number
 
 ): Sprite {
 
@@ -39324,6 +40673,8 @@ function spawnAgilityThrustProjectile(
     sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
 
     sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.AGILITY)
+
+    sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0)
 
 
 
@@ -39418,7 +40769,7 @@ function spawnAgilityThrustProjectile(
 
     // Keep the V17 dash bookkeeping; updater doesn't depend on it, but other systems might
 
-    const dashEnd = heroBusyUntil[heroIndex] | 0
+    const dashEnd = _heroStateGetNum(heroBusyUntilByProfile, heroIndex, 0)
 
     sprites.setDataNumber(proj, PROJ_DATA.DASH_END_MS, dashEnd)
 
@@ -39678,9 +41029,9 @@ function updateAgilityProjectilesMotionFor(
 
         if (!nx && !ny) {
 
-            nx = heroFacingX[heroIndex] || 1
+            nx = _getHeroFacingX(heroIndex) || 1
 
-            ny = heroFacingY[heroIndex] || 0
+            ny = _getHeroFacingY(heroIndex) || 0
 
         }
 
@@ -39959,6 +41310,9 @@ function updateAgilityProjectilesMotionFor(
 
     proj.y = anchorY + (minYW + maxYW) / 2
 
+    const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+    _spawnHeroElementTrailParticle(proj, element | 0, nowMs | 0)
+
 
 
     // Optional: keep V10-style debug trace
@@ -40085,6 +41439,8 @@ const INT_DETONATE_START_KEY = "INT_DS"   // detonation start time (ms)
 
 const INT_DETONATE_END_KEY = "INT_DE"     // detonation end time (ms)
 
+const INT_DETONATE_USE_ELEMENT_FX_KEY = "__intDetElemFx"
+
 
 
 // NEW: control window (when the player must finish aiming)
@@ -40112,6 +41468,8 @@ const INT_CAST_DMG_MULT_KEY = "INT_CAST_DMG_MULT"
 const INT_CAST_WEAK_PCT_KEY = "INT_CAST_WEAK_PCT"
 
 const INT_CAST_WEAK_DUR_KEY = "INT_CAST_WEAK_DUR"
+
+const INT_CAST_ELEMENT_KEY = "INT_CAST_ELEMENT"
 
 const INT_CAST_SPEED_KEY = "INT_CAST_SPEED"
 
@@ -40474,7 +41832,7 @@ function maybeDetonateIntellectSpellsOnWall(nowMs: number): void {
 
     for (let heroIndex = 0; heroIndex < heroes.length; heroIndex++) {
 
-        const spell = heroControlledSpells[heroIndex]
+        const spell = _getHeroControlledSpell(heroIndex)
 
         if (spell) tryDetonateSpell(spell, heroIndex)
 
@@ -40517,6 +41875,7 @@ function executeIntellectMove(
 ) {
 
     const nowMs = now | 0
+    const element = traits[OUT.ELEMENT] | 0
 
 
 
@@ -40604,6 +41963,7 @@ function executeIntellectMove(
     sprites.setDataNumber(hero, INT_CAST_DMG_MULT_KEY, dmgMult | 0)
 
     sprites.setDataNumber(hero, INT_CAST_RADIUS_KEY, radiusPx | 0)
+    sprites.setDataNumber(hero, INT_CAST_ELEMENT_KEY, element | 0)
 
     sprites.setDataNumber(hero, INT_CAST_WEAK_PCT_KEY, weakenPct | 0)
 
@@ -40805,7 +42165,7 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     // Destroy any previous controlled spell
 
-    const prev = heroControlledSpells[heroIndex]
+    const prev = _getHeroControlledSpell(heroIndex)
 
     if (prev && !(prev.flags & sprites.Flag.Destroyed)) {
 
@@ -40813,7 +42173,7 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     }
 
-    heroControlledSpells[heroIndex] = null
+    _setHeroControlledSpell(heroIndex, null)
 
 
 
@@ -40879,6 +42239,12 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     const button = sprites.readDataString(hero, INT_CAST_BUTTON_KEY)
 
+    const dataAny: any = (hero as any).data || {}
+    const hasCastElement = Object.prototype.hasOwnProperty.call(dataAny, INT_CAST_ELEMENT_KEY)
+    const element = hasCastElement
+        ? (sprites.readDataNumber(hero, INT_CAST_ELEMENT_KEY) | 0)
+        : _heroElementFromRenderStyle(hero)
+
 
 
     sprites.setDataNumber(spell, PROJ_DATA.HERO_INDEX, heroIndex)
@@ -40886,6 +42252,8 @@ function beginIntellectTargeting(heroIndex: number): void {
     sprites.setDataNumber(spell, PROJ_DATA.FAMILY, family)
 
     sprites.setDataString(spell, PROJ_DATA.BUTTON, button)
+
+    sprites.setDataNumber(spell, PROJ_DATA.ELEMENT, element | 0)
 
     sprites.setDataNumber(spell, INT_SPELL_EXPIRES_AT_MS_KEY, expiresAtMs)
 
@@ -40914,7 +42282,6 @@ function beginIntellectTargeting(heroIndex: number): void {
 
 
     // Phaser-side visual override (optional but recommended)
-
     sprites.setDataString(spell, PROJ_PHASER_VISUAL_MODEL_KEY, "crystal")
 
 
@@ -41003,7 +42370,7 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     sprites.setDataSprite(hero, INT_SPELL_SPRITE_KEY, spell)
 
-    heroControlledSpells[heroIndex] = spell
+    _setHeroControlledSpell(heroIndex, spell)
 
 
 
@@ -41046,6 +42413,10 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
     const baseLinger = lingerMs | 0
 
     const totalLinger = Math.max(200, baseLinger, pulseLinger) | 0
+
+    const element = sprites.readDataNumber(spell, PROJ_DATA.ELEMENT) | 0
+    const useElemFx = _spawnHeroElementDetonationFx(spell, element | 0, totalLinger | 0)
+    sprites.setDataNumber(spell, INT_DETONATE_USE_ELEMENT_FX_KEY, useElemFx ? 1 : 0)
 
 
 
@@ -41175,7 +42546,7 @@ function finishIntellectSpellForHero(heroIndex: number): void {
 
         const fco0 = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
 
-        const hasSpell = heroControlledSpells[heroIndex] ? 1 : 0
+        const hasSpell = _getHeroControlledSpell(heroIndex) ? 1 : 0
 
         _dbgAnimKeys(heroIndex, hero, "INT_FINISH_BEGIN",
 
@@ -41198,6 +42569,7 @@ function finishIntellectSpellForHero(heroIndex: number): void {
     sprites.setDataNumber(hero, INT_CAST_FAMILY_KEY, 0)
 
     sprites.setDataString(hero, INT_CAST_BUTTON_KEY, "")
+    sprites.setDataNumber(hero, INT_CAST_ELEMENT_KEY, 0)
 
 
 
@@ -41209,7 +42581,7 @@ function finishIntellectSpellForHero(heroIndex: number): void {
 
     // IMPORTANT: do NOT destroy the spell here.
 
-    if (heroControlledSpells[heroIndex]) heroControlledSpells[heroIndex] = null
+    if (_getHeroControlledSpell(heroIndex)) _setHeroControlledSpell(heroIndex, null)
 
 
 
@@ -41520,25 +42892,15 @@ function updateIntellectSpellsControl(): void {
         // Steering: apply limited acceleration so turning has inertia.
 
         const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        const ctrl = getControllerForOwnerId(ownerId)
-
-
+        const st = _getInputStateForOwnerId(ownerId)
 
         let rawX = 0
-
         let rawY = 0
-
-        if (ctrl) {
-
-            if (ctrl.left.isPressed()) rawX -= 1
-
-            if (ctrl.right.isPressed()) rawX += 1
-
-            if (ctrl.up.isPressed()) rawY -= 1
-
-            if (ctrl.down.isPressed()) rawY += 1
-
+        if (st) {
+            if (st.left) rawX -= 1
+            if (st.right) rawX += 1
+            if (st.up) rawY -= 1
+            if (st.down) rawY += 1
         }
 
 
@@ -41582,8 +42944,6 @@ function updateIntellectSpellsControl(): void {
             }
 
         }
-
-
 
         // DEBUG (throttled + change-aware, per-hero keys)
 
@@ -42197,6 +43557,9 @@ function processIntellectLingers() {
 
         if (startMs <= 0 || endMs <= startMs) continue
 
+        const useElemFx = sprites.readDataNumber(proj, INT_DETONATE_USE_ELEMENT_FX_KEY) | 0
+        if (useElemFx) continue
+
 
 
         const total = Math.max(1, pulsePeriod | 0)
@@ -42499,9 +43862,9 @@ sprites.onDestroyed(SpriteKind.HeroWeapon, function (proj) {
 
 
 
-    if (heroControlledSpells[heroIndex] == proj) {
+    if (_getHeroControlledSpell(heroIndex) == proj) {
 
-        heroControlledSpells[heroIndex] = null
+        _setHeroControlledSpell(heroIndex, null)
 
 
 
@@ -43085,7 +44448,7 @@ function applySupportBuffToHero(heroIndex: number, kind: number, power: number, 
 
     const now = game.runtime()
 
-    const arr = heroBuffs[heroIndex]
+    const arr = _heroBuffsFor(heroIndex)
 
     if (!arr) {
 
@@ -43141,7 +44504,7 @@ function updateHeroBuffs(now: number) {
 
     for (let hi = 0; hi < heroes.length; hi++) {
 
-        const buffs = heroBuffs[hi]
+        const buffs = _heroBuffsFor(hi)
 
         if (!buffs) continue
 
@@ -43209,9 +44572,9 @@ function updateHeroBuffs(now: number) {
 
 
 
-        heroMoveSpeedMult[hi] = hasteMult
+        _setHeroMoveSpeedMult(hi, hasteMult)
 
-        heroDamageAmpMult[hi] = dmgMult
+        _setHeroDamageAmpMult(hi, dmgMult)
 
 
 
@@ -43420,7 +44783,7 @@ function applyHealToHeroIndex(heroIndex: number, amount: number) {
         showDamageNumber(hero.x, hero.y - 6, applied, "heal")
         // Pulse aura glow for brief heal feedback (self included)
         const now = game.runtime() | 0
-        heroHealGlowUntil[hi] = now + 700
+        _heroStateSetNum(heroHealGlowUntilByProfile, hi, now + 700)
 
     }
 
@@ -44110,9 +45473,7 @@ function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, nowMs: num
 
     // Locked until solved (keep your current behavior)
 
-    heroBusyUntil[heroIndex] = (now + 999999) | 0
-
-    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, heroBusyUntil[heroIndex] | 0)
+    setHeroBusyUntil(heroIndex, (now + 999999) | 0)
 
     lockHeroControls(heroIndex)
 
@@ -44278,21 +45639,10 @@ function updateSupportPuzzles(now: number) {
 
 
 
-        // Find controller for this hero
-
+        // Find input state for this hero
         const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        let ctrl: controller.Controller = null
-
-        if (ownerId == 1) ctrl = controller.player1
-
-        else if (ownerId == 2) ctrl = controller.player2
-
-        else if (ownerId == 3) ctrl = controller.player3
-
-        else if (ownerId == 4) ctrl = controller.player4
-
-        if (!ctrl) continue
+        const st = _getInputStateForOwnerId(ownerId)
+        if (!st) continue
 
 
 
@@ -44300,13 +45650,10 @@ function updateSupportPuzzles(now: number) {
 
         let mask = 0
 
-        if (ctrl.up.isPressed()) mask |= 1
-
-        if (ctrl.down.isPressed()) mask |= 2
-
-        if (ctrl.left.isPressed()) mask |= 4
-
-        if (ctrl.right.isPressed()) mask |= 8
+        if (st.up) mask |= 1
+        if (st.down) mask |= 2
+        if (st.left) mask |= 4
+        if (st.right) mask |= 8
 
 
 
@@ -44671,6 +46018,42 @@ function _enemyIsLpc(enemy: Sprite): boolean {
 const ENEMY_MELEE_RANGE_PX = 40 // melee slash travel distance for overlap reliability
 const ENEMY_MIN_HOLD_RANGE_PX = 25  // minimum “stop” range so enemies don’t chase inside hero center
 const ENEMY_ATTACK_BASE_RANGE_PX = 25
+// Attack cadence / telegraph tuning (feel of enemy attacks)
+const ENEMY_ATTACK_BASE_MS = 420
+const ENEMY_ATTACK_MIN_TOTAL_MS = 260
+const ENEMY_ATTACK_WINDUP_PCT = 45
+const ENEMY_ATTACK_STRIKE_PCT = 20
+const ENEMY_ATTACK_RECOVER_PCT = 35
+const ENEMY_ATTACK_WINDUP_MIN_MS = 140
+const ENEMY_ATTACK_STRIKE_MIN_MS = 60
+const ENEMY_ATTACK_RECOVER_MIN_MS = 120
+const ENEMY_ATTACK_COOLDOWN_BASE_MS = 400
+const ENEMY_ATTACK_TELL_BACK_PX = 2
+const ENEMY_ATTACK_TELL_LIFT_PX = 2
+const ENEMY_ATTACK_TELL_SHAKE_PX = 1
+const ENEMY_ATTACK_TELL_SHAKE_MS = 80
+const ENEMY_ATTACK_WINDUP_SCALE_X1000 = 1080
+const ENEMY_ATTACK_STRIKE_SCALE_X1000 = 1140
+const ENEMY_ATTACK_RECOVER_SCALE_X1000 = 1020
+const ENEMY_ATTACK_STRIKE_LUNGE_PX = 3
+const ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID = "flameball"
+const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "mage-bullet"
+const ENEMY_PROJECTILE_SKIN_DIMENSIONS: { [id: string]: { w: number; h: number } } = {
+    [ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID]: { w: 32, h: 32 },
+    [ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID]: { w: 13, h: 13 }
+}
+const ENEMY_PROJECTILE_SKIN_BY_ID: { [id: string]: string } = {
+    // Optional per-monster overrides go here.
+}
+const ENEMY_STRAFE_CHANCE_PCT = 28
+const ENEMY_STRAFE_SPEED_PCT = 60
+const ENEMY_STRAFE_MIN_MS = 320
+const ENEMY_STRAFE_MAX_MS = 680
+const ENEMY_STRAFE_COOLDOWN_MS = 700
+const ENEMY_STRAFE_HOLD_SLACK_PX = 6
+const ENEMY_TEAM_SEP_RADIUS_MIN_PX = 24
+const ENEMY_TEAM_SEP_RADIUS_PCT = 80
+const ENEMY_TEAM_SEP_WEIGHT = 1.6
 const ENEMY_STUCK_WALL_MARGIN_PX = 2
 const RANGED_ADVANCE_RANGE_CAP_PX = 140
 const ENEMY_WALL_COLLIDER_PX = 30
@@ -44890,6 +46273,61 @@ const ENEMY_KIND = {
         "plantEnt": ["STATIONARY", "STRONG", "SLOW", "TANK"],
         "treeEnt": ["STATIONARY", "STRONG", "SLOW", "TANK"]
 
+    }
+
+    const MONSTER_ELEMENT_TYPES: { [id: string]: number[] } = {
+        "bat": [ELEM.AIR],
+        "bee": [ELEM.AIR],
+        "beetle": [ELEM.EARTH],
+        "big worm": [ELEM.EARTH],
+        "eyeball": [ELEM.ELECTRIC],
+        "ghost": [ELEM.AIR],
+        "goblin": [],
+        "skeleton": [],
+        "zombie": [],
+        "golem": [ELEM.EARTH],
+        "golem white": [ELEM.EARTH, ELEM.ICE],
+        "googon": [ELEM.WATER],
+        "imp blue": [ELEM.ICE],
+        "imp green": [ELEM.GRASS],
+        "imp red": [ELEM.FIRE],
+        "man eater flower": [ELEM.GRASS],
+        "minotaur red": [ELEM.FIRE],
+        "pumpking": [ELEM.GRASS],
+        "pegasus": [ELEM.AIR],
+        "slime": [ELEM.WATER],
+        "slime black": [ELEM.EARTH],
+        "slime blue": [ELEM.WATER],
+        "slime brown": [ELEM.EARTH],
+        "slime green": [ELEM.GRASS],
+        "slime lightblue": [ELEM.ICE],
+        "slime projectile": [ELEM.WATER],
+        "slime red": [ELEM.FIRE],
+        "slime violet": [ELEM.ELECTRIC],
+        "slime yellow": [ELEM.ELECTRIC],
+        "small worm": [ELEM.EARTH],
+        "snake": [ELEM.EARTH],
+        "spider black": [ELEM.EARTH],
+        "spider black yellow": [ELEM.EARTH, ELEM.ELECTRIC],
+        "spider blue": [ELEM.WATER],
+        "spider blue orange": [ELEM.WATER, ELEM.FIRE],
+        "spider blue silver": [ELEM.WATER, ELEM.ICE],
+        "spider green": [ELEM.GRASS],
+        "spider green yellow dot": [ELEM.GRASS, ELEM.ELECTRIC],
+        "spider green yellow stripe": [ELEM.GRASS, ELEM.ELECTRIC],
+        "spider red": [ELEM.FIRE],
+        "spider red yellow": [ELEM.FIRE, ELEM.ELECTRIC],
+        "spider silver red": [ELEM.ICE, ELEM.FIRE],
+        "treeent": [ELEM.GRASS, ELEM.EARTH],
+        "plantent": [ELEM.GRASS, ELEM.EARTH],
+        "wolf light brown": []
+    }
+
+    function _monsterElementsForId(monsterId: string): number[] {
+        const key = (monsterId || "").trim().toLowerCase()
+        if (!key) return []
+        const elems = MONSTER_ELEMENT_TYPES[key]
+        return Array.isArray(elems) ? elems : []
     }
 
 
@@ -46146,25 +47584,17 @@ function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: 
     const targets: number[] = []
 
     if (isBoss) {
-
-        for (let pid = 1; pid <= 4; pid++) {
-
-            const hi = playerToHeroIndex[pid] | 0
-
-            if (hi < 0 || hi >= heroes.length) continue
-
+        const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+            ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+            : null
+        for (let hi = 0; hi < heroes.length; hi++) {
             const h = heroes[hi]
-
-            if (!h) continue
-
-            if (h.flags & sprites.Flag.Destroyed) continue
-
+            if (!h || (h.flags & sprites.Flag.Destroyed)) continue
             if ((sprites.readDataNumber(h, HERO_DATA.HP) | 0) <= 0) continue
-
+            const profileKey = _heroProfileKeyForIndex(hi)
+            if (connectedMap && profileKey && !connectedMap[profileKey]) continue
             targets.push(hi)
-
         }
-
     } else {
 
         if (killerHi >= 0 && killerHi < heroes.length && heroes[killerHi] && !(heroes[killerHi].flags & sprites.Flag.Destroyed)) {
@@ -46474,6 +47904,7 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
     sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, sizing.renderOffsY | 0)
 
     sprites.setDataString(enemy, ENEMY_DATA.MONSTER_ID, monsterIdNorm)
+    enemy.data.__moveProfile = _enemyBuildMoveProfile(monsterIdNorm)
 
     _enemyApplyAuraForDir(enemy, "down")
 
@@ -49194,6 +50625,29 @@ interface EnemyEdgePick {
 
 }
 
+function _heroAuraCenterForEnemyTarget(hero: Sprite): { x: number, y: number } {
+    if (!hero) return { x: 0, y: 0 }
+    const anyHero: any = hero as any
+    const data: any = anyHero.data || {}
+
+    // Prefer Phaser-native sprite center if available.
+    const native: any = anyHero.native
+    if (native) {
+        const w = (native.displayWidth || native.width || hero.width || 0) as number
+        const h = (native.displayHeight || native.height || hero.height || 0) as number
+        const ox = (native.originX != null ? native.originX : 0.5) as number
+        const oy = (native.originY != null ? native.originY : 0.5) as number
+        const cx = (native.x as number) + (0.5 - ox) * w
+        const cy = (native.y as number) + (0.5 - oy) * h
+        return { x: (cx | 0), y: (cy | 0) }
+    }
+
+    // Optional override hook if we cache aura centers later.
+    const cxRaw = (data.__heroAuraCenterX != null) ? data.__heroAuraCenterX : hero.x
+    const cyRaw = (data.__heroAuraCenterY != null) ? data.__heroAuraCenterY : hero.y
+    return { x: (cxRaw | 0), y: (cyRaw | 0) }
+}
+
 
 function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: number) {
     const fw = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
@@ -49390,6 +50844,7 @@ function _enemyShouldFreezeForPhaseOrKnockback(enemy: Sprite, nowMs: number): bo
         enemy.vx = 0
 
         enemy.vy = 0
+        _enemySetIntent(enemy, "death")
 
         return true
 
@@ -49399,7 +50854,10 @@ function _enemyShouldFreezeForPhaseOrKnockback(enemy: Sprite, nowMs: number): bo
 
     const kbUntil = sprites.readDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
 
-    if (kbUntil > 0 && nowMs < kbUntil) return true
+    if (kbUntil > 0 && nowMs < kbUntil) {
+        _enemySetIntent(enemy, "knockback")
+        return true
+    }
 
 
 
@@ -49440,28 +50898,82 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
 
 
     const atkUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_UNTIL) | 0
+    const strikeAt = sprites.readDataNumber(enemy, "__atkStrikeAt") | 0
+    const recoverAt = sprites.readDataNumber(enemy, "__atkRecoverAt") | 0
+    const burstCount = sprites.readDataNumber(enemy, "__atkBurstCount") | 0
+    const burstGapMs = sprites.readDataNumber(enemy, "__atkBurstGapMs") | 0
+    let burstFired = sprites.readDataNumber(enemy, "__atkBurstFired") | 0
+    let nextStrikeAt = sprites.readDataNumber(enemy, "__atkNextStrikeAt") | 0
 
-
-
-    if (nowMs >= atkUntil) {
+    if (atkUntil > 0 && nowMs >= atkUntil) {
 
         sprites.setDataString(enemy, "phase", "walk")
 
         sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
 
-        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + 400)
+        const atkIntervalMs = sprites.readDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS) | 0
+        const cdMs = Math.max(ENEMY_ATTACK_COOLDOWN_BASE_MS, atkIntervalMs | 0) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, nowMs + cdMs)
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+
+        _enemyClearAttackCadenceState(enemy)
+        _enemySetIntent(enemy, "cooldown")
 
         return false
 
     }
 
+    if (strikeAt > 0 && nowMs < strikeAt) {
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_WINDUP)
+    } else if (recoverAt > 0 && nowMs < recoverAt) {
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
+        if (nextStrikeAt <= 0) nextStrikeAt = strikeAt | 0
+        if (burstFired < 0) burstFired = 0
+        if (burstCount > 0 && nowMs >= nextStrikeAt && nowMs < atkUntil) {
+            const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
+            const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
+            const strikeMs = sprites.readDataNumber(enemy, "__atkStrikeMs") | 0
+            _spawnMonsterSlashOrProjectile(enemy, dirX, dirY, strikeMs)
+            burstFired = (burstFired + 1) | 0
+            sprites.setDataNumber(enemy, "__atkBurstFired", burstFired)
+            sprites.setDataNumber(enemy, "__atkStrikeDone", 1)
+            if (burstFired < burstCount) {
+                const gap = Math.max(40, burstGapMs | 0) | 0
+                nextStrikeAt = (nextStrikeAt + gap) | 0
+                sprites.setDataNumber(enemy, "__atkNextStrikeAt", nextStrikeAt)
+            }
+        }
+    } else {
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_RECOVER)
+    }
 
+    let vx = 0
+    let vy = 0
+    const peekSide = sprites.readDataNumber(enemy, "__peekSide") | 0
+    if (peekSide !== 0 && _enemyIsRanged(enemy)) {
+        const move = _enemyGetMoveProfile(enemy)
+        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const peekSpeed = Math.max(1, Math.idiv(baseSpeed * (move.coverPeekSpeedPct | 0), 100)) | 0
+        const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
+        const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
+        const perpX = -dirY * peekSide
+        const perpY = dirX * peekSide
+        const atkPhase = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_PHASE) | 0
+        if (atkPhase === ENEMY_ATK_PHASE_WINDUP || atkPhase === ENEMY_ATK_PHASE_ATTACK) {
+            vx += perpX * peekSpeed
+            vy += perpY * peekSpeed
+        } else if (atkPhase === ENEMY_ATK_PHASE_RECOVER) {
+            vx -= perpX * peekSpeed
+            vy -= perpY * peekSpeed
+        }
+    }
 
-    enemy.vx = 0
+    enemy.vx = Math.round(vx) | 0
 
-    enemy.vy = 0
+    enemy.vy = Math.round(vy) | 0
 
-
+    _enemyUpdateAttackCadenceVisuals(enemy, nowMs)
+    _enemySetIntent(enemy, "attack")
 
     if (ei === 0 && (nowMs - _lastEnemyHomingLogMs) >= 250) {
 
@@ -49517,13 +51029,13 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
         const h = heroTargets[hi]
         if (!h) continue
 
-        // Hero FEET point = hero collision bounds bottom-center
-        const hb = _boundsWithOffset(h, _heroCollisionOffsetY(h))
-        const hFootX = hb.centerX | 0
-        const hFootY = hb.bottom | 0
+        // Hero target point = aura bounds center (not feet)
+        const hc = _heroAuraCenterForEnemyTarget(h)
+        const hCenterX = hc.x | 0
+        const hCenterY = hc.y | 0
 
-        const dx = (hFootX - eFootX) | 0
-        const dy = (hFootY - eFootY) | 0
+        const dx = (hCenterX - eFootX) | 0
+        const dy = (hCenterY - eFootY) | 0
         const d2 = (dx * dx + dy * dy)
 
         if (d2 < bestD2) {
@@ -49531,12 +51043,12 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
             target = h
             bestDx = dx
             bestDy = dy
-            bestEdgeX = hFootX
-            bestEdgeY = hFootY
+            bestEdgeX = hCenterX
+            bestEdgeY = hCenterY
         }
     }
 
-    // NOTE: edgeX/edgeY now mean "hero feet point" (collision), not sprite edge.
+    // NOTE: edgeX/edgeY now mean "hero aura center", not sprite feet.
     return { target, d2: bestD2, dx: bestDx, dy: bestDy, edgeX: bestEdgeX, edgeY: bestEdgeY }
 }
 
@@ -49552,6 +51064,376 @@ function _enemyDirFromVector(dx: number, dy: number): string {
 
     return dir
 
+}
+
+function _enemySetIntent(enemy: Sprite, intent: string): void {
+    sprites.setDataString(enemy, "__aiIntent", intent || "")
+}
+
+function _enemyAiTraceAdd(trace: string[] | null, label: string, ok: boolean): void {
+    if (!trace) return
+    trace.push(label + "=" + (ok ? "1" : "0"))
+}
+
+function _enemyAiLogDecision(enemy: Sprite, nowMs: number, trace: string[] | null, action: string): void {
+    if (!DEBUG_ENEMY_AI_DECISIONS || !trace) return
+    const monsterId = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    const sig = action + "|" + trace.join("|")
+    const lastSig = sprites.readDataString(enemy, "__aiTraceSig") || ""
+    const lastAt = sprites.readDataNumber(enemy, "__aiTraceAt") | 0
+    const changed = sig !== lastSig
+    if (DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES && !changed) {
+        const throttle = DEBUG_ENEMY_AI_DECISIONS_THROTTLE_MS | 0
+        if (throttle > 0 && (nowMs - lastAt) < throttle) return
+    }
+    sprites.setDataString(enemy, "__aiTraceSig", sig)
+    sprites.setDataNumber(enemy, "__aiTraceAt", nowMs | 0)
+    console.log(
+        `[AI][${enemy.id}|${monsterId}] action=${action} trace=${trace.join(" ")}`
+    )
+}
+
+type EnemyAttackMotionId = "default" | "bite" | "slam" | "slime_crush" | "worm_spit"
+
+interface EnemyAttackMotionProfile {
+    backPx?: number
+    liftPx?: number
+    shakePx?: number
+    shakeMs?: number
+    windupScaleX1000?: number
+    strikeScaleX1000?: number
+    recoverScaleX1000?: number
+    strikeLungePx?: number
+}
+
+const ENEMY_ATTACK_MOTION_PROFILES: { [id: string]: EnemyAttackMotionProfile } = {
+    default: {
+        backPx: ENEMY_ATTACK_TELL_BACK_PX,
+        liftPx: ENEMY_ATTACK_TELL_LIFT_PX,
+        shakePx: ENEMY_ATTACK_TELL_SHAKE_PX,
+        shakeMs: ENEMY_ATTACK_TELL_SHAKE_MS,
+        windupScaleX1000: ENEMY_ATTACK_WINDUP_SCALE_X1000,
+        strikeScaleX1000: ENEMY_ATTACK_STRIKE_SCALE_X1000,
+        recoverScaleX1000: ENEMY_ATTACK_RECOVER_SCALE_X1000,
+        strikeLungePx: ENEMY_ATTACK_STRIKE_LUNGE_PX
+    },
+    bite: {
+        backPx: 1,
+        liftPx: 1,
+        shakePx: 1,
+        shakeMs: 70,
+        windupScaleX1000: 1060,
+        strikeScaleX1000: 1120,
+        recoverScaleX1000: 1000,
+        strikeLungePx: 4
+    },
+    slam: {
+        backPx: 2,
+        liftPx: 0,
+        shakePx: 0,
+        shakeMs: 90,
+        windupScaleX1000: 1100,
+        strikeScaleX1000: 1200,
+        recoverScaleX1000: 980,
+        strikeLungePx: 2
+    },
+    slime_crush: {
+        backPx: 3,
+        liftPx: 1,
+        shakePx: 1,
+        shakeMs: 80,
+        windupScaleX1000: 1120,
+        strikeScaleX1000: 1220,
+        recoverScaleX1000: 980,
+        strikeLungePx: 5
+    },
+    worm_spit: {
+        backPx: 1,
+        liftPx: 0,
+        shakePx: 0,
+        shakeMs: 70,
+        windupScaleX1000: 1040,
+        strikeScaleX1000: 1080,
+        recoverScaleX1000: 1000,
+        strikeLungePx: 2
+    }
+}
+
+interface EnemyMoveProfile {
+    attackMotionId: EnemyAttackMotionId
+    strafeChancePct: number
+    strafeSpeedPct: number
+    strafeMinMs: number
+    strafeMaxMs: number
+    strafeCooldownMs: number
+    strafeHoldSlackPx: number
+    burstCount: number
+    burstGapMs: number
+    preferCover: boolean
+    coverPeekSpeedPct: number
+    coverPeekStepTiles: number
+    evadeChancePct: number
+    evadeCooldownMs: number
+    evadeSpeedPct: number
+    evadeRadiusPx: number
+    evadeDurationMs: number
+}
+
+const ENEMY_MOVE_PROFILE_BY_ID: { [id: string]: Partial<EnemyMoveProfile> } = {
+    // Override defaults per monster id as needed.
+    "slime projectile": { attackMotionId: "worm_spit", burstCount: 2, burstGapMs: 110, preferCover: true },
+    "imp blue": { burstCount: 3, burstGapMs: 90, preferCover: true, evadeChancePct: 26 },
+    "imp green": { burstCount: 3, burstGapMs: 90, preferCover: true, evadeChancePct: 26 },
+    "imp red": { burstCount: 3, burstGapMs: 90, preferCover: true, evadeChancePct: 26 },
+    "eyeball": { burstCount: 2, burstGapMs: 130, preferCover: true, evadeChancePct: 20 },
+    "ghost": { burstCount: 2, burstGapMs: 140, preferCover: true, evadeChancePct: 18 }
+}
+
+function _enemyBuildMoveProfile(monsterId: string): EnemyMoveProfile {
+    const id = (monsterId || "").toLowerCase()
+    let attackMotionId: EnemyAttackMotionId = "default"
+    let strafeChancePct = ENEMY_STRAFE_CHANCE_PCT
+    let strafeSpeedPct = ENEMY_STRAFE_SPEED_PCT
+    let strafeMinMs = ENEMY_STRAFE_MIN_MS
+    let strafeMaxMs = ENEMY_STRAFE_MAX_MS
+    let strafeCooldownMs = ENEMY_STRAFE_COOLDOWN_MS
+    let strafeHoldSlackPx = ENEMY_STRAFE_HOLD_SLACK_PX
+    let burstCount = 1
+    let burstGapMs = 120
+    let preferCover = false
+    let coverPeekSpeedPct = 70
+    let coverPeekStepTiles = 1
+    let evadeChancePct = 0
+    let evadeCooldownMs = 900
+    let evadeSpeedPct = 120
+    let evadeRadiusPx = 72
+    let evadeDurationMs = 220
+
+    if (id.startsWith("slime")) {
+        attackMotionId = "slime_crush"
+        strafeChancePct = 10
+        strafeSpeedPct = 50
+        burstCount = 1
+        evadeChancePct = 4
+    } else if (id.indexOf("worm") >= 0) {
+        attackMotionId = "worm_spit"
+        strafeChancePct = 12
+        strafeSpeedPct = 50
+        burstCount = 2
+        preferCover = true
+        evadeChancePct = 10
+    } else if (id.indexOf("wolf") >= 0 || id.indexOf("snake") >= 0 || id.indexOf("spider") >= 0) {
+        attackMotionId = "bite"
+        strafeChancePct = 38
+        strafeSpeedPct = 75
+        burstCount = 2
+        evadeChancePct = 12
+    } else if (id.indexOf("golem") >= 0 || id.indexOf("ent") >= 0 || id.indexOf("minotaur") >= 0) {
+        attackMotionId = "slam"
+        strafeChancePct = 6
+        strafeSpeedPct = 40
+        burstCount = 1
+        evadeChancePct = 2
+    }
+
+    const md = _monsterDefById(id)
+    if (attackMotionId === "default" && md && (md.danger | 0) !== 999 && (md.advanceRangePx | 0) > 0) {
+        attackMotionId = "worm_spit"
+        burstCount = 2
+        preferCover = true
+        evadeChancePct = 16
+    }
+
+    const override = ENEMY_MOVE_PROFILE_BY_ID[id]
+    if (override) {
+        if (override.attackMotionId) attackMotionId = override.attackMotionId
+        if (override.strafeChancePct != null) strafeChancePct = override.strafeChancePct | 0
+        if (override.strafeSpeedPct != null) strafeSpeedPct = override.strafeSpeedPct | 0
+        if (override.strafeMinMs != null) strafeMinMs = override.strafeMinMs | 0
+        if (override.strafeMaxMs != null) strafeMaxMs = override.strafeMaxMs | 0
+        if (override.strafeCooldownMs != null) strafeCooldownMs = override.strafeCooldownMs | 0
+        if (override.strafeHoldSlackPx != null) strafeHoldSlackPx = override.strafeHoldSlackPx | 0
+        if (override.burstCount != null) burstCount = override.burstCount | 0
+        if (override.burstGapMs != null) burstGapMs = override.burstGapMs | 0
+        if (override.preferCover != null) preferCover = !!override.preferCover
+        if (override.coverPeekSpeedPct != null) coverPeekSpeedPct = override.coverPeekSpeedPct | 0
+        if (override.coverPeekStepTiles != null) coverPeekStepTiles = override.coverPeekStepTiles | 0
+        if (override.evadeChancePct != null) evadeChancePct = override.evadeChancePct | 0
+        if (override.evadeCooldownMs != null) evadeCooldownMs = override.evadeCooldownMs | 0
+        if (override.evadeSpeedPct != null) evadeSpeedPct = override.evadeSpeedPct | 0
+        if (override.evadeRadiusPx != null) evadeRadiusPx = override.evadeRadiusPx | 0
+        if (override.evadeDurationMs != null) evadeDurationMs = override.evadeDurationMs | 0
+    }
+
+    return {
+        attackMotionId,
+        strafeChancePct,
+        strafeSpeedPct,
+        strafeMinMs,
+        strafeMaxMs,
+        strafeCooldownMs,
+        strafeHoldSlackPx,
+        burstCount,
+        burstGapMs,
+        preferCover,
+        coverPeekSpeedPct,
+        coverPeekStepTiles,
+        evadeChancePct,
+        evadeCooldownMs,
+        evadeSpeedPct,
+        evadeRadiusPx,
+        evadeDurationMs
+    }
+}
+
+function _enemyGetMoveProfile(enemy: Sprite): EnemyMoveProfile {
+    const anyEnemy: any = enemy as any
+    if (!anyEnemy.data) anyEnemy.data = {}
+    let mp = anyEnemy.data.__moveProfile as EnemyMoveProfile | undefined
+    if (!mp) {
+        const id = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+        mp = _enemyBuildMoveProfile(id)
+        anyEnemy.data.__moveProfile = mp
+    }
+    return mp
+}
+
+function _enemyGetAttackMotionProfile(enemy: Sprite): EnemyAttackMotionProfile {
+    const move = _enemyGetMoveProfile(enemy)
+    const motion = ENEMY_ATTACK_MOTION_PROFILES[move.attackMotionId] || ENEMY_ATTACK_MOTION_PROFILES.default
+    return motion || ENEMY_ATTACK_MOTION_PROFILES.default
+}
+
+function _enemyIsRanged(enemy: Sprite): boolean {
+    const rangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+    if (rangePx > 0) return true
+    const projId = sprites.readDataString(enemy, ENEMY_DATA.PROJECTILE_ID) || ""
+    return !!projId
+}
+
+function _enemyHasCoverAtPos(x: number, y: number, heroX: number, heroY: number): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize <= 0) return false
+
+    const dx = heroX - x
+    const dy = heroY - y
+    let stepR = 0
+    let stepC = 0
+    if (Math.abs(dx) > Math.abs(dy)) stepC = dx >= 0 ? 1 : -1
+    else stepR = dy >= 0 ? 1 : -1
+
+    const r = Math.idiv(y | 0, tileSize) + stepR
+    const c = Math.idiv(x | 0, tileSize) + stepC
+    if (r < 0 || c < 0) return false
+    if (r >= _engineWorldTileMap.length) return false
+    if (c >= _engineWorldTileMap[0].length) return false
+
+    return _tileIsSolidType(_engineWorldTileMap[r][c] | 0)
+}
+
+function _enemyComputeAttackCadenceMs(baseMs: number): { totalMs: number, windupMs: number, strikeMs: number, recoverMs: number } {
+    let totalMs = Math.max(ENEMY_ATTACK_MIN_TOTAL_MS, baseMs | 0) | 0
+    let windupMs = Math.max(ENEMY_ATTACK_WINDUP_MIN_MS, Math.idiv(totalMs * ENEMY_ATTACK_WINDUP_PCT, 100)) | 0
+    let strikeMs = Math.max(ENEMY_ATTACK_STRIKE_MIN_MS, Math.idiv(totalMs * ENEMY_ATTACK_STRIKE_PCT, 100)) | 0
+    let recoverMs = Math.max(ENEMY_ATTACK_RECOVER_MIN_MS, (totalMs - windupMs - strikeMs) | 0) | 0
+
+    totalMs = (windupMs + strikeMs + recoverMs) | 0
+    return { totalMs, windupMs, strikeMs, recoverMs }
+}
+
+function _enemyClearAttackCadenceState(enemy: Sprite): void {
+    sprites.setDataNumber(enemy, "__atkStartMs", 0)
+    sprites.setDataNumber(enemy, "__atkWindupMs", 0)
+    sprites.setDataNumber(enemy, "__atkStrikeMs", 0)
+    sprites.setDataNumber(enemy, "__atkRecoverMs", 0)
+    sprites.setDataNumber(enemy, "__atkStrikeAt", 0)
+    sprites.setDataNumber(enemy, "__atkRecoverAt", 0)
+    sprites.setDataNumber(enemy, "__atkEndAt", 0)
+    sprites.setDataNumber(enemy, "__atkStrikeDone", 0)
+    sprites.setDataNumber(enemy, "__atkDirX1000", 0)
+    sprites.setDataNumber(enemy, "__atkDirY1000", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffY", 0)
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", 0)
+    sprites.setDataNumber(enemy, "__atkBurstCount", 0)
+    sprites.setDataNumber(enemy, "__atkBurstGapMs", 0)
+    sprites.setDataNumber(enemy, "__atkBurstFired", 0)
+    sprites.setDataNumber(enemy, "__atkNextStrikeAt", 0)
+    sprites.setDataNumber(enemy, "__peekSide", 0)
+    sprites.setDataNumber(enemy, "__peekSpeedPct", 0)
+}
+
+function _enemyUpdateAttackCadenceVisuals(enemy: Sprite, nowMs: number): void {
+    const phase = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_PHASE) | 0
+    if (phase === ENEMY_ATK_PHASE_IDLE) {
+        _enemyClearAttackCadenceState(enemy)
+        return
+    }
+
+    const startMs = sprites.readDataNumber(enemy, "__atkStartMs") | 0
+    const windupMs = sprites.readDataNumber(enemy, "__atkWindupMs") | 0
+    const strikeMs = sprites.readDataNumber(enemy, "__atkStrikeMs") | 0
+    const recoverMs = sprites.readDataNumber(enemy, "__atkRecoverMs") | 0
+    const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
+    const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
+
+    const motion = _enemyGetAttackMotionProfile(enemy)
+    const backPx = (motion.backPx != null ? motion.backPx : ENEMY_ATTACK_TELL_BACK_PX)
+    const liftPx = (motion.liftPx != null ? motion.liftPx : ENEMY_ATTACK_TELL_LIFT_PX)
+    const shakePx = (motion.shakePx != null ? motion.shakePx : ENEMY_ATTACK_TELL_SHAKE_PX)
+    const shakeMs = (motion.shakeMs != null ? motion.shakeMs : ENEMY_ATTACK_TELL_SHAKE_MS)
+    const windupScale = (motion.windupScaleX1000 != null ? motion.windupScaleX1000 : ENEMY_ATTACK_WINDUP_SCALE_X1000)
+    const strikeScale = (motion.strikeScaleX1000 != null ? motion.strikeScaleX1000 : ENEMY_ATTACK_STRIKE_SCALE_X1000)
+    const recoverScale = (motion.recoverScaleX1000 != null ? motion.recoverScaleX1000 : ENEMY_ATTACK_RECOVER_SCALE_X1000)
+    const lungePx = (motion.strikeLungePx != null ? motion.strikeLungePx : ENEMY_ATTACK_STRIKE_LUNGE_PX)
+
+    let offX = 0
+    let offY = 0
+    let scaleX1000 = 1000
+
+    if (phase === ENEMY_ATK_PHASE_WINDUP && windupMs > 0) {
+        const t = Math.min(1, Math.max(0, (nowMs - startMs) / windupMs))
+        const ease = Math.sin(t * Math.PI * 0.5)
+        const back = backPx * ease
+        const lift = liftPx * ease
+        offX -= dirX * back
+        offY -= dirY * back
+        offY -= lift
+
+        if (shakePx > 0 && shakeMs > 0) {
+            const shakeSign = (((nowMs / shakeMs) | 0) & 1) ? 1 : -1
+            const perpX = -dirY
+            const perpY = dirX
+            offX += perpX * shakePx * shakeSign
+            offY += perpY * shakePx * shakeSign
+        }
+
+        const target = windupScale
+        scaleX1000 = Math.round(1000 + (target - 1000) * ease)
+    } else if (phase === ENEMY_ATK_PHASE_ATTACK && strikeMs > 0) {
+        const strikeStart = (startMs + windupMs) | 0
+        const t = Math.min(1, Math.max(0, (nowMs - strikeStart) / strikeMs))
+        const pulse = Math.sin(t * Math.PI)
+        const lunge = lungePx * pulse
+        offX += dirX * lunge
+        offY += dirY * lunge
+        const target = strikeScale
+        scaleX1000 = Math.round(1000 + (target - 1000) * pulse)
+    } else if (phase === ENEMY_ATK_PHASE_RECOVER && recoverMs > 0) {
+        const recoverStart = (startMs + windupMs + strikeMs) | 0
+        const t = Math.min(1, Math.max(0, (nowMs - recoverStart) / recoverMs))
+        const falloff = Math.cos(t * Math.PI * 0.5)
+        const lunge = lungePx * falloff
+        offX += dirX * lunge
+        offY += dirY * lunge
+        const target = recoverScale
+        scaleX1000 = Math.round(1000 + (target - 1000) * falloff)
+    }
+
+    sprites.setDataNumber(enemy, "__atkVisOffX", Math.round(offX))
+    sprites.setDataNumber(enemy, "__atkVisOffY", Math.round(offY))
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", scaleX1000 | 0)
 }
 
 
@@ -49620,6 +51502,22 @@ function _makeSlashImage(dx: number, dy: number, color: number): Image {
     }
 }
 
+function _enemyProjectileSkinId(enemy: Sprite): string {
+    const raw = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").trim().toLowerCase()
+    if (!raw) return ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID
+    const override = ENEMY_PROJECTILE_SKIN_BY_ID[raw]
+    if (override) return override
+    let hash = 0
+    for (let i = 0; i < raw.length; i++) hash = (hash + raw.charCodeAt(i)) | 0
+    return (hash & 1) ? ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID : ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID
+}
+
+function _enemyProjectileDimsForSkin(skinId: string): { w: number; h: number } {
+    const dims = ENEMY_PROJECTILE_SKIN_DIMENSIONS[skinId]
+    if (dims && (dims.w | 0) > 0 && (dims.h | 0) > 0) return dims
+    return { w: 16, h: 16 }
+}
+
 function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, attackMs: number): void {
     if (!enemy) return;
 
@@ -49636,6 +51534,32 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
     const offX = vx * ((w / 2) + pad);
     const offY = vy * ((h / 2) + pad);
 
+    // Decide melee vs ranged by advanceRangePx (<=0 melee)
+    const rangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0;
+    const dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0;
+
+    if (rangePx > 0) {
+        const skinId = _enemyProjectileSkinId(enemy)
+        const dims = _enemyProjectileDimsForSkin(skinId)
+        const img = image.create(dims.w | 0, dims.h | 0)
+        img.fill(0)
+
+        const fx = sprites.create(img, SpriteKind.MonsterEffect);
+        fx.z = enemy.z + 2000; // ensure above heroes/monsters/aura
+        fx.x = enemy.x + offX;
+        fx.y = enemy.y + offY;
+        sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0);
+        sprites.setDataNumber(fx, "dmg", dmg);
+        applyEffectToSprite(fx, skinId, { dir: _enemyDirFromVector(dx, dy) })
+
+        const speed = 70;
+        fx.vx = (vx * speed) | 0;
+        fx.vy = (vy * speed) | 0;
+        const life = Math.max(120, Math.idiv(rangePx * 1000, speed));
+        fx.lifespan = life;
+        return;
+    }
+
     const color = _monsterDominantColor(enemy);
     const img = _makeSlashImage(vx, vy, color);
 
@@ -49643,27 +51567,15 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
     fx.z = enemy.z + 2000; // ensure above heroes/monsters/aura
     fx.x = enemy.x + offX;
     fx.y = enemy.y + offY;
-
-    // Decide melee vs ranged by advanceRangePx (<=0 melee)
-    const rangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0;
-    const dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0;
     sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0);
     sprites.setDataNumber(fx, "dmg", dmg);
 
-    if (rangePx > 0) {
-        const speed = 70;
-        fx.vx = (vx * speed) | 0;
-        fx.vy = (vy * speed) | 0;
-        const life = Math.max(120, Math.idiv(rangePx * 1000, speed));
-        fx.lifespan = life;
-    } else {
-        // melee: push the slash far enough to overlap the hero
-        const speed = 90;
-        fx.vx = (vx * speed) | 0;
-        fx.vy = (vy * speed) | 0;
-        const life = Math.max(attackMs, Math.idiv(ENEMY_MELEE_RANGE_PX * 1000, speed));
-        fx.lifespan = life;
-    }
+    // melee: push the slash far enough to overlap the hero
+    const speed = 90;
+    fx.vx = (vx * speed) | 0;
+    fx.vy = (vy * speed) | 0;
+    const life = Math.max(attackMs, Math.idiv(ENEMY_MELEE_RANGE_PX * 1000, speed));
+    fx.lifespan = life;
 }
 
 
@@ -49696,30 +51608,81 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
 
     const atkRatePct = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) || 100
 
-    const baseAttackDurationMs = 350
+    const baseAttackDurationMs = ENEMY_ATTACK_BASE_MS
 
     let attackMs = baseAttackDurationMs
 
     if (atkRatePct !== 100) attackMs = Math.idiv(baseAttackDurationMs * 100, atkRatePct)
 
-    if (attackMs < 150) attackMs = 150
+    const cadence = _enemyComputeAttackCadenceMs(attackMs)
+    const totalMs = cadence.totalMs | 0
+    const windupMs = cadence.windupMs | 0
+    const strikeMs = cadence.strikeMs | 0
+    const recoverMs = cadence.recoverMs | 0
 
+    let mag = Math.sqrt(attackDx * attackDx + attackDy * attackDy)
+    if (mag === 0) mag = 1
+    const dirX1000 = Math.round((attackDx / mag) * 1000) | 0
+    const dirY1000 = Math.round((attackDy / mag) * 1000) | 0
 
+    const windupUntil = (nowMs + windupMs) | 0
+    const strikeUntil = (windupUntil + strikeMs) | 0
+    const endAt = (strikeUntil + recoverMs) | 0
 
-    sprites.setDataNumber(enemy, "attackAnimMs", attackMs)
+    sprites.setDataNumber(enemy, "attackAnimMs", totalMs)
 
+    sprites.setDataNumber(enemy, "__atkStartMs", nowMs | 0)
+    sprites.setDataNumber(enemy, "__atkWindupMs", windupMs)
+    sprites.setDataNumber(enemy, "__atkStrikeMs", strikeMs)
+    sprites.setDataNumber(enemy, "__atkRecoverMs", recoverMs)
+    sprites.setDataNumber(enemy, "__atkStrikeAt", windupUntil)
+    sprites.setDataNumber(enemy, "__atkRecoverAt", strikeUntil)
+    sprites.setDataNumber(enemy, "__atkEndAt", endAt)
+    sprites.setDataNumber(enemy, "__atkStrikeDone", 0)
+    sprites.setDataNumber(enemy, "__atkDirX1000", dirX1000)
+    sprites.setDataNumber(enemy, "__atkDirY1000", dirY1000)
 
+    const move = _enemyGetMoveProfile(enemy)
+    const burstCount = Math.max(1, move.burstCount | 0) | 0
+    const burstGapMs = Math.max(40, move.burstGapMs | 0) | 0
+    sprites.setDataNumber(enemy, "__atkBurstCount", burstCount)
+    sprites.setDataNumber(enemy, "__atkBurstGapMs", burstGapMs)
+    sprites.setDataNumber(enemy, "__atkBurstFired", 0)
+    sprites.setDataNumber(enemy, "__atkNextStrikeAt", windupUntil)
+
+    let peekSide = 0
+    if (_enemyIsRanged(enemy) && move.preferCover && (move.coverPeekSpeedPct | 0) > 0) {
+        const dims = _enemyGetColliderDims(enemy)
+        const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+        const footX = feet.footX | 0
+        const footY = feet.footY | 0
+        const heroX = pick.edgeX | 0
+        const heroY = pick.edgeY | 0
+        const inCover = _enemyHasCoverAtPos(footX, footY, heroX, heroY)
+        if (inCover) {
+            const stepTiles = Math.max(1, move.coverPeekStepTiles | 0) | 0
+            const step = (WORLD_TILE_SIZE | 0) * stepTiles
+            const nx = attackDx / mag
+            const ny = attackDy / mag
+            const perpX = -ny
+            const perpY = nx
+            const coverSide1 = _enemyHasCoverAtPos(footX + perpX * step, footY + perpY * step, heroX, heroY)
+            const coverSide2 = _enemyHasCoverAtPos(footX - perpX * step, footY - perpY * step, heroX, heroY)
+            if (coverSide1 !== coverSide2) {
+                peekSide = coverSide1 ? -1 : 1
+            } else {
+                peekSide = Math.random() < 0.5 ? 1 : -1
+            }
+        }
+    }
+    sprites.setDataNumber(enemy, "__peekSide", peekSide)
+    sprites.setDataNumber(enemy, "__peekSpeedPct", move.coverPeekSpeedPct | 0)
 
     sprites.setDataString(enemy, "phase", "attack")
-
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_ATTACK)
-
-    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, nowMs + attackMs)
-
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_WINDUP)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, endAt)
     sprites.setDataString(enemy, "dir", attackDir)
-
-    // VFX: slash/projectile telegraph from the monster
-    _spawnMonsterSlashOrProjectile(enemy, attackDx, attackDy, attackMs)
+    _enemySetIntent(enemy, "attack")
 
 
 
@@ -49739,9 +51702,143 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
 
 }
 
+function _enemyApplyStrafeIfEligible(
+    enemy: Sprite,
+    pick: EnemyEdgePick,
+    speed: number,
+    holdRangePx: number,
+    nowMs: number
+): boolean {
+    const move = _enemyGetMoveProfile(enemy)
+    const baseChancePct = move.strafeChancePct | 0
+    const cooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
+    const inCooldown = cooldownUntil > 0 && nowMs < cooldownUntil
+    const chancePct = inCooldown ? Math.max(70, baseChancePct) : baseChancePct
+    if (chancePct <= 0) return false
+
+    const strafeUntil = sprites.readDataNumber(enemy, "__strafeUntil") | 0
+    const strafeCooldownUntil = sprites.readDataNumber(enemy, "__strafeCooldownUntil") | 0
+
+    let active = (nowMs < strafeUntil)
+
+    if (!active) {
+        if (nowMs < strafeCooldownUntil) return false
+        if ((Math.random() * 100) >= chancePct) return false
+
+        const minMs = move.strafeMinMs | 0
+        const maxMs = move.strafeMaxMs | 0
+        const durMs = minMs + (Math.random() * Math.max(0, maxMs - minMs))
+
+        const prevSide = sprites.readDataNumber(enemy, "__strafeSide") | 0
+        let side = (prevSide === 0) ? (Math.random() < 0.5 ? -1 : 1) : (-prevSide | 0)
+
+        if (move.preferCover && inCooldown && _enemyIsRanged(enemy)) {
+            const dims = _enemyGetColliderDims(enemy)
+            const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+            const footX = feet.footX | 0
+            const footY = feet.footY | 0
+            const heroX = pick.edgeX | 0
+            const heroY = pick.edgeY | 0
+            const dx = pick.dx
+            const dy = pick.dy
+            let mag = Math.sqrt(dx * dx + dy * dy)
+            if (mag === 0) mag = 1
+            const nx = dx / mag
+            const ny = dy / mag
+            const perpX = -ny
+            const perpY = nx
+            const stepTiles = Math.max(1, move.coverPeekStepTiles | 0) | 0
+            const step = (WORLD_TILE_SIZE | 0) * stepTiles
+            const coverSide1 = _enemyHasCoverAtPos(footX + perpX * step, footY + perpY * step, heroX, heroY)
+            const coverSide2 = _enemyHasCoverAtPos(footX - perpX * step, footY - perpY * step, heroX, heroY)
+            if (coverSide1 !== coverSide2) {
+                side = coverSide1 ? 1 : -1
+            }
+        }
+
+        sprites.setDataNumber(enemy, "__strafeSide", side)
+        sprites.setDataNumber(enemy, "__strafeUntil", nowMs + (durMs | 0))
+        sprites.setDataNumber(enemy, "__strafeCooldownUntil", nowMs + (durMs | 0) + (move.strafeCooldownMs | 0))
+        active = true
+    }
+
+    if (!active) return false
+
+    const dx = pick.dx
+    const dy = pick.dy
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag === 0) return false
+
+    const nx = dx / mag
+    const ny = dy / mag
+    const side = sprites.readDataNumber(enemy, "__strafeSide") | 0
+    const px = -ny * (side || 1)
+    const py = nx * (side || 1)
+
+    const strafeSpeed = Math.max(1, Math.idiv(speed * (move.strafeSpeedPct | 0), 100)) | 0
+
+    let moveX = px
+    let moveY = py
+
+    const sepRadius = Math.max(
+        ENEMY_TEAM_SEP_RADIUS_MIN_PX,
+        Math.idiv(holdRangePx * ENEMY_TEAM_SEP_RADIUS_PCT, 100)
+    ) | 0
+    const sepRadius2 = sepRadius * sepRadius
+    let sepX = 0
+    let sepY = 0
+
+    if (sepRadius > 0) {
+        const selfDims = _enemyGetColliderDims(enemy)
+        const selfFeet = _enemyNavGetEnemyFeetPoint(enemy, selfDims.w | 0, selfDims.h | 0)
+        const selfX = selfFeet.footX | 0
+        const selfY = selfFeet.footY | 0
+
+        for (let i = 0; i < enemies.length; i++) {
+            const other = enemies[i]
+            if (!other || other === enemy) continue
+            if (other.flags & sprites.Flag.Destroyed) continue
+            const od = _enemyGetColliderDims(other)
+            const of = _enemyNavGetEnemyFeetPoint(other, od.w | 0, od.h | 0)
+            const ox = of.footX | 0
+            const oy = of.footY | 0
+            const dx2 = selfX - ox
+            const dy2 = selfY - oy
+            const d2 = dx2 * dx2 + dy2 * dy2
+            if (d2 <= 0 || d2 > sepRadius2) continue
+            const d = Math.sqrt(d2) || 1
+            const push = (sepRadius - d) / sepRadius
+            sepX += (dx2 / d) * push
+            sepY += (dy2 / d) * push
+        }
+    }
+
+    const sepMag = Math.sqrt(sepX * sepX + sepY * sepY)
+    if (sepMag > 0.001) {
+        moveX += (sepX / sepMag) * ENEMY_TEAM_SEP_WEIGHT
+        moveY += (sepY / sepMag) * ENEMY_TEAM_SEP_WEIGHT
+    }
+
+    const slack = move.strafeHoldSlackPx | 0
+    const dist = Math.sqrt(pick.d2)
+    if (holdRangePx > 0 && Math.abs(dist - holdRangePx) > slack) {
+        const pull = Math.min(3, Math.abs(dist - holdRangePx) - slack)
+        const dir = (dist > holdRangePx) ? -1 : 1
+        moveX += nx * pull * dir
+        moveY += ny * pull * dir
+    }
+
+    let moveMag = Math.sqrt(moveX * moveX + moveY * moveY)
+    if (moveMag === 0) moveMag = 1
+    enemy.vx = Math.round((moveX / moveMag) * strafeSpeed) | 0
+    enemy.vy = Math.round((moveY / moveMag) * strafeSpeed) | 0
+
+    return true
+}
 
 
-function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boolean {
+
+function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick, speed: number, nowMs: number): boolean {
 
     // Default to a small hold range so enemies don't chase into hero center
     const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
@@ -49756,19 +51853,105 @@ function _enemyShouldHoldAtAdvanceRange(enemy: Sprite, pick: EnemyEdgePick): boo
 
 
 
-    enemy.vx = 0
-
-    enemy.vy = 0
+    const strafing = _enemyApplyStrafeIfEligible(enemy, pick, speed, holdRangePx, nowMs)
+    if (!strafing) {
+        enemy.vx = 0
+        enemy.vy = 0
+    }
 
     sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
 
     sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+    _enemySetIntent(enemy, strafing ? "orbit" : "hold")
 
     return true
 
 }
 
 
+
+function _enemyFindProjectileThreat(
+    enemy: Sprite,
+    nowMs: number,
+    radiusPx: number
+): { x: number, y: number, vx: number, vy: number } | null {
+    if (!heroProjectiles || heroProjectiles.length === 0) return null
+    const r = Math.max(1, radiusPx | 0) | 0
+    const r2 = r * r
+    let best: any = null
+    let bestD2 = r2 + 1
+
+    for (let i = 0; i < heroProjectiles.length; i++) {
+        const proj = heroProjectiles[i]
+        if (!proj || (proj.flags & sprites.Flag.Destroyed)) continue
+
+        const isActive = sprites.readDataNumber(proj, PROJ_DATA.IS_ACTIVE) | 0
+        const activateAt = sprites.readDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS) | 0
+        if (isActive === 0 && activateAt > nowMs) continue
+
+        const pvx = proj.vx | 0
+        const pvy = proj.vy | 0
+        if ((pvx | 0) === 0 && (pvy | 0) === 0) continue
+
+        const dx = (enemy.x | 0) - (proj.x | 0)
+        const dy = (enemy.y | 0) - (proj.y | 0)
+        const d2 = (dx * dx + dy * dy)
+        if (d2 > r2) continue
+
+        const dot = (pvx * dx) + (pvy * dy)
+        if (dot <= 0) continue
+
+        if (d2 < bestD2) {
+            bestD2 = d2
+            best = { x: proj.x | 0, y: proj.y | 0, vx: pvx | 0, vy: pvy | 0 }
+        }
+    }
+
+    return best
+}
+
+function _enemyTryEvadeProjectiles(enemy: Sprite, nowMs: number, speed: number): boolean {
+    const move = _enemyGetMoveProfile(enemy)
+    const chancePct = move.evadeChancePct | 0
+    if (chancePct <= 0) return false
+
+    const evadeUntil = sprites.readDataNumber(enemy, "__evadeUntil") | 0
+    if (evadeUntil > nowMs) {
+        const dirX = (sprites.readDataNumber(enemy, "__evadeDirX1000") | 0) / 1000
+        const dirY = (sprites.readDataNumber(enemy, "__evadeDirY1000") | 0) / 1000
+        const evadeSpeed = Math.max(1, Math.idiv(speed * (move.evadeSpeedPct | 0), 100)) | 0
+        enemy.vx = Math.round(dirX * evadeSpeed) | 0
+        enemy.vy = Math.round(dirY * evadeSpeed) | 0
+        _enemySetIntent(enemy, "evade")
+        return true
+    }
+
+    const cooldownUntil = sprites.readDataNumber(enemy, "__evadeCooldownUntil") | 0
+    if (cooldownUntil > 0 && nowMs < cooldownUntil) return false
+
+    const threat = _enemyFindProjectileThreat(enemy, nowMs, move.evadeRadiusPx | 0)
+    if (!threat) return false
+
+    if ((Math.random() * 100) >= chancePct) return false
+
+    const dx = (enemy.x | 0) - (threat.x | 0)
+    const dy = (enemy.y | 0) - (threat.y | 0)
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag === 0) mag = 1
+
+    const dirX = dx / mag
+    const dirY = dy / mag
+    const evadeSpeed = Math.max(1, Math.idiv(speed * (move.evadeSpeedPct | 0), 100)) | 0
+    enemy.vx = Math.round(dirX * evadeSpeed) | 0
+    enemy.vy = Math.round(dirY * evadeSpeed) | 0
+
+    sprites.setDataNumber(enemy, "__evadeDirX1000", Math.round(dirX * 1000) | 0)
+    sprites.setDataNumber(enemy, "__evadeDirY1000", Math.round(dirY * 1000) | 0)
+    sprites.setDataNumber(enemy, "__evadeUntil", nowMs + Math.max(80, move.evadeDurationMs | 0))
+    sprites.setDataNumber(enemy, "__evadeCooldownUntil", nowMs + Math.max(200, move.evadeCooldownMs | 0))
+    _enemySetIntent(enemy, "evade")
+    return true
+}
 
 function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
 
@@ -49964,6 +52147,8 @@ function updateEnemyHoming(nowMs: number) {
 
         if (!_enemyIsInitialized(enemy)) continue
 
+        const trace = DEBUG_ENEMY_AI_DECISIONS ? [] as string[] : null
+
 
 
         // Death timing cleanup
@@ -49974,9 +52159,12 @@ function updateEnemyHoming(nowMs: number) {
 
         // Phase/knockback short-circuits
 
-        if (_enemyShouldFreezeForPhaseOrKnockback(enemy, nowMs)) {
+        const froze = _enemyShouldFreezeForPhaseOrKnockback(enemy, nowMs)
+        _enemyAiTraceAdd(trace, "freeze", froze)
+        if (froze) {
 
             _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, sprites.readDataString(enemy, "__aiIntent") || "freeze")
 
             continue
 
@@ -49992,9 +52180,12 @@ function updateEnemyHoming(nowMs: number) {
 
         // Attack hold/finish
 
-        if (_enemyTickAttackHoldOrFinish(enemy, nowMs, ei)) {
+        const attackHold = _enemyTickAttackHoldOrFinish(enemy, nowMs, ei)
+        _enemyAiTraceAdd(trace, "attackHold", attackHold)
+        if (attackHold) {
 
             _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "attack")
 
             continue
 
@@ -50010,7 +52201,9 @@ function updateEnemyHoming(nowMs: number) {
 
         // If we're basically on the hero edge, stop (but stay in walk phase)
 
-        if (pick.d2 < 1) {
+        const tooClose = pick.d2 < 1
+        _enemyAiTraceAdd(trace, "tooClose", tooClose)
+        if (tooClose) {
 
             enemy.vx = 0
 
@@ -50019,20 +52212,33 @@ function updateEnemyHoming(nowMs: number) {
             sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
 
             sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+            _enemySetIntent(enemy, "hold")
 
             _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "hold")
 
             continue
 
+        }
+
+        const evade = _enemyTryEvadeProjectiles(enemy, nowMs, speed)
+        _enemyAiTraceAdd(trace, "evade", evade)
+        if (evade) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "evade")
+            continue
         }
 
 
 
         // Start attack if close enough and off cooldown
 
-        if (_enemyTryStartAttackIfInRange(enemy, pick, nowMs, ei)) {
+        const startAttack = _enemyTryStartAttackIfInRange(enemy, pick, nowMs, ei)
+        _enemyAiTraceAdd(trace, "startAtk", startAttack)
+        if (startAttack) {
 
             _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "attackStart")
 
             continue
 
@@ -50042,9 +52248,12 @@ function updateEnemyHoming(nowMs: number) {
 
         // advanceRange (0 melee; >0 hold position at range)
 
-        if (_enemyShouldHoldAtAdvanceRange(enemy, pick)) {
+        const holdRange = _enemyShouldHoldAtAdvanceRange(enemy, pick, speed, nowMs)
+        _enemyAiTraceAdd(trace, "holdRange", holdRange)
+        if (holdRange) {
 
             _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, sprites.readDataString(enemy, "__aiIntent") || "hold")
 
             continue
 
@@ -50077,6 +52286,7 @@ function updateEnemyHoming(nowMs: number) {
         sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EY, pick.edgeY | 0)
 
         _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed)
+        _enemySetIntent(enemy, "advance")
 
 
 
@@ -50085,6 +52295,7 @@ function updateEnemyHoming(nowMs: number) {
 
 
         _enemyAiUpdateLastPos(enemy)
+        _enemyAiLogDecision(enemy, nowMs, trace, "advance")
 
 
 
@@ -50244,6 +52455,8 @@ interface EnemyHitPacket {
 
     sourceTag?: string;   // debug label
 
+    element?: number;     // ELEM.*
+
 
 
     // status intent (centralized here)
@@ -50305,6 +52518,8 @@ interface EnemyHitContext {
 
 
     family: number;          // -1 allowed
+
+    element: number;         // ELEM.*
 
     button: string;
 
@@ -50676,6 +52891,8 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
         family: (hit && hit.family != null) ? (hit.family | 0) : -1,
 
+        element: (hit && hit.element != null) ? (hit.element | 0) : (ELEM.NONE | 0),
+
         button: (hit && hit.button != null) ? ("" + hit.button) : "",
 
         sourceTag: (hit && hit.sourceTag != null) ? ("" + hit.sourceTag) : "",
@@ -50753,6 +52970,18 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
     // 2) Execute any queued “weird effects” (teleport, mark, etc.)
 
     _enemyHitRunEffects(ctx);
+
+
+
+    // 2b) Elemental damage multiplier (only affects damage)
+    if (ctx.damage > 0) {
+        const monsterId = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+        const elems = _monsterElementsForId(monsterId)
+        const mult = _elementDamageMultiplier(ctx.element, elems)
+        if (mult !== 1) {
+            ctx.damage = Math.max(0, Math.round(ctx.damage * mult))
+        }
+    }
 
 
 
@@ -51203,23 +53432,10 @@ function encodeIntentToStrBtnId(intent: string): number {
 
 function isStrBtnIdPressedForOwner(ownerId: number, btnId: number): boolean {
 
-    let ctrl: controller.Controller = null
-
-    if (ownerId === 1) ctrl = controller.player1
-
-    else if (ownerId === 2) ctrl = controller.player2
-
-    else if (ownerId === 3) ctrl = controller.player3
-
-    else if (ownerId === 4) ctrl = controller.player4
-
-    if (!ctrl) return false
-
-
-
-    const a = ctrl.A.isPressed()
-
-    const b = ctrl.B.isPressed()
+    const st = _getInputStateForOwnerId(ownerId)
+    if (!st) return false
+    const a = !!st.A
+    const b = !!st.B
 
 
 
@@ -51241,115 +53457,19 @@ function isStrBtnIdPressedForOwner(ownerId: number, btnId: number): boolean {
 
 function consumePlayerIntent(playerId: number): string {
 
-    // 2-deep FIFO pop: return pending1, shift pending2 up.
-
-    if (playerId === 1) {
-
-        if (p1IntentPending !== "") {
-
-            const s = p1IntentPending
-
-            p1IntentPending = p1IntentPending2
-
-            p1IntentPending2 = ""
-
-            return s
-
-        }
-
-        if (p1IntentPending2 !== "") {
-
-            const s = p1IntentPending2
-
-            p1IntentPending2 = ""
-
-            return s
-
-        }
-
-        return ""
-
-    } else if (playerId === 2) {
-
-        if (p2IntentPending !== "") {
-
-            const s = p2IntentPending
-
-            p2IntentPending = p2IntentPending2
-
-            p2IntentPending2 = ""
-
-            return s
-
-        }
-
-        if (p2IntentPending2 !== "") {
-
-            const s = p2IntentPending2
-
-            p2IntentPending2 = ""
-
-            return s
-
-        }
-
-        return ""
-
-    } else if (playerId === 3) {
-
-        if (p3IntentPending !== "") {
-
-            const s = p3IntentPending
-
-            p3IntentPending = p3IntentPending2
-
-            p3IntentPending2 = ""
-
-            return s
-
-        }
-
-        if (p3IntentPending2 !== "") {
-
-            const s = p3IntentPending2
-
-            p3IntentPending2 = ""
-
-            return s
-
-        }
-
-        return ""
-
-    } else if (playerId === 4) {
-
-        if (p4IntentPending !== "") {
-
-            const s = p4IntentPending
-
-            p4IntentPending = p4IntentPending2
-
-            p4IntentPending2 = ""
-
-            return s
-
-        }
-
-        if (p4IntentPending2 !== "") {
-
-            const s = p4IntentPending2
-
-            p4IntentPending2 = ""
-
-            return s
-
-        }
-
-        return ""
-
+    const pid = playerId | 0
+    if (pid <= 0) return ""
+    let profile = playerIdToProfile[pid] || ""
+    if (!profile) {
+        try {
+            const g: any = globalThis as any
+            if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+                profile = g.__netProfileByPid[pid]
+            }
+        } catch { }
     }
-
-    return ""
+    if (!profile) return ""
+    return _consumeIntentForProfile(profile)
 
 }
 
@@ -51365,431 +53485,31 @@ function updatePlayerInputs() {
 
     const nowMs = game.runtime() | 0
 
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
 
+    const seen: Record<string, boolean> = Object.create(null)
 
-    const _queueIntent = (pid: number, ev: string): void => {
-
-        if (pid === 1) {
-
-            if (p1IntentPending === "") p1IntentPending = ev
-
-            else if (p1IntentPending2 === "") p1IntentPending2 = ev
-
-            else p1IntentPending2 = ev
-
-            return
-
-        }
-
-        if (pid === 2) {
-
-            if (p2IntentPending === "") p2IntentPending = ev
-
-            else if (p2IntentPending2 === "") p2IntentPending2 = ev
-
-            else p2IntentPending2 = ev
-
-            return
-
-        }
-
-        if (pid === 3) {
-
-            if (p3IntentPending === "") p3IntentPending = ev
-
-            else if (p3IntentPending2 === "") p3IntentPending2 = ev
-
-            else p3IntentPending2 = ev
-
-            return
-
-        }
-
-        if (pid === 4) {
-
-            if (p4IntentPending === "") p4IntentPending = ev
-
-            else if (p4IntentPending2 === "") p4IntentPending2 = ev
-
-            else p4IntentPending2 = ev
-
-            return
-
-        }
-
+    const localProfile = _getLocalProfileKey()
+    if (localProfile) {
+        _syncLocalInputState(localProfile)
+        const stLocal = _getInputStateForProfile(localProfile)
+        _updateIntentStateForProfile(localProfile, stLocal, nowMs, true)
+        seen[localProfile] = true
     }
 
-
-
-    const _upgradePendingToAB = (pid: number): boolean => {
-
-        if (pid === 1) {
-
-            if (p1IntentPending === "A" || p1IntentPending === "B") { p1IntentPending = "A+B"; return true }
-
-            if (p1IntentPending2 === "A" || p1IntentPending2 === "B") { p1IntentPending2 = "A+B"; return true }
-
-            return false
-
-        }
-
-        if (pid === 2) {
-
-            if (p2IntentPending === "A" || p2IntentPending === "B") { p2IntentPending = "A+B"; return true }
-
-            if (p2IntentPending2 === "A" || p2IntentPending2 === "B") { p2IntentPending2 = "A+B"; return true }
-
-            return false
-
-        }
-
-        if (pid === 3) {
-
-            if (p3IntentPending === "A" || p3IntentPending === "B") { p3IntentPending = "A+B"; return true }
-
-            if (p3IntentPending2 === "A" || p3IntentPending2 === "B") { p3IntentPending2 = "A+B"; return true }
-
-            return false
-
-        }
-
-        if (pid === 4) {
-
-            if (p4IntentPending === "A" || p4IntentPending === "B") { p4IntentPending = "A+B"; return true }
-
-            if (p4IntentPending2 === "A" || p4IntentPending2 === "B") { p4IntentPending2 = "A+B"; return true }
-
-            return false
-
-        }
-
-        return false
-
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (!profileKey) continue
+        if (seen[profileKey]) continue
+        if (connectedMap && connectedMap[profileKey] === false) continue
+        const st = _getInputStateForProfile(profileKey)
+        _updateIntentStateForProfile(profileKey, st, nowMs, false)
+        seen[profileKey] = true
     }
-
-
-
-    // --------------------------
-
-    // Player 1
-
-    // --------------------------
-
-    const a1 = controller.player1.A.isPressed()
-
-    const b1 = controller.player1.B.isPressed()
-
-
-
-    // Held intent (kept for debug visibility)
-
-    if (a1 && b1) p1Intent = "A+B"
-
-    else if (a1) p1Intent = "A"
-
-    else if (b1) p1Intent = "B"
-
-    else p1Intent = ""
-
-
-
-    // Edge intent: enqueue on rising edge (A+B chord window)
-
-    const a1Edge = a1 && !_p1PrevA
-
-    const b1Edge = b1 && !_p1PrevB
-
-    if (a1Edge) _p1LastAEdgeMs = nowMs
-
-    if (b1Edge) _p1LastBEdgeMs = nowMs
-
-
-
-    const ab1Edge =
-
-        (a1Edge && b1) ||
-
-        (b1Edge && a1) ||
-
-        (a1Edge && (nowMs - _p1LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
-
-        (b1Edge && (nowMs - _p1LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
-
-
-
-    if (a1Edge || b1Edge) {
-
-        if (ab1Edge) {
-
-            const upgraded = _upgradePendingToAB(1)
-
-            if (!upgraded) _queueIntent(1, "A+B")
-
-        } else {
-
-            _queueIntent(1, a1Edge ? "A" : "B")
-
-        }
-
-    }
-
-
-
-    if (DEBUG_HERO_LOGIC && DEBUG_FILTER_LOGS) {
-
-        const changed = (p1Intent !== _dbg_prevP1Intent)
-
-        const abChanged = (a1 !== _dbg_prevP1A) || (b1 !== _dbg_prevP1B)
-
-        if (changed || abChanged || a1Edge || b1Edge) {
-
-            const dur = (_dbg_prevP1IntentMs > 0) ? (nowMs - _dbg_prevP1IntentMs) : 0
-
-            console.log(
-
-                DEBUG_FILTER_PHRASE +
-
-                " EDGE timeMs=" + nowMs +
-
-                " intent=" + p1Intent +
-
-                " (prev=" + _dbg_prevP1Intent + " prevDurMs=" + dur + ")" +
-
-                " aNow=" + (a1 ? 1 : 0) +
-
-                " bNow=" + (b1 ? 1 : 0) +
-
-                " aEdge=" + (a1Edge ? 1 : 0) +
-
-                " bEdge=" + (b1Edge ? 1 : 0) +
-
-                " pending=" + p1IntentPending +
-
-                " pending2=" + p1IntentPending2
-
-            )
-
-
-
-            if (_dbg_prevP1Intent === "" && p1Intent !== "") _dbg_prevP1IntentMs = nowMs
-
-            if (_dbg_prevP1Intent !== "" && p1Intent === "") _dbg_prevP1IntentMs = 0
-
-
-
-            _dbg_prevP1Intent = p1Intent
-
-            _dbg_prevP1A = a1
-
-            _dbg_prevP1B = b1
-
-        }
-
-    }
-
-
-
-    _p1PrevA = a1
-
-    _p1PrevB = b1
-
-
-
-    // --------------------------
-
-    // Player 2
-
-    // --------------------------
-
-    const a2 = controller.player2.A.isPressed()
-
-    const b2 = controller.player2.B.isPressed()
-
-
-
-    if (a2 && b2) p2Intent = "A+B"
-
-    else if (a2) p2Intent = "A"
-
-    else if (b2) p2Intent = "B"
-
-    else p2Intent = ""
-
-
-
-    const a2Edge = a2 && !_p2PrevA
-
-    const b2Edge = b2 && !_p2PrevB
-
-    if (a2Edge) _p2LastAEdgeMs = nowMs
-
-    if (b2Edge) _p2LastBEdgeMs = nowMs
-
-
-
-    const ab2Edge =
-
-        (a2Edge && b2) ||
-
-        (b2Edge && a2) ||
-
-        (a2Edge && (nowMs - _p2LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
-
-        (b2Edge && (nowMs - _p2LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
-
-
-
-    if (a2Edge || b2Edge) {
-
-        if (ab2Edge) {
-
-            const upgraded = _upgradePendingToAB(2)
-
-            if (!upgraded) _queueIntent(2, "A+B")
-
-        } else {
-
-            _queueIntent(2, a2Edge ? "A" : "B")
-
-        }
-
-    }
-
-    _p2PrevA = a2
-
-    _p2PrevB = b2
-
-
-
-    // --------------------------
-
-    // Player 3
-
-    // --------------------------
-
-    const a3 = controller.player3.A.isPressed()
-
-    const b3 = controller.player3.B.isPressed()
-
-
-
-    if (a3 && b3) p3Intent = "A+B"
-
-    else if (a3) p3Intent = "A"
-
-    else if (b3) p3Intent = "B"
-
-    else p3Intent = ""
-
-
-
-    const a3Edge = a3 && !_p3PrevA
-
-    const b3Edge = b3 && !_p3PrevB
-
-    if (a3Edge) _p3LastAEdgeMs = nowMs
-
-    if (b3Edge) _p3LastBEdgeMs = nowMs
-
-
-
-    const ab3Edge =
-
-        (a3Edge && b3) ||
-
-        (b3Edge && a3) ||
-
-        (a3Edge && (nowMs - _p3LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
-
-        (b3Edge && (nowMs - _p3LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
-
-
-
-    if (a3Edge || b3Edge) {
-
-        if (ab3Edge) {
-
-            const upgraded = _upgradePendingToAB(3)
-
-            if (!upgraded) _queueIntent(3, "A+B")
-
-        } else {
-
-            _queueIntent(3, a3Edge ? "A" : "B")
-
-        }
-
-    }
-
-    _p3PrevA = a3
-
-    _p3PrevB = b3
-
-
-
-    // --------------------------
-
-    // Player 4
-
-    // --------------------------
-
-    const a4 = controller.player4.A.isPressed()
-
-    const b4 = controller.player4.B.isPressed()
-
-
-
-    if (a4 && b4) p4Intent = "A+B"
-
-    else if (a4) p4Intent = "A"
-
-    else if (b4) p4Intent = "B"
-
-    else p4Intent = ""
-
-
-
-    const a4Edge = a4 && !_p4PrevA
-
-    const b4Edge = b4 && !_p4PrevB
-
-    if (a4Edge) _p4LastAEdgeMs = nowMs
-
-    if (b4Edge) _p4LastBEdgeMs = nowMs
-
-
-
-    const ab4Edge =
-
-        (a4Edge && b4) ||
-
-        (b4Edge && a4) ||
-
-        (a4Edge && (nowMs - _p4LastBEdgeMs) <= AB_CHORD_WINDOW_MS) ||
-
-        (b4Edge && (nowMs - _p4LastAEdgeMs) <= AB_CHORD_WINDOW_MS)
-
-
-
-    if (a4Edge || b4Edge) {
-
-        if (ab4Edge) {
-
-            const upgraded = _upgradePendingToAB(4)
-
-            if (!upgraded) _queueIntent(4, "A+B")
-
-        } else {
-
-            _queueIntent(4, a4Edge ? "A" : "B")
-
-        }
-
-    }
-
-    _p4PrevA = a4
-
-    _p4PrevB = b4
 
 }
 
@@ -51936,6 +53656,12 @@ function updateHeroMovementPhase(now: number) {
 
             continue
 
+        }
+
+        const teleMode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+        if (teleMode) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_TELEPORT", "updateHeroMovementPhase")
+            continue
         }
 
 
@@ -52642,126 +54368,54 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
 
 
 
-    if (blockIntents) {
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
 
-        const uiAllowsA = (pid: number): boolean => {
-
-            const hi = _uiResolveHeroIndexForPid(pid | 0)
-
-            if (hi < 0 || hi >= heroes.length) return false
-
-            const hero = heroes[hi]
-
-            if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
-
-            const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
-
-            return uiMode === HERO_UI_MODE.LEVELUP || uiMode === HERO_UI_MODE.SHOP
-
-        }
-
-
-
-        const drainBlockedIntent = (pid: number): void => {
-
-            const allowA = uiAllowsA(pid)
-
-            for (let i = 0; i < 2; i++) {
-
-                const intent = consumePlayerIntent(pid)
-
-                if (!intent) break
-
-                if (intent === "A+B" || intent === "B" || (allowA && intent === "A")) {
-
-                    doHeroMoveForPlayer(pid, intent)
-
-                }
-
-            }
-
-        }
-
-
-
-        drainBlockedIntent(1)
-
-        drainBlockedIntent(2)
-
-        drainBlockedIntent(3)
-
-        drainBlockedIntent(4)
-
-        return
-
+    const active: { hi: number; hero: Sprite; profile: string }[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const profile = _heroProfileKeyForIndex(hi)
+        if (!profile) continue
+        if (connectedMap && connectedMap[profile] === false) continue
+        active.push({ hi, hero, profile })
     }
 
+    if (blockIntents) {
+        const uiAllowsAForHero = (hero: Sprite): boolean => {
+            const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
+            return uiMode === HERO_UI_MODE.LEVELUP || uiMode === HERO_UI_MODE.SHOP
+        }
 
+        for (const entry of active) {
+            const allowA = uiAllowsAForHero(entry.hero)
+            const pid = sprites.readDataNumber(entry.hero, HERO_DATA.OWNER) | 0
+            if (pid <= 0) continue
+            for (let i = 0; i < 2; i++) {
+                const intent = _consumeIntentForProfile(entry.profile)
+                if (!intent) break
+                if (intent === "A+B" || intent === "B" || (allowA && intent === "A")) {
+                    doHeroMoveForPlayer(pid, intent)
+                }
+            }
+        }
+        return
+    }
 
     try {
-
         const now = nowMs | 0
-
-
-
-        const i1 = consumePlayerIntent(1)
-
-        if (i1 !== "") {
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P1 intent=" + i1 + " timeMs=" + now)
-
-            doHeroMoveForPlayer(1, i1)
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P1 intent=" + i1 + " timeMs=" + now)
-
+        for (const entry of active) {
+            const pid = sprites.readDataNumber(entry.hero, HERO_DATA.OWNER) | 0
+            if (pid <= 0) continue
+            const intent = _consumeIntentForProfile(entry.profile)
+            if (!intent) continue
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE pid=" + pid + " intent=" + intent + " timeMs=" + now)
+            doHeroMoveForPlayer(pid, intent)
+            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER pid=" + pid + " intent=" + intent + " timeMs=" + now)
         }
-
-
-
-        const i2 = consumePlayerIntent(2)
-
-        if (i2 !== "") {
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P2 intent=" + i2 + " timeMs=" + now)
-
-            doHeroMoveForPlayer(2, i2)
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P2 intent=" + i2 + " timeMs=" + now)
-
-        }
-
-
-
-        const i3 = consumePlayerIntent(3)
-
-        if (i3 !== "") {
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P3 intent=" + i3 + " timeMs=" + now)
-
-            doHeroMoveForPlayer(3, i3)
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P3 intent=" + i3 + " timeMs=" + now)
-
-        }
-
-
-
-        const i4 = consumePlayerIntent(4)
-
-        if (i4 !== "") {
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] BEFORE P4 intent=" + i4 + " timeMs=" + now)
-
-            doHeroMoveForPlayer(4, i4)
-
-            if (DEBUG_HERO_LOGIC) console.log("[TIMER80] AFTER P4 intent=" + i4 + " timeMs=" + now)
-
-        }
-
     } catch (e) {
-
         console.log("[TIMER80] ERROR in doHeroMoveForPlayer:" + e)
-
     }
 
 }
@@ -52804,9 +54458,10 @@ game.onUpdate(function () {
 
 
 
-    updateHeroFacingsFromVelocity()
-
     updatePlayerInputs()
+    updateHeroMovementFromInputs(now)
+    updateHeroFacingsFromVelocity()
+    updateHeroTeleportFx(now)
     _trapPromptInputTick()
 
 
@@ -54306,6 +55961,42 @@ function _applySnapshotToSprite(target: Sprite, snap: any): void {
     } catch { }
 }
 
+// Capture a sprite snapshot (position/data/image) for later restore.
+function _captureSnapshotFromSprite(source: Sprite): any {
+    if (!source) return null
+    const snap: any = {}
+    try {
+        snap.x = source.x || 0
+        snap.y = source.y || 0
+        snap.vx = source.vx || 0
+        snap.vy = source.vy || 0
+        snap.flags = (source.flags | 0)
+
+        const data: any = (source as any).data || {}
+        const out: any = {}
+        for (const k of Object.keys(data)) {
+            const v = data[k]
+            if (v === undefined) continue
+            if (typeof v === "number" || typeof v === "boolean" || typeof v === "string" || v === null) {
+                out[k] = v
+            }
+        }
+        snap.data = out
+
+        const img: any = (source as any).image
+        if (img) {
+            const w = (source.width || img.width || 0) | 0
+            const h = (source.height || img.height || 0) | 0
+            if (w > 0 && h > 0 && typeof img.toJSONPixels === "function") {
+                snap.width = w
+                snap.height = h
+                snap.pixels = img.toJSONPixels()
+            }
+        }
+    } catch { }
+    return snap
+}
+
 // --------------------------------------------------------------
 
 // Phaser-only glue: expose HeroEngine namespace on globalThis
@@ -54552,6 +56243,187 @@ if (typeof globalThis !== "undefined") {
             _applySnapshotToSprite(hero, snap)
         }
 
+        function _computeDefaultHeroSpawnCoords(): number[][] {
+            let W = userconfig.ARCADE_SCREEN_WIDTH
+            let H = userconfig.ARCADE_SCREEN_HEIGHT
+
+            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
+                const rows = _engineWorldTileMap.length
+                const cols = _engineWorldTileMap[0].length
+                W = cols * WORLD_TILE_SIZE
+                H = rows * WORLD_TILE_SIZE
+            }
+
+            const centerW = W / 2
+            const centerH = H / 2
+            const offset = 40
+
+            return [
+                [centerW + offset, centerH + offset],
+                [centerW - offset, centerH + offset],
+                [centerW + offset, centerH - offset],
+                [centerW - offset, centerH - offset],
+            ]
+        }
+
+        function _pickSpawnCoords(slotIndex: number): number[] {
+            const coords = _computeDefaultHeroSpawnCoords()
+            if (slotIndex >= 0 && slotIndex < coords.length) return coords[slotIndex]
+            if (coords.length <= 0) return [userconfig.ARCADE_SCREEN_WIDTH / 2, userconfig.ARCADE_SCREEN_HEIGHT / 2]
+            const idx = Math.max(0, heroes.length | 0) % coords.length
+            return coords[idx]
+        }
+
+        function _resolveProfileForPlayerId(pid: number): string {
+            if (pid <= 0) return ""
+            const prof = playerIdToProfile[pid] || ""
+            if (prof) return prof
+            try {
+                const g: any = (globalThis as any)
+                if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+                    return g.__netProfileByPid[pid]
+                }
+            } catch { }
+            return ""
+        }
+
+        internals.getHeroIndexForProfile = function (profile: string): number {
+            return _resolveHeroIndexForProfile(profile)
+        }
+
+        internals.ensureHeroForProfile = function (profile: string, playerId?: number): number {
+            const key = _normalizeProfileKey(profile)
+            if (!key) {
+                if (DEBUG_NET_IDENTITY) console.warn("[profile.identity] ensure rejected: empty profile", { profile })
+                return -1
+            }
+
+            const existing = _resolveHeroIndexForProfile(key)
+            if (existing >= 0) {
+                const hero = heroes[existing]
+                if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                    const mode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+                    if (mode === 2) {
+                        if (DEBUG_NET_IDENTITY) {
+                            console.log("[profile.identity] reconnect; cancel teleport-out", { profile: key, heroIndex: existing })
+                        }
+                        _beginHeroTeleportFx(existing, hero, 1, key, "reconnect")
+                    }
+                }
+                return existing
+            }
+
+            // Repair: if mapping was cleared but a hero already exists with this profile,
+            // re-register it instead of spawning a duplicate.
+            let found = -1
+            const extras: number[] = []
+            for (let hi = 0; hi < heroes.length; hi++) {
+                const hero = heroes[hi]
+                if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+                if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+                const prof = _normalizeProfileKey(_getProfileFromHeroSprite(hero))
+                if (prof && prof === key) {
+                    if (found < 0) found = hi
+                    else extras.push(hi)
+                }
+            }
+            if (found >= 0) {
+                _registerHeroProfile(key, found)
+                const hero = heroes[found]
+                const pid = (typeof playerId === "number") ? (playerId | 0) : 0
+                if (hero && pid > 0) {
+                    sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
+                    playerIdToProfile[pid] = key
+                    playerToHeroIndex[pid] = found
+                }
+                if (extras.length) {
+                    for (const hi of extras) {
+                        const extra = heroes[hi]
+                        if (!extra || (extra.flags & sprites.Flag.Destroyed)) continue
+                        const owner = sprites.readDataNumber(extra, HERO_DATA.OWNER) | 0
+                        if (owner > 0 && playerToHeroIndex[owner] === hi) {
+                            playerToHeroIndex[owner] = found
+                        }
+                        _clearHeroProfile(key, hi)
+                        extra.destroy()
+                    }
+                }
+                if (DEBUG_NET_IDENTITY) {
+                    console.log("[profile.identity] mapping repaired", {
+                        profile: key,
+                        heroIndex: found,
+                        extras: extras.length
+                    })
+                }
+                return found
+            }
+
+            const pid = (typeof playerId === "number") ? (playerId | 0) : 0
+            if (DEBUG_NET_IDENTITY) {
+                console.log("[profile.identity] spawn request", { profile: key, pid })
+            }
+            const coords = _pickSpawnCoords(pid > 0 ? (pid - 1) : -1)
+            createHeroForPlayer(pid, coords[0], coords[1], key, undefined, undefined, undefined, "ensureHeroForProfile")
+
+            const after = _resolveHeroIndexForProfile(key)
+            if (after >= 0 && after < heroes.length && heroes[after]) {
+                let restored = false
+                try {
+                    const g: any = (globalThis as any)
+                    const restore: any = g.__heroSavedSnapshotByProfile
+                    if (restore && restore[key]) {
+                        const hero = heroes[after]
+                        _applyHeroSnapshotToSprite(hero, restore[key])
+                        delete restore[key]
+                        restored = true
+                        console.log(">>> [HeroEngineInPhaser] restored hero from save profile=", key)
+                    }
+                } catch { }
+                const hero = heroes[after]
+                if (hero) {
+                    _beginHeroTeleportFx(after, hero, 1, key, restored ? "restore" : "spawn")
+                }
+                if (DEBUG_NET_IDENTITY) {
+                    console.log("[profile.identity]", restored ? "WELCOME_BACK" : "WELCOME", {
+                        profile: key,
+                        pid,
+                        heroIndex: after
+                    })
+                }
+            }
+
+            return after >= 0 && after < heroes.length && heroes[after] ? after : -1
+        }
+
+        internals.applyProfileInput = function (profile: string, btn: string, pressed: boolean): void {
+            _applyNetInputForProfile(profile, btn, pressed)
+        }
+
+        internals.despawnHeroForProfile = function (profile: string): boolean {
+            const key = _normalizeProfileKey(profile)
+            if (!key) return false
+            const hi = _resolveHeroIndexForProfile(key)
+            if (hi < 0 || hi >= heroes.length) return false
+            const hero = heroes[hi]
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+            const mode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+            if (mode === 2) return true
+            const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            if (DEBUG_NET_IDENTITY) {
+                console.log("[profile.identity] despawn request", { profile: key, pid, heroIndex: hi })
+            }
+            try {
+                const g: any = globalThis as any
+                if (!g.__heroSavedSnapshotByProfile) g.__heroSavedSnapshotByProfile = {}
+                g.__heroSavedSnapshotByProfile[key] = _captureSnapshotFromSprite(hero)
+                if (DEBUG_NET_IDENTITY) {
+                    console.log("[profile.identity] snapshot saved", { profile: key, pid, heroIndex: hi })
+                }
+            } catch { }
+            _beginHeroTeleportFx(hi, hero, 2, key, "disconnect")
+            return true
+        }
+
 
         // ------------------------------------------------------------
 
@@ -54563,96 +56435,22 @@ if (typeof globalThis !== "undefined") {
 
             const pid = playerId | 0
 
-            if (pid < 1 || pid > 4) return -1
+            if (pid <= 0) return -1
 
+            const prof = _resolveProfileForPlayerId(pid)
+            const profileKey = prof || "Default"
 
-            const existing = playerToHeroIndex[pid] | 0
-
-            if (existing >= 0 && existing < heroes.length && heroes[existing]) {
-                const h = heroes[existing]
-                if (h && !(h.flags & sprites.Flag.Destroyed)) {
-                    return existing
-                }
-                // existing hero is destroyed; treat as absent
-            }
-
-
-
-            // Compute the same spawn coordinates used by setupHeroes()
-
-            let W = userconfig.ARCADE_SCREEN_WIDTH
-
-            let H = userconfig.ARCADE_SCREEN_HEIGHT
-
-
-
-            if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && _engineWorldTileMap[0].length > 0) {
-
-                const rows = _engineWorldTileMap.length
-
-                const cols = _engineWorldTileMap[0].length
-
-                W = cols * WORLD_TILE_SIZE
-
-                H = rows * WORLD_TILE_SIZE
-
-            }
-
-
-
-            const centerW = W / 2
-
-            const centerH = H / 2
-
-            const offset = 40
-
-
-
-            const coords: number[][] = [
-
-                [centerW + offset, centerH + offset],
-
-                [centerW - offset, centerH + offset],
-
-                [centerW + offset, centerH - offset],
-
-                [centerW - offset, centerH - offset],
-
-            ]
-
-
-
-            const slotIndex = pid - 1
-
-            console.log(">>> [HeroEngineInPhaser] ensureHeroForPlayer spawning pid =", pid)
-
-            createHeroForPlayer(pid, coords[slotIndex][0], coords[slotIndex][1])
-
-
-
-            const after = playerToHeroIndex[pid] | 0
-
-            // If saved snapshot exists for this profile, restore it once.
-            try {
-                const g: any = (globalThis as any)
-                const restore: any = g.__heroSavedSnapshotByProfile
-                const prof = getHeroProfileForHeroIndex(after | 0)
-                if (restore && prof && restore[prof]) {
-                    const hero = heroes[after]
-                    _applyHeroSnapshotToSprite(hero, restore[prof])
-                    delete restore[prof]
-                    console.log(">>> [HeroEngineInPhaser] restored hero from save profile=", prof)
-                }
-            } catch { }
-
-            return after >= 0 && after < heroes.length && heroes[after] ? after : -1
+            return internals.ensureHeroForProfile(profileKey, pid)
 
         }
 
-        // Despawn hero for a player (used when profile disconnects)
+        // Despawn hero for a player (legacy wrapper; profile-centric path preferred)
         internals.despawnHeroForPlayer = function (playerId: number): boolean {
             const pid = playerId | 0
-            if (pid < 1 || pid > 4) return false
+            if (pid <= 0) return false
+            const prof = _resolveProfileForPlayerId(pid)
+            if (prof) return internals.despawnHeroForProfile(prof)
+
             const hi = playerToHeroIndex[pid] | 0
             if (hi < 0 || hi >= heroes.length) return false
             const hero = heroes[hi]
@@ -54874,6 +56672,12 @@ function _effectDebugMark(id: number, stage: string, payload?: any, finalize?: b
 }
 
 try { _installEffectDebugOnce() } catch { }
+try {
+    if (DEBUG_EFFECT_ANIMS) {
+        const g: any = globalThis as any
+        if (g && g.__heEffectDebug) g.__heEffectDebug.enabled = true
+    }
+} catch { }
 
 
 
@@ -56555,21 +58359,15 @@ function relic_resolveNextFloorKindOrHold(
 
 
 
-    for (let pid = 1; pid <= 4; pid++) {
-
-        const bit = 1 << (pid - 1)
-
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const bit = (hi >= 0 && hi < 31) ? (1 << hi) : 0
+        if (bit === 0) continue
         if (((readyMask | 0) & bit) === 0) continue
 
-
-
-        const hi = _relicResolveHeroIndexForPid(pid | 0)
-
-        if (hi < 0) continue
-
         const hero = heroes[hi]
-
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0) continue
 
 
 
@@ -56841,33 +58639,19 @@ function relic_onManaSpent(ctx: RelicManaSpentContext): void {
 
 function relic_onCombatCleared_allPlayers(nowMs: number): void {
 
-    // Prefer connected slots when available
-
-    const connected = (isPhaserRuntime() && (globalThis as any).__netSlotConnected)
-
-        ? ((globalThis as any).__netSlotConnected as boolean[])
-
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
         : null
 
-
-
-    for (let pid = 1; pid <= 4; pid++) {
-
-        if (connected && !connected[pid - 1]) continue
-
-
-
-        const hi = playerToHeroIndex[pid] | 0
-
-        if (hi < 0 || hi >= heroes.length) continue
-
-
+    for (let hi = 0; hi < heroes.length; hi++) {
 
         const hero = heroes[hi]
-
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (connectedMap && profileKey && !connectedMap[profileKey]) continue
 
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
 
         const ctx: RelicCombatClearedContext = {
 
@@ -57291,8 +59075,7 @@ function _relicSpawnRingOfFire(hi: number, hero: Sprite): void {
 
         flame.lifespan = RELIC_RING_OF_FIRE_LIFESPAN_MS | 0
 
-        sprites.setDataString(flame, "effectSkin", RELIC_RING_OF_FIRE_SKIN_ID)
-        sprites.setDataString(flame, "effectDir", dir)
+        applyEffectToSprite(flame, RELIC_RING_OF_FIRE_SKIN_ID, { dir })
         sprites.setDataNumber(flame, RELIC_EFFECT_RING_RING_ID_KEY, ringId | 0)
 
         sprites.setDataNumber(flame, RELIC_EFFECT_RING_SRC_HI_KEY, hi | 0)
@@ -57682,8 +59465,8 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
 
 
     if (_relicOfferSession.active) {
-        let selectedIndex = 0
         if ((pid | 0) === (_relicOfferSession.activePid | 0)) {
+            let selectedIndex = 0
             const hi = _relicResolveHeroIndexForPid(pid | 0)
             if (hi >= 0 && hi < heroes.length) {
                 const hero = heroes[hi]
@@ -57691,16 +59474,18 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
                     selectedIndex = _uiReadNum(hero, HERO_UI_DATA.SEL, 0) | 0
                 }
             }
-        }
-        snap.offer = {
-            activePlayerId: _relicOfferSession.activePid | 0,
-            title: String(_relicOfferSession.title || "Choose a Relic"),
-            flavorText: String(_relicOfferSession.flavorText || ""),
-            theme: String(_relicOfferSession.theme || ""),
-            options: (_relicOfferSession.options || []).slice(0, 3),
-            selectedIndex: selectedIndex | 0,
-            canControl: ((pid | 0) === (_relicOfferSession.activePid | 0)),
-            source: String(_relicOfferSession.source || ""),
+            snap.offer = {
+                activePlayerId: _relicOfferSession.activePid | 0,
+                title: String(_relicOfferSession.title || "Choose a Relic"),
+                flavorText: String(_relicOfferSession.flavorText || ""),
+                theme: String(_relicOfferSession.theme || ""),
+                options: (_relicOfferSession.options || []).slice(0, 3),
+                selectedIndex: selectedIndex | 0,
+                canControl: true,
+                source: String(_relicOfferSession.source || ""),
+            }
+        } else {
+            if (snap.offer == null) snap.offer = null
         }
     } else {
         if (snap.offer == null) snap.offer = null
@@ -57711,29 +59496,80 @@ function appendRelicsToSnapshot(snap: any, pid: number): void {
     // Next-floor choice session (Wing Boots analog)
 
     if (_relicNextFloorChoice.active) {
-
-        snap.floorChoice = {
-
-            activePlayerId: _relicNextFloorChoice.activePid | 0,
-
-            nextFloorIndex: _relicNextFloorChoice.nextFloorIndex | 0,
-
-            title: String(_relicNextFloorChoice.title || "Choose Next Floor"),
-
-            options: (_relicNextFloorChoice.options || []).slice(0, 2),
-
-            selectedIndex: _relicNextFloorChoice.selectedIndex | 0,
-
-            canControl: ((pid | 0) === (_relicNextFloorChoice.activePid | 0)),
-
+        if ((pid | 0) === (_relicNextFloorChoice.activePid | 0)) {
+            snap.floorChoice = {
+                activePlayerId: _relicNextFloorChoice.activePid | 0,
+                nextFloorIndex: _relicNextFloorChoice.nextFloorIndex | 0,
+                title: String(_relicNextFloorChoice.title || "Choose Next Floor"),
+                options: (_relicNextFloorChoice.options || []).slice(0, 2),
+                selectedIndex: _relicNextFloorChoice.selectedIndex | 0,
+                canControl: true,
+            }
+        } else {
+            if (snap.floorChoice == null) snap.floorChoice = null
         }
-
     } else {
-
         if (snap.floorChoice == null) snap.floorChoice = null
-
     }
 
+}
+
+function _relicDefToUi(def: RelicDefinition | null): any {
+    if (!def) return null
+    const iconPrimary = def.iconPrimary
+        ? { sheet: def.iconPrimary.sheet, x: def.iconPrimary.x | 0, y: def.iconPrimary.y | 0 }
+        : null
+    const iconAlt = def.iconAlt
+        ? { sheet: def.iconAlt.sheet, x: def.iconAlt.x | 0, y: def.iconAlt.y | 0 }
+        : null
+    return {
+        id: String(def.id || ""),
+        name: String(def.name || ""),
+        effectText: String(def.effectText || ""),
+        flavorText: String(def.flavorText || ""),
+        iconPrimary,
+        iconAlt,
+    }
+}
+
+function appendRelicDefsToSnapshot(snap: any): void {
+    if (!snap) return
+
+    const ids: string[] = []
+    const add = (rid: any) => {
+        const s = String(rid || "")
+        if (!s) return
+        if (ids.indexOf(s) < 0) ids.push(s)
+    }
+
+    const owned = snap.relics && Array.isArray(snap.relics.ownedRelicIds) ? snap.relics.ownedRelicIds : null
+    if (owned) {
+        for (let i = 0; i < owned.length; i++) add(owned[i])
+    }
+
+    const offer = snap.offer && Array.isArray(snap.offer.options) ? snap.offer.options : null
+    if (offer) {
+        for (let i = 0; i < offer.length; i++) add(offer[i])
+    }
+
+    const shopItems = snap.shop && Array.isArray(snap.shop.items) ? snap.shop.items : null
+    if (shopItems) {
+        for (let i = 0; i < shopItems.length; i++) {
+            const it = shopItems[i]
+            if (it && it.relicId) add(it.relicId)
+        }
+    }
+
+    if (ids.length <= 0) return
+
+    const out: any = {}
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i]
+        const def = RELIC_CATALOG[id] || null
+        const ui = _relicDefToUi(def)
+        if (ui) out[id] = ui
+    }
+    if (Object.keys(out).length > 0) snap.relicDefs = out
 }
 
 
@@ -58068,7 +59904,7 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
     const mana = _uiReadNum(hero, HERO_DATA.MANA, 0) | 0
 
     const maxMana = _uiReadNum(hero, HERO_DATA.MAX_MANA, 0) | 0
-    const manaFlashUntil = (heroManaFlashUntil[hi] | 0)
+    const manaFlashUntil = _heroStateGetNum(heroManaFlashUntilByProfile, hi, 0)
     const manaFlash = manaFlashUntil > 0 && (game.runtime() | 0) < manaFlashUntil
 
 
@@ -58382,6 +60218,8 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
     appendRelicsToSnapshot(snap, pid)
 
     appendShopToSnapshot(snap, pid, hi)
+
+    appendRelicDefsToSnapshot(snap)
 
 
 
@@ -59199,24 +61037,46 @@ try {
             g.addEventListener("he:dialogChoice", (ev: any) => {
                 const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
                 const idx = (ev && ev.detail && typeof ev.detail.index === "number") ? (ev.detail.index | 0) : undefined
-                if (DEBUG_TRAP_LOGS) {
+                const state = _trapGetState()
+                if (state && state.mode === "prompt" && DEBUG_TRAP_LOGS) {
                     console.log("[TRAP][PROMPT] dialogChoice", { id: String(id || ""), idx })
                 }
                 _trapHandleDialogChoice(String(id || ""), idx)
             })
-            g.addEventListener("he:dialogHide", () => {
-                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] dialogHide")
+            g.addEventListener("he:dialogAdvance", () => {
                 const state = _trapGetState()
-                if (state && state.mode === "prompt") _trapClearState()
+                if (!state || state.mode !== "prompt") return
+                const now = game.runtime() | 0
+                if ((state.inputIgnoreUntilMs | 0) > (now | 0)) return
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] dialogAdvance")
+                _trapHandleDialogChoice("fix_trap", 0)
+            })
+            g.addEventListener("he:dialogHide", () => {
+                const state = _trapGetState()
+                if (!state || state.mode !== "prompt") return
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] dialogHide")
+                _trapClearState()
             })
             g.addEventListener("he:trapSolved", (ev: any) => {
                 if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] trapSolved event")
                 _trapHandleSolved(ev ? ev.detail : null)
             })
+            g.addEventListener("he:trapResult", (ev: any) => {
+                if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] trapResult event")
+                _trapHandleResult(ev ? ev.detail : null)
+            })
             g.addEventListener("he:trapEditorClosed", (ev: any) => {
                 if (DEBUG_TRAP_LOGS) console.log("[TRAP][PROMPT] trapEditorClosed")
                 const state = _trapGetState()
-                if (state && state.mode === "editing") _trapClearState()
+                if (state && state.mode === "editing") {
+                    if (state.instanceId) {
+                        const inst = getTrapInstance(state.instanceId)
+                        if (!inst || inst.state !== "failed") {
+                            setTrapInstanceState(state.instanceId, "fresh")
+                        }
+                    }
+                    _trapClearState()
+                }
             })
         }
     }

@@ -11491,5 +11491,1661 @@ export const MONSTER_AURA_FEET: Record<string, { frameW: number; frameH: number;
     "maxY": 63,
     "centerX": 32,
     "centerY": 32
+  },
+  "andromalius": {
+    "frameW": 57,
+    "frameH": 88,
+    "footBottom": 85,
+    "outline": [
+      [
+        56,
+        7
+      ],
+      [
+        47,
+        87
+      ],
+      [
+        9,
+        87
+      ],
+      [
+        0,
+        61
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        52,
+        1
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 0,
+    "minY": 0,
+    "maxX": 56,
+    "maxY": 87,
+    "centerX": 28,
+    "centerY": 44,
+    "dirs": {
+      "up": {
+        "frameW": 57,
+        "frameH": 88,
+        "footBottom": 85,
+        "outline": [
+          [
+            55,
+            5
+          ],
+          [
+            46,
+            87
+          ],
+          [
+            11,
+            80
+          ],
+          [
+            0,
+            61
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            52,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 55,
+        "maxY": 87,
+        "centerX": 28,
+        "centerY": 44
+      },
+      "left": {
+        "frameW": 57,
+        "frameH": 88,
+        "footBottom": 85,
+        "outline": [
+          [
+            56,
+            7
+          ],
+          [
+            56,
+            69
+          ],
+          [
+            12,
+            87
+          ],
+          [
+            10,
+            87
+          ],
+          [
+            1,
+            29
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            24,
+            0
+          ],
+          [
+            53,
+            3
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 1,
+        "minY": 0,
+        "maxX": 56,
+        "maxY": 87,
+        "centerX": 29,
+        "centerY": 44
+      },
+      "down": {
+        "frameW": 57,
+        "frameH": 88,
+        "footBottom": 85,
+        "outline": [
+          [
+            56,
+            7
+          ],
+          [
+            56,
+            69
+          ],
+          [
+            12,
+            87
+          ],
+          [
+            10,
+            87
+          ],
+          [
+            1,
+            29
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            24,
+            0
+          ],
+          [
+            53,
+            3
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 1,
+        "minY": 0,
+        "maxX": 56,
+        "maxY": 87,
+        "centerX": 29,
+        "centerY": 44
+      },
+      "right": {
+        "frameW": 57,
+        "frameH": 88,
+        "footBottom": 85,
+        "outline": [
+          [
+            55,
+            5
+          ],
+          [
+            46,
+            87
+          ],
+          [
+            11,
+            80
+          ],
+          [
+            0,
+            61
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            52,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 55,
+        "maxY": 87,
+        "centerX": 28,
+        "centerY": 44
+      }
+    }
+  },
+  "disciple": {
+    "frameW": 45,
+    "frameH": 51,
+    "footBottom": 48,
+    "outline": [
+      [
+        44,
+        28
+      ],
+      [
+        43,
+        50
+      ],
+      [
+        1,
+        50
+      ],
+      [
+        1,
+        45
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        36,
+        0
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 1,
+    "minY": 0,
+    "maxX": 44,
+    "maxY": 50,
+    "centerX": 23,
+    "centerY": 25,
+    "dirs": {
+      "up": {
+        "frameW": 45,
+        "frameH": 51,
+        "footBottom": 48,
+        "outline": [
+          [
+            37,
+            9
+          ],
+          [
+            33,
+            50
+          ],
+          [
+            1,
+            50
+          ],
+          [
+            1,
+            45
+          ],
+          [
+            14,
+            2
+          ],
+          [
+            35,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 1,
+        "minY": 0,
+        "maxX": 37,
+        "maxY": 50,
+        "centerX": 19,
+        "centerY": 25
+      },
+      "left": {
+        "frameW": 45,
+        "frameH": 51,
+        "footBottom": 48,
+        "outline": [
+          [
+            43,
+            45
+          ],
+          [
+            43,
+            50
+          ],
+          [
+            11,
+            50
+          ],
+          [
+            7,
+            9
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            30,
+            2
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 7,
+        "minY": 0,
+        "maxX": 43,
+        "maxY": 50,
+        "centerX": 25,
+        "centerY": 25
+      },
+      "down": {
+        "frameW": 45,
+        "frameH": 51,
+        "footBottom": 48,
+        "outline": [
+          [
+            43,
+            45
+          ],
+          [
+            43,
+            50
+          ],
+          [
+            11,
+            50
+          ],
+          [
+            7,
+            9
+          ],
+          [
+            9,
+            1
+          ],
+          [
+            30,
+            2
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 7,
+        "minY": 0,
+        "maxX": 43,
+        "maxY": 50,
+        "centerX": 25,
+        "centerY": 25
+      },
+      "right": {
+        "frameW": 45,
+        "frameH": 51,
+        "footBottom": 48,
+        "outline": [
+          [
+            37,
+            9
+          ],
+          [
+            33,
+            50
+          ],
+          [
+            1,
+            50
+          ],
+          [
+            1,
+            45
+          ],
+          [
+            14,
+            2
+          ],
+          [
+            35,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 1,
+        "minY": 0,
+        "maxX": 37,
+        "maxY": 50,
+        "centerX": 19,
+        "centerY": 25
+      }
+    }
+  },
+  "gnu": {
+    "frameW": 120,
+    "frameH": 100,
+    "footBottom": 92,
+    "outline": [
+      [
+        112,
+        82
+      ],
+      [
+        109,
+        92
+      ],
+      [
+        8,
+        93
+      ],
+      [
+        5,
+        85
+      ],
+      [
+        37,
+        4
+      ],
+      [
+        82,
+        2
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 5,
+    "minY": 2,
+    "maxX": 112,
+    "maxY": 94,
+    "centerX": 59,
+    "centerY": 48,
+    "dirs": {
+      "up": {
+        "frameW": 120,
+        "frameH": 100,
+        "footBottom": 90,
+        "outline": [
+          [
+            86,
+            17
+          ],
+          [
+            84,
+            92
+          ],
+          [
+            30,
+            92
+          ],
+          [
+            23,
+            87
+          ],
+          [
+            23,
+            81
+          ],
+          [
+            33,
+            30
+          ],
+          [
+            77,
+            4
+          ],
+          [
+            83,
+            5
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 23,
+        "minY": 4,
+        "maxX": 86,
+        "maxY": 92,
+        "centerX": 55,
+        "centerY": 48
+      },
+      "left": {
+        "frameW": 120,
+        "frameH": 100,
+        "footBottom": 90,
+        "outline": [
+          [
+            96,
+            81
+          ],
+          [
+            96,
+            87
+          ],
+          [
+            35,
+            92
+          ],
+          [
+            35,
+            92
+          ],
+          [
+            33,
+            17
+          ],
+          [
+            37,
+            4
+          ],
+          [
+            37,
+            4
+          ],
+          [
+            85,
+            29
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 33,
+        "minY": 4,
+        "maxX": 96,
+        "maxY": 92,
+        "centerX": 65,
+        "centerY": 48
+      },
+      "down": {
+        "frameW": 120,
+        "frameH": 100,
+        "footBottom": 90,
+        "outline": [
+          [
+            96,
+            81
+          ],
+          [
+            96,
+            87
+          ],
+          [
+            35,
+            92
+          ],
+          [
+            35,
+            92
+          ],
+          [
+            33,
+            17
+          ],
+          [
+            37,
+            4
+          ],
+          [
+            37,
+            4
+          ],
+          [
+            85,
+            29
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 33,
+        "minY": 4,
+        "maxX": 96,
+        "maxY": 92,
+        "centerX": 65,
+        "centerY": 48
+      },
+      "right": {
+        "frameW": 120,
+        "frameH": 100,
+        "footBottom": 90,
+        "outline": [
+          [
+            86,
+            17
+          ],
+          [
+            84,
+            92
+          ],
+          [
+            30,
+            92
+          ],
+          [
+            23,
+            87
+          ],
+          [
+            23,
+            81
+          ],
+          [
+            33,
+            30
+          ],
+          [
+            77,
+            4
+          ],
+          [
+            83,
+            5
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 23,
+        "minY": 4,
+        "maxX": 86,
+        "maxY": 92,
+        "centerX": 55,
+        "centerY": 48
+      }
+    }
+  },
+  "mage1": {
+    "frameW": 85,
+    "frameH": 94,
+    "footBottom": 91,
+    "outline": [
+      [
+        84,
+        75
+      ],
+      [
+        84,
+        89
+      ],
+      [
+        21,
+        93
+      ],
+      [
+        0,
+        89
+      ],
+      [
+        0,
+        81
+      ],
+      [
+        15,
+        12
+      ],
+      [
+        34,
+        0
+      ],
+      [
+        68,
+        11
+      ]
+    ],
+    "outlineSides": 8,
+    "minX": 0,
+    "minY": 0,
+    "maxX": 84,
+    "maxY": 93,
+    "centerX": 42,
+    "centerY": 47,
+    "dirs": {
+      "up": {
+        "frameW": 85,
+        "frameH": 94,
+        "footBottom": 91,
+        "outline": [
+          [
+            84,
+            75
+          ],
+          [
+            84,
+            89
+          ],
+          [
+            3,
+            89
+          ],
+          [
+            0,
+            81
+          ],
+          [
+            29,
+            0
+          ],
+          [
+            68,
+            11
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 84,
+        "maxY": 93,
+        "centerX": 42,
+        "centerY": 47
+      },
+      "left": {
+        "frameW": 85,
+        "frameH": 94,
+        "footBottom": 91,
+        "outline": [
+          [
+            84,
+            81
+          ],
+          [
+            82,
+            88
+          ],
+          [
+            19,
+            93
+          ],
+          [
+            0,
+            89
+          ],
+          [
+            0,
+            78
+          ],
+          [
+            15,
+            12
+          ],
+          [
+            42,
+            0
+          ],
+          [
+            55,
+            0
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 84,
+        "maxY": 93,
+        "centerX": 42,
+        "centerY": 47
+      },
+      "down": {
+        "frameW": 85,
+        "frameH": 94,
+        "footBottom": 91,
+        "outline": [
+          [
+            84,
+            81
+          ],
+          [
+            82,
+            88
+          ],
+          [
+            19,
+            93
+          ],
+          [
+            0,
+            89
+          ],
+          [
+            0,
+            78
+          ],
+          [
+            15,
+            12
+          ],
+          [
+            42,
+            0
+          ],
+          [
+            55,
+            0
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 84,
+        "maxY": 93,
+        "centerX": 42,
+        "centerY": 47
+      },
+      "right": {
+        "frameW": 85,
+        "frameH": 94,
+        "footBottom": 91,
+        "outline": [
+          [
+            84,
+            75
+          ],
+          [
+            84,
+            89
+          ],
+          [
+            3,
+            89
+          ],
+          [
+            0,
+            81
+          ],
+          [
+            29,
+            0
+          ],
+          [
+            68,
+            11
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 84,
+        "maxY": 93,
+        "centerX": 42,
+        "centerY": 47
+      }
+    }
+  },
+  "mage2": {
+    "frameW": 122,
+    "frameH": 110,
+    "footBottom": 102,
+    "outline": [
+      [
+        121,
+        11
+      ],
+      [
+        109,
+        98
+      ],
+      [
+        12,
+        98
+      ],
+      [
+        0,
+        29
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        119,
+        0
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 0,
+    "minY": 0,
+    "maxX": 121,
+    "maxY": 104,
+    "centerX": 61,
+    "centerY": 52,
+    "dirs": {
+      "up": {
+        "frameW": 122,
+        "frameH": 110,
+        "footBottom": 102,
+        "outline": [
+          [
+            121,
+            11
+          ],
+          [
+            109,
+            98
+          ],
+          [
+            28,
+            98
+          ],
+          [
+            0,
+            29
+          ],
+          [
+            0,
+            29
+          ],
+          [
+            119,
+            0
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 121,
+        "maxY": 104,
+        "centerX": 61,
+        "centerY": 52
+      },
+      "left": {
+        "frameW": 122,
+        "frameH": 110,
+        "footBottom": 102,
+        "outline": [
+          [
+            121,
+            29
+          ],
+          [
+            93,
+            98
+          ],
+          [
+            12,
+            98
+          ],
+          [
+            0,
+            11
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            121,
+            29
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 121,
+        "maxY": 104,
+        "centerX": 61,
+        "centerY": 52
+      },
+      "down": {
+        "frameW": 122,
+        "frameH": 110,
+        "footBottom": 102,
+        "outline": [
+          [
+            121,
+            29
+          ],
+          [
+            93,
+            98
+          ],
+          [
+            12,
+            98
+          ],
+          [
+            0,
+            11
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            121,
+            29
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 121,
+        "maxY": 104,
+        "centerX": 61,
+        "centerY": 52
+      },
+      "right": {
+        "frameW": 122,
+        "frameH": 110,
+        "footBottom": 102,
+        "outline": [
+          [
+            121,
+            11
+          ],
+          [
+            109,
+            98
+          ],
+          [
+            28,
+            98
+          ],
+          [
+            0,
+            29
+          ],
+          [
+            0,
+            29
+          ],
+          [
+            119,
+            0
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 121,
+        "maxY": 104,
+        "centerX": 61,
+        "centerY": 52
+      }
+    }
+  },
+  "mage3": {
+    "frameW": 87,
+    "frameH": 110,
+    "footBottom": 107,
+    "outline": [
+      [
+        86,
+        19
+      ],
+      [
+        77,
+        91
+      ],
+      [
+        38,
+        109
+      ],
+      [
+        9,
+        91
+      ],
+      [
+        0,
+        26
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        34,
+        0
+      ],
+      [
+        81,
+        13
+      ]
+    ],
+    "outlineSides": 8,
+    "minX": 0,
+    "minY": 0,
+    "maxX": 86,
+    "maxY": 109,
+    "centerX": 43,
+    "centerY": 55,
+    "dirs": {
+      "up": {
+        "frameW": 87,
+        "frameH": 110,
+        "footBottom": 107,
+        "outline": [
+          [
+            86,
+            19
+          ],
+          [
+            77,
+            91
+          ],
+          [
+            38,
+            109
+          ],
+          [
+            8,
+            88
+          ],
+          [
+            0,
+            26
+          ],
+          [
+            4,
+            17
+          ],
+          [
+            34,
+            0
+          ],
+          [
+            81,
+            13
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 86,
+        "maxY": 109,
+        "centerX": 43,
+        "centerY": 55
+      },
+      "left": {
+        "frameW": 87,
+        "frameH": 110,
+        "footBottom": 107,
+        "outline": [
+          [
+            86,
+            22
+          ],
+          [
+            78,
+            88
+          ],
+          [
+            41,
+            109
+          ],
+          [
+            9,
+            91
+          ],
+          [
+            0,
+            26
+          ],
+          [
+            5,
+            13
+          ],
+          [
+            43,
+            0
+          ],
+          [
+            82,
+            17
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 86,
+        "maxY": 109,
+        "centerX": 43,
+        "centerY": 55
+      },
+      "down": {
+        "frameW": 87,
+        "frameH": 110,
+        "footBottom": 107,
+        "outline": [
+          [
+            86,
+            22
+          ],
+          [
+            78,
+            88
+          ],
+          [
+            41,
+            109
+          ],
+          [
+            9,
+            91
+          ],
+          [
+            0,
+            26
+          ],
+          [
+            5,
+            13
+          ],
+          [
+            43,
+            0
+          ],
+          [
+            82,
+            17
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 86,
+        "maxY": 109,
+        "centerX": 43,
+        "centerY": 55
+      },
+      "right": {
+        "frameW": 87,
+        "frameH": 110,
+        "footBottom": 107,
+        "outline": [
+          [
+            86,
+            19
+          ],
+          [
+            77,
+            91
+          ],
+          [
+            38,
+            109
+          ],
+          [
+            8,
+            88
+          ],
+          [
+            0,
+            26
+          ],
+          [
+            4,
+            17
+          ],
+          [
+            34,
+            0
+          ],
+          [
+            81,
+            13
+          ]
+        ],
+        "outlineSides": 8,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 86,
+        "maxY": 109,
+        "centerX": 43,
+        "centerY": 55
+      }
+    }
+  },
+  "minion": {
+    "frameW": 45,
+    "frameH": 66,
+    "footBottom": 63,
+    "outline": [
+      [
+        44,
+        14
+      ],
+      [
+        32,
+        65
+      ],
+      [
+        14,
+        64
+      ],
+      [
+        0,
+        18
+      ],
+      [
+        10,
+        0
+      ],
+      [
+        33,
+        0
+      ]
+    ],
+    "outlineSides": 6,
+    "minX": 0,
+    "minY": 0,
+    "maxX": 44,
+    "maxY": 65,
+    "centerX": 22,
+    "centerY": 33,
+    "dirs": {
+      "up": {
+        "frameW": 45,
+        "frameH": 66,
+        "footBottom": 63,
+        "outline": [
+          [
+            44,
+            14
+          ],
+          [
+            32,
+            65
+          ],
+          [
+            19,
+            65
+          ],
+          [
+            0,
+            18
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            25,
+            0
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 44,
+        "maxY": 65,
+        "centerX": 22,
+        "centerY": 33
+      },
+      "left": {
+        "frameW": 45,
+        "frameH": 66,
+        "footBottom": 62,
+        "outline": [
+          [
+            43,
+            22
+          ],
+          [
+            26,
+            63
+          ],
+          [
+            14,
+            64
+          ],
+          [
+            0,
+            18
+          ],
+          [
+            20,
+            0
+          ],
+          [
+            33,
+            0
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 43,
+        "maxY": 64,
+        "centerX": 22,
+        "centerY": 32
+      },
+      "down": {
+        "frameW": 45,
+        "frameH": 66,
+        "footBottom": 62,
+        "outline": [
+          [
+            44,
+            13
+          ],
+          [
+            28,
+            64
+          ],
+          [
+            16,
+            64
+          ],
+          [
+            0,
+            18
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            39,
+            5
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 3,
+        "maxX": 44,
+        "maxY": 64,
+        "centerX": 22,
+        "centerY": 34
+      },
+      "right": {
+        "frameW": 45,
+        "frameH": 66,
+        "footBottom": 63,
+        "outline": [
+          [
+            44,
+            14
+          ],
+          [
+            32,
+            65
+          ],
+          [
+            19,
+            65
+          ],
+          [
+            0,
+            18
+          ],
+          [
+            10,
+            0
+          ],
+          [
+            25,
+            0
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 0,
+        "maxX": 44,
+        "maxY": 65,
+        "centerX": 22,
+        "centerY": 33
+      }
+    }
+  },
+  "shadow": {
+    "frameW": 80,
+    "frameH": 70,
+    "footBottom": 67,
+    "outline": [
+      [
+        79,
+        13
+      ],
+      [
+        79,
+        67
+      ],
+      [
+        3,
+        69
+      ],
+      [
+        0,
+        67
+      ],
+      [
+        0,
+        64
+      ],
+      [
+        0,
+        13
+      ],
+      [
+        33,
+        1
+      ],
+      [
+        79,
+        13
+      ]
+    ],
+    "outlineSides": 8,
+    "minX": 0,
+    "minY": 1,
+    "maxX": 79,
+    "maxY": 69,
+    "centerX": 40,
+    "centerY": 35,
+    "dirs": {
+      "up": {
+        "frameW": 80,
+        "frameH": 70,
+        "footBottom": 67,
+        "outline": [
+          [
+            79,
+            13
+          ],
+          [
+            70,
+            68
+          ],
+          [
+            1,
+            68
+          ],
+          [
+            0,
+            64
+          ],
+          [
+            33,
+            1
+          ],
+          [
+            79,
+            13
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 1,
+        "maxX": 79,
+        "maxY": 69,
+        "centerX": 40,
+        "centerY": 35
+      },
+      "left": {
+        "frameW": 80,
+        "frameH": 70,
+        "footBottom": 67,
+        "outline": [
+          [
+            79,
+            63
+          ],
+          [
+            78,
+            68
+          ],
+          [
+            9,
+            68
+          ],
+          [
+            0,
+            13
+          ],
+          [
+            0,
+            13
+          ],
+          [
+            46,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 1,
+        "maxX": 79,
+        "maxY": 69,
+        "centerX": 40,
+        "centerY": 35
+      },
+      "down": {
+        "frameW": 80,
+        "frameH": 70,
+        "footBottom": 67,
+        "outline": [
+          [
+            79,
+            63
+          ],
+          [
+            78,
+            68
+          ],
+          [
+            9,
+            68
+          ],
+          [
+            0,
+            13
+          ],
+          [
+            0,
+            13
+          ],
+          [
+            46,
+            1
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 1,
+        "maxX": 79,
+        "maxY": 69,
+        "centerX": 40,
+        "centerY": 35
+      },
+      "right": {
+        "frameW": 80,
+        "frameH": 70,
+        "footBottom": 67,
+        "outline": [
+          [
+            79,
+            13
+          ],
+          [
+            70,
+            68
+          ],
+          [
+            1,
+            68
+          ],
+          [
+            0,
+            64
+          ],
+          [
+            33,
+            1
+          ],
+          [
+            79,
+            13
+          ]
+        ],
+        "outlineSides": 6,
+        "minX": 0,
+        "minY": 1,
+        "maxX": 79,
+        "maxY": 69,
+        "centerX": 40,
+        "centerY": 35
+      }
+    }
   }
 };

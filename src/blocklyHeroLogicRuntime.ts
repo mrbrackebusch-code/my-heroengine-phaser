@@ -1295,3 +1295,4 @@ export function dbgBlocklyHeroLogic(profile: string) {
 }
 
 (globalThis as any).__heBlocklyHeroLogicDebug = dbgBlocklyHeroLogic;
+(globalThis as any).__heBlocklyHeroLogicRun = tryRunBlocklyHeroLogic;

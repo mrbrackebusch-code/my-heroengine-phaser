@@ -2,7 +2,7 @@
 /**
  * Generate precomputed "foot" positions for monster aura sheets.
  *
- * For each aura PNG in assets/monsters/monster_auras, we:
+ * For each aura PNG in assets/enemies/<group>/auras, we:
  *   - Read the PNG without external deps.
  *   - Scan the center column for the lowest non-transparent pixel.
  *   - Lift that pixel upward by FOOT_LIFT_PX (clamped) to avoid tiny overhangs.
@@ -21,7 +21,10 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(path.join(__dirname, ".."));
-const AURA_DIR = path.join(ROOT, "assets/monsters/monster_auras");
+const AURA_DIRS = [
+  path.join(ROOT, "assets", "enemies", "monsters", "auras"),
+  path.join(ROOT, "assets", "enemies", "bosses", "auras"),
+];
 const OUT_TS = path.join(ROOT, "src/generated/monsterAuraFeet.ts");
 const FOOT_LIFT_PX = 2;       // lift the foot a bit to avoid grabbing trailing pixels
 const OVERWRITE_ALL = (process.env.OVERWRITE_AURA_FEET === "true");  // true to recompute all entries; false fills only missing ids
@@ -474,8 +477,24 @@ function findFoot(baseName, filePath, meta) {
   return out;
 }
 
+function listAuraPngs() {
+  const out = [];
+  for (const dir of AURA_DIRS) {
+    if (!fs.existsSync(dir)) continue;
+    const files = fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith(".png"));
+    for (const file of files) {
+      out.push({ dir, file, full: path.join(dir, file) });
+    }
+  }
+  return out;
+}
+
 function main() {
-  const files = fs.readdirSync(AURA_DIR).filter(f => f.toLowerCase().endsWith(".png"));
+  const entries = listAuraPngs();
+  if (entries.length === 0) {
+    console.error(`[genMonsterAuraFeet] No aura PNGs found in: ${AURA_DIRS.join(", ")}`);
+    process.exit(1);
+  }
   // Seed with existing data if present
   let out = {};
   if (!OVERWRITE_ALL && fs.existsSync(OUT_TS)) {
@@ -492,13 +511,12 @@ function main() {
   }
 
   const byId = new Map();
-  for (const f of files) {
-    const base = f.replace(/\.png$/i, "");
+  for (const entry of entries) {
+    const base = entry.file.replace(/\.png$/i, "");
     const meta = parseAuraMeta(base);
     if (!meta) continue;
-    const full = path.join(AURA_DIR, f);
     const list = byId.get(meta.id) || [];
-    list.push({ ...meta, file: f, full });
+    list.push({ ...meta, file: entry.file, full: entry.full });
     byId.set(meta.id, list);
   }
 

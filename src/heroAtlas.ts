@@ -243,7 +243,7 @@ export function setHeroAnimDebugSectionFlag(
 
 
 const heroAuraPngs = import.meta.glob(
-    "../assets/auras/*.png",
+    "../assets/heroes/auras/*.png",
     { as: "url", eager: true }
 ) as Record<string, string>;
 
@@ -252,7 +252,8 @@ const heroAuraPngs = import.meta.glob(
 // Mirrors monsterAtlas: we eagerly glob all hero PNGs in ../assets/heroes.
 const heroPngs = {
     ...import.meta.glob("../assets/heroes/*.png", { as: "url", eager: true }),
-    ...import.meta.glob("../assets/enemies/*.png", { as: "url", eager: true })
+    ...import.meta.glob("../assets/enemies/*.png", { as: "url", eager: true }),
+    ...import.meta.glob("../assets/enemies/humanoid/*.png", { as: "url", eager: true })
 } as Record<string, string>;
 
 interface ParsedHeroSheet {
@@ -380,8 +381,18 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
         if (!fileNameWithExt.toLowerCase().endsWith(".png")) continue;
         const baseName = fileNameWithExt.slice(0, -4);
 
+        const isHumanoid = path.includes("/assets/enemies/humanoid/") || path.includes("\\assets\\enemies\\humanoid\\");
         const parsed = parseHeroFilename(baseName, url);
-        if (parsed) parsedSheets.push(parsed);
+        if (!parsed) {
+            if (isHumanoid) {
+                throw new Error(`[heroAtlas.preloadHeroSheets] humanoid enemy filename must match <Name>Enemy*.png: ${path}`);
+            }
+            continue;
+        }
+        if (isHumanoid && !parsed.isEnemy) {
+            throw new Error(`[heroAtlas.preloadHeroSheets] humanoid enemy filename must include Enemy in name: ${path}`);
+        }
+        parsedSheets.push(parsed);
     }
 
     heroLog(
@@ -432,7 +443,7 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
             }
             throw new Error(
                 `[AURA-MISSING] Missing aura spritesheet for ${sheet.id}. ` +
-                `Expected assets/auras/${auraBase64}.png. ` +
+                `Expected assets/heroes/auras/${auraBase64}.png. ` +
                 `Run: npm run gen-auras`
             );
         }

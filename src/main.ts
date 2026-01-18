@@ -1,8 +1,9 @@
 
 import Phaser from "phaser";
 
-import { installBlocklyHeroLogicEditor } from "./blocklyHeroLogicEditor";
+import { installBlocklyHeroLogicEditor, syncBlocklyXmlFromStorage } from "./blocklyHeroLogicEditor";
 import { installBlocklyTrapEditor } from "./blocklyTrapEditor";
+import "./blocklyHeroLogicRuntime";
 
 
 import { preloadMonsterSheets, buildMonsterAtlas, type MonsterAtlas } from "./monsterAtlas";
@@ -134,10 +135,50 @@ function _uiLoadingMaybeDone(): void {
 // ------------------------------------------------------------
 // Host visibility pause (prevents jumps/teleports on tab blur)
 // ------------------------------------------------------------
+function _isHostClient(): boolean {
+  try {
+    const g: any = globalThis as any;
+    const net: any = g.__net;
+    if (net && typeof net.isHostNow === "function") return !!net.isHostNow();
+    if (typeof g.__isHost === "boolean") return !!g.__isHost;
+  } catch { }
+  return false;
+}
+
+function _connectedProfileCount(): number {
+  try {
+    const g: any = globalThis as any;
+    const map = g.__netProfileConnected;
+    if (map && typeof map === "object") {
+      let n = 0;
+      for (const k of Object.keys(map)) {
+        if (map[k]) n++;
+      }
+      if (n > 0) return n;
+    }
+    const byPid = g.__netProfileByPid;
+    if (byPid && typeof byPid === "object") {
+      const n = Object.keys(byPid).length | 0;
+      if (n > 0) return n;
+    }
+  } catch { }
+  return 0;
+}
+
+function _shouldHonorVisibilityPause(flag: boolean): boolean {
+  if (!flag) return true;
+  if (!_isHostClient()) return true;
+  return _connectedProfileCount() <= 1;
+}
+
 function _setEnginePaused(flag: boolean, reason: string): void {
   try {
     const he: any = (globalThis as any).HeroEngine;
     if (he && typeof he.setPaused === "function") {
+      if (flag && !_shouldHonorVisibilityPause(flag)) {
+        he.setPaused(false, `mp-override:${reason || "blur"}`);
+        return;
+      }
       he.setPaused(flag, reason);
     }
   } catch { }
@@ -362,14 +403,24 @@ function _hud_readStr(spritesNS: any, spr: any, key: string): string {
   }
 }
 
+function _hud_getProfileForHero(pid: number, hero: any): string {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+  const direct =
+    _hud_readStr(spritesNS, hero, "name") ||
+    _hud_readStr(spritesNS, hero, "heroName");
+  if (direct) return direct;
+  if (g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
+    return String(g.__netProfileByPid[pid]);
+  }
+  return "";
+}
+
 function _hud_buildTextForHero(pid: number, hero: any): { sub: string; text: string } {
   const g: any = globalThis as any;
   const spritesNS: any = g.sprites;
 
-  const profile =
-    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
-      ? String(g.__heroProfiles[pid - 1])
-      : "";
+  const profile = _hud_getProfileForHero(pid, hero);
 
   const hp = _hud_readNum(spritesNS, hero, "hp");
   const maxHp = _hud_readNum(spritesNS, hero, "maxHp");
@@ -414,18 +465,21 @@ function _hud_buildTextForHero(pid: number, hero: any): { sub: string; text: str
     lines.push(`A+B: ${ab || "(missing " + HUD_KEYS.AB + ")"}`);
   }
 
-  const sub = `connected=${_hud_slotConnected(pid)}  host=${!!g.__isHost}`;
+  const sub = `connected=${_hud_slotConnected(pid, profile)}  host=${!!g.__isHost}`;
 
   return { sub, text: lines.join("\n") };
 }
 
-function _hud_slotConnected(pid: number): boolean {
+function _hud_slotConnected(pid: number, profile?: string): boolean {
   const g: any = globalThis as any;
-  const arr: any = g.__netSlotConnected;
-  const idx = (pid | 0) - 1;
-  if (!Array.isArray(arr)) return false;
-  if (idx < 0 || idx >= arr.length) return false;
-  return !!arr[idx];
+  const key =
+    (typeof profile === "string" && profile.trim())
+      ? profile.trim()
+      : (g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string")
+        ? String(g.__netProfileByPid[pid])
+        : "";
+  if (key && g.__netProfileConnected) return !!g.__netProfileConnected[key];
+  return false;
 }
 
 function _hud_tick(): void {
@@ -488,10 +542,7 @@ function _hud_buildCellsForHero(pid: number, hero: any): {
   const g: any = globalThis as any;
   const spritesNS: any = g.sprites;
 
-  const profile =
-    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
-      ? String(g.__heroProfiles[pid - 1])
-      : "";
+  const profile = _hud_getProfileForHero(pid, hero);
 
   const whoPrefix = `P${pid}${profile ? ":" + profile : ""}`;
 
@@ -611,10 +662,7 @@ function _hud_buildLineForHero(pid: number, hero: any): { line: string; title: s
   const g: any = globalThis as any;
   const spritesNS: any = g.sprites;
 
-  const profile =
-    Array.isArray(g.__heroProfiles) && g.__heroProfiles[pid - 1]
-      ? String(g.__heroProfiles[pid - 1])
-      : "";
+  const profile = _hud_getProfileForHero(pid, hero);
 
   const who = `P${pid}${profile ? ":" + profile : ""}`;
 
@@ -673,15 +721,8 @@ function applyUrlProfileToGlobals() {
 
     // Store the raw name if anyone wants it
     g.__localHeroProfileName = profile;
-
-    if (!g.__heroProfiles) {
-        g.__heroProfiles = ["Default", "Default", "Default", "Default"];
-    }
-
     if (profile && typeof profile === "string") {
-        // Apply to slot 0 (player 1)
-        g.__heroProfiles[0] = profile;
-        logMain("[main] URL profile override for P1:", profile);
+        logMain("[main] URL profile override:", profile);
     } else {
         logMain("[main] no ?profile= URL param; using defaults");
     }
@@ -756,14 +797,20 @@ function _npcSnapshotKey(s: any): string {
 
 function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePayload | null {
   const g: any = globalThis as any;
-  const profilesArr = Array.isArray(g.__heroProfiles) ? g.__heroProfiles : [];
-  const connected = Array.isArray(g.__netSlotConnected) ? g.__netSlotConnected : [];
-
   const profiles: string[] = [];
-  for (let i = 0; i < Math.min(4, profilesArr.length); i++) {
-    if (!connected[i]) continue;
-    const p = (typeof profilesArr[i] === "string" && profilesArr[i].trim()) ? profilesArr[i].trim() : null;
-    if (p) profiles.push(p);
+  const connectedMap = (g.__netProfileConnected && typeof g.__netProfileConnected === "object")
+    ? g.__netProfileConnected
+    : null;
+  if (connectedMap) {
+    for (const k of Object.keys(connectedMap)) {
+      if (connectedMap[k]) profiles.push(String(k));
+    }
+  }
+  if (profiles.length === 0) {
+    const local = (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+      ? g.__localHeroProfileName.trim()
+      : null;
+    if (local) profiles.push(local);
   }
 
   const internals = g.__HeroEnginePhaserInternals || {};
@@ -851,13 +898,9 @@ function _applyPendingSaveIfAny(): void {
 
   logSave("[save] applying save from file", pending.name || "");
 
-  // Install profiles (up to 4)
-  if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
+  // Cache profiles from save (for UI/debug; spawning is still by connect)
   const profs: string[] = Array.isArray(save.profiles) ? save.profiles : [];
-  for (let i = 0; i < Math.min(4, profs.length); i++) {
-    const p = (typeof profs[i] === "string" && profs[i].trim()) ? profs[i].trim() : null;
-    if (p) g.__heroProfiles[i] = p;
-  }
+  g.__loadedSaveProfiles = profs.filter((p: any) => typeof p === "string" && p.trim());
 
   // Install blockly XML map
   if (!g.__heBlocklyXmlByProfile) g.__heBlocklyXmlByProfile = {};
@@ -1330,8 +1373,9 @@ private _updateCameraZoom(): void {
     const zoomComp = (Number.isFinite(dpr) && dpr > 0) ? Math.max(1, 1 / dpr) : 1;
 
     let target = this._camZoomBase * zoomComp * this._camZoomUser;
-    if (target >= 1) {
-        target = Math.round(target * 2) / 2;
+    const step = CAMERA_ZOOM_STEP;
+    if (Number.isFinite(step) && step > 0) {
+        target = Math.round(target / step) * step;
     }
 
     target = Phaser.Math.Clamp(
@@ -1345,6 +1389,22 @@ private _updateCameraZoom(): void {
 
     cam.setRoundPixels(true);
     cam.setZoom(target);
+}
+
+private _snapCameraScrollToPixelGrid(): void {
+    const cam = this.cameras?.main;
+    if (!cam) return;
+
+    const z = (cam.zoom || 1);
+    if (!Number.isFinite(z) || z <= 0) return;
+
+    const snap = (v: number) => Math.round(v * z) / z;
+    const nextX = snap(cam.scrollX);
+    const nextY = snap(cam.scrollY);
+
+    if (nextX !== cam.scrollX || nextY !== cam.scrollY) {
+        cam.setScroll(nextX, nextY);
+    }
 }
 
 private _updateCameraFollowLocalHero(): void {
@@ -1481,6 +1541,7 @@ private setupGlobalsAndDebug() {
     // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
     // (kept as-is; profile selection is not "debug")
     applyUrlProfileToGlobals();
+    syncBlocklyXmlFromStorage();
 
     // ✅ Install Blockly editor button + overlay (editor only; no execution yet)
     installBlocklyHeroLogicEditor();
@@ -1931,10 +1992,13 @@ private _updateCoinFx(g: any): void {
 
             // Ensure animation exists (once). This is intentionally self-contained.
             const animKey = "__coinSpin";
+            const coinTexKey =
+                (this.textures.exists("anims.coins 16x16") ? "anims.coins 16x16" : "") ||
+                (this.textures.exists("anims.coins") ? "anims.coins" : "");
 
             if (!this.anims.exists(animKey)) {
-                if (!this.textures.exists("anims.coins")) {
-                    console.warn("[COINFX] missing texture anims.coins");
+                if (!coinTexKey) {
+                    console.warn("[COINFX] missing texture anims.coins 16x16 (or legacy anims.coins)");
                 } else {
                     // Best-effort inference of frames:
                     // - If spritesheet frames are numeric strings ("0","1",...) we compute max.
@@ -1942,7 +2006,7 @@ private _updateCoinFx(g: any): void {
                     let end = 0;
 
                     try {
-                        const tex: any = this.textures.get("anims.coins");
+                        const tex: any = this.textures.get(coinTexKey);
                         const names: string[] =
                             (tex && typeof tex.getFrameNames === "function") ? tex.getFrameNames() : [];
 
@@ -1962,7 +2026,7 @@ private _updateCoinFx(g: any): void {
 
                     this.anims.create({
                         key: animKey,
-                        frames: this.anims.generateFrameNumbers("anims.coins", { start: 0, end }),
+                        frames: this.anims.generateFrameNumbers(coinTexKey, { start: 0, end }),
                         frameRate: 14,
                         repeat: -1,
                     });
@@ -1981,9 +2045,9 @@ private _updateCoinFx(g: any): void {
 
                 if (!Number.isFinite(sx) || !Number.isFinite(sy) || countRaw <= 0) continue;
 
-                const hasTex = this.textures.exists("anims.coins");
+                const hasTex = !!coinTexKey;
                 if (DEBUG_COINFX) {
-                    console.log("[COINFX spawnBurst]", { sx, sy, countRaw, hasTex });
+                    console.log("[COINFX spawnBurst]", { sx, sy, countRaw, hasTex, coinTexKey });
                 }
                 if (!hasTex) continue;
 
@@ -2034,7 +2098,7 @@ private _updateCoinFx(g: any): void {
                     const thisVal = (baseVal + (rem > 0 ? 1 : 0)) | 0;
                     if (rem > 0) rem--;
 
-                    const coin = this.add.sprite(sx, sy, "anims.coins", 0);
+                    const coin = this.add.sprite(sx, sy, coinTexKey, 0);
                     coin.setOrigin(0.5, 0.5);
                     coin.setDepth(9999);
                     coin.setScale(1); // 16x16 (no upscaling)
@@ -2821,6 +2885,7 @@ update(time: number, delta: number) {
 
     // Keep camera following local player hero (works on host + clients)
     this._updateCameraFollowLocalHero();
+    this._snapCameraScrollToPixelGrid();
 
     this._updateLegacyHostTick(g);
 

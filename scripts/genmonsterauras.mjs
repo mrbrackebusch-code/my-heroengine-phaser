@@ -1,7 +1,7 @@
 // scripts/genmonsterauras.mjs
 // Generate dilated aura masks for monsters. Uses frame size parsed from the
 // filename (e.g., "slime 64x64 ULDR 1Walk.png" -> 64x64 frames).
-// Writes outputs to assets/monsters/monster_auras/<name>_aura_r2.png
+// Writes outputs to assets/enemies/<group>/auras/<name>_aura_r2.png
 // Skips regeneration by default when the output already exists; override via flag/env.
 
 import fs from "node:fs";
@@ -9,8 +9,11 @@ import path from "node:path";
 import { PNG } from "pngjs";
 
 const ROOT = process.cwd();
-const MON_DIR = path.join(ROOT, "assets", "monsters");
-const OUT_DIR = path.join(MON_DIR, "monster_auras");
+const MONSTER_DIRS = [
+  path.join(ROOT, "assets", "enemies", "monsters"),
+  path.join(ROOT, "assets", "enemies", "bosses"),
+];
+const OUT_SUBDIR = "auras";
 const RADIUS = 2;
 const FRAME_DIM_RE = /(\d+)\s*x\s*(\d+)/i;
 
@@ -42,7 +45,7 @@ function listPngs(dir) {
       const full = path.join(d, ent.name);
       if (ent.isDirectory()) {
         // Skip output folder to avoid treating generated auras as inputs.
-        if (path.basename(full).toLowerCase() === "monster_auras") continue;
+        if (ent.name.toLowerCase() === OUT_SUBDIR) continue;
         walk(full);
       } else if (ent.isFile() && ent.name.toLowerCase().endsWith(".png")) {
         out.push(full);
@@ -136,27 +139,34 @@ async function writePng(png, filePath) {
 }
 
 async function main() {
-  ensureDir(OUT_DIR);
-  const files = listPngs(MON_DIR);
-  if (files.length === 0) {
-    console.error("[mon-auras] No monster PNGs found");
+  const inputs = [];
+  for (const dir of MONSTER_DIRS) {
+    const files = listPngs(dir);
+    for (const file of files) inputs.push({ file, dir });
+  }
+  if (inputs.length === 0) {
+    console.error(`[mon-auras] No monster PNGs found in: ${MONSTER_DIRS.join(", ")}`);
     process.exit(1);
   }
 
   console.log(
-    `[mon-auras] monsters=${files.length} radius=${RADIUS} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
+    `[mon-auras] monsters=${inputs.length} radius=${RADIUS} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
   );
 
-  for (const file of files) {
+  let missingSize = 0;
+
+  for (const entry of inputs) {
+    const file = entry.file;
     const name = path.basename(file, ".png");
     const dims = parseFrameSizeFromName(file);
     if (!dims) {
-      console.warn(`[mon-auras] SKIP ${name}: no WxH in filename`);
+      missingSize++;
+      console.error(`[mon-auras] ERROR ${name}: missing WxH in filename`);
       continue;
     }
     const { frameW, frameH } = dims;
     const outName = `${name}_aura_r${RADIUS}.png`;
-    const outPath = path.join(OUT_DIR, outName);
+    const outPath = path.join(entry.dir, OUT_SUBDIR, outName);
     if (SKIP_EXISTING && fs.existsSync(outPath)) continue;
 
     let src;
@@ -177,6 +187,11 @@ async function main() {
     console.log(
       `[mon-auras] wrote ${path.relative(ROOT, outPath)} (frames=${r.rows}x${r.cols}, frame=${frameW}x${frameH})`
     );
+  }
+
+  if (missingSize > 0) {
+    console.error(`[mon-auras] ERROR missing size suffix in ${missingSize} monster file(s).`);
+    process.exit(1);
   }
 
   console.log("[mon-auras] done");

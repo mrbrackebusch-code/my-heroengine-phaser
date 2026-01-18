@@ -95,6 +95,12 @@ import {
     DEBUG_DRAW_ENEMY_NATIVE_BOUNDS,
     DEBUG_DRAW_ENEMY_SPRITE_BOUNDS,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
+    DEBUG_DRAW_HERO_COLLIDER_BOUNDS,
+    DEBUG_DRAW_HERO_HITBOX,
+    DEBUG_DRAW_HERO_NAV_FOOTPRINT,
+    DEBUG_DRAW_HERO_NATIVE_BOUNDS,
+    DEBUG_DRAW_HERO_SPRITE_BOUNDS,
+    DEBUG_DRAW_HERO_WALL_COLLIDERS,
     DEBUG_ENEMY_POS_GUARD,
     DEBUG_ENEMY_POS_GUARD_THROW,
     DEBUG_DRAW_WALL_COLLIDERS,
@@ -103,6 +109,7 @@ import {
     DEBUG_HERO_NATIVE_FEET_ANCHOR,
     DEBUG_INT_HERO_NAME_FILTER,
     DEBUG_INT_HERO_VIS,
+    DEBUG_INPUT_EDGE_LOGS,
     DEBUG_KIND56_CREATE_TRACE,
     DEBUG_NET,
     DEBUG_NET_APPLY_FOLLOWER,
@@ -690,6 +697,94 @@ function decor_applyTightOpaqueAabbToSolids(args: {
             _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, info, bb });
         }
     }
+
+    if (
+        DEBUG_DRAW_HERO_WALL_COLLIDERS ||
+        DEBUG_DRAW_HERO_SPRITE_BOUNDS ||
+        DEBUG_DRAW_HERO_COLLIDER_BOUNDS ||
+        DEBUG_DRAW_HERO_HITBOX ||
+        DEBUG_DRAW_HERO_NATIVE_BOUNDS ||
+        DEBUG_DRAW_HERO_NAV_FOOTPRINT
+    ) {
+        for (let i = 0; i < _allSprites.length; i++) {
+            const s = _allSprites[i];
+            if (!s) continue;
+            const dataAny: any = (s as any).data || {};
+            if (dataAny.enemyLpc) continue;
+            if (!isHeroSprite(s)) continue;
+
+            const cw = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
+            const ch = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
+            const offY = _heroCollisionOffsetY(s);
+
+            const spriteW = s.width | 0;
+            const spriteH = s.height | 0;
+            const spriteLeft = ((s.x | 0) - (spriteW >> 1)) | 0;
+            const spriteTop = ((s.y | 0) - (spriteH >> 1)) | 0;
+
+            const colW = cw | 0;
+            const colH = ch | 0;
+            const colLeft = ((s.x | 0) - (colW >> 1)) | 0;
+            const colTop = (((s.y | 0) + (offY | 0)) - (colH >> 1)) | 0;
+
+            const hitBounds = _getEngineCollisionBounds(s);
+            const hitLeft = hitBounds ? (hitBounds.left | 0) : colLeft;
+            const hitTop = hitBounds ? (hitBounds.top | 0) : colTop;
+            const hitRight = hitBounds ? (hitBounds.right | 0) : ((colLeft + colW - 1) | 0);
+            const hitBottom = hitBounds ? (hitBounds.bottom | 0) : ((colTop + colH - 1) | 0);
+            const hitW = ((hitRight - hitLeft + 1) | 0);
+            const hitH = ((hitBottom - hitTop + 1) | 0);
+
+            const footX = s.x | 0;
+            const footY = (((s.y | 0) + (offY | 0) + (Math.idiv((colH | 0), 2) | 0) - 1) | 0);
+            const wallLeft = (footX - (colW >> 1)) | 0;
+            const wallTop = (footY - colH + 1) | 0;
+
+            const navLeft = wallLeft;
+            const navTop = wallTop;
+
+            if (DEBUG_DRAW_HERO_SPRITE_BOUNDS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_SPRITE_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(spriteLeft, spriteTop, spriteW, spriteH);
+            }
+            if (DEBUG_DRAW_HERO_COLLIDER_BOUNDS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_BODY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(colLeft, colTop, colW, colH);
+            }
+            if (DEBUG_DRAW_HERO_HITBOX) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_HIT_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(hitLeft, hitTop, hitW, hitH);
+            }
+            if (DEBUG_DRAW_HERO_NATIVE_BOUNDS) {
+                const native: any = (s as any).native;
+                if (native && typeof native.getBounds === "function") {
+                    const b = native.getBounds();
+                    gHeroes.lineStyle(1, DEBUG_COLLIDER_NATIVE_COLOR, DEBUG_COLLIDER_ALPHA);
+                    gHeroes.strokeRect(b.x, b.y, b.width, b.height);
+                }
+            }
+            if (DEBUG_DRAW_HERO_NAV_FOOTPRINT) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_NAV_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(navLeft, navTop, colW, colH);
+            }
+            if (DEBUG_DRAW_HERO_WALL_COLLIDERS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(wallLeft, wallTop, colW, colH);
+            }
+
+            if (!_dbgLoggedHeroColliderOnce) {
+                _dbgLoggedHeroColliderOnce = true;
+                console.log("[DEBUG][HERO_COLLIDER]", {
+                    id: sprites.readDataString(s, "name") || sprites.readDataString(s, "heroName") || s.id,
+                    pos: { x: s.x | 0, y: s.y | 0 },
+                    sprite: { left: spriteLeft, top: spriteTop, right: spriteLeft + spriteW - 1, bottom: spriteTop + spriteH - 1, w: spriteW, h: spriteH },
+                    collider: { left: colLeft, top: colTop, right: colLeft + colW - 1, bottom: colTop + colH - 1, w: colW, h: colH },
+                    hitbox: { left: hitLeft, top: hitTop, right: hitRight, bottom: hitBottom, w: hitW, h: hitH },
+                    wall: { left: wallLeft, top: wallTop, right: wallLeft + colW - 1, bottom: wallTop + colH - 1, w: colW, h: colH },
+                });
+            }
+        }
+    }
 }
 
 
@@ -1227,6 +1322,9 @@ const PROJ_HERO_INDEX_KEY = "heroIndex";
 const EFFECT_SKIN_DATA_KEY = "effectSkin";
 const EFFECT_DIR_DATA_KEY = "effectDir";
 const EFFECT_DEBUG_ID_KEY = "effectDebugId";
+const EFFECT_OFFX_DATA_KEY = "effectOffX";
+const EFFECT_OFFY_DATA_KEY = "effectOffY";
+const EFFECT_TINT_DATA_KEY = "effectTint";
 
 // Phaser-only native data keys
 const NATIVE_FORCE_INVISIBLE_KEY = "__forceInvisible";
@@ -4253,6 +4351,38 @@ interface Image {
     }
 }
 
+// --------------------------------------------------------------
+// MakeCode Arcade compat: Image.drawTransparentImage
+// --------------------------------------------------------------
+
+interface Image {
+    drawTransparentImage(src: Image, x: number, y: number): void
+}
+
+(Image as any).prototype.drawTransparentImage = function (
+    src: Image,
+    x: number,
+    y: number
+): void {
+    if (!this || !src) return
+
+    const w = (src.width | 0)
+    const h = (src.height | 0)
+    const ox = x | 0
+    const oy = y | 0
+
+    for (let yy = 0; yy < h; yy++) {
+        const ty = (oy + yy) | 0
+        if (ty < 0 || ty >= this.height) continue
+        for (let xx = 0; xx < w; xx++) {
+            const tx = (ox + xx) | 0
+            if (tx < 0 || tx >= this.width) continue
+            const c = src.getPixel(xx, yy) | 0
+            if (c) this.setPixel(tx, ty, c)
+        }
+    }
+}
+
 
 
 
@@ -4669,7 +4799,8 @@ const ENEMY_POS_GUARD_ALLOWLIST: string[] = [
     "_resolveSpriteOverlap",
     "spawnEnemyOfKind",
     "spawnDummyEnemy",
-    "setPosition"
+    "setPosition",
+    "netWorld.apply"
 ];
 
 const ENEMY_POS_GUARD_LOG_LIMIT = 200;
@@ -6323,6 +6454,11 @@ function _attachUploadPixelsToTexture(
 
 function _attachDestroyNativeIfWrongSize(ctx: AttachContext, w: number, h: number): void {
     const s = ctx.s;
+    const dataAny: any = ctx.dataAny || (s as any).data || {};
+    const role = _classifySpriteRole((s.kind as any) | 0, Object.keys((s as any).data || {}));
+    if (role === "EFFECT" || dataAny[EFFECT_SKIN_DATA_KEY] || dataAny.effectSkinId) {
+        return;
+    }
 
     if (s.native) {
         const n: any = s.native;
@@ -6376,13 +6512,24 @@ function _attachGetOrCreateNative(
     let native: any = s.native;
     let didCreate = false;
 
+    const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
+    const wantsSprite = (role === "ENEMY" || role === "ACTOR" || role === "EFFECT");
+
+    if (native && wantsSprite) {
+        const hasAnims = typeof native.play === "function" || !!native.anims;
+        if (!hasAnims) {
+            try { native.destroy(); } catch { /* ignore */ }
+            s.native = undefined as any;
+            native = undefined;
+        }
+    }
+
     if (!native) {
-        const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
         const isEnemyLike = (role === "ENEMY" || role === "ACTOR");
         const offX = isEnemyLike ? readInt(dataAny.renderOffsX, 0) : 0;
         const offY = isEnemyLike ? readInt(dataAny.renderOffsY, 0) : 0;
 
-        const n = isEnemyLike
+        const n = wantsSprite
             ? sc.add.sprite(s.x + offX, s.y + offY, texKey)
             : sc.add.image(s.x, s.y, texKey);
 
@@ -6402,7 +6549,6 @@ function _attachGetOrCreateNative(
             );
         }
     } else {
-        const role = _classifySpriteRole((kind as number) || 0, Object.keys((s as any).data || {}));
         if (role === "ENEMY" || role === "ACTOR") {
             const offX = readInt(dataAny.renderOffsX, 0);
             const offY = readInt(dataAny.renderOffsY, 0);
@@ -9324,6 +9470,10 @@ function _syncEnemyActorPath(
         const punchUntil = sprites.readDataNumber(s, "__hitPunchUntil") | 0;
         const punchMs = sprites.readDataNumber(s, "__hitPunchMs") | 0;
         const punchScaleX1000 = sprites.readDataNumber(s, "__hitPunchScaleX1000") | 0;
+        const atkOffX = sprites.readDataNumber(s, "__atkVisOffX") | 0;
+        const atkOffY = sprites.readDataNumber(s, "__atkVisOffY") | 0;
+        const atkScaleX1000 = sprites.readDataNumber(s, "__atkVisScaleX1000") | 0;
+        const atkScale = (atkScaleX1000 > 0) ? (atkScaleX1000 / 1000) : 1;
 
         if (typeof nativeAny.__hitBaseScaleX !== "number") {
             nativeAny.__hitBaseScaleX = (typeof nativeAny.scaleX === "number") ? nativeAny.scaleX : 1;
@@ -9337,13 +9487,31 @@ function _syncEnemyActorPath(
             const t = (punchUntil - now) / punchMs;
             const amp = punchScaleX1000 / 1000;
             const pulse = 1 + amp * Math.sin(t * Math.PI);
-            if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX * pulse, baseY * pulse);
-            else { nativeAny.scaleX = baseX * pulse; nativeAny.scaleY = baseY * pulse; }
+            const sx = baseX * atkScale * pulse;
+            const sy = baseY * atkScale * pulse;
+            if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
+            else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
             nativeAny.__hitPunchActive = true;
-        } else if (nativeAny.__hitPunchActive) {
-            if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX, baseY);
-            else { nativeAny.scaleX = baseX; nativeAny.scaleY = baseY; }
+        } else {
+            if (nativeAny.__hitPunchActive || atkScale !== 1 || nativeAny.__atkTeleScaleActive) {
+                const sx = baseX * atkScale;
+                const sy = baseY * atkScale;
+                if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
+                else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
+            }
             nativeAny.__hitPunchActive = false;
+        }
+        nativeAny.__atkTeleScaleActive = (atkScale !== 1);
+
+        if (atkOffX || atkOffY) {
+            const basePosX = nativeAny.x;
+            const basePosY = nativeAny.y;
+            nativeAny.x = basePosX + atkOffX;
+            nativeAny.y = basePosY + atkOffY;
+            nativeAny.__atkTeleOffsetActive = true;
+        } else if (nativeAny.__atkTeleOffsetActive) {
+            // Base position will be reapplied by the sync loop; just clear the flag.
+            nativeAny.__atkTeleOffsetActive = false;
         }
 
         if (flashUntil > now) {
@@ -9398,9 +9566,19 @@ function _syncEffectPath(
     const skin = sprites.readDataString(s, EFFECT_SKIN_DATA_KEY) || "";
     const dir = sprites.readDataString(s, EFFECT_DIR_DATA_KEY) || "";
     const dbgId = sprites.readDataNumber(s, EFFECT_DEBUG_ID_KEY) | 0;
+    const offX = sprites.readDataNumber(s, EFFECT_OFFX_DATA_KEY);
+    const offY = sprites.readDataNumber(s, EFFECT_OFFY_DATA_KEY);
+    const tintRaw = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY);
+    const tint = Number.isFinite(tintRaw) ? (tintRaw as number) | 0 : 0;
 
-    if (skin) data[EFFECT_SKIN_DATA_KEY] = skin;
+    if (skin) {
+        data[EFFECT_SKIN_DATA_KEY] = skin;
+        (s as any)._lastNonZeroPixels = 1;
+    }
     if (dir) data[EFFECT_DIR_DATA_KEY] = dir;
+    if (Number.isFinite(offX)) data[EFFECT_OFFX_DATA_KEY] = offX;
+    if (Number.isFinite(offY)) data[EFFECT_OFFY_DATA_KEY] = offY;
+    if (tint) data[EFFECT_TINT_DATA_KEY] = tint;
 
     const nativeAny: any = s.native;
     if (!nativeAny || typeof nativeAny.setData !== "function") {
@@ -9420,6 +9598,12 @@ function _syncEffectPath(
 
     if (skin) nativeAny.setData(EFFECT_SKIN_DATA_KEY, skin);
     if (dir) nativeAny.setData(EFFECT_DIR_DATA_KEY, dir);
+    if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
+
+    if (offX || offY) {
+        nativeAny.x = (s.x as number) + (offX || 0);
+        nativeAny.y = (s.y as number) + (offY || 0);
+    }
 
     const glueAny: any = (globalThis as any).effectAnimGlue || effectAnimGlue;
     const effectSprite = nativeAny as Phaser.GameObjects.Sprite;
@@ -9441,6 +9625,19 @@ function _syncEffectPath(
     } else if (glueAny && typeof glueAny.applyEffectAnimationForSprite === "function") {
         glueAny.applyEffectAnimationForSprite(effectSprite);
     }
+
+    try {
+        const lastTint = (nativeAny as any).__effectTint | 0;
+        if (tint) {
+            if ((lastTint | 0) !== (tint | 0)) {
+                if (typeof nativeAny.setTint === "function") nativeAny.setTint(tint | 0);
+                (nativeAny as any).__effectTint = tint | 0;
+            }
+        } else if (lastTint) {
+            if (typeof nativeAny.clearTint === "function") nativeAny.clearTint();
+            (nativeAny as any).__effectTint = 0;
+        }
+    } catch { /* ignore */ }
 }
 
 function _syncPixelDeathRemoval(
@@ -9910,7 +10107,9 @@ let _processEventsCallCount = 0;
 
 let _dbgColliderGfxWalls: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxEnemies: Phaser.GameObjects.Graphics | null = null;
+let _dbgColliderGfxHeroes: Phaser.GameObjects.Graphics | null = null;
 let _dbgLoggedEnemyColliderOnce = false;
+let _dbgLoggedHeroColliderOnce = false;
 
 function _heroCollisionOffsetY(s: Sprite): number {
     if (!s) return 0;
@@ -9936,6 +10135,10 @@ function _debugEnsureColliderGfx(sc: Phaser.Scene): void {
         _dbgColliderGfxEnemies = sc.add.graphics();
         try { (_dbgColliderGfxEnemies as any).setDepth?.(999999); } catch { }
     }
+    if (!_dbgColliderGfxHeroes) {
+        _dbgColliderGfxHeroes = sc.add.graphics();
+        try { (_dbgColliderGfxHeroes as any).setDepth?.(999999); } catch { }
+    }
 }
 
 function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
@@ -9947,13 +10150,21 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
         !DEBUG_DRAW_ENEMY_HITBOX &&
         !DEBUG_DRAW_ENEMY_NATIVE_BOUNDS &&
         !DEBUG_DRAW_ENEMY_NAV_FOOTPRINT &&
-        !DEBUG_DRAW_ENEMY_AURA_BOUNDS
+        !DEBUG_DRAW_ENEMY_AURA_BOUNDS &&
+        !DEBUG_DRAW_HERO_WALL_COLLIDERS &&
+        !DEBUG_DRAW_HERO_SPRITE_BOUNDS &&
+        !DEBUG_DRAW_HERO_COLLIDER_BOUNDS &&
+        !DEBUG_DRAW_HERO_HITBOX &&
+        !DEBUG_DRAW_HERO_NATIVE_BOUNDS &&
+        !DEBUG_DRAW_HERO_NAV_FOOTPRINT
     ) return;
     _debugEnsureColliderGfx(sc);
     const gWalls = _dbgColliderGfxWalls!;
     const gEnemies = _dbgColliderGfxEnemies!;
+    const gHeroes = _dbgColliderGfxHeroes!;
     gWalls.clear();
     gEnemies.clear();
+    gHeroes.clear();
 
     const g: any = globalThis as any;
     const internals: any = g ? g.__HeroEnginePhaserInternals : null;
@@ -11000,19 +11211,25 @@ namespace controller {
 
     let _keyboardWired = false;
     let _gamepadWired = false;
+    let _inputFirstPressLogged = false;
+    let _inputFirstReleaseLogged = false;
 
     // Send a local input event (button pressed/released) to the network.
     function _sendLocalInput(button: string, pressed: boolean) {
+        // Always keep local controller state in sync so the engine can read it.
+        const ctrl = _getLocalController() as any;
+        const btn = ctrl ? ctrl[button] : null;
+        if (btn && typeof btn._setPressed === "function") {
+            btn._setPressed(pressed);
+        }
+
+        if (DEBUG_INPUT_EDGE_LOGS) {
+            console.log("[input.edge]", { button, pressed });
+        }
+
         const net: any = (globalThis as any).__net;
         if (net && typeof net.sendInput === "function") {
             net.sendInput(button, pressed);
-        } else {
-            // Fallback: no network – apply directly to local controller
-            const ctrl = _getLocalController() as any;
-            const btn = ctrl[button];
-            if (btn && typeof btn._setPressed === "function") {
-                btn._setPressed(pressed);
-            }
         }
     }
 
@@ -11037,20 +11254,60 @@ namespace controller {
             console.log("[controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)");
         }
 
-        function bindKeyToButtonName(key: string, buttonName: string) {
-            kb.on("keydown-" + key, () => _sendLocalInput(buttonName, true));
-            kb.on("keyup-" + key, () => _sendLocalInput(buttonName, false));
+        const keyMap: any = kb.addKeys({
+            left: "LEFT",
+            right: "RIGHT",
+            up: "UP",
+            down: "DOWN",
+            A: "Q",
+            B: "E",
+        });
+
+        const bindings = [
+            { key: keyMap?.left, button: "left" },
+            { key: keyMap?.right, button: "right" },
+            { key: keyMap?.up, button: "up" },
+            { key: keyMap?.down, button: "down" },
+            { key: keyMap?.A, button: "A" },
+            { key: keyMap?.B, button: "B" },
+        ];
+
+        const state: Record<string, boolean> = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            A: false,
+            B: false,
+        };
+
+        const syncKeys = () => {
+            for (const b of bindings) {
+                const down = !!(b.key && b.key.isDown);
+                if (state[b.button] !== down) {
+                    state[b.button] = down;
+                    _sendLocalInput(b.button, down);
+                }
+            }
+        };
+
+        // Prime state so we don't depend on keyup reliability.
+        syncKeys();
+
+        if (scene && scene.events && typeof scene.events.on === "function") {
+            scene.events.on("update", syncKeys);
         }
 
-        // Movement: arrows
-        bindKeyToButtonName("LEFT",  "left");
-        bindKeyToButtonName("RIGHT", "right");
-        bindKeyToButtonName("UP",    "up");
-        bindKeyToButtonName("DOWN",  "down");
-
-        // Moves: Q/E → A/B
-        bindKeyToButtonName("Q", "A");
-        bindKeyToButtonName("E", "B");
+        if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+            window.addEventListener("blur", () => {
+                for (const b of bindings) {
+                    if (state[b.button]) {
+                        state[b.button] = false;
+                        _sendLocalInput(b.button, false);
+                    }
+                }
+            });
+        }
     }
 
     // Hook Phaser gamepad into the "local" player (first connected pad).
@@ -11754,9 +12011,6 @@ function startSpriteSyncLoop() {
 
 (function initPlayerRegistry() {
     const g: any = (globalThis as any);
-    if (!g.__heroProfiles) {
-        g.__heroProfiles = ["Default", "Default", "Default", "Default"];
-    }
     if (!g.__playerNames) {
         g.__playerNames = [null, null, null, null];
     }
@@ -11774,11 +12028,12 @@ function startSpriteSyncLoop() {
 // ---------------------------------------------------------------------
 export function registerLocalPlayer(slotIndex: number, name: string | null) {
     const g: any = (globalThis as any);
-    if (!g.__heroProfiles) g.__heroProfiles = ["Default", "Default", "Default", "Default"];
     if (!g.__playerNames) g.__playerNames = [null, null, null, null];
 
     g.__playerNames[slotIndex] = name || null;
-    g.__heroProfiles[slotIndex] = name || "Default";
+    if (name && typeof name === "string") {
+        g.__localHeroProfileName = name;
+    }
 
     // This client controls this slot (1–4)
     if ((globalThis as any).controller &&

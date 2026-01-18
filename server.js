@@ -383,9 +383,9 @@ function bindHello(ws, msg) {
     }
   }
 
-  // Determine profile for this token (sticky once set)
+  // Determine profile for this token (client is authoritative)
   const existingProfile = tokenToProfile.get(token) || null;
-  const profile = existingProfile || desiredProfile || null;
+  const profile = desiredProfile || null;
 
   // Validate profile against assets
   if (profile && !allowedProfiles.has(profile)) {
@@ -408,13 +408,24 @@ function bindHello(ws, msg) {
       ws.close(1008, "Profile already in use");
       return;
     }
-    // Claim ownership (idempotent for same token)
+  }
+
+  // Release old profile ownership if this token is switching profiles
+  if (existingProfile && existingProfile !== profile) {
+    if (profileToToken.get(existingProfile) === token) {
+      profileToToken.delete(existingProfile);
+    }
+    console.warn("[server.identity] token profile override", {
+      token: token.slice(0, 8) + "…",
+      from: existingProfile,
+      to: profile
+    });
+  }
+
+  // Claim ownership (idempotent for same token)
+  if (profile) {
     profileToToken.set(profile, token);
     tokenToProfile.set(token, profile);
-  } else if (!existingProfile && desiredProfile) {
-    // Persist the desired profile even if blank ownership checks didn't fire
-    tokenToProfile.set(token, desiredProfile);
-    profileToToken.set(desiredProfile, token);
   }
 
   pending.delete(ws);
@@ -450,6 +461,19 @@ function bindHello(ws, msg) {
     controlSlot,
     "profile=",
     profileNow
+  );
+
+  console.log(
+    "[server.identity]",
+    (existingProfile ? "WELCOME_BACK" : "WELCOME"),
+    "profile=",
+    profileNow,
+    "playerId=",
+    playerId,
+    "token=",
+    token.slice(0, 8) + "…",
+    "controlSlot=",
+    controlSlot
   );
 
   // Send assign (includes optional fields; clients can ignore what they don't use)
@@ -488,6 +512,8 @@ function handleInputMessage(ws, info, msg) {
 
   // Attach controlSlot for Phase 1 routing (host may use it)
   msg.controlSlot = tokenToControlSlot.get(info.token) || 0;
+  // Attach authoritative profile for host-side input routing
+  msg.profile = tokenToProfile.get(info.token) || null;
 
   if (DEBUG_NET) {
     const nowServer = Date.now();
@@ -537,6 +563,25 @@ function handleUiCommand(ws, info, msg) {
   };
 
   sendJson(hostWs, payload);
+}
+
+function handleBlocklyXmlMessage(ws, info, msg) {
+  const xml = (msg && typeof msg.xml === "string") ? msg.xml : "";
+  if (!xml || !xml.trim()) return;
+
+  // Enforce profile ownership from HELLO identity
+  const profile = tokenToProfile.get(info.token) || null;
+  if (!profile) return;
+
+  const payload = {
+    type: "blocklyXml",
+    playerId: info.playerId | 0,
+    profile,
+    xml
+  };
+
+  // Broadcast to all so host + followers stay in sync
+  broadcast(payload);
 }
 
 function handleUiCommandResult(ws, info, msg) {
@@ -822,6 +867,7 @@ function onSocketMessage(ws, data) {
   if (msg.type === "input") return handleInputMessage(ws, info, msg);
   if (msg.type === "uiCommand") return handleUiCommand(ws, info, msg);
   if (msg.type === "uiCommandResult") return handleUiCommandResult(ws, info, msg);
+  if (msg.type === "blocklyXml") return handleBlocklyXmlMessage(ws, info, msg);
   if (msg.type === "dialog") return handleDialogMessage(ws, info, msg);
   if (msg.type === "state") return handleStateMessage(ws, info, msg);
   if (msg.type === "tilemap") return handleTilemapMessage(ws, info, msg);

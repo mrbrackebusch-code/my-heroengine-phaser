@@ -14,6 +14,112 @@ export interface TrapRunResult {
 
 const TRAP_ENTRY_FN = "trapMain";
 
+const TRAP_ENEMY_FIELD_OPTIONS: Array<[string, string]> = [
+  ["hp", "hp"],
+  ["maxHp", "maxHp"],
+  ["mana", "mana"],
+  ["maxMana", "maxMana"],
+  ["x", "x"],
+  ["y", "y"],
+  ["vx", "vx"],
+  ["vy", "vy"],
+  ["damage", "damage"],
+  ["distance", "dist"],
+  ["distSq", "distSq"],
+  ["name", "name"],
+];
+
+function _enemyFieldToVar(field: string): string {
+  switch (field) {
+    case "hp":
+      return "enemyHp";
+    case "maxHp":
+      return "enemyMaxHp";
+    case "mana":
+      return "enemyMana";
+    case "maxMana":
+      return "enemyMaxMana";
+    case "x":
+      return "enemyX";
+    case "y":
+      return "enemyY";
+    case "vx":
+      return "enemyVx";
+    case "vy":
+      return "enemyVy";
+    case "damage":
+      return "enemyDamage";
+    case "distSq":
+      return "enemyDistSq";
+    case "name":
+      return "enemyNames";
+    case "dist":
+    default:
+      return "enemyDist";
+  }
+}
+
+function _installTrapBlocks(): void {
+  const Blocks: any = (Blockly as any).Blocks || {};
+  if (!Blocks["he_trap_enemy_list"]) {
+    (Blockly as any).Blocks["he_trap_enemy_list"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput()
+          .appendField("enemy")
+          .appendField(new (Blockly as any).FieldDropdown(TRAP_ENEMY_FIELD_OPTIONS), "FIELD")
+          .appendField("list");
+        this.setOutput(true);
+      },
+    };
+  }
+  if (!Blocks["he_trap_enemy_indices"]) {
+    (Blockly as any).Blocks["he_trap_enemy_indices"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput().appendField("enemies");
+        this.setOutput(true);
+      },
+    };
+  }
+  if (!Blocks["he_trap_enemy_field_at"]) {
+    (Blockly as any).Blocks["he_trap_enemy_field_at"] = {
+      init: function () {
+        this.setColour("#5CB1D6");
+        this.appendDummyInput()
+          .appendField("enemy")
+          .appendField(new (Blockly as any).FieldDropdown(TRAP_ENEMY_FIELD_OPTIONS), "FIELD")
+          .appendField("at index");
+        this.appendValueInput("I").setCheck("Number");
+        this.setOutput(true);
+      },
+    };
+  }
+  const G: any = javascriptGenerator as any;
+  if (!G.forBlock["he_trap_enemy_list"]) {
+    G.forBlock["he_trap_enemy_list"] = function (block: any) {
+      const field = block.getFieldValue("FIELD") || "dist";
+      const varName = _enemyFieldToVar(String(field || ""));
+      return [varName, G.ORDER_ATOMIC];
+    };
+  }
+  if (!G.forBlock["he_trap_enemy_indices"]) {
+    G.forBlock["he_trap_enemy_indices"] = function () {
+      return ["__heTrapEnemyIndices(enemyNames)", G.ORDER_FUNCTION_CALL];
+    };
+  }
+  if (!G.forBlock["he_trap_enemy_field_at"]) {
+    G.forBlock["he_trap_enemy_field_at"] = function (block: any, generator: any) {
+      const field = block.getFieldValue("FIELD") || "dist";
+      const idx = generator.valueToCode(block, "I", G.ORDER_NONE) || "1";
+      const varName = _enemyFieldToVar(String(field || ""));
+      return [`__heTrapListAt(${varName}, ${idx})`, G.ORDER_FUNCTION_CALL];
+    };
+  }
+}
+
+_installTrapBlocks();
+
 function _getTrapXmlMap(): Record<string, string> {
   const g: any = (globalThis as any);
   if (!g.__heTrapBlocklyXmlById) g.__heTrapBlocklyXmlById = {};
@@ -38,6 +144,9 @@ function _parseXml(xmlText: string): Element | null {
 
 function _buildWorkspaceFromXml(xmlText: string): Blockly.Workspace {
   const ws = new (Blockly as any).Workspace();
+  try {
+    if ((ws as any).options) (ws as any).options.oneBasedIndex = true;
+  } catch { }
   const dom = _parseXml(xmlText);
   if (!dom) return ws;
   (Blockly as any).Xml?.domToWorkspace?.(dom, ws);
@@ -122,6 +231,23 @@ function _makeInputDecls(spec: TrapSpec): string {
   return out;
 }
 
+function _makeTrapHelpers(): string {
+  return `
+function __heTrapEnemyIndices(list) {
+  const n = Array.isArray(list) ? list.length : 0;
+  const out = [];
+  for (let i = 1; i <= n; i++) out.push(i);
+  return out;
+}
+function __heTrapListAt(list, idx) {
+  if (!Array.isArray(list)) throw new Error("List expected");
+  const i = (idx | 0) - 1;
+  if (i < 0 || i >= list.length) throw new Error("Index out of bounds");
+  return list[i];
+}
+`;
+}
+
 function _deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -185,7 +311,8 @@ export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>):
   let value: unknown = undefined;
   try {
     const decls = _makeInputDecls(spec);
-    const wrapped = `"use strict";\n${decls}\n${code}\n` +
+    const helpers = _makeTrapHelpers();
+    const wrapped = `"use strict";\n${decls}\n${helpers}\n${code}\n` +
       `return (typeof ${TRAP_ENTRY_FN} === "function") ? ${TRAP_ENTRY_FN}() : undefined;`;
     const fn = new Function("inputs", wrapped);
     value = fn(inputs);

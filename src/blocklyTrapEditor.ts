@@ -1,6 +1,9 @@
 import * as Blockly from "blockly";
 import "blockly/blocks";
+import { DEBUG_TRAP_SHOW_SOLUTION } from "./debugFlags";
 import type { TrapSpec } from "./trapSchema";
+import type { TrapInstance } from "./trapInstances";
+import { resolveTrapSpecForInstance } from "./trapInstances";
 import { getTrapSpecById } from "./trapSpecs";
 import { getTrapXmlForId, runTrapBlockly, setTrapXmlForId } from "./blocklyTrapRuntime";
 
@@ -8,6 +11,7 @@ const OVERLAY_ID = "he-trap-blockly-overlay";
 const HOST_ID = "he-trap-blockly-host";
 const TITLE_ID = "he-trap-blockly-title";
 const STATUS_ID = "he-trap-blockly-status";
+const SOLUTION_ID = "he-trap-blockly-solution";
 const ANCHOR_BTN_ID = "he-trap-blockly-anchor";
 const RESIZE_ID = "he-trap-blockly-resize";
 const TOOLBOX_BTN_ID = "he-trap-blockly-toggle-toolbox";
@@ -28,6 +32,7 @@ const TRAP_TOOLBOX_BASE: any = {
       contents: [
         { kind: "block", type: "math_number" },
         { kind: "block", type: "math_arithmetic" },
+        { kind: "block", type: "math_on_list" },
         { kind: "block", type: "logic_compare" },
         { kind: "block", type: "logic_operation" },
         { kind: "block", type: "logic_negate" },
@@ -35,6 +40,16 @@ const TRAP_TOOLBOX_BASE: any = {
         { kind: "block", type: "math_modulo" },
         { kind: "block", type: "math_round" },
         { kind: "block", type: "math_random_int" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Sensing",
+      colour: "#5CB1D6",
+      contents: [
+        { kind: "block", type: "he_trap_enemy_list" },
+        { kind: "block", type: "he_trap_enemy_indices" },
+        { kind: "block", type: "he_trap_enemy_field_at" },
       ],
     },
     {
@@ -67,6 +82,7 @@ const TRAP_TOOLBOX_BASE: any = {
         { kind: "block", type: "lists_repeat" },
         { kind: "block", type: "lists_length" },
         { kind: "block", type: "lists_getIndex" },
+        { kind: "block", type: "lists_indexOf" },
         { kind: "block", type: "lists_setIndex" },
       ],
     },
@@ -108,6 +124,7 @@ const TRAP_TOOLBOX_BASE: any = {
 let _workspace: Blockly.WorkspaceSvg | null = null;
 let _activeSpec: TrapSpec | null = null;
 let _activeInputs: Record<string, unknown> | null = null;
+let _activeInstance: TrapInstance | null = null;
 let _trapTheme: Blockly.Theme | null = null;
 
 function _getUiState(): { anchor: TrapAnchor; width: number; height: number; toolboxHidden: boolean } {
@@ -265,6 +282,7 @@ function _ensureOverlay(): HTMLElement {
         <div style="flex:1;">
           <span id="${TITLE_ID}">Trap Blockly</span>
           <span id="${STATUS_ID}" style="margin-left:10px; opacity:0.75; font-size:12px;"></span>
+          <span id="${SOLUTION_ID}" style="margin-left:10px; opacity:0.6; font-size:11px;"></span>
         </div>
         <button id="${TOOLBOX_BTN_ID}">Hide Sidebar</button>
         <button id="${ANCHOR_BTN_ID}">Corner: BR</button>
@@ -483,6 +501,7 @@ function _ensureWorkspace(spec: TrapSpec): Blockly.WorkspaceSvg {
     trashcan: false,
     renderer: "zelos",
     theme: _getTrapTheme(),
+    oneBasedIndex: true,
     zoom: { controls: false, wheel: true, startScale: 0.95, maxScale: 2.0, minScale: 0.4 },
     grid: { spacing: 20, length: 3, snap: true },
     move: { scrollbars: true, drag: true, wheel: true },
@@ -535,10 +554,44 @@ function _setStatus(msg: string): void {
   if (el) el.textContent = msg;
 }
 
-export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, unknown>): void {
+function _setSolution(msg: string): void {
+  const el = document.getElementById(SOLUTION_ID);
+  if (el) el.textContent = msg;
+}
+
+function _formatSolution(value: unknown): string {
+  if (value === undefined) return "";
+  let text = "";
+  try {
+    text = JSON.stringify(value);
+  } catch {
+    text = String(value);
+  }
+  if (text.length > 120) text = text.slice(0, 117) + "...";
+  return `Solution: ${text}`;
+}
+
+function _resolveDebugSolution(spec: TrapSpec, inputs: Record<string, unknown>, instance: TrapInstance | null): unknown {
+  if (instance && instance.expectedOutput !== undefined) return instance.expectedOutput;
+  const validator = spec.validator;
+  if (validator && typeof validator.expectedOutputFromInputs === "function") {
+    try {
+      return validator.expectedOutputFromInputs(inputs);
+    } catch {
+      return undefined;
+    }
+  }
+  if (validator && Object.prototype.hasOwnProperty.call(validator, "expectedOutput")) {
+    return validator.expectedOutput;
+  }
+  return undefined;
+}
+
+export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, unknown>, instance?: TrapInstance | null): void {
   const overlay = _ensureOverlay();
   _activeSpec = spec;
   _activeInputs = inputs || spec.preview.inputs || {};
+  _activeInstance = instance || null;
 
   const panel = overlay.querySelector(".he-trap-blockly-panel") as HTMLElement | null;
   const anchorBtn = overlay.querySelector(`#${ANCHOR_BTN_ID}`) as HTMLButtonElement | null;
@@ -552,6 +605,8 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
     if (toolboxBtn) toolboxBtn.textContent = _toolboxLabel(ui.toolboxHidden);
     if (resizeHandle) _updateResizeHandle(resizeHandle, ui.anchor);
   }
+
+  overlay.style.display = "block";
 
   const ws = _ensureWorkspace(spec);
   const xml = getTrapXmlForId(spec.id) || spec.starterBlocks.xml;
@@ -569,6 +624,21 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   const titleEl = document.getElementById(TITLE_ID);
   if (titleEl) titleEl.textContent = spec.ui.title || "Trap Blockly";
   _setStatus("");
+  if (DEBUG_TRAP_SHOW_SOLUTION) {
+    const solution = _resolveDebugSolution(spec, _activeInputs || {}, _activeInstance);
+    _setSolution(_formatSolution(solution));
+    try {
+      const g: any = globalThis as any;
+      g.__heTrapDebugSolution = {
+        trapId: spec.id,
+        instanceId: _activeInstance ? _activeInstance.instanceId : "",
+        inputs: _activeInputs || {},
+        expectedOutput: solution,
+      };
+    } catch { }
+  } else {
+    _setSolution("");
+  }
 
   const applyBtn = overlay.querySelector("#he-trap-blockly-apply") as HTMLButtonElement | null;
   const resetBtn = overlay.querySelector("#he-trap-blockly-reset") as HTMLButtonElement | null;
@@ -583,7 +653,14 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
       const g: any = (globalThis as any);
       g.__heTrapLastResult = res;
       try {
-        const detail = { trapId: spec.id, ok: res.ok, value: res.value, errors: res.errors, inputs: _activeInputs || {} };
+        const detail = {
+          trapId: spec.id,
+          instanceId: _activeInstance ? _activeInstance.instanceId : "",
+          ok: res.ok,
+          value: res.value,
+          errors: res.errors,
+          inputs: _activeInputs || {},
+        };
         if (typeof (globalThis as any).dispatchEvent === "function") {
           (globalThis as any).dispatchEvent(new CustomEvent("he:trapResult", { detail }));
           if (res.ok) (globalThis as any).dispatchEvent(new CustomEvent("he:trapSolved", { detail }));
@@ -603,19 +680,34 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
     closeBtn.onclick = () => closeBlocklyTrapEditor();
   }
 
-  overlay.style.display = "block";
-  Blockly.svgResize(ws);
+  // Must resize after becoming visible so drag/metrics are correct.
+  setTimeout(() => {
+    try { (ws as any).resizeContents?.(); } catch {}
+    try { Blockly.svgResize(ws); } catch {}
+    try { (ws as any).markFocused?.(); } catch {}
+  }, 0);
 }
 
 export function closeBlocklyTrapEditor(): void {
   const overlay = document.getElementById(OVERLAY_ID);
   if (overlay) overlay.style.display = "none";
   try {
-    const detail = { trapId: _activeSpec ? _activeSpec.id : "" };
+    const detail = {
+      trapId: _activeSpec ? _activeSpec.id : "",
+      instanceId: _activeInstance ? _activeInstance.instanceId : "",
+    };
     if (typeof (globalThis as any).dispatchEvent === "function") {
       (globalThis as any).dispatchEvent(new CustomEvent("he:trapEditorClosed", { detail }));
     }
   } catch { }
+}
+
+export function openBlocklyTrapEditorInstance(instance: TrapInstance): void {
+  if (!instance) return;
+  const baseSpec = getTrapSpecById(instance.specId);
+  if (!baseSpec) return;
+  const spec = resolveTrapSpecForInstance(baseSpec, instance);
+  openBlocklyTrapEditor(spec, instance.inputs || {}, instance);
 }
 
 export function installBlocklyTrapEditor(): void {
@@ -626,7 +718,10 @@ export function installBlocklyTrapEditor(): void {
   g.__heOpenTrapBlocklyEditor = (trapId: string, inputs?: Record<string, unknown>) => {
     const spec = getTrapSpecById(trapId);
     if (!spec) return;
-    openBlocklyTrapEditor(spec, inputs || spec.preview.inputs || {});
+    openBlocklyTrapEditor(spec, inputs || spec.preview.inputs || {}, null);
+  };
+  g.__heOpenTrapBlocklyEditorInstance = (instance: TrapInstance) => {
+    openBlocklyTrapEditorInstance(instance);
   };
   g.__heCloseTrapBlocklyEditor = closeBlocklyTrapEditor;
 }

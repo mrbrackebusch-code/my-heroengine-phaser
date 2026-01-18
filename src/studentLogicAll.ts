@@ -31,7 +31,7 @@ const HERO_DATA = {
 const FAMILY = { STRENGTH: 0, AGILITY: 1, INTELLECT: 2, HEAL: 3 };
 
 // Match ELEM enum from WorkingHeroEngine25.ts
-const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, HEAL: 5 };
+const ELEM = { NONE: 0, GRASS: 1, FIRE: 2, WATER: 3, ELECTRIC: 4, EARTH: 5, ICE: 6, AIR: 7, HEAL: 0, WIND: 7 };
 
 // Match ANIM structure from WorkingHeroEngine25.ts
 const ANIM = {

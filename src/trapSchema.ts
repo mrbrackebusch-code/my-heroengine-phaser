@@ -25,6 +25,52 @@ export type ValueKind =
   | "target"
   | "direction";
 
+export type TrapTargetDomain = "enemy" | "prop" | "self" | "tile" | "none";
+export type TrapTargetKey = "name" | "index" | "position" | "distance" | "value" | "list";
+export type TrapTargetSource = "given" | "sensed";
+export type TrapTargetCount = "single" | "list";
+
+export interface TrapTargetingAxis {
+  domain: TrapTargetDomain;
+  key: TrapTargetKey;
+  source: TrapTargetSource;
+  count: TrapTargetCount;
+}
+
+export type TrapTriggerMode = "none" | "sequence" | "condition";
+export type TrapComparator = "==" | "!=" | "<" | "<=" | ">" | ">=";
+export type TrapLogicOp = "and" | "or" | "not";
+export type TrapMathOp = "ADD" | "MINUS" | "MULTIPLY" | "DIVIDE";
+
+export interface TrapTriggeringAxis {
+  mode: TrapTriggerMode;
+  comparator?: TrapComparator;
+  logicOps?: TrapLogicOp[];
+  mathOp?: TrapMathOp;
+  operand?: number;
+}
+
+export type TrapEffectElement = "fire" | "poison" | "ice" | "arcane";
+export type TrapEffectPattern = "radial" | "line" | "burst" | "single";
+
+export interface TrapEffectAxis {
+  element: TrapEffectElement;
+  pattern: TrapEffectPattern;
+}
+
+export interface TrapExtrasAxis {
+  extraTarget?: boolean;
+  extraProcedure?: boolean;
+  dualOutput?: boolean;
+}
+
+export interface TrapAxes {
+  targeting: TrapTargetingAxis;
+  triggering: TrapTriggeringAxis;
+  effect: TrapEffectAxis;
+  extras: TrapExtrasAxis;
+}
+
 export interface TrapInputSpec {
   name: string;
   type: ApCspType;

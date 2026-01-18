@@ -1089,7 +1089,28 @@ function _publishXmlToRuntime(xmlText: string): void {
   try {
     const g: any = globalThis as any;
     if (!g.__heBlocklyXmlByProfile) g.__heBlocklyXmlByProfile = {};
-    g.__heBlocklyXmlByProfile[_getProfileName()] = String(xmlText || "");
+    const prof = _getProfileName();
+    const text = String(xmlText || "");
+    g.__heBlocklyXmlByProfile[prof] = text;
+    _syncBlocklyXmlToNet(prof, text);
+  } catch {}
+}
+
+const _lastNetXmlByProfile: Record<string, string> = Object.create(null);
+
+function _syncBlocklyXmlToNet(profile: string, xmlText: string): void {
+  const p = (typeof profile === "string" && profile.trim()) ? profile.trim() : "Default";
+  const text = String(xmlText || "");
+  if (!text.trim()) return;
+  if (_lastNetXmlByProfile[p] === text) return;
+  _lastNetXmlByProfile[p] = text;
+
+  try {
+    const g: any = globalThis as any;
+    const net: any = g && g.__net;
+    if (net && typeof net.sendBlocklyXml === "function") {
+      net.sendBlocklyXml(p, text);
+    }
   } catch {}
 }
 
@@ -1530,6 +1551,16 @@ function _saveWorkspace(): void {
 
   localStorage.setItem(_storageKey(), xmlText);
   _publishXmlToRuntime(xmlText);
+}
+
+export function syncBlocklyXmlFromStorage(): void {
+  try {
+    const key = _storageKey();
+    const xml = localStorage.getItem(key);
+    if (xml && xml.trim()) {
+      _publishXmlToRuntime(xml);
+    }
+  } catch {}
 }
 
 export function openBlocklyHeroLogicEditor(): void {

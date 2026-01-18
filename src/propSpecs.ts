@@ -77,6 +77,22 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       statesByDir: FIRE_TOTEM_DIR,
     },
   },
+  shrine: {
+    name: "shrine",
+    collision: {
+      mode: "base",
+      baseHeightPx: 32,
+      useAura: true,
+    },
+    interact: {
+      interactable: true,
+      focusable: true,
+      action: "prop",
+    },
+    placement: {
+      floorKinds: ["entrance"],
+    },
+  },
 };
 
 export function propBaseNameFromKey(name: string): string {

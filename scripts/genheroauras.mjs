@@ -16,7 +16,7 @@ const SKIP_EXISTING = true; // flip to false if you always want rebuilds
 const RADIUS = 2;
 
 const HERO_DIR = path.join(ROOT, "assets", "heroes");
-const OUT_DIR = path.join(ROOT, "assets", "auras");
+const OUT_DIR = path.join(ROOT, "assets", "heroes", "auras");
 
 function _isTruthy(v) {
   if (v === undefined || v === null) return false;

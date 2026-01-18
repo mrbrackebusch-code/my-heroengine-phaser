@@ -24,12 +24,9 @@ const INVALID_MOVE_OUT: any[] = [-1, 0, 0, 0, 0, -1, "INVALID"];
 // Registries (kept global for debugging)
 // ==========================================
 globalThis.__heroLogicByProfile = globalThis.__heroLogicByProfile || {};
-globalThis.__heroLogicByIndex = globalThis.__heroLogicByIndex || {};
 
 const heroLogicByProfile: { [name: string]: HeroLogicFn } =
     globalThis.__heroLogicByProfile;
-const heroLogicByIndex: { [idx: number]: HeroLogicFn } =
-    globalThis.__heroLogicByIndex;
 
 // Grab engine enums if we need a totally generic fallback
 const FAMILY: any = (globalThis as any).FAMILY || {};
@@ -78,47 +75,7 @@ for (const key of Object.keys(SL)) {
     }
 }
 
-// Also wire classic hero1Logic..hero4Logic to indexes 0..3 if present
-if (typeof SL.hero1Logic === "function") {
-    heroLogicByIndex[0] = SL.hero1Logic as HeroLogicFn;
-    if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] index 0 → hero1Logic");
-}
-if (typeof SL.hero2Logic === "function") {
-    heroLogicByIndex[1] = SL.hero2Logic as HeroLogicFn;
-    if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] index 1 → hero2Logic");
-}
-if (typeof SL.hero3Logic === "function") {
-    heroLogicByIndex[2] = SL.hero3Logic as HeroLogicFn;
-    if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] index 2 → hero3Logic");
-}
-if (typeof SL.hero4Logic === "function") {
-    heroLogicByIndex[3] = SL.hero4Logic as HeroLogicFn;
-    if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] index 3 → hero4Logic");
-}
-
-// ==========================================
-// WIRE ANIMATION HOOKS FROM STUDENT LOGIC FILE
-// ==========================================
-const HE: any = (globalThis as any).HeroEngine;
-
-if (HE) {
-    if (typeof SL.animateHero1 === "function") {
-        HE.animateHero1Hook = SL.animateHero1;
-        if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] animateHero1Hook wired");
-    }
-    if (typeof SL.animateHero2 === "function") {
-        HE.animateHero2Hook = SL.animateHero2;
-        if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] animateHero2Hook wired");
-    }
-    if (typeof SL.animateHero3 === "function") {
-        HE.animateHero3Hook = SL.animateHero3;
-        if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] animateHero3Hook wired");
-    }
-    if (typeof SL.animateHero4 === "function") {
-        HE.animateHero4Hook = SL.animateHero4;
-        if (DEBUG_HOST_LOGIC) console.log("[heroLogicHost] animateHero4Hook wired");
-    }
-}
+// Old hero1..4 hooks are intentionally not wired; profile logic is authoritative.
 
 // ==========================================
 // RESOLVER → used by heroEnginePhaserGlue.ts
@@ -325,8 +282,9 @@ function _he_normFamily(v: any): number {
 }
 
 function _he_normElem(v: any): number {
-    // Ensure WIND exists (non-breaking; new id)
-    if ((ELEM as any).WIND == null) (ELEM as any).WIND = 6;
+    const anyElem = (ELEM as any);
+    if (anyElem.AIR == null) anyElem.AIR = (anyElem.WIND != null ? anyElem.WIND : 7);
+    if (anyElem.WIND == null) anyElem.WIND = anyElem.AIR;
 
     if (typeof v === "number" && isFinite(v)) return v | 0;
     if (typeof v === "string") {
@@ -336,7 +294,8 @@ function _he_normElem(v: any): number {
         if (s === "fire") return (ELEM.FIRE ?? 2) | 0;
         if (s === "water") return (ELEM.WATER ?? 3) | 0;
         if (s === "earth") return (ELEM.EARTH ?? 5) | 0;
-        if (s === "wind") return ((ELEM as any).WIND ?? 6) | 0;
+        if (s === "ice" || s === "icy") return (ELEM.ICE ?? 6) | 0;
+        if (s === "air" || s === "wind") return (anyElem.AIR ?? anyElem.WIND ?? 7) | 0;
 
         // Keep legacy/extra names (won’t hurt)
         if (s === "grass") return (ELEM.GRASS ?? 1) | 0;
@@ -429,11 +388,6 @@ if (typeof setResolver === "function") {
         // Always include the effective/fallback
         cand.push(effectiveProfile);
 
-        // If you ever use __heroProfiles, try that too (P1 is slot 0)
-        if (g.__heroProfiles && typeof g.__heroProfiles[0] === "string" && g.__heroProfiles[0].trim()) {
-            cand.push(g.__heroProfiles[0].trim());
-        }
-
         // Unique preserve order
         const seen = new Set<string>();
         // Always append the shared fallback so Blockly/TS agree on the “no profile” name.
@@ -449,11 +403,30 @@ if (typeof setResolver === "function") {
             for (const p of profilesToTry) {
                 const key = "he_blockly_ws_v1:" + encodeURIComponent(p);
                 let hasXml = (() => {
+                    try {
+                        const map = g && g.__heBlocklyXmlByProfile;
+                        if (map && typeof map === "object") {
+                            const live = String(map[p] || "");
+                            if (live && live.trim()) return true;
+                        }
+                    } catch { /* ignore */ }
                     try { return !!(localStorage.getItem(key) || "").trim(); } catch { return false; }
                 })();
                 if (!hasXml && p !== FALLBACK_PROFILE) {
                     const fbKey = "he_blockly_ws_v1:" + encodeURIComponent(FALLBACK_PROFILE);
-                    try { hasXml = !!(localStorage.getItem(fbKey) || "").trim(); } catch { hasXml = false; }
+                    try {
+                        const map = g && g.__heBlocklyXmlByProfile;
+                        if (map && typeof map === "object") {
+                            const live = String(map[FALLBACK_PROFILE] || "");
+                            if (live && live.trim()) {
+                                hasXml = true;
+                            } else {
+                                hasXml = !!(localStorage.getItem(fbKey) || "").trim();
+                            }
+                        } else {
+                            hasXml = !!(localStorage.getItem(fbKey) || "").trim();
+                        }
+                    } catch { hasXml = false; }
                 }
                 if (hasXml) sawBlocklyXml = true;
 
@@ -516,15 +489,7 @@ if (typeof setResolver === "function") {
             }
         }
 
-        // 2) Index-based (TS)
-        const byIndex = heroLogicByIndex[heroIndex | 0];
-        if (byIndex) {
-            _trace("[heroLogicHost] USING ts:index", { heroIndex, fn: byIndex.name, profile: effectiveProfile });
-            _setLogicSource("ts:index", effectiveProfile);
-            return byIndex(button, heroIndex, enemiesArr, heroesArr);
-        }
-
-        // 3) Demo fallback
+        // 2) Demo fallback
         if (DemoHeroLogic) {
             _trace("[heroLogicHost] USING demo fallback", { profile: effectiveProfile });
             _setLogicSource("demo", effectiveProfile);

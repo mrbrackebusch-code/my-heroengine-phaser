@@ -593,7 +593,7 @@
 
 .relic-offer-item .shopui-price {
   font-size: 11px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -604,11 +604,7 @@
   box-sizing: border-box;
 }
 
-.relic-offer-item .shopui-icon {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-}
+
 
 
       /* -----------------------------
@@ -1927,9 +1923,41 @@
 // ------------------------------------------------------------
 // Snapshot cache (prevents __heGetUiSnapshot spam / logs)
 // ------------------------------------------------------------
+function _uiIsHost() {
+  try {
+    const net = window.__net;
+    if (!net) return true;
+    if (typeof net.isHostNow === "function") return !!net.isHostNow();
+    if (typeof window.__isHost === "boolean") return !!window.__isHost;
+  } catch (_e) {}
+  return false;
+}
+
 const SNAPSHOT_REFRESH_MS = 500;
 let _hud_lastSnap = null;
 let _hud_lastSnapAt = 0;
+let _hud_netSnapPending = false;
+
+async function _hud_fetchSnapshotFromNet(pid) {
+  const net = window.__net;
+  if (!net || typeof net.sendUiCommand !== "function") return null;
+  if (_hud_netSnapPending) return null;
+  _hud_netSnapPending = true;
+  try {
+    const cmd = { playerId: pid | 0, type: "ping" };
+    const r = await net.sendUiCommand(cmd);
+    const snap = r && r.snapshot ? r.snapshot : null;
+    if (snap && snap.ready) {
+      _hud_lastSnap = snap;
+      _hud_lastSnapAt = Date.now() | 0;
+    }
+    return snap;
+  } catch (_e) {
+    return null;
+  } finally {
+    _hud_netSnapPending = false;
+  }
+}
 
 function _getUiSnapshotCached(pid) {
   const now = Date.now() | 0;
@@ -1942,6 +1970,12 @@ function _getUiSnapshotCached(pid) {
   _hud_lastSnapAt = now;
 
   try {
+    const net = window.__net;
+    const isHost = _uiIsHost();
+    if (!isHost && net && typeof net.sendUiCommand === "function") {
+      _hud_fetchSnapshotFromNet(p);
+      return _hud_lastSnap;
+    }
     if (typeof window.__heGetUiSnapshot === "function") {
       _hud_lastSnap = window.__heGetUiSnapshot(p | 0) || null;
       return _hud_lastSnap;
@@ -2240,14 +2274,17 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
           let r = null;
 
+          const net = window.__net;
+          const isHost = _uiIsHost();
           const fn = window.__heUiCommand;
-          if (typeof fn === "function") {
+          if (isHost && typeof fn === "function") {
             r = fn(cmd);
           } else {
             try {
-              const net = (typeof globalThis !== "undefined" && (globalThis).__net) ? (globalThis).__net : null;
               if (net && typeof net.sendUiCommand === "function") {
                 r = await net.sendUiCommand(cmd);
+              } else if (typeof fn === "function") {
+                r = fn(cmd);
               }
             } catch (_e) {}
           }
@@ -2257,7 +2294,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           // refresh immediately with returned snapshot if present, else fall back to getter
           try {
             const snap2 = (r && r.snapshot) ? r.snapshot
-              : (typeof window.__heGetUiSnapshot === "function" ? window.__heGetUiSnapshot(pid | 0) : null);
+              : ((isHost || !net) && typeof window.__heGetUiSnapshot === "function" ? window.__heGetUiSnapshot(pid | 0) : null);
             if (snap2 && snap2.ready) {
               _hud_lastSnap = snap2;
               _hud_lastSnapAt = Date.now() | 0;
@@ -2452,16 +2489,35 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
         }
 
-        function _shopui_cmd(pid, payload) {
-          const fn = window.__heUiCommand;
-          if (typeof fn !== "function") return null;
-
+        async function _shopui_cmd(pid, payload) {
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
-          const r = fn(cmd);
+          let r = null;
+
+          const net = window.__net;
+          const isHost = _uiIsHost();
+          const fn = window.__heUiCommand;
+          if (isHost && typeof fn === "function") {
+            r = fn(cmd);
+          } else {
+            try {
+              if (net && typeof net.sendUiCommand === "function") {
+                r = await net.sendUiCommand(cmd);
+              } else if (typeof fn === "function") {
+                r = fn(cmd);
+              }
+            } catch (_e) {}
+          }
+
+          _invalidateUiSnapshotCache();
 
           try {
-            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
-            if (snap2 && snap2.ready) _shopui_applySnapshot(snap2);
+            const snap2 = (r && r.snapshot) ? r.snapshot
+              : ((isHost || !net) && window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null);
+            if (snap2 && snap2.ready) {
+              _hud_lastSnap = snap2;
+              _hud_lastSnapAt = Date.now() | 0;
+              _shopui_applySnapshot(snap2);
+            }
           } catch (_e) {}
 
           return r;
@@ -2682,17 +2738,35 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
         }
 
-        function _relicoffer_cmd(pid, payload) {
-          const fn = window.__heUiCommand;
-          if (typeof fn !== "function") return null;
-
+        async function _relicoffer_cmd(pid, payload) {
           const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
-          const r = fn(cmd);
+          let r = null;
+
+          const net = window.__net;
+          const isHost = _uiIsHost();
+          const fn = window.__heUiCommand;
+          if (isHost && typeof fn === "function") {
+            r = fn(cmd);
+          } else {
+            try {
+              if (net && typeof net.sendUiCommand === "function") {
+                r = await net.sendUiCommand(cmd);
+              } else if (typeof fn === "function") {
+                r = fn(cmd);
+              }
+            } catch (_e) {}
+          }
+
           _invalidateUiSnapshotCache();
 
           try {
-            const snap2 = window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null;
-            if (snap2 && snap2.ready) _relicoffer_applySnapshot(snap2);
+            const snap2 = (r && r.snapshot) ? r.snapshot
+              : ((isHost || !net) && window.__heGetUiSnapshot ? window.__heGetUiSnapshot(pid | 0) : null);
+            if (snap2 && snap2.ready) {
+              _hud_lastSnap = snap2;
+              _hud_lastSnapAt = Date.now() | 0;
+              _relicoffer_applySnapshot(snap2);
+            }
           } catch (_e) {}
 
           return r;
@@ -2820,7 +2894,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           const offer = snap.offer || null;
-          const open = !!(offer && offer.options && offer.options.length > 0);
+          const pid = getPid();
+          const forMe = offer && (offer.activePlayerId | 0) === (pid | 0);
+          const open = !!(offer && offer.options && offer.options.length > 0 && forMe);
           _relicoffer_setShown(open);
           if (!open) return;
 
@@ -3051,8 +3127,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         function callStudentLogic(heroIndex, button, profile) {
           const HE = window.HeroEngine;
+          const isHost = (typeof _uiIsHost === "function") ? _uiIsHost() : false;
           let out = null;
-          if (HE && typeof HE.runHeroLogicForHeroHook === "function") {
+          if (!isHost && typeof window.__heBlocklyHeroLogicRun === "function") {
+            try {
+              out = window.__heBlocklyHeroLogicRun(profile || "", button);
+            } catch (_e) {
+              out = null;
+            }
+          } else if (HE && typeof HE.runHeroLogicForHeroHook === "function") {
             try {
               out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
             } catch (_e) {
@@ -3413,7 +3496,28 @@ function _readTeamCoins(pid, hero, spritesNS) {
               return _hud_relicCatalog;
             }
           } catch (_e) {}
+          try {
+            if (window.__heRelicCatalogFromNet && typeof window.__heRelicCatalogFromNet === "object") {
+              _hud_relicCatalog = window.__heRelicCatalogFromNet;
+              return _hud_relicCatalog;
+            }
+          } catch (_e) {}
           return null;
+        }
+
+        function _hud_mergeRelicCatalogFromSnap(snap) {
+          const defs = snap && snap.relicDefs;
+          if (!defs || typeof defs !== "object") return;
+          const cur = (window.__heRelicCatalogFromNet && typeof window.__heRelicCatalogFromNet === "object")
+            ? window.__heRelicCatalogFromNet
+            : {};
+          for (const k in defs) {
+            if (Object.prototype.hasOwnProperty.call(defs, k) && defs[k]) {
+              cur[k] = defs[k];
+            }
+          }
+          window.__heRelicCatalogFromNet = cur;
+          _hud_relicCatalog = cur;
         }
 
         function _hud_tooltipForRelic(def) {
@@ -3559,6 +3663,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
           setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
           const snap = _getUiSnapshotCached(pid);
+          _hud_mergeRelicCatalogFromSnap(snap);
           const manaFlash = snap && snap.ready && !!snap.manaFlash;
           if (R.youMana) {
             if (manaFlash) R.youMana.classList.add("hud-mana-flash");

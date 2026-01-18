@@ -18,6 +18,7 @@ export const DEBUG_FILTER_PHRASE = "[P1 intent]"; // must include "P1 intent" pe
 export const DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE = false;
 export const DEBUG_PHASE_CHANGES = false;
 export const DEBUG_SETUP_HEROES_LOGS = false;
+export const DEBUG_HERO_SPAWN_LOGS = true;
 
 // Anim keys logging (HeroEngineInPhaser.ts)
 export const DEBUG_ANIM_KEYS = false;
@@ -81,9 +82,14 @@ export const DEBUG_STATUE_PEDESTAL = false;
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
 export const DEBUG_DUNGEON_LOGS = false;
 export const DEBUG_FOCUS_LOGS = false;
-export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
-export const DEBUG_PROP_INTERACT_LOGS = false; // Prop-specific interact/dispatch logs.
+export const DEBUG_INTERACT_LOGS = true; // General interact pipeline (props/NPC).
+export const DEBUG_PROP_INTERACT_LOGS = true; // Prop-specific interact/dispatch logs.
 export const DEBUG_TRAP_LOGS = true; // Trap prompt + trap effect logs.
+export const DEBUG_TRAP_FORCE_ID = ""; // Force a specific trap spec id (overrides registry).
+export const DEBUG_TRAP_FORCE_KIND = ""; // Force a trap kind (maps to default trap id).
+export const DEBUG_TRAP_FORCE_SEED = 0; // Force a specific trap seed (0 disables).
+export const DEBUG_TRAP_DUMP_INSTANCE = false; // Log generated trap inputs/expected output.
+export const DEBUG_TRAP_SHOW_SOLUTION = true; // Show expected output in trap editor (debug only).
 export const DEBUG_CHEST_INTERACT_LOGS = false; // Legacy: use DEBUG_INTERACT_LOGS.
 export const DEBUG_RELIC_LOGS = false;
 export const DEBUG_UI_LOGS = false;
@@ -100,6 +106,9 @@ export const DEBUG_ENEMY_NAV_LOG = false;
 export const DEBUG_ENEMY_STUCK_LOG = true;
 export const DEBUG_ENEMY_NAV_COLLISION = true;
 export const DEBUG_DISABLE_ENEMY_WALL_COLLISIONS = true; // Allow enemies to ignore wall collision resolution.
+export const DEBUG_ENEMY_AI_DECISIONS = false;
+export const DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES = true;
+export const DEBUG_ENEMY_AI_DECISIONS_THROTTLE_MS = 400;
 
 // ------------------------------------------------------------
 // Arcade compat / Phaser wrapper (arcadeCompat.ts + arcadeCompat.net.ts)
@@ -108,7 +117,9 @@ export const DEBUG_INT_HERO_VIS = false;
 export const DEBUG_INT_HERO_NAME_FILTER = "Jason"; // empty string logs all
 export const DEBUG_SETFLAG = false;
 export const DEBUG_WRAP_TEX = false;
+export const DEBUG_INPUT_EDGE_LOGS = true; // Log all local press/release edges (keyboard/gamepad)
 export const DEBUG_NET = false;
+export const DEBUG_NET_IDENTITY = true; // Profile/identity lifecycle logs.
 export const DEBUG_TILEMAP_COMPAT = false; // [net.tilemap] receive/forward logs.
 export const DEBUG_COMPAT_BOOT = false;
 export const DEBUG_COMPAT_CONTROLLER = false;
@@ -125,6 +136,14 @@ export const DEBUG_DRAW_ENEMY_HITBOX = false; // Engine overlap bounds (AABB use
 export const DEBUG_DRAW_ENEMY_NATIVE_BOUNDS = false; // Phaser native sprite bounds (rendered art)
 export const DEBUG_DRAW_ENEMY_NAV_FOOTPRINT = true; // Enemy nav footprint (clamped by DEBUG_ENEMY_FOOTPRINT_MAX_PX)
 export const DEBUG_DRAW_ENEMY_AURA_BOUNDS = false; // Aura outline polygon (from non-transparent pixels)
+export const DEBUG_DRAW_HERO_SPRITE_BOUNDS = false; // Hero sprite bounds (Arcade image)
+export const DEBUG_DRAW_HERO_COLLIDER_BOUNDS = false; // Hero collider bounds (colW/colH)
+export const DEBUG_DRAW_HERO_HITBOX = false; // Hero overlap bounds (AABB used for overlaps)
+export const DEBUG_DRAW_HERO_NATIVE_BOUNDS = false; // Hero native sprite bounds (rendered art)
+export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint
+export const DEBUG_DRAW_HERO_NAV_FOOTPRINT = false; // Hero nav footprint (same as wall for now)
+export const DEBUG_EFFECT_ANIMS = true; // Effect anim application logs (effects.*)
+export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 export const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
 export const DEBUG_COLLIDER_SPRITE_COLOR = 0x00b7ff;
@@ -250,3 +269,4 @@ export const DEBUG_BLOCKLY_CODE_DUMP = false;
 export const DEBUG_BLOCKLY_INVALID_MOVES = false;
 export const DEBUG_HERO_LOGIC_STUDENT = false;
 export const DEBUG_MONSTER_SPRITES = false;
+export const DEBUG_MONSTER_SHEET_PARSE = false;
