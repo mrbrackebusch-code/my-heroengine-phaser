@@ -93,6 +93,34 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       floorKinds: ["entrance"],
     },
   },
+  book_stump: {
+    name: "book_stump",
+    collision: {
+      mode: "none",
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+    placement: {
+      floorKinds: ["entrance"],
+    },
+  },
+  book_memories: {
+    name: "book_memories",
+    collision: {
+      mode: "none",
+    },
+    interact: {
+      interactable: true,
+      focusable: true,
+      action: "prop",
+    },
+    placement: {
+      floorKinds: ["entrance"],
+    },
+  },
 };
 
 export function propBaseNameFromKey(name: string): string {

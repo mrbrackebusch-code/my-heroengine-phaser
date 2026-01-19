@@ -1653,6 +1653,80 @@ const HERO_SPELL_ELEMENT_DEFENSE_EFFECTS: { [element: number]: HeroElementEffect
     [ELEM.ICE]: { baseId: "iceshield" },
 };
 
+type HeroEffectOffset = { x: number; y: number };
+type HeroEffectOffsetByDir = Partial<Record<"up" | "down" | "left" | "right", HeroEffectOffset>>;
+type HeroEffectOffsetDef = {
+    base?: HeroEffectOffset;
+    strength?: HeroEffectOffset;
+    agility?: HeroEffectOffset;
+    intellect?: HeroEffectOffset;
+    move?: { [moveType: string]: HeroEffectOffset };
+    dir?: HeroEffectOffsetByDir;
+    moveDir?: { [moveType: string]: HeroEffectOffsetByDir };
+};
+
+const HERO_SPELL_EFFECT_DEFAULT_OFFSETS: {
+    strength: HeroEffectOffset;
+    agility: HeroEffectOffset;
+    intellect: HeroEffectOffset;
+} = {
+    strength: { x: 0, y: -16 },
+    agility: { x: 0, y: -16 },
+    intellect: { x: 0, y: 0 }
+};
+
+// Per-effect tuning: offsets are applied in this order:
+//   defaults (family) -> base -> family -> move -> dir -> moveDir
+const HERO_SPELL_EFFECT_OFFSETS: { [skinId: string]: HeroEffectOffsetDef } = {
+    tornado: {},
+    firelion: {},
+    torrentacle: {},
+    lightningclaw: {},
+    spikes: {},
+    snakebite_up: {},
+    snakebite_down: {},
+    snakebite_side: {},
+    icetacle: {},
+    turtleshell_front: {},
+    turtleshell_side: {},
+    iceshield: {}
+};
+
+function _heroSpellEffectOffsetFor(
+    skinId: string,
+    dir: string,
+    family: number,
+    moveType?: string
+): HeroEffectOffset {
+    let x = 0;
+    let y = 0;
+    const add = (o?: HeroEffectOffset) => {
+        if (!o) return;
+        x = (x + (o.x | 0)) | 0;
+        y = (y + (o.y | 0)) | 0;
+    };
+    if ((family | 0) === (FAMILY.STRENGTH | 0)) add(HERO_SPELL_EFFECT_DEFAULT_OFFSETS.strength);
+    else if ((family | 0) === (FAMILY.AGILITY | 0)) add(HERO_SPELL_EFFECT_DEFAULT_OFFSETS.agility);
+    else if ((family | 0) === (FAMILY.INTELLECT | 0)) add(HERO_SPELL_EFFECT_DEFAULT_OFFSETS.intellect);
+
+    const def = HERO_SPELL_EFFECT_OFFSETS[skinId];
+    if (!def) return { x, y };
+    const d = (dir || "").toLowerCase() as "up" | "down" | "left" | "right";
+    const mv = (moveType || "").trim();
+
+    add(def.base);
+    if ((family | 0) === (FAMILY.STRENGTH | 0)) add(def.strength);
+    else if ((family | 0) === (FAMILY.AGILITY | 0)) add(def.agility);
+    else if ((family | 0) === (FAMILY.INTELLECT | 0)) add(def.intellect);
+
+    if (mv && def.move && def.move[mv]) add(def.move[mv]);
+    if (d && def.dir && def.dir[d]) add(def.dir[d]);
+    if (mv && d && def.moveDir && def.moveDir[mv] && def.moveDir[mv]![d]) {
+        add(def.moveDir[mv]![d]);
+    }
+    return { x, y };
+}
+
 function _heroElementFromRenderStyle(hero: Sprite): number {
     if (!hero) return ELEM.NONE;
     const mask = sprites.readDataNumber(hero, HERO_DATA.RenderStyleMask) | 0;
@@ -1737,6 +1811,16 @@ function _heroBodyFxZBiasForFamily(family: number): number {
     return HERO_BODY_FX_Z_BIAS_DEFAULT;
 }
 
+let __effectDummyImage: Image | null = null;
+function _getEffectDummyImage(): Image {
+    if (!__effectDummyImage) {
+        const img = image.create(1, 1);
+        img.fill(0);
+        __effectDummyImage = img;
+    }
+    return __effectDummyImage;
+}
+
 function _heroBodyFxMaskRadiusForHero(hero: Sprite): number {
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return 0;
     let r = HERO_BODY_FX_MASK_RADIUS | 0;
@@ -1771,17 +1855,21 @@ function _spawnHeroBodyPaintFxForMove(
     element: number,
     nx: number,
     ny: number,
-    lifespanMs: number
+    lifespanMs: number,
+    moveType?: string
 ): Sprite | null {
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null;
     const dir = _enemyDirFromVector(nx, ny);
     const elem = _heroBodyEffectElement(hero, element | 0);
     const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
     if (!pick || !pick.skinId) return null;
+    const frameWindowMs =
+        ((family | 0) === (FAMILY.AGILITY | 0) && (lifespanMs | 0) > 0)
+            ? (lifespanMs | 0)
+            : 0;
+    const offset = _heroSpellEffectOffsetFor(pick.skinId, pick.dir || dir, family | 0, moveType || "");
 
-    const img = image.create(2, 2);
-    img.fill(0);
-    const fx = sprites.create(img, SpriteKind.HeroEffect);
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
     fx.setFlag(SpriteFlag.Ghost, true);
     fx.x = hero.x;
     fx.y = hero.y;
@@ -1803,13 +1891,21 @@ function _spawnHeroBodyPaintFxForMove(
             dir: pick.dir,
             mode: HERO_BODY_FX_MODE,
             alpha,
-            blend
+            blend,
+            forceTop: HERO_BODY_FX_FORCE_TOP,
+            frameWindowMs,
+            offsetX: offset.x,
+            offsetY: offset.y
         });
     } else {
         applyEffectToSprite(fx, pick.skinId, {
             mode: HERO_BODY_FX_MODE,
             alpha,
-            blend
+            blend,
+            forceTop: HERO_BODY_FX_FORCE_TOP,
+            frameWindowMs,
+            offsetX: offset.x,
+            offsetY: offset.y
         });
     }
     if (DEBUG_EFFECT_MASKS) {
@@ -1908,9 +2004,7 @@ function _spawnStrengthSwingFxSegments(
         Math.max(6, Math.idiv((reachFromFront | 0) * STR_FX_SEG_FIT_PCT_X1000, 1000)) | 0;
 
     for (let i = 0; i < segCount; i++) {
-        const img = image.create(2, 2);
-        img.fill(0);
-        const fx = sprites.create(img, SpriteKind.HeroEffect);
+        const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
         fx.setFlag(SpriteFlag.Ghost, true);
         fx.x = hero.x;
         fx.y = hero.y;
@@ -1974,9 +2068,7 @@ function _spawnAgilityTrailFxSegments(
         Math.max(6, Math.idiv((Math.max(hero.width, hero.height) | 0) * AGI_FX_SEG_FIT_PCT_X1000, 1000)) | 0;
 
     for (let i = 0; i < AGI_FX_SEG_COUNT; i++) {
-        const img = image.create(2, 2);
-        img.fill(0);
-        const fx = sprites.create(img, SpriteKind.HeroEffect);
+        const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
         fx.setFlag(SpriteFlag.Ghost, true);
         fx.setFlag(SpriteFlag.Invisible, true);
         fx.x = hero.x;
@@ -2145,6 +2237,8 @@ const EFFECT_POP_START_MS_DATA_KEY = "effectPopStartMs";
 const EFFECT_ALIGN_BOTTOM_Y_DATA_KEY = "effectAlignBottomY";
 const EFFECT_ALPHA_DATA_KEY = "effectAlpha";
 const EFFECT_BLEND_DATA_KEY = "effectBlend";
+const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
+const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
 const EFFECT_INTRO_MS_DATA_KEY = "effectIntroMs";
 const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
@@ -2156,13 +2250,14 @@ const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const HERO_BODY_FX_KEY = "bodyFx";
 const HERO_BODY_FX_ALPHA_DEFAULT = 0.25;
-const HERO_BODY_FX_ALPHA_AGILITY = 1.0;
+const HERO_BODY_FX_ALPHA_AGILITY = 0.6;
 const HERO_BODY_FX_BLEND_DEFAULT = "add";
 const HERO_BODY_FX_BLEND_AGILITY = "normal";
 const HERO_BODY_FX_MODE = "silhouette";
 const HERO_BODY_FX_MASK_INVERT = false;
 const HERO_BODY_FX_MASK_RADIUS = -1; // -1 => use hero aura radius
 const HERO_BODY_FX_MASK_RADIUS_PX = 0;
+const HERO_BODY_FX_FORCE_TOP = true;
 const HERO_BODY_FX_Z_BIAS_DEFAULT = 2000;
 const HERO_BODY_FX_Z_BIAS_AGILITY = 2000;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
@@ -2336,9 +2431,9 @@ function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanM
     const detRadius = sprites.readDataNumber(spell, INT_DET_VIS_RADIUS_KEY) | 0;
     const baseRadius = sprites.readDataNumber(spell, INT_RADIUS_KEY) | 0;
     const fitRadius = detRadius > 0 ? detRadius : baseRadius;
-    const img = image.create(2, 2);
-    img.fill(0);
-    const fx = sprites.create(img, SpriteKind.RelicEffect);
+    const detDir = pick.dir || "down";
+    const offset = _heroSpellEffectOffsetFor(pick.skinId, detDir, family | 0, "intellectDetonation");
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.RelicEffect);
     fx.setFlag(SpriteFlag.Ghost, true);
     fx.x = spell.x;
     fx.y = spell.y;
@@ -2346,6 +2441,8 @@ function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanM
     fx.lifespan = Math.max(200, lifespanMs | 0) | 0;
     const opts: EffectApplyOpts = { mode: "full" };
     if (fitRadius > 0) opts.fitRadiusPx = fitRadius | 0;
+    opts.offsetX = offset.x;
+    opts.offsetY = offset.y;
     if (family === (FAMILY.INTELLECT | 0)) {
         const introMs = Math.max(120, Math.min(INT_DET_FX_INTRO_MS | 0, lifespanMs | 0));
         opts.introMs = introMs | 0;
@@ -7229,10 +7326,39 @@ const SHRINE_ACTIVE_UNTIL_KEY = "shrineActiveUntil"
 const SHRINE_ACTIVE_START_KEY = "shrineActiveStart"
 const SHRINE_ACTIVE_DEFAULT_MS = 120000
 const SHRINE_OVERLAY_CYCLE_MS = 10000
+const SHRINE_OVERLAY_PULSE_MS = 10000
 const SHRINE_OVERLAY_SAT = 0.78
-const SHRINE_OVERLAY_LIGHT = 0.32
-const SHRINE_OVERLAY_ALPHA = 0.8
-const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "normal"
+const SHRINE_OVERLAY_LIGHT_MIN = 0.5
+const SHRINE_OVERLAY_LIGHT_MAX = 1.0
+const SHRINE_OVERLAY_ALPHA_MIN = 0.8
+const SHRINE_OVERLAY_ALPHA_MAX = 1.0
+const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "add"
+const SHRINE_SPARKLE_SKIN_ID = "firefly"
+const SHRINE_SPARKLE_CYCLE_MS = 12000
+const SHRINE_SPARKLE_SAT = 0.75
+const SHRINE_SPARKLE_LIGHT = 0.65
+const SHRINE_SPARKLE_OFFSET_Y_PX = 24
+const SHRINE_SPARKLE_Z_BIAS = 220
+const SHRINE_SPARKLE_RADIUS_PX = 5
+const SHRINE_SPARKLE_ALPHA = 0.75
+const SHRINE_SPARKLE_ALPHA_MIN = 0.05
+const SHRINE_SPARKLE_BLEND = "add"
+const SHRINE_SPARKLE_LIFESPAN_MS = 1200
+const SHRINE_SPARKLE_POP_MS = 240
+const SHRINE_SPARKLE_POP_SCALE = 0.35
+const SHRINE_SPARKLE_SPEED_MIN_PX = 6
+const SHRINE_SPARKLE_SPEED_MAX_PX = 18
+const SHRINE_SPARKLE_ANGLE_MIN_DEG = -150
+const SHRINE_SPARKLE_ANGLE_MAX_DEG = -30
+const SHRINE_SPARKLE_BURST_COUNT = 6
+const SHRINE_SPARKLE_BURST_SPREAD_PX = 20
+const SHRINE_SPARKLE_IDLE_COUNT = 1
+const SHRINE_SPARKLE_IDLE_SPREAD_PX = 14
+const SHRINE_SPARKLE_IDLE_INTERVAL_MIN_MS = 900
+const SHRINE_SPARKLE_IDLE_INTERVAL_MAX_MS = 1500
+const SHRINE_SPARKLE_NEXT_MS_KEY = "shrineSparkleNextMs"
+const SHRINE_SPARKLE_FADE_START_KEY = "shrineSparkleFadeStartMs"
+const SHRINE_SPARKLE_FADE_END_KEY = "shrineSparkleFadeEndMs"
 const SHRINE_FLASH_UNTIL_KEY = "shrineFlashUntil"
 const SHRINE_FLASH_MS = 180
 const SHRINE_FLASH_ALPHA = 0.95
@@ -7246,6 +7372,31 @@ let _dunShrineStateRescanAtMs = 0
 let _dunShrineBlessingUntilMs = 0
 let _dunShrineBlessingFloor = -1
 let _dunShrineBlessingKey = ""
+
+const BOOK_MEMORIES_BASE = "book_memories"
+const BOOK_STUMP_BASE = "book_stump"
+const BOOK_FRAME_SPAWN = 1
+const BOOK_FRAME_READY = 42
+const BOOK_FRAME_CLOSED_FRONT = 36
+const BOOK_ANIM_OPEN_START = 2
+const BOOK_ANIM_OPEN_END = 12
+const BOOK_ANIM_TURN_LEFT_START = 13
+const BOOK_ANIM_TURN_LEFT_END = 18
+const BOOK_ANIM_TURN_RIGHT_START = 19
+const BOOK_ANIM_TURN_RIGHT_END = 24
+const BOOK_ANIM_CLOSE_START = 25
+const BOOK_ANIM_CLOSE_END = 36
+const BOOK_ANIM_FLIP_START = 37
+const BOOK_ANIM_FLIP_END = 41
+const BOOK_ANIM_FRAME_MS = 80
+const BOOK_FLOAT_AMPLITUDE_PX = 3
+const BOOK_FLOAT_PERIOD_MS = 2200
+const BOOK_MENU_LIFT_PX = 10
+const BOOK_MENU_LIFT_SPEED_PX_PER_MS = 0.01
+const BOOK_SPARKLE_MIN_MS = 1400
+const BOOK_SPARKLE_MAX_MS = 3200
+const BOOK_SPARKLE_RADIUS_PX = 18
+const BOOK_SPARKLE_LIFESPAN_MS = 700
 
 type ShrineObsStep = {
     ok: number
@@ -7274,7 +7425,8 @@ const SHRINE_OBS_STEP_ORDER: string[] = [
     "activation_triggered",
     "blessing_set",
     "blessing_active",
-    "overlay_visible",
+    "overlay_flash",
+    "overlay_active",
     "overlay_cycling",
     "hud_indicator",
     "mana_regen_bonus",
@@ -7289,7 +7441,8 @@ const SHRINE_OBS_STEP_LABELS: Record<string, string> = {
     activation_triggered: "Activation triggered",
     blessing_set: "Blessing set",
     blessing_active: "Blessing active",
-    overlay_visible: "Overlay visible",
+    overlay_flash: "Overlay flash",
+    overlay_active: "Overlay active",
     overlay_cycling: "Overlay cycling",
     hud_indicator: "HUD indicator",
     mana_regen_bonus: "Mana regen bonus",
@@ -7297,14 +7450,15 @@ const SHRINE_OBS_STEP_LABELS: Record<string, string> = {
 
 const SHRINE_OBS_REQUIRED_STEPS: string[] = [
     "blessing_active",
-    "overlay_visible",
+    "overlay_active",
     "overlay_cycling",
 ]
 
 const SHRINE_OBS_RESET_ON_ACTIVATE: string[] = [
     "blessing_set",
     "blessing_active",
-    "overlay_visible",
+    "overlay_flash",
+    "overlay_active",
     "overlay_cycling",
     "hud_indicator",
     "mana_regen_bonus",
@@ -7463,7 +7617,7 @@ function _shrineObsOverlayTick(
     tint: number,
     alpha: number,
     blend: any,
-    cycleEligible: boolean
+    mode: "active" | "flash"
 ): void {
     if (!DEBUG_SHRINE_OBSERVER) return
     if (!key) return
@@ -7471,8 +7625,13 @@ function _shrineObsOverlayTick(
     const state = _shrineObsGetState(key, floor | 0, now)
     const tintHex = _shrineObsHex(tint | 0)
     const detail = `ok=${ok ? 1 : 0} tint=${tintHex} alpha=${alpha} blend=${String(blend || "")}`
-    _shrineObsMark(key, floor | 0, "overlay_visible", ok, detail, now)
-    if (!ok || !cycleEligible) return
+    if (mode === "active") {
+        _shrineObsMark(key, floor | 0, "overlay_active", ok, detail, now)
+    } else {
+        _shrineObsMark(key, floor | 0, "overlay_flash", ok, detail, now)
+        return
+    }
+    if (!ok) return
     if ((state.lastTint | 0) >= 0 && (state.lastTint | 0) !== (tint | 0)) {
         const prevHex = _shrineObsHex(state.lastTint | 0)
         _shrineObsMark(key, floor | 0, "overlay_cycling", true, `tint=${prevHex}->${tintHex}`, now)
@@ -7548,6 +7707,7 @@ type ShrineMoveCommittedContext = {
 }
 
 const _dunShrineStates = new Map<string, ShrineState>()
+let _dunShrineSparkles: Sprite[] = []
 
 function _hslToRgbHex(h: number, s: number, l: number): number {
     const hue = ((h % 360) + 360) % 360
@@ -7572,12 +7732,116 @@ function _hslToRgbHex(h: number, s: number, l: number): number {
     return ((r << 16) | (g << 8) | b) >>> 0
 }
 
-function _shrineOverlayTint(nowMs: number, startMs: number): number {
+function _shrineOverlayPulse(nowMs: number, startMs: number): number {
+    const cycle = Math.max(1000, SHRINE_OVERLAY_PULSE_MS | 0)
+    const delta = Math.max(0, (nowMs | 0) - (startMs | 0)) | 0
+    const t = ((delta % cycle) / cycle)
+    return (1 - Math.cos(t * Math.PI * 2)) * 0.5
+}
+
+function _shrineOverlayTint(nowMs: number, startMs: number, lightness: number): number {
     const cycle = Math.max(1000, SHRINE_OVERLAY_CYCLE_MS | 0)
     const delta = ((nowMs | 0) - (startMs | 0)) | 0
     const t = ((delta % cycle) + cycle) % cycle
     const hue = (t / cycle) * 360
-    return _hslToRgbHex(hue, SHRINE_OVERLAY_SAT, SHRINE_OVERLAY_LIGHT)
+    return _hslToRgbHex(hue, SHRINE_OVERLAY_SAT, lightness)
+}
+
+function _shrineSparkleTint(nowMs: number, seedMs: number): number {
+    const cycle = Math.max(1000, SHRINE_SPARKLE_CYCLE_MS | 0)
+    const delta = ((nowMs | 0) + (seedMs | 0)) | 0
+    const t = ((delta % cycle) + cycle) % cycle
+    const hue = (t / cycle) * 360
+    return _hslToRgbHex(hue, SHRINE_SPARKLE_SAT, SHRINE_SPARKLE_LIGHT)
+}
+
+function _shrineSparkleAlpha(nowMs: number, startMs: number, endMs: number): number {
+    const start = startMs | 0
+    const end = endMs | 0
+    if (start <= 0 || end <= start) return SHRINE_SPARKLE_ALPHA
+    const t = Math.max(0, Math.min(1, ((nowMs | 0) - start) / Math.max(1, (end - start))))
+    const alpha = SHRINE_SPARKLE_ALPHA * (1 - t)
+    return Math.max(SHRINE_SPARKLE_ALPHA_MIN, alpha)
+}
+
+function _shrineSparkleBaseXY(decor: Sprite | null, tileR: number, tileC: number): { x: number; y: number } {
+    const x = (decor && typeof decor.x === "number") ? (decor.x | 0) : _dunColToX(tileC | 0)
+    const y0 = (decor && typeof decor.y === "number") ? (decor.y | 0) : _dunRowToY(tileR | 0)
+    const y = (y0 - (SHRINE_SPARKLE_OFFSET_Y_PX | 0)) | 0
+    return { x: x | 0, y: y | 0 }
+}
+
+function _shrineSpawnSparkleAt(x: number, y: number, nowMs: number): void {
+    if (!SHRINE_SPARKLE_SKIN_ID) return
+    const now = nowMs | 0
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.x = x | 0
+    fx.y = y | 0
+    fx.z = SHRINE_SPARKLE_Z_BIAS | 0
+    if ((SHRINE_SPARKLE_LIFESPAN_MS | 0) > 0) fx.lifespan = SHRINE_SPARKLE_LIFESPAN_MS | 0
+    const tintSeed = Math.randomRange(0, Math.max(0, (SHRINE_SPARKLE_CYCLE_MS | 0) - 1)) | 0
+    const tint = _shrineSparkleTint(now | 0, tintSeed | 0)
+    applyEffectToSprite(fx, SHRINE_SPARKLE_SKIN_ID, {
+        tint,
+        alpha: SHRINE_SPARKLE_ALPHA,
+        blend: SHRINE_SPARKLE_BLEND,
+        fitRadiusPx: SHRINE_SPARKLE_RADIUS_PX,
+        popMs: SHRINE_SPARKLE_POP_MS,
+        popScale: SHRINE_SPARKLE_POP_SCALE,
+        repeat: 0,
+    })
+    const angleDeg = Math.randomRange(SHRINE_SPARKLE_ANGLE_MIN_DEG | 0, SHRINE_SPARKLE_ANGLE_MAX_DEG | 0) | 0
+    const speed = Math.randomRange(SHRINE_SPARKLE_SPEED_MIN_PX | 0, SHRINE_SPARKLE_SPEED_MAX_PX | 0) | 0
+    const rad = (angleDeg * Math.PI) / 180
+    fx.vx = Math.round(Math.cos(rad) * speed)
+    fx.vy = Math.round(Math.sin(rad) * speed)
+    const fadeEnd = (now + Math.max(1, SHRINE_SPARKLE_LIFESPAN_MS | 0)) | 0
+    sprites.setDataNumber(fx, SHRINE_SPARKLE_FADE_START_KEY, now | 0)
+    sprites.setDataNumber(fx, SHRINE_SPARKLE_FADE_END_KEY, fadeEnd | 0)
+    _dunShrineSparkles.push(fx)
+}
+
+function _dunSpawnShrineSparkles(
+    decor: Sprite | null,
+    tileR: number,
+    tileC: number,
+    count: number,
+    spreadPx: number,
+    nowMs: number
+): void {
+    const total = Math.max(0, count | 0)
+    if (total <= 0) return
+    const spread = Math.max(0, spreadPx | 0)
+    const base = _shrineSparkleBaseXY(decor, tileR | 0, tileC | 0)
+    for (let i = 0; i < total; i++) {
+        const angleDeg = Math.randomRange(0, 359) | 0
+        const rad = (angleDeg * Math.PI) / 180
+        const radius = spread > 0 ? (Math.randomRange(0, spread | 0) | 0) : 0
+        const ox = Math.round(Math.cos(rad) * radius)
+        const oy = Math.round(Math.sin(rad) * radius * 0.7)
+        _shrineSpawnSparkleAt((base.x + ox) | 0, (base.y + oy) | 0, nowMs | 0)
+    }
+}
+
+function _dunUpdateShrineSparkles(nowMs: number): void {
+    if (!_dunShrineSparkles || _dunShrineSparkles.length === 0) return
+    const now = nowMs | 0
+    let write = 0
+    for (let i = 0; i < _dunShrineSparkles.length; i++) {
+        const fx = _dunShrineSparkles[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const endMs = sprites.readDataNumber(fx, SHRINE_SPARKLE_FADE_END_KEY) | 0
+        if (endMs > 0 && (now | 0) >= (endMs | 0)) {
+            fx.destroy()
+            continue
+        }
+        const startMs = sprites.readDataNumber(fx, SHRINE_SPARKLE_FADE_START_KEY) | 0
+        const alpha = _shrineSparkleAlpha(now | 0, startMs | 0, endMs | 0)
+        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, alpha)
+        _dunShrineSparkles[write++] = fx
+    }
+    if (write < _dunShrineSparkles.length) _dunShrineSparkles.length = write
 }
 
 function _shrineSecondsLabel(ms: number): string {
@@ -8158,6 +8422,8 @@ type EffectApplyOpts = {
     introMs?: number
     introScale?: number
     animDelayMs?: number
+    forceTop?: boolean
+    frameWindowMs?: number
 }
 
 function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts): void {
@@ -8173,6 +8439,12 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     else sprites.setDataNumber(s, EFFECT_ALPHA_DATA_KEY, 0)
     if (typeof opts?.blend === "string") sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, opts.blend)
     else sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, "")
+    sprites.setDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY, opts?.forceTop ? 1 : 0)
+    if (typeof opts?.frameWindowMs === "number") {
+        sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, opts.frameWindowMs | 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0)
+    }
 
     const family = sprites.readDataNumber(s, PROJ_DATA.FAMILY) | 0
     let mode = (opts?.mode || "") as string
@@ -8289,6 +8561,9 @@ function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: numbe
     }
     if (baseName === TRAP_TOTEM_BASE) {
         _dunFireTotemTriggerActivation(nowMs | 0)
+    }
+    if (baseName === BOOK_MEMORIES_BASE) {
+        _dunBookHandleInteract(it, hero, hi | 0, nowMs | 0)
     }
 
     try {
@@ -10010,6 +10285,33 @@ let _dunFireTotemActiveUntilMs = 0
 let _dunFireTotemAnimUntilMs = 0
 let _dunFireTotemMenuActive = false
 
+let _dunBookDecor: Sprite = null as any
+let _dunBookInteractable: Sprite = null as any
+let _dunBookStumpDecor: Sprite = null as any
+let _dunBookStumpSolids: Sprite[] = []
+let _dunBookTileR = -1
+let _dunBookTileC = -1
+let _dunBookState = ""
+let _dunBookFrame = BOOK_FRAME_SPAWN
+let _dunBookAnimActive = false
+let _dunBookAnimStartFrame = 0
+let _dunBookAnimEndFrame = 0
+let _dunBookAnimFrame = 0
+let _dunBookAnimNextMs = 0
+let _dunBookAnimHoldFrame = 0
+let _dunBookAnimHoldState = ""
+let _dunBookFocusActive = false
+let _dunBookMenuActive = false
+let _dunBookMenuHeroIndex = -1
+let _dunBookPendingMenuOpen = false
+let _dunBookMenuLoading = false
+let _dunBookLiftPx = 0
+let _dunBookLiftTargetPx = 0
+let _dunBookLiftLastMs = 0
+let _dunBookBaseY = NaN
+let _dunBookNextSparkleMs = 0
+let _dunBookSaveEntries: { file: string; label: string }[] = []
+
 
 
 
@@ -11210,6 +11512,7 @@ function _dunClearTransientFloorEntities(): void {
 
     _dunInteractables = []
     _dunResetFireTotemState()
+    _dunResetBookRuntime()
     _trapClearState()
 
     if (_dunStoryNpcs && _dunStoryNpcs.length) {
@@ -11910,6 +12213,579 @@ function _dunEnterFloor_spawnStarterShrine(): void {
     }
 }
 
+function _dunEnterFloor_spawnMemoryBook(nowMs: number): void {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 1 || cols <= 1) return
+
+    if (_dunBookInteractable && !(_dunBookInteractable.flags & sprites.Flag.Destroyed)) return
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (tileSize <= 0) return
+
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+
+    function tileFree(rr: number, cc: number): boolean {
+        if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
+        if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
+        if (_dunFindDecorAtTile(rr, cc, "")) return false
+        return true
+    }
+
+    function stumpFits(anchorR: number, anchorC: number): boolean {
+        if (anchorR <= 0 || anchorC < 0 || anchorC >= (cols - 1)) return false
+        for (let dr = 0; dr < 2; dr++) {
+            for (let dc = 0; dc < 2; dc++) {
+                const rr = (anchorR - dr) | 0
+                const cc = (anchorC + dc) | 0
+                if (!tileFree(rr, cc)) return false
+            }
+        }
+        return true
+    }
+
+    let anchorR = Math.max(1, Math.min(rows - 1, padR + 2)) | 0
+    let anchorC = Math.max(0, Math.min(cols - 2, padC + 3)) | 0
+
+    const candidates = [
+        { r: (padR + 2) | 0, c: (padC + 3) | 0 },
+        { r: (padR + 2) | 0, c: (padC - 3) | 0 },
+        { r: (padR + 4) | 0, c: (padC + 1) | 0 },
+        { r: (padR + 4) | 0, c: (padC - 1) | 0 },
+        { r: (padR + 1) | 0, c: (padC + 4) | 0 },
+        { r: (padR + 1) | 0, c: (padC - 4) | 0 },
+    ]
+
+    let found = false
+    for (let i = 0; i < candidates.length; i++) {
+        const cand = candidates[i]
+        const rr = Math.max(1, Math.min(rows - 1, cand.r | 0)) | 0
+        const cc = Math.max(0, Math.min(cols - 2, cand.c | 0)) | 0
+        if (stumpFits(rr, cc)) {
+            anchorR = rr | 0
+            anchorC = cc | 0
+            found = true
+            break
+        }
+    }
+
+    if (!found) {
+        for (let i = 0; i < 200; i++) {
+            const rr = Math.randomRange(1, (rows - 1) | 0) | 0
+            const cc = Math.randomRange(0, (cols - 2) | 0) | 0
+            if (stumpFits(rr, cc)) {
+                anchorR = rr | 0
+                anchorC = cc | 0
+                found = true
+                break
+            }
+        }
+    }
+
+    if (!stumpFits(anchorR, anchorC)) return
+
+    _dunBookStumpDecor = _dunDecor_spawnAtTile({
+        name: BOOK_STUMP_BASE,
+        role: DECOR_ROLE.TRIGGER,
+        tileR: anchorR | 0,
+        tileC: anchorC | 0,
+        pxW: tileSize,
+        pxH: tileSize,
+    })
+
+    const solids: Sprite[] = []
+    for (let dr = 0; dr < 2; dr++) {
+        for (let dc = 0; dc < 2; dc++) {
+            const rr = (anchorR - dr) | 0
+            const cc = (anchorC + dc) | 0
+            const s = _dunDecor_spawnAtTile({
+                name: "",
+                role: DECOR_ROLE.SOLID,
+                tileR: rr | 0,
+                tileC: cc | 0,
+                pxW: tileSize,
+                pxH: tileSize,
+            })
+            if (s) solids.push(s)
+        }
+    }
+    _dunBookStumpSolids = solids
+
+    const bookTileR = Math.max(0, Math.min(rows - 1, (anchorR - 1) | 0)) | 0
+    const bookTileC = Math.max(0, Math.min(cols - 1, (anchorC + 1) | 0)) | 0
+
+    const it = _dunSpawnInteractableProp({
+        name: BOOK_MEMORIES_BASE,
+        tileR: bookTileR | 0,
+        tileC: bookTileC | 0,
+        action: INTERACT_ACTION_PROP,
+        role: DECOR_ROLE.TRIGGER,
+        pxW: tileSize,
+        pxH: tileSize,
+    })
+    if (it && !(it.flags & sprites.Flag.Destroyed)) {
+        _dunBookInteractable = it
+        _dunBookTileR = bookTileR | 0
+        _dunBookTileC = bookTileC | 0
+        _dunBookDecor = _dunFindDecorAtTile(bookTileR | 0, bookTileC | 0, BOOK_MEMORIES_BASE)
+        _dunBookState = "idle_back"
+        _dunBookFrame = BOOK_FRAME_SPAWN
+        _dunBookAnimActive = false
+        _dunBookLiftPx = 0
+        _dunBookLiftTargetPx = 0
+        _dunBookBaseY = NaN
+        _dunBookNextSparkleMs = (nowMs | 0) + Math.randomRange(BOOK_SPARKLE_MIN_MS, BOOK_SPARKLE_MAX_MS)
+        if (_dunBookDecor && !(_dunBookDecor.flags & sprites.Flag.Destroyed)) {
+            const frameIndex = Math.max(0, (BOOK_FRAME_SPAWN - 1) | 0)
+            _dunDecor_setName(_dunBookDecor, `${BOOK_MEMORIES_BASE}@${frameIndex}`)
+        }
+        sprites.setDataString(it, DECOR_DATA.NAME, `${BOOK_MEMORIES_BASE}@${Math.max(0, (BOOK_FRAME_SPAWN - 1) | 0)}`)
+    }
+}
+
+function _dunBookGetRenderer(): any {
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    return sc?.registry?.get?.("__worldTileRenderer") || null
+}
+
+function _dunBookGetDisplay(): any | null {
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) return null
+    const renderer: any = _dunBookGetRenderer()
+    if (!renderer) return null
+    if (typeof renderer.tryGetPropDisplayAtAnchor === "function") {
+        const obj = renderer.tryGetPropDisplayAtAnchor(_dunBookTileR | 0, _dunBookTileC | 0)
+        if (obj) return obj
+    }
+    if (typeof renderer.tryGetPropDisplayAt === "function") {
+        return renderer.tryGetPropDisplayAt(_dunBookTileR | 0, _dunBookTileC | 0)
+    }
+    return null
+}
+
+function _dunBookFrameIndex(frameNumber: number): number {
+    return Math.max(0, ((frameNumber | 0) - 1) | 0) | 0
+}
+
+function _dunBookCommitFrameName(frameNumber: number): void {
+    const frameIndex = _dunBookFrameIndex(frameNumber | 0)
+    const name = `${BOOK_MEMORIES_BASE}@${frameIndex | 0}`
+    if (_dunBookDecor && !(_dunBookDecor.flags & sprites.Flag.Destroyed)) {
+        _dunDecor_setName(_dunBookDecor, name)
+    }
+    if (_dunBookInteractable && !(_dunBookInteractable.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataString(_dunBookInteractable, DECOR_DATA.NAME, name)
+    }
+}
+
+function _dunBookSetFrame(frameNumber: number, commitName: boolean): void {
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) return
+    const f = Math.max(1, frameNumber | 0) | 0
+    _dunBookFrame = f | 0
+    const frameIndex = _dunBookFrameIndex(f)
+
+    const renderer: any = _dunBookGetRenderer()
+    if (renderer && typeof renderer.setPropFrameAt === "function") {
+        let ok = renderer.setPropFrameAt(_dunBookTileR | 0, _dunBookTileC | 0, frameIndex | 0)
+        if (!ok && typeof renderer.replacePropAt === "function") {
+            try { renderer.replacePropAt(_dunBookTileR | 0, _dunBookTileC | 0, `${BOOK_MEMORIES_BASE}@${frameIndex | 0}`) } catch { }
+            ok = renderer.setPropFrameAt(_dunBookTileR | 0, _dunBookTileC | 0, frameIndex | 0)
+        }
+    }
+
+    if (commitName) _dunBookCommitFrameName(f)
+}
+
+function _dunBookStartAnim(
+    startFrame: number,
+    endFrame: number,
+    nowMs: number,
+    holdFrame: number,
+    holdState: string
+): void {
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) return
+    if (startFrame <= 0 || endFrame <= 0) return
+    let start = startFrame | 0
+    let end = endFrame | 0
+    if (start > end) {
+        const tmp = start
+        start = end
+        end = tmp
+    }
+    _dunBookAnimActive = true
+    _dunBookAnimStartFrame = start | 0
+    _dunBookAnimEndFrame = end | 0
+    _dunBookAnimFrame = start | 0
+    _dunBookAnimHoldFrame = holdFrame | 0
+    _dunBookAnimHoldState = String(holdState || "")
+    _dunBookAnimNextMs = (nowMs | 0) + (BOOK_ANIM_FRAME_MS | 0)
+    _dunBookSetFrame(start | 0, false)
+}
+
+function _dunBookAdvanceAnim(nowMs: number): void {
+    if (!_dunBookAnimActive) return
+    const now = nowMs | 0
+    if (now < (_dunBookAnimNextMs | 0)) return
+
+    let next = ((_dunBookAnimFrame | 0) + 1) | 0
+    if (next > (_dunBookAnimEndFrame | 0)) {
+        _dunBookAnimActive = false
+        const holdFrame = (_dunBookAnimHoldFrame | 0) > 0 ? (_dunBookAnimHoldFrame | 0) : (_dunBookAnimEndFrame | 0)
+        const holdState = String(_dunBookAnimHoldState || "")
+        if (holdState) _dunBookState = holdState
+        _dunBookSetFrame(holdFrame | 0, true)
+
+        if (_dunBookPendingMenuOpen && !_dunBookMenuActive && _dunBookState === "open_ready") {
+            _dunBookPendingMenuOpen = false
+            _dunBookBeginMenu(now)
+        }
+        return
+    }
+
+    _dunBookAnimFrame = next | 0
+    _dunBookAnimNextMs = (now + (BOOK_ANIM_FRAME_MS | 0)) | 0
+    _dunBookSetFrame(next | 0, false)
+}
+
+function _dunBookCurrentProfiles(): string[] {
+    const g: any = globalThis as any
+    const profiles: string[] = []
+    const connectedMap = (g && typeof g.__netProfileConnected === "object") ? g.__netProfileConnected : null
+    if (connectedMap) {
+        for (const k of Object.keys(connectedMap)) {
+            if (connectedMap[k]) profiles.push(String(k))
+        }
+    }
+    if (!profiles.length) {
+        const local = (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+            ? g.__localHeroProfileName.trim()
+            : ""
+        if (local) profiles.push(local)
+    }
+    return profiles
+}
+
+function _dunBookShowDialog(text: string, choices?: Array<string | { id: string; label: string }>): void {
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (!dlg || typeof dlg.show !== "function") return
+    try {
+        dlg.show({
+            speaker: "Book of Memories",
+            text: text || "",
+            hint: "",
+            choices: choices || [],
+        })
+    } catch { }
+}
+
+function _dunBookRequestSaveList(): void {
+    const g: any = globalThis as any
+    const net: any = g ? g.__net : null
+    if (!net || typeof net.sendSaveListRequest !== "function") {
+        _dunBookMenuLoading = false
+        _dunBookSaveEntries = []
+        _dunBookShowDialog("No memories were found.")
+        return
+    }
+
+    _dunBookMenuLoading = true
+    _dunBookShowDialog("The pages begin to shimmer…")
+
+    const profiles = _dunBookCurrentProfiles()
+    net.sendSaveListRequest({ profiles }).then((res: any) => {
+        if (!_dunBookMenuActive) return
+        _dunBookMenuLoading = false
+        if (res && res.ok === false && res.reason === "not-host") {
+            _dunBookSaveEntries = []
+            _dunBookShowDialog("Only the host may read this tome.")
+            return
+        }
+
+        const entriesRaw = Array.isArray(res?.entries) ? res.entries : []
+        const entries: { file: string; label: string }[] = []
+        for (let i = 0; i < entriesRaw.length; i++) {
+            const e = entriesRaw[i]
+            if (!e || !e.file) continue
+            const floorIndex = (typeof e.floorIndex === "number") ? (e.floorIndex | 0) : -1
+            const floorKind = (typeof e.floorKind === "string") ? e.floorKind : ""
+            const profs = Array.isArray(e.profiles) ? e.profiles.filter((p: any) => typeof p === "string" && p.trim()) : []
+            const floorLabel = (floorIndex >= 0) ? `Floor ${floorIndex}` : "Unknown Floor"
+            const kindLabel = floorKind ? ` (${floorKind})` : ""
+            const players = profs.length ? `Players: ${profs.join(", ")}` : "Players: Unknown"
+            entries.push({
+                file: String(e.file),
+                label: `${floorLabel}${kindLabel} — ${players}`,
+            })
+        }
+
+        _dunBookSaveEntries = entries
+        if (!entries.length) {
+            _dunBookShowDialog("No memories have been recorded yet.")
+            return
+        }
+
+        const choices = entries.map((e) => ({ id: e.file, label: e.label }))
+        choices.push({ id: "cancel", label: "Leave the book" })
+        _dunBookShowDialog("Choose a memory to revisit.", choices)
+    }).catch(() => {
+        if (!_dunBookMenuActive) return
+        _dunBookMenuLoading = false
+        _dunBookSaveEntries = []
+        _dunBookShowDialog("The pages refuse to reveal their secrets.")
+    })
+}
+
+function _dunBookBeginMenu(nowMs: number): void {
+    if (_dunBookMenuActive) return
+    _dunBookMenuActive = true
+    _dunBookMenuLoading = false
+    _dunBookLiftTargetPx = BOOK_MENU_LIFT_PX
+
+    if (_dunBookMenuHeroIndex >= 0) {
+        lockHeroControls(_dunBookMenuHeroIndex | 0)
+    }
+
+    _dunBookStartAnim(
+        BOOK_ANIM_TURN_LEFT_START,
+        BOOK_ANIM_TURN_LEFT_END,
+        nowMs | 0,
+        BOOK_FRAME_READY,
+        "menu_open"
+    )
+
+    _dunBookRequestSaveList()
+}
+
+function _dunBookCloseMenu(nowMs: number, reason: string): void {
+    if (!_dunBookMenuActive) return
+    void reason
+    _dunBookMenuActive = false
+    _dunBookMenuLoading = false
+    _dunBookSaveEntries = []
+    _dunBookLiftTargetPx = 0
+
+    if (_dunBookMenuHeroIndex >= 0) {
+        unlockHeroControls(_dunBookMenuHeroIndex | 0)
+    }
+    _dunBookMenuHeroIndex = -1
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (dlg && typeof dlg.hide === "function") {
+        try { dlg.hide() } catch { }
+    }
+
+    _dunBookAnimActive = false
+    _dunBookState = "open_ready"
+    _dunBookStartAnim(
+        BOOK_ANIM_TURN_RIGHT_START,
+        BOOK_ANIM_TURN_RIGHT_END,
+        nowMs | 0,
+        BOOK_FRAME_READY,
+        "open_ready"
+    )
+}
+
+function _dunBookHandleDialogChoice(idRaw: string, idx?: number): void {
+    if (!_dunBookMenuActive) return
+    void idx
+    const id = String(idRaw || "")
+    const now = game.runtime() | 0
+    if (!id || id === "cancel") {
+        _dunBookCloseMenu(now, "cancel")
+        return
+    }
+
+    const entry = _dunBookSaveEntries.find((e) => e.file === id) || null
+    if (!entry) {
+        _dunBookCloseMenu(now, "missing")
+        return
+    }
+
+    const g: any = globalThis as any
+    const net: any = g ? g.__net : null
+    if (!net || typeof net.sendSaveLoadRequest !== "function") {
+        _dunBookShowDialog("This memory cannot be opened.")
+        return
+    }
+
+    _dunBookMenuLoading = true
+    _dunBookShowDialog("The book rises…")
+
+    net.sendSaveLoadRequest({ file: entry.file }).then((res: any) => {
+        if (!_dunBookMenuActive) return
+        _dunBookMenuLoading = false
+        if (res && res.ok === false) {
+            _dunBookShowDialog("That memory cannot be reached.")
+            return
+        }
+        const payload = res?.payload || null
+        const applyFn = g ? g.__hero_applySavePayload : null
+        if (!payload || typeof applyFn !== "function") {
+            _dunBookShowDialog("That memory has faded.")
+            return
+        }
+        try { applyFn(payload, "autosave") } catch { }
+        _dunBookCloseMenu(game.runtime() | 0, "loaded")
+    }).catch(() => {
+        if (!_dunBookMenuActive) return
+        _dunBookMenuLoading = false
+        _dunBookShowDialog("The pages flutter closed.")
+    })
+}
+
+function _dunBookHandleDialogHide(): void {
+    if (!_dunBookMenuActive) return
+    _dunBookCloseMenu(game.runtime() | 0, "hide")
+}
+
+function _dunBookHandleInteract(it: Sprite, hero: Sprite, hi: number, nowMs: number): void {
+    void it
+    void hero
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) return
+    if (_dunBookMenuActive) return
+
+    const now = nowMs | 0
+    _dunBookMenuHeroIndex = hi | 0
+
+    if (_dunBookAnimActive) {
+        _dunBookPendingMenuOpen = true
+        return
+    }
+
+    if (_dunBookState !== "open_ready") {
+        _dunBookPendingMenuOpen = true
+        if (_dunBookState === "idle_back") {
+            _dunBookStartAnim(BOOK_ANIM_OPEN_START, BOOK_ANIM_OPEN_END, now, BOOK_FRAME_READY, "open_ready")
+        } else if (_dunBookState === "closed_front") {
+            _dunBookStartAnim(BOOK_ANIM_FLIP_START, BOOK_ANIM_FLIP_END, now, BOOK_FRAME_READY, "open_ready")
+        } else {
+            _dunBookStartAnim(BOOK_ANIM_OPEN_START, BOOK_ANIM_OPEN_END, now, BOOK_FRAME_READY, "open_ready")
+        }
+        return
+    }
+
+    _dunBookPendingMenuOpen = false
+    _dunBookBeginMenu(now)
+}
+
+function _dunBookHandleFocusChange(focused: boolean, nowMs: number): void {
+    const want = !!focused
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) {
+        _dunBookFocusActive = false
+        return
+    }
+
+    const had = !!_dunBookFocusActive
+    _dunBookFocusActive = want
+
+    if (_dunBookMenuActive) return
+    if (_dunBookAnimActive) return
+
+    if (want && !had) {
+        if (_dunBookState === "idle_back") {
+            _dunBookStartAnim(BOOK_ANIM_OPEN_START, BOOK_ANIM_OPEN_END, nowMs | 0, BOOK_FRAME_READY, "open_ready")
+        } else if (_dunBookState === "closed_front") {
+            _dunBookStartAnim(BOOK_ANIM_FLIP_START, BOOK_ANIM_FLIP_END, nowMs | 0, BOOK_FRAME_READY, "open_ready")
+        } else if (_dunBookState === "open_ready") {
+            _dunBookSetFrame(BOOK_FRAME_READY, true)
+        }
+    }
+
+    if (!want && had) {
+        if (_dunBookState === "open_ready") {
+            _dunBookStartAnim(BOOK_ANIM_CLOSE_START, BOOK_ANIM_CLOSE_END, nowMs | 0, BOOK_FRAME_CLOSED_FRONT, "closed_front")
+        }
+    }
+}
+
+function _dunBookUpdateFloatAndLift(nowMs: number): void {
+    const obj: any = _dunBookGetDisplay()
+    if (!obj) return
+
+    const key = "__bookBaseY"
+    if (typeof obj[key] !== "number") obj[key] = obj.y
+    const baseY = (obj[key] as number) || obj.y
+
+    const now = nowMs | 0
+    const phase = (BOOK_FLOAT_PERIOD_MS > 0)
+        ? (((now % BOOK_FLOAT_PERIOD_MS) / BOOK_FLOAT_PERIOD_MS) * Math.PI * 2)
+        : 0
+    const floatOff = Math.sin(phase) * (BOOK_FLOAT_AMPLITUDE_PX | 0)
+
+    const last = (_dunBookLiftLastMs | 0) > 0 ? (_dunBookLiftLastMs | 0) : (now | 0)
+    const dt = Math.max(0, ((now | 0) - (last | 0)) | 0)
+    _dunBookLiftLastMs = now | 0
+
+    const target = Math.max(0, _dunBookLiftTargetPx | 0)
+    let cur = _dunBookLiftPx
+    const step = (BOOK_MENU_LIFT_SPEED_PX_PER_MS * dt)
+    if (cur < target) cur = Math.min(target, cur + step)
+    else if (cur > target) cur = Math.max(target, cur - step)
+    _dunBookLiftPx = cur
+
+    try {
+        obj.y = (baseY + floatOff - cur) as any
+    } catch { /* ignore */ }
+}
+
+function _dunBookSpawnSparkle(nowMs: number): void {
+    void nowMs
+    const obj: any = _dunBookGetDisplay()
+    const baseX = obj ? (obj.x as number) : (_dunColToX(_dunBookTileC | 0) | 0)
+    const baseY = obj ? (obj.y as number) : (_dunRowToY(_dunBookTileR | 0) | 0)
+
+    const ox = Math.randomRange(-BOOK_SPARKLE_RADIUS_PX, BOOK_SPARKLE_RADIUS_PX) | 0
+    const oy = Math.randomRange(-BOOK_SPARKLE_RADIUS_PX, BOOK_SPARKLE_RADIUS_PX) | 0
+
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.setPosition((baseX + ox) | 0, (baseY + oy) | 0)
+    fx.z = 999
+    fx.lifespan = BOOK_SPARKLE_LIFESPAN_MS | 0
+
+    const skins = ["firespark1", "firespark2", "firespark3"]
+    const pick = skins[Math.randomRange(0, skins.length - 1)] || "firespark1"
+    applyEffectToSprite(fx, pick, {
+        alpha: 0.7,
+        scale: 0.4,
+        fps: 12,
+        repeat: 0,
+        blend: "add",
+    })
+}
+
+function _dunBookTick(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    if ((_dunBookTileR | 0) < 0 || (_dunBookTileC | 0) < 0) return
+
+    if (!_dunBookDecor || (_dunBookDecor.flags & sprites.Flag.Destroyed)) {
+        _dunBookDecor = _dunFindDecorAtTile(_dunBookTileR | 0, _dunBookTileC | 0, BOOK_MEMORIES_BASE)
+    }
+
+    _dunBookAdvanceAnim(nowMs | 0)
+
+    if (!_dunBookAnimActive) {
+        _dunBookSetFrame(_dunBookFrame | 0, false)
+    }
+
+    if (!_dunBookMenuActive && !_dunBookAnimActive && _dunBookState === "open_ready" && !_dunBookFocusActive) {
+        _dunBookStartAnim(BOOK_ANIM_CLOSE_START, BOOK_ANIM_CLOSE_END, nowMs | 0, BOOK_FRAME_CLOSED_FRONT, "closed_front")
+    }
+
+    _dunBookUpdateFloatAndLift(nowMs | 0)
+
+    if ((_dunBookNextSparkleMs | 0) === 0) {
+        _dunBookNextSparkleMs = (nowMs | 0) + Math.randomRange(BOOK_SPARKLE_MIN_MS, BOOK_SPARKLE_MAX_MS)
+    } else if ((nowMs | 0) >= (_dunBookNextSparkleMs | 0)) {
+        _dunBookNextSparkleMs = (nowMs | 0) + Math.randomRange(BOOK_SPARKLE_MIN_MS, BOOK_SPARKLE_MAX_MS)
+        _dunBookSpawnSparkle(nowMs | 0)
+    }
+}
+
 function _dunResetFireTotemState(): void {
     _dunFireTotemDecor = null
     _dunFireTotemInteractable = null
@@ -11921,6 +12797,43 @@ function _dunResetFireTotemState(): void {
     _dunFireTotemMenuActive = false
 }
 
+function _dunResetBookRuntime(): void {
+    _dunDestroySprite(_dunBookDecor)
+    _dunDestroySprite(_dunBookInteractable)
+    _dunDestroySprite(_dunBookStumpDecor)
+    _dunBookDecor = null
+    _dunBookInteractable = null
+    _dunBookStumpDecor = null
+    if (_dunBookStumpSolids && _dunBookStumpSolids.length) {
+        for (let i = 0; i < _dunBookStumpSolids.length; i++) {
+            _dunDestroySprite(_dunBookStumpSolids[i])
+        }
+    }
+    _dunBookStumpSolids = []
+    _dunBookTileR = -1
+    _dunBookTileC = -1
+    _dunBookState = ""
+    _dunBookFrame = BOOK_FRAME_SPAWN
+    _dunBookAnimActive = false
+    _dunBookAnimStartFrame = 0
+    _dunBookAnimEndFrame = 0
+    _dunBookAnimFrame = 0
+    _dunBookAnimNextMs = 0
+    _dunBookAnimHoldFrame = 0
+    _dunBookAnimHoldState = ""
+    _dunBookFocusActive = false
+    _dunBookMenuActive = false
+    _dunBookMenuHeroIndex = -1
+    _dunBookPendingMenuOpen = false
+    _dunBookMenuLoading = false
+    _dunBookLiftPx = 0
+    _dunBookLiftTargetPx = 0
+    _dunBookLiftLastMs = 0
+    _dunBookBaseY = NaN
+    _dunBookNextSparkleMs = 0
+    _dunBookSaveEntries = []
+}
+
 function _dunResetShrineRuntime(): void {
     _dunShrineStates.clear()
     _dunShrineStateRescanAtMs = 0
@@ -11929,6 +12842,7 @@ function _dunResetShrineRuntime(): void {
     _dunShrineBlessingKey = ""
     _dunShrineInteractRescanAtMs = 0
     _shrineObsResetAll()
+    _dunShrineSparkles = []
 }
 
 function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): Sprite | null {
@@ -11983,6 +12897,19 @@ function _dunActivateShrineDecor(decor: Sprite, nowMs: number, durationMs?: numb
             applied = 1
         }
         if (applied && obsKey) _dunShrineBlessingKey = obsKey
+        if (applied) {
+            _dunSpawnShrineSparkles(
+                decor,
+                tileR | 0,
+                tileC | 0,
+                SHRINE_SPARKLE_BURST_COUNT,
+                SHRINE_SPARKLE_BURST_SPREAD_PX,
+                now | 0
+            )
+            const nextSparkle =
+                (now + Math.randomRange(SHRINE_SPARKLE_IDLE_INTERVAL_MIN_MS, SHRINE_SPARKLE_IDLE_INTERVAL_MAX_MS)) | 0
+            sprites.setDataNumber(decor, SHRINE_SPARKLE_NEXT_MS_KEY, nextSparkle | 0)
+        }
         _shrineObsMark(
             obsKey,
             _dunFloorIndex | 0,
@@ -12217,6 +13144,7 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
     _dunRuneSetName("teleport_rune")
     _dunEnterFloor_spawnStarterChest(nowMs)
     _dunEnterFloor_spawnStarterShrine()
+    _dunEnterFloor_spawnMemoryBook(nowMs)
 
 }
 
@@ -26245,8 +27173,8 @@ let _tileCollFrame = 0
 // Feet-aligned: collider bottom sits at sprite bottom.
 
 const HERO_SPRITE_PX = 64
-const HERO_COLLIDER_W_PX = 26
-const HERO_COLLIDER_H_PX = 20
+const HERO_COLLIDER_W_PX = 20
+const HERO_COLLIDER_H_PX = 15
 const HERO_DIAG_SQUEEZE_W_PCT = 80
 const HERO_DIAG_SQUEEZE_W_MIN_PX = 18
 const HERO_COLLISION_Y_OFFSET_PX = Math.max(0, ((HERO_SPRITE_PX - HERO_COLLIDER_H_PX) >> 1))
@@ -26540,6 +27468,10 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
     }
 
+    const focusBase = focusName ? propBaseNameFromKey(focusName) : ""
+    const bookFocused = focusThisTick && focusBase === BOOK_MEMORIES_BASE
+    _dunBookHandleFocusChange(bookFocused, nowMs | 0)
+
     // Drive prop focus outlines (true silhouette path via renderer).
 
     try {
@@ -26721,6 +27653,7 @@ function _dunEnsureShrineInteractables(nowMs: number): void {
 
 function _dunUpdateShrineOverlays(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
+    _dunUpdateShrineSparkles(nowMs)
     const g: any = globalThis as any
     const sc: any = g ? g.__phaserScene : null
     const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
@@ -26769,8 +27702,16 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                     start = now | 0
                     sprites.setDataNumber(s, SHRINE_ACTIVE_START_KEY, start | 0)
                 }
-                const tint = flash ? (SHRINE_FLASH_TINT | 0) : _shrineOverlayTint(now | 0, start | 0)
-                const alpha = flash ? SHRINE_FLASH_ALPHA : SHRINE_OVERLAY_ALPHA
+                const pulse = _shrineOverlayPulse(now | 0, start | 0)
+                const light =
+                    SHRINE_OVERLAY_LIGHT_MIN +
+                    (SHRINE_OVERLAY_LIGHT_MAX - SHRINE_OVERLAY_LIGHT_MIN) * pulse
+                const alphaActive =
+                    SHRINE_OVERLAY_ALPHA_MIN +
+                    (SHRINE_OVERLAY_ALPHA_MAX - SHRINE_OVERLAY_ALPHA_MIN) * pulse
+                const tintActive = _shrineOverlayTint(now | 0, start | 0, light)
+                const tint = flash ? (SHRINE_FLASH_TINT | 0) : tintActive
+                const alpha = flash ? SHRINE_FLASH_ALPHA : alphaActive
                 const blend = flash ? SHRINE_FLASH_BLEND_MODE : SHRINE_OVERLAY_BLEND_MODE
                 let ok = renderer.setPropOverlayAt(r, c, true, {
                     tint,
@@ -26789,7 +27730,42 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                     ;(s as any)[warnKey] = 0
                     ;(s as any)[retryKey] = 0
                 }
-                _shrineObsOverlayTick(key, _dunFloorIndex | 0, now | 0, ok, tint | 0, alpha, blend, true)
+                _shrineObsOverlayTick(
+                    key,
+                    _dunFloorIndex | 0,
+                    now | 0,
+                    ok,
+                    tintActive | 0,
+                    alphaActive,
+                    SHRINE_OVERLAY_BLEND_MODE,
+                    "active"
+                )
+                if (flash) {
+                    _shrineObsOverlayTick(
+                        key,
+                        _dunFloorIndex | 0,
+                        now | 0,
+                        ok,
+                        SHRINE_FLASH_TINT,
+                        SHRINE_FLASH_ALPHA,
+                        SHRINE_FLASH_BLEND_MODE,
+                        "flash"
+                    )
+                }
+                const nextSparkle = sprites.readDataNumber(s, SHRINE_SPARKLE_NEXT_MS_KEY) | 0
+                if ((nextSparkle | 0) <= 0 || (now | 0) >= (nextSparkle | 0)) {
+                    _dunSpawnShrineSparkles(
+                        s,
+                        r | 0,
+                        c | 0,
+                        SHRINE_SPARKLE_IDLE_COUNT,
+                        SHRINE_SPARKLE_IDLE_SPREAD_PX,
+                        now | 0
+                    )
+                    const nextMs =
+                        (now + Math.randomRange(SHRINE_SPARKLE_IDLE_INTERVAL_MIN_MS, SHRINE_SPARKLE_IDLE_INTERVAL_MAX_MS)) | 0
+                    sprites.setDataNumber(s, SHRINE_SPARKLE_NEXT_MS_KEY, nextMs | 0)
+                }
                 if (DEBUG_SHRINE_OVERLAY_LOGS) {
                     const prev = (s as any)[stateKey] | 0
                     if ((prev | 0) !== (nextState | 0)) {
@@ -26808,6 +27784,9 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
             } else {
                 if ((sprites.readDataNumber(s, SHRINE_ACTIVE_START_KEY) | 0) !== 0) {
                     sprites.setDataNumber(s, SHRINE_ACTIVE_START_KEY, 0)
+                }
+                if ((sprites.readDataNumber(s, SHRINE_SPARKLE_NEXT_MS_KEY) | 0) !== 0) {
+                    sprites.setDataNumber(s, SHRINE_SPARKLE_NEXT_MS_KEY, 0)
                 }
                 if (flash) {
                     let ok = renderer.setPropOverlayAt(r, c, true, {
@@ -26831,7 +27810,16 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                         ;(s as any)[warnKey] = 0
                         ;(s as any)[retryKey] = 0
                     }
-                    _shrineObsOverlayTick(key, _dunFloorIndex | 0, now | 0, ok, SHRINE_FLASH_TINT, SHRINE_FLASH_ALPHA, SHRINE_FLASH_BLEND_MODE, false)
+                    _shrineObsOverlayTick(
+                        key,
+                        _dunFloorIndex | 0,
+                        now | 0,
+                        ok,
+                        SHRINE_FLASH_TINT,
+                        SHRINE_FLASH_ALPHA,
+                        SHRINE_FLASH_BLEND_MODE,
+                        "flash"
+                    )
                     if (DEBUG_SHRINE_OVERLAY_LOGS) {
                         const prev = (s as any)[stateKey] | 0
                         if ((prev | 0) !== (nextState | 0)) {
@@ -27086,6 +28074,7 @@ function updateGenericFocus(nowMs: number): void {
 
     _dunEnsureShrineInteractables(nowMs)
     _dunUpdateInteractableFocus(nowMs)
+    _dunBookTick(nowMs)
     _dunUpdatePropAuraOverrides(nowMs)
     _dunUpdateShrineRituals(nowMs)
     _dunUpdateShrineOverlays(nowMs)
@@ -28081,6 +29070,7 @@ function updateHeroUnderfootTilesAndDecals(nowMs: number): void {
 // --------------------------------------------------------------
 
 let DECOR_SOLID_BLOCKING_ENABLED = true
+const DECOR_SOLID_ALLOW_DIAG_SQUEEZE = false
 const DECOR_SOLID_RESCUE_AFTER_MS = 250
 const DECOR_SOLID_MAX_PUSH_PX = 8
 const DECOR_SOLID_RESCUE_RADIUS_TILES = 3
@@ -28275,7 +29265,7 @@ function decorSolids_blockingHook(nowMs: number): void {
         const dx = (cx - px) | 0
         const dy = (cy - py) | 0
         const movingDiag = (dx !== 0 && dy !== 0) || (Math.abs(h.vx) > 0.001 && Math.abs(h.vy) > 0.001)
-        const useDiagSqueeze = movingDiag && (HERO_DIAG_SQUEEZE_W_PCT > 0) && (HERO_DIAG_SQUEEZE_W_PCT < 100)
+        const useDiagSqueeze = DECOR_SOLID_ALLOW_DIAG_SQUEEZE && movingDiag && (HERO_DIAG_SQUEEZE_W_PCT > 0) && (HERO_DIAG_SQUEEZE_W_PCT < 100)
 
         const worldBlocked = heroBlockedByWorldAt(h, cx, cy)
         const decorBlockedFull = heroOverlapsDecorAt(h, cx, cy, false)
@@ -28972,7 +29962,7 @@ function _boxOverlapsDecorSolidsBounds(left: number, right: number, top: number,
         let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
         let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
 
-        if (left <= r && right >= l && top <= b && bottom >= t) return true
+        if (left < r && right > l && top < b && bottom > t) return true
 
     }
 
@@ -35091,7 +36081,7 @@ function updateHeroAgilityChargeFx(now: number): void {
         const aim = computeHeroAimForIndicator(i, hero);
         const thrustOff = _agiThrustOffsets(aim.nx, aim.ny);
         if (!fx || (fx.flags & sprites.Flag.Destroyed)) {
-            const bodyFx = _spawnHeroBodyPaintFxForMove(i, hero, FAMILY.AGILITY, 0, aim.nx, aim.ny, 0);
+            const bodyFx = _spawnHeroBodyPaintFxForMove(i, hero, FAMILY.AGILITY, 0, aim.nx, aim.ny, 0, "agilityCharge");
             if (bodyFx) {
                 sprites.setDataSprite(hero, AGI_CHARGE_FX_KEY, bodyFx);
                 fx = bodyFx;
@@ -38297,7 +39287,8 @@ function spawnStrengthSwingProjectile(
         element | 0,
         nx,
         ny,
-        swingDuration | 0
+        swingDuration | 0,
+        "strengthSwing"
     )
     if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
 
@@ -42057,7 +43048,8 @@ function spawnAgilityThrustProjectile(
         element | 0,
         nx,
         ny,
-        ((dashMs | 0) + 200) | 0
+        ((dashMs | 0) + 200) | 0,
+        "agilityThrust"
     )
     if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
 
@@ -63260,6 +64252,23 @@ try {
 
     }
 
+} catch (_e) { }
+
+try {
+    const g: any = globalThis as any
+    if (g && !g.__heBookMemoriesDialogInstalled) {
+        g.__heBookMemoriesDialogInstalled = true
+        if (typeof g.addEventListener === "function") {
+            g.addEventListener("he:dialogChoice", (ev: any) => {
+                const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
+                const idx = (ev && ev.detail && typeof ev.detail.index === "number") ? (ev.detail.index | 0) : undefined
+                _dunBookHandleDialogChoice(String(id || ""), idx)
+            })
+            g.addEventListener("he:dialogHide", () => {
+                _dunBookHandleDialogHide()
+            })
+        }
+    }
 } catch (_e) { }
 
 

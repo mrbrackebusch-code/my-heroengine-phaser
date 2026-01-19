@@ -80,6 +80,7 @@ import {
     DEBUG_COLLIDER_BODY_COLOR,
     DEBUG_COLLIDER_ENEMY_COLOR,
     DEBUG_COLLIDER_HIT_COLOR,
+    DEBUG_COLLIDER_DECOR_COLOR,
     DEBUG_COLLIDER_AURA_COLOR,
     DEBUG_COLLIDER_NAV_COLOR,
     DEBUG_COLLIDER_NATIVE_COLOR,
@@ -96,6 +97,8 @@ import {
     DEBUG_DRAW_ENEMY_NATIVE_BOUNDS,
     DEBUG_DRAW_ENEMY_SPRITE_BOUNDS,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
+    DEBUG_DRAW_EFFECT_BOUNDS,
+    DEBUG_DRAW_DECOR_COLLIDERS,
     DEBUG_DRAW_HERO_COLLIDER_BOUNDS,
     DEBUG_DRAW_HERO_HITBOX,
     DEBUG_DRAW_HERO_NAV_FOOTPRINT,
@@ -120,6 +123,8 @@ import {
     DEBUG_OVERLAPS,
     DEBUG_PROJECTILE_NATIVE,
     DEBUG_PROP_OUTLINE_VERBOSE,
+    DEBUG_COLLIDER_EFFECT_FRAME_COLOR,
+    DEBUG_COLLIDER_EFFECT_PIXEL_COLOR,
     DEBUG_ROLE_ACTOR,
     DEBUG_ROLE_AURA,
     DEBUG_ROLE_EFFECT,
@@ -1289,6 +1294,7 @@ const EFFECT_OFFY_DATA_KEY = "effectOffY";
 const EFFECT_TINT_DATA_KEY = "effectTint";
 const EFFECT_ALPHA_DATA_KEY = "effectAlpha";
 const EFFECT_BLEND_DATA_KEY = "effectBlend";
+const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
@@ -1307,6 +1313,47 @@ const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
 const EFFECT_ANIM_DELAY_MS_DATA_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
+const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
+
+const EFFECT_BLANK_TEX_KEY = "__effectBlankTex";
+const EFFECT_FORCE_TOP_DEPTH = 2000000000;
+
+function _getEffectAtlasFromScene(scene: Phaser.Scene): any | null {
+    const anyScene = scene as any;
+    return (
+        (scene.registry?.get?.("effectAtlas") as any) ||
+        (anyScene.effectAtlas as any) ||
+        (anyScene.__effectAtlas as any) ||
+        ((globalThis as any).__effectAtlas as any) ||
+        null
+    );
+}
+
+function _resolveEffectAtlasEntry(atlas: any, skin: string, dir: string): any | null {
+    if (!atlas || !skin) return null;
+    const direct = atlas[skin];
+    if (direct) return direct;
+    const dirLower = String(dir || "").trim().toLowerCase();
+    if (!dirLower) return null;
+    const suffixes = [`_${dirLower}`, `-${dirLower}`, ` ${dirLower}`];
+    for (const suffix of suffixes) {
+        const candidate = `${skin}${suffix}`;
+        if (atlas[candidate]) return atlas[candidate];
+    }
+    return null;
+}
+
+function _ensureEffectBlankTexture(sc: Phaser.Scene): string {
+    const key = EFFECT_BLANK_TEX_KEY;
+    if (!sc.textures || sc.textures.exists(key)) return key;
+    const tex = sc.textures.createCanvas(key, 1, 1);
+    if (tex) {
+        const ctx = tex.getContext();
+        if (ctx) ctx.clearRect(0, 0, 1, 1);
+        tex.refresh();
+    }
+    return key;
+}
 
 const __effectMaskSyncOnce = new Set<string>();
 const __effectMaskInitOnce = new Set<string>();
@@ -1314,6 +1361,7 @@ const __effectMaskSkipOnce = new Set<string>();
 const __effectMaskHideOnce = new Set<string>();
 const __effectMaskClearOnce = new Set<string>();
 const __effectMaskKeyOnce = new Set<string>();
+const __effectMaskVisOnce = new Set<string>();
 
 const __heroNativeByIndex: { [idx: number]: any } = Object.create(null);
 
@@ -6301,6 +6349,78 @@ function _attachDecorSkipPath(ctx: AttachContext): boolean {
     return true;
 }
 
+// Effect sprites use Phaser textures directly; skip Arcade pixel upload/placeholder textures.
+function _attachEffectSpriteNonUiPath(ctx: AttachContext): boolean {
+    const s = ctx.s;
+    const sc = ctx.sc;
+    const dataAny: any = ctx.dataAny || {};
+    const dataKeys = Object.keys(dataAny);
+    const role = _classifySpriteRole((s.kind as any) | 0, dataKeys);
+    if (role !== "EFFECT") return false;
+
+    const skinRaw =
+        (sprites.readDataString(s, EFFECT_SKIN_DATA_KEY) || "") ||
+        (typeof dataAny[EFFECT_SKIN_DATA_KEY] === "string" ? dataAny[EFFECT_SKIN_DATA_KEY] : "") ||
+        (typeof dataAny.effectSkinId === "string" ? dataAny.effectSkinId : "");
+    const skin = String(skinRaw || "").trim();
+    if (!skin) return false;
+
+    const dirRaw =
+        (sprites.readDataString(s, EFFECT_DIR_DATA_KEY) || "") ||
+        (typeof dataAny[EFFECT_DIR_DATA_KEY] === "string" ? dataAny[EFFECT_DIR_DATA_KEY] : "");
+    const dir = String(dirRaw || "").trim();
+
+    const atlas = _getEffectAtlasFromScene(sc);
+    const resolved = _resolveEffectAtlasEntry(atlas, skin, dir);
+    const texKey = resolved && typeof resolved.textureKey === "string" ? resolved.textureKey : "";
+    const frames = resolved && Array.isArray(resolved.frameIndices) ? resolved.frameIndices : null;
+    const frame0 = (frames && frames.length > 0) ? frames[0] : undefined;
+    const texReady = !!(texKey && sc.textures && sc.textures.exists(texKey));
+
+    let native: any = (s as any).native;
+    let didCreate = false;
+
+    if (native && (native as any).destroyed) {
+        try { native.destroy(); } catch { /* ignore */ }
+        native = undefined;
+        (s as any).native = undefined;
+    }
+    if (native && (!native.anims || typeof native.play !== "function")) {
+        try { native.destroy(); } catch { /* ignore */ }
+        native = undefined;
+        (s as any).native = undefined;
+    }
+
+    if (!native) {
+        const useKey = texReady ? texKey : _ensureEffectBlankTexture(sc);
+        const useFrame = texReady ? frame0 : undefined;
+        const n = sc.add.sprite(s.x, s.y, useKey, useFrame as any);
+        n.setOrigin(0.5, 0.5);
+        s.native = n;
+        native = n;
+        didCreate = true;
+    } else {
+        native.setPosition(s.x, s.y);
+    }
+
+    if (texReady) {
+        try {
+            const curKey = native.texture?.key;
+            if (curKey !== texKey) {
+                native.setTexture(texKey, frame0 as any);
+                if (native.anims && native.anims.isPlaying) native.anims.stop();
+            }
+        } catch { /* ignore */ }
+    }
+
+    try { (s as any)._lastNonZeroPixels = 1; } catch { /* ignore */ }
+
+    if (didCreate) _attachFinalizeCreate(ctx);
+    else _attachFinalizeUpdate(ctx);
+
+    return true;
+}
+
 
 // PURPOSE: Attach/update a non-UI sprite using canvas texture + pixel upload.
 // READS:  sprite.image pixels (via upload helper), sprite.kind, sprite.flags, sprite.z
@@ -6327,6 +6447,7 @@ function _attachNativeSpriteNonUiPath(sc: Phaser.Scene, s: Sprite, g: number, tA
 
     // NEW: decor collider sprites are logic-only (never attach/upload/render).
     if (_attachDecorSkipPath(ctx)) return;
+    if (_attachEffectSpriteNonUiPath(ctx)) return;
 
     if (!_attachImageGuard(ctx)) return;
     if (_attachHeroSkipPath(ctx)) return;
@@ -9882,6 +10003,8 @@ function _syncEffectPath(
     const tintRaw = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY);
     const hasAlpha = Object.prototype.hasOwnProperty.call(data, EFFECT_ALPHA_DATA_KEY);
     const hasBlend = Object.prototype.hasOwnProperty.call(data, EFFECT_BLEND_DATA_KEY);
+    const hasForceTop = Object.prototype.hasOwnProperty.call(data, EFFECT_FORCE_TOP_DATA_KEY);
+    const hasFrameWindowMs = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_MS_DATA_KEY);
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
     const hasRepeat = Object.prototype.hasOwnProperty.call(data, EFFECT_REPEAT_DATA_KEY);
     const hasScale = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_DATA_KEY);
@@ -9900,6 +10023,9 @@ function _syncEffectPath(
     const hasMaskRadiusPx = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_PX_DATA_KEY);
     const alpha = hasAlpha ? sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY) : 0;
     const blend = hasBlend ? (sprites.readDataString(s, EFFECT_BLEND_DATA_KEY) || "") : "";
+    const forceTopRaw = hasForceTop ? sprites.readDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY) : 0;
+    const forceTop = (forceTopRaw | 0) !== 0;
+    const frameWindowMs = hasFrameWindowMs ? sprites.readDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY) : 0;
     const fps = hasFps ? sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY) : 0;
     const repeat = hasRepeat ? sprites.readDataNumber(s, EFFECT_REPEAT_DATA_KEY) : 0;
     const scale = hasScale ? sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY) : 0;
@@ -9930,6 +10056,8 @@ function _syncEffectPath(
     if (tint) data[EFFECT_TINT_DATA_KEY] = tint;
     if (hasAlpha) data[EFFECT_ALPHA_DATA_KEY] = alpha;
     if (hasBlend) data[EFFECT_BLEND_DATA_KEY] = blend;
+    if (hasForceTop) data[EFFECT_FORCE_TOP_DATA_KEY] = forceTopRaw;
+    if (hasFrameWindowMs) data[EFFECT_FRAME_WINDOW_MS_DATA_KEY] = frameWindowMs;
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
     if (hasRepeat) data[EFFECT_REPEAT_DATA_KEY] = repeat;
     if (hasScale) data[EFFECT_SCALE_DATA_KEY] = scale;
@@ -9973,6 +10101,8 @@ function _syncEffectPath(
     if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
     if (hasAlpha) nativeAny.setData(EFFECT_ALPHA_DATA_KEY, alpha);
     if (hasBlend) nativeAny.setData(EFFECT_BLEND_DATA_KEY, blend);
+    if (hasForceTop) nativeAny.setData(EFFECT_FORCE_TOP_DATA_KEY, forceTopRaw);
+    if (hasFrameWindowMs) nativeAny.setData(EFFECT_FRAME_WINDOW_MS_DATA_KEY, frameWindowMs);
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
     if (hasRepeat) nativeAny.setData(EFFECT_REPEAT_DATA_KEY, repeat);
     if (hasScale) nativeAny.setData(EFFECT_SCALE_DATA_KEY, scale);
@@ -10062,7 +10192,8 @@ function _syncEffectPath(
                     hasHeroIndex: hasHeroIndexKey ? 1 : 0,
                     hasHeroRef: heroRefForMask ? 1 : 0,
                     maskRadius: maskRadiusRaw | 0,
-                    maskRadiusPx: maskRadiusPxRaw | 0
+                    maskRadiusPx: maskRadiusPxRaw | 0,
+                    forceTop: forceTop ? 1 : 0
                 });
             }
         } catch { /* ignore */ }
@@ -10354,12 +10485,24 @@ function _syncVisibilityAndDebugTail(
     // UI-managed flag (needed early so we don't y-sort UI)
     // ------------------------------------------------------------
     const isUiManaged = !!(native && typeof native.getData === "function" && native.getData("uiManaged"));
+    const dataAny: any = (s as any).data || {};
+    const dataKeys = Object.keys(dataAny || {});
+    const role = _classifySpriteRole((s.kind as any) | 0, dataKeys);
+    const forceTop = (role === "EFFECT") && (((dataAny[EFFECT_FORCE_TOP_DATA_KEY] as any) | 0) !== 0);
 
     // ------------------------------------------------------------
     // Y-SORT DEPTH (NEW): apply only to non-UI native sprites
     // ------------------------------------------------------------
     if (!isUiManaged) {
-        _applyWorldDepthForNative(s, native);
+        if (forceTop) {
+            const depth = (EFFECT_FORCE_TOP_DEPTH + ((s as any).z | 0)) | 0;
+            try {
+                if (native.setDepth) native.setDepth(depth);
+                else native.depth = depth;
+            } catch { /* ignore */ }
+        } else {
+            _applyWorldDepthForNative(s, native);
+        }
     }
 
     // ------------------------------------------------------------
@@ -10493,6 +10636,29 @@ function _syncVisibilityAndDebugTail(
             if (st) console.log(st);
         }
     }
+
+    if (DEBUG_EFFECT_MASKS && role === "EFFECT") {
+        try {
+            const key = "vis:" + String(s.id | 0);
+            if (!__effectMaskVisOnce.has(key)) {
+                __effectMaskVisOnce.add(key);
+                console.log("[effectmask][vis]", {
+                    spriteId: s.id | 0,
+                    visible: !!native.visible,
+                    alpha: (native.alpha ?? 0),
+                    depth: (native as any).depth ?? 0,
+                    tex: (native as any).texture?.key ?? "",
+                    frame: (native as any).frame?.name ?? "",
+                    displayW: (native as any).displayWidth ?? (native as any).width ?? 0,
+                    displayH: (native as any).displayHeight ?? (native as any).height ?? 0,
+                    mode: String(dataAny[EFFECT_MODE_DATA_KEY] || ""),
+                    maskType: String((native as any).__effectPaintMaskType || ""),
+                    maskAttached: (native as any).__effectPaintMask ? 1 : 0,
+                    forceTop: forceTop ? 1 : 0
+                });
+            }
+        } catch { /* ignore */ }
+    }
 }
 
 
@@ -10517,7 +10683,10 @@ function _syncEndFrame(ctx: SyncContext): void {
     _hostPerfLastSpriteCount = spriteCount;
 
     // Debug collider overlay (independent of perf logging)
-    if (ctx.sc) _debugDrawEnemyWallColliders(ctx.sc);
+    if (ctx.sc) {
+        _debugDrawEnemyWallColliders(ctx.sc);
+        _debugDrawEffectBounds(ctx.sc);
+    }
 
     if (!ctx.shouldLog) return;
 
@@ -10741,6 +10910,8 @@ let _processEventsCallCount = 0;
 let _dbgColliderGfxWalls: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxEnemies: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxHeroes: Phaser.GameObjects.Graphics | null = null;
+let _dbgColliderGfxDecor: Phaser.GameObjects.Graphics | null = null;
+let _dbgEffectGfx: Phaser.GameObjects.Graphics | null = null;
 let _dbgLoggedEnemyColliderOnce = false;
 let _dbgLoggedHeroColliderOnce = false;
 
@@ -10780,6 +10951,65 @@ function _debugEnsureColliderGfx(sc: Phaser.Scene): void {
         _dbgColliderGfxHeroes = sc.add.graphics();
         try { (_dbgColliderGfxHeroes as any).setDepth?.(999999); } catch { }
     }
+    if (!_dbgColliderGfxDecor) {
+        _dbgColliderGfxDecor = sc.add.graphics();
+        try { (_dbgColliderGfxDecor as any).setDepth?.(999999); } catch { }
+    }
+}
+
+function _debugEnsureEffectGfx(sc: Phaser.Scene): void {
+    if (_dbgEffectGfx) return;
+    _dbgEffectGfx = sc.add.graphics();
+    try { (_dbgEffectGfx as any).setDepth?.(999999); } catch { }
+}
+
+function _debugDrawEffectBounds(sc: Phaser.Scene): void {
+    if (!DEBUG_DRAW_EFFECT_BOUNDS) return;
+    _debugEnsureEffectGfx(sc);
+    const g = _dbgEffectGfx!;
+    g.clear();
+
+    const atlas = _getEffectAtlasFromScene(sc);
+    const alpha = DEBUG_COLLIDER_ALPHA;
+
+    for (const s of _allSprites) {
+        const dataAny: any = (s as any).data || {};
+        const role = _classifySpriteRole((s.kind as any) | 0, Object.keys(dataAny || {}));
+        if (role !== "EFFECT") continue;
+        const native: any = (s as any).native;
+        if (!native) continue;
+
+        const nx = (native.x ?? s.x ?? 0) as number;
+        const ny = (native.y ?? s.y ?? 0) as number;
+        const dw = (native.displayWidth ?? native.width ?? 0) as number;
+        const dh = (native.displayHeight ?? native.height ?? 0) as number;
+        if (dw > 0 && dh > 0) {
+            g.lineStyle(1, DEBUG_COLLIDER_EFFECT_FRAME_COLOR, alpha);
+            g.strokeRect(nx - dw / 2, ny - dh / 2, dw, dh);
+        }
+
+        const skin = (sprites.readDataString(s, EFFECT_SKIN_DATA_KEY) || "").trim();
+        const dir = (sprites.readDataString(s, EFFECT_DIR_DATA_KEY) || "").trim();
+        const resolved = _resolveEffectAtlasEntry(atlas, skin, dir);
+        if (!resolved || !resolved.collisionBounds) continue;
+
+        const bounds = resolved.collisionBounds;
+        const frameW = (resolved.frameW | 0) || 0;
+        const frameH = (resolved.frameH | 0) || 0;
+        if (frameW <= 0 || frameH <= 0) continue;
+
+        const scaleX = (dw > 0) ? (dw / frameW) : 1;
+        const scaleY = (dh > 0) ? (dh / frameH) : 1;
+        const frameCx = (frameW - 1) / 2;
+        const frameCy = (frameH - 1) / 2;
+        const cx = nx + ((bounds.centerX - frameCx) * scaleX);
+        const cy = ny + ((bounds.centerY - frameCy) * scaleY);
+        const bw = (bounds.w || frameW) * scaleX;
+        const bh = (bounds.h || frameH) * scaleY;
+
+        g.lineStyle(1, DEBUG_COLLIDER_EFFECT_PIXEL_COLOR, alpha);
+        g.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh);
+    }
 }
 
 function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
@@ -10792,6 +11022,8 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
         !DEBUG_DRAW_ENEMY_NATIVE_BOUNDS &&
         !DEBUG_DRAW_ENEMY_NAV_FOOTPRINT &&
         !DEBUG_DRAW_ENEMY_AURA_BOUNDS &&
+        !DEBUG_DRAW_DECOR_COLLIDERS &&
+        !DEBUG_DRAW_EFFECT_BOUNDS &&
         !DEBUG_DRAW_HERO_WALL_COLLIDERS &&
         !DEBUG_DRAW_HERO_SPRITE_BOUNDS &&
         !DEBUG_DRAW_HERO_COLLIDER_BOUNDS &&
@@ -10803,9 +11035,11 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
     const gWalls = _dbgColliderGfxWalls!;
     const gEnemies = _dbgColliderGfxEnemies!;
     const gHeroes = _dbgColliderGfxHeroes!;
+    const gDecor = _dbgColliderGfxDecor!;
     gWalls.clear();
     gEnemies.clear();
     gHeroes.clear();
+    gDecor.clear();
 
     const g: any = globalThis as any;
     const internals: any = g ? g.__HeroEnginePhaserInternals : null;
@@ -10827,6 +11061,36 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
                     gWalls.strokeRect(x, y, tileSize, tileSize);
                 }
             }
+        }
+    }
+
+    // Decor colliders: draw trigger/solid bounds from decor collider sprites.
+    if (DEBUG_DRAW_DECOR_COLLIDERS) {
+        const kTrig = (((SpriteKind as any).DecorTrigger ?? DECOR_KIND_TRIGGER_FALLBACK) | 0);
+        const kSol = (((SpriteKind as any).DecorSolid ?? DECOR_KIND_SOLID_FALLBACK) | 0);
+        for (let i = 0; i < _allSprites.length; i++) {
+            const s = _allSprites[i];
+            if (!s) continue;
+            const kind = (s.kind as number) | 0;
+            const marked = (sprites.readDataNumber(s, DECOR_DATA_IS_COLLIDER) | 0) !== 0;
+            const kindIsDecor = (kind === kTrig) || (kind === kSol);
+            if (!marked && !kindIsDecor) continue;
+
+            const w = s.width | 0;
+            const h = s.height | 0;
+            if (w <= 0 || h <= 0) continue;
+
+            const left = (typeof (s as any).left === "number")
+                ? ((s as any).left | 0)
+                : (((s.x | 0) - (w >> 1)) | 0);
+            const top = (typeof (s as any).top === "number")
+                ? ((s as any).top | 0)
+                : (((s.y | 0) - (h >> 1)) | 0);
+
+            const role = sprites.readDataNumber(s, DECOR_DATA_ROLE) | 0;
+            const color = (role === 1) ? DEBUG_COLLIDER_HIT_COLOR : DEBUG_COLLIDER_DECOR_COLOR;
+            gDecor.lineStyle(1, color, DEBUG_COLLIDER_ALPHA);
+            gDecor.strokeRect(left, top, w, h);
         }
     }
 

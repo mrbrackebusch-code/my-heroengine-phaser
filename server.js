@@ -719,6 +719,72 @@ function sanitizeProfilesKey(profiles) {
   return sanitized.slice(0, 64);
 }
 
+function normalizeProfilesForMatch(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((p) => String(p || "").trim())
+    .filter(Boolean)
+    .map((p) => p.toLowerCase())
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+function profilesMatch(a, b) {
+  const aa = normalizeProfilesForMatch(a);
+  const bb = normalizeProfilesForMatch(b);
+  if (aa.length !== bb.length) return false;
+  for (let i = 0; i < aa.length; i++) {
+    if (aa[i] !== bb[i]) return false;
+  }
+  return true;
+}
+
+function listAutosaveEntries(filterProfiles) {
+  const entries = [];
+  let files = [];
+  try {
+    files = fs.readdirSync(SAVE_DIR);
+  } catch (_e) {
+    return entries;
+  }
+
+  for (const f of files) {
+    if (!f || typeof f !== "string") continue;
+    if (!f.startsWith("autosave_") || !f.endsWith(".json")) continue;
+    const full = path.join(SAVE_DIR, f);
+    let raw = "";
+    let stat = null;
+    try {
+      raw = fs.readFileSync(full, "utf8");
+      stat = fs.statSync(full);
+    } catch (_e) {
+      continue;
+    }
+    let payload = null;
+    try {
+      payload = JSON.parse(raw);
+    } catch (_e) {
+      payload = null;
+    }
+    if (!payload || payload.type !== "heroesSaveV1") continue;
+    if (filterProfiles && filterProfiles.length > 0) {
+      if (!profilesMatch(filterProfiles, payload.profiles || [])) continue;
+    }
+    const savedAt = (typeof payload.savedAt === "number") ? payload.savedAt : (stat ? stat.mtimeMs : 0);
+    const floorIndex = (payload.floor && typeof payload.floor.index === "number") ? (payload.floor.index | 0) : -1;
+    const floorKind = (payload.floor && typeof payload.floor.kind === "string") ? payload.floor.kind : "";
+    const profiles = Array.isArray(payload.profiles) ? payload.profiles : [];
+    entries.push({ file: f, savedAt, floorIndex, floorKind, profiles });
+  }
+
+  entries.sort((a, b) => {
+    const ta = (typeof a.savedAt === "number") ? a.savedAt : 0;
+    const tb = (typeof b.savedAt === "number") ? b.savedAt : 0;
+    return tb - ta;
+  });
+
+  return entries;
+}
+
 function pruneOldSaves(prefix) {
   try {
     const files = fs.readdirSync(SAVE_DIR);
@@ -803,6 +869,48 @@ function handleSaveGameMessage(ws, info, msg) {
   }
 }
 
+function handleSaveListRequest(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs || ws !== hostWs) return;
+
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  if (!requestId) return;
+
+  const filterProfiles = Array.isArray(msg.profiles) ? msg.profiles : null;
+  const entries = listAutosaveEntries(filterProfiles);
+
+  sendJson(ws, { type: "saveList", requestId, entries });
+}
+
+function handleSaveLoadRequest(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs || ws !== hostWs) return;
+
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  const file = (msg && typeof msg.file === "string") ? msg.file : "";
+  if (!requestId) return;
+
+  if (!file || !file.startsWith("autosave_") || !file.endsWith(".json") || file.includes("..") || file.includes("/") || file.includes("\\")) {
+    sendJson(ws, { type: "saveLoad", requestId, error: "invalid-file" });
+    return;
+  }
+
+  const full = path.join(SAVE_DIR, file);
+  if (!full.startsWith(SAVE_DIR)) {
+    sendJson(ws, { type: "saveLoad", requestId, error: "invalid-path" });
+    return;
+  }
+
+  try {
+    const raw = fs.readFileSync(full, "utf8");
+    const payload = JSON.parse(raw);
+    sendJson(ws, { type: "saveLoad", requestId, payload });
+  } catch (e) {
+    console.warn("[server.save] load failed", e);
+    sendJson(ws, { type: "saveLoad", requestId, error: "load-failed" });
+  }
+}
+
 
 function handleCoinBurstMessage(ws, info, msg) {
   const hostWs = getHostWsLeased();
@@ -872,6 +980,8 @@ function onSocketMessage(ws, data) {
   if (msg.type === "state") return handleStateMessage(ws, info, msg);
   if (msg.type === "tilemap") return handleTilemapMessage(ws, info, msg);
   if (msg.type === "saveGame") return handleSaveGameMessage(ws, info, msg);
+  if (msg.type === "saveListRequest") return handleSaveListRequest(ws, info, msg);
+  if (msg.type === "saveLoadRequest") return handleSaveLoadRequest(ws, info, msg);
 
   // Unknown message types are ignored for forward-compat
 }

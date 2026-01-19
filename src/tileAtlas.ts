@@ -287,6 +287,22 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         },
     },
 
+    book_stump: {
+        atlas: "terrain_atlas",
+        ref: { row: 13, col: 12 },
+        wTiles: 2,
+        hTiles: 2,
+    },
+
+    book_memories: {
+        atlas: "anims.Book 32x40",
+        ref: { row: 0, col: 0 },
+        offsetXPx: 16,
+        offsetYPx: -36,
+        depthBias: 2,
+        focusAuraAllowInset: true,
+    },
+
 teleport_rune: {
     // IDLE: static (no anim) so it does NOT spin unless someone stands on it
     atlas: "anims.teleportrune 64x64",

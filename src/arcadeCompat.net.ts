@@ -252,6 +252,10 @@ type NetMessage =
     | { type: "assign"; playerId: number; name?: string; token?: string | null; profile?: string | null }
     | { type: "helloError"; reason: string; profile?: string | null }
     | { type: "saveGame"; payload: any }
+    | { type: "saveListRequest"; requestId: string; profiles?: string[] }
+    | { type: "saveList"; requestId: string; entries: Array<{ file: string; savedAt?: number; floorIndex?: number; floorKind?: string; profiles?: string[] }> }
+    | { type: "saveLoadRequest"; requestId: string; file: string }
+    | { type: "saveLoad"; requestId: string; payload?: any; error?: string }
     | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
     | {
           type: "dialog";
@@ -356,6 +360,10 @@ class NetworkClient {
 
     // Pending UI command resolvers (follower -> host RPC)
     private uiCmdResolvers: Map<string, (res: any) => void> = new Map();
+
+    // Save list/load resolvers (host -> server)
+    private saveListResolvers: Map<string, (res: any) => void> = new Map();
+    private saveLoadResolvers: Map<string, (res: any) => void> = new Map();
 
     // Latest tilemap revision we've accepted (monotonic)
     private _tilemapRev: number = 0;
@@ -604,6 +612,93 @@ class NetworkClient {
         this.ws.send(JSON.stringify(msg));
     }
 
+    // Host uses this to list autosaves on the server
+    sendSaveListRequest(opts?: { profiles?: string[] }): Promise<any> {
+        const requestId = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const profiles = Array.isArray(opts?.profiles) ? opts?.profiles : undefined;
+
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return Promise.resolve({ ok: false, reason: "ws-closed", entries: [] });
+        }
+        if (!this.isHostNow()) {
+            return Promise.resolve({ ok: false, reason: "not-host", entries: [] });
+        }
+
+        const msg: NetMessage = { type: "saveListRequest", requestId, profiles };
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                if (this.saveListResolvers.has(requestId)) {
+                    this.saveListResolvers.delete(requestId);
+                    resolve({ ok: false, reason: "timeout", entries: [] });
+                }
+            }, 3000);
+
+            this.saveListResolvers.set(requestId, (res: any) => {
+                clearTimeout(timeout);
+                resolve(res);
+            });
+
+            try {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(msg));
+                } else {
+                    this.saveListResolvers.delete(requestId);
+                    clearTimeout(timeout);
+                    resolve({ ok: false, reason: "ws-closed", entries: [] });
+                }
+            } catch (e: any) {
+                this.saveListResolvers.delete(requestId);
+                clearTimeout(timeout);
+                resolve({ ok: false, reason: String(e?.message || "send-failed"), entries: [] });
+            }
+        });
+    }
+
+    // Host uses this to load a specific autosave payload
+    sendSaveLoadRequest(opts: { file: string }): Promise<any> {
+        const requestId = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const file = (opts && typeof opts.file === "string") ? opts.file : "";
+
+        if (!file) return Promise.resolve({ ok: false, reason: "no-file" });
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return Promise.resolve({ ok: false, reason: "ws-closed" });
+        }
+        if (!this.isHostNow()) {
+            return Promise.resolve({ ok: false, reason: "not-host" });
+        }
+
+        const msg: NetMessage = { type: "saveLoadRequest", requestId, file };
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                if (this.saveLoadResolvers.has(requestId)) {
+                    this.saveLoadResolvers.delete(requestId);
+                    resolve({ ok: false, reason: "timeout" });
+                }
+            }, 5000);
+
+            this.saveLoadResolvers.set(requestId, (res: any) => {
+                clearTimeout(timeout);
+                resolve(res);
+            });
+
+            try {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(msg));
+                } else {
+                    this.saveLoadResolvers.delete(requestId);
+                    clearTimeout(timeout);
+                    resolve({ ok: false, reason: "ws-closed" });
+                }
+            } catch (e: any) {
+                this.saveLoadResolvers.delete(requestId);
+                clearTimeout(timeout);
+                resolve({ ok: false, reason: String(e?.message || "send-failed") });
+            }
+        });
+    }
+
     // Any client can send their Blockly XML for their profile
     sendBlocklyXml(profile: string, xml: string) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -713,6 +808,14 @@ private handleMessage(msg: NetMessage) {
 
         case "input":
             this.onInput(msg as any);
+            return;
+
+        case "saveList":
+            this.onSaveList(msg as any);
+            return;
+
+        case "saveLoad":
+            this.onSaveLoad(msg as any);
             return;
 
         case "uiCommandForward":
@@ -1250,6 +1353,22 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         const resolver = this.uiCmdResolvers.get(msg.requestId);
         if (resolver) {
             this.uiCmdResolvers.delete(msg.requestId);
+            resolver(msg);
+        }
+    }
+
+    private onSaveList(msg: any) {
+        const resolver = this.saveListResolvers.get(msg.requestId);
+        if (resolver) {
+            this.saveListResolvers.delete(msg.requestId);
+            resolver(msg);
+        }
+    }
+
+    private onSaveLoad(msg: any) {
+        const resolver = this.saveLoadResolvers.get(msg.requestId);
+        if (resolver) {
+            this.saveLoadResolvers.delete(msg.requestId);
             resolver(msg);
         }
     }

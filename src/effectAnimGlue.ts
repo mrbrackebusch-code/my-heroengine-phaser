@@ -10,6 +10,7 @@ const EFFECT_DIR_KEY = "effectDir";
 const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 const EFFECT_ANIM_DELAY_MS_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
+const EFFECT_FRAME_WINDOW_MS_KEY = "effectFrameWindowMs";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
@@ -25,6 +26,30 @@ type MonsterFrameRef = {
     phase: "walk" | "attack" | "death";
     frameIndex: number;
 };
+
+function selectCenteredFrameWindow(
+    frames: number[],
+    windowCount: number
+): { frames: number[]; start: number; end: number } {
+    const total = frames.length | 0;
+    if (windowCount >= total) return { frames: frames.slice(), start: 0, end: total - 1 };
+    const center = Math.floor(total / 2);
+    const left = Math.ceil((windowCount - 1) / 2);
+    const right = (windowCount - 1) - left;
+    let start = center - left;
+    let end = center + right;
+
+    if (start < 0) {
+        end = Math.min(total - 1, end + (-start));
+        start = 0;
+    }
+    if (end > total - 1) {
+        const over = end - (total - 1);
+        start = Math.max(0, start - over);
+        end = total - 1;
+    }
+    return { frames: frames.slice(start, end + 1), start, end };
+}
 
 function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
     const anyScene = scene as any;
@@ -271,11 +296,39 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         ? (repeatOverride as number)
         : resolved.repeat;
 
+    const windowMsRaw = data.get(EFFECT_FRAME_WINDOW_MS_KEY);
+    const windowMs = (typeof windowMsRaw === "number") ? windowMsRaw : Number(windowMsRaw);
+
+    let useFrames = resolved.frameIndices;
+    let frameWindowCount = 0;
+    let frameWindowStart = 0;
+    let frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
+
+    if (Number.isFinite(windowMs) && windowMs > 0 && frameRate > 0) {
+        const calc = Math.floor((windowMs * frameRate) / 1000);
+        frameWindowCount = Math.max(1, Math.min(useFrames.length, calc | 0));
+        if (frameWindowCount > 0 && frameWindowCount < useFrames.length) {
+            const picked = selectCenteredFrameWindow(useFrames, frameWindowCount | 0);
+            useFrames = picked.frames;
+            frameWindowStart = picked.start | 0;
+            frameWindowEnd = picked.end | 0;
+        } else {
+            frameWindowStart = 0;
+            frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
+        }
+    } else {
+        frameWindowStart = 0;
+        frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
+    }
+
     const safeSkin = resolvedId.replace(/\s+/g, "_").toLowerCase();
     const dirKey = String(dir || "none").toLowerCase();
-    const animKey = (frameRate === resolved.frameRate && repeat === resolved.repeat)
+    const animKeyBase = (frameRate === resolved.frameRate && repeat === resolved.repeat)
         ? `effect_${safeSkin}`
         : `effect_${safeSkin}_fps${frameRate}_r${repeat}`;
+    const animKey = (useFrames.length < resolved.frameIndices.length)
+        ? `${animKeyBase}_w${useFrames.length}_s${frameWindowStart}`
+        : animKeyBase;
 
     if (lastAnim && lastAnim === animKey && lastSkin === resolvedId && lastDir === dirKey) {
         return;
@@ -285,17 +338,20 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
     if (!mgr.exists(animKey)) {
         mgr.create({
             key: animKey,
-            frames: mgr.generateFrameNumbers(resolved.textureKey, { frames: resolved.frameIndices }),
+            frames: mgr.generateFrameNumbers(resolved.textureKey, { frames: useFrames }),
             frameRate,
             repeat
         });
     }
 
     let played = false;
+    let playErr = "";
     try {
         sprite.play(animKey, true);
         played = true;
-    } catch { }
+    } catch (err) {
+        playErr = (err instanceof Error) ? err.message : String(err || "");
+    }
 
     const hidMissing = !!data.get(EFFECT_HIDE_MISSING_TEX_KEY);
     if (hidMissing) {
@@ -317,10 +373,21 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
             fps: frameRate,
             repeat,
             played,
+            playErr,
+            windowMs: Number.isFinite(windowMs) ? (windowMs | 0) : 0,
+            windowFrames: useFrames.length,
+            windowStart: frameWindowStart,
+            windowEnd: frameWindowEnd,
             curAnimKey: curAnim ? curAnim.key : "",
             isPlaying: sprite.anims ? !!sprite.anims.isPlaying : false,
             nativeTex: (sprite as any).texture?.key ?? "",
-            nativeFrame: (sprite as any).frame?.name ?? ""
+            nativeFrame: (sprite as any).frame?.name ?? "",
+            visible: (sprite as any).visible ?? true,
+            alpha: (sprite as any).alpha ?? 1,
+            depth: (sprite as any).depth ?? 0,
+            displayW: (sprite as any).displayWidth ?? (sprite as any).width ?? 0,
+            displayH: (sprite as any).displayHeight ?? (sprite as any).height ?? 0,
+            hasAnims: !!(sprite as any).anims
         });
     }
 

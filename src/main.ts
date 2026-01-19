@@ -895,23 +895,22 @@ function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
 // ------------------------------------------------------------
 let _pendingSaveApplied = false;
 
-function _applyPendingSaveIfAny(): void {
-  if (_pendingSaveApplied) return;
+function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   const g: any = globalThis as any;
-  if (!g.__isHost) return;
-
-  const pending = g.__pendingSaveFromFile;
-  if (!pending || !pending.parsed) return;
-
-  const save = pending.parsed;
+  if (!g.__isHost) return false;
   if (!save || save.type !== "heroesSaveV1") {
     console.warn("[save] pending save has unknown type");
-    return;
+    return false;
   }
 
-  _pendingSaveApplied = true;
+  logSave("[save] applying save", sourceLabel || "");
 
-  logSave("[save] applying save from file", pending.name || "");
+  // Clear any previous pending save state
+  g.__pendingWorldSnapshotForSave = null;
+  g.__pendingDecorPayload = null;
+  g.__npcSavedSnapshotByKey = null;
+  g.__heroSavedSnapshotByProfile = null;
+  g.__loadedSaveProfiles = null;
 
   // Cache profiles from save (for UI/debug; spawning is still by connect)
   const profs: string[] = Array.isArray(save.profiles) ? save.profiles : [];
@@ -1016,9 +1015,24 @@ function _applyPendingSaveIfAny(): void {
   }
 
   logSave("[save] pending save installed; will apply on next hero spawn for matching profiles");
+  return true;
+}
+
+function _applyPendingSaveIfAny(): void {
+  if (_pendingSaveApplied) return;
+  const g: any = globalThis as any;
+  if (!g.__isHost) return;
+
+  const pending = g.__pendingSaveFromFile;
+  if (!pending || !pending.parsed) return;
+
+  const save = pending.parsed;
+  if (!_applyHeroSavePayload(save, pending.name || "")) return;
+  _pendingSaveApplied = true;
 }
 
 (globalThis as any).__onHostBecameHost = _applyPendingSaveIfAny;
+(globalThis as any).__hero_applySavePayload = _applyHeroSavePayload;
 
 
 
