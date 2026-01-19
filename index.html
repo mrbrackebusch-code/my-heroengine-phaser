@@ -608,7 +608,7 @@
 
 
       /* -----------------------------
-         HUD (4 boxes)
+         HUD (5 boxes)
          ----------------------------- */
     :root {
       --hud-left-w: 150px; /* single source of truth */
@@ -619,10 +619,10 @@
         box-sizing: border-box;
 
         display: grid;
-        grid-template-columns: var(--hud-left-w) 1.20fr 1fr 1fr 1fr;
+        grid-template-columns: var(--hud-left-w) 1.20fr 1fr 1fr 1fr 1fr;
         gap: 1px;
 
-        grid-template-columns: 1.20fr 1fr 1fr 1fr;
+        grid-template-columns: 1.20fr 1fr 1fr 1fr 1fr;
         gap: 8px;
 
         padding: 10px;
@@ -750,6 +750,10 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .hud-cost-bad {
+        color: #ff6b6b;
+        text-shadow: 0 0 6px rgba(255, 78, 78, 0.45);
+      }
 
       .hud-elemline {
         display: flex;
@@ -813,6 +817,30 @@
       .hud-you-stat {
         color: rgba(255, 255, 255, 0.84);
         font-size: 11.5px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      .hud-you-stat-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .hud-you-stat-rate {
+        flex: 0 0 auto;
+        min-width: 44px;
+        margin-left: auto;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.9;
+      }
+
+      .hud-regen-boost {
+        color: var(--c-support);
+        text-shadow: 0 0 6px rgba(76, 255, 136, 0.45);
       }
 
       @keyframes hudManaFlash {
@@ -1294,6 +1322,7 @@
   <div id="hud-cell-a"></div>
   <div id="hud-cell-b"></div>
   <div id="hud-cell-ab"></div>
+  <div id="hud-cell-r"></div>
 </div>
 
 
@@ -1339,15 +1368,21 @@
               <div class="hud-subtle" id="hud-you-slot">â€¦</div>
             </div>
               <div class="hud-youline" id="hud-you-name">â€¦</div>
-              <div class="hud-youline hud-you-stat" id="hud-you-health">â€¦</div>
-              <div class="hud-youline hud-you-stat" id="hud-you-mana">â€¦</div>
+              <div class="hud-youline hud-you-stat" id="hud-you-health">
+                <span class="hud-you-stat-label" id="hud-you-health-label">...</span>
+                <span class="hud-you-stat-rate" id="hud-you-health-rate"></span>
+              </div>
+              <div class="hud-youline hud-you-stat" id="hud-you-mana">
+                <span class="hud-you-stat-label" id="hud-you-mana-label">...</span>
+                <span class="hud-you-stat-rate" id="hud-you-mana-rate"></span>
+              </div>
               <div class="hud-youline hud-you-stat" id="hud-you-coins">â€¦</div>
           </div>
 
-          <!-- A -->
+          <!-- Q -->
           <div class="hud-cell hud-cell-a" id="hud-box-a">
             <div class="hud-head">
-              <div class="hud-title">A Button</div>
+              <div class="hud-title">Q Button</div>
               <div class="hud-subtle" id="hud-a-note"></div>
             </div>
 
@@ -1361,6 +1396,7 @@
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-a-cost">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
@@ -1370,10 +1406,10 @@
             <div class="hud-raw" id="hud-a-raw"></div>
           </div>
 
-          <!-- B -->
+          <!-- W -->
           <div class="hud-cell hud-cell-b" id="hud-box-b">
             <div class="hud-head">
-              <div class="hud-title">B Button</div>
+              <div class="hud-title">W Button</div>
               <div class="hud-subtle" id="hud-b-note"></div>
             </div>
 
@@ -1387,6 +1423,7 @@
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-b-cost">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
@@ -1396,10 +1433,10 @@
             <div class="hud-raw" id="hud-b-raw"></div>
           </div>
 
-          <!-- A+B -->
+          <!-- E -->
           <div class="hud-cell hud-cell-ab" id="hud-box-ab">
             <div class="hud-head">
-              <div class="hud-title">A+B Button</div>
+              <div class="hud-title">E Button</div>
               <div class="hud-subtle" id="hud-ab-note"></div>
             </div>
 
@@ -1413,6 +1450,7 @@
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-ab-cost">â€”</span></div>
             </div>
 
             <div class="hud-elemline">
@@ -1420,6 +1458,33 @@
               <div class="hud-elem" id="hud-ab-elem" title="">*</div>
             </div>
             <div class="hud-raw" id="hud-ab-raw"></div>
+          </div>
+
+          <!-- R -->
+          <div class="hud-cell hud-cell-r" id="hud-box-r">
+            <div class="hud-head">
+              <div class="hud-title">R Button</div>
+              <div class="hud-subtle" id="hud-r-note"></div>
+            </div>
+
+            <div class="hud-kindline">
+              <div class="hud-kindlabel">Type:</div>
+              <div class="hud-kind" id="hud-r-kind">â€”</div>
+            </div>
+
+            <div class="hud-traits">
+              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-r-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-r-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-r-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-r-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-r-cost">â€”</span></div>
+            </div>
+
+            <div class="hud-elemline">
+              <div class="hud-k">Element:</div>
+              <div class="hud-elem" id="hud-r-elem" title="">*</div>
+            </div>
+            <div class="hud-raw" id="hud-r-raw"></div>
           </div>
         </div>
 
@@ -1476,7 +1541,7 @@
             <div id="shop-box">
               <div id="shop-title">Shop</div>
               <div id="shop-items"></div>
-              <div id="shop-hint">A: Buy  B: Close</div>
+              <div id="shop-hint">Q: Buy  W: Close</div>
             </div>
           </div>
           <div id="relic-offer-layer" aria-hidden="true">
@@ -1484,7 +1549,7 @@
               <div id="relic-offer-title">Relic Offer</div>
               <div id="relic-offer-flavor"></div>
               <div id="relic-offer-items"></div>
-              <div id="relic-offer-hint">A: Choose  B: Close</div>
+              <div id="relic-offer-hint">Q: Choose  W: Close</div>
             </div>
           </div>
 
@@ -1663,7 +1728,11 @@
           youSlot: document.getElementById("hud-you-slot"),
           youName: document.getElementById("hud-you-name"),
           youHealth: document.getElementById("hud-you-health"),
+          youHealthLabel: document.getElementById("hud-you-health-label"),
+          youHealthRate: document.getElementById("hud-you-health-rate"),
           youMana: document.getElementById("hud-you-mana"),
+          youManaLabel: document.getElementById("hud-you-mana-label"),
+          youManaRate: document.getElementById("hud-you-mana-rate"),
           youCoins: document.getElementById("hud-you-coins"),
 
           boxA: document.getElementById("hud-box-a"),
@@ -1674,6 +1743,7 @@
           aReach: document.getElementById("hud-a-reach"),
           aTime: document.getElementById("hud-a-time"),
           aStatus: document.getElementById("hud-a-status"),
+          aCost: document.getElementById("hud-a-cost"),
           aElem: document.getElementById("hud-a-elem"),
 
           boxB: document.getElementById("hud-box-b"),
@@ -1684,6 +1754,7 @@
           bReach: document.getElementById("hud-b-reach"),
           bTime: document.getElementById("hud-b-time"),
           bStatus: document.getElementById("hud-b-status"),
+          bCost: document.getElementById("hud-b-cost"),
           bElem: document.getElementById("hud-b-elem"),
 
           boxAB: document.getElementById("hud-box-ab"),
@@ -1694,7 +1765,19 @@
           abReach: document.getElementById("hud-ab-reach"),
           abTime: document.getElementById("hud-ab-time"),
           abStatus: document.getElementById("hud-ab-status"),
+          abCost: document.getElementById("hud-ab-cost"),
           abElem: document.getElementById("hud-ab-elem"),
+
+          boxR: document.getElementById("hud-box-r"),
+          rNote: document.getElementById("hud-r-note"),
+          rRaw: document.getElementById("hud-r-raw"),
+          rKind: document.getElementById("hud-r-kind"),
+          rDmg: document.getElementById("hud-r-dmg"),
+          rReach: document.getElementById("hud-r-reach"),
+          rTime: document.getElementById("hud-r-time"),
+          rStatus: document.getElementById("hud-r-status"),
+          rCost: document.getElementById("hud-r-cost"),
+          rElem: document.getElementById("hud-r-elem"),
 
           xpLeftProgress: document.getElementById("xp-left-progress"),
           xpLevelTop: document.getElementById("xp-level-top"),
@@ -2903,7 +2986,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (R.relicOfferTitle) setText(R.relicOfferTitle, String(offer.title || "Relic Offer"));
           if (R.relicOfferFlavor) setText(R.relicOfferFlavor, String(offer.flavorText || ""));
           if (R.relicOfferBox) R.relicOfferBox.setAttribute("data-theme", String(offer.theme || ""));
-          if (R.relicOfferHint) setText(R.relicOfferHint, "A: Choose  B: Close");
+          if (R.relicOfferHint) setText(R.relicOfferHint, "Q: Choose  W: Close");
 
           const options = Array.isArray(offer.options) ? offer.options : [];
           const canControl = !!offer.canControl;
@@ -3118,6 +3201,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
         }
 
         function resolveHeroIndexForSprite(hero) {
+          if (typeof window.__heFindHeroIndexForSprite === "function") {
+            try {
+              const hi = window.__heFindHeroIndexForSprite(hero);
+              if (typeof hi === "number") return (hi | 0);
+            } catch (_e) {}
+          }
           const heroesArr = buildHeroesArr();
           for (let i = 0; i < heroesArr.length; i++) {
             if (heroesArr[i] === hero) return (i | 0);
@@ -3125,19 +3214,36 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return -1;
         }
 
-        function callStudentLogic(heroIndex, button, profile) {
-          const HE = window.HeroEngine;
-          const isHost = (typeof _uiIsHost === "function") ? _uiIsHost() : false;
-          let out = null;
-          if (!isHost && typeof window.__heBlocklyHeroLogicRun === "function") {
-            try {
-              out = window.__heBlocklyHeroLogicRun(profile || "", button);
-            } catch (_e) {
-              out = null;
+        function _hasBlocklyXml(profile) {
+          const p = (profile || "").trim();
+          if (!p) return false;
+          try {
+            const map = window.__heBlocklyXmlByProfile;
+            if (map && typeof map === "object") {
+              const live = String(map[p] || "");
+              if (live && live.trim()) return true;
             }
-          } else if (HE && typeof HE.runHeroLogicForHeroHook === "function") {
+          } catch (_e) {}
+          try {
+            const key = "he_blockly_ws_v1:" + encodeURIComponent(p);
+            return !!(localStorage.getItem(key) || "").trim();
+          } catch (_e) {
+            return false;
+          }
+        }
+
+        function callStudentLogic(heroIndex, button, profile) {
+          const prof = (profile || "").trim();
+          const hasXml = _hasBlocklyXml(prof);
+          if (!hasXml) return { out: null, raw: null, button, profile: prof, heroIndex, hasXml };
+
+          let out = null;
+          if (typeof window.__heBlocklyHeroLogicRun === "function") {
             try {
-              out = HE.runHeroLogicForHeroHook(heroIndex | 0, button);
+              if (typeof window.__heSetBlocklyROForHeroIndex === "function") {
+                try { window.__heSetBlocklyROForHeroIndex(heroIndex | 0); } catch (_e) {}
+              }
+              out = window.__heBlocklyHeroLogicRun(prof, button);
             } catch (_e) {
               out = null;
             }
@@ -3145,11 +3251,11 @@ function _readTeamCoins(pid, hero, spritesNS) {
           let raw = null;
           try {
             if (typeof window.__heBlocklyHeroLogicDebug === "function") {
-              const dbg = window.__heBlocklyHeroLogicDebug(profile || "");
+              const dbg = window.__heBlocklyHeroLogicDebug(prof);
               raw = (dbg && dbg.lastRawByButton && dbg.lastRawByButton[button]) || dbg?.lastRaw || null;
             }
           } catch (_e) {}
-          return { out, raw, button, profile };
+          return { out, raw, button, profile: prof, heroIndex, hasXml };
         }
 
         function _logicNoteForButton(button, profile) {
@@ -3174,7 +3280,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const dbg = (typeof window.__heBlocklyHeroLogicDebug === "function")
             ? window.__heBlocklyHeroLogicDebug(profile || "")
             : null;
-          const btnIds = { "A": "a", "B": "b", "A+B": "ab" };
+          const btnIds = { "A": "a", "B": "b", "A+B": "ab", "R": "r" };
           const hud = Object.keys(btnIds).map(btn => {
             const suffix = btnIds[btn];
             const rawEl = document.getElementById(`hud-${suffix}-raw`);
@@ -3209,9 +3315,28 @@ function _readTeamCoins(pid, hero, spritesNS) {
           return msg;
         };
 
+      function _coerceFamilyId(val) {
+        const FAMILY = window.FAMILY || {};
+        if (typeof val === "number" && Number.isFinite(val)) return val | 0;
+        if (typeof val === "string") {
+          const s = val.trim().toLowerCase();
+          if (s === "strength") return (typeof FAMILY.STRENGTH === "number" ? (FAMILY.STRENGTH | 0) : 0);
+          if (s === "agility") return (typeof FAMILY.AGILITY === "number" ? (FAMILY.AGILITY | 0) : 1);
+          if (s === "intellect" || s === "intelligence") return (typeof FAMILY.INTELLECT === "number" ? (FAMILY.INTELLECT | 0) : 2);
+          if (s === "wisdom" || s === "support" || s === "heal") {
+            if (typeof FAMILY.HEAL === "number") return (FAMILY.HEAL | 0);
+            if (typeof FAMILY.SUPPORT === "number") return (FAMILY.SUPPORT | 0);
+            return 3;
+          }
+          const key = s.toUpperCase();
+          if (typeof FAMILY[key] === "number") return (FAMILY[key] | 0);
+        }
+        return (val | 0);
+      }
+
       function familyInfo(fam) {
         const FAMILY = window.FAMILY || {};
-        const f = (Number(fam) | 0);
+        const f = _coerceFamilyId(fam);
 
         // Prefer engine enums when present
         if (typeof FAMILY.STRENGTH === "number" && f === (FAMILY.STRENGTH | 0)) {
@@ -3242,9 +3367,28 @@ function _readTeamCoins(pid, hero, spritesNS) {
       }
 
         // --- element mapping: DEFAULT NONE unless enum says otherwise ---
+        function _coerceElementId(val) {
+          const WE = window.ELEM || {};
+          if (typeof val === "number" && Number.isFinite(val)) return val | 0;
+          if (typeof val === "string") {
+            const s = val.trim().toLowerCase();
+            if (s === "none") return (typeof WE.NONE === "number" ? (WE.NONE | 0) : 0);
+            if (s === "fire") return (typeof WE.FIRE === "number" ? (WE.FIRE | 0) : 2);
+            if (s === "water") return (typeof WE.WATER === "number" ? (WE.WATER | 0) : 3);
+            if (s === "earth") return (typeof WE.EARTH === "number" ? (WE.EARTH | 0) : 5);
+            if (s === "ice" || s === "icy") return (typeof WE.ICE === "number" ? (WE.ICE | 0) : 6);
+            if (s === "air" || s === "wind") return (typeof WE.AIR === "number" ? (WE.AIR | 0) : (typeof WE.WIND === "number" ? (WE.WIND | 0) : 7));
+            if (s === "electric" || s === "lightning") return (typeof WE.ELECTRIC === "number" ? (WE.ELECTRIC | 0) : 4);
+            if (s === "grass" || s === "plant" || s === "plants" || s === "nature") return (typeof WE.GRASS === "number" ? (WE.GRASS | 0) : 1);
+            const key = s.toUpperCase();
+            if (typeof WE[key] === "number") return (WE[key] | 0);
+          }
+          return (val | 0);
+        }
+
         function elemInfo(elem) {
           const WE = window.ELEM || {};
-          const e = (Number(elem) | 0);
+          const e = _coerceElementId(elem);
 
           // Helper: prefer engine enum ids when available; otherwise use fallback numeric ids
           function _matchesAnyKey(keys) {
@@ -3279,7 +3423,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
           try { return (spritesNS.readDataNumber(spr, key) | 0); } catch (_e) { return 0; }
         }
 
-        function readProfile(pid) {
+        function readProfile(pid, hero) {
+          try {
+            const spritesNS = window.sprites;
+            if (spritesNS && hero) {
+              const key = String(spritesNS.readDataString(hero, "__profileKey") || "");
+              if (key && key.trim()) return key.trim();
+              const n0 = String(spritesNS.readDataString(hero, "name") || "");
+              if (n0 && n0.trim()) return n0.trim();
+              const n1 = String(spritesNS.readDataString(hero, "heroName") || "");
+              if (n1 && n1.trim()) return n1.trim();
+            }
+          } catch (_e) {}
+
           const profs = window.__heroProfiles;
           if (Array.isArray(profs) && profs[pid - 1]) return String(profs[pid - 1]);
           // Fallback to the locally selected profile name (e.g., when no server profile exists)
@@ -3302,7 +3458,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         }
 
         const RAW_LABELS = ["family", "damage", "reach", "time", "status", "element", "id"];
-        function renderMoveV2(data, boxEl, noteEl, rawEl, kindEl, dmgEl, reachEl, timeEl, statusEl, elemEl, wpnModsByFamily) {
+        function renderMoveV2(data, boxEl, noteEl, rawEl, kindEl, dmgEl, reachEl, timeEl, statusEl, costEl, elemEl, wpnModsByFamily) {
           const out = data ? data.out : null;
           let raw = data ? data.raw : null;
           let note = data ? data.note : "";
@@ -3319,6 +3475,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(reachEl, "—");
             setText(timeEl, "—");
             setText(statusEl, "—");
+            if (costEl) {
+              setText(costEl, "—");
+              costEl.classList.remove("hud-cost-bad");
+            }
             const ei0 = { name: "None", emoji: "∅" };
             setText(elemEl, ei0.emoji);
             setTitle(elemEl, ei0.name);
@@ -3328,7 +3488,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           // If raw missing, try pulling the latest from the debug helper for this button/profile.
-          if ((!raw || !Array.isArray(raw)) && typeof window.__heBlocklyHeroLogicDebug === "function" && btn) {
+          if ((!raw || !Array.isArray(raw)) && data && data.hasXml && typeof window.__heBlocklyHeroLogicDebug === "function" && btn) {
             try {
               const dbg = window.__heBlocklyHeroLogicDebug(prof || "");
               const cand = dbg && dbg.lastRawByButton ? dbg.lastRawByButton[btn] : null;
@@ -3339,16 +3499,21 @@ function _readTeamCoins(pid, hero, spritesNS) {
           let arrMain = (Array.isArray(out) && out.length >= 7) ? out : null;
           const arrRaw = (Array.isArray(raw) && raw.length >= 7) ? raw : (Array.isArray(out) && out.length >= 7 ? out : null);
 
-          // Force invalid view if Blockly reported invalid/default-out or if raw has null/undefined entries
-          const noteInvalid = (note || "").indexOf("blockly:invalid") >= 0;
-          const rawHasHoles = !!(arrRaw && arrRaw.some(v => v === null || typeof v === "undefined"));
-          if (noteInvalid || rawHasHoles) {
+          const invalidSentinel = !!(arrMain &&
+            (typeof arrMain[0] === "number" && (arrMain[0] | 0) < 0) &&
+            (typeof arrMain[5] === "number" && (arrMain[5] | 0) < 0) &&
+            (typeof arrMain[6] === "string" && String(arrMain[6]).trim().toLowerCase() === "invalid"));
+          if (invalidSentinel) {
             arrMain = null;
           }
 
           if (!arrMain) {
             reset();
-            setText(noteEl, `No valid move made`);
+            if (data && data.hasXml === false) {
+              setText(noteEl, "No Blockly for profile");
+            } else {
+              setText(noteEl, `No valid move made`);
+            }
             if (rawEl) {
               const src = arrRaw || [];
               rawEl.innerHTML = RAW_LABELS.map((lbl, i) => {
@@ -3375,12 +3540,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (detailNodes) detailNodes.forEach(n => { try { n.style.display = ""; } catch (_e) {} });
           if (rawEl) rawEl.style.display = "none";
 
-          const fam = arrMain[0] | 0;
+          const fam = _coerceFamilyId(arrMain[0]);
           const dmg = arrMain[1] | 0;
           const reach = arrMain[2] | 0;
           const time = arrMain[3] | 0;
           const status = arrMain[4] | 0;
-          const elem = arrMain[5] | 0;
+          const elem = _coerceElementId(arrMain[5]);
 
           const fi = familyInfo(fam);
           const ei = elemInfo(elem);
@@ -3395,6 +3560,25 @@ function _readTeamCoins(pid, hero, spritesNS) {
           setText(reachEl, _fmtTraitWithWeapon(reach, wmods ? wmods.reach : 0));
           setText(timeEl, _fmtTraitWithWeapon(time, wmods ? wmods.time : 0));
           setText(statusEl, _fmtTraitWithWeapon(status, wmods ? wmods.status : 0));
+
+          if (costEl) {
+            const manaNow = (data && typeof data.mana === "number") ? (data.mana | 0) : null;
+            const maxMana = (data && typeof data.maxMana === "number") ? (data.maxMana | 0) : null;
+            let cost = (dmg + reach + time + status) | 0;
+            let tooExpensive = false;
+            if (typeof window.__heComputeManaCostForHero === "function" && data && typeof data.heroIndex === "number") {
+              try {
+                const res = window.__heComputeManaCostForHero((data.heroIndex | 0), fam, dmg, reach, time, status);
+                if (res && typeof res.cost === "number") {
+                  cost = res.cost | 0;
+                  if (typeof res.tooExpensive === "boolean") tooExpensive = res.tooExpensive;
+                }
+              } catch (_e) {}
+            }
+            setText(costEl, String(cost | 0));
+            const lowMana = (manaNow != null) && (cost > manaNow);
+            costEl.classList.toggle("hud-cost-bad", lowMana || tooExpensive || (maxMana != null && cost > maxMana));
+          }
 
           setText(elemEl, ei.emoji);
           setTitle(elemEl, ei.name);
@@ -3444,12 +3628,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
             return;
           }
 
-          const fam = out[0] | 0;
+          const fam = _coerceFamilyId(out[0]);
           const dmg = out[1] | 0;
           const reach = out[2] | 0;
           const time = out[3] | 0;
           const status = out[4] | 0;
-          const elem = out[5] | 0;
+          const elem = _coerceElementId(out[5]);
 
           const fi = familyInfo(fam);
           const ei = elemInfo(elem);
@@ -3623,34 +3807,41 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (!pid) {
             setText(R.youSlot, "â€¦");
             setText(R.youName, "Waiting for serverâ€¦");
-            setText(R.youHealth, "");
-            setText(R.youMana, "");
+            setText(R.youHealthLabel, "");
+            setText(R.youHealthRate, "");
+            setText(R.youManaLabel, "");
+            setText(R.youManaRate, "");
             if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
+            if (R.youManaRate) R.youManaRate.classList.remove("hud-regen-boost");
             setText(R.youCoins, "");
 
-            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, null);
+            renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
             _xp_resetUi();
             return;
           }
 
           const urlProf = (typeof window.__localHeroProfileName === "string" && window.__localHeroProfileName.trim()) ? window.__localHeroProfileName.trim() : "";
-          const profile = readProfile(pid) || urlProf || "";
+          const hero = findLocalHeroSprite(pid);
+          const profile = readProfile(pid, hero) || urlProf || "";
           setText(R.youSlot, "P" + pid);
           setText(R.youName, "P" + pid + (profile ? ": " + profile : ""));
-
-          const hero = findLocalHeroSprite(pid);
           if (!hero || !spritesNS) {
-            setText(R.youHealth, "Waiting");
-            setText(R.youMana, "For");
+            setText(R.youHealthLabel, "Waiting");
+            setText(R.youHealthRate, "");
+            setText(R.youManaLabel, "For");
+            setText(R.youManaRate, "");
             if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
+            if (R.youManaRate) R.youManaRate.classList.remove("hud-regen-boost");
             setText(R.youCoins, "A Hero");
 
-            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, null);
+            renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
             _xp_resetUi();
             return;
@@ -3660,9 +3851,15 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const maxHp = readNum(spritesNS, hero, "maxHp");
           const mana = readNum(spritesNS, hero, "mana");
           const maxMana = readNum(spritesNS, hero, "maxMana");
-          setText(R.youHealth, `${EMOJI.health} Health: ${hp}/${maxHp}`);
-          setText(R.youMana, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
           const snap = _getUiSnapshotCached(pid);
+          const regenPerSec = (snap && snap.ready) ? (snap.manaRegenPerSec | 0) : 0;
+          const regenLabel = (snap && snap.ready) ? (`+${regenPerSec}/s`) : "";
+          const manaBlessActive = !!(snap && snap.ready && snap.manaBlessActive);
+          setText(R.youHealthLabel, `${EMOJI.health} Health: ${hp}/${maxHp}`);
+            setText(R.youHealthRate, "");
+          setText(R.youManaLabel, `${EMOJI.mana} Mana: ${mana}/${maxMana}`);
+          setText(R.youManaRate, regenLabel);
+          if (R.youManaRate) R.youManaRate.classList.toggle("hud-regen-boost", manaBlessActive);
           _hud_mergeRelicCatalogFromSnap(snap);
           const manaFlash = snap && snap.ready && !!snap.manaFlash;
           if (R.youMana) {
@@ -3729,19 +3926,22 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const heroIndex = resolveHeroIndexForSprite(hero);
           if (heroIndex < 0) {
-            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, null);
-            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, null);
-            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, null);
+            renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
+            renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
+            renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, null);
+            renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             return;
           }
 
           const outA = callStudentLogic(heroIndex, "A", profile);
           const outB = callStudentLogic(heroIndex, "B", profile);
           const outAB = callStudentLogic(heroIndex, "A+B", profile);
+          const outR = callStudentLogic(heroIndex, "R", profile);
 
-          renderMoveV2({ out: outA.out, raw: outA.raw, note: _logicNoteForButton("A", profile), button: "A", profile }, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aElem, wpnModsByFamily);
-          renderMoveV2({ out: outB.out, raw: outB.raw, note: _logicNoteForButton("B", profile), button: "B", profile }, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bElem, wpnModsByFamily);
-          renderMoveV2({ out: outAB.out, raw: outAB.raw, note: _logicNoteForButton("A+B", profile), button: "A+B", profile }, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abElem, wpnModsByFamily);
+          renderMoveV2({ out: outA.out, raw: outA.raw, note: _logicNoteForButton("A", profile), button: "A", profile, heroIndex, mana, maxMana }, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, wpnModsByFamily);
+          renderMoveV2({ out: outB.out, raw: outB.raw, note: _logicNoteForButton("B", profile), button: "B", profile, heroIndex, mana, maxMana }, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, wpnModsByFamily);
+          renderMoveV2({ out: outAB.out, raw: outAB.raw, note: _logicNoteForButton("A+B", profile), button: "A+B", profile, heroIndex, mana, maxMana }, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, wpnModsByFamily);
+          renderMoveV2({ out: outR.out, raw: outR.raw, note: _logicNoteForButton("R", profile), button: "R", profile, heroIndex, mana, maxMana }, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, wpnModsByFamily);
         }
 
         setInterval(tick, REFRESH_MS);

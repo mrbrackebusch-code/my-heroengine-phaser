@@ -3,6 +3,7 @@ import type {
   TrapKind,
   TrapOutputContract,
   TrapPaletteSpec,
+  TrapBlocklySpec,
   TrapSpec,
   TrapStarterBlocks,
   TrapUIText,
@@ -20,6 +21,7 @@ export interface TrapInstance {
   expectedOutput?: unknown;
   outputContract?: TrapOutputContract;
   paletteOverride?: TrapPaletteSpec;
+  blocklyOverride?: TrapBlocklySpec;
   uiOverride?: Partial<TrapUIText>;
   starterBlocksOverride?: TrapStarterBlocks;
   axes?: TrapAxes;
@@ -45,6 +47,7 @@ export function createTrapInstance(args: {
   expectedOutput?: unknown;
   outputContract?: TrapOutputContract;
   paletteOverride?: TrapPaletteSpec;
+  blocklyOverride?: TrapBlocklySpec;
   uiOverride?: Partial<TrapUIText>;
   starterBlocksOverride?: TrapStarterBlocks;
   axes?: TrapAxes;
@@ -82,6 +85,7 @@ export function resolveTrapSpecForInstance(spec: TrapSpec, instance: TrapInstanc
     ui: spec.ui ? { ...spec.ui } : spec.ui,
     validator: spec.validator ? { ...spec.validator } : spec.validator,
     starterBlocks: spec.starterBlocks ? { ...spec.starterBlocks } : spec.starterBlocks,
+    blockly: spec.blockly ? { ...spec.blockly } : spec.blockly,
   };
 
   if (instance.outputContract) {
@@ -91,6 +95,10 @@ export function resolveTrapSpecForInstance(spec: TrapSpec, instance: TrapInstanc
 
   if (instance.paletteOverride) {
     next.palette = { ...next.palette, ...instance.paletteOverride };
+  }
+
+  if (instance.blocklyOverride) {
+    next.blockly = { ...next.blockly, ...instance.blocklyOverride };
   }
 
   if (instance.uiOverride) {

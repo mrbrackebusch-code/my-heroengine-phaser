@@ -710,93 +710,6 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         }
     }
 
-    if (
-        DEBUG_DRAW_HERO_WALL_COLLIDERS ||
-        DEBUG_DRAW_HERO_SPRITE_BOUNDS ||
-        DEBUG_DRAW_HERO_COLLIDER_BOUNDS ||
-        DEBUG_DRAW_HERO_HITBOX ||
-        DEBUG_DRAW_HERO_NATIVE_BOUNDS ||
-        DEBUG_DRAW_HERO_NAV_FOOTPRINT
-    ) {
-        for (let i = 0; i < _allSprites.length; i++) {
-            const s = _allSprites[i];
-            if (!s) continue;
-            const dataAny: any = (s as any).data || {};
-            if (dataAny.enemyLpc) continue;
-            if (!isHeroSprite(s)) continue;
-
-            const cw = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
-            const ch = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
-            const offY = _heroCollisionOffsetY(s);
-
-            const spriteW = s.width | 0;
-            const spriteH = s.height | 0;
-            const spriteLeft = ((s.x | 0) - (spriteW >> 1)) | 0;
-            const spriteTop = ((s.y | 0) - (spriteH >> 1)) | 0;
-
-            const colW = cw | 0;
-            const colH = ch | 0;
-            const colLeft = ((s.x | 0) - (colW >> 1)) | 0;
-            const colTop = (((s.y | 0) + (offY | 0)) - (colH >> 1)) | 0;
-
-            const hitBounds = _getEngineCollisionBounds(s);
-            const hitLeft = hitBounds ? (hitBounds.left | 0) : colLeft;
-            const hitTop = hitBounds ? (hitBounds.top | 0) : colTop;
-            const hitRight = hitBounds ? (hitBounds.right | 0) : ((colLeft + colW - 1) | 0);
-            const hitBottom = hitBounds ? (hitBounds.bottom | 0) : ((colTop + colH - 1) | 0);
-            const hitW = ((hitRight - hitLeft + 1) | 0);
-            const hitH = ((hitBottom - hitTop + 1) | 0);
-
-            const footX = s.x | 0;
-            const footY = (((s.y | 0) + (offY | 0) + (Math.idiv((colH | 0), 2) | 0) - 1) | 0);
-            const wallLeft = (footX - (colW >> 1)) | 0;
-            const wallTop = (footY - colH + 1) | 0;
-
-            const navLeft = wallLeft;
-            const navTop = wallTop;
-
-            if (DEBUG_DRAW_HERO_SPRITE_BOUNDS) {
-                gHeroes.lineStyle(1, DEBUG_COLLIDER_SPRITE_COLOR, DEBUG_COLLIDER_ALPHA);
-                gHeroes.strokeRect(spriteLeft, spriteTop, spriteW, spriteH);
-            }
-            if (DEBUG_DRAW_HERO_COLLIDER_BOUNDS) {
-                gHeroes.lineStyle(1, DEBUG_COLLIDER_BODY_COLOR, DEBUG_COLLIDER_ALPHA);
-                gHeroes.strokeRect(colLeft, colTop, colW, colH);
-            }
-            if (DEBUG_DRAW_HERO_HITBOX) {
-                gHeroes.lineStyle(1, DEBUG_COLLIDER_HIT_COLOR, DEBUG_COLLIDER_ALPHA);
-                gHeroes.strokeRect(hitLeft, hitTop, hitW, hitH);
-            }
-            if (DEBUG_DRAW_HERO_NATIVE_BOUNDS) {
-                const native: any = (s as any).native;
-                if (native && typeof native.getBounds === "function") {
-                    const b = native.getBounds();
-                    gHeroes.lineStyle(1, DEBUG_COLLIDER_NATIVE_COLOR, DEBUG_COLLIDER_ALPHA);
-                    gHeroes.strokeRect(b.x, b.y, b.width, b.height);
-                }
-            }
-            if (DEBUG_DRAW_HERO_NAV_FOOTPRINT) {
-                gHeroes.lineStyle(1, DEBUG_COLLIDER_NAV_COLOR, DEBUG_COLLIDER_ALPHA);
-                gHeroes.strokeRect(navLeft, navTop, colW, colH);
-            }
-            if (DEBUG_DRAW_HERO_WALL_COLLIDERS) {
-                gHeroes.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
-                gHeroes.strokeRect(wallLeft, wallTop, colW, colH);
-            }
-
-            if (!_dbgLoggedHeroColliderOnce) {
-                _dbgLoggedHeroColliderOnce = true;
-                console.log("[DEBUG][HERO_COLLIDER]", {
-                    id: sprites.readDataString(s, "name") || sprites.readDataString(s, "heroName") || s.id,
-                    pos: { x: s.x | 0, y: s.y | 0 },
-                    sprite: { left: spriteLeft, top: spriteTop, right: spriteLeft + spriteW - 1, bottom: spriteTop + spriteH - 1, w: spriteW, h: spriteH },
-                    collider: { left: colLeft, top: colTop, right: colLeft + colW - 1, bottom: colTop + colH - 1, w: colW, h: colH },
-                    hitbox: { left: hitLeft, top: hitTop, right: hitRight, bottom: hitBottom, w: hitW, h: hitH },
-                    wall: { left: wallLeft, top: wallTop, right: wallLeft + colW - 1, bottom: wallTop + colH - 1, w: colW, h: colH },
-                });
-            }
-        }
-    }
 }
 
 
@@ -1373,6 +1286,11 @@ const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 const EFFECT_OFFX_DATA_KEY = "effectOffX";
 const EFFECT_OFFY_DATA_KEY = "effectOffY";
 const EFFECT_TINT_DATA_KEY = "effectTint";
+const EFFECT_ALPHA_DATA_KEY = "effectAlpha";
+const EFFECT_BLEND_DATA_KEY = "effectBlend";
+const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
+const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
+const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_FPS_DATA_KEY = "effectFps";
 const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
 const EFFECT_MODE_DATA_KEY = "effectMode";
@@ -1381,6 +1299,12 @@ const EFFECT_BRUSH_PX_DATA_KEY = "effectBrushPx";
 const EFFECT_POP_MS_DATA_KEY = "effectPopMs";
 const EFFECT_POP_SCALE_DATA_KEY = "effectPopScale";
 const EFFECT_POP_START_MS_DATA_KEY = "effectPopStartMs";
+const EFFECT_ALIGN_BOTTOM_Y_DATA_KEY = "effectAlignBottomY";
+const EFFECT_INTRO_MS_DATA_KEY = "effectIntroMs";
+const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
+const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
+const EFFECT_ANIM_DELAY_MS_DATA_KEY = "effectAnimDelayMs";
+const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
 
 const __heroNativeByIndex: { [idx: number]: any } = Object.create(null);
 
@@ -3839,6 +3763,7 @@ function _syncShopWeaponRingIfPresent(
             try { fg.setData?.("__shopFocusedByPid", 0); } catch { }
         }
     }
+
 }
 
 //End of shop section
@@ -4466,6 +4391,7 @@ interface Image {
             if (c) this.setPixel(tx, ty, c)
         }
     }
+
 }
 
 
@@ -8801,6 +8727,9 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
             weaponId = wSlash;
         } else if (dpSnake === "thrust" || dpSnake === "attack_thrust") {
             weaponId = wThrust;
+        } else if (dpSnake === "shoot" || dpSnake === "bow") {
+            weaponId = wCast;
+            weaponPhase = "shoot";
         } else if (castPhaseByDisplay || castPhaseByRaw) {
             if (isIntFamily || isSupportFamily) {
                 staffCast = true;
@@ -9722,16 +9651,67 @@ function _effectEnsurePaintMask(sc: Phaser.Scene, nativeAny: any, brushPx: numbe
     }
 }
 
+function _ensureHeroAuraMaskImage(heroNative: any, radius: number): any | null {
+    if (!heroNative) return null;
+    const scene: any = heroNative.scene || (globalThis as any).__phaserScene;
+    if (!scene) return null;
+
+    const heroTexKey = heroNative.texture?.key ? String(heroNative.texture.key) : "";
+    if (!heroTexKey) return null;
+
+    const frameName =
+        (heroNative.frame && (heroNative.frame.name !== undefined))
+            ? heroNative.frame.name
+            : undefined;
+    if (frameName === undefined) return null;
+
+    const auraTexKey = auraKey(heroTexKey, radius | 0);
+    if (!scene.textures || !scene.textures.exists(auraTexKey)) return null;
+    const auraTex = scene.textures.get(auraTexKey);
+    const auraFrame = auraTex.get(frameName as any);
+    if (!auraFrame) return null;
+
+    const cacheKey = `__heroAuraMaskImage_r${radius | 0}`;
+    let maskImg: any = (heroNative as any)[cacheKey];
+    if (!maskImg || !(maskImg as any).scene || (maskImg as any).destroyed) {
+        maskImg = scene.add.image(heroNative.x, heroNative.y, auraTexKey, frameName as any);
+        (heroNative as any)[cacheKey] = maskImg;
+        if (typeof heroNative.originX === "number" && typeof heroNative.originY === "number") {
+            maskImg.setOrigin(heroNative.originX, heroNative.originY);
+        }
+        maskImg.setVisible(false);
+    } else {
+        maskImg.setTexture(auraTexKey, frameName as any);
+    }
+
+    maskImg.x = heroNative.x;
+    maskImg.y = heroNative.y;
+    maskImg.scaleX = (heroNative.scaleX ?? 1) as number;
+    maskImg.scaleY = (heroNative.scaleY ?? 1) as number;
+    maskImg.rotation = (heroNative.rotation ?? 0) as number;
+    if (typeof maskImg.setFlipX === "function") {
+        maskImg.setFlipX(!!heroNative.flipX);
+    }
+    if (typeof maskImg.setFlipY === "function") {
+        maskImg.setFlipY(!!heroNative.flipY);
+    }
+    return maskImg;
+}
+
 function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean {
     if (!nativeAny || !heroNative) return false;
-    const auraImg: any = (heroNative as any).__heroAuraImage;
+    const radius = (nativeAny.__effectMaskRadius | 0);
+    const auraImg: any = _ensureHeroAuraMaskImage(heroNative, radius | 0);
     if (!auraImg || !(auraImg as any).scene || (auraImg as any).destroyed) return false;
 
     const heroId = (heroNative as any).__heroNativeMaskId || (heroNative as any).name || heroNative;
     const lastType = nativeAny.__effectPaintMaskType;
     const lastHero = nativeAny.__effectPaintMaskHeroId;
 
+    const wantInvert = !!nativeAny.__effectMaskInvert;
     if (lastType === "hero" && lastHero === heroId && nativeAny.__effectPaintMask) {
+        try { nativeAny.__effectPaintMask.invertAlpha = wantInvert; } catch { }
+        try { nativeAny.setMask?.(nativeAny.__effectPaintMask); } catch { }
         return true;
     }
 
@@ -9739,6 +9719,7 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
 
     try {
         const mask = auraImg.createBitmapMask();
+        try { mask.invertAlpha = wantInvert; } catch { }
         nativeAny.setMask(mask);
         nativeAny.__effectPaintMask = mask;
         nativeAny.__effectPaintMaskType = "hero";
@@ -9777,6 +9758,27 @@ function _effectApplyScale(nativeAny: any, scale: number, hasScale: boolean, pul
     }
 }
 
+function _effectBlendModeFromString(modeRaw: string): number | null {
+    const mode = String(modeRaw || "").trim().toLowerCase();
+    if (!mode) return null;
+    switch (mode) {
+        case "add":
+        case "additive":
+            return Phaser.BlendModes.ADD;
+        case "screen":
+            return Phaser.BlendModes.SCREEN;
+        case "multiply":
+        case "mul":
+            return Phaser.BlendModes.MULTIPLY;
+        case "normal":
+        case "none":
+        case "opaque":
+            return Phaser.BlendModes.NORMAL;
+        default:
+            return null;
+    }
+}
+
 function _syncEffectPath(
     ctx: SyncContext,
     s: any,
@@ -9795,6 +9797,8 @@ function _syncEffectPath(
     const offX = sprites.readDataNumber(s, EFFECT_OFFX_DATA_KEY);
     const offY = sprites.readDataNumber(s, EFFECT_OFFY_DATA_KEY);
     const tintRaw = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY);
+    const hasAlpha = Object.prototype.hasOwnProperty.call(data, EFFECT_ALPHA_DATA_KEY);
+    const hasBlend = Object.prototype.hasOwnProperty.call(data, EFFECT_BLEND_DATA_KEY);
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
     const hasRepeat = Object.prototype.hasOwnProperty.call(data, EFFECT_REPEAT_DATA_KEY);
     const hasScale = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_DATA_KEY);
@@ -9802,6 +9806,17 @@ function _syncEffectPath(
     const hasPopMs = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_MS_DATA_KEY);
     const hasPopScale = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_SCALE_DATA_KEY);
     const hasPopStart = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_START_MS_DATA_KEY);
+    const hasAlignBottom = Object.prototype.hasOwnProperty.call(data, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY);
+    const hasIntroMs = Object.prototype.hasOwnProperty.call(data, EFFECT_INTRO_MS_DATA_KEY);
+    const hasIntroScale = Object.prototype.hasOwnProperty.call(data, EFFECT_INTRO_SCALE_DATA_KEY);
+    const hasIntroStart = Object.prototype.hasOwnProperty.call(data, EFFECT_INTRO_START_MS_DATA_KEY);
+    const hasAnimDelay = Object.prototype.hasOwnProperty.call(data, EFFECT_ANIM_DELAY_MS_DATA_KEY);
+    const hasAnimDelayStart = Object.prototype.hasOwnProperty.call(data, EFFECT_ANIM_DELAY_START_MS_DATA_KEY);
+    const hasMaskInvert = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_INVERT_DATA_KEY);
+    const hasMaskRadius = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_DATA_KEY);
+    const hasMaskRadiusPx = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_PX_DATA_KEY);
+    const alpha = hasAlpha ? sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY) : 0;
+    const blend = hasBlend ? (sprites.readDataString(s, EFFECT_BLEND_DATA_KEY) || "") : "";
     const fps = hasFps ? sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY) : 0;
     const repeat = hasRepeat ? sprites.readDataNumber(s, EFFECT_REPEAT_DATA_KEY) : 0;
     const scale = hasScale ? sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY) : 0;
@@ -9809,6 +9824,16 @@ function _syncEffectPath(
     const popMs = hasPopMs ? sprites.readDataNumber(s, EFFECT_POP_MS_DATA_KEY) : 0;
     const popScale = hasPopScale ? sprites.readDataNumber(s, EFFECT_POP_SCALE_DATA_KEY) : 0;
     const popStartRaw = hasPopStart ? sprites.readDataNumber(s, EFFECT_POP_START_MS_DATA_KEY) : 0;
+    const alignBottomY = hasAlignBottom ? sprites.readDataNumber(s, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY) : 0;
+    const introMs = hasIntroMs ? sprites.readDataNumber(s, EFFECT_INTRO_MS_DATA_KEY) : 0;
+    const introScale = hasIntroScale ? sprites.readDataNumber(s, EFFECT_INTRO_SCALE_DATA_KEY) : 0;
+    const introStartRaw = hasIntroStart ? sprites.readDataNumber(s, EFFECT_INTRO_START_MS_DATA_KEY) : 0;
+    const animDelayMs = hasAnimDelay ? sprites.readDataNumber(s, EFFECT_ANIM_DELAY_MS_DATA_KEY) : 0;
+    const animDelayStartRaw = hasAnimDelayStart ? sprites.readDataNumber(s, EFFECT_ANIM_DELAY_START_MS_DATA_KEY) : 0;
+    const maskInvertRaw = hasMaskInvert ? sprites.readDataNumber(s, EFFECT_MASK_INVERT_DATA_KEY) : 0;
+    const maskRadiusRaw = hasMaskRadius ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_DATA_KEY) : 0;
+    const maskRadiusPxRaw = hasMaskRadiusPx ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_PX_DATA_KEY) : 0;
+    const maskInvert = (maskInvertRaw | 0) !== 0;
     const modeRaw = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim().toLowerCase();
     const tint = Number.isFinite(tintRaw) ? (tintRaw as number) | 0 : 0;
 
@@ -9820,6 +9845,8 @@ function _syncEffectPath(
     if (Number.isFinite(offX)) data[EFFECT_OFFX_DATA_KEY] = offX;
     if (Number.isFinite(offY)) data[EFFECT_OFFY_DATA_KEY] = offY;
     if (tint) data[EFFECT_TINT_DATA_KEY] = tint;
+    if (hasAlpha) data[EFFECT_ALPHA_DATA_KEY] = alpha;
+    if (hasBlend) data[EFFECT_BLEND_DATA_KEY] = blend;
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
     if (hasRepeat) data[EFFECT_REPEAT_DATA_KEY] = repeat;
     if (hasScale) data[EFFECT_SCALE_DATA_KEY] = scale;
@@ -9828,6 +9855,15 @@ function _syncEffectPath(
     if (hasPopMs) data[EFFECT_POP_MS_DATA_KEY] = popMs;
     if (hasPopScale) data[EFFECT_POP_SCALE_DATA_KEY] = popScale;
     if (hasPopStart) data[EFFECT_POP_START_MS_DATA_KEY] = popStartRaw;
+    if (hasAlignBottom) data[EFFECT_ALIGN_BOTTOM_Y_DATA_KEY] = alignBottomY;
+    if (hasIntroMs) data[EFFECT_INTRO_MS_DATA_KEY] = introMs;
+    if (hasIntroScale) data[EFFECT_INTRO_SCALE_DATA_KEY] = introScale;
+    if (hasIntroStart) data[EFFECT_INTRO_START_MS_DATA_KEY] = introStartRaw;
+    if (hasAnimDelay) data[EFFECT_ANIM_DELAY_MS_DATA_KEY] = animDelayMs;
+    if (hasAnimDelayStart) data[EFFECT_ANIM_DELAY_START_MS_DATA_KEY] = animDelayStartRaw;
+    if (hasMaskInvert) data[EFFECT_MASK_INVERT_DATA_KEY] = maskInvertRaw;
+    if (hasMaskRadius) data[EFFECT_MASK_RADIUS_DATA_KEY] = maskRadiusRaw;
+    if (hasMaskRadiusPx) data[EFFECT_MASK_RADIUS_PX_DATA_KEY] = maskRadiusPxRaw;
 
     const nativeAny: any = s.native;
     if (!nativeAny || typeof nativeAny.setData !== "function") {
@@ -9848,6 +9884,8 @@ function _syncEffectPath(
     if (skin) nativeAny.setData(EFFECT_SKIN_DATA_KEY, skin);
     if (dir) nativeAny.setData(EFFECT_DIR_DATA_KEY, dir);
     if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
+    if (hasAlpha) nativeAny.setData(EFFECT_ALPHA_DATA_KEY, alpha);
+    if (hasBlend) nativeAny.setData(EFFECT_BLEND_DATA_KEY, blend);
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
     if (hasRepeat) nativeAny.setData(EFFECT_REPEAT_DATA_KEY, repeat);
     if (hasScale) nativeAny.setData(EFFECT_SCALE_DATA_KEY, scale);
@@ -9856,6 +9894,15 @@ function _syncEffectPath(
     if (hasPopMs) nativeAny.setData(EFFECT_POP_MS_DATA_KEY, popMs);
     if (hasPopScale) nativeAny.setData(EFFECT_POP_SCALE_DATA_KEY, popScale);
     if (hasPopStart) nativeAny.setData(EFFECT_POP_START_MS_DATA_KEY, popStartRaw);
+    if (hasAlignBottom) nativeAny.setData(EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, alignBottomY);
+    if (hasIntroMs) nativeAny.setData(EFFECT_INTRO_MS_DATA_KEY, introMs);
+    if (hasIntroScale) nativeAny.setData(EFFECT_INTRO_SCALE_DATA_KEY, introScale);
+    if (hasIntroStart) nativeAny.setData(EFFECT_INTRO_START_MS_DATA_KEY, introStartRaw);
+    if (hasAnimDelay) nativeAny.setData(EFFECT_ANIM_DELAY_MS_DATA_KEY, animDelayMs);
+    if (hasAnimDelayStart) nativeAny.setData(EFFECT_ANIM_DELAY_START_MS_DATA_KEY, animDelayStartRaw);
+    if (hasMaskInvert) nativeAny.setData(EFFECT_MASK_INVERT_DATA_KEY, maskInvertRaw);
+    if (hasMaskRadius) nativeAny.setData(EFFECT_MASK_RADIUS_DATA_KEY, maskRadiusRaw);
+    if (hasMaskRadiusPx) nativeAny.setData(EFFECT_MASK_RADIUS_PX_DATA_KEY, maskRadiusPxRaw);
 
     if (offX || offY) {
         nativeAny.x = (s.x as number) + (offX || 0);
@@ -9883,52 +9930,143 @@ function _syncEffectPath(
         glueAny.applyEffectAnimationForSprite(effectSprite);
     }
 
+    if (hasMaskInvert) {
+        nativeAny.__effectMaskInvert = maskInvert;
+    }
+    if (hasMaskRadius) {
+        nativeAny.__effectMaskRadius = maskRadiusRaw | 0;
+    } else if (nativeAny.__effectMaskRadius == null) {
+        nativeAny.__effectMaskRadius = 0;
+    }
+    if (hasMaskRadiusPx) {
+        nativeAny.__effectMaskRadiusPx = maskRadiusPxRaw | 0;
+    } else if (nativeAny.__effectMaskRadiusPx == null) {
+        nativeAny.__effectMaskRadiusPx = 0;
+    }
+
+    const wantsHeroMaskOnly =
+        modeRaw === "silhouette" ||
+        modeRaw === "mask" ||
+        modeRaw === "outline";
     const wantsPaint =
+        wantsHeroMaskOnly ||
         modeRaw === "paint" ||
         modeRaw === "painted" ||
         modeRaw === "reveal" ||
         modeRaw === "painted_reveal";
     if (wantsPaint) {
         let usedHeroMask = false;
-        try {
-            const dataAny = data || {};
-            const hasHeroIndex = Object.prototype.hasOwnProperty.call(dataAny, PROJ_HERO_INDEX_KEY);
-            const heroIndex = hasHeroIndex ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
-            if (hasHeroIndex) {
-                const heroNative = _getHeroNativeByIndex(heroIndex | 0);
-                if (heroNative && _effectEnsureHeroOutlineMask(nativeAny, heroNative)) {
-                    usedHeroMask = true;
+        const maskRadiusPx = (nativeAny.__effectMaskRadiusPx | 0);
+        if ((maskRadiusPx | 0) > 0) {
+            try {
+                if (nativeAny.__effectPaintMaskType === "hero") _effectClearPaintMask(nativeAny);
+            } catch { }
+            _effectEnsurePaintMask(ctx.sc as any, nativeAny, maskRadiusPx | 0);
+            usedHeroMask = true;
+        }
+        if (!usedHeroMask) {
+            try {
+                const dataAny = data || {};
+                const hasHeroIndex = Object.prototype.hasOwnProperty.call(dataAny, PROJ_HERO_INDEX_KEY);
+                const heroIndex = hasHeroIndex ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
+                if (hasHeroIndex) {
+                    const heroNative = _getHeroNativeByIndex(heroIndex | 0);
+                    if (heroNative && _effectEnsureHeroOutlineMask(nativeAny, heroNative)) {
+                        usedHeroMask = true;
+                        if (typeof heroNative.originX === "number" && typeof heroNative.originY === "number") {
+                            try { nativeAny.setOrigin?.(heroNative.originX, heroNative.originY); } catch { }
+                        }
+                        if (Number.isFinite(heroNative.x as any)) nativeAny.x = heroNative.x;
+                        if (Number.isFinite(heroNative.y as any)) nativeAny.y = heroNative.y;
+                    }
                 }
-            }
-        } catch { }
+            } catch { }
+        }
         if (!usedHeroMask) {
             if (nativeAny.__effectPaintMaskType === "hero") {
                 _effectClearPaintMask(nativeAny);
             }
-            const brush = (hasBrush && (brushPx | 0) > 0) ? (brushPx | 0) : _effectAutoBrushPx(s, nativeAny);
-            _effectEnsurePaintMask(ctx.sc as any, nativeAny, brush | 0);
+            if (!wantsHeroMaskOnly) {
+                const brush = (hasBrush && (brushPx | 0) > 0) ? (brushPx | 0) : _effectAutoBrushPx(s, nativeAny);
+                _effectEnsurePaintMask(ctx.sc as any, nativeAny, brush | 0);
+            }
+            if (wantsHeroMaskOnly) {
+                nativeAny.setVisible?.(false);
+                nativeAny.setAlpha?.(0);
+                return;
+            }
         }
     } else {
         _effectClearPaintMask(nativeAny);
     }
+    let nowMs = 0;
+    const _nowMs = (): number => {
+        if (nowMs) return nowMs | 0;
+        nowMs = (ctx.sc && (ctx.sc as any).time && typeof (ctx.sc as any).time.now === "number")
+            ? ((ctx.sc as any).time.now | 0)
+            : (Date.now() | 0);
+        return nowMs | 0;
+    };
+
     let popMult = 1;
     if (hasPopMs && (popMs | 0) > 0) {
         let startMs = popStartRaw | 0;
-        const nowMs = (ctx.sc && (ctx.sc as any).time && typeof (ctx.sc as any).time.now === "number")
-            ? ((ctx.sc as any).time.now | 0)
-            : (Date.now() | 0);
+        const curMs = _nowMs();
         if (!(startMs > 0)) {
-            startMs = nowMs | 0;
+            startMs = curMs | 0;
             data[EFFECT_POP_START_MS_DATA_KEY] = startMs | 0;
             try { nativeAny.setData(EFFECT_POP_START_MS_DATA_KEY, startMs | 0); } catch { }
         }
         const dur = Math.max(1, popMs | 0);
-        const t = Math.max(0, Math.min(1, (nowMs - startMs) / dur));
+        const t = Math.max(0, Math.min(1, (curMs - startMs) / dur));
         const pulse = Math.sin(Math.PI * t);
         const amp = (hasPopScale && Number.isFinite(popScale)) ? popScale : 0.25;
         popMult = 1 + (amp * pulse);
     }
-    _effectApplyScale(nativeAny, scale, hasScale, popMult);
+
+    let introMult = 1;
+    if (hasIntroMs && (introMs | 0) > 0) {
+        let startMs = introStartRaw | 0;
+        const curMs = _nowMs();
+        if (!(startMs > 0)) {
+            startMs = curMs | 0;
+            data[EFFECT_INTRO_START_MS_DATA_KEY] = startMs | 0;
+            try { nativeAny.setData(EFFECT_INTRO_START_MS_DATA_KEY, startMs | 0); } catch { }
+        }
+        const dur = Math.max(1, introMs | 0);
+        const t = Math.max(0, Math.min(1, (curMs - startMs) / dur));
+        const startScale = (hasIntroScale && Number.isFinite(introScale) && introScale > 0)
+            ? introScale
+            : 0.25;
+        introMult = startScale + ((1 - startScale) * t);
+    }
+
+    const totalMult = popMult * introMult;
+    _effectApplyScale(nativeAny, scale, hasScale, totalMult);
+
+    if (hasAlignBottom && (alignBottomY | 0) !== 0) {
+        const dispH = (nativeAny.displayHeight ?? nativeAny.height ?? 0) as number;
+        if (Number.isFinite(dispH) && dispH > 0) {
+            const offYAdj = Number.isFinite(offY as any) ? (offY as number) : 0;
+            nativeAny.y = (alignBottomY | 0) - (dispH * 0.5) + offYAdj;
+        }
+    }
+
+    if (hasBlend) {
+        const mode = _effectBlendModeFromString(blend);
+        const lastMode = (nativeAny as any).__effectBlendMode;
+        try {
+            if (mode == null) {
+                if (lastMode != null && typeof nativeAny.setBlendMode === "function") {
+                    nativeAny.setBlendMode(Phaser.BlendModes.NORMAL);
+                    (nativeAny as any).__effectBlendMode = null;
+                }
+            } else if (lastMode !== mode) {
+                if (typeof nativeAny.setBlendMode === "function") nativeAny.setBlendMode(mode);
+                (nativeAny as any).__effectBlendMode = mode;
+            }
+        } catch { /* ignore */ }
+    }
 
     try {
         const lastTint = (nativeAny as any).__effectTint | 0;
@@ -10057,6 +10195,10 @@ function _syncVisibilityAndDebugTail(
     const dir = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("dir") as any) || "") : "";
     const forceInvisibleVal =
         (nativeAny && nativeAny.getData) ? (nativeAny.getData(NATIVE_FORCE_INVISIBLE_KEY) as any) : undefined;
+    const effectAlphaRaw =
+        (nativeAny && nativeAny.getData) ? (nativeAny.getData(EFFECT_ALPHA_DATA_KEY) as any) : undefined;
+    const effectAlphaNum = Number(effectAlphaRaw);
+    const hasEffectAlpha = Number.isFinite(effectAlphaNum) && effectAlphaNum > 0 && effectAlphaNum <= 1;
 
     const shouldLogHero =
         !!DEBUG_INT_HERO_VIS &&
@@ -10131,7 +10273,7 @@ function _syncVisibilityAndDebugTail(
         }
 
         native.visible = shouldBeVisible;
-        native.alpha = shouldBeVisible ? 1 : 0;
+        native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
 
         if (shouldLogHero) {
             console.log(
@@ -10152,7 +10294,7 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
     native.visible = shouldBeVisible;
-    native.alpha = shouldBeVisible ? 1 : 0;
+    native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
 
     if (shouldLogHero) {
         console.log(
@@ -10428,16 +10570,24 @@ let _dbgLoggedHeroColliderOnce = false;
 function _heroCollisionOffsetY(s: Sprite): number {
     if (!s) return 0;
     const dataAny: any = (s as any).data || {};
-    if (dataAny.enemyLpc) return 0;
-    if (!isHeroSprite(s)) return 0;
-    try {
-        const g: any = (globalThis as any);
-        const internals = g ? g.__HeroEnginePhaserInternals : null;
-        if (internals && typeof internals.getHeroCollisionOffsetY === "function") {
-            return (internals.getHeroCollisionOffsetY() | 0) | 0;
-        }
-    } catch { /* ignore */ }
-    return 0;
+    const kind = (s.kind as number) | 0;
+    const isEnemy = kind === SpriteKind.Enemy || !!dataAny.enemyLpc;
+    const isNpc = !!dataAny.isNpc || !!dataAny.npcLpc || kind === (SpriteKind as any).NpcLpc;
+    const isHero = isHeroSprite(s);
+    if (!isHero && !isNpc && !isEnemy) return 0;
+    if (isHero) {
+        try {
+            const g: any = (globalThis as any);
+            const internals = g ? g.__HeroEnginePhaserInternals : null;
+            if (internals && typeof internals.getHeroCollisionOffsetY === "function") {
+                return (internals.getHeroCollisionOffsetY() | 0) | 0;
+            }
+        } catch { /* ignore */ }
+    }
+    const colH = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
+    const spriteH = (s.height | 0) || ((s.image && (s.image.height | 0)) || 0);
+    if (spriteH <= 0 || colH <= 0) return 0;
+    return Math.max(0, ((spriteH - colH) >> 1) | 0);
 }
 
 function _debugEnsureColliderGfx(sc: Phaser.Scene): void {
@@ -10651,6 +10801,106 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
                     hitbox: { left: hitLeft, top: hitTop, right: hitRight, bottom: hitBottom, w: hitW, h: hitH },
                     nav: { left: navLeft, top: navTop, right: navLeft + navW - 1, bottom: navTop + navH - 1, w: navW, h: navH },
                     wall: { left: wallLeft, top: wallTop, right: wallLeft + fw - 1, bottom: wallTop + fh - 1, w: fw, h: fh },
+                });
+            }
+        }
+    }
+
+    // Heroes: outline collider + footprint bounds.
+    if (
+        DEBUG_DRAW_HERO_WALL_COLLIDERS ||
+        DEBUG_DRAW_HERO_SPRITE_BOUNDS ||
+        DEBUG_DRAW_HERO_COLLIDER_BOUNDS ||
+        DEBUG_DRAW_HERO_HITBOX ||
+        DEBUG_DRAW_HERO_NATIVE_BOUNDS ||
+        DEBUG_DRAW_HERO_NAV_FOOTPRINT
+    ) {
+        for (let i = 0; i < _allSprites.length; i++) {
+            const s = _allSprites[i];
+            if (!s) continue;
+            const dataAny: any = (s as any).data || {};
+            if (dataAny.enemyLpc) continue;
+
+            let isHero = false;
+            try {
+                isHero = isHeroSprite(s);
+            } catch {
+                const kind = (s.kind as number) | 0;
+                if (kind === SpriteKind.Player || kind === (SpriteKind as any).Hero) isHero = true;
+                if (dataAny.heroName || dataAny.heroFamily || dataAny.heroIndex != null) isHero = true;
+                if (dataAny.isNpc || dataAny.npcLpc || kind === (SpriteKind as any).NpcLpc) isHero = false;
+            }
+            if (!isHero) continue;
+
+            const kind = (s.kind as number) | 0;
+            if (dataAny.isNpc || dataAny.npcLpc || kind === (SpriteKind as any).NpcLpc) continue;
+
+            const colW = (sprites.readDataNumber(s, "colW") | 0) || (s.width | 0);
+            const colH = (sprites.readDataNumber(s, "colH") | 0) || (s.height | 0);
+            const offY = _heroCollisionOffsetY(s);
+
+            const spriteW = s.width | 0;
+            const spriteH = s.height | 0;
+            const spriteLeft = ((s.x | 0) - (spriteW >> 1)) | 0;
+            const spriteTop = ((s.y | 0) - (spriteH >> 1)) | 0;
+
+            const colLeft = ((s.x | 0) - (colW >> 1)) | 0;
+            const colTop = (((s.y | 0) + (offY | 0)) - (colH >> 1)) | 0;
+
+            const hitBounds = _getEngineCollisionBounds(s);
+            const hitLeft = hitBounds ? (hitBounds.left | 0) : colLeft;
+            const hitTop = hitBounds ? (hitBounds.top | 0) : colTop;
+            const hitRight = hitBounds ? (hitBounds.right | 0) : ((colLeft + colW - 1) | 0);
+            const hitBottom = hitBounds ? (hitBounds.bottom | 0) : ((colTop + colH - 1) | 0);
+            const hitW = ((hitRight - hitLeft + 1) | 0);
+            const hitH = ((hitBottom - hitTop + 1) | 0);
+
+            const footX = s.x | 0;
+            const footY = (((s.y | 0) + (offY | 0) + (Math.idiv((colH | 0), 2) | 0) - 1) | 0);
+            const wallLeft = (footX - (colW >> 1)) | 0;
+            const wallTop = (footY - colH + 1) | 0;
+
+            const navLeft = wallLeft;
+            const navTop = wallTop;
+
+            if (DEBUG_DRAW_HERO_SPRITE_BOUNDS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_SPRITE_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(spriteLeft, spriteTop, spriteW, spriteH);
+            }
+            if (DEBUG_DRAW_HERO_COLLIDER_BOUNDS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_BODY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(colLeft, colTop, colW, colH);
+            }
+            if (DEBUG_DRAW_HERO_HITBOX) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_HIT_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(hitLeft, hitTop, hitW, hitH);
+            }
+            if (DEBUG_DRAW_HERO_NATIVE_BOUNDS) {
+                const native: any = (s as any).native;
+                if (native && typeof native.getBounds === "function") {
+                    const b = native.getBounds();
+                    gHeroes.lineStyle(1, DEBUG_COLLIDER_NATIVE_COLOR, DEBUG_COLLIDER_ALPHA);
+                    gHeroes.strokeRect(b.x, b.y, b.width, b.height);
+                }
+            }
+            if (DEBUG_DRAW_HERO_NAV_FOOTPRINT) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_NAV_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(navLeft, navTop, colW, colH);
+            }
+            if (DEBUG_DRAW_HERO_WALL_COLLIDERS) {
+                gHeroes.lineStyle(1, DEBUG_COLLIDER_ENEMY_COLOR, DEBUG_COLLIDER_ALPHA);
+                gHeroes.strokeRect(wallLeft, wallTop, colW, colH);
+            }
+
+            if (!_dbgLoggedHeroColliderOnce) {
+                _dbgLoggedHeroColliderOnce = true;
+                console.log("[DEBUG][HERO_COLLIDER]", {
+                    id: sprites.readDataString(s, "name") || sprites.readDataString(s, "heroName") || s.id,
+                    pos: { x: s.x | 0, y: s.y | 0 },
+                    sprite: { left: spriteLeft, top: spriteTop, right: spriteLeft + spriteW - 1, bottom: spriteTop + spriteH - 1, w: spriteW, h: spriteH },
+                    collider: { left: colLeft, top: colTop, right: colLeft + colW - 1, bottom: colTop + colH - 1, w: colW, h: colH },
+                    hitbox: { left: hitLeft, top: hitTop, right: hitRight, bottom: hitBottom, w: hitW, h: hitH },
+                    wall: { left: wallLeft, top: wallTop, right: wallLeft + colW - 1, bottom: wallTop + colH - 1, w: colW, h: colH },
                 });
             }
         }
@@ -11408,6 +11658,10 @@ namespace controller {
         moveSprite(s: Sprite, vx: number, vy: number): void;
         A: Button;
         B: Button;
+        AB: Button;
+        R: Button;
+        Jump: Button;
+        Interact: Button;
         up: Button;
         down: Button;
         left: Button;
@@ -11417,6 +11671,10 @@ namespace controller {
     class BasicController implements Controller {
         A = new BasicButton();
         B = new BasicButton();
+        AB = new BasicButton();
+        R = new BasicButton();
+        Jump = new BasicButton();
+        Interact = new BasicButton();
         up = new BasicButton();
         down = new BasicButton();
         left = new BasicButton();
@@ -11570,8 +11828,8 @@ namespace controller {
         }
     }
 
-    // Hook Phaser keyboard into the "local" player.
-    // SAME keys on every client: arrows + Q/E.
+        // Hook Phaser keyboard into the "local" player.
+        // SAME keys on every client: arrows + Q/W/E/R + Space + F.
     export function _wireKeyboard(scene: any): void {
         if (_keyboardWired) {
             if (DEBUG_COMPAT_CONTROLLER) {
@@ -11597,7 +11855,11 @@ namespace controller {
             up: "UP",
             down: "DOWN",
             A: "Q",
-            B: "E",
+            B: "W",
+            AB: "E",
+            R: "R",
+            Jump: "SPACE",
+            Interact: "F",
         });
 
         const bindings = [
@@ -11607,6 +11869,10 @@ namespace controller {
             { key: keyMap?.down, button: "down" },
             { key: keyMap?.A, button: "A" },
             { key: keyMap?.B, button: "B" },
+            { key: keyMap?.AB, button: "AB" },
+            { key: keyMap?.R, button: "R" },
+            { key: keyMap?.Jump, button: "Jump" },
+            { key: keyMap?.Interact, button: "Interact" },
         ];
 
         const state: Record<string, boolean> = {
@@ -11616,6 +11882,10 @@ namespace controller {
             down: false,
             A: false,
             B: false,
+            AB: false,
+            R: false,
+            Jump: false,
+            Interact: false,
         };
 
         const syncKeys = () => {
@@ -11648,7 +11918,7 @@ namespace controller {
     }
 
     // Hook Phaser gamepad into the "local" player (first connected pad).
-    // Maps: A/B buttons -> A/B, D-pad and left stick -> arrows.
+    // Maps: face buttons -> A/B/AB/R, bumpers -> Interact/Jump, D-pad/stick -> arrows.
     export function _wireGamepad(scene: any): void {
         if (_gamepadWired) {
             if (DEBUG_COMPAT_CONTROLLER) {
@@ -11674,8 +11944,12 @@ namespace controller {
 
         const axisState = { left: false, right: false, up: false, down: false };
         const btnNames: Record<number, string> = {
-            0: "A",  // South
-            1: "B",  // East
+            0: "A",        // South
+            1: "B",        // East
+            2: "AB",       // West
+            3: "R",        // North
+            4: "Interact", // LB
+            5: "Jump",     // RB
             12: "up",
             13: "down",
             14: "left",
@@ -11687,6 +11961,10 @@ namespace controller {
         const releaseAll = () => {
             emit("A", false);
             emit("B", false);
+            emit("AB", false);
+            emit("R", false);
+            emit("Jump", false);
+            emit("Interact", false);
             emit("up", false);
             emit("down", false);
             emit("left", false);

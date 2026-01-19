@@ -113,6 +113,11 @@ export interface TrapPaletteSpec {
   blocksBanned?: string[];
 }
 
+export interface TrapBlocklySpec {
+  enemyFields?: string[];
+  exposedInputs?: string[];
+}
+
 export interface TrapStarterBlocks {
   xml: string;
   readOnly?: boolean;
@@ -172,6 +177,7 @@ export interface TrapSpec {
   preview: TrapPreviewData;
   ui: TrapUIText;
   analytics?: TrapAnalyticsSpec;
+  blockly?: TrapBlocklySpec;
 
   solutionSpec?: {
     expectedOutput?: unknown;

@@ -76,8 +76,9 @@ const PROP_FOCUS_AURA_RADIUS_SCALE = 0.06; // each radius step adds this much sc
 
 // Gentle alpha pulse for interactable outlines.
 const PROP_FOCUS_AURA_PULSE_PERIOD_MS = 5000;
-const PROP_FOCUS_AURA_PULSE_ALPHA_MIN = 0;
-const PROP_FOCUS_AURA_PULSE_ALPHA_MAX = 0.9;
+const PROP_FOCUS_AURA_PULSE_ALPHA_MIN = 0.05;
+const PROP_FOCUS_AURA_PULSE_ALPHA_MAX = 0.35;
+const PROP_FOCUS_AURA_ALPHA_CAP = 0.45;
 
 // If an aura tile is fully opaque (no transparency), inflate it so a border shows.
 // This helps props like chests that fill the entire 32x32 tile.
@@ -194,12 +195,15 @@ function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number, opts?: Pr
     ? nowMs
     : (((scene as any)?.time?.now ?? Date.now()) | 0);
 
-  const minA = Math.max(0, Math.min(1,
+  let minA = Math.max(0, Math.min(1,
     (opts && typeof opts.alphaMin === "number") ? opts.alphaMin : PROP_FOCUS_AURA_PULSE_ALPHA_MIN
   ));
-  const maxA = Math.max(minA, Math.min(1,
+  let maxA = Math.max(minA, Math.min(1,
     (opts && typeof opts.alphaMax === "number") ? opts.alphaMax : PROP_FOCUS_AURA_PULSE_ALPHA_MAX
   ));
+  const cap = Math.max(0, Math.min(1, PROP_FOCUS_AURA_ALPHA_CAP));
+  if (maxA > cap) maxA = cap;
+  if (minA > maxA) minA = maxA;
   const span = Math.max(0, maxA - minA);
   const period = Math.max(200, ((opts && typeof opts.pulseMs === "number") ? opts.pulseMs : PROP_FOCUS_AURA_PULSE_PERIOD_MS) | 0);
 
@@ -4703,6 +4707,14 @@ private _propDestroyInstance(
   const overlayObjs: any[] = Array.isArray(inst?.overlayObjs) ? inst.overlayObjs : [];
   const objSet = new Set<any>(objs);
   for (let i = 0; i < overlayObjs.length; i++) objSet.add(overlayObjs[i]);
+  const destroyOutline = (obj: any): void => {
+    if (!obj) return;
+    try {
+      const outline = (obj as any).__focusOutlineImage;
+      if (outline) outline.destroy?.();
+    } catch { /* ignore */ }
+    try { (obj as any).__focusOutlineImage = null; } catch { /* ignore */ }
+  };
 
   if (Array.isArray(anyThis.__propImgs)) {
     anyThis.__propImgs = (anyThis.__propImgs as any[]).filter(o => !objSet.has(o));
@@ -4710,10 +4722,12 @@ private _propDestroyInstance(
 
   for (let i = 0; i < objs.length; i++) {
     const obj = objs[i];
+    destroyOutline(obj);
     try { obj?.destroy?.(); } catch { /* ignore */ }
   }
   for (let i = 0; i < overlayObjs.length; i++) {
     const obj = overlayObjs[i];
+    destroyOutline(obj);
     try { obj?.destroy?.(); } catch { /* ignore */ }
   }
 
@@ -4725,6 +4739,11 @@ private _propDestroyInstance(
       try { inst.focusAuraChildren[i]?.destroy?.(); } catch { /* ignore */ }
     }
   }
+  try {
+    const hideTimer = (inst as any).__focusAuraHideTimer ?? null;
+    if (hideTimer) clearTimeout(hideTimer);
+    (inst as any).__focusAuraHideTimer = null;
+  } catch { /* ignore */ }
 
   const anchorR = (inst.anchorR | 0);
   const anchorC = (inst.anchorC | 0);

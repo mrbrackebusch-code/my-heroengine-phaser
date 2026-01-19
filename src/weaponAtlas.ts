@@ -116,15 +116,27 @@ function basenameNoExt(p: string): string {
 
 function parseWeaponFilename(base: string): WeaponPngMeta | null {
   // base is already filename without .png
-  const parts = base.split("__");
-  if (parts.length !== 6) return null;
+  const parts = base.split("__").filter(Boolean);
+  if (parts.length < 6) return null;
 
   const tPart = parts[0];
   const category = parts[1];
-  const model = parts[2];
-  const anim = parts[3];
-  const layer = parts[4] as WeaponLayer;
-  const vPart = parts[5];
+
+  let vIndex = -1;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (/^v.+/i.test(parts[i])) {
+      vIndex = i;
+      break;
+    }
+  }
+  if (vIndex < 5) return null;
+
+  const layer = parts[vIndex - 1] as WeaponLayer;
+  const anim = parts[vIndex - 2];
+  const modelTokens = parts.slice(2, vIndex - 2);
+  if (!modelTokens.length) return null;
+  const model = modelTokens.join("_");
+  const vPart = parts[vIndex];
 
   if (!/^t(064|128|192)$/.test(tPart)) return null;
   if (layer !== "bg" && layer !== "fg") return null;
@@ -159,6 +171,12 @@ const ALL_WEAPON_SHEETS: WeaponPngMeta[] = [];
 // model -> variant -> tile -> anim -> pair
 type PairLeaf = { bg?: WeaponPngMeta; fg?: WeaponPngMeta };
 const INDEX = new Map<string, Map<string, Map<WeaponTile, Map<string, PairLeaf>>>>();
+
+// Composite weapon models: allow bg/fg to come from different source models.
+const WEAPON_MODEL_COMPOSITES: Record<string, { bg?: string; fg?: string }> = {
+  // Skeleton archer: quiver on back (bg) + bow in hand (fg).
+  skeleton_bow: { bg: "quiver", fg: "bow_normal" }
+};
 
 for (const [path, url] of Object.entries(weaponPngs)) {
   const base = basenameNoExt(path);
@@ -340,6 +358,11 @@ function candidatesForHeroPhase(heroPhase: string): string[] {
   // Cast mapping
   if (base === "cast") return ["cast", "spellcast", "spell_cast"];
 
+  // Shoot / bow mapping
+  if (base === "shoot" || base === "bow") {
+    return ["shoot", "universal_shoot", "bow", "attack_shoot"];
+  }
+
   // Slash / Thrust (attack_* variants exist)
   if (base === "slash") {
     return ["slash", "attack_slash", "slash_oversize", "slashOversize", "slashoversize"];
@@ -372,6 +395,56 @@ export function resolveWeaponLayerPair(args: {
   variant?: string;          // without leading "v" (e.g. "base", "gold")
 }): WeaponLayerPair | null {
   const model = String(args.weaponId || "").trim();
+  if (!model) return null;
+
+  const composite = WEAPON_MODEL_COMPOSITES[model];
+  if (composite) {
+    const fgPair = composite.fg
+      ? _resolveWeaponLayerPairForModel({
+        model: composite.fg,
+        heroPhase: args.heroPhase,
+        mode: args.mode,
+        variant: args.variant
+      })
+      : null;
+    const bgPair = composite.bg
+      ? _resolveWeaponLayerPairForModel({
+        model: composite.bg,
+        heroPhase: args.heroPhase,
+        mode: args.mode,
+        variant: args.variant
+      })
+      : null;
+
+    const bg = bgPair ? (bgPair.bg ?? bgPair.fg) : undefined;
+    const fg = fgPair ? (fgPair.fg ?? fgPair.bg) : undefined;
+    if (!bg && !fg) return null;
+
+    return {
+      tile: (fgPair?.tile ?? bgPair?.tile ?? tileForWeaponMode(args.mode)),
+      model,
+      variant: (fgPair?.variant ?? bgPair?.variant ?? String(args.variant || "base")),
+      anim: (fgPair?.anim ?? bgPair?.anim ?? ""),
+      bg,
+      fg
+    };
+  }
+
+  return _resolveWeaponLayerPairForModel({
+    model,
+    heroPhase: args.heroPhase,
+    mode: args.mode,
+    variant: args.variant
+  });
+}
+
+function _resolveWeaponLayerPairForModel(args: {
+  model: string;
+  heroPhase: string;
+  mode: WeaponMode;
+  variant?: string;
+}): WeaponLayerPair | null {
+  const model = String(args.model || "").trim();
   if (!model) return null;
 
   const desiredVariant = String(args.variant || "base").trim() || "base";
@@ -427,6 +500,39 @@ export function resolveAnyWeaponLayerPair(args: {
   variant?: string; // without leading "v"
 }): WeaponLayerPair | null {
   const model = String(args.weaponId || "").trim();
+  if (!model) return null;
+
+  const composite = WEAPON_MODEL_COMPOSITES[model];
+  if (composite) {
+    const fgPair = composite.fg
+      ? _resolveAnyWeaponLayerPairForModel({ model: composite.fg, variant: args.variant })
+      : null;
+    const bgPair = composite.bg
+      ? _resolveAnyWeaponLayerPairForModel({ model: composite.bg, variant: args.variant })
+      : null;
+
+    const bg = bgPair ? (bgPair.bg ?? bgPair.fg) : undefined;
+    const fg = fgPair ? (fgPair.fg ?? fgPair.bg) : undefined;
+    if (!bg && !fg) return null;
+
+    return {
+      tile: (fgPair?.tile ?? bgPair?.tile ?? 64),
+      model,
+      variant: (fgPair?.variant ?? bgPair?.variant ?? String(args.variant || "base")),
+      anim: (fgPair?.anim ?? bgPair?.anim ?? ""),
+      bg,
+      fg
+    };
+  }
+
+  return _resolveAnyWeaponLayerPairForModel({ model, variant: args.variant });
+}
+
+function _resolveAnyWeaponLayerPairForModel(args: {
+  model: string;
+  variant?: string;
+}): WeaponLayerPair | null {
+  const model = String(args.model || "").trim();
   if (!model) return null;
 
   const desiredVariant = String(args.variant || "base").trim() || "base";

@@ -134,6 +134,7 @@ export function applyMonsterAnimationForSprite(
 
     const phase = ((data.get("phase") as Phase) || "walk") as Phase;
     const dir   = ((data.get("dir")   as Dir)   || "down") as Dir;
+    const monsterIdNorm = String(monsterIdRaw || "").trim().toLowerCase();
     const attackIndexRaw =
         (data.get(ATTACK_INDEX_KEY) as number | undefined) ??
         (data.get("attackIndex") as number | undefined);
@@ -205,6 +206,15 @@ export function applyMonsterAnimationForSprite(
         const attacks = animSet.attacks as Record<Dir, number[]>[];
         const idx = Math.min(attacks.length, Math.max(1, attackIndex)) - 1;
         if (attacks[idx]) perPhase = attacks[idx];
+    }
+    if (phase === "attack" && monsterIdNorm === "eyeball" && perPhase) {
+        const trimmed: Record<Dir, number[]> = {} as any;
+        for (const key of ["up", "down", "left", "right"] as Dir[]) {
+            const frames = perPhase[key];
+            if (frames && frames.length > 2) trimmed[key] = frames.slice(0, 2);
+            else if (frames) trimmed[key] = frames.slice();
+        }
+        perPhase = trimmed;
     }
     if (!perPhase) {
         console.warn(

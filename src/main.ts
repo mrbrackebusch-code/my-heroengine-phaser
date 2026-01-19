@@ -221,6 +221,7 @@ const HUD_KEYS = {
   A: "__ui_A",
   B: "__ui_B",
   AB: "__ui_AB",
+  R: "__ui_R",
 };
 
 
@@ -233,6 +234,7 @@ type HudRefs = {
   a: HTMLElement;
   b: HTMLElement;
   ab: HTMLElement;
+  r: HTMLElement;
 };
 
 let _hudRefs: HudRefs | null = null;
@@ -240,6 +242,7 @@ let _hudLastWho = "";
 let _hudLastA = "";
 let _hudLastB = "";
 let _hudLastAB = "";
+let _hudLastR = "";
 let _hudTimer: any = null;
 
 
@@ -253,8 +256,9 @@ function _hud_installOnce(): void {
   const a = document.getElementById("hud-cell-a");
   const b = document.getElementById("hud-cell-b");
   const ab = document.getElementById("hud-cell-ab");
+  const r = document.getElementById("hud-cell-r");
 
-  if (!who || !a || !b || !ab) {
+  if (!who || !a || !b || !ab || !r) {
     if (!g.__htmlHudInstallQueued) {
       g.__htmlHudInstallQueued = true;
 
@@ -269,13 +273,13 @@ function _hud_installOnce(): void {
         setTimeout(retry, 0);
       }
     }
-    console.warn("[hud] missing DOM elements (#hud-cell-who/#hud-cell-a/#hud-cell-b/#hud-cell-ab)");
+    console.warn("[hud] missing DOM elements (#hud-cell-who/#hud-cell-a/#hud-cell-b/#hud-cell-ab/#hud-cell-r)");
     return;
   }
 
   g.__htmlHudInstalled = true;
 
-  _hudRefs = { who, a, b, ab };
+  _hudRefs = { who, a, b, ab, r };
 
   _hudTimer = setInterval(() => {
     try {
@@ -426,6 +430,7 @@ function _hud_buildTextForHero(pid: number, hero: any): { sub: string; text: str
   const a = _hud_readStr(spritesNS, hero, HUD_KEYS.A);
   const b = _hud_readStr(spritesNS, hero, HUD_KEYS.B);
   const ab = _hud_readStr(spritesNS, hero, HUD_KEYS.AB);
+  const r = _hud_readStr(spritesNS, hero, HUD_KEYS.R);
 
   const lines: string[] = [];
 
@@ -443,9 +448,10 @@ function _hud_buildTextForHero(pid: number, hero: any): { sub: string; text: str
     lines.push(preview);
   } else {
     lines.push("Buttons (preview keys not published yet):");
-    lines.push(`A  : ${a || "(missing " + HUD_KEYS.A + ")"}`);
-    lines.push(`B  : ${b || "(missing " + HUD_KEYS.B + ")"}`);
-    lines.push(`A+B: ${ab || "(missing " + HUD_KEYS.AB + ")"}`);
+    lines.push(`Q  : ${a || "(missing " + HUD_KEYS.A + ")"}`);
+    lines.push(`W  : ${b || "(missing " + HUD_KEYS.B + ")"}`);
+    lines.push(`E  : ${ab || "(missing " + HUD_KEYS.AB + ")"}`);
+    lines.push(`R  : ${r || "(missing " + HUD_KEYS.R + ")"}`);
   }
 
   const sub = `connected=${_hud_slotConnected(pid, profile)}  host=${!!g.__isHost}`;
@@ -514,6 +520,11 @@ function _hud_tick(): void {
     _hudLastAB = cells.ab;
     _hudLastAB = cells.ab;
   }
+  if (_hudLastR !== cells.r) {
+    _hudRefs.r.textContent = cells.r;
+    _hudRefs.r.title = cells.rTitle || cells.r;
+    _hudLastR = cells.r;
+  }
 }
 
 function _hud_buildCellsForHero(pid: number, hero: any): {
@@ -521,6 +532,7 @@ function _hud_buildCellsForHero(pid: number, hero: any): {
   a: string;   aTitle?: string;
   b: string;   bTitle?: string;
   ab: string;  abTitle?: string;
+  r: string;   rTitle?: string;
 } {
   const g: any = globalThis as any;
   const spritesNS: any = g.sprites;
@@ -547,29 +559,35 @@ function _hud_buildCellsForHero(pid: number, hero: any): {
       a: "…",
       b: "…",
       ab: "…",
+      r: "…",
     };
   }
 
   const outA = _hud_callStudentLogic(profile, heroIndex, "A");
   const outB = _hud_callStudentLogic(profile, heroIndex, "B");
   const outAB = _hud_callStudentLogic(profile, heroIndex, "A+B");
+  const outR = _hud_callStudentLogic(profile, heroIndex, "R");
 
   const aFull = _hud_fmtArrayFull(outA);
   const bFull = _hud_fmtArrayFull(outB);
   const abFull = _hud_fmtArrayFull(outAB);
+  const rFull = _hud_fmtArrayFull(outR);
 
   return {
     who,
     whoTitle: `${whoPrefix}\nheroIndex=${heroIndex}` + ((maxHp || maxMana) ? `\nHP ${hp}/${maxHp}  M ${mana}/${maxMana}` : ""),
 
     a: aFull,
-    aTitle: `A\n${aFull}`,
+    aTitle: `Q\n${aFull}`,
 
     b: bFull,
-    bTitle: `B\n${bFull}`,
+    bTitle: `W\n${bFull}`,
 
     ab: abFull,
-    abTitle: `A+B\n${abFull}`,
+    abTitle: `E\n${abFull}`,
+
+    r: rFull,
+    rTitle: `R\n${rFull}`,
   };
 }
 
@@ -624,7 +642,7 @@ function _hud_resolveHeroIndexForSprite(heroSprite: any): number {
   return -1;
 }
 
-function _hud_callStudentLogic(profile: string, _heroIndex: number, button: "A" | "B" | "A+B"): any[] | null {
+function _hud_callStudentLogic(profile: string, _heroIndex: number, button: "A" | "B" | "A+B" | "R"): any[] | null {
   const g: any = globalThis as any;
   const fn = g.__heBlocklyHeroLogicRun;
   if (typeof fn !== "function") return null;
@@ -636,7 +654,8 @@ function _hud_callStudentLogic(profile: string, _heroIndex: number, button: "A" 
     if (typeof setRo === "function" && (_heroIndex | 0) >= 0) {
       try { setRo(_heroIndex | 0); } catch {}
     }
-    const prof = (typeof profile === "string" && profile.trim()) ? profile.trim() : "Default";
+    const prof = (typeof profile === "string" && profile.trim()) ? profile.trim() : "";
+    if (!prof) return null;
     const out = fn(prof, button);
     return Array.isArray(out) ? out : null;
   } catch (_e) {
@@ -675,6 +694,7 @@ function _hud_buildLineForHero(pid: number, hero: any): { line: string; title: s
   const aS = _hud_fmtArrayFull(outA);
   const bS = _hud_fmtArrayFull(outB);
   const abS = _hud_fmtArrayFull(outAB);
+  const rS = _hud_fmtArrayFull(outR);
 
   // (Optional) keep a tiny bit of state context; remove if you want PURE logic only
   const hp = spritesNS ? _hud_readNum(spritesNS, hero, "hp") : 0;
@@ -684,15 +704,16 @@ function _hud_buildLineForHero(pid: number, hero: any): { line: string; title: s
 
   const stats = (maxHp || maxMana) ? `HP ${hp}/${maxHp} M ${mana}/${maxMana}` : "";
 
-  const line = `${who}${stats ? " | " + stats : ""} | A=${aS} | B=${bS} | A+B=${abS}`;
+  const line = `${who}${stats ? " | " + stats : ""} | Q=${aS} | W=${bS} | E=${abS} | R=${rS}`;
 
   const title =
     `${who}\n` +
     `heroIndex=${heroIndex}\n` +
     (stats ? `${stats}\n` : "") +
-    `A   = ${aS}\n` +
-    `B   = ${bS}\n` +
-    `A+B = ${abS}`;
+    `Q   = ${aS}\n` +
+    `W   = ${bS}\n` +
+    `E   = ${abS}\n` +
+    `R   = ${rS}`;
 
   return { line, title };
 }

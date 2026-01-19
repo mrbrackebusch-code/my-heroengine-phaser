@@ -70,9 +70,10 @@ function _ensureHeBlocksRegistered(): void {
       },
     };
   };
-  _mkEntry("he_on_button_a", "When A Button Pressed");
-  _mkEntry("he_on_button_b", "When B Button Pressed");
-  _mkEntry("he_on_button_ab", "When A+B Button Pressed");
+  _mkEntry("he_on_button_a", "When Q Button Pressed");
+  _mkEntry("he_on_button_b", "When W Button Pressed");
+  _mkEntry("he_on_button_ab", "When E Button Pressed");
+  _mkEntry("he_on_button_r", "When R Button Pressed");
   _mkEntry("he_choose_move", "Choose My Move");
 
   // Enemy/Hero property accessors with dropdown fields
@@ -177,7 +178,7 @@ function _ensureHeBlocksRegistered(): void {
     ["none", "none"], ["fire", "fire"], ["earth", "earth"], ["wind", "wind"], ["water", "water"],
     ["lightning", "lightning"], ["ice", "ice"], ["poison", "poison"],
   ]);
-  _mkDropdownSetter("he_set_id", "set id to", "ID", [["A", "A"], ["B", "B"], ["A+B", "A+B"]]);
+  _mkDropdownSetter("he_set_id", "set id to", "ID", [["Q", "A"], ["W", "B"], ["E", "A+B"], ["R", "R"]]);
 
   const _mkNumSetter = (type: string, label: string) => {
     if (Blocks[type]) return;
@@ -226,7 +227,7 @@ function _ensureHeBlocksRegistered(): void {
           ["lightning", "lightning"], ["ice", "ice"], ["poison", "poison"],
         ]), "EL");
         this.appendDummyInput().appendField("ID").appendField(new (Blockly as any).FieldDropdown([
-          ["A", "A"], ["B", "B"], ["A+B", "A+B"],
+          ["Q", "A"], ["W", "B"], ["E", "A+B"], ["R", "R"],
         ]), "ID");
         this.setPreviousStatement(true);
         this.setNextStatement(true);
@@ -425,6 +426,7 @@ function chooseMyMove(button) {
   if (button === "A" && typeof chooseMoveA === "function") return chooseMoveA(button);
   if (button === "B" && typeof chooseMoveB === "function") return chooseMoveB(button);
   if (button === "A+B" && typeof chooseMoveAB === "function") return chooseMoveAB(button);
+  if (button === "R" && typeof chooseMoveR === "function") return chooseMoveR(button);
   return null;
 }
 function heroLogic(button){ return chooseMyMove(button); }
@@ -468,6 +470,7 @@ ${_emitRouter()}`;
   _mkEntryGen("he_on_button_a", "chooseMoveA", "A");
   _mkEntryGen("he_on_button_b", "chooseMoveB", "B");
   _mkEntryGen("he_on_button_ab", "chooseMoveAB", "A+B");
+  _mkEntryGen("he_on_button_r", "chooseMoveR", "R");
 
   G.forBlock["he_choose_move"] = function (block: any, generator: any) {
     const body = generator.statementToCode(block, "DO");
@@ -768,7 +771,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         try { tail.nextConnection?.connect(ret.previousConnection); } catch { }
       }
     };
-    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"];
+    const entryTypes = ["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_on_button_r", "he_choose_move"];
     const allBlocks: any[] = ws.getAllBlocks(false) || [];
     for (const b of allBlocks) {
       if (entryTypes.indexOf(b.type) >= 0) ensureReturn(b);
@@ -1176,17 +1179,11 @@ function _validateOut(out: any): HeroLogicOut {
  * - null if no workspace, compile error, runtime error, invalid result, or step-limit
  */
 export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLogicOut {
-  const effectiveProfile = profile && profile.trim() ? profile.trim() : FALLBACK_PROFILE;
+  const effectiveProfile = profile && profile.trim() ? profile.trim() : "";
+  if (!effectiveProfile) return null;
 
-  let xmlProfile = effectiveProfile;
-  let xml = _getSavedXml(effectiveProfile);
-  if (!xml && effectiveProfile !== FALLBACK_PROFILE) {
-    const fallbackXml = _getSavedXml(FALLBACK_PROFILE);
-    if (fallbackXml) {
-      xml = fallbackXml;
-      xmlProfile = FALLBACK_PROFILE;
-    }
-  }
+  const xmlProfile = effectiveProfile;
+  const xml = _getSavedXml(effectiveProfile);
   if (!xml) return null;
 
   const cached = _cache.get(effectiveProfile);

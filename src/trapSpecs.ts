@@ -188,9 +188,9 @@ function makeUntargetedTrapSpec(args: {
   const starterBlocks = args.starterBlocks ?? {
     xml: `
       <xml xmlns="https://developers.google.com/blockly/xml">
-        <block type="procedures_defreturn" x="20" y="20">
+        <comment pinned="true" h="160" w="360" x="10" y="10">Goal: pick the correct target from the given lists, then return the result.</comment>
+        <block type="procedures_defreturn" x="20" y="220">
           <field name="NAME">trapMain</field>
-          <comment pinned="true" h="160" w="360" x="10" y="10">Goal: pick the correct target from the given lists, then return the result.</comment>
           <value name="RETURN">
             <block type="variables_get">
               <field name="VAR">target</field>
@@ -532,10 +532,10 @@ export const SHRINE_TRAP_SPEC: TrapSpec = {
     type: "Boolean",
     boolean: {},
   },
-  valueKindsUsed: ["procedure"],
+  valueKindsUsed: ["list", "math", "logic"],
   palette: {
-    categories: ["Functions"],
-    blocksAllowed: ["procedures_defreturn", "logic_boolean"],
+    categories: ["Variables", "Lists", "Math", "Text", "Logic"],
+    blocksAllowed: ["variables_set", "lists_create_with", "math_number", "text", "logic_boolean"],
   },
 
   givenInputs: [],
@@ -556,19 +556,64 @@ export const SHRINE_TRAP_SPEC: TrapSpec = {
     readOnly: true,
     xml: `
       <xml xmlns="https://developers.google.com/blockly/xml">
-        <block type="procedures_defreturn" x="20" y="20">
-          <field name="NAME">trapMain</field>
-          <comment pinned="true" h="160" w="360" x="10" y="10">Blessing rule: read the code and see what activates the shrine.</comment>
-          <value name="RETURN">
-            <block type="logic_boolean">
-              <field name="BOOL">TRUE</field>
+        <comment pinned="true" h="80" w="360" x="10" y="10">This is what we are looking for.</comment>
+        <block type="variables_set" x="20" y="20">
+          <field name="VAR">ritualType</field>
+          <value name="VALUE">
+            <block type="text">
+              <field name="TEXT">sequence</field>
             </block>
           </value>
+          <next>
+            <block type="variables_set">
+              <field name="VAR">moves</field>
+              <value name="VALUE">
+                <block type="lists_create_with">
+                  <mutation items="3"></mutation>
+                  <value name="ADD0">
+                    <block type="text">
+                      <field name="TEXT">Strength</field>
+                    </block>
+                  </value>
+                  <value name="ADD1">
+                    <block type="text">
+                      <field name="TEXT">Agility</field>
+                    </block>
+                  </value>
+                  <value name="ADD2">
+                    <block type="text">
+                      <field name="TEXT">Strength</field>
+                    </block>
+                  </value>
+                </block>
+              </value>
+              <next>
+                <block type="variables_set">
+                  <field name="VAR">minGapMs</field>
+                  <value name="VALUE">
+                    <block type="math_number">
+                      <field name="NUM">1000</field>
+                    </block>
+                  </value>
+                  <next>
+                    <block type="variables_set">
+                      <field name="VAR">radiusTiles</field>
+                      <value name="VALUE">
+                        <block type="math_number">
+                          <field name="NUM">2</field>
+                        </block>
+                      </value>
+                    </block>
+                  </next>
+                </block>
+              </next>
+            </block>
+          </next>
         </block>
       </xml>
     `,
   },
-  blockBudget: { maxBlocks: 1, maxDepth: 1 },
+  blockBudget: { maxBlocks: 12, maxDepth: 4 },
 
   preview: { inputs: {} },
   ui: {

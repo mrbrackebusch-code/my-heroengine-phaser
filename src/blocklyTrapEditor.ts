@@ -12,6 +12,7 @@ const HOST_ID = "he-trap-blockly-host";
 const TITLE_ID = "he-trap-blockly-title";
 const STATUS_ID = "he-trap-blockly-status";
 const SOLUTION_ID = "he-trap-blockly-solution";
+const CODE_ID = "he-trap-blockly-code";
 const ANCHOR_BTN_ID = "he-trap-blockly-anchor";
 const RESIZE_ID = "he-trap-blockly-resize";
 const TOOLBOX_BTN_ID = "he-trap-blockly-toggle-toolbox";
@@ -22,6 +23,12 @@ const TRAP_ANCHORS: TrapAnchor[] = ["bottom-right", "bottom-left", "top-right", 
 const DEFAULT_ANCHOR: TrapAnchor = "bottom-right";
 const DEFAULT_SIZE = { width: 520, height: 360 };
 const MIN_SIZE = { width: 320, height: 220 };
+const COMMENT_MIN_WIDTH = 240;
+const COMMENT_MIN_HEIGHT = 80;
+const COMMENT_LINE_HEIGHT = 18;
+const COMMENT_PADDING_X = 28;
+const COMMENT_PADDING_Y = 44;
+const COMMENT_FONT = "13px monospace";
 
 type TrapBlocklyStyle = "normal" | "apcsp";
 const DEFAULT_STYLE: TrapBlocklyStyle = "normal";
@@ -151,6 +158,7 @@ let _activeSpec: TrapSpec | null = null;
 let _activeInputs: Record<string, unknown> | null = null;
 let _activeInstance: TrapInstance | null = null;
 let _trapTheme: Blockly.Theme | null = null;
+let _commentMeasureCtx: CanvasRenderingContext2D | null = null;
 
 function _getUiState(): { anchor: TrapAnchor; width: number; height: number; toolboxHidden: boolean } {
   const g: any = (globalThis as any);
@@ -160,6 +168,164 @@ function _getUiState(): { anchor: TrapAnchor; width: number; height: number; too
   const height = typeof size.height === "number" ? size.height : DEFAULT_SIZE.height;
   const toolboxHidden = !!g.__heTrapBlocklyToolboxHidden;
   return { anchor, width, height, toolboxHidden };
+}
+
+function _setTrapEnemyFieldFilter(spec: TrapSpec | null): void {
+  const g: any = (globalThis as any);
+  const fields = spec?.blockly?.enemyFields;
+  if (Array.isArray(fields) && fields.length > 0) {
+    g.__heTrapEnemyFields = fields.slice();
+  } else {
+    delete g.__heTrapEnemyFields;
+  }
+}
+
+function _resolveExposedInputs(spec: TrapSpec): string[] {
+  const exposed = spec.blockly?.exposedInputs;
+  if (Array.isArray(exposed)) return exposed;
+  return spec.givenInputs || [];
+}
+
+function _flattenToolboxContents(node: any, out: any[]): void {
+  if (!node) return;
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) _flattenToolboxContents(node[i], out);
+    return;
+  }
+  if (node.kind === "block") {
+    out.push({ ...node });
+    return;
+  }
+  if (Array.isArray(node.contents)) {
+    for (let i = 0; i < node.contents.length; i++) _flattenToolboxContents(node.contents[i], out);
+  }
+}
+
+function _collapseToolboxToSingleCategory(toolbox: any): any {
+  if (!toolbox || !Array.isArray(toolbox.contents)) return toolbox;
+  const blocks: any[] = [];
+  _flattenToolboxContents(toolbox.contents, blocks);
+  if (!blocks.length) return toolbox;
+  return {
+    kind: "categoryToolbox",
+    contents: [
+      {
+        kind: "category",
+        name: "Toolbox",
+        colour: "#8fa0b3",
+        contents: blocks,
+      },
+    ],
+  };
+}
+
+function _selectFirstToolboxCategory(ws: Blockly.WorkspaceSvg | null): void {
+  if (!ws) return;
+  try {
+    const tb: any = (ws as any).getToolbox?.();
+    if (tb && typeof tb.selectItemByPosition === "function") {
+      tb.selectItemByPosition(0);
+    }
+  } catch { /* ignore */ }
+}
+
+function _measureTextWidth(text: string): number {
+  if (!text) return 0;
+  if (!_commentMeasureCtx) {
+    const canvas = document.createElement("canvas");
+    _commentMeasureCtx = canvas.getContext("2d");
+  }
+  if (!_commentMeasureCtx) return text.length * 7;
+  _commentMeasureCtx.font = COMMENT_FONT;
+  return _commentMeasureCtx.measureText(text).width;
+}
+
+function _estimateCommentSize(text: string, maxWidth: number): { width: number; height: number } {
+  const raw = String(text || "").trim();
+  if (!raw) return { width: COMMENT_MIN_WIDTH, height: COMMENT_MIN_HEIGHT };
+  const lines = raw.split(/\r?\n/);
+  let longest = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const w = _measureTextWidth(lines[i] || "");
+    if (w > longest) longest = w;
+  }
+  const width = Math.max(
+    COMMENT_MIN_WIDTH,
+    Math.min(Math.floor(maxWidth), Math.ceil(longest + COMMENT_PADDING_X))
+  );
+  const wrapWidth = Math.max(40, width - COMMENT_PADDING_X);
+  const spaceW = _measureTextWidth(" ");
+  let wrappedLines = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] || "";
+    if (!line) { wrappedLines += 1; continue; }
+    if (_measureTextWidth(line) <= wrapWidth) {
+      wrappedLines += 1;
+      continue;
+    }
+    const words = line.split(/\s+/).filter(Boolean);
+    let lineW = 0;
+    for (let w = 0; w < words.length; w++) {
+      const wordW = _measureTextWidth(words[w]);
+      const nextW = lineW === 0 ? wordW : (lineW + spaceW + wordW);
+      if (nextW > wrapWidth) {
+        wrappedLines += 1;
+        lineW = wordW;
+      } else {
+        lineW = nextW;
+      }
+    }
+    if (lineW > 0) wrappedLines += 1;
+  }
+  const height = Math.max(
+    COMMENT_MIN_HEIGHT,
+    Math.ceil(wrappedLines * COMMENT_LINE_HEIGHT + COMMENT_PADDING_Y)
+  );
+  return { width, height };
+}
+
+function _autoExpandTrapComments(ws: Blockly.WorkspaceSvg, spec: TrapSpec | null, maxWidth: number): void {
+  if (!ws || typeof (ws as any).getTopComments !== "function") return;
+  const comments: any[] = (ws as any).getTopComments(true) || [];
+  const instructions = (spec?.ui?.instructions || "").trim();
+  let target: any = null;
+  if (instructions) {
+    for (let i = 0; i < comments.length; i++) {
+      const c = comments[i];
+      const text = String(c?.getText?.() || "").trim();
+      if (text === instructions) {
+        target = c;
+        break;
+      }
+    }
+  }
+  if (!target && !comments.length && instructions && typeof (ws as any).newComment === "function") {
+    try {
+      target = (ws as any).newComment();
+      target?.setText?.(instructions);
+      const Coord = (Blockly as any)?.utils?.Coordinate;
+      if (Coord && typeof target?.moveTo === "function") {
+        target.moveTo(new Coord(10, 10));
+      }
+    } catch { /* ignore */ }
+  }
+  if (target && instructions) {
+    const existing = String(target?.getText?.() || "").trim();
+    if (!existing) target?.setText?.(instructions);
+  }
+  const all = (target && comments.indexOf(target) < 0) ? comments.concat([target]) : comments;
+  for (let i = 0; i < all.length; i++) {
+    const c = all[i];
+    if (!c || c.isDisposed?.()) continue;
+    try { c.setCollapsed?.(false); } catch { /* ignore */ }
+    const text = String(c.getText?.() || "");
+    const size = _estimateCommentSize(text, maxWidth);
+    try {
+      const Size = (Blockly as any)?.utils?.Size;
+      c.setSize?.(Size ? new Size(size.width, size.height) : (size as any));
+    } catch { /* ignore */ }
+    try { c.view?.bringToFront?.(); } catch { /* ignore */ }
+  }
 }
 
 function _getTrapStyle(): TrapBlocklyStyle {
@@ -372,6 +538,7 @@ function _ensureOverlay(): HTMLElement {
         <button id="he-trap-blockly-reset">Reset</button>
         <button id="he-trap-blockly-close">Close</button>
       </div>
+      <div id="${CODE_ID}" class="he-trap-blockly-code"></div>
       <div id="${HOST_ID}" class="he-trap-blockly-host"></div>
       <div id="${RESIZE_ID}" class="he-trap-blockly-resize corner-tl"></div>
     </div>
@@ -423,6 +590,18 @@ function _ensureOverlay(): HTMLElement {
       position: relative;
       overflow: hidden;
     }
+    #${OVERLAY_ID} .he-trap-blockly-code {
+      display: none;
+      max-height: 120px;
+      overflow: auto;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      color: rgba(255,255,255,0.9);
+      background: rgba(8,8,10,0.95);
+      white-space: pre-wrap;
+    }
+    #${OVERLAY_ID} .he-trap-blockly-code.active { display: block; }
     #${OVERLAY_ID} .he-trap-blockly-resize {
       width: 12px;
       height: 12px;
@@ -469,6 +648,7 @@ function _ensureOverlay(): HTMLElement {
       _setUiState({ toolboxHidden: nextHidden });
       toolboxBtn.textContent = _toolboxLabel(nextHidden);
       _applyToolboxVisibility(overlay, nextHidden);
+      if (!nextHidden) _selectFirstToolboxCategory(_workspace);
     };
   }
 
@@ -483,7 +663,9 @@ function _ensureOverlay(): HTMLElement {
       Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, _workspace);
       _ensureTrapVariables(_workspace, _activeSpec);
       _lockProcedureName(_workspace);
-      _applyToolboxVisibility(overlay, _getUiState().toolboxHidden);
+      const hidden = _getUiState().toolboxHidden;
+      _applyToolboxVisibility(overlay, hidden);
+      if (!hidden) _selectFirstToolboxCategory(_workspace);
       try { (_workspace as any).resizeContents?.(); } catch {}
       try { Blockly.svgResize(_workspace); } catch {}
     };
@@ -595,7 +777,8 @@ function _ensureWorkspace(spec: TrapSpec, readOnly: boolean): Blockly.WorkspaceS
     _workspace = null;
   }
 
-  const toolbox = readOnly ? undefined : _filterToolboxBySpec(TRAP_TOOLBOX_BASE, spec);
+  let toolbox = readOnly ? undefined : _filterToolboxBySpec(TRAP_TOOLBOX_BASE, spec);
+  if (toolbox) toolbox = _collapseToolboxToSingleCategory(toolbox);
   _workspace = Blockly.inject(host, {
     toolbox,
     trashcan: false,
@@ -629,7 +812,8 @@ function _ensureTrapVariables(ws: Blockly.WorkspaceSvg, spec: TrapSpec): void {
   if (!vm || typeof vm.getVariable !== "function" || typeof vm.createVariable !== "function") return;
 
   const names = new Set<string>();
-  for (let i = 0; i < spec.givenInputs.length; i++) names.add(spec.givenInputs[i]);
+  const exposed = _resolveExposedInputs(spec);
+  for (let i = 0; i < exposed.length; i++) names.add(exposed[i]);
   names.add("target");
 
   names.forEach(name => {
@@ -658,6 +842,15 @@ function _setStatus(msg: string): void {
 function _setSolution(msg: string): void {
   const el = document.getElementById(SOLUTION_ID);
   if (el) el.textContent = msg;
+}
+
+function _setCode(msg: string): void {
+  const el = document.getElementById(CODE_ID);
+  if (!el) return;
+  const text = String(msg || "");
+  el.textContent = text;
+  if (text) el.classList.add("active");
+  else el.classList.remove("active");
 }
 
 function _formatSolution(value: unknown): string {
@@ -694,6 +887,7 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   _activeInputs = inputs || spec.preview.inputs || {};
   _activeInstance = instance || null;
   const readOnly = !!spec.starterBlocks?.readOnly;
+  _setTrapEnemyFieldFilter(spec);
 
   const panel = overlay.querySelector(".he-trap-blockly-panel") as HTMLElement | null;
   const anchorBtn = overlay.querySelector(`#${ANCHOR_BTN_ID}`) as HTMLButtonElement | null;
@@ -716,7 +910,8 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   overlay.style.display = "block";
 
   const ws = _ensureWorkspace(spec, readOnly);
-  const xml = getTrapXmlForId(spec.id) || spec.starterBlocks.xml;
+  const storedXml = getTrapXmlForId(spec.id);
+  const xml = readOnly || !storedXml ? spec.starterBlocks.xml : storedXml;
   try {
     _loadXmlIntoWorkspace(ws, xml);
   } catch {
@@ -729,11 +924,17 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
   if (readOnly) {
     _applyToolboxVisibility(overlay, true);
   } else {
-    _applyToolboxVisibility(overlay, _getUiState().toolboxHidden);
+    const hidden = _getUiState().toolboxHidden;
+    _applyToolboxVisibility(overlay, hidden);
+    if (!hidden) _selectFirstToolboxCategory(ws);
   }
+
+  const panelWidth = panel ? (panel.clientWidth || _getUiState().width) : _getUiState().width;
+  _autoExpandTrapComments(ws, spec, Math.max(COMMENT_MIN_WIDTH, panelWidth - 40));
 
   const titleEl = document.getElementById(TITLE_ID);
   if (titleEl) titleEl.textContent = spec.ui.title || "Trap Blockly";
+  _setCode(spec.ui.hint || "");
   _setStatus("");
   if (DEBUG_TRAP_SHOW_SOLUTION) {
     const solution = _resolveDebugSolution(spec, _activeInputs || {}, _activeInstance);
@@ -784,6 +985,8 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
       _loadXmlIntoWorkspace(ws, spec.starterBlocks.xml);
       _ensureTrapVariables(ws, spec);
       _lockProcedureName(ws);
+      const panelWidth = panel ? (panel.clientWidth || _getUiState().width) : _getUiState().width;
+      _autoExpandTrapComments(ws, spec, Math.max(COMMENT_MIN_WIDTH, panelWidth - 40));
       _setStatus("Reset");
     };
   }
@@ -802,6 +1005,7 @@ export function openBlocklyTrapEditor(spec: TrapSpec, inputs?: Record<string, un
 export function closeBlocklyTrapEditor(): void {
   const overlay = document.getElementById(OVERLAY_ID);
   if (overlay) overlay.style.display = "none";
+  _setTrapEnemyFieldFilter(null);
   _restoreTrapStyleMessages();
   try {
     const detail = {

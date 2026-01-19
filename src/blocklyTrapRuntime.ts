@@ -29,6 +29,20 @@ const TRAP_ENEMY_FIELD_OPTIONS: Array<[string, string]> = [
   ["name", "name"],
 ];
 
+function _getEnemyFieldOptions(): Array<[string, string]> {
+  const g: any = (globalThis as any);
+  const raw = g.__heTrapEnemyFields;
+  if (!Array.isArray(raw) || raw.length === 0) return TRAP_ENEMY_FIELD_OPTIONS;
+  const allowed = new Set<string>();
+  for (let i = 0; i < raw.length; i++) {
+    const v = raw[i];
+    if (typeof v === "string" && v) allowed.add(v);
+  }
+  if (!allowed.size) return TRAP_ENEMY_FIELD_OPTIONS;
+  const filtered = TRAP_ENEMY_FIELD_OPTIONS.filter(([, value]) => allowed.has(value));
+  return filtered.length ? filtered : TRAP_ENEMY_FIELD_OPTIONS;
+}
+
 function _enemyFieldToVar(field: string): string {
   switch (field) {
     case "hp":
@@ -67,7 +81,7 @@ function _installTrapBlocks(): void {
         this.setColour("#5CB1D6");
         this.appendDummyInput()
           .appendField("enemy")
-          .appendField(new (Blockly as any).FieldDropdown(TRAP_ENEMY_FIELD_OPTIONS), "FIELD")
+          .appendField(new (Blockly as any).FieldDropdown(() => _getEnemyFieldOptions()), "FIELD")
           .appendField("list");
         this.setOutput(true);
       },
@@ -88,7 +102,7 @@ function _installTrapBlocks(): void {
         this.setColour("#5CB1D6");
         this.appendDummyInput()
           .appendField("enemy")
-          .appendField(new (Blockly as any).FieldDropdown(TRAP_ENEMY_FIELD_OPTIONS), "FIELD")
+          .appendField(new (Blockly as any).FieldDropdown(() => _getEnemyFieldOptions()), "FIELD")
           .appendField("at index");
         this.appendValueInput("I").setCheck("Number");
         this.setOutput(true);

@@ -1,12 +1,15 @@
 // src/effectAnimGlue.ts
 import type Phaser from "phaser";
 import type { EffectAtlas, EffectDir } from "./effectAtlas";
+import type { MonsterAtlas } from "./monsterAtlas";
 import { getMissingEffectSizeNames } from "./effectAtlas";
 import { DEBUG_EFFECT_ANIMS } from "./debugFlags";
 
 const EFFECT_SKIN_KEY = "effectSkin";
 const EFFECT_DIR_KEY = "effectDir";
 const EFFECT_DEBUG_ID_KEY = "effectDebugId";
+const EFFECT_ANIM_DELAY_MS_KEY = "effectAnimDelayMs";
+const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
@@ -15,6 +18,13 @@ const MISSING_EFFECT_ONCE = new Set<string>();
 const MISSING_EFFECT_TEX_ONCE = new Set<string>();
 const EFFECT_PENDING_TEX_LOAD = new Set<string>();
 const EFFECT_HIDE_MISSING_TEX_KEY = "__effectHideMissingTex";
+const MONSTER_FRAME_PREFIX = "monsterframe:";
+
+type MonsterFrameRef = {
+    id: string;
+    phase: "walk" | "attack" | "death";
+    frameIndex: number;
+};
 
 function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
     const anyScene = scene as any;
@@ -24,6 +34,32 @@ function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
         (anyScene.__effectAtlas as EffectAtlas | undefined) ||
         ((globalThis as any).__effectAtlas as EffectAtlas | undefined)
     );
+}
+
+function getMonsterAtlasFromScene(scene: Phaser.Scene): MonsterAtlas | undefined {
+    const anyScene = scene as any;
+    return (
+        (scene.registry?.get?.("monsterAtlas") as MonsterAtlas | undefined) ||
+        (anyScene.monsterAtlas as MonsterAtlas | undefined) ||
+        (anyScene.__monsterAtlas as MonsterAtlas | undefined) ||
+        ((globalThis as any).__monsterAtlas as MonsterAtlas | undefined)
+    );
+}
+
+function parseMonsterFrameSkin(skinId: string): MonsterFrameRef | null {
+    if (!skinId) return null;
+    const raw = String(skinId || "").trim();
+    if (!raw.toLowerCase().startsWith(MONSTER_FRAME_PREFIX)) return null;
+    const parts = raw.slice(MONSTER_FRAME_PREFIX.length).split(":");
+    if (parts.length < 3) return null;
+    const idToken = String(parts[0] || "").trim();
+    const phaseRaw = String(parts[1] || "").trim().toLowerCase();
+    const frameRaw = parseInt(String(parts[2] || "").trim(), 10);
+    if (!idToken) return null;
+    if (phaseRaw !== "walk" && phaseRaw !== "attack" && phaseRaw !== "death") return null;
+    if (!Number.isFinite(frameRaw) || frameRaw <= 0) return null;
+    const id = idToken.replace(/_/g, " ");
+    return { id, phase: phaseRaw as MonsterFrameRef["phase"], frameIndex: frameRaw | 0 };
 }
 
 export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite): void {
@@ -39,6 +75,73 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
     const skinId = String(skinIdRaw || "").trim();
     if (!skinId) return;
 
+    const dirRaw = (data.get(EFFECT_DIR_KEY) as string | undefined) || "";
+    const dir = (dirRaw as EffectDir) || "none";
+
+    const monsterFrame = parseMonsterFrameSkin(skinId);
+    if (monsterFrame) {
+        const delayRaw = data.get(EFFECT_ANIM_DELAY_MS_KEY);
+        const delayMs = (typeof delayRaw === "number") ? delayRaw : Number(delayRaw);
+        if (Number.isFinite(delayMs) && delayMs > 0) {
+            const nowMs = (scene.time && typeof scene.time.now === "number") ? scene.time.now : Date.now();
+            let startMsRaw = data.get(EFFECT_ANIM_DELAY_START_MS_KEY);
+            let startMs = (typeof startMsRaw === "number") ? startMsRaw : Number(startMsRaw);
+            if (!(startMs > 0)) {
+                startMs = nowMs | 0;
+                try { data.set(EFFECT_ANIM_DELAY_START_MS_KEY, startMs | 0); } catch { }
+            }
+            if (nowMs < ((startMs | 0) + (delayMs | 0))) return;
+        }
+
+        const monsterAtlas = getMonsterAtlasFromScene(scene);
+        if (!monsterAtlas) return;
+        const keyRaw = monsterFrame.id;
+        const animSet =
+            monsterAtlas[keyRaw] ||
+            monsterAtlas[keyRaw.toLowerCase()] ||
+            monsterAtlas[keyRaw.toUpperCase()];
+        if (!animSet) return;
+
+        let perPhase = (animSet.phases as any)?.[monsterFrame.phase] as any;
+        if (monsterFrame.phase === "attack" && Array.isArray(animSet.attacks) && animSet.attacks.length > 0) {
+            perPhase = animSet.attacks[0];
+        }
+        if (!perPhase) return;
+
+        const dirKeyRaw = String(dirRaw || "").trim().toLowerCase();
+        const dirKey = (dirKeyRaw === "none" || !dirKeyRaw) ? "down" : dirKeyRaw;
+        const frames =
+            (perPhase as any)[dirKey] ||
+            (perPhase as any).down ||
+            (perPhase as any).up ||
+            (perPhase as any).left ||
+            (perPhase as any).right;
+        if (!frames || !frames.length) return;
+
+        const idx = Math.min(frames.length - 1, Math.max(0, (monsterFrame.frameIndex | 0) - 1)) | 0;
+        const frame = frames[idx];
+        const texKey =
+            (animSet.phaseTexture && (animSet.phaseTexture as any)[monsterFrame.phase]) ||
+            (animSet.textureKeys && animSet.textureKeys[0]) ||
+            "";
+        if (!texKey) return;
+
+        if (!(scene.textures && scene.textures.exists(texKey))) return;
+
+        try {
+            sprite.setTexture(texKey, frame);
+            if (sprite.anims && sprite.anims.isPlaying) sprite.anims.stop();
+        } catch { }
+
+        const animKey = `effect_${monsterFrame.id.replace(/\\s+/g, "_").toLowerCase()}_${monsterFrame.phase}_${monsterFrame.frameIndex}_${dirKey}`;
+        try {
+            data.set(LAST_EFFECT_SKIN_KEY, skinId);
+            data.set(LAST_EFFECT_DIR_KEY, dirKey);
+            data.set(LAST_EFFECT_ANIM_KEY, animKey);
+        } catch { }
+        return;
+    }
+
     const atlas = getEffectAtlasFromScene(scene);
     if (!atlas) {
         try {
@@ -50,9 +153,6 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         } catch { }
         return;
     }
-
-    const dirRaw = (data.get(EFFECT_DIR_KEY) as string | undefined) || "";
-    const dir = (dirRaw as EffectDir) || "none";
 
     let resolved = atlas[skinId];
     let resolvedId = skinId;
@@ -127,6 +227,32 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
             }
         }
         return;
+    }
+
+    const delayRaw = data.get(EFFECT_ANIM_DELAY_MS_KEY);
+    const delayMs = (typeof delayRaw === "number") ? delayRaw : Number(delayRaw);
+    if (Number.isFinite(delayMs) && delayMs > 0) {
+        const nowMs = (scene.time && typeof scene.time.now === "number") ? scene.time.now : Date.now();
+        let startMsRaw = data.get(EFFECT_ANIM_DELAY_START_MS_KEY);
+        let startMs = (typeof startMsRaw === "number") ? startMsRaw : Number(startMsRaw);
+        if (!(startMs > 0)) {
+            startMs = nowMs | 0;
+            try { data.set(EFFECT_ANIM_DELAY_START_MS_KEY, startMs | 0); } catch { }
+        }
+        if (nowMs < ((startMs | 0) + (delayMs | 0))) {
+            try {
+                sprite.setTexture(resolved.textureKey, resolved.frameIndices[0]);
+                if (sprite.anims && sprite.anims.isPlaying) sprite.anims.stop();
+            } catch { }
+            const hidMissing = !!data.get(EFFECT_HIDE_MISSING_TEX_KEY);
+            if (hidMissing) {
+                try {
+                    data.set(EFFECT_HIDE_MISSING_TEX_KEY, 0);
+                    sprite.setVisible(true);
+                } catch { }
+            }
+            return;
+        }
     }
 
     const lastSkin = data.get(LAST_EFFECT_SKIN_KEY) as string | undefined;

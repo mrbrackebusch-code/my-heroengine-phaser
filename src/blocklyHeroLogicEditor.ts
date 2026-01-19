@@ -45,7 +45,7 @@ const DEFAULT_WORKSPACE_XML = `
 <xml xmlns="https://developers.google.com/blockly/xml">
   <block type="he_on_button_a" x="40" y="40">
     <comment pinned="false" h="110" w="260">
-When A is pressed, return a 7-entry array:
+When Q is pressed, return a 7-entry array:
 [family, damage, reach, time, status, element, id]
     </comment>
     <statement name="DO">
@@ -54,7 +54,7 @@ When A is pressed, return a 7-entry array:
   </block>
   <block type="he_on_button_b" x="360" y="40">
     <comment pinned="false" h="110" w="260">
-When B is pressed, return a 7-entry array:
+When W is pressed, return a 7-entry array:
 [family, damage, reach, time, status, element, id]
     </comment>
     <statement name="DO">
@@ -63,7 +63,16 @@ When B is pressed, return a 7-entry array:
   </block>
   <block type="he_on_button_ab" x="680" y="40">
     <comment pinned="false" h="110" w="260">
-When A+B is pressed, return a 7-entry array:
+When E is pressed, return a 7-entry array:
+[family, damage, reach, time, status, element, id]
+    </comment>
+    <statement name="DO">
+      <block type="he_return_move"></block>
+    </statement>
+  </block>
+  <block type="he_on_button_r" x="40" y="240">
+    <comment pinned="false" h="110" w="260">
+When R is pressed, return a 7-entry array:
 [family, damage, reach, time, status, element, id]
     </comment>
     <statement name="DO">
@@ -257,9 +266,10 @@ const HE_ELEMENT_OPTIONS: Array<[string, string]> = [
 ];
 
 const HE_ID_OPTIONS: Array<[string, string]> = [
-  ["A", "A"],
-  ["B", "B"],
-  ["A+B", "A+B"],
+  ["Q", "A"],
+  ["W", "B"],
+  ["E", "A+B"],
+  ["R", "R"],
 ];
 
 const HE_RETURN_INPUTS: Array<{ input: string; varName: HeOutputVarName; label: string }> = [
@@ -480,7 +490,7 @@ function _heInstallReservedVariableGuards(workspace: Blockly.WorkspaceSvg): void
 
 function _heEnsureBlocksRegistered(): void {
   const B: any = (Blockly as any).Blocks;
-  if (B && B.he_return_move && B.he_choose_move && B.he_on_button_a && B.he_on_button_b && B.he_on_button_ab && B.he_set_outputs_bundle) {
+  if (B && B.he_return_move && B.he_choose_move && B.he_on_button_a && B.he_on_button_b && B.he_on_button_ab && B.he_on_button_r && B.he_set_outputs_bundle) {
     return;
   }
 
@@ -497,9 +507,10 @@ function _heEnsureBlocksRegistered(): void {
   };
 
   // --- Main entry blocks (button-specific) ---
-  _mkEntry("he_on_button_a", "When A Button Pressed");
-  _mkEntry("he_on_button_b", "When B Button Pressed");
-  _mkEntry("he_on_button_ab", "When A+B Button Pressed");
+  _mkEntry("he_on_button_a", "When Q Button Pressed");
+  _mkEntry("he_on_button_b", "When W Button Pressed");
+  _mkEntry("he_on_button_ab", "When E Button Pressed");
+  _mkEntry("he_on_button_r", "When R Button Pressed");
 
   // Legacy block (kept for older XML)
   _mkEntry("he_choose_move", "Choose My Move");
@@ -901,6 +912,7 @@ function _heEnsureEntryBlocks(workspace: Blockly.WorkspaceSvg): Blockly.Block[] 
   entries.push(_heEnsureEntryBlock(workspace, "he_on_button_a", 40, 40));
   entries.push(_heEnsureEntryBlock(workspace, "he_on_button_b", 360, 40));
   entries.push(_heEnsureEntryBlock(workspace, "he_on_button_ab", 680, 40));
+  entries.push(_heEnsureEntryBlock(workspace, "he_on_button_r", 40, 240));
   return entries;
 }
 
@@ -1450,7 +1462,7 @@ function _ensureWorkspace(): Blockly.WorkspaceSvg {
     // Auto-remove stray Return blocks pulled out of entry blocks
     try {
       if (e?.type === (Blockly as any).Events?.MOVE) {
-        const entryTypes = new Set(["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_choose_move"]);
+        const entryTypes = new Set(["he_on_button_a", "he_on_button_b", "he_on_button_ab", "he_on_button_r", "he_choose_move"]);
         const blk = _workspace.getBlockById(e.blockId || e.newParentId || e.oldParentId);
         let cur: any = blk, underEntry = false;
         while (cur) { if (entryTypes.has(cur.type)) { underEntry = true; break; } cur = cur.getParent?.(); }

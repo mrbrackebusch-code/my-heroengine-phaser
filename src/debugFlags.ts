@@ -81,6 +81,7 @@ export const DEBUG_STATUE_PEDESTAL = false;
 
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
 export const DEBUG_DUNGEON_LOGS = false;
+export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
 export const DEBUG_FOCUS_LOGS = true;
 export const DEBUG_INTERACT_LOGS = true; // General interact pipeline (props/NPC).
 export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
@@ -91,6 +92,9 @@ export const DEBUG_TRAP_FORCE_KIND = ""; // Force a trap kind (maps to default t
 export const DEBUG_TRAP_FORCE_SEED = 0; // Force a specific trap seed (0 disables).
 export const DEBUG_TRAP_DUMP_INSTANCE = false; // Log generated trap inputs/expected output.
 export const DEBUG_TRAP_SHOW_SOLUTION = true; // Show expected output in trap editor (debug only).
+export const DEBUG_SHRINE_FORCE_OPEN_EDITOR = false; // Shrine: force open read-only Blockly on interact.
+export const DEBUG_SHRINE_FORCE_ACTIVATE = true; // Shrine: force activation on interact (skip ritual).
+export const DEBUG_SHRINE_OVERLAY_LOGS = true; // Shrine: log overlay apply failures.
 export const DEBUG_CHEST_INTERACT_LOGS = false; // Legacy: use DEBUG_INTERACT_LOGS.
 export const DEBUG_RELIC_LOGS = false;
 export const DEBUG_UI_LOGS = false;
@@ -138,7 +142,7 @@ export const DEBUG_DRAW_ENEMY_NATIVE_BOUNDS = false; // Phaser native sprite bou
 export const DEBUG_DRAW_ENEMY_NAV_FOOTPRINT = true; // Enemy nav footprint (clamped by DEBUG_ENEMY_FOOTPRINT_MAX_PX)
 export const DEBUG_DRAW_ENEMY_AURA_BOUNDS = false; // Aura outline polygon (from non-transparent pixels)
 export const DEBUG_DRAW_HERO_SPRITE_BOUNDS = false; // Hero sprite bounds (Arcade image)
-export const DEBUG_DRAW_HERO_COLLIDER_BOUNDS = false; // Hero collider bounds (colW/colH)
+export const DEBUG_DRAW_HERO_COLLIDER_BOUNDS = true; // Hero collider bounds (colW/colH)
 export const DEBUG_DRAW_HERO_HITBOX = false; // Hero overlap bounds (AABB used for overlaps)
 export const DEBUG_DRAW_HERO_NATIVE_BOUNDS = false; // Hero native sprite bounds (rendered art)
 export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint

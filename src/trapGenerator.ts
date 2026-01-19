@@ -12,7 +12,7 @@ import type {
   TrapStarterBlocks,
 } from "./trapSchema";
 import { createTrapInstance, type TrapInstance } from "./trapInstances";
-import { getTrapSpecById } from "./trapSpecs";
+import { SHRINE_TRAP_ID, getTrapSpecById } from "./trapSpecs";
 
 export type TrapGeneratorFn = (spec: TrapSpec, seed: number) => TrapInstance;
 
@@ -51,6 +51,34 @@ const UNTARGETED_ENEMY_NAMES = [
 const DISASSEMBLED_EFFECT_ELEMENTS: TrapEffectAxis["element"][] = ["fire", "poison", "ice", "arcane"];
 const DISASSEMBLED_EFFECT_PATTERNS: TrapEffectAxis["pattern"][] = ["radial", "line", "burst", "single"];
 const BASE_PROC_BLOCKS = ["procedures_defreturn", "variables_set", "variables_get"];
+
+type ShrineRitualKind = "move_sequence" | "circle" | "gather";
+
+export type ShrineRitualSpec = {
+  kind: ShrineRitualKind;
+  description: string;
+  radiusTiles: number;
+  sequence?: string[];
+  minGapMs?: number;
+  direction?: "cw" | "ccw" | "either";
+  laps?: number;
+  requiredHeroes?: number;
+  holdMs?: number;
+};
+
+const SHRINE_MOVE_SEQUENCES: string[][] = [
+  ["Strength", "Agility", "Strength"],
+  ["Agility", "Intellect", "Agility"],
+  ["Strength", "Strength", "Agility"],
+];
+const SHRINE_MOVE_GAP_MS = [1000, 2000];
+const SHRINE_MOVE_RADIUS_TILES = [2, 3];
+const SHRINE_CIRCLE_RADIUS_TILES = [2, 3];
+const SHRINE_CIRCLE_DIRS: Array<ShrineRitualSpec["direction"]> = ["cw", "ccw", "either"];
+const SHRINE_CIRCLE_LAPS = [1, 2];
+const SHRINE_GATHER_COUNTS = [2, 3];
+const SHRINE_GATHER_HOLD_MS = [2000, 3000, 4000];
+const SHRINE_GATHER_RADIUS_TILES = [2, 3];
 
 type DisassembledNumberStyle = "identity" | "math_single" | "math_double" | "gated";
 const DISASSEMBLED_NUMBER_STYLES: DisassembledNumberStyle[] = [
@@ -811,9 +839,9 @@ function _buildUntargetedStarterBlocks(comment: string): TrapStarterBlocks {
   return {
     xml: `
       <xml xmlns="https://developers.google.com/blockly/xml">
-        <block type="procedures_defreturn" x="20" y="20">
+        <comment pinned="true" h="160" w="360" x="10" y="10">${text}</comment>
+        <block type="procedures_defreturn" x="20" y="220">
           <field name="NAME">trapMain</field>
-          <comment pinned="true" h="160" w="360" x="10" y="10">${text}</comment>
           <value name="RETURN">
             <block type="variables_get">
               <field name="VAR">target</field>
@@ -822,6 +850,408 @@ function _buildUntargetedStarterBlocks(comment: string): TrapStarterBlocks {
         </block>
       </xml>
     `,
+  };
+}
+
+function _buildUntargetedListStarterBlocks(args: {
+  comment: string;
+  field: string;
+  useMin: boolean;
+  outputType: ApCspType;
+}): TrapStarterBlocks {
+  const text = _escapeXml(args.comment);
+  const field = args.field || "dist";
+  const op = args.useMin ? "MIN" : "MAX";
+  const valuesGet = `
+    <block type="variables_get">
+      <field name="VAR">values</field>
+    </block>
+  `;
+  const indexOfBlock = `
+    <block type="lists_indexOf">
+      <field name="END">FIRST</field>
+      <value name="VALUE">
+        ${valuesGet}
+      </value>
+      <value name="FIND">
+        <block type="math_on_list">
+          <field name="OP">${op}</field>
+          <value name="LIST">
+            ${valuesGet}
+          </value>
+        </block>
+      </value>
+    </block>
+  `;
+  let targetValue = indexOfBlock;
+  if (args.outputType === "String" || args.outputType === "List") {
+    const nameListBlock = `
+      <block type="he_trap_enemy_list">
+        <field name="FIELD">name</field>
+      </block>
+    `;
+    const nameAtIndex = `
+      <block type="lists_getIndex">
+        <field name="MODE">GET</field>
+        <field name="WHERE">FROM_START</field>
+        <value name="VALUE">
+          ${nameListBlock}
+        </value>
+        <value name="AT">
+          ${indexOfBlock}
+        </value>
+      </block>
+    `;
+    if (args.outputType === "List") {
+      targetValue = `
+        <block type="lists_create_with">
+          <mutation items="1"></mutation>
+          <value name="ADD0">
+            ${nameAtIndex}
+          </value>
+        </block>
+      `;
+    } else {
+      targetValue = nameAtIndex;
+    }
+  }
+
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <comment pinned="true" h="160" w="360" x="10" y="10">${text}</comment>
+        <block type="procedures_defreturn" x="20" y="220">
+          <field name="NAME">trapMain</field>
+          <statement name="STACK">
+            <block type="variables_set">
+              <field name="VAR">values</field>
+              <value name="VALUE">
+                <block type="he_trap_enemy_list">
+                  <field name="FIELD">${field}</field>
+                </block>
+              </value>
+              <next>
+                <block type="variables_set">
+                  <field name="VAR">target</field>
+                  <value name="VALUE">
+                    ${targetValue}
+                  </value>
+                </block>
+              </next>
+            </block>
+          </statement>
+          <value name="RETURN">
+            <block type="variables_get">
+              <field name="VAR">target</field>
+            </block>
+          </value>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _buildUntargetedLoopStarterBlocks(args: {
+  comment: string;
+  field: string;
+  useMin: boolean;
+  outputType: ApCspType;
+}): TrapStarterBlocks {
+  const text = _escapeXml(args.comment);
+  const field = args.field || "dist";
+  const compareOp = args.useMin ? "LT" : "GT";
+  const valuesGet = `
+    <block type="variables_get">
+      <field name="VAR">values</field>
+    </block>
+  `;
+  const idxOne = `
+    <block type="math_number">
+      <field name="NUM">1</field>
+    </block>
+  `;
+  const idxVar = `
+    <block type="variables_get">
+      <field name="VAR">i</field>
+    </block>
+  `;
+  const bestIndexGet = `
+    <block type="variables_get">
+      <field name="VAR">bestIndex</field>
+    </block>
+  `;
+  const bestValueGet = `
+    <block type="variables_get">
+      <field name="VAR">bestValue</field>
+    </block>
+  `;
+  const listGetAt = (indexBlock: string) => `
+    <block type="lists_getIndex">
+      <field name="MODE">GET</field>
+      <field name="WHERE">FROM_START</field>
+      <value name="VALUE">
+        ${valuesGet}
+      </value>
+      <value name="AT">
+        ${indexBlock}
+      </value>
+    </block>
+  `;
+  const compareBlock = `
+    <block type="logic_compare">
+      <field name="OP">${compareOp}</field>
+      <value name="A">
+        ${listGetAt(idxVar)}
+      </value>
+      <value name="B">
+        ${bestValueGet}
+      </value>
+    </block>
+  `;
+  const updateBestBlock = `
+    <block type="variables_set">
+      <field name="VAR">bestValue</field>
+      <value name="VALUE">
+        ${listGetAt(idxVar)}
+      </value>
+      <next>
+        <block type="variables_set">
+          <field name="VAR">bestIndex</field>
+          <value name="VALUE">
+            ${idxVar}
+          </value>
+        </block>
+      </next>
+    </block>
+  `;
+  let targetValue = bestIndexGet;
+  if (args.outputType === "String" || args.outputType === "List") {
+    const nameListBlock = `
+      <block type="he_trap_enemy_list">
+        <field name="FIELD">name</field>
+      </block>
+    `;
+    const nameAtBest = `
+      <block type="lists_getIndex">
+        <field name="MODE">GET</field>
+        <field name="WHERE">FROM_START</field>
+        <value name="VALUE">
+          ${nameListBlock}
+        </value>
+        <value name="AT">
+          ${bestIndexGet}
+        </value>
+      </block>
+    `;
+    if (args.outputType === "List") {
+      targetValue = `
+        <block type="lists_create_with">
+          <mutation items="1"></mutation>
+          <value name="ADD0">
+            ${nameAtBest}
+          </value>
+        </block>
+      `;
+    } else {
+      targetValue = nameAtBest;
+    }
+  }
+
+  return {
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <comment pinned="true" h="170" w="380" x="10" y="10">${text}</comment>
+        <block type="procedures_defreturn" x="20" y="240">
+          <field name="NAME">trapMain</field>
+          <statement name="STACK">
+            <block type="variables_set">
+              <field name="VAR">values</field>
+              <value name="VALUE">
+                <block type="he_trap_enemy_list">
+                  <field name="FIELD">${field}</field>
+                </block>
+              </value>
+              <next>
+                <block type="variables_set">
+                  <field name="VAR">bestIndex</field>
+                  <value name="VALUE">
+                    ${idxOne}
+                  </value>
+                  <next>
+                    <block type="variables_set">
+                      <field name="VAR">bestValue</field>
+                      <value name="VALUE">
+                        ${listGetAt(idxOne)}
+                      </value>
+                      <next>
+                        <block type="controls_forEach">
+                          <field name="VAR">i</field>
+                          <value name="LIST">
+                            <block type="he_trap_enemy_indices"></block>
+                          </value>
+                          <statement name="DO">
+                            <block type="controls_if">
+                              <value name="IF0">
+                                ${compareBlock}
+                              </value>
+                              <statement name="DO0">
+                                ${updateBestBlock}
+                              </statement>
+                            </block>
+                          </statement>
+                          <next>
+                            <block type="variables_set">
+                              <field name="VAR">target</field>
+                              <value name="VALUE">
+                                ${targetValue}
+                              </value>
+                            </block>
+                          </next>
+                        </block>
+                      </next>
+                    </block>
+                  </next>
+                </block>
+              </next>
+            </block>
+          </statement>
+          <value name="RETURN">
+            <block type="variables_get">
+              <field name="VAR">target</field>
+            </block>
+          </value>
+        </block>
+      </xml>
+    `,
+  };
+}
+
+function _msToSecondsLabel(ms: number): string {
+  const clamped = Math.max(0, ms | 0);
+  const sec = Math.idiv(clamped, 1000);
+  return `${sec}s`;
+}
+
+function _blockText(value: string): string {
+  return `
+    <block type="text">
+      <field name="TEXT">${_escapeXml(value)}</field>
+    </block>
+  `;
+}
+
+function _blockNumber(value: number): string {
+  const num = Number.isFinite(value) ? value : 0;
+  return `
+    <block type="math_number">
+      <field name="NUM">${num}</field>
+    </block>
+  `;
+}
+
+function _blockTextList(values: string[]): string {
+  const items = values && values.length ? values : [""];
+  let out = `<block type="lists_create_with"><mutation items="${items.length}"></mutation>`;
+  for (let i = 0; i < items.length; i++) {
+    out += `<value name="ADD${i}">${_blockText(String(items[i] || ""))}</value>`;
+  }
+  out += "</block>";
+  return out;
+}
+
+function _blockVarSet(name: string, valueBlock: string, nextBlock?: string, pos?: { x: number; y: number }): string {
+  const x = pos ? ` x="${pos.x | 0}" y="${pos.y | 0}"` : "";
+  const next = nextBlock ? `<next>${nextBlock}</next>` : "";
+  return `
+    <block type="variables_set"${x}>
+      <field name="VAR">${_escapeXml(name)}</field>
+      <value name="VALUE">${valueBlock}</value>
+      ${next}
+    </block>
+  `;
+}
+
+export function buildShrineStarterBlocks(ritual: ShrineRitualSpec): TrapStarterBlocks {
+  const summary = ritual && ritual.description ? `This is what we are looking for: ${ritual.description}` : "This is what we are looking for.";
+  const comment = _escapeXml(summary);
+  let script = "";
+  if (!ritual) {
+    script = _blockVarSet("ritualType", _blockText("unknown"), undefined, { x: 20, y: 20 });
+  } else if (ritual.kind === "circle") {
+    const dir = ritual.direction || "either";
+    const laps = ritual.laps == null ? 1 : ritual.laps | 0;
+    const radius = ritual.radiusTiles | 0;
+    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
+    const block3 = _blockVarSet("laps", _blockNumber(laps), block4);
+    const block2 = _blockVarSet("direction", _blockText(dir), block3);
+    script = _blockVarSet("ritualType", _blockText("circle"), block2, { x: 20, y: 20 });
+  } else if (ritual.kind === "gather") {
+    const required = ritual.requiredHeroes == null ? 2 : ritual.requiredHeroes | 0;
+    const hold = ritual.holdMs == null ? 2000 : ritual.holdMs | 0;
+    const radius = ritual.radiusTiles | 0;
+    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
+    const block3 = _blockVarSet("holdMs", _blockNumber(hold), block4);
+    const block2 = _blockVarSet("heroes", _blockNumber(required), block3);
+    script = _blockVarSet("ritualType", _blockText("gather"), block2, { x: 20, y: 20 });
+  } else {
+    const seq = ritual.sequence || [];
+    const minGap = ritual.minGapMs == null ? 0 : ritual.minGapMs | 0;
+    const radius = ritual.radiusTiles | 0;
+    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
+    const block3 = _blockVarSet("minGapMs", _blockNumber(minGap), block4);
+    const block2 = _blockVarSet("moves", _blockTextList(seq), block3);
+    script = _blockVarSet("ritualType", _blockText("sequence"), block2, { x: 20, y: 20 });
+  }
+  return {
+    readOnly: true,
+    xml: `
+      <xml xmlns="https://developers.google.com/blockly/xml">
+        <comment pinned="true" h="80" w="360" x="10" y="10">${comment}</comment>
+        ${script}
+      </xml>
+    `,
+  };
+}
+
+function _generateShrineRitual(rng: () => number): ShrineRitualSpec {
+  const kind = _pick<ShrineRitualKind>(rng, ["move_sequence", "circle", "gather"], "move_sequence");
+  if (kind === "circle") {
+    const radiusTiles = _pick(rng, SHRINE_CIRCLE_RADIUS_TILES, 2);
+    const direction = _pick(rng, SHRINE_CIRCLE_DIRS, "either") || "either";
+    const laps = _pick(rng, SHRINE_CIRCLE_LAPS, 1);
+    const dirLabel = direction === "either" ? "a full circle" : (direction === "cw" ? "clockwise" : "counterclockwise");
+    const lapLabel = laps > 1 ? ` for ${laps} laps` : "";
+    return {
+      kind,
+      radiusTiles,
+      direction,
+      laps,
+      description: `Run ${dirLabel} around the shrine${lapLabel} within ${radiusTiles} tiles.`,
+    };
+  }
+  if (kind === "gather") {
+    const radiusTiles = _pick(rng, SHRINE_GATHER_RADIUS_TILES, 2);
+    const requiredHeroes = _pick(rng, SHRINE_GATHER_COUNTS, 2);
+    const holdMs = _pick(rng, SHRINE_GATHER_HOLD_MS, 2000);
+    const holdLabel = _msToSecondsLabel(holdMs);
+    return {
+      kind,
+      radiusTiles,
+      requiredHeroes,
+      holdMs,
+      description: `Gather ${requiredHeroes} heroes within ${radiusTiles} tiles and hold for ${holdLabel}.`,
+    };
+  }
+  const sequence = _pick(rng, SHRINE_MOVE_SEQUENCES, SHRINE_MOVE_SEQUENCES[0]);
+  const radiusTiles = _pick(rng, SHRINE_MOVE_RADIUS_TILES, 2);
+  const minGapMs = _pick(rng, SHRINE_MOVE_GAP_MS, 1000);
+  const gapLabel = _msToSecondsLabel(minGapMs);
+  return {
+    kind,
+    radiusTiles,
+    sequence,
+    minGapMs,
+    description: `Use ${sequence.join(" -> ")} within ${radiusTiles} tiles, waiting at least ${gapLabel} between moves.`,
   };
 }
 
@@ -1171,7 +1601,21 @@ function _generateUntargetedInstance(spec: TrapSpec, seed: number): TrapInstance
   const comment = useListStyle
     ? `Goal: target the ${_untargetedModeLabel(mode)} enemy using the enemy <field> list.\nUse MIN or MAX on the list, then find the index.\n${outputHint}`
     : `Goal: target the ${_untargetedModeLabel(mode)} enemy by looping over enemies.\nTrack the best value and its index.\n${outputHint}`;
-  const starterBlocksOverride = _buildUntargetedStarterBlocks(comment);
+  const correctField = useDistances ? "dist" : "hp";
+  const starterField = useDistances ? "hp" : "dist";
+  const starterBlocksOverride = useListStyle
+    ? _buildUntargetedListStarterBlocks({
+        comment,
+        field: starterField,
+        useMin,
+        outputType: (spec.output?.type as ApCspType) || "Number",
+      })
+    : _buildUntargetedLoopStarterBlocks({
+        comment,
+        field: starterField,
+        useMin,
+        outputType: (spec.output?.type as ApCspType) || "Number",
+      });
   const paletteBlocks = useListStyle
     ? [
         ...BASE_PROC_BLOCKS,
@@ -1181,16 +1625,20 @@ function _generateUntargetedInstance(spec: TrapSpec, seed: number): TrapInstance
       ]
     : [
         ...BASE_PROC_BLOCKS,
+        "he_trap_enemy_list",
         "he_trap_enemy_indices",
-        "he_trap_enemy_field_at",
         "controls_forEach",
         "controls_if",
         "logic_compare",
         "math_number",
+        "lists_getIndex",
       ];
   if (spec.output?.type !== "Number") paletteBlocks.push("lists_getIndex");
   if (spec.output?.type === "List") paletteBlocks.push("lists_create_with");
   const paletteOverride = _paletteBlocks(paletteBlocks);
+  const enemyFields = new Set<string>([correctField, starterField]);
+  if (spec.output?.type !== "Number") enemyFields.add("name");
+  const blocklyOverride = { enemyFields: Array.from(enemyFields), exposedInputs: [] };
 
   return createTrapInstance({
     spec,
@@ -1214,7 +1662,25 @@ function _generateUntargetedInstance(spec: TrapSpec, seed: number): TrapInstance
     uiOverride: { instructions },
     starterBlocksOverride,
     paletteOverride,
+    blocklyOverride,
     axes,
+  });
+}
+
+function _generateShrineInstance(spec: TrapSpec, seed: number): TrapInstance {
+  const rng = _mulberry32(seed | 0);
+  const ritual = _generateShrineRitual(rng);
+  const starterBlocksOverride = buildShrineStarterBlocks(ritual);
+  const instructions = `Ritual: ${ritual.description}`;
+
+  return createTrapInstance({
+    spec,
+    seed: seed | 0,
+    inputs: { ritual },
+    expectedOutput: true,
+    outputContract: spec.output,
+    uiOverride: { instructions },
+    starterBlocksOverride,
   });
 }
 
@@ -1227,6 +1693,7 @@ const TRAP_GENERATORS_BY_KIND: Partial<Record<TrapKind, TrapGeneratorFn>> = {
 export function generateTrapInstanceById(trapId: string, seed: number): TrapInstance | null {
   const spec = getTrapSpecById(trapId);
   if (!spec) return null;
+  if (trapId === SHRINE_TRAP_ID) return _generateShrineInstance(spec, seed | 0);
   const gen = TRAP_GENERATORS_BY_KIND[spec.kind];
   if (!gen) return null;
   return gen(spec, seed | 0);
