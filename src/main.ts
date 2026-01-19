@@ -86,6 +86,24 @@ declare const globalThis: any;
 // ------------------------------------------------------------
 // UI loading overlay (DOM-defined in index.html)
 // ------------------------------------------------------------
+type UiLoadingState = {
+  pct?: number;
+  msg?: string;
+  shown: boolean;
+  done: boolean;
+};
+
+const _uiLoadingState: UiLoadingState = {
+  pct: undefined,
+  msg: "",
+  shown: true,
+  done: false,
+};
+
+try {
+  (globalThis as any).__heLoadingState = _uiLoadingState;
+} catch { }
+
 function _uiLoadingUi(): any {
   try {
     return (globalThis as any).__heLoadingUI || null;
@@ -93,18 +111,25 @@ function _uiLoadingUi(): any {
 }
 function _uiLoadingSet(pct?: number, msg?: string): void {
   try {
+    if (typeof pct === "number" && Number.isFinite(pct)) _uiLoadingState.pct = pct;
+    if (typeof msg === "string" && msg.trim()) _uiLoadingState.msg = msg;
     const ui = _uiLoadingUi();
     if (ui && typeof ui.set === "function") ui.set(pct, msg);
   } catch {}
 }
 function _uiLoadingDone(): void {
   try {
+    _uiLoadingState.done = true;
+    _uiLoadingState.shown = false;
     const ui = _uiLoadingUi();
     if (ui && typeof ui.done === "function") ui.done();
   } catch {}
 }
 function _uiLoadingShow(msg?: string): void {
   try {
+    _uiLoadingState.shown = true;
+    _uiLoadingState.done = false;
+    if (typeof msg === "string" && msg.trim()) _uiLoadingState.msg = msg;
     const ui = _uiLoadingUi();
     if (ui && typeof ui.show === "function") ui.show(msg);
   } catch {}
@@ -1636,8 +1661,8 @@ private _updateCameraFollowLocalHero(): void {
         this._camFollowPid = pid;
         this._camFollowNative = bestNative;
 
-        // Smooth follow; tweak lerp if you want it snappier
-        this.cameras.main.startFollow(bestNative, true, 0.18, 0.18);
+        // Smooth follow; keep the hero centered more aggressively
+        this.cameras.main.startFollow(bestNative, true, 0.35, 0.35);
     }
 }
 
@@ -3250,11 +3275,11 @@ const INITIAL_VIEW_H = 270;
 
 const CAMERA_BASE_VIEW_W = INITIAL_VIEW_W;
 const CAMERA_BASE_VIEW_H = INITIAL_VIEW_H;
-const CAMERA_ZOOM_MIN = 0.25;
+const CAMERA_ZOOM_MIN = 0.5;
 const CAMERA_ZOOM_MAX = 6;
-const CAMERA_USER_ZOOM_MIN = 0.25;
+const CAMERA_USER_ZOOM_MIN = 0.5;
 const CAMERA_USER_ZOOM_MAX = 3;
-// Zoom levels: 25/50/75/100% then smaller steps above, all tile-aligned.
+// Zoom steps: 50/75/100% below 1x, then 12.5% above; tile-aligned.
 const CAMERA_ZOOM_BASE_TILE_PIXEL_MULTIPLE = 4;
 const CAMERA_ZOOM_TARGET_TILE_PIXEL_MULTIPLE = 1;
 const CAMERA_ZOOM_BASE_STEP_FALLBACK = 0.25;

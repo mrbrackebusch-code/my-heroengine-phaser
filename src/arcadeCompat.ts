@@ -2738,6 +2738,16 @@ function __installHeroVisualInfoHookOnce(): void {
             return [innerR, leadEdge, wTipX, wTipY];
         };
 
+        g.__HeroEngineHooks.getAuraMaskBits = function (texKey: string, frameName: string, radius: number): any {
+            const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+            if (!scene) return null;
+            const tk = texKey ? String(texKey) : "";
+            if (!tk) return null;
+            const fn = (frameName !== undefined && frameName !== null) ? String(frameName) : "__BASE";
+            const r = (radius | 0);
+            return heroAnimGlue.getOrBuildHeroAuraMaskBits(scene, tk, fn, r);
+        };
+
 
         if (DEBUG_COMPAT_BOOT) {
             console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
@@ -9566,6 +9576,29 @@ function _syncWeaponOverlaysForHeroNative(
                     (s as any).data.visWTipY = wTipY;
                 } catch { /* ignore */ }
             }
+        }
+    } catch { /* ignore */ }
+
+    try {
+        const fgAny: any = overlays.weaponFg as any;
+        if (fgAny) {
+            const baseX = (nativeHero.x ?? 0) as number;
+            const baseY = (nativeHero.y ?? 0) as number;
+            const texKey = fgAny.texture?.key ? String(fgAny.texture.key) : "";
+            const frameName = (fgAny.frame && (fgAny.frame.name !== undefined))
+                ? String(fgAny.frame.name)
+                : "";
+            const dataAny: any = (s as any).data || ((s as any).data = {});
+            dataAny.__wpnFgTexKey = texKey;
+            dataAny.__wpnFgFrame = frameName;
+            dataAny.__wpnFgOffX = ((fgAny.x ?? baseX) - baseX);
+            dataAny.__wpnFgOffY = ((fgAny.y ?? baseY) - baseY);
+            dataAny.__wpnFgOriginX = (typeof fgAny.originX === "number") ? fgAny.originX : 0.5;
+            dataAny.__wpnFgOriginY = (typeof fgAny.originY === "number") ? fgAny.originY : 0.5;
+            dataAny.__wpnFgScaleX = (typeof fgAny.scaleX === "number") ? fgAny.scaleX : 1;
+            dataAny.__wpnFgScaleY = (typeof fgAny.scaleY === "number") ? fgAny.scaleY : 1;
+            dataAny.__wpnFgFlipX = !!fgAny.flipX;
+            dataAny.__wpnFgFlipY = !!fgAny.flipY;
         }
     } catch { /* ignore */ }
 

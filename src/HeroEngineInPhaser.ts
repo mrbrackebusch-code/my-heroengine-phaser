@@ -2505,7 +2505,7 @@ const AGI_TEX_MIN_Y_KEY = "aTexMinY";
 const AGI_TEX_MAX_Y_KEY = "aTexMaxY";
 const AGI_LAST_TIP_X_KEY = "aTipX";
 const AGI_LAST_TIP_Y_KEY = "aTipY";
-const AGI_TIP_TRACE_SIZE_PX = 16;
+const AGI_TIP_TRACE_SIZE_PX = 8;
 const AGI_TIP_TRACE_COLOR = 2;
 const AGI_TIP_TRACE_EDGE_COLOR = 15;
 const AGI_BACK_PULSE_ARC_DEG = 90;
@@ -2514,6 +2514,14 @@ const AGI_BACK_PULSE_SYNC_MS = 18;
 const AGI_BACK_PULSE_DURATION_MS = 180;
 const AGI_BACK_PULSE_INNER_PAD_PX = 1;
 const AGI_BACK_PULSE_OUTER_PAD_PX = 3;
+const WPN_AURA_TIP_DEPTH_PX = 10;
+const DEBUG_WPN_AURA_TRACE = true;
+const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
+const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
+const WPN_TRACE_ID_KEY = "__wpnTraceId";
+const WPN_TRACE_LAST_MS_KEY = "__wpnTraceLastMs";
+let __wpnTraceSeq = 0;
+const __wpnTraceLogOnce: { [k: string]: 1 } = Object.create(null);
 const _elementTintCache: { [k: string]: number } = Object.create(null);
 
 function _getEffectAtlasAny(): any {
@@ -7239,9 +7247,10 @@ const DECOR_ROLE = {
 
 // Knob for world size tile size tiles dimensions world dimensions
 
-const WORLD_TILES_W = 64;     // columns
+// Sized so 50% zoom fits a 1920x1080 game area with a small margin.
+const WORLD_TILES_W = 108;     // columns
 
-const WORLD_TILES_H = 64;     // rows
+const WORLD_TILES_H = 54;     // rows
 
 
 
@@ -7447,54 +7456,25 @@ function _isHeroInInteractRange(hero: Sprite, target: Sprite, extraX: number, ex
 
 
 
-const DUNGEON_THEME_GROUND_BASES: string[] = [
+type DungeonThemePair = {
+    base: string
+    chasm: string
+    palette: string
+    kinds?: string[]
+    weight?: number
+}
 
-    "ground_light",
-
-    "ground_medium",
-
-    "ground_red",
-
-    "grass_sparse_light",
-
-    "grass_dense_light",
-
-    "grass_dark",
-
-//    "dirt_patch_lightgrass", This entry is NOT something that can be used willy-nilly, it is much more complex
-
-    "sand",
-
-    "sand_water",
-
-    "ground_black",
-
-    "ground_void",
-
-
-
-]
-
-
-
-const DUNGEON_THEME_CHASM_BASES: string[] = [
-
-    "chasm_light",
-
-    "chasm_medium",
-
-    "chasm_black",
-
-    "water_chasm",
-
-//Hedges are currently busted    "hedge_green_low",
-
-//    "hedge_green_high",
-
-//Straw is current busted    "hedge_straw",
-
-    "lava",
-
+const DUNGEON_THEME_PAIRS: DungeonThemePair[] = [
+    { base: "ground_light", chasm: "chasm_light", palette: "stone_light" },
+    { base: "ground_medium", chasm: "chasm_medium", palette: "stone_medium" },
+    { base: "ground_red", chasm: "lava", palette: "volcanic" },
+    { base: "ground_black", chasm: "chasm_black", palette: "obsidian" },
+    { base: "ground_void", chasm: "chasm_black", palette: "void" },
+    { base: "sand", chasm: "chasm_light", palette: "desert" },
+    { base: "sand_water", chasm: "water_chasm", palette: "desert_oasis" },
+    { base: "grass_sparse_light", chasm: "water_chasm", palette: "meadow" },
+    { base: "grass_dense_light", chasm: "water_chasm", palette: "forest" },
+    { base: "grass_dark", chasm: "water_chasm", palette: "forest_dark" },
 ]
 
 
@@ -7670,6 +7650,69 @@ const SHRINE_FLASH_BLEND_MODE: "add" | "lighten" | "normal" = "add"
 const SHRINE_INTERACT_RESCAN_MS = 1000
 const SHRINE_STATE_RESCAN_MS = 1000
 const SHRINE_REGEN_BONUS_PCT = 50
+const AMBIENT_ENABLED = true
+const AMBIENT_FADE_START_KEY = "ambientFadeStartMs"
+const AMBIENT_FADE_END_KEY = "ambientFadeEndMs"
+const AMBIENT_MOTE_SKIN_ID = "firefly"
+const AMBIENT_MOTE_CYCLE_MS = 20000
+const AMBIENT_MOTE_SAT = 0.15
+const AMBIENT_MOTE_LIGHT = 0.7
+const AMBIENT_MOTE_ALPHA = 0.18
+const AMBIENT_MOTE_ALPHA_MIN = 0.03
+const AMBIENT_MOTE_BLEND = "add"
+const AMBIENT_MOTE_RADIUS_PX = 2
+const AMBIENT_MOTE_LIFESPAN_MS = 6000
+const AMBIENT_MOTE_SPEED_MIN_PX = 1
+const AMBIENT_MOTE_SPEED_MAX_PX = 6
+const AMBIENT_MOTE_SPAWN_MIN_MS = 140
+const AMBIENT_MOTE_SPAWN_MAX_MS = 260
+const AMBIENT_MOTE_MAX = 24
+const AMBIENT_MOTE_MARGIN_PX = 4
+const AMBIENT_MOTE_Z = 40
+const AMBIENT_HAZE_SKIN_ID = "smoke"
+const AMBIENT_HAZE_CYCLE_MS = 45000
+const AMBIENT_HAZE_SAT = 0.08
+const AMBIENT_HAZE_LIGHT = 0.6
+const AMBIENT_HAZE_ALPHA = 0.1
+const AMBIENT_HAZE_ALPHA_MIN = 0.02
+const AMBIENT_HAZE_BLEND = "screen"
+const AMBIENT_HAZE_LIFESPAN_MS = 18000
+const AMBIENT_HAZE_SPEED_MIN_PX = 1
+const AMBIENT_HAZE_SPEED_MAX_PX = 4
+const AMBIENT_HAZE_SPAWN_MIN_MS = 7000
+const AMBIENT_HAZE_SPAWN_MAX_MS = 11000
+const AMBIENT_HAZE_MAX = 2
+const AMBIENT_HAZE_SCALE_MIN = 1.4
+const AMBIENT_HAZE_SCALE_MAX = 2.2
+const AMBIENT_HAZE_MARGIN_PX = 12
+const AMBIENT_HAZE_Z = 20
+const AMBIENT_RAYS_SKIN_ID = "rays"
+const AMBIENT_RAYS_CYCLE_MS = 60000
+const AMBIENT_RAYS_SAT = 0.12
+const AMBIENT_RAYS_LIGHT = 0.7
+const AMBIENT_RAYS_ALPHA = 0.08
+const AMBIENT_RAYS_ALPHA_MIN = 0.02
+const AMBIENT_RAYS_BLEND = "screen"
+const AMBIENT_RAYS_LIFESPAN_MS = 24000
+const AMBIENT_RAYS_SPEED_MIN_PX = 0
+const AMBIENT_RAYS_SPEED_MAX_PX = 2
+const AMBIENT_RAYS_SPAWN_MIN_MS = 12000
+const AMBIENT_RAYS_SPAWN_MAX_MS = 20000
+const AMBIENT_RAYS_MAX = 1
+const AMBIENT_RAYS_SCALE_MIN = 1.2
+const AMBIENT_RAYS_SCALE_MAX = 1.8
+const AMBIENT_RAYS_MARGIN_PX = 12
+const AMBIENT_RAYS_Z = 30
+const AMBIENT_WASH_SKIN_ID = "waves"
+const AMBIENT_WASH_CYCLE_MS = 90000
+const AMBIENT_WASH_PULSE_MS = 18000
+const AMBIENT_WASH_SAT = 0.1
+const AMBIENT_WASH_LIGHT = 0.6
+const AMBIENT_WASH_ALPHA_MIN = 0.03
+const AMBIENT_WASH_ALPHA_MAX = 0.08
+const AMBIENT_WASH_BLEND = "screen"
+const AMBIENT_WASH_SCALE_PAD_PX = 40
+const AMBIENT_WASH_Z = 10
 let _dunShrineInteractRescanAtMs = 0
 let _dunShrineStateRescanAtMs = 0
 let _dunShrineBlessingUntilMs = 0
@@ -8016,6 +8059,13 @@ const _dunShrineStates = new Map<string, ShrineState>()
 let _dunShrineSparkles: Sprite[] = []
 let _dunShrineAmbientSparkles: Sprite[] = []
 let _dunShrineAmbientNextMs = 0
+let _dunAmbientMotes: Sprite[] = []
+let _dunAmbientHaze: Sprite[] = []
+let _dunAmbientRays: Sprite[] = []
+let _dunAmbientWash: Sprite = null
+let _dunAmbientMoteNextMs = 0
+let _dunAmbientHazeNextMs = 0
+let _dunAmbientRaysNextMs = 0
 
 function _hslToRgbHex(h: number, s: number, l: number): number {
     const hue = ((h % 360) + 360) % 360
@@ -8271,6 +8321,237 @@ function _dunUpdateShrineAmbience(nowMs: number): void {
         const detail = `count=${_dunShrineAmbientSparkles.length | 0}`
         _shrineObsMark(_dunShrineBlessingKey, _dunFloorIndex | 0, "screen_ambience", true, detail, now | 0)
     }
+}
+
+function _ambientPulse(nowMs: number, cycleMs: number, offsetMs: number): number {
+    const cycle = Math.max(1000, cycleMs | 0)
+    const delta = ((nowMs | 0) + (offsetMs | 0)) | 0
+    const t = ((delta % cycle) + cycle) % cycle
+    return (1 - Math.cos((t / cycle) * Math.PI * 2)) * 0.5
+}
+
+function _ambientTint(nowMs: number, cycleMs: number, sat: number, light: number, offsetMs: number): number {
+    const cycle = Math.max(1000, cycleMs | 0)
+    const delta = ((nowMs | 0) + (offsetMs | 0)) | 0
+    const t = ((delta % cycle) + cycle) % cycle
+    const hue = (t / cycle) * 360
+    return _hslToRgbHex(hue, sat, light)
+}
+
+function _ambientFadeAlpha(nowMs: number, startMs: number, endMs: number, alpha: number, alphaMin: number): number {
+    const start = startMs | 0
+    const end = endMs | 0
+    if (start <= 0 || end <= start) return alpha
+    const t = Math.max(0, Math.min(1, ((nowMs | 0) - start) / Math.max(1, (end - start))))
+    const out = alpha * (1 - t)
+    return Math.max(alphaMin, out)
+}
+
+function _ambientPickScreenPoint(marginPx: number): { x: number; y: number } | null {
+    const w = scene.screenWidth() | 0
+    const h = scene.screenHeight() | 0
+    if (w <= 0 || h <= 0) return null
+    const margin = Math.max(0, marginPx | 0) | 0
+    const minX = margin | 0
+    const maxX = Math.max(minX | 0, (w - 1 - margin) | 0) | 0
+    const minY = margin | 0
+    const maxY = Math.max(minY | 0, (h - 1 - margin) | 0) | 0
+    return {
+        x: Math.randomRange(minX | 0, maxX | 0) | 0,
+        y: Math.randomRange(minY | 0, maxY | 0) | 0,
+    }
+}
+
+function _ambientUpdateList(list: Sprite[], nowMs: number, alpha: number, alphaMin: number): void {
+    if (!list || list.length === 0) return
+    const now = nowMs | 0
+    let write = 0
+    for (let i = 0; i < list.length; i++) {
+        const fx = list[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const endMs = sprites.readDataNumber(fx, AMBIENT_FADE_END_KEY) | 0
+        if (endMs > 0 && (now | 0) >= (endMs | 0)) {
+            fx.destroy()
+            continue
+        }
+        const startMs = sprites.readDataNumber(fx, AMBIENT_FADE_START_KEY) | 0
+        const nextAlpha = _ambientFadeAlpha(now | 0, startMs | 0, endMs | 0, alpha, alphaMin)
+        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, nextAlpha)
+        list[write++] = fx
+    }
+    if (write < list.length) list.length = write
+}
+
+function _ambientSpawnMote(nowMs: number): void {
+    if (!AMBIENT_MOTE_SKIN_ID) return
+    const pt = _ambientPickScreenPoint(AMBIENT_MOTE_MARGIN_PX | 0)
+    if (!pt) return
+    const now = nowMs | 0
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.setFlag(SpriteFlag.RelativeToCamera, true)
+    fx.x = pt.x | 0
+    fx.y = pt.y | 0
+    fx.z = AMBIENT_MOTE_Z | 0
+    if ((AMBIENT_MOTE_LIFESPAN_MS | 0) > 0) fx.lifespan = AMBIENT_MOTE_LIFESPAN_MS | 0
+    const tintSeed = Math.randomRange(0, Math.max(0, (AMBIENT_MOTE_CYCLE_MS | 0) - 1)) | 0
+    const tint = _ambientTint(now | 0, AMBIENT_MOTE_CYCLE_MS | 0, AMBIENT_MOTE_SAT, AMBIENT_MOTE_LIGHT, tintSeed | 0)
+    applyEffectToSprite(fx, AMBIENT_MOTE_SKIN_ID, {
+        tint,
+        alpha: AMBIENT_MOTE_ALPHA,
+        blend: AMBIENT_MOTE_BLEND,
+        fitRadiusPx: AMBIENT_MOTE_RADIUS_PX,
+        repeat: 0,
+        forceTop: true,
+    })
+    const angleDeg = Math.randomRange(0, 359) | 0
+    const speed = Math.randomRange(AMBIENT_MOTE_SPEED_MIN_PX | 0, AMBIENT_MOTE_SPEED_MAX_PX | 0) | 0
+    const rad = (angleDeg * Math.PI) / 180
+    fx.vx = Math.round(Math.cos(rad) * speed)
+    fx.vy = Math.round(Math.sin(rad) * speed)
+    const fadeEnd = (now + Math.max(1, AMBIENT_MOTE_LIFESPAN_MS | 0)) | 0
+    sprites.setDataNumber(fx, AMBIENT_FADE_START_KEY, now | 0)
+    sprites.setDataNumber(fx, AMBIENT_FADE_END_KEY, fadeEnd | 0)
+    _dunAmbientMotes.push(fx)
+}
+
+function _ambientSpawnHaze(nowMs: number): void {
+    if (!AMBIENT_HAZE_SKIN_ID) return
+    const pt = _ambientPickScreenPoint(AMBIENT_HAZE_MARGIN_PX | 0)
+    if (!pt) return
+    const now = nowMs | 0
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.setFlag(SpriteFlag.RelativeToCamera, true)
+    fx.x = pt.x | 0
+    fx.y = pt.y | 0
+    fx.z = AMBIENT_HAZE_Z | 0
+    if ((AMBIENT_HAZE_LIFESPAN_MS | 0) > 0) fx.lifespan = AMBIENT_HAZE_LIFESPAN_MS | 0
+    const tintSeed = Math.randomRange(0, Math.max(0, (AMBIENT_HAZE_CYCLE_MS | 0) - 1)) | 0
+    const tint = _ambientTint(now | 0, AMBIENT_HAZE_CYCLE_MS | 0, AMBIENT_HAZE_SAT, AMBIENT_HAZE_LIGHT, tintSeed | 0)
+    const scale = Math.randomRange((AMBIENT_HAZE_SCALE_MIN * 100) | 0, (AMBIENT_HAZE_SCALE_MAX * 100) | 0) / 100
+    applyEffectToSprite(fx, AMBIENT_HAZE_SKIN_ID, {
+        tint,
+        alpha: AMBIENT_HAZE_ALPHA,
+        blend: AMBIENT_HAZE_BLEND,
+        scale,
+        repeat: 0,
+        forceTop: true,
+    })
+    const angleDeg = Math.randomRange(0, 359) | 0
+    const speed = Math.randomRange(AMBIENT_HAZE_SPEED_MIN_PX | 0, AMBIENT_HAZE_SPEED_MAX_PX | 0) | 0
+    const rad = (angleDeg * Math.PI) / 180
+    fx.vx = Math.round(Math.cos(rad) * speed)
+    fx.vy = Math.round(Math.sin(rad) * speed)
+    const fadeEnd = (now + Math.max(1, AMBIENT_HAZE_LIFESPAN_MS | 0)) | 0
+    sprites.setDataNumber(fx, AMBIENT_FADE_START_KEY, now | 0)
+    sprites.setDataNumber(fx, AMBIENT_FADE_END_KEY, fadeEnd | 0)
+    _dunAmbientHaze.push(fx)
+}
+
+function _ambientSpawnRays(nowMs: number): void {
+    if (!AMBIENT_RAYS_SKIN_ID) return
+    const pt = _ambientPickScreenPoint(AMBIENT_RAYS_MARGIN_PX | 0)
+    if (!pt) return
+    const now = nowMs | 0
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.setFlag(SpriteFlag.RelativeToCamera, true)
+    fx.x = pt.x | 0
+    fx.y = pt.y | 0
+    fx.z = AMBIENT_RAYS_Z | 0
+    if ((AMBIENT_RAYS_LIFESPAN_MS | 0) > 0) fx.lifespan = AMBIENT_RAYS_LIFESPAN_MS | 0
+    const tintSeed = Math.randomRange(0, Math.max(0, (AMBIENT_RAYS_CYCLE_MS | 0) - 1)) | 0
+    const tint = _ambientTint(now | 0, AMBIENT_RAYS_CYCLE_MS | 0, AMBIENT_RAYS_SAT, AMBIENT_RAYS_LIGHT, tintSeed | 0)
+    const scale = Math.randomRange((AMBIENT_RAYS_SCALE_MIN * 100) | 0, (AMBIENT_RAYS_SCALE_MAX * 100) | 0) / 100
+    applyEffectToSprite(fx, AMBIENT_RAYS_SKIN_ID, {
+        tint,
+        alpha: AMBIENT_RAYS_ALPHA,
+        blend: AMBIENT_RAYS_BLEND,
+        scale,
+        repeat: 0,
+        forceTop: true,
+    })
+    const angleDeg = Math.randomRange(0, 359) | 0
+    const speed = Math.randomRange(AMBIENT_RAYS_SPEED_MIN_PX | 0, AMBIENT_RAYS_SPEED_MAX_PX | 0) | 0
+    const rad = (angleDeg * Math.PI) / 180
+    fx.vx = Math.round(Math.cos(rad) * speed)
+    fx.vy = Math.round(Math.sin(rad) * speed)
+    const fadeEnd = (now + Math.max(1, AMBIENT_RAYS_LIFESPAN_MS | 0)) | 0
+    sprites.setDataNumber(fx, AMBIENT_FADE_START_KEY, now | 0)
+    sprites.setDataNumber(fx, AMBIENT_FADE_END_KEY, fadeEnd | 0)
+    _dunAmbientRays.push(fx)
+}
+
+function _ambientEnsureWash(nowMs: number): void {
+    if (!AMBIENT_WASH_SKIN_ID) return
+    const w = scene.screenWidth() | 0
+    const h = scene.screenHeight() | 0
+    if (w <= 0 || h <= 0) return
+
+    let wash = _dunAmbientWash
+    if (!wash || (wash.flags & sprites.Flag.Destroyed)) {
+        wash = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        wash.setFlag(SpriteFlag.Ghost, true)
+        wash.setFlag(SpriteFlag.RelativeToCamera, true)
+        wash.z = AMBIENT_WASH_Z | 0
+        applyEffectToSprite(wash, AMBIENT_WASH_SKIN_ID, {
+            alpha: AMBIENT_WASH_ALPHA_MIN,
+            blend: AMBIENT_WASH_BLEND,
+            repeat: 0,
+            forceTop: true,
+        })
+        _dunAmbientWash = wash
+    }
+
+    wash.x = Math.idiv(w, 2)
+    wash.y = Math.idiv(h, 2)
+
+    const now = nowMs | 0
+    const tint = _ambientTint(now | 0, AMBIENT_WASH_CYCLE_MS | 0, AMBIENT_WASH_SAT, AMBIENT_WASH_LIGHT, 0)
+    const pulse = _ambientPulse(now | 0, AMBIENT_WASH_PULSE_MS | 0, 0)
+    const alpha =
+        AMBIENT_WASH_ALPHA_MIN +
+        (AMBIENT_WASH_ALPHA_MAX - AMBIENT_WASH_ALPHA_MIN) * pulse
+    const radius = (Math.max(w, h) + (AMBIENT_WASH_SCALE_PAD_PX | 0)) | 0
+    const scale = _effectPickScaleForRadius(AMBIENT_WASH_SKIN_ID, "", radius | 0)
+    if (Number.isFinite(scale) && scale > 0) {
+        sprites.setDataNumber(wash, EFFECT_SCALE_DATA_KEY, scale)
+    }
+    sprites.setDataNumber(wash, EFFECT_TINT_DATA_KEY, tint | 0)
+    sprites.setDataNumber(wash, EFFECT_ALPHA_DATA_KEY, alpha)
+}
+
+function _dunUpdateWorldAmbience(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE || !AMBIENT_ENABLED) {
+        _dunResetAmbientRuntime()
+        return
+    }
+    const now = nowMs | 0
+
+    _ambientUpdateList(_dunAmbientMotes, now | 0, AMBIENT_MOTE_ALPHA, AMBIENT_MOTE_ALPHA_MIN)
+    _ambientUpdateList(_dunAmbientHaze, now | 0, AMBIENT_HAZE_ALPHA, AMBIENT_HAZE_ALPHA_MIN)
+    _ambientUpdateList(_dunAmbientRays, now | 0, AMBIENT_RAYS_ALPHA, AMBIENT_RAYS_ALPHA_MIN)
+
+    if ((_dunAmbientMoteNextMs | 0) <= 0 || (now | 0) >= (_dunAmbientMoteNextMs | 0)) {
+        if ((_dunAmbientMotes.length | 0) < (AMBIENT_MOTE_MAX | 0)) _ambientSpawnMote(now | 0)
+        _dunAmbientMoteNextMs =
+            (now + Math.randomRange(AMBIENT_MOTE_SPAWN_MIN_MS | 0, AMBIENT_MOTE_SPAWN_MAX_MS | 0)) | 0
+    }
+
+    if ((_dunAmbientHazeNextMs | 0) <= 0 || (now | 0) >= (_dunAmbientHazeNextMs | 0)) {
+        if ((_dunAmbientHaze.length | 0) < (AMBIENT_HAZE_MAX | 0)) _ambientSpawnHaze(now | 0)
+        _dunAmbientHazeNextMs =
+            (now + Math.randomRange(AMBIENT_HAZE_SPAWN_MIN_MS | 0, AMBIENT_HAZE_SPAWN_MAX_MS | 0)) | 0
+    }
+
+    if ((_dunAmbientRaysNextMs | 0) <= 0 || (now | 0) >= (_dunAmbientRaysNextMs | 0)) {
+        if ((_dunAmbientRays.length | 0) < (AMBIENT_RAYS_MAX | 0)) _ambientSpawnRays(now | 0)
+        _dunAmbientRaysNextMs =
+            (now + Math.randomRange(AMBIENT_RAYS_SPAWN_MIN_MS | 0, AMBIENT_RAYS_SPAWN_MAX_MS | 0)) | 0
+    }
+
+    _ambientEnsureWash(now | 0)
 }
 
 function _shrineSecondsLabel(ms: number): string {
@@ -9701,15 +9982,19 @@ function _dunHandleInteractRelicOffer(it: Sprite, hero: Sprite, pid: number, hi:
 
 
 
+    // Flip the prop state so Phaser stamps the "open" frame.
+    let chestR = sprites.readDataNumber(it, "decorTileR") | 0
+    let chestC = sprites.readDataNumber(it, "decorTileC") | 0
+    if (chestR < 0 || chestC < 0) {
+        chestR = _dunChestTileR | 0
+        chestC = _dunChestTileC | 0
+    }
+
     _dunDestroySprite(it)
 
+    if (chestR >= 0 && chestC >= 0) {
 
-
-    // Flip the prop state so Phaser stamps the "open" frame.
-
-    if (_dunChestTileR >= 0 && _dunChestTileC >= 0) {
-
-        _dunDecor_upsertChestSolid(_dunChestTileR, _dunChestTileC, true)
+        _dunDecor_upsertChestSolid(chestR, chestC, true)
 
         _engineDecorRev = (_engineDecorRev + 1) | 0
 
@@ -9808,6 +10093,7 @@ let _dunAllReadySinceMs = 0
 let _dunBaseFamily = "ground_light"
 
 let _dunWallFamily = "chasm_light"
+let _dunThemePalette = "stone_light"
 
 
 
@@ -10703,8 +10989,7 @@ let _dunStairsStatueSolid: Sprite = null as any
 let _dunChestTileR = -1
 
 let _dunChestTileC = -1
-
-let _dunChestSolid: Sprite = null as any
+let _dunChestSolidsByKey: { [key: string]: Sprite } = Object.create(null)
 
 let _dunInteractFocusActive = 0
 let _dunInteractFocusR = -1
@@ -10768,10 +11053,9 @@ function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolea
 
 
     const name = opened ? "chest#open" : "chest#closed"
+    const key = `${r | 0}:${c | 0}`
 
-
-
-    let s = _dunChestSolid
+    let s = _dunChestSolidsByKey[key]
 
     const dead = (!s || (s.flags & sprites.Flag.Destroyed))
 
@@ -10785,10 +11069,16 @@ function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolea
 
         s.setFlag(SpriteFlag.Invisible, true)
 
-        _dunChestSolid = s
+        _dunChestSolidsByKey[key] = s
 
         _engineDecorSolids.push(s)
 
+    } else {
+        let found = false
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            if (_engineDecorSolids[i] === s) { found = true; break }
+        }
+        if (!found) _engineDecorSolids.push(s)
     }
 
 
@@ -11234,13 +11524,27 @@ function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): voi
 
 function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
 
-    const base = DUNGEON_THEME_GROUND_BASES[Math.randomRange(0, DUNGEON_THEME_GROUND_BASES.length - 1)]
+    const floorKind = String(kind || "")
+    let pool = DUNGEON_THEME_PAIRS.filter(p => !p.kinds || p.kinds.indexOf(floorKind) >= 0)
+    if (!pool.length) pool = DUNGEON_THEME_PAIRS.slice()
+    if (!pool.length) return
 
-    const chasm = DUNGEON_THEME_CHASM_BASES[Math.randomRange(0, DUNGEON_THEME_CHASM_BASES.length - 1)]
+    let total = 0
+    for (let i = 0; i < pool.length; i++) {
+        total += Math.max(1, (pool[i].weight ?? 1) | 0)
+    }
+    total = Math.max(1, total | 0)
+    let roll = Math.randomRange(1, total) | 0
+    let pick = pool[0]
+    for (let i = 0; i < pool.length; i++) {
+        const w = Math.max(1, (pool[i].weight ?? 1) | 0) | 0
+        roll = (roll - w) | 0
+        if (roll <= 0) { pick = pool[i]; break }
+    }
 
-    _dunBaseFamily = base
-
-    _dunWallFamily = chasm
+    _dunBaseFamily = pick.base
+    _dunWallFamily = pick.chasm
+    _dunThemePalette = pick.palette
 
 
 
@@ -11251,6 +11555,8 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
         ;(globalThis as any).__floorBaseFamily = _dunBaseFamily
 
         ;(globalThis as any).__floorWallFamily = _dunWallFamily
+
+        ;(globalThis as any).__floorThemePalette = _dunThemePalette
 
     }
 
@@ -12410,6 +12716,7 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
 
     _dunClearTransientFloorEntities()
     _dunResetShrineRuntime()
+    _dunResetAmbientRuntime()
 
     _dunPickThemeForFloor(_dunFloorIndex, _dunFloorKind)
     _trapClearState()
@@ -12568,6 +12875,10 @@ function _dunEnterFloor_spawnRandomChest(nowMs: number): void {
 
 }
 
+const TREASURE_CHEST_MIN_PAD_DIST = 6
+const TREASURE_CHEST_EXTRA_PAD_DIST = 4
+const TREASURE_CHEST_MAX_TRIES = 260
+
 function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     // Place 3 tiles below the teleport rune (entrance pad).
     const targetR = Math.max(0, (_dunPadTileR | 0) + 3) | 0
@@ -12582,6 +12893,75 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
             theme: "starter",
             count: RELIC_STARTER_OFFER_COUNT | 0,
         })
+    }
+}
+
+function _dunEnterFloor_spawnTreasureChest(nowMs: number): void {
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    const relicR = Math.max(0, Math.min(rows - 1, (padR + 3) | 0)) | 0
+    const relicC = Math.max(0, Math.min(cols - 1, padC | 0)) | 0
+    const relicDist = (Math.abs((relicR | 0) - (padR | 0)) + Math.abs((relicC | 0) - (padC | 0))) | 0
+    const minDist = Math.max(TREASURE_CHEST_MIN_PAD_DIST | 0, (relicDist + TREASURE_CHEST_EXTRA_PAD_DIST) | 0) | 0
+
+    function tileFree(rr: number, cc: number): boolean {
+        if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+        if (rr < 1 || cc < 1 || rr >= (rows - 1) || cc >= (cols - 1)) return false
+        if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
+        if (_dunFindDecorAtTile(rr, cc, "")) return false
+        return true
+    }
+
+    function distFromPad(rr: number, cc: number): number {
+        return (Math.abs((rr | 0) - (padR | 0)) + Math.abs((cc | 0) - (padC | 0))) | 0
+    }
+
+    function pickFarTile(): { r: number, c: number } | null {
+        for (let i = 0; i < (TREASURE_CHEST_MAX_TRIES | 0); i++) {
+            const rr = Math.randomRange(1, (rows - 2) | 0) | 0
+            const cc = Math.randomRange(1, (cols - 2) | 0) | 0
+            if (!tileFree(rr, cc)) continue
+            if (distFromPad(rr, cc) < (minDist | 0)) continue
+            return { r: rr | 0, c: cc | 0 }
+        }
+        return null
+    }
+
+    function pickFarthest(): { r: number, c: number } | null {
+        let bestR = -1
+        let bestC = -1
+        let bestDist = -1
+        for (let rr = 1; rr < rows - 1; rr++) {
+            for (let cc = 1; cc < cols - 1; cc++) {
+                if (!tileFree(rr, cc)) continue
+                const dist = distFromPad(rr, cc)
+                if (dist <= bestDist) continue
+                bestDist = dist | 0
+                bestR = rr | 0
+                bestC = cc | 0
+            }
+        }
+        if ((bestDist | 0) < 0) return null
+        return { r: bestR | 0, c: bestC | 0 }
+    }
+
+    const pick =
+        pickFarTile() ||
+        pickFarthest() ||
+        _dunPickRandomWalkableTile({
+            avoidR: padR,
+            avoidC: padC,
+            minManhattan: Math.max(1, (minDist - 2) | 0),
+            maxTries: 200
+        })
+
+    const chest = _dunSpawnChest(nowMs, _dunColToX(pick.c | 0), _dunRowToY(pick.r | 0))
+    if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "treasure")
     }
 }
 
@@ -13320,6 +13700,40 @@ function _dunResetShrineRuntime(): void {
     _dunShrineAmbientNextMs = 0
 }
 
+function _dunResetAmbientRuntime(): void {
+    if (_dunAmbientMotes && _dunAmbientMotes.length) {
+        for (let i = 0; i < _dunAmbientMotes.length; i++) {
+            const fx = _dunAmbientMotes[i]
+            if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+            fx.destroy()
+        }
+    }
+    if (_dunAmbientHaze && _dunAmbientHaze.length) {
+        for (let i = 0; i < _dunAmbientHaze.length; i++) {
+            const fx = _dunAmbientHaze[i]
+            if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+            fx.destroy()
+        }
+    }
+    if (_dunAmbientRays && _dunAmbientRays.length) {
+        for (let i = 0; i < _dunAmbientRays.length; i++) {
+            const fx = _dunAmbientRays[i]
+            if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+            fx.destroy()
+        }
+    }
+    if (_dunAmbientWash && !(_dunAmbientWash.flags & sprites.Flag.Destroyed)) {
+        _dunAmbientWash.destroy()
+    }
+    _dunAmbientMotes = []
+    _dunAmbientHaze = []
+    _dunAmbientRays = []
+    _dunAmbientWash = null
+    _dunAmbientMoteNextMs = 0
+    _dunAmbientHazeNextMs = 0
+    _dunAmbientRaysNextMs = 0
+}
+
 function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): Sprite | null {
     const r = tileR | 0
     const c = tileC | 0
@@ -13477,13 +13891,20 @@ function _dunSetFireTotemMenuActive(active: boolean): void {
 
 try { (globalThis as any).dun_setFireTotemMenuActive = _dunSetFireTotemMenuActive } catch { /* ignore */ }
 
+const TRAP_CENTER_SEARCH_RADIUS = 6
+
 function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | null): void {
     const rows = _dunWorldRows() | 0
     const cols = _dunWorldCols() | 0
     if (rows <= 0 || cols <= 0) return
 
-    let r = Math.max(0, Math.min(rows - 1, (_dunPadTileR | 0) + 3)) | 0
-    let c = Math.max(0, Math.min(cols - 1, (_dunPadTileC | 0) + 2)) | 0
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    const centerR = (padR >= 0 ? padR : (Math.idiv(rows, 2) | 0)) | 0
+    const centerC = (padC >= 0 ? padC : (Math.idiv(cols, 2) | 0)) | 0
+
+    let r = Math.max(0, Math.min(rows - 1, (padR + 3) | 0)) | 0
+    let c = Math.max(0, Math.min(cols - 1, (padC + 2) | 0)) | 0
 
     function hasDecorAt(rr: number, cc: number): boolean {
         if (_engineDecorSolids && _engineDecorSolids.length) {
@@ -13513,6 +13934,33 @@ function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | nul
         if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
         if (hasDecorAt(rr, cc)) return false
         return true
+    }
+
+    function pickNearCenter(r0: number, c0: number, maxRadius: number): { r: number, c: number } | null {
+        const baseR = r0 | 0
+        const baseC = c0 | 0
+        if (isTileFree(baseR, baseC)) return { r: baseR | 0, c: baseC | 0 }
+        const cap = Math.max(0, maxRadius | 0) | 0
+        for (let rad = 1; rad <= cap; rad++) {
+            for (let dr = -rad; dr <= rad; dr++) {
+                for (let dc = -rad; dc <= rad; dc++) {
+                    if (Math.abs(dr) !== rad && Math.abs(dc) !== rad) continue
+                    const rr = (baseR + (dr | 0)) | 0
+                    const cc = (baseC + (dc | 0)) | 0
+                    if (!isTileFree(rr, cc)) continue
+                    return { r: rr | 0, c: cc | 0 }
+                }
+            }
+        }
+        return null
+    }
+
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const pick = pickNearCenter(centerR, centerC, TRAP_CENTER_SEARCH_RADIUS | 0)
+        if (pick) {
+            r = pick.r | 0
+            c = pick.c | 0
+        }
     }
 
     if (!isTileFree(r, c)) {
@@ -13618,6 +14066,7 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
 
     _dunRuneSetName("teleport_rune")
     _dunEnterFloor_spawnStarterChest(nowMs)
+    _dunEnterFloor_spawnTreasureChest(nowMs)
     _dunEnterFloor_spawnStarterShrine()
     _dunEnterFloor_spawnMemoryBook(nowMs)
 
@@ -27288,6 +27737,9 @@ function initWorldDecorPostPass(): void {
     _destroyAllInPlace(_engineDecorTriggers)
 
     _destroyAllInPlace(_engineDecorSolids)
+    _dunChestSolidsByKey = Object.create(null)
+    _dunChestTileR = -1
+    _dunChestTileC = -1
 
 
 
@@ -28699,6 +29151,7 @@ function updateGenericFocus(nowMs: number): void {
     _dunUpdatePropAuraOverrides(nowMs)
     _dunUpdateShrineRituals(nowMs)
     _dunUpdateShrineOverlays(nowMs)
+    _dunUpdateWorldAmbience(nowMs)
     _shopUpdateFocusHighlights(nowMs)
 
 }
@@ -39804,7 +40257,7 @@ function spawnStrengthSwingProjectile(
 
 
 
-    const outerR = (inner0 | 0) + (reachFromInner | 0)
+    const outerR = (inner0 | 0) + (reachFromInner | 0) + 3
     const img0 = _createStrengthTraceImage(outerR)
 
 
@@ -39826,11 +40279,53 @@ function spawnStrengthSwingProjectile(
     const halfH = (img0.height | 0) >> 1
     let tipInitX = wTipX
     let tipInitY = wTipY
-    if (!tipInitX && !tipInitY) {
-        tipInitX = nx * frontStartR
-        tipInitY = ny * frontStartR
+    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+    if (auraPack && auraPack.shapes[3]) {
+        const tipShape = auraPack.shapes[3]
+        const baseX = hero.x + (auraPack.info.offX || 0)
+        const baseY = hero.y + (auraPack.info.offY || 0)
+        const tipWorldX = baseX + tipShape.tipDx
+        const tipWorldY = baseY + tipShape.tipDy
+        tipInitX = tipWorldX - hero.x
+        tipInitY = tipWorldY - hero.y
+        _stampWeaponAuraAt(img0, -halfW, -halfH, tipInitX, tipInitY, tipShape, STR_TIP_TRACE_COLOR)
+        if (_wpnTraceEnabled()) {
+            const traceId = _wpnTraceAssignId(proj)
+            _wpnTraceLog("str.spawn.auraTip", {
+                id: traceId,
+                heroIndex,
+                dir: _weaponDirKeyFromVector(nx, ny),
+                texKey: auraPack.info.texKey,
+                frame: auraPack.info.frameName,
+                offX: auraPack.info.offX | 0,
+                offY: auraPack.info.offY | 0,
+                tipDx: +tipShape.tipDx.toFixed(2),
+                tipDy: +tipShape.tipDy.toFixed(2),
+                tipLocalX: +tipInitX.toFixed(2),
+                tipLocalY: +tipInitY.toFixed(2),
+                imgW: img0.width | 0,
+                imgH: img0.height | 0
+            });
+        }
+    } else {
+        if (!tipInitX && !tipInitY) {
+            tipInitX = nx * frontStartR
+            tipInitY = ny * frontStartR
+        }
+        _strengthTraceStampAt(img0, Math.round(tipInitX) + halfW, Math.round(tipInitY) + halfH)
+        if (_wpnTraceEnabled()) {
+            const traceId = _wpnTraceAssignId(proj)
+            _wpnTraceLog("str.spawn.fallbackTip", {
+                id: traceId,
+                heroIndex,
+                dir: _weaponDirKeyFromVector(nx, ny),
+                wTipX: +tipInitX.toFixed(2),
+                wTipY: +tipInitY.toFixed(2),
+                imgW: img0.width | 0,
+                imgH: img0.height | 0
+            });
+        }
     }
-    _strengthTraceStampAt(img0, Math.round(tipInitX) + halfW, Math.round(tipInitY) + halfH)
 
 
 
@@ -40061,23 +40556,73 @@ function updateStrengthProjectilesMotionFor(
         if (img) {
             const halfW = (img.width | 0) >> 1
             const halfH = (img.height | 0) >> 1
-            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
-            let wTipX = (vis[2] || 0)
-            let wTipY = (vis[3] || 0)
-            if (!wTipX && !wTipY) {
-                wTipX = nx * frontStart
-                wTipY = ny * frontStart
-            }
-            const tipWorldX = (hero.x + wTipX)
-            const tipWorldY = (hero.y + wTipY)
-            const tipLocalX = tipWorldX - anchorX
-            const tipLocalY = tipWorldY - anchorY
+            const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+            if (auraPack && auraPack.shapes[3]) {
+                const tipShape = auraPack.shapes[3]
+                const baseX = hero.x + (auraPack.info.offX || 0)
+                const baseY = hero.y + (auraPack.info.offY || 0)
+                const tipWorldX = baseX + tipShape.tipDx
+                const tipWorldY = baseY + tipShape.tipDy
+                const tipLocalX = tipWorldX - anchorX
+                const tipLocalY = tipWorldY - anchorY
+                const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+                const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+                _stampWeaponAuraLine(
+                    img,
+                    -halfW,
+                    -halfH,
+                    lastX,
+                    lastY,
+                    tipLocalX,
+                    tipLocalY,
+                    auraPack.shapes,
+                    STR_TIP_TRACE_COLOR
+                )
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("str.tick.auraTip", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2),
+                        lastX: +lastX.toFixed(2),
+                        lastY: +lastY.toFixed(2),
+                        imgW: img.width | 0,
+                        imgH: img.height | 0
+                    });
+                }
+                sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+                sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+            } else {
+                const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+                let wTipX = (vis[2] || 0)
+                let wTipY = (vis[3] || 0)
+                if (!wTipX && !wTipY) {
+                    wTipX = nx * frontStart
+                    wTipY = ny * frontStart
+                }
+                const tipWorldX = (hero.x + wTipX)
+                const tipWorldY = (hero.y + wTipY)
+                const tipLocalX = tipWorldX - anchorX
+                const tipLocalY = tipWorldY - anchorY
 
-            const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
-            const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
-            _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
-            sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
-            sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+                const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+                const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+                _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("str.tick.fallbackTip", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2),
+                        lastX: +lastX.toFixed(2),
+                        lastY: +lastY.toFixed(2),
+                        imgW: img.width | 0,
+                        imgH: img.height | 0
+                    });
+                }
+                sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+                sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+            }
         }
         _updateHeroBodyPaintFxForProj(proj, hero)
         _updateProjectileMaskFxForProj(proj, hero)
@@ -40105,23 +40650,74 @@ function updateStrengthProjectilesMotionFor(
     if (img) {
         const halfW = (img.width | 0) >> 1
         const halfH = (img.height | 0) >> 1
-        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
-        let wTipX = (vis[2] || 0)
-        let wTipY = (vis[3] || 0)
-        if (!wTipX && !wTipY) {
-            wTipX = nx * frontStart
-            wTipY = ny * frontStart
-        }
-        const tipWorldX = (hero.x + wTipX)
-        const tipWorldY = (hero.y + wTipY)
-        const tipLocalX = tipWorldX - anchorX
-        const tipLocalY = tipWorldY - anchorY
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+        if (auraPack && auraPack.shapes[3]) {
+            const tipShape = auraPack.shapes[3]
+            const baseX = hero.x + (auraPack.info.offX || 0)
+            const baseY = hero.y + (auraPack.info.offY || 0)
+            const tipWorldX = baseX + tipShape.tipDx
+            const tipWorldY = baseY + tipShape.tipDy
+            const tipLocalX = tipWorldX - anchorX
+            const tipLocalY = tipWorldY - anchorY
 
-        const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
-        const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
-        _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
-        sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
-        sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+            const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+            const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+            _stampWeaponAuraLine(
+                img,
+                -halfW,
+                -halfH,
+                lastX,
+                lastY,
+                tipLocalX,
+                tipLocalY,
+                auraPack.shapes,
+                STR_TIP_TRACE_COLOR
+            )
+            if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                _wpnTraceLog("str.tick2.auraTip", {
+                    id: _wpnTraceAssignId(proj),
+                    heroIndex,
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    lastX: +lastX.toFixed(2),
+                    lastY: +lastY.toFixed(2),
+                    imgW: img.width | 0,
+                    imgH: img.height | 0
+                });
+            }
+            sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+            sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+        } else {
+            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+            let wTipX = (vis[2] || 0)
+            let wTipY = (vis[3] || 0)
+            if (!wTipX && !wTipY) {
+                wTipX = nx * frontStart
+                wTipY = ny * frontStart
+            }
+            const tipWorldX = (hero.x + wTipX)
+            const tipWorldY = (hero.y + wTipY)
+            const tipLocalX = tipWorldX - anchorX
+            const tipLocalY = tipWorldY - anchorY
+
+            const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+            const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+            _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
+            if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                _wpnTraceLog("str.tick2.fallbackTip", {
+                    id: _wpnTraceAssignId(proj),
+                    heroIndex,
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    lastX: +lastX.toFixed(2),
+                    lastY: +lastY.toFixed(2),
+                    imgW: img.width | 0,
+                    imgH: img.height | 0
+                });
+            }
+            sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+            sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+        }
     }
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
@@ -40515,6 +41111,324 @@ function _strengthTraceStampLine(
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
         _strengthTraceStampAt(img, Math.round(lx) + halfW, Math.round(ly) + halfH);
+    }
+}
+
+type WeaponFgInfo = {
+    texKey: string;
+    frameName: string;
+    offX: number;
+    offY: number;
+    originX: number;
+    originY: number;
+    scaleX: number;
+    scaleY: number;
+    flipX: boolean;
+    flipY: boolean;
+};
+
+type WeaponAuraTipShape = {
+    offsets: number[];
+    tipDx: number;
+    tipDy: number;
+    sideHalf: number;
+};
+
+const __weaponAuraTipCache: { [k: string]: WeaponAuraTipShape } = Object.create(null);
+
+function _weaponDirKeyFromVector(nx: number, ny: number): string {
+    if (!nx && !ny) return "down";
+    if (!nx) return ny >= 0 ? "down" : "up";
+    if (!ny) return nx >= 0 ? "right" : "left";
+    if (nx > 0 && ny > 0) return "down_right";
+    if (nx > 0 && ny < 0) return "up_right";
+    if (nx < 0 && ny > 0) return "down_left";
+    return "up_left";
+}
+
+function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
+    const d: any = (hero as any).data;
+    if (!d) return null;
+    const texKey = d.__wpnFgTexKey;
+    const frameName = d.__wpnFgFrame;
+    if (!texKey || frameName == null || frameName === "") return null;
+    return {
+        texKey: String(texKey),
+        frameName: String(frameName),
+        offX: (d.__wpnFgOffX || 0),
+        offY: (d.__wpnFgOffY || 0),
+        originX: (typeof d.__wpnFgOriginX === "number") ? d.__wpnFgOriginX : 0.5,
+        originY: (typeof d.__wpnFgOriginY === "number") ? d.__wpnFgOriginY : 0.5,
+        scaleX: (typeof d.__wpnFgScaleX === "number") ? d.__wpnFgScaleX : 1,
+        scaleY: (typeof d.__wpnFgScaleY === "number") ? d.__wpnFgScaleY : 1,
+        flipX: !!d.__wpnFgFlipX,
+        flipY: !!d.__wpnFgFlipY
+    };
+}
+
+function _getAuraMaskBits(texKey: string, frameName: string, radius: number): any | null {
+    try {
+        const g: any = (globalThis as any);
+        const hook = g && g.__HeroEngineHooks && g.__HeroEngineHooks.getAuraMaskBits;
+        if (typeof hook !== "function") return null;
+        return hook(texKey, frameName, radius | 0);
+    } catch {
+        return null;
+    }
+}
+
+function _wpnTraceEnabled(): boolean {
+    const g: any = (globalThis as any);
+    if (typeof g.__DBG_WPN_AURA_TRACE === "boolean") return g.__DBG_WPN_AURA_TRACE;
+    return DEBUG_WPN_AURA_TRACE;
+}
+
+function _wpnTraceVerbose(): boolean {
+    const g: any = (globalThis as any);
+    if (typeof g.__DBG_WPN_AURA_TRACE_VERBOSE === "boolean") return g.__DBG_WPN_AURA_TRACE_VERBOSE;
+    return DEBUG_WPN_AURA_TRACE_VERBOSE;
+}
+
+function _wpnTraceLog(tag: string, payload: any): void {
+    if (!_wpnTraceEnabled()) return;
+    console.log("[WPNTRACE][" + tag + "]", payload);
+}
+
+function _wpnTraceAssignId(proj: Sprite): number {
+    if (!proj) return 0;
+    let id = sprites.readDataNumber(proj, WPN_TRACE_ID_KEY) | 0;
+    if (id > 0) return id;
+    __wpnTraceSeq = (__wpnTraceSeq + 1) | 0;
+    id = __wpnTraceSeq | 0;
+    sprites.setDataNumber(proj, WPN_TRACE_ID_KEY, id);
+    return id;
+}
+
+function _wpnTraceShouldLog(proj: Sprite, nowMs: number): boolean {
+    if (!_wpnTraceEnabled()) return false;
+    const last = sprites.readDataNumber(proj, WPN_TRACE_LAST_MS_KEY) | 0;
+    if ((nowMs | 0) - (last | 0) < (DEBUG_WPN_AURA_TRACE_INTERVAL_MS | 0)) return false;
+    sprites.setDataNumber(proj, WPN_TRACE_LAST_MS_KEY, nowMs | 0);
+    return true;
+}
+
+function _countMaskBits(mask: any): number {
+    if (!mask || !mask.bits || !mask.w || !mask.h) return 0;
+    const bits: Uint32Array = mask.bits as Uint32Array;
+    let count = 0;
+    for (let i = 0; i < bits.length; i++) {
+        let v = bits[i] >>> 0;
+        while (v) {
+            v &= (v - 1) >>> 0;
+            count++;
+        }
+    }
+    return count;
+}
+
+function _getWeaponAuraTipShape(
+    info: WeaponFgInfo,
+    nx: number,
+    ny: number,
+    dirKey: string,
+    radius: number,
+    depthPx: number
+): WeaponAuraTipShape | null {
+    const key = [
+        info.texKey, info.frameName, dirKey,
+        "r" + (radius | 0),
+        "d" + (depthPx | 0),
+        "ox" + Math.round(info.originX * 1000),
+        "oy" + Math.round(info.originY * 1000),
+        "sx" + Math.round(info.scaleX * 1000),
+        "sy" + Math.round(info.scaleY * 1000),
+        info.flipX ? "fx1" : "fx0",
+        info.flipY ? "fy1" : "fy0"
+    ].join("|");
+    const cached = __weaponAuraTipCache[key];
+    if (cached) return cached;
+
+    const mask = _getAuraMaskBits(info.texKey, info.frameName, radius | 0);
+    if (!mask || !mask.bits || !(mask.w > 0) || !(mask.h > 0)) {
+        if (_wpnTraceEnabled() && !__wpnTraceLogOnce[key]) {
+            __wpnTraceLogOnce[key] = 1;
+            _wpnTraceLog("maskMissing", {
+                key,
+                texKey: info.texKey,
+                frame: info.frameName,
+                radius: radius | 0
+            });
+        }
+        return null;
+    }
+
+    const w = mask.w | 0;
+    const h = mask.h | 0;
+    const bits: Uint32Array = mask.bits as Uint32Array;
+    const ox = info.originX;
+    const oy = info.originY;
+    const sx = info.scaleX;
+    const sy = info.scaleY;
+    const flipX = info.flipX;
+    const flipY = info.flipY;
+    const sideX = -ny;
+    const sideY = nx;
+
+    let maxDot = -1e9;
+    let tipDx = 0;
+    let tipDy = 0;
+    let maxAbsSide = 0;
+
+    function bitOn(idx: number): boolean {
+        const v = bits[idx >> 5] >>> (idx & 31);
+        return (v & 1) !== 0;
+    }
+
+    const n = w * h;
+    for (let i = 0; i < n; i++) {
+        if (!bitOn(i)) continue;
+        const x = i % w;
+        const y = (i / w) | 0;
+        let px = (x + 0.5) - (ox * w);
+        let py = (y + 0.5) - (oy * h);
+        px *= sx;
+        py *= sy;
+        if (flipX) px = -px;
+        if (flipY) py = -py;
+        const dot = (px * nx) + (py * ny);
+        const side = (px * sideX) + (py * sideY);
+        const absSide = Math.abs(side);
+        if (absSide > maxAbsSide) maxAbsSide = absSide;
+        if (dot > maxDot) {
+            maxDot = dot;
+            tipDx = px;
+            tipDy = py;
+        }
+    }
+
+    if (maxDot <= -1e8) return null;
+
+    const cutoff = maxDot - Math.max(0, depthPx | 0);
+    const offsets: number[] = [];
+
+    for (let i = 0; i < n; i++) {
+        if (!bitOn(i)) continue;
+        const x = i % w;
+        const y = (i / w) | 0;
+        let px = (x + 0.5) - (ox * w);
+        let py = (y + 0.5) - (oy * h);
+        px *= sx;
+        py *= sy;
+        if (flipX) px = -px;
+        if (flipY) py = -py;
+        const dot = (px * nx) + (py * ny);
+        if (dot < cutoff) continue;
+        offsets.push(Math.round(px - tipDx));
+        offsets.push(Math.round(py - tipDy));
+    }
+
+    const out: WeaponAuraTipShape = {
+        offsets,
+        tipDx,
+        tipDy,
+        sideHalf: Math.max(1, Math.ceil(maxAbsSide) | 0)
+    };
+    __weaponAuraTipCache[key] = out;
+
+    if (_wpnTraceVerbose() && !__wpnTraceLogOnce[key]) {
+        __wpnTraceLogOnce[key] = 1;
+        const maskCount = _countMaskBits(mask);
+        const area = Math.max(1, (mask.w | 0) * (mask.h | 0));
+        const ratio = maskCount / area;
+        _wpnTraceLog("maskBuilt", {
+            key,
+            texKey: info.texKey,
+            frame: info.frameName,
+            radius: radius | 0,
+            w: mask.w | 0,
+            h: mask.h | 0,
+            maskCount,
+            ratio: +ratio.toFixed(4),
+            tipDx: +tipDx.toFixed(2),
+            tipDy: +tipDy.toFixed(2),
+            sideHalf: out.sideHalf | 0,
+            offsets: (offsets.length / 2) | 0
+        });
+    }
+    return out;
+}
+
+function _getWeaponAuraTipShapes(
+    hero: Sprite,
+    nx: number,
+    ny: number
+): { info: WeaponFgInfo; shapes: WeaponAuraTipShape[]; dirKey: string } | null {
+    const info = _getHeroWeaponFgInfo(hero);
+    if (!info) return null;
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const depth = Math.max(1, WPN_AURA_TIP_DEPTH_PX | 0);
+    const shapes: WeaponAuraTipShape[] = [];
+    for (let r = 0; r <= 3; r++) {
+        const shape = _getWeaponAuraTipShape(info, nx, ny, dirKey, r, depth + r);
+        if (!shape || shape.offsets.length === 0) return null;
+        shapes[r] = shape;
+    }
+    return { info, shapes, dirKey };
+}
+
+function _stampWeaponAuraAt(
+    img: Image,
+    minX: number,
+    minY: number,
+    tipLocalX: number,
+    tipLocalY: number,
+    shape: WeaponAuraTipShape,
+    color: number
+): void {
+    if (!img || !shape || !shape.offsets || shape.offsets.length === 0) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const baseX = (Math.round(tipLocalX) - (minX | 0)) | 0;
+    const baseY = (Math.round(tipLocalY) - (minY | 0)) | 0;
+    const off = shape.offsets;
+    for (let i = 0; i < off.length; i += 2) {
+        const x = baseX + off[i];
+        const y = baseY + off[i + 1];
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        img.setPixel(x, y, color | 0);
+    }
+}
+
+function _stampWeaponAuraLine(
+    img: Image,
+    minX: number,
+    minY: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    shapes: WeaponAuraTipShape[],
+    color: number
+): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
+    if (steps <= 0) {
+        const shape = shapes[3] || shapes[2] || shapes[1] || shapes[0];
+        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color);
+        return;
+    }
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        let idx = 0;
+        if (t >= 0.75) idx = 3;
+        else if (t >= 0.5) idx = 2;
+        else if (t >= 0.25) idx = 1;
+        const shape = shapes[idx] || shapes[0];
+        if (!shape) continue;
+        const lx = x0 + dx * t;
+        const ly = y0 + dy * t;
+        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color);
     }
 }
 
@@ -43650,12 +44564,10 @@ function spawnAgilityThrustProjectile(
 
     proj.y = hero.y
 
-    proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny, 0, 0))
-
     // Pre-size the projectile texture so we never shrink/expand every frame.
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny)
     let attachPx = 0
     {
-        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
         const wTipX = (vis[2] || 0)
         const wTipY = (vis[3] || 0)
         const wTipProj = (wTipX * nx) + (wTipY * ny)
@@ -43670,16 +44582,85 @@ function spawnAgilityThrustProjectile(
     let sFrontStop = totalReach - 2
     if (sFrontStop <= sBackAtCast) sFrontStop = sBackAtCast + 4
     const maxPulse = _agiBackPulseArcParams(hero, nx, ny, true)
-    const maxTrail = _buildAgilityTrailImage(sBackAtCast, sFrontStop, nx, ny, 0, 0, maxPulse)
-    const maxImg = maxTrail?.img
-    if (maxImg) {
-        sprites.setDataNumber(proj, PROJ_DATA.TEX_W, maxImg.width | 0)
-        sprites.setDataNumber(proj, PROJ_DATA.TEX_H, maxImg.height | 0)
-        sprites.setDataNumber(proj, AGI_TEX_MIN_X_KEY, maxTrail.bounds.minX | 0)
-        sprites.setDataNumber(proj, AGI_TEX_MAX_X_KEY, maxTrail.bounds.maxX | 0)
-        sprites.setDataNumber(proj, AGI_TEX_MIN_Y_KEY, maxTrail.bounds.minY | 0)
-        sprites.setDataNumber(proj, AGI_TEX_MAX_Y_KEY, maxTrail.bounds.maxY | 0)
+    const halfTip = _agiTraceHalfPx()
+    const wTipX0 = (vis[2] || 0)
+    const wTipY0 = (vis[3] || 0)
+    const sx = -ny
+    const sy = nx
+    const wTipSide = (wTipX0 * sx) + (wTipY0 * sy)
+    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+    const auraSide = (auraPack && auraPack.shapes[3]) ? (auraPack.shapes[3].sideHalf | 0) : 0
+    const sideHalf = Math.max(halfTip, Math.ceil(Math.abs(wTipSide)) + halfTip, auraSide)
+    const pad = 2 + sideHalf
+    const boundFront = sFrontStop + 3
+    const maxBounds = _calcAgilityTrailBounds(sBackAtCast, boundFront, nx, ny, 0, 0, sideHalf, pad, maxPulse)
+    const maxImg = _createAgilityTraceImage(maxBounds)
+    proj.setImage(maxImg)
+    sprites.setDataNumber(proj, PROJ_DATA.TEX_W, maxImg.width | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.TEX_H, maxImg.height | 0)
+    sprites.setDataNumber(proj, AGI_TEX_MIN_X_KEY, maxBounds.minX | 0)
+    sprites.setDataNumber(proj, AGI_TEX_MAX_X_KEY, maxBounds.maxX | 0)
+    sprites.setDataNumber(proj, AGI_TEX_MIN_Y_KEY, maxBounds.minY | 0)
+    sprites.setDataNumber(proj, AGI_TEX_MAX_Y_KEY, maxBounds.maxY | 0)
+    const thrustOff = _agiThrustOffsets(nx, ny)
+    const anchorX = hero.x + (thrustOff.ox | 0)
+    const anchorY = hero.y + (thrustOff.oy | 0)
+    let tipLocalX = 0
+    let tipLocalY = 0
+    if (auraPack && auraPack.shapes[3]) {
+        const tipShape = auraPack.shapes[3]
+        const baseX = hero.x + (auraPack.info.offX || 0)
+        const baseY = hero.y + (auraPack.info.offY || 0)
+        const tipWorldX = baseX + tipShape.tipDx
+        const tipWorldY = baseY + tipShape.tipDy
+        tipLocalX = tipWorldX - anchorX
+        tipLocalY = tipWorldY - anchorY
+        _stampWeaponAuraAt(maxImg, maxBounds.minX, maxBounds.minY, tipLocalX, tipLocalY, tipShape, AGI_TIP_TRACE_COLOR)
+        if (_wpnTraceEnabled()) {
+            const traceId = _wpnTraceAssignId(proj)
+            _wpnTraceLog("agi.spawn.auraTip", {
+                id: traceId,
+                heroIndex,
+                dir: _weaponDirKeyFromVector(nx, ny),
+                texKey: auraPack.info.texKey,
+                frame: auraPack.info.frameName,
+                offX: auraPack.info.offX | 0,
+                offY: auraPack.info.offY | 0,
+                tipDx: +tipShape.tipDx.toFixed(2),
+                tipDy: +tipShape.tipDy.toFixed(2),
+                tipLocalX: +tipLocalX.toFixed(2),
+                tipLocalY: +tipLocalY.toFixed(2),
+                bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
+            });
+        }
+    } else {
+        let tipInitX = wTipX0
+        let tipInitY = wTipY0
+        if (!tipInitX && !tipInitY) {
+            tipInitX = nx * attachPx
+            tipInitY = ny * attachPx
+        }
+        tipLocalX = (hero.x + tipInitX) - anchorX
+        tipLocalY = (hero.y + tipInitY) - anchorY
+        _agiTraceStampAt(maxImg, maxBounds.minX, maxBounds.minY, tipLocalX, tipLocalY)
+        if (_wpnTraceEnabled()) {
+            const traceId = _wpnTraceAssignId(proj)
+            _wpnTraceLog("agi.spawn.fallbackTip", {
+                id: traceId,
+                heroIndex,
+                dir: _weaponDirKeyFromVector(nx, ny),
+                wTipX: +tipInitX.toFixed(2),
+                wTipY: +tipInitY.toFixed(2),
+                tipLocalX: +tipLocalX.toFixed(2),
+                tipLocalY: +tipLocalY.toFixed(2),
+                bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
+            });
+        }
     }
+    sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
+    sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+    proj.x = anchorX + (maxBounds.minX + maxBounds.maxX) / 2
+    proj.y = anchorY + (maxBounds.minY + maxBounds.maxY) / 2
 
 
 
@@ -43776,21 +44757,9 @@ function spawnAgilityThrustProjectile(
 
 
 
-    // If not active yet: hide + disable overlaps until forward starts
-
-    if (!activeNow) {
-
-        proj.setFlag(SpriteFlag.Invisible, !AGI_DEBUG_SHOW_WINDUP_TRAIL)
-
-        proj.setFlag(SpriteFlag.Ghost, true)
-
-    } else {
-
-        proj.setFlag(SpriteFlag.Invisible, false)
-
-        proj.setFlag(SpriteFlag.Ghost, false)
-
-    }
+    // If not active yet: disable overlaps (visuals remain visible)
+    proj.setFlag(SpriteFlag.Invisible, false)
+    proj.setFlag(SpriteFlag.Ghost, !activeNow)
 
 
 
@@ -43896,6 +44865,66 @@ function _agiTrailStyle() {
     const mainCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_MAIN_COLOR : 5;
     const edgeCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_EDGE_COLOR : 15;
     return { baseHalf, sideHalf, pad, mainCol, edgeCol };
+}
+
+function _agiTraceHalfPx(): number {
+    const half = Math.idiv((AGI_TIP_TRACE_SIZE_PX | 0), 2) | 0;
+    return Math.max(1, half | 0);
+}
+
+function _createAgilityTraceImage(bounds: AgiTrailBounds): Image {
+    const w = Math.max(1, (bounds.maxX - bounds.minX + 1) | 0);
+    const h = Math.max(1, (bounds.maxY - bounds.minY + 1) | 0);
+    return image.create(w, h);
+}
+
+function _agiTraceStampAt(img: Image, minX: number, minY: number, localX: number, localY: number): void {
+    if (!img) return;
+    const half = _agiTraceHalfPx();
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const cx = (Math.round(localX) - (minX | 0)) | 0;
+    const cy = (Math.round(localY) - (minY | 0)) | 0;
+
+    for (let dy = -half; dy < half; dy++) {
+        const y = cy + dy;
+        if (y < 0 || y >= h) continue;
+        for (let dx = -half; dx < half; dx++) {
+            const x = cx + dx;
+            if (x < 0 || x >= w) continue;
+            const isEdge = (dx === -half || dx === (half - 1) || dy === -half || dy === (half - 1));
+            const cur = img.getPixel(x, y);
+            if (isEdge) {
+                if (cur === 0) img.setPixel(x, y, AGI_TIP_TRACE_EDGE_COLOR | 0);
+            } else {
+                img.setPixel(x, y, AGI_TIP_TRACE_COLOR | 0);
+            }
+        }
+    }
+}
+
+function _agiTraceStampLine(
+    img: Image,
+    minX: number,
+    minY: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
+    if (steps <= 0) {
+        _agiTraceStampAt(img, minX, minY, x0, y0);
+        return;
+    }
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const lx = x0 + dx * t;
+        const ly = y0 + dy * t;
+        _agiTraceStampAt(img, minX, minY, lx, ly);
+    }
 }
 
 function _calcAgilityTrailBounds(
@@ -44115,109 +45144,61 @@ function updateAgilityProjectilesMotionFor(
 
 
 
-    const isActive = (sprites.readDataNumber(proj, PROJ_DATA.IS_ACTIVE) | 0)
+    let activeNow = (sprites.readDataNumber(proj, PROJ_DATA.IS_ACTIVE) | 0)
 
     const activateAt = (sprites.readDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS) | 0)
+    const preActive = (!activeNow && activateAt > 0 && nowMs < activateAt)
 
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
 
+    if (!activeNow && !preActive) {
+        // Activate now: enable overlaps but keep cast anchor.
+        sprites.setDataNumber(proj, PROJ_DATA.IS_ACTIVE, 1)
+        activeNow = 1
 
+        proj.setFlag(SpriteFlag.Invisible, false)
+        proj.setFlag(SpriteFlag.Ghost, false)
 
-    if (!isActive) {
+        sprites.setDataNumber(proj, PROJ_DATA.START_TIME, nowMs | 0)
+        sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs | 0)
+        sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, 0)
+        sprites.setDataNumber(proj, PROJ_DATA.REACH_T, 0)
+        sprites.setDataNumber(proj, PREV_S_KEY, 0)
 
-        if (activateAt <= 0 || nowMs >= activateAt) {
+        // Safety: no stale overlap bookkeeping
+        sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
 
-            // Activate now: become visible and start fresh from this anchor/time
-
-            sprites.setDataNumber(proj, PROJ_DATA.IS_ACTIVE, 1)
-
-
-
-            proj.setFlag(SpriteFlag.Invisible, false)
-
-            proj.setFlag(SpriteFlag.Ghost, false)
-
-
-
-            sprites.setDataNumber(proj, PROJ_DATA.START_TIME, nowMs | 0)
-
-            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
-
-            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
-
-
-
-            sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs | 0)
-
-            sprites.setDataNumber(proj, PROJ_DATA.ARROW_LEN, 0)
-
-            sprites.setDataNumber(proj, PROJ_DATA.REACH_T, 0)
-
-            sprites.setDataNumber(proj, PREV_S_KEY, 0)
-
-
-
-            // Safety: no stale overlap bookkeeping
-
-            sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
-
-            if (!sprites.readDataSprite(proj, PROJ_MASK_FX_KEY)) {
-                let fxNx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X)
-                let fxNy = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y)
-                let fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy)
-                if (fxMag < 1e-6) {
-                    fxNx = _getHeroFacingX(heroIndex) || 1
-                    fxNy = _getHeroFacingY(heroIndex) || 0
-                    fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy) || 1
-                }
-                fxNx /= fxMag
-                fxNy /= fxMag
-                const fxElement = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
-                const fxDashMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0
-                _spawnProjectileMaskFxForMove(
-                    proj,
-                    heroIndex,
-                    hero,
-                    FAMILY.AGILITY | 0,
-                    fxElement | 0,
-                    fxNx,
-                    fxNy,
-                    ((fxDashMs | 0) + 200) | 0,
-                    "agilityTrail"
-                )
+        if (!sprites.readDataSprite(proj, PROJ_MASK_FX_KEY)) {
+            let fxNx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X)
+            let fxNy = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y)
+            let fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy)
+            if (fxMag < 1e-6) {
+                fxNx = _getHeroFacingX(heroIndex) || 1
+                fxNy = _getHeroFacingY(heroIndex) || 0
+                fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy) || 1
             }
-
-        } else {
-
-            // Still in windup: keep hidden + no overlaps; follow hero silently
-
-            proj.setFlag(SpriteFlag.Invisible, !AGI_DEBUG_SHOW_WINDUP_TRAIL)
-
-            proj.setFlag(SpriteFlag.Ghost, true)
-
-
-
-            proj.vx = 0
-
-            proj.vy = 0
-
-            proj.x = hero.x
-
-            proj.y = hero.y
-            _updateHeroBodyPaintFxForProj(proj, hero)
-            _updateProjectileMaskFxForProj(proj, hero)
-            _hideAgilityTrailFxSegments(proj)
-
-
-
-            sprites.setDataNumber(proj, PROJ_DATA.LAST_T, nowMs | 0)
-
-            return true
-
+            fxNx /= fxMag
+            fxNy /= fxMag
+            const fxElement = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+            const fxDashMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0
+            _spawnProjectileMaskFxForMove(
+                proj,
+                heroIndex,
+                hero,
+                FAMILY.AGILITY | 0,
+                fxElement | 0,
+                fxNx,
+                fxNy,
+                ((fxDashMs | 0) + 200) | 0,
+                "agilityTrail"
+            )
         }
-
     }
+
+    proj.setFlag(SpriteFlag.Invisible, false)
+    proj.setFlag(SpriteFlag.Ghost, !activeNow)
+    if (!activeNow) _hideAgilityTrailFxSegments(proj)
 
 
 
@@ -44383,7 +45364,12 @@ function updateAgilityProjectilesMotionFor(
 
 
 
-    if (reachT <= 0) {
+    if (preActive) {
+        arrowLen = 0
+        reachT = 0
+        sBack = sBackAtCast
+        sFront = sBackAtCast
+    } else if (reachT <= 0) {
 
         // Phase A — extend: grow only the front from the front edge
 
@@ -44478,30 +45464,101 @@ function updateAgilityProjectilesMotionFor(
 
 
 
-    const ageMs = (nowMs - startMs) | 0
-    const pulseDelay = Math.max(0, AGI_BACK_PULSE_DELAY_MS | 0)
-    const pulseDur = Math.max(1, AGI_BACK_PULSE_DURATION_MS | 0)
-    const pulseSync = Math.max(0, AGI_BACK_PULSE_SYNC_MS | 0)
-    const pulseActive =
-        (ageMs >= 0 && ageMs <= pulseSync) ||
-        (ageMs >= pulseDelay && ageMs <= (pulseDelay + pulseDur))
-
-    const anchorOffX = anchorX - hero.x
-    const anchorOffY = anchorY - hero.y
-    const pulse = _agiBackPulseArcParams(hero, nx, ny, pulseActive)
-    const trail = _buildAgilityTrailImage(sBack, sFront, nx, ny, anchorOffX, anchorOffY, pulse)
-
-    // Replace image and place it in world space
-
-    proj.setImage(trail.img)
+    const minX = sprites.readDataNumber(proj, AGI_TEX_MIN_X_KEY) | 0
+    const maxX = sprites.readDataNumber(proj, AGI_TEX_MAX_X_KEY) | 0
+    const minY = sprites.readDataNumber(proj, AGI_TEX_MIN_Y_KEY) | 0
+    const maxY = sprites.readDataNumber(proj, AGI_TEX_MAX_Y_KEY) | 0
 
     proj.vx = 0
-
     proj.vy = 0
+    proj.x = anchorX + (minX + maxX) / 2
+    proj.y = anchorY + (minY + maxY) / 2
 
-    proj.x = hero.x + (trail.bounds.minX + trail.bounds.maxX) / 2
+    const img = proj.image
+    if (img) {
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+        if (auraPack && auraPack.shapes[3]) {
+            const tipShape = auraPack.shapes[3]
+            const baseX = hero.x + (auraPack.info.offX || 0)
+            const baseY = hero.y + (auraPack.info.offY || 0)
+            const tipWorldX = baseX + tipShape.tipDx
+            const tipWorldY = baseY + tipShape.tipDy
+            const tipLocalX = tipWorldX - anchorX
+            const tipLocalY = tipWorldY - anchorY
+            const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
+            const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
+            _stampWeaponAuraLine(
+                img,
+                minX,
+                minY,
+                lastX,
+                lastY,
+                tipLocalX,
+                tipLocalY,
+                auraPack.shapes,
+                AGI_TIP_TRACE_COLOR
+            )
+            if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
+                _wpnTraceLog("agi.tick.auraTip", {
+                    id: _wpnTraceAssignId(proj),
+                    heroIndex,
+                    active: !!activeNow,
+                    preActive: !!preActive,
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    lastX: +lastX.toFixed(2),
+                    lastY: +lastY.toFixed(2),
+                    bounds: { minX: minX | 0, maxX: maxX | 0, minY: minY | 0, maxY: maxY | 0 },
+                    inBounds
+                });
+            } else {
+                const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
+                if (!inBounds) {
+                    _wpnTraceLog("agi.tick.oob", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2),
+                        bounds: { minX: minX | 0, maxX: maxX | 0, minY: minY | 0, maxY: maxY | 0 }
+                    });
+                }
+            }
+            sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
+            sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+        } else {
+            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+            let wTipX = (vis[2] || 0)
+            let wTipY = (vis[3] || 0)
+            if (!wTipX && !wTipY) {
+                wTipX = nx * attachPx
+                wTipY = ny * attachPx
+            }
+            const tipLocalX = (hero.x + wTipX) - anchorX
+            const tipLocalY = (hero.y + wTipY) - anchorY
+            const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
+            const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
+            _agiTraceStampLine(img, minX, minY, lastX, lastY, tipLocalX, tipLocalY)
+            if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
+                _wpnTraceLog("agi.tick.fallbackTip", {
+                    id: _wpnTraceAssignId(proj),
+                    heroIndex,
+                    active: !!activeNow,
+                    preActive: !!preActive,
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    lastX: +lastX.toFixed(2),
+                    lastY: +lastY.toFixed(2),
+                    bounds: { minX: minX | 0, maxX: maxX | 0, minY: minY | 0, maxY: maxY | 0 },
+                    inBounds
+                });
+            }
+            sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
+            sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+        }
+    }
 
-    proj.y = hero.y + (trail.bounds.minY + trail.bounds.maxY) / 2
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
 

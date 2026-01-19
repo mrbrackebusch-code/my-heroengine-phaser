@@ -731,9 +731,11 @@
 
       .hud-kv {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         gap: 4px; /* tighter */
         min-width: 0;
+        white-space: nowrap;
+        flex-wrap: nowrap;
       }
 
       .hud-k {
@@ -743,6 +745,23 @@
         color: var(--txt-dim);
         white-space: nowrap;
         flex: 0 0 auto;
+        line-height: 1;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 1px;
+      }
+
+      .hud-k-initial {
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        line-height: 1;
+      }
+
+      .hud-k-rest {
+        font-size: 7px;
+        letter-spacing: 0.2px;
+        text-transform: uppercase;
         line-height: 1;
       }
 
@@ -1020,8 +1039,8 @@
       #xp-bar {
         position: relative;
         width: 100%;
-        height: auto;
-        flex: 1 1 auto;
+        height: 120px;
+        flex: 0 0 auto;
         min-height: 96px;
 
         border: 2px solid rgba(255, 255, 255, 0.22);
@@ -1050,18 +1069,18 @@
         flex-direction: column;
         gap: 4px;
         align-items: center;
+        flex: 1 1 auto;
         min-height: 0;
         overflow: auto;
       }
 
       #xp-panel .xp-stat-row {
         width: 100%;
-        min-height: 32px;
+        min-height: 18px;
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px;
       }
 
       #xp-panel .xp-stat-head {
@@ -1069,18 +1088,62 @@
       }
 
       #xp-panel .xp-stat-label {
-        font-size: 7px;
-        font-weight: 800;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 1px;
+        white-space: nowrap;
+        color: var(--txt);
+      }
+
+      #xp-panel .xp-stat-initial {
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        line-height: 1;
+      }
+
+      #xp-panel .xp-stat-rest {
+        font-size: 6px;
         letter-spacing: 0.2px;
         text-transform: uppercase;
         color: var(--txt-dim);
+        line-height: 1;
       }
 
       #xp-panel .xp-stat-val {
         font-size: 9px;
         color: rgba(255, 255, 255, 0.88);
         font-variant-numeric: tabular-nums;
-        text-align: center;
+        text-align: right;
+        min-width: 22px;
+        white-space: nowrap;
+      }
+
+      #xp-panel .xp-minimap {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        margin-top: auto;
+      }
+
+      #xp-panel .xp-minimap-title {
+        font-size: 7px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--txt-dim);
+      }
+
+      #xp-panel #mini-map {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        display: block;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.9);
+        background: rgba(6, 7, 10, 0.95);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        image-rendering: pixelated;
       }
 
       #relic-bar {
@@ -1553,19 +1616,19 @@
             <div class="hud-subtle" id="hud-a-note"></div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-a-dmg">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">D</span><span class="hud-k-rest">mg:</span></span><span class="hud-n" id="hud-a-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">R</span><span class="hud-k-rest">ch:</span></span><span class="hud-n" id="hud-a-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">T</span><span class="hud-k-rest">ime:</span></span><span class="hud-n" id="hud-a-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">S</span><span class="hud-k-rest">tat:</span></span><span class="hud-n" id="hud-a-status">â€”</span></div>
             </div>
 
             <div class="hud-footline">
               <div class="hud-elemline">
-                <div class="hud-k">Element:</div>
+                <div class="hud-k"><span class="hud-k-initial">E</span><span class="hud-k-rest">lem:</span></div>
                 <div class="hud-elem" id="hud-a-elem" title="">*</div>
               </div>
               <div class="hud-costline">
-                <div class="hud-k">Total Cost:</div>
+                <div class="hud-k"><span class="hud-k-initial">C</span><span class="hud-k-rest">ost:</span></div>
                 <div class="hud-n" id="hud-a-cost">â€”</div>
               </div>
             </div>
@@ -1584,19 +1647,19 @@
             <div class="hud-subtle" id="hud-b-note"></div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-b-dmg">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">D</span><span class="hud-k-rest">mg:</span></span><span class="hud-n" id="hud-b-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">R</span><span class="hud-k-rest">ch:</span></span><span class="hud-n" id="hud-b-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">T</span><span class="hud-k-rest">ime:</span></span><span class="hud-n" id="hud-b-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">S</span><span class="hud-k-rest">tat:</span></span><span class="hud-n" id="hud-b-status">â€”</span></div>
             </div>
 
             <div class="hud-footline">
               <div class="hud-elemline">
-                <div class="hud-k">Element:</div>
+                <div class="hud-k"><span class="hud-k-initial">E</span><span class="hud-k-rest">lem:</span></div>
                 <div class="hud-elem" id="hud-b-elem" title="">*</div>
               </div>
               <div class="hud-costline">
-                <div class="hud-k">Total Cost:</div>
+                <div class="hud-k"><span class="hud-k-initial">C</span><span class="hud-k-rest">ost:</span></div>
                 <div class="hud-n" id="hud-b-cost">â€”</div>
               </div>
             </div>
@@ -1615,19 +1678,19 @@
             <div class="hud-subtle" id="hud-ab-note"></div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-ab-dmg">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">D</span><span class="hud-k-rest">mg:</span></span><span class="hud-n" id="hud-ab-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">R</span><span class="hud-k-rest">ch:</span></span><span class="hud-n" id="hud-ab-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">T</span><span class="hud-k-rest">ime:</span></span><span class="hud-n" id="hud-ab-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">S</span><span class="hud-k-rest">tat:</span></span><span class="hud-n" id="hud-ab-status">â€”</span></div>
             </div>
 
             <div class="hud-footline">
               <div class="hud-elemline">
-                <div class="hud-k">Element:</div>
+                <div class="hud-k"><span class="hud-k-initial">E</span><span class="hud-k-rest">lem:</span></div>
                 <div class="hud-elem" id="hud-ab-elem" title="">*</div>
               </div>
               <div class="hud-costline">
-                <div class="hud-k">Total Cost:</div>
+                <div class="hud-k"><span class="hud-k-initial">C</span><span class="hud-k-rest">ost:</span></div>
                 <div class="hud-n" id="hud-ab-cost">â€”</div>
               </div>
             </div>
@@ -1646,19 +1709,19 @@
             <div class="hud-subtle" id="hud-r-note"></div>
 
             <div class="hud-traits">
-              <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-r-dmg">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-r-reach">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-r-time">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-r-status">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">D</span><span class="hud-k-rest">mg:</span></span><span class="hud-n" id="hud-r-dmg">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">R</span><span class="hud-k-rest">ch:</span></span><span class="hud-n" id="hud-r-reach">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">T</span><span class="hud-k-rest">ime:</span></span><span class="hud-n" id="hud-r-time">â€”</span></div>
+              <div class="hud-kv"><span class="hud-k"><span class="hud-k-initial">S</span><span class="hud-k-rest">tat:</span></span><span class="hud-n" id="hud-r-status">â€”</span></div>
             </div>
 
             <div class="hud-footline">
               <div class="hud-elemline">
-                <div class="hud-k">Element:</div>
+                <div class="hud-k"><span class="hud-k-initial">E</span><span class="hud-k-rest">lem:</span></div>
                 <div class="hud-elem" id="hud-r-elem" title="">*</div>
               </div>
               <div class="hud-costline">
-                <div class="hud-k">Total Cost:</div>
+                <div class="hud-k"><span class="hud-k-initial">C</span><span class="hud-k-rest">ost:</span></div>
                 <div class="hud-n" id="hud-r-cost">â€”</div>
               </div>
             </div>
@@ -1676,29 +1739,33 @@
 
             <div class="xp-stats" id="xp-stats">
               <div class="xp-stat-row">
-                <div class="xp-stat-label">DMG</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">D</span><span class="xp-stat-rest">mg:</span></div>
                 <div class="xp-stat-val" id="xp-stat-dmg-lvl">+0</div>
               </div>
               <div class="xp-stat-row">
-                <div class="xp-stat-label">RCH</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">R</span><span class="xp-stat-rest">ch:</span></div>
                 <div class="xp-stat-val" id="xp-stat-reach-lvl">+0</div>
               </div>
               <div class="xp-stat-row">
-                <div class="xp-stat-label">TIME</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">T</span><span class="xp-stat-rest">ime:</span></div>
                 <div class="xp-stat-val" id="xp-stat-time-lvl">+0</div>
               </div>
               <div class="xp-stat-row">
-                <div class="xp-stat-label">STAT</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">S</span><span class="xp-stat-rest">tat:</span></div>
                 <div class="xp-stat-val" id="xp-stat-status-lvl">+0</div>
               </div>
               <div class="xp-stat-row">
-                <div class="xp-stat-label">HP</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">H</span><span class="xp-stat-rest">p:</span></div>
                 <div class="xp-stat-val" id="xp-stat-hp-lvl">+0</div>
               </div>
               <div class="xp-stat-row">
-                <div class="xp-stat-label">MP</div>
+                <div class="xp-stat-label"><span class="xp-stat-initial">M</span><span class="xp-stat-rest">p:</span></div>
                 <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
               </div>
+            </div>
+            <div class="xp-minimap" id="xp-minimap">
+              <div class="xp-minimap-title">Map</div>
+              <canvas id="mini-map" width="64" height="64"></canvas>
             </div>
           </div>
           <div id="app"></div>
@@ -2000,6 +2067,7 @@
           xpStatStatusLvl: document.getElementById("xp-stat-status-lvl"),
           xpStatHpLvl: document.getElementById("xp-stat-hp-lvl"),
           xpStatMpLvl: document.getElementById("xp-stat-mp-lvl"),
+          miniMap: document.getElementById("mini-map"),
           lvlLayer: document.getElementById("levelup-layer"),
           lvlPoints: document.getElementById("lvlui-points"),
           relicTip: document.getElementById("relic-tooltip"),
@@ -2138,6 +2206,22 @@
           };
 
           (globalThis).__heLoadingUI = { set, show, done };
+          const st = (globalThis).__heLoadingState;
+          if (st && typeof st === "object") {
+            if (st.done) {
+              done();
+            } else {
+              if (st.shown === false) {
+                hidden = true;
+                if (overlay) overlay.classList.add("hidden");
+              } else {
+                show();
+              }
+              const hasPct = typeof st.pct === "number" && isFinite(st.pct);
+              const hasMsg = typeof st.msg === "string" && st.msg.trim();
+              if (hasPct || hasMsg) set(st.pct, st.msg);
+            }
+          }
         })();
 
 
@@ -2440,6 +2524,192 @@ function _readTeamCoins(pid, hero, spritesNS) {
             R.xpLevelupBtn.style.pointerEvents = "none";
             setText(R.xpLevelupBtn, "+0");
             setTitle(R.xpLevelupBtn, "Level Up (0)");
+          }
+        }
+
+        // ------------------------------------------------------------
+        // Minimap (simple world overview + hero + points of interest)
+        // ------------------------------------------------------------
+
+        const _minimapState = {
+          baseKey: "",
+          baseCanvas: null,
+          baseCtx: null,
+          size: 0,
+          rows: 0,
+          cols: 0,
+          offX: 0,
+          offY: 0,
+          drawW: 0,
+          drawH: 0,
+        };
+
+        const _minimapColors = {
+          bg: [8, 10, 14],
+          floor: [34, 38, 46],
+          wall: [6, 8, 12],
+          bridge: [78, 66, 52],
+          hero: "#4ac4ff",
+        };
+
+        function _minimap_syncCanvasSize() {
+          const canvas = R.miniMap;
+          if (!canvas) return 0;
+          const rect = canvas.getBoundingClientRect();
+          const sizeCss = Math.max(1, Math.min(rect.width, rect.height));
+          const dpr = (window.devicePixelRatio && window.devicePixelRatio > 0) ? window.devicePixelRatio : 1;
+          const size = Math.max(1, Math.floor(sizeCss * dpr));
+          if (canvas.width !== size || canvas.height !== size) {
+            canvas.width = size;
+            canvas.height = size;
+          }
+          return size;
+        }
+
+        function _minimap_bounds(cols, rows, size) {
+          if (cols <= 0 || rows <= 0 || size <= 0) {
+            return { offX: 0, offY: 0, drawW: size, drawH: size };
+          }
+          const ratio = cols / rows;
+          let drawW = size;
+          let drawH = Math.max(1, Math.round(size / ratio));
+          if (drawH > size) {
+            drawH = size;
+            drawW = Math.max(1, Math.round(size * ratio));
+          }
+          const offX = (size - drawW) >> 1;
+          const offY = (size - drawH) >> 1;
+          return { offX, offY, drawW, drawH };
+        }
+
+        function _minimap_colorForTile(v) {
+          if ((v | 0) === 1) return _minimapColors.wall;
+          if ((v | 0) === 2) return _minimapColors.bridge;
+          return _minimapColors.floor;
+        }
+
+        function _minimap_colorForProp(p) {
+          const name = (p && p.name) ? String(p.name) : "";
+          const role = (p && typeof p.role === "number") ? (p.role | 0) : 0;
+          if (name.indexOf("chest") >= 0) return "#f6c454";
+          if (name.indexOf("stairs") >= 0) return "#6fd3ff";
+          if (name.indexOf("shop") >= 0) return "#9cf26a";
+          if (name.indexOf("pedestal") >= 0) return "#ff9f55";
+          if (role === 1) return "#ffb14a";
+          if (role === 2) return "#b9b9b9";
+          return "#f0896b";
+        }
+
+        function _minimap_buildBase(msg, size) {
+          const canvas = _minimapState.baseCanvas || document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          ctx.imageSmoothingEnabled = false;
+          ctx.clearRect(0, 0, size, size);
+          ctx.fillStyle = `rgb(${_minimapColors.bg[0]},${_minimapColors.bg[1]},${_minimapColors.bg[2]})`;
+          ctx.fillRect(0, 0, size, size);
+
+          const grid = msg.data;
+          const rows = (msg.rows | 0) || (grid ? grid.length : 0);
+          const cols = (msg.cols | 0) || (grid && grid[0] ? grid[0].length : 0);
+          const b = _minimap_bounds(cols, rows, size);
+
+          const img = ctx.createImageData(b.drawW, b.drawH);
+          const data = img.data;
+          let i = 0;
+          for (let y = 0; y < b.drawH; y++) {
+            const r = Math.min(rows - 1, Math.max(0, Math.floor((y * rows) / b.drawH)));
+            const row = grid[r] || [];
+            for (let x = 0; x < b.drawW; x++) {
+              const c = Math.min(cols - 1, Math.max(0, Math.floor((x * cols) / b.drawW)));
+              const v = (row[c] | 0);
+              const col = _minimap_colorForTile(v);
+              data[i++] = col[0];
+              data[i++] = col[1];
+              data[i++] = col[2];
+              data[i++] = 255;
+            }
+          }
+          ctx.putImageData(img, b.offX, b.offY);
+
+          _minimapState.baseCanvas = canvas;
+          _minimapState.baseCtx = ctx;
+          _minimapState.size = size;
+          _minimapState.rows = rows;
+          _minimapState.cols = cols;
+          _minimapState.offX = b.offX;
+          _minimapState.offY = b.offY;
+          _minimapState.drawW = b.drawW;
+          _minimapState.drawH = b.drawH;
+        }
+
+        function _minimap_mapToCanvas(r, c) {
+          const rows = _minimapState.rows;
+          const cols = _minimapState.cols;
+          if (rows <= 0 || cols <= 0) return null;
+          const x = _minimapState.offX + Math.floor(((c + 0.5) * _minimapState.drawW) / cols);
+          const y = _minimapState.offY + Math.floor(((r + 0.5) * _minimapState.drawH) / rows);
+          return { x, y };
+        }
+
+        function _minimap_getHeroCell(hero, tileSize, rows, cols) {
+          if (!hero || tileSize <= 0 || rows <= 0 || cols <= 0) return null;
+          const hx = (typeof hero.x === "number") ? hero.x : NaN;
+          const hy = (typeof hero.y === "number") ? hero.y : NaN;
+          if (!isFinite(hx) || !isFinite(hy)) return null;
+          const c = Math.max(0, Math.min(cols - 1, Math.floor(hx / tileSize)));
+          const r = Math.max(0, Math.min(rows - 1, Math.floor(hy / tileSize)));
+          return { r, c };
+        }
+
+        function _minimap_draw(hero) {
+          const canvas = R.miniMap;
+          if (!canvas) return;
+          const msg = window.__lastTilemapMsg;
+          if (!msg || !Array.isArray(msg.data)) {
+            const ctx0 = canvas.getContext("2d");
+            if (ctx0) ctx0.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+          }
+
+          const size = _minimap_syncCanvasSize();
+          if (size <= 0) return;
+
+          const rows = (msg.rows | 0) || (msg.data ? msg.data.length : 0);
+          const cols = (msg.cols | 0) || (msg.data && msg.data[0] ? msg.data[0].length : 0);
+          const baseKey = `${msg.rev}|${rows}|${cols}|${size}`;
+          if (_minimapState.baseKey !== baseKey || !_minimapState.baseCanvas) {
+            _minimap_buildBase(msg, size);
+            _minimapState.baseKey = baseKey;
+          }
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx || !_minimapState.baseCanvas) return;
+          ctx.imageSmoothingEnabled = false;
+          ctx.clearRect(0, 0, size, size);
+          ctx.drawImage(_minimapState.baseCanvas, 0, 0);
+
+          const decor = msg.decor || null;
+          const props = (decor && Array.isArray(decor.props)) ? decor.props : [];
+          for (let i = 0; i < props.length; i++) {
+            const p = props[i];
+            if (!p) continue;
+            const pos = _minimap_mapToCanvas(p.r | 0, p.c | 0);
+            if (!pos) continue;
+            ctx.fillStyle = _minimap_colorForProp(p);
+            ctx.fillRect(pos.x - 1, pos.y - 1, 2, 2);
+          }
+
+          const tileSize = (msg.tileSize | 0) || 0;
+          const heroCell = _minimap_getHeroCell(hero, tileSize, rows, cols);
+          if (heroCell) {
+            const pos = _minimap_mapToCanvas(heroCell.r, heroCell.c);
+            if (pos) {
+              ctx.fillStyle = _minimapColors.hero;
+              ctx.fillRect(pos.x - 1, pos.y - 1, 3, 3);
+            }
           }
         }
 
@@ -4129,6 +4399,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
             _xp_resetUi();
+            _minimap_draw(null);
             return;
           }
 
@@ -4152,6 +4423,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
             _xp_resetUi();
+            _minimap_draw(null);
             return;
           }
 
@@ -4212,6 +4484,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           _hud_renderRelics(document.getElementById("xp-relics-box"), snap);
+          _minimap_draw(hero);
 
           const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
           _lvlui_initOnce();
