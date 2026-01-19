@@ -3276,6 +3276,7 @@ function _registerHeroProfile(profileRaw: any, heroIndex: number): string {
         const hero = heroes[heroIndex | 0]
         if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
             sprites.setDataString(hero, HERO_PROFILE_KEY, key)
+            sprites.setDataNumber(hero, HERO_DATA.HERO_INDEX, heroIndex | 0)
         }
     } catch { }
     return key
@@ -29166,6 +29167,7 @@ function createHeroForPlayer(
 
 
     const heroIndex = heroes.length; heroes.push(hero)
+    sprites.setDataNumber(hero, HERO_DATA.HERO_INDEX, heroIndex | 0)
 
 
 
