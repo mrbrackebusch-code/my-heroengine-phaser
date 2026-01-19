@@ -116,6 +116,7 @@ import {
     DEBUG_NET_APPLY_FOLLOWER,
     DEBUG_NET_SNAPSHOT,
     DEBUG_NPC_PIPELINE,
+    DEBUG_EFFECT_MASKS,
     DEBUG_OVERLAPS,
     DEBUG_PROJECTILE_NATIVE,
     DEBUG_PROP_OUTLINE_VERBOSE,
@@ -1291,6 +1292,7 @@ const EFFECT_BLEND_DATA_KEY = "effectBlend";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
+const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const EFFECT_FPS_DATA_KEY = "effectFps";
 const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
 const EFFECT_MODE_DATA_KEY = "effectMode";
@@ -1305,6 +1307,13 @@ const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
 const EFFECT_ANIM_DELAY_MS_DATA_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
+
+const __effectMaskSyncOnce = new Set<string>();
+const __effectMaskInitOnce = new Set<string>();
+const __effectMaskSkipOnce = new Set<string>();
+const __effectMaskHideOnce = new Set<string>();
+const __effectMaskClearOnce = new Set<string>();
+const __effectMaskKeyOnce = new Set<string>();
 
 const __heroNativeByIndex: { [idx: number]: any } = Object.create(null);
 
@@ -9587,6 +9596,19 @@ function _syncEnemyActorPath(
 // ---------------------------------------------------------------------
 function _effectClearPaintMask(nativeAny: any): void {
     if (!nativeAny) return;
+    if (DEBUG_EFFECT_MASKS && nativeAny.__effectPaintMaskType === "hero") {
+        try {
+            const id = (nativeAny.__arcadeSpriteId | 0) || 0;
+            const key = "clear:" + id;
+            if (!__effectMaskClearOnce.has(key)) {
+                __effectMaskClearOnce.add(key);
+                console.log("[effectmask][clear]", {
+                    spriteId: id,
+                    maskType: String(nativeAny.__effectPaintMaskType || "")
+                });
+            }
+        } catch { /* ignore */ }
+    }
     try { nativeAny.clearMask?.(true); } catch { }
     try {
         const g: any = nativeAny.__effectPaintMaskG;
@@ -9721,6 +9743,24 @@ function _ensureHeroAuraMaskImage(heroNative: any, radius: number): any | null {
     if (typeof maskImg.setFlipY === "function") {
         maskImg.setFlipY(!!heroNative.flipY);
     }
+    if (DEBUG_EFFECT_MASKS) {
+        try {
+            const key = maskTexKey + "::" + String(maskUsesFrame ? frameName : "__BASE");
+            if (!__effectMaskKeyOnce.has(key)) {
+                __effectMaskKeyOnce.add(key);
+                console.log("[effectmask][mask]", {
+                    key,
+                    heroTex: heroTexKey,
+                    heroFrame: frameName,
+                    radius: r | 0,
+                    maskTex: maskTexKey,
+                    maskUsesFrame: !!maskUsesFrame,
+                    w: (maskImg.width ?? 0) | 0,
+                    h: (maskImg.height ?? 0) | 0
+                });
+            }
+        } catch { /* ignore */ }
+    }
     return maskImg;
 }
 
@@ -9728,7 +9768,24 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
     if (!nativeAny || !heroNative) return false;
     const radius = (nativeAny.__effectMaskRadius | 0);
     const auraImg: any = _ensureHeroAuraMaskImage(heroNative, radius | 0);
-    if (!auraImg || !(auraImg as any).scene || (auraImg as any).destroyed) return false;
+    if (!auraImg || !(auraImg as any).scene || (auraImg as any).destroyed) {
+        if (DEBUG_EFFECT_MASKS) {
+            try {
+                const heroTex = heroNative?.texture?.key ?? "";
+                const heroFrame = heroNative?.frame?.name ?? "";
+                const key = "heroMissing:" + heroTex + ":" + heroFrame + ":r" + (radius | 0);
+                if (!__effectMaskKeyOnce.has(key)) {
+                    __effectMaskKeyOnce.add(key);
+                    console.log("[effectmask][maskMissing]", {
+                        heroTex,
+                        heroFrame,
+                        radius: radius | 0
+                    });
+                }
+            } catch { /* ignore */ }
+        }
+        return false;
+    }
 
     const heroId = (heroNative as any).__heroNativeMaskId || (heroNative as any).name || heroNative;
     const lastType = nativeAny.__effectPaintMaskType;
@@ -9907,6 +9964,10 @@ function _syncEffectPath(
         return;
     }
 
+    if (nativeAny.__arcadeSpriteId == null) {
+        nativeAny.__arcadeSpriteId = s.id | 0;
+    }
+
     if (skin) nativeAny.setData(EFFECT_SKIN_DATA_KEY, skin);
     if (dir) nativeAny.setData(EFFECT_DIR_DATA_KEY, dir);
     if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
@@ -9970,6 +10031,10 @@ function _syncEffectPath(
         nativeAny.__effectMaskRadiusPx = 0;
     }
 
+    const hasHeroIndexKey = Object.prototype.hasOwnProperty.call(data, PROJ_HERO_INDEX_KEY);
+    const heroIndexForDebug = hasHeroIndexKey ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
+    const heroRefForMask = sprites.readDataSprite(s, EFFECT_HERO_REF_DATA_KEY);
+
     const wantsHeroMaskOnly =
         modeRaw === "silhouette" ||
         modeRaw === "mask" ||
@@ -9980,8 +10045,31 @@ function _syncEffectPath(
         modeRaw === "painted" ||
         modeRaw === "reveal" ||
         modeRaw === "painted_reveal";
+
+    if (DEBUG_EFFECT_MASKS) {
+        try {
+            const key = "init:" + String(s.id | 0);
+            if (!__effectMaskInitOnce.has(key)) {
+                __effectMaskInitOnce.add(key);
+                console.log("[effectmask][init]", {
+                    spriteId: s.id | 0,
+                    skin,
+                    dir,
+                    mode: modeRaw || "",
+                    wantsPaint: wantsPaint ? 1 : 0,
+                    wantsHeroMaskOnly: wantsHeroMaskOnly ? 1 : 0,
+                    heroIndex: heroIndexForDebug | 0,
+                    hasHeroIndex: hasHeroIndexKey ? 1 : 0,
+                    hasHeroRef: heroRefForMask ? 1 : 0,
+                    maskRadius: maskRadiusRaw | 0,
+                    maskRadiusPx: maskRadiusPxRaw | 0
+                });
+            }
+        } catch { /* ignore */ }
+    }
     if (wantsPaint) {
         let usedHeroMask = false;
+        let maskType = "none";
         const maskRadiusPx = (nativeAny.__effectMaskRadiusPx | 0);
         if ((maskRadiusPx | 0) > 0) {
             try {
@@ -9989,16 +10077,33 @@ function _syncEffectPath(
             } catch { }
             _effectEnsurePaintMask(ctx.sc as any, nativeAny, maskRadiusPx | 0);
             usedHeroMask = true;
+            maskType = "circle";
         }
         if (!usedHeroMask) {
             try {
-                const dataAny = data || {};
-                const hasHeroIndex = Object.prototype.hasOwnProperty.call(dataAny, PROJ_HERO_INDEX_KEY);
-                const heroIndex = hasHeroIndex ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
-                if (hasHeroIndex) {
-                    const heroNative = _getHeroNativeByIndex(heroIndex | 0);
-                    if (heroNative && _effectEnsureHeroOutlineMask(nativeAny, heroNative)) {
+                let heroNative = hasHeroIndexKey ? _getHeroNativeByIndex(heroIndexForDebug | 0) : null;
+                if (!heroNative && heroRefForMask && (heroRefForMask as any).native) {
+                    const refNative = (heroRefForMask as any).native;
+                    if (refNative && refNative.getData && refNative.getData("isHeroNative")) {
+                        heroNative = refNative;
+                        if (DEBUG_EFFECT_MASKS) {
+                            try {
+                                const key = "heroRef:" + String(s.id | 0);
+                                if (!__effectMaskSyncOnce.has(key)) {
+                                    __effectMaskSyncOnce.add(key);
+                                    console.log("[effectmask][heroRef]", {
+                                        spriteId: s.id | 0,
+                                        heroIndex: heroIndexForDebug | 0
+                                    });
+                                }
+                            } catch { /* ignore */ }
+                        }
+                    }
+                }
+                if (heroNative) {
+                    if (_effectEnsureHeroOutlineMask(nativeAny, heroNative)) {
                         usedHeroMask = true;
+                        maskType = "hero";
                         if (typeof heroNative.originX === "number" && typeof heroNative.originY === "number") {
                             try { nativeAny.setOrigin?.(heroNative.originX, heroNative.originY); } catch { }
                         }
@@ -10008,21 +10113,67 @@ function _syncEffectPath(
                 }
             } catch { }
         }
-        if (!usedHeroMask) {
-            if (nativeAny.__effectPaintMaskType === "hero") {
-                _effectClearPaintMask(nativeAny);
-            }
-            if (!wantsHeroMaskOnly) {
+            if (!usedHeroMask) {
+                if (nativeAny.__effectPaintMaskType === "hero") {
+                    _effectClearPaintMask(nativeAny);
+                }
+                if (!wantsHeroMaskOnly) {
                 const brush = (hasBrush && (brushPx | 0) > 0) ? (brushPx | 0) : _effectAutoBrushPx(s, nativeAny);
                 _effectEnsurePaintMask(ctx.sc as any, nativeAny, brush | 0);
-            }
+                }
             if (wantsHeroMaskOnly) {
                 nativeAny.setVisible?.(false);
                 nativeAny.setAlpha?.(0);
+                if (DEBUG_EFFECT_MASKS) {
+                    try {
+                        const key = "hide:" + String(s.id | 0);
+                        if (!__effectMaskHideOnce.has(key)) {
+                            __effectMaskHideOnce.add(key);
+                            console.log("[effectmask][hide]", {
+                                spriteId: s.id | 0,
+                                heroIndex: heroIndexForDebug | 0,
+                                mode: modeRaw || "",
+                                maskType
+                            });
+                        }
+                    } catch { /* ignore */ }
+                }
                 return;
             }
         }
+        if (DEBUG_EFFECT_MASKS) {
+            try {
+                const key = "sync:" + String(s.id | 0);
+                if (!__effectMaskSyncOnce.has(key)) {
+                    __effectMaskSyncOnce.add(key);
+                    const maskAttached = !!nativeAny.__effectPaintMask;
+                    console.log("[effectmask][sync]", {
+                        spriteId: s.id | 0,
+                        heroIndex: heroIndexForDebug | 0,
+                        mode: modeRaw || "",
+                        maskType,
+                        maskAttached: maskAttached ? 1 : 0,
+                        maskRadius: maskRadiusRaw | 0,
+                        maskRadiusPx: maskRadiusPxRaw | 0,
+                        wantsHeroMaskOnly: wantsHeroMaskOnly ? 1 : 0
+                    });
+                }
+            } catch { /* ignore */ }
+        }
     } else {
+        if (DEBUG_EFFECT_MASKS) {
+            try {
+                const key = "skip:" + String(s.id | 0);
+                if (!__effectMaskSkipOnce.has(key)) {
+                    __effectMaskSkipOnce.add(key);
+                    console.log("[effectmask][skip]", {
+                        spriteId: s.id | 0,
+                        mode: modeRaw || "",
+                        wantsPaint: wantsPaint ? 1 : 0
+                    });
+                }
+            } catch { /* ignore */ }
+        }
         _effectClearPaintMask(nativeAny);
     }
     let nowMs = 0;

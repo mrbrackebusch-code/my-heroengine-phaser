@@ -27,6 +27,7 @@ import {
     DEBUG_PROVE_HERO_CAST_ANIM,
     DEBUG_PROVE_HERO_NAME_FILTER,
     DEBUG_TURN_SHOULD_PROVE_ON,
+    DEBUG_EFFECT_MASKS,
     FORCE_PROP_SCALE_OUTLINE,
 } from "./debugFlags";
 import { DEFAULT_AURA_RADIUS, auraKey, pickAuraRadius } from "./auraConfig";
@@ -2018,6 +2019,14 @@ type MaskEntry = {
 };
 
 const __auraMaskCache = new Map<string, MaskEntry>();
+const __effectMaskStatsOnce = new Set<string>();
+
+function __countBits32(v: number): number {
+    let x = v >>> 0;
+    x = x - ((x >>> 1) & 0x55555555);
+    x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+    return (((x + (x >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
+}
 const __outlineAuraFrameHasAlpha = new Map<string, boolean>();
 const __outlineAuraFrameStats = new Map<string, {
     alphaCount: number;
@@ -3052,6 +3061,26 @@ export function getOrBuildHeroAuraMaskBits(
     const img = __readFrameImageData(scene, texKey, frameName);
     const entry = __buildDilatedMaskBitsFromImage(img, r);
     __auraMaskCache.set(key, entry);
+    if (DEBUG_EFFECT_MASKS && !__effectMaskStatsOnce.has(key)) {
+        __effectMaskStatsOnce.add(key);
+        let maskCount = 0;
+        const bits = entry.bits;
+        for (let i = 0; i < bits.length; i++) {
+            maskCount += __countBits32(bits[i] >>> 0);
+        }
+        const area = Math.max(1, (entry.w | 0) * (entry.h | 0));
+        const ratio = maskCount / area;
+        console.log("[effectmask][maskStats]", {
+            key,
+            texKey,
+            frame: frameName,
+            radius: r | 0,
+            w: entry.w | 0,
+            h: entry.h | 0,
+            maskCount,
+            ratio: +ratio.toFixed(4)
+        });
+    }
     return entry;
 }
 

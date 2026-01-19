@@ -45,6 +45,7 @@ import {
     DEBUG_ENEMY_NAV_LOG,
     DEBUG_ENEMY_STUCK_LOG,
     DEBUG_EFFECT_ANIMS,
+    DEBUG_EFFECT_MASKS,
     DEBUG_FILTER_LOGS,
     DEBUG_FILTER_PHRASE,
     DEBUG_FOCUS_LOGS,
@@ -73,6 +74,7 @@ import {
     DEBUG_SETUP_HEROES_LOGS,
     DEBUG_SHRINE_FORCE_ACTIVATE,
     DEBUG_SHRINE_FORCE_OPEN_EDITOR,
+    DEBUG_SHRINE_OBSERVER,
     DEBUG_SHRINE_OVERLAY_LOGS,
     DEBUG_SHOP_LOGS,
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
@@ -1791,6 +1793,7 @@ function _spawnHeroBodyPaintFxForMove(
     sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, HERO_BODY_FX_MASK_INVERT ? 1 : 0);
     sprites.setDataNumber(fx, EFFECT_MASK_RADIUS_DATA_KEY, _heroBodyFxMaskRadiusForHero(hero));
     sprites.setDataNumber(fx, EFFECT_MASK_RADIUS_PX_DATA_KEY, HERO_BODY_FX_MASK_RADIUS_PX | 0);
+    sprites.setDataSprite(fx, EFFECT_HERO_REF_DATA_KEY, hero);
 
     const alpha = _heroBodyFxAlphaForFamily(family);
     const blend = _heroBodyFxBlendForFamily(family);
@@ -1808,6 +1811,28 @@ function _spawnHeroBodyPaintFxForMove(
             alpha,
             blend
         });
+    }
+    if (DEBUG_EFFECT_MASKS) {
+        try {
+            const fxId = (fx as any).id | 0;
+            if (!__effectMaskSpawnOnce.has(fxId)) {
+                __effectMaskSpawnOnce.add(fxId);
+                const auraR = sprites.readDataNumber(hero, HERO_DATA.AURA_RADIUS) | 0;
+                const maskR = _heroBodyFxMaskRadiusForHero(hero) | 0;
+                console.log("[effectmask][spawn]", {
+                    fxId,
+                    heroIndex: heroIndex | 0,
+                    family: family | 0,
+                    elem: elem | 0,
+                    skin: pick.skinId,
+                    dir: pick.dir || "",
+                    mode: HERO_BODY_FX_MODE,
+                    maskRadius: maskR,
+                    maskRadiusPx: HERO_BODY_FX_MASK_RADIUS_PX | 0,
+                    auraRadius: auraR
+                });
+            }
+        } catch { /* ignore */ }
     }
     return fx;
 }
@@ -2128,6 +2153,7 @@ const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
+const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const HERO_BODY_FX_KEY = "bodyFx";
 const HERO_BODY_FX_ALPHA_DEFAULT = 0.25;
 const HERO_BODY_FX_ALPHA_AGILITY = 1.0;
@@ -2141,6 +2167,7 @@ const HERO_BODY_FX_Z_BIAS_DEFAULT = 2000;
 const HERO_BODY_FX_Z_BIAS_AGILITY = 2000;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
+const __effectMaskSpawnOnce = new Set<number>();
 const STR_FX_SEG_COUNT_KEY = "SS_FX_N";
 const STR_FX_SEG_BASE_KEY = "SS_FX_";
 const STR_FX_SEG_MIN = 4;
@@ -7216,6 +7243,258 @@ let _dunShrineInteractRescanAtMs = 0
 let _dunShrineStateRescanAtMs = 0
 let _dunShrineBlessingUntilMs = 0
 let _dunShrineBlessingFloor = -1
+let _dunShrineBlessingKey = ""
+
+type ShrineObsStep = {
+    ok: number
+    at: number
+    detail: string
+}
+
+type ShrineObsState = {
+    key: string
+    floor: number
+    createdAt: number
+    sessionId: number
+    lastReportSession: number
+    activeStart: number
+    activeUntil: number
+    lastTint: number
+    steps: Record<string, ShrineObsStep>
+}
+
+const SHRINE_OBS_STEP_ORDER: string[] = [
+    "decor_present",
+    "interactable_ready",
+    "ritual_loaded",
+    "interact_triggered",
+    "ritual_satisfied",
+    "activation_triggered",
+    "blessing_set",
+    "blessing_active",
+    "overlay_visible",
+    "overlay_cycling",
+    "hud_indicator",
+    "mana_regen_bonus",
+]
+
+const SHRINE_OBS_STEP_LABELS: Record<string, string> = {
+    decor_present: "Decor detected",
+    interactable_ready: "Interactable registered",
+    ritual_loaded: "Ritual loaded",
+    interact_triggered: "Interact triggered",
+    ritual_satisfied: "Ritual satisfied",
+    activation_triggered: "Activation triggered",
+    blessing_set: "Blessing set",
+    blessing_active: "Blessing active",
+    overlay_visible: "Overlay visible",
+    overlay_cycling: "Overlay cycling",
+    hud_indicator: "HUD indicator",
+    mana_regen_bonus: "Mana regen bonus",
+}
+
+const SHRINE_OBS_REQUIRED_STEPS: string[] = [
+    "blessing_active",
+    "overlay_visible",
+    "overlay_cycling",
+]
+
+const SHRINE_OBS_RESET_ON_ACTIVATE: string[] = [
+    "blessing_set",
+    "blessing_active",
+    "overlay_visible",
+    "overlay_cycling",
+    "hud_indicator",
+    "mana_regen_bonus",
+]
+
+const _shrineObsByKey = new Map<string, ShrineObsState>()
+
+function _shrineObsKey(r: number, c: number): string {
+    if ((r | 0) < 0 || (c | 0) < 0) return ""
+    return String(r | 0) + "," + String(c | 0)
+}
+
+function _shrineObsHex(value: number): string {
+    const v = (value >>> 0).toString(16).toUpperCase()
+    return "0x" + ("000000" + v).slice(-6)
+}
+
+function _shrineObsGetState(key: string, floor: number, nowMs: number): ShrineObsState {
+    let state = _shrineObsByKey.get(key)
+    if (!state) {
+        state = {
+            key,
+            floor: floor | 0,
+            createdAt: nowMs | 0,
+            sessionId: 0,
+            lastReportSession: 0,
+            activeStart: 0,
+            activeUntil: 0,
+            lastTint: -1,
+            steps: Object.create(null),
+        }
+        _shrineObsByKey.set(key, state)
+        return state
+    }
+    state.floor = floor | 0
+    return state
+}
+
+function _shrineObsClearSteps(state: ShrineObsState, ids: string[]): void {
+    for (let i = 0; i < ids.length; i++) {
+        delete state.steps[ids[i]]
+    }
+}
+
+function _shrineObsStartActivation(state: ShrineObsState, nowMs: number, untilMs: number): void {
+    const until = untilMs | 0
+    if (until <= 0) return
+    if ((state.activeUntil | 0) >= (until | 0)) return
+    state.sessionId = ((state.sessionId | 0) + 1) | 0
+    state.activeStart = nowMs | 0
+    state.activeUntil = until | 0
+    state.lastTint = -1
+    state.lastReportSession = 0
+    _shrineObsClearSteps(state, SHRINE_OBS_RESET_ON_ACTIVATE)
+}
+
+function _shrineObsMaybeReport(state: ShrineObsState, nowMs: number, reason: string): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    if ((state.sessionId | 0) <= 0) return
+    if ((state.lastReportSession | 0) === (state.sessionId | 0)) return
+    for (let i = 0; i < SHRINE_OBS_REQUIRED_STEPS.length; i++) {
+        const step = state.steps[SHRINE_OBS_REQUIRED_STEPS[i]]
+        if (!step || !(step.ok | 0)) return
+    }
+    state.lastReportSession = state.sessionId | 0
+    _shrineObsReportState(state, nowMs | 0, reason || "auto")
+}
+
+function _shrineObsMark(
+    key: string,
+    floor: number,
+    stepId: string,
+    ok: boolean,
+    detail: string,
+    nowMs: number
+): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    if (!key) return
+    const now = nowMs | 0
+    const state = _shrineObsGetState(key, floor | 0, now)
+    const nextOk = ok ? 1 : 0
+    const prev = state.steps[stepId]
+    if (nextOk) {
+        if (!prev || !(prev.ok | 0)) {
+            state.steps[stepId] = { ok: 1, at: now, detail: detail || "" }
+        } else if (detail && detail !== prev.detail) {
+            prev.detail = detail
+        }
+        _shrineObsMaybeReport(state, now, stepId)
+        return
+    }
+    if (!prev || !(prev.ok | 0)) {
+        state.steps[stepId] = { ok: 0, at: now, detail: detail || "" }
+    }
+}
+
+function _shrineObsReportState(state: ShrineObsState, nowMs: number, reason: string): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    const now = nowMs | 0
+    const t0 = state.createdAt | 0
+    const lines: string[] = []
+    lines.push(
+        `[SHRINE][OBS] REPORT #${state.sessionId | 0} key=${state.key} floor=${state.floor | 0} now=${now | 0} activeStart=${state.activeStart | 0} activeUntil=${state.activeUntil | 0} reason=${String(reason || "")}`
+    )
+    for (let i = 0; i < SHRINE_OBS_STEP_ORDER.length; i++) {
+        const id = SHRINE_OBS_STEP_ORDER[i]
+        const label = SHRINE_OBS_STEP_LABELS[id] || id
+        const step = state.steps[id]
+        const ok = (step && (step.ok | 0)) ? "x" : " "
+        const at = step ? (step.at | 0) : 0
+        const dt = step ? ` t+${(at - t0) | 0}ms` : ""
+        const detail = (step && step.detail) ? ` ${step.detail}` : ""
+        lines.push(`- [${ok}] ${label}${dt}${detail}`)
+    }
+    console.log(lines.join("\n"))
+}
+
+function _shrineObsReportAll(nowMs: number, reason: string): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    const now = nowMs | 0
+    if (_shrineObsByKey.size <= 0) {
+        console.log("[SHRINE][OBS] REPORT (empty)")
+        return
+    }
+    for (const state of _shrineObsByKey.values()) {
+        _shrineObsReportState(state, now, reason)
+    }
+}
+
+function _shrineObsRitualDetail(ritual: ShrineRitualSpec | null): string {
+    if (!ritual) return "ritual=none"
+    const radius = ritual.radiusTiles | 0
+    if (ritual.kind === "move_sequence") {
+        const seq = (ritual.sequence || []).join(",")
+        const gap = ritual.minGapMs == null ? 0 : (ritual.minGapMs | 0)
+        return `kind=move_sequence radius=${radius} seq=${seq || "none"} gapMs=${gap | 0}`
+    }
+    if (ritual.kind === "circle") {
+        const laps = ritual.laps == null ? 1 : (ritual.laps | 0)
+        const dir = ritual.direction || "either"
+        return `kind=circle radius=${radius} laps=${laps | 0} dir=${dir}`
+    }
+    if (ritual.kind === "gather") {
+        const req = ritual.requiredHeroes == null ? 0 : (ritual.requiredHeroes | 0)
+        const hold = ritual.holdMs == null ? 0 : (ritual.holdMs | 0)
+        return `kind=gather radius=${radius} required=${req | 0} holdMs=${hold | 0}`
+    }
+    return `kind=${ritual.kind} radius=${radius}`
+}
+
+function _shrineObsOverlayTick(
+    key: string,
+    floor: number,
+    nowMs: number,
+    ok: boolean,
+    tint: number,
+    alpha: number,
+    blend: any,
+    cycleEligible: boolean
+): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    if (!key) return
+    const now = nowMs | 0
+    const state = _shrineObsGetState(key, floor | 0, now)
+    const tintHex = _shrineObsHex(tint | 0)
+    const detail = `ok=${ok ? 1 : 0} tint=${tintHex} alpha=${alpha} blend=${String(blend || "")}`
+    _shrineObsMark(key, floor | 0, "overlay_visible", ok, detail, now)
+    if (!ok || !cycleEligible) return
+    if ((state.lastTint | 0) >= 0 && (state.lastTint | 0) !== (tint | 0)) {
+        const prevHex = _shrineObsHex(state.lastTint | 0)
+        _shrineObsMark(key, floor | 0, "overlay_cycling", true, `tint=${prevHex}->${tintHex}`, now)
+    }
+    state.lastTint = tint | 0
+}
+
+function _shrineObsResetAll(): void {
+    if (!DEBUG_SHRINE_OBSERVER) return
+    _shrineObsByKey.clear()
+}
+
+try {
+    ;(globalThis as any).dun_shrineObsReport = (key?: string) => {
+        const now = game.runtime() | 0
+        if (key) {
+            const state = _shrineObsByKey.get(String(key || ""))
+            if (state) _shrineObsReportState(state, now, "manual")
+            else console.log(`[SHRINE][OBS] REPORT missing key=${String(key || "")}`)
+            return
+        }
+        _shrineObsReportAll(now, "manual")
+    }
+} catch { /* ignore */ }
 
 type ShrineRitualKind = "move_sequence" | "circle" | "gather"
 
@@ -7464,6 +7743,10 @@ function _dunAdoptShrineInstance(state: ShrineState, next: TrapInstance): void {
     state.ritual = _shrineRitualFromInstance(inst)
     state.ritualSeed = inst.seed | 0
     _dunResetShrineProgress(state)
+    if (state.ritual) {
+        const now = game.runtime() | 0
+        _shrineObsMark(state.key, _dunFloorIndex | 0, "ritual_loaded", true, _shrineObsRitualDetail(state.ritual), now | 0)
+    }
 }
 
 function _dunRescanShrines(nowMs: number): void {
@@ -7527,6 +7810,10 @@ function _dunRescanShrines(nowMs: number): void {
                 }
                 _dunEnsureShrineProgressArrays(state)
             }
+            _shrineObsMark(key, _dunFloorIndex | 0, "decor_present", true, `r=${r | 0} c=${c | 0} floor=${_dunFloorIndex | 0}`, now | 0)
+            if (state && state.ritual) {
+                _shrineObsMark(key, _dunFloorIndex | 0, "ritual_loaded", true, _shrineObsRitualDetail(state.ritual), now | 0)
+            }
         }
     }
 
@@ -7562,8 +7849,12 @@ function _dunShrineFlash(state: ShrineState, nowMs: number): void {
 
 function _dunShrineTryActivate(state: ShrineState, nowMs: number): void {
     if (!state || !state.decor) return
-    _dunActivateShrineDecor(state.decor, nowMs | 0, SHRINE_ACTIVE_DEFAULT_MS)
-    _dunShrineFlash(state, nowMs | 0)
+    const now = nowMs | 0
+    const ritualKind = state.ritual ? state.ritual.kind : ""
+    _shrineObsMark(state.key, _dunFloorIndex | 0, "ritual_satisfied", true, `kind=${ritualKind || "none"}`, now)
+    _shrineObsMark(state.key, _dunFloorIndex | 0, "activation_triggered", true, `kind=${ritualKind || "none"}`, now)
+    _dunActivateShrineDecor(state.decor, now | 0, SHRINE_ACTIVE_DEFAULT_MS)
+    _dunShrineFlash(state, now | 0)
     state.wasActive = true
     _dunResetShrineProgress(state)
     if (DEBUG_TRAP_LOGS) {
@@ -8324,6 +8615,15 @@ function _trapShowPrompt(it: Sprite, baseName: string, pid: number, hi: number):
         if (DEBUG_SHRINE_FORCE_ACTIVATE) {
             const tileR = sprites.readDataNumber(it, "decorTileR") | 0
             const tileC = sprites.readDataNumber(it, "decorTileC") | 0
+            const obsKey = _shrineObsKey(tileR | 0, tileC | 0)
+            _shrineObsMark(
+                obsKey,
+                _dunFloorIndex | 0,
+                "activation_triggered",
+                true,
+                "kind=debug",
+                now | 0
+            )
             const activated = _dunActivateShrineAt(tileR | 0, tileC | 0, now | 0, SHRINE_ACTIVE_DEFAULT_MS)
             if (DEBUG_TRAP_LOGS) {
                 console.log("[SHRINE][DEBUG] force activate", {
@@ -8588,6 +8888,19 @@ function _trapOnPropInteract(payload: any): boolean {
     if (!getTrapDefinitionForProp(baseName)) return false
     const it = payload.target as Sprite
     if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    if (baseName === SHRINE_BASE) {
+        const tileR = sprites.readDataNumber(it, "decorTileR") | 0
+        const tileC = sprites.readDataNumber(it, "decorTileC") | 0
+        const obsKey = _shrineObsKey(tileR | 0, tileC | 0)
+        _shrineObsMark(
+            obsKey,
+            _dunFloorIndex | 0,
+            "interact_triggered",
+            true,
+            `pid=${payload.pid | 0} hi=${payload.hi | 0}`,
+            game.runtime() | 0
+        )
+    }
     if (DEBUG_TRAP_LOGS) {
         console.log("[TRAP][PROMPT] interact", {
             pid: payload.pid | 0,
@@ -11611,7 +11924,9 @@ function _dunResetShrineRuntime(): void {
     _dunShrineStateRescanAtMs = 0
     _dunShrineBlessingUntilMs = 0
     _dunShrineBlessingFloor = -1
+    _dunShrineBlessingKey = ""
     _dunShrineInteractRescanAtMs = 0
+    _shrineObsResetAll()
 }
 
 function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): Sprite | null {
@@ -11647,9 +11962,16 @@ function _dunActivateShrineDecor(decor: Sprite, nowMs: number, durationMs?: numb
     const now = nowMs | 0
     const dur = ((durationMs == null ? SHRINE_ACTIVE_DEFAULT_MS : durationMs) | 0)
     const until = (now + Math.max(0, dur)) | 0
+    const tileR = sprites.readDataNumber(decor, "decorTileR") | 0
+    const tileC = sprites.readDataNumber(decor, "decorTileC") | 0
+    const obsKey = _shrineObsKey(tileR | 0, tileC | 0)
     sprites.setDataNumber(decor, SHRINE_ACTIVE_UNTIL_KEY, until | 0)
     sprites.setDataNumber(decor, SHRINE_ACTIVE_START_KEY, now | 0)
     if (dur > 0) {
+        if (obsKey && DEBUG_SHRINE_OBSERVER) {
+            const state = _shrineObsGetState(obsKey, _dunFloorIndex | 0, now | 0)
+            _shrineObsStartActivation(state, now | 0, until | 0)
+        }
         const prevUntil = _dunShrineBlessingUntilMs | 0
         const prevFloor = _dunShrineBlessingFloor | 0
         let applied = 0
@@ -11658,9 +11980,16 @@ function _dunActivateShrineDecor(decor: Sprite, nowMs: number, durationMs?: numb
             _dunShrineBlessingFloor = _dunFloorIndex | 0
             applied = 1
         }
+        if (applied && obsKey) _dunShrineBlessingKey = obsKey
+        _shrineObsMark(
+            obsKey,
+            _dunFloorIndex | 0,
+            "blessing_set",
+            true,
+            `applied=${applied | 0} until=${until | 0} dur=${dur | 0} floor=${_dunFloorIndex | 0}`,
+            now | 0
+        )
         if (DEBUG_TRAP_LOGS) {
-            const tileR = sprites.readDataNumber(decor, "decorTileR") | 0
-            const tileC = sprites.readDataNumber(decor, "decorTileC") | 0
             console.log("[SHRINE] blessing", {
                 applied,
                 floor: _dunFloorIndex | 0,
@@ -11673,7 +12002,16 @@ function _dunActivateShrineDecor(decor: Sprite, nowMs: number, durationMs?: numb
                 prevFloor: prevFloor | 0,
             })
         }
-    } else if (DEBUG_TRAP_LOGS) {
+    } else {
+        _shrineObsMark(
+            obsKey,
+            _dunFloorIndex | 0,
+            "blessing_set",
+            false,
+            `applied=0 until=${until | 0} dur=${dur | 0} floor=${_dunFloorIndex | 0}`,
+            now | 0
+        )
+        if (!DEBUG_TRAP_LOGS) return
         console.log("[SHRINE] blessing skipped", {
             floor: _dunFloorIndex | 0,
             now: now | 0,
@@ -13902,7 +14240,7 @@ const DEFAULT_WEAPON_LOADOUT_VER = 2
 
 // Your current picked defaults:
 
-const DEFAULT_WEAPON_SLASH_ID = "glowsword"
+const DEFAULT_WEAPON_SLASH_ID = "arming"
 
 const DEFAULT_WEAPON_THRUST_ID = "spear"
 
@@ -13930,11 +14268,11 @@ const DEFAULT_WEAPON_VARIANT = "base" //"base"
 
 // Trait-slot default weapons (shop equip slots)
 
-const DEFAULT_WEAPON_STRENGTH_ID = "longsword"
+const DEFAULT_WEAPON_STRENGTH_ID = "arming"
 
 const DEFAULT_WEAPON_AGILITY_ID = "spear"
 
-const DEFAULT_WEAPON_INTELLIGENCE_ID = "gnarled"
+const DEFAULT_WEAPON_INTELLIGENCE_ID = "simple"
 
 const DEFAULT_WEAPON_SUPPORT_ID = "simple"
 
@@ -26338,7 +26676,10 @@ function _dunEnsureShrineInteractables(nowMs: number): void {
         const key = String(r | 0) + "," + String(c | 0)
         if (seen[key]) return
         seen[key] = 1
-        if (hasInteractableAt(r, c)) return
+        if (hasInteractableAt(r, c)) {
+            _shrineObsMark(key, _dunFloorIndex | 0, "interactable_ready", true, "exists", now | 0)
+            return
+        }
 
         const img = image.create(1, 1)
         img.fill(0)
@@ -26361,6 +26702,7 @@ function _dunEnsureShrineInteractables(nowMs: number): void {
         sprites.setDataNumber(it, INTERACT_DATA.FOCUSABLE, focusable ? 1 : 0)
 
         _dunInteractables.push(it)
+        _shrineObsMark(key, _dunFloorIndex | 0, "interactable_ready", true, "created", now | 0)
     }
 
     if (_engineDecorSolids && _engineDecorSolids.length) {
@@ -26445,6 +26787,7 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                     ;(s as any)[warnKey] = 0
                     ;(s as any)[retryKey] = 0
                 }
+                _shrineObsOverlayTick(key, _dunFloorIndex | 0, now | 0, ok, tint | 0, alpha, blend, true)
                 if (DEBUG_SHRINE_OVERLAY_LOGS) {
                     const prev = (s as any)[stateKey] | 0
                     if ((prev | 0) !== (nextState | 0)) {
@@ -26486,6 +26829,7 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                         ;(s as any)[warnKey] = 0
                         ;(s as any)[retryKey] = 0
                     }
+                    _shrineObsOverlayTick(key, _dunFloorIndex | 0, now | 0, ok, SHRINE_FLASH_TINT, SHRINE_FLASH_ALPHA, SHRINE_FLASH_BLEND_MODE, false)
                     if (DEBUG_SHRINE_OVERLAY_LOGS) {
                         const prev = (s as any)[stateKey] | 0
                         if ((prev | 0) !== (nextState | 0)) {
@@ -33824,16 +34168,29 @@ function regenHeroManaAll(percentOfMax: number) {
 
         let displayGain = baseGainRaw | 0
         if (pct > 0 && displayGain < 1) displayGain = 1
+        let bonusDisplay = 0
         if (shrineActive && displayGain > 0) {
-            let bonusDisplay = Math.idiv((displayGain * (SHRINE_REGEN_BONUS_PCT | 0)) | 0, 100) | 0
+            bonusDisplay = Math.idiv((displayGain * (SHRINE_REGEN_BONUS_PCT | 0)) | 0, 100) | 0
             if (bonusDisplay < 1) bonusDisplay = 1
             displayGain = (displayGain + bonusDisplay) | 0
         }
 
+        let bonus = 0
         if (shrineActive && baseGain > 0) {
-            let bonus = Math.idiv((baseGain * (SHRINE_REGEN_BONUS_PCT | 0)) | 0, 100) | 0
+            bonus = Math.idiv((baseGain * (SHRINE_REGEN_BONUS_PCT | 0)) | 0, 100) | 0
             if (bonus < 1) bonus = 1
             baseGain = (baseGain + bonus) | 0
+        }
+
+        if (shrineActive && (bonus > 0 || bonusDisplay > 0)) {
+            _shrineObsMark(
+                _dunShrineBlessingKey,
+                _dunFloorIndex | 0,
+                "mana_regen_bonus",
+                true,
+                `hero=${i | 0} baseGain=${baseGain | 0} bonus=${bonus | 0} displayGain=${displayGain | 0} bonusDisplay=${bonusDisplay | 0}`,
+                now | 0
+            )
         }
 
 
@@ -34958,6 +35315,25 @@ function updateHeroManaBlessIndicators(now: number): void {
         if (tAny.text !== label) { tAny.text = label; dirty = true }
         if (tAny.fg !== nextFg) { tAny.fg = nextFg; dirty = true }
         if (dirty && typeof tAny.update === "function") tAny.update()
+
+        if (shrineActive && i === 0) {
+            _shrineObsMark(
+                _dunShrineBlessingKey,
+                _dunFloorIndex | 0,
+                "blessing_active",
+                true,
+                `until=${_dunShrineBlessingUntilMs | 0} floor=${_dunFloorIndex | 0}`,
+                now | 0
+            )
+            _shrineObsMark(
+                _dunShrineBlessingKey,
+                _dunFloorIndex | 0,
+                "hud_indicator",
+                true,
+                `hero=${i | 0} regenPerSec=${regenPerSec | 0}`,
+                now | 0
+            )
+        }
 
         if (doDbg && i === 0) {
             console.log("[SHRINE][HUD] mana", {
