@@ -7,7 +7,7 @@ import {
   DECAL_VISUALS_BY_NAME,
   PROP_VISUALS_BY_NAME,
 } from "./tileAtlas";
-import { DEFAULT_AURA_RADIUS, auraKey } from "./auraConfig";
+import { DEFAULT_AURA_RADIUS, auraKey, pickAuraRadius } from "./auraConfig";
 import * as heroAnimGlue from "./heroAnimGlue";
 import {
   DEBUG_PROP_FOCUS_AURA,
@@ -64,8 +64,10 @@ const TILE_LAYER_DEPTH_DECALS = -997000;
 //
 // Naming convention (auto-resolved):
 //   <propTextureKey> + "_aura_r{radius}"
-const PROP_FOCUS_AURA_USE_TILED = false; // use heroAnimGlue true outline instead of tile-based aura
+const PROP_FOCUS_AURA_USE_TILED = true; // use pre-baked outline tiles for focus auras
 const PROP_FOCUS_AURA_RADIUS = DEFAULT_AURA_RADIUS;
+const PROP_FOCUS_AURA_LAYER_RADII = [1, 2, 3] as const;
+const PROP_FOCUS_AURA_LAYER_ALPHA = [1, 0.55, 0.25];
 
 // Scale tuning:
 // - We always scale the outline up slightly so it is visible even if the
@@ -105,6 +107,7 @@ const PROP_FOCUS_AURA_CACHE_STATE = true;
 
 // If forcing front, how far in front of the prop to push it.
 
+const CHEST_AURA_FORCE_PAD = false;
 const CHEST_AURA_PAD_PX = 2;
 const CHEST_AURA_PAD_KEY = "__chestAuraPadBox__";
 
@@ -211,6 +214,15 @@ function _propFocusAuraPulseAlpha(scene: Phaser.Scene, nowMs?: number, opts?: Pr
   const wave = (Math.sin(phase) + 1) * 0.5; // 0..1
 
   return minA + span * wave;
+}
+
+function _propFocusAuraLayerAlpha(radius: number): number {
+  const r = Math.max(0, radius | 0);
+  for (let i = 0; i < PROP_FOCUS_AURA_LAYER_RADII.length; i++) {
+    const rr = PROP_FOCUS_AURA_LAYER_RADII[i] | 0;
+    if (rr === r) return PROP_FOCUS_AURA_LAYER_ALPHA[i] ?? 1;
+  }
+  return 1;
 }
 
 function _resolveAuraBlendMode(blendMode: any, fallback: number): number {
@@ -2294,47 +2306,67 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     return updated;
   }
 
-    try {
-      if (active && inst?.vis && ((inst.vis as any).focusAuraPadAlways || (inst.vis as any).auraPadAlways)) {
-        const kids: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
-        const k0: any = (kids && kids.length) ? kids[0] : null;
-        const padBaked = !!(k0 as any)?.__auraPadBaked;
-        const padScale = (typeof (k0 as any)?.__auraPadScale === "number") ? (k0 as any).__auraPadScale : 1;
-        const needsRebuild = !kids.length || (!padBaked && padScale <= 1.01);
-        if (needsRebuild) {
-          const rebuilt = this._propRebuildFocusAuraForInstance(inst);
-          if (rebuilt && !(inst as any).__loggedFocusAuraRebuild) {
-            (inst as any).__loggedFocusAuraRebuild = 1;
-            if (DEBUG_PROP_FOCUS_AURA_LOGS) {
-              console.log(`[PROPAURA][REBUILD] ${JSON.stringify({
-                baseName: inst.baseName ?? "",
-                rawKey: inst.rawKey ?? "",
-                padBaked,
-                padScale
-              })}`);
-            }
-          }
-        }
-      }
-      if (DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled && String(inst.baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || "")) {
-        const key = `${DEBUG_PROP_FOCUS_AURA_OVERRIDE.auraTextureKey}::${DEBUG_PROP_FOCUS_AURA_OVERRIDE.frameIndex}`;
-        if ((inst as any).__dbgAuraOverrideKey !== key) {
-          (inst as any).__dbgAuraOverrideKey = key;
-          const rebuilt = this._propRebuildFocusAuraForInstance(inst);
+  let layers: any[] = Array.isArray(inst.focusAuraLayers) ? inst.focusAuraLayers : [];
+  if (!layers.length) {
+    const fallbackKids: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
+    if (inst.focusAura || fallbackKids.length) {
+      layers = [{
+        cont: inst.focusAura || null,
+        children: fallbackKids,
+        baseScale: inst.focusAuraBaseScale ?? PROP_FOCUS_AURA_BASE_SCALE,
+        radius: PROP_FOCUS_AURA_RADIUS
+      }];
+    }
+  }
+  if (!layers.length) return false;
+
+  const primary = layers[0] || null;
+  const cont: any = primary?.cont ?? null;
+  const children: any[] = Array.isArray(primary?.children) ? primary.children : [];
+  const allChildren: any[] = [];
+  for (let i = 0; i < layers.length; i++) {
+    const kids: any[] = Array.isArray(layers[i]?.children) ? layers[i].children : [];
+    for (let k = 0; k < kids.length; k++) allChildren.push(kids[k]);
+  }
+
+  try {
+    if (active && inst?.vis && ((inst.vis as any).focusAuraPadAlways || (inst.vis as any).auraPadAlways)) {
+      const k0: any = (children && children.length) ? children[0] : null;
+      const padBaked = !!(k0 as any)?.__auraPadBaked;
+      const padScale = (typeof (k0 as any)?.__auraPadScale === "number") ? (k0 as any).__auraPadScale : 1;
+      const needsRebuild = !children.length || (!padBaked && padScale <= 1.01);
+      if (needsRebuild) {
+        const rebuilt = this._propRebuildFocusAuraForInstance(inst);
+        if (rebuilt && !(inst as any).__loggedFocusAuraRebuild) {
+          (inst as any).__loggedFocusAuraRebuild = 1;
           if (DEBUG_PROP_FOCUS_AURA_LOGS) {
-            console.log(`[PROPAURA][OVERRIDE-REBUILD] ${JSON.stringify({
+            console.log(`[PROPAURA][REBUILD] ${JSON.stringify({
               baseName: inst.baseName ?? "",
               rawKey: inst.rawKey ?? "",
-              key,
-              rebuilt
+              padBaked,
+              padScale
             })}`);
           }
         }
       }
-    } catch { /* ignore */ }
+    }
+    if (DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled && String(inst.baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || "")) {
+      const key = `${DEBUG_PROP_FOCUS_AURA_OVERRIDE.auraTextureKey}::${DEBUG_PROP_FOCUS_AURA_OVERRIDE.frameIndex}`;
+      if ((inst as any).__dbgAuraOverrideKey !== key) {
+        (inst as any).__dbgAuraOverrideKey = key;
+        const rebuilt = this._propRebuildFocusAuraForInstance(inst);
+        if (DEBUG_PROP_FOCUS_AURA_LOGS) {
+          console.log(`[PROPAURA][OVERRIDE-REBUILD] ${JSON.stringify({
+            baseName: inst.baseName ?? "",
+            rawKey: inst.rawKey ?? "",
+            key,
+            rebuilt
+          })}`);
+        }
+      }
+    }
+  } catch { /* ignore */ }
 
-    const cont: any = inst.focusAura || null;
-    const children: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
   if (!cont && children.length === 0) return false;
 
   // Hide
@@ -2356,14 +2388,14 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
       clearTimeout(hideTimer);
       (inst as any).__focusAuraHideTimer = null;
     }
-    try { cont?.setVisible?.(false); } catch { /* ignore */ }
-    if (children.length) {
-      try {
-        for (let i = 0; i < children.length; i++) {
-          children[i]?.setVisible?.(false);
-        }
-      } catch { /* ignore */ }
-    }
+    try {
+      for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        layer?.cont?.setVisible?.(false);
+        const kids: any[] = Array.isArray(layer?.children) ? layer.children : [];
+        for (let k = 0; k < kids.length; k++) kids[k]?.setVisible?.(false);
+      }
+    } catch { /* ignore */ }
 
     // Also hide the debug marker (if we created one)
     try {
@@ -2377,13 +2409,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
   }
 
   const auraAlpha = _propFocusAuraPulseAlpha(this.scene, now, opts);
-
-  // Compute scale/depth
-  const rad = Math.max(0, (radius | 0));
-  const scale = Math.max(
-    0.01,
-    (inst.focusAuraBaseScale ?? PROP_FOCUS_AURA_BASE_SCALE) + (rad * PROP_FOCUS_AURA_RADIUS_SCALE)
-  );
+  const maxRad = Math.max(1, (radius | 0));
   const tileSize = (this.atlas?.tileSize ?? 32) | 0;
 
   const baseDepth = (inst.baseDepth | 0);
@@ -2406,7 +2432,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     (inst as any).__focusAuraHideTimer = null;
   }
 
-  if (DEBUG_PROP_FOCUS_AURA_BLINK && children.length) {
+  if (DEBUG_PROP_FOCUS_AURA_BLINK && allChildren.length) {
     // Blink for 1 second so visibility stays obvious even if depth is wrong
     try {
       const blinkEvt = (inst as any).__focusAuraBlinkEvt;
@@ -2420,8 +2446,8 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         callback: () => {
           toggles++;
           const on = (toggles % 2) === 1;
-          for (let i = 0; i < children.length; i++) {
-            const ch: any = children[i];
+          for (let i = 0; i < allChildren.length; i++) {
+            const ch: any = allChildren[i];
             ch?.setAlpha?.(on ? 1 : 0.4);
           }
         }
@@ -2450,17 +2476,46 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
     }
   } catch { /* ignore */ }
 
-  // Apply
-  try {
-    cont?.setVisible?.(true);
-    cont?.setDepth?.(depth);
-    cont?.setAlpha?.(auraAlpha);
-  } catch { /* ignore */ }
-    // Chest: force a simple solid pad texture sized slightly larger than the tile
-    if (active && String(inst.baseName || "") === "chest" && children.length) {
+  const defaultBlend =
+    ((Phaser as any)?.BlendModes?.LIGHTEN ??
+      (Phaser as any)?.BlendModes?.SCREEN ??
+      (Phaser as any)?.BlendModes?.NORMAL ??
+      0);
+  const blendMode = _resolveAuraBlendMode(opts?.blendMode, defaultBlend | 0);
+
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    if (!layer) continue;
+    const layerRadius = (layer.radius ?? PROP_FOCUS_AURA_RADIUS) | 0;
+    const showLayer = layerRadius <= (maxRad | 0);
+    const layerChildren: any[] = Array.isArray(layer.children) ? layer.children : [];
+    const layerCont: any = layer.cont ?? null;
+
+    if (!showLayer) {
+      try { layerCont?.setVisible?.(false); } catch { /* ignore */ }
+      for (let k = 0; k < layerChildren.length; k++) {
+        layerChildren[k]?.setVisible?.(false);
+      }
+      continue;
+    }
+
+    const layerAlpha = Math.min(1, auraAlpha * _propFocusAuraLayerAlpha(layerRadius));
+    const layerScale = Math.max(
+      0.01,
+      (layer.baseScale ?? PROP_FOCUS_AURA_BASE_SCALE) + (layerRadius * PROP_FOCUS_AURA_RADIUS_SCALE)
+    );
+    const layerDepth = ((depth - (li | 0)) | 0);
+
+    try {
+      layerCont?.setVisible?.(true);
+      layerCont?.setDepth?.(layerDepth);
+      layerCont?.setAlpha?.(layerAlpha);
+    } catch { /* ignore */ }
+
+    if (CHEST_AURA_FORCE_PAD && isChest && li === 0 && layerChildren.length) {
       try {
         const padKey = _ensureChestAuraPadTexture(this.scene, tileSize, CHEST_AURA_PAD_PX);
-        const ch: any = children[0];
+        const ch: any = layerChildren[0];
         ch?.setTexture?.(padKey);
         ch?.setFrame?.("__BASE");
         ch?.setDisplaySize?.(tileSize + CHEST_AURA_PAD_PX * 2, tileSize + CHEST_AURA_PAD_PX * 2);
@@ -2470,22 +2525,17 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         (ch as any).__auraPadScale = 1;
       } catch { /* ignore */ }
     }
-    if (children.length) {
+
+    if (layerChildren.length) {
       try {
-        for (let i = 0; i < children.length; i++) {
-          const ch: any = children[i];
+        for (let i = 0; i < layerChildren.length; i++) {
+          const ch: any = layerChildren[i];
           if (!ch) continue;
           const isMulti = ((inst.wTiles | 0) > 1 || (inst.hTiles | 0) > 1);
           const isEdge = !!(ch as any).__auraIsEdge;
           const padScale = (typeof (ch as any).__auraPadScale === "number") ? (ch as any).__auraPadScale : 1;
           const padBaked = !!(ch as any).__auraPadBaked;
-          const defaultBlend =
-            ((Phaser as any)?.BlendModes?.LIGHTEN ??
-              (Phaser as any)?.BlendModes?.SCREEN ??
-              (Phaser as any)?.BlendModes?.NORMAL ??
-              0);
-          const blendMode = _resolveAuraBlendMode(opts?.blendMode, defaultBlend | 0);
-          let finalScale = padBaked ? scale : ((padScale > scale) ? padScale : scale);
+          let finalScale = padBaked ? layerScale : ((padScale > layerScale) ? padScale : layerScale);
           if (isMulti && finalScale > 1 && !isEdge) {
             // Avoid overlaps between adjacent aura tiles on multi-tile props; keep padding on perimeter.
             finalScale = 1;
@@ -2510,8 +2560,8 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
             try { trimMask.fillRect(maskX, maskY, maskW, maskH); } catch { /* ignore */ }
             try { trimMask.setVisible(false); } catch { /* ignore */ }
           }
-          ch.setDepth?.(depth);
-          ch.setAlpha?.(auraAlpha);
+          ch.setDepth?.(layerDepth);
+          ch.setAlpha?.(layerAlpha);
           try { ch.setBlendMode?.(blendMode); } catch { /* ignore */ }
           if (!isChest && tint != null) {
             try { ch.setTint?.(tint); } catch { /* ignore */ }
@@ -2527,6 +2577,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
         }
       } catch { /* ignore */ }
     }
+  }
 
     if (DEBUG_PROP_FOCUS_AURA_VERBOSE) {
       try {
@@ -2558,11 +2609,11 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
       const overrideTarget = overrideEnabled ? (anyThis as any).__dbgAuraOverrideTarget : null;
       const hasTarget = overrideTarget && typeof overrideTarget.r === "number" && typeof overrideTarget.c === "number";
       const tileSize = (this.atlas?.tileSize ?? 32) | 0;
-      if (overrideEnabled && children.length) {
+      if (overrideEnabled && allChildren.length) {
         const dx = hasTarget ? ((overrideTarget.c | 0) - (inst.anchorC | 0)) * tileSize : 0;
         const dy = hasTarget ? ((overrideTarget.r | 0) - (inst.anchorR | 0)) * tileSize : 0;
-        for (let i = 0; i < children.length; i++) {
-          const ch: any = children[i];
+        for (let i = 0; i < allChildren.length; i++) {
+          const ch: any = allChildren[i];
           if (!ch) continue;
           if (!ch.__dbgAuraBasePos) {
             ch.__dbgAuraBasePos = { x: ch.x, y: ch.y };
@@ -2646,12 +2697,12 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
 
   if (DEBUG_PROP_FOCUS_AURA_PIN_SCREEN) {
     try {
-      if (children.length) {
-        for (let i = 0; i < children.length; i++) {
-          children[i]?.setScrollFactor?.(0, 0);
-          children[i]?.setPosition?.(80, 80);
-          children[i]?.setScale?.(2);
-          children[i]?.setDepth?.(9999999);
+      if (allChildren.length) {
+        for (let i = 0; i < allChildren.length; i++) {
+          allChildren[i]?.setScrollFactor?.(0, 0);
+          allChildren[i]?.setPosition?.(80, 80);
+          allChildren[i]?.setScale?.(2);
+          allChildren[i]?.setDepth?.(9999999);
         }
       }
     } catch { /* ignore */ }
@@ -2667,7 +2718,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
 // --- DEBUG: make world aura impossible to miss ---
   if (DEBUG_PROP_FOCUS_AURA_NEON) {
     try {
-      const kids: any[] = children.length ? children : ((cont?.list ?? []) as any[]);
+      const kids: any[] = allChildren.length ? allChildren : ((cont?.list ?? []) as any[]);
       for (let i = 0; i < kids.length; i++) {
       const ch: any = kids[i];
       if (!ch) continue;
@@ -3486,11 +3537,12 @@ private _propCreateDisplayObj(args: {
 }
 
 
-private _propResolveFocusAuraTextureKey(propTextureKey: string, vis: any): string | null {
+private _propResolveFocusAuraTextureKey(propTextureKey: string, vis: any, radius: number): string | null {
+  const rad = pickAuraRadius(radius | 0);
   const resolveKey = (raw: string): string | null => {
     const tk = this.atlas.resolveAtlasTextureKey(raw.trim());
     if (this.atlas.getSheetInfo(tk)) return tk;
-    const auraTk = auraKey(tk, PROP_FOCUS_AURA_RADIUS);
+    const auraTk = auraKey(tk, rad);
     if (this.atlas.getSheetInfo(auraTk)) return auraTk;
     return null;
   };
@@ -3512,7 +3564,7 @@ private _propResolveFocusAuraTextureKey(propTextureKey: string, vis: any): strin
   const base = String(propTextureKey || "");
   if (base) {
     const baseTk = this.atlas.resolveAtlasTextureKey(base);
-    const auraTk = auraKey(baseTk, PROP_FOCUS_AURA_RADIUS);
+    const auraTk = auraKey(baseTk, rad);
     if (this.atlas.getSheetInfo(auraTk)) return auraTk;
   }
 
@@ -3545,12 +3597,14 @@ private _propCreateFocusAuraContainer(args: {
   ox: number;
   oy: number;
   baseDepth: number;
-}): { cont: any; baseScale: number; auraTextureKey: string; auraPngUrl: string; frameIndices: number[]; children: any[] } | null {
+  radius: number;
+}): { cont: any; baseScale: number; auraTextureKey: string; auraPngUrl: string; frameIndices: number[]; children: any[]; radius: number } | null {
   const { st, anchorR, anchorC, baseName, vis, textureKey, baseRef, wTiles, hTiles, ox, oy, baseDepth } = args;
 
   if (!PROP_FOCUS_AURA_USE_TILED) return null;
 
-  let auraTk = this._propResolveFocusAuraTextureKey(textureKey, vis);
+  const rad = pickAuraRadius(args.radius | 0);
+  let auraTk = this._propResolveFocusAuraTextureKey(textureKey, vis, rad);
 
   const tile = (st.tileSize | 0);
   const half = (tile >> 1);
@@ -3573,7 +3627,7 @@ private _propCreateFocusAuraContainer(args: {
   );
 
   if (!auraTk) {
-    const missing = auraKey(textureKey, PROP_FOCUS_AURA_RADIUS);
+    const missing = auraKey(textureKey, rad);
     throw new Error(
       `[AURA-MISSING] Missing prop focus aura for ${baseName || textureKey}. ` +
       `Expected ${missing}. Run: npm run gen-prop-auras`
@@ -3839,7 +3893,7 @@ private _propCreateFocusAuraContainer(args: {
             edgeLeft = (stats.edgeLeft | 0) || 0;
             edgeRight = (stats.edgeRight | 0) || 0;
             edgeOk = !!(stats.edgeOk);
-            const forceSolidPad = String(baseName || "") === "chest";
+            const forceSolidPad = CHEST_AURA_FORCE_PAD && String(baseName || "") === "chest";
             const skipPad = String(baseName || "") === "stairs_statue";
             const needsPad =
               forcePad ||
@@ -4124,7 +4178,41 @@ private _propCreateFocusAuraContainer(args: {
 
   (st.anyThis.__propImgs as any[]).push(cont);
 
-  return { cont, baseScale, auraTextureKey: auraTk, auraPngUrl: auraUrl, frameIndices, children };
+  return { cont, baseScale, auraTextureKey: auraTk, auraPngUrl: auraUrl, frameIndices, children, radius: rad };
+}
+
+private _propCreateFocusAuraLayers(args: {
+  st: {
+    anyThis: any;
+    byRc: Record<string, { textureKey: string; frameIndex: number }>;
+    instByAnchor: Record<string, any>;
+    anchorKeyByRc: Record<string, string>;
+    tileSize: number;
+  };
+  anchorR: number;
+  anchorC: number;
+  baseName: string;
+  vis: any;
+  textureKey: string;
+  sheetCols: number;
+  baseRef: { row: number; col: number };
+  wTiles: number;
+  hTiles: number;
+  ox: number;
+  oy: number;
+  baseDepth: number;
+}): any[] {
+  if (!PROP_FOCUS_AURA_USE_TILED) return [];
+  const layers: any[] = [];
+  for (let i = 0; i < PROP_FOCUS_AURA_LAYER_RADII.length; i++) {
+    const radius = PROP_FOCUS_AURA_LAYER_RADII[i] | 0;
+    const aura = this._propCreateFocusAuraContainer({
+      ...args,
+      radius,
+    });
+    if (aura) layers.push(aura);
+  }
+  return layers;
 }
 
 private _propRebuildFocusAuraForInstance(inst: any): boolean {
@@ -4143,11 +4231,21 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
     tileSize: (this.atlas?.tileSize ?? 32) | 0,
   };
 
+  const oldLayers: any[] = Array.isArray(inst.focusAuraLayers) ? inst.focusAuraLayers : [];
   const oldCont: any = inst.focusAura || null;
   const oldKids: any[] = Array.isArray(inst.focusAuraChildren) ? inst.focusAuraChildren : [];
   const toRemove = new Set<any>();
-  if (oldCont) toRemove.add(oldCont);
-  for (let i = 0; i < oldKids.length; i++) toRemove.add(oldKids[i]);
+  if (oldLayers.length) {
+    for (let i = 0; i < oldLayers.length; i++) {
+      const layer = oldLayers[i];
+      if (layer?.cont) toRemove.add(layer.cont);
+      const kids: any[] = Array.isArray(layer?.children) ? layer.children : [];
+      for (let k = 0; k < kids.length; k++) toRemove.add(kids[k]);
+    }
+  } else {
+    if (oldCont) toRemove.add(oldCont);
+    for (let i = 0; i < oldKids.length; i++) toRemove.add(oldKids[i]);
+  }
 
   try {
     const arr: any[] = (anyThis.__propImgs as any[]) || [];
@@ -4156,13 +4254,25 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
     }
   } catch { /* ignore */ }
 
-  try { oldCont?.destroy?.(); } catch { /* ignore */ }
-  for (let i = 0; i < oldKids.length; i++) {
-    try { oldKids[i]?.destroy?.(); } catch { /* ignore */ }
-    try { (oldKids[i] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
+  if (oldLayers.length) {
+    for (let i = 0; i < oldLayers.length; i++) {
+      const layer = oldLayers[i];
+      try { layer?.cont?.destroy?.(); } catch { /* ignore */ }
+      const kids: any[] = Array.isArray(layer?.children) ? layer.children : [];
+      for (let k = 0; k < kids.length; k++) {
+        try { kids[k]?.destroy?.(); } catch { /* ignore */ }
+        try { (kids[k] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
+      }
+    }
+  } else {
+    try { oldCont?.destroy?.(); } catch { /* ignore */ }
+    for (let i = 0; i < oldKids.length; i++) {
+      try { oldKids[i]?.destroy?.(); } catch { /* ignore */ }
+      try { (oldKids[i] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
+    }
   }
 
-  const aura = this._propCreateFocusAuraContainer({
+  const auraLayers = this._propCreateFocusAuraLayers({
     st,
     anchorR: (inst.anchorR | 0),
     anchorC: (inst.anchorC | 0),
@@ -4178,38 +4288,42 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
     baseDepth: (inst.baseDepth | 0),
   });
 
-  if (!aura) return false;
+  if (!auraLayers.length) return false;
 
-  inst.focusAura = aura.cont;
-  inst.focusAuraChildren = aura.children;
-  inst.focusAuraBaseScale = aura.baseScale;
-  inst.focusAuraTextureKey = aura.auraTextureKey;
-  inst.focusAuraPngUrl = aura.auraPngUrl;
-  inst.focusAuraFrameIndices = aura.frameIndices;
+  const primary = auraLayers[0];
+  inst.focusAuraLayers = auraLayers;
+  inst.focusAura = primary?.cont ?? null;
+  inst.focusAuraChildren = primary?.children ?? null;
+  inst.focusAuraBaseScale = primary?.baseScale ?? PROP_FOCUS_AURA_BASE_SCALE;
+  inst.focusAuraTextureKey = primary?.auraTextureKey ?? "";
+  inst.focusAuraPngUrl = primary?.auraPngUrl ?? "";
+  inst.focusAuraFrameIndices = primary?.frameIndices ?? null;
   inst.__loggedFocusAuraRender = 0;
   inst.__loggedFocusAuraMulti = 0;
   inst.__loggedFocusAuraSceneDiag = 0;
   inst.__loggedFocusAuraPixelProbe = 0;
 
-    if (String(baseName || "") === "chest") {
-      const child0: any = children.length ? children[0] : null;
-      const mode = (DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
-        String(baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || ""))
-        ? "override"
-        : "normal";
-      console.log(`[PROPAURA][CHEST-COMPARE] ${JSON.stringify({
-        mode,
-        anchor: { r: anchorR | 0, c: anchorC | 0 },
-        hasChildren: !!children.length,
-        padMode: child0?.__auraPadMode ?? null,
-        padTexKey: child0?.__auraPadTexKey ?? null,
-        childFrame: child0?.frame?.name ?? null,
-        displayW: child0?.displayWidth ?? null,
-        displayH: child0?.displayHeight ?? null,
-        scaleX: child0?.scaleX ?? null,
-        scaleY: child0?.scaleY ?? null
-      })}`);
-    }
+  const baseName = String(inst.baseName ?? "");
+  if (baseName === "chest") {
+    const kids: any[] = Array.isArray(primary?.children) ? primary.children : [];
+    const child0: any = kids.length ? kids[0] : null;
+    const mode = (DEBUG_PROP_FOCUS_AURA_OVERRIDE.enabled &&
+      String(baseName || "") === String(DEBUG_PROP_FOCUS_AURA_OVERRIDE.fromBaseName || ""))
+      ? "override"
+      : "normal";
+    console.log(`[PROPAURA][CHEST-COMPARE] ${JSON.stringify({
+      mode,
+      anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
+      hasChildren: !!kids.length,
+      padMode: child0?.__auraPadMode ?? null,
+      padTexKey: child0?.__auraPadTexKey ?? null,
+      childFrame: child0?.frame?.name ?? null,
+      displayW: child0?.displayWidth ?? null,
+      displayH: child0?.displayHeight ?? null,
+      scaleX: child0?.scaleX ?? null,
+      scaleY: child0?.scaleY ?? null
+    })}`);
+  }
 
   return true;
 }
@@ -4401,6 +4515,7 @@ private _propPlaceOneAnchor(
       overlayTintDefault,
       overlayBlendModeDefault,
 
+      focusAuraLayers: null,
       focusAura: null,
       focusAuraChildren: null,
       focusAuraBaseScale: PROP_FOCUS_AURA_BASE_SCALE,
@@ -4509,7 +4624,7 @@ private _propPlaceOneAnchor(
   }
 
   // Focus aura (pre-baked outline tiles), created per anchor.
-  const aura = this._propCreateFocusAuraContainer({
+  const auraLayers = this._propCreateFocusAuraLayers({
     st,
     anchorR: anchorR | 0,
     anchorC: anchorC | 0,
@@ -4524,6 +4639,7 @@ private _propPlaceOneAnchor(
     oy,
     baseDepth: baseDepth | 0,
   });
+  const primaryAura = auraLayers.length ? auraLayers[0] : null;
 
   // "composition X" — use the engine composition key verbatim (includes #state or @frame)
   const composition = String(rawKey || "");
@@ -4555,14 +4671,15 @@ private _propPlaceOneAnchor(
     overlayTintDefault,
     overlayBlendModeDefault,
 
-    focusAura: aura ? aura.cont : null,
-    focusAuraChildren: aura ? aura.children : null,
-    focusAuraBaseScale: aura ? aura.baseScale : PROP_FOCUS_AURA_BASE_SCALE,
+    focusAuraLayers: auraLayers.length ? auraLayers : null,
+    focusAura: primaryAura ? primaryAura.cont : null,
+    focusAuraChildren: primaryAura ? primaryAura.children : null,
+    focusAuraBaseScale: primaryAura ? primaryAura.baseScale : PROP_FOCUS_AURA_BASE_SCALE,
 
     // For logging proof
-    focusAuraTextureKey: aura ? aura.auraTextureKey : "",
-    focusAuraPngUrl: aura ? aura.auraPngUrl : "",
-    focusAuraFrameIndices: aura ? aura.frameIndices : null,
+    focusAuraTextureKey: primaryAura ? primaryAura.auraTextureKey : "",
+    focusAuraPngUrl: primaryAura ? primaryAura.auraPngUrl : "",
+    focusAuraFrameIndices: primaryAura ? primaryAura.frameIndices : null,
   };
 }
 
@@ -4707,6 +4824,29 @@ private _propDestroyInstance(
   const overlayObjs: any[] = Array.isArray(inst?.overlayObjs) ? inst.overlayObjs : [];
   const objSet = new Set<any>(objs);
   for (let i = 0; i < overlayObjs.length; i++) objSet.add(overlayObjs[i]);
+  const auraLayers: any[] = Array.isArray(inst?.focusAuraLayers) ? inst.focusAuraLayers : [];
+  if (auraLayers.length) {
+    for (let i = 0; i < auraLayers.length; i++) {
+      const layer = auraLayers[i];
+      if (layer?.cont) objSet.add(layer.cont);
+      const kids: any[] = Array.isArray(layer?.children) ? layer.children : [];
+      for (let k = 0; k < kids.length; k++) {
+        const ch: any = kids[k];
+        if (ch) objSet.add(ch);
+        const mask: any = (ch as any)?.__auraTrimMask ?? null;
+        if (mask) objSet.add(mask);
+      }
+    }
+  } else {
+    if (inst?.focusAura) objSet.add(inst.focusAura);
+    const kids: any[] = Array.isArray(inst?.focusAuraChildren) ? inst.focusAuraChildren : [];
+    for (let i = 0; i < kids.length; i++) {
+      const ch: any = kids[i];
+      if (ch) objSet.add(ch);
+      const mask: any = (ch as any)?.__auraTrimMask ?? null;
+      if (mask) objSet.add(mask);
+    }
+  }
   const destroyOutline = (obj: any): void => {
     if (!obj) return;
     try {
@@ -4731,12 +4871,25 @@ private _propDestroyInstance(
     try { obj?.destroy?.(); } catch { /* ignore */ }
   }
 
-  if (inst?.focusAura) {
-    try { inst.focusAura.destroy?.(); } catch { /* ignore */ }
-  }
-  if (Array.isArray(inst?.focusAuraChildren)) {
-    for (let i = 0; i < inst.focusAuraChildren.length; i++) {
-      try { inst.focusAuraChildren[i]?.destroy?.(); } catch { /* ignore */ }
+  if (auraLayers.length) {
+    for (let i = 0; i < auraLayers.length; i++) {
+      const layer = auraLayers[i];
+      try { layer?.cont?.destroy?.(); } catch { /* ignore */ }
+      const kids: any[] = Array.isArray(layer?.children) ? layer.children : [];
+      for (let k = 0; k < kids.length; k++) {
+        try { kids[k]?.destroy?.(); } catch { /* ignore */ }
+        try { (kids[k] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
+      }
+    }
+  } else {
+    if (inst?.focusAura) {
+      try { inst.focusAura.destroy?.(); } catch { /* ignore */ }
+    }
+    if (Array.isArray(inst?.focusAuraChildren)) {
+      for (let i = 0; i < inst.focusAuraChildren.length; i++) {
+        try { inst.focusAuraChildren[i]?.destroy?.(); } catch { /* ignore */ }
+        try { (inst.focusAuraChildren[i] as any)?.__auraTrimMask?.destroy?.(); } catch { /* ignore */ }
+      }
     }
   }
   try {

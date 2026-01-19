@@ -163,6 +163,20 @@ function _getOrCreateSessionToken(profileHint?: string): string {
             rotateReasons.push("profile-mismatch");
         }
 
+        // If this is the same tab/profile, prefer reusing the existing token even if
+        // the duplicate-tab heuristic fired (refresh-safe, avoids profileInUse).
+        if (rotateToken && rotateReasons.includes("tab-duplicate")) {
+            const canReuse =
+                existing &&
+                typeof existing === "string" &&
+                existing.length >= 8 &&
+                (!desiredProfile || !existingProfile || existingProfile === desiredProfile);
+            if (canReuse && !rotateReasons.includes("profile-mismatch")) {
+                rotateToken = false;
+                rotateReasons.push("duplicate-keep-token");
+            }
+        }
+
         if (!rotateToken && existing && typeof existing === "string" && existing.length >= 8) {
             if (desiredProfile && !existingProfile) {
                 ss.setItem(SESSION_TOKEN_PROFILE_KEY, desiredProfile);

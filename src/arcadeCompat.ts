@@ -1298,6 +1298,7 @@ const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
+const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const EFFECT_FPS_DATA_KEY = "effectFps";
 const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
@@ -6513,7 +6514,13 @@ function _attachUploadPixelsToTexture(
 
     const tPix0 = _hostPerfNowMs();
 
-    ctx2d.clearRect(0, 0, w, h);
+    const src = tex.source[0];
+    const texW = (src.width | 0);
+    const texH = (src.height | 0);
+    const offX = Math.max(0, Math.idiv((texW - (w | 0)), 2) | 0);
+    const offY = Math.max(0, Math.idiv((texH - (h | 0)), 2) | 0);
+
+    ctx2d.clearRect(0, 0, texW, texH);
 
     const pixelsLen = w * h;
     const imgData = ctx2d.createImageData(w, h);
@@ -6577,7 +6584,7 @@ function _attachUploadPixelsToTexture(
 
     (s as any)._lastNonZeroPixels = nonZero;
 
-    ctx2d.putImageData(imgData, 0, 0);
+    ctx2d.putImageData(imgData, offX, offY);
     tex.refresh();
 
     const tPix1 = _hostPerfNowMs();
@@ -7028,6 +7035,19 @@ function _attachGetOrRecreateCanvasTexture(
     const sc = ctx.sc;
     const s = ctx.s;
     const g = ctx.g;
+    const dataAny: any = ctx.dataAny || (s as any).data || {};
+
+    let targetW = w | 0;
+    let targetH = h | 0;
+    try {
+        const role = _classifySpriteRole((s.kind as any) | 0, Object.keys(dataAny || {}));
+        if (role === "PROJECTILE") {
+            const tw = typeof dataAny.texW === "number" ? (dataAny.texW | 0) : 0;
+            const th = typeof dataAny.texH === "number" ? (dataAny.texH | 0) : 0;
+            if (tw > 0) targetW = Math.max(targetW, tw | 0);
+            if (th > 0) targetH = Math.max(targetH, th | 0);
+        }
+    } catch { /* ignore */ }
 
     const tTex0 = _hostPerfNowMs();
 
@@ -7040,13 +7060,13 @@ function _attachGetOrRecreateCanvasTexture(
         const texW = (src.width | 0);
         const texH = (src.height | 0);
 
-        if (texW !== w || texH !== h) {
+        if (texW !== targetW || texH !== targetH) {
             if (DEBUG_WRAP_TEX) {
                 console.log(
                     "[WRAP-TEX-RECREATE]",
                     "| id", s.id,
                     "| old tex w,h", texW, texH,
-                    "| new img w,h", w, h
+                    "| new img w,h", targetW, targetH
                 );
             }
             sc.textures.remove(texKey);
@@ -7055,7 +7075,7 @@ function _attachGetOrRecreateCanvasTexture(
     }
 
     if (!tex) {
-        tex = sc.textures.createCanvas(texKey, w, h);
+        tex = sc.textures.createCanvas(texKey, targetW, targetH);
 
         if (DEBUG_WRAP_TEX && _attachCallCount <= MAX_ATTACH_VERBOSE) {
             console.log(
@@ -7570,6 +7590,25 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                 if (role === "HERO") {
                     const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
                     _clearHeroNativeByIndex(heroIndex, s.native);
+                }
+                if (role === "PROJECTILE") {
+                    const fx = dataAny.projMaskFx as any;
+                    if (fx) {
+                        try {
+                            const fxNative = (fx as any).native;
+                            if (fxNative) {
+                                _effectClearPaintMask(fxNative);
+                                try { fxNative.setVisible?.(false); } catch { }
+                                try { fxNative.setAlpha?.(0); } catch { }
+                                try { fxNative.destroy(); } catch { }
+                                (fx as any).native = null;
+                            }
+                        } catch { /* ignore */ }
+                        try {
+                            (fx as any).flags |= SpriteFlag.Destroyed;
+                            (fx as any)._destroyed = true;
+                        } catch { /* ignore */ }
+                    }
                 }
             } catch { }
 
@@ -9744,6 +9783,7 @@ function _effectClearPaintMask(nativeAny: any): void {
     try { nativeAny.__effectPaintBrushPx = undefined; } catch { }
     try { nativeAny.__effectPaintMaskType = undefined; } catch { }
     try { nativeAny.__effectPaintMaskHeroId = undefined; } catch { }
+    try { nativeAny.__effectPaintMaskSpriteId = undefined; } catch { }
 }
 
 function _effectAutoBrushPx(s: any, nativeAny: any): number {
@@ -9907,6 +9947,12 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
         }
         return false;
     }
+    const auraFrame = (auraImg as any).frame;
+    const auraTex = auraFrame?.texture || (auraImg as any).texture;
+    if (!auraFrame || !auraTex || (auraTex as any).destroyed) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
 
     const heroId = (heroNative as any).__heroNativeMaskId || (heroNative as any).name || heroNative;
     const lastType = nativeAny.__effectPaintMaskType;
@@ -9928,6 +9974,124 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
         nativeAny.__effectPaintMask = mask;
         nativeAny.__effectPaintMaskType = "hero";
         nativeAny.__effectPaintMaskHeroId = heroId;
+        return true;
+    } catch {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+}
+
+function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
+    if (!nativeAny || !maskNative) return false;
+    if (typeof (maskNative as any).createBitmapMask !== "function") {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    if ((maskNative as any).destroyed || !(maskNative as any).scene) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    const frame = (maskNative as any).frame;
+    const tex = frame?.texture || (maskNative as any).texture;
+    if (!frame || !tex) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    if ((tex as any).destroyed) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    const scene = (maskNative as any).scene || (globalThis as any).__phaserScene;
+    if (!scene) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+
+    const texKey = String((tex as any).key || "");
+    const frameName = (frame && frame.name !== undefined) ? frame.name : undefined;
+    if (!texKey || frameName === undefined) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    if (!scene.textures || !scene.textures.exists(texKey)) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    const texEntry = scene.textures.get(texKey);
+    const texFrame = texEntry?.get(frameName as any);
+    if (!texEntry || !texFrame) {
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+    const texSrc = texEntry?.source ? texEntry.source[0] : null;
+    if (texSrc && !texSrc.glTexture && typeof (texEntry as any).refresh === "function") {
+        try { (texEntry as any).refresh(); } catch { /* ignore */ }
+    }
+    if (texSrc && !texSrc.glTexture) {
+        if (DEBUG_EFFECT_MASKS) {
+            try {
+                const key = "maskTexMissing:" + texKey + ":" + String(frameName);
+                if (!__effectMaskKeyOnce.has(key)) {
+                    __effectMaskKeyOnce.add(key);
+                    console.log("[effectmask][maskMissing]", {
+                        tex: texKey,
+                        frame: String(frameName)
+                    });
+                }
+            } catch { /* ignore */ }
+        }
+        _effectClearPaintMask(nativeAny);
+        return false;
+    }
+
+    let maskImg: any = nativeAny.__effectMaskSpriteImg;
+    if (!maskImg || !(maskImg as any).scene || (maskImg as any).destroyed) {
+        maskImg = scene.add.image(maskNative.x, maskNative.y, texKey, frameName as any);
+        maskImg.setVisible(false);
+        nativeAny.__effectMaskSpriteImg = maskImg;
+        if (!nativeAny.__effectMaskSpriteImgBound && typeof nativeAny.once === "function") {
+            nativeAny.__effectMaskSpriteImgBound = 1;
+            try {
+                nativeAny.once("destroy", () => {
+                    try { maskImg.destroy(); } catch { }
+                });
+            } catch { /* ignore */ }
+        }
+    } else {
+        try { maskImg.setTexture(texKey, frameName as any); } catch { }
+    }
+
+    maskImg.x = maskNative.x;
+    maskImg.y = maskNative.y;
+    maskImg.scaleX = (maskNative.scaleX ?? 1) as number;
+    maskImg.scaleY = (maskNative.scaleY ?? 1) as number;
+    maskImg.rotation = (maskNative.rotation ?? 0) as number;
+    if (typeof maskNative.originX === "number" && typeof maskNative.originY === "number") {
+        try { maskImg.setOrigin(maskNative.originX, maskNative.originY); } catch { }
+    }
+    if (typeof maskImg.setFlipX === "function") {
+        maskImg.setFlipX(!!maskNative.flipX);
+    }
+    if (typeof maskImg.setFlipY === "function") {
+        maskImg.setFlipY(!!maskNative.flipY);
+    }
+
+    const maskId = (maskImg as any).__effectMaskSpriteId || (maskImg as any).name || maskImg;
+    const lastType = nativeAny.__effectPaintMaskType;
+    const lastMask = nativeAny.__effectPaintMaskSpriteId;
+    if (lastType === "sprite" && lastMask === maskId && nativeAny.__effectPaintMask) {
+        try { nativeAny.setMask?.(nativeAny.__effectPaintMask); } catch { }
+        return true;
+    }
+
+    _effectClearPaintMask(nativeAny);
+
+    try {
+        const mask = maskImg.createBitmapMask();
+        nativeAny.setMask(mask);
+        nativeAny.__effectPaintMask = mask;
+        nativeAny.__effectPaintMaskType = "sprite";
+        nativeAny.__effectPaintMaskSpriteId = maskId;
         return true;
     } catch {
         _effectClearPaintMask(nativeAny);
@@ -10164,8 +10328,18 @@ function _syncEffectPath(
     const hasHeroIndexKey = Object.prototype.hasOwnProperty.call(data, PROJ_HERO_INDEX_KEY);
     const heroIndexForDebug = hasHeroIndexKey ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
     const heroRefForMask = sprites.readDataSprite(s, EFFECT_HERO_REF_DATA_KEY);
+    const maskSpriteRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY);
+    const maskSpriteNative =
+        (maskSpriteRef && !(maskSpriteRef.flags & SpriteFlag.Destroyed) && (maskSpriteRef as any).native)
+            ? (maskSpriteRef as any).native
+            : null;
 
+    const wantsProjectileMask =
+        modeRaw === "projectile" ||
+        modeRaw === "proj" ||
+        modeRaw === "sprite";
     const wantsHeroMaskOnly =
+        wantsProjectileMask ||
         modeRaw === "silhouette" ||
         modeRaw === "mask" ||
         modeRaw === "outline";
@@ -10191,6 +10365,8 @@ function _syncEffectPath(
                     heroIndex: heroIndexForDebug | 0,
                     hasHeroIndex: hasHeroIndexKey ? 1 : 0,
                     hasHeroRef: heroRefForMask ? 1 : 0,
+                    hasMaskSprite: maskSpriteRef ? 1 : 0,
+                    maskSpriteId: maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0,
                     maskRadius: maskRadiusRaw | 0,
                     maskRadiusPx: maskRadiusPxRaw | 0,
                     forceTop: forceTop ? 1 : 0
@@ -10201,8 +10377,19 @@ function _syncEffectPath(
     if (wantsPaint) {
         let usedHeroMask = false;
         let maskType = "none";
+        if (wantsProjectileMask) {
+            try {
+                if (maskSpriteNative && _effectEnsureSpriteMask(nativeAny, maskSpriteNative)) {
+                    usedHeroMask = true;
+                    maskType = "sprite";
+                    if (typeof maskSpriteNative.originX === "number" && typeof maskSpriteNative.originY === "number") {
+                        try { nativeAny.setOrigin?.(maskSpriteNative.originX, maskSpriteNative.originY); } catch { }
+                    }
+                }
+            } catch { }
+        }
         const maskRadiusPx = (nativeAny.__effectMaskRadiusPx | 0);
-        if ((maskRadiusPx | 0) > 0) {
+        if (!usedHeroMask && !wantsProjectileMask && (maskRadiusPx | 0) > 0) {
             try {
                 if (nativeAny.__effectPaintMaskType === "hero") _effectClearPaintMask(nativeAny);
             } catch { }
@@ -10210,7 +10397,7 @@ function _syncEffectPath(
             usedHeroMask = true;
             maskType = "circle";
         }
-        if (!usedHeroMask) {
+        if (!usedHeroMask && !wantsProjectileMask) {
             try {
                 let heroNative = hasHeroIndexKey ? _getHeroNativeByIndex(heroIndexForDebug | 0) : null;
                 if (!heroNative && heroRefForMask && (heroRefForMask as any).native) {
@@ -10244,11 +10431,11 @@ function _syncEffectPath(
                 }
             } catch { }
         }
-            if (!usedHeroMask) {
-                if (nativeAny.__effectPaintMaskType === "hero") {
-                    _effectClearPaintMask(nativeAny);
-                }
-                if (!wantsHeroMaskOnly) {
+        if (!usedHeroMask) {
+            if (nativeAny.__effectPaintMaskType) {
+                _effectClearPaintMask(nativeAny);
+            }
+            if (!wantsHeroMaskOnly) {
                 const brush = (hasBrush && (brushPx | 0) > 0) ? (brushPx | 0) : _effectAutoBrushPx(s, nativeAny);
                 _effectEnsurePaintMask(ctx.sc as any, nativeAny, brush | 0);
                 }
@@ -10286,6 +10473,7 @@ function _syncEffectPath(
                         maskAttached: maskAttached ? 1 : 0,
                         maskRadius: maskRadiusRaw | 0,
                         maskRadiusPx: maskRadiusPxRaw | 0,
+                        maskSpriteId: maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0,
                         wantsHeroMaskOnly: wantsHeroMaskOnly ? 1 : 0
                     });
                 }
@@ -12173,53 +12361,54 @@ namespace controller {
         
     }
 
-    export const player1: BasicController = new BasicController();
-    export const player2: BasicController = new BasicController();
-    export const player3: BasicController = new BasicController();
-    export const player4: BasicController = new BasicController();
+    const _controllersBySlot: Record<number, BasicController> = Object.create(null);
+
+    function _ensureControllerForSlot(slot: number): BasicController | null {
+        const s = slot | 0;
+        if (s <= 0) return null;
+        let ctrl = _controllersBySlot[s];
+        if (!ctrl) {
+            ctrl = new BasicController();
+            _controllersBySlot[s] = ctrl;
+        }
+        return ctrl;
+    }
+
+    export const player1: BasicController = _ensureControllerForSlot(1)!;
+    export const player2: BasicController = _ensureControllerForSlot(2)!;
+    export const player3: BasicController = _ensureControllerForSlot(3)!;
+    export const player4: BasicController = _ensureControllerForSlot(4)!;
 
         // =====================================================================================
         // TODO_NPLAYER_BRIDGE
         // TEMPORARY FIXED-LANE CONTROLLER BRIDGE (player1..player4 exports).
         // All non-engine code must route through these helpers so later we delete/replace ONE place.
         // =====================================================================================
-        const _controllers: BasicController[] = [player1, player2, player3, player4];
-
         export function _getControllerForSlot(slot: number): BasicController | null {
-            const idx = (slot | 0) - 1;
-            if (idx < 0 || idx >= _controllers.length) return null;
-            return _controllers[idx];
+            return _ensureControllerForSlot(slot);
         }
 
         export function _getControllerSlotCount(): number {
-            return _controllers.length;
+            return Object.keys(_controllersBySlot).length;
         }
 
 
         // Which global player (1–4) this client controls.
         // All keyboard input will apply to THIS controller.
-        let _localPlayerSlot = 1; // 1..4
+        let _localPlayerSlot = 1; // any positive slot id
 
         export function setLocalPlayerSlot(playerId: number): void {
             const slot = playerId | 0;
-
-            // TODO_NPLAYER_BRIDGE: slot validity is tied to fixed controller exports.
-            const max = _getControllerSlotCount();
-
-            if (slot < 1 || slot > max) {
-                console.warn("[controller.setLocalPlayerSlot] invalid playerId", playerId, "max=", max);
-                return;
-            }
-
-        _localPlayerSlot = slot;
+            if (slot <= 0) return;
+            _ensureControllerForSlot(slot);
+            _localPlayerSlot = slot;
             if (DEBUG_COMPAT_CONTROLLER) {
                 console.log("[controller] local player slot set to", _localPlayerSlot);
             }
         }
 
 
-        function _getLocalController(): BasicController {
-            // TODO_NPLAYER_BRIDGE
+        export function _getLocalController(): BasicController {
             const ctrl = _getControllerForSlot(_localPlayerSlot);
             return ctrl || player1;
         }
@@ -12231,9 +12420,9 @@ namespace controller {
         export function _updateAllControllers(): void {
             // TODO_NPLAYER_BRIDGE
             // Update all exported controller lanes (currently fixed to player1..player4).
-            const k = _getControllerSlotCount();
-            for (let slot = 1; slot <= k; slot++) {
-                const ctrl: any = _getControllerForSlot(slot);
+            for (const key of Object.keys(_controllersBySlot)) {
+                const slot = key | 0;
+                const ctrl: any = _controllersBySlot[slot];
                 if (ctrl && typeof ctrl._updateSpriteVelocity === "function") {
                     ctrl._updateSpriteVelocity();
                 }
@@ -12246,7 +12435,16 @@ namespace controller {
 
 
     let _keyboardWired = false;
+    let _keyboardScene: any = null;
+    let _keyboardInput: any = null;
+    let _keyboardUpdateHandler: (() => void) | null = null;
+    let _keyboardReleaseAll: (() => void) | null = null;
+    let _keyboardBlurWired = false;
+
     let _gamepadWired = false;
+    let _gamepadScene: any = null;
+    let _gamepadInput: any = null;
+    let _gamepadReleaseAll: (() => void) | null = null;
     let _inputFirstPressLogged = false;
     let _inputFirstReleaseLogged = false;
 
@@ -12272,19 +12470,29 @@ namespace controller {
         // Hook Phaser keyboard into the "local" player.
         // SAME keys on every client: arrows + Q/W/E/R + Space + F.
     export function _wireKeyboard(scene: any): void {
-        if (_keyboardWired) {
-            if (DEBUG_COMPAT_CONTROLLER) {
-                console.log("[controller._wireKeyboard] already wired, skipping");
-            }
-            return;
-        }
-        _keyboardWired = true;
-
         const kb = scene && scene.input && scene.input.keyboard;
         if (!kb) {
             console.warn("[controller._wireKeyboard] no keyboard plugin on scene", scene);
             return;
         }
+
+        if (_keyboardWired && _keyboardScene === scene && _keyboardInput === kb) {
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.log("[controller._wireKeyboard] already wired, skipping");
+            }
+            return;
+        }
+
+        if (_keyboardReleaseAll) {
+            _keyboardReleaseAll();
+        }
+        if (_keyboardScene && _keyboardUpdateHandler && _keyboardScene.events && typeof _keyboardScene.events.off === "function") {
+            _keyboardScene.events.off("update", _keyboardUpdateHandler);
+        }
+
+        _keyboardWired = true;
+        _keyboardScene = scene;
+        _keyboardInput = kb;
 
         if (DEBUG_COMPAT_CONTROLLER) {
             console.log("[controller._wireKeyboard] wiring keyboard controls for LOCAL player (network-aware)");
@@ -12339,6 +12547,18 @@ namespace controller {
             }
         };
 
+        const releaseAll = () => {
+            for (const b of bindings) {
+                if (state[b.button]) {
+                    state[b.button] = false;
+                    _sendLocalInput(b.button, false);
+                }
+            }
+        };
+
+        _keyboardReleaseAll = releaseAll;
+        _keyboardUpdateHandler = syncKeys;
+
         // Prime state so we don't depend on keyup reliability.
         syncKeys();
 
@@ -12346,14 +12566,10 @@ namespace controller {
             scene.events.on("update", syncKeys);
         }
 
-        if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+        if (!_keyboardBlurWired && typeof window !== "undefined" && typeof window.addEventListener === "function") {
+            _keyboardBlurWired = true;
             window.addEventListener("blur", () => {
-                for (const b of bindings) {
-                    if (state[b.button]) {
-                        state[b.button] = false;
-                        _sendLocalInput(b.button, false);
-                    }
-                }
+                if (_keyboardReleaseAll) _keyboardReleaseAll();
             });
         }
     }
@@ -12361,19 +12577,26 @@ namespace controller {
     // Hook Phaser gamepad into the "local" player (first connected pad).
     // Maps: face buttons -> A/B/AB/R, bumpers -> Interact/Jump, D-pad/stick -> arrows.
     export function _wireGamepad(scene: any): void {
-        if (_gamepadWired) {
-            if (DEBUG_COMPAT_CONTROLLER) {
-                console.log("[controller._wireGamepad] already wired, skipping");
-            }
-            return;
-        }
-        _gamepadWired = true;
-
         const gp = scene && scene.input && scene.input.gamepad;
         if (!gp || typeof gp.on !== "function") {
             console.warn("[controller._wireGamepad] no gamepad plugin on scene", scene);
             return;
         }
+
+        if (_gamepadWired && _gamepadScene === scene && _gamepadInput === gp) {
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.log("[controller._wireGamepad] already wired, skipping");
+            }
+            return;
+        }
+
+        if (_gamepadReleaseAll) {
+            _gamepadReleaseAll();
+        }
+
+        _gamepadWired = true;
+        _gamepadScene = scene;
+        _gamepadInput = gp;
 
         if (DEBUG_COMPAT_CONTROLLER) {
             console.log("[controller._wireGamepad] wiring first gamepad for LOCAL player (network-aware)");
@@ -12416,6 +12639,7 @@ namespace controller {
                 updateHandler = null;
             }
         };
+        _gamepadReleaseAll = releaseAll;
 
         const syncAxes = () => {
             if (!pad || !pad.axes) return;

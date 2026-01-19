@@ -372,6 +372,56 @@ function _hud_tryGetLocalHeroSprite(pid: number): any | null {
   return null;
 }
 
+function _hud_isNpcHero(spritesNS: any, hero: any): boolean {
+  try {
+    return !!spritesNS.readDataBoolean(hero, "isNpc");
+  } catch (_e) {
+    return false;
+  }
+}
+
+function _hud_tryFindAnyPlayableHeroSprite(): any | null {
+  const g: any = globalThis as any;
+  const spritesNS: any = g.sprites;
+  if (!spritesNS || typeof spritesNS.allSprites !== "function") return null;
+
+  const all: any[] = spritesNS.allSprites();
+  if (!Array.isArray(all) || all.length === 0) return null;
+
+  const sk: any = g.SpriteKind;
+  const playerKind = (sk && typeof sk.Player === "number") ? (sk.Player | 0) : 0;
+
+  for (const s of all) {
+    if (!s) continue;
+    try {
+      if (playerKind && typeof s.kind === "function") {
+        const k = s.kind() | 0;
+        if (k !== playerKind) continue;
+      }
+    } catch (_e) {
+      // ignore
+    }
+
+    if (_hud_isNpcHero(spritesNS, s)) continue;
+
+    let owner = 0;
+    try {
+      owner = (spritesNS.readDataNumber(s, "owner") | 0);
+    } catch (_e) {
+      owner = 0;
+    }
+
+    const profile =
+      _hud_readStr(spritesNS, s, "__profileKey") ||
+      _hud_readStr(spritesNS, s, "name") ||
+      _hud_readStr(spritesNS, s, "heroName");
+
+    if (owner > 0 || profile) return s;
+  }
+
+  return null;
+}
+
 function _hud_readNum(spritesNS: any, spr: any, key: string): number {
   try {
     return spritesNS.readDataNumber(spr, key) | 0;
@@ -475,7 +525,9 @@ function _hud_tick(): void {
   if (!_hudRefs) return;
 
   const pid = _hud_tryGetLocalPlayerId();
+  const anyHero = _hud_tryFindAnyPlayableHeroSprite();
   if (!pid) {
+    if (anyHero) _uiLoadingMarkHero();
     const w = "Waiting for server assign…";
     if (_hudLastWho !== w) {
       _hudRefs.who.textContent = w;
@@ -487,6 +539,7 @@ function _hud_tick(): void {
 
   const hero = _hud_tryGetLocalHeroSprite(pid);
   if (!hero) {
+    if (anyHero) _uiLoadingMarkHero();
     const w = `pid=${pid} — waiting for hero sprite…`;
     if (_hudLastWho !== w) {
       _hudRefs.who.textContent = w;
@@ -734,13 +787,25 @@ function applyUrlProfileToGlobals() {
     const profile = getProfileFromUrl();
     const g: any = (globalThis as any);
 
-    // Store the raw name if anyone wants it
-    g.__localHeroProfileName = profile;
     if (profile && typeof profile === "string") {
+        // Store the raw name if anyone wants it
+        g.__localHeroProfileName = profile;
         logMain("[main] URL profile override:", profile);
-    } else {
-        logMain("[main] no ?profile= URL param; using defaults");
+        return;
     }
+
+    const existing =
+        (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+            ? g.__localHeroProfileName.trim()
+            : "";
+
+    if (existing) {
+        logMain("[main] no ?profile= URL param; keeping existing profile:", existing);
+        return;
+    }
+
+    g.__localHeroProfileName = profile;
+    logMain("[main] no ?profile= URL param; using defaults");
 }
 
 // ------------------------------------------------------------

@@ -300,6 +300,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         ref: { row: 0, col: 0 },
         offsetXPx: -16,
         offsetYPx: -15,
+        depthBiasTiles: 1.5,
         depthBias: 2,
         focusAuraAllowInset: true,
     },

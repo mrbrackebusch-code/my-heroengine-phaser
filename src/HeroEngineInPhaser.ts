@@ -2461,7 +2461,7 @@ const STR_FX_SEG_Z_BIAS = 4;
 const STR_FX_SEG_FIT_PCT_X1000 = 650;
 const STR_FX_SEG_INNER_PCT_X1000 = 350;
 const STR_FX_SEG_OUTER_PCT_X1000 = 850;
-const STR_FX_HIDE_BASE_PROJECTILE = true;
+const STR_FX_HIDE_BASE_PROJECTILE = false;
 const ENABLE_STR_FX_SEGMENTS = false;
 const AGI_FX_SEG_COUNT_KEY = "AGI_FX_N";
 const AGI_FX_SEG_BASE_KEY = "AGI_FX_";
@@ -3376,6 +3376,10 @@ const PROJ_DATA = {
 
     DESTROY_AT: "destroyAt",       // runtime() time when projectile should be destroyed
 
+    // Optional: pre-sized texture target (avoid per-frame texture recreate)
+    TEX_W: "texW",
+    TEX_H: "texH",
+
 
 
     SUPPORT_TARGET_HERO: "supTgtHero",
@@ -3700,7 +3704,10 @@ function _syncLocalInputState(profileRaw: any): void {
         const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
         if (netPid > 0) pid = netPid
     } catch { }
-    const ctrl: any = (controller as any)[`player${pid}`] || controller.player1
+    const ctrlNS: any = controller as any
+    const ctrl: any = (ctrlNS && typeof ctrlNS._getLocalController === "function")
+        ? ctrlNS._getLocalController()
+        : ((ctrlNS && ctrlNS[`player${pid}`]) || controller.player1)
     if (!ctrl) return
     st.left = ctrl.left.isPressed()
     st.right = ctrl.right.isPressed()
@@ -3826,6 +3833,25 @@ function _getLocalProfileKey(): string {
     } catch {
         return ""
     }
+}
+
+function _resolveProfileKeyForPlayerId(pid: number): string {
+    const safePid = pid | 0
+    if (safePid <= 0) return ""
+    const direct = playerIdToProfile[safePid]
+    if (direct) return _normalizeProfileKey(direct)
+    try {
+        const g: any = globalThis as any
+        if (g && g.__netProfileByPid && typeof g.__netProfileByPid[safePid] === "string") {
+            return _normalizeProfileKey(g.__netProfileByPid[safePid])
+        }
+    } catch { }
+    try {
+        const g: any = globalThis as any
+        const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+        if (netPid === safePid) return _getLocalProfileKey()
+    } catch { }
+    return ""
 }
 
 const HERO_TELE_FX_MODE_KEY = "__teleFxMode" // 0 none, 1=in, 2=out
@@ -7459,7 +7485,7 @@ const FIRE_TOTEM_ACTIVE_AURA_MS = 1400
 const FIRE_TOTEM_ANIM_MS = 900
 
 const FIRE_TOTEM_AURA_FOCUS: PropAuraStyle = {
-    radius: 2,
+    radius: 3,
     depthBias: 1,
     tint: 0xffe2a1,
     alphaMin: 0.15,
@@ -7469,7 +7495,7 @@ const FIRE_TOTEM_AURA_FOCUS: PropAuraStyle = {
 }
 
 const CHEST_AURA_FOCUS: PropAuraStyle = {
-    radius: 2,
+    radius: 3,
     depthBias: 1,
     tint: 0xffd27a,
     alphaMin: 0.15,
@@ -7535,7 +7561,7 @@ const SHRINE_SPARKLE_LIFESPAN_MS = 1200
 const SHRINE_SPARKLE_POP_MS = 240
 const SHRINE_SPARKLE_POP_SCALE = 0.35
 const SHRINE_SPARKLE_SPEED_MIN_PX = 6
-const SHRINE_SPARKLE_SPEED_MAX_PX = 18
+const SHRINE_SPARKLE_SPEED_MAX_PX = 20
 const SHRINE_SPARKLE_ANGLE_MIN_DEG = -150
 const SHRINE_SPARKLE_ANGLE_MAX_DEG = -30
 const SHRINE_SPARKLE_BURST_COUNT = 6
@@ -12261,7 +12287,9 @@ function _dunEnterFloor_placeHeroesAtSpawn(
 
         if (hi < 0) {
 
-            createHeroForPlayer(pid, xy[0], xy[1], undefined, undefined, undefined, undefined, "dungeon:enter_floor")
+            const profileKey = _resolveProfileKeyForPlayerId(pid)
+            if (!profileKey) continue
+            createHeroForPlayer(pid, xy[0], xy[1], profileKey, undefined, undefined, undefined, "dungeon:enter_floor")
 
             hi = playerToHeroIndex[pid] | 0
 
@@ -27699,7 +27727,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
                     else if (base === "chest") auraStyle = CHEST_AURA_FOCUS
                 }
 
-                const auraRadius = auraStyle ? (auraStyle.radius ?? 2) : 2
+                const auraRadius = auraStyle ? (auraStyle.radius ?? 3) : 3
                 const auraDepth = auraStyle ? (auraStyle.depthBias ?? 1) : 1
                 const auraOpts = _dunAuraStyleToOpts(auraStyle)
 
@@ -31041,18 +31069,18 @@ function setupHeroes() {
 
     // Prefer local player id/profile if the network assigned one before boot.
     let pid = 1
-    let profileOverride = ""
     try {
         const g: any = globalThis as any
         const netPid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
         if (netPid > 0) pid = netPid
-        if (playerIdToProfile[pid]) {
-            profileOverride = playerIdToProfile[pid]
-        } else if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
-            profileOverride = g.__netProfileByPid[pid]
-        }
     } catch { }
-    if (!profileOverride) profileOverride = _getLocalProfileKey()
+    const profileOverride = _resolveProfileKeyForPlayerId(pid)
+    if (!profileOverride) {
+        if (DEBUG_SETUP_HEROES_LOGS) {
+            console.log("[setupHeroes] skipped spawn: missing profile", { pid })
+        }
+        return
+    }
     const slotIndex = (pid | 0) > 0 ? (pid - 1) : 0
     const coordIndex = (slotIndex >= 0 && slotIndex < coords.length) ? slotIndex : 0
     if (DEBUG_SETUP_HEROES_LOGS) {
@@ -31066,7 +31094,7 @@ function setupHeroes() {
         pid,
         coords[coordIndex][0],
         coords[coordIndex][1],
-        profileOverride || undefined,
+        profileOverride,
         undefined,
         undefined,
         undefined,
@@ -33540,12 +33568,14 @@ function _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId: number): number {
         ]
 
         const slotIndex = Math.max(0, (playerId | 0) - 1) % coords.length
+        const profileKey = _resolveProfileKeyForPlayerId(playerId)
+        if (!profileKey) return -1
         console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId)
         createHeroForPlayer(
             playerId,
             coords[slotIndex][0],
             coords[slotIndex][1],
-            undefined,
+            profileKey,
             undefined,
             undefined,
             undefined,
@@ -39398,6 +39428,8 @@ function spawnStrengthSwingProjectile(
 
 
     const proj = sprites.create(img0, SpriteKind.HeroWeapon)
+    sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
+    sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
 
     proj.z = hero.z + 12
 
@@ -43094,6 +43126,20 @@ function spawnAgilityThrustProjectile(
 
     proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny))
 
+    // Pre-size the projectile texture so we never shrink/expand every frame.
+    const attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
+    const reachExtra = L | 0
+    const totalReach = Math.max(1, (attachPx + reachExtra) | 0)
+    const backLen = Math.max(0, Math.round(attachPx * AGI_TRAIL_BACK_PCT_X1000 / 1000))
+    const sBackAtCast = -backLen
+    let sFrontStop = totalReach - 2
+    if (sFrontStop <= sBackAtCast) sFrontStop = sBackAtCast + 4
+    const maxImg = createAgilityArrowSegmentImage(sBackAtCast, sFrontStop, nx, ny)
+    if (maxImg) {
+        sprites.setDataNumber(proj, PROJ_DATA.TEX_W, maxImg.width | 0)
+        sprites.setDataNumber(proj, PROJ_DATA.TEX_H, maxImg.height | 0)
+    }
+
 
 
     // Core identifiers
@@ -43430,6 +43476,7 @@ function updateAgilityProjectilesMotionFor(
     const activateAt = (sprites.readDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS) | 0)
 
     _updateHeroBodyPaintFxForProj(proj, hero)
+    _updateProjectileMaskFxForProj(proj, hero)
 
 
 
@@ -43471,6 +43518,32 @@ function updateAgilityProjectilesMotionFor(
 
             sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
 
+            if (!sprites.readDataSprite(proj, PROJ_MASK_FX_KEY)) {
+                let fxNx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X)
+                let fxNy = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y)
+                let fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy)
+                if (fxMag < 1e-6) {
+                    fxNx = _getHeroFacingX(heroIndex) || 1
+                    fxNy = _getHeroFacingY(heroIndex) || 0
+                    fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy) || 1
+                }
+                fxNx /= fxMag
+                fxNy /= fxMag
+                const fxElement = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+                const fxDashMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0
+                _spawnProjectileMaskFxForMove(
+                    proj,
+                    heroIndex,
+                    hero,
+                    FAMILY.AGILITY | 0,
+                    fxElement | 0,
+                    fxNx,
+                    fxNy,
+                    ((fxDashMs | 0) + 200) | 0,
+                    "agilityTrail"
+                )
+            }
+
         } else {
 
             // Still in windup: keep hidden + no overlaps; follow hero silently
@@ -43489,6 +43562,7 @@ function updateAgilityProjectilesMotionFor(
 
             proj.y = hero.y
             _updateHeroBodyPaintFxForProj(proj, hero)
+            _updateProjectileMaskFxForProj(proj, hero)
             _hideAgilityTrailFxSegments(proj)
 
 
@@ -43704,6 +43778,7 @@ function updateAgilityProjectilesMotionFor(
         if (arrowLen <= 0) {
 
             _destroyHeroBodyPaintFxForProj(proj)
+            _destroyProjectileMaskFxForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
             proj.destroy()
 
@@ -43839,6 +43914,7 @@ function updateAgilityProjectilesMotionFor(
 
     proj.y = anchorY + (minYW + maxYW) / 2
     _updateHeroBodyPaintFxForProj(proj, hero)
+    _updateProjectileMaskFxForProj(proj, hero)
 
     const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
     _spawnHeroElementTrailParticle(proj, element | 0, nowMs | 0)
@@ -56831,7 +56907,10 @@ function updateProjectilesCleanup() {
 
         const destroyAt = sprites.readDataNumber(proj, PROJ_DATA.DESTROY_AT) | 0
 
-        if (destroyAt > 0 && now >= destroyAt) proj.destroy()
+        if (destroyAt > 0 && now >= destroyAt) {
+            _destroyProjectileMaskFxForProj(proj)
+            proj.destroy()
+        }
 
     }
 
@@ -59725,16 +59804,7 @@ if (typeof globalThis !== "undefined") {
         }
 
         function _resolveProfileForPlayerId(pid: number): string {
-            if (pid <= 0) return ""
-            const prof = playerIdToProfile[pid] || ""
-            if (prof) return prof
-            try {
-                const g: any = (globalThis as any)
-                if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
-                    return g.__netProfileByPid[pid]
-                }
-            } catch { }
-            return ""
+            return _resolveProfileKeyForPlayerId(pid)
         }
 
         internals.getHeroIndexForProfile = function (profile: string): number {
@@ -59887,9 +59957,11 @@ if (typeof globalThis !== "undefined") {
 
             if (pid <= 0) return -1
 
-            const prof = _resolveProfileForPlayerId(pid)
-            const profileKey = prof || "Default"
-
+            const profileKey = _resolveProfileForPlayerId(pid)
+            if (!profileKey) {
+                if (DEBUG_NET_IDENTITY) console.warn("[profile.identity] ensure rejected: missing profile", { pid })
+                return -1
+            }
             return internals.ensureHeroForProfile(profileKey, pid)
 
         }
