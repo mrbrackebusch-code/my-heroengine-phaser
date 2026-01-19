@@ -2434,6 +2434,9 @@ const HERO_DATA = {
     LAST_HIT_TIME: "lastHit", LAST_MOVE_KEY: "lastMoveKey",
 
     IFRAME_UNTIL: "iUntil",
+    JUMP_UNTIL: "jUntil",
+    JUMP_START_MS: "jStart",
+    JUMP_OFFS_Y: "jOffY",
 
     AGI_DASH_UNTIL: "aDashUntil",      // when AGI dash ends (ms)
 
@@ -7197,10 +7200,10 @@ const SHRINE_ACTIVE_UNTIL_KEY = "shrineActiveUntil"
 const SHRINE_ACTIVE_START_KEY = "shrineActiveStart"
 const SHRINE_ACTIVE_DEFAULT_MS = 120000
 const SHRINE_OVERLAY_CYCLE_MS = 10000
-const SHRINE_OVERLAY_SAT = 0.72
-const SHRINE_OVERLAY_LIGHT = 0.18
-const SHRINE_OVERLAY_ALPHA = 0.7
-const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "add"
+const SHRINE_OVERLAY_SAT = 0.78
+const SHRINE_OVERLAY_LIGHT = 0.32
+const SHRINE_OVERLAY_ALPHA = 0.8
+const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "normal"
 const SHRINE_FLASH_UNTIL_KEY = "shrineFlashUntil"
 const SHRINE_FLASH_MS = 180
 const SHRINE_FLASH_ALPHA = 0.95
@@ -12718,6 +12721,8 @@ const AMBIENT_COMBATIDLE_PHASE_DUR_MS = 520
 const SPECIAL_SIT_PHASE_DUR_MS = 800   // ambient-paced loop for “sit” feedback
 const SPECIAL_EMOTE_PHASE_DUR_MS = 650 // short one-shot for “emote” feedback
 const SPECIAL_JUMP_PHASE_DUR_MS = 500  // short one-shot for “jump” feedback
+const HERO_JUMP_SPEED_PCT = 110        // jump gives a tiny movement boost
+const HERO_JUMP_LIFT_PX = 6            // jump arc height (pseudo-gravity)
 
 
 
@@ -26411,6 +26416,9 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
             const flashUntil = sprites.readDataNumber(s, SHRINE_FLASH_UNTIL_KEY) | 0
             const flash = (flashUntil | 0) > (now | 0)
             const warnKey = "__shrineOverlayWarned"
+            const retryKey = "__shrineOverlayRetry"
+            const stateKey = "__shrineOverlayState"
+            const nextState = active ? (flash ? 3 : 1) : (flash ? 2 : 0)
             if (active) {
                 let start = sprites.readDataNumber(s, SHRINE_ACTIVE_START_KEY) | 0
                 if (start <= 0 || start > now || start > activeUntil) {
@@ -26420,35 +26428,93 @@ function _dunUpdateShrineOverlays(nowMs: number): void {
                 const tint = flash ? (SHRINE_FLASH_TINT | 0) : _shrineOverlayTint(now | 0, start | 0)
                 const alpha = flash ? SHRINE_FLASH_ALPHA : SHRINE_OVERLAY_ALPHA
                 const blend = flash ? SHRINE_FLASH_BLEND_MODE : SHRINE_OVERLAY_BLEND_MODE
-                const ok = renderer.setPropOverlayAt(r, c, true, {
+                let ok = renderer.setPropOverlayAt(r, c, true, {
                     tint,
                     alpha,
                     blendMode: blend,
                 })
+                if (!ok && typeof renderer.replacePropAt === "function" && !(s as any)[retryKey]) {
+                    ;(s as any)[retryKey] = 1
+                    try { renderer.replacePropAt(r, c, name || SHRINE_BASE) } catch { /* ignore */ }
+                    ok = renderer.setPropOverlayAt(r, c, true, { tint, alpha, blendMode: blend })
+                }
                 if (!ok && DEBUG_SHRINE_OVERLAY_LOGS && !(s as any)[warnKey]) {
                     ;(s as any)[warnKey] = 1
                     console.log("[SHRINE][OVERLAY] missing overlay", { r: r | 0, c: c | 0, active: 1, flash: flash ? 1 : 0 })
                 } else if (ok && (s as any)[warnKey]) {
                     ;(s as any)[warnKey] = 0
+                    ;(s as any)[retryKey] = 0
+                }
+                if (DEBUG_SHRINE_OVERLAY_LOGS) {
+                    const prev = (s as any)[stateKey] | 0
+                    if ((prev | 0) !== (nextState | 0)) {
+                        ;(s as any)[stateKey] = nextState | 0
+                        console.log("[SHRINE][OVERLAY] state", {
+                            r: r | 0,
+                            c: c | 0,
+                            state: nextState | 0,
+                            ok: ok ? 1 : 0,
+                            tint: tint | 0,
+                            alpha,
+                            blend,
+                        })
+                    }
                 }
             } else {
                 if ((sprites.readDataNumber(s, SHRINE_ACTIVE_START_KEY) | 0) !== 0) {
                     sprites.setDataNumber(s, SHRINE_ACTIVE_START_KEY, 0)
                 }
                 if (flash) {
-                    const ok = renderer.setPropOverlayAt(r, c, true, {
+                    let ok = renderer.setPropOverlayAt(r, c, true, {
                         tint: SHRINE_FLASH_TINT,
                         alpha: SHRINE_FLASH_ALPHA,
                         blendMode: SHRINE_FLASH_BLEND_MODE,
                     })
+                    if (!ok && typeof renderer.replacePropAt === "function" && !(s as any)[retryKey]) {
+                        ;(s as any)[retryKey] = 1
+                        try { renderer.replacePropAt(r, c, name || SHRINE_BASE) } catch { /* ignore */ }
+                        ok = renderer.setPropOverlayAt(r, c, true, {
+                            tint: SHRINE_FLASH_TINT,
+                            alpha: SHRINE_FLASH_ALPHA,
+                            blendMode: SHRINE_FLASH_BLEND_MODE,
+                        })
+                    }
                     if (!ok && DEBUG_SHRINE_OVERLAY_LOGS && !(s as any)[warnKey]) {
                         ;(s as any)[warnKey] = 1
                         console.log("[SHRINE][OVERLAY] missing overlay", { r: r | 0, c: c | 0, active: 0, flash: 1 })
                     } else if (ok && (s as any)[warnKey]) {
                         ;(s as any)[warnKey] = 0
+                        ;(s as any)[retryKey] = 0
+                    }
+                    if (DEBUG_SHRINE_OVERLAY_LOGS) {
+                        const prev = (s as any)[stateKey] | 0
+                        if ((prev | 0) !== (nextState | 0)) {
+                            ;(s as any)[stateKey] = nextState | 0
+                            console.log("[SHRINE][OVERLAY] state", {
+                                r: r | 0,
+                                c: c | 0,
+                                state: nextState | 0,
+                                ok: ok ? 1 : 0,
+                                tint: SHRINE_FLASH_TINT,
+                                alpha: SHRINE_FLASH_ALPHA,
+                                blend: SHRINE_FLASH_BLEND_MODE,
+                            })
+                        }
                     }
                 } else {
-                    renderer.setPropOverlayAt(r, c, false)
+                    const ok = renderer.setPropOverlayAt(r, c, false)
+                    if (DEBUG_SHRINE_OVERLAY_LOGS) {
+                        const prev = (s as any)[stateKey] | 0
+                        if ((prev | 0) !== (nextState | 0)) {
+                            ;(s as any)[stateKey] = nextState | 0
+                            console.log("[SHRINE][OVERLAY] state", {
+                                r: r | 0,
+                                c: c | 0,
+                                state: nextState | 0,
+                                ok: ok ? 1 : 0,
+                            })
+                        }
+                    }
                 }
             }
             if (!flash && (flashUntil | 0) !== 0) {
@@ -28933,6 +28999,9 @@ function createHeroForPlayer(
     sprites.setDataString(hero, HERO_DATA.LAST_MOVE_KEY, "")
 
     sprites.setDataNumber(hero, HERO_DATA.IFRAME_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.JUMP_UNTIL, 0)
+    sprites.setDataNumber(hero, HERO_DATA.JUMP_START_MS, 0)
+    sprites.setDataNumber(hero, HERO_DATA.JUMP_OFFS_Y, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
 
@@ -29623,7 +29692,11 @@ function updateHeroMovementFromInputs(nowMs: number): void {
             continue
         }
 
-        const speed = _computeHeroMoveSpeed(hi, hero)
+        let speed = _computeHeroMoveSpeed(hi, hero)
+        const jumpUntil = sprites.readDataNumber(hero, HERO_DATA.JUMP_UNTIL) | 0
+        if (jumpUntil > 0 && nowMs < jumpUntil) {
+            speed = (speed * HERO_JUMP_SPEED_PCT) / 100
+        }
         hero.vx = dx * speed
         hero.vy = dy * speed
         _dbgMovePipeTick(
@@ -29656,6 +29729,9 @@ function updateHeroJumpFromInputs(nowMs: number): void {
         heroJumpPrevByProfile[profileKey] = jumpNow
         if (!jumpNow || jumpPrev) continue
 
+        const jumpUntil = sprites.readDataNumber(hero, HERO_DATA.JUMP_UNTIL) | 0
+        if (jumpUntil > 0 && nowMs < jumpUntil) continue
+
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
         if (sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)) continue
 
@@ -29668,6 +29744,44 @@ function updateHeroJumpFromInputs(nowMs: number): void {
         if (agiState === AGI_STATE.EXECUTING) continue
 
         publishHeroSpecialPhase(hi, "jump", SPECIAL_JUMP_PHASE_DUR_MS, "SPECIAL_JUMP", "updateHeroJumpFromInputs")
+        sprites.setDataNumber(hero, HERO_DATA.JUMP_UNTIL, (nowMs + SPECIAL_JUMP_PHASE_DUR_MS) | 0)
+        sprites.setDataNumber(hero, HERO_DATA.JUMP_START_MS, nowMs | 0)
+        sprites.setDataNumber(hero, HERO_DATA.JUMP_OFFS_Y, 0)
+    }
+}
+
+function updateHeroJumpMotion(nowMs: number): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const until = sprites.readDataNumber(hero, HERO_DATA.JUMP_UNTIL) | 0
+        const prevOff = sprites.readDataNumber(hero, HERO_DATA.JUMP_OFFS_Y) | 0
+
+        if (until <= 0 || nowMs >= until) {
+            if (prevOff !== 0) {
+                hero.y = ((hero.y | 0) + (prevOff | 0)) | 0
+                sprites.setDataNumber(hero, HERO_DATA.JUMP_OFFS_Y, 0)
+            }
+            if (until > 0 && nowMs >= until) {
+                sprites.setDataNumber(hero, HERO_DATA.JUMP_UNTIL, 0)
+                sprites.setDataNumber(hero, HERO_DATA.JUMP_START_MS, 0)
+            }
+            continue
+        }
+
+        let start = sprites.readDataNumber(hero, HERO_DATA.JUMP_START_MS) | 0
+        if (start <= 0) start = ((until | 0) - (SPECIAL_JUMP_PHASE_DUR_MS | 0)) | 0
+        const dur = Math.max(1, (until - start) | 0) | 0
+        let t = (nowMs - start) / dur
+        if (t < 0) t = 0
+        if (t > 1) t = 1
+        const lift = Math.round(Math.sin(t * Math.PI) * (HERO_JUMP_LIFT_PX | 0)) | 0
+        const delta = (lift | 0) - (prevOff | 0)
+        if (delta !== 0) {
+            hero.y = ((hero.y | 0) - (delta | 0)) | 0
+            sprites.setDataNumber(hero, HERO_DATA.JUMP_OFFS_Y, lift)
+        }
     }
 }
 
@@ -36070,11 +36184,15 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
     // Clamp each to min
 
-    if (windMs < STR_SWING_SEG_MIN_MS) windMs = STR_SWING_SEG_MIN_MS
+    const windMin = STR_SWING_SEG_WINDUP_MIN_MS | 0
+    const fwdMin = STR_SWING_SEG_FORWARD_MIN_MS | 0
+    const landMin = STR_SWING_SEG_LANDING_MIN_MS | 0
 
-    if (fwdMs  < STR_SWING_SEG_MIN_MS) fwdMs  = STR_SWING_SEG_MIN_MS
+    if (windMs < windMin) windMs = windMin
 
-    if (landMs < STR_SWING_SEG_MIN_MS) landMs = STR_SWING_SEG_MIN_MS
+    if (fwdMs  < fwdMin) fwdMs  = fwdMin
+
+    if (landMs < landMin) landMs = landMin
 
 
 
@@ -36086,19 +36204,19 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
         // Prefer shaving landing first, then forward, then windup
 
-        let shave = Math.min(over, Math.max(0, (landMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        let shave = Math.min(over, Math.max(0, (landMs - landMin) | 0)) | 0
 
         if (shave > 0) { landMs = (landMs - shave) | 0; over = (over - shave) | 0 }
 
 
 
-        shave = Math.min(over, Math.max(0, (fwdMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        shave = Math.min(over, Math.max(0, (fwdMs - fwdMin) | 0)) | 0
 
         if (shave > 0) { fwdMs = (fwdMs - shave) | 0; over = (over - shave) | 0 }
 
 
 
-        shave = Math.min(over, Math.max(0, (windMs - STR_SWING_SEG_MIN_MS) | 0)) | 0
+        shave = Math.min(over, Math.max(0, (windMs - windMin) | 0)) | 0
 
         if (shave > 0) { windMs = (windMs - shave) | 0; over = (over - shave) | 0 }
 
@@ -36943,9 +37061,20 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     const baseSwingMs0 = (stats[STAT.STRENGTH_SWING_MS] | 0) || 220
 
-    const swingMin0 = Math.max(1, (baseSwingMs0 - 60) | 0)         // 220->160
+    let swingMin0 = Math.max(1, (baseSwingMs0 - 60) | 0)         // 220->160
 
-    const swingMax0 = ((baseSwingMs0 * 2) + 80) | 0                // 220->520
+    let swingMax0 = ((baseSwingMs0 * 2) + 80) | 0                // 220->520
+
+    const fwdFrac = STR_SWING_SEG_FORWARD_FRAC_X1000 | 0
+    const windLandFrac = Math.max(1, (1000 - fwdFrac) | 0)
+    const windLandMin = (STR_SWING_SEG_WINDUP_MIN_MS + STR_SWING_SEG_LANDING_MIN_MS) | 0
+    const fwdNeed = STR_SWING_SEG_FORWARD_MIN_MS | 0
+    const minTotalForForward = Math.idiv((fwdNeed * 1000 + fwdFrac - 1), fwdFrac) | 0
+    const minTotalForWindLand = Math.idiv((windLandMin * 1000 + windLandFrac - 1), windLandFrac) | 0
+    const swingMinTotal = Math.max(minTotalForForward | 0, minTotalForWindLand | 0) | 0
+
+    if (swingMin0 < swingMinTotal) swingMin0 = swingMinTotal
+    if (swingMax0 < swingMin0) swingMax0 = swingMin0
 
     const swingDurationMs =
 
@@ -56173,8 +56302,9 @@ game.onUpdate(function () {
 
 
     updatePlayerInputs()
-    updateHeroMovementFromInputs(now)
     updateHeroJumpFromInputs(now)
+    updateHeroMovementFromInputs(now)
+    updateHeroJumpMotion(now)
     updateHeroFacingsFromVelocity()
     updateHeroTeleportFx(now)
     _trapPromptInputTick()

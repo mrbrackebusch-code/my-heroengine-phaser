@@ -9665,23 +9665,49 @@ function _ensureHeroAuraMaskImage(heroNative: any, radius: number): any | null {
             : undefined;
     if (frameName === undefined) return null;
 
-    const auraTexKey = auraKey(heroTexKey, radius | 0);
-    if (!scene.textures || !scene.textures.exists(auraTexKey)) return null;
-    const auraTex = scene.textures.get(auraTexKey);
-    const auraFrame = auraTex.get(frameName as any);
-    if (!auraFrame) return null;
+    const r = radius | 0;
+    let maskTexKey = "";
+    let maskUsesFrame = false;
+    try {
+        const frameKey = String(frameName);
+        const key = `__heroAuraMaskFx__${heroTexKey}::${frameKey}::r${r}`;
+        if (!scene.textures.exists(key)) {
+            const maskBits = heroAnimGlue.getOrBuildHeroAuraMaskBits(scene, heroTexKey, frameKey, r);
+            heroAnimGlue.renderAuraTextureFromMaskBits(scene, key, maskBits, [255, 255, 255, 255]);
+        }
+        if (scene.textures.exists(key)) {
+            maskTexKey = key;
+            maskUsesFrame = false;
+        }
+    } catch { /* ignore */ }
 
-    const cacheKey = `__heroAuraMaskImage_r${radius | 0}`;
+    if (!maskTexKey) {
+        const auraTexKey = auraKey(heroTexKey, r);
+        if (!scene.textures || !scene.textures.exists(auraTexKey)) return null;
+        const auraTex = scene.textures.get(auraTexKey);
+        const auraFrame = auraTex.get(frameName as any);
+        if (!auraFrame) return null;
+        maskTexKey = auraTexKey;
+        maskUsesFrame = true;
+    }
+
+    const cacheKey = `__heroAuraMaskImage_r${r}`;
     let maskImg: any = (heroNative as any)[cacheKey];
     if (!maskImg || !(maskImg as any).scene || (maskImg as any).destroyed) {
-        maskImg = scene.add.image(heroNative.x, heroNative.y, auraTexKey, frameName as any);
+        maskImg = scene.add.image(
+            heroNative.x,
+            heroNative.y,
+            maskTexKey,
+            maskUsesFrame ? (frameName as any) : undefined
+        );
         (heroNative as any)[cacheKey] = maskImg;
         if (typeof heroNative.originX === "number" && typeof heroNative.originY === "number") {
             maskImg.setOrigin(heroNative.originX, heroNative.originY);
         }
         maskImg.setVisible(false);
     } else {
-        maskImg.setTexture(auraTexKey, frameName as any);
+        if (maskUsesFrame) maskImg.setTexture(maskTexKey, frameName as any);
+        else maskImg.setTexture(maskTexKey);
     }
 
     maskImg.x = heroNative.x;
