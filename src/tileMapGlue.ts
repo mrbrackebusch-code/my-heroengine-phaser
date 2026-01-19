@@ -4830,6 +4830,10 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
     const info = this.atlas.getSheetInfo(tk);
     if (!info || info.cols <= 0 || info.rows <= 0) continue;
 
+    // Only real tile sheets should be added to the tilemap tileset list.
+    // Props/effects live under anims.* and are rendered as sprites, not tiles.
+    if (!tk.startsWith("tiles.")) continue;
+
     // ✅ Only tile-sized sheets should become tilemap tilesets.
     // anims.* (16x16, 64x64, 64x96, etc.) must NOT be added via addTilesetImage(tileSize=32).
     if ((info.tileSize | 0) !== (tileSize | 0)) continue;

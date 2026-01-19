@@ -16,6 +16,7 @@
 
 
 import type Phaser from "phaser";
+import { queueSpritesheetOnce } from "./loaderCache";
 
 // ----------------------------------------------------------
 // Legacy-exported types (kept so other code can keep importing)
@@ -230,10 +231,13 @@ export function loadWeaponAtlases(scene: Phaser.Scene): void {
   for (const meta of ALL_WEAPON_SHEETS) {
     if (loaded.has(meta.key)) continue;
     loaded.add(meta.key);
-    scene.load.spritesheet(meta.key, meta.url, {
-      frameWidth: meta.tile,
-      frameHeight: meta.tile
-    });
+    queueSpritesheetOnce(
+      scene,
+      meta.key,
+      meta.url,
+      meta.tile,
+      meta.tile
+    );
   }
 }
 

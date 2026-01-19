@@ -2,6 +2,7 @@
 import type Phaser from "phaser";
 import { DEBUG_MONSTER_SHEET_PARSE, DEBUG_MONSTER_SPRITES } from "./debugFlags";
 import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
+import { queueSpritesheetOnce } from "./loaderCache";
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Phase = "walk" | "attack" | "death";
@@ -601,10 +602,13 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
     for (const sheet of PARSED_SHEETS) {
         if (sheet.skip) continue;
 
-        scene.load.spritesheet(sheet.textureKey, sheet.url, {
-            frameWidth: sheet.width,
-            frameHeight: sheet.height
-        });
+        queueSpritesheetOnce(
+            scene,
+            sheet.textureKey,
+            sheet.url,
+            sheet.width,
+            sheet.height
+        );
 
         const isBoss = /[\\/](bosses)[\\/]/i.test(sheet.sourcePath || "");
         const auraFolder = isBoss ? "assets/enemies/bosses/auras" : "assets/enemies/monsters/auras";
@@ -617,10 +621,13 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
                 continue;
             }
 
-            scene.load.spritesheet(auraKey(sheet.textureKey, radius), auraUrl, {
-                frameWidth: sheet.width,
-                frameHeight: sheet.height
-            });
+            queueSpritesheetOnce(
+                scene,
+                auraKey(sheet.textureKey, radius),
+                auraUrl,
+                sheet.width,
+                sheet.height
+            );
         }
     }
 

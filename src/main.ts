@@ -1313,10 +1313,13 @@ private _resizeGameToDomViewport(reason: string): void {
     this._domViewH = h;
 
     // With Phaser.Scale.RESIZE this is legal; it makes the canvas match DOM
+    if (!this.scale || typeof this.scale.resize !== "function") return;
     this.scale.resize(w, h);
 
     // Ensure the main camera viewport matches
-    this.cameras.main.setViewport(0, 0, w, h);
+    const cam = this.cameras ? this.cameras.main : null;
+    if (!cam || typeof cam.setViewport !== "function") return;
+    cam.setViewport(0, 0, w, h);
 
     this._updateCameraZoom();
 }
@@ -2986,27 +2989,35 @@ private runStartupDialogTest(): void {
 }
 
 
-let __phaserGame: Phaser.Game | null = null;
+const HERO_SCENE_KEY = "hero";
+
+let __phaserGame: Phaser.Game | null = (globalThis as any).__phaserGame || null;
 
 function _startPhaserGameSingleton(gameConfig: Phaser.Types.Core.GameConfig): Phaser.Game {
   const parentId = (typeof gameConfig.parent === "string" ? gameConfig.parent : "app") || "app";
   const parentEl = document.getElementById(parentId);
 
-  // Kill any prior instance (prevents duplicate canvases)
-  try {
-    if (__phaserGame) {
-      __phaserGame.destroy(true);
-      __phaserGame = null;
-    }
-  } catch (_e) {
-    // ignore
-  }
+  if (__phaserGame) return __phaserGame;
 
   // Also hard-clear the parent to remove any leftover canvas
   if (parentEl) parentEl.innerHTML = "";
 
   __phaserGame = new Phaser.Game(gameConfig);
+  (globalThis as any).__phaserGame = __phaserGame;
   return __phaserGame;
+}
+
+function _swapHeroScene(game: Phaser.Game): void {
+  const mgr = game.scene;
+  try {
+    if (mgr.getScene(HERO_SCENE_KEY)) {
+      mgr.stop(HERO_SCENE_KEY);
+      mgr.remove(HERO_SCENE_KEY);
+    }
+  } catch (_e) {
+    // ignore
+  }
+  mgr.add(HERO_SCENE_KEY, HeroScene, true);
 }
 
 
@@ -3088,7 +3099,9 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 if (shouldStartGameFromUrl()) {
     logMain("[main] profile found in URL; starting Phaser game.");
 
-    _startPhaserGameSingleton(gameConfig);
+    const hadGame = !!(globalThis as any).__phaserGame;
+    const game = _startPhaserGameSingleton(gameConfig);
+    if (hadGame) _swapHeroScene(game);
 
 } else {
     logMain("[main] no ?profile= URL param; waiting for landing page redirect.");
@@ -3097,6 +3110,10 @@ if (shouldStartGameFromUrl()) {
 
 
 _hud_installOnce();
+
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}
 
 
 // Verbose network tilemap/decor logging; set to true when debugging sync issues.

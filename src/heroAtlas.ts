@@ -4,6 +4,7 @@
 // 
 import type Phaser from "phaser";
 import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
+import { queueSpritesheetOnce } from "./loaderCache";
 
 export type HeroDir = "up" | "down" | "left" | "right";
 
@@ -406,17 +407,23 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
 
     for (const sheet of parsedSheets) {
         // Canonical 64×64 LPC grid
-        scene.load.spritesheet(sheet.textureKey, sheet.url, {
-            frameWidth: HERO_FRAME_W,
-            frameHeight: HERO_FRAME_H
-        });
+        queueSpritesheetOnce(
+            scene,
+            sheet.textureKey,
+            sheet.url,
+            HERO_FRAME_W,
+            HERO_FRAME_H
+        );
 
         // Oversize 192×192 grid view (3×3 over the same image).
         // Whether we USE it is decided later by buildHeroAtlas (oversize rows detection).
-        scene.load.spritesheet(sheet.textureKey + "_192", sheet.url, {
-            frameWidth: HERO_OVERSIZE_FRAME_W,
-            frameHeight: HERO_OVERSIZE_FRAME_H
-        });
+        queueSpritesheetOnce(
+            scene,
+            sheet.textureKey + "_192",
+            sheet.url,
+            HERO_OVERSIZE_FRAME_W,
+            HERO_OVERSIZE_FRAME_H
+        );
     }
 
     // Stash the parsed list so buildHeroAtlas can reuse without reparsing.
@@ -448,10 +455,13 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
                 );
             }
 
-            scene.load.spritesheet(auraKey(sheet.textureKey, radius), auraUrl64, {
-                frameWidth: HERO_FRAME_W,
-                frameHeight: HERO_FRAME_H
-            });
+            queueSpritesheetOnce(
+                scene,
+                auraKey(sheet.textureKey, radius),
+                auraUrl64,
+                HERO_FRAME_W,
+                HERO_FRAME_H
+            );
 
             // --------------------------
             // OPTIONAL 192×192 aura sheet
@@ -460,10 +470,13 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
             const auraBase192 = `${sheet.id}_192${auraSuffix(radius)}`;
             const auraUrl192 = auraUrlById.get(auraBase192);
             if (auraUrl192) {
-                scene.load.spritesheet(auraKey(`${sheet.textureKey}_192`, radius), auraUrl192, {
-                    frameWidth: HERO_OVERSIZE_FRAME_W,
-                    frameHeight: HERO_OVERSIZE_FRAME_H
-                });
+                queueSpritesheetOnce(
+                    scene,
+                    auraKey(`${sheet.textureKey}_192`, radius),
+                    auraUrl192,
+                    HERO_OVERSIZE_FRAME_W,
+                    HERO_OVERSIZE_FRAME_H
+                );
             }
         }
     }

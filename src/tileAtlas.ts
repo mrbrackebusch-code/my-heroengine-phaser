@@ -2,6 +2,7 @@
 import type Phaser from "phaser";
 import { DEBUG_TILE_ATLAS_GLOBAL, DEBUG_TILES } from "./debugFlags";
 import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
+import { queueSpritesheetOnce } from "./loaderCache";
 
 // ---------------------------------------------------------------------------
 // Tile / terrain data
@@ -297,8 +298,8 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     book_memories: {
         atlas: "anims.Book 32x40",
         ref: { row: 0, col: 0 },
-        offsetXPx: 16,
-        offsetYPx: -36,
+        offsetXPx: -16,
+        offsetYPx: -15,
         depthBias: 2,
         focusAuraAllowInset: true,
     },
@@ -855,10 +856,13 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
         // Base sheet
         __SHEET_URL_BY_KEY.set(sheet.textureKey, sheet.url);
 
-        scene.load.spritesheet(sheet.textureKey, sheet.url, {
-            frameWidth: sheet.frameW | 0,
-            frameHeight: sheet.frameH | 0
-        });
+        queueSpritesheetOnce(
+            scene,
+            sheet.textureKey,
+            sheet.url,
+            sheet.frameW | 0,
+            sheet.frameH | 0
+        );
 
         const texKey = sheet.textureKey;
         const isAnim = texKey.startsWith("anims.");
@@ -876,10 +880,13 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             const auraTexKey = auraKey(texKey, radius);
 
             __SHEET_URL_BY_KEY.set(auraTexKey, auraUrl);
-            scene.load.spritesheet(auraTexKey, auraUrl, {
-                frameWidth: sheet.frameW | 0,
-                frameHeight: sheet.frameH | 0
-            });
+            queueSpritesheetOnce(
+                scene,
+                auraTexKey,
+                auraUrl,
+                sheet.frameW | 0,
+                sheet.frameH | 0
+            );
 
             if (DEBUG_TILES) {
                 logTiles("[tileAtlas.preload] aura loaded", { texKey, auraTexKey, auraUrl });

@@ -1678,7 +1678,65 @@ const HERO_SPELL_EFFECT_DEFAULT_OFFSETS: {
 // Per-effect tuning: offsets are applied in this order:
 //   defaults (family) -> base -> family -> move -> dir -> moveDir
 const HERO_SPELL_EFFECT_OFFSETS: { [skinId: string]: HeroEffectOffsetDef } = {
-    tornado: {},
+    // Example with all knobs (tune per spell; values are additive with defaults).
+    tornado: {
+        base: { x: 0, y: 0 },
+        strength: { x: 0, y: 0 },
+        agility: { x: 0, y: 0 },
+        intellect: { x: 0, y: 0 },
+        move: {
+            strengthSwing: { x: 0, y: 0 },
+            strengthTrail: { x: 0, y: 0 },
+            agilityThrust: { x: 0, y: 0 },
+            agilityCharge: { x: 0, y: 0 },
+            agilityTrail: { x: 0, y: 0 },
+            intellectDetonation: { x: 0, y: 0 }
+        },
+        dir: {
+            up: { x: 0, y: 0 },
+            down: { x: 0, y: 0 },
+            left: { x: 0, y: 0 },
+            right: { x: 0, y: 0 }
+        },
+        moveDir: {
+            strengthSwing: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            },
+            strengthTrail: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            },
+            agilityThrust: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            },
+            agilityCharge: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            },
+            agilityTrail: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            },
+            intellectDetonation: {
+                up: { x: 0, y: 0 },
+                down: { x: 0, y: 0 },
+                left: { x: 0, y: 0 },
+                right: { x: 0, y: 0 }
+            }
+        }
+    },
     firelion: {},
     torrentacle: {},
     lightningclaw: {},
@@ -1950,6 +2008,127 @@ function _destroyHeroBodyPaintFxForProj(proj: Sprite): void {
         fx.destroy();
     }
     sprites.setDataSprite(proj, HERO_BODY_FX_KEY, null as any);
+}
+
+function _projectileMaskFitRadiusPx(proj: Sprite, hero?: Sprite): number {
+    let w = (proj.width | 0);
+    let h = (proj.height | 0);
+    if ((w | 0) <= 0 || (h | 0) <= 0) {
+        try {
+            const img = (proj as any).image;
+            if (img) {
+                w = (img.width | 0);
+                h = (img.height | 0);
+            }
+        } catch { /* ignore */ }
+    }
+    if ((w | 0) <= 0 || (h | 0) <= 0) {
+        if (hero) {
+            w = (hero.width | 0);
+            h = (hero.height | 0);
+        }
+    }
+    const maxDim = Math.max(w | 0, h | 0);
+    if (maxDim <= 0) return 1;
+    return Math.max(1, Math.idiv(maxDim, 2) | 0);
+}
+
+function _spawnProjectileMaskFxForMove(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    family: number,
+    element: number,
+    nx: number,
+    ny: number,
+    lifespanMs: number,
+    moveType?: string
+): Sprite | null {
+    if (!proj || !hero) return null;
+    if (proj.flags & sprites.Flag.Destroyed) return null;
+    const dir = _enemyDirFromVector(nx, ny);
+    const elem = _heroBodyEffectElement(hero, element | 0);
+    const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
+    if (!pick || !pick.skinId) return null;
+
+    const offset = _heroSpellEffectOffsetFor(pick.skinId, pick.dir || dir, family | 0, moveType || "");
+    const fitRadius = _projectileMaskFitRadiusPx(proj, hero);
+    const scale = _effectPickScaleForRadius(pick.skinId, pick.dir || dir, fitRadius | 0);
+
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.x = proj.x;
+    fx.y = proj.y;
+    fx.z = (proj.z | 0) + (PROJ_MASK_FX_Z_BIAS | 0);
+    if ((lifespanMs | 0) > 0) fx.lifespan = lifespanMs | 0;
+
+    sprites.setDataNumber(fx, PROJ_DATA.HERO_INDEX, heroIndex | 0);
+    sprites.setDataNumber(fx, PROJ_DATA.FAMILY, family | 0);
+    sprites.setDataNumber(fx, PROJ_MASK_FX_FIT_RADIUS_KEY, fitRadius | 0);
+
+    const opts: EffectApplyOpts = {
+        mode: PROJ_MASK_FX_MODE,
+        alpha: PROJ_MASK_FX_ALPHA,
+        blend: PROJ_MASK_FX_BLEND,
+        repeat: PROJ_MASK_FX_REPEAT,
+        forceTop: PROJ_MASK_FX_FORCE_TOP,
+        scale,
+        offsetX: offset.x,
+        offsetY: offset.y,
+        maskSprite: proj
+    };
+    if (pick.dir) opts.dir = pick.dir;
+    applyEffectToSprite(fx, pick.skinId, opts);
+    sprites.setDataSprite(proj, PROJ_MASK_FX_KEY, fx);
+
+    if (DEBUG_EFFECT_MASKS) {
+        try {
+            console.log("[effectmask][spawn]", {
+                fxId: (fx as any).id | 0,
+                heroIndex: heroIndex | 0,
+                family: family | 0,
+                elem: elem | 0,
+                skin: pick.skinId,
+                dir: pick.dir || "",
+                mode: PROJ_MASK_FX_MODE,
+                maskSpriteId: (proj as any).id | 0,
+                fitRadius: fitRadius | 0
+            });
+        } catch { /* ignore */ }
+    }
+
+    return fx;
+}
+
+function _updateProjectileMaskFxForProj(proj: Sprite, hero?: Sprite): void {
+    if (!proj) return;
+    const fx = sprites.readDataSprite(proj, PROJ_MASK_FX_KEY);
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return;
+    fx.x = proj.x;
+    fx.y = proj.y;
+    fx.z = (proj.z | 0) + (PROJ_MASK_FX_Z_BIAS | 0);
+    fx.setFlag(SpriteFlag.Invisible, !!(proj.flags & sprites.Flag.Invisible));
+
+    const fitRadius = _projectileMaskFitRadiusPx(proj, hero);
+    const lastFit = sprites.readDataNumber(fx, PROJ_MASK_FX_FIT_RADIUS_KEY) | 0;
+    if ((fitRadius | 0) > 0 && (fitRadius | 0) !== (lastFit | 0)) {
+        const skinId = sprites.readDataString(fx, "effectSkin") || "";
+        if (skinId) {
+            const dir = sprites.readDataString(fx, "effectDir") || "";
+            const scale = _effectPickScaleForRadius(skinId, dir, fitRadius | 0);
+            sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
+            sprites.setDataNumber(fx, PROJ_MASK_FX_FIT_RADIUS_KEY, fitRadius | 0);
+        }
+    }
+}
+
+function _destroyProjectileMaskFxForProj(proj: Sprite): void {
+    if (!proj) return;
+    const fx = sprites.readDataSprite(proj, PROJ_MASK_FX_KEY);
+    if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+        fx.destroy();
+    }
+    sprites.setDataSprite(proj, PROJ_MASK_FX_KEY, null as any);
 }
 
 function _strengthSwingFxSegKey(i: number): string {
@@ -2247,6 +2426,7 @@ const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
+const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const HERO_BODY_FX_KEY = "bodyFx";
 const HERO_BODY_FX_ALPHA_DEFAULT = 0.25;
@@ -2260,6 +2440,14 @@ const HERO_BODY_FX_MASK_RADIUS_PX = 0;
 const HERO_BODY_FX_FORCE_TOP = true;
 const HERO_BODY_FX_Z_BIAS_DEFAULT = 2000;
 const HERO_BODY_FX_Z_BIAS_AGILITY = 2000;
+const PROJ_MASK_FX_KEY = "projMaskFx";
+const PROJ_MASK_FX_FIT_RADIUS_KEY = "projMaskFitRadius";
+const PROJ_MASK_FX_MODE = "projectile";
+const PROJ_MASK_FX_ALPHA = 0.85;
+const PROJ_MASK_FX_BLEND = "normal";
+const PROJ_MASK_FX_REPEAT = -1;
+const PROJ_MASK_FX_FORCE_TOP = false;
+const PROJ_MASK_FX_Z_BIAS = 3;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
 const __effectMaskSpawnOnce = new Set<number>();
@@ -7334,7 +7522,7 @@ const SHRINE_OVERLAY_ALPHA_MIN = 0.8
 const SHRINE_OVERLAY_ALPHA_MAX = 1.0
 const SHRINE_OVERLAY_BLEND_MODE: "add" | "lighten" | "normal" = "add"
 const SHRINE_SPARKLE_SKIN_ID = "firefly"
-const SHRINE_SPARKLE_CYCLE_MS = 12000
+const SHRINE_SPARKLE_CYCLE_MS = 6000
 const SHRINE_SPARKLE_SAT = 0.75
 const SHRINE_SPARKLE_LIGHT = 0.65
 const SHRINE_SPARKLE_OFFSET_Y_PX = 24
@@ -8424,6 +8612,7 @@ type EffectApplyOpts = {
     animDelayMs?: number
     forceTop?: boolean
     frameWindowMs?: number
+    maskSprite?: Sprite | null
 }
 
 function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts): void {
@@ -8444,6 +8633,10 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
         sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, opts.frameWindowMs | 0)
     } else {
         sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0)
+    }
+    if (opts && Object.prototype.hasOwnProperty.call(opts, "maskSprite")) {
+        const maskSprite = opts.maskSprite || null;
+        sprites.setDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY, maskSprite as any);
     }
 
     const family = sprites.readDataNumber(s, PROJ_DATA.FAMILY) | 0
@@ -39304,6 +39497,18 @@ function spawnStrengthSwingProjectile(
         totalArcDeg,
         swingDuration | 0
     )
+    const trailFx = _spawnProjectileMaskFxForMove(
+        proj,
+        heroIndex,
+        hero,
+        FAMILY.STRENGTH | 0,
+        element | 0,
+        nx,
+        ny,
+        swingDuration | 0,
+        "strengthTrail"
+    )
+    if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
 
 }
 
@@ -39332,6 +39537,7 @@ function updateStrengthProjectilesMotionFor(
             " age=" + age + " swingMs=" + swingMs)
 
         _destroyHeroBodyPaintFxForProj(proj)
+        _destroyProjectileMaskFxForProj(proj)
         _destroyStrengthSwingFxSegments(proj)
         proj.destroy()
 
@@ -39421,6 +39627,7 @@ function updateStrengthProjectilesMotionFor(
 
         proj.setPosition(hero.x, hero.y)
         _updateHeroBodyPaintFxForProj(proj, hero)
+        _updateProjectileMaskFxForProj(proj, hero)
         _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
 
         return true
@@ -39441,6 +39648,7 @@ function updateStrengthProjectilesMotionFor(
 
     proj.setPosition(hero.x, hero.y)  // center-anchored
     _updateHeroBodyPaintFxForProj(proj, hero)
+    _updateProjectileMaskFxForProj(proj, hero)
     _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
 
     const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
@@ -43052,6 +43260,19 @@ function spawnAgilityThrustProjectile(
         "agilityThrust"
     )
     if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
+    if (activeNow) {
+        _spawnProjectileMaskFxForMove(
+            proj,
+            heroIndex,
+            hero,
+            FAMILY.AGILITY | 0,
+            element | 0,
+            nx,
+            ny,
+            ((dashMs | 0) + 200) | 0,
+            "agilityTrail"
+        )
+    }
 
     _spawnAgilityTrailFxSegments(
         proj,

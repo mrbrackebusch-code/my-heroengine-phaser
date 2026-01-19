@@ -1,6 +1,7 @@
 // src/effectAtlas.ts
 import type Phaser from "phaser";
 import { DEBUG_EFFECT_ATLAS } from "./debugFlags";
+import { queueSpritesheetOnce } from "./loaderCache";
 
 export type EffectDir = "up" | "down" | "left" | "right" | "none";
 
@@ -327,10 +328,13 @@ export function preloadEffectSheets(scene: Phaser.Scene): void {
     }
 
     for (const sheet of EFFECT_SHEETS) {
-        scene.load.spritesheet(sheet.textureKey, sheet.url, {
-            frameWidth: sheet.frameW,
-            frameHeight: sheet.frameH
-        });
+        queueSpritesheetOnce(
+            scene,
+            sheet.textureKey,
+            sheet.url,
+            sheet.frameW,
+            sheet.frameH
+        );
     }
 }
 

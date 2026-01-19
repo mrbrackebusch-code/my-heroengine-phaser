@@ -930,6 +930,7 @@ namespace statusbars {
             game.currentScene().data[MANAGED_SPRITES_KEY] = managedSprites = [] as StatusBarSprite[];
             game.eventContext().registerFrameHandler(scene.UPDATE_PRIORITY + 5, () => {
                 const managed = getManagedSprites();
+                if (!managed || managed.length <= 0) return;
                 for (let i = managed.length - 1; i >= 0; --i) {
                     const spr = managed[i];
                     const sb = spr._statusBar;
@@ -944,7 +945,7 @@ namespace statusbars {
 
                     if (spr.flags & sprites.Flag.Destroyed) {
                         // give the garbage collector a helping hand
-                        sb.sprite = undefined;
+                        if (sb) sb.sprite = undefined;
                         managed.removeAt(i);
                         continue;
                     }
