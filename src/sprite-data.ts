@@ -1,6 +1,8 @@
 // Shim for MakeCode's SpriteKind.create in this module
 namespace SpriteKind {
     let _nextStatusKind = 10000;
+    export let Player: number;
+    export let Enemy: number;
     export function create(): number {
         const id = _nextStatusKind;
         _nextStatusKind++;

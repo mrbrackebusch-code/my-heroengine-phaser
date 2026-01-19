@@ -9,12 +9,14 @@ declare global {
     [key: string]: any;
     width: number;
     height: number;
+    clearCrop?(): void;
   }
 
   interface ImageConstructor {
     fromJSON?(width: number, height: number, pixels: number[]): Image;
     [key: string]: any;
   }
+  const Image: ImageConstructor;
 
   interface Math {
     idiv(a: number, b: number): number;
@@ -29,6 +31,22 @@ declare global {
   type TextSprite = any;
   type MoveTraits = number[];
   type SyncContext = any;
+
+  namespace SpriteKind {
+    let Player: number;
+    let Enemy: number;
+  }
+
+  namespace sprites {
+    function readDataNumber(...args: any[]): number;
+    function readDataString(...args: any[]): string;
+    function readDataBoolean(...args: any[]): boolean;
+    function readDataSprite(...args: any[]): Sprite | null;
+    function setDataNumber(...args: any[]): void;
+    function setDataString(...args: any[]): void;
+    function setDataBoolean(...args: any[]): void;
+    function setDataSprite(...args: any[]): void;
+  }
 
   const SpriteKind: any;
   const SpriteFlag: any;

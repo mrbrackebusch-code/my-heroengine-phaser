@@ -1,5 +1,5 @@
 // tileMapGlue.ts
-import type Phaser from "phaser";
+import Phaser from "phaser";
 
 
 import type { TileAtlas, TileFamily, AutoShape } from "./tileAtlas";
@@ -288,7 +288,7 @@ function _dbgTextureAlphaStats(scene: Phaser.Scene, textureKey: string): {
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
     if (!ctx) return { ok: false, reason: "no-ctx", w, h, alphaCount: 0, maxAlpha: 0 };
 
     ctx.clearRect(0, 0, w, h);
@@ -691,7 +691,7 @@ function _dbgProbePixelsArea(
         const canvas = document.createElement("canvas");
         canvas.width = Math.max(1, iw);
         canvas.height = Math.max(1, ih);
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | null;
         if (!ctx) {
           console.log(`[PROPAURA][PIXEL] ${tag} ${JSON.stringify({ error: "snapshotAreaNoContext" })}`);
           done("noContext");
@@ -786,7 +786,7 @@ function _dbgExtractPixelFromImage(image: any, x: number, y: number): { r: numbe
     if (w <= 0 || h <= 0) return null;
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | null;
     if (!ctx) return null;
     ctx.drawImage(image, 0, 0);
     const img = ctx.getImageData(x | 0, y | 0, 1, 1);
@@ -992,6 +992,12 @@ function _dbgFrameOpaqueStats(
   rowsWithPixels: number;
   colsWithPixels: number;
   boxOk: boolean;
+  edgeMin: number;
+  edgeTop: number;
+  edgeBottom: number;
+  edgeLeft: number;
+  edgeRight: number;
+  edgeOk: boolean;
 } {
   try {
     const texMgr: any = (scene as any)?.textures;
@@ -1005,7 +1011,8 @@ function _dbgFrameOpaqueStats(
         req: frame, resolved: null, hasFrame: false,
         w: 0, h: 0, opaque: 0, total: 0, aMax: 0, aMin: 0,
         minX: -1, minY: -1, maxX: -1, maxY: -1, bboxW: 0, bboxH: 0,
-        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false
+        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false,
+        edgeMin: 0, edgeTop: 0, edgeBottom: 0, edgeLeft: 0, edgeRight: 0, edgeOk: false
       };
     }
 
@@ -1052,7 +1059,8 @@ function _dbgFrameOpaqueStats(
         req: frame, resolved: null, hasFrame: false,
         w: 0, h: 0, opaque: 0, total: 0, aMax: 0, aMin: 0,
         minX: -1, minY: -1, maxX: -1, maxY: -1, bboxW: 0, bboxH: 0,
-        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false
+        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false,
+        edgeMin: 0, edgeTop: 0, edgeBottom: 0, edgeLeft: 0, edgeRight: 0, edgeOk: false
       };
     }
 
@@ -1068,7 +1076,8 @@ function _dbgFrameOpaqueStats(
         req: frame, resolved, hasFrame: true,
         w: sw, h: sh, opaque: 0, total: 0, aMax: 0, aMin: 0,
         minX: -1, minY: -1, maxX: -1, maxY: -1, bboxW: 0, bboxH: 0,
-        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false
+        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false,
+        edgeMin: 0, edgeTop: 0, edgeBottom: 0, edgeLeft: 0, edgeRight: 0, edgeOk: false
       };
     }
 
@@ -1076,7 +1085,7 @@ function _dbgFrameOpaqueStats(
     const canvas = document.createElement("canvas");
     canvas.width = sw;
     canvas.height = sh;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
     if (!ctx) {
       return {
         ok: false, reason: "no-canvas-ctx",
@@ -1084,7 +1093,8 @@ function _dbgFrameOpaqueStats(
         req: frame, resolved, hasFrame: true,
         w: sw, h: sh, opaque: 0, total: 0, aMax: 0, aMin: 0,
         minX: -1, minY: -1, maxX: -1, maxY: -1, bboxW: 0, bboxH: 0,
-        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false
+        rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false,
+        edgeMin: 0, edgeTop: 0, edgeBottom: 0, edgeLeft: 0, edgeRight: 0, edgeOk: false
       };
     }
 
@@ -1130,6 +1140,12 @@ function _dbgFrameOpaqueStats(
     let rowsWithPixels = 0;
     let colsWithPixels = 0;
     let boxOk = false;
+    let edgeTop = 0;
+    let edgeBottom = 0;
+    let edgeLeft = 0;
+    let edgeRight = 0;
+    let edgeMin = 0;
+    let edgeOk = false;
 
     if (opaque > 0 && maxX >= minX && maxY >= minY) {
       bboxW = ((maxX - minX + 1) | 0);
@@ -1149,6 +1165,12 @@ function _dbgFrameOpaqueStats(
       rowMin = (rMin === 999999) ? 0 : (rMin | 0);
       colMin = (cMin === 999999) ? 0 : (cMin | 0);
       boxOk = (bboxW >= 2 && bboxH >= 2 && rowMin >= 2 && colMin >= 2);
+      edgeTop = (minY >= 0 && minY < sh) ? (rowCounts[minY] | 0) : 0;
+      edgeBottom = (maxY >= 0 && maxY < sh) ? (rowCounts[maxY] | 0) : 0;
+      edgeLeft = (minX >= 0 && minX < sw) ? (colCounts[minX] | 0) : 0;
+      edgeRight = (maxX >= 0 && maxX < sw) ? (colCounts[maxX] | 0) : 0;
+      edgeMin = Math.max(2, ((Math.min(sw, sh) * 0.25) | 0));
+      edgeOk = (edgeTop >= edgeMin && edgeBottom >= edgeMin && edgeLeft >= edgeMin && edgeRight >= edgeMin);
     } else {
       minX = -1;
       minY = -1;
@@ -1162,7 +1184,8 @@ function _dbgFrameOpaqueStats(
       req: frame, resolved, hasFrame: true,
       w: sw, h: sh, opaque, total, aMax, aMin,
       minX, minY, maxX, maxY, bboxW, bboxH,
-      rowMin, colMin, rowsWithPixels, colsWithPixels, boxOk
+      rowMin, colMin, rowsWithPixels, colsWithPixels, boxOk,
+      edgeMin, edgeTop, edgeBottom, edgeLeft, edgeRight, edgeOk
     };
   } catch {
     return {
@@ -1171,7 +1194,8 @@ function _dbgFrameOpaqueStats(
       req: frame, resolved: null, hasFrame: false,
       w: 0, h: 0, opaque: 0, total: 0, aMax: 0, aMin: 0,
       minX: -1, minY: -1, maxX: -1, maxY: -1, bboxW: 0, bboxH: 0,
-      rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false
+      rowMin: 0, colMin: 0, rowsWithPixels: 0, colsWithPixels: 0, boxOk: false,
+      edgeMin: 0, edgeTop: 0, edgeBottom: 0, edgeLeft: 0, edgeRight: 0, edgeOk: false
     };
   }
 }
@@ -1258,7 +1282,7 @@ function _dbgCropOpaqueStats(
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
     if (!ctx) {
       return {
         ok: false, reason: "no-ctx", imgW, imgH, opaque: 0, total: 0, aMax: 0,
@@ -1606,7 +1630,7 @@ function _buildSolidBoxPadTexture(
   baseKey: string,
   tile: number,
   padPx: number
-): { ok: boolean; key: string; w: number; h: number } {
+): { ok: boolean; reason: string; key: string; w: number; h: number } {
   const pad = Math.max(1, padPx | 0);
   const out = (tile | 0) + pad * 2;
   const key = `__auraPadSolid__${baseKey}::${pad}`;
@@ -1617,10 +1641,10 @@ function _buildSolidBoxPadTexture(
       const img: any = texObj?.getSourceImage?.() ?? texObj?.source?.[0]?.image ?? null;
       const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
       const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
-      return { ok: true, key, w, h };
+      return { ok: true, reason: "cached", key, w, h };
     }
     const rt: any = (scene as any)?.add?.renderTexture?.(0, 0, out, out);
-    if (!rt) return { ok: false, key, w: 0, h: 0 };
+    if (!rt) return { ok: false, reason: "no-rt", key, w: 0, h: 0 };
     rt.setVisible(false);
     rt.fill(0xffffff, 1);
     rt.saveTexture?.(key);
@@ -1629,9 +1653,9 @@ function _buildSolidBoxPadTexture(
     const img: any = texObj?.getSourceImage?.() ?? texObj?.source?.[0]?.image ?? null;
     const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
     const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
-    return { ok: !!w && !!h, key, w, h };
+    return { ok: !!w && !!h, reason: (!!w && !!h) ? "ok" : "no-out-img", key, w, h };
   } catch {
-    return { ok: false, key, w: 0, h: 0 };
+    return { ok: false, reason: "exception", key, w: 0, h: 0 };
   }
 }
 
@@ -2943,6 +2967,9 @@ if (DEBUG_PROP_FOCUS_AURA_WORLD_MARKER) {
     const comp = String(inst.focusAuraComposition ?? inst.rawKey ?? inst.baseName ?? "");
     const auraTk = String(inst.focusAuraTextureKey ?? "");
     const auraUrl = String(inst.focusAuraPngUrl ?? "");
+    const scale = (typeof cont?.scaleX === "number")
+      ? cont.scaleX
+      : (inst.focusAuraBaseScale ?? PROP_FOCUS_AURA_BASE_SCALE);
 
     // Try to grab one child frame id (what we *think* we're drawing)
     let child0Frame: any = null;
@@ -4046,7 +4073,7 @@ private _propCreateFocusAuraContainer(args: {
               edgeRight,
               edgeOk,
               padScale,
-              padMode: makeRing ? (ringMode === "box" ? "box" : "ring") : "pad",
+              padMode: padMode ?? null,
               forceCrop: forcedCrop,
               statsFrom,
               padBaked,
@@ -4157,7 +4184,7 @@ private _propCreateFocusAuraContainer(args: {
             edgeOk,
             bbox: { w: bboxW | 0, h: bboxH | 0 },
             padScale,
-            padMode: (cached as any).padMode ?? null,
+            padMode,
             padBaked,
             padPx: padPxApplied,
             padTexKey,

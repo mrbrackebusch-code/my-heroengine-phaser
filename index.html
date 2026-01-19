@@ -625,9 +625,9 @@
 
         display: grid;
         grid-template-columns: 1.10fr 1fr 1fr 1fr 1fr;
-        gap: var(--hud-gap);
+        gap: 4px;
 
-        padding: var(--hud-gap);
+        padding: 4px;
         border: 2px solid var(--hud-border);
         border-radius: 10px;
 
@@ -643,7 +643,7 @@
         min-width: 0;
         border: 2px solid rgba(255, 255, 255, 0.18);
         border-radius: 8px;
-        padding: 8px 10px;
+        padding: 5px 7px;
         box-sizing: border-box;
 
         background: linear-gradient(
@@ -653,8 +653,7 @@
         );
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
 
-        /* âœ… taller by ~3 lines */
-        min-height: 132px;
+        min-height: 88px;
       }
 
       .hud-head {
@@ -662,16 +661,17 @@
         align-items: baseline;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 4px;
+        margin-bottom: 1px;
       }
 
       .hud-title {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 12px;
+        font-size: 11px;
         letter-spacing: 0.4px;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -680,13 +680,17 @@
       .hud-subtle {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 10px;
-        letter-spacing: 0.6px;
+        font-size: 9px;
+        letter-spacing: 0.3px;
         color: var(--txt-dim);
+        line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        margin-bottom: 4px;
+        margin-bottom: 1px;
+      }
+      .hud-subtle:empty {
+        display: none;
       }
 
       /* Kind row */
@@ -709,7 +713,7 @@
       .hud-kind {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 800;
         color: var(--txt);
         white-space: nowrap;
@@ -722,8 +726,8 @@
       .hud-traits {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 4px 6px; /* tighter */
-        margin-bottom: 6px;
+        gap: 1px 6px; /* tighter */
+        margin-bottom: 2px;
       }
 
       .hud-kv {
@@ -736,16 +740,17 @@
       .hud-k {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 9px; /* smaller label */
+        font-size: 8px; /* smaller label */
         color: var(--txt-dim);
         white-space: nowrap;
         flex: 0 0 auto;
+        line-height: 1;
       }
 
       .hud-n {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace;
-        font-size: 15px; /* slightly smaller number */
+        font-size: 12px; /* slightly smaller number */
         font-weight: 900;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
@@ -754,6 +759,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        line-height: 1;
       }
       .hud-cost-bad {
         color: #ff6b6b;
@@ -770,14 +776,14 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        margin-top: auto;
+        gap: 6px;
+        margin-top: 1px;
       }
 
       .hud-costline {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
       }
 
       .hud-costline .hud-n {
@@ -788,14 +794,14 @@
       .hud-elem {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
           "Liberation Mono", "Courier New", monospace, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
-        font-size: 18px;
+        font-size: 16px;
         line-height: 1;
       }
 
       .hud-raw {
         display: none;
-        margin-top: 6px;
-        font: 11px/1.2 monospace;
+        margin-top: 4px;
+        font: 10px/1.2 monospace;
         color: rgba(255, 255, 255, 0.85);
       }
       .hud-raw-row {
@@ -829,21 +835,27 @@
           "Liberation Mono", "Courier New", monospace, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-        font-size: 12px;
+        font-size: 11px;
+        line-height: 1.1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      .hud-youline { margin-top: 6px; }
+      .hud-youline { margin-top: 2px; }
       #hud-you-name { margin-top: 0; }
+      #hud-you-slot {
+        margin-bottom: 0;
+        letter-spacing: 0.2px;
+        text-align: right;
+      }
 
       .hud-you-stat {
         color: rgba(255, 255, 255, 0.84);
-        font-size: 11.5px;
+        font-size: 10.5px;
         display: flex;
         align-items: baseline;
-        gap: 8px;
+        gap: 6px;
       }
 
       .hud-you-stat-label {
@@ -855,7 +867,7 @@
 
       .hud-you-stat-rate {
         flex: 0 0 auto;
-        min-width: 44px;
+        min-width: 36px;
         margin-left: auto;
         text-align: right;
         font-variant-numeric: tabular-nums;
@@ -1510,7 +1522,6 @@
                 <span class="hud-you-stat-label" id="hud-you-mana-label">...</span>
                 <span class="hud-you-stat-rate" id="hud-you-mana-rate"></span>
               </div>
-              <div class="hud-youline hud-you-stat" id="hud-you-coins">â€¦</div>
           </div>
 
           <!-- Q -->
@@ -1856,7 +1867,9 @@
             if (typeof zoomBy !== "function") return;
             const dir = ev.deltaY > 0 ? -1 : 1;
             if (!dir) return;
-            zoomBy(dir * 0.1);
+            const bounds = (typeof window.__heGetZoomBounds === "function") ? window.__heGetZoomBounds() : null;
+            const step = (bounds && typeof bounds.step === "number") ? bounds.step : 0.1;
+            zoomBy(dir * step);
             ev.preventDefault();
           }, { passive: false });
         }
@@ -2118,6 +2131,35 @@
           health: "\u2764\uFE0F",
           mana: "\u{1FAE7}",
         };
+
+        const HERO_ADJECTIVES = [
+          "Great",
+          "Wise",
+          "Brave",
+          "Swift",
+          "Bold",
+          "Clever",
+          "Kind",
+          "Mighty",
+          "Lucky",
+          "Bright",
+          "Stalwart",
+          "Witty",
+          "Noble",
+          "Fierce",
+          "Steady",
+          "Calm"
+        ];
+
+        function _heroTitleFromProfile(name) {
+          const base = (typeof name === "string" && name.trim()) ? name.trim() : "Hero";
+          let h = 0;
+          for (let i = 0; i < base.length; i++) {
+            h = ((h * 31) + base.charCodeAt(i)) | 0;
+          }
+          const idx = Math.abs(h) % HERO_ADJECTIVES.length;
+          return `${base} the ${HERO_ADJECTIVES[idx]}`;
+        }
 
         function _readTextSpriteString(spritesNS, s) {
           if (!s || !spritesNS) return "";
@@ -4054,7 +4096,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const spritesNS = window.sprites;
 
           if (!pid) {
-            setText(R.youSlot, "â€¦");
+            setText(R.youSlot, "");
             setText(R.youName, "Waiting for serverâ€¦");
             setText(R.youHealthLabel, "");
             setText(R.youHealthRate, "");
@@ -4076,8 +4118,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const urlProf = (typeof window.__localHeroProfileName === "string" && window.__localHeroProfileName.trim()) ? window.__localHeroProfileName.trim() : "";
           const hero = findLocalHeroSprite(pid);
           const profile = readProfile(pid, hero) || urlProf || "";
-          setText(R.youSlot, "P" + pid);
-          setText(R.youName, "P" + pid + (profile ? ": " + profile : ""));
+          setText(R.youSlot, "");
+          setText(R.youName, _heroTitleFromProfile(profile));
           if (!hero || !spritesNS) {
             setText(R.youHealthLabel, "Waiting");
             setText(R.youHealthRate, "");
@@ -4085,7 +4127,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youManaRate, "");
             if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
             if (R.youManaRate) R.youManaRate.classList.remove("hud-regen-boost");
-            setText(R.youCoins, "A Hero");
+            setText(R.youCoins, "");
 
             renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
             renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
@@ -4118,7 +4160,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const coinsActual = _readTeamCoins(pid, hero, spritesNS);
           const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
-          setText(R.youCoins, `${EMOJI.coin} Coins: ${coinsShown}`);
+          setText(R.youSlot, `${EMOJI.coin} ${coinsShown}`);
+          setText(R.youCoins, "");
 
 
           // --- XP / Level (per-hero) ---

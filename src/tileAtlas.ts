@@ -71,8 +71,10 @@ export interface DecorAnimDef {
 export type DecorAnimFrames = {
     /** Phaser animation key (shared / global). */
     key: string;
-    startFrame: number;
-    endFrame: number;
+    startFrame?: number;
+    endFrame?: number;
+    frames?: number[];
+    frameRefs?: TileRef[];
     frameRate?: number;
     repeat?: number;
 };

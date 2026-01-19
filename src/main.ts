@@ -399,8 +399,8 @@ function _hud_tryFindAnyPlayableHeroSprite(): any | null {
   if (!Array.isArray(all) || all.length === 0) return null;
 
   const sk: any = g.SpriteKind;
-  const playerKind = (sk && typeof sk.Player === "number") ? (sk.Player | 0) : 0;
-  const hasPlayerKind = playerKind !== 0;
+  const hasPlayerKind = !!(sk && typeof sk.Player === "number");
+  const playerKind = hasPlayerKind ? (sk.Player | 0) : 0;
 
   for (const s of all) {
     if (!s) continue;
@@ -1148,6 +1148,7 @@ class HeroScene extends Phaser.Scene {
     private _camControlsInstalled: boolean = false;
     private _worldPixelW: number = 0;
     private _worldPixelH: number = 0;
+    private _worldTileSize: number = 0;
 
 
     // NEW: track dims too (lets us force-reapply if needed)
@@ -1418,13 +1419,13 @@ private _installCameraZoomControls(): void {
             if (key === "=" || key === "+" || key === "]") {
                 ev.preventDefault();
                 ev.stopPropagation();
-                this._nudgeUserZoom(CAMERA_ZOOM_STEP);
+                this._nudgeUserZoom(this._getUserZoomStep());
                 return;
             }
             if (key === "-" || key === "_" || key === "[") {
                 ev.preventDefault();
                 ev.stopPropagation();
-                this._nudgeUserZoom(-CAMERA_ZOOM_STEP);
+                this._nudgeUserZoom(-this._getUserZoomStep());
                 return;
             }
             if (key === "0") {
@@ -1441,7 +1442,7 @@ private _installCameraZoomControls(): void {
 
         const dir = (dy > 0) ? -1 : 1;
         if (dir === 0) return;
-        this._nudgeUserZoom(dir * CAMERA_WHEEL_ZOOM_STEP);
+        this._nudgeUserZoom(dir * this._getUserZoomStep());
 
         ev.preventDefault();
     });
@@ -1470,6 +1471,25 @@ private _setUserZoom(next: number): void {
     this._updateCameraZoom();
 }
 
+private _getZoomComp(): number {
+    const dpr = (typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    return (Number.isFinite(dpr) && dpr > 0) ? Math.max(1, 1 / dpr) : 1;
+}
+
+private _getEffectiveZoomStep(): number {
+    const tileSize = this._worldTileSize | 0;
+    if (tileSize > 0) return 1 / tileSize;
+    return CAMERA_ZOOM_STEP;
+}
+
+private _getUserZoomStep(): number {
+    const denom = this._camZoomBase * this._getZoomComp();
+    const effStep = this._getEffectiveZoomStep();
+    if (!Number.isFinite(denom) || denom <= 0) return CAMERA_WHEEL_ZOOM_STEP;
+    if (!Number.isFinite(effStep) || effStep <= 0) return CAMERA_WHEEL_ZOOM_STEP;
+    return effStep / denom;
+}
+
 private _updateCameraZoom(): void {
     const cam = this.cameras?.main;
     if (!cam) return;
@@ -1478,16 +1498,22 @@ private _updateCameraZoom(): void {
     const viewH = this._domViewH || cam.height || 0;
     if (viewW <= 0 || viewH <= 0) return;
 
-    const fit = Math.min(viewW / CAMERA_BASE_VIEW_W, viewH / CAMERA_BASE_VIEW_H);
+    let fit = Math.min(viewW / CAMERA_BASE_VIEW_W, viewH / CAMERA_BASE_VIEW_H);
+    if (this._worldPixelH > 0) {
+        const fitH = viewH / this._worldPixelH;
+        if (Number.isFinite(fitH) && fitH > 0) fit = fitH;
+    }
+    const effStep = this._getEffectiveZoomStep();
+    if (Number.isFinite(effStep) && effStep > 0) {
+        fit = Math.round(fit / effStep) * effStep;
+    }
     this._camZoomBase = (Number.isFinite(fit) && fit > 0) ? fit : 1;
 
-    const dpr = (typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
-    const zoomComp = (Number.isFinite(dpr) && dpr > 0) ? Math.max(1, 1 / dpr) : 1;
+    const zoomComp = this._getZoomComp();
 
     let target = this._camZoomBase * zoomComp * this._camZoomUser;
-    const step = CAMERA_ZOOM_STEP;
-    if (Number.isFinite(step) && step > 0) {
-        target = Math.round(target / step) * step;
+    if (Number.isFinite(effStep) && effStep > 0) {
+        target = Math.round(target / effStep) * effStep;
     }
 
     target = Phaser.Math.Clamp(
@@ -1495,6 +1521,25 @@ private _updateCameraZoom(): void {
         CAMERA_ZOOM_MIN,
         CAMERA_ZOOM_MAX
     );
+
+    const denom = this._camZoomBase * zoomComp;
+    if (Number.isFinite(denom) && denom > 0) {
+        const snappedUser = Phaser.Math.Clamp(
+            target / denom,
+            CAMERA_USER_ZOOM_MIN,
+            CAMERA_USER_ZOOM_MAX
+        );
+        if (Math.abs(snappedUser - this._camZoomUser) > 0.0001) {
+            this._camZoomUser = snappedUser;
+        }
+        if (snappedUser !== (target / denom)) {
+            target = denom * snappedUser;
+            if (Number.isFinite(effStep) && effStep > 0) {
+                target = Math.round(target / effStep) * effStep;
+            }
+            target = Phaser.Math.Clamp(target, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
+        }
+    }
 
     if (!Number.isFinite(target) || target <= 0) return;
     if (Math.abs((cam.zoom || 1) - target) < 0.0001) return;
@@ -1523,7 +1568,11 @@ private _updateCameraFollowLocalHero(): void {
     const g: any = globalThis as any;
     const net = g.__net || g.net;
     const pid = ((net?.playerId ?? 0) | 0);
-    if (pid <= 0) return;
+    if (pid <= 0) {
+        const anyHero = _hud_tryFindAnyPlayableHeroSprite();
+        if (anyHero) _uiLoadingMarkHero();
+        return;
+    }
 
     const spritesNS: any = g?.sprites;
     if (!spritesNS || typeof spritesNS.allSprites !== "function") return;
@@ -1549,6 +1598,7 @@ private _updateCameraFollowLocalHero(): void {
     }
 
     if (!bestNative) return;
+    _uiLoadingMarkHero();
 
     if (this._camFollowPid !== pid || this._camFollowNative !== bestNative) {
         this._camFollowPid = pid;
@@ -1617,6 +1667,9 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
 
     const worldWidth = cols * tileSize;
     const worldHeight = rows * tileSize;
+    this._worldPixelW = worldWidth;
+    this._worldPixelH = worldHeight;
+    this._worldTileSize = tileSize | 0;
 
     // World bounds define where the camera can scroll
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
@@ -1666,7 +1719,7 @@ private setupGlobalsAndDebug() {
         (globalThis as any).__heGetZoomBounds = () => ({
             min: CAMERA_USER_ZOOM_MIN,
             max: CAMERA_USER_ZOOM_MAX,
-            step: CAMERA_WHEEL_ZOOM_STEP
+            step: this._getUserZoomStep()
         });
     } catch { }
 

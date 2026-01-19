@@ -2731,7 +2731,7 @@ const STAT = {
 
 // --------------------------------------------------------------
 
-const HERO_DATA = {
+const HERO_DATA: Record<string, string> = {
 
     HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana", NAME: "name", SPAWN_REASON: "spawnReason",
 
@@ -2881,6 +2881,7 @@ const HERO_DATA = {
 
     OWNER: "owner",                    // which player "owns" this hero
     PLAYER_ID: "owner",
+    PLAYER_INDEX: "owner",
     IS_NPC: "isNpc",                   // hero-like sprite that should be excluded from hero loops
 
 
@@ -3018,6 +3019,7 @@ const HERO_DATA = {
     ActionKind: "ActionKind",
 
     ActionVariant: "ActionVariant",
+    ActionVariantBtnId: "ActionVariantBtnId",
 
     ActionSeed: "ActionSeed",
 
@@ -3030,6 +3032,7 @@ const HERO_DATA = {
     ActionP3: "ActionP3",
 
     ActionTargetId: "ActionTargetId",
+    ActionTargetSpriteId: "ActionTargetSpriteId",
     ActionTarget: "ActionTargetId",
 
 
@@ -3059,6 +3062,7 @@ const HERO_DATA = {
 
 
     PhaseName: "PhaseName",
+    PhaseRaw: "PhaseRaw",
 
     PhaseStartMs: "PhaseStartMs",
 
@@ -7162,6 +7166,8 @@ let _engineDecorTriggers: Sprite[] = []
 let _engineDecorSolids: Sprite[] = []
 
 let _engineDecorRev = 0
+let _engineDecorCells: number[][] = []
+let _engineDecorDecals: number[][] = []
 
 
 
@@ -17603,6 +17609,7 @@ const SHOP_STATUE_PLAYER_IDS: number[] = [95, 96, 97, 98]
 
 
 const SHOPKEEPER_HERO_NAME = "Shopkeeper"
+const SHOPKEEPER_PROFILE_NAME = SHOPKEEPER_HERO_NAME
 
 const SHOP_FOCUS_KEEPALIVE_MS = 120
 
@@ -17731,6 +17738,8 @@ let shopFocusUntilMsByHero: number[] = [0, 0, 0, 0]
 
 
 // UI gating + purchase flags (if you still want them)
+
+let shopTouchRingMaskByHero: number[] = [0, 0, 0, 0]
 
 let shopTouchUntilMsByHero: number[] = [0, 0, 0, 0]
 
@@ -32754,6 +32763,7 @@ function _doHeroMoveTrySpendMana(
     let mana = sprites.readDataNumber(hero, HERO_DATA.MANA) | 0
 
     const maxMana = sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0
+    const button = sprites.readDataString(hero, HERO_DATA.BUTTON) || ""
 
     // Trace mana checks once per unique scenario (cost>0) to confirm we entered spend logic.
     if (DEBUG_MANA_FAIL_LOG_ONCE && manaCost > 0) {
@@ -55172,7 +55182,7 @@ function _computeTextureFrameBounds(
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any);
+        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
         if (!ctx) return null;
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(source as any, 0, 0);
