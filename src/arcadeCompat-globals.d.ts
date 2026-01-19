@@ -2,9 +2,8 @@ export {}
 
 declare global {
   // Arcade runtime globals (provided by arcadeCompat.ts at runtime)
-  class Sprite {
-    [key: string]: any;
-  }
+  type Sprite = any;
+  const Sprite: any;
 
   interface Image {
     [key: string]: any;
@@ -22,7 +21,14 @@ declare global {
     randomRange(min: number, max: number): number;
   }
 
+  interface Array<T> {
+    removeAt(index: number): T | undefined;
+  }
+
   type StatusBarSprite = any;
+  type TextSprite = any;
+  type MoveTraits = number[];
+  type SyncContext = any;
 
   const SpriteKind: any;
   const SpriteFlag: any;

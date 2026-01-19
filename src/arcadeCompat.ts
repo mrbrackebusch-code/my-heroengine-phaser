@@ -1037,6 +1037,17 @@ const HERO_WPN_CAST_KEY = "wCa";
 const HERO_WPN_EXEC_KEY = "wEx";
 const HERO_WPN_INT_KEY = "wInt";
 const HERO_WPN_SUP_KEY = "wSup";
+const HERO_AIM_DIR_X1000_KEY = "aimDx";
+const HERO_AIM_DIR_Y1000_KEY = "aimDy";
+const HERO_AIM_ANGLE_MDEG_KEY = "aimAng";
+
+// Weapon diagonal aim render mode:
+//  - "rotate": rotate the weapon overlays to the aim angle
+//  - "ghost": keep weapon cardinal, show a rotated ghost at aim
+//  - "projectile": no weapon changes (only projectiles follow aim)
+const WPN_AIM_RENDER_MODE: "rotate" | "ghost" | "projectile" = "projectile";
+const WPN_AIM_GHOST_ALPHA = 0.6;
+const WPN_AIM_GHOST_OFFSET_PX = 6;
 
 // Staff-cast hover tuning (Intellect/Support)
 const STAFF_CAST_DEFAULT_CLIP_LEN = 7;
@@ -1363,6 +1374,7 @@ const __effectMaskHideOnce = new Set<string>();
 const __effectMaskClearOnce = new Set<string>();
 const __effectMaskKeyOnce = new Set<string>();
 const __effectMaskVisOnce = new Set<string>();
+const __effectMaskTexOnce = new Set<string>();
 
 const __heroNativeByIndex: { [idx: number]: any } = Object.create(null);
 
@@ -5253,6 +5265,7 @@ function _pickTextureKeyForModel(sc: Phaser.Scene, modelLower: string): string {
 
 function _attachEnsureIntellectProjectileVisual(ctx: AttachContext): void {
     const s: any = ctx.s as any;
+    const native: any = (s as any).native;
 
     // Only HeroWeapon projectiles (kind 51 in your logs)
     if ((s.kind | 0) !== HERO_WEAPON_KIND_ID) return;
@@ -5393,6 +5406,9 @@ function _copyHeroIdentityToNative(
     const dir = (typeof dirRaw === "string" && dirRaw) ? dirRaw : "down";
     native.setData("phase", phase);
     native.setData("dir", dir);
+    native.setData("aimDx", readInt(dataAny.aimDx, 0));
+    native.setData("aimDy", readInt(dataAny.aimDy, 0));
+    native.setData("aimAng", readInt(dataAny.aimAng, 0));
 
     const fco = readInt(dataAny.frameColOverride, -1);
     native.setData("frameColOverride", fco);
@@ -7061,6 +7077,32 @@ function _attachGetOrRecreateCanvasTexture(
         const texH = (src.height | 0);
 
         if (texW !== targetW || texH !== targetH) {
+            try {
+                const role = _classifySpriteRole((s.kind as any) | 0, Object.keys(dataAny || {}));
+                if (role === "PROJECTILE") {
+                    const fx = (dataAny as any).projMaskFx as any;
+                    if (fx && (fx as any).native) {
+                        const fxNative = (fx as any).native;
+                        _effectClearPaintMask(fxNative);
+                        try { fxNative.setVisible?.(false); } catch { }
+                        try { fxNative.setAlpha?.(0); } catch { }
+                    }
+                    if (DEBUG_EFFECT_MASKS) {
+                        const key = `projTexRecreate:${s.id}:${texKey}:${texW}x${texH}->${targetW}x${targetH}`;
+                        if (!__effectMaskTexOnce.has(key)) {
+                            __effectMaskTexOnce.add(key);
+                            console.log("[effectmask][projTexRecreate]", {
+                                spriteId: s.id | 0,
+                                texKey,
+                                oldW: texW | 0,
+                                oldH: texH | 0,
+                                newW: targetW | 0,
+                                newH: targetH | 0
+                            });
+                        }
+                    }
+                }
+            } catch { /* ignore */ }
             if (DEBUG_WRAP_TEX) {
                 console.log(
                     "[WRAP-TEX-RECREATE]",
@@ -7630,6 +7672,16 @@ function _syncSpriteLoop(ctx: SyncContext): void {
 
             const texKey = "sprite_" + s.id;
             if (sc.textures && sc.textures.exists(texKey)) {
+                if (DEBUG_EFFECT_MASKS) {
+                    const key = `projTexRemove:${s.id}:${texKey}`;
+                    if (!__effectMaskTexOnce.has(key)) {
+                        __effectMaskTexOnce.add(key);
+                        console.log("[effectmask][projTexRemove]", {
+                            spriteId: s.id | 0,
+                            texKey
+                        });
+                    }
+                }
                 sc.textures.remove(texKey);
             }
 
@@ -8918,6 +8970,133 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
     return { phaseRaw, displayedPhase, weaponPhase, weaponId, isComboRender, aState, staffCast, wSlash, wThrust, wCast, wExec, wCombo };
 }
 
+function _wpnShouldAimRotate(weaponPhase: string): boolean {
+    const p = _wpnSnake(weaponPhase);
+    if (
+        p === "thrust" ||
+        p === "attack_thrust" ||
+        p === "slash" ||
+        p === "attack_slash" ||
+        p.includes("slash")
+    ) {
+        return true;
+    }
+    return false;
+}
+
+function _wpnResolveRenderDirForAim(
+    requestedDir: "up" | "down" | "left" | "right",
+    actionKind: string,
+    aimDx1000: number,
+    aimDy1000: number
+): "up" | "down" | "left" | "right" {
+    const ak = (actionKind || "").toLowerCase();
+    if ((ak.startsWith("strength") || ak.startsWith("agility")) && _wpnAimIsDiagonal(aimDx1000, aimDy1000)) {
+        return (aimDx1000 >= 0) ? "right" : "left";
+    }
+    return requestedDir;
+}
+
+function _wpnDirBaseRad(dir: "up" | "down" | "left" | "right"): number {
+    switch (dir) {
+        case "up": return -Math.PI / 2;
+        case "down": return Math.PI / 2;
+        case "left": return Math.PI;
+        case "right": return 0;
+        default: return 0;
+    }
+}
+
+function _wpnWrapRad(r: number): number {
+    let v = r;
+    while (v > Math.PI) v -= Math.PI * 2;
+    while (v < -Math.PI) v += Math.PI * 2;
+    return v;
+}
+
+function _wpnAimDeltaRad(
+    baseDir: "up" | "down" | "left" | "right",
+    aimAngleMdeg: number,
+    aimDx1000: number,
+    aimDy1000: number
+): number {
+    const baseRad = _wpnDirBaseRad(baseDir);
+    const targetRad = (aimAngleMdeg !== 0)
+        ? ((aimAngleMdeg * Math.PI) / 180000)
+        : Math.atan2(aimDy1000, aimDx1000);
+    return _wpnWrapRad(targetRad - baseRad);
+}
+
+function _wpnAimIsDiagonal(aimDx1000: number, aimDy1000: number): boolean {
+    return (aimDx1000 | 0) !== 0 && (aimDy1000 | 0) !== 0;
+}
+
+function _wpnApplyAimGhost(args: {
+    overlays: any;
+    baseDir: "up" | "down" | "left" | "right";
+    aimDx1000: number;
+    aimDy1000: number;
+    aimAngleMdeg: number;
+    enabled: boolean;
+}): void {
+    const ghostsBg: any[] = args.overlays?.ghostsBg || [];
+    const ghostsFg: any[] = args.overlays?.ghostsFg || [];
+    const maxPairs = Math.min(ghostsBg.length | 0, ghostsFg.length | 0);
+    if (maxPairs <= 0) return;
+
+    const gIdx = Math.max(0, maxPairs - 1);
+    const gbg = ghostsBg[gIdx];
+    const gfg = ghostsFg[gIdx];
+
+    if (!gbg || !gfg) return;
+
+    if (!args.enabled || !_wpnAimIsDiagonal(args.aimDx1000, args.aimDy1000)) {
+        try { gbg.setVisible(false); } catch { }
+        try { gfg.setVisible(false); } catch { }
+        return;
+    }
+
+    const bgAny: any = args.overlays.weaponBg as any;
+    const fgAny: any = args.overlays.weaponFg as any;
+    const bgKey = bgAny?.texture?.key ? String(bgAny.texture.key) : "";
+    const fgKey = fgAny?.texture?.key ? String(fgAny.texture.key) : "";
+    const bgVisible = !!bgAny?.visible;
+    const fgVisible = !!fgAny?.visible;
+    if (!bgVisible || !fgVisible || !bgKey || !fgKey || bgKey === "__MISSING" || fgKey === "__MISSING") {
+        try { gbg.setVisible(false); } catch { }
+        try { gfg.setVisible(false); } catch { }
+        return;
+    }
+
+    const ang = _wpnAimDeltaRad(args.baseDir, args.aimAngleMdeg | 0, args.aimDx1000 | 0, args.aimDy1000 | 0);
+    const dx = (args.aimDx1000 | 0) / 1000;
+    const dy = (args.aimDy1000 | 0) / 1000;
+    const ox = Math.round(dx * WPN_AIM_GHOST_OFFSET_PX);
+    const oy = Math.round(dy * WPN_AIM_GHOST_OFFSET_PX);
+
+    const applyGhost = (g: any, src: any, alpha: number, depthBias: number) => {
+        if (!g || !src) return;
+        try { g.setTexture(src.texture.key); } catch { }
+        const frameName = (src.frame?.name ?? src.frame?.index ?? 0) as any;
+        try { g.setFrame(frameName); } catch { }
+        g.x = (src.x ?? 0) + ox;
+        g.y = (src.y ?? 0) + oy;
+        g.scaleX = src.scaleX ?? 1;
+        g.scaleY = src.scaleY ?? 1;
+        g.rotation = (src.rotation ?? 0) + ang;
+        if (typeof g.setFlipX === "function") g.setFlipX(!!src.flipX);
+        if (typeof g.setFlipY === "function") g.setFlipY(!!src.flipY);
+        const d = (src.depth ?? 0) + depthBias;
+        try { g.setDepth(d); } catch { }
+        try { g.setAlpha(alpha); } catch { }
+        try { g.setVisible(true); } catch { }
+        try { g.setBlendMode?.(Phaser.BlendModes.ADD); } catch { }
+    };
+
+    applyGhost(gbg, bgAny, Math.max(0, Math.min(1, WPN_AIM_GHOST_ALPHA - 0.1)), -1);
+    applyGhost(gfg, fgAny, Math.max(0, Math.min(1, WPN_AIM_GHOST_ALPHA)), 1);
+}
+
 function _wpnComputeHeroFrameInfo(sc: any, dataAny: any, nativeHero: Phaser.GameObjects.Sprite): {
     nativeDir: string;
     rawNativeFco: any;
@@ -9225,6 +9404,12 @@ function _syncWeaponOverlaysForHeroNative(
     const staffCast = sel.staffCast;
     const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
     const weaponVariant = _weaponVariantForHero(heroIndex, weaponId);
+    const aimDx1000 = (dataAny[HERO_AIM_DIR_X1000_KEY] as any | 0);
+    const aimDy1000 = (dataAny[HERO_AIM_DIR_Y1000_KEY] as any | 0);
+    const aimAngleMdeg = (dataAny[HERO_AIM_ANGLE_MDEG_KEY] as any | 0);
+    const actionKind = (typeof dataAny.ActionKind === "string") ? String(dataAny.ActionKind) : "";
+    const renderDir = _wpnResolveRenderDirForAim(requestedDir as any, actionKind, aimDx1000 | 0, aimDy1000 | 0);
+    const allowAimRotate = (WPN_AIM_RENDER_MODE === "rotate") && (!staffCast) && _wpnShouldAimRotate(weaponPhase);
 
     // Mirror keys for glue (unchanged)
     _wpnMirrorKeysForGlue(nativeHero, dataAny);
@@ -9291,13 +9476,17 @@ function _syncWeaponOverlaysForHeroNative(
         weaponFg: overlays.weaponFg,
         weaponId,
         heroPhase: weaponPhase,
-        dir: requestedDir as any,
+        dir: renderDir as any,
         heroFrameIndex,
         variant: weaponVariant,
         frameColOverride: glueFrameColOverride,
         frameDirOverride: glueFrameDirOverride,
         posOffsetX: staffOffsetX,
-        posOffsetY: staffOffsetY
+        posOffsetY: staffOffsetY,
+        aimDx1000,
+        aimDy1000,
+        aimAngleMdeg,
+        allowAimRotate
     });
 
     // Post-glue: compute actual weapon frame cols/names + apply nativeFco if present (unchanged)
@@ -9306,6 +9495,15 @@ function _syncWeaponOverlaysForHeroNative(
 
     // Step 6/7/8 ... (UNCHANGED behavior; just moved)
     _wpnStep6_7_8_Effects(sc, dataAny, nativeHero, overlays);
+
+    _wpnApplyAimGhost({
+        overlays,
+        baseDir: renderDir as any,
+        aimDx1000,
+        aimDy1000,
+        aimAngleMdeg,
+        enabled: (WPN_AIM_RENDER_MODE === "ghost") && (!staffCast) && _wpnShouldAimRotate(weaponPhase)
+    });
 
     // DEBUG follow + frame result logs (unchanged)
     _wpnDebugFollowAndFrameResultLog({
@@ -12473,6 +12671,24 @@ namespace controller {
         const kb = scene && scene.input && scene.input.keyboard;
         if (!kb) {
             console.warn("[controller._wireKeyboard] no keyboard plugin on scene", scene);
+            return;
+        }
+        if (!kb.manager) {
+            if (DEBUG_COMPAT_CONTROLLER) {
+                console.warn("[controller._wireKeyboard] keyboard manager not ready; retrying");
+            }
+            try {
+                const g: any = (globalThis as any);
+                if (!scene.__heKeyboardRetryCount) scene.__heKeyboardRetryCount = 0;
+                if (scene.__heKeyboardRetryCount < 10) {
+                    scene.__heKeyboardRetryCount++;
+                    if (scene.time && typeof scene.time.delayedCall === "function") {
+                        scene.time.delayedCall(0, () => _wireKeyboard(scene));
+                    } else if (g && typeof g.setTimeout === "function") {
+                        g.setTimeout(() => _wireKeyboard(scene), 0);
+                    }
+                }
+            } catch (_e) { /* ignore */ }
             return;
         }
 

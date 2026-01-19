@@ -127,6 +127,16 @@ function _uiLoadingMaybeDone(): void {
   }
 }
 
+function _tryPruneUnconnectedHeroes(reason: string): void {
+  try {
+    const g: any = globalThis as any;
+    const internals: any = g.__HeroEnginePhaserInternals;
+    if (internals && typeof internals.pruneUnconnectedHeroes === "function") {
+      internals.pruneUnconnectedHeroes(reason || "scene");
+    }
+  } catch { }
+}
+
 
 // ------------------------------------------------------------
 // Weapon debug flags (no URL params / no console commands needed)
@@ -390,11 +400,12 @@ function _hud_tryFindAnyPlayableHeroSprite(): any | null {
 
   const sk: any = g.SpriteKind;
   const playerKind = (sk && typeof sk.Player === "number") ? (sk.Player | 0) : 0;
+  const hasPlayerKind = playerKind !== 0;
 
   for (const s of all) {
     if (!s) continue;
     try {
-      if (playerKind && typeof s.kind === "function") {
+      if (hasPlayerKind && typeof s.kind === "function") {
         const k = s.kind() | 0;
         if (k !== playerKind) continue;
       }
@@ -403,6 +414,7 @@ function _hud_tryFindAnyPlayableHeroSprite(): any | null {
     }
 
     if (_hud_isNpcHero(spritesNS, s)) continue;
+    if (hasPlayerKind) return s;
 
     let owner = 0;
     try {
@@ -1134,6 +1146,8 @@ class HeroScene extends Phaser.Scene {
     private _camZoomUser: number = 1;
     private _camZoomBase: number = 1;
     private _camControlsInstalled: boolean = false;
+    private _worldPixelW: number = 0;
+    private _worldPixelH: number = 0;
 
 
     // NEW: track dims too (lets us force-reapply if needed)
@@ -1228,6 +1242,7 @@ async create() {
 
     // 8) Network init (all clients)
     this.initNetwork(compatMod);
+    _tryPruneUnconnectedHeroes("scene-create");
 
     // 9) Keyboard -> controller wiring (all clients)
     this.wireKeyboardToController();
@@ -1464,7 +1479,7 @@ private _updateCameraZoom(): void {
     if (viewW <= 0 || viewH <= 0) return;
 
     const fit = Math.min(viewW / CAMERA_BASE_VIEW_W, viewH / CAMERA_BASE_VIEW_H);
-    this._camZoomBase = (Number.isFinite(fit) && fit > 0) ? Math.min(1, fit) : 1;
+    this._camZoomBase = (Number.isFinite(fit) && fit > 0) ? fit : 1;
 
     const dpr = (typeof window !== "undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
     const zoomComp = (Number.isFinite(dpr) && dpr > 0) ? Math.max(1, 1 / dpr) : 1;
@@ -1634,6 +1649,26 @@ private setupGlobalsAndDebug() {
         ">>> [HeroScene.create] __phaserScene set =",
         !!(globalThis as any).__phaserScene
     );
+    try {
+        (globalThis as any).__heZoomBy = (delta: number) => {
+            if (!Number.isFinite(delta)) return;
+            this._nudgeUserZoom(delta);
+        };
+        (globalThis as any).__heSetZoom = (z: number) => {
+            if (!Number.isFinite(z)) return;
+            this._setUserZoom(z);
+        };
+        (globalThis as any).__heGetZoom = () => this._camZoomUser;
+        (globalThis as any).__heGetEffectiveZoom = () => {
+            const cam = this.cameras?.main;
+            return (cam && Number.isFinite(cam.zoom)) ? cam.zoom : this._camZoomUser;
+        };
+        (globalThis as any).__heGetZoomBounds = () => ({
+            min: CAMERA_USER_ZOOM_MIN,
+            max: CAMERA_USER_ZOOM_MAX,
+            step: CAMERA_WHEEL_ZOOM_STEP
+        });
+    } catch { }
 
     // Apply URL-driven hero profile (e.g., ?profile=Demo%20Hero)
     // (kept as-is; profile selection is not "debug")

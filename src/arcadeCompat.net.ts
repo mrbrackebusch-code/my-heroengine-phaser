@@ -1000,6 +1000,14 @@ private onRosterSnapshot(msg: Extract<NetMessage, { type: "rosterSnapshot" }>) {
         }
     }
 
+    const internals = g.__HeroEnginePhaserInternals;
+    const pruneFn = internals && typeof internals.pruneUnconnectedHeroes === "function"
+        ? internals.pruneUnconnectedHeroes
+        : null;
+    if (pruneFn) {
+        try { pruneFn("rosterSnapshot"); } catch (e) { console.warn("[net] pruneUnconnectedHeroes failed", e); }
+    }
+
     if (DEBUG_NET) {
         console.log("[net.rosterSnapshot] applied", {
             hostToken: (msg.hostToken ? (msg.hostToken.slice(0, 8) + "…") : null),
@@ -1110,6 +1118,14 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         } else {
             _queueEnsureHero(profile, playerId);
         }
+    }
+
+    const internals = g.__HeroEnginePhaserInternals;
+    const pruneFn = internals && typeof internals.pruneUnconnectedHeroes === "function"
+        ? internals.pruneUnconnectedHeroes
+        : null;
+    if (pruneFn) {
+        try { pruneFn("playerState"); } catch (e) { console.warn("[net] pruneUnconnectedHeroes failed", e); }
     }
 }
 

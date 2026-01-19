@@ -67,7 +67,7 @@ const TILE_LAYER_DEPTH_DECALS = -997000;
 const PROP_FOCUS_AURA_USE_TILED = true; // use pre-baked outline tiles for focus auras
 const PROP_FOCUS_AURA_RADIUS = DEFAULT_AURA_RADIUS;
 const PROP_FOCUS_AURA_LAYER_RADII = [1, 2, 3] as const;
-const PROP_FOCUS_AURA_LAYER_ALPHA = [1, 0.55, 0.25];
+const PROP_FOCUS_AURA_LAYER_ALPHA = [1, 0.4, 0.1];
 
 // Scale tuning:
 // - We always scale the outline up slightly so it is visible even if the
@@ -2540,9 +2540,7 @@ setPropFocusAuraAt(r: number, c: number, active: boolean, radius: number, depthB
             // Avoid overlaps between adjacent aura tiles on multi-tile props; keep padding on perimeter.
             finalScale = 1;
           }
-          // For chests, we want the pad box to stay exactly its authored size (no extra scale).
           if (isChest) {
-            finalScale = 1;
             try { ch.setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
           }
           ch.setVisible?.(true);
@@ -3897,10 +3895,9 @@ private _propCreateFocusAuraContainer(args: {
             const skipPad = String(baseName || "") === "stairs_statue";
             const needsPad =
               forcePad ||
-              fullOpaque ||
               forceBoxRing ||
               forceSolidPad ||
-              (!allowInset && (!boxOk || !edgeOk));
+              (!allowInset && (fullOpaque || !boxOk || !edgeOk));
             if (skipPad) {
               padScale = 1;
               padBaked = false;

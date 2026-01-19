@@ -694,6 +694,10 @@ export function syncWeaponLayersToHero(args: {
   frameDirOverride?: Dir4;
   posOffsetX?: number;
   posOffsetY?: number;
+  aimDx1000?: number;
+  aimDy1000?: number;
+  aimAngleMdeg?: number;
+  allowAimRotate?: boolean;
 }): WeaponRenderResolve | null {
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
 
@@ -704,6 +708,39 @@ export function syncWeaponLayersToHero(args: {
   const heroAny: any = args.heroSprite as any;
   const heroDepth = heroAny.depth ?? 0;
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
+  const aimDx1000 = (typeof args.aimDx1000 === "number") ? (args.aimDx1000 | 0) : 0;
+  const aimDy1000 = (typeof args.aimDy1000 === "number") ? (args.aimDy1000 | 0) : 0;
+  const aimAngleMdeg = (typeof args.aimAngleMdeg === "number") ? (args.aimAngleMdeg | 0) : 0;
+  const baseDir = (args.frameDirOverride ?? args.dir) as Dir4;
+  const aimIsDiag = (aimDx1000 !== 0 && aimDy1000 !== 0);
+  const useAimRotate = !!args.allowAimRotate && aimIsDiag;
+
+  function _dirBaseRad(dir: Dir4): number {
+    switch (dir) {
+      case "up": return -Math.PI / 2;
+      case "down": return Math.PI / 2;
+      case "left": return Math.PI;
+      case "right": return 0;
+      default: return 0;
+    }
+  }
+
+  function _wrapRad(r: number): number {
+    let v = r;
+    while (v > Math.PI) v -= Math.PI * 2;
+    while (v < -Math.PI) v += Math.PI * 2;
+    return v;
+  }
+
+  let aimRot = 0;
+  if (useAimRotate) {
+    const baseRad = _dirBaseRad(baseDir);
+    const targetRad = (aimAngleMdeg !== 0)
+      ? ((aimAngleMdeg * Math.PI) / 180000)
+      : Math.atan2(aimDy1000, aimDx1000);
+    aimRot = _wrapRad(targetRad - baseRad);
+    // NOTE: If we later add body lean, use the same aim angle in heroAnimGlue.
+  }
 
   // Optional per-hero weapon offset (lets us “fake” extra placement)
   const wpnOx = heroAny.getData?.("wpnOx") ?? 0;
@@ -768,7 +805,8 @@ export function syncWeaponLayersToHero(args: {
 
     spr.scaleX = heroAny.scaleX ?? 1;
     spr.scaleY = heroAny.scaleY ?? 1;
-    (spr as any).rotation = heroAny.rotation ?? 0;
+    const baseRot = heroAny.rotation ?? 0;
+    (spr as any).rotation = baseRot + (useAimRotate ? aimRot : 0);
 
     if (typeof (spr as any).setFlipX === "function") (spr as any).setFlipX(!!heroAny.flipX);
     if (typeof (spr as any).setFlipY === "function") (spr as any).setFlipY(!!heroAny.flipY);

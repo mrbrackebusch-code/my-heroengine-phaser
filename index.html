@@ -36,7 +36,7 @@
         box-sizing: border-box;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
-        background: #ffffff;
+        background: #0b0b0d;
       }
 
       /* -----------------------------
@@ -50,6 +50,8 @@
         max-width: 320px;
         width: 100%;
         text-align: center;
+        background: #ffffff;
+        color: #111111;
       }
 
       #landing h1 {
@@ -611,7 +613,10 @@
          HUD (5 boxes)
          ----------------------------- */
     :root {
-      --hud-left-w: 150px; /* single source of truth */
+      --hud-left-w: 170px; /* single source of truth */
+      --hud-right-w: 64px;
+      --hud-bottom-h: 48px;
+      --hud-gap: 6px;
     }
 
     #hud {
@@ -619,13 +624,10 @@
         box-sizing: border-box;
 
         display: grid;
-        grid-template-columns: var(--hud-left-w) 1.20fr 1fr 1fr 1fr 1fr;
-        gap: 1px;
+        grid-template-columns: 1.10fr 1fr 1fr 1fr 1fr;
+        gap: var(--hud-gap);
 
-        grid-template-columns: 1.20fr 1fr 1fr 1fr 1fr;
-        gap: 8px;
-
-        padding: 10px;
+        padding: var(--hud-gap);
         border: 2px solid var(--hud-border);
         border-radius: 10px;
 
@@ -636,10 +638,12 @@
       }
 
       .hud-cell {
+        display: flex;
+        flex-direction: column;
         min-width: 0;
         border: 2px solid rgba(255, 255, 255, 0.18);
         border-radius: 8px;
-        padding: 10px 10px;
+        padding: 8px 10px;
         box-sizing: border-box;
 
         background: linear-gradient(
@@ -655,10 +659,10 @@
 
       .hud-head {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
 
       .hud-title {
@@ -682,15 +686,16 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        margin-bottom: 4px;
       }
 
       /* Kind row */
       .hud-kindline {
-        margin-bottom: 6px;
         display: flex;
         align-items: baseline;
         gap: 8px;
         min-width: 0;
+        justify-content: flex-end;
       }
 
       .hud-kindlabel {
@@ -718,7 +723,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 4px 6px; /* tighter */
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .hud-kv {
@@ -759,6 +764,25 @@
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .hud-footline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: auto;
+      }
+
+      .hud-costline {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .hud-costline .hud-n {
+        min-width: 28px;
+        text-align: right;
       }
 
       .hud-elem {
@@ -1037,46 +1061,136 @@
         text-align: center;
       }
 
-      #xp-panel .xp-relics-title {
-        margin-top: 6px;
+      #relic-bar {
+        grid-column: 2;
+        grid-row: 2;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        box-sizing: border-box;
+        height: 100%;
+
+        background: rgba(18, 18, 22, 0.92);
+        border: 2px solid #000;
+        border-radius: 10px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+        overflow: hidden;
+      }
+
+      #relic-bar .relic-bar-title {
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 0.2px;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        white-space: nowrap;
       }
 
+      #relic-bar .relic-bar-box {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 2px 0;
+      }
 
-  #xp-panel .xp-relics-box {
-  height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+      #buffs-panel {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px;
+        box-sizing: border-box;
+        height: 100%;
 
-  display: flex;
-  gap: 6px;
-  padding: 6px;
-  box-sizing: border-box;
-  align-items: flex-start;
-  overflow: hidden;
-}
+        background: rgba(18, 18, 22, 0.92);
+        border: 2px solid #000;
+        border-radius: 12px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+        color: rgba(255, 255, 255, 0.92);
 
-#xp-panel .xp-relics-box {
-  /* MASSIVE by default */
-  height: clamp(140px, 28vh, 360px);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
 
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+      #buffs-panel .buffs-title {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        color: var(--txt);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        white-space: nowrap;
+      }
 
-  display: flex;
-  flex-wrap: wrap;          /* allow multiple rows */
-  align-content: flex-start;
-  gap: 8px;
-  padding: 8px;
-  box-sizing: border-box;
+      #buffs-panel .buffs-box {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: auto;
+      }
 
-  overflow-y: auto;         /* scroll when needed */
-  overflow-x: hidden;
-}
+      #buffs-panel .buffs-sep {
+        width: 100%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.12);
+        margin: 2px 0;
+      }
+
+      #buffs-panel .zoom-panel {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 0 4px;
+        text-align: center;
+      }
+
+      #buffs-panel .zoom-title {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        color: var(--txt);
+        text-transform: uppercase;
+      }
+
+      #buffs-panel .zoom-value {
+        font-size: 12px;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.92);
+        font-variant-numeric: tabular-nums;
+      }
+
+      #buffs-panel .zoom-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-rows: repeat(2, 1fr);
+        gap: 6px;
+      }
+
+      #buffs-panel .zoom-btn {
+        width: 100%;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid #000;
+        background: rgba(30, 32, 38, 0.9);
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 16px;
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+      }
+
+      #buffs-panel .zoom-btn:active {
+        transform: translateY(1px);
+      }
 
 
 .xp-relic {
@@ -1087,6 +1201,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+}
+
+#relic-bar .xp-relic {
+  height: 32px;
+  justify-content: center;
 }
 
 .xp-relic-icon {
@@ -1103,6 +1222,10 @@
 .xp-relic-icon.xp-disabled {
   filter: grayscale(1);
   opacity: 0.42;
+}
+
+#relic-bar .xp-relic-glyph {
+  display: none;
 }
 
 .xp-relic-badge {
@@ -1205,7 +1328,9 @@
 
 :root {
   --hud-left-w: 170px; /* tweak if you want wider/narrower left sidebar */
-  --hud-gap: 8px;
+  --hud-right-w: 64px;
+  --hud-bottom-h: 48px;
+  --hud-gap: 6px;
 }
 
 /* Keep landing page behavior as-is (body flex centering is fine).
@@ -1221,6 +1346,7 @@
   display: flex;                 /* script already sets flex; keep consistent */
   justify-content: stretch;
   align-items: stretch;
+  background: #000;
 }
 
 /* Stage becomes a 2-row grid: top HUD + rest (sidebar + canvas) */
@@ -1234,8 +1360,8 @@
   padding: var(--hud-gap);
   border: 2px solid rgba(0, 0, 0, 0.9);
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+  background: #0b0b0d;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
 }
 
 /* HUD spans full width (covers top-left too) */
@@ -1252,7 +1378,8 @@
   height: 100%;
 
   display: grid;
-  grid-template-columns: var(--hud-left-w) 1fr;
+  grid-template-columns: var(--hud-left-w) 1fr var(--hud-right-w);
+  grid-template-rows: 1fr var(--hud-bottom-h);
   gap: var(--hud-gap);
 
   /* critical for grid children to be allowed to shrink */
@@ -1260,6 +1387,8 @@
   min-width: 0;
 
   position: relative;
+  background: #000;
+  border-radius: 12px;
 }
 
 /* Left sidebar: stop positioning it “outside” the canvas */
@@ -1267,6 +1396,9 @@
   position: relative !important;
   top: auto !important;
   left: auto !important;
+
+  grid-column: 1;
+  grid-row: 1 / span 2;
 
   width: var(--hud-left-w) !important;
   height: 100% !important;
@@ -1283,6 +1415,8 @@
 #app {
   width: 100% !important;
   height: 100% !important;
+  grid-column: 2;
+  grid-row: 1;
 
   /* critical for grid */
   min-width: 0;
@@ -1383,25 +1517,29 @@
           <div class="hud-cell hud-cell-a" id="hud-box-a">
             <div class="hud-head">
               <div class="hud-title">Q Button</div>
-              <div class="hud-subtle" id="hud-a-note"></div>
+              <div class="hud-kindline">
+                <div class="hud-kindlabel">Type:</div>
+                <div class="hud-kind" id="hud-a-kind">â€”</div>
+              </div>
             </div>
-
-            <div class="hud-kindline">
-              <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-a-kind">â€”</div>
-            </div>
+            <div class="hud-subtle" id="hud-a-note"></div>
 
             <div class="hud-traits">
               <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-a-dmg">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-a-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-a-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-a-status">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-a-cost">â€”</span></div>
             </div>
 
-            <div class="hud-elemline">
-              <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-a-elem" title="">*</div>
+            <div class="hud-footline">
+              <div class="hud-elemline">
+                <div class="hud-k">Element:</div>
+                <div class="hud-elem" id="hud-a-elem" title="">*</div>
+              </div>
+              <div class="hud-costline">
+                <div class="hud-k">Total Cost:</div>
+                <div class="hud-n" id="hud-a-cost">â€”</div>
+              </div>
             </div>
             <div class="hud-raw" id="hud-a-raw"></div>
           </div>
@@ -1410,25 +1548,29 @@
           <div class="hud-cell hud-cell-b" id="hud-box-b">
             <div class="hud-head">
               <div class="hud-title">W Button</div>
-              <div class="hud-subtle" id="hud-b-note"></div>
+              <div class="hud-kindline">
+                <div class="hud-kindlabel">Type:</div>
+                <div class="hud-kind" id="hud-b-kind">â€”</div>
+              </div>
             </div>
-
-            <div class="hud-kindline">
-              <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-b-kind">â€”</div>
-            </div>
+            <div class="hud-subtle" id="hud-b-note"></div>
 
             <div class="hud-traits">
               <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-b-dmg">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-b-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-b-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-b-status">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-b-cost">â€”</span></div>
             </div>
 
-            <div class="hud-elemline">
-              <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-b-elem" title="">*</div>
+            <div class="hud-footline">
+              <div class="hud-elemline">
+                <div class="hud-k">Element:</div>
+                <div class="hud-elem" id="hud-b-elem" title="">*</div>
+              </div>
+              <div class="hud-costline">
+                <div class="hud-k">Total Cost:</div>
+                <div class="hud-n" id="hud-b-cost">â€”</div>
+              </div>
             </div>
             <div class="hud-raw" id="hud-b-raw"></div>
           </div>
@@ -1437,25 +1579,29 @@
           <div class="hud-cell hud-cell-ab" id="hud-box-ab">
             <div class="hud-head">
               <div class="hud-title">E Button</div>
-              <div class="hud-subtle" id="hud-ab-note"></div>
+              <div class="hud-kindline">
+                <div class="hud-kindlabel">Type:</div>
+                <div class="hud-kind" id="hud-ab-kind">â€”</div>
+              </div>
             </div>
-
-            <div class="hud-kindline">
-              <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-ab-kind">â€”</div>
-            </div>
+            <div class="hud-subtle" id="hud-ab-note"></div>
 
             <div class="hud-traits">
               <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-ab-dmg">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-ab-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-ab-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-ab-status">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-ab-cost">â€”</span></div>
             </div>
 
-            <div class="hud-elemline">
-              <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-ab-elem" title="">*</div>
+            <div class="hud-footline">
+              <div class="hud-elemline">
+                <div class="hud-k">Element:</div>
+                <div class="hud-elem" id="hud-ab-elem" title="">*</div>
+              </div>
+              <div class="hud-costline">
+                <div class="hud-k">Total Cost:</div>
+                <div class="hud-n" id="hud-ab-cost">â€”</div>
+              </div>
             </div>
             <div class="hud-raw" id="hud-ab-raw"></div>
           </div>
@@ -1464,25 +1610,29 @@
           <div class="hud-cell hud-cell-r" id="hud-box-r">
             <div class="hud-head">
               <div class="hud-title">R Button</div>
-              <div class="hud-subtle" id="hud-r-note"></div>
+              <div class="hud-kindline">
+                <div class="hud-kindlabel">Type:</div>
+                <div class="hud-kind" id="hud-r-kind">â€”</div>
+              </div>
             </div>
-
-            <div class="hud-kindline">
-              <div class="hud-kindlabel">Type:</div>
-              <div class="hud-kind" id="hud-r-kind">â€”</div>
-            </div>
+            <div class="hud-subtle" id="hud-r-note"></div>
 
             <div class="hud-traits">
               <div class="hud-kv"><span class="hud-k">Damage:</span><span class="hud-n" id="hud-r-dmg">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Reach:</span><span class="hud-n" id="hud-r-reach">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Time:</span><span class="hud-n" id="hud-r-time">â€”</span></div>
               <div class="hud-kv"><span class="hud-k">Status:</span><span class="hud-n" id="hud-r-status">â€”</span></div>
-              <div class="hud-kv"><span class="hud-k">Total Cost:</span><span class="hud-n" id="hud-r-cost">â€”</span></div>
             </div>
 
-            <div class="hud-elemline">
-              <div class="hud-k">Element:</div>
-              <div class="hud-elem" id="hud-r-elem" title="">*</div>
+            <div class="hud-footline">
+              <div class="hud-elemline">
+                <div class="hud-k">Element:</div>
+                <div class="hud-elem" id="hud-r-elem" title="">*</div>
+              </div>
+              <div class="hud-costline">
+                <div class="hud-k">Total Cost:</div>
+                <div class="hud-n" id="hud-r-cost">â€”</div>
+              </div>
             </div>
             <div class="hud-raw" id="hud-r-raw"></div>
           </div>
@@ -1520,12 +1670,26 @@
                 <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
               </div>
             </div>
-
-            <div class="xp-relics-title">Relics:</div>
-            <div class="xp-relics-box" id="xp-relics-box"></div>
+          </div>
+          <div id="app"></div>
+          <div id="buffs-panel" aria-hidden="true">
+            <div class="buffs-title">Buffs:</div>
+            <div class="buffs-box" id="buffs-box"></div>
+            <div class="buffs-sep"></div>
+            <div class="zoom-panel" id="zoom-panel">
+              <div class="zoom-title">Zoom</div>
+              <div class="zoom-value" id="zoom-value">100%</div>
+              <div class="zoom-buttons">
+                <button class="zoom-btn" id="zoom-out-btn" type="button" aria-label="Zoom out">-</button>
+                <button class="zoom-btn" id="zoom-in-btn" type="button" aria-label="Zoom in">+</button>
+              </div>
+            </div>
+          </div>
+          <div id="relic-bar" aria-hidden="true">
+            <div class="relic-bar-title">Relics:</div>
+            <div class="xp-relics-box relic-bar-box" id="xp-relics-box"></div>
           </div>
           <div id="relic-tooltip" aria-hidden="true"></div>
-          <div id="app"></div>
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
             <div id="levelup-box">
@@ -1680,6 +1844,23 @@
         const gameWrapEl = document.getElementById("game-wrap");
         let lastW = 0;
 
+        if (stageEl) {
+          stageEl.addEventListener("wheel", (ev) => {
+            if (ev.ctrlKey || ev.metaKey) return;
+            const t = ev.target;
+            if (t && t.closest) {
+              if (t.closest("#app")) return;
+              if (t.closest("#relic-bar")) return;
+            }
+            const zoomBy = window.__heZoomBy;
+            if (typeof zoomBy !== "function") return;
+            const dir = ev.deltaY > 0 ? -1 : 1;
+            if (!dir) return;
+            zoomBy(dir * 0.1);
+            ev.preventDefault();
+          }, { passive: false });
+        }
+
         // --- Force HUD width to match the actual canvas width (live) ---
       function syncStageWidthToCanvas() {
         if (gameWrapEl) {
@@ -1805,12 +1986,66 @@
           loadingOverlay: document.getElementById("loading-overlay"),
           loadingMsg: document.getElementById("loading-msg"),
           loadingBar: document.getElementById("loading-bar-fill"),
+          zoomValue: document.getElementById("zoom-value"),
+          zoomOutBtn: document.getElementById("zoom-out-btn"),
+          zoomInBtn: document.getElementById("zoom-in-btn"),
 
         };
 
         function setText(el, txt) {
           if (!el) return;
           if (el.textContent !== txt) el.textContent = txt;
+        }
+
+        function _zoom_getBounds() {
+          const fn = window.__heGetZoomBounds;
+          if (typeof fn === "function") {
+            const b = fn() || {};
+            const min = (typeof b.min === "number") ? b.min : 0.5;
+            const max = (typeof b.max === "number") ? b.max : 3;
+            const step = (typeof b.step === "number") ? b.step : 0.1;
+            return { min, max, step };
+          }
+          return { min: 0.5, max: 3, step: 0.1 };
+        }
+
+        function _zoom_nudge(dir) {
+          const by = window.__heZoomBy;
+          if (typeof by === "function") {
+            const step = _zoom_getBounds().step;
+            by(dir * step);
+            return;
+          }
+          const get = window.__heGetZoom;
+          const set = window.__heSetZoom;
+          if (typeof get === "function" && typeof set === "function") {
+            const step = _zoom_getBounds().step;
+            set(get() + dir * step);
+          }
+        }
+
+        const _zoomUiState = { lastPct: null, lastTitle: "" };
+        function _zoom_updateUi() {
+          const get = window.__heGetZoom;
+          if (typeof get !== "function") return;
+          const z = +get();
+          if (!isFinite(z)) return;
+          const pct = Math.round(z * 100);
+          if (R.zoomValue && _zoomUiState.lastPct !== pct) {
+            R.zoomValue.textContent = pct + "%";
+            _zoomUiState.lastPct = pct;
+          }
+          const getEff = window.__heGetEffectiveZoom;
+          if (R.zoomValue && typeof getEff === "function") {
+            const eff = +getEff();
+            if (isFinite(eff)) {
+              const title = "Camera " + eff.toFixed(2) + "x (dbl-click resets)";
+              if (_zoomUiState.lastTitle !== title) {
+                R.zoomValue.title = title;
+                _zoomUiState.lastTitle = title;
+              }
+            }
+          }
         }
 
         if (R.xpLevelupBtn) {
@@ -1821,6 +2056,19 @@
             _lvlui_log("btn click -> openLevelUp");
             _lvlui_setShown(true, "btn openLevelUp");
             _lvlui_cmd(pid, { type: "openLevelUp" });
+          });
+        }
+
+        if (R.zoomOutBtn) {
+          R.zoomOutBtn.addEventListener("click", () => _zoom_nudge(-1));
+        }
+        if (R.zoomInBtn) {
+          R.zoomInBtn.addEventListener("click", () => _zoom_nudge(1));
+        }
+        if (R.zoomValue) {
+          R.zoomValue.addEventListener("dblclick", () => {
+            const set = window.__heSetZoom;
+            if (typeof set === "function") set(1);
           });
         }
 
@@ -3464,7 +3712,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           let note = data ? data.note : "";
           const btn = data ? data.button : null;
           const prof = data ? data.profile : null;
-          const detailNodes = boxEl ? boxEl.querySelectorAll(".hud-kindline, .hud-traits, .hud-elemline") : null;
+          const detailNodes = boxEl ? boxEl.querySelectorAll(".hud-kindline, .hud-traits, .hud-elemline, .hud-footline") : null;
 
           function reset() {
             setText(noteEl, note || "");
@@ -3801,6 +4049,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
 
         function tick() {
+          _zoom_updateUi();
           const pid = getPid();
           const spritesNS = window.sprites;
 

@@ -281,6 +281,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         atlas: "anims.Shrine 32x64",
         ref: { row: 0, col: 0 },
         offsetYPx: -16,
+        focusAuraAllowInset: true,
         focusAuraUseOutline: true,
         overlay: {
             frameIndex: 1,

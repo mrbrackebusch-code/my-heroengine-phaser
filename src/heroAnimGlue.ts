@@ -39,6 +39,9 @@ const HERO_NAME_KEY   = "heroName";
 const HERO_FAMILY_KEY = "heroFamily";
 const HERO_PHASE_KEY  = "phase";   // same key name as monsters, different value set
 const HERO_DIR_KEY    = "dir";
+const HERO_AIM_DIR_X1000_KEY = "aimDx";
+const HERO_AIM_DIR_Y1000_KEY = "aimDy";
+const HERO_AIM_ANGLE_MDEG_KEY = "aimAng";
 
 // Internal bookkeeping keys on the Phaser sprite
 const LAST_ANIM_KEY  = "__heroLastAnimKey";
@@ -51,6 +54,9 @@ const HERO_REST_PHASE_KEY = "__heroRestPhase";
 const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 
 const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
+
+const HERO_AIM_TILT_MAX_DEG = 8;
+const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
 
 
 // Local phase window tracking (because engine PhaseStartMs is Arcade time, not Phaser time)
@@ -377,6 +383,19 @@ function formatFrameDebug(frameIndices: number[]): string {
     return parts.join(", ");
 }
 
+function _heroAimIsDiagonal(dx1000: number, dy1000: number): boolean {
+    return (dx1000 | 0) !== 0 && (dy1000 | 0) !== 0;
+}
+
+function _heroShouldUseSideDirForAim(phase: HeroPhase | null, actionKind?: string): boolean {
+    const ak = (actionKind || "").toLowerCase();
+    if (ak.startsWith("strength") || ak.startsWith("agility")) return true;
+    if (!phase) return false;
+    if (phase === "slash" || phase === "thrust") return true;
+    if (phase === "oneHandSlash" || phase === "oneHandBackslash" || phase === "oneHandHalfslash") return true;
+    if (phase === "slashOversize" || phase === "thrustOversize") return true;
+    return false;
+}
 
 // ------------------------------------------------------------
 // Split helpers (NO behavior change; refactor only)
@@ -767,6 +786,9 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     const phaseNameRaw = anySprite.getData ? (anySprite.getData(HERO_PHASE_NAME_KEY) as any) : undefined;
 
     const dirRaw = anySprite.getData ? (anySprite.getData(HERO_DIR_KEY) as any) : undefined;
+    const aimDxRaw = anySprite.getData ? (anySprite.getData(HERO_AIM_DIR_X1000_KEY) as any) : undefined;
+    const aimDyRaw = anySprite.getData ? (anySprite.getData(HERO_AIM_DIR_Y1000_KEY) as any) : undefined;
+    const aimAngRaw = anySprite.getData ? (anySprite.getData(HERO_AIM_ANGLE_MDEG_KEY) as any) : undefined;
 
     const frameColOverrideRaw = anySprite.getData ? (anySprite.getData(HERO_FRAME_COL_OVERRIDE_KEY) as any) : undefined;
 
@@ -835,7 +857,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         return null;
     })();
 
-    const dir: HeroDir = (() => {
+    let dir: HeroDir = (() => {
         if (!dirRaw) return "down";
         const d0 = String(dirRaw).trim().toLowerCase();
         const d = d0.replace(/[\s_-]+/g, "");
@@ -844,6 +866,22 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (d === "left" || d === "w" || d === "west") return "left";
         if (d === "right" || d === "e" || d === "east") return "right";
         return "down";
+    })();
+
+    const aimDx1000 = (() => {
+        const n = Number(aimDxRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+    const aimDy1000 = (() => {
+        const n = Number(aimDyRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
+    })();
+    const aimAngleMdeg = (() => {
+        const n = Number(aimAngRaw);
+        if (!Number.isFinite(n)) return 0;
+        return (n | 0);
     })();
 
     const frameColOverride = (() => {
@@ -860,6 +898,16 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (sl === "none" || sl === "null" || sl === "undefined") return undefined;
         return s;
     })();
+
+    const useSideForAim = _heroShouldUseSideDirForAim(phase, actionKind);
+    const aimDiag = _heroAimIsDiagonal(aimDx1000, aimDy1000);
+    let aimTiltRad = 0;
+    if (useSideForAim && aimDiag) {
+        dir = (aimDx1000 >= 0) ? "right" : "left";
+        let tiltSign = (aimDy1000 < 0 ? -1 : 1);
+        if (dir === "left") tiltSign = -tiltSign;
+        aimTiltRad = HERO_AIM_TILT_MAX_RAD * tiltSign;
+    }
 
     const actionSequence = (() => {
         const n = Number(actionSeqRaw);
@@ -948,7 +996,12 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         strSegName,
         strSegStartMs,
         strSegDurationMs,
-        strSegProgressInt
+        strSegProgressInt,
+
+        aimDx1000,
+        aimDy1000,
+        aimAngleMdeg,
+        aimTiltRad
     };
 }
 
@@ -1148,6 +1201,17 @@ function _tryStrengthChargeThrob(
     try { _publishHeroFollowFrameKeys(sprite, def); } catch {}
 
     return true;
+}
+
+function _applyHeroAimTilt(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequest): void {
+    const anySprite: any = sprite as any;
+    const baseKey = "__heroBaseRotation";
+    if (anySprite[baseKey] == null) {
+        anySprite[baseKey] = sprite.rotation ?? 0;
+    }
+    const baseRot = Number(anySprite[baseKey]) || 0;
+    const tilt = Number((req as any).aimTiltRad) || 0;
+    sprite.rotation = baseRot + tilt;
 }
 
 
@@ -1386,6 +1450,8 @@ function applyHeroAnimationForSpriteInternal(
             });
         }
     }
+
+    _applyHeroAimTilt(sprite, req);
 
     // ------------------------------------------------------------
     // Strength charge throb (early return on success)

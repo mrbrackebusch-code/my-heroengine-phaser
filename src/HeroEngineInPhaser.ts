@@ -145,6 +145,10 @@ function logCoins(...args: any[]): void {
 
 namespace SpriteKind {
 
+    export let Player: number
+
+    export let Enemy: number
+
     export let Hero: number
 
     export let HeroWeapon: number
@@ -862,7 +866,7 @@ namespace HeroEngine {
         direction: string
     ) => void;
 
-    export let animateHeroByProfileHook: HeroAnimByProfileHook = null;
+    export let animateHeroByProfileHook: HeroAnimByProfileHook | null = null;
 
 
 
@@ -1876,7 +1880,7 @@ function _getEffectDummyImage(): Image {
         img.fill(0);
         __effectDummyImage = img;
     }
-    return __effectDummyImage;
+    return __effectDummyImage!;
 }
 
 function _heroBodyFxMaskRadiusForHero(hero: Sprite): number {
@@ -2876,6 +2880,7 @@ const HERO_DATA = {
     STR_INNER_RADIUS: "strInnerR",     // STR smash inner radius (per-hero cache)
 
     OWNER: "owner",                    // which player "owns" this hero
+    PLAYER_ID: "owner",
     IS_NPC: "isNpc",                   // hero-like sprite that should be excluded from hero loops
 
 
@@ -2988,6 +2993,10 @@ const HERO_DATA = {
 
     DIR: "dir",
 
+    AIM_DIR_X1000: "aimDx",
+    AIM_DIR_Y1000: "aimDy",
+    AIM_ANGLE_MDEG: "aimAng",
+
     PHASE: "phase",
 
     FRAME_COL_OVERRIDE: "frameColOverride",
@@ -3021,6 +3030,7 @@ const HERO_DATA = {
     ActionP3: "ActionP3",
 
     ActionTargetId: "ActionTargetId",
+    ActionTarget: "ActionTargetId",
 
 
 
@@ -3911,7 +3921,7 @@ function _finalizeHeroTeleportOut(heroIndex: number, hero: Sprite): void {
     _clearHeroProfile(profileKey, heroIndex)
     if (pid > 0 && playerToHeroIndex[pid] === heroIndex) playerToHeroIndex[pid] = -1
     for (const pidStr of Object.keys(playerIdToProfile)) {
-        const p = pidStr | 0
+        const p = (Number(pidStr) | 0)
         if (playerIdToProfile[p] === profileKey) delete playerIdToProfile[p]
     }
     if (DEBUG_NET_IDENTITY && profileKey) {
@@ -6091,23 +6101,36 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
         // NOTE: We keep entMoveSig (with XY) so DIFF can show movement when we choose to print it.
 
         const diffSnap = _dbgContract_buildDiffSnap({
+            playerId: owner,
+            heroIndex: hi,
 
-            owner, hi,
+            actionSeq: aSeq,
+            actionKind: aKind,
+            actionVar: aVar,
+            actionSeed: aSeed,
+            actionTgt: aTgt,
 
-            aSeq, aKind, aVar, aSeed, aTgt,
+            phase: ph,
+            part: pp,
 
-            ph, pp,
+            locked,
+            ctrlSpell: ctrl,
+            strCharge: strCh,
+            agiState,
 
-            locked, ctrl, strCh, agiState,
+            family,
+            dir,
+            phaseMirror,
+            frameColOverride: fco,
 
-            family, dir, phaseMirror, fco,
-
-            wSl, wTh, wCa, wEx, wCo,
+            weaponSlash: wSl,
+            weaponThrust: wTh,
+            weaponCast: wCa,
+            weaponExec: wEx,
+            weaponCombo: wCo,
 
             entSig: (hasEntities ? entMoveSig : ""), // DIFF sees movement
-
             hasEntities
-
         })
 
         _dbgContract_pendingDiffSnapByHero[hi] = diffSnap
@@ -8626,7 +8649,7 @@ type EffectApplyOpts = {
     tint?: number
     alpha?: number
     blend?: string
-    mode?: "full" | "paint"
+    mode?: "full" | "paint" | "silhouette" | "projectile"
     scale?: number
     fitRadiusPx?: number
     brushPx?: number
@@ -10923,7 +10946,7 @@ function _dunGetActivePidsUpTo4(): number[] {
         const connected = g && g.__netProfileConnected ? g.__netProfileConnected : null
         if (byPid && connected) {
             for (const pidStr of Object.keys(byPid)) {
-                const pid = pidStr | 0
+                const pid = (Number(pidStr) | 0)
                 const profile = byPid[pid]
                 if (!profile) continue
                 if (!connected[profile]) continue
@@ -27396,6 +27419,8 @@ let _tileCollFrame = 0
 const HERO_SPRITE_PX = 64
 const HERO_COLLIDER_W_PX = 20
 const HERO_COLLIDER_H_PX = 15
+// Collision assists (diag squeeze/cheat/auto-nudge) are gated for stability.
+const HERO_COLLISION_ASSIST_ENABLED = false
 const HERO_DIAG_SQUEEZE_W_PCT = 80
 const HERO_DIAG_SQUEEZE_W_MIN_PX = 18
 const HERO_COLLISION_Y_OFFSET_PX = Math.max(0, ((HERO_SPRITE_PX - HERO_COLLIDER_H_PX) >> 1))
@@ -27404,6 +27429,9 @@ const HERO_WALL_DIAG_CHEAT_MIN_PX = 8
 const HERO_WALL_DIAG_CHEAT_MAX_PX = -1
 const HERO_WALL_DIAG_NUDGE_PX = 1
 const HERO_WALL_DIAG_NUDGE_TICKS = 3
+
+// Centralized collision resolver toggle (wall + decor in one pass).
+const HERO_COLLISION_UNIFIED = true
 
 
 
@@ -27459,7 +27487,7 @@ function _heroEnvColliderDimsForMove(s: Sprite, movingDiag: boolean): { w: numbe
     const dims = _readSpriteColliderDims(s)
     let w = dims.w | 0
     const h = dims.h | 0
-    if (movingDiag) w = _heroDiagSqueezeWidth(w)
+    if (HERO_COLLISION_ASSIST_ENABLED && movingDiag) w = _heroDiagSqueezeWidth(w)
     return { w: w | 0, h: h | 0 }
 }
 
@@ -27495,6 +27523,143 @@ function _boundsWithOffset(s: Sprite, offY: number) {
 
 }
 
+// Check if an axis-aligned box overlaps any solid tile collision shape.
+function _boxOverlapsWorldCollisionBounds(
+    left: number,
+    right: number,
+    top: number,
+    bottom: number
+): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
+
+    const map = _engineWorldTileMap
+    const rows = map.length
+    const cols = map[0].length
+    const tileSize = WORLD_TILE_SIZE
+
+    const minCol = Math.idiv(left, tileSize)
+    const maxCol = Math.idiv(right, tileSize)
+    const minRow = Math.idiv(top, tileSize)
+    const maxRow = Math.idiv(bottom, tileSize)
+
+    for (let r = minRow; r <= maxRow; r++) {
+        if (r < 0 || r >= rows) continue
+        const rowArr = map[r]
+        for (let c = minCol; c <= maxCol; c++) {
+            if (c < 0 || c >= cols) continue
+            const type = rowArr[c] | 0
+            const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
+            if (!def.solid) continue
+            const shapeLeft = (c * tileSize + def.offsetX) | 0
+            const shapeTop = (r * tileSize + def.offsetY) | 0
+            const shapeRight = (shapeLeft + def.width) | 0
+            const shapeBottom = (shapeTop + def.height) | 0
+            if (left < shapeRight && right > shapeLeft && top < shapeBottom && bottom > shapeTop) return true
+        }
+    }
+
+    return false
+}
+
+// Single collision resolver for heroes: walls + decor in one pass.
+function _resolveHeroCollisionsUnified(): void {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
+
+    const map = _engineWorldTileMap
+    const rows = map.length | 0
+    const cols = (map[0] ? (map[0].length | 0) : 0)
+    const tileSize = WORLD_TILE_SIZE | 0
+    if (rows <= 0 || cols <= 0 || tileSize <= 0) return
+
+    const worldW = (cols * tileSize) | 0
+    const worldH = (rows * tileSize) | 0
+
+    function heroBoundsAt(h: Sprite, x: number, y: number, movingDiag: boolean) {
+        const dims = _heroEnvColliderDimsForMove(h, movingDiag)
+        const halfW = (dims.w | 0) >> 1
+        const halfH = (dims.h | 0) >> 1
+        const offY = _heroCollisionOffsetY(h) | 0
+        const cx = x | 0
+        const cy = ((y | 0) + offY) | 0
+        return {
+            left: (cx - halfW) | 0,
+            right: (cx + halfW - 1) | 0,
+            top: (cy - halfH) | 0,
+            bottom: (cy + halfH - 1) | 0,
+        }
+    }
+
+    function heroOverlapsAt(h: Sprite, x: number, y: number, movingDiag: boolean): boolean {
+        const b = heroBoundsAt(h, x, y, movingDiag)
+        if (b.left < 0 || b.top < 0 || b.right >= worldW || b.bottom >= worldH) return true
+        if (_boxOverlapsWorldCollisionBounds(b.left, b.right, b.top, b.bottom)) return true
+        if (_boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)) return true
+        return false
+    }
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+        if (h.flags & sprites.Flag.Ghost) continue
+
+        const curX = h.x | 0
+        const curY = h.y | 0
+
+        let prevX = sprites.readDataNumber(h, HERO_DATA.PREV_X)
+        let prevY = sprites.readDataNumber(h, HERO_DATA.PREV_Y)
+        if (!(prevX || prevX === 0)) prevX = curX
+        if (!(prevY || prevY === 0)) prevY = curY
+        const px = (prevX | 0)
+        const py = (prevY | 0)
+
+        const dx = (curX - px) | 0
+        const dy = (curY - py) | 0
+        const movingDiag = (dx !== 0 && dy !== 0) || (Math.abs(h.vx) > 0.001 && Math.abs(h.vy) > 0.001)
+
+        if (!heroOverlapsAt(h, curX, curY, movingDiag)) continue
+
+        const canX = !heroOverlapsAt(h, curX, py, movingDiag)
+        const canY = !heroOverlapsAt(h, px, curY, movingDiag)
+
+        let finalX = curX
+        let finalY = curY
+        let blockedX = false
+        let blockedY = false
+
+        if (canX && !canY) {
+            finalY = py
+            blockedY = true
+        } else if (canY && !canX) {
+            finalX = px
+            blockedX = true
+        } else if (canX && canY) {
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                finalY = py
+                blockedY = true
+            } else {
+                finalX = px
+                blockedX = true
+            }
+        } else {
+            finalX = px
+            finalY = py
+            blockedX = true
+            blockedY = true
+        }
+
+        h.x = finalX | 0
+        h.y = finalY | 0
+        if (blockedX) h.vx = 0
+        if (blockedY) h.vy = 0
+
+        if (heroOverlapsAt(h, h.x | 0, h.y | 0, movingDiag)) {
+            h.x = px | 0
+            h.y = py | 0
+            h.vx = 0
+            h.vy = 0
+        }
+    }
+}
 
 
 // Check if an axis-aligned box overlaps any solid tile.
@@ -28579,6 +28744,11 @@ function _resolveTilemapCollisionsForGroup(group: Sprite[], label: string): void
 
 function resolveHeroTilemapCollisions(): void {
 
+    if (HERO_COLLISION_UNIFIED) {
+        _resolveHeroCollisionsUnified()
+        return
+    }
+
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
 
 
@@ -28664,7 +28834,7 @@ function resolveHeroTilemapCollisions(): void {
                 minApproach: number
             } | null = null
 
-            if (movingDiag) {
+            if (HERO_COLLISION_ASSIST_ENABLED && movingDiag) {
                 let diagCheatPx = Math.round(Math.min(cw | 0, ch | 0) * 0.5 * HERO_WALL_DIAG_CHEAT_RADIUS_PCT) | 0
                 if (diagCheatPx < (HERO_WALL_DIAG_CHEAT_MIN_PX | 0)) diagCheatPx = HERO_WALL_DIAG_CHEAT_MIN_PX | 0
                 const diagCheatMax = HERO_WALL_DIAG_CHEAT_MAX_PX | 0
@@ -29304,6 +29474,7 @@ const HERO_BLOCKED_SINCE_MS_KEY = "__heBlockedSinceMs"
 
 function decorSolids_blockingHook(nowMs: number): void {
 
+    if (HERO_COLLISION_UNIFIED) return
     if (!DECOR_SOLID_BLOCKING_ENABLED) return
     if (!_engineDecorSolids) return
 
@@ -29486,7 +29657,12 @@ function decorSolids_blockingHook(nowMs: number): void {
         const dx = (cx - px) | 0
         const dy = (cy - py) | 0
         const movingDiag = (dx !== 0 && dy !== 0) || (Math.abs(h.vx) > 0.001 && Math.abs(h.vy) > 0.001)
-        const useDiagSqueeze = DECOR_SOLID_ALLOW_DIAG_SQUEEZE && movingDiag && (HERO_DIAG_SQUEEZE_W_PCT > 0) && (HERO_DIAG_SQUEEZE_W_PCT < 100)
+        const useDiagSqueeze =
+            HERO_COLLISION_ASSIST_ENABLED &&
+            DECOR_SOLID_ALLOW_DIAG_SQUEEZE &&
+            movingDiag &&
+            (HERO_DIAG_SQUEEZE_W_PCT > 0) &&
+            (HERO_DIAG_SQUEEZE_W_PCT < 100)
 
         const worldBlocked = heroBlockedByWorldAt(h, cx, cy)
         const decorBlockedFull = heroOverlapsDecorAt(h, cx, cy, false)
@@ -29525,9 +29701,11 @@ function decorSolids_blockingHook(nowMs: number): void {
                 if (blockedY) h.vy = 0
             }
 
-            for (let it = 0; it < MAX_FALLBACK_ITERS; it++) {
-                if (!heroOverlapsDecorAt(h, h.x | 0, h.y | 0, useDiagSqueeze)) break
-                if (!resolveByPenetrationOnce(h, useDiagSqueeze)) break
+            if (HERO_COLLISION_ASSIST_ENABLED) {
+                for (let it = 0; it < MAX_FALLBACK_ITERS; it++) {
+                    if (!heroOverlapsDecorAt(h, h.x | 0, h.y | 0, useDiagSqueeze)) break
+                    if (!resolveByPenetrationOnce(h, useDiagSqueeze)) break
+                }
             }
         }
 
@@ -29536,7 +29714,11 @@ function decorSolids_blockingHook(nowMs: number): void {
         const decorBlockedFinal = useDiagSqueeze ? heroOverlapsDecorAt(h, h.x | 0, h.y | 0, true) : decorBlockedFinalFull
 
         if (worldBlockedFinal || decorBlockedFinal) {
-            heroTryRescueIfBlocked(h, now)
+            if (HERO_COLLISION_ASSIST_ENABLED) {
+                heroTryRescueIfBlocked(h, now)
+            } else {
+                sprites.setDataNumber(h, HERO_BLOCKED_SINCE_MS_KEY, 0)
+            }
         } else if (!decorBlockedFinalFull && !worldBlockedFinal) {
             heroMarkSafe(h, h.x | 0, h.y | 0)
         } else {
@@ -29661,7 +29843,7 @@ function _resolvePidForProfile(profileRaw: any): number {
     if (!key) return 0
     try {
         for (const pidStr of Object.keys(playerIdToProfile)) {
-            const pid = pidStr | 0
+            const pid = (Number(pidStr) | 0)
             if (pid > 0 && playerIdToProfile[pid] === key) return pid
         }
     } catch { }
@@ -30435,6 +30617,9 @@ function createHeroForPlayer(
     // NEW: seed initial facing + phase for animations
 
     syncHeroDirData(heroIndex)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, 1000)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, 0)
 
     setHeroPhaseString(heroIndex, "idle")
 
@@ -36092,11 +36277,14 @@ function updateHeroAimIndicators(now: number) {
 
 
 
-        if (!show) continue
-
-
-
         const aim = computeHeroAimForIndicator(i, hero)
+
+        // Publish aim to hero data so weapon overlays can rotate on diagonals.
+        sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, aim.dx1000 | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, aim.dy1000 | 0)
+        sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, aim.angleMdeg | 0)
+
+        if (!show) continue
 
 
 
@@ -36499,7 +36687,16 @@ function updateHeroMeters(now: number) {
 
 
 
+const SHOW_MANA_REGEN_FLOATING_TEXT = false
+
 function updateHeroManaBlessIndicators(now: number): void {
+    if (!SHOW_MANA_REGEN_FLOATING_TEXT) {
+        for (let i = 0; i < heroes.length; i++) {
+            const t = _getHeroManaBlessIndicator(i)
+            if (t) t.setFlag(SpriteFlag.Invisible, true)
+        }
+        return
+    }
     const shrineActive =
         ((_dunShrineBlessingFloor | 0) === (_dunFloorIndex | 0)) &&
         ((_dunShrineBlessingUntilMs | 0) > (now | 0))
@@ -57934,9 +58131,14 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
 
 }
 
-
-
-
+function _snapshotHeroPrevPositions(): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h) continue
+        sprites.setDataNumber(h, HERO_DATA.PREV_X, h.x)
+        sprites.setDataNumber(h, HERO_DATA.PREV_Y, h.y)
+    }
+}
 
 // Master update
 
@@ -57952,24 +58154,6 @@ game.onUpdate(function () {
 
     const now = game.runtime() | 0
     _storyBlessPreTick(now)
-
-
-    // snapshot previous positions for all heroes
-
-    for (let hi = 0; hi < heroes.length; hi++) {
-
-        const h = heroes[hi]
-
-        if (h) {
-
-            sprites.setDataNumber(h, HERO_DATA.PREV_X, h.x)
-
-            sprites.setDataNumber(h, HERO_DATA.PREV_Y, h.y)
-
-        }
-
-    }
-
 
 
     updatePlayerInputs()
@@ -58064,7 +58248,7 @@ if (SHOP_MODE_ACTIVE) {
 
         updateGenericFocus(now)
 
-
+        _snapshotHeroPrevPositions()
 
         logHeroRuntimeContractAllHeroes(now, "onUpdate:shopMode")
 
@@ -58183,6 +58367,8 @@ if (SHOP_MODE_ACTIVE) {
     updateEnemyHoming(now)
 
     updateEnemyEffects(now)
+
+    _snapshotHeroPrevPositions()
 
 
 
@@ -59981,6 +60167,90 @@ if (typeof globalThis !== "undefined") {
             }
             playerToHeroIndex[pid] = -1
             return true
+        }
+
+        // Remove stray heroes that do not map to any connected profile.
+        internals.pruneUnconnectedHeroes = function (reason?: string): number {
+            try {
+                const g: any = globalThis as any
+                const allowed: Record<string, boolean> = Object.create(null)
+
+                const connected = g.__netProfileConnected
+                if (connected && typeof connected === "object") {
+                    for (const k of Object.keys(connected)) {
+                        if (!connected[k]) continue
+                        const key = _normalizeProfileKey(k)
+                        if (key) allowed[key] = true
+                    }
+                }
+
+                const byPid = g.__netProfileByPid
+                if (!Object.keys(allowed).length && byPid && typeof byPid === "object") {
+                    for (const k of Object.keys(byPid)) {
+                        const key = _normalizeProfileKey(byPid[k])
+                        if (key) allowed[key] = true
+                    }
+                }
+
+                if (!Object.keys(allowed).length) {
+                    const local =
+                        (typeof g.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+                            ? g.__localHeroProfileName.trim()
+                            : (typeof g.__netHelloProfile === "string" && g.__netHelloProfile.trim())
+                                ? g.__netHelloProfile.trim()
+                                : ""
+                    const key = _normalizeProfileKey(local)
+                    if (key) allowed[key] = true
+                }
+
+                if (!Object.keys(allowed).length) return 0
+
+                let removed = 0
+                for (let hi = 0; hi < heroes.length; hi++) {
+                    const hero = heroes[hi]
+                    if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+                    if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+
+                    const profile = _normalizeProfileKey(_getProfileFromHeroSprite(hero))
+                    const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+
+                    let keep = false
+                    if (profile && allowed[profile]) {
+                        keep = true
+                    } else if (owner > 0 && byPid && typeof byPid[owner] === "string") {
+                        const byPidKey = _normalizeProfileKey(byPid[owner])
+                        if (byPidKey && allowed[byPidKey]) keep = true
+                    }
+
+                    if (keep) continue
+
+                    if (profile) _clearHeroProfile(profile, hi)
+                    if (owner > 0) {
+                        if (playerToHeroIndex[owner] === hi) playerToHeroIndex[owner] = -1
+                        const mapped = playerIdToProfile[owner]
+                        if (typeof mapped === "string") {
+                            const mappedKey = _normalizeProfileKey(mapped)
+                            if (!mappedKey || !allowed[mappedKey] || mappedKey === profile) {
+                                delete playerIdToProfile[owner]
+                            }
+                        }
+                    }
+
+                    hero.destroy()
+                    removed++
+                }
+
+                if (DEBUG_NET_IDENTITY && removed > 0) {
+                    console.log("[profile.identity] pruned unconnected heroes", {
+                        removed,
+                        reason: reason || ""
+                    })
+                }
+                return removed
+            } catch (e) {
+                if (DEBUG_NET_IDENTITY) console.warn("[profile.identity] prune failed", e)
+                return 0
+            }
         }
 
         // NPC LPC helpers (Phaser-only convenience API)
