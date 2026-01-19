@@ -4006,6 +4006,74 @@ export function getHeroAuraInnerRForNative(
     return inner > 0 ? inner : 0;
 }
 
+const __spriteTipCache = new Map<string, { dx: number; dy: number }>();
+
+export function getSpriteTipOffsetForNativeVec(
+    native: Phaser.GameObjects.Sprite,
+    dirKey: string,
+    nx: number,
+    ny: number
+): { dx: number; dy: number } | null {
+    const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+    if (!scene || !native) return null;
+    if (!dirKey || (!nx && !ny)) return null;
+
+    const texKey = native.texture?.key ? String(native.texture.key) : "";
+    if (!texKey) return null;
+    const frameName =
+        (native.frame && (native.frame.name !== undefined))
+            ? String(native.frame.name)
+            : "";
+    if (!frameName) return null;
+
+    const ox = (typeof native.originX === "number") ? native.originX : 0.5;
+    const oy = (typeof native.originY === "number") ? native.originY : 0.5;
+    const key = `${texKey}|${frameName}|${dirKey}|${Math.round(ox * 1000)}|${Math.round(oy * 1000)}`;
+    const cached = __spriteTipCache.get(key);
+    if (cached) return cached;
+
+    const img = __readFrameImageData(scene, texKey, frameName);
+    const w = img.width | 0;
+    const h = img.height | 0;
+    if (w <= 0 || h <= 0) return null;
+
+    const data = img.data;
+    let bestDot = -1e9;
+    let bestDx = 0;
+    let bestDy = 0;
+    for (let y = 0; y < h; y++) {
+        const row = y * w;
+        for (let x = 0; x < w; x++) {
+            const i = (row + x) * 4;
+            const a = data[i + 3] | 0;
+            if (a <= 0) continue;
+            const px = (x + 0.5) - (ox * w);
+            const py = (y + 0.5) - (oy * h);
+            const dot = (px * nx) + (py * ny);
+            if (dot > bestDot) {
+                bestDot = dot;
+                bestDx = px;
+                bestDy = py;
+            }
+        }
+    }
+
+    if (bestDot <= -1e8) return null;
+
+    let dx = bestDx;
+    let dy = bestDy;
+    const sx = (typeof native.scaleX === "number") ? native.scaleX : 1;
+    const sy = (typeof native.scaleY === "number") ? native.scaleY : 1;
+    dx *= sx;
+    dy *= sy;
+    if ((native as any).flipX) dx = -dx;
+    if ((native as any).flipY) dy = -dy;
+
+    const out = { dx, dy };
+    __spriteTipCache.set(key, out);
+    return out;
+}
+
 
 
 // ----------------------------------------------------------

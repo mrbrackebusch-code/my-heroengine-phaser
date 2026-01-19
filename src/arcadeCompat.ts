@@ -2722,10 +2722,18 @@ function __installHeroVisualInfoHookOnce(): void {
                 innerR = leadEdge + 3;
             }
 
-            // 3) Weapon tip: start dumb, later replace with real offsets from heroAnimGlue
-            const tip = leadEdge + 6;
-            const wTipX = nx * tip;
-            const wTipY = ny * tip;
+            // 3) Weapon tip: prefer cached offsets if available
+            let wTipX = 0;
+            let wTipY = 0;
+            try {
+                wTipX = sprites.readDataNumber(hero, HERO_DATA.VIS_WTIP_X) | 0;
+                wTipY = sprites.readDataNumber(hero, HERO_DATA.VIS_WTIP_Y) | 0;
+            } catch { /* ignore */ }
+            if (!wTipX && !wTipY) {
+                const tip = leadEdge + 6;
+                wTipX = nx * tip;
+                wTipY = ny * tip;
+            }
 
             return [innerR, leadEdge, wTipX, wTipY];
         };
@@ -2794,10 +2802,18 @@ function __installHeroVisualInfoHookOnce(): void {
             if (innerR <= 0) innerR = 35;
             if (leadEdge <= 0) leadEdge = 32;
 
-            // 4) Weapon tip offset (dumb for now; we’ll replace with real weapon offsets later)
-            const tip = leadEdge + 6;
-            const wTipX = nx * tip;
-            const wTipY = ny * tip;
+            // 4) Weapon tip offset (prefer cached real weapon offsets)
+            let wTipX = 0;
+            let wTipY = 0;
+            try {
+                wTipX = sprites.readDataNumber(hero, HERO_DATA.VIS_WTIP_X) | 0;
+                wTipY = sprites.readDataNumber(hero, HERO_DATA.VIS_WTIP_Y) | 0;
+            } catch { /* ignore */ }
+            if (!wTipX && !wTipY) {
+                const tip = leadEdge + 6;
+                wTipX = nx * tip;
+                wTipY = ny * tip;
+            }
 
             return [innerR, leadEdge, wTipX, wTipY];
         };
@@ -9031,6 +9047,38 @@ function _wpnAimIsDiagonal(aimDx1000: number, aimDy1000: number): boolean {
     return (aimDx1000 | 0) !== 0 && (aimDy1000 | 0) !== 0;
 }
 
+function _wpnTipDirKeyFromAim(
+    aimDx1000: number,
+    aimDy1000: number,
+    fallbackDir: "up" | "down" | "left" | "right"
+): string {
+    const dx = (aimDx1000 | 0);
+    const dy = (aimDy1000 | 0);
+    if (!dx && !dy) return fallbackDir;
+    if (!dx) return dy >= 0 ? "down" : "up";
+    if (!dy) return dx >= 0 ? "right" : "left";
+    const sx = dx >= 0 ? 1 : -1;
+    const sy = dy >= 0 ? 1 : -1;
+    if (sx > 0 && sy > 0) return "down_right";
+    if (sx > 0 && sy < 0) return "up_right";
+    if (sx < 0 && sy > 0) return "down_left";
+    return "up_left";
+}
+
+function _wpnTipDirVec(key: string): { nx: number; ny: number } {
+    switch (key) {
+        case "up": return { nx: 0, ny: -1 };
+        case "down": return { nx: 0, ny: 1 };
+        case "left": return { nx: -1, ny: 0 };
+        case "right": return { nx: 1, ny: 0 };
+        case "up_left": return { nx: -0.7071, ny: -0.7071 };
+        case "up_right": return { nx: 0.7071, ny: -0.7071 };
+        case "down_left": return { nx: -0.7071, ny: 0.7071 };
+        case "down_right": return { nx: 0.7071, ny: 0.7071 };
+        default: return { nx: 0, ny: -1 };
+    }
+}
+
 function _wpnApplyAimGhost(args: {
     overlays: any;
     baseDir: "up" | "down" | "left" | "right";
@@ -9492,6 +9540,34 @@ function _syncWeaponOverlaysForHeroNative(
     // Post-glue: compute actual weapon frame cols/names + apply nativeFco if present (unchanged)
     const nativeFcoForWeapon = staffCast ? -1 : nativeFco;
     const wfi = _wpnPostGlueComputeWeaponFrameInfoAndApplyFco(sc, overlays, nativeFcoForWeapon);
+
+    // Cache weapon tip offset (hero-relative) for gameplay projectiles.
+    try {
+        const tipDirKey = _wpnTipDirKeyFromAim(aimDx1000, aimDy1000, renderDir as any);
+        const tipVec = _wpnTipDirVec(tipDirKey);
+        const fgAny: any = overlays.weaponFg as any;
+        if (fgAny && heroAnimGlue?.getSpriteTipOffsetForNativeVec) {
+            const tip = heroAnimGlue.getSpriteTipOffsetForNativeVec(
+                fgAny,
+                tipDirKey,
+                tipVec.nx,
+                tipVec.ny
+            );
+            if (tip) {
+                const baseX = (nativeHero.x ?? 0) as number;
+                const baseY = (nativeHero.y ?? 0) as number;
+                const wTipX = ((fgAny.x ?? baseX) + (tip.dx || 0)) - baseX;
+                const wTipY = ((fgAny.y ?? baseY) + (tip.dy || 0)) - baseY;
+                sprites.setDataNumber(s, HERO_DATA.VIS_WTIP_X, wTipX);
+                sprites.setDataNumber(s, HERO_DATA.VIS_WTIP_Y, wTipY);
+                try {
+                    (s as any).data = (s as any).data || {};
+                    (s as any).data.visWTipX = wTipX;
+                    (s as any).data.visWTipY = wTipY;
+                } catch { /* ignore */ }
+            }
+        }
+    } catch { /* ignore */ }
 
     // Step 6/7/8 ... (UNCHANGED behavior; just moved)
     _wpnStep6_7_8_Effects(sc, dataAny, nativeHero, overlays);

@@ -5,22 +5,12 @@ declare global {
   type Sprite = any;
   const Sprite: any;
 
-  interface Image {
-    [key: string]: any;
-    width: number;
-    height: number;
-    clearCrop?(): void;
-  }
-
-  interface ImageConstructor {
-    fromJSON?(width: number, height: number, pixels: number[]): Image;
-    [key: string]: any;
-  }
-  const Image: ImageConstructor;
+  type Image = any;
 
   interface Math {
     idiv(a: number, b: number): number;
     randomRange(min: number, max: number): number;
+    constrain(value: number, min: number, max: number): number;
   }
 
   interface Array<T> {
@@ -31,6 +21,7 @@ declare global {
   type TextSprite = any;
   type MoveTraits = number[];
   type SyncContext = any;
+  type CollisionDirection = any;
 
   namespace SpriteKind {
     let Player: number;
@@ -38,6 +29,11 @@ declare global {
   }
 
   namespace sprites {
+    const Flag: any;
+    function create(image: Image, kind?: number): Sprite;
+    function onOverlap(kind: number, otherKind: number, handler: (sprite: Sprite, other: Sprite) => void): void;
+    function onDestroyed(kind: number, handler: (sprite: Sprite) => void): void;
+    function allOfKind(kind: number): Sprite[];
     function readDataNumber(...args: any[]): number;
     function readDataString(...args: any[]): string;
     function readDataBoolean(...args: any[]): boolean;
@@ -46,6 +42,15 @@ declare global {
     function setDataString(...args: any[]): void;
     function setDataBoolean(...args: any[]): void;
     function setDataSprite(...args: any[]): void;
+  }
+
+  namespace image {
+    type Font = any;
+    const font5: Font;
+    const font8: Font;
+    const font12: Font;
+    const font16: Font;
+    function create(width: number, height: number): Image;
   }
 
   const SpriteKind: any;

@@ -10,6 +10,11 @@ Not affiliated with or endorsed by Microsoft. “MakeCode” is a Microsoft trad
 
 A Phaser-based runtime/wrapper for MakeCode Arcade-style gameplay, plus a small WebSocket server for multiplayer experiments.
 
+## To-Do
+- Shrine: rewrite the “what we are looking for” block script to be blunt/explicit with story-like variable names (readable, not tricky).
+- Shrine: ensure the blessing effect is floor-wide and applies to all heroes consistently.
+- Shrine: add a global screen particle/visual effect while the blessing is active (rainbow ambient), separate from local shrine overlay/sparkles.
+
 
 ## Setup to run locally
 
@@ -19,8 +24,7 @@ Prereqs:
 Install:
 ```bash
 npm install
-
-
+```
 
 ## Run locally
 Start multiplayer server (WebSocket, port 8080):

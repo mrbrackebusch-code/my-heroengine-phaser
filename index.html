@@ -613,9 +613,9 @@
          HUD (5 boxes)
          ----------------------------- */
     :root {
-      --hud-left-w: 170px; /* single source of truth */
+      --hud-left-w: 64px; /* single source of truth */
       --hud-right-w: 64px;
-      --hud-bottom-h: 48px;
+      --hud-bottom-h: 64px;
       --hud-gap: 6px;
     }
 
@@ -625,9 +625,9 @@
 
         display: grid;
         grid-template-columns: 1.10fr 1fr 1fr 1fr 1fr;
-        gap: 4px;
+        gap: 3px;
 
-        padding: 4px;
+        padding: 3px;
         border: 2px solid var(--hud-border);
         border-radius: 10px;
 
@@ -643,7 +643,7 @@
         min-width: 0;
         border: 2px solid rgba(255, 255, 255, 0.18);
         border-radius: 8px;
-        padding: 5px 7px;
+        padding: 4px 6px;
         box-sizing: border-box;
 
         background: linear-gradient(
@@ -653,7 +653,6 @@
         );
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
 
-        min-height: 88px;
       }
 
       .hud-head {
@@ -661,7 +660,7 @@
         align-items: baseline;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 1px;
+        margin-bottom: 0;
       }
 
       .hud-title {
@@ -687,7 +686,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        margin-bottom: 1px;
+        margin-bottom: 0;
       }
       .hud-subtle:empty {
         display: none;
@@ -726,8 +725,8 @@
       .hud-traits {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1px 6px; /* tighter */
-        margin-bottom: 2px;
+        gap: 0 6px; /* tighter */
+        margin-bottom: 1px;
       }
 
       .hud-kv {
@@ -777,7 +776,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 6px;
-        margin-top: 1px;
+        margin-top: 0;
       }
 
       .hud-costline {
@@ -836,13 +835,13 @@
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
         font-size: 11px;
-        line-height: 1.1;
+        line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      .hud-youline { margin-top: 2px; }
+      .hud-youline { margin-top: 1px; }
       #hud-you-name { margin-top: 0; }
       #hud-you-slot {
         margin-bottom: 0;
@@ -894,20 +893,21 @@
        #xp-panel {
         position: absolute;
         top: 0px;
-        left: -150px;          /* sits left of the canvas */
-        width: 150px;
+        left: calc(-1 * var(--hud-left-w)); /* sits left of the canvas */
+        width: var(--hud-left-w);
         height: calc(100% - 1px);
 
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
+        align-items: center;
 
-        padding: 10px;
+        padding: 4px 2px;
         box-sizing: border-box;
 
         background: rgba(18, 18, 22, 0.92);
         border: 2px solid #000;
-        border-radius: 12px;
+        border-radius: 10px;
         box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
 
         color: rgba(255, 255, 255, 0.92);
@@ -919,15 +919,14 @@
       }
 
       #xp-panel .xp-title {
-        font-size: 12px;
+        font-size: 9px;
         font-weight: 900;
         letter-spacing: 0.4px;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        text-align: center;
+        white-space: pre-line;
+        width: 100%;
       }
 
       #stage-body {
@@ -956,27 +955,27 @@
 
 
       #xp-panel .xp-line {
-        font-size: 10px;
-        letter-spacing: 0.3px;
+        font-size: 8px;
+        letter-spacing: 0.2px;
         color: var(--txt-dim);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        text-align: center;
+        line-height: 1;
+        width: 100%;
       }
 
         #xp-panel .xp-levelup-btn {
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 900;
           letter-spacing: 0.4px;
           color: rgba(255, 255, 255, 0.95);
           text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
           background: linear-gradient(135deg, rgba(74,163,255,0.9), rgba(255,184,74,0.9));
           border: 2px solid rgba(255,255,255,0.18);
-          border-radius: 8px;
-          padding: 6px 8px;
+          border-radius: 6px;
+          padding: 2px 0;
           text-align: center;
           width: 100%;
-          min-height: 28px;
+          min-height: 22px;
           box-sizing: border-box;
           cursor: pointer;
           transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
@@ -1009,18 +1008,21 @@
         }
 
       #xp-level-top {
-        font-size: 12px;
+        font-size: 9px;
         font-weight: 900;
-        line-height: 1;
+        line-height: 1.1;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-        white-space: nowrap;
+        text-align: center;
+        white-space: pre-line;
       }
 
       #xp-bar {
         position: relative;
         width: 100%;
-        height: 10px;
+        height: auto;
+        flex: 1 1 auto;
+        min-height: 96px;
 
         border: 2px solid rgba(255, 255, 255, 0.22);
         border-radius: 8px;
@@ -1034,41 +1036,49 @@
       #xp-bar-fill {
         position: absolute;
         left: 0;
-        top: 0;
+        right: 0;
         bottom: 0;
 
-        width: 0%;
+        height: 0%;
         background: rgba(74, 163, 255, 0.90); /* matches your intel-blue vibe */
       }
 
       #xp-panel .xp-stats {
-        margin-top: 6px;
+        margin-top: 4px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+        min-height: 0;
+        overflow: auto;
       }
 
-      #xp-panel .xp-stats-grid {
-        display: grid;
-        grid-template-columns: 1fr 50px;
-        gap: 4px 1px;
+      #xp-panel .xp-stat-row {
+        width: 100%;
+        min-height: 32px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
+        justify-content: center;
+        gap: 2px;
       }
 
       #xp-panel .xp-stat-head {
-        font-size: 9px;
-        letter-spacing: 0.6px;
-        text-transform: uppercase;
-        color: var(--txt-dim);
-        text-align: center;
+        display: none;
       }
 
       #xp-panel .xp-stat-label {
-        font-size: 10px;
+        font-size: 7px;
         font-weight: 800;
         letter-spacing: 0.2px;
+        text-transform: uppercase;
+        color: var(--txt-dim);
       }
 
       #xp-panel .xp-stat-val {
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.85);
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.88);
         font-variant-numeric: tabular-nums;
         text-align: center;
       }
@@ -1115,10 +1125,11 @@
         grid-row: 1 / span 2;
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        padding: 6px;
+        gap: 4px;
+        padding: 4px 2px;
         box-sizing: border-box;
         height: 100%;
+        align-items: center;
 
         background: rgba(18, 18, 22, 0.92);
         border: 2px solid #000;
@@ -1131,12 +1142,16 @@
       }
 
       #buffs-panel .buffs-title {
-        font-size: 10px;
+        font-size: 8px;
         font-weight: 800;
         letter-spacing: 0.2px;
         color: var(--txt);
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
         white-space: nowrap;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
       }
 
       #buffs-panel .buffs-box {
@@ -1144,8 +1159,10 @@
         min-height: 0;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
         overflow: auto;
+        align-items: center;
+        width: 100%;
       }
 
       #buffs-panel .buffs-sep {
@@ -1160,13 +1177,13 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 6px;
-        padding: 2px 0 4px;
+        gap: 4px;
+        padding: 2px 0;
         text-align: center;
       }
 
       #buffs-panel .zoom-title {
-        font-size: 10px;
+        font-size: 8px;
         font-weight: 800;
         letter-spacing: 0.2px;
         color: var(--txt);
@@ -1174,7 +1191,7 @@
       }
 
       #buffs-panel .zoom-value {
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 900;
         color: rgba(255, 255, 255, 0.92);
         font-variant-numeric: tabular-nums;
@@ -1184,17 +1201,17 @@
         width: 100%;
         display: grid;
         grid-template-rows: repeat(2, 1fr);
-        gap: 6px;
+        gap: 4px;
       }
 
       #buffs-panel .zoom-btn {
         width: 100%;
-        height: 28px;
-        border-radius: 8px;
+        height: 22px;
+        border-radius: 6px;
         border: 1px solid #000;
         background: rgba(30, 32, 38, 0.9);
         color: rgba(255, 255, 255, 0.95);
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 900;
         cursor: pointer;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -1339,9 +1356,9 @@
    ========================================================= */
 
 :root {
-  --hud-left-w: 170px; /* tweak if you want wider/narrower left sidebar */
+  --hud-left-w: 64px; /* tweak if you want wider/narrower left sidebar */
   --hud-right-w: 64px;
-  --hud-bottom-h: 48px;
+  --hud-bottom-h: 64px;
   --hud-gap: 6px;
 }
 
@@ -1652,31 +1669,33 @@
         <div id="viewport">
           <!-- XP / Level panel (per-client, per-hero) -->
           <div id="xp-panel" aria-hidden="true">
-            <div class="xp-title" id="xp-level-top">Level ...</div>
-            <div class="xp-line" id="xp-left-progress">...</div>
+            <div class="xp-title" id="xp-level-top">Level</div>
             <div id="xp-bar"><div id="xp-bar-fill"></div></div>
-            <button class="xp-levelup-btn" id="xp-levelup-btn" type="button">LEVEL UP (0)</button>
+            <div class="xp-line" id="xp-left-progress">...</div>
+            <button class="xp-levelup-btn" id="xp-levelup-btn" type="button">+0</button>
 
             <div class="xp-stats" id="xp-stats">
-              <div class="xp-stats-grid">
-                <div></div>
-                <div class="xp-stat-head">Levels</div>
-
-                <div class="xp-stat-label">Damage</div>
+              <div class="xp-stat-row">
+                <div class="xp-stat-label">DMG</div>
                 <div class="xp-stat-val" id="xp-stat-dmg-lvl">+0</div>
-
-                <div class="xp-stat-label">Reach</div>
+              </div>
+              <div class="xp-stat-row">
+                <div class="xp-stat-label">RCH</div>
                 <div class="xp-stat-val" id="xp-stat-reach-lvl">+0</div>
-
-                <div class="xp-stat-label">Time</div>
+              </div>
+              <div class="xp-stat-row">
+                <div class="xp-stat-label">TIME</div>
                 <div class="xp-stat-val" id="xp-stat-time-lvl">+0</div>
-
-                <div class="xp-stat-label">Status</div>
+              </div>
+              <div class="xp-stat-row">
+                <div class="xp-stat-label">STAT</div>
                 <div class="xp-stat-val" id="xp-stat-status-lvl">+0</div>
-
+              </div>
+              <div class="xp-stat-row">
                 <div class="xp-stat-label">HP</div>
                 <div class="xp-stat-val" id="xp-stat-hp-lvl">+0</div>
-
+              </div>
+              <div class="xp-stat-row">
                 <div class="xp-stat-label">MP</div>
                 <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
               </div>
@@ -1684,7 +1703,7 @@
           </div>
           <div id="app"></div>
           <div id="buffs-panel" aria-hidden="true">
-            <div class="buffs-title">Buffs:</div>
+            <div class="buffs-title">Buffs</div>
             <div class="buffs-box" id="buffs-box"></div>
             <div class="buffs-sep"></div>
             <div class="zoom-panel" id="zoom-panel">
@@ -1867,9 +1886,7 @@
             if (typeof zoomBy !== "function") return;
             const dir = ev.deltaY > 0 ? -1 : 1;
             if (!dir) return;
-            const bounds = (typeof window.__heGetZoomBounds === "function") ? window.__heGetZoomBounds() : null;
-            const step = (bounds && typeof bounds.step === "number") ? bounds.step : 0.1;
-            zoomBy(dir * step);
+            zoomBy(dir);
             ev.preventDefault();
           }, { passive: false });
         }
@@ -2025,8 +2042,7 @@
         function _zoom_nudge(dir) {
           const by = window.__heZoomBy;
           if (typeof by === "function") {
-            const step = _zoom_getBounds().step;
-            by(dir * step);
+            by(dir);
             return;
           }
           const get = window.__heGetZoom;
@@ -2407,7 +2423,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function _xp_setBarHeight(pct) {
           if (!R.xpBarFill) return;
           const p = Math.max(0, Math.min(100, +pct || 0));
-          R.xpBarFill.style.width = p.toFixed(2) + "%";
+          R.xpBarFill.style.height = p.toFixed(2) + "%";
         }
 
         function _xp_resetUi() {
@@ -2422,7 +2438,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
             R.xpLevelupBtn.style.visibility = "hidden";
             R.xpLevelupBtn.style.opacity = "0";
             R.xpLevelupBtn.style.pointerEvents = "none";
-            setText(R.xpLevelupBtn, "LEVEL UP (0)");
+            setText(R.xpLevelupBtn, "+0");
+            setTitle(R.xpLevelupBtn, "Level Up (0)");
           }
         }
 
@@ -4176,14 +4193,16 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           const lvlPts = Math.max(0, readNum(spritesNS, hero, "lvlPts"));
           const xpTot = Math.max(0, readNum(spritesNS, hero, "xpTot"));
-          setText(R.xpLevelTop, `Level ${lvl}`);
-          setText(R.xpLeftProgress, `${xp}/${xpNext} XP`);
+          setText(R.xpLevelTop, `Level\n${lvl}`);
+          setText(R.xpLeftProgress, `${Math.round(pct)}%`);
+          setTitle(R.xpLeftProgress, `${xp}/${xpNext} XP`);
           const safeToSpend = !snap || !!snap.safeForSpend;
           const hasLevelPoints = lvlPts > 0;
           const canLevelUp = hasLevelPoints && safeToSpend;
           const blocked = hasLevelPoints && !safeToSpend;
           if (R.xpLevelupBtn) {
-            setText(R.xpLevelupBtn, `LEVEL UP (${lvlPts})`);
+            setText(R.xpLevelupBtn, `+${lvlPts}`);
+            setTitle(R.xpLevelupBtn, `Level Up (${lvlPts})`);
             R.xpLevelupBtn.classList.toggle("ready", hasLevelPoints);
             R.xpLevelupBtn.classList.toggle("flash", canLevelUp);
             R.xpLevelupBtn.classList.toggle("blocked", blocked);

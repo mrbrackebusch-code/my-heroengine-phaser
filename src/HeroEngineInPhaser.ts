@@ -2361,6 +2361,10 @@ function _updateStrengthSwingFxSegments(
     const count = sprites.readDataNumber(proj, STR_FX_SEG_COUNT_KEY) | 0;
     if (count <= 0) return;
 
+    const baseX = (proj.x | 0);
+    const baseY = (proj.y | 0);
+    const baseZ = (proj.z | 0);
+
     const outerR = (inner0 | 0) + (reachFromFront | 0);
     const thickness = Math.max(1, (outerR - (inner0 | 0)) | 0);
     const rInner = (inner0 | 0) + Math.idiv(thickness * STR_FX_SEG_INNER_PCT_X1000, 1000);
@@ -2381,9 +2385,9 @@ function _updateStrengthSwingFxSegments(
             const fx = sprites.readDataSprite(proj, _strengthSwingFxSegKey(i));
             if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue;
             const s = startR + Math.round(len * ((i + 0.5) / count));
-            fx.x = hero.x + nx * s;
-            fx.y = hero.y + ny * s;
-            fx.z = (hero.z | 0) + (STR_FX_SEG_Z_BIAS | 0);
+            fx.x = baseX + nx * s;
+            fx.y = baseY + ny * s;
+            fx.z = baseZ + (STR_FX_SEG_Z_BIAS | 0);
             _strengthFxUpdateDir(fx, dirForward);
         }
         return;
@@ -2391,21 +2395,30 @@ function _updateStrengthSwingFxSegments(
 
     const sweepT = (tClamped - PHASE1_FRAC) / (1 - PHASE1_FRAC);
     const halfArcRadMax = ((totalArcDeg | 0) * 0.5) * (Math.PI / 180);
-    const halfArcRad = halfArcRadMax * sweepT;
-    const span = Math.max(0.001, halfArcRad * 2);
+    const travelRad = halfArcRadMax * sweepT;
+    const perArc = Math.max(1, Math.idiv(count, 2) | 0);
+    const spread = Math.max(0.02, (halfArcRadMax * (STR_FX_SEG_CLUSTER_SPREAD_PCT_X1000 | 0) / 1000));
+    const step = (perArc > 1) ? (spread / (perArc - 1)) : 0;
 
     for (let i = 0; i < count; i++) {
         const fx = sprites.readDataSprite(proj, _strengthSwingFxSegKey(i));
         if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue;
-        const a = -halfArcRad + span * ((i + 0.5) / count);
+
+        const arcIdx = (i < perArc) ? 0 : 1;
+        const local = (arcIdx === 0) ? i : (i - perArc);
+        const arcSign = (arcIdx === 0) ? -1 : 1;
+        const baseAng = arcSign * travelRad;
+        const offset = (local - ((perArc - 1) / 2)) * step;
+        const a = baseAng + offset;
+
         const cosA = Math.cos(a);
         const sinA = Math.sin(a);
         const dxDir = nx * cosA + sx * sinA;
         const dyDir = ny * cosA + sy * sinA;
-        const r = (i % 2 === 0) ? rOuter : rInner;
-        fx.x = hero.x + dxDir * r;
-        fx.y = hero.y + dyDir * r;
-        fx.z = (hero.z | 0) + (STR_FX_SEG_Z_BIAS | 0);
+        const r = (local % 2 === 0) ? rOuter : rInner;
+        fx.x = baseX + dxDir * r;
+        fx.y = baseY + dyDir * r;
+        fx.z = baseZ + (STR_FX_SEG_Z_BIAS | 0);
         _strengthFxUpdateDir(fx, _enemyDirFromVector(dxDir, dyDir));
     }
 }
@@ -2465,8 +2478,16 @@ const STR_FX_SEG_Z_BIAS = 4;
 const STR_FX_SEG_FIT_PCT_X1000 = 650;
 const STR_FX_SEG_INNER_PCT_X1000 = 350;
 const STR_FX_SEG_OUTER_PCT_X1000 = 850;
+const STR_FX_SEG_CLUSTER_SPREAD_PCT_X1000 = 350;
 const STR_FX_HIDE_BASE_PROJECTILE = false;
-const ENABLE_STR_FX_SEGMENTS = false;
+const ENABLE_STR_FX_SEGMENTS = true;
+const STR_USE_PROJECTILE_MASK_FX = false;
+const STR_OUTLINE_TIP_ONLY = true;
+const STR_OUTLINE_TIP_DEPTH_PX = 1;
+const STR_OUTLINE_CARDINAL_ONLY = true;
+const STR_TIP_TRACE_SIZE_PX = 16;
+const STR_TIP_TRACE_COLOR = 2;
+const STR_TIP_TRACE_EDGE_COLOR = 15;
 const AGI_FX_SEG_COUNT_KEY = "AGI_FX_N";
 const AGI_FX_SEG_BASE_KEY = "AGI_FX_";
 const AGI_FX_SEG_ACTIVE_KEY = "AGI_FX_ACTIVE";
@@ -2478,6 +2499,21 @@ const AGI_FX_SEG_FIT_PCT_X1000 = 650;
 const AGI_FX_INTRO_MS = 140;
 const AGI_FX_INTRO_SCALE = 0.2;
 const ENABLE_AGI_FX_SEGMENTS = false;
+const AGI_TEX_MIN_X_KEY = "aTexMinX";
+const AGI_TEX_MAX_X_KEY = "aTexMaxX";
+const AGI_TEX_MIN_Y_KEY = "aTexMinY";
+const AGI_TEX_MAX_Y_KEY = "aTexMaxY";
+const AGI_LAST_TIP_X_KEY = "aTipX";
+const AGI_LAST_TIP_Y_KEY = "aTipY";
+const AGI_TIP_TRACE_SIZE_PX = 16;
+const AGI_TIP_TRACE_COLOR = 2;
+const AGI_TIP_TRACE_EDGE_COLOR = 15;
+const AGI_BACK_PULSE_ARC_DEG = 90;
+const AGI_BACK_PULSE_DELAY_MS = 60;
+const AGI_BACK_PULSE_SYNC_MS = 18;
+const AGI_BACK_PULSE_DURATION_MS = 180;
+const AGI_BACK_PULSE_INNER_PAD_PX = 1;
+const AGI_BACK_PULSE_OUTER_PAD_PX = 3;
 const _elementTintCache: { [k: string]: number } = Object.create(null);
 
 function _getEffectAtlasAny(): any {
@@ -5626,7 +5662,7 @@ function _dbgContract_readHeroContractObs(nowMs: number, hi: number, hero: Sprit
 
 
 
-function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
+function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string, note?: string): void {
 
     if (!DEBUG_CONTRACT_SNAPSHOT) return
 
@@ -5636,7 +5672,7 @@ function logHeroRuntimeContractAllHeroes(nowMs: number, stage: string): void {
 
     const now = nowMs | 0
 
-    const st = stage || ""
+    const st = note ? `${stage}:${note}` : (stage || "")
 
 
 
@@ -7203,9 +7239,9 @@ const DECOR_ROLE = {
 
 // Knob for world size tile size tiles dimensions world dimensions
 
-const WORLD_TILES_W = 40;     // columns
+const WORLD_TILES_W = 64;     // columns
 
-const WORLD_TILES_H = 20;     // rows
+const WORLD_TILES_H = 64;     // rows
 
 
 
@@ -7568,6 +7604,9 @@ const SHRINE_BASE = "shrine"
 const SHRINE_ACTIVE_UNTIL_KEY = "shrineActiveUntil"
 const SHRINE_ACTIVE_START_KEY = "shrineActiveStart"
 const SHRINE_ACTIVE_DEFAULT_MS = 120000
+const SHRINE_SPAWN_MIN_PAD_MANHATTAN = 6
+const SHRINE_SPAWN_MIN_EDGE = 2
+const SHRINE_SPAWN_MAX_TRIES = 250
 const SHRINE_OVERLAY_CYCLE_MS = 10000
 const SHRINE_OVERLAY_PULSE_MS = 10000
 const SHRINE_OVERLAY_SAT = 0.78
@@ -7599,6 +7638,27 @@ const SHRINE_SPARKLE_IDLE_COUNT = 1
 const SHRINE_SPARKLE_IDLE_SPREAD_PX = 14
 const SHRINE_SPARKLE_IDLE_INTERVAL_MIN_MS = 900
 const SHRINE_SPARKLE_IDLE_INTERVAL_MAX_MS = 1500
+const SHRINE_AMBIENT_SKIN_ID = "firefly"
+const SHRINE_AMBIENT_CYCLE_MS = 14000
+const SHRINE_AMBIENT_SAT = 0.7
+const SHRINE_AMBIENT_LIGHT = 0.55
+const SHRINE_AMBIENT_ALPHA = 0.22
+const SHRINE_AMBIENT_ALPHA_MIN = 0.03
+const SHRINE_AMBIENT_BLEND = "add"
+const SHRINE_AMBIENT_RADIUS_PX = 3
+const SHRINE_AMBIENT_LIFESPAN_MS = 2600
+const SHRINE_AMBIENT_POP_MS = 260
+const SHRINE_AMBIENT_POP_SCALE = 0.25
+const SHRINE_AMBIENT_SPEED_MIN_PX = 2
+const SHRINE_AMBIENT_SPEED_MAX_PX = 10
+const SHRINE_AMBIENT_ANGLE_MIN_DEG = -160
+const SHRINE_AMBIENT_ANGLE_MAX_DEG = -20
+const SHRINE_AMBIENT_SPAWN_MIN_MS = 140
+const SHRINE_AMBIENT_SPAWN_MAX_MS = 260
+const SHRINE_AMBIENT_SPAWN_MIN_COUNT = 1
+const SHRINE_AMBIENT_SPAWN_MAX_COUNT = 2
+const SHRINE_AMBIENT_MARGIN_PX = 6
+const SHRINE_AMBIENT_Z_BIAS = 9000
 const SHRINE_SPARKLE_NEXT_MS_KEY = "shrineSparkleNextMs"
 const SHRINE_SPARKLE_FADE_START_KEY = "shrineSparkleFadeStartMs"
 const SHRINE_SPARKLE_FADE_END_KEY = "shrineSparkleFadeEndMs"
@@ -7671,6 +7731,7 @@ const SHRINE_OBS_STEP_ORDER: string[] = [
     "overlay_flash",
     "overlay_active",
     "overlay_cycling",
+    "screen_ambience",
     "hud_indicator",
     "mana_regen_bonus",
 ]
@@ -7687,6 +7748,7 @@ const SHRINE_OBS_STEP_LABELS: Record<string, string> = {
     overlay_flash: "Overlay flash",
     overlay_active: "Overlay active",
     overlay_cycling: "Overlay cycling",
+    screen_ambience: "Screen ambience",
     hud_indicator: "HUD indicator",
     mana_regen_bonus: "Mana regen bonus",
 }
@@ -7703,6 +7765,7 @@ const SHRINE_OBS_RESET_ON_ACTIVATE: string[] = [
     "overlay_flash",
     "overlay_active",
     "overlay_cycling",
+    "screen_ambience",
     "hud_indicator",
     "mana_regen_bonus",
 ]
@@ -7951,6 +8014,8 @@ type ShrineMoveCommittedContext = {
 
 const _dunShrineStates = new Map<string, ShrineState>()
 let _dunShrineSparkles: Sprite[] = []
+let _dunShrineAmbientSparkles: Sprite[] = []
+let _dunShrineAmbientNextMs = 0
 
 function _hslToRgbHex(h: number, s: number, l: number): number {
     const hue = ((h % 360) + 360) % 360
@@ -7998,6 +8063,14 @@ function _shrineSparkleTint(nowMs: number, seedMs: number): number {
     return _hslToRgbHex(hue, SHRINE_SPARKLE_SAT, SHRINE_SPARKLE_LIGHT)
 }
 
+function _shrineAmbientTint(nowMs: number, seedMs: number): number {
+    const cycle = Math.max(1000, SHRINE_AMBIENT_CYCLE_MS | 0)
+    const delta = ((nowMs | 0) + (seedMs | 0)) | 0
+    const t = ((delta % cycle) + cycle) % cycle
+    const hue = (t / cycle) * 360
+    return _hslToRgbHex(hue, SHRINE_AMBIENT_SAT, SHRINE_AMBIENT_LIGHT)
+}
+
 function _shrineSparkleAlpha(nowMs: number, startMs: number, endMs: number): number {
     const start = startMs | 0
     const end = endMs | 0
@@ -8005,6 +8078,15 @@ function _shrineSparkleAlpha(nowMs: number, startMs: number, endMs: number): num
     const t = Math.max(0, Math.min(1, ((nowMs | 0) - start) / Math.max(1, (end - start))))
     const alpha = SHRINE_SPARKLE_ALPHA * (1 - t)
     return Math.max(SHRINE_SPARKLE_ALPHA_MIN, alpha)
+}
+
+function _shrineAmbientAlpha(nowMs: number, startMs: number, endMs: number): number {
+    const start = startMs | 0
+    const end = endMs | 0
+    if (start <= 0 || end <= start) return SHRINE_AMBIENT_ALPHA
+    const t = Math.max(0, Math.min(1, ((nowMs | 0) - start) / Math.max(1, (end - start))))
+    const alpha = SHRINE_AMBIENT_ALPHA * (1 - t)
+    return Math.max(SHRINE_AMBIENT_ALPHA_MIN, alpha)
 }
 
 function _shrineSparkleBaseXY(decor: Sprite | null, tileR: number, tileC: number): { x: number; y: number } {
@@ -8085,6 +8167,110 @@ function _dunUpdateShrineSparkles(nowMs: number): void {
         _dunShrineSparkles[write++] = fx
     }
     if (write < _dunShrineSparkles.length) _dunShrineSparkles.length = write
+}
+
+function _shrineAmbientSpawnSparkle(nowMs: number): void {
+    if (!SHRINE_AMBIENT_SKIN_ID) return
+    const w = scene.screenWidth() | 0
+    const h = scene.screenHeight() | 0
+    if (w <= 0 || h <= 0) return
+    const margin = Math.max(0, SHRINE_AMBIENT_MARGIN_PX | 0) | 0
+    const minX = margin | 0
+    const maxX = Math.max(minX | 0, (w - 1 - margin) | 0) | 0
+    const minY = margin | 0
+    const maxY = Math.max(minY | 0, (h - 1 - margin) | 0) | 0
+
+    const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.setFlag(SpriteFlag.RelativeToCamera, true)
+    fx.x = Math.randomRange(minX | 0, maxX | 0) | 0
+    fx.y = Math.randomRange(minY | 0, maxY | 0) | 0
+    fx.z = SHRINE_AMBIENT_Z_BIAS | 0
+    if ((SHRINE_AMBIENT_LIFESPAN_MS | 0) > 0) fx.lifespan = SHRINE_AMBIENT_LIFESPAN_MS | 0
+
+    const now = nowMs | 0
+    const tintSeed = Math.randomRange(0, Math.max(0, (SHRINE_AMBIENT_CYCLE_MS | 0) - 1)) | 0
+    const tint = _shrineAmbientTint(now | 0, tintSeed | 0)
+    applyEffectToSprite(fx, SHRINE_AMBIENT_SKIN_ID, {
+        tint,
+        alpha: SHRINE_AMBIENT_ALPHA,
+        blend: SHRINE_AMBIENT_BLEND,
+        fitRadiusPx: SHRINE_AMBIENT_RADIUS_PX,
+        popMs: SHRINE_AMBIENT_POP_MS,
+        popScale: SHRINE_AMBIENT_POP_SCALE,
+        repeat: 0,
+    })
+    const angleDeg = Math.randomRange(SHRINE_AMBIENT_ANGLE_MIN_DEG | 0, SHRINE_AMBIENT_ANGLE_MAX_DEG | 0) | 0
+    const speed = Math.randomRange(SHRINE_AMBIENT_SPEED_MIN_PX | 0, SHRINE_AMBIENT_SPEED_MAX_PX | 0) | 0
+    const rad = (angleDeg * Math.PI) / 180
+    fx.vx = Math.round(Math.cos(rad) * speed)
+    fx.vy = Math.round(Math.sin(rad) * speed)
+    const fadeEnd = (now + Math.max(1, SHRINE_AMBIENT_LIFESPAN_MS | 0)) | 0
+    sprites.setDataNumber(fx, SHRINE_SPARKLE_FADE_START_KEY, now | 0)
+    sprites.setDataNumber(fx, SHRINE_SPARKLE_FADE_END_KEY, fadeEnd | 0)
+    _dunShrineAmbientSparkles.push(fx)
+}
+
+function _dunSpawnShrineAmbientSparkles(count: number, nowMs: number): void {
+    const total = Math.max(0, count | 0)
+    if (total <= 0) return
+    for (let i = 0; i < total; i++) {
+        _shrineAmbientSpawnSparkle(nowMs | 0)
+    }
+}
+
+function _dunUpdateShrineAmbientSparkles(nowMs: number): void {
+    if (!_dunShrineAmbientSparkles || _dunShrineAmbientSparkles.length === 0) return
+    const now = nowMs | 0
+    let write = 0
+    for (let i = 0; i < _dunShrineAmbientSparkles.length; i++) {
+        const fx = _dunShrineAmbientSparkles[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const endMs = sprites.readDataNumber(fx, SHRINE_SPARKLE_FADE_END_KEY) | 0
+        if (endMs > 0 && (now | 0) >= (endMs | 0)) {
+            fx.destroy()
+            continue
+        }
+        const startMs = sprites.readDataNumber(fx, SHRINE_SPARKLE_FADE_START_KEY) | 0
+        const alpha = _shrineAmbientAlpha(now | 0, startMs | 0, endMs | 0)
+        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, alpha)
+        _dunShrineAmbientSparkles[write++] = fx
+    }
+    if (write < _dunShrineAmbientSparkles.length) _dunShrineAmbientSparkles.length = write
+}
+
+function _dunUpdateShrineAmbience(nowMs: number): void {
+    const now = nowMs | 0
+    const shrineActive =
+        ((_dunShrineBlessingFloor | 0) === (_dunFloorIndex | 0)) &&
+        ((_dunShrineBlessingUntilMs | 0) > (now | 0))
+
+    if (!shrineActive) {
+        if (_dunShrineAmbientSparkles && _dunShrineAmbientSparkles.length) {
+            for (let i = 0; i < _dunShrineAmbientSparkles.length; i++) {
+                const fx = _dunShrineAmbientSparkles[i]
+                if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+                fx.destroy()
+            }
+            _dunShrineAmbientSparkles.length = 0
+        }
+        _dunShrineAmbientNextMs = 0
+        return
+    }
+
+    _dunUpdateShrineAmbientSparkles(now | 0)
+
+    if ((_dunShrineAmbientNextMs | 0) <= 0 || (now | 0) >= (_dunShrineAmbientNextMs | 0)) {
+        const count = Math.randomRange(SHRINE_AMBIENT_SPAWN_MIN_COUNT | 0, SHRINE_AMBIENT_SPAWN_MAX_COUNT | 0) | 0
+        _dunSpawnShrineAmbientSparkles(count | 0, now | 0)
+        const nextMs = (now + Math.randomRange(SHRINE_AMBIENT_SPAWN_MIN_MS | 0, SHRINE_AMBIENT_SPAWN_MAX_MS | 0)) | 0
+        _dunShrineAmbientNextMs = nextMs | 0
+    }
+
+    if (DEBUG_SHRINE_OBSERVER && _dunShrineBlessingKey) {
+        const detail = `count=${_dunShrineAmbientSparkles.length | 0}`
+        _shrineObsMark(_dunShrineBlessingKey, _dunFloorIndex | 0, "screen_ambience", true, detail, now | 0)
+    }
 }
 
 function _shrineSecondsLabel(ms: number): string {
@@ -12420,9 +12606,6 @@ function _dunEnterFloor_spawnStarterShrine(): void {
     checkList(_engineDecorTriggers)
     if (foundExisting) return
 
-    let r = Math.max(0, Math.min(rows - 1, (_dunPadTileR | 0) + 2)) | 0
-    let c = Math.max(0, Math.min(cols - 1, (_dunPadTileC | 0) - 2)) | 0
-
     function isTileFree(rr: number, cc: number): boolean {
         if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
         if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
@@ -12431,18 +12614,58 @@ function _dunEnterFloor_spawnStarterShrine(): void {
         return true
     }
 
-    if (!isTileFree(r, c)) {
-        const pick = _dunPickRandomWalkableTile({
-            avoidR: _dunPadTileR | 0,
-            avoidC: _dunPadTileC | 0,
-            minManhattan: 4,
-            maxTries: 250
-        })
-        r = pick.r | 0
-        c = pick.c | 0
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    const minDim = Math.max(0, Math.min(rows, cols) - 1) | 0
+    const maxEdge = (minDim >> 1) | 0
+    const edge = Math.max(0, Math.min(SHRINE_SPAWN_MIN_EDGE | 0, maxEdge | 0)) | 0
+    let minR = edge | 0
+    let maxR = (rows - 1 - edge) | 0
+    let minC = edge | 0
+    let maxC = (cols - 1 - edge) | 0
+    if (maxR < minR) { minR = 0; maxR = Math.max(0, (rows - 1) | 0) }
+    if (maxC < minC) { minC = 0; maxC = Math.max(0, (cols - 1) | 0) }
+
+    const minDist = Math.max(1, SHRINE_SPAWN_MIN_PAD_MANHATTAN | 0) | 0
+
+    function pickRandom(minDistR: number): { r: number, c: number } | null {
+        for (let i = 0; i < (SHRINE_SPAWN_MAX_TRIES | 0); i++) {
+            const rr = Math.randomRange(minR | 0, maxR | 0) | 0
+            const cc = Math.randomRange(minC | 0, maxC | 0) | 0
+            if (!isTileFree(rr | 0, cc | 0)) continue
+            const dist = (Math.abs((rr | 0) - (padR | 0)) + Math.abs((cc | 0) - (padC | 0))) | 0
+            if (dist < (minDistR | 0)) continue
+            return { r: rr | 0, c: cc | 0 }
+        }
+        return null
     }
 
-    if (!isTileFree(r, c)) return
+    function pickFarthest(): { r: number, c: number } | null {
+        let bestR = -1
+        let bestC = -1
+        let bestDist = -1
+        for (let rr = minR | 0; rr <= (maxR | 0); rr++) {
+            for (let cc = minC | 0; cc <= (maxC | 0); cc++) {
+                if (!isTileFree(rr | 0, cc | 0)) continue
+                const dist = (Math.abs((rr | 0) - (padR | 0)) + Math.abs((cc | 0) - (padC | 0))) | 0
+                if (dist <= 0) continue
+                if ((dist | 0) <= (bestDist | 0)) continue
+                bestDist = dist | 0
+                bestR = rr | 0
+                bestC = cc | 0
+            }
+        }
+        if ((bestDist | 0) < 0) return null
+        return { r: bestR | 0, c: bestC | 0 }
+    }
+
+    const pick = pickRandom(minDist | 0) || pickFarthest()
+    if (!pick) return
+
+    const r = pick.r | 0
+    const c = pick.c | 0
+
+    if (!isTileFree(r | 0, c | 0)) return
 
     const it = _dunSpawnInteractableProp({
         name: SHRINE_BASE,
@@ -13093,6 +13316,8 @@ function _dunResetShrineRuntime(): void {
     _dunShrineInteractRescanAtMs = 0
     _shrineObsResetAll()
     _dunShrineSparkles = []
+    _dunShrineAmbientSparkles = []
+    _dunShrineAmbientNextMs = 0
 }
 
 function _dunFindDecorAtTile(tileR: number, tileC: number, baseName?: string): Sprite | null {
@@ -28049,6 +28274,7 @@ function _dunEnsureShrineInteractables(nowMs: number): void {
 function _dunUpdateShrineOverlays(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
     _dunUpdateShrineSparkles(nowMs)
+    _dunUpdateShrineAmbience(nowMs)
     const g: any = globalThis as any
     const sc: any = g ? g.__phaserScene : null
     const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
@@ -36528,7 +36754,16 @@ function updateHeroAgilityChargeFx(now: number): void {
 
         if (!spear || (spear.flags & sprites.Flag.Destroyed)) continue;
 
-        let attachPx = findHeroLeadingEdgeDistance(hero, aim.nx, aim.ny);
+        let attachPx = 0;
+        {
+            const vis = getHeroVisualInfoForStrength(hero, aim.nx, aim.ny);
+            const wTipX = (vis[2] || 0);
+            const wTipY = (vis[3] || 0);
+            const wTipProj = (wTipX * aim.nx) + (wTipY * aim.ny);
+            if (wTipProj > 0) attachPx = wTipProj;
+            if (attachPx <= 0) attachPx = (vis[1] || 0);
+        }
+        if (attachPx <= 0) attachPx = findHeroLeadingEdgeDistance(hero, aim.nx, aim.ny);
         if (attachPx <= 0) {
             attachPx = 0.5 * (Math.abs(aim.nx) * hero.width + Math.abs(aim.ny) * hero.height);
         }
@@ -36543,49 +36778,15 @@ function updateHeroAgilityChargeFx(now: number): void {
         let sFront = attachPx + len;
         if (sFront <= sBack + 4) sFront = sBack + 4;
 
-        const sx = -aim.ny;
-        const sy = aim.nx;
-        const pad = 2;
-        const sideHalf = 2;
+        const anchorOffX = thrustOff.ox;
+        const anchorOffY = thrustOff.oy;
+        const trail = _buildAgilityTrailImage(sBack, sFront, aim.nx, aim.ny, anchorOffX, anchorOffY);
 
-        const fMin = sBack;
-        const fMax = sFront + 2;
-
-        function cornerX(f: number, wside: number) { return aim.nx * f + sx * wside; }
-        function cornerY(f: number, wside: number) { return aim.ny * f + sy * wside; }
-
-        const xs = [
-            cornerX(fMin, -sideHalf),
-            cornerX(fMin, sideHalf),
-            cornerX(fMax, -sideHalf),
-            cornerX(fMax, sideHalf)
-        ];
-
-        const ys = [
-            cornerY(fMin, -sideHalf),
-            cornerY(fMin, sideHalf),
-            cornerY(fMax, -sideHalf),
-            cornerY(fMax, sideHalf)
-        ];
-
-        let minXW = xs[0], maxXW = xs[0], minYW = ys[0], maxYW = ys[0];
-        for (let j = 1; j < 4; j++) {
-            if (xs[j] < minXW) minXW = xs[j];
-            if (xs[j] > maxXW) maxXW = xs[j];
-            if (ys[j] < minYW) minYW = ys[j];
-            if (ys[j] > maxYW) maxYW = ys[j];
-        }
-
-        minXW = Math.floor(minXW) - pad;
-        maxXW = Math.ceil(maxXW) + pad;
-        minYW = Math.floor(minYW) - pad;
-        maxYW = Math.ceil(maxYW) + pad;
-
-        spear.setImage(createAgilityArrowSegmentImage(sBack, sFront, aim.nx, aim.ny));
+        spear.setImage(trail.img);
         spear.vx = 0;
         spear.vy = 0;
-        spear.x = hero.x + thrustOff.ox + (minXW + maxXW) / 2;
-        spear.y = hero.y + thrustOff.oy + (minYW + maxYW) / 2;
+        spear.x = hero.x + (trail.bounds.minX + trail.bounds.maxX) / 2;
+        spear.y = hero.y + (trail.bounds.minY + trail.bounds.maxY) / 2;
         spear.z = hero.z + 12;
     }
 }
@@ -37829,7 +38030,7 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
     const swingMs = sprites.readDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY) | 0
 
     const arcDeg  = sprites.readDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY) | 0
-    const element = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
+    const payloadElement = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
 
 
 
@@ -37893,7 +38094,7 @@ function _strTrySpawnPendingSwingForHero(heroIndex: number, hero: Sprite, nowMs:
 
         reachExtraPx,
 
-        element
+        payloadElement
 
     )
 
@@ -39044,54 +39245,23 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
 
     // ------------------------------------------------------------
-
-    // ? schedule projectile spawn LATER inside the swing window
-
+    // Spawn projectile immediately at swing start (first aggressive frame)
     // ------------------------------------------------------------
+    spawnStrengthSwingProjectile(
+        heroIndex, hero,
+        dmg, false, button,
+        slowPct, slowDurationMs,
+        weakenPct, weakenDurationMs,
+        knockbackPct,
+        swingDurationMs,
+        arcDeg,
+        reachExtraPx,
+        payloadElement
+    )
 
-    let spawnDelayMs = Math.idiv((swingDurationMs | 0) * STR_SWING_PROJECTILE_SPAWN_FRAC_X1000, 1000) | 0
-
-    if (spawnDelayMs < 0) spawnDelayMs = 0
-
-    if (spawnDelayMs > swingDurationMs) spawnDelayMs = swingDurationMs
-
-
-
-    const spawnAtMs = (now + spawnDelayMs) | 0
-
-
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 1)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, spawnAtMs)
-
-
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_DMG_KEY, dmg | 0)
-
-    sprites.setDataString(hero, STR_PEND_SWING_BTN_KEY, button)
-
-
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_PCT_KEY, slowPct | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_SLOW_MS_KEY, slowDurationMs | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_PCT_KEY, weakenPct | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_WEAK_MS_KEY, weakenDurationMs | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_KB_PCT_KEY, knockbackPct | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_SWING_MS_KEY, swingDurationMs | 0)
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_ARC_DEG_KEY, arcDeg | 0)
-
-
-
-    // ? NEW: carry reach snapshot into the late-spawn projectile
-
-    sprites.setDataNumber(hero, STR_PEND_SWING_REACH_EXTRA_KEY, reachExtraPx | 0)
+    // Clear any pending swing state (no late spawn)
+    sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
+    sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
 
 
 
@@ -39618,6 +39788,12 @@ function spawnStrengthSwingProjectile(
 
     if (frontStartR > inner0) frontStartR = inner0
 
+    const wTipProj = (wTipX * nx) + (wTipY * ny)
+    if (wTipProj > 0) {
+        const tipR = Math.round(wTipProj)
+        if (tipR > frontStartR) frontStartR = tipR
+    }
+
 
 
     // ? Reach is now a pure input (centralized in calculateStrengthStats -> STAT.STRENGTH_REACH_EXTRA_PX)
@@ -39628,9 +39804,8 @@ function spawnStrengthSwingProjectile(
 
 
 
-    // Create initial image at progress = 0
-
-    const img0 = buildStrengthSmashBitmap(nx, ny, inner0, frontStartR, reachFromInner, totalArcDeg, 0)
+    const outerR = (inner0 | 0) + (reachFromInner | 0)
+    const img0 = _createStrengthTraceImage(outerR)
 
 
 
@@ -39645,6 +39820,17 @@ function spawnStrengthSwingProjectile(
     proj.vy = 0
 
     proj.setPosition(hero.x, hero.y)
+    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
+    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
+    const halfW = (img0.width | 0) >> 1
+    const halfH = (img0.height | 0) >> 1
+    let tipInitX = wTipX
+    let tipInitY = wTipY
+    if (!tipInitX && !tipInitY) {
+        tipInitX = nx * frontStartR
+        tipInitY = ny * frontStartR
+    }
+    _strengthTraceStampAt(img0, Math.round(tipInitX) + halfW, Math.round(tipInitY) + halfH)
 
 
 
@@ -39677,6 +39863,8 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, "SS_WTIP_X", wTipX)
 
     sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY)
+    sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipInitX)
+    sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipInitY)
 
 
 
@@ -39736,18 +39924,20 @@ function spawnStrengthSwingProjectile(
         totalArcDeg,
         swingDuration | 0
     )
-    const trailFx = _spawnProjectileMaskFxForMove(
-        proj,
-        heroIndex,
-        hero,
-        FAMILY.STRENGTH | 0,
-        element | 0,
-        nx,
-        ny,
-        swingDuration | 0,
-        "strengthTrail"
-    )
-    if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+    if (STR_USE_PROJECTILE_MASK_FX) {
+        const trailFx = _spawnProjectileMaskFxForMove(
+            proj,
+            heroIndex,
+            hero,
+            FAMILY.STRENGTH | 0,
+            element | 0,
+            nx,
+            ny,
+            swingDuration | 0,
+            "strengthTrail"
+        )
+        if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+    }
 
 }
 
@@ -39864,7 +40054,31 @@ function updateStrengthProjectilesMotionFor(
 
     if (lastT >= 0 && Math.abs(t - lastT) < 0.06) {
 
-        proj.setPosition(hero.x, hero.y)
+        const anchorX = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_X) || hero.x
+        const anchorY = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_Y) || hero.y
+        proj.setPosition(anchorX, anchorY)
+        const img = proj.image
+        if (img) {
+            const halfW = (img.width | 0) >> 1
+            const halfH = (img.height | 0) >> 1
+            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+            let wTipX = (vis[2] || 0)
+            let wTipY = (vis[3] || 0)
+            if (!wTipX && !wTipY) {
+                wTipX = nx * frontStart
+                wTipY = ny * frontStart
+            }
+            const tipWorldX = (hero.x + wTipX)
+            const tipWorldY = (hero.y + wTipY)
+            const tipLocalX = tipWorldX - anchorX
+            const tipLocalY = tipWorldY - anchorY
+
+            const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+            const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+            _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
+            sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+            sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+        }
         _updateHeroBodyPaintFxForProj(proj, hero)
         _updateProjectileMaskFxForProj(proj, hero)
         _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
@@ -39883,9 +40097,32 @@ function updateStrengthProjectilesMotionFor(
 
 
 
-    proj.setImage(buildStrengthSmashBitmap(nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg, t))
+    const anchorX = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_X) || hero.x
+    const anchorY = sprites.readDataNumber(proj, PROJ_DATA.START_HERO_Y) || hero.y
+    proj.setPosition(anchorX, anchorY)  // world-anchored at cast position
 
-    proj.setPosition(hero.x, hero.y)  // center-anchored
+    const img = proj.image
+    if (img) {
+        const halfW = (img.width | 0) >> 1
+        const halfH = (img.height | 0) >> 1
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+        let wTipX = (vis[2] || 0)
+        let wTipY = (vis[3] || 0)
+        if (!wTipX && !wTipY) {
+            wTipX = nx * frontStart
+            wTipY = ny * frontStart
+        }
+        const tipWorldX = (hero.x + wTipX)
+        const tipWorldY = (hero.y + wTipY)
+        const tipLocalX = tipWorldX - anchorX
+        const tipLocalY = tipWorldY - anchorY
+
+        const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
+        const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+        _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
+        sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
+        sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
+    }
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
     _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
@@ -40021,17 +40258,27 @@ function buildStrengthSmashBitmap(
 
         // Outline (color 15) around any color-2 pixel
 
+        const tipEdgeR = tipR
+        const tipMinR = Math.max(0, (tipEdgeR | 0) - (STR_OUTLINE_TIP_DEPTH_PX | 0))
+        const tipMinR2 = tipMinR * tipMinR
+
         for (let x = 0; x < size; x++) {
 
             for (let y = 0; y < size; y++) {
 
                 if (img.getPixel(x, y) == 2) {
+                    if (STR_OUTLINE_TIP_ONLY) {
+                        const rx = (x - half)
+                        const ry = (y - half)
+                        if (((rx * rx) + (ry * ry)) < tipMinR2) continue
+                    }
 
                     for (let dx = -1; dx <= 1; dx++) {
 
                         for (let dy = -1; dy <= 1; dy++) {
 
                             if (dx == 0 && dy == 0) continue
+                            if (STR_OUTLINE_CARDINAL_ONLY && dx != 0 && dy != 0) continue
 
                             const ox = x + dx
 
@@ -40165,17 +40412,26 @@ function buildStrengthSmashBitmap(
 
     // Outline (color 15) around any color-2 pixel
 
+    const tipMinR = Math.max(0, (outerR | 0) - (STR_OUTLINE_TIP_DEPTH_PX | 0))
+    const tipMinR2 = tipMinR * tipMinR
+
     for (let x = 0; x < size; x++) {
 
         for (let y = 0; y < size; y++) {
 
             if (img.getPixel(x, y) == 2) {
+                if (STR_OUTLINE_TIP_ONLY) {
+                    const rx = (x - half)
+                    const ry = (y - half)
+                    if (((rx * rx) + (ry * ry)) < tipMinR2) continue
+                }
 
                 for (let dx = -1; dx <= 1; dx++) {
 
                     for (let dy = -1; dy <= 1; dy++) {
 
                         if (dx == 0 && dy == 0) continue
+                        if (STR_OUTLINE_CARDINAL_ONLY && dx != 0 && dy != 0) continue
 
                         const ox = x + dx
 
@@ -40199,6 +40455,67 @@ function buildStrengthSmashBitmap(
 
     return img
 
+}
+
+function _strengthTraceHalfPx(): number {
+    const half = Math.idiv((STR_TIP_TRACE_SIZE_PX | 0), 2) | 0;
+    return Math.max(1, half | 0);
+}
+
+function _createStrengthTraceImage(outerR: number): Image {
+    const halfTip = _strengthTraceHalfPx();
+    const outerInt = Math.ceil(Math.max(0, outerR));
+    const pad = 2 + halfTip;
+    const half = outerInt + pad;
+    const size = Math.max(1, (half * 2) + 1);
+    return image.create(size, size);
+}
+
+function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
+    if (!img) return;
+    const half = _strengthTraceHalfPx();
+    const w = img.width | 0;
+    const h = img.height | 0;
+
+    for (let dy = -half; dy < half; dy++) {
+        const y = cy + dy;
+        if (y < 0 || y >= h) continue;
+        for (let dx = -half; dx < half; dx++) {
+            const x = cx + dx;
+            if (x < 0 || x >= w) continue;
+            const isEdge = (dx === -half || dx === (half - 1) || dy === -half || dy === (half - 1));
+            const cur = img.getPixel(x, y);
+            if (isEdge) {
+                if (cur === 0) img.setPixel(x, y, STR_TIP_TRACE_EDGE_COLOR | 0);
+            } else {
+                img.setPixel(x, y, STR_TIP_TRACE_COLOR | 0);
+            }
+        }
+    }
+}
+
+function _strengthTraceStampLine(
+    img: Image,
+    halfW: number,
+    halfH: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
+    if (steps <= 0) {
+        _strengthTraceStampAt(img, Math.round(x0) + halfW, Math.round(y0) + halfH);
+        return;
+    }
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const lx = x0 + dx * t;
+        const ly = y0 + dy * t;
+        _strengthTraceStampAt(img, Math.round(lx) + halfW, Math.round(ly) + halfH);
+    }
 }
 
 
@@ -40389,7 +40706,7 @@ const EVENT_MASK_SHOP_SWAP = 1 << 1
 
 // 4 = RAND_LR (random left/right each hit)
 
-const AGI_EXEC_POS_MODE = 3   // ALT_LR (alternate left/right each hit)
+const AGI_EXEC_POS_MODE: number = 3   // ALT_LR (alternate left/right each hit)
 
 
 
@@ -43164,6 +43481,7 @@ function executeAgilityMove(
 
 
     const isHeal = false
+    const element = traits[OUT.ELEMENT] | 0
 
 
 
@@ -43177,7 +43495,8 @@ function executeAgilityMove(
 
         weakenPct, weakenDurationMs,
 
-        knockbackPct
+        knockbackPct,
+        element
 
     )
 
@@ -43331,20 +43650,35 @@ function spawnAgilityThrustProjectile(
 
     proj.y = hero.y
 
-    proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny))
+    proj.setImage(createAgilityArrowSegmentImage(0, 0, nx, ny, 0, 0))
 
     // Pre-size the projectile texture so we never shrink/expand every frame.
-    const attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
+    let attachPx = 0
+    {
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+        const wTipX = (vis[2] || 0)
+        const wTipY = (vis[3] || 0)
+        const wTipProj = (wTipX * nx) + (wTipY * ny)
+        if (wTipProj > 0) attachPx = wTipProj
+        if (attachPx <= 0) attachPx = (vis[1] || 0)
+    }
+    if (attachPx <= 0) attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
     const reachExtra = L | 0
     const totalReach = Math.max(1, (attachPx + reachExtra) | 0)
     const backLen = Math.max(0, Math.round(attachPx * AGI_TRAIL_BACK_PCT_X1000 / 1000))
     const sBackAtCast = -backLen
     let sFrontStop = totalReach - 2
     if (sFrontStop <= sBackAtCast) sFrontStop = sBackAtCast + 4
-    const maxImg = createAgilityArrowSegmentImage(sBackAtCast, sFrontStop, nx, ny)
+    const maxPulse = _agiBackPulseArcParams(hero, nx, ny, true)
+    const maxTrail = _buildAgilityTrailImage(sBackAtCast, sFrontStop, nx, ny, 0, 0, maxPulse)
+    const maxImg = maxTrail?.img
     if (maxImg) {
         sprites.setDataNumber(proj, PROJ_DATA.TEX_W, maxImg.width | 0)
         sprites.setDataNumber(proj, PROJ_DATA.TEX_H, maxImg.height | 0)
+        sprites.setDataNumber(proj, AGI_TEX_MIN_X_KEY, maxTrail.bounds.minX | 0)
+        sprites.setDataNumber(proj, AGI_TEX_MAX_X_KEY, maxTrail.bounds.maxX | 0)
+        sprites.setDataNumber(proj, AGI_TEX_MIN_Y_KEY, maxTrail.bounds.minY | 0)
+        sprites.setDataNumber(proj, AGI_TEX_MAX_Y_KEY, maxTrail.bounds.maxY | 0)
     }
 
 
@@ -43552,101 +43886,204 @@ function spawnAgilityThrustProjectile(
 
 // 8.1 — AGILITY helpers (unchanged core)
 
-function createAgilityArrowSegmentImage(sBack: number, sFront: number, nx: number, ny: number): Image { /* same as before */
+type AgiTrailBounds = { minX: number; maxX: number; minY: number; maxY: number };
+type AgiPulseArc = { active: boolean; innerR: number; outerR: number; startRad: number; endRad: number };
 
-    const sx = -ny, sy = nx
+function _agiTrailStyle() {
+    const baseHalf = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_HALF_PX : 1;
+    const sideHalf = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : (baseHalf + 1);
+    const pad = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : 2;
+    const mainCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_MAIN_COLOR : 5;
+    const edgeCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_EDGE_COLOR : 15;
+    return { baseHalf, sideHalf, pad, mainCol, edgeCol };
+}
 
-    let sb = sBack, sf = sFront
+function _calcAgilityTrailBounds(
+    sBack: number,
+    sFront: number,
+    nx: number,
+    ny: number,
+    anchorOffX: number,
+    anchorOffY: number,
+    sideHalf: number,
+    pad: number,
+    pulse?: AgiPulseArc
+): AgiTrailBounds {
+    const sx = -ny, sy = nx;
+    let sb = sBack, sf = sFront;
+    if (sf < sb) { const t = sb; sb = sf; sf = t; }
+    const fMin = sb;
+    const fMax = sf + 2;
+    function cornerX(f: number, wside: number) { return anchorOffX + (nx * f) + (sx * wside); }
+    function cornerY(f: number, wside: number) { return anchorOffY + (ny * f) + (sy * wside); }
 
-    if (sf < sb) { const t = sb; sb = sf; sf = t }
+    const xs = [
+        cornerX(fMin, -sideHalf),
+        cornerX(fMin, sideHalf),
+        cornerX(fMax, -sideHalf),
+        cornerX(fMax, sideHalf)
+    ];
+    const ys = [
+        cornerY(fMin, -sideHalf),
+        cornerY(fMin, sideHalf),
+        cornerY(fMax, -sideHalf),
+        cornerY(fMax, sideHalf)
+    ];
 
-    const baseHalf = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_HALF_PX : 1
-    const sideHalf = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : (baseHalf + 1)
-    const pad = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : 2
-    const mainCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_MAIN_COLOR : 5
-    const edgeCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_EDGE_COLOR : 15
+    let minX = xs[0], maxX = xs[0], minY = ys[0], maxY = ys[0];
+    for (let j = 1; j < 4; j++) {
+        if (xs[j] < minX) minX = xs[j];
+        if (xs[j] > maxX) maxX = xs[j];
+        if (ys[j] < minY) minY = ys[j];
+        if (ys[j] > maxY) maxY = ys[j];
+    }
 
-    const fMin = sb
+    if (pulse && pulse.active) {
+        const r = Math.max(0, pulse.outerR | 0);
+        if (r > 0) {
+            const rPad = r + 1;
+            if (-rPad < minX) minX = -rPad;
+            if (rPad > maxX) maxX = rPad;
+            if (-rPad < minY) minY = -rPad;
+            if (rPad > maxY) maxY = rPad;
+        }
+    }
 
-    const fMax = sf + 2
+    minX = Math.floor(minX) - pad;
+    maxX = Math.ceil(maxX) + pad;
+    minY = Math.floor(minY) - pad;
+    maxY = Math.ceil(maxY) + pad;
 
-    function cornerX(f: number, wside: number) { return nx * f + sx * wside }
+    return { minX, maxX, minY, maxY };
+}
 
-    function cornerY(f: number, wside: number) { return ny * f + sy * wside }
+function _buildAgilityTrailImage(
+    sBack: number,
+    sFront: number,
+    nx: number,
+    ny: number,
+    anchorOffX: number,
+    anchorOffY: number,
+    pulse?: AgiPulseArc,
+    fixedBounds?: AgiTrailBounds
+): { img: Image; bounds: AgiTrailBounds } {
+    const { baseHalf, sideHalf, pad, mainCol, edgeCol } = _agiTrailStyle();
+    const bounds = fixedBounds
+        ? fixedBounds
+        : _calcAgilityTrailBounds(sBack, sFront, nx, ny, anchorOffX, anchorOffY, sideHalf, pad, pulse);
 
-    const xs = [cornerX(fMin, -sideHalf), cornerX(fMin, sideHalf), cornerX(fMax, -sideHalf), cornerX(fMax, sideHalf)]
+    const { minX, maxX, minY, maxY } = bounds;
+    const w = Math.max(1, maxX - minX + 1);
+    const h = Math.max(1, maxY - minY + 1);
+    const img = image.create(w, h);
 
-    const ys = [cornerY(fMin, -sideHalf), cornerY(fMin, sideHalf), cornerY(fMax, -sideHalf), cornerY(fMax, sideHalf)]
+    const sx = -ny, sy = nx;
+    let sb = sBack, sf = sFront;
+    if (sf < sb) { const t = sb; sb = sf; sf = t; }
 
-    let minX = xs[0], maxX = xs[0], minY = ys[0], maxY = ys[0]
+    function mapX(sForward: number, wSide: number) {
+        return Math.round(anchorOffX + (nx * sForward) + (sx * wSide)) - minX;
+    }
+    function mapY(sForward: number, wSide: number) {
+        return Math.round(anchorOffY + (ny * sForward) + (sy * wSide)) - minY;
+    }
 
-    for (let j = 1; j < 4; j++) { if (xs[j] < minX) minX = xs[j]; if (xs[j] > maxX) maxX = xs[j]; if (ys[j] < minY) minY = ys[j]; if (ys[j] > maxY) maxY = ys[j] }
-
-    minX = Math.floor(minX) - pad; maxX = Math.ceil(maxX) + pad
-
-    minY = Math.floor(minY) - pad; maxY = Math.ceil(maxY) + pad
-
-    const w = Math.max(1, maxX - minX + 1), h = Math.max(1, maxY - minY + 1)
-
-    const img = image.create(w, h)
-
-    function mapX(sForward: number, wSide: number) { return Math.round(nx * sForward + sx * wSide) - minX }
-
-    function mapY(sForward: number, wSide: number) { return Math.round(ny * sForward + sy * wSide) - minY }
-
-    const sStart = Math.floor(sb), sEnd = Math.floor(sf)
+    const sStart = Math.floor(sb), sEnd = Math.floor(sf);
 
     for (let s = sStart; s <= sEnd; s++) {
         if (AGI_DEBUG_HUGE_TRAIL) {
             for (let woff = -baseHalf; woff <= baseHalf; woff++) {
                 const px = mapX(s, woff), py = mapY(s, woff);
-                if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, mainCol)
+                if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, mainCol);
             }
         } else {
             const px = mapX(s, 0), py = mapY(s, 0);
-            if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, mainCol)
+            if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, mainCol);
         }
     }
 
     for (let woff = -baseHalf; woff <= baseHalf; woff++) {
-
         const hx = mapX(sf, woff), hy = mapY(sf, woff);
-        if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, mainCol)
-
+        if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, mainCol);
     }
 
     {
         const hx = mapX(sf + 1, 0), hy = mapY(sf + 1, 0);
-        if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, mainCol)
+        if (hx >= 0 && hx < w && hy >= 0 && hy < h) img.setPixel(hx, hy, mainCol);
+    }
+
+    if (pulse && pulse.active && (pulse.outerR | 0) > (pulse.innerR | 0)) {
+        const start = pulse.startRad;
+        const end = pulse.endRad;
+        const step = Math.PI / 90;
+        const dir = (end >= start) ? 1 : -1;
+        for (let a = start; dir > 0 ? (a <= end) : (a >= end); a += dir * step) {
+            const cosA = Math.cos(a);
+            const sinA = Math.sin(a);
+            const rStart = Math.max(0, pulse.innerR | 0);
+            const rEnd = Math.max(rStart, pulse.outerR | 0);
+            for (let r = rStart; r <= rEnd; r++) {
+                const px = Math.round(cosA * r) - minX;
+                const py = Math.round(sinA * r) - minY;
+                if (px >= 0 && px < w && py >= 0 && py < h) img.setPixel(px, py, mainCol);
+            }
+        }
     }
 
     for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (img.getPixel(x, y) == mainCol)
-
         for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-
-            if (dx == 0 && dy == 0) continue
-
-            const ox = x + dx, oy = y + dy
-
-            if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue
-
-            if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, edgeCol)
-
+            if (dx == 0 && dy == 0) continue;
+            const ox = x + dx, oy = y + dy;
+            if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue;
+            if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, edgeCol);
         }
 
     {
         const nxp = mapX(sf + 2, 0), nyp = mapY(sf + 2, 0);
-        if (nxp >= 0 && nxp < w && nyp >= 0 && nyp < h) img.setPixel(nxp, nyp, edgeCol)
+        if (nxp >= 0 && nxp < w && nyp >= 0 && nyp < h) img.setPixel(nxp, nyp, edgeCol);
     }
 
     {
         const px = mapX(sf, 0), py = mapY(sf, 0);
-        if (px >= 0 && px < w && py >= 0 && py < h && img.getPixel(px, py) == 0) img.setPixel(px, py, mainCol)
+        if (px >= 0 && px < w && py >= 0 && py < h && img.getPixel(px, py) == 0) img.setPixel(px, py, mainCol);
     }
 
-    return img
-
+    return { img, bounds };
 }
+
+function createAgilityArrowSegmentImage(
+    sBack: number,
+    sFront: number,
+    nx: number,
+    ny: number,
+    anchorOffX: number = 0,
+    anchorOffY: number = 0,
+    pulse?: AgiPulseArc
+): Image {
+    return _buildAgilityTrailImage(sBack, sFront, nx, ny, anchorOffX, anchorOffY, pulse).img;
+}
+
+function _agiBackPulseArcParams(hero: Sprite, nx: number, ny: number, active: boolean): AgiPulseArc {
+    if (!hero || !active) return { active: false, innerR: 0, outerR: 0, startRad: 0, endRad: 0 };
+
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+    let innerR = (vis[0] || 0) | 0;
+    if (innerR <= 0) innerR = (findHeroLeadingEdgeDistance(hero, nx, ny) | 0);
+    innerR = Math.max(1, (innerR | 0) - (AGI_BACK_PULSE_INNER_PAD_PX | 0));
+    const outerR = Math.max(innerR + 1, (innerR | 0) + (AGI_BACK_PULSE_OUTER_PAD_PX | 0));
+
+    const ang = Math.atan2(ny, nx);
+    const half = ((AGI_BACK_PULSE_ARC_DEG | 0) * (Math.PI / 180)) * 0.5;
+
+    return {
+        active: true,
+        innerR,
+        outerR,
+        startRad: ang - half,
+        endRad: ang + half
+    };
+}
+
 
 
 
@@ -43854,12 +44291,20 @@ function updateAgilityProjectilesMotionFor(
     // Distance from hero center to the FRONT EDGE in the dash direction.
     // Size-based estimate (Phaser provides native visuals separately).
 
-    let attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
-
+    let attachPx = 0
+    {
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+        const wTipX = (vis[2] || 0)
+        const wTipY = (vis[3] || 0)
+        const wTipProj = (wTipX * nx) + (wTipY * ny)
+        if (wTipProj > 0) attachPx = wTipProj
+        if (attachPx <= 0) attachPx = (vis[1] || 0)
+    }
     if (attachPx <= 0) {
-
+        attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
+    }
+    if (attachPx <= 0) {
         attachPx = 0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
-
     }
 
     let L = (attachPx + reachExtra) | 0
@@ -44033,93 +44478,30 @@ function updateAgilityProjectilesMotionFor(
 
 
 
-    // --- World-space bounding box for the segment sprite ---
+    const ageMs = (nowMs - startMs) | 0
+    const pulseDelay = Math.max(0, AGI_BACK_PULSE_DELAY_MS | 0)
+    const pulseDur = Math.max(1, AGI_BACK_PULSE_DURATION_MS | 0)
+    const pulseSync = Math.max(0, AGI_BACK_PULSE_SYNC_MS | 0)
+    const pulseActive =
+        (ageMs >= 0 && ageMs <= pulseSync) ||
+        (ageMs >= pulseDelay && ageMs <= (pulseDelay + pulseDur))
 
-    const sx = -ny
-
-    const sy = nx
-
-    const pad = 2
-
-    const sideHalf = 2
-
-
-
-    const fMin = sBack
-
-    const fMax = sFront + 2 // include nose
-
-
-
-    function cornerX(f: number, wside: number) { return nx * f + sx * wside }
-
-    function cornerY(f: number, wside: number) { return ny * f + sy * wside }
-
-
-
-    const xs = [
-
-        cornerX(fMin, -sideHalf),
-
-        cornerX(fMin, sideHalf),
-
-        cornerX(fMax, -sideHalf),
-
-        cornerX(fMax, sideHalf)
-
-    ]
-
-    const ys = [
-
-        cornerY(fMin, -sideHalf),
-
-        cornerY(fMin, sideHalf),
-
-        cornerY(fMax, -sideHalf),
-
-        cornerY(fMax, sideHalf)
-
-    ]
-
-
-
-    let minXW = xs[0], maxXW = xs[0], minYW = ys[0], maxYW = ys[0]
-
-    for (let j = 1; j < 4; j++) {
-
-        if (xs[j] < minXW) minXW = xs[j]
-
-        if (xs[j] > maxXW) maxXW = xs[j]
-
-        if (ys[j] < minYW) minYW = ys[j]
-
-        if (ys[j] > maxYW) maxYW = ys[j]
-
-    }
-
-
-
-    minXW = Math.floor(minXW) - pad
-
-    maxXW = Math.ceil(maxXW) + pad
-
-    minYW = Math.floor(minYW) - pad
-
-    maxYW = Math.ceil(maxYW) + pad
-
-
+    const anchorOffX = anchorX - hero.x
+    const anchorOffY = anchorY - hero.y
+    const pulse = _agiBackPulseArcParams(hero, nx, ny, pulseActive)
+    const trail = _buildAgilityTrailImage(sBack, sFront, nx, ny, anchorOffX, anchorOffY, pulse)
 
     // Replace image and place it in world space
 
-    proj.setImage(createAgilityArrowSegmentImage(sBack, sFront, nx, ny))
+    proj.setImage(trail.img)
 
     proj.vx = 0
 
     proj.vy = 0
 
-    proj.x = anchorX + (minXW + maxXW) / 2
+    proj.x = hero.x + (trail.bounds.minX + trail.bounds.maxX) / 2
 
-    proj.y = anchorY + (minYW + maxYW) / 2
+    proj.y = hero.y + (trail.bounds.minY + trail.bounds.maxY) / 2
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
 
@@ -45372,17 +45754,22 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
 
 
 
-function finishIntellectSpellForHero(heroIndex: number): void {
+function finishIntellectSpellForHero(
+    heroIndex: number,
+    heroOverride?: Sprite | null,
+    nowOverride?: number,
+    reason?: string
+): void {
 
     if (heroIndex < 0 || heroIndex >= heroes.length) return
 
-    const hero = heroes[heroIndex]
+    const hero = heroOverride || heroes[heroIndex]
 
     if (!hero) return
 
 
 
-    const nowMs = game.runtime() | 0
+    const nowMs = (typeof nowOverride === "number") ? (nowOverride | 0) : (game.runtime() | 0)
 
 
 
@@ -45402,9 +45789,10 @@ function finishIntellectSpellForHero(heroIndex: number): void {
 
         const hasSpell = _getHeroControlledSpell(heroIndex) ? 1 : 0
 
+        const reasonLabel = reason ? ` reason=${reason}` : ""
         _dbgAnimKeys(heroIndex, hero, "INT_FINISH_BEGIN",
 
-            `t=${nowMs} ctrl=${ctrl0} hasSpell=${hasSpell} busyUntil=${busy0} ph=${ph0} part=${part0} fco=${fco0}`
+            `t=${nowMs} ctrl=${ctrl0} hasSpell=${hasSpell} busyUntil=${busy0} ph=${ph0} part=${part0} fco=${fco0}${reasonLabel}`
 
         )
 
@@ -45453,7 +45841,7 @@ function finishIntellectSpellForHero(heroIndex: number): void {
 
 
 
-    _dbgContract_noteWhy(heroIndex, "INTELLECT_CAST_FINISH", "finishIntellectSpellForHero")
+    _dbgContract_noteWhy(heroIndex, "INTELLECT_CAST_FINISH", reason ? `finishIntellectSpellForHero:${reason}` : "finishIntellectSpellForHero")
 
 
 
@@ -59673,7 +60061,7 @@ function _applySnapshotToSprite(target: Sprite, snap: any): void {
             const h = snap.height | 0
             let img: any = (target as any).image
             if (!img || img.width !== w || img.height !== h) {
-                img = Image.fromJSON(w, h, snap.pixels)
+                img = (Image as any).fromJSON(w, h, snap.pixels)
                 if (typeof (target as any).setImage === "function") {
                     (target as any).setImage(img)
                 } else {
