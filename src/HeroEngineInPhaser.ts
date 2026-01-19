@@ -2446,6 +2446,7 @@ const HERO_DATA = {
 
     HP: "hp", MAX_HP: "maxHp", MANA: "mana", MAX_MANA: "maxMana", NAME: "name", SPAWN_REASON: "spawnReason",
 
+    HERO_INDEX: "heroIndex",
     FAMILY: "family", BUTTON: "btn",
 
     TRAIT1: "t1", TRAIT2: "t2", TRAIT3: "t3", TRAIT4: "t4",
