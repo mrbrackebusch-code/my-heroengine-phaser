@@ -201,6 +201,8 @@ namespace SpriteKind {
 
     // Hero-only VFX (painted body effects)
     export let HeroEffect: number
+    // Projectile mask sprite (hidden; used for effect masks)
+    export let HeroWeaponMask: number
 
 }
 
@@ -243,6 +245,7 @@ namespace SpriteKind {
     if (SK.HeroWeapon == null) SK.HeroWeapon = 51;
 
     if (SK.HeroAura == null) SK.HeroAura = 52;
+    if (SK.HeroWeaponMask == null) SK.HeroWeaponMask = 68;
 
     if (SK.EnemySpawner == null) SK.EnemySpawner = 53;
 
@@ -1483,6 +1486,12 @@ const BALANCE = {
         TRAIT_SCALE_PCT_MAX: 400, // cap so late floors don't explode
         TRAIT_MIN_ABS: 5,
         TRAIT_MAX_ABS: 400
+    },
+
+    MULTI: {
+        // Per extra player (beyond 1), scale monster count and XP.
+        MONSTER_COUNT_PER_EXTRA_PCT: 50, // 2 players = +50% monsters
+        XP_PER_EXTRA_PCT: 50,            // 2 players = +50% XP per kill
     }
 
 }
@@ -1741,7 +1750,11 @@ const HERO_SPELL_EFFECT_OFFSETS: { [skinId: string]: HeroEffectOffsetDef } = {
             }
         }
     },
-    firelion: {},
+    firelion: {
+        move: {
+            intellectDetonation: { x: 0, y: 6 }
+        }
+    },
     torrentacle: {},
     lightningclaw: {},
     spikes: {},
@@ -2038,6 +2051,40 @@ function _projectileMaskFitRadiusPx(proj: Sprite, hero?: Sprite): number {
     return Math.max(1, Math.idiv(maxDim, 2) | 0);
 }
 
+function _ensureProjectileMaskSprite(proj: Sprite, img: Image): Sprite | null {
+    if (!proj || !img) return null;
+    let mask = sprites.readDataSprite(proj, PROJ_MASK_SPRITE_KEY);
+    if (!mask || (mask.flags & sprites.Flag.Destroyed)) {
+        mask = sprites.create(img.clone(), SpriteKind.HeroWeaponMask);
+        mask.setFlag(SpriteFlag.Ghost, true);
+        mask.setFlag(SpriteFlag.Invisible, true);
+        mask.z = (proj.z | 0) - 1;
+        sprites.setDataSprite(proj, PROJ_MASK_SPRITE_KEY, mask);
+    }
+    return mask;
+}
+
+function _updateProjectileMaskSpriteForProj(proj: Sprite, img: Image): void {
+    if (!proj || !img) return;
+    const mask = _ensureProjectileMaskSprite(proj, img);
+    if (!mask) return;
+    mask.setImage(img.clone());
+    mask.x = proj.x;
+    mask.y = proj.y;
+    mask.z = (proj.z | 0) - 1;
+    mask.setFlag(SpriteFlag.Ghost, true);
+    mask.setFlag(SpriteFlag.Invisible, true);
+}
+
+function _destroyProjectileMaskSpriteForProj(proj: Sprite): void {
+    if (!proj) return;
+    const mask = sprites.readDataSprite(proj, PROJ_MASK_SPRITE_KEY);
+    if (mask && !(mask.flags & sprites.Flag.Destroyed)) {
+        mask.destroy();
+    }
+    sprites.setDataSprite(proj, PROJ_MASK_SPRITE_KEY, null as any);
+}
+
 function _spawnProjectileMaskFxForMove(
     proj: Sprite,
     heroIndex: number,
@@ -2071,6 +2118,7 @@ function _spawnProjectileMaskFxForMove(
     sprites.setDataNumber(fx, PROJ_DATA.FAMILY, family | 0);
     sprites.setDataNumber(fx, PROJ_MASK_FX_FIT_RADIUS_KEY, fitRadius | 0);
 
+    const maskSprite = _ensureProjectileMaskSprite(proj, proj.image as any);
     const opts: EffectApplyOpts = {
         mode: PROJ_MASK_FX_MODE,
         alpha: PROJ_MASK_FX_ALPHA,
@@ -2080,7 +2128,7 @@ function _spawnProjectileMaskFxForMove(
         scale,
         offsetX: offset.x,
         offsetY: offset.y,
-        maskSprite: proj
+        maskSprite: maskSprite || proj
     };
     if (pick.dir) opts.dir = pick.dir;
     applyEffectToSprite(fx, pick.skinId, opts);
@@ -2096,7 +2144,7 @@ function _spawnProjectileMaskFxForMove(
                 skin: pick.skinId,
                 dir: pick.dir || "",
                 mode: PROJ_MASK_FX_MODE,
-                maskSpriteId: (proj as any).id | 0,
+                maskSpriteId: (maskSprite ? (maskSprite as any).id : (proj as any).id) | 0,
                 fitRadius: fitRadius | 0
             });
         } catch { /* ignore */ }
@@ -2181,6 +2229,7 @@ function _spawnStrengthSwingFxSegments(
     const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
     if (!pick || !pick.skinId) return;
 
+    const maskSprite = _ensureProjectileMaskSprite(proj, proj.image as any);
     const baseSkin = pick.skinId;
     const sizedSkin = _effectSkinIdWithSize(baseSkin, WEAPON_TILE_FX_SIZE_PX | 0, pick.dir || dir);
     const offset = _heroSpellEffectOffsetFor(baseSkin, pick.dir || dir, FAMILY.STRENGTH | 0, "strengthTrail");
@@ -2206,7 +2255,7 @@ function _spawnStrengthSwingFxSegments(
             repeat: -1,
             offsetX: offset.x,
             offsetY: offset.y,
-            maskSprite: proj,
+            maskSprite: maskSprite || proj,
             flipX: WEAPON_TILE_FX_MIRROR && ((i % 2) === 1) && (Math.abs(nx) >= Math.abs(ny)),
             flipY: WEAPON_TILE_FX_MIRROR && ((i % 2) === 1) && (Math.abs(ny) > Math.abs(nx))
         };
@@ -2254,6 +2303,7 @@ function _spawnAgilityTrailFxSegments(
     const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
     if (!pick || !pick.skinId) return;
 
+    const maskSprite = _ensureProjectileMaskSprite(proj, proj.image as any);
     const baseSkin = pick.skinId;
     const sizedSkin = _effectSkinIdWithSize(baseSkin, WEAPON_TILE_FX_SIZE_PX | 0, pick.dir || dir);
     const offset = _heroSpellEffectOffsetFor(baseSkin, pick.dir || dir, FAMILY.AGILITY | 0, "agilityTrail");
@@ -2282,7 +2332,7 @@ function _spawnAgilityTrailFxSegments(
             introScale: AGI_FX_INTRO_SCALE,
             offsetX: offset.x,
             offsetY: offset.y,
-            maskSprite: proj,
+            maskSprite: maskSprite || proj,
             flipX: WEAPON_TILE_FX_MIRROR && horiz ? ((i % 2) === 1) : false,
             flipY: WEAPON_TILE_FX_MIRROR && !horiz ? ((i % 2) === 1) : false
         };
@@ -2467,6 +2517,9 @@ const EFFECT_ALPHA_DATA_KEY = "effectAlpha";
 const EFFECT_BLEND_DATA_KEY = "effectBlend";
 const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
+const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
+const EFFECT_SCALE_X_DATA_KEY = "effectScaleX";
+const EFFECT_SCALE_Y_DATA_KEY = "effectScaleY";
 const EFFECT_INTRO_MS_DATA_KEY = "effectIntroMs";
 const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
@@ -2493,6 +2546,7 @@ const HERO_BODY_FX_FORCE_TOP = true;
 const HERO_BODY_FX_Z_BIAS_DEFAULT = 2000;
 const HERO_BODY_FX_Z_BIAS_AGILITY = 2000;
 const PROJ_MASK_FX_KEY = "projMaskFx";
+const PROJ_MASK_SPRITE_KEY = "projMaskSprite";
 const PROJ_MASK_FX_FIT_RADIUS_KEY = "projMaskFitRadius";
 const PROJ_MASK_FX_MODE = "projectile";
 const PROJ_MASK_FX_ALPHA = 0.85;
@@ -2501,7 +2555,9 @@ const PROJ_MASK_FX_REPEAT = -1;
 const PROJ_MASK_FX_FORCE_TOP = false;
 const PROJ_MASK_FX_Z_BIAS = 3;
 const PROJ_HIDE_BASE_FOR_MASK_FX = false;
-const PROJECTILE_OUTLINE_ONLY = true;
+const PROJECTILE_FORCE_BORDER = true;
+const PROJECTILE_HIDE_FILL = true;
+const AGI_TRAIL_FILL_COLOR = 5;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
 const __effectMaskSpawnOnce = new Set<number>();
@@ -2522,6 +2578,10 @@ const STR_USE_PROJECTILE_MASK_FX = false;
 const STR_OUTLINE_TIP_ONLY = true;
 const STR_OUTLINE_TIP_DEPTH_PX = 1;
 const STR_OUTLINE_CARDINAL_ONLY = true;
+const STR_ARC_MAX_WIDTH_PX = 32;
+const STR_ARC_MIN_WIDTH_PX = 1;
+const STR_ARC_STEP_DEG = 3;
+const STR_ARC_SWEEP_START_FRAC = 0.25;
 const STR_TIP_TRACE_SIZE_PX = 16;
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
@@ -2568,6 +2628,9 @@ const WPN_AURA_GROW_T0 = 0.18;
 const WPN_AURA_GROW_T1 = 0.42;
 const WPN_AURA_GROW_T2 = 0.7;
 const WPN_AURA_TIP_SIDE_EPS = 0.75;
+const WPN_DOWN_SIDE_CLIP_EPS = 0;
+const WPN_DOWN_FRONT_CLIP_EPS = 0;
+const WPN_DOWN_FORCE_SIDE_SIGN = -1;
 const HERO_AURA_SIDE_PAD_PX = 2;
 const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const DEBUG_WPN_AURA_TRACE = true;
@@ -2755,14 +2818,21 @@ function _spawnHeroElementDetonationFx(spell: Sprite, element: number, lifespanM
     opts.offsetX = offset.x;
     opts.offsetY = offset.y;
     if (family === (FAMILY.INTELLECT | 0)) {
-        const introMs = Math.max(120, Math.min(INT_DET_FX_INTRO_MS | 0, lifespanMs | 0));
-        opts.introMs = introMs | 0;
-        opts.introScale = INT_DET_FX_INTRO_SCALE;
-        opts.animDelayMs = introMs | 0;
+        opts.introMs = 0;
+        opts.introScale = 0;
+        opts.animDelayMs = 0;
         opts.offsetX = INT_DET_FX_ALIGN_X_PX | 0;
     }
     if (pick.dir) applyEffectToSprite(fx, pick.skinId, { ...opts, dir: pick.dir });
     else applyEffectToSprite(fx, pick.skinId, opts);
+    if (family === (FAMILY.INTELLECT | 0)) {
+        const baseScaleRaw = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY);
+        const baseScale = (baseScaleRaw > 0) ? baseScaleRaw : 1;
+        sprites.setDataNumber(fx, INT_DET_FX_BASE_SCALE_KEY, baseScale);
+        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0);
+        sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, INT_DET_FX_CONE_SCALE_X);
+        sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, INT_DET_FX_CONE_SCALE_Y);
+    }
     sprites.setDataSprite(spell, INT_DET_FX_SPRITE_KEY, fx);
     return true;
 }
@@ -3086,6 +3156,9 @@ const HERO_DATA: Record<string, string> = {
     IS_DEAD: "isDead",
 
     DEATH_UNTIL: "deathUntil",
+    DEAD_GHOST: "deadGhost",
+    DEAD_MARKER: "deadMarker",
+    DEAD_DIALOG: "deadDialog",
 
 
 
@@ -7452,7 +7525,7 @@ const STORY_NPC_EMOTE_UNTIL_MS_KEY = "storyEmoteUntilMs"
 
 
 
-const DUNGEON_SHOP_EVERY_N_FLOORS = 3 //Shop knob
+const DUNGEON_SHOP_EVERY_N_FLOORS = 0 //Shop knob (0 = disabled; use elite/boss cadence)
 
 const DUNGEON_PAD_HOLD_MS = 650
 
@@ -11752,6 +11825,47 @@ function _dunGetActivePidsUpTo4(): number[] {
 
 }
 
+function _dunGetActiveProfileCount(): number {
+    if (isPhaserRuntime()) {
+        const g: any = globalThis as any
+        const connected = g && typeof g.__netProfileConnected === "object" ? g.__netProfileConnected : null
+        if (connected) {
+            let count = 0
+            for (const k of Object.keys(connected)) {
+                if (connected[k]) count++
+            }
+            if (count > 0) return count | 0
+        }
+    }
+
+    let fallback = 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const h = heroes[hi]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(h, HERO_DATA.IS_DEAD)) continue
+        if (sprites.readDataBoolean(h, HERO_DATA.DEAD_GHOST)) continue
+        fallback++
+    }
+
+    return Math.max(1, fallback | 0) | 0
+}
+
+function _dunScaleForPlayers(base: number, perExtraPct: number, players: number): number {
+    const p = Math.max(1, players | 0) | 0
+    const step = Math.max(0, perExtraPct | 0) | 0
+    const scale = 1 + ((p - 1) * step) / 100
+    return base * scale
+}
+
+function _dunGetMonsterCountScale(players: number): number {
+    return Math.max(1, _dunScaleForPlayers(1, BALANCE.MULTI.MONSTER_COUNT_PER_EXTRA_PCT | 0, players))
+}
+
+function _dunGetXpScale(players: number): number {
+    const scale = _dunScaleForPlayers(1, BALANCE.MULTI.XP_PER_EXTRA_PCT | 0, players)
+    return Math.max(0, scale)
+}
+
 
 
 function _dunActiveHeroCountUpTo4(): number {
@@ -12886,13 +13000,30 @@ function _dunCountLiveEnemies(): number {
 
 }
 
+function _dunIsEliteFloor(floor1: number): boolean {
+    const f = Math.max(1, floor1 | 0) | 0
+    return (f % 10) === 5
+}
 
+function _dunIsBossFloor(floor1: number): boolean {
+    const f = Math.max(1, floor1 | 0) | 0
+    return (f % 10) === 0
+}
+
+function _dunShouldShopAfterFloor(floor1: number): boolean {
+    return _dunIsEliteFloor(floor1 | 0) || _dunIsBossFloor(floor1 | 0)
+}
 
 function _dunPickNextFloorKind(nextIndex: number): string {
+    const cur = _dunFloorIndex | 0
+    if (_dunFloorKind !== DUNGEON_KIND_SHOP && _dunShouldShopAfterFloor(cur | 0)) {
+        return DUNGEON_KIND_SHOP
+    }
 
-    if (nextIndex > 0 && (nextIndex % DUNGEON_SHOP_EVERY_N_FLOORS) == 0) return DUNGEON_KIND_SHOP
+    const shopEvery = DUNGEON_SHOP_EVERY_N_FLOORS | 0
+    if (shopEvery > 0 && (nextIndex | 0) > 0 && (nextIndex % shopEvery) == 0) return DUNGEON_KIND_SHOP
 
-
+    if ((nextIndex | 0) <= 6) return DUNGEON_KIND_COMBAT
 
     const roll = Math.randomRange(0, 99)
 
@@ -15124,10 +15255,12 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
 
     // Teleport: destroy pad and enter next floor
+    const nextKind = String(r.kind || defaultKind || "")
+    const enterIndex = (nextKind === DUNGEON_KIND_SHOP) ? (_dunFloorIndex | 0) : (next | 0)
     try {
         const g: any = (globalThis as any);
         if (g && typeof g.__hero_saveBeforeTeleport === "function") {
-            g.__hero_saveBeforeTeleport(next, String(r.kind || defaultKind || ""));
+            g.__hero_saveBeforeTeleport(enterIndex, nextKind);
         }
     } catch (_e) { }
 
@@ -15137,7 +15270,7 @@ function _dunTickTeleportCommit(nowMs: number): boolean {
 
 
 
-    _dunEnterFloor(next, String(r.kind || defaultKind || ""), nowMs | 0)
+    _dunEnterFloor(enterIndex, nextKind, nowMs | 0)
 
     return true
 
@@ -15367,6 +15500,10 @@ const PHASE_PROGRESS_MAX = 1024   // PhaseProgressInt is 0..PHASE_PROGRESS_MAX
 // How long to keep a dying hero around so LPC "death" anim can play (ms)
 
 const HERO_DEATH_ANIM_MS = 600;
+const HERO_DEATH_HEADSTONE_PROP = "headstone";
+const HERO_DEATH_DIALOG_OWNER_PREFIX = "death";
+const HERO_DEATH_DIALOG_CHOICE_LOAD = "loadRecent";
+const HERO_DEATH_DIALOG_CHOICE_STAY = "stayDead";
 
 
 
@@ -16732,6 +16869,7 @@ function ensureHeroSpriteKinds(): void {
     if (SK.Hero == null) SK.Hero = 50
     if (SK.HeroWeapon == null) SK.HeroWeapon = 51
     if (SK.HeroAura == null) SK.HeroAura = 52
+    if (SK.HeroWeaponMask == null) SK.HeroWeaponMask = 68
     if (SK.EnemySpawner == null) SK.EnemySpawner = 53
     if (SK.SupportBeam == null) SK.SupportBeam = 54
     if (SK.SupportIcon == null) SK.SupportIcon = 55
@@ -18861,6 +18999,29 @@ function _isShopActor(hero: Sprite): boolean {
 
     return false
 
+}
+
+function _shouldShowHeroStatusBars(hero: Sprite): boolean {
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) return false
+    if (_isShopActor(hero)) return false
+    return true
+}
+
+function _clearHeroHPBar(heroIndex: number): void {
+    const bar = _getHeroHPBar(heroIndex)
+    if (bar && !(bar.flags & sprites.Flag.Destroyed)) {
+        bar.destroy()
+    }
+    _setHeroHPBar(heroIndex, null)
+}
+
+function _clearHeroManaBar(heroIndex: number): void {
+    const bar = _getHeroManaBar(heroIndex)
+    if (bar && !(bar.flags & sprites.Flag.Destroyed)) {
+        bar.destroy()
+    }
+    _setHeroManaBar(heroIndex, null)
 }
 
 let _shopPlatformAnchor: Sprite = null
@@ -31879,6 +32040,11 @@ function createHeroForPlayer(
     sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_UNTIL, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, false)
+    sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, false)
 
 
 
@@ -33036,6 +33202,22 @@ function updateHeroFacingsFromVelocity() {
     for (let i = 0; i < heroes.length; i++) {
 
         const hero = heroes[i]; if (!hero) continue
+
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD) && sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) {
+            const input = _getInputStateForHeroIndex(i)
+            let dx = 0
+            let dy = 0
+            if (input.left) dx = -1
+            else if (input.right) dx = 1
+            if (input.up) dy = -1
+            else if (input.down) dy = 1
+            if (dx !== 0 || dy !== 0) {
+                _setHeroFacingX(i, dx)
+                _setHeroFacingY(i, dy)
+                syncHeroDirData(i)
+            }
+            continue
+        }
 
 
 
@@ -36113,9 +36295,9 @@ function showStrengthChargeBar(heroIndex: number, hero: Sprite, show: boolean): 
 
 function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 
-    if (_isShopActor(hero)) {
-        // Avoid HP bars for shopkeeper/statues
-        _setHeroHPBar(heroIndex, null)
+    if (!_shouldShowHeroStatusBars(hero)) {
+        // Avoid HP bars for NPCs (shopkeepers/statues included)
+        _clearHeroHPBar(heroIndex)
         return
     }
 
@@ -36132,9 +36314,9 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
     //This is the knob for offset of the hp bar. bar knob
 
 
-
-    // Phaser: LARGE padding to actually get above the real sprite
-    bar.setOffsetPadding(0, 18)
+    //This is the HP bar padding
+    // Phaser: move bars downward (positive padding moves upward)
+    bar.setOffsetPadding(0, -7)
 
 
 
@@ -36149,6 +36331,10 @@ function initHeroHP(heroIndex: number, hero: Sprite, maxHPVal: number) {
 function updateHeroHPBar(heroIndex: number) {
 
     const hero = heroes[heroIndex]; if (!hero) return
+    if (!_shouldShowHeroStatusBars(hero)) {
+        _clearHeroHPBar(heroIndex)
+        return
+    }
 
     const bar = _getHeroHPBar(heroIndex); if (!bar) return
 
@@ -36166,9 +36352,9 @@ function updateHeroHPBar(heroIndex: number) {
 
 function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 
-    if (_isShopActor(hero)) {
-        // Avoid mana bars for shopkeeper/statues
-        _setHeroManaBar(heroIndex, null)
+    if (!_shouldShowHeroStatusBars(hero)) {
+        // Avoid mana bars for NPCs (shopkeepers/statues included)
+        _clearHeroManaBar(heroIndex)
         return
     }
 
@@ -36185,9 +36371,9 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
     //Bar knob for offset padding of mana bar
 
 
-
-    // Phaser: LARGE padding on top of the real sprite
-    bar.setOffsetPadding(0, 14)
+    //This is the mana bar padding
+    // Phaser: move bars downward (positive padding moves upward)
+    bar.setOffsetPadding(0, -11)
 
 
 
@@ -36205,6 +36391,10 @@ function initHeroMana(heroIndex: number, hero: Sprite, maxManaVal: number) {
 function updateHeroManaBar(heroIndex: number) {
 
     const hero = heroes[heroIndex]; if (!hero) return
+    if (!_shouldShowHeroStatusBars(hero)) {
+        _clearHeroManaBar(heroIndex)
+        return
+    }
 
     const bar = _getHeroManaBar(heroIndex); if (!bar) return
 
@@ -38470,6 +38660,29 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, he
 
 
 // MonsterEffect -> Hero (enemy slashes/projectiles). Single hit then destroy.
+function _spawnPoisonGroundHazard(x: number, y: number): void {
+    const size = Math.max(4, POISON_GROUND_SIZE_PX | 0) | 0
+    const img = image.create(size, size)
+    img.fill(0)
+    const fill = 7
+    const border = 5
+    for (let iy = 0; iy < size; iy++) {
+        for (let ix = 0; ix < size; ix++) {
+            const isBorder = (ix === 0 || iy === 0 || ix === (size - 1) || iy === (size - 1))
+            img.setPixel(ix, iy, isBorder ? border : fill)
+        }
+    }
+    const hz = sprites.create(img, SpriteKind.MonsterEffect)
+    hz.z = 2
+    hz.x = x | 0
+    hz.y = y | 0
+    sprites.setDataNumber(hz, "__hazard", 1)
+    sprites.setDataNumber(hz, "__hazardDmg", POISON_GROUND_DMG | 0)
+    sprites.setDataNumber(hz, "__hazardTickMs", POISON_GROUND_TICK_MS | 0)
+    sprites.setDataNumber(hz, "__hazardNextHitMs", 0)
+    hz.lifespan = POISON_GROUND_LIFE_MS | 0
+}
+
 sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, hero) {
     if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
@@ -38477,8 +38690,32 @@ sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, her
     const hi = heroes.indexOf(hero)
     if (hi < 0) return
 
+    const isHazard = (sprites.readDataNumber(fx, "__hazard") | 0) !== 0
+    if (isHazard) {
+        const now = game.runtime() | 0
+        const next = sprites.readDataNumber(fx, "__hazardNextHitMs") | 0
+        if (now >= next) {
+            const dmg = sprites.readDataNumber(fx, "__hazardDmg") | 0
+            if (dmg > 0) {
+                applyDamageToHeroIndex(hi, dmg)
+            }
+            const tick = Math.max(100, sprites.readDataNumber(fx, "__hazardTickMs") | 0) | 0
+            sprites.setDataNumber(fx, "__hazardNextHitMs", (now + tick) | 0)
+        }
+        return
+    }
+
     const dmg = sprites.readDataNumber(fx, "dmg") | 0
-    if (dmg > 0) applyDamageToHeroIndex(hi, dmg)
+    if (dmg > 0) {
+        const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+        const cap = Math.max(1, Math.idiv((maxHp | 0) * (ENEMY_DAMAGE_CAP_PCT_OF_MAX_HP | 0), 100)) | 0
+        const finalDmg = (cap > 0 && dmg > cap) ? cap : dmg
+        applyDamageToHeroIndex(hi, finalDmg)
+    }
+
+    if ((sprites.readDataNumber(fx, "__projPoison") | 0) !== 0) {
+        _spawnPoisonGroundHazard(fx.x | 0, fx.y | 0)
+    }
 
     fx.destroy()
 })
@@ -40145,6 +40382,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         });
     }
 
+    const payloadElement = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
+
 
     // ------------------------------------------------------------
     // Spawn projectile immediately at swing start (first aggressive frame)
@@ -40738,7 +40977,23 @@ function spawnStrengthSwingProjectile(
         const tipWorldY = baseY + tipShape.tipDy
         tipInitX = tipWorldX - hero.x
         tipInitY = tipWorldY - hero.y
-        _stampWeaponAuraAt(img0, -halfW, -halfH, tipInitX, tipInitY, tipShape, STR_TIP_TRACE_COLOR)
+        const heroLocalX = hero.x - hero.x
+        const heroLocalY = hero.y - hero.y
+        let sideSign = _tipSideSign(tipInitX, tipInitY, heroLocalX, heroLocalY, nx, ny)
+        if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
+        const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
+        _stampWeaponAuraAt(
+            img0,
+            -halfW,
+            -halfH,
+            tipInitX,
+            tipInitY,
+            tipShape,
+            STR_TIP_TRACE_COLOR,
+            STR_TIP_TRACE_EDGE_COLOR,
+            STR_OUTLINE_CARDINAL_ONLY,
+            clip
+        )
         if (_wpnTraceEnabled()) {
             const traceId = _wpnTraceAssignId(proj)
             _wpnTraceLog("str.spawn.auraTip", {
@@ -40777,7 +41032,11 @@ function spawnStrengthSwingProjectile(
         }
     }
 
-    const tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
+    _updateProjectileMaskSpriteForProj(proj, img0)
+    _clearStrengthProjectileFill(img0)
+
+    let tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
+    if (!tipSide) tipSide = _weaponDefaultSideSign(nx, ny)
     sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, tipSide)
 
 
@@ -40916,6 +41175,7 @@ function updateStrengthProjectilesMotionFor(
 
         _destroyHeroBodyPaintFxForProj(proj)
         _destroyProjectileMaskFxForProj(proj)
+        _destroyProjectileMaskSpriteForProj(proj)
         _destroyStrengthSwingFxSegments(proj)
         proj.destroy()
 
@@ -41031,6 +41291,13 @@ function updateStrengthProjectilesMotionFor(
                 const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
                 const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
                 let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+                if (sideLock === 0 && sideNow === 0) {
+                    const fallback = _weaponDefaultSideSign(nx, ny)
+                    if (fallback) {
+                        sideLock = fallback
+                        sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                    }
+                }
                 if (sideLock === 0 && sideNow !== 0) {
                     sideLock = sideNow
                     sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
@@ -41051,6 +41318,7 @@ function updateStrengthProjectilesMotionFor(
                 }
                 tipLocalXNow = tipLocalX
                 tipLocalYNow = tipLocalY
+                const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideLock || sideNow)
                 _stampWeaponAuraLine(
                     img,
                     -halfW,
@@ -41061,7 +41329,10 @@ function updateStrengthProjectilesMotionFor(
                     tipLocalY,
                     auraPack.shapes,
                     STR_TIP_TRACE_COLOR,
-                    growthIdx
+                    growthIdx,
+                    STR_TIP_TRACE_EDGE_COLOR,
+                    STR_OUTLINE_CARDINAL_ONLY,
+                    clip
                 )
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.auraTip", {
@@ -41094,6 +41365,13 @@ function updateStrengthProjectilesMotionFor(
                 const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
                 const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
                 let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+                if (sideLock === 0 && sideNow === 0) {
+                    const fallback = _weaponDefaultSideSign(nx, ny)
+                    if (fallback) {
+                        sideLock = fallback
+                        sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                    }
+                }
                 if (sideLock === 0 && sideNow !== 0) {
                     sideLock = sideNow
                     sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
@@ -41146,6 +41424,23 @@ function updateStrengthProjectilesMotionFor(
                 ny,
                 growthIdx
             )
+            const arcOuter = Math.max(1, ((attachPx | 0) + (reachFromFront | 0)) | 0);
+            _stampStrengthArcTrail(
+                img,
+                -halfW,
+                -halfH,
+                nx,
+                ny,
+                attachPx | 0,
+                arcOuter,
+                totalArcDeg | 0,
+                t,
+                STR_TIP_TRACE_COLOR | 0,
+                STR_TIP_TRACE_EDGE_COLOR | 0
+            )
+            _updateProjectileMaskSpriteForProj(proj, img)
+            _clearStrengthProjectileFill(img)
+            _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
         }
         _updateHeroBodyPaintFxForProj(proj, hero)
         _updateProjectileMaskFxForProj(proj, hero)
@@ -41194,6 +41489,13 @@ function updateStrengthProjectilesMotionFor(
             const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
             const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
             let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow === 0) {
+                const fallback = _weaponDefaultSideSign(nx, ny)
+                if (fallback) {
+                    sideLock = fallback
+                    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+            }
             if (sideLock === 0 && sideNow !== 0) {
                 sideLock = sideNow
                 sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
@@ -41214,6 +41516,7 @@ function updateStrengthProjectilesMotionFor(
             }
             tipLocalXNow = tipLocalX
             tipLocalYNow = tipLocalY
+            const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideLock || sideNow)
             _stampWeaponAuraLine(
                 img,
                 -halfW,
@@ -41224,7 +41527,10 @@ function updateStrengthProjectilesMotionFor(
                 tipLocalY,
                 auraPack.shapes,
                 STR_TIP_TRACE_COLOR,
-                growthIdx
+                growthIdx,
+                STR_TIP_TRACE_EDGE_COLOR,
+                STR_OUTLINE_CARDINAL_ONLY,
+                clip
             )
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 _wpnTraceLog("str.tick2.auraTip", {
@@ -41257,6 +41563,13 @@ function updateStrengthProjectilesMotionFor(
             const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
             const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
             let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow === 0) {
+                const fallback = _weaponDefaultSideSign(nx, ny)
+                if (fallback) {
+                    sideLock = fallback
+                    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+            }
             if (sideLock === 0 && sideNow !== 0) {
                 sideLock = sideNow
                 sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
@@ -41309,6 +41622,23 @@ function updateStrengthProjectilesMotionFor(
             ny,
             growthIdx
         )
+        const arcOuter = Math.max(1, ((attachPx | 0) + (reachFromFront | 0)) | 0);
+        _stampStrengthArcTrail(
+            img,
+            -halfW,
+            -halfH,
+            nx,
+            ny,
+            attachPx | 0,
+            arcOuter,
+            totalArcDeg | 0,
+            t,
+            STR_TIP_TRACE_COLOR | 0,
+            STR_TIP_TRACE_EDGE_COLOR | 0
+        )
+        _updateProjectileMaskSpriteForProj(proj, img)
+        _clearStrengthProjectileFill(img)
+        _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
     }
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
@@ -41556,10 +41886,13 @@ function buildStrengthSmashBitmap(
             //   - at ends:   inner ˜ outerR - 1 (1-pixel thick)
 
             let innerR = inner0 + distFromCenter
-
-            if (innerR > outerR - 1) innerR = outerR - 1
-
+            const maxWidth = Math.min(STR_ARC_MAX_WIDTH_PX | 0, (outerR | 0))
+            const minWidth = Math.max(1, STR_ARC_MIN_WIDTH_PX | 0)
             if (innerR < inner0) innerR = inner0
+            if (innerR > (outerR - minWidth)) innerR = outerR - minWidth
+            if ((outerR - innerR) > maxWidth) innerR = outerR - maxWidth
+            if (innerR < inner0) innerR = inner0
+            if (innerR > (outerR - minWidth)) innerR = outerR - minWidth
 
 
 
@@ -41675,9 +42008,7 @@ function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
             if (isEdge) {
                 if (cur === 0) img.setPixel(x, y, STR_TIP_TRACE_EDGE_COLOR | 0);
             } else {
-                if (!PROJECTILE_OUTLINE_ONLY) {
-                    img.setPixel(x, y, STR_TIP_TRACE_COLOR | 0);
-                }
+                img.setPixel(x, y, STR_TIP_TRACE_COLOR | 0);
             }
         }
     }
@@ -41707,6 +42038,97 @@ function _strengthTraceStampLine(
     }
 }
 
+function _strengthArcSweepT(t: number): number {
+    const tt = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+    if (tt <= STR_ARC_SWEEP_START_FRAC) return 0;
+    const denom = Math.max(1e-6, (1 - STR_ARC_SWEEP_START_FRAC));
+    return Math.max(0, Math.min(1, (tt - STR_ARC_SWEEP_START_FRAC) / denom));
+}
+
+function _stampStrengthArcTrail(
+    img: Image,
+    minX: number,
+    minY: number,
+    nx: number,
+    ny: number,
+    inner0: number,
+    outerR: number,
+    arcDeg: number,
+    t: number,
+    fillColor: number,
+    edgeColor: number
+): void {
+    if (!img) return;
+    const maxR = Math.max(1, Math.round(outerR));
+    if (maxR <= 0 || !Number.isFinite(arcDeg)) return;
+    const sweepT = _strengthArcSweepT(t);
+    if (sweepT <= 0) return;
+    const halfArcRadMax = Math.abs(arcDeg) * 0.5 * (Math.PI / 180);
+    const halfArcRad = halfArcRadMax * sweepT;
+    if (!(halfArcRad > 0)) return;
+
+    const sx = -ny;
+    const sy = nx;
+    const stepRad = (STR_ARC_STEP_DEG | 0) * (Math.PI / 180);
+    let steps = Math.floor(halfArcRad / stepRad) * 2 + 1;
+    if (steps < 1) steps = 1;
+    const centerIndex = (steps - 1) / 2;
+    let maxWidth = Math.min(STR_ARC_MAX_WIDTH_PX | 0, maxR | 0);
+    if (maxWidth < 1) maxWidth = 1;
+    const minWidth = Math.max(1, STR_ARC_MIN_WIDTH_PX | 0);
+
+    const w = img.width | 0;
+    const h = img.height | 0;
+    for (let i = 0; i < steps; i++) {
+        const alpha = -halfArcRad + i * stepRad;
+        const dist = Math.abs(i - centerIndex);
+        let innerR = (inner0 | 0) + Math.round(dist);
+        if (innerR < (inner0 | 0)) innerR = inner0 | 0;
+        if (innerR > (maxR - minWidth)) innerR = maxR - minWidth;
+        const width = (maxR - innerR) | 0;
+        if (width > maxWidth) innerR = maxR - maxWidth;
+        if (innerR < (inner0 | 0)) innerR = inner0 | 0;
+        if (innerR > (maxR - minWidth)) innerR = maxR - minWidth;
+
+        const cosA = Math.cos(alpha);
+        const sinA = Math.sin(alpha);
+        const dxDir = nx * cosA + sx * sinA;
+        const dyDir = ny * cosA + sy * sinA;
+        for (let r = innerR; r <= maxR; r++) {
+            const px = Math.round(dxDir * r) - (minX | 0);
+            const py = Math.round(dyDir * r) - (minY | 0);
+            if (px < 0 || py < 0 || px >= w || py >= h) continue;
+            if ((edgeColor | 0) > 0 && (r === innerR || r === maxR)) {
+                img.setPixel(px, py, edgeColor | 0);
+            } else {
+                img.setPixel(px, py, fillColor | 0);
+            }
+        }
+    }
+}
+
+function _projectileClearFill(img: Image, fillColor: number): void {
+    if (!PROJECTILE_HIDE_FILL) return;
+    if (!img) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            if (img.getPixel(x, y) == (fillColor | 0)) img.setPixel(x, y, 0);
+        }
+    }
+}
+
+function _clearStrengthProjectileFill(img: Image): void {
+    _projectileClearFill(img, STR_TIP_TRACE_COLOR | 0);
+}
+
+function _clearAgilityProjectileFill(img: Image): void {
+    _projectileClearFill(img, AGI_TIP_TRACE_COLOR | 0);
+    _projectileClearFill(img, AGI_TRAIL_FILL_COLOR | 0);
+    _projectileClearFill(img, AGI_DEBUG_TRAIL_MAIN_COLOR | 0);
+}
+
 type WeaponFgInfo = {
     texKey: string;
     frameName: string;
@@ -41726,6 +42148,16 @@ type WeaponAuraTipShape = {
     tipDx: number;
     tipDy: number;
     sideHalf: number;
+};
+
+type WeaponAuraClip = {
+    heroLocalX: number;
+    heroLocalY: number;
+    nx: number;
+    ny: number;
+    sideSign: number;
+    sideEps: number;
+    frontEps: number;
 };
 
 type HeroFrameInfo = {
@@ -41793,6 +42225,33 @@ function _tipSideSign(
     const side = (dx * -ny) + (dy * nx);
     if (Math.abs(side) < WPN_AURA_TIP_SIDE_EPS) return 0;
     return side > 0 ? 1 : -1;
+}
+
+function _weaponDefaultSideSign(nx: number, ny: number): number {
+    if (ny > 0.6 && Math.abs(nx) < 0.35) return WPN_DOWN_FORCE_SIDE_SIGN | 0;
+    return 0;
+}
+
+function _weaponAuraClipForDown(
+    nx: number,
+    ny: number,
+    heroLocalX: number,
+    heroLocalY: number,
+    sideSign: number
+): WeaponAuraClip | null {
+    if (!(ny > 0.6 && Math.abs(nx) < 0.35)) return null;
+    let sign = sideSign | 0;
+    if (!sign) sign = _weaponDefaultSideSign(nx, ny);
+    if (!sign) return null;
+    return {
+        heroLocalX,
+        heroLocalY,
+        nx,
+        ny,
+        sideSign: sign,
+        sideEps: WPN_DOWN_SIDE_CLIP_EPS | 0,
+        frontEps: WPN_DOWN_FRONT_CLIP_EPS | 0
+    };
 }
 
 function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
@@ -41919,6 +42378,41 @@ function _wpnTraceShouldLog(proj: Sprite, nowMs: number): boolean {
     if ((nowMs | 0) - (last | 0) < (DEBUG_WPN_AURA_TRACE_INTERVAL_MS | 0)) return false;
     sprites.setDataNumber(proj, WPN_TRACE_LAST_MS_KEY, nowMs | 0);
     return true;
+}
+
+function _wpnTraceLogPixels(
+    proj: Sprite,
+    nowMs: number,
+    tag: string,
+    img: Image,
+    fillColor: number,
+    edgeColor: number
+): void {
+    if (!_wpnTraceEnabled()) return;
+    if (!proj || !img) return;
+    if (!_wpnTraceShouldLog(proj, nowMs | 0)) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    let fillCount = 0;
+    let edgeCount = 0;
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            const v = img.getPixel(x, y) | 0;
+            if (v === (fillColor | 0)) fillCount++;
+            else if (v === (edgeColor | 0)) edgeCount++;
+        }
+    }
+    if ((fillCount | 0) > 0 || (edgeCount | 0) === 0) {
+        _wpnTraceLog(tag, {
+            id: _wpnTraceAssignId(proj),
+            fill: fillCount | 0,
+            edge: edgeCount | 0,
+            w,
+            h,
+            fillC: fillColor | 0,
+            edgeC: edgeColor | 0
+        });
+    }
 }
 
 function _countMaskBits(mask: any): number {
@@ -42196,7 +42690,10 @@ function _stampWeaponAuraAt(
     tipLocalX: number,
     tipLocalY: number,
     shape: WeaponAuraTipShape,
-    color: number
+    color: number,
+    edgeColor: number = 0,
+    edgeCardinalOnly: boolean = true,
+    clip?: WeaponAuraClip | null
 ): void {
     if (!img || !shape || !shape.offsets || shape.offsets.length === 0) return;
     const w = img.width | 0;
@@ -42208,7 +42705,27 @@ function _stampWeaponAuraAt(
         const x = baseX + off[i];
         const y = baseY + off[i + 1];
         if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if (clip && clip.sideSign) {
+            const px = tipLocalX + off[i];
+            const py = tipLocalY + off[i + 1];
+            const sideCoord = ((px - clip.heroLocalX) * -clip.ny) + ((py - clip.heroLocalY) * clip.nx);
+            if ((sideCoord * clip.sideSign) < -(clip.sideEps || 0)) continue;
+            const frontCoord = ((px - clip.heroLocalX) * clip.nx) + ((py - clip.heroLocalY) * clip.ny);
+            if (frontCoord < -(clip.frontEps || 0)) continue;
+        }
         img.setPixel(x, y, color | 0);
+        if ((edgeColor | 0) > 0 && PROJECTILE_FORCE_BORDER) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    if (edgeCardinalOnly && dx !== 0 && dy !== 0) continue;
+                    const ox = x + dx;
+                    const oy = y + dy;
+                    if (ox < 0 || oy < 0 || ox >= w || oy >= h) continue;
+                    if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, edgeColor | 0);
+                }
+            }
+        }
     }
 }
 
@@ -42222,14 +42739,17 @@ function _stampWeaponAuraLine(
     y1: number,
     shapes: WeaponAuraTipShape[],
     color: number,
-    maxIdx: number = 3
+    maxIdx: number = 3,
+    edgeColor: number = 0,
+    edgeCardinalOnly: boolean = true,
+    clip?: WeaponAuraClip | null
 ): void {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
     if (steps <= 0) {
         const shape = shapes[Math.min(maxIdx, 3)] || shapes[0];
-        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color);
+        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color, edgeColor, edgeCardinalOnly, clip);
         return;
     }
     for (let i = 0; i <= steps; i++) {
@@ -42243,7 +42763,7 @@ function _stampWeaponAuraLine(
         if (!shape) continue;
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
-        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color);
+        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color, edgeColor, edgeCardinalOnly, clip);
     }
 }
 
@@ -42381,7 +42901,9 @@ function _stampBackWaveToHeroStrength(
                 backY,
                 auraShapes,
                 STR_TIP_TRACE_COLOR,
-                maxIdx
+                maxIdx,
+                STR_TIP_TRACE_EDGE_COLOR,
+                STR_OUTLINE_CARDINAL_ONLY
             );
         } else {
             _strengthTraceStampLine(img, halfW, halfH, tipLocalX, tipLocalY, backX, backY);
@@ -42770,7 +43292,8 @@ const AGI_DEBUG_TRAIL_MAIN_COLOR = 1
 const AGI_DEBUG_TRAIL_EDGE_COLOR = 7
 const AGI_DEBUG_SHOW_WINDUP_TRAIL = true
 const AGI_DEBUG_CHARGE_LEN_PX = 64
-const AGI_TRAIL_BACK_PCT_X1000 = 900
+const AGI_TRAIL_BACK_PCT_X1000 = 450
+const AGI_LAUNCH_MIN_PX = 6
 const AGI_THRUST_OFFS_Y_SIDE = 12
 const AGI_THRUST_OFFS_X_UP = 9
 const AGI_THRUST_OFFS_X_DOWN = -4
@@ -45596,7 +46119,23 @@ function spawnAgilityThrustProjectile(
         const tipWorldY = baseY + tipShape.tipDy
         tipLocalX = tipWorldX - anchorX
         tipLocalY = tipWorldY - anchorY
-        _stampWeaponAuraAt(maxImg, maxBounds.minX, maxBounds.minY, tipLocalX, tipLocalY, tipShape, AGI_TIP_TRACE_COLOR)
+        const heroLocalX = hero.x - anchorX
+        const heroLocalY = hero.y - anchorY
+        let sideSign = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+        if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
+        const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
+        _stampWeaponAuraAt(
+            maxImg,
+            maxBounds.minX,
+            maxBounds.minY,
+            tipLocalX,
+            tipLocalY,
+            tipShape,
+            AGI_TIP_TRACE_COLOR,
+            AGI_TIP_TRACE_EDGE_COLOR,
+            true,
+            clip
+        )
         if (_wpnTraceEnabled()) {
             const traceId = _wpnTraceAssignId(proj)
             _wpnTraceLog("agi.spawn.auraTip", {
@@ -45638,12 +46177,35 @@ function spawnAgilityThrustProjectile(
             });
         }
     }
+    {
+        const tipForward = Math.max(
+            0,
+            ((tipLocalX * nx) + (tipLocalY * ny))
+        )
+        const tipSide = (tipLocalX * sx) + (tipLocalY * sy)
+        const launchLen = Math.min(Math.max(1, L | 0), Math.max(0, (AGI_LAUNCH_MIN_PX | 0)))
+        _renderAgilityTrailBase(
+            maxImg,
+            maxBounds.minX,
+            maxBounds.minY,
+            tipForward,
+            tipForward + launchLen,
+            nx,
+            ny,
+            sx * tipSide,
+            sy * tipSide
+        )
+    }
+    _updateProjectileMaskSpriteForProj(proj, maxImg)
+    _clearAgilityProjectileFill(maxImg)
+
     sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
     sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
     {
         const heroLocalX = hero.x - anchorX
         const heroLocalY = hero.y - anchorY
-        const tipSide = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+        let tipSide = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+        if (!tipSide) tipSide = _weaponDefaultSideSign(nx, ny)
         sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, tipSide)
     }
     proj.x = anchorX + (maxBounds.minX + maxBounds.maxX) / 2
@@ -46076,15 +46638,73 @@ function _buildAgilityTrailImage(
         if (px >= 0 && px < w && py >= 0 && py < h && img.getPixel(px, py) == 0) img.setPixel(px, py, mainCol);
     }
 
-    if (PROJECTILE_OUTLINE_ONLY) {
-        for (let x = 0; x < w; x++) {
-            for (let y = 0; y < h; y++) {
-                if (img.getPixel(x, y) == mainCol) img.setPixel(x, y, 0);
+    return { img, bounds };
+}
+
+function _renderAgilityTrailBase(
+    img: Image,
+    minX: number,
+    minY: number,
+    sBack: number,
+    sFront: number,
+    nx: number,
+    ny: number,
+    anchorOffX: number,
+    anchorOffY: number
+): void {
+    if (!img) return;
+    const { baseHalf, sideHalf, mainCol, edgeCol } = _agiTrailStyle();
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const sx = -ny, sy = nx;
+    let sb = sBack, sf = sFront;
+    if (sf < sb) { const t = sb; sb = sf; sf = t; }
+
+    function mapX(sForward: number, wSide: number) {
+        return (Math.round(anchorOffX + (nx * sForward) + (sx * wSide)) - (minX | 0)) | 0;
+    }
+    function mapY(sForward: number, wSide: number) {
+        return (Math.round(anchorOffY + (ny * sForward) + (sy * wSide)) - (minY | 0)) | 0;
+    }
+    function setIfEmpty(px: number, py: number, col: number) {
+        if (px < 0 || px >= w || py < 0 || py >= h) return;
+        if (img.getPixel(px, py) === 0) img.setPixel(px, py, col | 0);
+    }
+
+    const sStart = Math.floor(sb);
+    const sEnd = Math.floor(sf);
+    for (let s = sStart; s <= sEnd; s++) {
+        if (AGI_DEBUG_HUGE_TRAIL) {
+            for (let woff = -baseHalf; woff <= baseHalf; woff++) {
+                setIfEmpty(mapX(s, woff), mapY(s, woff), mainCol);
+            }
+        } else {
+            setIfEmpty(mapX(s, 0), mapY(s, 0), mainCol);
+        }
+    }
+
+    for (let woff = -baseHalf; woff <= baseHalf; woff++) {
+        setIfEmpty(mapX(sf, woff), mapY(sf, woff), mainCol);
+    }
+
+    setIfEmpty(mapX(sf + 1, 0), mapY(sf + 1, 0), mainCol);
+
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            if (img.getPixel(x, y) !== (mainCol | 0)) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    const ox = x + dx, oy = y + dy;
+                    if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue;
+                    if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, edgeCol | 0);
+                }
             }
         }
     }
 
-    return { img, bounds };
+    setIfEmpty(mapX(sf + 2, 0), mapY(sf + 2, 0), edgeCol);
+    setIfEmpty(mapX(sf, 0), mapY(sf, 0), mainCol);
 }
 
 function createAgilityArrowSegmentImage(
@@ -46291,6 +46911,8 @@ function updateAgilityProjectilesMotionFor(
     nx /= m
 
     ny /= m
+    const sx = -ny
+    const sy = nx
 
 
 
@@ -46405,10 +47027,12 @@ function updateAgilityProjectilesMotionFor(
 
 
     if (preActive) {
-        arrowLen = 0
+        const launchLen = Math.max(0, (AGI_LAUNCH_MIN_PX | 0))
+        arrowLen = Math.min(maxLen | 0, launchLen | 0)
         reachT = 0
         sBack = sBackAtCast
-        sFront = sBackAtCast
+        sFront = sBackAtCast + arrowLen
+        if (sFront < sBack) sFront = sBack
     } else if (reachT <= 0) {
 
         // Phase A — extend: grow only the front from the front edge
@@ -46457,6 +47081,7 @@ function updateAgilityProjectilesMotionFor(
 
             _destroyHeroBodyPaintFxForProj(proj)
             _destroyProjectileMaskFxForProj(proj)
+            _destroyProjectileMaskSpriteForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
             proj.destroy()
 
@@ -46517,6 +47142,8 @@ function updateAgilityProjectilesMotionFor(
     const img = proj.image
     let tipLocalX: number | null = null
     let tipLocalY: number | null = null
+    let tipForward = 0
+    let tipSide = 0
     let auraShapes: WeaponAuraTipShape[] | null = null
     if (img) {
         const heroLocalX = hero.x - anchorX
@@ -46537,6 +47164,13 @@ function updateAgilityProjectilesMotionFor(
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
             const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
             let sideLock = sprites.readDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow === 0) {
+                const fallback = _weaponDefaultSideSign(nx, ny)
+                if (fallback) {
+                    sideLock = fallback
+                    sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+            }
             if (sideLock === 0 && sideNow !== 0) {
                 sideLock = sideNow
                 sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
@@ -46555,6 +47189,7 @@ function updateAgilityProjectilesMotionFor(
                 tipLocalX = lastX
                 tipLocalY = lastY
             }
+            const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideLock || sideNow)
             _stampWeaponAuraLine(
                 img,
                 minX,
@@ -46565,7 +47200,10 @@ function updateAgilityProjectilesMotionFor(
                 tipLocalY,
                 auraPack.shapes,
                 AGI_TIP_TRACE_COLOR,
-                growthIdx
+                growthIdx,
+                AGI_TIP_TRACE_EDGE_COLOR,
+                true,
+                clip
             )
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
@@ -46595,6 +47233,8 @@ function updateAgilityProjectilesMotionFor(
             }
             sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
             sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+            tipForward = Math.max(0, (tipLocalX * nx) + (tipLocalY * ny))
+            tipSide = (tipLocalX * sx) + (tipLocalY * sy)
         } else {
             const vis = getHeroVisualInfoForStrength(hero, nx, ny)
             let wTipX = (vis[2] || 0)
@@ -46609,6 +47249,13 @@ function updateAgilityProjectilesMotionFor(
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
             const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
             let sideLock = sprites.readDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow === 0) {
+                const fallback = _weaponDefaultSideSign(nx, ny)
+                if (fallback) {
+                    sideLock = fallback
+                    sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+            }
             if (sideLock === 0 && sideNow !== 0) {
                 sideLock = sideNow
                 sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
@@ -46645,7 +47292,24 @@ function updateAgilityProjectilesMotionFor(
             }
             sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
             sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+            tipForward = Math.max(0, (tipLocalX * nx) + (tipLocalY * ny))
+            tipSide = (tipLocalX * sx) + (tipLocalY * sy)
         }
+    }
+    if (img) {
+        const beamMax = Math.max(1, (reachExtra | 0))
+        const beamLen = Math.min(beamMax, Math.max(0, (arrowLen | 0)))
+        _renderAgilityTrailBase(
+            img,
+            minX,
+            minY,
+            tipForward,
+            tipForward + beamLen,
+            nx,
+            ny,
+            sx * tipSide,
+            sy * tipSide
+        )
     }
 
     if (img && tipLocalX != null && tipLocalY != null) {
@@ -46688,6 +47352,8 @@ function updateAgilityProjectilesMotionFor(
                     const backX = tipLocalX - (dirX * weaponLen)
                     const backY = tipLocalY - (dirY * weaponLen)
                     if (auraShapes) {
+                        const sideSign = sprites.readDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY) | 0
+                        const clip = _weaponAuraClipForDown(dirX, dirY, heroLocalX, heroLocalY, sideSign)
                         _stampWeaponAuraLine(
                             img,
                             minX,
@@ -46698,7 +47364,10 @@ function updateAgilityProjectilesMotionFor(
                             backY,
                             auraShapes,
                             AGI_TIP_TRACE_COLOR,
-                            growthIdx
+                            growthIdx,
+                            AGI_TIP_TRACE_EDGE_COLOR,
+                            true,
+                            clip
                         )
                     } else {
                         _agiTraceStampLine(img, minX, minY, tipLocalX, tipLocalY, backX, backY)
@@ -46729,6 +47398,12 @@ function updateAgilityProjectilesMotionFor(
                 }
             }
         }
+    }
+
+    if (img) {
+        _updateProjectileMaskSpriteForProj(proj, img)
+        _clearAgilityProjectileFill(img)
+        _wpnTraceLogPixels(proj, nowMs | 0, "agi.tracePixels", img, AGI_TIP_TRACE_COLOR | 0, AGI_TIP_TRACE_EDGE_COLOR | 0)
     }
 
     _updateHeroBodyPaintFxForProj(proj, hero)
@@ -46935,7 +47610,7 @@ const INT_PRODUCE_DUR_MS = 1000
 const INT_LAND_DUR_MS = 500
 
 // Detonation visual controls (animation does NOT drive damage timing)
-const INT_DET_MIN_SIZE_PX = 64
+const INT_DET_MIN_SIZE_PX = 32
 const INT_DET_MIN_SHOW_MS = 1000
 const INT_DET_EXTRA_RADIUS_PX = 6
 const INT_DET_LIFT_PX = 6
@@ -46943,10 +47618,20 @@ const INT_DET_FX_ALIGN_X_PX = 3
 const INT_DET_FX_RAISE_PX = 6
 const INT_DET_FX_INTRO_MS = 240
 const INT_DET_FX_INTRO_SCALE = 0.2
+const INT_DET_FX_INTRO_FRAMES = 4
+const INT_DET_FX_PULSE_FRAME_START = 2
+const INT_DET_FX_PULSE_FRAME_END = 6
+const INT_DET_FX_PULSE_MIN_SCALE = 0.7
+const INT_DET_FX_PULSE_MAX_SCALE = 1.05
+const INT_DET_FX_CONE_SCALE_X = 0.9
+const INT_DET_FX_CONE_SCALE_Y = 1.05
+const INT_DET_FX_OPEN_SCALES: number[] = [0.1, 0.5, 0.75, 1]
 const INT_RING_PULSE_MIN_SCALE = 0.7
 const INT_RING_TILT_Y_SCALE = 0.75
 const INT_DET_LIFT_PX_KEY = "INT_DET_LIFT_PX"
 const INT_DET_VIS_RADIUS_KEY = "INT_DET_VIS_RAD"
+const INT_DET_FX_INTRO_MS_KEY = "INT_DET_FX_INTRO_MS"
+const INT_DET_FX_BASE_SCALE_KEY = "INT_DET_FX_BASE_SCALE"
 
 
 
@@ -47536,6 +48221,8 @@ const INT_PULSE_DEFAULT_PERIOD_MS = 250;  // tweak (or write from your "Time" ax
 
 const INT_PULSE_WINDOW_MS = 70;           // short window so multiple enemies can be hit in same pulse
 
+const INT_SPELL_SPAWN_Y_OFFSET_PX = -6;   // chest-height spawn (negative = up from center)
+
 
 
 // Safe even if INT_PULSE_DEFAULT_PERIOD_MS was never declared anywhere.
@@ -47693,7 +48380,7 @@ function beginIntellectTargeting(heroIndex: number): void {
 
     spell.x = hero.x
 
-    spell.y = hero.y - 12
+    spell.y = hero.y + INT_SPELL_SPAWN_Y_OFFSET_PX
 
 
 
@@ -47869,8 +48556,26 @@ function runIntellectDetonation(spell: Sprite, lingerMs: number) {
     let pulsePeriod = sprites.readDataNumber(spell, INT_PULSE_PERIOD_MS_KEY) | 0
 
     if (pulsePeriod <= 0) pulsePeriod = INT_PULSE_DEFAULT_PERIOD_MS
-
-    const pulseLinger = (pulseTotal > 0 ? (pulseTotal * pulsePeriod + INT_PULSE_WINDOW_MS) : 0) | 0
+    const family = sprites.readDataNumber(spell, PROJ_DATA.FAMILY) | 0
+    const isIntellect = family === (FAMILY.INTELLECT | 0)
+    let introMs = 0
+    if (isIntellect) {
+        const introMax = Math.max(0, INT_DET_FX_INTRO_MS | 0)
+        introMs = Math.max(0, Math.min(introMax, pulsePeriod | 0)) | 0
+        sprites.setDataNumber(spell, INT_DET_FX_INTRO_MS_KEY, introMs | 0)
+        if (pulseTotal > 0) sprites.setDataNumber(spell, INT_PULSE_NEXT_AT_MS_KEY, (now + introMs) | 0)
+    } else {
+        sprites.setDataNumber(spell, INT_DET_FX_INTRO_MS_KEY, 0)
+    }
+    let pulseLinger = 0
+    if (pulseTotal > 0) {
+        if (isIntellect) {
+            const pulseCount = Math.max(0, (pulseTotal | 0) - 1) | 0
+            pulseLinger = (introMs + (pulseCount * (pulsePeriod | 0)) + INT_PULSE_WINDOW_MS) | 0
+        } else {
+            pulseLinger = ((pulseTotal * pulsePeriod) + INT_PULSE_WINDOW_MS) | 0
+        }
+    }
 
     const baseLinger = lingerMs | 0
 
@@ -48959,6 +49664,8 @@ function processIntellectLingers() {
 
 
         if (!sprites.readDataNumber(proj, INT_DETONATED_KEY)) continue
+        const family = sprites.readDataNumber(proj, PROJ_DATA.FAMILY) | 0
+        const isIntellect = family === (FAMILY.INTELLECT | 0)
 
 
 
@@ -49028,6 +49735,10 @@ function processIntellectLingers() {
 
         if (startMs <= 0 || endMs <= startMs) continue
 
+        const introMs = isIntellect ? (sprites.readDataNumber(proj, INT_DET_FX_INTRO_MS_KEY) | 0) : 0
+        const introEndMs = (introMs > 0) ? ((startMs + introMs) | 0) : (startMs | 0)
+        const inIntro = isIntellect && (introMs | 0) > 0 && now < introEndMs
+
 
 
 
@@ -49048,17 +49759,29 @@ function processIntellectLingers() {
         // Clamp animation progress [0, 1] within the current pulse
 
         let t = total > 0 ? (elapsed / total) : 1
-        const pulseT = Math.sin(Math.PI * t)
+        if (t < 0) t = 0
+        if (t > 1) t = 1
         const hasPulse = (pulseTotal | 0) > 0
-        const pulseNorm = hasPulse ? pulseT : 1
+        let pulseNorm = 1
+        if (hasPulse) {
+            if (isIntellect) {
+                const cosT = Math.cos(2 * Math.PI * t)
+                pulseNorm = (cosT + 1) * 0.5
+            } else {
+                pulseNorm = Math.sin(Math.PI * t)
+            }
+        }
+        if (inIntro) pulseNorm = 1
         const pulseScale =
             (INT_RING_PULSE_MIN_SCALE + ((1 - INT_RING_PULSE_MIN_SCALE) * pulseNorm))
         const detProgress = Math.max(0, Math.min(1, (now - startMs) / Math.max(1, (endMs - startMs) | 0)))
 
 
 
-        let maxRadius = sprites.readDataNumber(proj, INT_RADIUS_KEY) | 0
-
+        let maxRadius = sprites.readDataNumber(proj, INT_DET_VIS_RADIUS_KEY) | 0
+        if (maxRadius <= 0) maxRadius = sprites.readDataNumber(proj, INT_RADIUS_KEY) | 0
+        const minRingRadius = Math.max(1, (INT_DET_MIN_SIZE_PX >> 1) | 0)
+        if (maxRadius < minRingRadius) maxRadius = minRingRadius
         if (maxRadius <= 0) maxRadius = 16
 
 
@@ -49112,18 +49835,63 @@ function processIntellectLingers() {
         const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
         const baseGlow = _heroElementParticleColor(element | 0) | 0
         const pulseBase = (baseGlow > 0) ? baseGlow : 8
-        const glowColor = (pulseT > 0.6) ? 1 : pulseBase
+        const glowColor = (pulseNorm > 0.6) ? 1 : pulseBase
         _img_fillEllipseCompat(img, cx, cy, glowOuterRx, glowOuterRy, glowColor)
 
         if (glowInnerRx < glowOuterRx) _img_fillEllipseCompat(img, cx, cy, glowInnerRx, glowInnerRy, 0)
 
         const fx = sprites.readDataSprite(proj, INT_DET_FX_SPRITE_KEY)
         if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
-            const ringBottomY = ((proj.y | 0) + (glowOuterRy - liftNow)) | 0
+            const raisePx = isIntellect ? (INT_DET_FX_RAISE_PX | 0) : 0
+            const ringBottomY = ((proj.y | 0) + (glowOuterRy - liftNow) - raisePx) | 0
             sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, ringBottomY | 0)
+
+            if (isIntellect) {
+                const atlas = _getEffectAtlasAny()
+                const skinId = sprites.readDataString(fx, "effectSkin") || ""
+                if (atlas && skinId) {
+                    const dir = sprites.readDataString(fx, "effectDir") || ""
+                    const resolved = _resolveEffectEntry(atlas, skinId, dir)
+                    const frameCount = resolved?.frameIndices ? (resolved.frameIndices.length | 0) : 0
+                    if (frameCount > 0) {
+                        let frameIdx = 0
+                        let scaleMult = 1
+
+                        if (inIntro) {
+                            const introDur = Math.max(1, introMs | 0)
+                            const introT = Math.max(0, Math.min(1, (now - startMs) / introDur))
+                            const introFrameCount = Math.max(1, Math.min(INT_DET_FX_INTRO_FRAMES, frameCount))
+                            const introFrameIdx = Math.min(introFrameCount - 1, Math.floor(introT * introFrameCount))
+                            const introScaleIdx = Math.min(INT_DET_FX_OPEN_SCALES.length - 1, Math.floor(introT * INT_DET_FX_OPEN_SCALES.length))
+                            frameIdx = introFrameIdx | 0
+                            scaleMult = INT_DET_FX_OPEN_SCALES[introScaleIdx] || 1
+                        } else {
+                            let pulseStartIdx = Math.min(INT_DET_FX_PULSE_FRAME_START, frameCount - 1)
+                            let pulseEndIdx = Math.min(INT_DET_FX_PULSE_FRAME_END, frameCount - 1)
+                            if (pulseEndIdx < pulseStartIdx) {
+                                const tmp = pulseStartIdx
+                                pulseStartIdx = pulseEndIdx
+                                pulseEndIdx = tmp
+                            }
+                            const span = Math.max(1, (pulseEndIdx - pulseStartIdx) | 0)
+                            frameIdx = (pulseStartIdx + Math.round(pulseNorm * span)) | 0
+                            scaleMult =
+                                INT_DET_FX_PULSE_MIN_SCALE +
+                                ((INT_DET_FX_PULSE_MAX_SCALE - INT_DET_FX_PULSE_MIN_SCALE) * pulseNorm)
+                        }
+
+                        const baseScaleRaw = sprites.readDataNumber(fx, INT_DET_FX_BASE_SCALE_KEY)
+                        const baseScale = (baseScaleRaw > 0) ? baseScaleRaw : 1
+                        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0)
+                        sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, baseScale * scaleMult)
+                        sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, INT_DET_FX_CONE_SCALE_X)
+                        sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, INT_DET_FX_CONE_SCALE_Y)
+                    }
+                }
+            }
         }
 
-        const tendrilColor = (element === (ELEM.NONE | 0)) ? ((pulseT > 0.6) ? 9 : 8) : 0
+        const tendrilColor = (element === (ELEM.NONE | 0)) ? ((pulseNorm > 0.6) ? 9 : 8) : 0
 
         const twoPi = 2 * Math.PI
 
@@ -49414,10 +50182,13 @@ let supportPuzzleProgress: number[] = [0, 0, 0, 0]
 let supportPuzzleIcons: Sprite[][] = [[], [], [], []]
 
 let supportPuzzleStartMs: number[] = [0, 0, 0, 0]
+let supportPuzzleWrongUntil: number[] = [0, 0, 0, 0]
 
 // For edge detection on D-pad
 
 let supportPuzzlePrevMask: number[] = [0, 0, 0, 0]
+// For edge detection on cancel
+let supportPuzzlePrevInteract: boolean[] = [false, false, false, false]
 
 
 
@@ -49448,6 +50219,8 @@ const SUPPORT_BEAM_SPEED = BALANCE.BUFFS.SUPPORT_BEAM_SPEED // pixels per second
 const SUPPORT_PUZZLE_STEP_BUDGET_MS = BALANCE.BUFFS.SUPPORT_PUZZLE_STEP_BUDGET_MS
 
 const SUPPORT_PUZZLE_MIN_TOTAL_MS = BALANCE.BUFFS.SUPPORT_PUZZLE_MIN_TOTAL_MS
+
+const SUPPORT_PUZZLE_WRONG_FLASH_MS = 650
 
 
 
@@ -50935,6 +51708,9 @@ function beginSupportPuzzleForHero(heroIndex: number, seqLen: number, nowMs: num
     supportPuzzleProgress[heroIndex] = 0
 
     supportPuzzleStartMs[heroIndex] = now
+    supportPuzzleWrongUntil[heroIndex] = 0
+    supportPuzzlePrevMask[heroIndex] = 0
+    supportPuzzlePrevInteract[heroIndex] = false
 
 
 
@@ -51137,7 +51913,14 @@ function updateSupportPuzzles(now: number) {
         const st = _getInputStateForOwnerId(ownerId)
         if (!st) continue
 
-
+        // Allow cancel via Interact (F)
+        const interactNow = !!st.Interact
+        const prevInteract = !!supportPuzzlePrevInteract[hi]
+        supportPuzzlePrevInteract[hi] = interactNow
+        if (interactNow && !prevInteract) {
+            clearSupportPuzzleForHero(hi)
+            continue
+        }
 
         // Direction mask
 
@@ -51208,6 +51991,7 @@ function updateSupportPuzzles(now: number) {
 
             // Wrong input: reset progress (simple)
 
+            supportPuzzleWrongUntil[hi] = (nowMs + SUPPORT_PUZZLE_WRONG_FLASH_MS) | 0
             resetSupportPuzzleProgress(hi)
 
         }
@@ -51257,8 +52041,10 @@ function clearSupportPuzzleForHero(heroIndex: number) {
     supportPuzzleActive[heroIndex] = false
 
     supportPuzzlePrevMask[heroIndex] = 0
+    supportPuzzlePrevInteract[heroIndex] = false
 
     supportPuzzleStartMs[heroIndex] = 0
+    supportPuzzleWrongUntil[heroIndex] = 0
 
 
 
@@ -51534,6 +52320,16 @@ const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "magebullet"
 const ENEMY_PROJECTILE_ARROW_SKIN_ID = "arrow"
 const ENEMY_PROJECTILE_EYEBALL_SKIN_ID = "monsterframe:eyeball:attack:3"
 const ENEMY_PROJECTILE_COLLISION_ALPHA_MIN = 8
+const MONSTER_SPAWN_VARIANT_SEP = "::"
+const ENEMY_DAMAGE_CAP_PCT_OF_MAX_HP = 50
+const ENEMY_POWER_SCALE_START_FLOOR = 6
+const ENEMY_MOVE_PACE_MIN_MS = 180
+const ENEMY_MOVE_PACE_MAX_MS = 1400
+const ENEMY_MOVE_PACE_STOP_CHANCE_PCT = 18
+const ENEMY_MOVE_PACE_SLOW_CHANCE_PCT = 42
+const ENEMY_MOVE_PACE_FAST_CHANCE_PCT = 24
+const ENEMY_MOVE_PACE_SLOW_SPEED_PCT = 35
+const ENEMY_MOVE_PACE_FAST_SPEED_PCT = 260
 const ENEMY_PROJECTILE_GENERIC_CHANCE_PCT = 35
 const ENEMY_PROJECTILE_EFFECTS_BY_ELEMENT: { [element: number]: string[] } = {
     [ELEM.FIRE]: [
@@ -51623,6 +52419,26 @@ const ENEMY_WALL_DIAG_NUDGE_TICKS = 3
 const ENEMY_HIT_FLASH_MS = 120
 const ENEMY_HIT_PUNCH_MS = 120
 const ENEMY_HIT_PUNCH_SCALE_X1000 = 120
+const LEVEL_UP_FLASH_MS = 280
+const SLIME_BASE_HP = 21
+const SLIME_RANGED_HP = 11
+const SLIME_BABY_HP = 5
+const SLIME_BASE_DAMAGE = 1
+const SLIME_BABY_SCALE = 0.5
+const SLIME_MEDIUM_SCALE = 2
+const SLIME_GIANT_SCALE = 4
+const SLIME_BABY_RANGE_PX = 70
+const SLIME_RANGED_RANGE_PX = 100
+const SLIME_BABY_PROJ_SPEED = 45
+const SLIME_RANGED_PROJ_SPEED = 75
+const SLIME_RETREAT_MS = 650
+const SLIME_RETREAT_SPEED_PCT = 110
+const SLIME_RETREAT_COOLDOWN_MS = 900
+const SLIME_SPLIT_OFFSET_PX = 14
+const POISON_GROUND_LIFE_MS = 1600
+const POISON_GROUND_TICK_MS = 400
+const POISON_GROUND_DMG = 1
+const POISON_GROUND_SIZE_PX = 12
 const WORM_SMALL_JUMP_CHANCE_PCT = 40
 const WORM_SMALL_JUMP_DIST_PCT = 50
 const WORM_SMALL_JUMP_STEP_PX = 4
@@ -52009,8 +52825,9 @@ function enemyStatsForMonsterId(monsterId: string) {
 
     // Scale enemy power with floor so level/floor progression matters
     const floorIdx = Math.max(1, (_dunFloorIndex | 0)) | 0
-    const powerPct = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.WAVES.ENEMY_POWER_PER_FLOOR_PCT | 0))
-    const speedPct = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.WAVES.ENEMY_SPEED_PER_FLOOR_PCT | 0))
+    const scaleFloor = Math.max(0, (floorIdx - (ENEMY_POWER_SCALE_START_FLOOR | 0) + 1) | 0) | 0
+    const powerPct = 100 + Math.max(0, (scaleFloor | 0) * (BALANCE.WAVES.ENEMY_POWER_PER_FLOOR_PCT | 0))
+    const speedPct = 100 + Math.max(0, (scaleFloor | 0) * (BALANCE.WAVES.ENEMY_SPEED_PER_FLOOR_PCT | 0))
 
     const maxHPScaled = Math.max(1, Math.idiv(maxHP * powerPct, 100))
     const touchDamageScaled = Math.max(1, Math.idiv(touchDamage * powerPct, 100))
@@ -52131,35 +52948,9 @@ function enemyPlaceholderImageForMonster(monsterId: string): Image {
 
 
     if (hasAtlas) {
-
         const w = sizing.colliderW | 0
-
         const h = sizing.colliderH | 0
-
-        const img = image.create(w, h)
-
-
-
-        // Visible debug body (so you can "see" collision size)
-
-        const fill = 1
-
-        const border = 2
-
-        for (let y = 0; y < h; y++) {
-
-            for (let x = 0; x < w; x++) {
-
-                const isBorder = (x === 0 || y === 0 || x === (w - 1) || y === (h - 1))
-
-                img.setPixel(x, y, isBorder ? border : fill)
-
-            }
-
-        }
-
-        return img
-
+        return _enemyMakeColliderPlaceholderImage(w | 0, h | 0)
     }
 
 
@@ -52170,6 +52961,28 @@ function enemyPlaceholderImageForMonster(monsterId: string): Image {
 
     return enemyImageForKind(kindKey)
 
+}
+
+function _enemyMakeColliderPlaceholderImage(w: number, h: number): Image {
+    const iw = Math.max(1, w | 0) | 0
+    const ih = Math.max(1, h | 0) | 0
+    const img = image.create(iw, ih)
+    // Visible debug body (so you can "see" collision size)
+    const fill = 1
+    const border = 2
+    for (let y = 0; y < ih; y++) {
+        for (let x = 0; x < iw; x++) {
+            const isBorder = (x === 0 || y === 0 || x === (iw - 1) || y === (ih - 1))
+            img.setPixel(x, y, isBorder ? border : fill)
+        }
+    }
+    return img
+}
+
+function _enemySetPlaceholderImageForCollider(enemy: Sprite, w: number, h: number): void {
+    if (!enemy) return
+    const img = _enemyMakeColliderPlaceholderImage(w | 0, h | 0)
+    enemy.setImage(img)
 }
 
 
@@ -53094,7 +53907,11 @@ function grantXpToHeroIndex(heroIndex: number, deltaXp: number, popX: number, po
         updateHeroManaBar(heroIndex)
     }
 
-
+    if (leveled > 0) {
+        const now = game.runtime() | 0
+        sprites.setDataNumber(hero, "__hitFlashUntil", (now + LEVEL_UP_FLASH_MS) | 0)
+        sprites.setDataNumber(hero, "__hitFlashMs", LEVEL_UP_FLASH_MS | 0)
+    }
 
     // Optional: you can add a "LEVEL UP!" popup later tied to `leveled > 0`
 
@@ -53114,18 +53931,20 @@ function awardXpForEnemyDeath(enemy: Sprite, sourceHeroIndex: number, coinPopX: 
 
 
 
-    // Apply xpScale (from relic kill hook)
+    // Apply xpScale (from relic kill hook + player count scaling)
 
     let s = (xpScale == null) ? 1 : Number(xpScale)
-
     if (!(s >= 0)) s = 1
 
+    const playerCount = _dunGetActiveProfileCount()
+    const playerScale = _dunGetXpScale(playerCount | 0)
+    if (playerScale !== 1) {
+        s = s * playerScale
+    }
+
     if (s !== 1) {
-
         xpVal = Math.floor(xpVal * s) | 0
-
         if (xpVal < 0) xpVal = 0
-
     }
 
 
@@ -53593,6 +54412,87 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
 
     return enemy
 
+}
+
+function _enemySetHpAndBar(enemy: Sprite, hp: number): void {
+    if (!enemy) return
+    const nextHp = Math.max(1, hp | 0) | 0
+    sprites.setDataNumber(enemy, ENEMY_DATA.MAX_HP, nextHp)
+    sprites.setDataNumber(enemy, ENEMY_DATA.HP, nextHp)
+    const eIndex = getEnemyIndex(enemy)
+    if (eIndex >= 0) updateEnemyHPBar(eIndex)
+}
+
+function _enemySetMonsterScale(enemy: Sprite, scale: number): void {
+    const s = Number(scale)
+    if (!(s > 0)) return
+    const sx = Math.round(s * 1000) | 0
+    sprites.setDataNumber(enemy, "__monsterScaleX1000", sx)
+    sprites.setDataNumber(enemy, "__monsterScaleY1000", sx)
+    const baseW = sprites.readDataNumber(enemy, "__monsterBaseFrameW") | 0
+    const baseH = sprites.readDataNumber(enemy, "__monsterBaseFrameH") | 0
+    const curW = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_W) | 0
+    const curH = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_H) | 0
+    if (baseW <= 0 && curW > 0) sprites.setDataNumber(enemy, "__monsterBaseFrameW", curW | 0)
+    if (baseH <= 0 && curH > 0) sprites.setDataNumber(enemy, "__monsterBaseFrameH", curH | 0)
+    const srcW = (baseW > 0 ? baseW : curW) | 0
+    const srcH = (baseH > 0 ? baseH : curH) | 0
+    if (srcW > 0) sprites.setDataNumber(enemy, ENEMY_DATA.FRAME_W, Math.max(1, Math.round(srcW * s)) | 0)
+    if (srcH > 0) sprites.setDataNumber(enemy, ENEMY_DATA.FRAME_H, Math.max(1, Math.round(srcH * s)) | 0)
+    const dir = (sprites.readDataString(enemy, "dir") || "down")
+    _enemyApplyAuraForDir(enemy, dir)
+    const dims = _enemyGetColliderDims(enemy)
+    if ((dims.w | 0) > 0 && (dims.h | 0) > 0) {
+        _enemySetPlaceholderImageForCollider(enemy, dims.w | 0, dims.h | 0)
+    }
+}
+
+function _enemyIsSlimeId(id: string): boolean {
+    const key = String(id || "").toLowerCase()
+    return key.indexOf("slime") >= 0
+}
+
+function _applyEnemyVariant(enemy: Sprite, baseId: string, variant: string): void {
+    if (!enemy) return
+    const v = String(variant || "").toLowerCase()
+    if (!v) return
+    sprites.setDataString(enemy, "__monsterVariant", v)
+
+    if (_enemyIsSlimeId(baseId)) {
+        if (v === "baby" || v === "baby_ranged" || v === "split_small") {
+            _enemySetMonsterScale(enemy, SLIME_BABY_SCALE)
+            _enemySetHpAndBar(enemy, SLIME_BABY_HP)
+            sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, SLIME_BASE_DAMAGE | 0)
+            sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 14)
+            if (v === "baby_ranged") {
+                sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, SLIME_BABY_RANGE_PX | 0)
+                sprites.setDataNumber(enemy, "__projSpeed", SLIME_BABY_PROJ_SPEED | 0)
+                sprites.setDataNumber(enemy, "__poisonGround", 0)
+            }
+        } else if (v === "ranged") {
+            _enemySetMonsterScale(enemy, 1)
+            _enemySetHpAndBar(enemy, SLIME_RANGED_HP)
+            sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, SLIME_BASE_DAMAGE | 0)
+            sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 16)
+            sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, SLIME_RANGED_RANGE_PX | 0)
+            sprites.setDataNumber(enemy, "__projSpeed", SLIME_RANGED_PROJ_SPEED | 0)
+            const allowSplit = ((_dunFloorIndex | 0) >= 6) ? 1 : 0
+            sprites.setDataNumber(enemy, "__slimeSplitOnDeath", allowSplit)
+            sprites.setDataNumber(enemy, "__poisonGround", ((_dunFloorIndex | 0) === 5) ? 1 : 0)
+        } else if (v === "split_medium") {
+            _enemySetMonsterScale(enemy, SLIME_MEDIUM_SCALE)
+            _enemySetHpAndBar(enemy, SLIME_BASE_HP * 2)
+            sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, SLIME_BASE_DAMAGE | 0)
+            sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 14)
+            sprites.setDataNumber(enemy, "__slimeSplitStage", 1)
+        } else if (v === "boss_giant") {
+            _enemySetMonsterScale(enemy, SLIME_GIANT_SCALE)
+            _enemySetHpAndBar(enemy, SLIME_BASE_HP * 4)
+            sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, SLIME_BASE_DAMAGE | 0)
+            sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 12)
+            sprites.setDataNumber(enemy, "__slimeSplitStage", 2)
+        }
+    }
 }
 
 
@@ -54129,8 +55029,9 @@ function startEnemyWaves() {
         return
     }
 
+    const playerCount = _dunGetActiveProfileCount()
     const floorNum = Math.max(1, (_dunFloorIndex | 0)) | 0
-    const built = _buildMonsterPoolForFloor(_dunFloorIndex | 0)
+    const built = _buildMonsterPoolForFloor(_dunFloorIndex | 0, playerCount | 0)
     _dunMonsterPool = built.monsters || []
     _dunMonsterPoolTotalCount = _dunMonsterPool.length | 0
     _dunMonsterPoolDanger = built.totalDanger | 0
@@ -56391,8 +57292,34 @@ const ENEMY_AI_NAV_HERO_C = "__aiNavHeroC"
 const ENEMY_AI_NAV_HERO_EX = "__aiNavHeroEX"
 
 const ENEMY_AI_NAV_HERO_EY = "__aiNavHeroEY"
+const ENEMY_AI_AGGRO_SEEN_UNTIL = "__aiAggroSeenUntil"
+const ENEMY_AI_AGGRO_COMMIT_UNTIL = "__aiAggroCommitUntil"
+const ENEMY_AI_AGGRO_NEED_FIRST_HIT = "__aiAggroNeedFirstHit"
 
 const ENEMY_NAV_COLLISION_SCAN_MAX_TILES = 128  // safety cap; avoids runaway scans if something goes weird
+const ENEMY_AGGRO_HALF_LIFE_MS = 4500
+const ENEMY_AGGRO_MIN_THREAT = 0.25
+const ENEMY_AGGRO_STICKY_MS = 900
+const ENEMY_AGGRO_STICKY_BONUS = 6
+const ENEMY_AGGRO_SWITCH_MARGIN = 8
+const ENEMY_AGGRO_RECENT_WINDOW_MS = 1600
+const ENEMY_AGGRO_RECENT_BONUS = 6
+const ENEMY_AGGRO_DAMAGE_SCALE = 1
+const ENEMY_AGGRO_STATUS_BONUS = 6
+const ENEMY_AGGRO_TOUCH_BONUS = 2
+const ENEMY_AGGRO_CASTER_BONUS = 12
+const ENEMY_AGGRO_DIST_PENALTY_PX = 24
+const ENEMY_AGGRO_RANGE_TILES = 24
+const ENEMY_AGGRO_RANGE_PX = ENEMY_AGGRO_RANGE_TILES * WORLD_TILE_SIZE
+const ENEMY_AGGRO_LOSE_MS = 1400
+const ENEMY_AGGRO_COMMIT_MS = 2200
+const ENEMY_CASTER_EVADE_CHANCE_PCT = 18
+const ENEMY_CASTER_EVADE_COOLDOWN_MS = 900
+const ENEMY_CASTER_EVADE_DURATION_MS = 200
+const ENEMY_AI_CASTER_EVADE_DIR_X1000 = "__aiCasterEvadeDirX1000"
+const ENEMY_AI_CASTER_EVADE_DIR_Y1000 = "__aiCasterEvadeDirY1000"
+const ENEMY_AI_CASTER_EVADE_UNTIL = "__aiCasterEvadeUntil"
+const ENEMY_AI_CASTER_EVADE_COOLDOWN_UNTIL = "__aiCasterEvadeCooldownUntil"
 
 
 interface EnemyEdgePick {
@@ -56408,7 +57335,83 @@ interface EnemyEdgePick {
     edgeX: number
 
     edgeY: number
+    targetHeroIndex?: number
+    score?: number
+    targetIsCaster?: boolean
+    onlyCasters?: boolean
+    useNavField?: boolean
+    aggroSwitched?: boolean
 
+}
+
+interface EnemyAggroState {
+    threats: Record<number, number>
+    lastHitMs: Record<number, number>
+    lastUpdateMs: number
+    targetHi: number
+    targetUntilMs: number
+}
+
+function _enemyAggroStateFor(enemy: Sprite, nowMs: number): EnemyAggroState {
+    const anyEnemy: any = enemy as any
+    let st: EnemyAggroState | undefined = anyEnemy.__aggroState
+    if (!st) {
+        st = {
+            threats: Object.create(null),
+            lastHitMs: Object.create(null),
+            lastUpdateMs: nowMs | 0,
+            targetHi: -1,
+            targetUntilMs: 0,
+        }
+        anyEnemy.__aggroState = st
+    }
+    return st
+}
+
+function _enemyAggroDecay(st: EnemyAggroState, nowMs: number): void {
+    const now = nowMs | 0
+    const last = st.lastUpdateMs | 0
+    const dt = (now - last) | 0
+    if (dt <= 0) return
+    const half = Math.max(1, ENEMY_AGGRO_HALF_LIFE_MS | 0)
+    const decay = Math.pow(0.5, dt / half)
+    const threats = st.threats
+    for (const k in threats) {
+        const v = Number(threats[k] || 0)
+        const next = v * decay
+        if (next <= ENEMY_AGGRO_MIN_THREAT) delete threats[k]
+        else threats[k] = next
+    }
+    st.lastUpdateMs = now
+}
+
+function _enemyIsValidAggroTarget(hero: Sprite): boolean {
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) return false
+    if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) return false
+    return true
+}
+
+function _enemyHeroIsCaster(hero: Sprite): boolean {
+    if (!hero) return false
+    const fam = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+    if ((fam | 0) !== (FAMILY.INTELLECT | 0)) return false
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) return true
+    const ak = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+    return ak === "intellect_cast"
+}
+
+function _enemyHeroIsMelee(hero: Sprite): boolean {
+    if (!hero) return false
+    const fam = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+    return (fam | 0) === (FAMILY.STRENGTH | 0) || (fam | 0) === (FAMILY.AGILITY | 0)
+}
+
+function _enemyAggroRangePx(enemy: Sprite): number {
+    const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+    const base = ENEMY_AGGRO_RANGE_PX | 0
+    if (advRangePx > 0) return Math.max(base, Math.idiv(advRangePx * 3, 2)) | 0
+    return base | 0
 }
 
 function _heroFeetPointForEnemyTarget(hero: Sprite): { x: number, y: number } {
@@ -56530,7 +57533,9 @@ function _enemyBuildLiveHeroTargets(): Sprite[] {
 
         const h = heroes[hi]
 
-        if (h && !(h.flags & sprites.Flag.Destroyed)) heroTargets.push(h)
+        if (!h) continue
+        if (!_enemyIsValidAggroTarget(h)) continue
+        heroTargets.push(h)
 
     }
 
@@ -56687,8 +57692,8 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
             let attackDir = queued.dir || ""
             if (heroTargets.length > 0 && !attackDir) {
                 const pick = _enemyPickNearestHeroEdge(enemy, heroTargets)
-                attackDx = (pick.edgeX | 0) - (enemy.x | 0)
-                attackDy = (pick.edgeY | 0) - (enemy.y | 0)
+                attackDx = pick.dx | 0
+                attackDy = pick.dy | 0
                 attackDir = _enemyDirFromVector(attackDx, attackDy)
             }
             if (!attackDir) attackDir = "down"
@@ -56721,6 +57726,8 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
 
         _enemyClearAttackCadenceState(enemy)
         _enemySetIntent(enemy, "cooldown")
+
+        _enemyQueueSlimeRetreat(enemy, nowMs)
 
         return false
 
@@ -56756,7 +57763,7 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
     const peekSide = sprites.readDataNumber(enemy, "__peekSide") | 0
     if (peekSide !== 0 && _enemyIsRanged(enemy)) {
         const move = _enemyGetMoveProfile(enemy)
-        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
         const peekSpeed = Math.max(1, Math.idiv(baseSpeed * (move.coverPeekSpeedPct | 0), 100)) | 0
         const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
         const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
@@ -56773,7 +57780,7 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
     }
 
     if (moveSpeedPct > 0) {
-        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
         const moveSpeed = Math.max(1, Math.idiv(baseSpeed * (moveSpeedPct | 0), 100)) | 0
         const dirX = (sprites.readDataNumber(enemy, "__atkDirX1000") | 0) / 1000
         const dirY = (sprites.readDataNumber(enemy, "__atkDirY1000") | 0) / 1000
@@ -56798,9 +57805,79 @@ function _enemyTickAttackHoldOrFinish(enemy: Sprite, nowMs: number, ei: number):
 
 }
 
+function _enemyQueueSlimeRetreat(enemy: Sprite, nowMs: number): void {
+    if (!enemy) return
+    const id = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    if (!_enemyIsSlimeId(id)) return
+
+    const cooldownUntil = sprites.readDataNumber(enemy, "__slimeRetreatCooldownUntil") | 0
+    if (cooldownUntil > nowMs) return
+
+    const heroTargets = _enemyBuildLiveHeroTargets()
+    if (!heroTargets || heroTargets.length <= 0) return
+
+    const pick = _enemyPickNearestHeroEdge(enemy, heroTargets)
+    let dx = (-(pick.dx | 0)) | 0
+    let dy = (-(pick.dy | 0)) | 0
+    if (dx === 0 && dy === 0) dy = 1
+
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag === 0) mag = 1
+
+    sprites.setDataNumber(enemy, "__slimeRetreatDirX1000", Math.round((dx / mag) * 1000))
+    sprites.setDataNumber(enemy, "__slimeRetreatDirY1000", Math.round((dy / mag) * 1000))
+    sprites.setDataNumber(enemy, "__slimeRetreatUntil", (nowMs + (SLIME_RETREAT_MS | 0)) | 0)
+    sprites.setDataNumber(enemy, "__slimeRetreatCooldownUntil", (nowMs + (SLIME_RETREAT_COOLDOWN_MS | 0)) | 0)
+}
+
+function _enemyTrySlimeRetreat(enemy: Sprite, nowMs: number, baseSpeed: number): boolean {
+    if (!enemy) return false
+    const id = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    if (!_enemyIsSlimeId(id)) return false
+
+    const until = sprites.readDataNumber(enemy, "__slimeRetreatUntil") | 0
+    if (until <= 0 || nowMs >= until) return false
+
+    const dirX = (sprites.readDataNumber(enemy, "__slimeRetreatDirX1000") | 0) / 1000
+    const dirY = (sprites.readDataNumber(enemy, "__slimeRetreatDirY1000") | 0) / 1000
+    const speed = Math.max(1, Math.idiv((baseSpeed | 0) * (SLIME_RETREAT_SPEED_PCT | 0), 100)) | 0
+    enemy.vx = Math.round(dirX * speed) | 0
+    enemy.vy = Math.round(dirY * speed) | 0
+    _enemySetIntent(enemy, "retreat")
+    return true
+}
 
 
-function _enemyComputeMoveSpeed(enemy: Sprite): number {
+
+function _enemyMovePacePct(enemy: Sprite, nowMs: number): number {
+    const move = _enemyGetMoveProfile(enemy)
+    const maxMs = move.paceMaxMs | 0
+    if (maxMs <= 0) return 100
+
+    const until = sprites.readDataNumber(enemy, "__movePaceUntil") | 0
+    const curPct = sprites.readDataNumber(enemy, "__movePacePct") | 0
+    if (curPct >= 0 && nowMs < until) return curPct | 0
+
+    const minMs = Math.max(0, move.paceMinMs | 0)
+    const span = Math.max(0, (maxMs - minMs) | 0)
+    const dur = minMs + Math.round(Math.random() * span)
+
+    const stopChance = Math.max(0, move.paceStopChancePct | 0)
+    const slowChance = Math.max(0, move.paceSlowChancePct | 0)
+    const fastChance = Math.max(0, move.paceFastChancePct | 0)
+
+    const roll = Math.randomRange(0, 99) | 0
+    let pct = 100
+    if (roll < stopChance) pct = 0
+    else if (roll < (stopChance + slowChance)) pct = Math.max(1, move.paceSlowSpeedPct | 0)
+    else if (roll < (stopChance + slowChance + fastChance)) pct = Math.max(1, move.paceFastSpeedPct | 0)
+
+    sprites.setDataNumber(enemy, "__movePacePct", pct | 0)
+    sprites.setDataNumber(enemy, "__movePaceUntil", (nowMs + dur) | 0)
+    return pct | 0
+}
+
+function _enemyComputeMoveSpeed(enemy: Sprite, applyPace = true, nowMs?: number): number {
 
     const baseSpeed = sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) || 10
 
@@ -56815,6 +57892,14 @@ function _enemyComputeMoveSpeed(enemy: Sprite): number {
         if (speed <= 0) speed = 1
 
     }
+
+    if (!applyPace) return speed | 0
+
+    const pacePct = _enemyMovePacePct(enemy, (nowMs != null ? nowMs : (game.runtime() | 0)) | 0) | 0
+    if (pacePct <= 0) return 0
+
+    speed = Math.idiv(speed * pacePct, 100)
+    if (speed <= 0) speed = 1
 
     return speed | 0
 
@@ -56863,6 +57948,174 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
 
     // NOTE: edgeX/edgeY now mean "hero feet point" (collision).
     return { target, d2: bestD2, dx: bestDx, dy: bestDy, edgeX: bestEdgeX, edgeY: bestEdgeY }
+}
+
+function _enemyPickAggroTarget(enemy: Sprite, heroTargets: Sprite[], nowMs: number): EnemyEdgePick {
+    const now = nowMs | 0
+    const st = _enemyAggroStateFor(enemy, now)
+    _enemyAggroDecay(st, now)
+
+    let bestHero: Sprite = heroTargets[0]
+    let bestScore = -1e9
+    let bestDx = 0
+    let bestDy = 0
+    let bestD2 = 0
+    let bestEdgeX = bestHero ? bestHero.x : 0
+    let bestEdgeY = bestHero ? bestHero.y : 0
+    let bestHi = -1
+
+    let nearestHero: Sprite = heroTargets[0]
+    let nearestD2 = 1e18
+    let nearestDx = 0
+    let nearestDy = 0
+    let nearestEdgeX = nearestHero ? nearestHero.x : 0
+    let nearestEdgeY = nearestHero ? nearestHero.y : 0
+    let nearestHi = -1
+
+    let currentHero: Sprite = null
+    let currentDx = 0
+    let currentDy = 0
+    let currentD2 = 0
+    let currentEdgeX = 0
+    let currentEdgeY = 0
+    let currentScore = -1e9
+    let currentHi = (st.targetHi | 0)
+
+    let hasMelee = false
+    let anyCaster = false
+
+    const dims = _enemyGetColliderDims(enemy)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const eFootX = feet.footX | 0
+    const eFootY = feet.footY | 0
+
+    for (let i = 0; i < heroTargets.length; i++) {
+        const h = heroTargets[i]
+        if (!h) continue
+        if (!_enemyIsValidAggroTarget(h)) continue
+
+        let hi = sprites.readDataNumber(h, HERO_DATA.HERO_INDEX) | 0
+        if (hi < 0 || hi >= heroes.length || heroes[hi] !== h) hi = heroes.indexOf(h)
+        if (hi < 0) continue
+
+        const hc = _heroFeetPointForEnemyTarget(h)
+        const hCenterX = hc.x | 0
+        const hCenterY = hc.y | 0
+        const dx = (hCenterX - eFootX) | 0
+        const dy = (hCenterY - eFootY) | 0
+        const d2 = (dx * dx + dy * dy)
+
+        if (d2 < nearestD2) {
+            nearestD2 = d2
+            nearestHero = h
+            nearestDx = dx
+            nearestDy = dy
+            nearestEdgeX = hCenterX
+            nearestEdgeY = hCenterY
+            nearestHi = hi
+        }
+
+        const isCaster = _enemyHeroIsCaster(h)
+        const isMelee = _enemyHeroIsMelee(h)
+        if (isMelee) hasMelee = true
+        if (isCaster) anyCaster = true
+
+        let score = Number(st.threats[hi] || 0)
+        const lastHit = Number(st.lastHitMs[hi] || 0)
+        if (lastHit > 0 && (now - (lastHit | 0)) < (ENEMY_AGGRO_RECENT_WINDOW_MS | 0)) {
+            score += (ENEMY_AGGRO_RECENT_BONUS | 0)
+        }
+        if (isCaster) score += (ENEMY_AGGRO_CASTER_BONUS | 0)
+        if ((hi | 0) === (st.targetHi | 0) && now < (st.targetUntilMs | 0)) {
+            score += (ENEMY_AGGRO_STICKY_BONUS | 0)
+        }
+        const distPenalty = Math.idiv(Math.round(Math.sqrt(d2)), Math.max(1, ENEMY_AGGRO_DIST_PENALTY_PX | 0)) | 0
+        score -= distPenalty
+
+        if ((hi | 0) === (currentHi | 0)) {
+            currentHero = h
+            currentScore = score
+            currentDx = dx
+            currentDy = dy
+            currentD2 = d2
+            currentEdgeX = hCenterX
+            currentEdgeY = hCenterY
+        }
+
+        if (score > bestScore) {
+            bestScore = score
+            bestHero = h
+            bestDx = dx
+            bestDy = dy
+            bestD2 = d2
+            bestEdgeX = hCenterX
+            bestEdgeY = hCenterY
+            bestHi = hi
+        }
+    }
+
+    if (!bestHero && nearestHero) {
+        bestHero = nearestHero
+        bestDx = nearestDx
+        bestDy = nearestDy
+        bestD2 = nearestD2
+        bestEdgeX = nearestEdgeX
+        bestEdgeY = nearestEdgeY
+        bestHi = nearestHi
+        bestScore = 0
+    }
+
+    let chosenHero = bestHero
+    let chosenDx = bestDx
+    let chosenDy = bestDy
+    let chosenD2 = bestD2
+    let chosenEdgeX = bestEdgeX
+    let chosenEdgeY = bestEdgeY
+    let chosenHi = bestHi
+    let chosenScore = bestScore
+    let switched = false
+
+    if (currentHero && now < (st.targetUntilMs | 0)) {
+        const margin = ENEMY_AGGRO_SWITCH_MARGIN | 0
+        if (currentScore >= (bestScore - margin)) {
+            chosenHero = currentHero
+            chosenDx = currentDx
+            chosenDy = currentDy
+            chosenD2 = currentD2
+            chosenEdgeX = currentEdgeX
+            chosenEdgeY = currentEdgeY
+            chosenHi = currentHi
+            chosenScore = currentScore
+        } else if ((bestHi | 0) !== (currentHi | 0)) {
+            switched = true
+        }
+    } else if ((bestHi | 0) !== (currentHi | 0)) {
+        switched = true
+    }
+
+    if (chosenHi >= 0) {
+        st.targetHi = chosenHi | 0
+        if (switched) st.targetUntilMs = (now + (ENEMY_AGGRO_STICKY_MS | 0)) | 0
+    }
+
+    const targetIsCaster = chosenHero ? _enemyHeroIsCaster(chosenHero) : false
+    const onlyCasters = (!hasMelee && anyCaster)
+    const useNavField = (nearestHi >= 0 && (nearestHi | 0) === (chosenHi | 0))
+
+    return {
+        target: chosenHero,
+        d2: chosenD2,
+        dx: chosenDx,
+        dy: chosenDy,
+        edgeX: chosenEdgeX,
+        edgeY: chosenEdgeY,
+        targetHeroIndex: chosenHi,
+        score: chosenScore,
+        targetIsCaster,
+        onlyCasters,
+        useNavField,
+        aggroSwitched: switched,
+    }
 }
 
 
@@ -57033,7 +58286,7 @@ function _enemyTickWolfIdle(enemy: Sprite, nowMs: number): void {
 
     const cur = sprites.readDataString(enemy, "__wolfIdleState") || ""
     if (cur === "walk") {
-        const baseSpeed = _enemyComputeMoveSpeed(enemy)
+        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
         const idleSpeed = Math.max(1, Math.idiv(baseSpeed * (WOLF_IDLE_WALK_SPEED_PCT | 0), 100)) | 0
         const dirX = (sprites.readDataNumber(enemy, "__wolfIdleDirX1000") | 0) / 1000
         const dirY = (sprites.readDataNumber(enemy, "__wolfIdleDirY1000") | 0) / 1000
@@ -57153,6 +58406,8 @@ function _enemyStartAttackWithPlan(
     sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INDEX, plan.index | 0)
     sprites.setDataNumber(enemy, "attackAnimMs", totalMs)
     sprites.setDataString(enemy, "__atkKind", plan.kind || "hit")
+    sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_NEED_FIRST_HIT, 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_COMMIT_UNTIL, 0)
     sprites.setDataNumber(enemy, "__atkNoHit", plan.noHit ? 1 : 0)
     sprites.setDataNumber(enemy, "__atkMoveSpeedPct", plan.moveSpeedPct ? (plan.moveSpeedPct | 0) : 0)
     sprites.setDataString(enemy, "__atkStrikeFx", plan.strikeFx || "")
@@ -57191,8 +58446,8 @@ function _enemyStartAttackWithPlan(
         const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
         const footX = feet.footX | 0
         const footY = feet.footY | 0
-        const heroX = (enemy.x | 0) + attackDx
-        const heroY = (enemy.y | 0) + attackDy
+        const heroX = (footX + attackDx) | 0
+        const heroY = (footY + attackDy) | 0
         const inCover = _enemyHasCoverAtPos(footX, footY, heroX, heroY)
         if (inCover) {
             const stepTiles = Math.max(1, move.coverPeekStepTiles | 0) | 0
@@ -57354,6 +58609,13 @@ interface EnemyMoveProfile {
     preferCover: boolean
     coverPeekSpeedPct: number
     coverPeekStepTiles: number
+    paceMinMs: number
+    paceMaxMs: number
+    paceStopChancePct: number
+    paceSlowChancePct: number
+    paceFastChancePct: number
+    paceSlowSpeedPct: number
+    paceFastSpeedPct: number
     evadeChancePct: number
     evadeCooldownMs: number
     evadeSpeedPct: number
@@ -57385,6 +58647,13 @@ function _enemyBuildMoveProfile(monsterId: string): EnemyMoveProfile {
     let preferCover = false
     let coverPeekSpeedPct = 70
     let coverPeekStepTiles = 1
+    let paceMinMs = ENEMY_MOVE_PACE_MIN_MS
+    let paceMaxMs = ENEMY_MOVE_PACE_MAX_MS
+    let paceStopChancePct = ENEMY_MOVE_PACE_STOP_CHANCE_PCT
+    let paceSlowChancePct = ENEMY_MOVE_PACE_SLOW_CHANCE_PCT
+    let paceFastChancePct = ENEMY_MOVE_PACE_FAST_CHANCE_PCT
+    let paceSlowSpeedPct = ENEMY_MOVE_PACE_SLOW_SPEED_PCT
+    let paceFastSpeedPct = ENEMY_MOVE_PACE_FAST_SPEED_PCT
     let evadeChancePct = 0
     let evadeCooldownMs = 900
     let evadeSpeedPct = 120
@@ -57393,28 +58662,38 @@ function _enemyBuildMoveProfile(monsterId: string): EnemyMoveProfile {
 
     if (id.startsWith("slime")) {
         attackMotionId = "slime_crush"
-        strafeChancePct = 10
-        strafeSpeedPct = 50
+        strafeChancePct = 8
+        strafeSpeedPct = 45
         burstCount = 1
-        evadeChancePct = 4
+        paceStopChancePct = 26
+        paceSlowChancePct = 50
+        paceFastChancePct = 18
+        paceSlowSpeedPct = 30
+        paceFastSpeedPct = 240
+        evadeChancePct = 6
     } else if (id.indexOf("worm") >= 0) {
         attackMotionId = "worm_spit"
         strafeChancePct = 12
         strafeSpeedPct = 50
         burstCount = 2
         preferCover = true
+        paceSlowSpeedPct = 60
+        paceFastSpeedPct = 190
         evadeChancePct = 10
     } else if (id.indexOf("wolf") >= 0 || id.indexOf("snake") >= 0 || id.indexOf("spider") >= 0) {
         attackMotionId = "bite"
         strafeChancePct = 38
         strafeSpeedPct = 75
         burstCount = 2
+        paceFastSpeedPct = 220
         evadeChancePct = 12
     } else if (id.indexOf("golem") >= 0 || id.indexOf("ent") >= 0 || id.indexOf("minotaur") >= 0) {
         attackMotionId = "slam"
         strafeChancePct = 6
         strafeSpeedPct = 40
         burstCount = 1
+        paceSlowSpeedPct = 45
+        paceFastSpeedPct = 160
         evadeChancePct = 2
     }
 
@@ -57440,6 +58719,13 @@ function _enemyBuildMoveProfile(monsterId: string): EnemyMoveProfile {
         if (override.preferCover != null) preferCover = !!override.preferCover
         if (override.coverPeekSpeedPct != null) coverPeekSpeedPct = override.coverPeekSpeedPct | 0
         if (override.coverPeekStepTiles != null) coverPeekStepTiles = override.coverPeekStepTiles | 0
+        if (override.paceMinMs != null) paceMinMs = override.paceMinMs | 0
+        if (override.paceMaxMs != null) paceMaxMs = override.paceMaxMs | 0
+        if (override.paceStopChancePct != null) paceStopChancePct = override.paceStopChancePct | 0
+        if (override.paceSlowChancePct != null) paceSlowChancePct = override.paceSlowChancePct | 0
+        if (override.paceFastChancePct != null) paceFastChancePct = override.paceFastChancePct | 0
+        if (override.paceSlowSpeedPct != null) paceSlowSpeedPct = override.paceSlowSpeedPct | 0
+        if (override.paceFastSpeedPct != null) paceFastSpeedPct = override.paceFastSpeedPct | 0
         if (override.evadeChancePct != null) evadeChancePct = override.evadeChancePct | 0
         if (override.evadeCooldownMs != null) evadeCooldownMs = override.evadeCooldownMs | 0
         if (override.evadeSpeedPct != null) evadeSpeedPct = override.evadeSpeedPct | 0
@@ -57460,6 +58746,13 @@ function _enemyBuildMoveProfile(monsterId: string): EnemyMoveProfile {
         preferCover,
         coverPeekSpeedPct,
         coverPeekStepTiles,
+        paceMinMs,
+        paceMaxMs,
+        paceStopChancePct,
+        paceSlowChancePct,
+        paceFastChancePct,
+        paceSlowSpeedPct,
+        paceFastSpeedPct,
         evadeChancePct,
         evadeCooldownMs,
         evadeSpeedPct,
@@ -57958,6 +59251,7 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
         const pick = _enemyProjectilePick(enemy)
         const skinId = pick.skinId
         const dir = _enemyDirFromVector(dx, dy)
+        const elem = _enemyProjectileElementForEnemy(enemy) | 0
         const collision = _effectCollisionBoxForSkin(skinId, dir)
         const dims = collision ? { w: collision.w | 0, h: collision.h | 0 } : _enemyProjectileDimsForSkin(skinId)
         const img = image.create(dims.w | 0, dims.h | 0)
@@ -57969,6 +59263,11 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
         fx.y = enemy.y + offY;
         sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0);
         sprites.setDataNumber(fx, "dmg", dmg);
+        sprites.setDataNumber(fx, "__projElem", elem | 0)
+        const poisonGround = (sprites.readDataNumber(enemy, "__poisonGround") | 0) !== 0
+        if (poisonGround && ((elem | 0) === (ELEM.GRASS | 0) || skinId.indexOf("poison") >= 0)) {
+            sprites.setDataNumber(fx, "__projPoison", 1)
+        }
         const effectOpts: EffectApplyOpts = { dir };
         if (collision) {
             effectOpts.offsetX = collision.offX | 0;
@@ -57977,7 +59276,8 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
         if (pick.tint) effectOpts.tint = pick.tint | 0;
         applyEffectToSprite(fx, skinId, effectOpts)
 
-        const speed = 70;
+        const projSpeed = sprites.readDataNumber(enemy, "__projSpeed") | 0
+        const speed = (projSpeed > 0 ? (projSpeed | 0) : 70) | 0;
         fx.vx = (vx * speed) | 0;
         fx.vy = (vy * speed) | 0;
         const life = Math.max(120, Math.idiv(rangePx * 1000, speed));
@@ -58025,8 +59325,8 @@ function _enemyTryStartAttackIfInRange(enemy: Sprite, pick: EnemyEdgePick, nowMs
 
 
 
-    const attackDx = (pick.edgeX | 0) - (enemy.x | 0)
-    const attackDy = (pick.edgeY | 0) - (enemy.y | 0)
+    const attackDx = pick.dx | 0
+    const attackDy = pick.dy | 0
     const attackDir = _enemyDirFromVector(attackDx, attackDy)
     const plan = _enemyPickAttackPlan(enemy, attackDir)
     _enemyStartAttackWithPlan(enemy, attackDx, attackDy, attackDir, nowMs, plan)
@@ -58046,6 +59346,7 @@ function _enemyApplyStrafeIfEligible(
     holdRangePx: number,
     nowMs: number
 ): boolean {
+    if ((speed | 0) <= 0) return false
     const move = _enemyGetMoveProfile(enemy)
     const baseChancePct = move.strafeChancePct | 0
     const cooldownUntil = sprites.readDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL) | 0
@@ -58290,7 +59591,51 @@ function _enemyTryEvadeProjectiles(enemy: Sprite, nowMs: number, speed: number):
     return true
 }
 
-function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number): void {
+function _enemyTryEvadeCaster(enemy: Sprite, pick: EnemyEdgePick, nowMs: number, speed: number): boolean {
+    if (!pick || !pick.target) return false
+    if (!pick.onlyCasters || !pick.targetIsCaster) return false
+
+    const move = _enemyGetMoveProfile(enemy)
+
+    const until = sprites.readDataNumber(enemy, ENEMY_AI_CASTER_EVADE_UNTIL) | 0
+    if (until > nowMs) {
+        const dirX = (sprites.readDataNumber(enemy, ENEMY_AI_CASTER_EVADE_DIR_X1000) | 0) / 1000
+        const dirY = (sprites.readDataNumber(enemy, ENEMY_AI_CASTER_EVADE_DIR_Y1000) | 0) / 1000
+        const evadeSpeed = Math.max(1, Math.idiv(speed * (move.evadeSpeedPct | 0), 100)) | 0
+        enemy.vx = Math.round(dirX * evadeSpeed) | 0
+        enemy.vy = Math.round(dirY * evadeSpeed) | 0
+        _enemySetIntent(enemy, "evadeCaster")
+        return true
+    }
+
+    const cooldownUntil = sprites.readDataNumber(enemy, ENEMY_AI_CASTER_EVADE_COOLDOWN_UNTIL) | 0
+    if (cooldownUntil > 0 && nowMs < cooldownUntil) return false
+
+    const chance = Math.max(0, Math.max(ENEMY_CASTER_EVADE_CHANCE_PCT | 0, move.evadeChancePct | 0))
+    if (chance <= 0) return false
+    if ((Math.random() * 100) >= chance) return false
+
+    const dx = (enemy.x | 0) - (pick.edgeX | 0)
+    const dy = (enemy.y | 0) - (pick.edgeY | 0)
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag === 0) mag = 1
+
+    const dirX = dx / mag
+    const dirY = dy / mag
+    const evadeSpeed = Math.max(1, Math.idiv(speed * (move.evadeSpeedPct | 0), 100)) | 0
+    enemy.vx = Math.round(dirX * evadeSpeed) | 0
+    enemy.vy = Math.round(dirY * evadeSpeed) | 0
+
+    sprites.setDataNumber(enemy, ENEMY_AI_CASTER_EVADE_DIR_X1000, Math.round(dirX * 1000) | 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_CASTER_EVADE_DIR_Y1000, Math.round(dirY * 1000) | 0)
+    const dur = Math.max(ENEMY_CASTER_EVADE_DURATION_MS | 0, move.evadeDurationMs | 0) | 0
+    sprites.setDataNumber(enemy, ENEMY_AI_CASTER_EVADE_UNTIL, (nowMs + dur) | 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_CASTER_EVADE_COOLDOWN_UNTIL, (nowMs + (ENEMY_CASTER_EVADE_COOLDOWN_MS | 0)) | 0)
+    _enemySetIntent(enemy, "evadeCaster")
+    return true
+}
+
+function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number, edgeY: number, speed: number, allowNavField = true): void {
 
     // Prefer A* path steering (tile-aware) when available
     if (_enemySteerTowardAStar(enemy, edgeX, edgeY, speed)) return
@@ -58303,7 +59648,7 @@ function _enemySteerTowardEdgePoint(enemy: Sprite, target: Sprite, edgeX: number
     }
 
     // Prefer shared nav-field (tile-aware, scalable)
-    if (_enemySteerTowardNavField(enemy, speed)) return
+    if (allowNavField && _enemySteerTowardNavField(enemy, speed)) return
 
     // Fallback: straight-line to the HERO FEET point, using ENEMY FEET point.
     const dims = _enemyGetColliderDims(enemy)
@@ -58446,6 +59791,28 @@ function _enemySetDirFromVelocityOrFacing(enemy: Sprite, pick: EnemyEdgePick): v
 
 }
 
+function _enemySetNavHeroTargetFromPick(enemy: Sprite, pick: EnemyEdgePick): void {
+    const tSize = WORLD_TILE_SIZE | 0
+    let hR = Math.idiv(pick.edgeY | 0, tSize) | 0
+    let hC = Math.idiv(pick.edgeX | 0, tSize) | 0
+
+    const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+    const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+
+    if (hR < 0) hR = 0
+    else if (rows > 0 && hR >= rows) hR = rows - 1
+
+    if (hC < 0) hC = 0
+    else if (cols > 0 && hC >= cols) hC = cols - 1
+
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_R, hR)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_C, hC)
+
+    // These are now "hero feet point" (collision), not sprite center/edge.
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EX, pick.edgeX | 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EY, pick.edgeY | 0)
+}
+
 
 
 
@@ -58537,9 +59904,44 @@ function updateEnemyHoming(nowMs: number) {
 
 
 
-        const speed = _enemyComputeMoveSpeed(enemy)
+        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
+        const speed = _enemyComputeMoveSpeed(enemy, true, nowMs)
 
-        const pick = _enemyPickNearestHeroEdge(enemy, heroTargets)
+        const pick = _enemyPickAggroTarget(enemy, heroTargets, nowMs)
+        _enemyAiTraceAdd(trace, "aggroSwitch", !!pick.aggroSwitched)
+        _enemyAiTraceAdd(trace, "casterTarget", !!pick.targetIsCaster)
+        _enemyAiTraceAdd(trace, "onlyCasters", !!pick.onlyCasters)
+        const aggroRangePx = _enemyAggroRangePx(enemy) | 0
+        const aggroRange2 = aggroRangePx * aggroRangePx
+        const seenUntil = sprites.readDataNumber(enemy, ENEMY_AI_AGGRO_SEEN_UNTIL) | 0
+        const wasAggro = seenUntil > nowMs
+        const inAggroRange = (pick.d2 | 0) <= aggroRange2
+
+        if (inAggroRange) {
+            sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_SEEN_UNTIL, nowMs + (ENEMY_AGGRO_LOSE_MS | 0))
+            if (!wasAggro) {
+                sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_NEED_FIRST_HIT, 1)
+                sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_COMMIT_UNTIL, nowMs + (ENEMY_AGGRO_COMMIT_MS | 0))
+            }
+        } else if (!wasAggro) {
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+            _enemySetIntent(enemy, "idle")
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "idle")
+            continue
+        }
+
+        let needFirstHit = (sprites.readDataNumber(enemy, ENEMY_AI_AGGRO_NEED_FIRST_HIT) | 0) !== 0
+        const commitUntil = sprites.readDataNumber(enemy, ENEMY_AI_AGGRO_COMMIT_UNTIL) | 0
+        if (needFirstHit && commitUntil > 0 && nowMs >= commitUntil) {
+            needFirstHit = false
+            sprites.setDataNumber(enemy, ENEMY_AI_AGGRO_NEED_FIRST_HIT, 0)
+        }
+        const commitActive = needFirstHit && commitUntil > 0 && nowMs < commitUntil
+        _enemyAiTraceAdd(trace, "aggroIn", inAggroRange)
+        _enemyAiTraceAdd(trace, "aggroCommit", commitActive)
 
 
 
@@ -58565,18 +59967,7 @@ function updateEnemyHoming(nowMs: number) {
 
         }
 
-        const evade = _enemyTryEvadeProjectiles(enemy, nowMs, speed)
-        _enemyAiTraceAdd(trace, "evade", evade)
-        if (evade) {
-            _enemyAiUpdateLastPos(enemy)
-            _enemyAiLogDecision(enemy, nowMs, trace, "evade")
-            continue
-        }
-
-
-
         // Start attack if close enough and off cooldown
-
         const startAttack = _enemyTryStartAttackIfInRange(enemy, pick, nowMs, ei)
         _enemyAiTraceAdd(trace, "startAtk", startAttack)
         if (startAttack) {
@@ -58586,6 +59977,42 @@ function updateEnemyHoming(nowMs: number) {
 
             continue
 
+        }
+
+        if (commitActive) {
+            _enemySetNavHeroTargetFromPick(enemy, pick)
+            const allowNavField = (pick.useNavField !== false)
+            const chargeSpeed = Math.max(1, baseSpeed | 0) | 0
+            _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, chargeSpeed, allowNavField)
+            _enemySetIntent(enemy, "charge")
+            _enemySetDirFromVelocityOrFacing(enemy, pick)
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "charge")
+            continue
+        }
+
+        const retreat = _enemyTrySlimeRetreat(enemy, nowMs, baseSpeed)
+        _enemyAiTraceAdd(trace, "retreat", retreat)
+        if (retreat) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "retreat")
+            continue
+        }
+
+        const evade = _enemyTryEvadeProjectiles(enemy, nowMs, baseSpeed)
+        _enemyAiTraceAdd(trace, "evade", evade)
+        if (evade) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "evade")
+            continue
+        }
+
+        const casterEvade = _enemyTryEvadeCaster(enemy, pick, nowMs, baseSpeed)
+        _enemyAiTraceAdd(trace, "casterEvade", casterEvade)
+        if (casterEvade) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "evadeCaster")
+            continue
         }
 
 
@@ -58607,29 +60034,9 @@ function updateEnemyHoming(nowMs: number) {
 
         // Normal steering (now prefers shared nav-field under the hood)
 
-        const tSize = WORLD_TILE_SIZE | 0
-
-
-        let hR = Math.idiv(pick.edgeY | 0, tSize) | 0
-        let hC = Math.idiv(pick.edgeX | 0, tSize) | 0
-
-        const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
-        const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
-
-        if (hR < 0) hR = 0
-        else if (rows > 0 && hR >= rows) hR = rows - 1
-
-        if (hC < 0) hC = 0
-        else if (cols > 0 && hC >= cols) hC = cols - 1
-
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_R, hR)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_C, hC)
-
-        // These are now "hero feet point" (collision), not sprite center/edge.
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EX, pick.edgeX | 0)
-        sprites.setDataNumber(enemy, ENEMY_AI_NAV_HERO_EY, pick.edgeY | 0)
-
-        _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed)
+        _enemySetNavHeroTargetFromPick(enemy, pick)
+        const allowNavField = (pick.useNavField !== false)
+        _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, speed, allowNavField)
         _enemySetIntent(enemy, "advance")
 
 
@@ -58903,6 +60310,35 @@ interface EnemyHitContext {
 
 }
 
+function _enemyAggroNoteHit(ctx: EnemyHitContext): void {
+    const enemy = ctx.enemy
+    if (!enemy) return
+    const srcHi = ctx.sourceHeroIndex | 0
+    if (srcHi < 0) return
+
+    const now = ctx.now | 0
+    const st = _enemyAggroStateFor(enemy, now)
+    _enemyAggroDecay(st, now)
+
+    let threat = Number(st.threats[srcHi] || 0)
+    let bonus = 0
+    if ((ctx.slowPct | 0) > 0 && (ctx.slowMs | 0) > 0) bonus += (ENEMY_AGGRO_STATUS_BONUS | 0)
+    if ((ctx.weakenPct | 0) > 0 && (ctx.weakenMs | 0) > 0) bonus += (ENEMY_AGGRO_STATUS_BONUS | 0)
+    if ((ctx.knockbackPct | 0) > 0) bonus += (ENEMY_AGGRO_STATUS_BONUS | 0)
+
+    if ((ctx.damage | 0) <= 0 && bonus <= 0) {
+        if ((ctx.sourceTag || ctx.button) && (ENEMY_AGGRO_TOUCH_BONUS | 0) > 0) {
+            bonus = (ENEMY_AGGRO_TOUCH_BONUS | 0)
+        }
+    }
+
+    if ((ctx.damage | 0) <= 0 && bonus <= 0) return
+
+    threat += ((ctx.damage | 0) * (ENEMY_AGGRO_DAMAGE_SCALE | 0)) + bonus
+    st.threats[srcHi] = threat
+    st.lastHitMs[srcHi] = now
+}
+
 
 
 // Supporting relic hook (NO-OP for now).
@@ -59143,6 +60579,28 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
 
     }
 
+    const splitStage = sprites.readDataNumber(enemy, "__slimeSplitStage") | 0
+    const splitOnDeath = (sprites.readDataNumber(enemy, "__slimeSplitOnDeath") | 0) !== 0
+    if (splitStage > 0 || splitOnDeath) {
+        const baseId = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "slime").trim()
+        let variant = ""
+        if (splitStage >= 2) variant = "split_medium"
+        else if (splitStage === 1) variant = "split_small"
+        else if (splitOnDeath) variant = "baby"
+        if (variant) {
+            const offs = SLIME_SPLIT_OFFSET_PX | 0
+            const points = [
+                { x: (enemy.x | 0) - offs, y: (enemy.y | 0) },
+                { x: (enemy.x | 0) + offs, y: (enemy.y | 0) }
+            ]
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i]
+                const child = spawnEnemyOfKind(baseId, p.x | 0, p.y | 0, /*elite=*/ false)
+                _applyEnemyVariant(child, baseId, variant)
+            }
+        }
+    }
+
 
 
     // ----------------------------
@@ -59326,6 +60784,9 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
             ctx.damage = Math.max(0, Math.round(ctx.damage * mult))
         }
     }
+
+    // 2c) Aggro (threat) update after final damage is known
+    _enemyAggroNoteHit(ctx)
 
 
 
@@ -59635,6 +61096,7 @@ function updateHeroProjectiles() {
         if (!proj || (proj.flags & sprites.Flag.Destroyed)) {
 
             if (proj) _destroyHeroBodyPaintFxForProj(proj)
+            if (proj) _destroyProjectileMaskSpriteForProj(proj)
             if (proj) _destroyAgilityTrailFxSegments(proj)
             if (proj) _destroyStrengthSwingFxSegments(proj)
             heroProjectiles.removeAt(i)
@@ -59652,6 +61114,7 @@ function updateHeroProjectiles() {
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
 
             _destroyHeroBodyPaintFxForProj(proj)
+            _destroyProjectileMaskSpriteForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
             _destroyStrengthSwingFxSegments(proj)
             proj.destroy()
@@ -59754,6 +61217,7 @@ function updateProjectilesCleanup() {
 
         if (destroyAt > 0 && now >= destroyAt) {
             _destroyProjectileMaskFxForProj(proj)
+            _destroyProjectileMaskSpriteForProj(proj)
             proj.destroy()
         }
 
@@ -59926,9 +61390,154 @@ function updateMeleeProjectilesMotion() {
 
 
 
+function _heroDeath_pickTileRC(hero: Sprite): { r: number; c: number } {
+    const tileSize = WORLD_TILE_SIZE | 0
+    let r = sprites.readDataNumber(hero, HERO_DATA.TILE_R) | 0
+    let c = sprites.readDataNumber(hero, HERO_DATA.TILE_C) | 0
+
+    if (r < 0 || c < 0) {
+        if (tileSize > 0) {
+            r = Math.idiv((hero.y | 0), tileSize) | 0
+            c = Math.idiv((hero.x | 0), tileSize) | 0
+        } else {
+            r = 0
+            c = 0
+        }
+    }
+
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        const cols = _engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0
+        if (rows > 0 && cols > 0) {
+            if (r < 0) r = 0
+            else if (r >= rows) r = (rows - 1) | 0
+            if (c < 0) c = 0
+            else if (c >= cols) c = (cols - 1) | 0
+        }
+    }
+
+    return { r, c }
+}
+
+function _heroDeath_spawnHeadstone(hero: Sprite): void {
+    if (!hero) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_MARKER)) return
+
+    const pick = _heroDeath_pickTileRC(hero)
+    _dunDecor_spawnAtTile({
+        name: HERO_DEATH_HEADSTONE_PROP,
+        role: DECOR_ROLE.TRIGGER,
+        tileR: pick.r | 0,
+        tileC: pick.c | 0,
+        pxW: WORLD_TILE_SIZE | 0,
+        pxH: WORLD_TILE_SIZE | 0
+    })
+
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, true)
+}
+
+function _heroDeath_showDialog(hero: Sprite, pid: number, profileKey: string): void {
+    if (!hero) return
+    if ((pid | 0) <= 0) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_DIALOG)) return
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    const net: any = g ? g.__net : null
+    const localPid = (net && typeof net.playerId === "number") ? (net.playerId | 0) : 0
+    const owner = `${HERO_DEATH_DIALOG_OWNER_PREFIX}:${profileKey || pid}`
+    const payload = {
+        speaker: "YOU DIED!",
+        text: "Your spirit lingers by your headstone.",
+        hint: "Choose what to do next.",
+        choices: [
+            { id: HERO_DEATH_DIALOG_CHOICE_LOAD, label: "Load most recent floor" },
+            { id: HERO_DEATH_DIALOG_CHOICE_STAY, label: "Stay here" }
+        ],
+        owner
+    }
+
+    if (dlg && typeof dlg.show === "function" && (pid | 0) === (localPid | 0)) {
+        try { dlg.show(payload) } catch { }
+    }
+
+    if (g && g.__isHost && net && typeof net.sendDialog === "function") {
+        if ((pid | 0) !== (localPid | 0)) {
+            try { net.sendDialog("show", payload, pid | 0) } catch { }
+        }
+    }
+
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, true)
+}
+
+function _heroDeath_enterGhost(heroIndex: number, hero: Sprite, now: number): void {
+    if (!hero) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) return
+
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+    sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "deadGhost")
+    hero.setFlag(SpriteFlag.Ghost, true)
+
+    const idleDur = _ambientPhaseWindowMs("idle") | 0
+    setHeroPhaseString(heroIndex, "idle", "heroDeathGhost")
+    _animKeys_stampPhaseWindow(heroIndex, hero, "idle", now | 0, idleDur, "HERO_DEATH_GHOST", "heroDeathGhost")
+
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, true)
+    sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0)
+}
+
+function _heroDeath_ownerToProfile(owner: string): string {
+    const prefix = HERO_DEATH_DIALOG_OWNER_PREFIX + ":"
+    if (owner && owner.indexOf(prefix) === 0) return owner.slice(prefix.length)
+    return ""
+}
+
+function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number): void {
+    const g: any = globalThis as any
+    if (!g) return
+    if (g.__deathLoadInFlight) return
+
+    const net: any = g.__net
+    const isHost = (typeof g.__isHost === "boolean") ? !!g.__isHost : true
+
+    if (!isHost) {
+        if (net && typeof net.sendUiCommand === "function") {
+            try { net.sendUiCommand({ type: "loadRecentSave", profile: profileKey || "", reason: "death", playerId: pid | 0 }) } catch { }
+        }
+        return
+    }
+
+    const fn = g.__hero_requestLoadLatestSave
+    if (typeof fn !== "function") return
+
+    g.__deathLoadInFlight = true
+    let out: any = null
+    try {
+        out = fn({ profile: profileKey || "", reason: "death", pid: pid | 0 })
+    } catch {
+        g.__deathLoadInFlight = false
+        return
+    }
+    if (out && typeof out.finally === "function") {
+        out.finally(() => { g.__deathLoadInFlight = false })
+    } else {
+        g.__deathLoadInFlight = false
+    }
+}
+
 // New helper: clean up heroes after their death animation finishes
 
 function updateHeroDeaths(now: number) {
+
+    const g: any = globalThis as any
+    const isHost = (g && typeof g.__isHost === "boolean") ? !!g.__isHost : true
+    if (!isHost) return
 
     for (let i = 0; i < heroes.length; i++) {
 
@@ -59949,41 +61558,29 @@ function updateHeroDeaths(now: number) {
 
 
 
+        if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) continue
+
         const deathUntil = sprites.readDataNumber(hero, HERO_DATA.DEATH_UNTIL) | 0;
+        if (deathUntil > 0 && now < deathUntil) continue
 
-        if (deathUntil > 0 && now >= deathUntil) {
+        // RELIC HOOK: hero death finalization (after death anim window)
+        try {
+            const ctx: RelicHeroDeathFinalContext = {
+                now: now | 0,
+                hi: i | 0,
+                hero,
+            }
+            relic_onHeroDeathFinal(ctx)
+        } catch { }
 
-            // RELIC HOOK: hero death finalization (after death anim window, before destroy)
+        _heroDeath_spawnHeadstone(hero)
 
-            try {
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        let profileKey = _heroProfileKeyForIndex(i)
+        if (!profileKey) profileKey = sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        _heroDeath_showDialog(hero, pid | 0, profileKey || "")
 
-                const ctx: RelicHeroDeathFinalContext = {
-
-                    now: now | 0,
-
-                    hi: i | 0,
-
-                    hero,
-
-                }
-
-                relic_onHeroDeathFinal(ctx)
-
-            } catch { }
-
-
-
-            // Final destroy – same effect as before, just delayed so LPC death can play.
-
-            hero.destroy(effects.disintegrate, 200);
-
-
-
-            // Optional: clear the timer so we don't re-evaluate
-
-            sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0);
-
-        }
+        _heroDeath_enterGhost(i, hero, now)
 
     }
 
@@ -60735,6 +62332,7 @@ function consumeAndDispatchPlayerIntents(nowMs: number): void {
     for (let hi = 0; hi < heroes.length; hi++) {
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
         const profile = _heroProfileKeyForIndex(hi)
         if (!profile) continue
         if (connectedMap && connectedMap[profile] === false) continue
@@ -61411,7 +63009,16 @@ interface GenWaveDef {
 const MONSTER_CATALOG: MonsterDef[] = [
 
     // Advance ranges increase gradually by danger (capped) for ranged attackers.
-    { id: "slime projectile", danger: 2,  hp: 10,  damage: 4,  speed: 22, xp: 4,  advanceRangePx: _calcAdvanceRangePxForDanger(2) },
+    { id: "slime",            danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime black",      danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime blue",       danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime brown",      danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime green",      danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime lightblue",  danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime red",        danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime violet",     danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime yellow",     danger: 2,  hp: SLIME_BASE_HP,  damage: SLIME_BASE_DAMAGE,  speed: 18, xp: 10, advanceRangePx: 0 },
+    { id: "slime projectile", danger: 2,  hp: SLIME_BABY_HP,  damage: SLIME_BASE_DAMAGE,  speed: 16, xp: 5,  advanceRangePx: _calcAdvanceRangePxForDanger(2) },
     { id: "bee",              danger: 4,  hp: 18,  damage: 6,  speed: 42, xp: 7,  advanceRangePx: _calcAdvanceRangePxForDanger(4) },
     { id: "bat",              danger: 5,  hp: 22,  damage: 7,  speed: 38, xp: 8,  advanceRangePx: _calcAdvanceRangePxForDanger(5) },
     { id: "beetle",           danger: 6,  hp: 30,  damage: 8,  speed: 26, xp: 9,  advanceRangePx: 0 },
@@ -61434,7 +63041,6 @@ const MONSTER_CATALOG: MonsterDef[] = [
     { id: "imp red",          danger: 13, hp: 54,  damage: 12, speed: 34, xp: 14, advanceRangePx: _calcAdvanceRangePxForDanger(13) },
     { id: "worm small",       danger: 14, hp: 56,  damage: 13, speed: 28, xp: 15, advanceRangePx: 0 },
     { id: "golem",            danger: 15, hp: 85,  damage: 17, speed: 20, xp: 20, advanceRangePx: 0 },
-    { id: "slime",            danger: 16, hp: 60,  damage: 12, speed: 20, xp: 16, advanceRangePx: 0 },
     { id: "golem white",      danger: 17, hp: 95,  damage: 18, speed: 18, xp: 21, advanceRangePx: 0 },
     { id: "eyeball",          danger: 18, hp: 65,  damage: 14, speed: 36, xp: 17, advanceRangePx: _calcAdvanceRangePxForDanger(18) },
     { id: "goblin",           danger: 19, hp: 70,  damage: 15, speed: 30, xp: 18, advanceRangePx: 0 },
@@ -61587,34 +63193,74 @@ function _enemyApplyAuraForDir(enemy: Sprite, dir: string): void {
     const aura = _monsterAuraForDir(monsterId, dir)
     if (!aura) return
 
-    sprites.setDataNumber(enemy, "__monsterAuraFrameW", (aura.frameW | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraFrameH", (aura.frameH | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraFootBottom", (aura.footBottom | 0) || 0)
+    const scaleX1000 = sprites.readDataNumber(enemy, "__monsterScaleX1000") | 0
+    const scaleY1000 = sprites.readDataNumber(enemy, "__monsterScaleY1000") | 0
+    const scaleX = (scaleX1000 > 0 ? (scaleX1000 / 1000) : 1)
+    const scaleY = (scaleY1000 > 0 ? (scaleY1000 / 1000) : 1)
+
+    const baseFrameW = (aura.frameW | 0) || 0
+    const baseFrameH = (aura.frameH | 0) || 0
+    const baseMinX = (aura.minX | 0) || 0
+    const baseMinY = (aura.minY | 0) || 0
+    const baseMaxX = (aura.maxX | 0) || 0
+    const baseMaxY = (aura.maxY | 0) || 0
+    const baseCenterX = (aura.centerX | 0) || 0
+    const baseCenterY = (aura.centerY | 0) || 0
+    const baseFoot = (aura.footBottom | 0) || 0
+
+    const baseW = Math.max(1, (baseMaxX - baseMinX + 1) | 0) | 0
+    const baseH = Math.max(1, (baseMaxY - baseMinY + 1) | 0) | 0
+    const scaledW = Math.max(1, Math.round(baseW * scaleX)) | 0
+    const scaledH = Math.max(1, Math.round(baseH * scaleY)) | 0
+    const scaledMinX = Math.round(baseMinX * scaleX) | 0
+    const scaledMinY = Math.round(baseMinY * scaleY) | 0
+    const centerOffX = (baseCenterX - baseMinX) | 0
+    const centerOffY = (baseCenterY - baseMinY) | 0
+    const scaledCenterX = (scaledMinX + Math.round(centerOffX * scaleX)) | 0
+    const scaledCenterY = (scaledMinY + Math.round(centerOffY * scaleY)) | 0
+    const scaledMaxX = (scaledMinX + scaledW - 1) | 0
+    const scaledMaxY = (scaledMinY + scaledH - 1) | 0
+
+    const frameW = Math.max(1, Math.round(baseFrameW * scaleX)) | 0
+    const frameH = Math.max(1, Math.round(baseFrameH * scaleY)) | 0
+    const footBottom = Math.round(baseFoot * scaleY) | 0
+
+    sprites.setDataNumber(enemy, "__monsterAuraFrameW", frameW | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraFrameH", frameH | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraFootBottom", footBottom | 0)
     sprites.setDataNumber(enemy, "__monsterAuraOutlineSides", (aura.outlineSides | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraMinX", (aura.minX | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraMinY", (aura.minY | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraMaxX", (aura.maxX | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraMaxY", (aura.maxY | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraCenterX", (aura.centerX | 0) || 0)
-    sprites.setDataNumber(enemy, "__monsterAuraCenterY", (aura.centerY | 0) || 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMinX", scaledMinX | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMinY", scaledMinY | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMaxX", scaledMaxX | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraMaxY", scaledMaxY | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraCenterX", scaledCenterX | 0)
+    sprites.setDataNumber(enemy, "__monsterAuraCenterY", scaledCenterY | 0)
     if (Array.isArray(aura.outline)) {
         const anyEnemy: any = enemy as any
         if (!anyEnemy.data) anyEnemy.data = {}
-        anyEnemy.data.__monsterAuraOutline = aura.outline
+        if (scaleX === 1 && scaleY === 1) {
+            anyEnemy.data.__monsterAuraOutline = aura.outline
+        } else {
+            const scaledOutline: number[][] = []
+            for (let i = 0; i < aura.outline.length; i++) {
+                const p = aura.outline[i]
+                if (!p || p.length < 2) continue
+                const sx = Math.round((p[0] | 0) * scaleX) | 0
+                const sy = Math.round((p[1] | 0) * scaleY) | 0
+                scaledOutline.push([sx, sy])
+            }
+            anyEnemy.data.__monsterAuraOutline = scaledOutline
+        }
     }
 
-    const auraW = ((aura.maxX | 0) - (aura.minX | 0) + 1) | 0
-    const auraH = ((aura.maxY | 0) - (aura.minY | 0) + 1) | 0
-    if (auraW > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_W, auraW | 0)
-    if (auraH > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_H, auraH | 0)
+    if (scaledW > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_W, scaledW | 0)
+    if (scaledH > 0) sprites.setDataNumber(enemy, ENEMY_DATA.COLLIDER_H, scaledH | 0)
 
-    const frameW = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_W) | 0
-    const frameH = sprites.readDataNumber(enemy, ENEMY_DATA.FRAME_H) | 0
     if (frameW > 0 && frameH > 0) {
         const frameCenterX = Math.round((frameW - 1) / 2) | 0
         const frameCenterY = Math.round((frameH - 1) / 2) | 0
-        const renderOffsX = (frameCenterX - (aura.centerX | 0)) | 0
-        const renderOffsY = (frameCenterY - (aura.centerY | 0)) | 0
+        const renderOffsX = (frameCenterX - scaledCenterX) | 0
+        const renderOffsY = (frameCenterY - scaledCenterY) | 0
         sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_X, renderOffsX)
         sprites.setDataNumber(enemy, ENEMY_DATA.RENDER_OFFS_Y, renderOffsY)
     }
@@ -61950,12 +63596,116 @@ function _cheapestMonsterId(slimeOnly: boolean): string {
     return id
 }
 
-function _buildMonsterPoolForFloor(floorIndex0: number): { monsters: string[], totalDanger: number } {
+function _parseMonsterSpawnId(rawId: string): { baseId: string; variant: string } {
+    const raw = String(rawId || "").trim()
+    if (!raw) return { baseId: "", variant: "" }
+    const parts = raw.split(MONSTER_SPAWN_VARIANT_SEP)
+    const baseId = String(parts[0] || "").trim()
+    const variant = (parts.length > 1) ? String(parts.slice(1).join(MONSTER_SPAWN_VARIANT_SEP) || "").trim().toLowerCase() : ""
+    return { baseId: baseId || raw, variant }
+}
+
+function _slimeRangedSpawnId(baseId: string, baby: boolean): string {
+    const v = baby ? "baby_ranged" : "ranged"
+    return `${baseId}${MONSTER_SPAWN_VARIANT_SEP}${v}`
+}
+
+function _monsterDangerForSpawnId(rawId: string): number {
+    const parsed = _parseMonsterSpawnId(rawId)
+    const base = parsed.baseId || rawId
+    let danger = Math.max(1, (_monsterDefById(base).danger | 0)) | 0
+    const v = parsed.variant || ""
+    if (v === "baby" || v === "baby_ranged" || v === "split_small") {
+        danger = Math.max(1, Math.round(danger * 0.5)) | 0
+    } else if (v === "split_medium") {
+        danger = Math.max(1, Math.round(danger * 2)) | 0
+    } else if (v === "boss_giant") {
+        danger = Math.max(1, Math.round(danger * 4)) | 0
+    }
+    return danger | 0
+}
+
+function _monsterTotalDangerForPool(monsters: string[]): number {
+    let total = 0
+    for (let i = 0; i < monsters.length; i++) {
+        total = (total + (_monsterDangerForSpawnId(monsters[i]) | 0)) | 0
+    }
+    return Math.max(1, total | 0) | 0
+}
+
+function _scaleMonsterPoolByPlayerCount(basePool: string[], scale: number): string[] {
+    const src = basePool || []
+    if (src.length === 0) return []
+    if (!(scale > 1)) return src.slice()
+    const targetCount = Math.max(1, Math.round(src.length * scale)) | 0
+    const out = src.slice()
+    let i = 0
+    while (out.length < targetCount) {
+        out.push(src[i % src.length])
+        i++
+    }
+    return out
+}
+
+function _buildCustomMonsterPoolForFloor(floor1: number): string[] | null {
+    if (floor1 <= 0) return null
+    if (floor1 === 1) {
+        return ["slime", "slime", "slime", "slime"]
+    }
+    if (floor1 === 2) {
+        const baby = _slimeRangedSpawnId("slime green", true)
+        return ["slime", "slime", "slime", "slime", baby, baby]
+    }
+    if (floor1 === 3) {
+        const baby = _slimeRangedSpawnId("slime green", true)
+        return ["slime", "slime", "slime", "slime", baby, baby, baby, baby]
+    }
+    if (floor1 === 4) {
+        const baby = _slimeRangedSpawnId("slime green", true)
+        return ["slime", "slime", "slime", "slime", "slime", "slime", baby, baby, baby, baby]
+    }
+    if (floor1 === 5) {
+        const ranged = _slimeRangedSpawnId("slime green", false)
+        return [
+            `slime${MONSTER_SPAWN_VARIANT_SEP}boss_giant`,
+            ranged,
+            ranged
+        ]
+    }
+    if (floor1 === 6) {
+        const rangedGreen = _slimeRangedSpawnId("slime green", false)
+        const rangedRed = _slimeRangedSpawnId("slime red", false)
+        const rangedBlue = _slimeRangedSpawnId("slime blue", false)
+        return [
+            "slime",
+            "slime red",
+            "slime blue",
+            "slime black",
+            "slime",
+            "slime red",
+            rangedGreen,
+            rangedRed,
+            rangedBlue,
+            rangedGreen
+        ]
+    }
+    return null
+}
+
+function _buildMonsterPoolForFloor(floorIndex0: number, playerCount: number): { monsters: string[], totalDanger: number } {
     const floor1 = Math.max(1, floorIndex0 | 0) | 0
+    const countScale = _dunGetMonsterCountScale(playerCount | 0)
+    const custom = _buildCustomMonsterPoolForFloor(floor1 | 0)
+    if (custom && custom.length > 0) {
+        const scaled = _scaleMonsterPoolByPlayerCount(custom, countScale)
+        return { monsters: scaled, totalDanger: _monsterTotalDangerForPool(scaled) | 0 }
+    }
     const slimeOnly = (floor1 | 0) == 1
-    const baseDanger = _floorDangerBase(floor1) | 0
+    const baseDanger = Math.max(1, Math.round(_floorDangerBase(floor1) * countScale)) | 0
     const targetCount = _clamp(
-        BALANCE.WAVES.POOL_TARGET_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.POOL_TARGET_COUNT_FLOOR_DIV),
+        Math.max(1, Math.round(
+            (BALANCE.WAVES.POOL_TARGET_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.POOL_TARGET_COUNT_FLOOR_DIV)) * countScale
+        )),
         BALANCE.WAVES.POOL_TARGET_COUNT_MIN,
         BALANCE.WAVES.POOL_TARGET_COUNT_MAX
     )
@@ -62041,18 +63791,22 @@ function _spawnFromMonsterPool(spawnerIndex: number): boolean {
     if (spawnerIndex < 0 || spawnerIndex >= enemySpawners.length) return false
 
     const pick = randint(0, _dunMonsterPool.length - 1) | 0
-    const monsterId = _dunMonsterPool[pick]
+    const rawId = _dunMonsterPool[pick]
     _dunMonsterPool.splice(pick, 1)
+
+    const parsed = _parseMonsterSpawnId(rawId)
+    const monsterId = parsed.baseId || rawId
 
     const spawner = enemySpawners[spawnerIndex]
     const enemy = spawnEnemyOfKind(monsterId, spawner.x, spawner.y, /*elite=*/ false)
     sprites.setDataNumber(enemy, ENEMY_DATA.SPAWNER_ID, spawnerIndex | 0)
+    if (parsed.variant) _applyEnemyVariant(enemy, monsterId, parsed.variant)
     return true
 }
 
 
 
-function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): GenWaveDef[] {
+function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number, playerCount: number): GenWaveDef[] {
 
     const floor1 = Math.max(1, floorIndex0 | 0) | 0
 
@@ -62060,7 +63814,8 @@ function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): G
 
 
 
-    const baseDanger = _floorDangerBase(floor1)
+    const countScale = _dunGetMonsterCountScale(playerCount | 0)
+    const baseDanger = Math.max(1, Math.round(_floorDangerBase(floor1) * countScale)) | 0
 
 
 
@@ -62119,6 +63874,8 @@ function _buildWavePlanForFloor(floorIndex0: number, spawnIntervalMs: number): G
             desiredCount = BALANCE.WAVES.ELITES_COUNT_BASE + Math.idiv(floor1, BALANCE.WAVES.ELITES_COUNT_FLOOR_DIV)
 
         }
+
+        desiredCount = Math.max(1, Math.round((desiredCount | 0) * countScale)) | 0
 
 
 
@@ -62384,6 +64141,23 @@ if (typeof globalThis !== "undefined") {
             const text = (typeof d.text === "string") ? d.text : "";
             const hint = (typeof d.hint === "string") ? d.hint : "";
             const autoHideMs = (typeof d.autoHideMs === "number") ? (d.autoHideMs | 0) : 0;
+            const choices = Array.isArray(d.choices) ? d.choices : null;
+            const owner = (typeof d.owner === "string") ? d.owner : "";
+            const dlg = (globalThis as any).__heDialog;
+
+            if (choices && choices.length > 0 && dlg && typeof dlg.show === "function") {
+                try {
+                    dlg.show({
+                        speaker: (typeof d.speaker === "string") ? d.speaker : "",
+                        text,
+                        hint,
+                        choices,
+                        owner,
+                    });
+                } catch { }
+                return;
+            }
+
             const now = game.runtime() | 0;
             _dunDialog_showStoryLine(now, text, hint, autoHideMs);
         } else if (action === "hide") {
@@ -66568,6 +68342,9 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
 
     const safe = _uiGetSafeForSpend(hi)
     const objective = _dunObjectiveUiText(now)
+    const supportActive = !!supportPuzzleActive[hi]
+    const supportSeq = supportActive ? (supportPuzzleSeq[hi] || []).slice(0) : []
+    const supportProgress = supportActive ? (supportPuzzleProgress[hi] | 0) : 0
 
 
 
@@ -66647,6 +68424,14 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
         uiMode: uiMode | 0,
 
         uiSel: uiSel | 0,
+
+        // Wisdom/support puzzle (DOM overlay)
+        supportPuzzle: {
+            active: supportActive,
+            seq: supportSeq,
+            progress: supportProgress,
+            wrongUntilMs: supportPuzzleWrongUntil[hi] | 0,
+        },
 
 
 
@@ -67129,6 +68914,12 @@ g.__heUiCommand = function (cmd: any): any {
 
     }
 
+    if (t === "loadRecentSave") {
+        const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
+        _heroDeath_requestLoadLatestSave(String(prof || ""), pid | 0)
+        return { ok: true, reason: "load-started", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
 
 
     if (t === "setSel") {
@@ -67467,6 +69258,40 @@ try {
 
     }
 
+} catch (_e) { }
+
+try {
+    const g: any = globalThis as any
+    if (g && !g.__heDeathDialogInstalled) {
+        g.__heDeathDialogInstalled = true
+        if (typeof g.addEventListener === "function") {
+            g.addEventListener("he:dialogChoice", (ev: any) => {
+                const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
+                    ? String(g.__heDialog.__heOwner || "")
+                    : ""
+                if (!owner || owner.indexOf(HERO_DEATH_DIALOG_OWNER_PREFIX + ":") !== 0) return
+                const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
+                const choice = String(id || "")
+                const profile = _heroDeath_ownerToProfile(owner)
+                if (choice === HERO_DEATH_DIALOG_CHOICE_LOAD) {
+                    _heroDeath_requestLoadLatestSave(profile, 0)
+                    try { g.__heDialog?.hide?.() } catch { }
+                }
+                if (choice === HERO_DEATH_DIALOG_CHOICE_STAY) {
+                    try { g.__heDialog?.hide?.() } catch { }
+                }
+            })
+            g.addEventListener("he:dialogAdvance", () => {
+                const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
+                    ? String(g.__heDialog.__heOwner || "")
+                    : ""
+                if (!owner || owner.indexOf(HERO_DEATH_DIALOG_OWNER_PREFIX + ":") !== 0) return
+                const profile = _heroDeath_ownerToProfile(owner)
+                _heroDeath_requestLoadLatestSave(profile, 0)
+                try { g.__heDialog?.hide?.() } catch { }
+            })
+        }
+    }
 } catch (_e) { }
 
 try {

@@ -3832,19 +3832,31 @@ private _propCreateFocusAuraContainer(args: {
         try { img.setFrame("__BASE"); } catch { /* ignore */ }
         img.setCrop(cropX, cropY, tile, tile);
       }
-      img.setDisplaySize(tile, tile);
+      let frameW = tile;
+      let frameH = tile;
+      try {
+        const fr: any = (img as any).frame;
+        const fw = (fr?.cutWidth ?? fr?.width ?? 0) | 0;
+        const fh = (fr?.cutHeight ?? fr?.height ?? 0) | 0;
+        if (fw > 0) frameW = fw;
+        if (fh > 0) frameH = fh;
+      } catch { /* ignore */ }
+      const halfW = frameW >> 1;
+      const halfH = frameH >> 1;
+      const padScaleBase = Math.max(1, Math.min(frameW | 0, frameH | 0)) | 0;
+      img.setDisplaySize(frameW, frameH);
       if (trimLeft || trimRight || trimTop || trimBottom) {
         const maskG = this.scene.add.graphics();
-        const maskW = Math.max(1, tile - trimLeft - trimRight);
-        const maskH = Math.max(1, tile - trimTop - trimBottom);
+        const maskW = Math.max(1, frameW - trimLeft - trimRight);
+        const maskH = Math.max(1, frameH - trimTop - trimBottom);
         maskG.fillStyle(0xffffff, 1);
-        maskG.fillRect(worldX - half + trimLeft, worldY - half + trimTop, maskW, maskH);
+        maskG.fillRect(worldX - halfW + trimLeft, worldY - halfH + trimTop, maskW, maskH);
         maskG.setVisible(false);
         const geomMask = maskG.createGeometryMask();
         img.setMask(geomMask);
         (img as any).__auraTrimMask = maskG;
         (img as any).__auraTrim = { left: trimLeft, right: trimRight, top: trimTop, bottom: trimBottom };
-        (img as any).__auraTrimTile = tile;
+        (img as any).__auraTrimTile = frameW | 0;
         (st.anyThis.__propImgs as any[]).push(maskG);
       }
 
@@ -3932,13 +3944,13 @@ private _propCreateFocusAuraContainer(args: {
               try {
                 img.setTexture(padTexKey, "__BASE" as any);
                 img.clearCrop?.();
-                img.setDisplaySize((tile + padPxApplied * 2) | 0, (tile + padPxApplied * 2) | 0);
+                img.setDisplaySize((frameW + padPxApplied * 2) | 0, (frameH + padPxApplied * 2) | 0);
                 usedFrame = false;
               } catch { /* ignore */ }
             }
           } else {
             const frameStats = usedFrame ? _dbgFrameOpaqueStats(this.scene, auraTk, frameName) : null;
-            const cropStats = _dbgCropOpaqueStats(this.scene, auraTk, cropX, cropY, tile, tile);
+            const cropStats = _dbgCropOpaqueStats(this.scene, auraTk, cropX, cropY, frameW | 0, frameH | 0);
             let stats = cropStats;
             statsFrom = "crop";
             if (usedFrame && frameStats && frameStats.ok && frameStats.opaque > 0) {
@@ -4005,7 +4017,7 @@ private _propCreateFocusAuraContainer(args: {
                 const fallback = ((PROP_FOCUS_AURA_FULL_OPAQUE_PAD_PX | 0) || 4) * 2;
                 solidPadPx = Math.max(fallback, padPx | 0);
               }
-              padScale = 1 + ((solidPadPx * 2) / tile);
+              padScale = 1 + ((solidPadPx * 2) / padScaleBase);
               const makeRing = forceBoxRing ? true : !!(fullOpaque || !boxOk || !edgeOk || forceSolidPad);
               const ringMode: "aura" | "box" | "solid" =
                 forceSolidPad ? "solid" : (forceBoxRing ? "box" : ((edgeOk || allowInset) ? "aura" : "box"));
@@ -4015,7 +4027,7 @@ private _propCreateFocusAuraContainer(args: {
                 frameName,
                 cropX,
                 cropY,
-                tile,
+                frameW | 0,
                 solidPadPx,
                 usedFrame,
                 makeRing,
@@ -4028,7 +4040,7 @@ private _propCreateFocusAuraContainer(args: {
                   frameName,
                   cropX,
                   cropY,
-                  tile,
+                  frameW | 0,
                   solidPadPx,
                   usedFrame,
                   makeRing,
@@ -4036,14 +4048,14 @@ private _propCreateFocusAuraContainer(args: {
                 );
               }
               if (!baked.ok && forceSolidPad) {
-                baked = _buildSolidBoxPadTexture(this.scene, `${auraTk}::${frameName}::solid`, tile, solidPadPx);
+                baked = _buildSolidBoxPadTexture(this.scene, `${auraTk}::${frameName}::solid`, frameW | 0, solidPadPx);
                 padMode = "solid";
               }
               if (baked.ok && baked.key) {
                 try {
                   img.setTexture(baked.key, "__BASE" as any);
                   img.clearCrop?.();
-                  img.setDisplaySize((tile + solidPadPx * 2) | 0, (tile + solidPadPx * 2) | 0);
+                  img.setDisplaySize((frameW + solidPadPx * 2) | 0, (frameH + solidPadPx * 2) | 0);
                   usedFrame = false;
                   padBaked = true;
                   padTexKey = baked.key;
@@ -4061,21 +4073,21 @@ private _propCreateFocusAuraContainer(args: {
                 frameName,
                 cropX,
                 cropY,
-                tile,
+                frameW | 0,
                 solidPadPx,
                 usedFrame,
                 true,
                 "solid"
               );
               if (!baked.ok && forceSolidPad) {
-                baked = _buildSolidBoxPadTexture(this.scene, `${auraTk}::${frameName}::solid`, tile, solidPadPx);
+                baked = _buildSolidBoxPadTexture(this.scene, `${auraTk}::${frameName}::solid`, frameW | 0, solidPadPx);
                 padMode = "solid";
               }
               if (baked.ok && baked.key) {
                 try {
                   img.setTexture(baked.key, "__BASE" as any);
                   img.clearCrop?.();
-                  img.setDisplaySize((tile + solidPadPx * 2) | 0, (tile + solidPadPx * 2) | 0);
+                  img.setDisplaySize((frameW + solidPadPx * 2) | 0, (frameH + solidPadPx * 2) | 0);
                   usedFrame = false;
                   padBaked = true;
                   padTexKey = baked.key;

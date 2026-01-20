@@ -294,6 +294,10 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         atlas: "base_out_atlas",
         ref: { row: 12, col: 16 },
     },
+    headstone: {
+        atlas: "object_atlas",
+        ref: { row: 25, col: 23 },
+    },
 
     fire_totem: {
         atlas: "anims.FireTotem 96x96",
@@ -423,6 +427,7 @@ export const PROP_CATALOG: {
     { name: "bridge_v", atlas: "base_out_atlas", atlasRow: 20, atlasCol: 13, wTiles: 1, hTiles: 3 },
     { name: "treasure_marker_a", atlas: "base_out_atlas", atlasRow: 12, atlasCol: 15, wTiles: 1, hTiles: 1 },
     { name: "treasure_marker_b", atlas: "base_out_atlas", atlasRow: 12, atlasCol: 16, wTiles: 1, hTiles: 1 },
+    { name: "headstone", atlas: "object_atlas", atlasRow: 25, atlasCol: 23, wTiles: 1, hTiles: 1 },
 ];
 
 

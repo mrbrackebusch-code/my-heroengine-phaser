@@ -605,6 +605,11 @@
   flex: 0 0 48px;
   box-sizing: border-box;
 }
+.relic-offer-item .shopui-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
 
 
 
@@ -641,6 +646,7 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        position: relative;
         border: 2px solid rgba(255, 255, 255, 0.18);
         border-radius: 8px;
         padding: 4px 6px;
@@ -652,7 +658,117 @@
           rgba(255, 255, 255, 0.02)
         );
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
 
+      }
+
+      #hud {
+        position: relative;
+      }
+
+      .hud-wisdom-overlay {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: rgba(10, 16, 12, 0.86);
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+        z-index: 5;
+        pointer-events: none;
+      }
+
+      .hud-wisdom-overlay.is-done {
+        opacity: 0.78;
+        filter: saturate(1.05);
+      }
+
+      .hud-wisdom-overlay.is-next {
+        box-shadow: inset 0 0 0 1px rgba(160, 255, 205, 0.25);
+      }
+
+      .hud-wisdom-overlay.is-wrong {
+        background: rgba(90, 10, 10, 0.86);
+        border-color: rgba(255, 90, 90, 0.5);
+        box-shadow: inset 0 0 0 1px rgba(255, 50, 50, 0.45);
+        animation: hudWisdomAlarm 0.16s ease-in-out infinite;
+      }
+
+      .hud-wisdom-arrow-wrap {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hud-wisdom-overlay.is-next .hud-wisdom-arrow-wrap {
+        animation: hudWisdomPulse 0.85s ease-in-out infinite;
+      }
+
+      .hud-wisdom-arrow {
+        width: 88%;
+        height: 88%;
+        transform-origin: 50% 50%;
+        filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55));
+      }
+
+      .hud-wisdom-arrow-outline {
+        fill: rgba(6, 12, 8, 0.9);
+      }
+
+      .hud-wisdom-arrow-fill {
+        fill: #f6f7f8;
+      }
+
+      .hud-wisdom-overlay.is-done .hud-wisdom-arrow-fill {
+        fill: #57ff9a;
+      }
+
+      .hud-wisdom-overlay.is-wrong .hud-wisdom-arrow-fill {
+        fill: #ff5050;
+      }
+
+      .hud-wisdom-overlay.is-wrong .hud-wisdom-arrow-outline {
+        fill: rgba(30, 0, 0, 0.95);
+      }
+
+      .hud-wisdom-overlay.dir-up .hud-wisdom-arrow { transform: rotate(0deg); }
+      .hud-wisdom-overlay.dir-right .hud-wisdom-arrow { transform: rotate(90deg); }
+      .hud-wisdom-overlay.dir-down .hud-wisdom-arrow { transform: rotate(180deg); }
+      .hud-wisdom-overlay.dir-left .hud-wisdom-arrow { transform: rotate(-90deg); }
+
+      #hud-wisdom-cancel {
+        position: absolute;
+        right: 8px;
+        bottom: 6px;
+        display: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 9px;
+        letter-spacing: 0.3px;
+        color: rgba(220, 255, 230, 0.85);
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(120, 255, 170, 0.35);
+        padding: 2px 6px;
+        border-radius: 999px;
+        z-index: 6;
+        pointer-events: none;
+        text-transform: uppercase;
+      }
+
+      @keyframes hudWisdomPulse {
+        0% { transform: scale(1); filter: brightness(1); }
+        50% { transform: scale(1.08); filter: brightness(1.2); }
+        100% { transform: scale(1); filter: brightness(1); }
+      }
+
+      @keyframes hudWisdomAlarm {
+        0% { filter: brightness(1); }
+        50% { filter: brightness(1.35); }
+        100% { filter: brightness(1); }
       }
 
       .hud-head {
@@ -1684,6 +1800,14 @@
               </div>
             </div>
             <div class="hud-raw" id="hud-a-raw"></div>
+            <div class="hud-wisdom-overlay" data-wisdom-slot="0">
+              <div class="hud-wisdom-arrow-wrap">
+                <svg class="hud-wisdom-arrow" viewBox="0 0 100 100" aria-hidden="true">
+                  <path class="hud-wisdom-arrow-outline" d="M50 6 L94 50 L72 50 L72 94 L28 94 L28 50 L6 50 Z"></path>
+                  <path class="hud-wisdom-arrow-fill" d="M50 12 L88 50 L68 50 L68 88 L32 88 L32 50 L12 50 Z"></path>
+                </svg>
+              </div>
+            </div>
           </div>
 
           <!-- W -->
@@ -1715,6 +1839,14 @@
               </div>
             </div>
             <div class="hud-raw" id="hud-b-raw"></div>
+            <div class="hud-wisdom-overlay" data-wisdom-slot="1">
+              <div class="hud-wisdom-arrow-wrap">
+                <svg class="hud-wisdom-arrow" viewBox="0 0 100 100" aria-hidden="true">
+                  <path class="hud-wisdom-arrow-outline" d="M50 6 L94 50 L72 50 L72 94 L28 94 L28 50 L6 50 Z"></path>
+                  <path class="hud-wisdom-arrow-fill" d="M50 12 L88 50 L68 50 L68 88 L32 88 L32 50 L12 50 Z"></path>
+                </svg>
+              </div>
+            </div>
           </div>
 
           <!-- E -->
@@ -1746,6 +1878,14 @@
               </div>
             </div>
             <div class="hud-raw" id="hud-ab-raw"></div>
+            <div class="hud-wisdom-overlay" data-wisdom-slot="2">
+              <div class="hud-wisdom-arrow-wrap">
+                <svg class="hud-wisdom-arrow" viewBox="0 0 100 100" aria-hidden="true">
+                  <path class="hud-wisdom-arrow-outline" d="M50 6 L94 50 L72 50 L72 94 L28 94 L28 50 L6 50 Z"></path>
+                  <path class="hud-wisdom-arrow-fill" d="M50 12 L88 50 L68 50 L68 88 L32 88 L32 50 L12 50 Z"></path>
+                </svg>
+              </div>
+            </div>
           </div>
 
           <!-- R -->
@@ -1777,7 +1917,16 @@
               </div>
             </div>
             <div class="hud-raw" id="hud-r-raw"></div>
+            <div class="hud-wisdom-overlay" data-wisdom-slot="3">
+              <div class="hud-wisdom-arrow-wrap">
+                <svg class="hud-wisdom-arrow" viewBox="0 0 100 100" aria-hidden="true">
+                  <path class="hud-wisdom-arrow-outline" d="M50 6 L94 50 L72 50 L72 94 L28 94 L28 50 L6 50 Z"></path>
+                  <path class="hud-wisdom-arrow-fill" d="M50 12 L88 50 L68 50 L68 88 L32 88 L32 50 L12 50 Z"></path>
+                </svg>
+              </div>
+            </div>
           </div>
+          <div id="hud-wisdom-cancel">Press F to cancel</div>
         </div>
 
         <div id="viewport">
@@ -2149,6 +2298,12 @@
           zoomOutBtn: document.getElementById("zoom-out-btn"),
           zoomInBtn: document.getElementById("zoom-in-btn"),
           zoomPresetBtn: document.getElementById("zoom-preset-btn"),
+          wisdomOverlays: Array.from(document.querySelectorAll(".hud-wisdom-overlay")).sort((a, b) => {
+            const ai = parseInt(a.getAttribute("data-wisdom-slot") || "0", 10) | 0;
+            const bi = parseInt(b.getAttribute("data-wisdom-slot") || "0", 10) | 0;
+            return ai - bi;
+          }),
+          wisdomCancel: document.getElementById("hud-wisdom-cancel"),
 
         };
 
@@ -2169,6 +2324,97 @@
             R.objectiveBox.classList.toggle("xp-objective-ready", st === "exit");
             if (R.miniMapBox) R.miniMapBox.classList.toggle("xp-minimap-float", !has);
           }
+        }
+
+        const WISDOM_DIR_CLASSES = ["dir-up", "dir-down", "dir-left", "dir-right"];
+        const WISDOM_STATE_CLASSES = ["is-done", "is-next", "is-wrong"];
+        const WISDOM_WRONG_FLASH_MS = 650;
+        const _hud_wisdomState = {
+          lastSeqKey: "",
+          lastProgress: 0,
+          lastActive: false,
+          flashUntil: 0
+        };
+
+        function _hud_resetWisdomOverlay(el) {
+          if (!el) return;
+          for (const cls of WISDOM_DIR_CLASSES) el.classList.remove(cls);
+          for (const cls of WISDOM_STATE_CLASSES) el.classList.remove(cls);
+          el.style.display = "none";
+        }
+
+        function _hud_resetWisdomState() {
+          _hud_wisdomState.lastSeqKey = "";
+          _hud_wisdomState.lastProgress = 0;
+          _hud_wisdomState.lastActive = false;
+          _hud_wisdomState.flashUntil = 0;
+        }
+
+        function _hud_clearWisdomOverlay() {
+          const overlays = R.wisdomOverlays || [];
+          for (let i = 0; i < overlays.length; i++) _hud_resetWisdomOverlay(overlays[i]);
+          if (R.wisdomCancel) R.wisdomCancel.style.display = "none";
+          _hud_resetWisdomState();
+        }
+
+        function _hud_updateWisdomOverlay(snap) {
+          const overlays = R.wisdomOverlays || [];
+          if (!overlays.length) return;
+          const puzzle = (snap && snap.ready && snap.supportPuzzle) ? snap.supportPuzzle : null;
+          if (!puzzle || !puzzle.active) {
+            _hud_clearWisdomOverlay();
+            return;
+          }
+
+          const seq = Array.isArray(puzzle.seq) ? puzzle.seq : [];
+          const prog = Math.max(0, Math.min((puzzle.progress | 0), (seq.length | 0)));
+          const now = Date.now();
+          const runtimeNow = (window.game && typeof window.game.runtime === "function")
+            ? window.game.runtime()
+            : null;
+          const seqKey = seq.join(",");
+          const seqChanged = seqKey !== _hud_wisdomState.lastSeqKey;
+          const wrongUntilMs = (typeof puzzle.wrongUntilMs === "number") ? puzzle.wrongUntilMs : 0;
+          let wrongUntilEpoch = 0;
+          if (typeof runtimeNow === "number" && isFinite(runtimeNow) && runtimeNow >= 0 && wrongUntilMs > 0) {
+            const runtimeEpochBase = now - runtimeNow;
+            wrongUntilEpoch = runtimeEpochBase + wrongUntilMs;
+          }
+
+          if (!_hud_wisdomState.lastActive || seqChanged) {
+            _hud_wisdomState.flashUntil = 0;
+          } else if (prog < _hud_wisdomState.lastProgress) {
+            _hud_wisdomState.flashUntil = now + WISDOM_WRONG_FLASH_MS;
+          }
+
+          if (wrongUntilEpoch > 0) {
+            _hud_wisdomState.flashUntil = Math.max(_hud_wisdomState.flashUntil, wrongUntilEpoch);
+          }
+
+          const wrongActive = now < _hud_wisdomState.flashUntil;
+
+          for (let i = 0; i < overlays.length; i++) {
+            const el = overlays[i];
+            const dir = (i < seq.length) ? (seq[i] | 0) : -1;
+            if (!el || dir < 0 || dir >= WISDOM_DIR_CLASSES.length) {
+              _hud_resetWisdomOverlay(el);
+              continue;
+            }
+
+            if (el.style.display !== "flex") el.style.display = "flex";
+            for (const cls of WISDOM_DIR_CLASSES) el.classList.remove(cls);
+            for (const cls of WISDOM_STATE_CLASSES) el.classList.remove(cls);
+            el.classList.add(WISDOM_DIR_CLASSES[dir]);
+            if (i < prog) el.classList.add("is-done");
+            else if (i === prog) el.classList.add("is-next");
+            if (wrongActive) el.classList.add("is-wrong");
+          }
+
+          if (R.wisdomCancel) R.wisdomCancel.style.display = "block";
+
+          _hud_wisdomState.lastActive = true;
+          _hud_wisdomState.lastSeqKey = seqKey;
+          _hud_wisdomState.lastProgress = prog;
         }
 
         function _zoom_getBounds() {
@@ -4523,6 +4769,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setObjectiveUi("", "", "");
             _xp_resetUi();
             _minimap_draw(null);
+            _hud_clearWisdomOverlay();
             return;
           }
 
@@ -4548,6 +4795,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setObjectiveUi("", "", "");
             _xp_resetUi();
             _minimap_draw(null);
+            _hud_clearWisdomOverlay();
             return;
           }
 
@@ -4556,6 +4804,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const mana = readNum(spritesNS, hero, "mana");
           const maxMana = readNum(spritesNS, hero, "maxMana");
           const snap = _getUiSnapshotCached(pid);
+          _hud_updateWisdomOverlay(snap);
           const objTitle = (snap && snap.ready) ? String(snap.objectiveTitle || "") : "";
           const objSub = (snap && snap.ready) ? String(snap.objectiveSub || "") : "";
           const objState = (snap && snap.ready) ? String(snap.objectiveState || "") : "";

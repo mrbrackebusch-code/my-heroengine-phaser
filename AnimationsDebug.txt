@@ -1,44 +1,922 @@
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponInfoMissing] heroIndex=0 tag=agi.spawn dir=right hasData=true hasFrameRef=false
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=1 heroIndex=0 dir=right wTipX=38 wTipY=0 tipLocalX=38 tipLocalY=-12 bounds=minX:-43,maxX:50,minY:-43,maxY:43
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponInfoMissing] heroIndex=0 tag=agi.tick dir=right hasData=true hasFrameRef=false
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=38 tipLocalY=-12 lastX=38 lastY=-12 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=right texKey=t064__polearm__spear__thrust__fg__vsteel frame=0 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=31.5 tipLocalY=-10.5 lastX=31.5 lastY=-10.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=28.5 tipLocalY=-1.5 lastX=28.5 lastY=-0.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=25.5 tipLocalY=-2.5 lastX=25.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=31.5 tipLocalY=-2.5 lastX=31.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=31.5 tipLocalY=-3.5 lastX=31.5 lastY=-3.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=25.5 tipLocalY=-2.5 lastX=25.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 dir=down align=0.66 minCos=0.82
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=down texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=2 heroIndex=0 dir=down wTipX=0 wTipY=38 tipLocalX=4 tipLocalY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=down texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=4 tipLocalY=38 lastX=4 lastY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=4 tipLocalY=38 lastX=4 lastY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=9.5 tipLocalY=31.5 lastX=9.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=-4.5 tipLocalY=30.5 lastX=-4.5 lastY=30.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-5.5 tipLocalY=31.5 lastX=-5.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-5.5 tipLocalY=31.5 lastX=-5.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-4.5 tipLocalY=30.5 lastX=-4.5 lastY=30.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 dir=left align=0.33 minCos=0.55
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=left texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=3 heroIndex=0 dir=left wTipX=-38 wTipY=0 tipLocalX=-38 tipLocalY=-12 bounds=minX:-50,maxX:43,minY:-43,maxY:43
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=left texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-38 tipLocalY=-12 lastX=-38 lastY=-12 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-28.5 tipLocalY=-0.5 lastX=-31.5 lastY=-10.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-28.5 tipLocalY=-1.5 lastX=-28.5 lastY=-1.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-25.5 tipLocalY=-2.5 lastX=-25.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-31.5 tipLocalY=-3.5 lastX=-31.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-31.5 tipLocalY=-2.5 lastX=-31.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-25.5 tipLocalY=-2.5 lastX=-25.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 dir=up align=-0.49 minCos=0.82
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=up texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=4 heroIndex=0 dir=up wTipX=0 wTipY=-38 tipLocalX=-9 tipLocalY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43
-HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=up texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 hasFrameRef=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-24.5 lastX=-3.5 lastY=-24.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-4.5 tipLocalY=-31.5 lastX=-4.5 lastY=-31.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-29.5 lastX=-3.5 lastY=-29.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
-HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-24.5 lastX=-3.5 lastY=-24.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'waves', dir: 'none', animKey: 'effect_waves', textureKey: 'effects.waves_256x256', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 43, skin: 'waves', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 43, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 43, visible: true, alpha: 0.0309398038375219, depth: 2000000010, tex: 'effects.waves_256x256', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'rays', dir: 'none', animKey: 'effect_rays', textureKey: 'effects.rays_300x300', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 42, skin: 'rays', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 42, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 42, visible: true, alpha: 0.08, depth: 2000000030, tex: 'effects.rays_300x300', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'smoke', dir: 'none', animKey: 'effect_smoke', textureKey: 'effects.smoke_340x340', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 41, skin: 'smoke', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 41, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 41, visible: true, alpha: 0.1, depth: 2000000020, tex: 'effects.smoke_340x340', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 40, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 40, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 40, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 8, texKey: 'sprite_8'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 7, texKey: 'sprite_7'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 6, texKey: 'sprite_6'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 5, texKey: 'sprite_5'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 4, texKey: 'sprite_4'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 3, texKey: 'sprite_3'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 2, texKey: 'sprite_2'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 1, texKey: 'sprite_1'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 44, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 44, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 44, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 45, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 45, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 45, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 46, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 46, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 46, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 47, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 47, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 47, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 48, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 48, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 48, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 49, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 49, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 49, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 50, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 50, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 50, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 51, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 51, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 51, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 52, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 52, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 52, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 53, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 53, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 53, visible: true, alpha: 0.7, depth: 41099, tex: 'effects.firespark1_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 54, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 54, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 54, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 55, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 55, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 55, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 56, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 56, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 56, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 53, texKey: 'sprite_53'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 57, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 57, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 57, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 58, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 58, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 58, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 59, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 59, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 59, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 60, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 60, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 60, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark3', dir: 'none', animKey: 'effect_firespark3', textureKey: 'effects.firespark3_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 61, skin: 'firespark3', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 61, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 61, visible: true, alpha: 0.7, depth: 42699, tex: 'effects.firespark3_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 62, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 62, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 62, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 63, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 63, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 63, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 61, texKey: 'sprite_61'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 64, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 64, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 64, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 65, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 65, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 65, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 66, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 66, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 66, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 67, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 67, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 67, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 68, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 68, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 68, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 69, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 69, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 69, visible: true, alpha: 0.7, depth: 40699, tex: 'effects.firespark1_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 40, texKey: 'sprite_40'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 70, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 70, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 70, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 44, texKey: 'sprite_44'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 69, texKey: 'sprite_69'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 71, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 71, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 71, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][weaponInfoMissing] heroIndex=0 tag=agi.spawn dir=right hasData=true hasFrameRef=false
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.fallbackTip] id=1 heroIndex=0 dir=right wTipX=38 wTipY=0 tipLocalX=38 tipLocalY=-12 bounds=minX:-43,maxX:50,minY:-43,maxY:43
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 45, texKey: 'sprite_45'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 74, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 74, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 74, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 46, texKey: 'sprite_46'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 75, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 75, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 75, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 47, texKey: 'sprite_47'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 76, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 76, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 76, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 77, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 77, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 77, visible: true, alpha: 0.7, depth: 44399, tex: 'effects.firespark1_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 48, texKey: 'sprite_48'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 78, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 78, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 78, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 49, texKey: 'sprite_49'}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|31|r=0', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '31', radius: 0, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|31|r=1', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '31', radius: 1, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|31|r=2', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '31', radius: 2, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|31|r=3', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '31', radius: 3, w: 64, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.auraTip] id=2 heroIndex=0 dir=right texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=31 offX=0 offY=0 tipDx=22.5 tipDy=12.5 tipLocalX=22.5 tipLocalY=0.5 bounds=minX:-57,maxX:64,minY:-57,maxY:57
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 81, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 81, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 81, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 50, texKey: 'sprite_50'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 82, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 82, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 82, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 77, texKey: 'sprite_77'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 51, texKey: 'sprite_51'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 83, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 83, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 83, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 52, texKey: 'sprite_52'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 84, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 84, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 84, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 54, texKey: 'sprite_54'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'smoke', dir: 'none', animKey: 'effect_smoke', textureKey: 'effects.smoke_340x340', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 85, skin: 'smoke', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 85, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 85, visible: true, alpha: 0.1, depth: 2000000020, tex: 'effects.smoke_340x340', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 86, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 86, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 86, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 55, texKey: 'sprite_55'}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=31 radius=0 dir=left align=0.38 minCos=0.55
+HeroEngineInPhaser.ts:42129 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=left texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=31 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.fallbackTip] id=3 heroIndex=0 dir=left wTipX=-38 wTipY=0 tipLocalX=-38 tipLocalY=-12 bounds=minX:-50,maxX:43,minY:-43,maxY:43
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 89, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 89, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 89, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 56, texKey: 'sprite_56'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 90, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 90, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 90, visible: true, alpha: 0.7, depth: 43899, tex: 'effects.firespark2_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 57, texKey: 'sprite_57'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 91, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 91, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 91, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 92, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 92, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 92, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 58, texKey: 'sprite_58'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 93, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 93, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 93, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 59, texKey: 'sprite_59'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 60, texKey: 'sprite_60'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 90, texKey: 'sprite_90'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 94, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 94, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 94, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 95, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 95, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 95, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 62, texKey: 'sprite_62'}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|15|r=0', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '15', radius: 0, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|15|r=1', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '15', radius: 1, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|15|r=2', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '15', radius: 2, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|15|r=3', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '15', radius: 3, w: 64, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.auraTip] id=4 heroIndex=0 dir=down texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=15 offX=0 offY=0 tipDx=-16.5 tipDy=14.5 tipLocalX=-12.5 tipLocalY=14.5 bounds=minX:-65,maxX:65,minY:-65,maxY:72
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 98, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 98, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 98, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 63, texKey: 'sprite_63'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 99, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 99, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 99, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 64, texKey: 'sprite_64'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 100, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 100, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 100, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 65, texKey: 'sprite_65'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 101, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 101, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 101, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 66, texKey: 'sprite_66'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 102, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 102, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 102, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 67, texKey: 'sprite_67'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 68, texKey: 'sprite_68'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 103, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 103, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 103, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 104, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 104, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 104, visible: true, alpha: 0.7, depth: 44099, tex: 'effects.firespark2_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 105, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 105, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 105, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 104, texKey: 'sprite_104'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 70, texKey: 'sprite_70'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 71, texKey: 'sprite_71'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 106, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 106, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 106, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 107, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 107, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 107, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 74, texKey: 'sprite_74'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 108, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 108, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 108, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 109, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 109, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 109, visible: true, alpha: 0.7, depth: 42299, tex: 'effects.firespark1_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 75, texKey: 'sprite_75'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 110, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 110, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 110, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 76, texKey: 'sprite_76'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 111, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 111, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 111, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 78, texKey: 'sprite_78'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 112, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 112, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 112, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 109, texKey: 'sprite_109'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 81, texKey: 'sprite_81'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 113, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 113, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 113, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 82, texKey: 'sprite_82'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 114, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 114, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 114, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 83, texKey: 'sprite_83'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 115, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 115, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 115, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 84, texKey: 'sprite_84'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 116, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 116, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 116, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 86, texKey: 'sprite_86'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 117, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 117, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 117, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 89, texKey: 'sprite_89'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 118, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 118, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 118, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 91, texKey: 'sprite_91'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 119, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 119, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 119, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 92, texKey: 'sprite_92'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 120, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 120, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 120, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 121, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 121, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 121, visible: true, alpha: 0.7, depth: 41799, tex: 'effects.firespark1_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 93, texKey: 'sprite_93'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 122, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 122, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 122, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 94, texKey: 'sprite_94'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 123, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 123, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 123, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 95, texKey: 'sprite_95'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 121, texKey: 'sprite_121'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 124, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 124, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 124, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 98, texKey: 'sprite_98'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 99, texKey: 'sprite_99'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 125, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 125, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 125, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 100, texKey: 'sprite_100'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 126, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 126, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 126, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 101, texKey: 'sprite_101'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 127, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 127, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 127, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 102, texKey: 'sprite_102'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 103, texKey: 'sprite_103'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 105, texKey: 'sprite_105'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 41, texKey: 'sprite_41'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 106, texKey: 'sprite_106'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 107, texKey: 'sprite_107'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 108, texKey: 'sprite_108'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 110, texKey: 'sprite_110'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 111, texKey: 'sprite_111'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 112, texKey: 'sprite_112'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 113, texKey: 'sprite_113'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 114, texKey: 'sprite_114'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 115, texKey: 'sprite_115'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 116, texKey: 'sprite_116'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 117, texKey: 'sprite_117'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 118, texKey: 'sprite_118'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'smoke', dir: 'none', animKey: 'effect_smoke', textureKey: 'effects.smoke_340x340', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 130, skin: 'smoke', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 130, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 130, visible: true, alpha: 0.1, depth: 2000000020, tex: 'effects.smoke_340x340', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 129, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 129, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 129, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 128, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 128, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 128, visible: true, alpha: 0.7, depth: 44199, tex: 'effects.firespark2_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 131, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 131, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 131, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 119, texKey: 'sprite_119'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 132, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 132, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 132, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 120, texKey: 'sprite_120'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 133, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 133, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 133, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 122, texKey: 'sprite_122'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 128, texKey: 'sprite_128'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 134, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 134, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 134, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|16|r=0', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '16', radius: 0, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|16|r=1', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '16', radius: 1, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|16|r=2', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '16', radius: 2, w: 64, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't064__polearm__spear__thrust__fg__vbase__dup2|16|r=3', texKey: 't064__polearm__spear__thrust__fg__vbase__dup2', frame: '16', radius: 3, w: 64, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.auraTip] id=5 heroIndex=0 dir=right texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=16 offX=0 offY=0 tipDx=25.5 tipDy=15.5 tipLocalX=25.5 tipLocalY=3.5 bounds=minX:-60,maxX:67,minY:-60,maxY:60
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 123, texKey: 'sprite_123'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 137, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 137, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 137, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 124, texKey: 'sprite_124'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 138, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 138, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 138, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 139, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 139, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 139, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 125, texKey: 'sprite_125'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 126, texKey: 'sprite_126'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 140, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 140, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 140, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 127, texKey: 'sprite_127'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 141, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 141, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 141, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 142, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 142, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 142, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 143, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 143, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 143, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 144, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 144, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 144, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 145, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 145, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 145, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 146, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 146, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 146, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 42, texKey: 'sprite_42'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 147, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 147, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 147, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 148, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 148, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 148, visible: true, alpha: 0.7, depth: 41399, tex: 'effects.firespark1_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 149, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 149, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 149, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 150, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 150, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 150, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 151, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 151, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 151, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 148, texKey: 'sprite_148'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 152, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 152, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 152, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 153, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 153, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 153, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 154, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 154, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 154, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 85, texKey: 'sprite_85'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 129, texKey: 'sprite_129'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 131, texKey: 'sprite_131'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 132, texKey: 'sprite_132'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 133, texKey: 'sprite_133'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 134, texKey: 'sprite_134'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 137, texKey: 'sprite_137'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 156, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 156, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 156, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 155, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 155, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 155, visible: true, alpha: 0.7, depth: 42499, tex: 'effects.firespark2_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 138, texKey: 'sprite_138'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 157, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 157, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 157, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 139, texKey: 'sprite_139'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 160, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 160, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 160, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.release] heroIndex=0 arcDeg=10 swingMs=522 reachExtra=4
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|19|r=0', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '19', radius: 0, w: 128, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][tipMisaligned] texKey=t128__sword__arming__attack_slash__fg__vbronze frame=19 radius=0 dir=right align=0.55 minCos=0.55
+HeroEngineInPhaser.ts:42129 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=str.spawn dir=right texKey=t128__sword__arming__attack_slash__fg__vbronze frame=19 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.spawn.fallbackTip] id=6 heroIndex=0 dir=right wTipX=38 wTipY=0 imgW=103 imgH=103
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 140, texKey: 'sprite_140'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 162, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 162, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 162, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 155, texKey: 'sprite_155'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 141, texKey: 'sprite_141'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 163, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 163, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 163, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 142, texKey: 'sprite_142'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 164, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 164, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 164, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 143, texKey: 'sprite_143'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 165, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 165, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 165, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 144, texKey: 'sprite_144'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 145, texKey: 'sprite_145'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 166, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 166, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 166, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 167, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 167, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 167, visible: true, alpha: 0.7, depth: 41499, tex: 'effects.firespark2_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 146, texKey: 'sprite_146'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 168, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 168, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 168, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'smoke', dir: 'none', animKey: 'effect_smoke', textureKey: 'effects.smoke_340x340', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 169, skin: 'smoke', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 169, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 169, visible: true, alpha: 0.1, depth: 2000000020, tex: 'effects.smoke_340x340', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 147, texKey: 'sprite_147'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 171, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 171, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 171, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.release] heroIndex=0 arcDeg=10 swingMs=522 reachExtra=4
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|18|r=0', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '18', radius: 0, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|18|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '18', radius: 1, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|18|r=2', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '18', radius: 2, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|18|r=3', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '18', radius: 3, w: 128, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.spawn.auraTip] id=7 heroIndex=0 dir=right texKey=t128__sword__arming__attack_slash__fg__vbronze frame=18 offX=0 offY=0 tipDx=16.33 tipDy=24.24 tipLocalX=16.33 tipLocalY=24.24 imgW=103 imgH=103
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 149, texKey: 'sprite_149'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 173, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 173, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 173, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 167, texKey: 'sprite_167'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 150, texKey: 'sprite_150'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 174, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 174, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 174, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 151, texKey: 'sprite_151'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 175, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 175, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 175, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 152, texKey: 'sprite_152'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 176, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 176, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 176, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 153, texKey: 'sprite_153'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark3', dir: 'none', animKey: 'effect_firespark3', textureKey: 'effects.firespark3_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 177, skin: 'firespark3', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 177, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 177, visible: true, alpha: 0.7, depth: 41399, tex: 'effects.firespark3_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 178, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 178, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 178, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 154, texKey: 'sprite_154'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 180, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 180, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 180, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 181, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 181, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 181, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 177, texKey: 'sprite_177'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 182, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 182, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 182, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 183, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 183, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 183, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 184, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 184, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 184, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 185, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 185, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 185, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 186, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 186, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 186, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 187, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 187, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 187, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 188, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 188, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 188, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark1', dir: 'none', animKey: 'effect_firespark1', textureKey: 'effects.firespark1_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 189, skin: 'firespark1', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 189, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 189, visible: true, alpha: 0.7, depth: 43899, tex: 'effects.firespark1_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'rays', dir: 'none', animKey: 'effect_rays', textureKey: 'effects.rays_300x300', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 190, skin: 'rays', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 190, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 190, visible: true, alpha: 0.08, depth: 2000000030, tex: 'effects.rays_300x300', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 189, texKey: 'sprite_189'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 156, texKey: 'sprite_156'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 191, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 191, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 191, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 157, texKey: 'sprite_157'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 192, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 192, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 192, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 160, texKey: 'sprite_160'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 193, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 193, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 193, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 162, texKey: 'sprite_162'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 194, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 194, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 194, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 163, texKey: 'sprite_163'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 195, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 195, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 195, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 164, texKey: 'sprite_164'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 196, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 196, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 196, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 165, texKey: 'sprite_165'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 197, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 197, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 197, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.release] heroIndex=0 arcDeg=360 swingMs=522 reachExtra=4
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.spawn.auraTip] id=8 heroIndex=0 dir=right texKey=t128__sword__arming__attack_slash__fg__vbronze frame=18 offX=0 offY=0 tipDx=16.18 tipDy=24.02 tipLocalX=16.18 tipLocalY=24.02 imgW=103 imgH=103
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 166, texKey: 'sprite_166'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 199, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 199, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 199, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 200, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 200, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 200, visible: true, alpha: 0.7, depth: 43399, tex: 'effects.firespark2_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 168, texKey: 'sprite_168'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 201, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 201, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 201, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 171, texKey: 'sprite_171'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 202, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 202, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 202, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 173, texKey: 'sprite_173'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 203, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 203, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 203, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 200, texKey: 'sprite_200'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 174, texKey: 'sprite_174'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 204, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 204, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 204, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 175, texKey: 'sprite_175'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 205, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 205, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 205, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 176, texKey: 'sprite_176'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 206, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 206, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 206, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 178, texKey: 'sprite_178'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 207, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 207, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 207, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 180, texKey: 'sprite_180'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 208, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 208, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 208, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|23|r=0', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '23', radius: 0, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|23|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '23', radius: 1, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|23|r=2', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '23', radius: 2, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|23|r=3', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '23', radius: 3, w: 128, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.auraTip] id=9 heroIndex=0 dir=right texKey=t128__sword__arming__attack_slash__fg__vbronze frame=23 offX=0 offY=0 tipDx=47.5 tipDy=1.5 tipLocalX=47.5 tipLocalY=-10.5 bounds=minX:-57,maxX:64,minY:-57,maxY:57
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 181, texKey: 'sprite_181'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 211, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 211, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 211, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 182, texKey: 'sprite_182'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 212, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 212, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 212, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 183, texKey: 'sprite_183'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 213, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 213, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 213, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 184, texKey: 'sprite_184'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 214, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 214, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 214, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 185, texKey: 'sprite_185'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 215, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 215, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 215, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 186, texKey: 'sprite_186'}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][agi.spawn.auraTip] id=10 heroIndex=0 dir=down texKey=t064__polearm__spear__thrust__fg__vbase__dup2 frame=31 offX=0 offY=0 tipDx=18.5 tipDy=14.5 tipLocalX=22.5 tipLocalY=14.5 bounds=minX:-65,maxX:65,minY:-65,maxY:72
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 218, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 218, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 218, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 130, texKey: 'sprite_130'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 219, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 219, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 219, visible: true, alpha: 0.7, depth: 41199, tex: 'effects.firespark2_32x32', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 187, texKey: 'sprite_187'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 220, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 220, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 220, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 188, texKey: 'sprite_188'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 221, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 221, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 221, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 219, texKey: 'sprite_219'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 223, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 223, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 223, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 191, texKey: 'sprite_191'}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.release] heroIndex=0 arcDeg=37 swingMs=522 reachExtra=4
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|12|r=0', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '12', radius: 0, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|12|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '12', radius: 1, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|12|r=2', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '12', radius: 2, w: 128, …}
+heroAnimGlue.ts:3226 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbronze|12|r=3', texKey: 't128__sword__arming__attack_slash__fg__vbronze', frame: '12', radius: 3, w: 128, …}
+HeroEngineInPhaser.ts:42129 [WPNTRACE][str.spawn.auraTip] id=11 heroIndex=0 dir=down texKey=t128__sword__arming__attack_slash__fg__vbronze frame=12 offX=0 offY=0 tipDx=2.49 tipDy=29.39 tipLocalX=2.49 tipLocalY=29.39 imgW=103 imgH=103
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 192, texKey: 'sprite_192'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 225, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 225, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 225, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 193, texKey: 'sprite_193'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 226, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 226, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 226, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 194, texKey: 'sprite_194'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 227, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 227, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 227, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 195, texKey: 'sprite_195'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 228, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 228, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 228, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 196, texKey: 'sprite_196'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 229, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 229, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 229, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 197, texKey: 'sprite_197'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firespark2', dir: 'none', animKey: 'effect_firespark2', textureKey: 'effects.firespark2_32x32', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 230, skin: 'firespark2', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 230, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 230, visible: true, alpha: 0.7, depth: 44099, tex: 'effects.firespark2_32x32', …}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 231, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 231, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 231, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 199, texKey: 'sprite_199'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 232, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 232, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 232, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 201, texKey: 'sprite_201'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 233, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 233, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 233, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 202, texKey: 'sprite_202'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 230, texKey: 'sprite_230'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 234, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 234, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 234, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 203, texKey: 'sprite_203'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 235, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 235, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 235, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 204, texKey: 'sprite_204'}
+effectAnimGlue.ts:366 [effectAnim] apply {skin: 'firefly', dir: 'none', animKey: 'effect_firefly', textureKey: 'effects.firefly_7x7', texExists: true, …}
+arcadeCompat.ts:10787 [effectmask][init] {spriteId: 236, skin: 'firefly', dir: '', mode: 'paint', wantsPaint: 1, …}
+arcadeCompat.ts:10897 [effectmask][sync] {spriteId: 236, heroIndex: -1, mode: 'paint', maskType: 'none', maskAttached: 1, …}
+arcadeCompat.ts:11274 [effectmask][vis] {spriteId: 236, visible: true, alpha: 0.18, depth: 2000000040, tex: 'effects.firefly_7x7', …}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 205, texKey: 'sprite_205'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 206, texKey: 'sprite_206'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 207, texKey: 'sprite_207'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 208, texKey: 'sprite_208'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 211, texKey: 'sprite_211'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 212, texKey: 'sprite_212'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 213, texKey: 'sprite_213'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 214, texKey: 'sprite_214'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 215, texKey: 'sprite_215'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 218, texKey: 'sprite_218'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 220, texKey: 'sprite_220'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 221, texKey: 'sprite_221'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 223, texKey: 'sprite_223'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 225, texKey: 'sprite_225'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 226, texKey: 'sprite_226'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 227, texKey: 'sprite_227'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 228, texKey: 'sprite_228'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 229, texKey: 'sprite_229'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 231, texKey: 'sprite_231'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 232, texKey: 'sprite_232'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 169, texKey: 'sprite_169'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 233, texKey: 'sprite_233'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 234, texKey: 'sprite_234'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 235, texKey: 'sprite_235'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 236, texKey: 'sprite_236'}
+arcadeCompat.ts:7804 [effectmask][projTexRemove] {spriteId: 190, texKey: 'sprite_190'}

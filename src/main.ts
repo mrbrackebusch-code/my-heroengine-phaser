@@ -1168,6 +1168,56 @@ function _applyPendingSaveIfAny(): void {
 (globalThis as any).__onHostBecameHost = _applyPendingSaveIfAny;
 (globalThis as any).__hero_applySavePayload = _applyHeroSavePayload;
 
+type LoadLatestSaveOpts = {
+  reason?: string;
+  profile?: string;
+  pid?: number;
+};
+
+function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
+  const g: any = globalThis as any;
+  if (!g.__isHost) return Promise.resolve({ ok: false, reason: "not-host" });
+  if (g.__heroLoadLatestInFlight) return Promise.resolve({ ok: false, reason: "busy" });
+
+  const net: any = g.__net;
+  if (!net || typeof net.sendSaveListRequest !== "function" || typeof net.sendSaveLoadRequest !== "function") {
+    return Promise.resolve({ ok: false, reason: "no-net" });
+  }
+
+  const reason = opts && typeof opts.reason === "string" ? opts.reason : "";
+  const profile = opts && typeof opts.profile === "string" ? opts.profile : "";
+
+  g.__heroLoadLatestInFlight = true;
+
+  return net
+    .sendSaveListRequest()
+    .then((res: any) => {
+      const entries = res && Array.isArray(res.entries) ? res.entries : [];
+      if (!entries.length) return { ok: false, reason: "no-saves" };
+      const best = entries[0];
+      const file = best && typeof best.file === "string" ? best.file : "";
+      if (!file) return { ok: false, reason: "no-file" };
+      logSave("[save] loading latest autosave", {
+        file,
+        savedAt: best.savedAt ?? null,
+        reason: reason || null,
+        profile: profile || null,
+      });
+      return net.sendSaveLoadRequest({ file }).then((load: any) => {
+        if (!load || load.error || !load.payload) {
+          return { ok: false, reason: load?.error || "load-failed" };
+        }
+        const ok = _applyHeroSavePayload(load.payload, "latest-autosave");
+        return { ok: !!ok, reason: ok ? "loaded" : "apply-failed" };
+      });
+    })
+    .finally(() => {
+      g.__heroLoadLatestInFlight = false;
+    });
+}
+
+(globalThis as any).__hero_requestLoadLatestSave = _requestLoadLatestSave;
+
 
 
 

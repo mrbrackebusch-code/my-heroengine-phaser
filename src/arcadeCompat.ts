@@ -1331,6 +1331,8 @@ const EFFECT_FPS_DATA_KEY = "effectFps";
 const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
 const EFFECT_MODE_DATA_KEY = "effectMode";
 const EFFECT_SCALE_DATA_KEY = "effectScale";
+const EFFECT_SCALE_X_DATA_KEY = "effectScaleX";
+const EFFECT_SCALE_Y_DATA_KEY = "effectScaleY";
 const EFFECT_BRUSH_PX_DATA_KEY = "effectBrushPx";
 const EFFECT_POP_MS_DATA_KEY = "effectPopMs";
 const EFFECT_POP_SCALE_DATA_KEY = "effectPopScale";
@@ -1344,6 +1346,7 @@ const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
 const EFFECT_FLIP_X_DATA_KEY = "effectFlipX";
 const EFFECT_FLIP_Y_DATA_KEY = "effectFlipY";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
+const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
 
 const EFFECT_BLANK_TEX_KEY = "__effectBlankTex";
 const EFFECT_FORCE_TOP_DEPTH = 2000000000;
@@ -1631,9 +1634,6 @@ const INT_PROJ_CLOUD_FLASH_BASE = 0.35;
 const INT_PROJ_CLOUD_FLASH_AMP = 0.55;
 const INT_PROJ_CLOUD_FLASH_SPEED = 0.035;
 const INT_PROJ_CLOUD_Y_OFFSET = 0;
-const INT_PROJ_PULSE_MIN_FRAME = 3;
-const INT_PROJ_PULSE_MAX_FRAME = 7;
-const INT_PROJ_PULSE_SWEEPS = 5;
 const INT_SPELL_CREATED_AT_MS_KEY = "INT_CA";
 const INT_SPELL_SPAWNED_AT_MS_KEY = "INT_SA";
 
@@ -2073,45 +2073,11 @@ function _intProj_dumpOnce(sc: any, anyNative: any, spr: Phaser.GameObjects.Spri
 function _intProj_followProjectileOverlay(
     sc: any,
     anyNative: any,
-    s: any,
     native: any,
     spr: Phaser.GameObjects.Sprite,
     shouldBeVisible: boolean
 ): void {
     const now = (sc.time?.now ?? 0) as number;
-    const texTotal = (((spr as any).texture as any)?.frameTotal ?? 0) | 0;
-    const minIdx = INT_PROJ_PULSE_MIN_FRAME | 0;
-    const maxIdx = Math.min(INT_PROJ_PULSE_MAX_FRAME | 0, (texTotal - 1) | 0) | 0;
-
-    if (maxIdx >= minIdx) {
-        let startMs = _intProj_readDataNumberMaybe(s, INT_SPELL_SPAWNED_AT_MS_KEY) | 0;
-        if (startMs <= 0) startMs = _intProj_readDataNumberMaybe(s, INT_SPELL_CREATED_AT_MS_KEY) | 0;
-        if (startMs <= 0) {
-            startMs = (anyNative.__intProjPulseStartMs | 0) || (now | 0);
-            if (!anyNative.__intProjPulseStartMs) anyNative.__intProjPulseStartMs = startMs | 0;
-        }
-
-        let periodMs = _intProj_readDataNumberMaybe(s, INT_PULSE_PERIOD_MS_KEY) | 0;
-        if (periodMs <= 0) periodMs = INT_PULSE_DEFAULT_PERIOD_MS;
-
-        const span = Math.max(1, (maxIdx - minIdx + 1) | 0);
-        const frameMs = Math.max(1, Math.floor(periodMs / span));
-        const sweepMs = Math.max(1, (frameMs * span) | 0);
-        const totalMs = Math.max(1, (sweepMs * (INT_PROJ_PULSE_SWEEPS | 0)) | 0);
-        const elapsed = Math.max(0, (now - startMs) | 0);
-
-        let frameIdx = maxIdx;
-        if (elapsed < totalMs) {
-            const sweep = Math.floor(elapsed / sweepMs);
-            const step = Math.min(span - 1, Math.floor((elapsed % sweepMs) / frameMs));
-            frameIdx = ((sweep % 2) === 0) ? (minIdx + step) : (maxIdx - step);
-        }
-
-        if ((anyNative.__intProjPulseFrame | 0) !== (frameIdx | 0)) {
-            anyNative.__intProjPulseFrame = frameIdx | 0;
-            spr.setFrame(frameIdx | 0);
-        }
-    }
 
     (spr as any).rotation = now * 0.006;
 
@@ -2259,7 +2225,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     // --------------------------------------------------
     // FOLLOW ENGINE PROJECTILE (authoritative)
     // --------------------------------------------------
-    _intProj_followProjectileOverlay(sc, anyNative, s, native, spr, shouldBeVisible);
+    _intProj_followProjectileOverlay(sc, anyNative, native, spr, shouldBeVisible);
 
     // --------------------------------------------------
     // Post-state log (once on first success, then only on meaningful change)
@@ -4405,6 +4371,12 @@ class Image {
         this.width = width;
         this.height = height;
         this._pixels = new Uint8Array(width * height);
+    }
+
+    clone(): Image {
+        const img = new Image(this.width, this.height);
+        img._pixels.set(this._pixels);
+        return img;
     }
 
     private idx(x: number, y: number): number {
@@ -9946,6 +9918,21 @@ function _syncHeroPath(
     } catch { /* ignore */ }
     _applyHeroAuraGlow(nativeAny, auraActive, auraGlow, ctx.sc);
 
+    try {
+        const now = game.runtime() | 0;
+        const flashUntil = sprites.readDataNumber(s, "__hitFlashUntil") | 0;
+        if (flashUntil > now) {
+            if (!nativeAny.__hitFlashActive) {
+                if (typeof nativeAny.setTintFill === "function") nativeAny.setTintFill(0xffffff);
+                else if (typeof nativeAny.setTint === "function") nativeAny.setTint(0xffffff);
+                nativeAny.__hitFlashActive = true;
+            }
+        } else if (nativeAny.__hitFlashActive) {
+            if (typeof nativeAny.clearTint === "function") nativeAny.clearTint();
+            nativeAny.__hitFlashActive = false;
+        }
+    } catch { /* ignore */ }
+
     if (DEBUG_NPC_PIPELINE) {
         const isNpc = !!dataAny.isNpc || !!dataAny.npcLpc || !!dataAny._npcRole;
         if (isNpc) {
@@ -10059,6 +10046,21 @@ function _syncEnemyActorPath(
     nativeAny.setData("name",      monsterId);
     nativeAny.setData("phase",     phase);
     nativeAny.setData("dir",       dir);
+
+    const scaleX1000 = sprites.readDataNumber(s, "__monsterScaleX1000") | 0;
+    const scaleY1000 = sprites.readDataNumber(s, "__monsterScaleY1000") | 0;
+    if (scaleX1000 > 0 || scaleY1000 > 0) {
+        const sx = (scaleX1000 > 0 ? (scaleX1000 / 1000) : 1);
+        const sy = (scaleY1000 > 0 ? (scaleY1000 / 1000) : 1);
+        if (nativeAny.__monsterBaseScaleX !== sx || nativeAny.__monsterBaseScaleY !== sy) {
+            if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
+            else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
+            nativeAny.__monsterBaseScaleX = sx;
+            nativeAny.__monsterBaseScaleY = sy;
+            nativeAny.__hitBaseScaleX = sx;
+            nativeAny.__hitBaseScaleY = sy;
+        }
+    }
 
     if (!isEnemyLpc) {
         const glueAny: any = (globalThis as any).monsterAnimGlue || monsterAnimGlue;
@@ -10557,7 +10559,14 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
     }
 }
 
-function _effectApplyScale(nativeAny: any, scale: number, hasScale: boolean, pulseMult: number): void {
+function _effectApplyScale(
+    nativeAny: any,
+    scale: number,
+    hasScale: boolean,
+    pulseMult: number,
+    scaleX: number,
+    scaleY: number
+): void {
     if (!nativeAny) return;
     if (nativeAny.__effectBaseScaleX == null) {
         nativeAny.__effectBaseScaleX = (typeof nativeAny.scaleX === "number") ? nativeAny.scaleX : 1;
@@ -10568,18 +10577,22 @@ function _effectApplyScale(nativeAny: any, scale: number, hasScale: boolean, pul
     const base = (hasScale && Number.isFinite(scale) && scale > 0) ? scale : 1;
     const pulse = (Number.isFinite(pulseMult) && pulseMult > 0) ? pulseMult : 1;
     const finalScale = base * pulse;
+    const axisX = (Number.isFinite(scaleX) && scaleX > 0) ? scaleX : 1;
+    const axisY = (Number.isFinite(scaleY) && scaleY > 0) ? scaleY : 1;
     const scaleOk = finalScale > 0 && Number.isFinite(finalScale);
     if (scaleOk) {
-        const sx = baseX * finalScale;
-        const sy = baseY * finalScale;
+        const sx = baseX * finalScale * axisX;
+        const sy = baseY * finalScale * axisY;
         if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
         else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
         nativeAny.__effectScaleApplied = finalScale;
         return;
     }
     if (nativeAny.__effectScaleApplied) {
-        if (typeof nativeAny.setScale === "function") nativeAny.setScale(baseX, baseY);
-        else { nativeAny.scaleX = baseX; nativeAny.scaleY = baseY; }
+        const sx = baseX * axisX;
+        const sy = baseY * axisY;
+        if (typeof nativeAny.setScale === "function") nativeAny.setScale(sx, sy);
+        else { nativeAny.scaleX = sx; nativeAny.scaleY = sy; }
         nativeAny.__effectScaleApplied = 0;
     }
 }
@@ -10630,7 +10643,10 @@ function _syncEffectPath(
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
     const hasRepeat = Object.prototype.hasOwnProperty.call(data, EFFECT_REPEAT_DATA_KEY);
     const hasScale = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_DATA_KEY);
+    const hasScaleX = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_X_DATA_KEY);
+    const hasScaleY = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_Y_DATA_KEY);
     const hasBrush = Object.prototype.hasOwnProperty.call(data, EFFECT_BRUSH_PX_DATA_KEY);
+    const hasFrameIndex = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_INDEX_DATA_KEY);
     const hasPopMs = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_MS_DATA_KEY);
     const hasPopScale = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_SCALE_DATA_KEY);
     const hasPopStart = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_START_MS_DATA_KEY);
@@ -10653,6 +10669,8 @@ function _syncEffectPath(
     const fps = hasFps ? sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY) : 0;
     const repeat = hasRepeat ? sprites.readDataNumber(s, EFFECT_REPEAT_DATA_KEY) : 0;
     const scale = hasScale ? sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY) : 0;
+    const scaleX = hasScaleX ? sprites.readDataNumber(s, EFFECT_SCALE_X_DATA_KEY) : 0;
+    const scaleY = hasScaleY ? sprites.readDataNumber(s, EFFECT_SCALE_Y_DATA_KEY) : 0;
     const brushPx = hasBrush ? sprites.readDataNumber(s, EFFECT_BRUSH_PX_DATA_KEY) : 0;
     const popMs = hasPopMs ? sprites.readDataNumber(s, EFFECT_POP_MS_DATA_KEY) : 0;
     const popScale = hasPopScale ? sprites.readDataNumber(s, EFFECT_POP_SCALE_DATA_KEY) : 0;
@@ -10668,6 +10686,7 @@ function _syncEffectPath(
     const maskInvertRaw = hasMaskInvert ? sprites.readDataNumber(s, EFFECT_MASK_INVERT_DATA_KEY) : 0;
     const maskRadiusRaw = hasMaskRadius ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_DATA_KEY) : 0;
     const maskRadiusPxRaw = hasMaskRadiusPx ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_PX_DATA_KEY) : 0;
+    const frameIndex = hasFrameIndex ? sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY) : 0;
     const maskInvert = (maskInvertRaw | 0) !== 0;
     const modeRaw = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim().toLowerCase();
     const tint = Number.isFinite(tintRaw) ? (tintRaw as number) | 0 : 0;
@@ -10687,7 +10706,10 @@ function _syncEffectPath(
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
     if (hasRepeat) data[EFFECT_REPEAT_DATA_KEY] = repeat;
     if (hasScale) data[EFFECT_SCALE_DATA_KEY] = scale;
+    if (hasScaleX) data[EFFECT_SCALE_X_DATA_KEY] = scaleX;
+    if (hasScaleY) data[EFFECT_SCALE_Y_DATA_KEY] = scaleY;
     if (hasBrush) data[EFFECT_BRUSH_PX_DATA_KEY] = brushPx;
+    if (hasFrameIndex) data[EFFECT_FRAME_INDEX_DATA_KEY] = frameIndex;
     if (modeRaw) data[EFFECT_MODE_DATA_KEY] = modeRaw;
     if (hasPopMs) data[EFFECT_POP_MS_DATA_KEY] = popMs;
     if (hasPopScale) data[EFFECT_POP_SCALE_DATA_KEY] = popScale;
@@ -10734,7 +10756,10 @@ function _syncEffectPath(
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
     if (hasRepeat) nativeAny.setData(EFFECT_REPEAT_DATA_KEY, repeat);
     if (hasScale) nativeAny.setData(EFFECT_SCALE_DATA_KEY, scale);
+    if (hasScaleX) nativeAny.setData(EFFECT_SCALE_X_DATA_KEY, scaleX);
+    if (hasScaleY) nativeAny.setData(EFFECT_SCALE_Y_DATA_KEY, scaleY);
     if (hasBrush) nativeAny.setData(EFFECT_BRUSH_PX_DATA_KEY, brushPx);
+    if (hasFrameIndex) nativeAny.setData(EFFECT_FRAME_INDEX_DATA_KEY, frameIndex);
     nativeAny.setData(EFFECT_MODE_DATA_KEY, modeRaw);
     if (hasPopMs) nativeAny.setData(EFFECT_POP_MS_DATA_KEY, popMs);
     if (hasPopScale) nativeAny.setData(EFFECT_POP_SCALE_DATA_KEY, popScale);
@@ -11004,7 +11029,7 @@ function _syncEffectPath(
     }
 
     const totalMult = popMult * introMult;
-    _effectApplyScale(nativeAny, scale, hasScale, totalMult);
+    _effectApplyScale(nativeAny, scale, hasScale, totalMult, scaleX, scaleY);
 
     if (hasFlipX) {
         const fx = (flipXRaw | 0) !== 0;

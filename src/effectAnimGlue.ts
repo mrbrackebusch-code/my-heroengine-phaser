@@ -11,6 +11,7 @@ const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 const EFFECT_ANIM_DELAY_MS_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
 const EFFECT_FRAME_WINDOW_MS_KEY = "effectFrameWindowMs";
+const EFFECT_FRAME_INDEX_KEY = "effectFrameIndex";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
@@ -251,6 +252,34 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
                 } catch { }
             }
         }
+        return;
+    }
+
+    const frameIndexRaw = data.get(EFFECT_FRAME_INDEX_KEY);
+    const frameIndex = (typeof frameIndexRaw === "number") ? frameIndexRaw : Number(frameIndexRaw);
+    if (Number.isFinite(frameIndex) && frameIndex >= 0) {
+        const frames = resolved.frameIndices;
+        if (!frames || !frames.length) return;
+        const idx = Math.min(frames.length - 1, Math.max(0, (frameIndex | 0)));
+        const frame = frames[idx];
+        try {
+            sprite.setTexture(resolved.textureKey, frame);
+            if (sprite.anims && sprite.anims.isPlaying) sprite.anims.stop();
+        } catch { }
+
+        const hidMissing = !!data.get(EFFECT_HIDE_MISSING_TEX_KEY);
+        if (hidMissing) {
+            try {
+                data.set(EFFECT_HIDE_MISSING_TEX_KEY, 0);
+                sprite.setVisible(true);
+            } catch { }
+        }
+
+        try {
+            data.set(LAST_EFFECT_SKIN_KEY, resolvedId);
+            data.set(LAST_EFFECT_DIR_KEY, String(dir || "none").toLowerCase());
+            data.set(LAST_EFFECT_ANIM_KEY, `manual_${resolvedId}`);
+        } catch { }
         return;
     }
 
