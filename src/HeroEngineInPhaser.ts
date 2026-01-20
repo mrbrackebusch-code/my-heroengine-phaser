@@ -89,6 +89,7 @@ import {
     DEBUG_WORLDGEN_BRIDGE_LOGS,
     DEBUG_WORLDGEN_FORCE_BRIDGE_VERTICAL,
     DEBUG_WORLD_SNAPSHOT,
+    DEBUG_WPN_AURA_ALWAYS_SHOW,
     DEBUG_WPN_AURA_TRACE,
     DEBUG_WPN_AURA_TRACE_INTERVAL_MS,
     DEBUG_WPN_AURA_TRACE_VERBOSE,
@@ -2530,6 +2531,18 @@ function _updateStrengthSwingFxSegments(
     }
 }
 
+function _setStrengthSwingFxSegmentsVisible(proj: Sprite, visible: boolean): void {
+    if (!proj) return;
+    const count = sprites.readDataNumber(proj, STR_FX_SEG_COUNT_KEY) | 0;
+    if (count <= 0) return;
+    const hide = !visible;
+    for (let i = 0; i < count; i++) {
+        const fx = sprites.readDataSprite(proj, _strengthSwingFxSegKey(i));
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue;
+        fx.setFlag(SpriteFlag.Invisible, hide);
+    }
+}
+
 const EFFECT_TINT_DATA_KEY = "effectTint";
 const EFFECT_MODE_DATA_KEY = "effectMode";
 const EFFECT_SCALE_DATA_KEY = "effectScale";
@@ -2585,8 +2598,9 @@ const PROJ_HIDE_BASE_FOR_MASK_FX = false;
 const PROJECTILE_FORCE_BORDER = true;
 const PROJECTILE_HIDE_FILL = true;
 const PROJECTILE_EMERGENCY_FILL = true;
-const PROJECTILE_EMERGENCY_SCALE = 2;
+const PROJECTILE_EMERGENCY_SCALE = 1;
 const PROJECTILE_EMERGENCY_FADE = true;
+const PROJECTILE_TRACE_INSTANT = true;
 const PROJECTILE_EMERGENCY_FADE_STEP_MS = 32;
 const PROJECTILE_EMERGENCY_FADE_PHASE_MS = 24;
 const PROJECTILE_EMERGENCY_FADE_DIVS: number[] = [6, 4, 3, 2, 1];
@@ -2613,6 +2627,12 @@ const STR_FX_TIP_ALPHA_MIN = 0.6;
 const STR_OUTLINE_TIP_ONLY = true;
 const STR_OUTLINE_TIP_DEPTH_PX = 1;
 const STR_OUTLINE_CARDINAL_ONLY = true;
+const STR_USE_WPN_AURA_OUTLINE_ONLY = true;
+const STR_WPN_AURA_OUTLINE_RADIUS = 3;
+const STR_ARC_BASE_MAX_WIDTH_PX = 32;
+const STR_ARC_BASE_MIN_WIDTH_PX = 1;
+const STR_ARC_MAX_FRONT_DEG = 180;
+const STR_SHOW_CHARGE_TRAIL = false;
 const STR_ARC_MAX_WIDTH_PX = 32;
 const STR_ARC_MIN_WIDTH_PX = 1;
 const STR_ARC_STEP_DEG = 3;
@@ -2620,9 +2640,37 @@ const STR_ARC_SWEEP_START_FRAC = 0.25;
 const STR_SLASH_MASK_START_FRAC = STR_ARC_SWEEP_START_FRAC;
 const STR_TIP_TRACE_SIZE_PX = 16;
 const STR_CHARGE_TRACE_SIZE_PX = 6;
+const STR_CHARGE_TIP_RADII = [3, 2];
+const STR_DEBUG_FRAME_MS_MULT = 1;
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
 const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
+const STR_ARC_START_FRAC_KEY = "SS_ARC_START_FRAC";
+const STR_WIND_MS_KEY = "SS_WIND_MS";
+const STR_FWD_MS_KEY = "SS_FWD_MS";
+const STR_LAND_MS_KEY = "SS_LAND_MS";
+const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
+
+type StrengthFrameRule = {
+    tipRadii: number[];
+    lineMaxIdx: number;
+    allowTip: boolean;
+    allowLine: boolean;
+    allowBackWave: boolean;
+    allowSlashMask: boolean;
+    allowArc: boolean;
+};
+
+const STR_SWING_FRAME_RULES: StrengthFrameRule[] = [
+    // frames 1..3 (windup): only tiny tip aura
+    { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
+    { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
+    { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
+    // frames 4..6 (forward): weapon trail + slash mask, arc begins at frame 5
+    { tipRadii: [2, 1], lineMaxIdx: 2, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: false },
+    { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true },
+    { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true }
+];
 const AGI_FX_SEG_COUNT_KEY = "AGI_FX_N";
 const AGI_FX_SEG_BASE_KEY = "AGI_FX_";
 const AGI_FX_SEG_ACTIVE_KEY = "AGI_FX_ACTIVE";
@@ -2672,6 +2720,8 @@ const WPN_AURA_TIP_SIDE_EPS = 0.75;
 const WPN_DOWN_SIDE_CLIP_EPS = 0;
 const WPN_DOWN_FRONT_CLIP_EPS = 0;
 const WPN_DOWN_FORCE_SIDE_SIGN = -1;
+const WPN_AURA_DEBUG_COLORS = [2, 7, 9, 14]; // r0..r3 overlay colors
+const WPN_AURA_DEBUG_Z_BOOST = 5000;
 const HERO_AURA_SIDE_PAD_PX = 2;
 const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const WPN_TRACE_ID_KEY = "__wpnTraceId";
@@ -2863,6 +2913,17 @@ function _projectileEmergencyFill(img: Image, element: number): void {
             if (sel === 0) color = highlight;
             else if (sel === 1) color = accent;
             img.setPixel(x, y, color | 0);
+        }
+    }
+}
+
+function _projectileClearImage(img: Image): void {
+    if (!img) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            if (img.getPixel(x, y) !== 0) img.setPixel(x, y, 0);
         }
     }
 }
@@ -3222,6 +3283,7 @@ const HERO_DATA: Record<string, string> = {
     STR_CHARGE_REACH_PX: "strChgReach",// number (reach extra for charge visuals)
 
     STR_CHARGE_FX_SPR: "strChgFx",     // sprite (charge trail visual)
+    WPN_AURA_DEBUG_SPR: "wpnAuraDbg",  // sprite (weapon aura debug overlay)
 
 
 
@@ -15304,7 +15366,8 @@ function _dunTickObjectivePadHint(nowMs: number): void {
 function _dunTickObjectiveEvaluation(nowMs: number): void {
 
     const allowInteractAfterObjective = (_dunFloorKind === DUNGEON_KIND_ENTRANCE)
-    if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY && !allowInteractAfterObjective) return
+    const allowChestAfterObjective = _dunHasPendingChestObjectives()
+    if (_dunObjectiveDone && _dunFloorKind !== DUNGEON_KIND_STORY && !allowInteractAfterObjective && !allowChestAfterObjective) return
 
     const logInteract = (DEBUG_INTERACT_LOGS || DEBUG_CHEST_INTERACT_LOGS)
     const logInteractTick = logInteract && DEBUG_INTERACT_TICK_LOGS
@@ -39420,6 +39483,16 @@ const STR_SWING_SEG_FORWARD_MIN_MS =
     Math.idiv((STR_SWING_SEG_FORWARD_FRAMES * 1000 + STR_SWING_SEG_FPS - 1), STR_SWING_SEG_FPS) | 0
 const STR_SWING_SEG_LANDING_MIN_MS =
     Math.idiv((STR_SWING_SEG_LANDING_FRAMES * 1000 + STR_SWING_SEG_FPS - 1), STR_SWING_SEG_FPS) | 0
+const STR_SWING_FRAME_OVERRIDE_ENABLE = true;
+const STR_SWING_FRAME_SCHEDULE_ENABLE = true;
+const STR_SWING_RETURN_FCO_KEY = "strSwingRetFco";
+const STR_SWING_WINDUP_FRAME_COLS = [0, 1, 2];
+const STR_SWING_FORWARD_FRAME_COLS = [3, 4, 5];
+const STR_SWING_RETURN_FRAME_COLS = [0];
+const STR_SWING_WINDUP_FRAME_MS = [60, 60, 60];
+const STR_SWING_FORWARD_FRAME_MS = [50, 30, 15];
+const STR_SWING_RETURN_FRAME_MS = [80];
+const STR_SWING_WINDUP_FCO_MAX_MS = 180;
 
 
 
@@ -39648,9 +39721,163 @@ function updateStrengthPendingSwingSpawnsAllHeroes(nowMs: number): void {
 
 }
 
+function _strengthSwingSegmentDurations(phaseDur: number): { windMs: number; fwdMs: number; landMs: number } {
+    const dur = Math.max(1, phaseDur | 0);
+    let windMs = Math.idiv((dur | 0) * STR_SWING_SEG_WINDUP_FRAC_X1000, 1000) | 0;
+    let fwdMs = Math.idiv((dur | 0) * STR_SWING_SEG_FORWARD_FRAC_X1000, 1000) | 0;
+    let landMs = (dur - windMs - fwdMs) | 0;
 
+    if (STR_SWING_FRAME_SCHEDULE_ENABLE) {
+        const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+        const scaleMs = (v: number): number => {
+            const base = v | 0;
+            if (mult <= 1 || base <= 0) return base;
+            return Math.max(1, (base * mult) | 0);
+        };
+        const wSum = (STR_SWING_WINDUP_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
+        const fSum = (STR_SWING_FORWARD_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
+        const rSum = (STR_SWING_RETURN_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
+        const total = (wSum + fSum + rSum) | 0;
+        if (total > 0) {
+            windMs = wSum | 0;
+            fwdMs = fSum | 0;
+            landMs = rSum | 0;
+            if (total > dur) {
+                const scale = dur / total;
+                windMs = Math.max(1, Math.round(windMs * scale));
+                fwdMs = Math.max(1, Math.round(fwdMs * scale));
+                landMs = Math.max(1, Math.round(landMs * scale));
+            }
+        }
+    }
 
+    if (!STR_SWING_FRAME_SCHEDULE_ENABLE) {
+        const windMin = STR_SWING_SEG_WINDUP_MIN_MS | 0;
+        const fwdMin = STR_SWING_SEG_FORWARD_MIN_MS | 0;
+        const landMin = STR_SWING_SEG_LANDING_MIN_MS | 0;
 
+        if (windMs < windMin) windMs = windMin;
+        if (fwdMs < fwdMin) fwdMs = fwdMin;
+        if (landMs < landMin) landMs = landMin;
+
+        let over = ((windMs + fwdMs + landMs - dur) | 0);
+        if (over > 0) {
+            let shave = Math.min(over, Math.max(0, (landMs - landMin) | 0)) | 0;
+            if (shave > 0) { landMs = (landMs - shave) | 0; over = (over - shave) | 0; }
+
+            shave = Math.min(over, Math.max(0, (fwdMs - fwdMin) | 0)) | 0;
+            if (shave > 0) { fwdMs = (fwdMs - shave) | 0; over = (over - shave) | 0; }
+
+            shave = Math.min(over, Math.max(0, (windMs - windMin) | 0)) | 0;
+            if (shave > 0) { windMs = (windMs - shave) | 0; over = (over - shave) | 0; }
+        }
+    }
+
+    return { windMs: windMs | 0, fwdMs: fwdMs | 0, landMs: landMs | 0 };
+}
+
+function _pickFrameBySchedule(
+    elapsedMs: number,
+    frames: number[],
+    frameMs?: number[],
+    maxMs?: number
+): number {
+    if (!frames || frames.length === 0) return 0;
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+    const scaleMs = (v: number): number => {
+        const base = v | 0;
+        if (mult <= 1 || base <= 0) return base;
+        return Math.max(1, (base * mult) | 0);
+    };
+    const ms = (frameMs && frameMs.length === frames.length) ? frameMs : null;
+    const total = ms ? ms.reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) : frames.length;
+    const cap = (maxMs != null && maxMs > 0) ? (scaleMs(maxMs | 0) | 0) : 0;
+    const effTotal = cap > 0 ? Math.min(cap, total | 0) : (total | 0);
+    const elapsed = Math.max(0, elapsedMs | 0);
+    if (elapsed >= effTotal) return frames[frames.length - 1] | 0;
+    if (!ms) {
+        const slice = Math.max(1, Math.idiv(effTotal | 0, Math.max(1, frames.length)));
+        const idx = Math.min(frames.length - 1, Math.idiv(elapsed, slice));
+        return frames[idx] | 0;
+    }
+    let acc = 0;
+    for (let i = 0; i < frames.length; i++) {
+        acc += Math.max(1, scaleMs(ms[i] | 0));
+        if (elapsed < acc) return frames[i] | 0;
+    }
+    return frames[frames.length - 1] | 0;
+}
+
+function _strengthFrameColForSeg(segName: string, elapsedMs: number, segDurMs: number): number {
+    if (segName === "prepareToCharge") {
+        return _pickFrameBySchedule(
+            elapsedMs | 0,
+            STR_SWING_WINDUP_FRAME_COLS,
+            STR_SWING_WINDUP_FRAME_MS,
+            STR_SWING_WINDUP_FCO_MAX_MS | 0
+        );
+    }
+    if (segName === "charging") {
+        return _pickFrameBySchedule(
+            elapsedMs | 0,
+            STR_SWING_FORWARD_FRAME_COLS,
+            STR_SWING_FORWARD_FRAME_MS
+        );
+    }
+    return _pickFrameBySchedule(
+        elapsedMs | 0,
+        STR_SWING_RETURN_FRAME_COLS,
+        STR_SWING_RETURN_FRAME_MS
+    );
+}
+
+function _strengthFrameRuleFor(segName: string, frameCol: number): StrengthFrameRule {
+    const base = STR_SWING_FRAME_RULES[clampInt(frameCol | 0, 0, STR_SWING_FRAME_RULES.length - 1)];
+    if (segName === "release") {
+        return {
+            tipRadii: [],
+            lineMaxIdx: base.lineMaxIdx,
+            allowTip: false,
+            allowLine: false,
+            allowBackWave: false,
+            allowSlashMask: false,
+            allowArc: true
+        };
+    }
+    return base;
+}
+
+function _stampStrengthTipRadii(
+    img: Image,
+    minX: number,
+    minY: number,
+    tipLocalX: number,
+    tipLocalY: number,
+    shapes: WeaponAuraTipShape[],
+    radii: number[],
+    color: number,
+    edgeColor: number,
+    clip?: WeaponAuraClip | null
+): void {
+    if (!img || !shapes || !radii) return;
+    for (const r of radii) {
+        const idx = clampInt(r | 0, 0, 3);
+        const shape = shapes[idx];
+        if (!shape) continue;
+        _stampWeaponAuraAt(
+            img,
+            minX,
+            minY,
+            tipLocalX,
+            tipLocalY,
+            shape,
+            color,
+            edgeColor,
+            STR_OUTLINE_CARDINAL_ONLY,
+            clip
+        );
+    }
+}
 
 function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: number): void {
 
@@ -39679,6 +39906,13 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
             sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, 0)
 
         }
+        if ((sprites.readDataNumber(hero, STR_SWING_RETURN_FCO_KEY) | 0) !== 0) {
+            clearHeroFrameColOverride(heroIndex);
+            sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
+        }
+        if ((sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0) !== 0) {
+            sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, 0);
+        }
 
         return
 
@@ -39703,53 +39937,14 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
 
     // Compute segment durations from fractions
-
-    let windMs = Math.idiv((phaseDur | 0) * STR_SWING_SEG_WINDUP_FRAC_X1000, 1000) | 0
-
-    let fwdMs  = Math.idiv((phaseDur | 0) * STR_SWING_SEG_FORWARD_FRAC_X1000, 1000) | 0
-
-    let landMs = (phaseDur - windMs - fwdMs) | 0
-
-
-
-    // Clamp each to min
-
-    const windMin = STR_SWING_SEG_WINDUP_MIN_MS | 0
-    const fwdMin = STR_SWING_SEG_FORWARD_MIN_MS | 0
-    const landMin = STR_SWING_SEG_LANDING_MIN_MS | 0
-
-    if (windMs < windMin) windMs = windMin
-
-    if (fwdMs  < fwdMin) fwdMs  = fwdMin
-
-    if (landMs < landMin) landMs = landMin
-
-
-
-    // If clamping pushed us over budget, shave back (never below min)
-
-    let over = ((windMs + fwdMs + landMs - phaseDur) | 0)
-
-    if (over > 0) {
-
-        // Prefer shaving landing first, then forward, then windup
-
-        let shave = Math.min(over, Math.max(0, (landMs - landMin) | 0)) | 0
-
-        if (shave > 0) { landMs = (landMs - shave) | 0; over = (over - shave) | 0 }
-
-
-
-        shave = Math.min(over, Math.max(0, (fwdMs - fwdMin) | 0)) | 0
-
-        if (shave > 0) { fwdMs = (fwdMs - shave) | 0; over = (over - shave) | 0 }
-
-
-
-        shave = Math.min(over, Math.max(0, (windMs - windMin) | 0)) | 0
-
-        if (shave > 0) { windMs = (windMs - shave) | 0; over = (over - shave) | 0 }
-
+    const segs = _strengthSwingSegmentDurations(phaseDur | 0);
+    let windMs = segs.windMs | 0;
+    let fwdMs = segs.fwdMs | 0;
+    let landMs = segs.landMs | 0;
+    const skipWindup = (sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0) !== 0;
+    if (skipWindup && windMs > 0) {
+        fwdMs = (fwdMs + windMs) | 0;
+        windMs = 0;
     }
 
 
@@ -39789,6 +39984,33 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
     }
 
 
+
+    // Strength swing return-to-guard frame override
+    if (STR_SWING_FRAME_OVERRIDE_ENABLE) {
+        const elapsed = Math.max(0, (nowMs - segStart) | 0);
+        let frames: number[] | null = null;
+        let frameMs: number[] | undefined;
+        let maxMs = 0;
+        if (segName === "prepareToCharge") {
+            frames = STR_SWING_WINDUP_FRAME_COLS;
+            frameMs = STR_SWING_WINDUP_FRAME_MS;
+            maxMs = STR_SWING_WINDUP_FCO_MAX_MS | 0;
+        } else if (segName === "charging") {
+            frames = STR_SWING_FORWARD_FRAME_COLS;
+            frameMs = STR_SWING_FORWARD_FRAME_MS;
+        } else if (segName === "release") {
+            frames = STR_SWING_RETURN_FRAME_COLS;
+            frameMs = STR_SWING_RETURN_FRAME_MS;
+        }
+        if (frames && frames.length) {
+            const col = _pickFrameBySchedule(elapsed | 0, frames, frameMs, maxMs | 0);
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0);
+            sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 1);
+        } else if ((sprites.readDataNumber(hero, STR_SWING_RETURN_FCO_KEY) | 0) !== 0) {
+            clearHeroFrameColOverride(heroIndex);
+            sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
+        }
+    }
 
     // Only rewrite when segment actually changes (less churn)
 
@@ -40032,6 +40254,9 @@ function beginStrengthCharge(
     let maxMs = stats[STAT.MOVE_DURATION] | 0
 
     if (maxMs <= 0) maxMs = 1
+    if (STR_DEBUG_FRAME_MS_MULT > 1) {
+        maxMs = Math.max(1, (maxMs | 0) * (STR_DEBUG_FRAME_MS_MULT | 0)) | 0
+    }
 
 
 
@@ -40079,6 +40304,7 @@ function beginStrengthCharge(
     setHeroPhaseString(heroIndex, "slash")
 
     clearHeroFrameColOverride(heroIndex)
+    sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0)
 
 
 
@@ -40119,6 +40345,9 @@ function beginStrengthCharge(
     if (prepMs < 0) prepMs = 0
 
     if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
+    if (STR_DEBUG_FRAME_MS_MULT > 1 && prepMs > 0) {
+        prepMs = Math.min(maxMs | 0, (prepMs | 0) * (STR_DEBUG_FRAME_MS_MULT | 0)) | 0
+    }
 
 
 
@@ -40168,7 +40397,12 @@ function beginStrengthCharge(
 
     }
 
-
+    if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_SCHEDULE_ENABLE) {
+        const initCol = (prepMs > 0)
+            ? (STR_SWING_WINDUP_FRAME_COLS[0] | 0)
+            : (STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0);
+        sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, initCol | 0);
+    }
 
     // Let slash play. Prep is visible; charging hold is done by heroAnimGlue when part=="charging".
 
@@ -40316,27 +40550,35 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
     const progress = arcMaxDeg > 0 ? Math.max(0, Math.min(1, arcDeg / arcMaxDeg)) : 0;
     const drawT = Math.min(progress, STR_CHARGE_DRAW_FRAC);
 
-    const fadeStart = (startMs | 0) + (STR_CHARGE_DRAW_MS | 0);
-    _fadeStrengthChargeTrailImage(img, nowMs | 0, fadeStart | 0);
+    if (PROJECTILE_TRACE_INSTANT) {
+        _projectileClearImage(img);
+    } else {
+        const fadeStart = (startMs | 0) + (STR_CHARGE_DRAW_MS | 0);
+        _fadeStrengthChargeTrailImage(img, nowMs | 0, fadeStart | 0);
+    }
 
     const halfW = (img.width | 0) >> 1;
     const halfH = (img.height | 0) >> 1;
-    const sweepFrac = Math.max(0.001, STR_ARC_SWEEP_START_FRAC);
-    const lineT = Math.min(1, (drawT / sweepFrac));
-    const tipR = (frontStartR | 0) + Math.round((reachFromInner | 0) * lineT);
-    let lastTipR = sprites.readDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY) | 0;
-    if (lastTipR <= 0) lastTipR = frontStartR | 0;
-    if ((tipR | 0) > (lastTipR | 0)) {
-        _strengthChargeTraceStampLine(
+    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.charge");
+    if (auraPack && auraPack.shapes[3]) {
+        const tipShape = auraPack.shapes[0] || auraPack.shapes[3];
+        const tipLocalX = (auraPack.info.offX || 0) + tipShape.tipDx;
+        const tipLocalY = (auraPack.info.offY || 0) + tipShape.tipDy;
+        let sideSign = _tipSideSign(tipLocalX, tipLocalY, 0, 0, nx, ny);
+        if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny);
+        const clip = _weaponAuraClipForDown(nx, ny, 0, 0, sideSign);
+        _stampStrengthTipRadii(
             img,
-            halfW,
-            halfH,
-            nx * (lastTipR | 0),
-            ny * (lastTipR | 0),
-            nx * (tipR | 0),
-            ny * (tipR | 0)
+            -halfW,
+            -halfH,
+            tipLocalX,
+            tipLocalY,
+            auraPack.shapes,
+            STR_CHARGE_TIP_RADII,
+            STR_TIP_TRACE_COLOR,
+            STR_TIP_TRACE_EDGE_COLOR,
+            clip
         );
-        sprites.setDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY, tipR | 0);
     }
     _stampStrengthArcTrail(
         img,
@@ -40366,6 +40608,9 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+
+    // Ensure the charge meter stays visible while charging.
+    showStrengthChargeBar(heroIndex, hero, true)
 
 
 
@@ -40533,6 +40778,22 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
     }
 
+    if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_SCHEDULE_ENABLE) {
+        if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
+            const elapsed = Math.max(0, (nowMs | 0) - (prepStart | 0));
+            const col = _pickFrameBySchedule(
+                elapsed | 0,
+                STR_SWING_WINDUP_FRAME_COLS,
+                STR_SWING_WINDUP_FRAME_MS,
+                STR_SWING_WINDUP_FCO_MAX_MS | 0
+            );
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0);
+        } else {
+            const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, holdCol | 0);
+        }
+    }
+
     sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, partProg)
 
 
@@ -40562,7 +40823,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         setStrengthChargeBarPct(heroIndex, hero, 100)
 
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
-        _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
+        if (STR_SHOW_CHARGE_TRAIL) _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
 
         return
 
@@ -40581,7 +40842,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
         setStrengthChargeBarPct(heroIndex, hero, pct0)
 
         sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS, nowMs)
-        _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
+        if (STR_SHOW_CHARGE_TRAIL) _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
 
         return
 
@@ -40606,7 +40867,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
     const pct = clampInt(Math.idiv(arcDeg * 100, Math.max(1, arcMaxDeg)), 0, 100)
 
     setStrengthChargeBarPct(heroIndex, hero, pct)
-    _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
+    if (STR_SHOW_CHARGE_TRAIL) _updateStrengthChargeTrailForHero(heroIndex, hero, nowMs)
 
 }
 
@@ -40617,6 +40878,10 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    const partBeforeRelease = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "");
+    const wasHolding = (partBeforeRelease === "charging");
+    sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
+
     _destroyStrengthChargeTrail(heroIndex, hero)
 
 
@@ -40784,7 +41049,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (swingMin0 < swingMinTotal) swingMin0 = swingMinTotal
     if (swingMax0 < swingMin0) swingMax0 = swingMin0
 
-    const swingDurationMs =
+    let swingDurationMs =
 
         clampInt(
 
@@ -40795,6 +41060,9 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
             swingMax0
 
         ) | 0
+    if (STR_DEBUG_FRAME_MS_MULT > 1) {
+        swingDurationMs = Math.max(1, (swingDurationMs | 0) * (STR_DEBUG_FRAME_MS_MULT | 0)) | 0
+    }
 
 
 
@@ -41511,6 +41779,21 @@ function spawnStrengthSwingProjectile(
         const tipR = Math.round(wTipProj)
         if (tipR > frontStartR) frontStartR = tipR
     }
+    if (STR_USE_WPN_AURA_OUTLINE_ONLY) {
+        const info = _getHeroWeaponFgInfo(hero);
+        if (info) {
+            const shape = _getWeaponMaskShape(info, STR_WPN_AURA_OUTLINE_RADIUS | 0);
+            if (shape) {
+                const baseLocalX = (info.offX || 0);
+                const baseLocalY = (info.offY || 0);
+                const leadR = _weaponMaskLeadingEdge(shape, baseLocalX, baseLocalY, nx, ny);
+                if (Number.isFinite(leadR)) {
+                    const leadRInt = Math.round(leadR);
+                    if (leadRInt > frontStartR) frontStartR = leadRInt;
+                }
+            }
+        }
+    }
 
 
 
@@ -41523,7 +41806,8 @@ function spawnStrengthSwingProjectile(
 
 
 
-    const outerR = (inner0 | 0) + (reachFromInner | 0) + 3
+    const outerBase = (frontStartR | 0) + (reachFromInner | 0);
+    const outerR = (outerBase | 0) + 3
     const img0 = _createStrengthTraceImage(outerR)
 
 
@@ -41547,7 +41831,7 @@ function spawnStrengthSwingProjectile(
     let tipInitX = wTipX
     let tipInitY = wTipY
     const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.spawn")
-    if (auraPack && auraPack.shapes[3]) {
+    if (auraPack && auraPack.shapes[3] && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
         const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
         const baseX = hero.x + (auraPack.info.offX || 0)
         const baseY = hero.y + (auraPack.info.offY || 0)
@@ -41560,18 +41844,21 @@ function spawnStrengthSwingProjectile(
         let sideSign = _tipSideSign(tipInitX, tipInitY, heroLocalX, heroLocalY, nx, ny)
         if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
         const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
-        _stampWeaponAuraAt(
-            img0,
-            -halfW,
-            -halfH,
-            tipInitX,
-            tipInitY,
-            tipShape,
-            STR_TIP_TRACE_COLOR,
-            STR_TIP_TRACE_EDGE_COLOR,
-            STR_OUTLINE_CARDINAL_ONLY,
-            clip
-        )
+        const rule = _strengthFrameRuleFor("prepareToCharge", STR_SWING_WINDUP_FRAME_COLS[0] | 0);
+        if (rule.allowTip) {
+            _stampStrengthTipRadii(
+                img0,
+                -halfW,
+                -halfH,
+                tipInitX,
+                tipInitY,
+                auraPack.shapes,
+                rule.tipRadii,
+                STR_TIP_TRACE_COLOR,
+                STR_TIP_TRACE_EDGE_COLOR,
+                clip
+            );
+        }
         if (_wpnTraceEnabled()) {
             const traceId = _wpnTraceAssignId(proj)
             _wpnTraceLog("str.spawn.auraTip", {
@@ -41595,20 +41882,9 @@ function spawnStrengthSwingProjectile(
             tipInitX = nx * frontStartR
             tipInitY = ny * frontStartR
         }
-        _strengthTraceStampAt(img0, Math.round(tipInitX) + halfW, Math.round(tipInitY) + halfH)
-        if (_wpnTraceEnabled()) {
-            const traceId = _wpnTraceAssignId(proj)
-            _wpnTraceLog("str.spawn.fallbackTip", {
-                id: traceId,
-                heroIndex,
-                dir: _weaponDirKeyFromVector(nx, ny),
-                wTipX: +tipInitX.toFixed(2),
-                wTipY: +tipInitY.toFixed(2),
-                imgW: img0.width | 0,
-                imgH: img0.height | 0
-            });
-        }
+        // No fallback square at spawn; wait for real weapon aura data.
     }
+    // Aura-only mode: do not draw any outline at spawn.
 
     _updateProjectileMaskSpriteForProj(proj, img0)
     _clearStrengthProjectileFill(img0, element | 0)
@@ -41628,6 +41904,21 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
 
     sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
+    const segs = _strengthSwingSegmentDurations(swingDuration | 0);
+    sprites.setDataNumber(proj, STR_WIND_MS_KEY, segs.windMs | 0);
+    sprites.setDataNumber(proj, STR_FWD_MS_KEY, segs.fwdMs | 0);
+    sprites.setDataNumber(proj, STR_LAND_MS_KEY, segs.landMs | 0);
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+    const scaleMs = (v: number): number => {
+        const base = v | 0;
+        if (mult <= 1 || base <= 0) return base;
+        return Math.max(1, (base * mult) | 0);
+    };
+    const fwdSum = (STR_SWING_FORWARD_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
+    const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length) ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0) : 0;
+    const arcStartMs = (segs.windMs | 0) + Math.round(((segs.fwdMs | 0) * (fwdFirst | 0)) / Math.max(1, fwdSum | 0));
+    const arcStartFracX1000 = Math.idiv(Math.max(0, arcStartMs | 0) * 1000, Math.max(1, swingDuration | 0)) | 0;
+    sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
 
     sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg)
 
@@ -41686,43 +41977,48 @@ function spawnStrengthSwingProjectile(
     sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing")
     sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
 
-    const bodyFx = _spawnHeroBodyPaintFxForMove(
-        heroIndex,
-        hero,
-        FAMILY.STRENGTH,
-        element | 0,
-        nx,
-        ny,
-        swingDuration | 0,
-        "strengthSwing"
-    )
-    if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
-
-    _spawnStrengthSwingFxSegments(
-        proj,
-        heroIndex,
-        hero,
-        element | 0,
-        nx,
-        ny,
-        inner0,
-        reachFromInner,
-        totalArcDeg,
-        swingDuration | 0
-    )
-    if (STR_USE_PROJECTILE_MASK_FX) {
-        const trailFx = _spawnProjectileMaskFxForMove(
-            proj,
+    if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
+        const bodyFx = _spawnHeroBodyPaintFxForMove(
             heroIndex,
             hero,
-            FAMILY.STRENGTH | 0,
+            FAMILY.STRENGTH,
             element | 0,
             nx,
             ny,
             swingDuration | 0,
-            "strengthTrail"
+            "strengthSwing"
         )
-        if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+        if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
+
+        _spawnStrengthSwingFxSegments(
+            proj,
+            heroIndex,
+            hero,
+            element | 0,
+            nx,
+            ny,
+            inner0,
+            reachFromInner,
+            totalArcDeg,
+            swingDuration | 0
+        )
+        if ((sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0) > 0) {
+            _setStrengthSwingFxSegmentsVisible(proj, false);
+        }
+        if (STR_USE_PROJECTILE_MASK_FX) {
+            const trailFx = _spawnProjectileMaskFxForMove(
+                proj,
+                heroIndex,
+                hero,
+                FAMILY.STRENGTH | 0,
+                element | 0,
+                nx,
+                ny,
+                swingDuration | 0,
+                "strengthTrail"
+            )
+            if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+        }
     }
 
 }
@@ -41805,6 +42101,49 @@ function updateStrengthProjectilesMotionFor(
     const reachFromFront = (sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0)
 
     const t = Math.max(0, Math.min(1, age / Math.max(1, swingMs)))
+    const windMs = sprites.readDataNumber(proj, STR_WIND_MS_KEY) | 0;
+    const fwdMs = sprites.readDataNumber(proj, STR_FWD_MS_KEY) | 0;
+    const landMs = sprites.readDataNumber(proj, STR_LAND_MS_KEY) | 0;
+    let segName = "release";
+    let segStart = (windMs + fwdMs) | 0;
+    let segDur = landMs | 0;
+    if (age < (windMs | 0)) {
+        segName = "prepareToCharge";
+        segStart = 0;
+        segDur = windMs | 0;
+    } else if (age < ((windMs | 0) + (fwdMs | 0))) {
+        segName = "charging";
+        segStart = windMs | 0;
+        segDur = fwdMs | 0;
+    }
+    if (segDur <= 0) segDur = Math.max(1, swingMs | 0);
+    const segElapsed = Math.max(0, (age - segStart) | 0);
+    const frameCol = _strengthFrameColForSeg(segName, segElapsed | 0, segDur | 0);
+    const rule = _strengthFrameRuleFor(segName, frameCol | 0);
+
+    const arcStartFrac = sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0;
+    const arcStart = STR_USE_WPN_AURA_OUTLINE_ONLY
+        ? 0
+        : Math.max(0, Math.min(1, (arcStartFrac | 0) / 1000));
+    let arcStartSegMs = 0;
+    if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "charging") {
+        const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+        const scaleMs = (v: number): number => {
+            const base = v | 0;
+            if (mult <= 1 || base <= 0) return base;
+            return Math.max(1, (base * mult) | 0);
+        };
+        const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length)
+            ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0)
+            : 0;
+        arcStartSegMs = Math.max(0, fwdFirst | 0);
+    }
+    const arcActive = rule.allowArc && (segElapsed >= arcStartSegMs) && (t >= arcStart);
+    const arcT = arcActive
+        ? (STR_USE_WPN_AURA_OUTLINE_ONLY
+            ? Math.min(1, Math.max(0, (segElapsed - arcStartSegMs) / Math.max(1, (segDur - arcStartSegMs))))
+            : Math.min(1, (t - arcStart) / Math.max(0.0001, (1 - arcStart))))
+        : 0;
 
 
 
@@ -41830,7 +42169,12 @@ function updateStrengthProjectilesMotionFor(
 
 
 
-    const totalArcDeg = sprites.readDataNumber(proj, "SS_ARC_DEG") || 150
+    let totalArcDeg = sprites.readDataNumber(proj, "SS_ARC_DEG") || 150
+    if (STR_USE_WPN_AURA_OUTLINE_ONLY) {
+        const sign = totalArcDeg < 0 ? -1 : 1;
+        const abs = Math.abs(totalArcDeg | 0);
+        totalArcDeg = sign * Math.min(abs, STR_ARC_MAX_FRONT_DEG | 0);
+    }
 
     
 
@@ -41847,8 +42191,12 @@ function updateStrengthProjectilesMotionFor(
         proj.setPosition(anchorX, anchorY)
         const img = proj.image
         if (img) {
-            const fadeStart = startMs | 0;
-            _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+            if (PROJECTILE_TRACE_INSTANT) {
+                _projectileClearImage(img);
+            } else {
+                const fadeStart = startMs | 0;
+                _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+            }
             const halfW = (img.width | 0) >> 1
             const halfH = (img.height | 0) >> 1
             const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick")
@@ -41899,23 +42247,55 @@ function updateStrengthProjectilesMotionFor(
                 tipLocalXNow = tipLocalX
                 tipLocalYNow = tipLocalY
                 const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideLock || sideNow)
-                const useSlashMask = t >= STR_SLASH_MASK_START_FRAC
-                if (useSlashMask) {
-                    const maskShape = _getWeaponMaskShape(auraPack.info, 0)
-                    if (maskShape) {
-                        const baseLocalX = (hero.x + (auraPack.info.offX || 0)) - anchorX
-                        const baseLocalY = (hero.y + (auraPack.info.offY || 0)) - anchorY
-                        _stampWeaponMaskAt(
-                            img,
-                            -halfW,
-                            -halfH,
-                            baseLocalX,
-                            baseLocalY,
-                            maskShape,
-                            STR_TIP_TRACE_COLOR,
-                            STR_TIP_TRACE_EDGE_COLOR,
-                            STR_OUTLINE_CARDINAL_ONLY
-                        )
+                if (rule.allowTip && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                    _stampStrengthTipRadii(
+                        img,
+                        -halfW,
+                        -halfH,
+                        tipLocalX,
+                        tipLocalY,
+                        auraPack.shapes,
+                        rule.tipRadii,
+                        STR_TIP_TRACE_COLOR,
+                        STR_TIP_TRACE_EDGE_COLOR,
+                        clip
+                    )
+                }
+                if (rule.allowLine && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                    const useSlashMask = !!rule.allowSlashMask
+                    if (useSlashMask) {
+                        const maskShape = _getWeaponMaskShape(auraPack.info, 0)
+                        if (maskShape) {
+                            const baseLocalX = (hero.x + (auraPack.info.offX || 0)) - anchorX
+                            const baseLocalY = (hero.y + (auraPack.info.offY || 0)) - anchorY
+                            _stampWeaponMaskAt(
+                                img,
+                                -halfW,
+                                -halfH,
+                                baseLocalX,
+                                baseLocalY,
+                                maskShape,
+                                STR_TIP_TRACE_COLOR,
+                                STR_TIP_TRACE_EDGE_COLOR,
+                                STR_OUTLINE_CARDINAL_ONLY
+                            )
+                        } else {
+                            _stampWeaponAuraLine(
+                                img,
+                                -halfW,
+                                -halfH,
+                                lastX,
+                                lastY,
+                                tipLocalX,
+                                tipLocalY,
+                                auraPack.shapes,
+                                STR_TIP_TRACE_COLOR,
+                                rule.lineMaxIdx,
+                                STR_TIP_TRACE_EDGE_COLOR,
+                                STR_OUTLINE_CARDINAL_ONLY,
+                                clip
+                            )
+                        }
                     } else {
                         _stampWeaponAuraLine(
                             img,
@@ -41927,28 +42307,12 @@ function updateStrengthProjectilesMotionFor(
                             tipLocalY,
                             auraPack.shapes,
                             STR_TIP_TRACE_COLOR,
-                            0,
+                            rule.lineMaxIdx,
                             STR_TIP_TRACE_EDGE_COLOR,
                             STR_OUTLINE_CARDINAL_ONLY,
                             clip
                         )
                     }
-                } else {
-                    _stampWeaponAuraLine(
-                        img,
-                        -halfW,
-                        -halfH,
-                        lastX,
-                        lastY,
-                        tipLocalX,
-                        tipLocalY,
-                        auraPack.shapes,
-                        STR_TIP_TRACE_COLOR,
-                        0,
-                        STR_TIP_TRACE_EDGE_COLOR,
-                        STR_OUTLINE_CARDINAL_ONLY,
-                        clip
-                    )
                 }
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.auraTip", {
@@ -42008,7 +42372,6 @@ function updateStrengthProjectilesMotionFor(
                 }
                 tipLocalXNow = tipLocalX
                 tipLocalYNow = tipLocalY
-                _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.fallbackTip", {
                         id: _wpnTraceAssignId(proj),
@@ -42024,44 +42387,86 @@ function updateStrengthProjectilesMotionFor(
                 sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
                 sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
             }
-            _stampBackWaveToHeroStrength(
-                img,
-                halfW,
-                halfH,
-                tipLocalXNow,
-                tipLocalYNow,
-                hero.x - anchorX,
-                hero.y - anchorY,
-                hero,
-                heroIndex,
-                t,
-                auraShapesNow,
-                nx,
-                ny,
-                growthIdx
-            )
-            const arcOuter = Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
-            _stampStrengthArcTrail(
-                img,
-                -halfW,
-                -halfH,
-                nx,
-                ny,
-                attachPx | 0,
-                arcOuter,
-                totalArcDeg | 0,
-                t,
-                STR_TIP_TRACE_COLOR | 0,
-                STR_TIP_TRACE_EDGE_COLOR | 0
-            )
-            _updateProjectileMaskSpriteForProj(proj, img)
+            if (rule.allowBackWave && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                _stampBackWaveToHeroStrength(
+                    img,
+                    halfW,
+                    halfH,
+                    tipLocalXNow,
+                    tipLocalYNow,
+                    hero.x - anchorX,
+                    hero.y - anchorY,
+                    hero,
+                    heroIndex,
+                    t,
+                    auraShapesNow,
+                    nx,
+                    ny,
+                    growthIdx
+                )
+            }
+            if (STR_USE_WPN_AURA_OUTLINE_ONLY && arcActive) {
+                const info = auraPack ? auraPack.info : _getHeroWeaponFgInfo(hero);
+                if (info) {
+                    const shape = _getWeaponMaskShape(info, STR_WPN_AURA_OUTLINE_RADIUS | 0);
+                    if (shape) {
+                        const baseLocalX = (hero.x + (info.offX || 0)) - anchorX;
+                        const baseLocalY = (hero.y + (info.offY || 0)) - anchorY;
+                        _stampWeaponMaskFrontAt(
+                            img,
+                            -halfW,
+                            -halfH,
+                            baseLocalX,
+                            baseLocalY,
+                            shape,
+                            nx,
+                            ny,
+                            STR_TIP_TRACE_COLOR,
+                            STR_TIP_TRACE_EDGE_COLOR,
+                            STR_OUTLINE_CARDINAL_ONLY,
+                            0
+                        );
+                    }
+                }
+            }
+            const minReach = Math.max(0, ((frontStart | 0) - (attachPx | 0)) | 0);
+            const extraReach = Math.max(0, ((reachFromFront | 0) - minReach) | 0);
+            const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
+                ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
+                : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
+            const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
+                ? Math.max(0, (arcOuter | 0) - (STR_ARC_BASE_MAX_WIDTH_PX | 0))
+                : (attachPx | 0);
+            if (arcActive) {
+                _stampStrengthArcTrail(
+                    img,
+                    -halfW,
+                    -halfH,
+                    nx,
+                    ny,
+                    (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
+                    arcOuter,
+                    totalArcDeg | 0,
+                    arcT,
+                    STR_TIP_TRACE_COLOR | 0,
+                    STR_TIP_TRACE_EDGE_COLOR | 0
+                )
+            }
+            if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
             const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
             _clearStrengthProjectileFill(img, element | 0)
             _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
         }
-        _updateHeroBodyPaintFxForProj(proj, hero)
-        _updateProjectileMaskFxForProj(proj, hero)
-        _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
+        if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
+            _updateHeroBodyPaintFxForProj(proj, hero)
+            _updateProjectileMaskFxForProj(proj, hero)
+            if (arcActive) {
+                _setStrengthSwingFxSegmentsVisible(proj, true);
+                _updateStrengthSwingFxSegments(proj, hero, arcT, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
+            } else {
+                _setStrengthSwingFxSegmentsVisible(proj, false);
+            }
+        }
 
         return true
 
@@ -42083,8 +42488,12 @@ function updateStrengthProjectilesMotionFor(
 
     const img = proj.image
     if (img) {
-        const fadeStart = startMs | 0;
-        _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+        if (PROJECTILE_TRACE_INSTANT) {
+            _projectileClearImage(img);
+        } else {
+            const fadeStart = startMs | 0;
+            _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+        }
         const halfW = (img.width | 0) >> 1
         const halfH = (img.height | 0) >> 1
         const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick2")
@@ -42136,23 +42545,55 @@ function updateStrengthProjectilesMotionFor(
             tipLocalXNow = tipLocalX
             tipLocalYNow = tipLocalY
             const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideLock || sideNow)
-            const useSlashMask = t >= STR_SLASH_MASK_START_FRAC
-            if (useSlashMask) {
-                const maskShape = _getWeaponMaskShape(auraPack.info, 0)
-                if (maskShape) {
-                    const baseLocalX = (hero.x + (auraPack.info.offX || 0)) - anchorX
-                    const baseLocalY = (hero.y + (auraPack.info.offY || 0)) - anchorY
-                    _stampWeaponMaskAt(
-                        img,
-                        -halfW,
-                        -halfH,
-                        baseLocalX,
-                        baseLocalY,
-                        maskShape,
-                        STR_TIP_TRACE_COLOR,
-                        STR_TIP_TRACE_EDGE_COLOR,
-                        STR_OUTLINE_CARDINAL_ONLY
-                    )
+            if (rule.allowTip && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                _stampStrengthTipRadii(
+                    img,
+                    -halfW,
+                    -halfH,
+                    tipLocalX,
+                    tipLocalY,
+                    auraPack.shapes,
+                    rule.tipRadii,
+                    STR_TIP_TRACE_COLOR,
+                    STR_TIP_TRACE_EDGE_COLOR,
+                    clip
+                )
+            }
+            if (rule.allowLine && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                const useSlashMask = !!rule.allowSlashMask
+                if (useSlashMask) {
+                    const maskShape = _getWeaponMaskShape(auraPack.info, 0)
+                    if (maskShape) {
+                        const baseLocalX = (hero.x + (auraPack.info.offX || 0)) - anchorX
+                        const baseLocalY = (hero.y + (auraPack.info.offY || 0)) - anchorY
+                        _stampWeaponMaskAt(
+                            img,
+                            -halfW,
+                            -halfH,
+                            baseLocalX,
+                            baseLocalY,
+                            maskShape,
+                            STR_TIP_TRACE_COLOR,
+                            STR_TIP_TRACE_EDGE_COLOR,
+                            STR_OUTLINE_CARDINAL_ONLY
+                        )
+                    } else {
+                        _stampWeaponAuraLine(
+                            img,
+                            -halfW,
+                            -halfH,
+                            lastX,
+                            lastY,
+                            tipLocalX,
+                            tipLocalY,
+                            auraPack.shapes,
+                            STR_TIP_TRACE_COLOR,
+                            rule.lineMaxIdx,
+                            STR_TIP_TRACE_EDGE_COLOR,
+                            STR_OUTLINE_CARDINAL_ONLY,
+                            clip
+                        )
+                    }
                 } else {
                     _stampWeaponAuraLine(
                         img,
@@ -42164,28 +42605,12 @@ function updateStrengthProjectilesMotionFor(
                         tipLocalY,
                         auraPack.shapes,
                         STR_TIP_TRACE_COLOR,
-                        0,
+                        rule.lineMaxIdx,
                         STR_TIP_TRACE_EDGE_COLOR,
                         STR_OUTLINE_CARDINAL_ONLY,
                         clip
                     )
                 }
-            } else {
-                _stampWeaponAuraLine(
-                    img,
-                    -halfW,
-                    -halfH,
-                    lastX,
-                    lastY,
-                    tipLocalX,
-                    tipLocalY,
-                    auraPack.shapes,
-                    STR_TIP_TRACE_COLOR,
-                    0,
-                    STR_TIP_TRACE_EDGE_COLOR,
-                    STR_OUTLINE_CARDINAL_ONLY,
-                    clip
-                )
             }
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 _wpnTraceLog("str.tick2.auraTip", {
@@ -42245,7 +42670,6 @@ function updateStrengthProjectilesMotionFor(
             }
             tipLocalXNow = tipLocalX
             tipLocalYNow = tipLocalY
-            _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 _wpnTraceLog("str.tick2.fallbackTip", {
                     id: _wpnTraceAssignId(proj),
@@ -42261,47 +42685,89 @@ function updateStrengthProjectilesMotionFor(
             sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
             sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
         }
-        _stampBackWaveToHeroStrength(
-            img,
-            halfW,
-            halfH,
-            tipLocalXNow,
-            tipLocalYNow,
-            hero.x - anchorX,
-            hero.y - anchorY,
-            hero,
-            heroIndex,
-            t,
-            auraShapesNow,
-            nx,
-            ny,
-            growthIdx
-        )
-        const arcOuter = Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
-        _stampStrengthArcTrail(
-            img,
-            -halfW,
-            -halfH,
-            nx,
-            ny,
-            attachPx | 0,
-            arcOuter,
-            totalArcDeg | 0,
-            t,
-            STR_TIP_TRACE_COLOR | 0,
-            STR_TIP_TRACE_EDGE_COLOR | 0
-        )
-        _updateProjectileMaskSpriteForProj(proj, img)
+        if (rule.allowBackWave && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+            _stampBackWaveToHeroStrength(
+                img,
+                halfW,
+                halfH,
+                tipLocalXNow,
+                tipLocalYNow,
+                hero.x - anchorX,
+                hero.y - anchorY,
+                hero,
+                heroIndex,
+                t,
+                auraShapesNow,
+                nx,
+                ny,
+                growthIdx
+            )
+        }
+        if (STR_USE_WPN_AURA_OUTLINE_ONLY && arcActive) {
+            const info = auraPack ? auraPack.info : _getHeroWeaponFgInfo(hero);
+            if (info) {
+                const shape = _getWeaponMaskShape(info, STR_WPN_AURA_OUTLINE_RADIUS | 0);
+                if (shape) {
+                    const baseLocalX = (hero.x + (info.offX || 0)) - anchorX;
+                    const baseLocalY = (hero.y + (info.offY || 0)) - anchorY;
+                    _stampWeaponMaskFrontAt(
+                        img,
+                        -halfW,
+                        -halfH,
+                        baseLocalX,
+                        baseLocalY,
+                        shape,
+                        nx,
+                        ny,
+                        STR_TIP_TRACE_COLOR,
+                        STR_TIP_TRACE_EDGE_COLOR,
+                        STR_OUTLINE_CARDINAL_ONLY,
+                        0
+                    );
+                }
+            }
+        }
+        const minReach = Math.max(0, ((frontStart | 0) - (attachPx | 0)) | 0);
+        const extraReach = Math.max(0, ((reachFromFront | 0) - minReach) | 0);
+        const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
+            ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
+            : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
+        const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
+            ? Math.max(0, (arcOuter | 0) - (STR_ARC_BASE_MAX_WIDTH_PX | 0))
+            : (attachPx | 0);
+        if (arcActive) {
+            _stampStrengthArcTrail(
+                img,
+                -halfW,
+                -halfH,
+                nx,
+                ny,
+                (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
+                arcOuter,
+                totalArcDeg | 0,
+                arcT,
+                STR_TIP_TRACE_COLOR | 0,
+                STR_TIP_TRACE_EDGE_COLOR | 0
+            )
+        }
+        if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
         const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
         _clearStrengthProjectileFill(img, element | 0)
         _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
     }
-    _updateHeroBodyPaintFxForProj(proj, hero)
-    _updateProjectileMaskFxForProj(proj, hero)
-    _updateStrengthSwingFxSegments(proj, hero, t, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
+    if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
+        _updateHeroBodyPaintFxForProj(proj, hero)
+        _updateProjectileMaskFxForProj(proj, hero)
+        if (arcActive) {
+            _setStrengthSwingFxSegmentsVisible(proj, true);
+            _updateStrengthSwingFxSegments(proj, hero, arcT, nx, ny, attachPx, frontStart, reachFromFront, totalArcDeg)
+        } else {
+            _setStrengthSwingFxSegmentsVisible(proj, false);
+        }
 
-    const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
-    _spawnHeroElementTrailParticle(proj, element | 0, nowMs | 0)
+        const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0
+        _spawnHeroElementTrailParticle(proj, element | 0, nowMs | 0)
+    }
 
 
 
@@ -42737,9 +43203,10 @@ function _strengthChargeTraceStampLine(
 
 function _strengthArcSweepT(t: number): number {
     const tt = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
-    if (tt <= STR_ARC_SWEEP_START_FRAC) return 0;
-    const denom = Math.max(1e-6, (1 - STR_ARC_SWEEP_START_FRAC));
-    return Math.max(0, Math.min(1, (tt - STR_ARC_SWEEP_START_FRAC) / denom));
+    const startFrac = STR_USE_WPN_AURA_OUTLINE_ONLY ? 0 : STR_ARC_SWEEP_START_FRAC;
+    if (tt <= startFrac) return 0;
+    const denom = Math.max(1e-6, (1 - startFrac));
+    return Math.max(0, Math.min(1, (tt - startFrac) / denom));
 }
 
 function _stampStrengthArcTrail(
@@ -42770,10 +43237,12 @@ function _stampStrengthArcTrail(
     let steps = Math.floor(halfArcRad / stepRad) * 2 + 1;
     if (steps < 1) steps = 1;
     const centerIndex = (steps - 1) / 2;
-    const scale = (PROJECTILE_EMERGENCY_SCALE | 0) > 1 ? (PROJECTILE_EMERGENCY_SCALE | 0) : 1;
-    let maxWidth = Math.min((STR_ARC_MAX_WIDTH_PX | 0) * scale, (maxR - (inner0 | 0)) | 0);
+    const scale = STR_USE_WPN_AURA_OUTLINE_ONLY ? 1 : ((PROJECTILE_EMERGENCY_SCALE | 0) > 1 ? (PROJECTILE_EMERGENCY_SCALE | 0) : 1);
+    const baseMax = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MAX_WIDTH_PX | 0) : (STR_ARC_MAX_WIDTH_PX | 0);
+    const baseMin = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MIN_WIDTH_PX | 0) : (STR_ARC_MIN_WIDTH_PX | 0);
+    let maxWidth = Math.min(baseMax * scale, (maxR - (inner0 | 0)) | 0);
     if (maxWidth < 1) maxWidth = 1;
-    const minWidth = Math.max(1, (STR_ARC_MIN_WIDTH_PX | 0) * scale);
+    const minWidth = Math.max(1, Math.min(baseMin, baseMax) * scale);
     if (maxWidth < minWidth) maxWidth = minWidth;
 
     const w = img.width | 0;
@@ -42798,7 +43267,9 @@ function _stampStrengthArcTrail(
             const px = Math.round(dxDir * r) - (minX | 0);
             const py = Math.round(dyDir * r) - (minY | 0);
             if (px < 0 || py < 0 || px >= w || py >= h) continue;
-            if ((edgeColor | 0) > 0 && (r === innerR || r === maxR)) {
+            if ((edgeColor | 0) > 0 && (r === maxR)) {
+                img.setPixel(px, py, edgeColor | 0);
+            } else if (!STR_USE_WPN_AURA_OUTLINE_ONLY && (edgeColor | 0) > 0 && (r === innerR)) {
                 img.setPixel(px, py, edgeColor | 0);
             } else {
                 img.setPixel(px, py, fillColor | 0);
@@ -43096,6 +43567,12 @@ function _wpnTraceVerbose(): boolean {
     const g: any = (globalThis as any);
     if (typeof g.__DBG_WPN_AURA_TRACE_VERBOSE === "boolean") return g.__DBG_WPN_AURA_TRACE_VERBOSE;
     return DEBUG_WPN_AURA_TRACE_VERBOSE;
+}
+
+function _wpnAuraAlwaysShowEnabled(): boolean {
+    const g: any = (globalThis as any);
+    if (typeof g.__DBG_WPN_AURA_ALWAYS_SHOW === "boolean") return g.__DBG_WPN_AURA_ALWAYS_SHOW;
+    return DEBUG_WPN_AURA_ALWAYS_SHOW;
 }
 
 function _wpnTraceLog(tag: string, payload: any): void {
@@ -43735,6 +44212,185 @@ function _stampWeaponMaskAt(
                 }
             }
         }
+    }
+}
+
+function _stampWeaponMaskFrontAt(
+    img: Image,
+    minX: number,
+    minY: number,
+    baseLocalX: number,
+    baseLocalY: number,
+    shape: HeroAuraMaskShape,
+    nx: number,
+    ny: number,
+    color: number,
+    edgeColor: number = 0,
+    edgeCardinalOnly: boolean = true,
+    frontEps: number = 0
+): void {
+    if (!img || !shape || !shape.offsets || shape.offsets.length === 0) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const baseX = (Math.round(baseLocalX) - (minX | 0)) | 0;
+    const baseY = (Math.round(baseLocalY) - (minY | 0)) | 0;
+    const off = shape.offsets;
+    for (let i = 0; i < off.length; i += 2) {
+        const px = baseLocalX + off[i];
+        const py = baseLocalY + off[i + 1];
+        const dot = (px * nx) + (py * ny);
+        if (dot < frontEps) continue;
+        const x = baseX + off[i];
+        const y = baseY + off[i + 1];
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        img.setPixel(x, y, color | 0);
+        if ((edgeColor | 0) > 0 && PROJECTILE_FORCE_BORDER) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    if (edgeCardinalOnly && dx !== 0 && dy !== 0) continue;
+                    const ox = x + dx;
+                    const oy = y + dy;
+                    if (ox < 0 || oy < 0 || ox >= w || oy >= h) continue;
+                    if (img.getPixel(ox, oy) == 0) img.setPixel(ox, oy, edgeColor | 0);
+                }
+            }
+        }
+    }
+}
+
+function _weaponMaskLeadingEdge(
+    shape: HeroAuraMaskShape,
+    baseLocalX: number,
+    baseLocalY: number,
+    nx: number,
+    ny: number
+): number {
+    if (!shape || !shape.offsets || shape.offsets.length === 0) return 0;
+    let maxDot = -1e9;
+    const off = shape.offsets;
+    for (let i = 0; i < off.length; i += 2) {
+        const px = baseLocalX + off[i];
+        const py = baseLocalY + off[i + 1];
+        const dot = (px * nx) + (py * ny);
+        if (dot > maxDot) maxDot = dot;
+    }
+    if (maxDot <= -1e8) return 0;
+    return maxDot;
+}
+
+function _destroyWeaponAuraDebugSprite(heroIndex: number, hero?: Sprite): void {
+    const h = hero || heroes[heroIndex];
+    if (!h) return;
+    const spr = sprites.readDataSprite(h, HERO_DATA.WPN_AURA_DEBUG_SPR);
+    if (spr) spr.destroy();
+    sprites.setDataSprite(h, HERO_DATA.WPN_AURA_DEBUG_SPR, null as any);
+}
+
+function _ensureWeaponAuraDebugSprite(
+    hero: Sprite,
+    halfW: number,
+    halfH: number
+): Sprite | null {
+    if (!hero) return null;
+    const w = Math.max(1, (halfW | 0) * 2 + 1);
+    const h = Math.max(1, (halfH | 0) * 2 + 1);
+    let spr = sprites.readDataSprite(hero, HERO_DATA.WPN_AURA_DEBUG_SPR);
+    if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
+        spr = sprites.create(image.create(w, h), SpriteKind.HeroEffect);
+        sprites.setDataSprite(hero, HERO_DATA.WPN_AURA_DEBUG_SPR, spr);
+    } else {
+        const img = spr.image;
+        if (!img || img.width !== w || img.height !== h) {
+            spr.setImage(image.create(w, h));
+        }
+    }
+    spr.x = hero.x;
+    spr.y = hero.y;
+    spr.z = hero.z + WPN_AURA_DEBUG_Z_BOOST;
+    spr.setFlag(SpriteFlag.Ghost, true);
+    spr.setFlag(SpriteFlag.Invisible, false);
+    return spr;
+}
+
+function _updateWeaponAuraDebugForHero(heroIndex: number, hero: Sprite): void {
+    if (!_wpnAuraAlwaysShowEnabled()) {
+        _destroyWeaponAuraDebugSprite(heroIndex, hero);
+        return;
+    }
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        _destroyWeaponAuraDebugSprite(heroIndex, hero);
+        return;
+    }
+    const info = _getHeroWeaponFgInfo(hero);
+    if (!info) {
+        _destroyWeaponAuraDebugSprite(heroIndex, hero);
+        return;
+    }
+    const baseLocalX = (info.offX || 0);
+    const baseLocalY = (info.offY || 0);
+    const shapes: (HeroAuraMaskShape | null)[] = [null, null, null, null];
+    let hasShape = false;
+    let maxAbsX = 0;
+    let maxAbsY = 0;
+    for (let r = 0; r <= 3; r++) {
+        const shape = _getWeaponMaskShape(info, r);
+        shapes[r] = shape;
+        if (!shape || !shape.offsets || shape.offsets.length === 0) continue;
+        hasShape = true;
+        const off = shape.offsets;
+        for (let i = 0; i < off.length; i += 2) {
+            const lx = baseLocalX + off[i];
+            const ly = baseLocalY + off[i + 1];
+            const ax = Math.abs(Math.round(lx));
+            const ay = Math.abs(Math.round(ly));
+            if (ax > maxAbsX) maxAbsX = ax;
+            if (ay > maxAbsY) maxAbsY = ay;
+        }
+    }
+    if (!hasShape) {
+        _destroyWeaponAuraDebugSprite(heroIndex, hero);
+        return;
+    }
+    const halfW = Math.max(1, maxAbsX | 0);
+    const halfH = Math.max(1, maxAbsY | 0);
+    const spr = _ensureWeaponAuraDebugSprite(hero, halfW, halfH);
+    if (!spr || !spr.image) return;
+    const img = spr.image;
+    _projectileClearImage(img);
+    const minX = -halfW;
+    const minY = -halfH;
+    for (let r = 3; r >= 0; r--) {
+        const shape = shapes[r];
+        if (!shape) continue;
+        const color = WPN_AURA_DEBUG_COLORS[r] || WPN_AURA_DEBUG_COLORS[0] || 2;
+        _stampWeaponMaskAt(
+            img,
+            minX,
+            minY,
+            baseLocalX,
+            baseLocalY,
+            shape,
+            color,
+            0,
+            true
+        );
+    }
+}
+
+function _updateWeaponAuraDebugAll(): void {
+    if (!_wpnAuraAlwaysShowEnabled()) {
+        for (let i = 0; i < heroes.length; i++) {
+            const hero = heroes[i];
+            if (!hero) continue;
+            _destroyWeaponAuraDebugSprite(i, hero);
+        }
+        return;
+    }
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i];
+        if (!hero) continue;
+        _updateWeaponAuraDebugForHero(i, hero);
     }
 }
 
@@ -48119,8 +48775,12 @@ function updateAgilityProjectilesMotionFor(
     let sideHalf = _agiTraceHalfPx()
     let auraShapes: WeaponAuraTipShape[] | null = null
     if (img) {
-        const fadeStart = startMs | 0;
-        _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+        if (PROJECTILE_TRACE_INSTANT) {
+            _projectileClearImage(img);
+        } else {
+            const fadeStart = startMs | 0;
+            _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
+        }
         const heroLocalX = hero.x - anchorX
         const heroLocalY = hero.y - anchorY
         const growthT = (maxLen > 0) ? (arrowLen / maxLen) : 0;
@@ -53337,6 +53997,24 @@ const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "magebullet"
 const ENEMY_PROJECTILE_ARROW_SKIN_ID = "arrow"
 const ENEMY_PROJECTILE_EYEBALL_SKIN_ID = "monsterframe:eyeball:attack:3"
 const ENEMY_PROJECTILE_COLLISION_ALPHA_MIN = 8
+const ENEMY_BOSS_BARRAGE_MIN_COUNT = 4
+const ENEMY_BOSS_BARRAGE_MAX_COUNT = 8
+const ENEMY_BOSS_BARRAGE_PER_HERO = 2
+const ENEMY_BOSS_BARRAGE_CLUSTER_RADIUS_PX = 96
+const ENEMY_BOSS_BARRAGE_SPREAD_DEG = 50
+const ENEMY_BOSS_BARRAGE_JITTER_DEG = 6
+const ENEMY_BOSS_BARRAGE_TARGET_JITTER_PX = 48
+const ENEMY_BOSS_BARRAGE_SPEED = 110
+const ENEMY_BOSS_PROJECTILE_EFFECTS: string[] = [
+    "starbeam2",
+    "lightningbolt",
+    "fireball3",
+    "bomb2",
+    "waterbeam",
+    "tentacles",
+    "chaosdart",
+    "eye"
+]
 const MONSTER_SPAWN_VARIANT_SEP = "::"
 const ENEMY_DAMAGE_CAP_PCT_OF_MAX_HP = 50
 const ENEMY_POWER_SCALE_START_FLOOR = 6
@@ -58337,6 +59015,16 @@ const ENEMY_AI_HAS_ATTACKED = "__aiHasAttacked"
 const ENEMY_AI_ROAM_UNTIL = "__aiRoamUntil"
 const ENEMY_AI_ROAM_TARGET_X = "__aiRoamTargetX"
 const ENEMY_AI_ROAM_TARGET_Y = "__aiRoamTargetY"
+const ENEMY_AI_BOSS_INTENDED_MOVE = "__aiBossIntendedMove"
+const ENEMY_AI_BOSS_BASE_INIT = "__aiBossBaseInit"
+const ENEMY_AI_BOSS_BASE_RANGE = "__aiBossBaseRange"
+const ENEMY_AI_BOSS_BASE_PROJ = "__aiBossBaseProj"
+const ENEMY_AI_BOSS_RANGED_UNTIL = "__aiBossRangedUntil"
+const ENEMY_AI_BOSS_STUCK_MS = "__aiBossStuckMs"
+const ENEMY_AI_BOSS_STUCK_LAST_MS = "__aiBossStuckLastMs"
+const ENEMY_AI_BOSS_STUCK_LAST_X = "__aiBossStuckLastX"
+const ENEMY_AI_BOSS_STUCK_LAST_Y = "__aiBossStuckLastY"
+const ENEMY_AI_BOSS_TELEPORT_LAST_MS = "__aiBossTeleportLastMs"
 
 const ENEMY_NAV_COLLISION_SCAN_MAX_TILES = 128  // safety cap; avoids runaway scans if something goes weird
 const ENEMY_AGGRO_HALF_LIFE_MS = 4500
@@ -58360,6 +59048,13 @@ const ENEMY_ROAM_RADIUS_PX = ENEMY_ROAM_RADIUS_TILES * WORLD_TILE_SIZE
 const ENEMY_ROAM_MIN_MS = 500
 const ENEMY_ROAM_MAX_MS = 1400
 const ENEMY_ROAM_SPEED_PCT = 35
+const ENEMY_BOSS_STUCK_MIN_MS = 700
+const ENEMY_BOSS_STUCK_MIN_MOVE_PX = 2
+const ENEMY_BOSS_RANGED_HOLD_MS = 2400
+const ENEMY_BOSS_STUCK_TELEPORT_MS = 4000
+const ENEMY_BOSS_STUCK_TELEPORT_COOLDOWN_MS = 6000
+const ENEMY_BOSS_STUCK_TELEPORT_MIN_PAD_DIST = 2
+const ENEMY_BOSS_STUCK_TELEPORT_MAX_PAD_DIST = 6
 const ENEMY_CASTER_EVADE_CHANCE_PCT = 18
 const ENEMY_CASTER_EVADE_COOLDOWN_MS = 900
 const ENEMY_CASTER_EVADE_DURATION_MS = 200
@@ -58459,6 +59154,172 @@ function _enemyAggroRangePx(enemy: Sprite): number {
     const base = ENEMY_AGGRO_RANGE_PX | 0
     if (advRangePx > 0) return Math.max(base, Math.idiv(advRangePx * 3, 2)) | 0
     return base | 0
+}
+
+const ENEMY_BOSS_IDS = new Set<string>([
+    "andromalius",
+    "disciple",
+    "gnu",
+    "mage1",
+    "mage2",
+    "mage3",
+    "minion",
+    "shadow"
+])
+
+function _enemyIsBoss(enemy: Sprite): boolean {
+    if (!enemy) return false
+    if ((sprites.readDataNumber(enemy, ENEMY_IS_BOSS_KEY) | 0) !== 0) return true
+    if (_enemyIsSlimeBoss(enemy)) return true
+    const id = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").toLowerCase()
+    if (!id) return false
+    if (id.indexOf("boss") >= 0) return true
+    return ENEMY_BOSS_IDS.has(id)
+}
+
+function _enemyBossLongRangePx(): number {
+    const tile = WORLD_TILE_SIZE | 0
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && tile > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        const cols = (_engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+        if (rows > 0 && cols > 0) {
+            const w = cols * tile
+            const h = rows * tile
+            const diag = Math.sqrt(w * w + h * h)
+            return Math.max(RANGED_ADVANCE_RANGE_CAP_PX | 0, Math.round(diag) | 0) | 0
+        }
+    }
+    return Math.max(RANGED_ADVANCE_RANGE_CAP_PX | 0, 800) | 0
+}
+
+function _enemyBossEnsureBaseRanged(enemy: Sprite): { baseRange: number, baseProj: string, baseProjSpeed: number } {
+    const inited = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_INIT) | 0
+    if (!inited) {
+        const baseRange = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
+        const baseProj = sprites.readDataString(enemy, ENEMY_DATA.PROJECTILE_ID) || ""
+        const baseProjSpeed = sprites.readDataNumber(enemy, "__projSpeed") | 0
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_RANGE, baseRange | 0)
+        sprites.setDataString(enemy, ENEMY_AI_BOSS_BASE_PROJ, baseProj)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_PROJ_SPEED, baseProjSpeed | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_INIT, 1)
+    }
+    const baseRange = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_RANGE) | 0
+    const baseProj = sprites.readDataString(enemy, ENEMY_AI_BOSS_BASE_PROJ) || ""
+    const baseProjSpeed = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_PROJ_SPEED) | 0
+    return { baseRange: baseRange | 0, baseProj, baseProjSpeed: baseProjSpeed | 0 }
+}
+
+function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
+    if (!_enemyIsBoss(enemy)) return false
+    const base = _enemyBossEnsureBaseRanged(enemy)
+    const until = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_RANGED_UNTIL) | 0
+    if (until > 0 && nowMs < until) {
+        const fallbackRange = Math.max(base.baseRange | 0, _enemyBossLongRangePx() | 0) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, fallbackRange | 0)
+        if (base.baseProj) {
+            sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, base.baseProj)
+        }
+        sprites.setDataNumber(enemy, "__projSpeed", ENEMY_BOSS_BARRAGE_SPEED | 0)
+        return true
+    }
+
+    // Restore baseline
+    sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, base.baseRange | 0)
+    sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, base.baseProj || "")
+    sprites.setDataNumber(enemy, "__projSpeed", base.baseProjSpeed | 0)
+    return false
+}
+
+function _enemyBossPickTeleportNearPad(): { x: number, y: number } | null {
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    if (padR < 0 || padC < 0) return null
+    if (!_engineWorldTileMap || !_engineWorldTileMap.length) return null
+
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return null
+
+    const minDist = ENEMY_BOSS_STUCK_TELEPORT_MIN_PAD_DIST | 0
+    const maxDist = ENEMY_BOSS_STUCK_TELEPORT_MAX_PAD_DIST | 0
+    const padLeft = (padC - 2) | 0
+    const padRight = (padC + 2) | 0
+
+    function isPadTile(rr: number, cc: number): boolean {
+        return (rr === padR || rr === (padR + 1)) && (cc >= padLeft && cc <= padRight)
+    }
+
+    const candidates: { r: number, c: number }[] = []
+    for (let rr = (padR - maxDist) | 0; rr <= (padR + maxDist); rr++) {
+        if (rr <= 0 || rr >= (rows - 1)) continue
+        for (let cc = (padC - maxDist) | 0; cc <= (padC + maxDist); cc++) {
+            if (cc <= 0 || cc >= (cols - 1)) continue
+            const dist = (Math.abs((rr | 0) - padR) + Math.abs((cc | 0) - padC)) | 0
+            if (dist < (minDist | 0) || dist > (maxDist | 0)) continue
+            if (isPadTile(rr | 0, cc | 0)) continue
+            if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) continue
+            if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
+            candidates.push({ r: rr | 0, c: cc | 0 })
+        }
+    }
+
+    if (!candidates.length) return null
+    const pick = candidates[Math.randomRange(0, (candidates.length - 1) | 0) | 0]
+    return { x: _dunColToX(pick.c | 0), y: _dunRowToY(pick.r | 0) }
+}
+
+function _enemyBossUpdateStuck(enemy: Sprite, nowMs: number): boolean {
+    if (!_enemyIsBoss(enemy)) return false
+    const intended = (sprites.readDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE) | 0) !== 0
+    const lastMs = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS) | 0
+    const lastX = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_X)
+    const lastY = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_Y)
+
+    sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS, nowMs | 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_X, enemy.x | 0)
+    sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_Y, enemy.y | 0)
+
+    if (!lastMs) return false
+
+    const dt = Math.max(0, (nowMs - lastMs) | 0) | 0
+    let stuckMs = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_MS) | 0
+    const dx = (enemy.x | 0) - (lastX | 0)
+    const dy = (enemy.y | 0) - (lastY | 0)
+    const move2 = (dx * dx) + (dy * dy)
+    const minMove = ENEMY_BOSS_STUCK_MIN_MOVE_PX | 0
+    const minMove2 = (minMove * minMove) | 0
+
+    if (intended && move2 <= minMove2) stuckMs = (stuckMs + dt) | 0
+    else stuckMs = 0
+
+    sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_MS, stuckMs | 0)
+
+    const lastTeleport = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_TELEPORT_LAST_MS) | 0
+    const teleportCooldown = ENEMY_BOSS_STUCK_TELEPORT_COOLDOWN_MS | 0
+    const canTeleport = (nowMs - lastTeleport) >= teleportCooldown
+
+    if (intended && stuckMs >= (ENEMY_BOSS_STUCK_TELEPORT_MS | 0) && canTeleport) {
+        const spot = _enemyBossPickTeleportNearPad()
+        if (spot) {
+            enemy.x = spot.x | 0
+            enemy.y = spot.y | 0
+            enemy.vx = 0
+            enemy.vy = 0
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_TELEPORT_LAST_MS, nowMs | 0)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_MS, 0)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS, nowMs | 0)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_X, enemy.x | 0)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_Y, enemy.y | 0)
+            return true
+        }
+    }
+
+    if (intended && stuckMs >= (ENEMY_BOSS_STUCK_MIN_MS | 0)) {
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_RANGED_UNTIL, (nowMs + (ENEMY_BOSS_RANGED_HOLD_MS | 0)) | 0)
+        return true
+    }
+
+    return false
 }
 
 function _heroFeetPointForEnemyTarget(hero: Sprite): { x: number, y: number } {
@@ -60125,6 +60986,9 @@ function _enemyProjectileElementForEnemy(enemy: Sprite): number {
 }
 
 function _enemyProjectilePick(enemy: Sprite): EnemyProjectilePick {
+    const bossPick = _enemyBossProjectilePick(enemy)
+    if (bossPick) return bossPick
+
     const explicit = _enemyProjectileExplicitSkinId(enemy)
     if (explicit) return { skinId: explicit, tint: 0 }
 
@@ -60151,6 +61015,17 @@ function _enemyProjectilePick(enemy: Sprite): EnemyProjectilePick {
     }
 
     return { skinId, tint }
+}
+
+function _enemyBossProjectilePick(enemy: Sprite): EnemyProjectilePick | null {
+    if (!_enemyIsBoss(enemy)) return null
+    const now = game.runtime() | 0
+    const until = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_RANGED_UNTIL) | 0
+    if (until <= 0 || now >= until) return null
+    if (ENEMY_BOSS_PROJECTILE_EFFECTS.length <= 0) return null
+    const idx = Math.randomRange(0, ENEMY_BOSS_PROJECTILE_EFFECTS.length - 1) | 0
+    const skinId = ENEMY_BOSS_PROJECTILE_EFFECTS[idx] || ENEMY_PROJECTILE_FLAMEBALL_SKIN_ID
+    return { skinId, tint: 0 }
 }
 
 function _enemyProjectileDimsForSkin(skinId: string): { w: number; h: number } {
@@ -60342,6 +61217,115 @@ function _enemyBossSlimeBurst(enemy: Sprite, attackMs: number): void {
     _enemyScreenShake(SLIME_BOSS_BURST_SCREEN_SHAKE_MS | 0, SLIME_BOSS_BURST_SCREEN_SHAKE_INTENSITY)
 }
 
+function _enemyBossSpawnBarrage(enemy: Sprite, attackMs: number): void {
+    if (!enemy) return
+    const heroTargets = _enemyBuildLiveHeroTargets()
+    if (!heroTargets || heroTargets.length <= 0) return
+
+    const heroCount = heroTargets.length | 0
+    const total = Math.min(
+        ENEMY_BOSS_BARRAGE_MAX_COUNT | 0,
+        Math.max(ENEMY_BOSS_BARRAGE_MIN_COUNT | 0, (heroCount * (ENEMY_BOSS_BARRAGE_PER_HERO | 0)) | 0)
+    ) | 0
+
+    const heroPoints: { x: number, y: number }[] = []
+    for (let i = 0; i < heroTargets.length; i++) {
+        const foot = _heroFeetPointForEnemyTarget(heroTargets[i])
+        heroPoints.push({ x: foot.x | 0, y: foot.y | 0 })
+    }
+
+    let cx = 0
+    let cy = 0
+    for (let i = 0; i < heroPoints.length; i++) {
+        cx += heroPoints[i].x | 0
+        cy += heroPoints[i].y | 0
+    }
+    cx = Math.round(cx / heroPoints.length) | 0
+    cy = Math.round(cy / heroPoints.length) | 0
+
+    let maxD2 = 0
+    for (let i = 0; i < heroPoints.length; i++) {
+        const dx = (heroPoints[i].x | 0) - cx
+        const dy = (heroPoints[i].y | 0) - cy
+        const d2 = (dx * dx) + (dy * dy)
+        if (d2 > maxD2) maxD2 = d2
+    }
+    const clusterR = ENEMY_BOSS_BARRAGE_CLUSTER_RADIUS_PX | 0
+    const clustered = maxD2 <= (clusterR * clusterR)
+
+    const targets: { x: number, y: number }[] = []
+    if (clustered) {
+        targets.push({ x: cx | 0, y: cy | 0 })
+    } else {
+        for (let i = 0; i < heroPoints.length; i++) {
+            targets.push({ x: heroPoints[i].x | 0, y: heroPoints[i].y | 0 })
+        }
+    }
+
+    const per = Math.max(1, Math.idiv(total, targets.length)) | 0
+    let rem = (total - (per * targets.length)) | 0
+
+    const spreadRad = (ENEMY_BOSS_BARRAGE_SPREAD_DEG | 0) * Math.PI / 180
+    const jitterRad = (ENEMY_BOSS_BARRAGE_JITTER_DEG | 0) * Math.PI / 180
+    const targetJitter = ENEMY_BOSS_BARRAGE_TARGET_JITTER_PX | 0
+    const rangePx = _enemyBossLongRangePx() | 0
+    const speed = ENEMY_BOSS_BARRAGE_SPEED | 0
+
+    for (let i = 0; i < targets.length; i++) {
+        const count = (rem > 0 ? (rem--, per + 1) : per) | 0
+        const tx = targets[i].x | 0
+        const ty = targets[i].y | 0
+        const jx = targetJitter > 0 ? (Math.randomRange(-targetJitter, targetJitter) | 0) : 0
+        const jy = targetJitter > 0 ? (Math.randomRange(-targetJitter, targetJitter) | 0) : 0
+        let base = Math.atan2(((ty + jy) - (enemy.y | 0)), ((tx + jx) - (enemy.x | 0)))
+        if (!Number.isFinite(base)) base = 0
+
+        for (let k = 0; k < count; k++) {
+            let offset = 0
+            if (count > 1) offset = ((k / (count - 1)) * 2 - 1)
+            const jitter = (Math.random() * 2 - 1) * jitterRad
+            const ang = base + (offset * spreadRad) + jitter
+            const vx = Math.cos(ang)
+            const vy = Math.sin(ang)
+
+            const w = enemy.image ? enemy.image.width : 16
+            const h = enemy.image ? enemy.image.height : 16
+            const pad = 2
+            const offX = vx * ((w / 2) + pad)
+            const offY = vy * ((h / 2) + pad)
+
+            const pick = _enemyProjectilePick(enemy)
+            const skinId = pick.skinId
+            const dir = _enemyDirFromVector(vx, vy)
+            const elem = _enemyProjectileElementForEnemy(enemy) | 0
+            const collision = _effectCollisionBoxForSkin(skinId, dir)
+            const dims = collision ? { w: collision.w | 0, h: collision.h | 0 } : _enemyProjectileDimsForSkin(skinId)
+            const img = image.create(dims.w | 0, dims.h | 0)
+            img.fill(0)
+
+            const fx = sprites.create(img, SpriteKind.MonsterEffect)
+            fx.z = enemy.z + 2000
+            fx.x = enemy.x + offX
+            fx.y = enemy.y + offY
+            sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0)
+            sprites.setDataNumber(fx, "dmg", sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0)
+            sprites.setDataNumber(fx, "__projElem", elem | 0)
+            const effectOpts: EffectApplyOpts = { dir }
+            if (collision) {
+                effectOpts.offsetX = collision.offX | 0
+                effectOpts.offsetY = collision.offY | 0
+            }
+            if (pick.tint) effectOpts.tint = pick.tint | 0
+            applyEffectToSprite(fx, skinId, effectOpts)
+
+            fx.vx = (vx * speed) | 0
+            fx.vy = (vy * speed) | 0
+            const life = Math.max(200, Math.idiv(rangePx * 1000, speed))
+            fx.lifespan = life
+        }
+    }
+}
+
 function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, attackMs: number): void {
     if (!enemy) return;
 
@@ -60363,6 +61347,11 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
     const dmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0;
 
     if (rangePx > 0) {
+        if (_enemyIsBoss(enemy) && (sprites.readDataNumber(enemy, ENEMY_AI_BOSS_RANGED_UNTIL) | 0) > (game.runtime() | 0)) {
+            _enemyBossSpawnBarrage(enemy, attackMs | 0)
+            return
+        }
+
         const pick = _enemyProjectilePick(enemy)
         const skinId = pick.skinId
         const dir = _enemyDirFromVector(dx, dy)
@@ -60440,6 +61429,9 @@ function _enemyComputeMeleeReachPx(enemy: Sprite, hero: Sprite | null): number {
 function _enemyComputeHoldRangePx(enemy: Sprite, pick: EnemyEdgePick): number {
     const advRangePx = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
     if (advRangePx > 0) {
+        if (_enemyIsBoss(enemy) && (advRangePx | 0) > (RANGED_ADVANCE_RANGE_CAP_PX | 0)) {
+            return advRangePx | 0
+        }
         return _clamp(
             advRangePx | 0,
             ENEMY_MIN_HOLD_RANGE_PX | 0,
@@ -60893,11 +61885,14 @@ function _enemyApplyAntiStuckSlide(enemy: Sprite, pick: EnemyEdgePick, speed: nu
 
 function _enemyAiUpdateLastPos(enemy: Sprite): void {
 
+    const nowMs = game.runtime() | 0
+    _enemyBossUpdateStuck(enemy, nowMs | 0)
+
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_X, enemy.x)
 
     sprites.setDataNumber(enemy, ENEMY_AI_LAST_Y, enemy.y)
 
-    _enemySyncLpcRenderPhase(enemy, game.runtime() | 0)
+    _enemySyncLpcRenderPhase(enemy, nowMs | 0)
 
 }
 
@@ -61067,6 +62062,8 @@ function updateEnemyHoming(nowMs: number) {
 
         if (!_enemyIsInitialized(enemy)) continue
 
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE, 0)
+
         const trace = DEBUG_ENEMY_AI_DECISIONS ? [] as string[] : null
 
         _enemyClearWolfIdleIfAggro(enemy)
@@ -61164,6 +62161,8 @@ function updateEnemyHoming(nowMs: number) {
         const commitActive = needFirstHit && commitUntil > 0 && nowMs < commitUntil
         _enemyAiTraceAdd(trace, "aggroIn", inAggroRange)
         _enemyAiTraceAdd(trace, "aggroCommit", commitActive)
+        const bossRange = _enemyBossApplyRangedFallback(enemy, nowMs)
+        _enemyAiTraceAdd(trace, "bossRange", bossRange)
 
 
 
@@ -61208,6 +62207,7 @@ function updateEnemyHoming(nowMs: number) {
             _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, chargeSpeed, allowNavField)
             _enemySetIntent(enemy, "charge")
             _enemySetDirFromVelocityOrFacing(enemy, pick)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE, 1)
             _enemyAiUpdateLastPos(enemy)
             _enemyAiLogDecision(enemy, nowMs, trace, "charge")
             continue
@@ -61268,6 +62268,8 @@ function updateEnemyHoming(nowMs: number) {
 
 
         _enemySetDirFromVelocityOrFacing(enemy, pick)
+
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE, 1)
 
 
 
@@ -62413,6 +63415,9 @@ function updateHeroProjectiles() {
 
     updateAgilityExecuteAll(now)
 
+    // Debug: weapon aura overlay (visual verify).
+    _updateWeaponAuraDebugAll();
+
 }
 
 
@@ -63490,7 +64495,12 @@ function updateHeroControlLocks(now: number) {
 
             if (DEBUG_ANIM_KEYS) console.log(_dbgAnimKeysLine(i, hero, "UNLOCK"))
 
-
+            const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+            if (fco >= 0) {
+                clearHeroFrameColOverride(i)
+                sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0)
+                sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, 0)
+            }
 
             unlockHeroControls(i)
 

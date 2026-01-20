@@ -28,6 +28,10 @@ export const DEBUG_ANIM_KEYS_PHASE_EDGE = false;
 export const DEBUG_ANIM_KEYS_PHASE_STAMP = false;
 export const DEBUG_ANIM_KEYS_PHASE_PART = false;
 export const DEBUG_ANIM_KEYS_INT_FINISH = false;
+export const DEBUG_HERO_ANIM_FRAMES = true;
+export const DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY = true;
+export const DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES = true;
+export const DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS = 0;
 
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
@@ -59,7 +63,7 @@ export const DEBUG_FORCE_TEST_WORLD_KIND = false;
 export const DEBUG_FORCE_TEST_WORLD_LOG = false;
 
 // Contract snapshot debug
-export const DEBUG_CONTRACT_SNAPSHOT = false;
+export const DEBUG_CONTRACT_SNAPSHOT = true;
 export let DEBUG_CONTRACT_PLAYER_ID = 0;       // 0 = all players
 export let DEBUG_CONTRACT_HERO_INDEX = -1;     // -1 = all heroes
 export let DEBUG_CONTRACT_THROTTLE_MS = 0;     // extra throttle beyond change-gate
@@ -265,6 +269,7 @@ export const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 // ------------------------------------------------------------
 export const WEAPON_DEBUG = false;
 export const WEAPON_DEBUG_VERBOSE = false;
+export const DEBUG_WPN_AURA_ALWAYS_SHOW = true; // Always render weapon aura masks on the hero (visual overlay).
 export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
 export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
 export const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;

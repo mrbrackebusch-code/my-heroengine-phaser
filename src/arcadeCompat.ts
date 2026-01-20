@@ -13514,27 +13514,33 @@ namespace netWorld {
         const isHost = !!g.__isHost;
         const snapWorldRev = (snap as any).worldRev;
         const snapFloorIndex = (snap as any).floorIndex;
-        if (!isHost && typeof snapWorldRev === "number" && typeof snapFloorIndex === "number") {
-            const hasWorld =
-                (typeof g.__tilemapAppliedWorldRev === "number") &&
-                (typeof g.__tilemapAppliedFloorIndex === "number");
-            const appliedWorldRev = hasWorld ? (g.__tilemapAppliedWorldRev | 0) : null;
-            const appliedFloorIndex = hasWorld ? (g.__tilemapAppliedFloorIndex | 0) : null;
-            const matches =
-                appliedWorldRev != null &&
-                appliedFloorIndex != null &&
-                (appliedWorldRev | 0) === (snapWorldRev | 0) &&
-                (appliedFloorIndex | 0) === (snapFloorIndex | 0);
+        if (!isHost && typeof snapWorldRev === "number") {
+            const hasWorldRev = (typeof g.__tilemapAppliedWorldRev === "number");
+            const hasFloorIndex = (typeof g.__tilemapAppliedFloorIndex === "number");
+            const appliedWorldRev = hasWorldRev ? (g.__tilemapAppliedWorldRev | 0) : null;
+            const appliedFloorIndex = hasFloorIndex ? (g.__tilemapAppliedFloorIndex | 0) : null;
+            const floorKnown = (appliedFloorIndex != null) && ((appliedFloorIndex | 0) >= 0);
+            const snapFloorKnown =
+                (typeof snapFloorIndex === "number") && ((snapFloorIndex | 0) >= 0);
+
+            const worldMatches =
+                appliedWorldRev != null && (appliedWorldRev | 0) === (snapWorldRev | 0);
+            const floorMatches =
+                !floorKnown || !snapFloorKnown || ((appliedFloorIndex | 0) === (snapFloorIndex | 0));
+
+            const matches = worldMatches && floorMatches;
 
             if (!matches) {
-                const sig = `${snapWorldRev}|${snapFloorIndex}`;
+                const sig = `${snapWorldRev}|${typeof snapFloorIndex === "number" ? (snapFloorIndex | 0) : -1}`;
                 g.__pendingWorldSnapshotForFloor = snap;
                 if (g.__pendingWorldSnapshotSig !== sig) {
                     g.__pendingWorldSnapshotSig = sig;
                     if (DEBUG_NET_SNAPSHOT) {
                         console.log("[netWorld.apply] queued snapshot for world", {
                             want: sig,
-                            have: hasWorld ? `${appliedWorldRev}|${appliedFloorIndex}` : "(no tilemap yet)",
+                            have: hasWorldRev
+                                ? `${appliedWorldRev}|${hasFloorIndex ? (appliedFloorIndex | 0) : -1}`
+                                : "(no tilemap yet)",
                             sprites: snap.sprites ? snap.sprites.length : 0
                         });
                     }

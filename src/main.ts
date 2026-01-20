@@ -2122,7 +2122,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     const tileSize = (msg.tileSize | 0) || 0;
     const encoding = (typeof msg.encoding === "string") ? msg.encoding : "";
 
-    const grid: number[][] = msg.data as any;
+    const grid: number[][] = (Array.isArray(msg.data) ? msg.data : msg.grid) as any;
     const rows = (msg.rows | 0) || ((grid && grid.length) ? (grid.length | 0) : 0);
     const cols = (msg.cols | 0) || ((grid && grid[0]) ? (grid[0].length | 0) : 0);
 
@@ -2417,10 +2417,13 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
     if (!gAny.__isHost) {
         const pendingSnap = g.__pendingWorldSnapshotForFloor;
-        if (pendingSnap && typeof pendingSnap.worldRev === "number" && typeof pendingSnap.floorIndex === "number") {
+        if (pendingSnap && typeof pendingSnap.worldRev === "number") {
             const wantRev = pendingSnap.worldRev | 0;
-            const wantFloor = pendingSnap.floorIndex | 0;
-            if ((wantRev | 0) === (worldRev | 0) && (wantFloor | 0) === (floorIndex | 0)) {
+            const wantFloor = (typeof pendingSnap.floorIndex === "number") ? (pendingSnap.floorIndex | 0) : -1;
+            const floorKnown = (floorIndex | 0) >= 0;
+            const wantFloorKnown = (wantFloor | 0) >= 0;
+            const floorMatches = (!floorKnown || !wantFloorKnown || (wantFloor | 0) === (floorIndex | 0));
+            if ((wantRev | 0) === (worldRev | 0) && floorMatches) {
                 g.__pendingWorldSnapshotForFloor = null;
                 g.__pendingWorldSnapshotSig = null;
                 try {

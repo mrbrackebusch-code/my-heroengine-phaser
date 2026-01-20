@@ -107,7 +107,7 @@ const _trapDefsByProp: Record<string, TrapDefinition[]> = {
       kind: "Dormant",
       seedPolicy: "perProp",
       minFloor: 0,
-      maxFloor: 0,
+      maxFloor: 100,
       weight: 1,
       spawnable: false,
       maxAttempts: TRAP_DEFAULT_MAX_ATTEMPTS,

@@ -15,6 +15,10 @@ import {
     DEBUG_HERO_ANIM_GLUE,
     DEBUG_HERO_ANIM_GLUE_FOCUS_ON_INTELLECT,
     DEBUG_HERO_ANIM_GLUE_ONLY_PROBLEMS,
+    DEBUG_HERO_ANIM_FRAMES,
+    DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES,
+    DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY,
+    DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS,
     DEBUG_INT_HERO_ANIM,
     DEBUG_INT_HERO_NAME_FILTER,
     DEBUG_NPC_PIPELINE,
@@ -54,6 +58,8 @@ const HERO_REST_PHASE_KEY = "__heroRestPhase";
 const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 
 const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
+const HERO_FRAME_LOG_LAST_IDX_KEY = "__heroFrameLogIdx";
+const HERO_FRAME_LOG_LAST_MS_KEY = "__heroFrameLogAt";
 
 const HERO_AIM_TILT_MAX_DEG = 8;
 const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
@@ -416,6 +422,58 @@ function _shouldProveHeroAnim(req: _HeroAnimRequest): boolean {
 }
 
 const SHOULD_LOG_REQ = false;
+
+function _debugHeroAnimFrame(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def?: any
+): void {
+    if (!DEBUG_HERO_ANIM_FRAMES) return;
+    const actionKind = (req.actionKind || "").toLowerCase();
+    if (DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY) {
+        if (!(actionKind.startsWith("strength") || req.phase === "slash")) return;
+    }
+    const anySprite = sprite as any;
+    const frame = sprite.frame as any;
+    const frameIndex = (frame?.index ?? frame?.name ?? -1);
+    const lastIdx = anySprite.getData ? (anySprite.getData(HERO_FRAME_LOG_LAST_IDX_KEY) as any) : undefined;
+    const nowMs = (scene as any)?.time?.now ?? Date.now();
+    const lastMs = anySprite.getData ? (anySprite.getData(HERO_FRAME_LOG_LAST_MS_KEY) as any) : undefined;
+    const throttle = DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS | 0;
+    const onlyChanges = !!DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES;
+    if (onlyChanges && (lastIdx === frameIndex)) {
+        if (!(throttle > 0 && typeof lastMs === "number" && (nowMs - lastMs) >= throttle)) {
+            return;
+        }
+    }
+    if (throttle > 0 && typeof lastMs === "number" && (nowMs - lastMs) < throttle) return;
+
+    if (anySprite.setData) {
+        try { anySprite.setData(HERO_FRAME_LOG_LAST_IDX_KEY, frameIndex); } catch {}
+        try { anySprite.setData(HERO_FRAME_LOG_LAST_MS_KEY, nowMs); } catch {}
+    }
+
+    const animKey = (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "";
+    const segName = (req as any).strSegName ?? "";
+    const partName = (req as any).phasePartName ?? "";
+    const msg =
+        "[HERO-ANIM][FRAME]" +
+        " heroName=" + (req.heroName || "") +
+        " family=" + (req.family || "") +
+        " phase=" + (req.phase || "") +
+        " part=" + (partName || "") +
+        " seg=" + (segName || "") +
+        " dir=" + (req.dir || "") +
+        " actionKind=" + (req.actionKind || "") +
+        " fco=" + (req.frameColOverride | 0) +
+        " animKey=" + (animKey || "") +
+        " tex=" + (def?.textureKey ?? (sprite.texture?.key ?? "")) +
+        " frameIndex=" + (frameIndex ?? -1) +
+        " frameName=" + (frame?.name ?? "") +
+        " t=" + (nowMs | 0);
+    console.log(msg);
+}
 
 function _proveLogHeroAnimReq(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequest): void {
     if (SHOULD_LOG_REQ ) {
@@ -1034,8 +1092,12 @@ function _tryStrengthChargeThrob(
     const partRaw = (typeof (req as any).phasePartName === "string") ? String((req as any).phasePartName) : "";
     const part = partRaw.trim().toLowerCase();
 
-    // Accept "charging", "charge", "charge_hold", etc.
-    const partLooksLikeCharging = part.includes("charg");
+    // Accept "charging", "charge", "charge_hold", etc. (but NOT "prepareToCharge")
+    const partLooksLikeCharging =
+        part === "charging" ||
+        part === "charge" ||
+        part.startsWith("charging_") ||
+        part.includes("charge_hold");
 
     // Fallback: if engine forgot to label part, still allow hold while locked during strength_charge+slash
     const isLocked = (() => {
@@ -1106,6 +1168,10 @@ function _tryStrengthChargeThrob(
     // Use your existing key, but now it means: "the fixed pose index we hold"
     const HOLD_COL_KEY = "strCh_holdCol";
     let holdIdx = anySprite.getData?.(HOLD_COL_KEY);
+    if ((req.frameColOverride | 0) >= 0) {
+        holdIdx = (req.frameColOverride | 0);
+        try { anySprite.setData?.(HOLD_COL_KEY, holdIdx); } catch {}
+    }
 
     if (!(typeof holdIdx === "number" && Number.isFinite(holdIdx))) {
         // Preserve your old intent: derive a stable column from the current frame
@@ -1457,6 +1523,7 @@ function applyHeroAnimationForSpriteInternal(
     // ------------------------------------------------------------
     if (_tryStrengthChargeThrob(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
         return;
     } else {
         _restoreBaseScaleIfPresent(sprite);
@@ -1467,6 +1534,7 @@ function applyHeroAnimationForSpriteInternal(
     // ------------------------------------------------------------
     if (_tryHoldSingleFrame(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
         return;
     }
 
@@ -1475,6 +1543,7 @@ function applyHeroAnimationForSpriteInternal(
     // ------------------------------------------------------------
     if (_tryCastPartFrameControl(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
         return;
     }
 
@@ -1482,6 +1551,7 @@ function applyHeroAnimationForSpriteInternal(
     // Default anim-based path
     // ------------------------------------------------------------
     _playDefaultAnimPath(scene, sprite, req, set, def, effectivePhase, allowFallback, shouldProve);
+    _debugHeroAnimFrame(scene, sprite, req, def);
 }
 
 
@@ -1527,8 +1597,41 @@ function _tryHoldSingleFrame(
         );
     }
 
-    if (sprite.anims) sprite.anims.stop();
-    sprite.setTexture(def.textureKey, frameIndex);
+    const animKey = buildHeroAnimKey(req.heroName!, def);
+    if (!scene.anims.exists(animKey)) {
+        scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(def.textureKey, { frames: def.frameIndices }),
+            frameRate: def.frameRate,
+            repeat: def.repeat,
+            yoyo: def.yoyo
+        });
+    }
+
+    const curKey = (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "";
+    if (!curKey || curKey !== animKey) {
+        try { sprite.anims.play(animKey, true); } catch { return true; }
+    }
+
+    const animState: any = sprite.anims as any;
+    if (animState && typeof animState.pause === "function") {
+        try { animState.pause(); } catch { /* ignore */ }
+    } else {
+        try { sprite.anims.stop(); } catch { /* ignore */ }
+    }
+
+    try {
+        const anim = sprite.anims.currentAnim as any;
+        const aframes = anim?.frames as any[] | undefined;
+        if (aframes && aframes.length) {
+            const safeIdx = clampInt(col | 0, 0, aframes.length - 1);
+            sprite.anims.setCurrentFrame(aframes[safeIdx]);
+        } else {
+            sprite.setTexture(def.textureKey, frameIndex);
+        }
+    } catch {
+        sprite.setTexture(def.textureKey, frameIndex);
+    }
 
     const prevHandler = anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] as
         | ((anim: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => void)
@@ -1539,7 +1642,7 @@ function _tryHoldSingleFrame(
     }
 
     if (anySprite.setData) {
-        anySprite.setData(LAST_ANIM_KEY, "");
+        anySprite.setData(LAST_ANIM_KEY, animKey);
         anySprite.setData(LAST_PHASE_KEY, def.phase);
         anySprite.setData(LAST_DIR_KEY, def.dir);
     }
