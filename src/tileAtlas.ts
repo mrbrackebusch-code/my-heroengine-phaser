@@ -196,6 +196,31 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
 
+    // Terrain.png bottom-right props (plants + rocks)
+    plant_leaf_a: { atlas: "terrain", ref: { row: 18, col: 15 } },
+    plant_leaf_b: { atlas: "terrain", ref: { row: 19, col: 15 } },
+    plant_leaf_c: { atlas: "terrain", ref: { row: 20, col: 15 } },
+    plant_leaf_d: { atlas: "terrain", ref: { row: 21, col: 15 } },
+    plant_bush_big: { atlas: "terrain", ref: { row: 19, col: 16 }, wTiles: 2, hTiles: 2 },
+    plant_blade: { atlas: "terrain", ref: { row: 20, col: 16 } },
+    plant_reeds_red: { atlas: "terrain", ref: { row: 20, col: 17 } },
+    plant_reeds_teal: { atlas: "terrain", ref: { row: 21, col: 17 } },
+    plant_bush_round: { atlas: "terrain", ref: { row: 22, col: 15 } },
+
+    rock_pebbles_a: { atlas: "terrain", ref: { row: 18, col: 18 } },
+    rock_pebbles_b: { atlas: "terrain", ref: { row: 18, col: 19 } },
+    rock_pebbles_c: { atlas: "terrain", ref: { row: 18, col: 20 } },
+    rock_pebbles_d: { atlas: "terrain", ref: { row: 19, col: 18 } },
+    rock_boulder_dark_a: { atlas: "terrain", ref: { row: 19, col: 19 } },
+    rock_boulder_dark_b: { atlas: "terrain", ref: { row: 19, col: 20 } },
+    rock_sand_small_a: { atlas: "terrain", ref: { row: 20, col: 18 } },
+    rock_sand_large: { atlas: "terrain", ref: { row: 20, col: 19 } },
+    rock_sand_med: { atlas: "terrain", ref: { row: 20, col: 20 } },
+    rock_sand_small_b: { atlas: "terrain", ref: { row: 21, col: 18 } },
+    rock_sand_small_c: { atlas: "terrain", ref: { row: 21, col: 19 } },
+    rock_sand_med_b: { atlas: "terrain", ref: { row: 21, col: 20 } },
+    rock_slab: { atlas: "terrain", ref: { row: 22, col: 19 } },
+
     // Shop platform (full 9x9 sheet, anchor = bottom-left tile)
     shop_platform: {
         atlas: "shopPlatform",
@@ -260,6 +285,14 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
                 open:   { row: 22, col: 15 }
             }
         }
+    },
+    treasure_marker_a: {
+        atlas: "base_out_atlas",
+        ref: { row: 12, col: 15 },
+    },
+    treasure_marker_b: {
+        atlas: "base_out_atlas",
+        ref: { row: 12, col: 16 },
     },
 
     fire_totem: {
@@ -388,6 +421,8 @@ export const PROP_CATALOG: {
     { name: "pedestal", atlas: "terrain_atlas", atlasRow: 14, atlasCol: 19, wTiles: 1, hTiles: 1 },
     { name: "bridge_h", atlas: "base_out_atlas", atlasRow: 17, atlasCol: 13, wTiles: 3, hTiles: 2 },
     { name: "bridge_v", atlas: "base_out_atlas", atlasRow: 20, atlasCol: 13, wTiles: 1, hTiles: 3 },
+    { name: "treasure_marker_a", atlas: "base_out_atlas", atlasRow: 12, atlasCol: 15, wTiles: 1, hTiles: 1 },
+    { name: "treasure_marker_b", atlas: "base_out_atlas", atlasRow: 12, atlasCol: 16, wTiles: 1, hTiles: 1 },
 ];
 
 

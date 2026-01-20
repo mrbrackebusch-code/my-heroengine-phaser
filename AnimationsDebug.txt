@@ -1,0 +1,44 @@
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponInfoMissing] heroIndex=0 tag=agi.spawn dir=right hasData=true hasFrameRef=false
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=1 heroIndex=0 dir=right wTipX=38 wTipY=0 tipLocalX=38 tipLocalY=-12 bounds=minX:-43,maxX:50,minY:-43,maxY:43
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponInfoMissing] heroIndex=0 tag=agi.tick dir=right hasData=true hasFrameRef=false
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=38 tipLocalY=-12 lastX=38 lastY=-12 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=right texKey=t064__polearm__spear__thrust__fg__vsteel frame=0 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=31.5 tipLocalY=-10.5 lastX=31.5 lastY=-10.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=28.5 tipLocalY=-1.5 lastX=28.5 lastY=-0.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=false preActive=true tipLocalX=25.5 tipLocalY=-2.5 lastX=25.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=31.5 tipLocalY=-2.5 lastX=31.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=31.5 tipLocalY=-3.5 lastX=31.5 lastY=-3.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=1 heroIndex=0 active=true preActive=false tipLocalX=25.5 tipLocalY=-2.5 lastX=25.5 lastY=-2.5 bounds=minX:-43,maxX:50,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 dir=down align=0.66 minCos=0.82
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=down texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=2 heroIndex=0 dir=down wTipX=0 wTipY=38 tipLocalX=4 tipLocalY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=down texKey=t064__polearm__spear__thrust__fg__vsteel frame=31 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=4 tipLocalY=38 lastX=4 lastY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=4 tipLocalY=38 lastX=4 lastY=38 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=9.5 tipLocalY=31.5 lastX=9.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=false preActive=true tipLocalX=-4.5 tipLocalY=30.5 lastX=-4.5 lastY=30.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-5.5 tipLocalY=31.5 lastX=-5.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-5.5 tipLocalY=31.5 lastX=-5.5 lastY=31.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=2 heroIndex=0 active=true preActive=false tipLocalX=-4.5 tipLocalY=30.5 lastX=-4.5 lastY=30.5 bounds=minX:-43,maxX:43,minY:-43,maxY:50 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 dir=left align=0.33 minCos=0.55
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=left texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=3 heroIndex=0 dir=left wTipX=-38 wTipY=0 tipLocalX=-38 tipLocalY=-12 bounds=minX:-50,maxX:43,minY:-43,maxY:43
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=left texKey=t064__polearm__spear__thrust__fg__vsteel frame=23 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-38 tipLocalY=-12 lastX=-38 lastY=-12 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-28.5 tipLocalY=-0.5 lastX=-31.5 lastY=-10.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-28.5 tipLocalY=-1.5 lastX=-28.5 lastY=-1.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=false preActive=true tipLocalX=-25.5 tipLocalY=-2.5 lastX=-25.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-31.5 tipLocalY=-3.5 lastX=-31.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-31.5 tipLocalY=-2.5 lastX=-31.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=3 heroIndex=0 active=true preActive=false tipLocalX=-25.5 tipLocalY=-2.5 lastX=-25.5 lastY=-2.5 bounds=minX:-50,maxX:43,minY:-43,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][tipMisaligned] texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 dir=up align=-0.49 minCos=0.82
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.spawn dir=up texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.spawn.fallbackTip] id=4 heroIndex=0 dir=up wTipX=0 wTipY=-38 tipLocalX=-9 tipLocalY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43
+HeroEngineInPhaser.ts:41151 [WPNTRACE][weaponShapeMissing] heroIndex=0 tag=agi.tick dir=up texKey=t064__polearm__spear__thrust__fg__vsteel frame=15 radius=0 hasFrameRef=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.fallbackTip] id=4 heroIndex=0 active=false preActive=true tipLocalX=-9 tipLocalY=-38 lastX=-9 lastY=-38 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-24.5 lastX=-3.5 lastY=-24.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-4.5 tipLocalY=-31.5 lastX=-4.5 lastY=-31.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-29.5 lastX=-3.5 lastY=-29.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true
+HeroEngineInPhaser.ts:41151 [WPNTRACE][agi.tick.auraTip] id=4 heroIndex=0 active=true preActive=false tipLocalX=-3.5 tipLocalY=-24.5 lastX=-3.5 lastY=-24.5 bounds=minX:-43,maxX:43,minY:-50,maxY:43 inBounds=true

@@ -2505,6 +2505,10 @@ const AGI_TEX_MIN_Y_KEY = "aTexMinY";
 const AGI_TEX_MAX_Y_KEY = "aTexMaxY";
 const AGI_LAST_TIP_X_KEY = "aTipX";
 const AGI_LAST_TIP_Y_KEY = "aTipY";
+const AGI_BACK_PULSE_START_MS_KEY = "agiBackPulseStart";
+const AGI_BACK_PULSE_END_MS_KEY = "agiBackPulseEnd";
+const AGI_BACK_PULSE_DONE_KEY = "agiBackPulseDone";
+const AGI_BACK_PULSE_LAST_OUTER_KEY = "agiBackPulseOuter";
 const AGI_TIP_TRACE_SIZE_PX = 8;
 const AGI_TIP_TRACE_COLOR = 2;
 const AGI_TIP_TRACE_EDGE_COLOR = 15;
@@ -2515,6 +2519,8 @@ const AGI_BACK_PULSE_DURATION_MS = 180;
 const AGI_BACK_PULSE_INNER_PAD_PX = 1;
 const AGI_BACK_PULSE_OUTER_PAD_PX = 3;
 const WPN_AURA_TIP_DEPTH_PX = 10;
+const WPN_AURA_TIP_ALIGN_MIN_COS = 0.55;
+const WPN_AURA_TIP_ALIGN_MIN_COS_VERT = 0.82;
 const DEBUG_WPN_AURA_TRACE = true;
 const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
 const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
@@ -7040,13 +7046,7 @@ const TILE_BRIDGE = 2               // private
 
 const DECAL_NONE = 0
 
-const DECAL_SAND_PATCH = 1
-
-
-
 const PROP_NONE = 0
-
-const PROP_ROCK_MOUNTAIN = 1
 
 const PROP_STAIRS_STATUE = 2
 
@@ -7056,6 +7056,49 @@ const PROP_PEDESTAL = 4
 
 
 
+
+type AmbientPropDef = {
+    name: string
+    wTiles: number
+    hTiles: number
+    kind: "plant" | "rock"
+}
+
+const AMBIENT_PROP_SCATTER_ENABLED = true
+const AMBIENT_PROP_SCATTER_DENSITY_PER_10000 = 20
+const AMBIENT_PROP_SCATTER_EDGE_MARGIN = 1
+const AMBIENT_PROP_SCATTER_MIN_PAD_MANHATTAN = 3
+const AMBIENT_PROP_SCATTER_MIN_PER_QUADRANT = 1
+const AMBIENT_PROP_SCATTER_MIN_TRIES_PER_QUADRANT = 160
+
+const AMBIENT_PROP_PLANTS: AmbientPropDef[] = [
+    { name: "plant_leaf_a", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_leaf_b", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_leaf_c", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_leaf_d", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_bush_big", wTiles: 2, hTiles: 2, kind: "plant" },
+    { name: "plant_blade", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_reeds_red", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_reeds_teal", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_bush_round", wTiles: 1, hTiles: 1, kind: "plant" },
+]
+
+const AMBIENT_PROP_ROCKS: AmbientPropDef[] = [
+    { name: "rock_pebbles_a", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_pebbles_b", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_pebbles_c", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_pebbles_d", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_boulder_dark_a", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_boulder_dark_b", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_small_a", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_large", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_med", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_small_b", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_small_c", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_sand_med_b", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_slab", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_mountain", wTiles: 1, hTiles: 1, kind: "rock" },
+]
 
 
 // Dungeon visual decals (terrain_atlas)
@@ -7248,9 +7291,9 @@ const DECOR_ROLE = {
 // Knob for world size tile size tiles dimensions world dimensions
 
 // Sized so 50% zoom fits a 1920x1080 game area with a small margin.
-const WORLD_TILES_W = 108;     // columns
+const WORLD_TILES_W = 96;     // columns
 
-const WORLD_TILES_H = 54;     // rows
+const WORLD_TILES_H = 50;     // rows
 
 
 
@@ -10473,6 +10516,131 @@ function _dunDecor_spawnAtRandomWalkable(args: {
 
 }
 
+function _dunAmbientPickPropDef(baseFamily: string): AmbientPropDef | null {
+    const base = String(baseFamily || "")
+    const preferPlants = (base.indexOf("grass") >= 0) || (base.indexOf("water") >= 0)
+    const plantChance = preferPlants ? 70 : 20
+    const usePlant = (AMBIENT_PROP_PLANTS.length > 0) && ((Math.randomRange(0, 99) | 0) < (plantChance | 0))
+    let pool = usePlant ? AMBIENT_PROP_PLANTS : AMBIENT_PROP_ROCKS
+    if (!pool.length) pool = usePlant ? AMBIENT_PROP_ROCKS : AMBIENT_PROP_PLANTS
+    if (!pool.length) return null
+    const idx = Math.randomRange(0, (pool.length - 1) | 0) | 0
+    return pool[idx] || null
+}
+
+function _dunAmbientPropFitsAt(anchorR: number, anchorC: number, wTiles: number, hTiles: number): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length <= 0) return false
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0
+    if (rows <= 0 || cols <= 0) return false
+
+    const w = Math.max(1, (wTiles | 0)) | 0
+    const h = Math.max(1, (hTiles | 0)) | 0
+
+    for (let dy = 0; dy < (h | 0); dy++) {
+        for (let dx = 0; dx < (w | 0); dx++) {
+            const rr = ((anchorR | 0) - ((h | 0) - 1) + (dy | 0)) | 0
+            const cc = ((anchorC | 0) + (dx | 0)) | 0
+            if (rr < 0 || cc < 0 || rr >= (rows | 0) || cc >= (cols | 0)) return false
+            if ((_engineWorldTileMap[rr][cc] | 0) !== (TILE_EMPTY | 0)) return false
+            if (_dunFindDecorAtTile(rr, cc, "")) return false
+        }
+    }
+    return true
+}
+
+function _dunScatterAmbientProps(rows: number, cols: number): void {
+    if (!AMBIENT_PROP_SCATTER_ENABLED) return
+    if (_dunFloorKind === DUNGEON_KIND_HALL || _dunFloorKind === DUNGEON_KIND_SHOP) return
+    if (!_engineWorldTileMap || rows <= 0 || cols <= 0) return
+
+    const margin = Math.max(0, (AMBIENT_PROP_SCATTER_EDGE_MARGIN | 0)) | 0
+    const minR = margin | 0
+    const minC = margin | 0
+    const maxR = ((rows - 1 - margin) | 0)
+    const maxC = ((cols - 1 - margin) | 0)
+    if ((minR | 0) > (maxR | 0) || (minC | 0) > (maxC | 0)) return
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    const minDist = Math.max(0, (AMBIENT_PROP_SCATTER_MIN_PAD_MANHATTAN | 0)) | 0
+    const baseFamily = String(_dunBaseFamily || "")
+    const minPerQuadrant = Math.max(0, (AMBIENT_PROP_SCATTER_MIN_PER_QUADRANT | 0)) | 0
+    const minTries = Math.max(1, (AMBIENT_PROP_SCATTER_MIN_TRIES_PER_QUADRANT | 0)) | 0
+
+    const tryPlaceInRect = (r0: number, r1: number, c0: number, c1: number, tries: number): boolean => {
+        if ((r0 | 0) > (r1 | 0) || (c0 | 0) > (c1 | 0)) return false
+        for (let i = 0; i < (tries | 0); i++) {
+            const r = Math.randomRange(r0 | 0, r1 | 0) | 0
+            const c = Math.randomRange(c0 | 0, c1 | 0) | 0
+            if ((_engineWorldTileMap[r][c] | 0) !== (TILE_EMPTY | 0)) continue
+            if (minDist > 0) {
+                const dist = (Math.abs((r | 0) - (padR | 0)) + Math.abs((c | 0) - (padC | 0))) | 0
+                if ((dist | 0) < (minDist | 0)) continue
+            }
+            let placed = false
+            for (let j = 0; j < 4; j++) {
+                const def = _dunAmbientPickPropDef(baseFamily)
+                if (!def) break
+                if (!_dunAmbientPropFitsAt(r, c, def.wTiles | 0, def.hTiles | 0)) continue
+                _dunDecor_spawnAtTile({
+                    name: def.name,
+                    role: DECOR_ROLE.TRIGGER,
+                    tileR: r | 0,
+                    tileC: c | 0,
+                    pxW: WORLD_TILE_SIZE,
+                    pxH: WORLD_TILE_SIZE,
+                })
+                placed = true
+                break
+            }
+            if (placed) return true
+        }
+        return false
+    }
+
+    if (minPerQuadrant > 0) {
+        const midR = Math.idiv((minR + maxR) | 0, 2)
+        const midC = Math.idiv((minC + maxC) | 0, 2)
+        for (let i = 0; i < minPerQuadrant; i++) {
+            tryPlaceInRect(minR, midR, minC, midC, minTries | 0)
+            tryPlaceInRect(minR, midR, (midC + 1) | 0, maxC, minTries | 0)
+            tryPlaceInRect((midR + 1) | 0, maxR, minC, midC, minTries | 0)
+            tryPlaceInRect((midR + 1) | 0, maxR, (midC + 1) | 0, maxC, minTries | 0)
+        }
+    }
+
+    for (let r = minR | 0; r <= (maxR | 0); r++) {
+        for (let c = minC | 0; c <= (maxC | 0); c++) {
+            if ((_engineWorldTileMap[r][c] | 0) !== (TILE_EMPTY | 0)) continue
+            if (minDist > 0) {
+                const dist = (Math.abs((r | 0) - (padR | 0)) + Math.abs((c | 0) - (padC | 0))) | 0
+                if ((dist | 0) < (minDist | 0)) continue
+            }
+
+            const roll = Math.randomRange(0, 9999) | 0
+            if ((roll | 0) >= (AMBIENT_PROP_SCATTER_DENSITY_PER_10000 | 0)) continue
+
+            let placed = false
+            for (let i = 0; i < 4; i++) {
+                const def = _dunAmbientPickPropDef(baseFamily)
+                if (!def) break
+                if (!_dunAmbientPropFitsAt(r, c, def.wTiles | 0, def.hTiles | 0)) continue
+                _dunDecor_spawnAtTile({
+                    name: def.name,
+                    role: DECOR_ROLE.TRIGGER,
+                    tileR: r | 0,
+                    tileC: c | 0,
+                    pxW: WORLD_TILE_SIZE,
+                    pxH: WORLD_TILE_SIZE,
+                })
+                placed = true
+                break
+            }
+            if (!placed) continue
+        }
+    }
+}
+
 function _dunPropNameHasVariant(name: string): boolean {
     const s = String(name || "");
     return (
@@ -10990,6 +11158,8 @@ let _dunChestTileR = -1
 
 let _dunChestTileC = -1
 let _dunChestSolidsByKey: { [key: string]: Sprite } = Object.create(null)
+let _dunStarterRelicTileR = -1
+let _dunStarterRelicTileC = -1
 
 let _dunInteractFocusActive = 0
 let _dunInteractFocusR = -1
@@ -12875,16 +13045,63 @@ function _dunEnterFloor_spawnRandomChest(nowMs: number): void {
 
 }
 
+const STARTER_CHEST_MIN_PAD_DIST = 3
+const STARTER_CHEST_MAX_TRIES = 220
 const TREASURE_CHEST_MIN_PAD_DIST = 6
 const TREASURE_CHEST_EXTRA_PAD_DIST = 4
 const TREASURE_CHEST_MAX_TRIES = 260
 
 function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
-    // Place 3 tiles below the teleport rune (entrance pad).
-    const targetR = Math.max(0, (_dunPadTileR | 0) + 3) | 0
-    const targetC = Math.max(0, _dunPadTileC | 0) | 0
-    const chest = _dunSpawnChest(nowMs, _dunColToX(targetC), _dunRowToY(targetR))
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    const minDist = STARTER_CHEST_MIN_PAD_DIST | 0
+
+    function tileFree(rr: number, cc: number): boolean {
+        if (!_engineWorldTileMap || !_engineWorldTileMap.length) return false
+        if (rr < 1 || cc < 1 || rr >= (rows - 1) || cc >= (cols - 1)) return false
+        if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) return false
+        if (_dunFindDecorAtTile(rr, cc, "")) return false
+        return true
+    }
+
+    function distFromPad(rr: number, cc: number): number {
+        return (Math.abs((rr | 0) - (padR | 0)) + Math.abs((cc | 0) - (padC | 0))) | 0
+    }
+
+    let pick: { r: number, c: number } | null = null
+    for (let i = 0; i < (STARTER_CHEST_MAX_TRIES | 0); i++) {
+        const rr = Math.randomRange(1, (rows - 2) | 0) | 0
+        const cc = Math.randomRange(1, (cols - 2) | 0) | 0
+        if (!tileFree(rr, cc)) continue
+        if (distFromPad(rr, cc) < (minDist | 0)) continue
+        pick = { r: rr | 0, c: cc | 0 }
+        break
+    }
+    if (!pick) {
+        const fallback = _dunPickRandomWalkableTile({
+            avoidR: padR,
+            avoidC: padC,
+            minManhattan: Math.max(1, (minDist - 1) | 0),
+            maxTries: 200
+        })
+        if (tileFree(fallback.r | 0, fallback.c | 0)) {
+            pick = { r: fallback.r | 0, c: fallback.c | 0 }
+        }
+    }
+    if (!pick) {
+        const targetR = Math.max(0, Math.min(rows - 1, (padR + 3) | 0)) | 0
+        const targetC = Math.max(0, Math.min(cols - 1, padC | 0)) | 0
+        pick = { r: targetR | 0, c: targetC | 0 }
+    }
+
+    const chest = _dunSpawnChest(nowMs, _dunColToX(pick.c | 0), _dunRowToY(pick.r | 0))
     if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
+        _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
+        _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
         sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "starter_relic")
         _dunConfigureChestRelicOffer(chest, {
             poolIds: _relicStarterOfferPool(),
@@ -12903,8 +13120,12 @@ function _dunEnterFloor_spawnTreasureChest(nowMs: number): void {
 
     const padR = _dunPadTileR | 0
     const padC = _dunPadTileC | 0
-    const relicR = Math.max(0, Math.min(rows - 1, (padR + 3) | 0)) | 0
-    const relicC = Math.max(0, Math.min(cols - 1, padC | 0)) | 0
+    const relicR = (_dunStarterRelicTileR >= 0)
+        ? (_dunStarterRelicTileR | 0)
+        : Math.max(0, Math.min(rows - 1, (padR + 3) | 0)) | 0
+    const relicC = (_dunStarterRelicTileC >= 0)
+        ? (_dunStarterRelicTileC | 0)
+        : Math.max(0, Math.min(cols - 1, padC | 0)) | 0
     const relicDist = (Math.abs((relicR | 0) - (padR | 0)) + Math.abs((relicC | 0) - (padC | 0))) | 0
     const minDist = Math.max(TREASURE_CHEST_MIN_PAD_DIST | 0, (relicDist + TREASURE_CHEST_EXTRA_PAD_DIST) | 0) | 0
 
@@ -12962,6 +13183,34 @@ function _dunEnterFloor_spawnTreasureChest(nowMs: number): void {
     const chest = _dunSpawnChest(nowMs, _dunColToX(pick.c | 0), _dunRowToY(pick.r | 0))
     if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
         sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "treasure")
+        const chestR = sprites.readDataNumber(chest, "decorTileR") | 0
+        const chestC = sprites.readDataNumber(chest, "decorTileC") | 0
+        const markerNames = ["treasure_marker_a", "treasure_marker_b"]
+        const candidates = [
+            { r: (chestR - 1) | 0, c: chestC | 0 }, // back (north)
+            { r: chestR | 0, c: (chestC - 1) | 0 }, // left
+            { r: chestR | 0, c: (chestC + 1) | 0 }, // right
+        ]
+        const open: { r: number, c: number }[] = []
+        for (let i = 0; i < candidates.length; i++) {
+            const cand = candidates[i]
+            if (!tileFree(cand.r | 0, cand.c | 0)) continue
+            open.push({ r: cand.r | 0, c: cand.c | 0 })
+        }
+        if (open.length > 0) {
+            const pickIdx = Math.randomRange(0, (open.length - 1) | 0) | 0
+            const spot = open[pickIdx] || open[0]
+            const variantIdx = Math.randomRange(0, (markerNames.length - 1) | 0) | 0
+            const markerName = markerNames[variantIdx] || markerNames[0]
+            _dunDecor_spawnAtTile({
+                name: markerName,
+                role: DECOR_ROLE.TRIGGER,
+                tileR: spot.r | 0,
+                tileC: spot.c | 0,
+                pxW: WORLD_TILE_SIZE,
+                pxH: WORLD_TILE_SIZE,
+            })
+        }
     }
 }
 
@@ -13956,7 +14205,19 @@ function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | nul
     }
 
     if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
-        const pick = pickNearCenter(centerR, centerC, TRAP_CENTER_SEARCH_RADIUS | 0)
+        const maxRadius = TRAP_CENTER_SEARCH_RADIUS | 0
+        let pick: { r: number, c: number } | null = null
+        const tries = Math.max(12, (maxRadius * maxRadius) | 0) | 0
+        for (let i = 0; i < tries; i++) {
+            const dr = Math.randomRange(-maxRadius, maxRadius) | 0
+            const dc = Math.randomRange(-maxRadius, maxRadius) | 0
+            const rr = (centerR + dr) | 0
+            const cc = (centerC + dc) | 0
+            if (!isTileFree(rr, cc)) continue
+            pick = { r: rr | 0, c: cc | 0 }
+            break
+        }
+        if (!pick) pick = pickNearCenter(centerR, centerC, maxRadius)
         if (pick) {
             r = pick.r | 0
             c = pick.c | 0
@@ -27740,6 +28001,8 @@ function initWorldDecorPostPass(): void {
     _dunChestSolidsByKey = Object.create(null)
     _dunChestTileR = -1
     _dunChestTileC = -1
+    _dunStarterRelicTileR = -1
+    _dunStarterRelicTileC = -1
 
 
 
@@ -27776,190 +28039,6 @@ function initWorldDecorPostPass(): void {
 
 
     // ----------------------------------------------------------
-
-    // Pick a WALKABLE center-ish tile for sand (robust)
-
-    // ----------------------------------------------------------
-
-    let sandR = (Math.idiv(rows, 2) | 0) + 3
-
-    let sandC = (Math.idiv(cols, 2) | 0) - 4
-
-
-
-    function isWalkable(r: number, c: number): boolean {
-
-        if (r < 0 || c < 0 || r >= rows || c >= cols) return false
-
-        return !_tileIsSolidType(_engineWorldTileMap[r][c] | 0)
-
-    }
-
-
-
-    if (!isWalkable(sandR, sandC)) {
-
-        // search outward for first walkable tile
-
-        let found = false
-
-        for (let rad = 1; rad <= 6 && !found; rad++) {
-
-            for (let dr = -rad; dr <= rad && !found; dr++) {
-
-                const r0 = (sandR + dr) | 0
-
-                const cLeft = (sandC - rad) | 0
-
-                const cRight = (sandC + rad) | 0
-
-                if (isWalkable(r0, cLeft)) { sandR = r0; sandC = cLeft; found = true; break }
-
-                if (isWalkable(r0, cRight)) { sandR = r0; sandC = cRight; found = true; break }
-
-            }
-
-            for (let dc = -rad; dc <= rad && !found; dc++) {
-
-                const c0 = (sandC + dc) | 0
-
-                const rUp = (sandR - rad) | 0
-
-                const rDown = (sandR + rad) | 0
-
-                if (isWalkable(rUp, c0)) { sandR = rUp; sandC = c0; found = true; break }
-
-                if (isWalkable(rDown, c0)) { sandR = rDown; sandC = c0; found = true; break }
-
-            }
-
-        }
-
-        // If still not found, keep original center (worst-case)
-
-    }
-
-
-
-    // Sand decal at chosen tile
-
-    _engineDecalGrid[sandR][sandC] = DECAL_SAND_PATCH
-
-
-
-    // ----------------------------------------------------------
-
-    // Place rock SOLID adjacent to sand (prefer right, then left/down/up)
-
-    // ----------------------------------------------------------
-
-    let rockR = sandR
-
-    let rockC = sandC
-
-
-
-    const candidates = [
-
-        { dr: 0, dc: 1 },
-
-        { dr: 0, dc: -1 },
-
-        { dr: 1, dc: 0 },
-
-        { dr: -1, dc: 0 },
-
-    ]
-
-
-
-    for (let i = 0; i < candidates.length; i++) {
-
-        const rr = (sandR + candidates[i].dr) | 0
-
-        const cc = (sandC + candidates[i].dc) | 0
-
-        if (isWalkable(rr, cc)) {
-
-            rockR = rr
-
-            rockC = cc
-
-            break
-
-        }
-
-    }
-
-
-
-    // ----------------------------------------------------------
-
-    // Trigger collider sprite for sand (overlap proof)
-
-    // ----------------------------------------------------------
-
-    const sandImg = _createDecorColliderImage(WORLD_TILE_SIZE, WORLD_TILE_SIZE)
-
-    const sandTrigger = sprites.create(sandImg, (SpriteKind as any).DecorTrigger)
-
-
-
-    sandTrigger.left = (sandC * WORLD_TILE_SIZE) | 0
-
-    sandTrigger.top = (sandR * WORLD_TILE_SIZE) | 0
-
-    sandTrigger.setFlag(SpriteFlag.Invisible, true)
-
-
-
-    sprites.setDataNumber(sandTrigger, DECOR_DATA.IS_COLLIDER, 1)
-
-    sprites.setDataNumber(sandTrigger, DECOR_DATA.ID, DECAL_SAND_PATCH)
-
-    sprites.setDataNumber(sandTrigger, DECOR_DATA.ROLE, DECOR_ROLE.TRIGGER)
-
-    sprites.setDataString(sandTrigger, DECOR_DATA.NAME, "sand_patch")
-
-
-
-    _engineDecorTriggers.push(sandTrigger)
-
-
-
-    // ----------------------------------------------------------
-
-    // Solid collider sprite for rock (overlap proof now; blocking later)
-
-    // ----------------------------------------------------------
-
-    const rockImg = _createDecorColliderImage(WORLD_TILE_SIZE, WORLD_TILE_SIZE)
-
-    const rockSolid = sprites.create(rockImg, (SpriteKind as any).DecorSolid)
-
-
-
-    rockSolid.left = (rockC * WORLD_TILE_SIZE) | 0
-
-    rockSolid.top = (rockR * WORLD_TILE_SIZE) | 0
-
-    rockSolid.setFlag(SpriteFlag.Invisible, true)
-
-
-
-    sprites.setDataNumber(rockSolid, DECOR_DATA.IS_COLLIDER, 1)
-
-    sprites.setDataNumber(rockSolid, DECOR_DATA.ID, PROP_ROCK_MOUNTAIN)
-
-    sprites.setDataNumber(rockSolid, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
-
-    sprites.setDataString(rockSolid, DECOR_DATA.NAME, "rock_mountain")
-
-
-
-    _engineDecorSolids.push(rockSolid)
-
-    // ----------------------------------------------------------
     // Bridge props (visuals only; collision handled by world grid)
     // ----------------------------------------------------------
     if (_worldgenBridgePlacements && _worldgenBridgePlacements.length) {
@@ -27979,6 +28058,9 @@ function initWorldDecorPostPass(): void {
             });
         }
     }
+
+    // Ambient prop scatter (terrain.png plants + rocks)
+    _dunScatterAmbientProps(rows | 0, cols | 0)
 
 
 
@@ -40279,7 +40361,7 @@ function spawnStrengthSwingProjectile(
     const halfH = (img0.height | 0) >> 1
     let tipInitX = wTipX
     let tipInitY = wTipY
-    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.spawn")
     if (auraPack && auraPack.shapes[3]) {
         const tipShape = auraPack.shapes[3]
         const baseX = hero.x + (auraPack.info.offX || 0)
@@ -40556,7 +40638,7 @@ function updateStrengthProjectilesMotionFor(
         if (img) {
             const halfW = (img.width | 0) >> 1
             const halfH = (img.height | 0) >> 1
-            const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+            const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick")
             if (auraPack && auraPack.shapes[3]) {
                 const tipShape = auraPack.shapes[3]
                 const baseX = hero.x + (auraPack.info.offX || 0)
@@ -40650,7 +40732,7 @@ function updateStrengthProjectilesMotionFor(
     if (img) {
         const halfW = (img.width | 0) >> 1
         const halfH = (img.height | 0) >> 1
-        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick2")
         if (auraPack && auraPack.shapes[3]) {
             const tipShape = auraPack.shapes[3]
             const baseX = hero.x + (auraPack.info.offX || 0)
@@ -41117,6 +41199,7 @@ function _strengthTraceStampLine(
 type WeaponFgInfo = {
     texKey: string;
     frameName: string;
+    frameRef: any | null;
     offX: number;
     offY: number;
     originX: number;
@@ -41135,6 +41218,7 @@ type WeaponAuraTipShape = {
 };
 
 const __weaponAuraTipCache: { [k: string]: WeaponAuraTipShape } = Object.create(null);
+const __weaponAuraTipStable: { [k: string]: WeaponAuraTipShape } = Object.create(null);
 
 function _weaponDirKeyFromVector(nx: number, ny: number): string {
     if (!nx && !ny) return "down";
@@ -41146,15 +41230,37 @@ function _weaponDirKeyFromVector(nx: number, ny: number): string {
     return "up_left";
 }
 
+function _weaponAuraStableKey(info: WeaponFgInfo, dirKey: string, radius: number): string {
+    return [
+        info.texKey,
+        dirKey,
+        "r" + (radius | 0),
+        "ox" + Math.round(info.originX * 1000),
+        "oy" + Math.round(info.originY * 1000),
+        "sx" + Math.round(info.scaleX * 1000),
+        "sy" + Math.round(info.scaleY * 1000),
+        info.flipX ? "fx1" : "fx0",
+        info.flipY ? "fy1" : "fy0"
+    ].join("|");
+}
+
 function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
     const d: any = (hero as any).data;
     if (!d) return null;
-    const texKey = d.__wpnFgTexKey;
-    const frameName = d.__wpnFgFrame;
+    const frameRef = (d.__wpnFgFrameRef as any) || null;
+    let texKey = d.__wpnFgTexKey;
+    let frameName = d.__wpnFgFrame;
+    if ((!texKey || texKey === "") && frameRef?.texture?.key) {
+        texKey = String(frameRef.texture.key);
+    }
+    if ((frameName == null || frameName === "") && frameRef?.name !== undefined) {
+        frameName = String(frameRef.name);
+    }
     if (!texKey || frameName == null || frameName === "") return null;
     return {
         texKey: String(texKey),
         frameName: String(frameName),
+        frameRef,
         offX: (d.__wpnFgOffX || 0),
         offY: (d.__wpnFgOffY || 0),
         originX: (typeof d.__wpnFgOriginX === "number") ? d.__wpnFgOriginX : 0.5,
@@ -41166,12 +41272,12 @@ function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
     };
 }
 
-function _getAuraMaskBits(texKey: string, frameName: string, radius: number): any | null {
+function _getAuraMaskBits(texKey: string, frameName: string, radius: number, frameRef?: any): any | null {
     try {
         const g: any = (globalThis as any);
         const hook = g && g.__HeroEngineHooks && g.__HeroEngineHooks.getAuraMaskBits;
         if (typeof hook !== "function") return null;
-        return hook(texKey, frameName, radius | 0);
+        return hook(texKey, frameName, radius | 0, frameRef);
     } catch {
         return null;
     }
@@ -41191,7 +41297,33 @@ function _wpnTraceVerbose(): boolean {
 
 function _wpnTraceLog(tag: string, payload: any): void {
     if (!_wpnTraceEnabled()) return;
-    console.log("[WPNTRACE][" + tag + "]", payload);
+    if (!payload || typeof payload !== "object") {
+        console.log("[WPNTRACE][" + tag + "]", payload);
+        return;
+    }
+    const parts: string[] = [];
+    const entries = Object.entries(payload);
+    for (const [k, v] of entries) {
+        if (v === undefined || v === null) continue;
+        if (typeof v === "number") {
+            const n = Number.isFinite(v) ? +v.toFixed(2) : v;
+            parts.push(`${k}=${n}`);
+            continue;
+        }
+        if (typeof v === "string" || typeof v === "boolean") {
+            parts.push(`${k}=${v}`);
+            continue;
+        }
+        if (typeof v === "object") {
+            const inner = Object.entries(v as any)
+                .map(([ik, iv]) => `${ik}:${iv}`)
+                .join(",");
+            parts.push(`${k}=${inner}`);
+            continue;
+        }
+        parts.push(`${k}=${String(v)}`);
+    }
+    console.log("[WPNTRACE][" + tag + "] " + parts.join(" "));
 }
 
 function _wpnTraceAssignId(proj: Sprite): number {
@@ -41245,19 +41377,36 @@ function _getWeaponAuraTipShape(
         info.flipX ? "fx1" : "fx0",
         info.flipY ? "fy1" : "fy0"
     ].join("|");
+    const stableKey = _weaponAuraStableKey(info, dirKey, radius);
     const cached = __weaponAuraTipCache[key];
     if (cached) return cached;
 
-    const mask = _getAuraMaskBits(info.texKey, info.frameName, radius | 0);
+    const mask = _getAuraMaskBits(info.texKey, info.frameName, radius | 0, info.frameRef);
     if (!mask || !mask.bits || !(mask.w > 0) || !(mask.h > 0)) {
-        if (_wpnTraceEnabled() && !__wpnTraceLogOnce[key]) {
-            __wpnTraceLogOnce[key] = 1;
+        const missKey = `miss|${info.texKey}|r${radius}|${dirKey}`;
+        if (_wpnTraceEnabled() && !__wpnTraceLogOnce[missKey]) {
+            __wpnTraceLogOnce[missKey] = 1;
             _wpnTraceLog("maskMissing", {
                 key,
                 texKey: info.texKey,
                 frame: info.frameName,
-                radius: radius | 0
+                radius: radius | 0,
+                hasFrameRef: !!info.frameRef
             });
+        }
+        const stable = __weaponAuraTipStable[stableKey];
+        if (stable) {
+            const useKey = `stable|${stableKey}`;
+            if (_wpnTraceEnabled() && !__wpnTraceLogOnce[useKey]) {
+                __wpnTraceLogOnce[useKey] = 1;
+                _wpnTraceLog("tipStableUsed", {
+                    texKey: info.texKey,
+                    frame: info.frameName,
+                    radius: radius | 0,
+                    dir: dirKey
+                });
+            }
+            return stable;
         }
         return null;
     }
@@ -41308,6 +41457,42 @@ function _getWeaponAuraTipShape(
 
     if (maxDot <= -1e8) return null;
 
+    const tipLen = Math.sqrt(tipDx * tipDx + tipDy * tipDy) || 0;
+    const align = tipLen > 1e-6 ? (maxDot / tipLen) : 0;
+    const isVertical = Math.abs(ny) > Math.abs(nx);
+    const minCos = isVertical ? WPN_AURA_TIP_ALIGN_MIN_COS_VERT : WPN_AURA_TIP_ALIGN_MIN_COS;
+    if (align < minCos) {
+        const stable = __weaponAuraTipStable[stableKey];
+        if (stable) {
+            const useKey = `stable|misalign|${stableKey}`;
+            if (_wpnTraceEnabled() && !__wpnTraceLogOnce[useKey]) {
+                __wpnTraceLogOnce[useKey] = 1;
+                _wpnTraceLog("tipStableUsed", {
+                    texKey: info.texKey,
+                    frame: info.frameName,
+                    radius: radius | 0,
+                    dir: dirKey,
+                    align: +align.toFixed(3),
+                    minCos: +minCos.toFixed(3)
+                });
+            }
+            return stable;
+        }
+        const misKey = `misalign|${stableKey}`;
+        if (_wpnTraceEnabled() && !__wpnTraceLogOnce[misKey]) {
+            __wpnTraceLogOnce[misKey] = 1;
+            _wpnTraceLog("tipMisaligned", {
+                texKey: info.texKey,
+                frame: info.frameName,
+                radius: radius | 0,
+                dir: dirKey,
+                align: +align.toFixed(3),
+                minCos: +minCos.toFixed(3)
+            });
+        }
+        return null;
+    }
+
     const cutoff = maxDot - Math.max(0, depthPx | 0);
     const offsets: number[] = [];
 
@@ -41334,6 +41519,7 @@ function _getWeaponAuraTipShape(
         sideHalf: Math.max(1, Math.ceil(maxAbsSide) | 0)
     };
     __weaponAuraTipCache[key] = out;
+    __weaponAuraTipStable[stableKey] = out;
 
     if (_wpnTraceVerbose() && !__wpnTraceLogOnce[key]) {
         __wpnTraceLogOnce[key] = 1;
@@ -41361,16 +41547,53 @@ function _getWeaponAuraTipShape(
 function _getWeaponAuraTipShapes(
     hero: Sprite,
     nx: number,
-    ny: number
+    ny: number,
+    heroIndex?: number,
+    traceTag?: string
 ): { info: WeaponFgInfo; shapes: WeaponAuraTipShape[]; dirKey: string } | null {
     const info = _getHeroWeaponFgInfo(hero);
-    if (!info) return null;
     const dirKey = _weaponDirKeyFromVector(nx, ny);
+    if (!info) {
+        if (_wpnTraceEnabled()) {
+            const d: any = (hero as any).data;
+            const missKey = `noinfo|${heroIndex ?? -1}|${dirKey}|${traceTag ?? ""}`;
+            if (!__wpnTraceLogOnce[missKey]) {
+                __wpnTraceLogOnce[missKey] = 1;
+                _wpnTraceLog("weaponInfoMissing", {
+                    heroIndex: heroIndex ?? -1,
+                    tag: traceTag || "",
+                    dir: dirKey,
+                    hasData: !!d,
+                    texKey: d && d.__wpnFgTexKey,
+                    frame: d && d.__wpnFgFrame,
+                    hasFrameRef: !!(d && d.__wpnFgFrameRef)
+                });
+            }
+        }
+        return null;
+    }
     const depth = Math.max(1, WPN_AURA_TIP_DEPTH_PX | 0);
     const shapes: WeaponAuraTipShape[] = [];
     for (let r = 0; r <= 3; r++) {
         const shape = _getWeaponAuraTipShape(info, nx, ny, dirKey, r, depth + r);
-        if (!shape || shape.offsets.length === 0) return null;
+        if (!shape || shape.offsets.length === 0) {
+            if (_wpnTraceEnabled()) {
+                const missKey = `shape|${info.texKey}|${dirKey}|r${r}|${traceTag ?? ""}`;
+                if (!__wpnTraceLogOnce[missKey]) {
+                    __wpnTraceLogOnce[missKey] = 1;
+                    _wpnTraceLog("weaponShapeMissing", {
+                        heroIndex: heroIndex ?? -1,
+                        tag: traceTag || "",
+                        dir: dirKey,
+                        texKey: info.texKey,
+                        frame: info.frameName,
+                        radius: r | 0,
+                        hasFrameRef: !!info.frameRef
+                    });
+                }
+            }
+            return null;
+        }
         shapes[r] = shape;
     }
     return { info, shapes, dirKey };
@@ -44588,7 +44811,7 @@ function spawnAgilityThrustProjectile(
     const sx = -ny
     const sy = nx
     const wTipSide = (wTipX0 * sx) + (wTipY0 * sy)
-    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.spawn")
     const auraSide = (auraPack && auraPack.shapes[3]) ? (auraPack.shapes[3].sideHalf | 0) : 0
     const sideHalf = Math.max(halfTip, Math.ceil(Math.abs(wTipSide)) + halfTip, auraSide)
     const pad = 2 + sideHalf
@@ -44736,6 +44959,16 @@ function spawnAgilityThrustProjectile(
     // Activation gate (NEW)
 
     sprites.setDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS, activateAt | 0)
+    const backPulseStart = ((activateAt | 0) + (AGI_BACK_PULSE_DELAY_MS | 0)) | 0
+    const backPulseDur = Math.max(AGI_BACK_PULSE_DURATION_MS | 0, (dashMs | 0)) | 0
+    sprites.setDataNumber(proj, AGI_BACK_PULSE_START_MS_KEY, backPulseStart)
+    sprites.setDataNumber(
+        proj,
+        AGI_BACK_PULSE_END_MS_KEY,
+        (backPulseStart + backPulseDur) | 0
+    )
+    sprites.setDataNumber(proj, AGI_BACK_PULSE_DONE_KEY, 0)
+    sprites.setDataNumber(proj, AGI_BACK_PULSE_LAST_OUTER_KEY, 0)
 
 
 
@@ -45090,6 +45323,39 @@ function createAgilityArrowSegmentImage(
     pulse?: AgiPulseArc
 ): Image {
     return _buildAgilityTrailImage(sBack, sFront, nx, ny, anchorOffX, anchorOffY, pulse).img;
+}
+
+function _stampAgilityPulseArc(
+    img: Image,
+    minX: number,
+    minY: number,
+    pulse: AgiPulseArc,
+    innerR: number,
+    outerR: number,
+    mainCol: number,
+    edgeCol: number
+): void {
+    if (!img || !pulse || !pulse.active) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const start = pulse.startRad;
+    const end = pulse.endRad;
+    const step = Math.PI / 90;
+    const dir = (end >= start) ? 1 : -1;
+    const rStart = Math.max(0, innerR | 0);
+    const rEnd = Math.max(rStart, outerR | 0);
+    for (let a = start; dir > 0 ? (a <= end) : (a >= end); a += dir * step) {
+        const cosA = Math.cos(a);
+        const sinA = Math.sin(a);
+        for (let r = rStart; r <= rEnd; r++) {
+            const px = Math.round(cosA * r) - (minX | 0);
+            const py = Math.round(sinA * r) - (minY | 0);
+            if (px < 0 || px >= w || py < 0 || py >= h) continue;
+            const isEdge = (r === rStart || r === rEnd);
+            const col = isEdge ? edgeCol : mainCol;
+            img.setPixel(px, py, col | 0);
+        }
+    }
 }
 
 function _agiBackPulseArcParams(hero: Sprite, nx: number, ny: number, active: boolean): AgiPulseArc {
@@ -45475,16 +45741,20 @@ function updateAgilityProjectilesMotionFor(
     proj.y = anchorY + (minY + maxY) / 2
 
     const img = proj.image
+    let tipLocalX: number | null = null
+    let tipLocalY: number | null = null
+    let auraShapes: WeaponAuraTipShape[] | null = null
     if (img) {
-        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny)
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.tick")
         if (auraPack && auraPack.shapes[3]) {
+            auraShapes = auraPack.shapes
             const tipShape = auraPack.shapes[3]
             const baseX = hero.x + (auraPack.info.offX || 0)
             const baseY = hero.y + (auraPack.info.offY || 0)
             const tipWorldX = baseX + tipShape.tipDx
             const tipWorldY = baseY + tipShape.tipDy
-            const tipLocalX = tipWorldX - anchorX
-            const tipLocalY = tipWorldY - anchorY
+            tipLocalX = tipWorldX - anchorX
+            tipLocalY = tipWorldY - anchorY
             const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
             _stampWeaponAuraLine(
@@ -45534,8 +45804,8 @@ function updateAgilityProjectilesMotionFor(
                 wTipX = nx * attachPx
                 wTipY = ny * attachPx
             }
-            const tipLocalX = (hero.x + wTipX) - anchorX
-            const tipLocalY = (hero.y + wTipY) - anchorY
+            tipLocalX = (hero.x + wTipX) - anchorX
+            tipLocalY = (hero.y + wTipY) - anchorY
             const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
             _agiTraceStampLine(img, minX, minY, lastX, lastY, tipLocalX, tipLocalY)
@@ -45556,6 +45826,49 @@ function updateAgilityProjectilesMotionFor(
             }
             sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
             sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+        }
+    }
+
+    if (img && tipLocalX != null && tipLocalY != null) {
+        const pulseStart = sprites.readDataNumber(proj, AGI_BACK_PULSE_START_MS_KEY) | 0
+        const pulseEnd = sprites.readDataNumber(proj, AGI_BACK_PULSE_END_MS_KEY) | 0
+        if (pulseStart > 0 && nowMs >= pulseStart) {
+            if (_wpnTraceEnabled()) {
+                const logKey = `agiPulse|${_wpnTraceAssignId(proj)}`;
+                if (!__wpnTraceLogOnce[logKey]) {
+                    __wpnTraceLogOnce[logKey] = 1;
+                    _wpnTraceLog("agi.backPulse.start", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        start: pulseStart | 0,
+                        end: pulseEnd | 0
+                    });
+                }
+            }
+            const duration = Math.max(1, (pulseEnd - pulseStart) | 0)
+            const t = Math.max(0, Math.min(1, (nowMs - pulseStart) / duration))
+            const tipProj = (tipLocalX * nx) + (tipLocalY * ny)
+            const backTotal = Math.max(0, tipProj)
+            const waveLen = Math.round(backTotal * t)
+            if (waveLen > 0) {
+                const backX = tipLocalX - (nx * waveLen)
+                const backY = tipLocalY - (ny * waveLen)
+                if (auraShapes) {
+                    _stampWeaponAuraLine(
+                        img,
+                        minX,
+                        minY,
+                        tipLocalX,
+                        tipLocalY,
+                        backX,
+                        backY,
+                        auraShapes,
+                        AGI_TIP_TRACE_COLOR
+                    )
+                } else {
+                    _agiTraceStampLine(img, minX, minY, tipLocalX, tipLocalY, backX, backY)
+                }
+            }
         }
     }
 

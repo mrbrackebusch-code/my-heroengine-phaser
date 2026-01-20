@@ -2133,6 +2133,9 @@ function __allocBits(w: number, h: number): Uint32Array {
 function __readFrameImageData(scene: Phaser.Scene, texKey: string, frameName: string): ImageData {
     const tex = scene.textures.get(texKey);
     const frame = tex.get(frameName);
+    if (!frame) {
+        throw new Error(`[auraMask] frame not found for ${texKey}:${frameName}`);
+    }
 
     const w = frame.width;
     const h = frame.height;
@@ -2150,6 +2153,36 @@ function __readFrameImageData(scene: Phaser.Scene, texKey: string, frameName: st
     }
 
     // Phaser Frame has cutX/cutY or x/y depending on build; support both
+    const sx = (frame as any).cutX ?? (frame as any).x ?? 0;
+    const sy = (frame as any).cutY ?? (frame as any).y ?? 0;
+
+    ctx.drawImage(src, sx, sy, w, h, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h);
+}
+
+// Draw a Phaser frame object into a canvas and return ImageData.
+function __readFrameImageDataFromFrame(frame: Phaser.Textures.Frame): ImageData {
+    const w = frame.width;
+    const h = frame.height;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+    ctx.clearRect(0, 0, w, h);
+
+    let src = (frame as any).source?.image as HTMLImageElement | HTMLCanvasElement | undefined;
+    if (!src) {
+        const texAny: any = (frame as any).texture;
+        src = (texAny?.getSourceImage?.() as HTMLImageElement | HTMLCanvasElement | undefined)
+            || (texAny?.source && texAny.source[0] ? texAny.source[0].image : undefined);
+    }
+    if (!src) {
+        const texKey = (frame as any).texture?.key ?? "?";
+        const frameName = (frame as any).name ?? "?";
+        throw new Error(`[auraMask] no frame source image for ${texKey}:${frameName}`);
+    }
+
     const sx = (frame as any).cutX ?? (frame as any).x ?? 0;
     const sy = (frame as any).cutY ?? (frame as any).y ?? 0;
 
@@ -3125,6 +3158,61 @@ export function getOrBuildHeroAuraMaskBits(
     if (hit) return hit;
 
     const img = __readFrameImageData(scene, texKey, frameName);
+    const entry = __buildDilatedMaskBitsFromImage(img, r);
+    __auraMaskCache.set(key, entry);
+    if (DEBUG_EFFECT_MASKS && !__effectMaskStatsOnce.has(key)) {
+        __effectMaskStatsOnce.add(key);
+        let maskCount = 0;
+        const bits = entry.bits;
+        for (let i = 0; i < bits.length; i++) {
+            maskCount += __countBits32(bits[i] >>> 0);
+        }
+        const area = Math.max(1, (entry.w | 0) * (entry.h | 0));
+        const ratio = maskCount / area;
+        console.log("[effectmask][maskStats]", {
+            key,
+            texKey,
+            frame: frameName,
+            radius: r | 0,
+            w: entry.w | 0,
+            h: entry.h | 0,
+            maskCount,
+            ratio: +ratio.toFixed(4)
+        });
+    }
+    return entry;
+}
+
+// Exported: get/build and cache 1-bit mask for a specific native frame object.
+export function getOrBuildHeroAuraMaskBitsForFrame(
+    scene: Phaser.Scene,
+    frame: Phaser.Textures.Frame,
+    r: number,
+    texKeyOverride?: string
+): MaskEntry {
+    const texKey = texKeyOverride || (frame as any).texture?.key || "";
+    const frameName = (frame as any).name !== undefined ? String((frame as any).name) : "__BASE";
+    const key = __maskKey(texKey, frameName, r);
+    const hit = __auraMaskCache.get(key);
+    if (hit) return hit;
+
+    let img: ImageData;
+    try {
+        img = __readFrameImageDataFromFrame(frame);
+    } catch (err) {
+        // Fallback to texture lookup when the frame source isn't directly readable.
+        img = __readFrameImageData(scene, texKey, frameName);
+        if (DEBUG_EFFECT_MASKS && !__effectMaskStatsOnce.has(key)) {
+            __effectMaskStatsOnce.add(key);
+            console.warn("[effectmask][frameFallback]", {
+                key,
+                texKey,
+                frame: frameName,
+                radius: r | 0,
+                err: String((err as any)?.message || err || "unknown")
+            });
+        }
+    }
     const entry = __buildDilatedMaskBitsFromImage(img, r);
     __auraMaskCache.set(key, entry);
     if (DEBUG_EFFECT_MASKS && !__effectMaskStatsOnce.has(key)) {

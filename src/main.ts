@@ -1177,6 +1177,8 @@ class HeroScene extends Phaser.Scene {
     private _worldPixelW: number = 0;
     private _worldPixelH: number = 0;
     private _worldTileSize: number = 0;
+    private _textureFiltersInstalled: boolean = false;
+    private _cameraRoundOverrideInstalled: boolean = false;
 
 
     // NEW: track dims too (lets us force-reapply if needed)
@@ -1236,11 +1238,14 @@ async create() {
     // 1) Globals + debug flags (weapon flags come from constants, not URL)
     this.setupGlobalsAndDebug();
 
+    this._installNearestTextureFiltering();
+
     
     // ✅ DOM-sized viewport management (canvas tracks #app size)
     this._installDomResizeObserver();
 
     this._installCameraZoomControls();
+    this._installCameraRenderRoundOverride();
     this._updateCameraZoom();
 
     // 2) Loading indicator
@@ -1621,6 +1626,55 @@ private _snapCameraScrollToPixelGrid(): void {
     }
 }
 
+private _installNearestTextureFiltering(): void {
+    if (this._textureFiltersInstalled) return;
+    this._textureFiltersInstalled = true;
+
+    const texMgr: any = this.textures;
+    if (!texMgr) return;
+
+    const apply = (tex: any) => {
+        if (!tex || typeof tex.setFilter !== "function") return;
+        try { tex.setFilter(Phaser.Textures.FilterMode.NEAREST); } catch { }
+    };
+
+    const list = (texMgr.list as Record<string, any>) || {};
+    for (const k of Object.keys(list)) {
+        apply(list[k]);
+    }
+
+    try {
+        texMgr.on(Phaser.Textures.Events.ADD, (_key: string, tex: any) => apply(tex));
+    } catch {
+        texMgr.on("addtexture", (_key: string, tex: any) => apply(tex));
+    }
+}
+
+private _installCameraRenderRoundOverride(): void {
+    if (this._cameraRoundOverrideInstalled) return;
+    this._cameraRoundOverrideInstalled = true;
+
+    const cam = this.cameras?.main as any;
+    if (!cam || typeof cam.preRender !== "function") return;
+
+    const scene = this;
+    const orig = cam.preRender;
+    cam.preRender = function () {
+        orig.call(this);
+        if (!this.roundPixels) return;
+        const tileSize = scene._worldTileSize | 0;
+        if (tileSize <= 0) return;
+        const zx = this.zoomX;
+        const zy = this.zoomY;
+        if (!Number.isFinite(zx) || !Number.isFinite(zy)) return;
+        const pxX = zx * tileSize;
+        const pxY = zy * tileSize;
+        if (Math.abs(pxX - Math.round(pxX)) > 0.0001) return;
+        if (Math.abs(pxY - Math.round(pxY)) > 0.0001) return;
+        this.renderRoundPixels = true;
+    };
+}
+
 private _updateCameraFollowLocalHero(): void {
     const g: any = globalThis as any;
     const net = g.__net || g.net;
@@ -1728,10 +1782,6 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     this._worldPixelW = worldWidth;
     this._worldPixelH = worldHeight;
     this._worldTileSize = tileSize | 0;
-    if (!hadWorld && !this._camZoomBaselineLocked) {
-        this._camZoomUser = 1;
-        this._camZoomBaselineLocked = true;
-    }
 
     // World bounds define where the camera can scroll
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
@@ -1740,6 +1790,12 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     // ✅ The canvas should match the DOM viewport (NOT the world).
     // This is what enables camera-follow / scrolling.
     this._resizeGameToDomViewport("applyTilemapToScene");
+
+    if (!hadWorld && !this._camZoomBaselineLocked) {
+        this._camZoomUser = this._snapUserZoomValue(1);
+        this._camZoomBaselineLocked = true;
+        this._updateCameraZoom();
+    }
 
     if (DEBUG_TILEMAP_MAIN) {
         console.log(">>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM)", {
@@ -3279,13 +3335,13 @@ const CAMERA_ZOOM_MIN = 0.5;
 const CAMERA_ZOOM_MAX = 6;
 const CAMERA_USER_ZOOM_MIN = 0.5;
 const CAMERA_USER_ZOOM_MAX = 3;
-// Zoom steps: 50/75/100% below 1x, then 12.5% above; tile-aligned.
-const CAMERA_ZOOM_BASE_TILE_PIXEL_MULTIPLE = 4;
-const CAMERA_ZOOM_TARGET_TILE_PIXEL_MULTIPLE = 1;
+// Zoom steps: 50/75/100/125...% (perfect ratios), tile-aligned.
+const CAMERA_ZOOM_BASE_TILE_PIXEL_MULTIPLE = 8;
+const CAMERA_ZOOM_TARGET_TILE_PIXEL_MULTIPLE = 8;
 const CAMERA_ZOOM_BASE_STEP_FALLBACK = 0.25;
-const CAMERA_ZOOM_TARGET_STEP_FALLBACK = 0.125;
+const CAMERA_ZOOM_TARGET_STEP_FALLBACK = 0.25;
 const CAMERA_USER_ZOOM_STEP_LOW = 0.25;
-const CAMERA_USER_ZOOM_STEP_HIGH = 0.125;
+const CAMERA_USER_ZOOM_STEP_HIGH = 0.25;
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,

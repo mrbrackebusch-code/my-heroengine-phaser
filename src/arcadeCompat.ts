@@ -2694,6 +2694,65 @@ let _frameGroupAttachEarlyOuts = [0, 0, 0, 0];
 // wTip offsets are relative to hero center (pixels).
 
 let __heroVisualHookInstalled = false;
+const __auraMaskErrOnce = new Set<string>();
+
+function __installAuraMaskBitsHook(g: any): void {
+    g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+    g.__HeroEngineHooks.getAuraMaskBits = function (
+        texKey: string,
+        frameName: string,
+        radius: number,
+        frameRef?: any
+    ): any {
+        const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+        if (!scene) return null;
+        const tk = texKey ? String(texKey) : "";
+        if (!tk && !frameRef) return null;
+        const fn = (frameName !== undefined && frameName !== null) ? String(frameName) : "__BASE";
+        const r = (radius | 0);
+        const errKey = `${tk}|${fn}|r${r}`;
+        if (frameRef && heroAnimGlue.getOrBuildHeroAuraMaskBitsForFrame) {
+            try {
+                return heroAnimGlue.getOrBuildHeroAuraMaskBitsForFrame(scene, frameRef, r, tk || undefined);
+            } catch (err) {
+                if (!__auraMaskErrOnce.has(errKey)) {
+                    __auraMaskErrOnce.add(errKey);
+                    const gAny: any = globalThis as any;
+                    if (gAny.__DBG_WPN_AURA_TRACE !== false) {
+                        const src = (frameRef && frameRef.source && frameRef.source.image)
+                            ? "frame.source"
+                            : (frameRef && frameRef.texture && (frameRef.texture.getSourceImage || frameRef.texture.source))
+                                ? "texture.source"
+                                : "none";
+                        console.warn("[WPNTRACE][maskError] tex=" + tk +
+                            " frame=" + fn +
+                            " r=" + r +
+                            " hasFrameRef=1" +
+                            " src=" + src +
+                            " err=" + String((err as any)?.message || err || "unknown"));
+                    }
+                }
+            }
+        }
+        if (!tk) return null;
+        try {
+            return heroAnimGlue.getOrBuildHeroAuraMaskBits(scene, tk, fn, r);
+        } catch (err) {
+            if (!__auraMaskErrOnce.has(errKey)) {
+                __auraMaskErrOnce.add(errKey);
+                const gAny: any = globalThis as any;
+                if (gAny.__DBG_WPN_AURA_TRACE !== false) {
+                    console.warn("[WPNTRACE][maskError] tex=" + tk +
+                        " frame=" + fn +
+                        " r=" + r +
+                        " hasFrameRef=" + (frameRef ? 1 : 0) +
+                        " err=" + String((err as any)?.message || err || "unknown"));
+                }
+            }
+            return null;
+        }
+    };
+}
 
 function __installHeroVisualInfoHookOnce(): void {
     if (__heroVisualHookInstalled) return;
@@ -2702,6 +2761,7 @@ function __installHeroVisualInfoHookOnce(): void {
     try {
         const g: any = (globalThis as any);
         g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+        __installAuraMaskBitsHook(g);
 
         g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
             // 1) Try cached silhouette-derived values first
@@ -2738,16 +2798,6 @@ function __installHeroVisualInfoHookOnce(): void {
             return [innerR, leadEdge, wTipX, wTipY];
         };
 
-        g.__HeroEngineHooks.getAuraMaskBits = function (texKey: string, frameName: string, radius: number): any {
-            const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
-            if (!scene) return null;
-            const tk = texKey ? String(texKey) : "";
-            if (!tk) return null;
-            const fn = (frameName !== undefined && frameName !== null) ? String(frameName) : "__BASE";
-            const r = (radius | 0);
-            return heroAnimGlue.getOrBuildHeroAuraMaskBits(scene, tk, fn, r);
-        };
-
 
         if (DEBUG_COMPAT_BOOT) {
             console.log(">>> [arcadeCompat] installed __HeroEngineHooks.getHeroVisualInfo override");
@@ -2762,6 +2812,7 @@ function __installHeroVisualInfoHookOnce(): void {
     try {
         const g: any = globalThis as any;
         g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+        __installAuraMaskBitsHook(g);
 
         const AURA_THICKNESS = 1;
         const SPACING = 1;
@@ -9489,6 +9540,20 @@ function _syncWeaponOverlaysForHeroNative(
     const heroCol = hfi.heroCol;
     const heroTexKey = hfi.heroTexKey;
 
+    try {
+        const heroFrameName = _getFrameName(nativeHero as any);
+        const dataAnyHero: any = (s as any).data || ((s as any).data = {});
+        dataAnyHero.__heroTexKey = heroTexKey;
+        dataAnyHero.__heroFrameName = heroFrameName;
+        dataAnyHero.__heroFrameRef = (nativeHero as any).frame || null;
+        dataAnyHero.__heroOriginX = (typeof (nativeHero as any).originX === "number") ? (nativeHero as any).originX : 0.5;
+        dataAnyHero.__heroOriginY = (typeof (nativeHero as any).originY === "number") ? (nativeHero as any).originY : 0.5;
+        dataAnyHero.__heroScaleX = (typeof (nativeHero as any).scaleX === "number") ? (nativeHero as any).scaleX : 1;
+        dataAnyHero.__heroScaleY = (typeof (nativeHero as any).scaleY === "number") ? (nativeHero as any).scaleY : 1;
+        dataAnyHero.__heroFlipX = !!(nativeHero as any).flipX;
+        dataAnyHero.__heroFlipY = !!(nativeHero as any).flipY;
+    } catch { /* ignore */ }
+
     let staffOffsetX = 0;
     let staffOffsetY = 0;
     let staffFrameDirOverride: "up" | undefined;
@@ -9591,6 +9656,7 @@ function _syncWeaponOverlaysForHeroNative(
             const dataAny: any = (s as any).data || ((s as any).data = {});
             dataAny.__wpnFgTexKey = texKey;
             dataAny.__wpnFgFrame = frameName;
+            dataAny.__wpnFgFrameRef = fgAny.frame || null;
             dataAny.__wpnFgOffX = ((fgAny.x ?? baseX) - baseX);
             dataAny.__wpnFgOffY = ((fgAny.y ?? baseY) - baseY);
             dataAny.__wpnFgOriginX = (typeof fgAny.originX === "number") ? fgAny.originX : 0.5;

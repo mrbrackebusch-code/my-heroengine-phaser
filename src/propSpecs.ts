@@ -121,6 +121,34 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       floorKinds: ["entrance"],
     },
   },
+  treasure_marker_a: {
+    name: "treasure_marker_a",
+    collision: {
+      mode: "none",
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+    placement: {
+      floorKinds: ["entrance", "treasure"],
+    },
+  },
+  treasure_marker_b: {
+    name: "treasure_marker_b",
+    collision: {
+      mode: "none",
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+    placement: {
+      floorKinds: ["entrance", "treasure"],
+    },
+  },
 };
 
 export function propBaseNameFromKey(name: string): string {

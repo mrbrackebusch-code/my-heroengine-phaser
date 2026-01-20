@@ -55,6 +55,9 @@ const TILE_LAYER_DEPTH_GROUND = -1000000;
 const TILE_LAYER_DEPTH_CHASM = -999000;
 const TILE_LAYER_DEPTH_CHASM_OVERLAY = -998000;
 const TILE_LAYER_DEPTH_DECALS = -997000;
+const DECAL_AUTO_ENABLED = false;
+const DECAL_AUTO_DENSITY_PER_1000 = 1;
+const DECAL_AUTO_EDGE_MARGIN = 1;
 
 // ----------------------------------------------------------
 // Prop focus aura (tile-based outline sheets)
@@ -1921,6 +1924,9 @@ export class WorldTileRenderer {
   private _tilesetsAll: Phaser.Tilemaps.Tileset[] = [];
   private _firstGidByTextureKey: Record<string, number> = Object.create(null);
   private _gidRanges: Array<{ textureKey: string; firstGid: number; lastExclusive: number }> = [];
+  private _lastGrid: number[][] | null = null;
+  private _lastValueToFamily: ((v: number) => TileFamily | "") | null = null;
+  private _lastGridSig = 0;
 
   constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions) {
     this.scene = scene;
@@ -3322,6 +3328,10 @@ syncFromEngineGrid(grid: number[][]): void {
   this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily, seedSalt);
   this._paintChasmLike(grid, rows, cols, valueToFamily, seedSalt);
 
+  this._lastGrid = grid;
+  this._lastValueToFamily = valueToFamily;
+  this._lastGridSig = seedSalt | 0;
+
   // stash last snapshot for other debug consumers if needed
   try {
     const anyThis: any = this as any;
@@ -3372,6 +3382,43 @@ syncFromEngineGrid(grid: number[][]): void {
         if (!vis) continue;
 
         this._placeVisualTiles(this.decalLayer, r, c, vis);
+      }
+    }
+
+    this._applyAutoDecorDecals(decalNameGrid, rows, cols);
+  }
+
+  private _applyAutoDecorDecals(decalNameGrid: string[][], rows: number, cols: number): void {
+    if (!DECAL_AUTO_ENABLED) return;
+    if (!this.decalLayer) return;
+    if (!this._lastGrid || !this._lastValueToFamily) return;
+
+    const grid = this._lastGrid;
+    const valueToFamily = this._lastValueToFamily;
+    const seedSalt = this._lastGridSig | 0;
+    // If decor sync sends an empty grid, still scatter based on the base grid size.
+    const autoRows = ((rows | 0) > 0) ? (rows | 0) : (grid.length | 0);
+    const autoCols = ((cols | 0) > 0) ? (cols | 0) : ((grid[0]?.length ?? 0) | 0);
+    const rowMax = Math.min(autoRows | 0, grid.length | 0);
+    const colMax = rowMax > 0 ? Math.min(autoCols | 0, (grid[0]?.length ?? 0) | 0) : 0;
+    const margin = Math.max(0, DECAL_AUTO_EDGE_MARGIN | 0) | 0;
+
+    for (let r = 0; r < rowMax; r++) {
+      if (r < margin || r >= (rowMax - margin)) continue;
+      const row = grid[r];
+      if (!row) continue;
+      const decalRow = decalNameGrid[r];
+      for (let c = 0; c < colMax; c++) {
+        if (c < margin || c >= (colMax - margin)) continue;
+        if (decalRow && decalRow[c]) continue;
+        const family = valueToFamily(row[c] | 0);
+        if (!family || isChasmLikeFamily(family as TileFamily)) continue;
+        const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString("decor_scatter"));
+        if (((seed | 0) % 1000) >= (DECAL_AUTO_DENSITY_PER_1000 | 0)) continue;
+        const deco = this.atlas.getDecorByIndex(family as TileFamily, seed | 0);
+        if (!deco) continue;
+        const gid = this._gidFor(deco.textureKey, deco.frameIndex);
+        if (gid >= 0) this.decalLayer.putTileAt(gid, c, r);
       }
     }
   }
