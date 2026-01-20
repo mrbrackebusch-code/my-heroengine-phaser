@@ -2226,6 +2226,8 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
         this._tilemapAppliedWorldRev = worldRev;
         this._tilemapAppliedFloorIndex = floorIndex;
     }
+    g.__tilemapAppliedWorldRev = (this._tilemapAppliedWorldRev | 0);
+    g.__tilemapAppliedFloorIndex = (this._tilemapAppliedFloorIndex | 0);
 
     if (shouldApplyBase) {
         this._tilemapAppliedPropByAnchor = null;
@@ -2412,6 +2414,26 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     }
 
     this._checkWorldSyncHashFromMsg(msg);
+
+    if (!gAny.__isHost) {
+        const pendingSnap = g.__pendingWorldSnapshotForFloor;
+        if (pendingSnap && typeof pendingSnap.worldRev === "number" && typeof pendingSnap.floorIndex === "number") {
+            const wantRev = pendingSnap.worldRev | 0;
+            const wantFloor = pendingSnap.floorIndex | 0;
+            if ((wantRev | 0) === (worldRev | 0) && (wantFloor | 0) === (floorIndex | 0)) {
+                g.__pendingWorldSnapshotForFloor = null;
+                g.__pendingWorldSnapshotSig = null;
+                try {
+                    const nw: any = (globalThis as any).netWorld;
+                    if (nw && typeof nw.apply === "function") {
+                        nw.apply(pendingSnap);
+                    }
+                } catch (e) {
+                    console.warn("[netWorld.apply] pending snapshot failed", e);
+                }
+            }
+        }
+    }
 }
 
 private _tilemap_applyPendingCachedNetTilemapIfAny(): void {
@@ -2845,6 +2867,8 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         this._tilemapAppliedTileSize = tileSize;
 
         g.__tilemapAppliedThemeKey = themeKey;
+        g.__tilemapAppliedWorldRev = (worldRev | 0);
+        g.__tilemapAppliedFloorIndex = (floorIndex | 0);
     } else if (decorNeedsApply) {
         try {
             const decorNS = (globalThis as any).__HeroEnginePhaserDecor;

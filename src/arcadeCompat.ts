@@ -13356,6 +13356,8 @@ namespace netWorld {
         timeMs: number;
         runtimeMs: number;      // <-- includes heroEngine's worldRuntimeMs if exported
         bgIndex: number;        // NEW: host background color index
+        worldRev?: number;      // NEW: host world revision (tilemap engine rev)
+        floorIndex?: number;    // NEW: host floor index (for world sync)
         sprites: SpriteSnapshot[];
     }
 
@@ -13394,6 +13396,37 @@ namespace netWorld {
 
 
 
+    function _netWorld_getWorldSig(): { worldRev: number; floorIndex: number } | null {
+        const g: any = (globalThis as any);
+
+        try {
+            const internals = g.__HeroEnginePhaserInternals;
+            const worldRev = (internals && typeof internals.getWorldRev === "function")
+                ? (internals.getWorldRev() | 0)
+                : null;
+            const floorIndex = (internals && typeof internals.getFloorIndex === "function")
+                ? (internals.getFloorIndex() | 0)
+                : null;
+            if (typeof worldRev === "number" && typeof floorIndex === "number") {
+                return { worldRev: worldRev | 0, floorIndex: floorIndex | 0 };
+            }
+        } catch { /* ignore */ }
+
+        if (typeof g.__tilemapAppliedWorldRev === "number" && typeof g.__tilemapAppliedFloorIndex === "number") {
+            return {
+                worldRev: (g.__tilemapAppliedWorldRev | 0),
+                floorIndex: (g.__tilemapAppliedFloorIndex | 0)
+            };
+        }
+
+        const lastMsg = g.__lastTilemapMsg;
+        if (lastMsg && typeof lastMsg.worldRev === "number" && typeof lastMsg.floorIndex === "number") {
+            return { worldRev: (lastMsg.worldRev | 0), floorIndex: (lastMsg.floorIndex | 0) };
+        }
+
+        return null;
+    }
+
     // ====================================================
     // CAPTURE SNAPSHOT
     // ====================================================
@@ -13403,6 +13436,7 @@ namespace netWorld {
         const g: any = (globalThis as any);
         const runtimeMs = (g.__heroEngineWorldRuntimeMs ?? 0) | 0;
         const bgIndex = (g.__net_bgColorIndex ?? 0) | 0;
+        const worldSig = _netWorld_getWorldSig();
 
         // Pull ALL sprites from compat layer
         const allFn = (sprites as any)._getAllSprites;
@@ -13452,6 +13486,8 @@ namespace netWorld {
             timeMs: game.runtime() | 0,
             runtimeMs: runtimeMs,
             bgIndex: bgIndex,
+            worldRev: worldSig ? (worldSig.worldRev | 0) : undefined,
+            floorIndex: worldSig ? (worldSig.floorIndex | 0) : undefined,
             sprites: snapSprites
         };
     }
@@ -13476,6 +13512,36 @@ namespace netWorld {
 
         const g: any = (globalThis as any);
         const isHost = !!g.__isHost;
+        const snapWorldRev = (snap as any).worldRev;
+        const snapFloorIndex = (snap as any).floorIndex;
+        if (!isHost && typeof snapWorldRev === "number" && typeof snapFloorIndex === "number") {
+            const hasWorld =
+                (typeof g.__tilemapAppliedWorldRev === "number") &&
+                (typeof g.__tilemapAppliedFloorIndex === "number");
+            const appliedWorldRev = hasWorld ? (g.__tilemapAppliedWorldRev | 0) : null;
+            const appliedFloorIndex = hasWorld ? (g.__tilemapAppliedFloorIndex | 0) : null;
+            const matches =
+                appliedWorldRev != null &&
+                appliedFloorIndex != null &&
+                (appliedWorldRev | 0) === (snapWorldRev | 0) &&
+                (appliedFloorIndex | 0) === (snapFloorIndex | 0);
+
+            if (!matches) {
+                const sig = `${snapWorldRev}|${snapFloorIndex}`;
+                g.__pendingWorldSnapshotForFloor = snap;
+                if (g.__pendingWorldSnapshotSig !== sig) {
+                    g.__pendingWorldSnapshotSig = sig;
+                    if (DEBUG_NET_SNAPSHOT) {
+                        console.log("[netWorld.apply] queued snapshot for world", {
+                            want: sig,
+                            have: hasWorld ? `${appliedWorldRev}|${appliedFloorIndex}` : "(no tilemap yet)",
+                            sprites: snap.sprites ? snap.sprites.length : 0
+                        });
+                    }
+                }
+                return;
+            }
+        }
     const now = game.runtime();
 
     // Wall-clock timer for perf (per snapshot apply)

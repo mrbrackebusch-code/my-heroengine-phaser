@@ -2586,6 +2586,10 @@ const PROJECTILE_FORCE_BORDER = true;
 const PROJECTILE_HIDE_FILL = true;
 const PROJECTILE_EMERGENCY_FILL = true;
 const PROJECTILE_EMERGENCY_SCALE = 2;
+const PROJECTILE_EMERGENCY_FADE = true;
+const PROJECTILE_EMERGENCY_FADE_STEP_MS = 32;
+const PROJECTILE_EMERGENCY_FADE_PHASE_MS = 24;
+const PROJECTILE_EMERGENCY_FADE_DIVS: number[] = [6, 4, 3, 2, 1];
 const AGI_TRAIL_FILL_COLOR = 5;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
@@ -2615,6 +2619,7 @@ const STR_ARC_STEP_DEG = 3;
 const STR_ARC_SWEEP_START_FRAC = 0.25;
 const STR_SLASH_MASK_START_FRAC = STR_ARC_SWEEP_START_FRAC;
 const STR_TIP_TRACE_SIZE_PX = 16;
+const STR_CHARGE_TRACE_SIZE_PX = 6;
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
 const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
@@ -2858,6 +2863,36 @@ function _projectileEmergencyFill(img: Image, element: number): void {
             if (sel === 0) color = highlight;
             else if (sel === 1) color = accent;
             img.setPixel(x, y, color | 0);
+        }
+    }
+}
+
+function _projectileFadeTrailImage(img: Image, nowMs: number, fadeStartMs: number): void {
+    if (!PROJECTILE_EMERGENCY_FADE) return;
+    if (!img) return;
+    if ((nowMs | 0) < (fadeStartMs | 0)) return;
+    const elapsed = (nowMs | 0) - (fadeStartMs | 0);
+    const stage = Math.min(
+        (PROJECTILE_EMERGENCY_FADE_DIVS.length - 1) | 0,
+        Math.idiv(Math.max(0, elapsed | 0), Math.max(1, PROJECTILE_EMERGENCY_FADE_STEP_MS | 0))
+    );
+    const divisor = (PROJECTILE_EMERGENCY_FADE_DIVS[stage] | 0) || 1;
+    const phase = Math.idiv(nowMs | 0, Math.max(1, PROJECTILE_EMERGENCY_FADE_PHASE_MS | 0)) | 0;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    if (divisor <= 1) {
+        for (let x = 0; x < w; x++) {
+            for (let y = 0; y < h; y++) {
+                if (img.getPixel(x, y) != 0) img.setPixel(x, y, 0);
+            }
+        }
+        return;
+    }
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            const v = img.getPixel(x, y) | 0;
+            if (v === 0) continue;
+            if (((x + y + phase) % divisor) === 0) img.setPixel(x, y, 0);
         }
     }
 }
@@ -7746,6 +7781,27 @@ function _isHeroInInteractRange(hero: Sprite, target: Sprite, extraX: number, ex
 
     return true
 
+}
+
+function _dunHeroAdjacentToInteractableTile(hero: Sprite, target: Sprite, maxManhattan: number): boolean {
+    if (!hero || !target) return false
+    const tr = sprites.readDataNumber(target, "decorTileR") | 0
+    const tc = sprites.readDataNumber(target, "decorTileC") | 0
+    if (tr < 0 || tc < 0) return false
+
+    let hr = sprites.readDataNumber(hero, HERO_DATA.TILE_R) | 0
+    let hc = sprites.readDataNumber(hero, HERO_DATA.TILE_C) | 0
+    if (hr < 0 || hc < 0) {
+        const tileSize = WORLD_TILE_SIZE | 0
+        if (tileSize <= 0) return false
+        const h = _heroCollisionCenterXY(hero)
+        hr = Math.idiv(h.y | 0, tileSize) | 0
+        hc = Math.idiv(h.x | 0, tileSize) | 0
+    }
+    if (hr < 0 || hc < 0) return false
+
+    const manhattan = (Math.abs((hr | 0) - (tr | 0)) + Math.abs((hc | 0) - (tc | 0))) | 0
+    return (manhattan | 0) <= (maxManhattan | 0)
 }
 
 
@@ -15336,7 +15392,10 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
             const action = _dunReadInteractAction(it)
             const name = sprites.readDataString(it, DECOR_DATA.NAME) || ""
-            const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+            let inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+            if (!inRange && action === INTERACT_ACTION_RELIC_OFFER) {
+                inRange = _dunHeroAdjacentToInteractableTile(hero, it, 1)
+            }
             const used = _dunReadInteractUsed(it)
 
             if (logInteract) {
@@ -29203,7 +29262,12 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             const focusable = sprites.readDataNumber(it, INTERACT_DATA.FOCUSABLE) | 0
             if (!focusable) continue
 
+            const action = _dunReadInteractAction(it)
             const used = _dunReadInteractUsed(it)
+            let inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
+            if (!inRange && action === INTERACT_ACTION_RELIC_OFFER) {
+                inRange = _dunHeroAdjacentToInteractableTile(hero, it, 1)
+            }
 
             try {
 
@@ -29213,15 +29277,13 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
                     (it as any).__dbgInteractScanMs = nowMs
 
-                    const inRange = _isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)
-
                     console.log("[FOCUS][INTERACT][SCAN]", {
 
                         used: used ? 1 : 0,
 
                         inRange: inRange ? 1 : 0,
 
-                        action: _dunReadInteractAction(it) || "",
+                        action: action || "",
 
                         name: sprites.readDataString(it, DECOR_DATA.NAME) || "",
 
@@ -29245,7 +29307,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
             if (used) continue
 
-            if (_isHeroInInteractRange(hero, it, DUNGEON_INTERACT_EXTRA_X_PX, DUNGEON_INTERACT_EXTRA_Y_PX)) {
+            if (inRange) {
 
                 found = it
 
@@ -39376,11 +39438,20 @@ const STR_CHARGE_EXTRA_MANA_PCT = 100       // extra mana over the baseCost when
 // Example: baseCost=10, EXTRA_MANA_PCT=100 => extraCost=10 => full charge total = 20
 
 const STR_CHARGE_DRAW_FRAC = 0.22
-const STR_CHARGE_DRAW_MS = 200
-const STR_CHARGE_FADE_STEP_MS = 220
-const STR_CHARGE_FADE_PHASE_MS = 90
-const STR_CHARGE_FADE_DIVS: number[] = [7, 6, 5, 4, 3, 2, 1]
+const STR_CHARGE_DRAW_MS_BASE = 200
+const STR_CHARGE_DRAW_MS_EMERGENCY = 80
+const STR_CHARGE_DRAW_MS = PROJECTILE_EMERGENCY_FADE ? STR_CHARGE_DRAW_MS_EMERGENCY : STR_CHARGE_DRAW_MS_BASE
+const STR_CHARGE_FADE_STEP_MS_BASE = 220
+const STR_CHARGE_FADE_STEP_MS_EMERGENCY = 60
+const STR_CHARGE_FADE_STEP_MS = PROJECTILE_EMERGENCY_FADE ? STR_CHARGE_FADE_STEP_MS_EMERGENCY : STR_CHARGE_FADE_STEP_MS_BASE
+const STR_CHARGE_FADE_PHASE_MS_BASE = 90
+const STR_CHARGE_FADE_PHASE_MS_EMERGENCY = 30
+const STR_CHARGE_FADE_PHASE_MS = PROJECTILE_EMERGENCY_FADE ? STR_CHARGE_FADE_PHASE_MS_EMERGENCY : STR_CHARGE_FADE_PHASE_MS_BASE
+const STR_CHARGE_FADE_DIVS_BASE: number[] = [7, 6, 5, 4, 3, 2, 1]
+const STR_CHARGE_FADE_DIVS_EMERGENCY: number[] = [6, 4, 3, 2, 1]
+const STR_CHARGE_FADE_DIVS: number[] = PROJECTILE_EMERGENCY_FADE ? STR_CHARGE_FADE_DIVS_EMERGENCY : STR_CHARGE_FADE_DIVS_BASE
 const STR_CHARGE_FX_OUTER_R_KEY = "strChgFxR"
+const STR_CHARGE_LAST_TIP_R_KEY = "strChgTipR"
 
 
 
@@ -40144,6 +40215,7 @@ function _ensureStrengthChargeTrailSprite(
         spr.z = hero.z + 10;
         sprites.setDataSprite(hero, HERO_DATA.STR_CHARGE_FX_SPR, spr);
         sprites.setDataNumber(spr, STR_CHARGE_FX_OUTER_R_KEY, outerR | 0);
+        sprites.setDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY, 0);
         __strChargeTrailState[heroIndex] = { sprite: spr, outerR: outerR | 0 };
     } else {
         const prevR = sprites.readDataNumber(spr, STR_CHARGE_FX_OUTER_R_KEY) | 0;
@@ -40151,6 +40223,7 @@ function _ensureStrengthChargeTrailSprite(
             const img = _createStrengthTraceImage(outerR);
             spr.setImage(img);
             sprites.setDataNumber(spr, STR_CHARGE_FX_OUTER_R_KEY, outerR | 0);
+            sprites.setDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY, 0);
         }
     }
     spr.x = hero.x;
@@ -40251,15 +40324,20 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
     const sweepFrac = Math.max(0.001, STR_ARC_SWEEP_START_FRAC);
     const lineT = Math.min(1, (drawT / sweepFrac));
     const tipR = (frontStartR | 0) + Math.round((reachFromInner | 0) * lineT);
-    _strengthTraceStampLine(
-        img,
-        halfW,
-        halfH,
-        nx * (frontStartR | 0),
-        ny * (frontStartR | 0),
-        nx * (tipR | 0),
-        ny * (tipR | 0)
-    );
+    let lastTipR = sprites.readDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY) | 0;
+    if (lastTipR <= 0) lastTipR = frontStartR | 0;
+    if ((tipR | 0) > (lastTipR | 0)) {
+        _strengthChargeTraceStampLine(
+            img,
+            halfW,
+            halfH,
+            nx * (lastTipR | 0),
+            ny * (lastTipR | 0),
+            nx * (tipR | 0),
+            ny * (tipR | 0)
+        );
+        sprites.setDataNumber(spr, STR_CHARGE_LAST_TIP_R_KEY, tipR | 0);
+    }
     _stampStrengthArcTrail(
         img,
         -halfW,
@@ -41769,6 +41847,8 @@ function updateStrengthProjectilesMotionFor(
         proj.setPosition(anchorX, anchorY)
         const img = proj.image
         if (img) {
+            const fadeStart = startMs | 0;
+            _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
             const halfW = (img.width | 0) >> 1
             const halfH = (img.height | 0) >> 1
             const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick")
@@ -42003,6 +42083,8 @@ function updateStrengthProjectilesMotionFor(
 
     const img = proj.image
     if (img) {
+        const fadeStart = startMs | 0;
+        _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
         const halfW = (img.width | 0) >> 1
         const halfH = (img.height | 0) >> 1
         const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick2")
@@ -42557,6 +42639,13 @@ function _strengthTraceHalfPx(): number {
     return Math.max(1, half | 0);
 }
 
+function _strengthChargeTraceHalfPx(): number {
+    const base = Number.isFinite(STR_CHARGE_TRACE_SIZE_PX) ? (STR_CHARGE_TRACE_SIZE_PX | 0) : 0;
+    const size = Math.max(1, base | 0);
+    const half = Math.idiv(size | 0, 2) | 0;
+    return Math.max(1, half | 0);
+}
+
 function _createStrengthTraceImage(outerR: number): Image {
     const halfTip = _strengthTraceHalfPx();
     const outerInt = Math.ceil(Math.max(0, outerR));
@@ -42566,9 +42655,8 @@ function _createStrengthTraceImage(outerR: number): Image {
     return image.create(size, size);
 }
 
-function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
+function _strengthTraceStampAtSized(img: Image, cx: number, cy: number, half: number): void {
     if (!img) return;
-    const half = _strengthTraceHalfPx();
     const w = img.width | 0;
     const h = img.height | 0;
 
@@ -42587,6 +42675,16 @@ function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
             }
         }
     }
+}
+
+function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
+    const half = _strengthTraceHalfPx();
+    _strengthTraceStampAtSized(img, cx, cy, half | 0);
+}
+
+function _strengthChargeTraceStampAt(img: Image, cx: number, cy: number): void {
+    const half = _strengthChargeTraceHalfPx();
+    _strengthTraceStampAtSized(img, cx, cy, half | 0);
 }
 
 function _strengthTraceStampLine(
@@ -42610,6 +42708,30 @@ function _strengthTraceStampLine(
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
         _strengthTraceStampAt(img, Math.round(lx) + halfW, Math.round(ly) + halfH);
+    }
+}
+
+function _strengthChargeTraceStampLine(
+    img: Image,
+    halfW: number,
+    halfH: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+): void {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
+    if (steps <= 0) {
+        _strengthChargeTraceStampAt(img, Math.round(x0) + halfW, Math.round(y0) + halfH);
+        return;
+    }
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const lx = x0 + dx * t;
+        const ly = y0 + dy * t;
+        _strengthChargeTraceStampAt(img, Math.round(lx) + halfW, Math.round(ly) + halfH);
     }
 }
 
@@ -47997,6 +48119,8 @@ function updateAgilityProjectilesMotionFor(
     let sideHalf = _agiTraceHalfPx()
     let auraShapes: WeaponAuraTipShape[] | null = null
     if (img) {
+        const fadeStart = startMs | 0;
+        _projectileFadeTrailImage(img, nowMs | 0, fadeStart);
         const heroLocalX = hero.x - anchorX
         const heroLocalY = hero.y - anchorY
         const growthT = (maxLen > 0) ? (arrowLen / maxLen) : 0;
