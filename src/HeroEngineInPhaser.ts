@@ -28222,6 +28222,9 @@ function initWorldDecorPostPass(): void {
     _dunObjectivePropAuraC = -1
     _dunObjectiveNpcOutlineSprite = null
     _dunObjectiveNpcOutlineActive = 0
+    _dunPadHintLastShowMs = 0
+    _dunPadHintWasOnPad = false
+    _dunPadHintActive = false
 
 
 
