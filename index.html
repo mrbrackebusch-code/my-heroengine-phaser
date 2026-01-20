@@ -1119,12 +1119,54 @@
         white-space: nowrap;
       }
 
+      #xp-panel .xp-objective {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        margin-top: auto;
+        padding: 3px 4px;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.75);
+        background: rgba(10, 12, 16, 0.85);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      #xp-panel .xp-objective-title {
+        font-size: 7px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--txt-dim);
+      }
+
+      #xp-panel .xp-objective-text {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        line-height: 1.1;
+      }
+
+      #xp-panel .xp-objective-sub {
+        font-size: 7px;
+        color: rgba(200, 210, 220, 0.85);
+        text-align: center;
+      }
+
+      #xp-panel .xp-objective.xp-objective-ready .xp-objective-text {
+        color: #9cf26a;
+      }
+
       #xp-panel .xp-minimap {
         width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 2px;
+        margin-top: 4px;
+      }
+
+      #xp-panel .xp-minimap.xp-minimap-float {
         margin-top: auto;
       }
 
@@ -1767,15 +1809,20 @@
                 <div class="xp-stat-label"><span class="xp-stat-initial">H</span><span class="xp-stat-rest">p:</span></div>
                 <div class="xp-stat-val" id="xp-stat-hp-lvl">+0</div>
               </div>
-              <div class="xp-stat-row">
-                <div class="xp-stat-label"><span class="xp-stat-initial">M</span><span class="xp-stat-rest">p:</span></div>
-                <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
-              </div>
+            <div class="xp-stat-row">
+              <div class="xp-stat-label"><span class="xp-stat-initial">M</span><span class="xp-stat-rest">p:</span></div>
+              <div class="xp-stat-val" id="xp-stat-mp-lvl">+0</div>
             </div>
-            <div class="xp-minimap" id="xp-minimap">
-              <div class="xp-minimap-title">Map</div>
-              <canvas id="mini-map" width="64" height="64"></canvas>
-            </div>
+          </div>
+          <div class="xp-objective" id="xp-objective">
+            <div class="xp-objective-title">Objective</div>
+            <div class="xp-objective-text" id="xp-objective-text">...</div>
+            <div class="xp-objective-sub" id="xp-objective-sub"></div>
+          </div>
+          <div class="xp-minimap" id="xp-minimap">
+            <div class="xp-minimap-title">Map</div>
+            <canvas id="mini-map" width="64" height="64"></canvas>
+          </div>
           </div>
           <div id="app"></div>
           <div id="buffs-panel" aria-hidden="true">
@@ -2077,6 +2124,10 @@
           xpStatStatusLvl: document.getElementById("xp-stat-status-lvl"),
           xpStatHpLvl: document.getElementById("xp-stat-hp-lvl"),
           xpStatMpLvl: document.getElementById("xp-stat-mp-lvl"),
+          objectiveBox: document.getElementById("xp-objective"),
+          objectiveText: document.getElementById("xp-objective-text"),
+          objectiveSub: document.getElementById("xp-objective-sub"),
+          miniMapBox: document.getElementById("xp-minimap"),
           miniMap: document.getElementById("mini-map"),
           lvlLayer: document.getElementById("levelup-layer"),
           lvlPoints: document.getElementById("lvlui-points"),
@@ -2104,6 +2155,20 @@
         function setText(el, txt) {
           if (!el) return;
           if (el.textContent !== txt) el.textContent = txt;
+        }
+
+        function setObjectiveUi(title, sub, state) {
+          const t = String(title || "");
+          const s = String(sub || "");
+          const st = String(state || "");
+          if (R.objectiveText) setText(R.objectiveText, t);
+          if (R.objectiveSub) setText(R.objectiveSub, s);
+          if (R.objectiveBox) {
+            const has = !!(t || s);
+            R.objectiveBox.style.display = has ? "flex" : "none";
+            R.objectiveBox.classList.toggle("xp-objective-ready", st === "exit");
+            if (R.miniMapBox) R.miniMapBox.classList.toggle("xp-minimap-float", !has);
+          }
         }
 
         function _zoom_getBounds() {
@@ -4455,6 +4520,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, null);
             renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
+            setObjectiveUi("", "", "");
             _xp_resetUi();
             _minimap_draw(null);
             return;
@@ -4479,6 +4545,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             renderMoveV2(null, R.boxAB, R.abNote, R.abRaw, R.abKind, R.abDmg, R.abReach, R.abTime, R.abStatus, R.abCost, R.abElem, null);
             renderMoveV2(null, R.boxR, R.rNote, R.rRaw, R.rKind, R.rDmg, R.rReach, R.rTime, R.rStatus, R.rCost, R.rElem, null);
             
+            setObjectiveUi("", "", "");
             _xp_resetUi();
             _minimap_draw(null);
             return;
@@ -4489,6 +4556,10 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const mana = readNum(spritesNS, hero, "mana");
           const maxMana = readNum(spritesNS, hero, "maxMana");
           const snap = _getUiSnapshotCached(pid);
+          const objTitle = (snap && snap.ready) ? String(snap.objectiveTitle || "") : "";
+          const objSub = (snap && snap.ready) ? String(snap.objectiveSub || "") : "";
+          const objState = (snap && snap.ready) ? String(snap.objectiveState || "") : "";
+          setObjectiveUi(objTitle, objSub, objState);
           const regenPerSec = (snap && snap.ready) ? (snap.manaRegenPerSec | 0) : 0;
           const regenLabel = (snap && snap.ready) ? (`+${regenPerSec}/s`) : "";
           const manaBlessActive = !!(snap && snap.ready && snap.manaBlessActive);
@@ -4596,6 +4667,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         const textEl = document.getElementById("dialog-text");
         const hintEl = document.getElementById("dialog-hint");
         const choicesEl = document.getElementById("dialog-choices");
+        let dialogOwner = "";
 
         function isOpen() {
           return !!layer && layer.classList.contains("he-show");
@@ -4615,6 +4687,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function show(opts) {
           if (!layer || !textEl) return;
           const o = opts || {};
+          dialogOwner = (typeof o.owner === "string") ? o.owner : "";
+          if (window.__heDialog) window.__heDialog.__heOwner = dialogOwner;
 
           _setText(speakerEl, o.speaker || "");
           _setText(textEl, o.text || "");
@@ -4662,6 +4736,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           layer.classList.remove("he-show");
           layer.setAttribute("aria-hidden", "true");
           _clearChoices();
+          dialogOwner = "";
+          if (window.__heDialog) window.__heDialog.__heOwner = dialogOwner;
           window.dispatchEvent(new CustomEvent("he:dialogHide"));
         }
 
@@ -4693,7 +4769,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         );
 
         // Global API Phaser can call
-        window.__heDialog = { show, hide, isOpen, advance };
+        window.__heDialog = { show, hide, isOpen, advance, __heOwner: dialogOwner };
       })();
     </script>
   </body>

@@ -108,14 +108,6 @@ const CAST_PART_FRAME_RULES: Record<string, { start: number; end: number; hold?:
     land:    { start: 5, end: 6 }
 };
 
-// Intellect cast "drive" uses a timed ping-pong to create 5 visible pulses.
-const INT_CAST_DRIVE_PULSE_SWEEPS = 5;
-const INT_CAST_DRIVE_PULSE_MIN_CLIP_IDX = 2;
-const INT_CAST_DRIVE_PULSE_MAX_CLIP_IDX = 6;
-const HERO_INT_DRIVE_PULSE_TOTAL_MS_KEY = "__heroIntDrivePulseTotalMs";
-const HERO_INT_DRIVE_PULSE_ACTIONSEQ_KEY = "__heroIntDrivePulseActionSeq";
-const HERO_INT_DRIVE_PULSE_PART_KEY = "__heroIntDrivePulsePart";
-
 function _clamp01(x: number): number {
     if (x < 0) return 0;
     if (x > 1) return 1;
@@ -285,62 +277,8 @@ function _tryCastPartFrameControl(
 
     const engineNowMs = sceneNowMs - (offsetMs | 0);
 
-    const anySprite: any = sprite as any;
-    const prevPulseSeq = (anySprite.getData && anySprite.getData(HERO_INT_DRIVE_PULSE_ACTIONSEQ_KEY)) || 0;
-    const prevPulsePart = (anySprite.getData && anySprite.getData(HERO_INT_DRIVE_PULSE_PART_KEY)) || "";
-    const prevPulseTotal = (anySprite.getData && anySprite.getData(HERO_INT_DRIVE_PULSE_TOTAL_MS_KEY)) || 0;
-
     let clipIdx = 0;
-    const isIntDrivePulse =
-        (partNameRaw === "drive" &&
-            (req.family === "intelligence" || req.actionKind === "intellect_cast"));
-
-    if (isIntDrivePulse) {
-        const remainingMs = Math.max(1, durMs | 0);
-        const actionSeq = (req.actionSequence | 0);
-        let totalMs = (typeof prevPulseTotal === "number" && Number.isFinite(prevPulseTotal)) ? (prevPulseTotal | 0) : 0;
-
-        if ((prevPulseSeq | 0) !== actionSeq || String(prevPulsePart || "") !== "drive" || totalMs <= 0) {
-            totalMs = remainingMs;
-        } else if (remainingMs > totalMs) {
-            totalMs = remainingMs;
-        }
-
-        if (anySprite.setData) {
-            anySprite.setData(HERO_INT_DRIVE_PULSE_ACTIONSEQ_KEY, actionSeq);
-            anySprite.setData(HERO_INT_DRIVE_PULSE_TOTAL_MS_KEY, totalMs);
-        }
-
-        let minIdx = Math.min(INT_CAST_DRIVE_PULSE_MIN_CLIP_IDX, frames.length - 1);
-        let maxIdx = Math.min(INT_CAST_DRIVE_PULSE_MAX_CLIP_IDX, frames.length - 1);
-        if (maxIdx < minIdx) maxIdx = minIdx;
-
-        const span = Math.max(1, (maxIdx - minIdx + 1) | 0);
-        const sweeps = Math.max(1, INT_CAST_DRIVE_PULSE_SWEEPS | 0);
-        const seqLen = span * sweeps;
-        const elapsed = Math.max(0, Math.min(totalMs, (totalMs - remainingMs)));
-
-        const baseFps =
-            (def && typeof def.frameRate === "number" && def.frameRate > 0)
-                ? def.frameRate
-                : 10;
-        const frameMs = Math.max(1, Math.floor(1000 / baseFps));
-        const cycleMs = Math.max(1, (frameMs * seqLen) | 0);
-
-        let seqIdx = 0;
-        const shouldLoop = totalMs > ((cycleMs * 2) | 0);
-        if (shouldLoop) {
-            const looped = elapsed % cycleMs;
-            seqIdx = Math.floor(looped / frameMs);
-        } else {
-            seqIdx = Math.floor((elapsed * seqLen) / Math.max(1, totalMs));
-        }
-        if (seqIdx >= seqLen) seqIdx = seqLen - 1;
-
-        const sweep = Math.floor(seqIdx / span);
-        const step = (seqIdx - (sweep * span)) | 0;
-        clipIdx = ((sweep % 2) === 0) ? (minIdx + step) : (maxIdx - step);
-    } else if (typeof rule.hold === "number") {
+    if (typeof rule.hold === "number") {
         clipIdx = rule.hold | 0;
     } else {
         let elapsed = engineNowMs - startMs;
@@ -369,10 +307,6 @@ function _tryCastPartFrameControl(
             );
         }
     };
-    }
-
-    if (anySprite.setData) {
-        anySprite.setData(HERO_INT_DRIVE_PULSE_PART_KEY, partNameRaw);
     }
 
     // Clamp to actual available frames

@@ -1307,6 +1307,12 @@ const HERO_INDEX_DATA_KEY = "heroIndex";
 const HERO_IS_CTRL_SPELL_KEY = "isCtrlSpell";
 const PROJ_FAMILY_KEY = "family";
 const PROJ_HERO_INDEX_KEY = "heroIndex";
+const PROJ_HIDE_BASE_KEY = "hideBase";
+const PROJ_MASK_FX_KEY = "projMaskFx";
+const STR_FX_SEG_COUNT_KEY = "SS_FX_N";
+const STR_FX_SEG_BASE_KEY = "SS_FX_";
+const AGI_FX_SEG_COUNT_KEY = "AGI_FX_N";
+const AGI_FX_SEG_BASE_KEY = "AGI_FX_";
 const EFFECT_SKIN_DATA_KEY = "effectSkin";
 const EFFECT_DIR_DATA_KEY = "effectDir";
 const EFFECT_DEBUG_ID_KEY = "effectDebugId";
@@ -1625,6 +1631,11 @@ const INT_PROJ_CLOUD_FLASH_BASE = 0.35;
 const INT_PROJ_CLOUD_FLASH_AMP = 0.55;
 const INT_PROJ_CLOUD_FLASH_SPEED = 0.035;
 const INT_PROJ_CLOUD_Y_OFFSET = 0;
+const INT_PROJ_PULSE_MIN_FRAME = 3;
+const INT_PROJ_PULSE_MAX_FRAME = 7;
+const INT_PROJ_PULSE_SWEEPS = 5;
+const INT_SPELL_CREATED_AT_MS_KEY = "INT_CA";
+const INT_SPELL_SPAWNED_AT_MS_KEY = "INT_SA";
 
 function _intProj_applyObviousGlow(sc: any, anyNative: any, spr: Phaser.GameObjects.Sprite, nowMs: number): void {
     // Base sprite: additive + tint + big scale pulse
@@ -2059,8 +2070,48 @@ function _intProj_dumpOnce(sc: any, anyNative: any, spr: Phaser.GameObjects.Spri
     }
 }
 
-function _intProj_followProjectileOverlay(sc: any, anyNative: any, native: any, spr: Phaser.GameObjects.Sprite, shouldBeVisible: boolean): void {
+function _intProj_followProjectileOverlay(
+    sc: any,
+    anyNative: any,
+    s: any,
+    native: any,
+    spr: Phaser.GameObjects.Sprite,
+    shouldBeVisible: boolean
+): void {
     const now = (sc.time?.now ?? 0) as number;
+    const texTotal = (((spr as any).texture as any)?.frameTotal ?? 0) | 0;
+    const minIdx = INT_PROJ_PULSE_MIN_FRAME | 0;
+    const maxIdx = Math.min(INT_PROJ_PULSE_MAX_FRAME | 0, (texTotal - 1) | 0) | 0;
+
+    if (maxIdx >= minIdx) {
+        let startMs = _intProj_readDataNumberMaybe(s, INT_SPELL_SPAWNED_AT_MS_KEY) | 0;
+        if (startMs <= 0) startMs = _intProj_readDataNumberMaybe(s, INT_SPELL_CREATED_AT_MS_KEY) | 0;
+        if (startMs <= 0) {
+            startMs = (anyNative.__intProjPulseStartMs | 0) || (now | 0);
+            if (!anyNative.__intProjPulseStartMs) anyNative.__intProjPulseStartMs = startMs | 0;
+        }
+
+        let periodMs = _intProj_readDataNumberMaybe(s, INT_PULSE_PERIOD_MS_KEY) | 0;
+        if (periodMs <= 0) periodMs = INT_PULSE_DEFAULT_PERIOD_MS;
+
+        const span = Math.max(1, (maxIdx - minIdx + 1) | 0);
+        const frameMs = Math.max(1, Math.floor(periodMs / span));
+        const sweepMs = Math.max(1, (frameMs * span) | 0);
+        const totalMs = Math.max(1, (sweepMs * (INT_PROJ_PULSE_SWEEPS | 0)) | 0);
+        const elapsed = Math.max(0, (now - startMs) | 0);
+
+        let frameIdx = maxIdx;
+        if (elapsed < totalMs) {
+            const sweep = Math.floor(elapsed / sweepMs);
+            const step = Math.min(span - 1, Math.floor((elapsed % sweepMs) / frameMs));
+            frameIdx = ((sweep % 2) === 0) ? (minIdx + step) : (maxIdx - step);
+        }
+
+        if ((anyNative.__intProjPulseFrame | 0) !== (frameIdx | 0)) {
+            anyNative.__intProjPulseFrame = frameIdx | 0;
+            spr.setFrame(frameIdx | 0);
+        }
+    }
 
     (spr as any).rotation = now * 0.006;
 
@@ -2208,7 +2259,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     // --------------------------------------------------
     // FOLLOW ENGINE PROJECTILE (authoritative)
     // --------------------------------------------------
-    _intProj_followProjectileOverlay(sc, anyNative, native, spr, shouldBeVisible);
+    _intProj_followProjectileOverlay(sc, anyNative, s, native, spr, shouldBeVisible);
 
     // --------------------------------------------------
     // Post-state log (once on first success, then only on meaningful change)
@@ -7169,13 +7220,7 @@ function _attachGetOrRecreateCanvasTexture(
             try {
                 const role = _classifySpriteRole((s.kind as any) | 0, Object.keys(dataAny || {}));
                 if (role === "PROJECTILE") {
-                    const fx = (dataAny as any).projMaskFx as any;
-                    if (fx && (fx as any).native) {
-                        const fxNative = (fx as any).native;
-                        _effectClearPaintMask(fxNative);
-                        try { fxNative.setVisible?.(false); } catch { }
-                        try { fxNative.setAlpha?.(0); } catch { }
-                    }
+                    _clearProjectileEffectMasksForTextureRecreate(s);
                     if (DEBUG_EFFECT_MASKS) {
                         const key = `projTexRecreate:${s.id}:${texKey}:${texW}x${texH}->${targetW}x${targetH}`;
                         if (!__effectMaskTexOnce.has(key)) {
@@ -7225,6 +7270,34 @@ function _attachGetOrRecreateCanvasTexture(
     _frameGroupAttachTexMs[g] += dTex;
 
     return tex;
+}
+
+function _clearProjectileEffectMasksForTextureRecreate(s: Sprite): void {
+    const clearFxMask = (fx: any): void => {
+        if (!fx || (fx.flags & SpriteFlag.Destroyed)) return;
+        const fxNative = (fx as any).native;
+        if (fxNative) {
+            _effectClearPaintMask(fxNative);
+            try { fxNative.setVisible?.(false); } catch { }
+            try { fxNative.setAlpha?.(0); } catch { }
+        }
+    };
+
+    try { clearFxMask(sprites.readDataSprite(s, PROJ_MASK_FX_KEY)); } catch { }
+
+    const strCount = sprites.readDataNumber(s, STR_FX_SEG_COUNT_KEY) | 0;
+    if (strCount > 0) {
+        for (let i = 0; i < strCount; i++) {
+            clearFxMask(sprites.readDataSprite(s, STR_FX_SEG_BASE_KEY + (i | 0)));
+        }
+    }
+
+    const agiCount = sprites.readDataNumber(s, AGI_FX_SEG_COUNT_KEY) | 0;
+    if (agiCount > 0) {
+        for (let i = 0; i < agiCount; i++) {
+            clearFxMask(sprites.readDataSprite(s, AGI_FX_SEG_BASE_KEY + (i | 0)));
+        }
+    }
 }
 
 
@@ -11107,6 +11180,7 @@ function _syncVisibilityAndDebugTail(
     const dir = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("dir") as any) || "") : "";
     const forceInvisibleVal =
         (nativeAny && nativeAny.getData) ? (nativeAny.getData(NATIVE_FORCE_INVISIBLE_KEY) as any) : undefined;
+    const hideBase = ((dataAny[PROJ_HIDE_BASE_KEY] as any) | 0) !== 0;
     const effectAlphaRaw =
         (nativeAny && nativeAny.getData) ? (nativeAny.getData(EFFECT_ALPHA_DATA_KEY) as any) : undefined;
     const effectAlphaNum = Number(effectAlphaRaw);
@@ -11178,10 +11252,10 @@ function _syncVisibilityAndDebugTail(
         if (uiKind === UI_KIND_COMBO_METER) {
             // Visibility is driven by the published data key, NOT SpriteFlag.Invisible
             const show = ((sprites.readDataNumber(s, UI_COMBO_VISIBLE_KEY) | 0) ? true : false);
-            shouldBeVisible = show && !autoHideByPixels;
+            shouldBeVisible = show && !autoHideByPixels && !hideBase;
         } else {
             // Status bars (and other UI) can still respect Invisible flag if you use it
-            shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
+            shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels && !hideBase;
         }
 
         native.visible = shouldBeVisible;
@@ -11204,7 +11278,7 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     // Normal visibility path (existing behavior)
     // ------------------------------------------------------------
-    const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels;
+    const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels && !hideBase;
     native.visible = shouldBeVisible;
     native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
 

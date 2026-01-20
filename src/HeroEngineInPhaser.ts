@@ -1920,6 +1920,7 @@ function _spawnHeroBodyPaintFxForMove(
     lifespanMs: number,
     moveType?: string
 ): Sprite | null {
+    if (!ENABLE_HERO_BODY_FX) return null;
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null;
     const dir = _enemyDirFromVector(nx, ny);
     const elem = _heroBodyEffectElement(hero, element | 0);
@@ -2483,6 +2484,7 @@ const HERO_BODY_FX_ALPHA_DEFAULT = 0.25;
 const HERO_BODY_FX_ALPHA_AGILITY = 0.6;
 const HERO_BODY_FX_BLEND_DEFAULT = "add";
 const HERO_BODY_FX_BLEND_AGILITY = "normal";
+const ENABLE_HERO_BODY_FX = false;
 const HERO_BODY_FX_MODE = "silhouette";
 const HERO_BODY_FX_MASK_INVERT = false;
 const HERO_BODY_FX_MASK_RADIUS = -1; // -1 => use hero aura radius
@@ -2498,6 +2500,8 @@ const PROJ_MASK_FX_BLEND = "normal";
 const PROJ_MASK_FX_REPEAT = -1;
 const PROJ_MASK_FX_FORCE_TOP = false;
 const PROJ_MASK_FX_Z_BIAS = 3;
+const PROJ_HIDE_BASE_FOR_MASK_FX = false;
+const PROJECTILE_OUTLINE_ONLY = true;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
 const __effectMaskSpawnOnce = new Set<number>();
@@ -3432,6 +3436,7 @@ const PROJ_DATA = {
 
     BUTTON: "btn",
     ELEMENT: "elem",
+    HIDE_BASE: "hideBase", // Phaser-only: hide base projectile sprite when masked effects are used
 
 
 
@@ -14816,7 +14821,7 @@ function _dunTickObjectivePadHint(nowMs: number): void {
 
     const isOpen = (typeof dlg.isOpen === "function") ? !!dlg.isOpen() : false
     const owner = dlg.__heOwner || ""
-    if (isOpen && owner && owner !== "pad-hint") return
+    if (isOpen && owner !== "pad-hint") return
 
     const info = _dunObjectiveUiText(now)
     const text = info.title ? `Objective: ${info.title}` : "Objective incomplete"
@@ -40842,6 +40847,7 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct)
 
     sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing")
+    sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
 
     const bodyFx = _spawnHeroBodyPaintFxForMove(
         heroIndex,
@@ -41669,7 +41675,9 @@ function _strengthTraceStampAt(img: Image, cx: number, cy: number): void {
             if (isEdge) {
                 if (cur === 0) img.setPixel(x, y, STR_TIP_TRACE_EDGE_COLOR | 0);
             } else {
-                img.setPixel(x, y, STR_TIP_TRACE_COLOR | 0);
+                if (!PROJECTILE_OUTLINE_ONLY) {
+                    img.setPixel(x, y, STR_TIP_TRACE_COLOR | 0);
+                }
             }
         }
     }
@@ -45654,6 +45662,7 @@ function spawnAgilityThrustProjectile(
         (L <= 0 ? "agilityStabLow" : "agilityStab")
 
     )
+    sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, 1)
 
     sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex)
 
@@ -45681,7 +45690,7 @@ function spawnAgilityThrustProjectile(
 
     sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct | 0)
 
-
+    sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
 
     // Direction + timing fields used by the updater
 
@@ -46065,6 +46074,14 @@ function _buildAgilityTrailImage(
     {
         const px = mapX(sf, 0), py = mapY(sf, 0);
         if (px >= 0 && px < w && py >= 0 && py < h && img.getPixel(px, py) == 0) img.setPixel(px, py, mainCol);
+    }
+
+    if (PROJECTILE_OUTLINE_ONLY) {
+        for (let x = 0; x < w; x++) {
+            for (let y = 0; y < h; y++) {
+                if (img.getPixel(x, y) == mainCol) img.setPixel(x, y, 0);
+            }
+        }
     }
 
     return { img, bounds };
@@ -66550,6 +66567,7 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
 
 
     const safe = _uiGetSafeForSpend(hi)
+    const objective = _dunObjectiveUiText(now)
 
 
 
@@ -66568,6 +66586,9 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
         dungeonActive: !!DUNGEON_MODE_ACTIVE,
 
         floorKind: String(_dunFloorKind || ""),
+        objectiveTitle: String(objective.title || ""),
+        objectiveSub: String(objective.sub || ""),
+        objectiveState: String(objective.state || ""),
 
 
 
