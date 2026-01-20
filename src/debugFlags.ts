@@ -24,10 +24,10 @@ export const DEBUG_HERO_SPAWN_LOGS = true;
 export const DEBUG_ANIM_KEYS = false;
 export const DEBUG_ANIM_KEYS_HERO_INDEX = -1; // -1 = all heroes
 export const DEBUG_ANIM_KEYS_PLAYER_ID = 0;   // 0 = all players
-export const DEBUG_ANIM_KEYS_PHASE_EDGE = true;
-export const DEBUG_ANIM_KEYS_PHASE_STAMP = true;
+export const DEBUG_ANIM_KEYS_PHASE_EDGE = false;
+export const DEBUG_ANIM_KEYS_PHASE_STAMP = false;
 export const DEBUG_ANIM_KEYS_PHASE_PART = false;
-export const DEBUG_ANIM_KEYS_INT_FINISH = true;
+export const DEBUG_ANIM_KEYS_INT_FINISH = false;
 
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
@@ -104,13 +104,13 @@ export const DEBUG_SHOP_LOGS = false;
 export const DEBUG_COINS_LOGS = false;
 
 // Intellect debug (HeroEngineInPhaser.ts)
-export const DEBUG_INT_DET = true;
-export const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = true;
+export const DEBUG_INT_DET = false;
+export const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = false;
 
 // Enemy navigation debug (HeroEngineInPhaser.ts)
 export const DEBUG_ENEMY_NAV_LOG = false;
-export const DEBUG_ENEMY_STUCK_LOG = true;
-export const DEBUG_ENEMY_NAV_COLLISION = true;
+export const DEBUG_ENEMY_STUCK_LOG = false;
+export const DEBUG_ENEMY_NAV_COLLISION = false;
 export const DEBUG_DISABLE_ENEMY_WALL_COLLISIONS = true; // Allow enemies to ignore wall collision resolution.
 export const DEBUG_ENEMY_AI_DECISIONS = false;
 export const DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES = true;
@@ -140,7 +140,7 @@ export const DEBUG_DRAW_ENEMY_SPRITE_BOUNDS = false; // Engine sprite bounds (Ar
 export const DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS = false; // Enemy collider base-size bounds (colW/colH)
 export const DEBUG_DRAW_ENEMY_HITBOX = false; // Engine overlap bounds (AABB used for overlaps)
 export const DEBUG_DRAW_ENEMY_NATIVE_BOUNDS = false; // Phaser native sprite bounds (rendered art)
-export const DEBUG_DRAW_ENEMY_NAV_FOOTPRINT = true; // Enemy nav footprint (clamped by DEBUG_ENEMY_FOOTPRINT_MAX_PX)
+export const DEBUG_DRAW_ENEMY_NAV_FOOTPRINT = false; // Enemy nav footprint (clamped by DEBUG_ENEMY_FOOTPRINT_MAX_PX)
 export const DEBUG_DRAW_ENEMY_AURA_BOUNDS = false; // Aura outline polygon (from non-transparent pixels)
 export const DEBUG_DRAW_EFFECT_BOUNDS = false; // Effect sprite bounds (frame + nontransparent)
 export const DEBUG_DRAW_HERO_SPRITE_BOUNDS = false; // Hero sprite bounds (Arcade image)
@@ -150,8 +150,8 @@ export const DEBUG_DRAW_HERO_NATIVE_BOUNDS = false; // Hero native sprite bounds
 export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint
 export const DEBUG_DRAW_HERO_NAV_FOOTPRINT = false; // Hero nav footprint (same as wall for now)
 export const DEBUG_DRAW_DECOR_COLLIDERS = false; // Decor prop collider bounds (triggers + solids)
-export const DEBUG_EFFECT_ANIMS = true; // Effect anim application logs (effects.*)
-export const DEBUG_EFFECT_MASKS = true; // Effect mask debug logs (silhouette / mask attach)
+export const DEBUG_EFFECT_ANIMS = false; // Effect anim application logs (effects.*)
+export const DEBUG_EFFECT_MASKS = false; // Effect mask debug logs (silhouette / mask attach)
 export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 export const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
@@ -181,6 +181,7 @@ export const DEBUG_ROLE_ACTOR = false;
 export const DEBUG_ROLE_EFFECT = false;
 export const DEBUG_ROLE_OTHER = false;
 export const DEBUG_HERO_NATIVE_FEET_ANCHOR = false;
+export const DEBUG_HERO_AURA_RENDER_LOGS = false; // [AURA][HERO][RENDER] one-time per frame/texture
 export const DEBUG_KIND56_CREATE_TRACE = true;
 export const DEBUG_OVERLAPS = false;
 export const MAX_OVERLAP_DEBUG_LOGS = 40;
@@ -227,10 +228,11 @@ export const DEBUG_TILEMAP_GLUE = false; // [tileMapGlue] base render done, etc.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)
-export const DEBUG_PROP_FOCUS_AURA = true;
+export const DEBUG_PROP_FOCUS_AURA = false;
 export const DEBUG_PROP_FOCUS_AURA_LOGS = false;
-export const LOG_PROP_FOCUS_AURA_RENDER_ONCE = true;
-export const DEBUG_PROP_FOCUS_AURA_DEPTH = true;
+export const DEBUG_PROP_FOCUS_AURA_FRAME_LOGS = false; // [PROPAURA][AURA-FRAME] verbose per-frame stats
+export const LOG_PROP_FOCUS_AURA_RENDER_ONCE = false;
+export const DEBUG_PROP_FOCUS_AURA_DEPTH = false;
 export const DEBUG_PROP_FOCUS_AURA_FORCE_FRONT = false;
 export const DEBUG_PROP_FOCUS_AURA_FORCE_FRONT_BUMP = 2000000;
 export const DEBUG_PROP_FOCUS_AURA_WORLD_MARKER = false;
@@ -250,7 +252,7 @@ export const DEBUG_PROP_FOCUS_AURA_HUD_PREVIEW = false;
 export const DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES = new Set<string>();
 export const DEBUG_PROP_FOCUS_AURA_TRACE = false;
 export const DEBUG_PROP_FOCUS_AURA_OVERRIDE = {
-  enabled: true,
+  enabled: false,
   fromBaseName: "chest",
   auraTextureKey: "tiles.terrain_atlas_aura_r2",
   frameIndex: 499,
@@ -263,6 +265,9 @@ export const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 // ------------------------------------------------------------
 export const WEAPON_DEBUG = false;
 export const WEAPON_DEBUG_VERBOSE = false;
+export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
+export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
+export const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
 export const ENABLE_WEAPON_AUDIT_ON_START = false;
 export const ENABLE_WEAPON_AUDIT_PRINT_ALL_MODELS = false;
 

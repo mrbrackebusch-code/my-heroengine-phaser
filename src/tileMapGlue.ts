@@ -13,6 +13,7 @@ import {
   DEBUG_PROP_FOCUS_AURA,
   DEBUG_PROP_FOCUS_AURA_BLINK,
   DEBUG_PROP_FOCUS_AURA_DEPTH,
+  DEBUG_PROP_FOCUS_AURA_FRAME_LOGS,
   DEBUG_PROP_FOCUS_AURA_FORCE_FRONT,
   DEBUG_PROP_FOCUS_AURA_FORCE_FRONT_BUMP,
   DEBUG_PROP_FOCUS_AURA_FORCE_VISIBLE_NAMES,
@@ -3535,6 +3536,7 @@ private _propResolveOverlayInfo(
   tint: number | null;
   blendMode: number | "add" | "lighten" | "normal" | null;
   visibleByDefault: boolean;
+  followState: boolean;
 } | null {
   const spec: any = vis?.overlay || null;
   if (!spec) return null;
@@ -3568,6 +3570,7 @@ private _propResolveOverlayInfo(
   const tint = (typeof spec.tint === "number") ? spec.tint : null;
   const blendMode = (spec.blendMode != null) ? spec.blendMode : null;
   const visibleByDefault = !!spec.visibleByDefault;
+  const followState = !!spec.followState;
 
   return {
     textureKey,
@@ -3580,6 +3583,7 @@ private _propResolveOverlayInfo(
     tint,
     blendMode,
     visibleByDefault,
+    followState,
   };
 }
 
@@ -4221,7 +4225,7 @@ private _propCreateFocusAuraContainer(args: {
           const logKey = padTexKey
             ? `${auraTk}::${auraFi}::${padTexKey}`
             : `${auraTk}::${auraFi}`;
-        if (!onceMap[logKey]) {
+        if (DEBUG_PROP_FOCUS_AURA_FRAME_LOGS && !onceMap[logKey]) {
           onceMap[logKey] = 1;
           console.log(`[PROPAURA][AURA-FRAME] ${JSON.stringify({
             auraTk,
@@ -4355,6 +4359,9 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
     }
   }
 
+  const instOffX = (inst.offsetX ?? 0) | 0;
+  const instOffY = (inst.offsetY ?? 0) | 0;
+
   const auraLayers = this._propCreateFocusAuraLayers({
     st,
     anchorR: (inst.anchorR | 0),
@@ -4366,8 +4373,8 @@ private _propRebuildFocusAuraForInstance(inst: any): boolean {
     baseRef: { row: (inst.baseRefRow | 0), col: (inst.baseRefCol | 0) },
     wTiles: (inst.wTiles | 0),
     hTiles: (inst.hTiles | 0),
-    ox: ((vis?.offsetXPx ?? 0) | 0),
-    oy: ((vis?.offsetYPx ?? 0) | 0),
+    ox: (((vis?.offsetXPx ?? 0) | 0) + instOffX),
+    oy: (((vis?.offsetYPx ?? 0) | 0) + instOffY),
     baseDepth: (inst.baseDepth | 0),
   });
 
@@ -4478,6 +4485,7 @@ private _propPlaceOneAnchor(
   let overlayAlphaDefault: number | null = null;
   let overlayTintDefault: number | null = null;
   let overlayBlendModeDefault: number | "add" | "lighten" | "normal" | null = null;
+  let rainbowTween: any = null;
 
   if (isBridgeH || isBridgeV) {
     if (!this.map) return;
@@ -4597,6 +4605,7 @@ private _propPlaceOneAnchor(
       overlayAlphaDefault,
       overlayTintDefault,
       overlayBlendModeDefault,
+      rainbowTween,
 
       focusAuraLayers: null,
       focusAura: null,
@@ -4658,6 +4667,7 @@ private _propPlaceOneAnchor(
     const overlayDepth = ((baseDepth | 0) + (overlayInfo.depthBias | 0)) | 0;
     const oox = (overlayInfo.offsetX | 0);
     const ooy = (overlayInfo.offsetY | 0);
+    const overlayRef = overlayInfo.followState ? baseRef : overlayInfo.ref;
     const blendFallback = (((Phaser as any)?.BlendModes?.NORMAL ?? 0) | 0);
     const blendResolved =
       (overlayBlendModeDefault != null)
@@ -4672,8 +4682,8 @@ private _propPlaceOneAnchor(
         if (!this.map) return;
         if (worldR < 0 || worldC < 0 || worldR >= (this.map.height | 0) || worldC >= (this.map.width | 0)) continue;
 
-        const atlasCol = (overlayInfo.ref.col + dx) | 0;
-        const atlasRow = (overlayInfo.ref.row - ((hTiles | 0) - 1) + dy) | 0;
+        const atlasCol = (overlayRef.col + dx) | 0;
+        const atlasRow = (overlayRef.row - ((hTiles | 0) - 1) + dy) | 0;
         const frameIndex = ((atlasRow * (overlayInfo.cols | 0) + atlasCol) | 0);
 
         const x = ((worldC * st.tileSize + (st.tileSize >> 1) + ox + oox) | 0);
@@ -4703,6 +4713,30 @@ private _propPlaceOneAnchor(
         overlayObjs.push(obj);
         (st.anyThis.__propImgs as any[]).push(obj);
       }
+    }
+  }
+
+  if (baseName === "chest_rainbow") {
+    const tintTargets = overlayObjs.length ? overlayObjs : objs;
+    const colorUtil = (Phaser as any)?.Display?.Color ?? null;
+    if (tintTargets.length && colorUtil && this.scene?.tweens) {
+      const tweenState = { t: 0 };
+      const applyTint = (): void => {
+        const rgb = colorUtil.HSVToRGB(tweenState.t, 1, 1);
+        const tint = (rgb && typeof rgb.color === "number") ? rgb.color : 0xffffff;
+        for (let i = 0; i < tintTargets.length; i++) {
+          try { tintTargets[i].setTint(tint); } catch { /* ignore */ }
+        }
+      };
+      applyTint();
+      rainbowTween = this.scene.tweens.add({
+        targets: tweenState,
+        t: 1,
+        duration: 1800,
+        repeat: -1,
+        ease: "Linear",
+        onUpdate: applyTint,
+      });
     }
   }
 
@@ -4753,6 +4787,7 @@ private _propPlaceOneAnchor(
     overlayAlphaDefault,
     overlayTintDefault,
     overlayBlendModeDefault,
+    rainbowTween,
 
     focusAuraLayers: auraLayers.length ? auraLayers : null,
     focusAura: primaryAura ? primaryAura.cont : null,
@@ -4979,6 +5014,15 @@ private _propDestroyInstance(
     const hideTimer = (inst as any).__focusAuraHideTimer ?? null;
     if (hideTimer) clearTimeout(hideTimer);
     (inst as any).__focusAuraHideTimer = null;
+  } catch { /* ignore */ }
+  try {
+    const tween = (inst as any).rainbowTween ?? null;
+    if (tween) {
+      try { tween.stop?.(); } catch { /* ignore */ }
+      try { tween.remove?.(); } catch { /* ignore */ }
+      try { tween.destroy?.(); } catch { /* ignore */ }
+    }
+    (inst as any).rainbowTween = null;
   } catch { /* ignore */ }
 
   const anchorR = (inst.anchorR | 0);

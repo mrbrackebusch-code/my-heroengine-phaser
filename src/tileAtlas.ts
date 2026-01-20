@@ -95,6 +95,8 @@ export type PropOverlaySpec = {
     atlas?: DecorAtlasKey;
     /** Overlay frame location within the overlay sheet. */
     ref?: TileRef;
+    /** If true, overlay follows the prop's current state frame. */
+    followState?: boolean;
     /** Explicit absolute frame index within the overlay sheet. */
     frameIndex?: number;
     /** Optional pixel offsets applied at render time (Phaser prop rendering). */
@@ -193,6 +195,35 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 };
 
 
+const CHEST_BASE_REF: TileRef = { row: 21, col: 15 };
+const CHEST_ANIM_STATES: DecorAnimStates = {
+    key: "unusedForStates",
+    states: {
+        closed: { row: 21, col: 15 },
+        open: { row: 22, col: 15 },
+    },
+};
+const CHEST_BASE_VISUAL: DecorVisualRef = {
+    atlas: "build_atlas",
+    ref: CHEST_BASE_REF,
+    focusAuraAllowInset: true,
+    anim: CHEST_ANIM_STATES,
+};
+const chestOverlay = (
+    tint: number,
+    alpha: number,
+    blendMode: "add" | "lighten" | "normal" = "add"
+): PropOverlaySpec => ({
+    atlas: "build_atlas",
+    ref: CHEST_BASE_REF,
+    followState: true,
+    visibleByDefault: true,
+    tint,
+    alpha,
+    blendMode,
+});
+
+
 export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     rock_mountain: { atlas: "terrain", ref: { row: 22, col: 20 } },
 
@@ -274,18 +305,15 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     pedestal_bl: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: -16, offsetYPx: -16 },
     pedestal_br: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: 16, offsetYPx: -16 },
 
-    chest: {
-        atlas: "build_atlas",
-        ref: { row: 21, col: 15 },
-        focusAuraAllowInset: true,
-        anim: {
-            key: "unusedForStates",
-            states: {
-                closed: { row: 21, col: 15 },
-                open:   { row: 22, col: 15 }
-            }
-        }
-    },
+    chest: { ...CHEST_BASE_VISUAL },
+    chest_brown: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0x8b5a2b, 0.35, "normal") },
+    chest_common: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0xf0f0f0, 0.4, "add") },
+    chest_uncommon: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0x49d06b, 0.5, "add") },
+    chest_rare: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0x4aa3ff, 0.55, "add") },
+    chest_epic: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0xb474ff, 0.6, "add") },
+    chest_legendary: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0xffd35a, 0.7, "add") },
+    chest_gold: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0xffc54d, 0.7, "add") },
+    chest_rainbow: { ...CHEST_BASE_VISUAL, overlay: chestOverlay(0xffffff, 0.7, "add") },
     treasure_marker_a: {
         atlas: "base_out_atlas",
         ref: { row: 12, col: 15 },
@@ -333,12 +361,13 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         ref: { row: 13, col: 12 },
         wTiles: 2,
         hTiles: 2,
+        offsetXPx: 8,
     },
 
     book_memories: {
         atlas: "anims.Book 32x40",
         ref: { row: 0, col: 0 },
-        offsetXPx: -16,
+        offsetXPx: -8,
         offsetYPx: -15,
         depthBiasTiles: 1.5,
         depthBias: 2,

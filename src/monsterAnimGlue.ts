@@ -45,15 +45,18 @@ const FALLBACK_DEATH_FPS  = 4;
 // ---------------------------------------------------------------------
 // Helper: locate the MonsterAtlas regardless of where we stashed it.
 // ---------------------------------------------------------------------
-function getMonsterAtlasFromScene(scene: Phaser.Scene): MonsterAtlas | undefined {
+function getMonsterAtlasFromScene(scene?: Phaser.Scene | null): MonsterAtlas | undefined {
     const anyScene = scene as any;
+    const fromRegistry = scene
+        ? ((scene.registry?.get?.("monsterAtlas") as MonsterAtlas | undefined) || undefined)
+        : undefined;
 
     return (
         // preferred: Phaser registry
-        (scene.registry?.get?.("monsterAtlas") as MonsterAtlas | undefined) ||
+        fromRegistry ||
         // also allow scene fields
-        (anyScene.monsterAtlas as MonsterAtlas | undefined) ||
-        (anyScene.__monsterAtlas as MonsterAtlas | undefined) ||
+        (anyScene?.monsterAtlas as MonsterAtlas | undefined) ||
+        (anyScene?.__monsterAtlas as MonsterAtlas | undefined) ||
         // and global escape hatch
         ((globalThis as any).__monsterAtlas as MonsterAtlas | undefined)
     );
@@ -113,6 +116,7 @@ export function applyMonsterAnimationForSprite(
     const scene = sprite.scene;
     const data = sprite.getDataManager ? sprite.getDataManager() : sprite.data;
     if (!data) return;
+    if (!scene || !(scene as any).anims || !sprite.anims) return;
 
     const atlas = getMonsterAtlasFromScene(scene);
     if (!atlas) {

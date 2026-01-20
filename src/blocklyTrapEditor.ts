@@ -4,7 +4,7 @@ import { DEBUG_TRAP_SHOW_SOLUTION } from "./debugFlags";
 import type { TrapSpec } from "./trapSchema";
 import type { TrapInstance } from "./trapInstances";
 import { resolveTrapSpecForInstance } from "./trapInstances";
-import { getTrapSpecById } from "./trapSpecs";
+import { getTrapSpecById, SHRINE_TRAP_ID } from "./trapSpecs";
 import { getTrapXmlForId, runTrapBlockly, setTrapXmlForId } from "./blocklyTrapRuntime";
 
 const OVERLAY_ID = "he-trap-blockly-overlay";
@@ -286,6 +286,15 @@ function _estimateCommentSize(text: string, maxWidth: number): { width: number; 
 
 function _autoExpandTrapComments(ws: Blockly.WorkspaceSvg, spec: TrapSpec | null, maxWidth: number): void {
   if (!ws || typeof (ws as any).getTopComments !== "function") return;
+  if (spec?.id === SHRINE_TRAP_ID) {
+    const comments: any[] = (ws as any).getTopComments(true) || [];
+    for (let i = 0; i < comments.length; i++) {
+      const c = comments[i];
+      if (!c || c.isDisposed?.()) continue;
+      try { c.dispose?.(); } catch { /* ignore */ }
+    }
+    return;
+  }
   const comments: any[] = (ws as any).getTopComments(true) || [];
   const instructions = (spec?.ui?.instructions || "").trim();
   let target: any = null;
@@ -823,12 +832,13 @@ function _ensureTrapVariables(ws: Blockly.WorkspaceSvg, spec: TrapSpec): void {
 }
 
 function _lockProcedureName(ws: Blockly.WorkspaceSvg): void {
+  const desired = (_activeSpec?.id === SHRINE_TRAP_ID) ? "When floor begins" : "trapMain";
   const blocks = ws.getAllBlocks(false);
   for (let i = 0; i < blocks.length; i++) {
     const b: any = blocks[i];
     if (b.type !== "procedures_defreturn") continue;
     const f = b.getField?.("NAME");
-    if (f && typeof f.setValue === "function") f.setValue("trapMain");
+    if (f && typeof f.setValue === "function") f.setValue(desired);
     if (f && typeof f.setEditable === "function") f.setEditable(false);
     if (typeof b.setDeletable === "function") b.setDeletable(false);
   }

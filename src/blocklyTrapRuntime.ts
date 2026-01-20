@@ -297,6 +297,19 @@ function _resolveExpectedOutput(spec: TrapSpec, inputs: Record<string, unknown>)
   return spec.validator.expectedOutput;
 }
 
+function _getEntryProcedureName(ws: Blockly.Workspace): string {
+  if (!ws) return TRAP_ENTRY_FN;
+  const blocks = ws.getAllBlocks(false);
+  for (let i = 0; i < blocks.length; i++) {
+    const b: any = blocks[i];
+    if (b?.type !== "procedures_defreturn") continue;
+    const f = b.getField?.("NAME");
+    const name = (f && typeof f.getValue === "function") ? String(f.getValue() || "") : "";
+    if (name) return name;
+  }
+  return TRAP_ENTRY_FN;
+}
+
 export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>): TrapRunResult {
   const errors: string[] = [];
   const xmlText = getTrapXmlForId(spec.id) || spec.starterBlocks.xml;
@@ -326,8 +339,18 @@ export function runTrapBlockly(spec: TrapSpec, inputs: Record<string, unknown>):
   try {
     const decls = _makeInputDecls(spec);
     const helpers = _makeTrapHelpers();
+    let entryFn = TRAP_ENTRY_FN;
+    const entryProc = _getEntryProcedureName(ws);
+    const G: any = javascriptGenerator as any;
+    const nameDB = G?.nameDB_;
+    const procNameType = (Blockly as any)?.Procedures?.NAME_TYPE || "PROCEDURE";
+    if (entryProc && nameDB && typeof nameDB.getName === "function") {
+      entryFn = nameDB.getName(entryProc, procNameType);
+    } else if (entryProc) {
+      entryFn = entryProc;
+    }
     const wrapped = `"use strict";\n${decls}\n${helpers}\n${code}\n` +
-      `return (typeof ${TRAP_ENTRY_FN} === "function") ? ${TRAP_ENTRY_FN}() : undefined;`;
+      `return (typeof ${entryFn} === "function") ? ${entryFn}() : undefined;`;
     const fn = new Function("inputs", wrapped);
     value = fn(inputs);
   } catch (e) {

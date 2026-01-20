@@ -89,9 +89,6 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       focusable: true,
       action: "prop",
     },
-    placement: {
-      floorKinds: ["entrance"],
-    },
   },
   book_stump: {
     name: "book_stump",

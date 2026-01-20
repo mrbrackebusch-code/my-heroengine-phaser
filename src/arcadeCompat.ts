@@ -111,6 +111,7 @@ import {
     DEBUG_ENEMY_FOOTPRINT_MAX_PX,
     DEBUG_ENEMY_WALL_FOOTPRINT_PX,
     DEBUG_HERO_NATIVE_FEET_ANCHOR,
+    DEBUG_HERO_AURA_RENDER_LOGS,
     DEBUG_INT_HERO_NAME_FILTER,
     DEBUG_INT_HERO_VIS,
     DEBUG_INPUT_EDGE_LOGS,
@@ -1047,6 +1048,9 @@ const HERO_WPN_CAST_KEY = "wCa";
 const HERO_WPN_EXEC_KEY = "wEx";
 const HERO_WPN_INT_KEY = "wInt";
 const HERO_WPN_SUP_KEY = "wSup";
+const HERO_GHOST_ALPHA_KEY = "ghostAlpha";
+const HERO_GHOST_TINT_KEY = "ghostTint";
+const HERO_GHOST_ACTIVE_KEY = "deadGhost";
 const HERO_AIM_DIR_X1000_KEY = "aimDx";
 const HERO_AIM_DIR_Y1000_KEY = "aimDy";
 const HERO_AIM_ANGLE_MDEG_KEY = "aimAng";
@@ -1321,10 +1325,12 @@ const EFFECT_OFFY_DATA_KEY = "effectOffY";
 const EFFECT_TINT_DATA_KEY = "effectTint";
 const EFFECT_ALPHA_DATA_KEY = "effectAlpha";
 const EFFECT_BLEND_DATA_KEY = "effectBlend";
+const EFFECT_ROT_DATA_KEY = "effectRot";
 const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
+const EFFECT_MASK_PAD_OUT_PX_DATA_KEY = "effectMaskPadOutPx";
 const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const EFFECT_FPS_DATA_KEY = "effectFps";
@@ -9898,7 +9904,7 @@ function _syncHeroPath(
         auraRadius
     );
     try {
-        if (auraActive) {
+        if (DEBUG_HERO_AURA_RENDER_LOGS && auraActive) {
             const k = "__heroAuraLogOnce_" + (nativeAny?.texture?.key ?? "") + ":" + (nativeAny?.frame?.name ?? "");
             const g: any = globalThis as any;
             if (!g[k]) {
@@ -9930,6 +9936,27 @@ function _syncHeroPath(
         } else if (nativeAny.__hitFlashActive) {
             if (typeof nativeAny.clearTint === "function") nativeAny.clearTint();
             nativeAny.__hitFlashActive = false;
+        }
+    } catch { /* ignore */ }
+
+    try {
+        const ghostActive = sprites.readDataBoolean(s, HERO_GHOST_ACTIVE_KEY);
+        const ghostAlphaRaw = sprites.readDataNumber(s, HERO_GHOST_ALPHA_KEY);
+        const ghostTintRaw = sprites.readDataNumber(s, HERO_GHOST_TINT_KEY);
+        const ghostAlpha = (ghostAlphaRaw > 0 && ghostAlphaRaw <= 1) ? ghostAlphaRaw : 0.35;
+        const ghostTint = (ghostTintRaw | 0) || 0xffffff;
+        if (ghostActive) {
+            if (typeof nativeAny.setVisible === "function") nativeAny.setVisible(true);
+            if (typeof nativeAny.setAlpha === "function") nativeAny.setAlpha(ghostAlpha);
+            else nativeAny.alpha = ghostAlpha;
+            if (typeof nativeAny.setTintFill === "function") nativeAny.setTintFill(ghostTint);
+            else if (typeof nativeAny.setTint === "function") nativeAny.setTint(ghostTint);
+            nativeAny.__ghostVisActive = true;
+        } else if (nativeAny.__ghostVisActive) {
+            if (typeof nativeAny.setAlpha === "function") nativeAny.setAlpha(1);
+            else nativeAny.alpha = 1;
+            if (typeof nativeAny.clearTint === "function") nativeAny.clearTint();
+            nativeAny.__ghostVisActive = false;
         }
     } catch { /* ignore */ }
 
@@ -10536,6 +10563,47 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
         maskImg.setFlipY(!!maskNative.flipY);
     }
 
+    const padOut = (nativeAny.__effectMaskPadOutPx | 0);
+    if (padOut > 0) {
+        let padDir = "";
+        try {
+            padDir = String(
+                (typeof nativeAny.getData === "function" ? nativeAny.getData(EFFECT_DIR_DATA_KEY) : "") ||
+                nativeAny.__effectMaskPadDir ||
+                ""
+            ).toLowerCase();
+        } catch {
+            padDir = String(nativeAny.__effectMaskPadDir || "").toLowerCase();
+        }
+        let padX = 0;
+        let padY = 0;
+        if (padDir === "left") padX = -padOut;
+        else if (padDir === "right") padX = padOut;
+        else if (padDir === "up") padY = -padOut;
+        else if (padDir === "down") padY = padOut;
+
+        const baseScaleX = (typeof maskNative.scaleX === "number") ? maskNative.scaleX : 1;
+        const baseScaleY = (typeof maskNative.scaleY === "number") ? maskNative.scaleY : 1;
+        if (padX) {
+            const dimX = (maskImg.width ?? maskNative.width ?? 0) as number;
+            if (Number.isFinite(dimX) && dimX > 0) {
+                const scale = (dimX + Math.abs(padX)) / dimX;
+                maskImg.scaleX = baseScaleX * scale;
+                const shift = (Math.abs(padX) * Math.abs(baseScaleX)) / 2;
+                maskImg.x += (padX > 0) ? shift : -shift;
+            }
+        }
+        if (padY) {
+            const dimY = (maskImg.height ?? maskNative.height ?? 0) as number;
+            if (Number.isFinite(dimY) && dimY > 0) {
+                const scale = (dimY + Math.abs(padY)) / dimY;
+                maskImg.scaleY = baseScaleY * scale;
+                const shift = (Math.abs(padY) * Math.abs(baseScaleY)) / 2;
+                maskImg.y += (padY > 0) ? shift : -shift;
+            }
+        }
+    }
+
     const maskId = (maskImg as any).__effectMaskSpriteId || (maskImg as any).name || maskImg;
     const lastType = nativeAny.__effectPaintMaskType;
     const lastMask = nativeAny.__effectPaintMaskSpriteId;
@@ -10638,6 +10706,7 @@ function _syncEffectPath(
     const tintRaw = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY);
     const hasAlpha = Object.prototype.hasOwnProperty.call(data, EFFECT_ALPHA_DATA_KEY);
     const hasBlend = Object.prototype.hasOwnProperty.call(data, EFFECT_BLEND_DATA_KEY);
+    const hasRot = Object.prototype.hasOwnProperty.call(data, EFFECT_ROT_DATA_KEY);
     const hasForceTop = Object.prototype.hasOwnProperty.call(data, EFFECT_FORCE_TOP_DATA_KEY);
     const hasFrameWindowMs = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_MS_DATA_KEY);
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
@@ -10661,6 +10730,7 @@ function _syncEffectPath(
     const hasMaskInvert = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_INVERT_DATA_KEY);
     const hasMaskRadius = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_DATA_KEY);
     const hasMaskRadiusPx = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_PX_DATA_KEY);
+    const hasMaskPadOut = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_PAD_OUT_PX_DATA_KEY);
     const alpha = hasAlpha ? sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY) : 0;
     const blend = hasBlend ? (sprites.readDataString(s, EFFECT_BLEND_DATA_KEY) || "") : "";
     const forceTopRaw = hasForceTop ? sprites.readDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY) : 0;
@@ -10686,6 +10756,8 @@ function _syncEffectPath(
     const maskInvertRaw = hasMaskInvert ? sprites.readDataNumber(s, EFFECT_MASK_INVERT_DATA_KEY) : 0;
     const maskRadiusRaw = hasMaskRadius ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_DATA_KEY) : 0;
     const maskRadiusPxRaw = hasMaskRadiusPx ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_PX_DATA_KEY) : 0;
+    const maskPadOutRaw = hasMaskPadOut ? sprites.readDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY) : 0;
+    const rot = hasRot ? sprites.readDataNumber(s, EFFECT_ROT_DATA_KEY) : 0;
     const frameIndex = hasFrameIndex ? sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY) : 0;
     const maskInvert = (maskInvertRaw | 0) !== 0;
     const modeRaw = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim().toLowerCase();
@@ -10701,6 +10773,7 @@ function _syncEffectPath(
     if (tint) data[EFFECT_TINT_DATA_KEY] = tint;
     if (hasAlpha) data[EFFECT_ALPHA_DATA_KEY] = alpha;
     if (hasBlend) data[EFFECT_BLEND_DATA_KEY] = blend;
+    if (hasRot) data[EFFECT_ROT_DATA_KEY] = rot;
     if (hasForceTop) data[EFFECT_FORCE_TOP_DATA_KEY] = forceTopRaw;
     if (hasFrameWindowMs) data[EFFECT_FRAME_WINDOW_MS_DATA_KEY] = frameWindowMs;
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
@@ -10725,6 +10798,7 @@ function _syncEffectPath(
     if (hasMaskInvert) data[EFFECT_MASK_INVERT_DATA_KEY] = maskInvertRaw;
     if (hasMaskRadius) data[EFFECT_MASK_RADIUS_DATA_KEY] = maskRadiusRaw;
     if (hasMaskRadiusPx) data[EFFECT_MASK_RADIUS_PX_DATA_KEY] = maskRadiusPxRaw;
+    if (hasMaskPadOut) data[EFFECT_MASK_PAD_OUT_PX_DATA_KEY] = maskPadOutRaw;
 
     const nativeAny: any = s.native;
     if (!nativeAny || typeof nativeAny.setData !== "function") {
@@ -10751,6 +10825,7 @@ function _syncEffectPath(
     if (tint) nativeAny.setData(EFFECT_TINT_DATA_KEY, tint);
     if (hasAlpha) nativeAny.setData(EFFECT_ALPHA_DATA_KEY, alpha);
     if (hasBlend) nativeAny.setData(EFFECT_BLEND_DATA_KEY, blend);
+    if (hasRot) nativeAny.setData(EFFECT_ROT_DATA_KEY, rot);
     if (hasForceTop) nativeAny.setData(EFFECT_FORCE_TOP_DATA_KEY, forceTopRaw);
     if (hasFrameWindowMs) nativeAny.setData(EFFECT_FRAME_WINDOW_MS_DATA_KEY, frameWindowMs);
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
@@ -10775,6 +10850,7 @@ function _syncEffectPath(
     if (hasMaskInvert) nativeAny.setData(EFFECT_MASK_INVERT_DATA_KEY, maskInvertRaw);
     if (hasMaskRadius) nativeAny.setData(EFFECT_MASK_RADIUS_DATA_KEY, maskRadiusRaw);
     if (hasMaskRadiusPx) nativeAny.setData(EFFECT_MASK_RADIUS_PX_DATA_KEY, maskRadiusPxRaw);
+    if (hasMaskPadOut) nativeAny.setData(EFFECT_MASK_PAD_OUT_PX_DATA_KEY, maskPadOutRaw);
 
     if (offX || offY) {
         nativeAny.x = (s.x as number) + (offX || 0);
@@ -10815,6 +10891,12 @@ function _syncEffectPath(
     } else if (nativeAny.__effectMaskRadiusPx == null) {
         nativeAny.__effectMaskRadiusPx = 0;
     }
+    if (hasMaskPadOut) {
+        nativeAny.__effectMaskPadOutPx = maskPadOutRaw | 0;
+    } else if (nativeAny.__effectMaskPadOutPx == null) {
+        nativeAny.__effectMaskPadOutPx = 0;
+    }
+    nativeAny.__effectMaskPadDir = dir || "";
 
     const hasHeroIndexKey = Object.prototype.hasOwnProperty.call(data, PROJ_HERO_INDEX_KEY);
     const heroIndexForDebug = hasHeroIndexKey ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
@@ -11030,6 +11112,10 @@ function _syncEffectPath(
 
     const totalMult = popMult * introMult;
     _effectApplyScale(nativeAny, scale, hasScale, totalMult, scaleX, scaleY);
+
+    if (hasRot) {
+        try { (nativeAny as any).rotation = rot; } catch { /* ignore */ }
+    }
 
     if (hasFlipX) {
         const fx = (flipXRaw | 0) !== 0;

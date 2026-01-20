@@ -52,33 +52,25 @@ const DISASSEMBLED_EFFECT_ELEMENTS: TrapEffectAxis["element"][] = ["fire", "pois
 const DISASSEMBLED_EFFECT_PATTERNS: TrapEffectAxis["pattern"][] = ["radial", "line", "burst", "single"];
 const BASE_PROC_BLOCKS = ["procedures_defreturn", "variables_set", "variables_get"];
 
-type ShrineRitualKind = "move_sequence" | "circle" | "gather";
+type ShrineRitualKind =
+  | "strength_away"
+  | "wisdom_near"
+  | "enemy_near"
+  | "corner_touch";
 
 export type ShrineRitualSpec = {
   kind: ShrineRitualKind;
   description: string;
-  radiusTiles: number;
-  sequence?: string[];
-  minGapMs?: number;
-  direction?: "cw" | "ccw" | "either";
-  laps?: number;
-  requiredHeroes?: number;
-  holdMs?: number;
+  radiusTiles?: number;
 };
 
-const SHRINE_MOVE_SEQUENCES: string[][] = [
-  ["Strength", "Agility", "Strength"],
-  ["Agility", "Intellect", "Agility"],
-  ["Strength", "Strength", "Agility"],
+const SHRINE_NEAR_RADIUS_TILES = 2;
+const SHRINE_RITUAL_KINDS: ShrineRitualKind[] = [
+  "strength_away",
+  "wisdom_near",
+  "enemy_near",
+  "corner_touch",
 ];
-const SHRINE_MOVE_GAP_MS = [1000, 2000];
-const SHRINE_MOVE_RADIUS_TILES = [2, 3];
-const SHRINE_CIRCLE_RADIUS_TILES = [2, 3];
-const SHRINE_CIRCLE_DIRS: Array<ShrineRitualSpec["direction"]> = ["cw", "ccw", "either"];
-const SHRINE_CIRCLE_LAPS = [1, 2];
-const SHRINE_GATHER_COUNTS = [2, 3];
-const SHRINE_GATHER_HOLD_MS = [2000, 3000, 4000];
-const SHRINE_GATHER_RADIUS_TILES = [2, 3];
 
 type DisassembledNumberStyle = "identity" | "math_single" | "math_double" | "gated";
 const DISASSEMBLED_NUMBER_STYLES: DisassembledNumberStyle[] = [
@@ -1140,6 +1132,14 @@ function _blockText(value: string): string {
   `;
 }
 
+function _blockBoolean(value: boolean): string {
+  return `
+    <block type="logic_boolean">
+      <field name="BOOL">${value ? "TRUE" : "FALSE"}</field>
+    </block>
+  `;
+}
+
 function _blockNumber(value: number): string {
   const num = Number.isFinite(value) ? value : 0;
   return `
@@ -1171,87 +1171,142 @@ function _blockVarSet(name: string, valueBlock: string, nextBlock?: string, pos?
   `;
 }
 
-export function buildShrineStarterBlocks(ritual: ShrineRitualSpec): TrapStarterBlocks {
-  const summary = ritual && ritual.description ? `This is what we are looking for: ${ritual.description}` : "This is what we are looking for.";
-  const comment = _escapeXml(summary);
-  let script = "";
-  if (!ritual) {
-    script = _blockVarSet("ritualType", _blockText("unknown"), undefined, { x: 20, y: 20 });
-  } else if (ritual.kind === "circle") {
-    const dir = ritual.direction || "either";
-    const laps = ritual.laps == null ? 1 : ritual.laps | 0;
-    const radius = ritual.radiusTiles | 0;
-    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
-    const block3 = _blockVarSet("laps", _blockNumber(laps), block4);
-    const block2 = _blockVarSet("direction", _blockText(dir), block3);
-    script = _blockVarSet("ritualType", _blockText("circle"), block2, { x: 20, y: 20 });
-  } else if (ritual.kind === "gather") {
-    const required = ritual.requiredHeroes == null ? 2 : ritual.requiredHeroes | 0;
-    const hold = ritual.holdMs == null ? 2000 : ritual.holdMs | 0;
-    const radius = ritual.radiusTiles | 0;
-    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
-    const block3 = _blockVarSet("holdMs", _blockNumber(hold), block4);
-    const block2 = _blockVarSet("heroes", _blockNumber(required), block3);
-    script = _blockVarSet("ritualType", _blockText("gather"), block2, { x: 20, y: 20 });
-  } else {
-    const seq = ritual.sequence || [];
-    const minGap = ritual.minGapMs == null ? 0 : ritual.minGapMs | 0;
-    const radius = ritual.radiusTiles | 0;
-    const block4 = _blockVarSet("radiusTiles", _blockNumber(radius));
-    const block3 = _blockVarSet("minGapMs", _blockNumber(minGap), block4);
-    const block2 = _blockVarSet("moves", _blockTextList(seq), block3);
-    script = _blockVarSet("ritualType", _blockText("sequence"), block2, { x: 20, y: 20 });
+function _blockVarGet(name: string): string {
+  return `
+    <block type="variables_get">
+      <field name="VAR">${_escapeXml(name)}</field>
+    </block>
+  `;
+}
+
+function _blockLogicCompare(op: string, aBlock: string, bBlock: string): string {
+  const mode = _escapeXml(op || "EQ");
+  return `
+    <block type="logic_compare">
+      <field name="OP">${mode}</field>
+      <value name="A">${aBlock}</value>
+      <value name="B">${bBlock}</value>
+    </block>
+  `;
+}
+
+function _blockLogicAnd(aBlock: string, bBlock: string): string {
+  return `
+    <block type="logic_operation">
+      <field name="OP">AND</field>
+      <value name="A">${aBlock}</value>
+      <value name="B">${bBlock}</value>
+    </block>
+  `;
+}
+
+function _blockLogicAndChain(blocks: string[]): string {
+  const list = (blocks || []).filter(Boolean);
+  if (!list.length) return _blockBoolean(false);
+  let expr = list[0];
+  for (let i = 1; i < list.length; i++) {
+    expr = _blockLogicAnd(expr, list[i]);
   }
+  return expr;
+}
+
+function _blockIf(conditionBlock: string, doBlock: string, nextBlock?: string): string {
+  const next = nextBlock ? `<next>${nextBlock}</next>` : "";
+  return `
+    <block type="controls_if">
+      <value name="IF0">${conditionBlock}</value>
+      <statement name="DO0">${doBlock}</statement>
+      ${next}
+    </block>
+  `;
+}
+
+function _blockWhileUntil(conditionBlock: string, doBlock?: string, nextBlock?: string): string {
+  const stmt = doBlock ? `${doBlock}` : "";
+  const next = nextBlock ? `<next>${nextBlock}</next>` : "";
+  return `
+    <block type="controls_whileUntil">
+      <field name="MODE">UNTIL</field>
+      <value name="BOOL">${conditionBlock}</value>
+      <statement name="DO">${stmt}</statement>
+      ${next}
+    </block>
+  `;
+}
+
+function _blockProcedureReturn(name: string, stackBlock: string, returnBlock: string): string {
+  const procName = String(name || "trapMain");
+  return `
+    <block type="procedures_defreturn" x="20" y="20">
+      <field name="NAME">${_escapeXml(procName)}</field>
+      <statement name="STACK">${stackBlock}</statement>
+      <value name="RETURN">${returnBlock}</value>
+    </block>
+  `;
+}
+
+export function buildShrineStarterBlocks(ritual: ShrineRitualSpec): TrapStarterBlocks {
+  const activateLine = _blockVarSet("activate", _blockBoolean(true));
+  const idleLine = _blockVarSet("shrine stays inactive", _blockBoolean(true));
+  const waitUntil = (conditionBlock: string, nextBlock?: string) =>
+    _blockWhileUntil(conditionBlock, idleLine, nextBlock);
+
+  const heroNear = _blockVarGet("hero is within 2 tiles of shrine");
+  const heroFacingAway = _blockVarGet("hero is facing away from shrine");
+  const heroStrength = _blockVarGet("hero is using a strength move");
+  const heroWisdom = _blockVarGet("hero is using a wisdom move");
+  const enemyNear = _blockVarGet("enemy is within 2 tiles of shrine");
+  const heroCorner = _blockVarGet("hero is touching a corner of the map");
+
+  let condition = _blockVarGet("activation condition is true");
+  if (ritual?.kind === "strength_away") {
+    condition = _blockLogicAndChain([heroNear, heroFacingAway, heroStrength]);
+  } else if (ritual?.kind === "wisdom_near") {
+    condition = _blockLogicAndChain([heroNear, heroWisdom]);
+  } else if (ritual?.kind === "enemy_near") {
+    condition = enemyNear;
+  } else if (ritual?.kind === "corner_touch") {
+    condition = heroCorner;
+  }
+
+  const stack = waitUntil(condition, activateLine);
+  const proc = _blockProcedureReturn("When floor begins", stack, _blockVarGet("activate"));
   return {
     readOnly: true,
     xml: `
       <xml xmlns="https://developers.google.com/blockly/xml">
-        <comment pinned="true" h="80" w="360" x="10" y="10">${comment}</comment>
-        ${script}
+        ${proc}
       </xml>
     `,
   };
 }
 
 function _generateShrineRitual(rng: () => number): ShrineRitualSpec {
-  const kind = _pick<ShrineRitualKind>(rng, ["move_sequence", "circle", "gather"], "move_sequence");
-  if (kind === "circle") {
-    const radiusTiles = _pick(rng, SHRINE_CIRCLE_RADIUS_TILES, 2);
-    const direction = _pick(rng, SHRINE_CIRCLE_DIRS, "either") || "either";
-    const laps = _pick(rng, SHRINE_CIRCLE_LAPS, 1);
-    const dirLabel = direction === "either" ? "a full circle" : (direction === "cw" ? "clockwise" : "counterclockwise");
-    const lapLabel = laps > 1 ? ` for ${laps} laps` : "";
+  const kind = _pick<ShrineRitualKind>(rng, SHRINE_RITUAL_KINDS, "strength_away");
+  if (kind === "strength_away") {
     return {
       kind,
-      radiusTiles,
-      direction,
-      laps,
-      description: `Run ${dirLabel} around the shrine${lapLabel} within ${radiusTiles} tiles.`,
+      radiusTiles: SHRINE_NEAR_RADIUS_TILES,
+      description: "Use a Strength move while within 2 tiles of the shrine and facing away from it.",
     };
   }
-  if (kind === "gather") {
-    const radiusTiles = _pick(rng, SHRINE_GATHER_RADIUS_TILES, 2);
-    const requiredHeroes = _pick(rng, SHRINE_GATHER_COUNTS, 2);
-    const holdMs = _pick(rng, SHRINE_GATHER_HOLD_MS, 2000);
-    const holdLabel = _msToSecondsLabel(holdMs);
+  if (kind === "wisdom_near") {
     return {
       kind,
-      radiusTiles,
-      requiredHeroes,
-      holdMs,
-      description: `Gather ${requiredHeroes} heroes within ${radiusTiles} tiles and hold for ${holdLabel}.`,
+      radiusTiles: SHRINE_NEAR_RADIUS_TILES,
+      description: "Use a Wisdom move while within 2 tiles of the shrine.",
     };
   }
-  const sequence = _pick(rng, SHRINE_MOVE_SEQUENCES, SHRINE_MOVE_SEQUENCES[0]);
-  const radiusTiles = _pick(rng, SHRINE_MOVE_RADIUS_TILES, 2);
-  const minGapMs = _pick(rng, SHRINE_MOVE_GAP_MS, 1000);
-  const gapLabel = _msToSecondsLabel(minGapMs);
+  if (kind === "enemy_near") {
+    return {
+      kind,
+      radiusTiles: SHRINE_NEAR_RADIUS_TILES,
+      description: "An enemy is within 2 tiles of the shrine.",
+    };
+  }
   return {
-    kind,
-    radiusTiles,
-    sequence,
-    minGapMs,
-    description: `Use ${sequence.join(" -> ")} within ${radiusTiles} tiles, waiting at least ${gapLabel} between moves.`,
+    kind: "corner_touch",
+    description: "Touch a corner of the map.",
   };
 }
 

@@ -535,7 +535,19 @@ export const SHRINE_TRAP_SPEC: TrapSpec = {
   valueKindsUsed: ["list", "math", "logic"],
   palette: {
     categories: ["Variables", "Lists", "Math", "Text", "Logic"],
-    blocksAllowed: ["variables_set", "lists_create_with", "math_number", "text", "logic_boolean"],
+    blocksAllowed: [
+      "procedures_defreturn",
+      "variables_set",
+      "variables_get",
+      "lists_create_with",
+      "math_number",
+      "text",
+      "logic_boolean",
+      "logic_compare",
+      "logic_operation",
+      "controls_if",
+      "controls_whileUntil",
+    ],
   },
 
   givenInputs: [],
@@ -556,59 +568,63 @@ export const SHRINE_TRAP_SPEC: TrapSpec = {
     readOnly: true,
     xml: `
       <xml xmlns="https://developers.google.com/blockly/xml">
-        <comment pinned="true" h="80" w="360" x="10" y="10">This is what we are looking for.</comment>
-        <block type="variables_set" x="20" y="20">
-          <field name="VAR">ritualType</field>
-          <value name="VALUE">
-            <block type="text">
-              <field name="TEXT">sequence</field>
-            </block>
-          </value>
-          <next>
-            <block type="variables_set">
-              <field name="VAR">moves</field>
-              <value name="VALUE">
-                <block type="lists_create_with">
-                  <mutation items="3"></mutation>
-                  <value name="ADD0">
-                    <block type="text">
-                      <field name="TEXT">Strength</field>
+        <block type="procedures_defreturn" x="20" y="20">
+          <field name="NAME">When floor begins</field>
+          <statement name="STACK">
+            <block type="controls_whileUntil">
+              <field name="MODE">UNTIL</field>
+              <value name="BOOL">
+                <block type="logic_operation">
+                  <field name="OP">AND</field>
+                  <value name="A">
+                    <block type="logic_operation">
+                      <field name="OP">AND</field>
+                      <value name="A">
+                        <block type="variables_get">
+                          <field name="VAR">hero is within 2 tiles of shrine</field>
+                        </block>
+                      </value>
+                      <value name="B">
+                        <block type="variables_get">
+                          <field name="VAR">hero is facing away from shrine</field>
+                        </block>
+                      </value>
                     </block>
                   </value>
-                  <value name="ADD1">
-                    <block type="text">
-                      <field name="TEXT">Agility</field>
-                    </block>
-                  </value>
-                  <value name="ADD2">
-                    <block type="text">
-                      <field name="TEXT">Strength</field>
+                  <value name="B">
+                    <block type="variables_get">
+                      <field name="VAR">hero is using a strength move</field>
                     </block>
                   </value>
                 </block>
               </value>
-              <next>
+              <statement name="DO">
                 <block type="variables_set">
-                  <field name="VAR">minGapMs</field>
+                  <field name="VAR">shrine stays inactive</field>
                   <value name="VALUE">
-                    <block type="math_number">
-                      <field name="NUM">1000</field>
+                    <block type="logic_boolean">
+                      <field name="BOOL">TRUE</field>
                     </block>
                   </value>
-                  <next>
-                    <block type="variables_set">
-                      <field name="VAR">radiusTiles</field>
-                      <value name="VALUE">
-                        <block type="math_number">
-                          <field name="NUM">2</field>
-                        </block>
-                      </value>
+                </block>
+              </statement>
+              <next>
+                <block type="variables_set">
+                  <field name="VAR">activate</field>
+                  <value name="VALUE">
+                    <block type="logic_boolean">
+                      <field name="BOOL">TRUE</field>
                     </block>
-                  </next>
+                  </value>
                 </block>
               </next>
             </block>
-          </next>
+          </statement>
+          <value name="RETURN">
+            <block type="variables_get">
+              <field name="VAR">activate</field>
+            </block>
+          </value>
         </block>
       </xml>
     `,
