@@ -2180,11 +2180,12 @@ function _spawnStrengthSwingFxSegments(
     const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
     if (!pick || !pick.skinId) return;
 
+    const baseSkin = pick.skinId;
+    const sizedSkin = _effectSkinIdWithSize(baseSkin, WEAPON_TILE_FX_SIZE_PX | 0, pick.dir || dir);
+    const offset = _heroSpellEffectOffsetFor(baseSkin, pick.dir || dir, FAMILY.STRENGTH | 0, "strengthTrail");
+
     const segCount = _strengthSwingFxSegmentCount(totalArcDeg | 0);
     if (segCount <= 0) return;
-
-    const fitRadius =
-        Math.max(6, Math.idiv((reachFromFront | 0) * STR_FX_SEG_FIT_PCT_X1000, 1000)) | 0;
 
     for (let i = 0; i < segCount; i++) {
         const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
@@ -2198,14 +2199,18 @@ function _spawnStrengthSwingFxSegments(
         sprites.setDataNumber(fx, PROJ_DATA.FAMILY, FAMILY.STRENGTH | 0);
 
         const opts: EffectApplyOpts = {
-            mode: "full",
+            mode: "projectile",
             alpha: STR_FX_SEG_ALPHA,
             blend: STR_FX_SEG_BLEND,
             repeat: -1,
-            fitRadiusPx: fitRadius
+            offsetX: offset.x,
+            offsetY: offset.y,
+            maskSprite: proj,
+            flipX: WEAPON_TILE_FX_MIRROR && ((i % 2) === 1) && (Math.abs(nx) >= Math.abs(ny)),
+            flipY: WEAPON_TILE_FX_MIRROR && ((i % 2) === 1) && (Math.abs(ny) > Math.abs(nx))
         };
         if (pick.dir) opts.dir = pick.dir;
-        applyEffectToSprite(fx, pick.skinId, opts);
+        applyEffectToSprite(fx, sizedSkin, opts);
         sprites.setDataSprite(proj, _strengthSwingFxSegKey(i), fx);
     }
 
@@ -2235,7 +2240,8 @@ function _spawnAgilityTrailFxSegments(
     element: number,
     nx: number,
     ny: number,
-    lifespanMs: number
+    lifespanMs: number,
+    maxLen: number
 ): void {
     if (!proj || !hero) return;
     if (!ENABLE_AGI_FX_SEGMENTS) {
@@ -2247,10 +2253,14 @@ function _spawnAgilityTrailFxSegments(
     const pick = _heroSpellEffectPick(elem | 0, dir, "offense");
     if (!pick || !pick.skinId) return;
 
-    const fitRadius =
-        Math.max(6, Math.idiv((Math.max(hero.width, hero.height) | 0) * AGI_FX_SEG_FIT_PCT_X1000, 1000)) | 0;
+    const baseSkin = pick.skinId;
+    const sizedSkin = _effectSkinIdWithSize(baseSkin, WEAPON_TILE_FX_SIZE_PX | 0, pick.dir || dir);
+    const offset = _heroSpellEffectOffsetFor(baseSkin, pick.dir || dir, FAMILY.AGILITY | 0, "agilityTrail");
+    const spacing = Math.max(8, AGI_FX_SEG_SPACING_PX | 0);
+    const segCount = Math.max(2, Math.min(AGI_FX_SEG_MAX | 0, Math.ceil((maxLen | 0) / spacing)));
+    const horiz = Math.abs(nx) >= Math.abs(ny);
 
-    for (let i = 0; i < AGI_FX_SEG_COUNT; i++) {
+    for (let i = 0; i < segCount; i++) {
         const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
         fx.setFlag(SpriteFlag.Ghost, true);
         fx.setFlag(SpriteFlag.Invisible, true);
@@ -2263,21 +2273,25 @@ function _spawnAgilityTrailFxSegments(
         sprites.setDataNumber(fx, PROJ_DATA.FAMILY, FAMILY.AGILITY | 0);
 
         const opts: EffectApplyOpts = {
-            mode: "full",
+            mode: "projectile",
             alpha: AGI_FX_SEG_ALPHA,
             blend: AGI_FX_SEG_BLEND,
             repeat: -1,
-            fitRadiusPx: fitRadius,
             introMs: AGI_FX_INTRO_MS,
-            introScale: AGI_FX_INTRO_SCALE
+            introScale: AGI_FX_INTRO_SCALE,
+            offsetX: offset.x,
+            offsetY: offset.y,
+            maskSprite: proj,
+            flipX: WEAPON_TILE_FX_MIRROR && horiz ? ((i % 2) === 1) : false,
+            flipY: WEAPON_TILE_FX_MIRROR && !horiz ? ((i % 2) === 1) : false
         };
         if (pick.dir) opts.dir = pick.dir;
-        applyEffectToSprite(fx, pick.skinId, opts);
+        applyEffectToSprite(fx, sizedSkin, opts);
         sprites.setDataNumber(fx, AGI_FX_SEG_ACTIVE_KEY, 0);
         sprites.setDataSprite(proj, _agilityTrailFxSegKey(i), fx);
     }
 
-    sprites.setDataNumber(proj, AGI_FX_SEG_COUNT_KEY, AGI_FX_SEG_COUNT | 0);
+    sprites.setDataNumber(proj, AGI_FX_SEG_COUNT_KEY, segCount | 0);
 }
 
 function _hideAgilityTrailFxSegments(proj: Sprite): void {
@@ -2343,6 +2357,11 @@ function _updateAgilityTrailFxSegments(
         fx.x = (anchorX + (nx * s));
         fx.y = (anchorY + (ny * s));
         fx.z = (hero.z | 0) + (AGI_FX_SEG_Z_BIAS | 0);
+        const scaleRaw = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY);
+        const scale = (Number.isFinite(scaleRaw) && scaleRaw > 0) ? scaleRaw : 1;
+        const topY = (anchorY + (sprites.readDataNumber(proj, AGI_TEX_MIN_Y_KEY) | 0)) | 0;
+        const alignBottomY = topY + Math.round((WEAPON_TILE_FX_SIZE_PX | 0) * scale);
+        sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, alignBottomY | 0);
     }
 }
 
@@ -2389,6 +2408,12 @@ function _updateStrengthSwingFxSegments(
             fx.y = baseY + ny * s;
             fx.z = baseZ + (STR_FX_SEG_Z_BIAS | 0);
             _strengthFxUpdateDir(fx, dirForward);
+            if (WEAPON_TILE_FX_MIRROR) {
+                const mirror = ((i % 2) === 1);
+                const horiz = Math.abs(nx) >= Math.abs(ny);
+                sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, mirror && horiz ? 1 : 0);
+                sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, mirror && !horiz ? 1 : 0);
+            }
         }
         return;
     }
@@ -2420,6 +2445,12 @@ function _updateStrengthSwingFxSegments(
         fx.y = baseY + dyDir * r;
         fx.z = baseZ + (STR_FX_SEG_Z_BIAS | 0);
         _strengthFxUpdateDir(fx, _enemyDirFromVector(dxDir, dyDir));
+        if (WEAPON_TILE_FX_MIRROR) {
+            const mirror = ((i % 2) === 1);
+            const horiz = Math.abs(dxDir) >= Math.abs(dyDir);
+            sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, mirror && horiz ? 1 : 0);
+            sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, mirror && !horiz ? 1 : 0);
+        }
     }
 }
 
@@ -2445,6 +2476,8 @@ const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
+const EFFECT_FLIP_X_DATA_KEY = "effectFlipX";
+const EFFECT_FLIP_Y_DATA_KEY = "effectFlipY";
 const HERO_BODY_FX_KEY = "bodyFx";
 const HERO_BODY_FX_ALPHA_DEFAULT = 0.25;
 const HERO_BODY_FX_ALPHA_AGILITY = 0.6;
@@ -2488,6 +2521,7 @@ const STR_OUTLINE_CARDINAL_ONLY = true;
 const STR_TIP_TRACE_SIZE_PX = 16;
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
+const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
 const AGI_FX_SEG_COUNT_KEY = "AGI_FX_N";
 const AGI_FX_SEG_BASE_KEY = "AGI_FX_";
 const AGI_FX_SEG_ACTIVE_KEY = "AGI_FX_ACTIVE";
@@ -2498,13 +2532,18 @@ const AGI_FX_SEG_Z_BIAS = 12;
 const AGI_FX_SEG_FIT_PCT_X1000 = 650;
 const AGI_FX_INTRO_MS = 140;
 const AGI_FX_INTRO_SCALE = 0.2;
-const ENABLE_AGI_FX_SEGMENTS = false;
+const ENABLE_AGI_FX_SEGMENTS = true;
+const AGI_FX_SEG_SPACING_PX = 24;
+const AGI_FX_SEG_MAX = 16;
+const WEAPON_TILE_FX_SIZE_PX = 32;
+const WEAPON_TILE_FX_MIRROR = true;
 const AGI_TEX_MIN_X_KEY = "aTexMinX";
 const AGI_TEX_MAX_X_KEY = "aTexMaxX";
 const AGI_TEX_MIN_Y_KEY = "aTexMinY";
 const AGI_TEX_MAX_Y_KEY = "aTexMaxY";
 const AGI_LAST_TIP_X_KEY = "aTipX";
 const AGI_LAST_TIP_Y_KEY = "aTipY";
+const AGI_TIP_SIDE_SIGN_KEY = "aTipSide";
 const AGI_BACK_PULSE_START_MS_KEY = "agiBackPulseStart";
 const AGI_BACK_PULSE_END_MS_KEY = "agiBackPulseEnd";
 const AGI_BACK_PULSE_DONE_KEY = "agiBackPulseDone";
@@ -2518,9 +2557,15 @@ const AGI_BACK_PULSE_SYNC_MS = 18;
 const AGI_BACK_PULSE_DURATION_MS = 180;
 const AGI_BACK_PULSE_INNER_PAD_PX = 1;
 const AGI_BACK_PULSE_OUTER_PAD_PX = 3;
-const WPN_AURA_TIP_DEPTH_PX = 10;
+const WPN_AURA_TIP_DEPTH_PX = 4;
 const WPN_AURA_TIP_ALIGN_MIN_COS = 0.55;
-const WPN_AURA_TIP_ALIGN_MIN_COS_VERT = 0.82;
+const WPN_AURA_TIP_ALIGN_MIN_COS_VERT = 0.6;
+const WPN_AURA_GROW_T0 = 0.18;
+const WPN_AURA_GROW_T1 = 0.42;
+const WPN_AURA_GROW_T2 = 0.7;
+const WPN_AURA_TIP_SIDE_EPS = 0.75;
+const HERO_AURA_SIDE_PAD_PX = 2;
+const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const DEBUG_WPN_AURA_TRACE = true;
 const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
 const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
@@ -2592,6 +2637,26 @@ function _effectPickRadiusForSkin(skinId: string, dir: string | undefined, targe
     const maxDim = Math.max(frameW, frameH);
     const radius = Math.round((maxDim * scale) / 2);
     return Math.max(1, radius | 0);
+}
+
+function _effectSkinIdWithSize(skinId: string, sizePx: number, dir?: string): string {
+    if (!skinId) return skinId;
+    const trimmed = String(skinId || "").trim();
+    if (!trimmed) return trimmed;
+    if (/\d+x\d+$/i.test(trimmed)) return trimmed;
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) return trimmed;
+    const dirRaw = String(dir || "").trim().toLowerCase();
+    if (dirRaw) {
+        const suffixes = [`_${dirRaw}`, `-${dirRaw}`, ` ${dirRaw}`];
+        for (const suffix of suffixes) {
+            const candidate = `${trimmed}${suffix} ${sizePx}x${sizePx}`;
+            if (atlas[candidate]) return candidate;
+        }
+    }
+    const candidate = `${trimmed} ${sizePx}x${sizePx}`;
+    if (atlas[candidate]) return candidate;
+    return trimmed;
 }
 
 function _effectTintForSkinInAtlas(atlas: any, skinId: string, dir?: string): number {
@@ -7062,6 +7127,7 @@ type AmbientPropDef = {
     wTiles: number
     hTiles: number
     kind: "plant" | "rock"
+    opaqueRatio: number
 }
 
 const AMBIENT_PROP_SCATTER_ENABLED = true
@@ -7070,34 +7136,37 @@ const AMBIENT_PROP_SCATTER_EDGE_MARGIN = 1
 const AMBIENT_PROP_SCATTER_MIN_PAD_MANHATTAN = 3
 const AMBIENT_PROP_SCATTER_MIN_PER_QUADRANT = 1
 const AMBIENT_PROP_SCATTER_MIN_TRIES_PER_QUADRANT = 160
+const AMBIENT_PROP_COLLISION_MIN_OPAQUE_RATIO = 0.4
+const AMBIENT_PROP_COLLISION_BASE_PX = 12
+const AMBIENT_PROP_COLLISION_USE_AURA = true
 
 const AMBIENT_PROP_PLANTS: AmbientPropDef[] = [
-    { name: "plant_leaf_a", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_leaf_b", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_leaf_c", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_leaf_d", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_bush_big", wTiles: 2, hTiles: 2, kind: "plant" },
-    { name: "plant_blade", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_reeds_red", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_reeds_teal", wTiles: 1, hTiles: 1, kind: "plant" },
-    { name: "plant_bush_round", wTiles: 1, hTiles: 1, kind: "plant" },
+    { name: "plant_leaf_a", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.247 },
+    { name: "plant_leaf_b", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.226 },
+    { name: "plant_leaf_c", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.348 },
+    { name: "plant_leaf_d", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.129 },
+    { name: "plant_bush_big", wTiles: 2, hTiles: 2, kind: "plant", opaqueRatio: 0.570 },
+    { name: "plant_blade", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.246 },
+    { name: "plant_reeds_red", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.245 },
+    { name: "plant_reeds_teal", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.203 },
+    { name: "plant_bush_round", wTiles: 1, hTiles: 1, kind: "plant", opaqueRatio: 0.663 },
 ]
 
 const AMBIENT_PROP_ROCKS: AmbientPropDef[] = [
-    { name: "rock_pebbles_a", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_pebbles_b", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_pebbles_c", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_pebbles_d", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_boulder_dark_a", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_boulder_dark_b", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_small_a", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_large", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_med", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_small_b", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_small_c", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_sand_med_b", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_slab", wTiles: 1, hTiles: 1, kind: "rock" },
-    { name: "rock_mountain", wTiles: 1, hTiles: 1, kind: "rock" },
+    { name: "rock_pebbles_a", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.215 },
+    { name: "rock_pebbles_b", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.108 },
+    { name: "rock_pebbles_c", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.198 },
+    { name: "rock_pebbles_d", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.108 },
+    { name: "rock_boulder_dark_a", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.501 },
+    { name: "rock_boulder_dark_b", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.532 },
+    { name: "rock_sand_small_a", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.198 },
+    { name: "rock_sand_large", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.812 },
+    { name: "rock_sand_med", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.413 },
+    { name: "rock_sand_small_b", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.215 },
+    { name: "rock_sand_small_c", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.108 },
+    { name: "rock_sand_med_b", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.501 },
+    { name: "rock_slab", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.266 },
+    { name: "rock_mountain", wTiles: 1, hTiles: 1, kind: "rock", opaqueRatio: 0.532 },
 ]
 
 
@@ -7132,6 +7201,9 @@ const DECOR_DATA = {
     ROLE: "decorRole",           // 1=trigger, 2=solid
 
     NAME: "decorName",           // optional debug string
+
+    SOLID_BASE_PX: "decorSolidBasePx",
+    SOLID_USE_AURA: "decorSolidUseAura",
 
 } as const
 
@@ -7291,9 +7363,9 @@ const DECOR_ROLE = {
 // Knob for world size tile size tiles dimensions world dimensions
 
 // Sized so 50% zoom fits a 1920x1080 game area with a small margin.
-const WORLD_TILES_W = 96;     // columns
+const WORLD_TILES_W = 48;     // columns
 
-const WORLD_TILES_H = 50;     // rows
+const WORLD_TILES_H = 25;     // rows
 
 
 
@@ -7408,6 +7480,9 @@ const FOCUS_OUTLINE_COLOR_DEFAULT = 1
 const FOCUS_OUTLINE_RADIUS_DEFAULT = 2
 
 const FOCUS_OUTLINE_DEPTH_BIAS_DEFAULT = 1
+const OBJECTIVE_OUTLINE_COLOR = 7
+const OBJECTIVE_OUTLINE_RADIUS = 2
+const OBJECTIVE_OUTLINE_DEPTH_BIAS = 1
 
 let _dunStairsStatueFocusActive = -1
 
@@ -7589,6 +7664,16 @@ const CHEST_AURA_FOCUS: PropAuraStyle = {
     alphaMin: 0.15,
     alphaMax: 0.6,
     pulseMs: 1800,
+    blendMode: "add",
+}
+
+const OBJECTIVE_AURA_HINT: PropAuraStyle = {
+    radius: 4,
+    depthBias: 1,
+    tint: 0x9ddcff,
+    alphaMin: 0.08,
+    alphaMax: 0.35,
+    pulseMs: 2600,
     blendMode: "add",
 }
 
@@ -9178,6 +9263,8 @@ type EffectApplyOpts = {
     forceTop?: boolean
     frameWindowMs?: number
     maskSprite?: Sprite | null
+    flipX?: boolean
+    flipY?: boolean
 }
 
 function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts): void {
@@ -9194,6 +9281,8 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     if (typeof opts?.blend === "string") sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, opts.blend)
     else sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, "")
     sprites.setDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY, opts?.forceTop ? 1 : 0)
+    if (typeof opts?.flipX === "boolean") sprites.setDataNumber(s, EFFECT_FLIP_X_DATA_KEY, opts.flipX ? 1 : 0)
+    if (typeof opts?.flipY === "boolean") sprites.setDataNumber(s, EFFECT_FLIP_Y_DATA_KEY, opts.flipY ? 1 : 0)
     if (typeof opts?.frameWindowMs === "number") {
         sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, opts.frameWindowMs | 0)
     } else {
@@ -10118,6 +10207,10 @@ let _dunFloorIndex = 0
 let _dunFloorKind = DUNGEON_KIND_ENTRANCE
 
 let _dunObjectiveDone = false
+const DUNGEON_PAD_HINT_COOLDOWN_MS = 4000
+let _dunPadHintLastShowMs = 0
+let _dunPadHintWasOnPad = false
+let _dunPadHintActive = false
 
 let _dunFloorStartedMs = 0
 
@@ -10566,6 +10659,7 @@ function _dunScatterAmbientProps(rows: number, cols: number): void {
     const baseFamily = String(_dunBaseFamily || "")
     const minPerQuadrant = Math.max(0, (AMBIENT_PROP_SCATTER_MIN_PER_QUADRANT | 0)) | 0
     const minTries = Math.max(1, (AMBIENT_PROP_SCATTER_MIN_TRIES_PER_QUADRANT | 0)) | 0
+    const minOpaque = Math.max(0, Math.min(1, AMBIENT_PROP_COLLISION_MIN_OPAQUE_RATIO)) || 0
 
     const tryPlaceInRect = (r0: number, r1: number, c0: number, c1: number, tries: number): boolean => {
         if ((r0 | 0) > (r1 | 0) || (c0 | 0) > (c1 | 0)) return false
@@ -10582,14 +10676,24 @@ function _dunScatterAmbientProps(rows: number, cols: number): void {
                 const def = _dunAmbientPickPropDef(baseFamily)
                 if (!def) break
                 if (!_dunAmbientPropFitsAt(r, c, def.wTiles | 0, def.hTiles | 0)) continue
-                _dunDecor_spawnAtTile({
+                const solid =
+                    ((AMBIENT_PROP_COLLISION_BASE_PX | 0) > 0) &&
+                    ((def.wTiles | 0) <= 1) &&
+                    ((def.hTiles | 0) <= 1) &&
+                    (((def.opaqueRatio ?? 0) as number) >= minOpaque)
+                const role = solid ? DECOR_ROLE.SOLID : DECOR_ROLE.TRIGGER
+                const decor = _dunDecor_spawnAtTile({
                     name: def.name,
-                    role: DECOR_ROLE.TRIGGER,
+                    role,
                     tileR: r | 0,
                     tileC: c | 0,
                     pxW: WORLD_TILE_SIZE,
                     pxH: WORLD_TILE_SIZE,
                 })
+                if (solid && decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                    sprites.setDataNumber(decor, DECOR_DATA.SOLID_BASE_PX, AMBIENT_PROP_COLLISION_BASE_PX | 0)
+                    sprites.setDataNumber(decor, DECOR_DATA.SOLID_USE_AURA, AMBIENT_PROP_COLLISION_USE_AURA ? 1 : 0)
+                }
                 placed = true
                 break
             }
@@ -10625,14 +10729,24 @@ function _dunScatterAmbientProps(rows: number, cols: number): void {
                 const def = _dunAmbientPickPropDef(baseFamily)
                 if (!def) break
                 if (!_dunAmbientPropFitsAt(r, c, def.wTiles | 0, def.hTiles | 0)) continue
-                _dunDecor_spawnAtTile({
+                const solid =
+                    ((AMBIENT_PROP_COLLISION_BASE_PX | 0) > 0) &&
+                    ((def.wTiles | 0) <= 1) &&
+                    ((def.hTiles | 0) <= 1) &&
+                    (((def.opaqueRatio ?? 0) as number) >= minOpaque)
+                const role = solid ? DECOR_ROLE.SOLID : DECOR_ROLE.TRIGGER
+                const decor = _dunDecor_spawnAtTile({
                     name: def.name,
-                    role: DECOR_ROLE.TRIGGER,
+                    role,
                     tileR: r | 0,
                     tileC: c | 0,
                     pxW: WORLD_TILE_SIZE,
                     pxH: WORLD_TILE_SIZE,
                 })
+                if (solid && decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                    sprites.setDataNumber(decor, DECOR_DATA.SOLID_BASE_PX, AMBIENT_PROP_COLLISION_BASE_PX | 0)
+                    sprites.setDataNumber(decor, DECOR_DATA.SOLID_USE_AURA, AMBIENT_PROP_COLLISION_USE_AURA ? 1 : 0)
+                }
                 placed = true
                 break
             }
@@ -11164,6 +11278,11 @@ let _dunStarterRelicTileC = -1
 let _dunInteractFocusActive = 0
 let _dunInteractFocusR = -1
 let _dunInteractFocusC = -1
+let _dunObjectivePropAuraActive = 0
+let _dunObjectivePropAuraR = -1
+let _dunObjectivePropAuraC = -1
+let _dunObjectiveNpcOutlineSprite: Sprite = null as any
+let _dunObjectiveNpcOutlineActive = 0
 
 let _dunFireTotemDecor: Sprite = null as any
 let _dunFireTotemInteractable: Sprite = null as any
@@ -14615,6 +14734,100 @@ function _dunTickPadContractRefresh(): void {
 
 }
 
+type ObjectiveUiInfo = {
+    title: string
+    sub: string
+    state: string
+}
+
+function _dunObjectiveUiText(nowMs: number): ObjectiveUiInfo {
+    void nowMs
+    if (!DUNGEON_MODE_ACTIVE) return { title: "", sub: "", state: "" }
+    const kind = String(_dunFloorKind || "")
+    const done = !!_dunObjectiveDone
+    const padPowered = _dunIsPadPowered()
+
+    if (done && padPowered) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInPadZone()
+        const ready = rc.ready | 0
+        let sub = "Step on the pad"
+        if (ready >= (needed | 0)) sub = "Hold to teleport"
+        else if (ready > 0) sub = `${ready}/${needed} on pad`
+        return { title: "Exit Pad", sub, state: "exit" }
+    }
+
+    if (kind === DUNGEON_KIND_ENTRANCE) {
+        return { title: "Reward Chest", sub: "Open a chest", state: "objective" }
+    }
+    if (kind === DUNGEON_KIND_TREASURE) {
+        return { title: "Treasure Chest", sub: "Find and open it", state: "objective" }
+    }
+    if (kind === DUNGEON_KIND_COMBAT) {
+        const live = _dunCountLiveEnemies() | 0
+        const sub = (live > 0) ? (`Remaining: ${live}`) : "Clear all enemies"
+        return { title: "Monsters", sub, state: "objective" }
+    }
+    if (kind === DUNGEON_KIND_SHOP) {
+        return { title: "Shopkeeper", sub: "Talk to unlock the pad", state: "objective" }
+    }
+    if (kind === DUNGEON_KIND_STORY) {
+        return { title: "Story NPC", sub: "Talk to continue", state: "objective" }
+    }
+    if (kind === DUNGEON_KIND_HALL) {
+        return { title: "Exit Pad", sub: "Step on the pad", state: "exit" }
+    }
+
+    return { title: "Objective", sub: "", state: "objective" }
+}
+
+function _dunTickObjectivePadHint(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE) return
+    if (!_dunExitPad || (_dunExitPad.flags & sprites.Flag.Destroyed)) return
+
+    const rc = _dunReadyMaskAndCountInPadZone()
+    const anyOn = (rc.ready | 0) > 0
+    const done = !!_dunObjectiveDone
+    const padPowered = _dunIsPadPowered()
+
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    const hasDlg = !!(dlg && typeof dlg.show === "function")
+
+    if (!anyOn || (done && padPowered)) {
+        _dunPadHintWasOnPad = false
+        if (_dunPadHintActive && dlg && typeof dlg.hide === "function") {
+            const owner = dlg.__heOwner || ""
+            if (owner === "pad-hint") {
+                try { dlg.hide() } catch { }
+            }
+        }
+        _dunPadHintActive = false
+        return
+    }
+
+    const rising = !_dunPadHintWasOnPad
+    _dunPadHintWasOnPad = true
+    if (!rising) return
+
+    const now = nowMs | 0
+    if ((now - (_dunPadHintLastShowMs | 0)) < (DUNGEON_PAD_HINT_COOLDOWN_MS | 0)) return
+    if (!hasDlg) return
+
+    const isOpen = (typeof dlg.isOpen === "function") ? !!dlg.isOpen() : false
+    const owner = dlg.__heOwner || ""
+    if (isOpen && owner && owner !== "pad-hint") return
+
+    const info = _dunObjectiveUiText(now)
+    const text = info.title ? `Objective: ${info.title}` : "Objective incomplete"
+    const hint = info.sub || "Complete the objective to power the pad."
+    try {
+        dlg.show({ speaker: "Teleport Pad", text, hint, owner: "pad-hint" })
+        _dunPadHintLastShowMs = now
+        _dunPadHintActive = true
+    } catch { }
+}
+
 
 
 
@@ -15056,6 +15269,7 @@ function dungeonTick(nowMs: number): void {
     // Objective evaluation (combat + interact)
 
     _dunTickObjectiveEvaluation(now)
+    _dunTickObjectivePadHint(now)
 
 
 
@@ -28003,6 +28217,11 @@ function initWorldDecorPostPass(): void {
     _dunChestTileC = -1
     _dunStarterRelicTileR = -1
     _dunStarterRelicTileC = -1
+    _dunObjectivePropAuraActive = 0
+    _dunObjectivePropAuraR = -1
+    _dunObjectivePropAuraC = -1
+    _dunObjectiveNpcOutlineSprite = null
+    _dunObjectiveNpcOutlineActive = 0
 
 
 
@@ -28672,6 +28891,137 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
 }
 
+function _dunPickObjectiveChestInteractable(): Sprite | null {
+    if (!_dunInteractables || _dunInteractables.length === 0) return null
+    let fallback: Sprite = null
+    let starter: Sprite = null
+    let treasure: Sprite = null
+    for (let i = 0; i < _dunInteractables.length; i++) {
+        const it = _dunInteractables[i]
+        if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+        const name = sprites.readDataString(it, DECOR_DATA.NAME) || ""
+        if (propBaseNameFromKey(name) !== "chest") continue
+        if (_dunReadInteractUsed(it)) continue
+        const role = (sprites.readDataString(it, INTERACT_DATA.CHEST_ROLE) || "").toLowerCase()
+        if (role === "treasure") {
+            treasure = it
+        } else if (role === "starter_relic") {
+            if (!starter) starter = it
+        } else if (!fallback) {
+            fallback = it
+        }
+    }
+    return treasure || starter || fallback
+}
+
+function _dunPickObjectivePropTarget(): { r: number, c: number } | null {
+    if (!DUNGEON_MODE_ACTIVE) return null
+    if (_dunIsPadPowered()) return null
+    if (_dunFloorKind !== DUNGEON_KIND_TREASURE) return null
+    const it = _dunPickObjectiveChestInteractable()
+    if (!it) return null
+    const r = sprites.readDataNumber(it, "decorTileR") | 0
+    const c = sprites.readDataNumber(it, "decorTileC") | 0
+    if (r < 0 || c < 0) return null
+    return { r: r | 0, c: c | 0 }
+}
+
+function _dunUpdateObjectivePropAura(nowMs: number): void {
+    void nowMs
+    if (!DUNGEON_MODE_ACTIVE) return
+
+    const target = _dunPickObjectivePropTarget()
+    const nextActive = !!target
+    const nextR = target ? (target.r | 0) : -1
+    const nextC = target ? (target.c | 0) : -1
+
+    const prevActive = _dunObjectivePropAuraActive | 0
+    const prevR = _dunObjectivePropAuraR | 0
+    const prevC = _dunObjectivePropAuraC | 0
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+    const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
+
+    if (prevActive && (!nextActive || prevR !== nextR || prevC !== nextC)) {
+        if (ok) renderer.setPropFocusAuraAt(prevR | 0, prevC | 0, false, 0, 0)
+    }
+
+    if (nextActive && ok) {
+        const style = OBJECTIVE_AURA_HINT
+        const radius = (style.radius ?? 3) | 0
+        const depth = (style.depthBias ?? 1) | 0
+        renderer.setPropFocusAuraAt(nextR | 0, nextC | 0, true, radius, depth, _dunAuraStyleToOpts(style))
+    }
+
+    _dunObjectivePropAuraActive = nextActive ? 1 : 0
+    _dunObjectivePropAuraR = nextR | 0
+    _dunObjectivePropAuraC = nextC | 0
+}
+
+function _dunPickObjectiveNpcTarget(): Sprite | null {
+    if (!DUNGEON_MODE_ACTIVE) return null
+    if (_dunIsPadPowered()) return null
+    if (_dunFloorKind === DUNGEON_KIND_STORY) {
+        for (let i = 0; i < _dunStoryNpcs.length; i++) {
+            const npc = _dunStoryNpcs[i]
+            if (!npc || (npc.flags & sprites.Flag.Destroyed)) continue
+            const role = sprites.readDataString(npc, "_npcRole") || ""
+            if (role && role !== "storyNpc") continue
+            return npc
+        }
+    }
+    if (_dunFloorKind === DUNGEON_KIND_SHOP) {
+        if (shopkeeperNpc && !(shopkeeperNpc.flags & sprites.Flag.Destroyed)) return shopkeeperNpc
+    }
+    return null
+}
+
+function _dunAnyHeroInInteractRange(target: Sprite, extraX: number, extraY: number): boolean {
+    if (!target || (target.flags & sprites.Flag.Destroyed)) return false
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if ((owner | 0) !== ((hi + 1) | 0)) continue
+        if (_isHeroInInteractRange(hero, target, extraX | 0, extraY | 0)) return true
+    }
+    return false
+}
+
+function _dunUpdateObjectiveNpcOutline(nowMs: number): void {
+    void nowMs
+    if (!DUNGEON_MODE_ACTIVE) return
+
+    const target = _dunPickObjectiveNpcTarget()
+    let shouldHighlight = false
+    if (target && !(target.flags & sprites.Flag.Destroyed)) {
+        if (target === shopkeeperNpc) {
+            const inRange = _dunAnyHeroInInteractRange(target, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
+            shouldHighlight = !inRange
+        } else {
+            shouldHighlight = true
+        }
+    }
+
+    const prevActive = _dunObjectiveNpcOutlineActive | 0
+    const prev = _dunObjectiveNpcOutlineSprite
+    if (prevActive && (!shouldHighlight || prev !== target)) {
+        const skipClear = (prev === shopkeeperNpc) && _dunAnyHeroInInteractRange(prev, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
+        if (prev && !(prev.flags & sprites.Flag.Destroyed) && !skipClear) {
+            _setFocusOutline(prev, false)
+        }
+    }
+
+    if (shouldHighlight && target && !(target.flags & sprites.Flag.Destroyed)) {
+        _setFocusOutline(target, true, OBJECTIVE_OUTLINE_COLOR, OBJECTIVE_OUTLINE_RADIUS, OBJECTIVE_OUTLINE_DEPTH_BIAS)
+    }
+
+    _dunObjectiveNpcOutlineSprite = target || null
+    _dunObjectiveNpcOutlineActive = shouldHighlight ? 1 : 0
+}
+
 function _dunUpdatePropAuraOverrides(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
     if ((_dunFireTotemTileR | 0) < 0 || (_dunFireTotemTileC | 0) < 0) return
@@ -29228,6 +29578,7 @@ function updateGenericFocus(nowMs: number): void {
 
 
     _dunEnsureShrineInteractables(nowMs)
+    _dunUpdateObjectivePropAura(nowMs)
     _dunUpdateInteractableFocus(nowMs)
     _dunBookTick(nowMs)
     _dunUpdatePropAuraOverrides(nowMs)
@@ -29235,6 +29586,7 @@ function updateGenericFocus(nowMs: number): void {
     _dunUpdateShrineOverlays(nowMs)
     _dunUpdateWorldAmbience(nowMs)
     _shopUpdateFocusHighlights(nowMs)
+    _dunUpdateObjectiveNpcOutline(nowMs)
 
 }
 
@@ -39776,7 +40128,14 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
-
+    if (_wpnTraceEnabled()) {
+        _wpnTraceLog("str.release", {
+            heroIndex,
+            arcDeg: arcDeg | 0,
+            swingMs: swingDurationMs | 0,
+            reachExtra: reachExtraPx | 0
+        });
+    }
 
 
     // ------------------------------------------------------------
@@ -40348,6 +40707,7 @@ function spawnStrengthSwingProjectile(
     sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
     sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
 
+    proj.setFlag(SpriteFlag.Invisible, false)
     proj.z = hero.z + 12
 
     proj.vx = 0
@@ -40363,7 +40723,7 @@ function spawnStrengthSwingProjectile(
     let tipInitY = wTipY
     const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.spawn")
     if (auraPack && auraPack.shapes[3]) {
-        const tipShape = auraPack.shapes[3]
+        const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
         const baseX = hero.x + (auraPack.info.offX || 0)
         const baseY = hero.y + (auraPack.info.offY || 0)
         const tipWorldX = baseX + tipShape.tipDx
@@ -40408,6 +40768,9 @@ function spawnStrengthSwingProjectile(
             });
         }
     }
+
+    const tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
+    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, tipSide)
 
 
 
@@ -40566,6 +40929,7 @@ function updateStrengthProjectilesMotionFor(
     proj.vy = 0
 
 
+    proj.setFlag(SpriteFlag.Invisible, false)
 
     // ?? FIX: do NOT use `||` here, or we'll corrupt vertical directions
 
@@ -40639,16 +41003,45 @@ function updateStrengthProjectilesMotionFor(
             const halfW = (img.width | 0) >> 1
             const halfH = (img.height | 0) >> 1
             const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick")
+            const heroLocalX = hero.x - anchorX
+            const heroLocalY = hero.y - anchorY
+            let tipLocalXNow = 0
+            let tipLocalYNow = 0
+            let auraShapesNow: WeaponAuraTipShape[] | null = null
+            const growthIdx = _pickAuraGrowthIdx(t)
             if (auraPack && auraPack.shapes[3]) {
-                const tipShape = auraPack.shapes[3]
+                const tipShape = auraPack.shapes[growthIdx] || auraPack.shapes[3]
                 const baseX = hero.x + (auraPack.info.offX || 0)
                 const baseY = hero.y + (auraPack.info.offY || 0)
                 const tipWorldX = baseX + tipShape.tipDx
                 const tipWorldY = baseY + tipShape.tipDy
-                const tipLocalX = tipWorldX - anchorX
-                const tipLocalY = tipWorldY - anchorY
+                let tipLocalX = tipWorldX - anchorX
+                let tipLocalY = tipWorldY - anchorY
+                auraShapesNow = auraPack.shapes
                 const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
                 const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+                const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+                let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+                if (sideLock === 0 && sideNow !== 0) {
+                    sideLock = sideNow
+                    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+                if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                    if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                        _wpnTraceLog("str.tip.sideReject", {
+                            id: _wpnTraceAssignId(proj),
+                            heroIndex,
+                            sideNow,
+                            sideLock,
+                            tipLocalX: +tipLocalX.toFixed(2),
+                            tipLocalY: +tipLocalY.toFixed(2)
+                        });
+                    }
+                    tipLocalX = lastX
+                    tipLocalY = lastY
+                }
+                tipLocalXNow = tipLocalX
+                tipLocalYNow = tipLocalY
                 _stampWeaponAuraLine(
                     img,
                     -halfW,
@@ -40658,7 +41051,8 @@ function updateStrengthProjectilesMotionFor(
                     tipLocalX,
                     tipLocalY,
                     auraPack.shapes,
-                    STR_TIP_TRACE_COLOR
+                    STR_TIP_TRACE_COLOR,
+                    growthIdx
                 )
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.auraTip", {
@@ -40684,11 +41078,33 @@ function updateStrengthProjectilesMotionFor(
                 }
                 const tipWorldX = (hero.x + wTipX)
                 const tipWorldY = (hero.y + wTipY)
-                const tipLocalX = tipWorldX - anchorX
-                const tipLocalY = tipWorldY - anchorY
+                let tipLocalX = tipWorldX - anchorX
+                let tipLocalY = tipWorldY - anchorY
 
                 const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
                 const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+                const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+                let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+                if (sideLock === 0 && sideNow !== 0) {
+                    sideLock = sideNow
+                    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+                }
+                if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                    if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                        _wpnTraceLog("str.tip.sideReject", {
+                            id: _wpnTraceAssignId(proj),
+                            heroIndex,
+                            sideNow,
+                            sideLock,
+                            tipLocalX: +tipLocalX.toFixed(2),
+                            tipLocalY: +tipLocalY.toFixed(2)
+                        });
+                    }
+                    tipLocalX = lastX
+                    tipLocalY = lastY
+                }
+                tipLocalXNow = tipLocalX
+                tipLocalYNow = tipLocalY
                 _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.fallbackTip", {
@@ -40705,6 +41121,22 @@ function updateStrengthProjectilesMotionFor(
                 sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
                 sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
             }
+            _stampBackWaveToHeroStrength(
+                img,
+                halfW,
+                halfH,
+                tipLocalXNow,
+                tipLocalYNow,
+                hero.x - anchorX,
+                hero.y - anchorY,
+                hero,
+                heroIndex,
+                t,
+                auraShapesNow,
+                nx,
+                ny,
+                growthIdx
+            )
         }
         _updateHeroBodyPaintFxForProj(proj, hero)
         _updateProjectileMaskFxForProj(proj, hero)
@@ -40733,17 +41165,46 @@ function updateStrengthProjectilesMotionFor(
         const halfW = (img.width | 0) >> 1
         const halfH = (img.height | 0) >> 1
         const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.tick2")
+        const heroLocalX = hero.x - anchorX
+        const heroLocalY = hero.y - anchorY
+        let tipLocalXNow = 0
+        let tipLocalYNow = 0
+        let auraShapesNow: WeaponAuraTipShape[] | null = null
+        const growthIdx = _pickAuraGrowthIdx(t)
         if (auraPack && auraPack.shapes[3]) {
-            const tipShape = auraPack.shapes[3]
+            const tipShape = auraPack.shapes[growthIdx] || auraPack.shapes[3]
             const baseX = hero.x + (auraPack.info.offX || 0)
             const baseY = hero.y + (auraPack.info.offY || 0)
             const tipWorldX = baseX + tipShape.tipDx
             const tipWorldY = baseY + tipShape.tipDy
-            const tipLocalX = tipWorldX - anchorX
-            const tipLocalY = tipWorldY - anchorY
+            let tipLocalX = tipWorldX - anchorX
+            let tipLocalY = tipWorldY - anchorY
+            auraShapesNow = auraPack.shapes
 
             const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
             const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+            const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+            let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow !== 0) {
+                sideLock = sideNow
+                sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+            }
+            if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("str.tip.sideReject", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        sideNow,
+                        sideLock,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2)
+                    });
+                }
+                tipLocalX = lastX
+                tipLocalY = lastY
+            }
+            tipLocalXNow = tipLocalX
+            tipLocalYNow = tipLocalY
             _stampWeaponAuraLine(
                 img,
                 -halfW,
@@ -40753,7 +41214,8 @@ function updateStrengthProjectilesMotionFor(
                 tipLocalX,
                 tipLocalY,
                 auraPack.shapes,
-                STR_TIP_TRACE_COLOR
+                STR_TIP_TRACE_COLOR,
+                growthIdx
             )
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 _wpnTraceLog("str.tick2.auraTip", {
@@ -40779,11 +41241,33 @@ function updateStrengthProjectilesMotionFor(
             }
             const tipWorldX = (hero.x + wTipX)
             const tipWorldY = (hero.y + wTipY)
-            const tipLocalX = tipWorldX - anchorX
-            const tipLocalY = tipWorldY - anchorY
+            let tipLocalX = tipWorldX - anchorX
+            let tipLocalY = tipWorldY - anchorY
 
             const lastX = sprites.readDataNumber(proj, "SS_LAST_TIP_X")
             const lastY = sprites.readDataNumber(proj, "SS_LAST_TIP_Y")
+            const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+            let sideLock = sprites.readDataNumber(proj, STR_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow !== 0) {
+                sideLock = sideNow
+                sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, sideLock)
+            }
+            if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("str.tip.sideReject", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        sideNow,
+                        sideLock,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2)
+                    });
+                }
+                tipLocalX = lastX
+                tipLocalY = lastY
+            }
+            tipLocalXNow = tipLocalX
+            tipLocalYNow = tipLocalY
             _strengthTraceStampLine(img, halfW, halfH, lastX, lastY, tipLocalX, tipLocalY)
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 _wpnTraceLog("str.tick2.fallbackTip", {
@@ -40800,6 +41284,22 @@ function updateStrengthProjectilesMotionFor(
             sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipLocalX)
             sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipLocalY)
         }
+        _stampBackWaveToHeroStrength(
+            img,
+            halfW,
+            halfH,
+            tipLocalXNow,
+            tipLocalYNow,
+            hero.x - anchorX,
+            hero.y - anchorY,
+            hero,
+            heroIndex,
+            t,
+            auraShapesNow,
+            nx,
+            ny,
+            growthIdx
+        )
     }
     _updateHeroBodyPaintFxForProj(proj, hero)
     _updateProjectileMaskFxForProj(proj, hero)
@@ -41217,8 +41717,25 @@ type WeaponAuraTipShape = {
     sideHalf: number;
 };
 
+type HeroFrameInfo = {
+    texKey: string;
+    frameName: string;
+    frameRef: any | null;
+    originX: number;
+    originY: number;
+    scaleX: number;
+    scaleY: number;
+    flipX: boolean;
+    flipY: boolean;
+};
+
+type HeroAuraMaskShape = {
+    offsets: number[];
+};
+
 const __weaponAuraTipCache: { [k: string]: WeaponAuraTipShape } = Object.create(null);
 const __weaponAuraTipStable: { [k: string]: WeaponAuraTipShape } = Object.create(null);
+const __heroAuraMaskCache: { [k: string]: HeroAuraMaskShape } = Object.create(null);
 
 function _weaponDirKeyFromVector(nx: number, ny: number): string {
     if (!nx && !ny) return "down";
@@ -41242,6 +41759,29 @@ function _weaponAuraStableKey(info: WeaponFgInfo, dirKey: string, radius: number
         info.flipX ? "fx1" : "fx0",
         info.flipY ? "fy1" : "fy0"
     ].join("|");
+}
+
+function _pickAuraGrowthIdx(t: number): number {
+    const tt = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+    if (tt < WPN_AURA_GROW_T0) return 0;
+    if (tt < WPN_AURA_GROW_T1) return 1;
+    if (tt < WPN_AURA_GROW_T2) return 2;
+    return 3;
+}
+
+function _tipSideSign(
+    tipLocalX: number,
+    tipLocalY: number,
+    heroLocalX: number,
+    heroLocalY: number,
+    nx: number,
+    ny: number
+): number {
+    const dx = tipLocalX - heroLocalX;
+    const dy = tipLocalY - heroLocalY;
+    const side = (dx * -ny) + (dy * nx);
+    if (Math.abs(side) < WPN_AURA_TIP_SIDE_EPS) return 0;
+    return side > 0 ? 1 : -1;
 }
 
 function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
@@ -41269,6 +41809,32 @@ function _getHeroWeaponFgInfo(hero: Sprite): WeaponFgInfo | null {
         scaleY: (typeof d.__wpnFgScaleY === "number") ? d.__wpnFgScaleY : 1,
         flipX: !!d.__wpnFgFlipX,
         flipY: !!d.__wpnFgFlipY
+    };
+}
+
+function _getHeroFrameInfo(hero: Sprite): HeroFrameInfo | null {
+    const d: any = (hero as any).data;
+    if (!d) return null;
+    let texKey = d.__heroTexKey;
+    let frameName = d.__heroFrameName;
+    const frameRef = (d.__heroFrameRef as any) || null;
+    if ((!texKey || texKey === "") && frameRef?.texture?.key) {
+        texKey = String(frameRef.texture.key);
+    }
+    if ((frameName == null || frameName === "") && frameRef?.name !== undefined) {
+        frameName = String(frameRef.name);
+    }
+    if (!texKey || frameName == null || frameName === "") return null;
+    return {
+        texKey: String(texKey),
+        frameName: String(frameName),
+        frameRef,
+        originX: (typeof d.__heroOriginX === "number") ? d.__heroOriginX : 0.5,
+        originY: (typeof d.__heroOriginY === "number") ? d.__heroOriginY : 0.5,
+        scaleX: (typeof d.__heroScaleX === "number") ? d.__heroScaleX : 1,
+        scaleY: (typeof d.__heroScaleY === "number") ? d.__heroScaleY : 1,
+        flipX: !!d.__heroFlipX,
+        flipY: !!d.__heroFlipY
     };
 }
 
@@ -41424,9 +41990,14 @@ function _getWeaponAuraTipShape(
     const sideY = nx;
 
     let maxDot = -1e9;
+    let bestSideScore = -1e9;
     let tipDx = 0;
     let tipDy = 0;
     let maxAbsSide = 0;
+    let preferSideSign = 0;
+    if (Math.abs(nx) < 0.35 && Math.abs(ny) >= Math.abs(nx)) {
+        preferSideSign = (ny < 0) ? 1 : -1;
+    }
 
     function bitOn(idx: number): boolean {
         const v = bits[idx >> 5] >>> (idx & 31);
@@ -41448,8 +42019,16 @@ function _getWeaponAuraTipShape(
         const side = (px * sideX) + (py * sideY);
         const absSide = Math.abs(side);
         if (absSide > maxAbsSide) maxAbsSide = absSide;
-        if (dot > maxDot) {
+        let sideScore = 0;
+        if (preferSideSign !== 0) sideScore = side * preferSideSign;
+        if (dot > maxDot + 0.5) {
             maxDot = dot;
+            bestSideScore = sideScore;
+            tipDx = px;
+            tipDy = py;
+        } else if (Math.abs(dot - maxDot) <= 0.5 && sideScore > bestSideScore) {
+            maxDot = dot;
+            bestSideScore = sideScore;
             tipDx = px;
             tipDy = py;
         }
@@ -41631,13 +42210,14 @@ function _stampWeaponAuraLine(
     x1: number,
     y1: number,
     shapes: WeaponAuraTipShape[],
-    color: number
+    color: number,
+    maxIdx: number = 3
 ): void {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
     if (steps <= 0) {
-        const shape = shapes[3] || shapes[2] || shapes[1] || shapes[0];
+        const shape = shapes[Math.min(maxIdx, 3)] || shapes[0];
         if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color);
         return;
     }
@@ -41647,11 +42227,177 @@ function _stampWeaponAuraLine(
         if (t >= 0.75) idx = 3;
         else if (t >= 0.5) idx = 2;
         else if (t >= 0.25) idx = 1;
+        if (idx > maxIdx) idx = maxIdx;
         const shape = shapes[idx] || shapes[0];
         if (!shape) continue;
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
         _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color);
+    }
+}
+
+function _getHeroAuraMaskShape(info: HeroFrameInfo, radius: number): HeroAuraMaskShape | null {
+    const key = [
+        info.texKey,
+        info.frameName,
+        "r" + (radius | 0),
+        "ox" + Math.round(info.originX * 1000),
+        "oy" + Math.round(info.originY * 1000),
+        "sx" + Math.round(info.scaleX * 1000),
+        "sy" + Math.round(info.scaleY * 1000),
+        info.flipX ? "fx1" : "fx0",
+        info.flipY ? "fy1" : "fy0"
+    ].join("|");
+    const cached = __heroAuraMaskCache[key];
+    if (cached) return cached;
+
+    const mask = _getAuraMaskBits(info.texKey, info.frameName, radius | 0, info.frameRef);
+    if (!mask || !mask.bits || !(mask.w > 0) || !(mask.h > 0)) return null;
+
+    const w = mask.w | 0;
+    const h = mask.h | 0;
+    const bits: Uint32Array = mask.bits as Uint32Array;
+    const ox = info.originX;
+    const oy = info.originY;
+    const sx = info.scaleX;
+    const sy = info.scaleY;
+    const flipX = info.flipX;
+    const flipY = info.flipY;
+
+    const offsets: number[] = [];
+    const n = w * h;
+    for (let i = 0; i < n; i++) {
+        const v = bits[i >> 5] >>> (i & 31);
+        if ((v & 1) === 0) continue;
+        const x = i % w;
+        const y = (i / w) | 0;
+        let px = (x + 0.5) - (ox * w);
+        let py = (y + 0.5) - (oy * h);
+        px *= sx;
+        py *= sy;
+        if (flipX) px = -px;
+        if (flipY) py = -py;
+        offsets.push(Math.round(px));
+        offsets.push(Math.round(py));
+    }
+
+    const out: HeroAuraMaskShape = { offsets };
+    __heroAuraMaskCache[key] = out;
+    return out;
+}
+
+function _stampHeroAuraSideAt(
+    img: Image,
+    minX: number,
+    minY: number,
+    heroLocalX: number,
+    heroLocalY: number,
+    nx: number,
+    ny: number,
+    shape: HeroAuraMaskShape,
+    threshold: number,
+    color: number
+): void {
+    if (!img || !shape || !shape.offsets || shape.offsets.length === 0) return;
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const baseX = (Math.round(heroLocalX) - (minX | 0)) | 0;
+    const baseY = (Math.round(heroLocalY) - (minY | 0)) | 0;
+    const off = shape.offsets;
+    for (let i = 0; i < off.length; i += 2) {
+        const dx = off[i];
+        const dy = off[i + 1];
+        const dot = (dx * nx) + (dy * ny);
+        if (dot < threshold) continue;
+        const x = baseX + dx;
+        const y = baseY + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        img.setPixel(x, y, color | 0);
+    }
+}
+
+function _stampBackWaveToHeroStrength(
+    img: Image,
+    halfW: number,
+    halfH: number,
+    tipLocalX: number,
+    tipLocalY: number,
+    heroLocalX: number,
+    heroLocalY: number,
+    hero: Sprite,
+    heroIndex: number,
+    waveT: number,
+    auraShapes: WeaponAuraTipShape[] | null,
+    dirFallbackX: number,
+    dirFallbackY: number,
+    maxIdx: number = 3
+): void {
+    if (!img) return;
+    const dx = tipLocalX - heroLocalX;
+    const dy = tipLocalY - heroLocalY;
+    let len = Math.sqrt(dx * dx + dy * dy);
+    if (!(len > 0.0001)) return;
+    let dirX = dx / len;
+    let dirY = dy / len;
+    if (!isFinite(dirX) || !isFinite(dirY)) {
+        dirX = dirFallbackX;
+        dirY = dirFallbackY;
+        len = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+        dirX /= len;
+        dirY /= len;
+    }
+
+    const visDir = getHeroVisualInfoForStrength(hero, dirX, dirY);
+    let heroFront = (visDir[1] || 0);
+    if (heroFront <= 0) heroFront = (visDir[0] || 0);
+    if (heroFront <= 0) heroFront = Math.max(1, Math.round(len));
+
+    const t = Math.max(0, Math.min(1, waveT));
+    const waveLen = len * t;
+    const hitDist = Math.max(0, len - heroFront);
+    const weaponLen = Math.min(waveLen, hitDist);
+    if (weaponLen > 0.5) {
+        const backX = tipLocalX - (dirX * weaponLen);
+        const backY = tipLocalY - (dirY * weaponLen);
+        if (auraShapes && auraShapes.length) {
+            _stampWeaponAuraLine(
+                img,
+                -halfW,
+                -halfH,
+                tipLocalX,
+                tipLocalY,
+                backX,
+                backY,
+                auraShapes,
+                STR_TIP_TRACE_COLOR,
+                maxIdx
+            );
+        } else {
+            _strengthTraceStampLine(img, halfW, halfH, tipLocalX, tipLocalY, backX, backY);
+        }
+    }
+
+    const heroSpread = Math.min(heroFront, Math.max(0, waveLen - hitDist));
+    if (heroSpread > 0) {
+        const heroInfo = _getHeroFrameInfo(hero);
+        const auraRaw = sprites.readDataNumber(hero, HERO_DATA.AURA_RADIUS) | 0;
+        const auraR = Math.max(1, ((auraRaw > 0 ? auraRaw : 1) - HERO_AURA_SIDE_RADIUS_PAD) | 0);
+        const heroShape = heroInfo ? _getHeroAuraMaskShape(heroInfo, auraR) : null;
+        if (heroShape) {
+            const threshold = (heroFront - heroSpread - HERO_AURA_SIDE_PAD_PX);
+            _stampHeroAuraSideAt(
+                img,
+                -halfW,
+                -halfH,
+                heroLocalX,
+                heroLocalY,
+                dirX,
+                dirY,
+                heroShape,
+                threshold,
+                STR_TIP_TRACE_COLOR
+            );
+        }
     }
 }
 
@@ -44804,6 +45550,7 @@ function spawnAgilityThrustProjectile(
     const sBackAtCast = -backLen
     let sFrontStop = totalReach - 2
     if (sFrontStop <= sBackAtCast) sFrontStop = sBackAtCast + 4
+    const maxLen = Math.max(1, (sFrontStop - sBackAtCast) | 0)
     const maxPulse = _agiBackPulseArcParams(hero, nx, ny, true)
     const halfTip = _agiTraceHalfPx()
     const wTipX0 = (vis[2] || 0)
@@ -44811,8 +45558,8 @@ function spawnAgilityThrustProjectile(
     const sx = -ny
     const sy = nx
     const wTipSide = (wTipX0 * sx) + (wTipY0 * sy)
-    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.spawn")
-    const auraSide = (auraPack && auraPack.shapes[3]) ? (auraPack.shapes[3].sideHalf | 0) : 0
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.spawn")
+        const auraSide = (auraPack && auraPack.shapes[3]) ? (auraPack.shapes[3].sideHalf | 0) : 0
     const sideHalf = Math.max(halfTip, Math.ceil(Math.abs(wTipSide)) + halfTip, auraSide)
     const pad = 2 + sideHalf
     const boundFront = sFrontStop + 3
@@ -44831,7 +45578,7 @@ function spawnAgilityThrustProjectile(
     let tipLocalX = 0
     let tipLocalY = 0
     if (auraPack && auraPack.shapes[3]) {
-        const tipShape = auraPack.shapes[3]
+        const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
         const baseX = hero.x + (auraPack.info.offX || 0)
         const baseY = hero.y + (auraPack.info.offY || 0)
         const tipWorldX = baseX + tipShape.tipDx
@@ -44882,6 +45629,12 @@ function spawnAgilityThrustProjectile(
     }
     sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
     sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
+    {
+        const heroLocalX = hero.x - anchorX
+        const heroLocalY = hero.y - anchorY
+        const tipSide = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+        sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, tipSide)
+    }
     proj.x = anchorX + (maxBounds.minX + maxBounds.maxX) / 2
     proj.y = anchorY + (maxBounds.minY + maxBounds.maxY) / 2
 
@@ -45070,7 +45823,8 @@ function spawnAgilityThrustProjectile(
         element | 0,
         nx,
         ny,
-        ((dashMs | 0) + 200) | 0
+        ((dashMs | 0) + 200) | 0,
+        maxLen | 0
     )
     if (!activeNow) _hideAgilityTrailFxSegments(proj)
 
@@ -45745,10 +46499,14 @@ function updateAgilityProjectilesMotionFor(
     let tipLocalY: number | null = null
     let auraShapes: WeaponAuraTipShape[] | null = null
     if (img) {
+        const heroLocalX = hero.x - anchorX
+        const heroLocalY = hero.y - anchorY
+        const growthT = (maxLen > 0) ? (arrowLen / maxLen) : 0;
+        const growthIdx = _pickAuraGrowthIdx(growthT);
         const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.tick")
         if (auraPack && auraPack.shapes[3]) {
             auraShapes = auraPack.shapes
-            const tipShape = auraPack.shapes[3]
+            const tipShape = auraPack.shapes[growthIdx] || auraPack.shapes[3]
             const baseX = hero.x + (auraPack.info.offX || 0)
             const baseY = hero.y + (auraPack.info.offY || 0)
             const tipWorldX = baseX + tipShape.tipDx
@@ -45757,6 +46515,26 @@ function updateAgilityProjectilesMotionFor(
             tipLocalY = tipWorldY - anchorY
             const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
+            const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+            let sideLock = sprites.readDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow !== 0) {
+                sideLock = sideNow
+                sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
+            }
+            if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("agi.tip.sideReject", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        sideNow,
+                        sideLock,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2)
+                    });
+                }
+                tipLocalX = lastX
+                tipLocalY = lastY
+            }
             _stampWeaponAuraLine(
                 img,
                 minX,
@@ -45766,7 +46544,8 @@ function updateAgilityProjectilesMotionFor(
                 tipLocalX,
                 tipLocalY,
                 auraPack.shapes,
-                AGI_TIP_TRACE_COLOR
+                AGI_TIP_TRACE_COLOR,
+                growthIdx
             )
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
@@ -45808,6 +46587,26 @@ function updateAgilityProjectilesMotionFor(
             tipLocalY = (hero.y + wTipY) - anchorY
             const lastX = sprites.readDataNumber(proj, AGI_LAST_TIP_X_KEY)
             const lastY = sprites.readDataNumber(proj, AGI_LAST_TIP_Y_KEY)
+            const sideNow = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+            let sideLock = sprites.readDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY) | 0
+            if (sideLock === 0 && sideNow !== 0) {
+                sideLock = sideNow
+                sprites.setDataNumber(proj, AGI_TIP_SIDE_SIGN_KEY, sideLock)
+            }
+            if (sideLock !== 0 && sideNow !== 0 && sideNow !== sideLock) {
+                if (_wpnTraceShouldLog(proj, nowMs | 0)) {
+                    _wpnTraceLog("agi.tip.sideReject", {
+                        id: _wpnTraceAssignId(proj),
+                        heroIndex,
+                        sideNow,
+                        sideLock,
+                        tipLocalX: +tipLocalX.toFixed(2),
+                        tipLocalY: +tipLocalY.toFixed(2)
+                    });
+                }
+                tipLocalX = lastX
+                tipLocalY = lastY
+            }
             _agiTraceStampLine(img, minX, minY, lastX, lastY, tipLocalX, tipLocalY)
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                 const inBounds = tipLocalX >= minX && tipLocalX <= maxX && tipLocalY >= minY && tipLocalY <= maxY;
@@ -45847,26 +46646,66 @@ function updateAgilityProjectilesMotionFor(
             }
             const duration = Math.max(1, (pulseEnd - pulseStart) | 0)
             const t = Math.max(0, Math.min(1, (nowMs - pulseStart) / duration))
-            const tipProj = (tipLocalX * nx) + (tipLocalY * ny)
-            const backTotal = Math.max(0, tipProj)
-            const waveLen = Math.round(backTotal * t)
-            if (waveLen > 0) {
-                const backX = tipLocalX - (nx * waveLen)
-                const backY = tipLocalY - (ny * waveLen)
-                if (auraShapes) {
-                    _stampWeaponAuraLine(
-                        img,
-                        minX,
-                        minY,
-                        tipLocalX,
-                        tipLocalY,
-                        backX,
-                        backY,
-                        auraShapes,
-                        AGI_TIP_TRACE_COLOR
-                    )
-                } else {
-                    _agiTraceStampLine(img, minX, minY, tipLocalX, tipLocalY, backX, backY)
+            const heroLocalX = hero.x - anchorX
+            const heroLocalY = hero.y - anchorY
+            const dx = tipLocalX - heroLocalX
+            const dy = tipLocalY - heroLocalY
+            const len = Math.sqrt(dx * dx + dy * dy)
+            if (len > 0.0001) {
+                const dirX = dx / len
+                const dirY = dy / len
+                const visDir = getHeroVisualInfoForStrength(hero, dirX, dirY)
+                let heroFront = (visDir[1] || 0)
+                if (heroFront <= 0) heroFront = (visDir[0] || 0)
+                if (heroFront <= 0) heroFront = Math.max(1, Math.round(len))
+
+                const waveLen = len * t
+                const growthT = (maxLen > 0) ? (arrowLen / maxLen) : 0;
+                const growthIdx = _pickAuraGrowthIdx(growthT);
+                const hitDist = Math.max(0, len - heroFront)
+                const weaponLen = Math.min(waveLen, hitDist)
+                if (weaponLen > 0.5) {
+                    const backX = tipLocalX - (dirX * weaponLen)
+                    const backY = tipLocalY - (dirY * weaponLen)
+                    if (auraShapes) {
+                        _stampWeaponAuraLine(
+                            img,
+                            minX,
+                            minY,
+                            tipLocalX,
+                            tipLocalY,
+                            backX,
+                            backY,
+                            auraShapes,
+                            AGI_TIP_TRACE_COLOR,
+                            growthIdx
+                        )
+                    } else {
+                        _agiTraceStampLine(img, minX, minY, tipLocalX, tipLocalY, backX, backY)
+                    }
+                }
+
+                const heroSpread = Math.min(heroFront, Math.max(0, waveLen - hitDist))
+                if (heroSpread > 0) {
+                    const heroInfo = _getHeroFrameInfo(hero)
+                    const auraRaw = sprites.readDataNumber(hero, HERO_DATA.AURA_RADIUS) | 0
+                    const auraR = Math.max(1, ((auraRaw > 0 ? auraRaw : 1) - HERO_AURA_SIDE_RADIUS_PAD) | 0)
+                    const heroShape = heroInfo ? _getHeroAuraMaskShape(heroInfo, auraR) : null
+                    if (heroShape) {
+                        const threshold = (heroFront - heroSpread - HERO_AURA_SIDE_PAD_PX)
+                        _stampHeroAuraSideAt(
+                            img,
+                            minX,
+                            minY,
+                            heroLocalX,
+                            heroLocalY,
+                            dirX,
+                            dirY,
+                            heroShape,
+                            threshold,
+                            AGI_TIP_TRACE_COLOR
+                        )
+                    }
                 }
             }
         }
@@ -49419,11 +50258,11 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
 
 
-    // ==========================
+    // ============================
 
-    // =======  UP (8×8)  =======
+    // =======  UP (11x11)  =======
 
-    // ==========================
+    // ============================
 
     if (dir == SUP_DIR_UP) {
 
@@ -49431,23 +50270,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 0 0 0 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 0 f 0 0 0 0 0
 
-                7 7 f f f f f 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 f f f f f f f 7
+                0 0 0 f 7 7 7 f 0 0 0
 
-                f f f f f f f f f
+                0 0 f 7 7 7 7 7 f 0 0
 
-                7 7 7 f f f 7 7 7
+                0 f 7 7 7 7 7 7 7 f 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
+
+                0 0 0 0 f 7 f 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49455,23 +50298,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 0 0 0 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 0 f 0 0 0 0 0
 
-                5 5 f f f f f 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 f f f f f f f 5
+                0 0 0 f 5 5 5 f 0 0 0
 
-                f f f f f f f f f
+                0 0 f 5 5 5 5 5 f 0 0
 
-                5 5 5 f f f 5 5 5
+                0 f 5 5 5 5 5 5 5 f 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
+
+                0 0 0 0 f 5 f 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49481,11 +50328,11 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
 
 
-    // ============================
+    // ==============================
 
-    // =======  DOWN (8×8)  =======
+    // =======  DOWN (11x11)  =======
 
-    // ============================
+    // ==============================
 
     else if (dir == SUP_DIR_DOWN) {
 
@@ -49493,23 +50340,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 0 0 0 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
 
-                f f f f f f f f f
+                0 0 0 0 f 7 f 0 0 0 0
 
-                7 f f f f f f f 7
+                0 f 7 7 7 7 7 7 7 f 0
 
-                7 7 f f f f f 7 7
+                0 0 f 7 7 7 7 7 f 0 0
 
-                7 7 7 f f f 7 7 7
+                0 0 0 f 7 7 7 f 0 0 0
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 f 7 f 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49517,23 +50368,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 0 0 0 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
 
-                f f f f f f f f f
+                0 0 0 0 f 5 f 0 0 0 0
 
-                5 f f f f f f f 5
+                0 f 5 5 5 5 5 5 5 f 0
 
-                5 5 f f f f f 5 5
+                0 0 f 5 5 5 5 5 f 0 0
 
-                5 5 5 f f f 5 5 5
+                0 0 0 f 5 5 5 f 0 0 0
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 f 5 f 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49543,11 +50398,11 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
 
 
-    // ============================
+    // ==============================
 
-    // =======  LEFT (8×8)  =======
+    // =======  LEFT (11x11)  =======
 
-    // ============================
+    // ==============================
 
     else if (dir == SUP_DIR_LEFT) {
 
@@ -49555,23 +50410,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 0 0 0 0 0 0 0
 
-                7 7 7 f f 7 7 7 7
+                0 0 0 0 0 f 0 0 0 0 0
 
-                7 7 f f f 7 7 7 7
+                0 0 0 0 f 7 0 0 0 0 0
 
-                7 f f f f f f f f
+                0 0 0 f 7 7 0 0 0 0 0
 
-                f f f f f f f f f
+                0 0 f 7 7 7 f f f f 0
 
-                7 f f f f f f f f
+                0 f 7 7 7 7 7 7 7 7 0
 
-                7 7 f f f 7 7 7 7
+                0 0 f 7 7 7 f f f f 0
 
-                7 7 7 f f 7 7 7 7
+                0 0 0 f 7 7 0 0 0 0 0
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 f 7 0 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49579,23 +50438,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 0 0 0 0 0 0 0
 
-                5 5 5 f f 5 5 5 5
+                0 0 0 0 0 f 0 0 0 0 0
 
-                5 5 f f f 5 5 5 5
+                0 0 0 0 f 5 0 0 0 0 0
 
-                5 f f f f f f f f
+                0 0 0 f 5 5 0 0 0 0 0
 
-                f f f f f f f f f
+                0 0 f 5 5 5 f f f f 0
 
-                5 f f f f f f f f
+                0 f 5 5 5 5 5 5 5 5 0
 
-                5 5 f f f 5 5 5 5
+                0 0 f 5 5 5 f f f f 0
 
-                5 5 5 f f 5 5 5 5
+                0 0 0 f 5 5 0 0 0 0 0
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 f 5 0 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49605,11 +50468,11 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
 
 
-    // =============================
+    // ===============================
 
-    // =======  RIGHT (8×8)  =======
+    // =======  RIGHT (11x11)  =======
 
-    // =============================
+    // ===============================
 
     else {
 
@@ -49617,23 +50480,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 0 0 0 0 0 0 0
 
-                7 7 7 7 f f 7 7 7
+                0 0 0 0 0 f 0 0 0 0 0
 
-                7 7 7 7 f f f 7 7
+                0 0 0 0 0 7 f 0 0 0 0
 
-                f f f f f f f f 7
+                0 0 0 0 0 7 7 f 0 0 0
 
-                f f f f f f f f f
+                0 f f f f 7 7 7 f 0 0
 
-                f f f f f f f f 7
+                0 7 7 7 7 7 7 7 7 f 0
 
-                7 7 7 7 f f f 7 7
+                0 f f f f 7 7 7 f 0 0
 
-                7 7 7 7 f f 7 7 7
+                0 0 0 0 0 7 7 f 0 0 0
 
-                7 7 7 7 f 7 7 7 7
+                0 0 0 0 0 7 f 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49641,23 +50508,27 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
             return img`
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 0 0 0 0 0 0 0
 
-                5 5 5 5 f f 5 5 5
+                0 0 0 0 0 f 0 0 0 0 0
 
-                5 5 5 5 f f f 5 5
+                0 0 0 0 0 5 f 0 0 0 0
 
-                f f f f f f f f 5
+                0 0 0 0 0 5 5 f 0 0 0
 
-                f f f f f f f f f
+                0 f f f f 5 5 5 f 0 0
 
-                f f f f f f f f 5
+                0 5 5 5 5 5 5 5 5 f 0
 
-                5 5 5 5 f f f 5 5
+                0 f f f f 5 5 5 f 0 0
 
-                5 5 5 5 f f 5 5 5
+                0 0 0 0 0 5 5 f 0 0 0
 
-                5 5 5 5 f 5 5 5 5
+                0 0 0 0 0 5 f 0 0 0 0
+
+                0 0 0 0 0 f 0 0 0 0 0
+
+                0 0 0 0 0 0 0 0 0 0 0
 
             `
 
@@ -49671,8 +50542,6 @@ function supportIconImageFor(dir: number, done: boolean): Image {
 
 
 
-
-
 function _positionSupportPuzzleIcons(heroIndex: number, hero: Sprite): void {
 
     const icons = supportPuzzleIcons[heroIndex] || []
@@ -49682,16 +50551,24 @@ function _positionSupportPuzzleIcons(heroIndex: number, hero: Sprite): void {
 
 
     const heroH = hero.image ? (hero.image.height | 0) : 16
+    let maxW = 0
+    let maxH = 0
+    for (let i = 0; i < icons.length; i++) {
+        const icon = icons[i]
+        if (!icon || !icon.image) continue
+        const iw = icon.image.width | 0
+        const ih = icon.image.height | 0
+        if (iw > maxW) maxW = iw
+        if (ih > maxH) maxH = ih
+    }
+    if (maxW <= 0) maxW = 9
+    if (maxH <= 0) maxH = 9
 
-    const y = (hero.y - Math.idiv(heroH, 2) - 6 + 50) | 0
-
-
-
-    const spacing = 10
-
+    const spacing = Math.max(12, (maxW + 4) | 0)
     const totalW = ((icons.length - 1) * spacing) | 0
-
     const startX = (hero.x - (totalW / 2)) | 0
+    const padY = Math.max(12, (Math.idiv(maxH, 2) + 10) | 0)
+    const y = (hero.y - Math.idiv(heroH, 2) - padY) | 0
 
 
 
@@ -49705,7 +50582,7 @@ function _positionSupportPuzzleIcons(heroIndex: number, hero: Sprite): void {
 
         icon.y = y
 
-        icon.z = (hero.z + 5) | 0
+        icon.z = (hero.z + 12) | 0
 
     }
 
@@ -55514,27 +56391,10 @@ interface EnemyEdgePick {
 
 }
 
-function _heroAuraCenterForEnemyTarget(hero: Sprite): { x: number, y: number } {
+function _heroFeetPointForEnemyTarget(hero: Sprite): { x: number, y: number } {
     if (!hero) return { x: 0, y: 0 }
-    const anyHero: any = hero as any
-    const data: any = anyHero.data || {}
-
-    // Prefer Phaser-native sprite center if available.
-    const native: any = anyHero.native
-    if (native) {
-        const w = (native.displayWidth || native.width || hero.width || 0) as number
-        const h = (native.displayHeight || native.height || hero.height || 0) as number
-        const ox = (native.originX != null ? native.originX : 0.5) as number
-        const oy = (native.originY != null ? native.originY : 0.5) as number
-        const cx = (native.x as number) + (0.5 - ox) * w
-        const cy = (native.y as number) + (0.5 - oy) * h
-        return { x: (cx | 0), y: (cy | 0) }
-    }
-
-    // Optional override hook if we cache aura centers later.
-    const cxRaw = (data.__heroAuraCenterX != null) ? data.__heroAuraCenterX : hero.x
-    const cyRaw = (data.__heroAuraCenterY != null) ? data.__heroAuraCenterY : hero.y
-    return { x: (cxRaw | 0), y: (cyRaw | 0) }
+    const hb = _boundsWithOffset(hero, _heroCollisionOffsetY(hero))
+    return { x: (hb.centerX | 0), y: (hb.bottom | 0) }
 }
 
 
@@ -55962,8 +56822,8 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
         const h = heroTargets[hi]
         if (!h) continue
 
-        // Hero target point = aura bounds center (not feet)
-        const hc = _heroAuraCenterForEnemyTarget(h)
+        // Hero target point = collision feet
+        const hc = _heroFeetPointForEnemyTarget(h)
         const hCenterX = hc.x | 0
         const hCenterY = hc.y | 0
 
@@ -55981,7 +56841,7 @@ function _enemyPickNearestHeroEdge(enemy: Sprite, heroTargets: Sprite[]): EnemyE
         }
     }
 
-    // NOTE: edgeX/edgeY now mean "hero aura center", not sprite feet.
+    // NOTE: edgeX/edgeY now mean "hero feet point" (collision).
     return { target, d2: bestD2, dx: bestDx, dy: bestDy, edgeX: bestEdgeX, edgeY: bestEdgeY }
 }
 

@@ -196,6 +196,8 @@ import { getPropSpec, propBaseNameFromKey } from "./propSpecs";
 
 const DECOR_DATA_TILE_R = "decorTileR";
 const DECOR_DATA_TILE_C = "decorTileC";
+const DECOR_SOLID_BASE_PX_KEY = "decorSolidBasePx";
+const DECOR_SOLID_USE_AURA_KEY = "decorSolidUseAura";
 
 type OpaqueAabb = { ox: number; oy: number; w: number; h: number };
 const _decorOpaqueAabbCache: Record<string, OpaqueAabb> = Object.create(null);
@@ -623,13 +625,19 @@ function decor_applyTightOpaqueAabbToSolids(args: {
 
         const collision = spec?.collision;
         const collisionMode = (collision?.mode || "").trim();
+        const overrideBasePx = (sprites.readDataNumber(s, DECOR_SOLID_BASE_PX_KEY) | 0);
+        const overrideUseAura = (sprites.readDataNumber(s, DECOR_SOLID_USE_AURA_KEY) | 0) !== 0;
         let baseHeightPx = 0;
         let useAura = false;
         let forceAura = false;
 
         if (collisionMode === "base") {
-            baseHeightPx = (collision?.baseHeightPx ?? vis?.collisionBaseHeightPx ?? 0) | 0;
-            useAura = !!(collision?.useAura ?? vis?.collisionUseAura);
+            baseHeightPx = ((collision?.baseHeightPx != null)
+                ? (collision.baseHeightPx | 0)
+                : ((overrideBasePx | 0) > 0)
+                    ? (overrideBasePx | 0)
+                    : (vis?.collisionBaseHeightPx ?? 0)) | 0;
+            useAura = !!(collision?.useAura ?? (((overrideBasePx | 0) > 0) ? overrideUseAura : undefined) ?? vis?.collisionUseAura);
         } else if (collisionMode === "aura") {
             baseHeightPx = 0;
             useAura = !!(collision?.useAura ?? true);
@@ -641,8 +649,10 @@ function decor_applyTightOpaqueAabbToSolids(args: {
             baseHeightPx = 0;
             useAura = false;
         } else {
-            baseHeightPx = (collision?.baseHeightPx ?? vis?.collisionBaseHeightPx ?? 0) | 0;
-            useAura = !!(collision?.useAura ?? vis?.collisionUseAura);
+            baseHeightPx = ((collision?.baseHeightPx != null)
+                ? (collision.baseHeightPx | 0)
+                : (vis?.collisionBaseHeightPx ?? (((overrideBasePx | 0) > 0) ? (overrideBasePx | 0) : 0))) | 0;
+            useAura = !!(collision?.useAura ?? vis?.collisionUseAura ?? (((overrideBasePx | 0) > 0) ? overrideUseAura : undefined));
         }
 
         if ((baseHeightPx | 0) > 0) {
@@ -1325,6 +1335,8 @@ const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
 const EFFECT_ANIM_DELAY_MS_DATA_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
+const EFFECT_FLIP_X_DATA_KEY = "effectFlipX";
+const EFFECT_FLIP_Y_DATA_KEY = "effectFlipY";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
 
 const EFFECT_BLANK_TEX_KEY = "__effectBlankTex";
@@ -10555,6 +10567,8 @@ function _syncEffectPath(
     const hasIntroStart = Object.prototype.hasOwnProperty.call(data, EFFECT_INTRO_START_MS_DATA_KEY);
     const hasAnimDelay = Object.prototype.hasOwnProperty.call(data, EFFECT_ANIM_DELAY_MS_DATA_KEY);
     const hasAnimDelayStart = Object.prototype.hasOwnProperty.call(data, EFFECT_ANIM_DELAY_START_MS_DATA_KEY);
+    const hasFlipX = Object.prototype.hasOwnProperty.call(data, EFFECT_FLIP_X_DATA_KEY);
+    const hasFlipY = Object.prototype.hasOwnProperty.call(data, EFFECT_FLIP_Y_DATA_KEY);
     const hasMaskInvert = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_INVERT_DATA_KEY);
     const hasMaskRadius = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_DATA_KEY);
     const hasMaskRadiusPx = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_PX_DATA_KEY);
@@ -10576,6 +10590,8 @@ function _syncEffectPath(
     const introStartRaw = hasIntroStart ? sprites.readDataNumber(s, EFFECT_INTRO_START_MS_DATA_KEY) : 0;
     const animDelayMs = hasAnimDelay ? sprites.readDataNumber(s, EFFECT_ANIM_DELAY_MS_DATA_KEY) : 0;
     const animDelayStartRaw = hasAnimDelayStart ? sprites.readDataNumber(s, EFFECT_ANIM_DELAY_START_MS_DATA_KEY) : 0;
+    const flipXRaw = hasFlipX ? sprites.readDataNumber(s, EFFECT_FLIP_X_DATA_KEY) : 0;
+    const flipYRaw = hasFlipY ? sprites.readDataNumber(s, EFFECT_FLIP_Y_DATA_KEY) : 0;
     const maskInvertRaw = hasMaskInvert ? sprites.readDataNumber(s, EFFECT_MASK_INVERT_DATA_KEY) : 0;
     const maskRadiusRaw = hasMaskRadius ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_DATA_KEY) : 0;
     const maskRadiusPxRaw = hasMaskRadiusPx ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_PX_DATA_KEY) : 0;
@@ -10609,6 +10625,8 @@ function _syncEffectPath(
     if (hasIntroStart) data[EFFECT_INTRO_START_MS_DATA_KEY] = introStartRaw;
     if (hasAnimDelay) data[EFFECT_ANIM_DELAY_MS_DATA_KEY] = animDelayMs;
     if (hasAnimDelayStart) data[EFFECT_ANIM_DELAY_START_MS_DATA_KEY] = animDelayStartRaw;
+    if (hasFlipX) data[EFFECT_FLIP_X_DATA_KEY] = flipXRaw;
+    if (hasFlipY) data[EFFECT_FLIP_Y_DATA_KEY] = flipYRaw;
     if (hasMaskInvert) data[EFFECT_MASK_INVERT_DATA_KEY] = maskInvertRaw;
     if (hasMaskRadius) data[EFFECT_MASK_RADIUS_DATA_KEY] = maskRadiusRaw;
     if (hasMaskRadiusPx) data[EFFECT_MASK_RADIUS_PX_DATA_KEY] = maskRadiusPxRaw;
@@ -10654,6 +10672,8 @@ function _syncEffectPath(
     if (hasIntroStart) nativeAny.setData(EFFECT_INTRO_START_MS_DATA_KEY, introStartRaw);
     if (hasAnimDelay) nativeAny.setData(EFFECT_ANIM_DELAY_MS_DATA_KEY, animDelayMs);
     if (hasAnimDelayStart) nativeAny.setData(EFFECT_ANIM_DELAY_START_MS_DATA_KEY, animDelayStartRaw);
+    if (hasFlipX) nativeAny.setData(EFFECT_FLIP_X_DATA_KEY, flipXRaw);
+    if (hasFlipY) nativeAny.setData(EFFECT_FLIP_Y_DATA_KEY, flipYRaw);
     if (hasMaskInvert) nativeAny.setData(EFFECT_MASK_INVERT_DATA_KEY, maskInvertRaw);
     if (hasMaskRadius) nativeAny.setData(EFFECT_MASK_RADIUS_DATA_KEY, maskRadiusRaw);
     if (hasMaskRadiusPx) nativeAny.setData(EFFECT_MASK_RADIUS_PX_DATA_KEY, maskRadiusPxRaw);
@@ -10912,6 +10932,17 @@ function _syncEffectPath(
 
     const totalMult = popMult * introMult;
     _effectApplyScale(nativeAny, scale, hasScale, totalMult);
+
+    if (hasFlipX) {
+        const fx = (flipXRaw | 0) !== 0;
+        if (typeof nativeAny.setFlipX === "function") nativeAny.setFlipX(fx);
+        else nativeAny.flipX = fx;
+    }
+    if (hasFlipY) {
+        const fy = (flipYRaw | 0) !== 0;
+        if (typeof nativeAny.setFlipY === "function") nativeAny.setFlipY(fy);
+        else nativeAny.flipY = fy;
+    }
 
     if (hasAlignBottom && (alignBottomY | 0) !== 0) {
         const dispH = (nativeAny.displayHeight ?? nativeAny.height ?? 0) as number;

@@ -76,8 +76,6 @@ function parseSizeFromName(name: string): { id: string; frameW: number; frameH: 
 }
 
 const EFFECT_SHEETS: EffectSheetDef[] = [];
-const EFFECT_SHEET_BY_ID = new Map<string, EffectSheetDef>();
-const EFFECT_DUPLICATE_IDS: string[] = [];
 const EFFECT_MISSING_SIZE: string[] = [];
 
 for (const [path, url] of Object.entries(effectPngs)) {
@@ -89,28 +87,20 @@ for (const [path, url] of Object.entries(effectPngs)) {
         continue;
     }
 
-    if (EFFECT_SHEET_BY_ID.has(size.id)) {
-        EFFECT_DUPLICATE_IDS.push(size.id);
-        continue;
-    }
-
+    const safeKey = baseName.replace(/\s+/g, "_");
     const sheet: EffectSheetDef = {
         id: size.id,
         baseName,
-        textureKey: `effects.${size.id}`,
+        textureKey: `effects.${safeKey}`,
         url,
         frameW: size.frameW,
         frameH: size.frameH
     };
 
-    EFFECT_SHEET_BY_ID.set(size.id, sheet);
     EFFECT_SHEETS.push(sheet);
 }
 
 function _warnEffectSheetIssues(): void {
-    if (EFFECT_DUPLICATE_IDS.length) {
-        console.warn("[effectAtlas] duplicate effect ids:", EFFECT_DUPLICATE_IDS.join(", "));
-    }
     if (EFFECT_MISSING_SIZE.length) {
         throw new Error(
             "[effectAtlas] effect sheets must include WxH in filename (tiles are the only exception). Missing: " +
@@ -340,8 +330,15 @@ export function preloadEffectSheets(scene: Phaser.Scene): void {
 
 export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
     const atlas: EffectAtlas = {};
+    const primaryById = new Map<string, EffectSheetDef>();
 
     for (const sheet of EFFECT_SHEETS) {
+        const area = (sheet.frameW | 0) * (sheet.frameH | 0);
+        const cur = primaryById.get(sheet.id);
+        if (!cur || (area > ((cur.frameW | 0) * (cur.frameH | 0)))) {
+            primaryById.set(sheet.id, sheet);
+        }
+
         const tex = scene.textures.get(sheet.textureKey);
         const source = tex?.getSourceImage?.() as HTMLImageElement | HTMLCanvasElement | undefined;
         if (!source) continue;
@@ -402,20 +399,7 @@ export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
             EFFECT_PALETTE_ALPHA_MIN
         );
 
-        if (DEBUG_EFFECT_ATLAS) {
-            console.log("[effectAtlas] sheet", {
-                id: sheet.id,
-                tex: sheet.textureKey,
-                size: `${source.width}x${source.height}`,
-                frame: `${sheet.frameW}x${sheet.frameH}`,
-                cols,
-                rows,
-                frames: frameIndices.length,
-                emptySkipped
-            });
-        }
-
-        atlas[sheet.id] = {
+        atlas[sheet.baseName] = {
             id: sheet.id,
             textureKey: sheet.textureKey,
             url: sheet.url,
@@ -427,6 +411,25 @@ export function buildEffectAtlas(scene: Phaser.Scene): EffectAtlas {
             palette: palette || undefined,
             collisionBounds
         };
+
+        if (DEBUG_EFFECT_ATLAS) {
+            console.log("[effectAtlas] sheet", {
+                id: sheet.id,
+                variant: sheet.baseName,
+                tex: sheet.textureKey,
+                size: `${source.width}x${source.height}`,
+                frame: `${sheet.frameW}x${sheet.frameH}`,
+                cols,
+                rows,
+                frames: frameIndices.length,
+                emptySkipped
+            });
+        }
+    }
+
+    for (const [id, sheet] of primaryById.entries()) {
+        const primary = atlas[sheet.baseName];
+        if (primary) atlas[id] = primary;
     }
 
     try {

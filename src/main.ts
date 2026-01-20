@@ -220,16 +220,46 @@ function _setEnginePaused(flag: boolean, reason: string): void {
   } catch { }
 }
 
+function _tryRecenterCamera(reason: string): void {
+  try {
+    const g: any = globalThis as any;
+    const scene: any = g.__phaserScene;
+    if (!scene) return;
+
+    const fn =
+      (scene as any)._forceCameraFollowNow ||
+      (scene as any).forceCameraFollowNow ||
+      (scene as any).__forceCameraFollowNow;
+    if (typeof fn === "function") {
+      fn.call(scene, reason || "focus");
+      return;
+    }
+
+    const cam = scene.cameras?.main;
+    if (!cam) return;
+    const hero = _hud_tryFindAnyPlayableHeroSprite();
+    const native = hero ? (hero as any).native : null;
+    try { cam.stopFollow?.(); } catch { }
+    if (native && cam.startFollow) cam.startFollow(native, true, 0.35, 0.35);
+    if (native && cam.centerOn) cam.centerOn(native.x, native.y);
+  } catch { }
+}
+
 function _installVisibilityPause(): void {
   const g: any = globalThis as any;
   if (g.__heVisPauseInstalled) return;
   g.__heVisPauseInstalled = true;
 
   const onVis = () => {
-    _setEnginePaused(document.hidden, document.hidden ? "hidden" : "visible");
+    const hidden = document.hidden;
+    _setEnginePaused(hidden, hidden ? "hidden" : "visible");
+    if (!hidden) _tryRecenterCamera("visible");
   };
   const onBlur = () => _setEnginePaused(true, "blur");
-  const onFocus = () => _setEnginePaused(document.hidden, "focus");
+  const onFocus = () => {
+    _setEnginePaused(document.hidden, "focus");
+    if (!document.hidden) _tryRecenterCamera("focus");
+  };
 
   document.addEventListener("visibilitychange", onVis);
   window.addEventListener("blur", onBlur);
@@ -1179,6 +1209,7 @@ class HeroScene extends Phaser.Scene {
     private _worldTileSize: number = 0;
     private _textureFiltersInstalled: boolean = false;
     private _cameraRoundOverrideInstalled: boolean = false;
+    private _camFollowSanityAtMs: number = 0;
 
 
     // NEW: track dims too (lets us force-reapply if needed)
@@ -1711,12 +1742,70 @@ private _updateCameraFollowLocalHero(): void {
     if (!bestNative) return;
     _uiLoadingMarkHero();
 
-    if (this._camFollowPid !== pid || this._camFollowNative !== bestNative) {
+    const cam: any = this.cameras?.main;
+    const follow = cam ? cam._follow : null;
+    const needsFollow = (this._camFollowPid !== pid || this._camFollowNative !== bestNative || follow !== bestNative);
+    if (needsFollow && cam && typeof cam.startFollow === "function") {
         this._camFollowPid = pid;
         this._camFollowNative = bestNative;
 
         // Smooth follow; keep the hero centered more aggressively
-        this.cameras.main.startFollow(bestNative, true, 0.35, 0.35);
+        cam.startFollow(bestNative, true, 0.35, 0.35);
+    }
+}
+
+private _forceCameraFollowNow(_reason: string): void {
+    const cam = this.cameras?.main;
+    if (!cam) return;
+
+    this._camFollowPid = 0;
+    this._camFollowNative = undefined;
+    try { cam.stopFollow(); } catch { }
+
+    this._updateCameraFollowLocalHero();
+    const native: any = this._camFollowNative as any;
+    if (native && Number.isFinite(native.x) && Number.isFinite(native.y)) {
+        try { cam.centerOn(native.x, native.y); } catch { }
+    }
+    this._snapCameraScrollToPixelGrid();
+}
+
+private _checkCameraFollowSanity(nowMs: number): void {
+    const nextAt = this._camFollowSanityAtMs | 0;
+    if (nextAt > 0 && nowMs < nextAt) return;
+    this._camFollowSanityAtMs = (nowMs + CAMERA_FOLLOW_SANITY_MS) | 0;
+
+    const g: any = globalThis as any;
+    const net = g.__net || g.net;
+    const pid = ((net?.playerId ?? 0) | 0);
+
+    let hero: any = null;
+    if (pid > 0) hero = _hud_tryGetLocalHeroSprite(pid);
+    if (!hero) hero = _hud_tryFindAnyPlayableHeroSprite();
+    if (!hero) return;
+
+    const native: any = (hero as any).native;
+    if (!native) return;
+
+    const cam = this.cameras?.main as any;
+    if (!cam) return;
+
+    const follow = cam._follow as any;
+    const isFollowing = follow === native;
+    const view = cam.worldView;
+    const hasView = !!(view && Number.isFinite(view.centerX) && Number.isFinite(view.centerY));
+    const midX = hasView ? view.centerX : (cam.midPoint?.x ?? (cam.scrollX + (cam.width * 0.5)));
+    const midY = hasView ? view.centerY : (cam.midPoint?.y ?? (cam.scrollY + (cam.height * 0.5)));
+    const inView = hasView ? !!view.contains(native.x, native.y) : true;
+
+    const dx = (native.x - midX);
+    const dy = (native.y - midY);
+    const dist = Math.sqrt((dx * dx) + (dy * dy));
+    const tileSize = this._worldTileSize | 0;
+    const threshold = Math.max(tileSize > 0 ? tileSize * CAMERA_FOLLOW_SANITY_TILES : 0, 160);
+
+    if (!isFollowing || !inView || dist > threshold) {
+        this._forceCameraFollowNow("sanity");
     }
 }
 
@@ -3194,6 +3283,7 @@ update(time: number, delta: number) {
 
     // Keep camera following local player hero (works on host + clients)
     this._updateCameraFollowLocalHero();
+    this._checkCameraFollowSanity(time | 0);
     this._snapCameraScrollToPixelGrid();
 
     this._updateLegacyHostTick(g);
@@ -3342,6 +3432,8 @@ const CAMERA_ZOOM_BASE_STEP_FALLBACK = 0.25;
 const CAMERA_ZOOM_TARGET_STEP_FALLBACK = 0.25;
 const CAMERA_USER_ZOOM_STEP_LOW = 0.25;
 const CAMERA_USER_ZOOM_STEP_HIGH = 0.25;
+const CAMERA_FOLLOW_SANITY_MS = 1500;
+const CAMERA_FOLLOW_SANITY_TILES = 6;
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
