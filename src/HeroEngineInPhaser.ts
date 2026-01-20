@@ -2402,6 +2402,11 @@ function _updateAgilityTrailFxSegments(
         return;
     }
     const lenActive = Math.max(1, curLen | 0);
+    const tipSide = sprites.readDataNumber(proj, AGI_TIP_SIDE_PX_KEY);
+    const sx = -ny;
+    const sy = nx;
+    const offX = Number.isFinite(tipSide) ? (sx * tipSide) : 0;
+    const offY = Number.isFinite(tipSide) ? (sy * tipSide) : 0;
 
     for (let i = 0; i < count; i++) {
         const fx = sprites.readDataSprite(proj, _agilityTrailFxSegKey(i));
@@ -2419,8 +2424,8 @@ function _updateAgilityTrailFxSegments(
             sprites.setDataNumber(fx, AGI_FX_SEG_ACTIVE_KEY, 1);
             sprites.setDataNumber(fx, EFFECT_INTRO_START_MS_DATA_KEY, nowMs | 0);
         }
-        fx.x = (anchorX + (nx * s));
-        fx.y = (anchorY + (ny * s));
+        fx.x = (anchorX + (nx * s) + offX);
+        fx.y = (anchorY + (ny * s) + offY);
         fx.z = (hero.z | 0) + (AGI_FX_SEG_Z_BIAS | 0);
         const scaleRaw = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY);
         const scale = (Number.isFinite(scaleRaw) && scaleRaw > 0) ? scaleRaw : 1;
@@ -2579,6 +2584,8 @@ const PROJ_MASK_FX_Z_BIAS = 3;
 const PROJ_HIDE_BASE_FOR_MASK_FX = false;
 const PROJECTILE_FORCE_BORDER = true;
 const PROJECTILE_HIDE_FILL = true;
+const PROJECTILE_EMERGENCY_FILL = true;
+const PROJECTILE_EMERGENCY_SCALE = 2;
 const AGI_TRAIL_FILL_COLOR = 5;
 const AGI_CHARGE_FX_KEY = "agiChargeFx";
 const AGI_CHARGE_SPEAR_KEY = "agiChargeSpear";
@@ -2634,6 +2641,7 @@ const AGI_TEX_MAX_Y_KEY = "aTexMaxY";
 const AGI_LAST_TIP_X_KEY = "aTipX";
 const AGI_LAST_TIP_Y_KEY = "aTipY";
 const AGI_TIP_SIDE_SIGN_KEY = "aTipSide";
+const AGI_TIP_SIDE_PX_KEY = "aTipSidePx";
 const AGI_BACK_PULSE_START_MS_KEY = "agiBackPulseStart";
 const AGI_BACK_PULSE_END_MS_KEY = "agiBackPulseEnd";
 const AGI_BACK_PULSE_DONE_KEY = "agiBackPulseDone";
@@ -2796,6 +2804,62 @@ function _heroElementParticleColor(element: number): number {
     if (e === ELEM.AIR) return 3;
     if (e === ELEM.NONE) return 0;
     return 1;
+}
+
+function _projectileEmergencyScalePx(px: number): number {
+    const base = Number.isFinite(px) ? px : 0;
+    const s = PROJECTILE_EMERGENCY_SCALE | 0;
+    if (s <= 1) return base | 0;
+    return Math.max(1, Math.round(base * s));
+}
+
+function _projectileEmergencyColors(element: number): number[] {
+    const e = element | 0;
+    switch (e) {
+        case ELEM.FIRE: return [2, 4, 5];
+        case ELEM.WATER: return [9, 8, 1];
+        case ELEM.ICE: return [9, 1, 13];
+        case ELEM.ELECTRIC: return [5, 1, 10];
+        case ELEM.EARTH: return [14, 13, 4];
+        case ELEM.GRASS: return [7, 6, 5];
+        case ELEM.AIR: return [9, 1, 8];
+        case ELEM.NONE: return [8, 9, 1];
+        default: return [1, 13, 11];
+    }
+}
+
+function _projectileEmergencyFill(img: Image, element: number): void {
+    if (!PROJECTILE_EMERGENCY_FILL) return;
+    if (!img) return;
+    const colors = _projectileEmergencyColors(element | 0);
+    if (!colors || colors.length === 0) return;
+    const base = colors[0] | 0;
+    const accent = (colors[1] != null ? colors[1] : base) | 0;
+    const highlight = (colors[2] != null ? colors[2] : accent) | 0;
+
+    const w = img.width | 0;
+    const h = img.height | 0;
+    const fillA = STR_TIP_TRACE_COLOR | 0;
+    const fillB = AGI_TIP_TRACE_COLOR | 0;
+    const fillC = AGI_TRAIL_FILL_COLOR | 0;
+    const fillD = AGI_DEBUG_TRAIL_MAIN_COLOR | 0;
+    const edgeA = STR_TIP_TRACE_EDGE_COLOR | 0;
+    const edgeB = AGI_TIP_TRACE_EDGE_COLOR | 0;
+    const edgeC = AGI_DEBUG_TRAIL_EDGE_COLOR | 0;
+
+    for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+            const v = img.getPixel(x, y) | 0;
+            if (v === 0) continue;
+            if (v === edgeA || v === edgeB || v === edgeC) continue;
+            if (v !== fillA && v !== fillB && v !== fillC && v !== fillD) continue;
+            const sel = (x + y) & 3;
+            let color = base;
+            if (sel === 0) color = highlight;
+            else if (sel === 1) color = accent;
+            img.setPixel(x, y, color | 0);
+        }
+    }
 }
 
 function _spawnHeroElementTrailParticle(proj: Sprite, element: number, nowMs: number): void {
@@ -10047,6 +10111,8 @@ function _dunHandleInteractRelicOffer(it: Sprite, hero: Sprite, pid: number, hi:
     // Flip the prop state so Phaser stamps the "open" frame.
     let chestR = sprites.readDataNumber(it, "decorTileR") | 0
     let chestC = sprites.readDataNumber(it, "decorTileC") | 0
+    const chestOffX = sprites.readDataNumber(it, "decorOffX") | 0
+    const chestOffY = sprites.readDataNumber(it, "decorOffY") | 0
     if (chestR < 0 || chestC < 0) {
         chestR = _dunChestTileR | 0
         chestC = _dunChestTileC | 0
@@ -10056,7 +10122,7 @@ function _dunHandleInteractRelicOffer(it: Sprite, hero: Sprite, pid: number, hi:
 
     if (chestR >= 0 && chestC >= 0) {
 
-        _dunDecor_upsertChestSolid(chestR, chestC, true, chestStyleBase)
+        _dunDecor_upsertChestSolid(chestR, chestC, true, chestStyleBase, chestOffX | 0, chestOffY | 0)
 
         _engineDecorRev = (_engineDecorRev + 1) | 0
 
@@ -11251,7 +11317,9 @@ function _dunChestSetStyle(it: Sprite, styleBase: string, opened?: boolean): voi
     const tileR = sprites.readDataNumber(it, "decorTileR") | 0
     const tileC = sprites.readDataNumber(it, "decorTileC") | 0
     if (tileR >= 0 && tileC >= 0) {
-        _dunDecor_upsertChestSolid(tileR, tileC, isOpen, base)
+        const offX = sprites.readDataNumber(it, "decorOffX") | 0
+        const offY = sprites.readDataNumber(it, "decorOffY") | 0
+        _dunDecor_upsertChestSolid(tileR, tileC, isOpen, base, offX | 0, offY | 0)
         _engineDecorRev = (_engineDecorRev + 1) | 0
     }
 }
@@ -11329,7 +11397,7 @@ let _dunBookSaveEntries: { file: string; label: string }[] = []
 
 
 
-function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolean, styleBase?: string): void {
+function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolean, styleBase?: string, offX: number = 0, offY: number = 0): void {
 
     const r = baseR | 0
 
@@ -11391,11 +11459,12 @@ function _dunDecor_upsertChestSolid(baseR: number, baseC: number, opened: boolea
 
     sprites.setDataNumber(s, "decorTileC", c)
 
+    sprites.setDataNumber(s, "decorOffX", offX | 0)
+    sprites.setDataNumber(s, "decorOffY", offY | 0)
 
+    s.left = ((c * tileSize) + (offX | 0)) | 0
 
-    s.left = (c * tileSize) | 0
-
-    s.top = (r * tileSize) | 0
+    s.top = ((r * tileSize) + (offY | 0)) | 0
 
 }
 
@@ -12176,7 +12245,7 @@ function _dunIsPadPowered(): boolean {
 
 
 
-function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string): Sprite {
+function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string, offX: number = 0, offY: number = 0): Sprite {
 
     // Replace the placeholder sprite-art chest with a real prop-driven chest.
 
@@ -12210,7 +12279,7 @@ function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string)
 
         chest.setFlag(SpriteFlag.Ghost, true)
 
-        chest.setPosition(x, y)
+        chest.setPosition(((x | 0) + (offX | 0)) | 0, ((y | 0) + (offY | 0)) | 0)
 
         chest.z = 6
 
@@ -12222,6 +12291,8 @@ function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string)
 
         sprites.setDataNumber(chest, INTERACT_DATA.OPENED, 0)
         sprites.setDataNumber(chest, INTERACT_DATA.FOCUSABLE, 1)
+        sprites.setDataNumber(chest, "decorOffX", offX | 0)
+        sprites.setDataNumber(chest, "decorOffY", offY | 0)
         const fallbackBase = _dunChestResolveStyleBase(styleBase || "")
         sprites.setDataString(chest, INTERACT_DATA.CHEST_STYLE, fallbackBase)
         sprites.setDataString(chest, DECOR_DATA.NAME, _dunChestDecorName(fallbackBase, false))
@@ -12251,7 +12322,7 @@ function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string)
     // Ensure a decor-solid exists so the Phaser-side prop renderer can stamp the chest.
 
     const chestStyleBase = _dunChestResolveStyleBase(styleBase || "")
-    _dunDecor_upsertChestSolid(rr, cc, false, chestStyleBase)
+    _dunDecor_upsertChestSolid(rr, cc, false, chestStyleBase, offX | 0, offY | 0)
 
     _engineDecorRev = (_engineDecorRev + 1) | 0
 
@@ -12269,7 +12340,7 @@ function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string)
 
     chest.setFlag(SpriteFlag.Invisible, true)
 
-    chest.setPosition(_dunColToX(cc), _dunRowToY(rr))
+    chest.setPosition((_dunColToX(cc) + (offX | 0)) | 0, (_dunRowToY(rr) + (offY | 0)) | 0)
 
     chest.z = 6
 
@@ -12282,6 +12353,8 @@ function _dunSpawnChest(nowMs: number, x: number, y: number, styleBase?: string)
     sprites.setDataNumber(chest, "decorTileR", rr)
 
     sprites.setDataNumber(chest, "decorTileC", cc)
+    sprites.setDataNumber(chest, "decorOffX", offX | 0)
+    sprites.setDataNumber(chest, "decorOffY", offY | 0)
 
 
 
@@ -13343,6 +13416,28 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     const minDist = STARTER_CHEST_MIN_PAD_DIST | 0
     const padLeft = (padC - 2) | 0
     const padRight = (padC + 2) | 0
+
+    if (padR >= 0 && padC >= 0) {
+        // Place the starter relic chest offset from the pad's bottom-left tile.
+        const anchorR = Math.max(0, Math.min(rows - 1, (padR + 1) | 0)) | 0
+        const anchorC = Math.max(0, Math.min(cols - 1, (padC - 2) | 0)) | 0
+        const offX = -16
+        const offY = 16
+        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", offX, offY)
+        if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
+            _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
+            _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
+            sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "starter_relic")
+            _dunConfigureChestRelicOffer(chest, {
+                poolIds: _relicStarterOfferPool(),
+                title: "Starter Relic",
+                flavorText: "Choose your first relic.",
+                theme: "starter",
+                count: RELIC_STARTER_OFFER_COUNT | 0,
+            })
+            return
+        }
+    }
 
     function isPadTile(rr: number, cc: number): boolean {
         return (rr === padR || rr === (padR + 1)) && (cc >= padLeft && cc <= padRight)
@@ -40178,7 +40273,8 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
         STR_TIP_TRACE_COLOR | 0,
         STR_TIP_TRACE_EDGE_COLOR | 0
     );
-    _clearStrengthProjectileFill(img);
+    const element = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0;
+    _clearStrengthProjectileFill(img, element | 0);
 }
 
 
@@ -41437,7 +41533,7 @@ function spawnStrengthSwingProjectile(
     }
 
     _updateProjectileMaskSpriteForProj(proj, img0)
-    _clearStrengthProjectileFill(img0)
+    _clearStrengthProjectileFill(img0, element | 0)
 
     let tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
     if (!tipSide) tipSide = _weaponDefaultSideSign(nx, ny)
@@ -41879,7 +41975,8 @@ function updateStrengthProjectilesMotionFor(
                 STR_TIP_TRACE_EDGE_COLOR | 0
             )
             _updateProjectileMaskSpriteForProj(proj, img)
-            _clearStrengthProjectileFill(img)
+            const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
+            _clearStrengthProjectileFill(img, element | 0)
             _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
         }
         _updateHeroBodyPaintFxForProj(proj, hero)
@@ -42113,7 +42210,8 @@ function updateStrengthProjectilesMotionFor(
             STR_TIP_TRACE_EDGE_COLOR | 0
         )
         _updateProjectileMaskSpriteForProj(proj, img)
-        _clearStrengthProjectileFill(img)
+        const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
+        _clearStrengthProjectileFill(img, element | 0)
         _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
     }
     _updateHeroBodyPaintFxForProj(proj, hero)
@@ -42454,7 +42552,8 @@ function buildStrengthSmashBitmap(
 }
 
 function _strengthTraceHalfPx(): number {
-    const half = Math.idiv((STR_TIP_TRACE_SIZE_PX | 0), 2) | 0;
+    const size = _projectileEmergencyScalePx(STR_TIP_TRACE_SIZE_PX | 0);
+    const half = Math.idiv((size | 0), 2) | 0;
     return Math.max(1, half | 0);
 }
 
@@ -42549,9 +42648,10 @@ function _stampStrengthArcTrail(
     let steps = Math.floor(halfArcRad / stepRad) * 2 + 1;
     if (steps < 1) steps = 1;
     const centerIndex = (steps - 1) / 2;
-    let maxWidth = Math.min(STR_ARC_MAX_WIDTH_PX | 0, (maxR - (inner0 | 0)) | 0);
+    const scale = (PROJECTILE_EMERGENCY_SCALE | 0) > 1 ? (PROJECTILE_EMERGENCY_SCALE | 0) : 1;
+    let maxWidth = Math.min((STR_ARC_MAX_WIDTH_PX | 0) * scale, (maxR - (inner0 | 0)) | 0);
     if (maxWidth < 1) maxWidth = 1;
-    const minWidth = Math.max(1, STR_ARC_MIN_WIDTH_PX | 0);
+    const minWidth = Math.max(1, (STR_ARC_MIN_WIDTH_PX | 0) * scale);
     if (maxWidth < minWidth) maxWidth = minWidth;
 
     const w = img.width | 0;
@@ -42597,11 +42697,19 @@ function _projectileClearFill(img: Image, fillColor: number): void {
     }
 }
 
-function _clearStrengthProjectileFill(img: Image): void {
+function _clearStrengthProjectileFill(img: Image, element: number): void {
+    if (PROJECTILE_EMERGENCY_FILL) {
+        _projectileEmergencyFill(img, element | 0);
+        return;
+    }
     _projectileClearFill(img, STR_TIP_TRACE_COLOR | 0);
 }
 
-function _clearAgilityProjectileFill(img: Image): void {
+function _clearAgilityProjectileFill(img: Image, element: number): void {
+    if (PROJECTILE_EMERGENCY_FILL) {
+        _projectileEmergencyFill(img, element | 0);
+        return;
+    }
     _projectileClearFill(img, AGI_TIP_TRACE_COLOR | 0);
     _projectileClearFill(img, AGI_TRAIL_FILL_COLOR | 0);
     _projectileClearFill(img, AGI_DEBUG_TRAIL_MAIN_COLOR | 0);
@@ -42780,7 +42888,7 @@ function _agiClampTipForDown(
             tipLocalY -= 2 * side * sy;
             side = -side;
         }
-        const minSide = Math.max(AGI_DOWN_TIP_SIDE_MIN_PX | 0, sideHalf | 0);
+        const minSide = Math.max(_projectileEmergencyScalePx(AGI_DOWN_TIP_SIDE_MIN_PX | 0), sideHalf | 0);
         if (Math.abs(side) < minSide) {
             const delta = (downSide * minSide) - side;
             tipLocalX += sx * delta;
@@ -46919,9 +47027,10 @@ function spawnAgilityThrustProjectile(
             tipForward + fadeLen,
             AGI_BEAM_FADE_STEPS | 0
         )
+        sprites.setDataNumber(proj, AGI_TIP_SIDE_PX_KEY, tipSide);
     }
     _updateProjectileMaskSpriteForProj(proj, maxImg)
-    _clearAgilityProjectileFill(maxImg)
+    _clearAgilityProjectileFill(maxImg, element | 0)
 
     sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
     sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
@@ -47142,16 +47251,19 @@ type AgiTrailBounds = { minX: number; maxX: number; minY: number; maxY: number }
 type AgiPulseArc = { active: boolean; innerR: number; outerR: number; startRad: number; endRad: number };
 
 function _agiTrailStyle() {
-    const baseHalf = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_HALF_PX : 1;
-    const sideHalf = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : (baseHalf + 1);
-    const pad = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + 2) : 2;
+    const scale = (PROJECTILE_EMERGENCY_SCALE | 0) > 1 ? (PROJECTILE_EMERGENCY_SCALE | 0) : 1;
+    const baseHalfRaw = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_HALF_PX : 1;
+    const baseHalf = Math.max(1, Math.round(baseHalfRaw * scale));
+    const sideHalf = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + (2 * scale)) : (baseHalf + scale);
+    const pad = AGI_DEBUG_HUGE_TRAIL ? (baseHalf + (2 * scale)) : Math.max(1, Math.round(2 * scale));
     const mainCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_MAIN_COLOR : 5;
     const edgeCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_EDGE_COLOR : 15;
     return { baseHalf, sideHalf, pad, mainCol, edgeCol };
 }
 
 function _agiTraceHalfPx(): number {
-    const half = Math.idiv((AGI_TIP_TRACE_SIZE_PX | 0), 2) | 0;
+    const size = _projectileEmergencyScalePx(AGI_TIP_TRACE_SIZE_PX | 0);
+    const half = Math.idiv((size | 0), 2) | 0;
     return Math.max(1, half | 0);
 }
 
@@ -47494,8 +47606,10 @@ function _agiBackPulseArcParams(hero: Sprite, nx: number, ny: number, active: bo
     const vis = getHeroVisualInfoForStrength(hero, nx, ny);
     let innerR = (vis[0] || 0) | 0;
     if (innerR <= 0) innerR = (findHeroLeadingEdgeDistance(hero, nx, ny) | 0);
-    innerR = Math.max(1, (innerR | 0) - (AGI_BACK_PULSE_INNER_PAD_PX | 0));
-    const outerR = Math.max(innerR + 1, (innerR | 0) + (AGI_BACK_PULSE_OUTER_PAD_PX | 0));
+    const innerPad = _projectileEmergencyScalePx(AGI_BACK_PULSE_INNER_PAD_PX | 0);
+    const outerPad = _projectileEmergencyScalePx(AGI_BACK_PULSE_OUTER_PAD_PX | 0);
+    innerR = Math.max(1, (innerR | 0) - (innerPad | 0));
+    const outerR = Math.max(innerR + 1, (innerR | 0) + (outerPad | 0));
 
     const ang = Math.atan2(ny, nx);
     const half = ((AGI_BACK_PULSE_ARC_DEG | 0) * (Math.PI / 180)) * 0.5;
@@ -48074,6 +48188,7 @@ function updateAgilityProjectilesMotionFor(
             tipForward + fadeLen,
             AGI_BEAM_FADE_STEPS | 0
         )
+        sprites.setDataNumber(proj, AGI_TIP_SIDE_PX_KEY, tipSide);
     }
 
     if (img && tipLocalX != null && tipLocalY != null) {
@@ -48170,7 +48285,8 @@ function updateAgilityProjectilesMotionFor(
 
     if (img) {
         _updateProjectileMaskSpriteForProj(proj, img)
-        _clearAgilityProjectileFill(img)
+        const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
+        _clearAgilityProjectileFill(img, element | 0)
         _wpnTraceLogPixels(proj, nowMs | 0, "agi.tracePixels", img, AGI_TIP_TRACE_COLOR | 0, AGI_TIP_TRACE_EDGE_COLOR | 0)
     }
 

@@ -2308,6 +2308,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
             const propsArr = Array.isArray(decor.props) ? decor.props : [];
             const nextPropByAnchor: Record<string, string> = Object.create(null);
+            const nextPropOffsetsByAnchor: Record<string, { offX: number; offY: number }> = Object.create(null);
             for (const p of propsArr) {
                 if (!p) continue;
                 const r = (p.r | 0);
@@ -2317,9 +2318,13 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 if (!propName) continue;
                 const key = String(r) + "," + String(c);
                 nextPropByAnchor[key] = propName;
+                const offX = (p.offX ?? 0) | 0;
+                const offY = (p.offY ?? 0) | 0;
+                nextPropOffsetsByAnchor[key] = { offX, offY };
             }
 
             if (renderer) {
+                (renderer as any).__propOffsetsByAnchor = nextPropOffsetsByAnchor;
                 const canIncremental =
                     !shouldApplyBase &&
                     this._tilemapAppliedPropByAnchor &&
@@ -2330,10 +2335,14 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
                 if (canIncremental) {
                     const prev = this._tilemapAppliedPropByAnchor as Record<string, string>;
+                    const prevOffsets = (this._tilemapAppliedPropOffsetsByAnchor as Record<string, { offX: number; offY: number }>) || Object.create(null);
                     for (const k of Object.keys(nextPropByAnchor)) {
                         const nextKey = nextPropByAnchor[k];
                         const prevKey = prev[k];
-                        if (prevKey === nextKey) continue;
+                        const nextOff = nextPropOffsetsByAnchor[k] || { offX: 0, offY: 0 };
+                        const prevOff = prevOffsets[k] || { offX: 0, offY: 0 };
+                        const offChanged = (prevOff.offX | 0) !== (nextOff.offX | 0) || (prevOff.offY | 0) !== (nextOff.offY | 0);
+                        if (prevKey === nextKey && !offChanged) continue;
                         const parts = k.split(",");
                         const r = (parseInt(parts[0] || "0", 10) | 0);
                         const c = (parseInt(parts[1] || "0", 10) | 0);
@@ -2360,6 +2369,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 }
 
                 this._tilemapAppliedPropByAnchor = nextPropByAnchor;
+                this._tilemapAppliedPropOffsetsByAnchor = nextPropOffsetsByAnchor;
             }
 
             const debugProps = DEBUG_PROP_SYNC || !!((globalThis as any).__DEBUG_PROP_SYNC);
@@ -2734,6 +2744,8 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
                     readDataNum(s, "decorId", readDataNum(s, "id", -1));
                 const r = readDataNum(s, "decorTileR", readDataNum(s, "tileR", -1));
                 const c = readDataNum(s, "decorTileC", readDataNum(s, "tileC", -1));
+                const offX = readDataNum(s, "decorOffX", 0);
+                const offY = readDataNum(s, "decorOffY", 0);
                 let name =
                     readDataStr(s, "decorName") ||
                     readDataStr(s, "name");
@@ -2750,7 +2762,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
                 const role =
                     readDataNum(s, "decorRole", readDataNum(s, "role", 0));
                 if (r >= 0 && c >= 0 && name) {
-                    props.push({ r, c, name, role, id });
+                    props.push({ r, c, name, role, id, offX, offY });
                 }
             }
         };
@@ -3546,7 +3558,7 @@ if (import.meta.hot) {
 // Verbose network tilemap/decor logging; set to true when debugging sync issues.
 // Debug flags live in src/debugFlags.ts
 
-type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number };
+type DecorPropEntry = { r: number; c: number; name?: string; role?: number; id?: number; offX?: number; offY?: number };
 type DecorPayload = { rev: number; decals?: number[][]; props?: DecorPropEntry[] };
 
 function _mapDecalIdToKey(id: number): string {

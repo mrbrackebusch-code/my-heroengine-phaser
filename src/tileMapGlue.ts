@@ -4462,9 +4462,15 @@ private _propPlaceOneAnchor(
     hTiles = ((span + 1) | 0);
   }
 
+  const anchorKey = String(anchorR | 0) + "," + String(anchorC | 0);
+  const instOffsets = (st.anyThis as any)?.__propOffsetsByAnchor || null;
+  const instOff = instOffsets ? instOffsets[anchorKey] : null;
+  const instOffX = (instOff?.offX ?? instOff?.x ?? 0) | 0;
+  const instOffY = (instOff?.offY ?? instOff?.y ?? 0) | 0;
+
   // Optional per-prop offsets (safe even if undefined)
-  const ox = ((vis.offsetXPx ?? 0) | 0);
-  const oy = ((vis.offsetYPx ?? 0) | 0);
+  const ox = (((vis.offsetXPx ?? 0) | 0) + instOffX);
+  const oy = (((vis.offsetYPx ?? 0) | 0) + instOffY);
   const depthBiasTiles = (vis.depthBiasTiles ?? 0);
   const depthBias = ((vis.depthBias ?? 0) | 0) + ((depthBiasTiles * st.tileSize * WORLD_DEPTH_Y_SCALE) | 0);
 
@@ -4478,7 +4484,6 @@ private _propPlaceOneAnchor(
   const anchorYpx = (((anchorR | 0) * st.tileSize + (st.tileSize >> 1) + oy) | 0);
   const baseDepth = ((anchorYpx * WORLD_DEPTH_Y_SCALE) + depthBias) | 0;
 
-  const anchorKey = String(anchorR | 0) + "," + String(anchorC | 0);
   const objs: any[] = [];
   const overlayObjs: any[] = [];
   let overlayActive = false;
@@ -4593,6 +4598,8 @@ private _propPlaceOneAnchor(
       hTiles,
       baseRefRow: baseRef.row | 0,
       baseRefCol: baseRef.col | 0,
+      offsetX: instOffX | 0,
+      offsetY: instOffY | 0,
 
       objs,
       vis,
@@ -4775,6 +4782,8 @@ private _propPlaceOneAnchor(
     hTiles,
     baseRefRow: baseRef.row | 0,
     baseRefCol: baseRef.col | 0,
+    offsetX: instOffX | 0,
+    offsetY: instOffY | 0,
 
     objs,
     vis,

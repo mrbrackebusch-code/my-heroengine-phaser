@@ -623,6 +623,8 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         const baseName = propBaseNameFromKey(name);
         const spec = baseName ? getPropSpec(baseName) : null;
         const vis: any = baseName ? (PROP_VISUALS_BY_NAME as any)[baseName] : null;
+        const instOffX = (sprites.readDataNumber(s, "decorOffX") | 0);
+        const instOffY = (sprites.readDataNumber(s, "decorOffY") | 0);
 
         const collision = spec?.collision;
         const collisionMode = (collision?.mode || "").trim();
@@ -670,8 +672,8 @@ function decor_applyTightOpaqueAabbToSolids(args: {
 
             const bbBase = _decor_computeOpaqueBaseBounds(scene, srcKey, info.frameIndex, baseHeightPx | 0);
             if (bbBase) {
-                const offX = (vis?.offsetXPx ?? 0) | 0;
-                const offY = (vis?.offsetYPx ?? 0) | 0;
+                const offX = (((vis?.offsetXPx ?? 0) | 0) + instOffX);
+                const offY = (((vis?.offsetYPx ?? 0) | 0) + instOffY);
 
                 const centerX = (((c * tileSize) + (tileSize >> 1) + offX) | 0);
                 const centerY = (((r * tileSize) + (tileSize >> 1) + offY) | 0);
@@ -719,8 +721,8 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         else s.image = img;
 
         // Reposition inside the tile
-        s.left = ((c * tileSize + (bb.ox | 0)) | 0);
-        s.top  = ((r * tileSize + (bb.oy | 0)) | 0);
+        s.left = ((c * tileSize + (bb.ox | 0) + instOffX) | 0);
+        s.top  = ((r * tileSize + (bb.oy | 0) + instOffY) | 0);
 
         if (DECOR_DEBUG) {
             _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, info, bb });
