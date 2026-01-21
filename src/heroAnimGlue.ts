@@ -35,6 +35,12 @@ import {
     DEBUG_EFFECT_MASKS,
     FORCE_PROP_SCALE_OUTLINE,
 } from "./debugFlags";
+import {
+    STR_SWING_FORWARD_FRAME_MS,
+    STR_SWING_RESET_INTRO_MS,
+    STR_SWING_RESET_OUTRO_MS,
+    STR_SWING_WINDUP_FRAME_MS,
+} from "./strengthAnimTiming";
 import { DEFAULT_AURA_RADIUS, auraKey, pickAuraRadius } from "./auraConfig";
 
 
@@ -74,9 +80,10 @@ const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
 // Strength swing reset tuning (manual frame timeline)
 const STR_RESET_ENABLE = true;
 const STR_CUSTOM_TIMELINE_ENABLE = true;
-const STR_RESET_INTRO_MS = 80;   // 1 -> 2
-const STR_RESET_OUTRO_MS = 120;  // 1 -> 0
-const STR_RESET_MIN_MS = 180;    // ensure reset is visible when swing duration allows it
+const STR_CUSTOM_PART_KEY = "__strCustomPart";
+const STR_CUSTOM_PART_START_MS_KEY = "__strCustomPartStartMs";
+const STR_CUSTOM_PART_SEQ_KEY = "__strCustomPartSeq";
+const STR_RESET_MIN_MS = Math.max(1, (STR_SWING_RESET_INTRO_MS + STR_SWING_RESET_OUTRO_MS) | 0);
 const STR_RESET_WOBBLE_SCALE = 0.02;
 const STR_RESET_WOBBLE_MS = 200;
 
@@ -928,7 +935,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     phasePartDurationMs: number;
 
     // Strength swing segmentation addon channel
-    strSegName: ("windup" | "forward" | "landing") | undefined;
+    strSegName: string | undefined;
     strSegStartMs: number;
     strSegDurationMs: number;
     strSegProgressInt: number; // 0..1000, -1 if missing
@@ -1107,9 +1114,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     const strSegName = (() => {
         if (strSegNameRaw == null) return undefined;
         const s0 = String(strSegNameRaw).trim().toLowerCase();
-        if (!s0.length) return undefined;
-        if (s0 === "windup" || s0 === "forward" || s0 === "landing") return s0;
-        return undefined;
+        return s0.length ? s0 : undefined;
     })();
 
     const strSegStartMs = (() => {
@@ -1392,6 +1397,35 @@ function _strengthProgressToElapsed(progressInt: number, durMs: number): number 
     return Math.round((d * p) / 1000) | 0;
 }
 
+function _pickStrengthFrameBySchedule(
+    elapsedMs: number,
+    frames: number[],
+    frameMs?: number[]
+): number {
+    if (!frames || frames.length === 0) return 0;
+    const mult = (typeof (globalThis as any).STR_DEBUG_FRAME_MS_MULT === "number")
+        ? ((globalThis as any).STR_DEBUG_FRAME_MS_MULT | 0)
+        : 1;
+    const scaleMs = (v: number): number => {
+        const base = Math.max(1, v | 0);
+        if (mult > 1) return Math.max(1, (base * mult) | 0);
+        return base;
+    };
+    const ms = (frameMs && frameMs.length === frames.length) ? frameMs : null;
+    const elapsed = Math.max(0, elapsedMs | 0);
+    if (!ms) {
+        const slice = Math.max(1, Math.idiv(Math.max(1, frames.length), Math.max(1, frames.length)));
+        const idx = Math.min(frames.length - 1, Math.idiv(elapsed, slice));
+        return frames[idx] | 0;
+    }
+    let acc = 0;
+    for (let i = 0; i < frames.length; i++) {
+        acc += scaleMs(ms[i] | 0);
+        if (elapsed < acc) return frames[i] | 0;
+    }
+    return frames[frames.length - 1] | 0;
+}
+
 function _strengthPickFrameFromProgress(
     frameCols: number[],
     progressInt: number,
@@ -1484,10 +1518,32 @@ function _tryStrengthCustomTimeline(
     const part = partRaw.trim().toLowerCase();
     const partDur = (req as any).phasePartDurationMs | 0;
     const partProg = (req as any).phasePartProgress | 0;
+    const phaseDur = (req.phaseDurationMs | 0);
+    const fallbackProg = clampInt(req.phaseProgressInt | 0, 0, 1000);
+    const safePartDur = (partDur > 0) ? (partDur | 0) : Math.max(1, phaseDur | 0);
+    const safePartProg = (partDur > 0) ? (partProg | 0) : (fallbackProg | 0);
+    const anySprite: any = sprite as any;
+    const nowLocal = (scene as any)?.time?.now ?? Date.now();
+    const seq = req.actionSequence | 0;
+    const partTag = `${actionKind}:${part || "none"}`;
+    const prevTag = anySprite.getData ? String(anySprite.getData(STR_CUSTOM_PART_KEY) || "") : "";
+    const prevSeq = anySprite.getData ? (anySprite.getData(STR_CUSTOM_PART_SEQ_KEY) | 0) : -1;
+    if (prevTag !== partTag || prevSeq !== (seq | 0)) {
+        try {
+            anySprite.setData?.(STR_CUSTOM_PART_KEY, partTag);
+            anySprite.setData?.(STR_CUSTOM_PART_SEQ_KEY, seq | 0);
+            anySprite.setData?.(STR_CUSTOM_PART_START_MS_KEY, nowLocal | 0);
+        } catch {}
+    }
+    const partStartMs = (() => {
+        const n = Number(anySprite.getData?.(STR_CUSTOM_PART_START_MS_KEY));
+        return Number.isFinite(n) ? (n | 0) : (nowLocal | 0);
+    })();
+    const elapsedLocal = clampInt((nowLocal | 0) - (partStartMs | 0), 0, safePartDur | 0);
 
-    if (actionKind === "strength_charge") {
+        if (actionKind === "strength_charge") {
         if (part === "preparetocharge") {
-            const col = _strengthPickFrameFromProgress([0, 1, 2], partProg | 0, partDur | 0);
+            const col = _pickStrengthFrameBySchedule(elapsedLocal | 0, [0, 1, 2], STR_SWING_WINDUP_FRAME_MS);
             _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "charge.prepare");
         } else {
             _applyStrengthFrameCol(scene, sprite, req, def, 2, shouldProve, "charge.hold");
@@ -1496,17 +1552,18 @@ function _tryStrengthCustomTimeline(
     }
 
     // strength_swing
-    if (part === "reset") {
-        const resetMs = Math.max(1, partDur | 0);
-        let introMs = Math.max(1, STR_RESET_INTRO_MS | 0);
-        let outroMs = Math.max(1, STR_RESET_OUTRO_MS | 0);
+    const isReset = (part === "strengthreset" || part === "reset");
+    if (isReset) {
+        const resetMs = Math.max(1, safePartDur | 0);
+        let introMs = Math.max(1, STR_SWING_RESET_INTRO_MS | 0);
+        let outroMs = Math.max(1, STR_SWING_RESET_OUTRO_MS | 0);
         if ((introMs + outroMs) > resetMs && resetMs > 0) {
             const scale = resetMs / (introMs + outroMs);
             introMs = Math.max(1, Math.round(introMs * scale));
             outroMs = Math.max(1, resetMs - introMs);
         }
         const holdMs = Math.max(0, (resetMs - introMs - outroMs) | 0);
-        const elapsed = _strengthProgressToElapsed(partProg | 0, resetMs | 0);
+        const elapsed = clampInt(elapsedLocal | 0, 0, resetMs | 0);
         let col = 0;
         let inHold = false;
         if (elapsed < introMs) {
@@ -1556,7 +1613,7 @@ function _tryStrengthCustomTimeline(
         return true;
     }
 
-    const col = _strengthPickFrameFromProgress([3, 4, 5], partProg | 0, partDur | 0);
+    const col = _pickStrengthFrameBySchedule(elapsedLocal | 0, [3, 4, 5], STR_SWING_FORWARD_FRAME_MS);
     _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "swing.slash");
     return true;
 }
@@ -1586,8 +1643,8 @@ function _tryStrengthSwingResetTimeline(
     }
     const resetMs = Math.max(0, (totalMs - slashMs) | 0);
 
-    let introMs = Math.max(1, STR_RESET_INTRO_MS | 0);
-    let outroMs = Math.max(1, STR_RESET_OUTRO_MS | 0);
+    let introMs = Math.max(1, STR_SWING_RESET_INTRO_MS | 0);
+    let outroMs = Math.max(1, STR_SWING_RESET_OUTRO_MS | 0);
     if ((introMs + outroMs) > resetMs && resetMs > 0) {
         const scale = resetMs / (introMs + outroMs);
         introMs = Math.max(1, Math.round(introMs * scale));
@@ -1947,7 +2004,7 @@ function applyHeroAnimationForSpriteInternal(
 
     if (req.phase === "cast" && castPartName) {
         requestedPhaseForLookup = `${req.phase}_${castPartName}`;
-    } else if (req.actionKind === "strength_swing" && req.phase === "slash" && strengthSegName) {
+    } else if (!STR_CUSTOM_TIMELINE_ENABLE && req.actionKind === "strength_swing" && req.phase === "slash" && strengthSegName) {
         // This only affects atlas lookup; engine PhasePartName stays "swing".
         requestedPhaseForLookup = `${req.phase}_${strengthSegName}`;
     }

@@ -96,6 +96,13 @@ import {
     DEBUG_WPN_AURA_TRACE_VERBOSE,
 } from "./debugFlags";
 import {
+    STR_SWING_FORWARD_FRAME_MS,
+    STR_SWING_RESET_INTRO_MS,
+    STR_SWING_RESET_OUTRO_MS,
+    STR_SWING_RETURN_FRAME_MS,
+    STR_SWING_WINDUP_FRAME_MS,
+} from "./strengthAnimTiming";
+import {
     getPropSpec,
     propBaseNameFromKey,
     propSpecAllowsFloor,
@@ -39888,10 +39895,8 @@ const STR_SWING_RETURN_FCO_KEY = "strSwingRetFco";
 const STR_SWING_WINDUP_FRAME_COLS = [0, 1, 2];
 const STR_SWING_FORWARD_FRAME_COLS = [3, 4, 5];
 const STR_SWING_RETURN_FRAME_COLS = [0];
-const STR_SWING_WINDUP_FRAME_MS = [60, 60, 60];
-const STR_SWING_FORWARD_FRAME_MS = [50, 30, 15];
-const STR_SWING_RETURN_FRAME_MS = [80];
 const STR_SWING_WINDUP_FCO_MAX_MS = 180;
+// STR_SWING_*_FRAME_MS and STR_SWING_RESET_* are imported from strengthAnimTiming.ts
 
 
 
@@ -39961,6 +39966,22 @@ function _strengthPrepFrameCol(elapsedMs: number, prepMs: number): number {
     const slice = Math.max(1, Math.idiv(Math.max(1, prepMs | 0), Math.max(1, frames.length)));
     const idx = Math.min(frames.length - 1, Math.idiv(elapsed | 0, slice));
     return frames[idx] | 0;
+}
+
+function _strengthSwingSlashMinMs(): number {
+    const frameMs = STR_SWING_FORWARD_FRAME_MS;
+    if (frameMs && frameMs.length) {
+        let sum = 0;
+        for (let i = 0; i < frameMs.length; i++) {
+            sum += Math.max(1, frameMs[i] | 0);
+        }
+        return Math.max(1, sum | 0);
+    }
+    return Math.max(1, STR_SWING_SEG_FORWARD_MIN_MS | 0);
+}
+
+function _strengthSwingResetMinMs(): number {
+    return Math.max(1, (STR_SWING_RESET_INTRO_MS + STR_SWING_RESET_OUTRO_MS) | 0);
 }
 
 
@@ -40247,6 +40268,20 @@ function _pickFrameBySchedule(
 }
 
 function _strengthFrameColForSeg(segName: string, elapsedMs: number, segDurMs: number): number {
+    if (segName === "strengthSlash") {
+        return _pickFrameBySchedule(
+            elapsedMs | 0,
+            STR_SWING_FORWARD_FRAME_COLS,
+            STR_SWING_FORWARD_FRAME_MS
+        );
+    }
+    if (segName === "strengthReset") {
+        return _pickFrameBySchedule(
+            elapsedMs | 0,
+            STR_SWING_RETURN_FRAME_COLS,
+            STR_SWING_RETURN_FRAME_MS
+        );
+    }
     if (segName === "prepareToCharge") {
         return _pickFrameBySchedule(
             elapsedMs | 0,
@@ -40271,7 +40306,7 @@ function _strengthFrameColForSeg(segName: string, elapsedMs: number, segDurMs: n
 
 function _strengthFrameRuleFor(segName: string, frameCol: number): StrengthFrameRule {
     const base = STR_SWING_FRAME_RULES[clampInt(frameCol | 0, 0, STR_SWING_FRAME_RULES.length - 1)];
-    if (segName === "release") {
+    if (segName === "strengthReset" || segName === "release") {
         return {
             tipRadii: [],
             lineMaxIdx: base.lineMaxIdx,
@@ -40377,51 +40412,23 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
 
 
-    // Compute segment durations from fractions
-    const segs = _strengthSwingSegmentDurations(phaseDur | 0);
-    let windMs = segs.windMs | 0;
-    let fwdMs = segs.fwdMs | 0;
-    let landMs = segs.landMs | 0;
-    const skipWindup = (sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0) !== 0;
-    if (skipWindup && windMs > 0) {
-        fwdMs = (fwdMs + windMs) | 0;
-        windMs = 0;
-    }
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0
+    const slashBase = _strengthSwingSlashMinMs() | 0
+    const slashMs = Math.min(
+        phaseDur | 0,
+        (mult > 1) ? Math.max(1, (slashBase | 0) * mult) : (slashBase | 0)
+    )
+    const slashEnd = (phaseStart + slashMs) | 0
+    const resetMs = Math.max(1, ((phaseDur | 0) - (slashMs | 0)) | 0)
 
+    let segName = "strengthSlash"
+    let segStart = phaseStart | 0
+    let segDur = slashMs | 0
 
-
-    // Recompute endpoints
-
-    const windEnd = (phaseStart + windMs) | 0
-
-    const fwdEnd  = (windEnd + fwdMs) | 0
-
-
-
-    let segName = "release"
-
-    let segStart = fwdEnd
-
-    let segDur = landMs
-
-
-
-    if (nowMs < windEnd) {
-
-        segName = "prepareToCharge"
-
-        segStart = phaseStart
-
-        segDur = windMs
-
-    } else if (nowMs < fwdEnd) {
-
-        segName = "charging"
-
-        segStart = windEnd
-
-        segDur = fwdMs
-
+    if (nowMs >= (slashEnd | 0)) {
+        segName = "strengthReset"
+        segStart = slashEnd | 0
+        segDur = resetMs | 0
     }
 
 
@@ -40461,16 +40468,9 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
     }
 
-    const slashMs = Math.min(phaseDur | 0, STR_SLASH_CLIP_MS | 0)
-    const resetStart = (phaseStart + (slashMs | 0)) | 0
     let partName = segName
     let partStart = segStart | 0
     let partDur = segDur | 0
-    if (segName === "release" && (nowMs | 0) >= (resetStart | 0)) {
-        partName = "reset"
-        partStart = resetStart | 0
-        partDur = Math.max(1, ((phaseStart + phaseDur) | 0) - (resetStart | 0)) | 0
-    }
 
     // Only rewrite when segment actually changes (less churn)
     const prevSegName = sprites.readDataString(hero, STR_SEG_NAME_KEY) || ""
@@ -40531,6 +40531,7 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
 
     sprites.setDataNumber(hero, STR_SEG_PROGRESS_INT_KEY, prog)
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
 
 }
 
@@ -41476,6 +41477,12 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
             swingMax0
 
         ) | 0
+
+    const slashMinBase = _strengthSwingSlashMinMs() | 0
+    const resetMinBase = _strengthSwingResetMinMs() | 0
+    const swingMinAnim = Math.max(1, (slashMinBase + resetMinBase) | 0)
+    if (swingDurationMs < swingMinAnim) swingDurationMs = swingMinAnim
+
     if (STR_DEBUG_FRAME_MS_MULT > 1) {
         swingDurationMs = Math.max(1, (swingDurationMs | 0) * (STR_DEBUG_FRAME_MS_MULT | 0)) | 0
     }
@@ -41594,17 +41601,19 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
 
 
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0
+    const slashMinMs = (mult > 1) ? Math.max(1, (slashMinBase | 0) * mult) : (slashMinBase | 0)
     _animKeys_setPhasePart(
 
         heroIndex,
 
         hero,
 
-        "swing",
+        "strengthSlash",
 
         now | 0,
 
-        swingDurationMs | 0,
+        Math.min(swingDurationMs | 0, slashMinMs | 0) | 0,
 
         now | 0,
 
@@ -42333,19 +42342,17 @@ function spawnStrengthSwingProjectile(
         // Persist parameters for per-frame updater
         sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
         sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
-        const segs = _strengthSwingSegmentDurations(swingDuration | 0);
-        sprites.setDataNumber(proj, STR_WIND_MS_KEY, segs.windMs | 0);
-        sprites.setDataNumber(proj, STR_FWD_MS_KEY, segs.fwdMs | 0);
-        sprites.setDataNumber(proj, STR_LAND_MS_KEY, segs.landMs | 0);
         const mult = STR_DEBUG_FRAME_MS_MULT | 0;
-        const scaleMs = (v: number): number => {
-            const base = v | 0;
-            if (mult <= 1 || base <= 0) return base;
-            return Math.max(1, (base * mult) | 0);
-        };
-        const fwdSum = (STR_SWING_FORWARD_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
-        const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length) ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0) : 0;
-        const arcStartMs = (segs.windMs | 0) + Math.round(((segs.fwdMs | 0) * (fwdFirst | 0)) / Math.max(1, fwdSum | 0));
+        const slashBase = _strengthSwingSlashMinMs() | 0;
+        const slashMs = Math.min(
+            swingDuration | 0,
+            (mult > 1) ? Math.max(1, (slashBase | 0) * mult) : (slashBase | 0)
+        );
+        const resetMs = Math.max(1, ((swingDuration | 0) - (slashMs | 0)) | 0);
+        sprites.setDataNumber(proj, STR_WIND_MS_KEY, 0);
+        sprites.setDataNumber(proj, STR_FWD_MS_KEY, slashMs | 0);
+        sprites.setDataNumber(proj, STR_LAND_MS_KEY, resetMs | 0);
+        const arcStartMs = slashMs | 0;
         const arcStartFracX1000 = Math.idiv(Math.max(0, arcStartMs | 0) * 1000, Math.max(1, swingDuration | 0)) | 0;
         sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
         sprites.setDataNumber(proj, STR_ARC_BASE_WIDTH_KEY, arcBaseW | 0);
@@ -42372,9 +42379,8 @@ function spawnStrengthSwingProjectile(
                 swingMs: swingDuration | 0,
                 arcStartFracX1000: arcStartFracX1000 | 0,
                 arcStartMs: arcStartMs | 0,
-                windMs: segs.windMs | 0,
-                fwdMs: segs.fwdMs | 0,
-                landMs: segs.landMs | 0,
+                slashMs: slashMs | 0,
+                resetMs: resetMs | 0,
                 innerR: inner0 | 0,
                 leadEdge: leadEdge | 0,
                 frontStartR: frontStartR | 0,
@@ -42567,15 +42573,11 @@ function updateStrengthProjectilesMotionFor(
     const windMs = sprites.readDataNumber(proj, STR_WIND_MS_KEY) | 0;
     const fwdMs = sprites.readDataNumber(proj, STR_FWD_MS_KEY) | 0;
     const landMs = sprites.readDataNumber(proj, STR_LAND_MS_KEY) | 0;
-    let segName = "release";
+    let segName = "strengthReset";
     let segStart = (windMs + fwdMs) | 0;
     let segDur = landMs | 0;
-    if (age < (windMs | 0)) {
-        segName = "prepareToCharge";
-        segStart = 0;
-        segDur = windMs | 0;
-    } else if (age < ((windMs | 0) + (fwdMs | 0))) {
-        segName = "charging";
+    if (age < ((windMs | 0) + (fwdMs | 0))) {
+        segName = "strengthSlash";
         segStart = windMs | 0;
         segDur = fwdMs | 0;
     }
@@ -42584,12 +42586,10 @@ function updateStrengthProjectilesMotionFor(
     const frameCol = _strengthFrameColForSeg(segName, segElapsed | 0, segDur | 0);
     const rule = _strengthFrameRuleFor(segName, frameCol | 0);
 
-    const arcStartFrac = sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0;
-    const arcStart = Math.max(0, Math.min(1, (arcStartFrac | 0) / 1000));
     const arcReady = rule.allowArc;
-    const arcActive = arcReady && (t >= arcStart);
+    const arcActive = arcReady && (segName === "strengthReset");
     const arcT = arcActive
-        ? Math.min(1, (t - arcStart) / Math.max(0.0001, (1 - arcStart)))
+        ? Math.min(1, (segElapsed | 0) / Math.max(1, segDur | 0))
         : 0;
     const prevArcActive = (sprites.readDataNumber(proj, "SS_LAST_ARC_ACTIVE") | 0) !== 0;
     if (_wpnTraceEnabled() && prevArcActive !== arcActive) {
