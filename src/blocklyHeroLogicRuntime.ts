@@ -6,7 +6,6 @@ import { DEBUG_BLOCKLY_CODE_DUMP, DEBUG_BLOCKLY_INVALID_MOVES } from "./debugFla
 
 const STORAGE_PREFIX = "he_blockly_ws_v1:";
 const STEP_LIMIT = 20000;
-const FALLBACK_PROFILE = "Default";
 // Debug flags live in src/debugFlags.ts
 
 const HE_OUTPUT_VARS = ["family", "damage", "reach", "time", "status", "element", "id"] as const;
@@ -668,12 +667,15 @@ const _cache = new Map<string, CacheEntry>();
   };
 })();
 
-function _storageKey(profile: string): string {
-  return STORAGE_PREFIX + encodeURIComponent(profile || FALLBACK_PROFILE);
+function _storageKey(profile: string): string | null {
+  const p = (typeof profile === "string" && profile.trim()) ? profile.trim() : "";
+  if (!p) return null;
+  return STORAGE_PREFIX + encodeURIComponent(p);
 }
 
 function _getSavedXml(profile: string): string | null {
   try {
+    if (!(typeof profile === "string" && profile.trim())) return null;
     const g: any = globalThis as any;
     const map = g && g.__heBlocklyXmlByProfile;
     if (map && typeof map === "object") {
@@ -682,6 +684,7 @@ function _getSavedXml(profile: string): string | null {
     }
 
     const key = _storageKey(profile);
+    if (!key) return null;
     const xml = localStorage.getItem(key);
     return xml && xml.trim() ? xml : null;
   } catch {
@@ -1263,8 +1266,29 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
 
 // Debug helper: why am I missing?
 export function dbgBlocklyHeroLogic(profile: string) {
-  const p = profile && profile.trim() ? profile.trim() : "Default";
-  const key = _storageKey(p);
+  const p = profile && profile.trim() ? profile.trim() : "";
+  if (!p) {
+    return {
+      profile: "",
+      key: "",
+      hasXml: false,
+      xmlLen: 0,
+      cached: false,
+      lastErr: "no-profile",
+      lastRaw: undefined,
+      lastRawType: "undefined",
+      lastRawJson: "undefined",
+      lastDefaultsUsed: null,
+      lastDefaultsUsedByButton: {},
+      lastRawByButton: {},
+      lastErrByButton: {},
+      lastXml: null,
+      lastCode: null,
+      codePreview: null,
+      xmlPreview: null,
+    };
+  }
+  const key = _storageKey(p) || "";
   const xml = _getSavedXml(p);
   const entry = _cache.get(p) || null;
 

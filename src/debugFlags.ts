@@ -33,6 +33,7 @@ export const DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY = true;
 export const DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES = true;
 export const DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS = 0;
 export const DEBUG_HERO_ANIM_STRENGTH_TRACE = true;
+export const DEBUG_STR_PROJECTILE_METRICS = true;
 
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
@@ -64,7 +65,7 @@ export const DEBUG_FORCE_TEST_WORLD_KIND = false;
 export const DEBUG_FORCE_TEST_WORLD_LOG = false;
 
 // Contract snapshot debug
-export const DEBUG_CONTRACT_SNAPSHOT = false;
+export const DEBUG_CONTRACT_SNAPSHOT = true;
 export let DEBUG_CONTRACT_PLAYER_ID = 0;       // 0 = all players
 export let DEBUG_CONTRACT_HERO_INDEX = -1;     // -1 = all heroes
 export let DEBUG_CONTRACT_THROTTLE_MS = 0;     // extra throttle beyond change-gate

@@ -929,6 +929,7 @@ function decor_maybeSyncFromEngineInternals(): void {
 
     // Props overlay from solid colliders (tile-aligned) AND triggers (for visuals like teleport rune)
     let propPlaced = 0;
+    const propOffsetsByAnchor: Record<string, { offX: number; offY: number }> = Object.create(null);
     if (typeof renderer.syncPropGridByName === "function" && rows > 0 && cols > 0) {
         const propGrid: Array<Array<string | "" | null | undefined>> = new Array(rows);
         for (let r = 0; r < rows; r++) {
@@ -951,6 +952,10 @@ function decor_maybeSyncFromEngineInternals(): void {
                 if (rc.r < 0 || rc.c < 0 || rc.r >= rows || rc.c >= cols) continue;
 
                 propGrid[rc.r][rc.c] = key;
+                propOffsetsByAnchor[`${rc.r},${rc.c}`] = {
+                    offX: (sprites.readDataNumber(s, "decorOffX") | 0),
+                    offY: (sprites.readDataNumber(s, "decorOffY") | 0),
+                };
                 propPlaced++;
             }
         }
@@ -970,11 +975,16 @@ function decor_maybeSyncFromEngineInternals(): void {
 
                 if (!propGrid[rc.r][rc.c]) {
                     propGrid[rc.r][rc.c] = key;
+                    propOffsetsByAnchor[`${rc.r},${rc.c}`] = {
+                        offX: (sprites.readDataNumber(s, "decorOffX") | 0),
+                        offY: (sprites.readDataNumber(s, "decorOffY") | 0),
+                    };
                     propPlaced++;
                 }
             }
         }
 
+        (renderer as any).__propOffsetsByAnchor = propOffsetsByAnchor;
         renderer.syncPropGridByName(propGrid);
     }
 
@@ -3129,10 +3139,10 @@ const SHOP_WPN_DIR_MAP_KEY = "shopWpnDirMap";                   // "idA:R,idB:U"
 const SHOP_WPN_RING_SLOTS_KEY = "shopWpnRingSlots";             // "thrust|slash|cast"
 const SHOP_WPN_RING_SOURCE_PHASES_KEY = "shopWpnRingSourcePhases"; // "thrust|slash|cast"
 
-// By-pid focus payloads (published by shop logic)
-const SHOP_WPN_TOUCHED_RING_BY_PID_KEY = "shopWpnTouchedRingByPid"; // "p1=-1|p2=0|p3=-1|p4=-1"
-const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid";     // "p1=|p2=diamond|..."
-const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"; // "p1=|p2=thrust|..."
+// By-pid focus payloads (published by shop logic; unbounded pids)
+const SHOP_WPN_TOUCHED_RING_BY_PID_KEY = "shopWpnTouchedRingByPid"; // "p5=-1|p12=0|..."
+const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid";     // "p5=|p12=diamond|..."
+const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"; // "p5=|p12=thrust|..."
 
 // ------------------------------------------------------------
 // SHOP WEAPON RING – Phaser-side visuals
@@ -3185,30 +3195,9 @@ function _shopSplitPipeKeepEmpty(s: string): string[] {
     return t.split("|").map(x => (x ?? "").trim());
 }
 
-// "p1=-1|p2=0|p3=-1|p4=-1" -> array indexed by pid: out[1..4]
-function _shopParsePidEqIntPipe(s: string): number[] {
-    const out = [0, -1, -1, -1, -1]; // [0 unused, p1..p4]
-    const t = (s || "").trim();
-    if (!t) return out;
-
-    const parts = t.split("|");
-    for (const part of parts) {
-        const kv = part.split("=");
-        if (kv.length !== 2) continue;
-        const k = (kv[0] || "").trim().toLowerCase(); // "p2"
-        const v = (kv[1] || "").trim();
-        if (k.length < 2 || k[0] !== "p") continue;
-        const pid = (parseInt(k.slice(1), 10) | 0);
-        if (pid < 1 || pid > 4) continue;
-        const n = parseInt(v, 10);
-        out[pid] = isFinite(n) ? (n | 0) : -1;
-    }
-    return out;
-}
-
-// "p1=dagger|p2=|p3=foo|p4=" -> out[1..4]
-function _shopParsePidEqStrPipe(s: string): string[] {
-    const out = ["", "", "", "", ""]; // [0 unused, p1..p4]
+// "p5=-1|p12=0" -> record keyed by pid
+function _shopParsePidEqIntPipe(s: string): Record<number, number> {
+    const out: Record<number, number> = Object.create(null);
     const t = (s || "").trim();
     if (!t) return out;
 
@@ -3220,7 +3209,28 @@ function _shopParsePidEqStrPipe(s: string): string[] {
         const v = (kv[1] || "").trim();
         if (k.length < 2 || k[0] !== "p") continue;
         const pid = (parseInt(k.slice(1), 10) | 0);
-        if (pid < 1 || pid > 4) continue;
+        if (pid <= 0) continue;
+        const n = parseInt(v, 10);
+        out[pid] = isFinite(n) ? (n | 0) : -1;
+    }
+    return out;
+}
+
+// "p5=dagger|p12=" -> record keyed by pid
+function _shopParsePidEqStrPipe(s: string): Record<number, string> {
+    const out: Record<number, string> = Object.create(null);
+    const t = (s || "").trim();
+    if (!t) return out;
+
+    const parts = t.split("|");
+    for (const part of parts) {
+        const kv = part.split("=");
+        if (kv.length !== 2) continue;
+        const k = (kv[0] || "").trim().toLowerCase();
+        const v = (kv[1] || "").trim();
+        if (k.length < 2 || k[0] !== "p") continue;
+        const pid = (parseInt(k.slice(1), 10) | 0);
+        if (pid <= 0) continue;
         out[pid] = v;
     }
     return out;
@@ -3627,7 +3637,13 @@ function _shopRing_buildFocusedIndex(n: number, touchedRingByPid: any): boolean[
     const focusedIndex: boolean[] = new Array(n | 0)
     for (let i = 0; i < (n | 0); i++) focusedIndex[i] = false
 
-    for (let pid = 1; pid <= 4; pid++) {
+    if (!touchedRingByPid) return focusedIndex
+
+    const pids = Object.keys(touchedRingByPid)
+        .map((k) => Number(k) | 0)
+        .filter((pid) => pid > 0)
+        .sort((a, b) => a - b)
+    for (const pid of pids) {
         const ri = (touchedRingByPid[pid] | 0)
         if (ri >= 0 && ri < (n | 0)) focusedIndex[ri] = true
     }
@@ -3877,7 +3893,11 @@ function _shopRing_setDebugMetadata(args: {
 }): void {
     if (args.isFocused) {
         let fp = 0
-        for (let pid = 1; pid <= 4; pid++) {
+        const pids = Object.keys(args.touchedRingByPid || {})
+            .map((k) => Number(k) | 0)
+            .filter((pid) => pid > 0)
+            .sort((a, b) => a - b)
+        for (const pid of pids) {
             if ((args.touchedRingByPid[pid] | 0) === (args.idx | 0)) { fp = pid; break }
         }
         try { args.bg.setData?.("__shopFocusedByPid", fp) } catch { }
@@ -3897,7 +3917,11 @@ function _shopRing_buildFocusMask(n: number, touchedRingByPid: any): boolean[] {
 
     if (!touchedRingByPid) return focusedIndex
 
-    for (let pid = 1; pid <= 4; pid++) {
+    const pids = Object.keys(touchedRingByPid)
+        .map((k) => Number(k) | 0)
+        .filter((pid) => pid > 0)
+        .sort((a, b) => a - b)
+    for (const pid of pids) {
         const ri = (touchedRingByPid[pid] | 0)
         if (ri >= 0 && ri < nn) focusedIndex[ri] = true
     }
@@ -4005,7 +4029,11 @@ function _syncShopWeaponRingIfPresent(
         // Debug metadata (unchanged behavior)
         if (isFocused) {
             let fp = 0;
-            for (let pid = 1; pid <= 4; pid++) {
+            const pids = Object.keys(cfg.touchedRingByPid || {})
+                .map((k) => Number(k) | 0)
+                .filter((pid) => pid > 0)
+                .sort((a, b) => a - b);
+            for (const pid of pids) {
                 if ((cfg.touchedRingByPid[pid] | 0) === (i | 0)) { fp = pid; break; }
             }
             try { bg.setData?.("__shopFocusedByPid", fp); } catch { }
@@ -13039,16 +13067,7 @@ namespace controller {
         return ctrl;
     }
 
-    export const player1: BasicController = _ensureControllerForSlot(1)!;
-    export const player2: BasicController = _ensureControllerForSlot(2)!;
-    export const player3: BasicController = _ensureControllerForSlot(3)!;
-    export const player4: BasicController = _ensureControllerForSlot(4)!;
-
-        // =====================================================================================
-        // TODO_NPLAYER_BRIDGE
-        // TEMPORARY FIXED-LANE CONTROLLER BRIDGE (player1..player4 exports).
-        // All non-engine code must route through these helpers so later we delete/replace ONE place.
-        // =====================================================================================
+        // Unbounded controller registry (profile-driven; no fixed player1..4 lanes).
         export function _getControllerForSlot(slot: number): BasicController | null {
             return _ensureControllerForSlot(slot);
         }
@@ -13058,8 +13077,8 @@ namespace controller {
         }
 
 
-        // Which global player (1–4) this client controls.
-        // All keyboard input will apply to THIS controller.
+        // Which playerId this client controls.
+        // All keyboard input applies to THIS controller.
         let _localPlayerSlot = 1; // any positive slot id
 
         export function setLocalPlayerSlot(playerId: number): void {
@@ -13075,7 +13094,7 @@ namespace controller {
 
         export function _getLocalController(): BasicController {
             const ctrl = _getControllerForSlot(_localPlayerSlot);
-            return ctrl || player1;
+            return ctrl || _ensureControllerForSlot(1);
         }
 
 
@@ -13083,8 +13102,6 @@ namespace controller {
     
     // NEW: helper for game._tick – update all controllers once per frame
         export function _updateAllControllers(): void {
-            // TODO_NPLAYER_BRIDGE
-            // Update all exported controller lanes (currently fixed to player1..player4).
             for (const key of Object.keys(_controllersBySlot)) {
                 const slot = key | 0;
                 const ctrl: any = _controllersBySlot[slot];
@@ -14047,7 +14064,7 @@ function startSpriteSyncLoop() {
 (function initPlayerRegistry() {
     const g: any = (globalThis as any);
     if (!g.__playerNames) {
-        g.__playerNames = [null, null, null, null];
+        g.__playerNames = {};
     }
 })();
 
@@ -14061,22 +14078,27 @@ function startSpriteSyncLoop() {
 // SAFETY:
 //   - Must remain idempotent / avoid duplicate registrations
 // ---------------------------------------------------------------------
-export function registerLocalPlayer(slotIndex: number, name: string | null) {
+export function registerLocalPlayer(playerId: number, name: string | null) {
     const g: any = (globalThis as any);
-    if (!g.__playerNames) g.__playerNames = [null, null, null, null];
+    if (!g.__playerNames) g.__playerNames = {};
 
-    g.__playerNames[slotIndex] = name || null;
+    const pid = playerId | 0;
+    if (pid <= 0) {
+        console.warn("[players] refused local player registration: invalid playerId", playerId);
+        return;
+    }
+    g.__playerNames[pid] = name || null;
     if (name && typeof name === "string") {
         g.__localHeroProfileName = name;
     }
 
-    // This client controls this slot (1–4)
+    // This client controls this playerId
     if ((globalThis as any).controller &&
         typeof (globalThis as any).controller.setLocalPlayerSlot === "function") {
-        (globalThis as any).controller.setLocalPlayerSlot(slotIndex + 1);
+        (globalThis as any).controller.setLocalPlayerSlot(pid);
     }
 
-    console.log("[players] registered LOCAL player slot", slotIndex + 1, "name=", name);
+    console.log("[players] registered LOCAL playerId", pid, "name=", name);
 }
 
 

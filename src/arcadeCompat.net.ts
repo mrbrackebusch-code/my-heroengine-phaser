@@ -947,17 +947,13 @@ private handleMessage(msg: NetMessage) {
             ctrlNS.setLocalPlayerSlot(this.playerId);
         }
 
-        const slotIndex = this.playerId - 1;
-
         if (!g.__netProfileByPid) g.__netProfileByPid = {};
         if (!g.__netProfileConnected) g.__netProfileConnected = {};
-        if (!g.__playerNames) g.__playerNames = [null, null, null, null];
+        if (!g.__playerNames) g.__playerNames = {};
 
         // Keep name for debugging/UI
         const name = msg.name || null;
-        if (slotIndex >= 0 && slotIndex < g.__playerNames.length) {
-            g.__playerNames[slotIndex] = name;
-        }
+        g.__playerNames[this.playerId] = name;
 
         // Prefer explicit server profile if present; otherwise keep existing.
         const profile = (typeof msg.profile === "string" && msg.profile.trim()) ? msg.profile.trim() : null;

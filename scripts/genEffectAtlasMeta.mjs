@@ -260,9 +260,19 @@ const header = [
 const body = JSON.stringify(sorted, null, 2);
 const output = `${header}\nexport const EFFECT_ATLAS_META = ${body} as const;\n`;
 fs.mkdirSync(path.dirname(OUT_TS), { recursive: true });
-fs.writeFileSync(OUT_TS, output, "utf8");
+
+let prev = "";
+try {
+  prev = fs.readFileSync(OUT_TS, "utf8");
+} catch {}
+
+if (prev !== output) {
+  fs.writeFileSync(OUT_TS, output, "utf8");
+  console.log(`[gen-effect-meta] wrote ${OUT_TS} (${Object.keys(sorted).length} entries)`);
+} else {
+  console.log(`[gen-effect-meta] up-to-date (${Object.keys(sorted).length} entries)`);
+}
 
 if (warnings.length) {
   for (const line of warnings) console.warn(line);
 }
-console.log(`[gen-effect-meta] wrote ${OUT_TS} (${Object.keys(sorted).length} entries)`);

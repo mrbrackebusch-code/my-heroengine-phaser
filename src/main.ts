@@ -1129,16 +1129,28 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
     g.__pendingDecorPayload = decorFromSave;
   }
 
-  // Prepare hero snapshots by profile (owner maps to slot index)
+  // Prepare hero snapshots by profile
   const heroArr = Array.isArray(save.heroSprites)
     ? save.heroSprites
     : (worldSnapRaw && Array.isArray(worldSnapRaw.sprites) ? worldSnapRaw.sprites : []);
   const map: any = {};
   for (const s of heroArr) {
     if (!s || !s.data) continue;
-    const owner = (typeof s.data.owner === "number") ? (s.data.owner | 0) : 0;
-    if (owner <= 0 || owner > 4) continue;
-    const prof = profs[owner - 1];
+    const d: any = s.data || {};
+    let prof =
+      (typeof d.__profileKey === "string" && d.__profileKey.trim())
+        ? d.__profileKey.trim()
+        : (typeof d.profile === "string" && d.profile.trim())
+          ? d.profile.trim()
+          : (typeof d.name === "string" && d.name.trim())
+            ? d.name.trim()
+            : (typeof d.heroName === "string" && d.heroName.trim())
+              ? d.heroName.trim()
+              : "";
+    if (!prof) {
+      const owner = (typeof d.owner === "number") ? (d.owner | 0) : 0;
+      if (owner > 0 && profs && profs[owner - 1]) prof = String(profs[owner - 1] || "");
+    }
     if (prof) map[prof] = s;
   }
   g.__heroSavedSnapshotByProfile = map;
@@ -1304,29 +1316,116 @@ class HeroScene extends Phaser.Scene {
 
     preload() {
         _uiLoadingShow("Loading assets…");
-        _uiLoadingSet(5, "Loading assets: monsters");
-        this.load.on("progress", (v: number) => {
+        _uiLoadingSet(5, "Queueing assets…");
+
+        const loader = this.load;
+        const fileLabelThrottleMs = 140;
+        let lastFileLabel = "";
+        let lastFileAt = 0;
+        const nowMs = () => (
+            (typeof performance !== "undefined" && typeof performance.now === "function")
+                ? performance.now()
+                : Date.now()
+        );
+        const groupFrom = (url: string, key: string) => {
+            const u = String(url || "").toLowerCase();
+            const k = String(key || "").toLowerCase();
+            if (u.includes("/assets/effects/") || k.startsWith("effects.")) return "effects";
+            if (u.includes("/assets/weapons/") || k.startsWith("weapons.")) return "weapons";
+            if (u.includes("/assets/tiles/") || k.startsWith("tiles.")) return "tiles";
+            if (u.includes("/assets/monsters/") || k.startsWith("monsters.")) return "monsters";
+            if (u.includes("/assets/heroes/") || k.startsWith("heroes.") || k.startsWith("hero.")) return "heroes";
+            if (u.includes("/assets/props/") || k.startsWith("props.")) return "props";
+            return "";
+        };
+        const weaponNameFromKey = (rawKey: string): string => {
+            if (!rawKey || rawKey.indexOf("__") < 0) return "";
+            const parts = rawKey.split("__").filter(Boolean);
+            if (parts.length < 6) return "";
+            if (!/^t(064|128|192)$/i.test(parts[0] || "")) return "";
+            let vIndex = -1;
+            for (let i = parts.length - 1; i >= 0; i--) {
+                if (/^v.+/i.test(parts[i])) {
+                    vIndex = i;
+                    break;
+                }
+            }
+            if (vIndex < 5) return "";
+            const modelTokens = parts.slice(2, vIndex - 2);
+            if (!modelTokens.length) return "";
+            return modelTokens.join("_");
+        };
+        const fileLabel = (file: any) => {
+            const key = String(file?.key || "").trim();
+            const rawUrl = String(file?.url || file?.src || "").trim();
+            const url = rawUrl.split("?")[0] || "";
+            const baseFromUrl = (url.split(/[\\/]/).pop() || "").trim();
+            const rawBase = key || baseFromUrl || "asset";
+            const rawWeapon = weaponNameFromKey(rawBase);
+
+            let name = rawWeapon || rawBase;
+            name = name.replace(/\.[a-z0-9]+$/i, "");
+            name = name.replace(/^effects\./i, "");
+            name = name.replace(/^tiles\./i, "");
+            name = name.replace(/^anims\./i, "");
+            name = name.replace(/^monsters\./i, "");
+            name = name.replace(/^heroes\./i, "");
+            name = name.replace(/^hero\./i, "");
+            name = name.replace(/^props\./i, "");
+            name = name.replace(/^weapons\./i, "");
+            name = name.replace(/_aura_r\d+$/i, "");
+            name = name.replace(/_192$/i, "");
+            name = name.replace(/\s*\d+x\d+$/i, "");
+            name = name.replace(/__+/g, " ");
+            name = name.replace(/_+/g, " ");
+            name = name.trim();
+            if (!name) name = "asset";
+            return name;
+        };
+        const onFileProgress = (file: any, progress: number) => {
+            const label = fileLabel(file);
+            const now = nowMs();
+            if (label === lastFileLabel && (now - lastFileAt) < fileLabelThrottleMs) return;
+            lastFileLabel = label;
+            lastFileAt = now;
+            const pct = (typeof progress === "number" && isFinite(progress))
+                ? `${Math.round(progress * 100)}%`
+                : "";
+            const total = (loader.totalToLoad | 0) || 0;
+            const done = (loader.totalComplete | 0) || 0;
+            const count = total > 0 ? `${done}/${total}` : "";
+            const extra = [pct, count].filter(Boolean).join(" • ");
+            _uiLoadingSet(undefined, `Loading ${label}${extra ? " (" + extra + ")" : ""}`);
+        };
+        const onProgress = (v: number) => {
             _uiLoadingSet(Math.round(v * 40));
-        });
-        this.load.once("complete", () => {
+        };
+        const onComplete = () => {
+            loader.off("fileprogress", onFileProgress as any);
+            loader.off("progress", onProgress as any);
             _uiLoadingSet(50, "Assets loaded");
-        });
+        };
+
+        loader.on("fileprogress", onFileProgress as any);
+        loader.on("progress", onProgress as any);
+        loader.once("complete", onComplete);
+
         logMain(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
 
-        _uiLoadingSet(10, "Loading assets: heroes");
+        _uiLoadingSet(10, "Queueing assets: heroes");
         logMain(">>> [HeroScene.preload] loading hero spritesheets");
         preloadHeroSheets(this);
 
-        _uiLoadingSet(15, "Loading assets: tiles");
+        _uiLoadingSet(15, "Queueing assets: tiles");
         logMain(">>> [HeroScene.preload] loading tile sheets");
         preloadTileSheets(this);
 
-        _uiLoadingSet(20, "Loading assets: weapons");
+        _uiLoadingSet(20, "Queueing assets: weapons");
         logMain(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
 
-        _uiLoadingSet(25, "Loading assets: effects");
+        _uiLoadingSet(25, "Queueing assets: effects");
         logMain(">>> [HeroScene.preload] loading effect sheets");
         preloadEffectSheets(this);
 

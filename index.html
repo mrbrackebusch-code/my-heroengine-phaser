@@ -211,7 +211,22 @@
         font-size: 13px;
         opacity: 0.82;
         min-height: 16px;
-        margin-bottom: 10px;
+        margin-bottom: 4px;
+      }
+      #loading-name {
+        font-size: 13px;
+        opacity: 0.92;
+        min-height: 16px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #loading-extra {
+        font-size: 11px;
+        opacity: 0.6;
+        min-height: 12px;
+        margin-bottom: 6px;
       }
       #loading-meta {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
@@ -1807,6 +1822,8 @@
       <div id="loading-card">
         <div id="loading-title">Loading...</div>
         <div id="loading-msg">Preparing assets</div>
+        <div id="loading-name"></div>
+        <div id="loading-extra"></div>
         <div id="loading-meta"></div>
         <div id="loading-steps"></div>
         <div id="loading-bar">
@@ -2523,6 +2540,8 @@
           hud: document.getElementById("hud"),
           loadingOverlay: document.getElementById("loading-overlay"),
           loadingMsg: document.getElementById("loading-msg"),
+          loadingName: document.getElementById("loading-name"),
+          loadingExtra: document.getElementById("loading-extra"),
           loadingMeta: document.getElementById("loading-meta"),
           loadingSteps: document.getElementById("loading-steps"),
           loadingBar: document.getElementById("loading-bar-fill"),
@@ -2814,6 +2833,8 @@
         (function () {
           const overlay = R.loadingOverlay;
           const msgEl = R.loadingMsg;
+          const nameEl = R.loadingName;
+          const extraEl = R.loadingExtra;
           const metaEl = R.loadingMeta;
           const stepsEl = R.loadingSteps;
           const bar = R.loadingBar;
@@ -2891,12 +2912,27 @@
             timing.timer = 0;
           };
 
+          const parseMsg = (msg) => {
+            const raw = String(msg || "").trim();
+            if (!raw) return { title: "", name: "", extra: "" };
+            const m = /^(loading)\s+(.+?)(?:\s*\(([^)]+)\))?$/i.exec(raw);
+            if (m) {
+              return { title: "Loading", name: (m[2] || "").trim(), extra: (m[3] || "").trim() };
+            }
+            return { title: raw, name: "", extra: "" };
+          };
+
           const set = (pct, msg) => {
             if (hidden) return;
             const hasPct = typeof pct === "number" && isFinite(pct);
             if (hasPct && bar) bar.style.width = clampPct(pct).toFixed(1) + "%";
-            if (msgEl && typeof msg === "string" && msg.trim()) msgEl.textContent = msg;
-            if (typeof msg === "string" && msg.trim()) noteStep(msg);
+            if (typeof msg === "string" && msg.trim()) {
+              const parsed = parseMsg(msg);
+              if (msgEl) msgEl.textContent = parsed.title || msg;
+              if (nameEl) nameEl.textContent = parsed.name || "";
+              if (extraEl) extraEl.textContent = parsed.extra || "";
+              noteStep(msg);
+            }
             updateMeta();
             startTimer();
           };

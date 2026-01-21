@@ -80,6 +80,7 @@ import {
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
     DEBUG_STATUE_STAMP,
+    DEBUG_STR_PROJECTILE_METRICS,
     DEBUG_UI_LOGS,
     DEBUG_UIAPI_LOGS,
     DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE,
@@ -1372,7 +1373,7 @@ const BALANCE = {
 
     MOVEMENT: {
 
-        HERO_BASE_SPEED: 120
+        HERO_BASE_SPEED: 200 //Base movement speed, hero speed, speed knob, move speed
 
     },
 
@@ -2647,7 +2648,7 @@ const STR_SLASH_MASK_START_FRAC = STR_ARC_SWEEP_START_FRAC;
 const STR_TIP_TRACE_SIZE_PX = 16;
 const STR_CHARGE_TRACE_SIZE_PX = 6;
 const STR_CHARGE_TIP_RADII = [3, 2];
-const STR_DEBUG_FRAME_MS_MULT = 1; //This multiplies the strength move slow-mo strength slowmo
+const STR_DEBUG_FRAME_MS_MULT = 1; //This multiplies the strength move slow-mo strength slowmo strength slowdown slow down strength slow multiplier
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
 const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
@@ -4089,6 +4090,16 @@ function _findPidForProfileKey(profileKey: string): number {
             if (pid > 0 && playerIdToProfile[pid] === profileKey) return pid
         }
     } catch { }
+    try {
+        const g: any = globalThis as any
+        const byPid = g && g.__netProfileByPid
+        if (byPid && typeof byPid === "object") {
+            for (const pidStr of Object.keys(byPid)) {
+                const pid = (Number(pidStr) | 0)
+                if (pid > 0 && byPid[pid] === profileKey) return pid
+            }
+        }
+    } catch { }
     return 0
 }
 
@@ -4310,7 +4321,9 @@ function _syncLocalInputState(profileRaw: any): void {
     const ctrlNS: any = controller as any
     const ctrl: any = (ctrlNS && typeof ctrlNS._getLocalController === "function")
         ? ctrlNS._getLocalController()
-        : ((ctrlNS && ctrlNS[`player${pid}`]) || controller.player1)
+        : (ctrlNS && typeof ctrlNS._getControllerForSlot === "function")
+            ? ctrlNS._getControllerForSlot(pid)
+            : null
     if (!ctrl) return
     st.left = ctrl.left.isPressed()
     st.right = ctrl.right.isPressed()
@@ -4575,13 +4588,11 @@ function updateHeroTeleportFx(nowMs: number): void {
 function _getInputStateForOwnerId(ownerId: number): HeroInputState | null {
     const pid = ownerId | 0
     if (pid <= 0) return null
-    let profile = playerIdToProfile[pid] || ""
+    let profile = _resolveProfileKeyForPlayerId(pid)
     if (!profile) {
         try {
             const g: any = globalThis as any
-            if (g && g.__netProfileByPid && typeof g.__netProfileByPid[pid] === "string") {
-                profile = g.__netProfileByPid[pid]
-            } else if (g && g.__net && (g.__net.playerId | 0) === (pid | 0)) {
+            if (g && g.__net && (g.__net.playerId | 0) === (pid | 0)) {
                 profile = _getLocalProfileKey()
             }
         } catch { }
@@ -10375,20 +10386,19 @@ function _trapPromptInputTick(): void {
     if (!state || state.mode !== "prompt") return
 
     const pid = state.pid | 0
-    if (pid <= 0 || pid > 4) return
+    if (pid <= 0) return
 
     const now = game.runtime() | 0
-
-    const btnA = (controller as any)[`player${pid}`]?.A
-    const btnB = (controller as any)[`player${pid}`]?.B
-    if (!btnA || !btnB) return
+    const profileKey = _resolveProfileKeyForPlayerId(pid)
+    if (!profileKey) return
+    const st = _getInputStateForProfile(profileKey)
 
     const prevKeyA = `__trapPrevA_${pid}`
     const prevKeyB = `__trapPrevB_${pid}`
     const wasA = (globalThis as any)[prevKeyA] ? 1 : 0
     const wasB = (globalThis as any)[prevKeyB] ? 1 : 0
-    const isA = btnA.isPressed() ? 1 : 0
-    const isB = btnB.isPressed() ? 1 : 0
+    const isA = st.A ? 1 : 0
+    const isB = st.B ? 1 : 0
     ;(globalThis as any)[prevKeyA] = (isA != 0)
     ;(globalThis as any)[prevKeyB] = (isB != 0)
 
@@ -12098,7 +12108,7 @@ function _dunRowToY(row: number): number {
 
 
 
-function _dunIsPidActiveUpTo4(pid: number): boolean {
+function _dunIsPidActive(pid: number): boolean {
 
     const p = pid | 0
 
@@ -12141,7 +12151,7 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 
 
 
-function _dunGetActivePidsUpTo4(): number[] {
+function _dunGetActivePids(): number[] {
 
     const out: number[] = []
     const seen: Record<number, boolean> = Object.create(null)
@@ -12225,9 +12235,9 @@ function _dunGetXpScale(players: number): number {
 
 
 
-function _dunActiveHeroCountUpTo4(): number {
+function _dunActiveHeroCount(): number {
 
-    return _dunGetActivePidsUpTo4().length | 0
+    return _dunGetActivePids().length | 0
 
 }
 
@@ -13413,13 +13423,16 @@ function _dunPickNextFloorKind(nextIndex: number): string {
 }
 
 function _dunResetInteractInputEdges(): void {
-    for (let pid = 1; pid <= 4; pid++) {
-        const btnInteract = (controller as any)[`player${pid}`]?.Interact
-        const btnA = (controller as any)[`player${pid}`]?.A
-        const btnB = (controller as any)[`player${pid}`]?.B
-        const interactPressed = btnInteract ? !!btnInteract.isPressed() : false
-        const aPressed = btnA ? !!btnA.isPressed() : false
-        const bPressed = btnB ? !!btnB.isPressed() : false
+    const pids = _dunGetActivePids()
+    for (let i = 0; i < pids.length; i++) {
+        const pid = pids[i] | 0
+        if (pid <= 0) continue
+        const profileKey = _resolveProfileKeyForPlayerId(pid)
+        if (!profileKey) continue
+        const st = _getInputStateForProfile(profileKey)
+        const interactPressed = !!st.Interact
+        const aPressed = !!st.A
+        const bPressed = !!st.B
         ;(globalThis as any)[`__dun_prevInteract_${pid}`] = interactPressed
         ;(globalThis as any)[`__trapPrevA_${pid}`] = aPressed
         ;(globalThis as any)[`__trapPrevB_${pid}`] = bPressed
@@ -13739,7 +13752,7 @@ function _dunEnterFloor_spawnRelicEventChests(nowMs: number): void {
         return true
     }
 
-    const pids = _dunGetActivePidsUpTo4()
+    const pids = _dunGetActivePids()
     const targetCount = Math.max(1, (pids.length | 0)) | 0
     const used: Record<string, boolean> = Object.create(null)
 
@@ -15450,7 +15463,7 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
     const pad = _dunEnterFloor_rebuildWorldAndSpawnPad()
 
-    const activePids = _dunGetActivePidsUpTo4()
+    const activePids = _dunGetActivePids()
 
     const coords = _dunEnterFloor_spawnCoordsAroundPad(pad.padX, pad.padY)
 
@@ -19850,19 +19863,19 @@ const SHOP_DBG_MIN_INTERVAL_MS = 500   // throttle (still prints immediately on 
 
 
 
-// "p1=2|p2=-1|p3=-1|p4=0"  (ring index touched by each player; -1 = none)
+// "p5=2|p12=-1"  (ring index touched by each player; -1 = none)
 
 const SHOP_WPN_TOUCHED_RING_BY_PID_KEY = "shopWpnTouchedRingByPid"
 
 
 
-// "p1=dagger|p2=|p3=|p4=glowsword"
+// "p5=dagger|p12=|..."
 
 const SHOP_WPN_TOUCHED_ID_BY_PID_KEY = "shopWpnTouchedIdByPid"
 
 
 
-// Optional: "p1=thrust|p2=|p3=|p4=slash"
+// Optional: "p5=thrust|p12=|..."
 
 const SHOP_WPN_TOUCHED_SLOT_BY_PID_KEY = "shopWpnTouchedSlotByPid"
 
@@ -22535,54 +22548,49 @@ function shopPublishTouchedMapOnShopkeeper(nowMs: number): void {
 
 
 
-    // Build: p1=2|p2=-1|p3=-1|p4=0
-
     let ringByPid = ""
 
     let idByPid = ""
 
     let slotByPid = ""
 
-
+    const touched: Record<number, { ring: number; wid: string; slot: string }> = Object.create(null)
 
     for (let hi = 0; hi < heroes.length; hi++) {
-
-        const pid = (hi + 1) | 0
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0) continue
 
         let ring = -1
-
         let wid = ""
-
         let slot = ""
 
-
-
         if (now <= (shopFocusUntilMsByHero[hi] | 0)) {
-
             ring = shopFocusRingIndexByHero[hi] | 0
-
             const offer = shopFocusOfferByHero[hi]
-
             if (offer && !(offer.flags & sprites.Flag.Destroyed)) {
-
                 wid = sprites.readDataString(offer, SH_ITEM_WEAPON_ID) || ""
-
                 slot = sprites.readDataString(offer, SH_ITEM_RENDER_SLOT) || ""
-
             }
-
         }
 
+        touched[pid] = { ring, wid, slot }
+    }
 
+    const pids = Object.keys(touched)
+        .map((k) => Number(k) | 0)
+        .filter((pid) => pid > 0)
+        .sort((a, b) => a - b)
 
-        if (hi > 0) { ringByPid += "|"; idByPid += "|"; slotByPid += "|" }
-
-        ringByPid += "p" + pid + "=" + ring
-
-        idByPid += "p" + pid + "=" + wid
-
-        slotByPid += "p" + pid + "=" + slot
-
+    for (let i = 0; i < pids.length; i++) {
+        const pid = pids[i] | 0
+        const entry = touched[pid]
+        if (!entry) continue
+        if (i > 0) { ringByPid += "|"; idByPid += "|"; slotByPid += "|" }
+        ringByPid += "p" + pid + "=" + (entry.ring | 0)
+        idByPid += "p" + pid + "=" + (entry.wid || "")
+        slotByPid += "p" + pid + "=" + (entry.slot || "")
     }
 
 
@@ -22617,11 +22625,8 @@ function shopHandleControls(nowMs: number): void {
 
 
 
-        const pid = (hi + 1) | 0
-
-        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        if ((owner | 0) !== (pid | 0)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0) continue
 
         const uiMode = _uiReadNum(hero, HERO_UI_DATA.MODE, HERO_UI_MODE.NONE) | 0
 
@@ -23237,13 +23242,22 @@ function _shopBuildDebugSignature(nowMs: number): string {
 
 
     // Per-hero coins
-
     sig += "|coins="
-
+    const coinByPid: Record<number, number> = Object.create(null)
     for (let hi = 0; hi < heroes.length; hi++) {
-
-        sig += "p" + ((hi + 1) | 0) + "=" + (getHeroCoins(hi) | 0) + ";"
-
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0) continue
+        coinByPid[pid] = getHeroCoins(hi) | 0
+    }
+    const coinPids = Object.keys(coinByPid)
+        .map((k) => Number(k) | 0)
+        .filter((pid) => pid > 0)
+        .sort((a, b) => a - b)
+    for (let i = 0; i < coinPids.length; i++) {
+        const pid = coinPids[i] | 0
+        sig += "p" + pid + "=" + (coinByPid[pid] | 0) + ";"
     }
 
 
@@ -25628,13 +25642,7 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
 
     const now = nowMs | 0
 
-    const pid = (hi + 1) | 0
-
-
-
-    if (hi < 0 || hi > 3) return
-
-
+    if (hi < 0) return
 
     // Always kill canvas UI (DOM-only)
 
@@ -26032,7 +26040,7 @@ function _shopToggleForPlayer(playerId: number): void {
 
     const pid = playerId | 0
 
-    if (pid < 1 || pid > 4) return
+    if (pid < 1) return
 
 
 
@@ -29639,8 +29647,7 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        if ((owner | 0) !== ((hi + 1) | 0)) continue
+        if (owner <= 0) continue
 
 
 
@@ -29889,7 +29896,7 @@ function _dunAnyHeroInInteractRange(target: Sprite, extraX: number, extraY: numb
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-        if ((owner | 0) !== ((hi + 1) | 0)) continue
+        if (owner <= 0) continue
         if (_isHeroInInteractRange(hero, target, extraX | 0, extraY | 0)) return true
     }
     return false
@@ -30445,8 +30452,7 @@ function _shopUpdateFocusHighlights(nowMs: number): void {
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-
-        if ((owner | 0) !== ((hi + 1) | 0)) continue
+        if (owner <= 0) continue
 
         if (now <= (shopFocusUntilMsByHero[hi] | 0)) continue
 
@@ -31779,16 +31785,6 @@ function decorSolids_blockingHook(nowMs: number): void {
 
 
 
-// Default hero profile names per slot (index 0..3).
-
-// On MakeCode, this is the only thing used.
-
-// On Phaser, the wrapper can override via __netProfileByPid / __localHeroProfileName.
-
-const HERO_SLOT_PROFILE_DEFAULTS = ["Default", "Default", "Default", "Default"];
-
-
-
 type HeroIntentState = {
     intent: string
     pending1: string
@@ -31828,12 +31824,26 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
 
     const hero = heroes[heroIndex]
 
-    if (!hero) return "Default"
+    if (!hero) return ""
 
     const direct = _getProfileFromHeroSprite(hero)
     if (direct) {
         if (heroIndexToProfile[heroIndex] !== direct) {
-            _registerHeroProfile(direct, heroIndex)
+            const mapped = profileToHeroIndex[direct]
+            if (mapped == null || mapped === heroIndex) {
+                _registerHeroProfile(direct, heroIndex)
+            } else {
+                const mHero = heroes[mapped]
+                if (!mHero || (mHero.flags & sprites.Flag.Destroyed)) {
+                    _registerHeroProfile(direct, heroIndex)
+                } else if (DEBUG_NET_IDENTITY) {
+                    console.warn("[profile.identity] mapping collision on read", {
+                        profile: direct,
+                        heroIndex,
+                        mapped
+                    })
+                }
+            }
         }
         return direct
     }
@@ -31868,13 +31878,7 @@ function _he_readDataNumber(s: any, key: string, fallback = 0): number {
 function _resolvePidForProfile(profileRaw: any): number {
     const key = (typeof profileRaw === "string") ? profileRaw.trim() : ""
     if (!key) return 0
-    try {
-        for (const pidStr of Object.keys(playerIdToProfile)) {
-            const pid = (Number(pidStr) | 0)
-            if (pid > 0 && playerIdToProfile[pid] === key) return pid
-        }
-    } catch { }
-    return 0
+    return _findPidForProfileKey(key)
 }
 
 function _he_buildReadonlyHeroLogicCtx(heroIndex: number, enemiesArr: Sprite[], heroesArr: Sprite[], profileKey: string) {
@@ -32564,6 +32568,44 @@ function createHeroForPlayer(
 
 ) {
 
+    const pid = playerId | 0
+    let profileName = (typeof profileNameOverride === "string") ? profileNameOverride : ""
+    if (!profileName && pid > 0) {
+        profileName = _resolveProfileKeyForPlayerId(pid)
+    }
+    if (!profileName && pid === SHOPKEEPER_PLAYER_ID) {
+        profileName = SHOPKEEPER_PROFILE_NAME
+    }
+    if (!profileName && SHOP_STATUE_PLAYER_IDS && SHOP_STATUE_PLAYER_IDS.indexOf(pid) >= 0) {
+        profileName = SHOP_STATUE_PROFILE_NAME
+    }
+    profileName = _normalizeProfileKey(profileName)
+
+    if (!profileName) {
+        if (DEBUG_NET_IDENTITY) {
+            console.warn("[profile.identity] abort spawn: missing profile", {
+                pid,
+                reason: spawnReason || ""
+            })
+        }
+        return
+    }
+
+    if (isPhaserRuntime()) {
+        const existing = _resolveHeroIndexForProfile(profileName)
+        if (existing >= 0) {
+            if (DEBUG_NET_IDENTITY) {
+                console.log("[profile.identity] skip duplicate spawn", {
+                    profile: profileName,
+                    pid,
+                    existing,
+                    reason: spawnReason || ""
+                })
+            }
+            return
+        }
+    }
+
     // Start with a 64x64 placeholder so HP/mana bars + collisions match LPC hero art size.
     // In Phaser, the native LPC sprite uses the same footprint; we skip pixel uploads.
 
@@ -32595,7 +32637,6 @@ function createHeroForPlayer(
     // Profile-first: always map pid -> hero index when pid is present.
     // (Profile lookup remains primary; pid mapping is legacy bridge.)
     // -------------------------------------------------
-    const pid = playerId | 0
     if (pid > 0) {
         playerToHeroIndex[pid] = heroIndex
     }
@@ -32894,36 +32935,21 @@ function createHeroForPlayer(
     // -------------------------------------------------
 
     // NEW: seed hero identity strings so Phaser can resolve LPC animations
-
     // and ALSO set your requested HERO_DATA.NAME = "name"
-
     // -------------------------------------------------
 
-    let profileName = profileNameOverride
-
-    // If caller didn't override, resolve from pid -> profile before falling back.
-    if (!profileName) {
-        const fromPid = (pid > 0) ? _resolveProfileKeyForPlayerId(pid) : ""
-        if (fromPid) profileName = fromPid
-    }
-
-    // If caller didn't override, keep your existing profile resolution
-    if (!profileName) {
-        profileName = getHeroProfileForHeroIndex(heroIndex)
-    }
-
-
-
-    // If this is the shopkeeper pid and no override was given, force it
-
-    if (!profileNameOverride && pid === SHOPKEEPER_PLAYER_ID) {
-
-        profileName = SHOPKEEPER_PROFILE_NAME
-
-    }
-
+    // profileName resolved at function entry; never fall back to "Default".
     profileName = _normalizeProfileKey(profileName)
-    if (!profileName) profileName = "Default"
+    if (!profileName) {
+        if (DEBUG_NET_IDENTITY) {
+            console.warn("[profile.identity] abort spawn: profile lost before register", {
+                pid,
+                reason: spawnReasonKey
+            })
+        }
+        hero.destroy()
+        return
+    }
     const profileKey = _registerHeroProfile(profileName, heroIndex)
     if ((pid | 0) > 0 && profileKey) {
         playerIdToProfile[pid] = profileKey
@@ -39844,6 +39870,9 @@ const STR_SWING_SEG_FPS = 12
 const STR_SWING_SEG_WINDUP_FRAMES = 1
 const STR_SWING_SEG_FORWARD_FRAMES = 4
 const STR_SWING_SEG_LANDING_FRAMES = 1
+const STR_SLASH_CLIP_FRAME_COUNT = 6
+const STR_SLASH_CLIP_FPS = 12
+const STR_SLASH_CLIP_MS = Math.round((STR_SLASH_CLIP_FRAME_COUNT / STR_SLASH_CLIP_FPS) * 1000)
 
 const STR_SWING_SEG_WINDUP_MIN_MS =
     Math.idiv((STR_SWING_SEG_WINDUP_FRAMES * 1000 + STR_SWING_SEG_FPS - 1), STR_SWING_SEG_FPS) | 0
@@ -39895,6 +39924,44 @@ const STR_CHARGE_FADE_DIVS_EMERGENCY: number[] = [6, 4, 3, 2, 1]
 const STR_CHARGE_FADE_DIVS: number[] = PROJECTILE_EMERGENCY_FADE ? STR_CHARGE_FADE_DIVS_EMERGENCY : STR_CHARGE_FADE_DIVS_BASE
 const STR_CHARGE_FX_OUTER_R_KEY = "strChgFxR"
 const STR_CHARGE_LAST_TIP_R_KEY = "strChgTipR"
+
+function _strengthPrepMsFromFrames(maxMs: number): number {
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+    const frameMs = STR_SWING_WINDUP_FRAME_MS;
+    let prep = 0;
+    if (frameMs && frameMs.length) {
+        for (let i = 0; i < frameMs.length; i++) {
+            const base = Math.max(1, frameMs[i] | 0);
+            prep += (mult > 1) ? Math.max(1, (base * mult) | 0) : base;
+        }
+    } else {
+        prep = STR_PREP_VISIBLE_MS | 0;
+        if (mult > 1 && prep > 0) prep = (prep * mult) | 0;
+    }
+    if (prep < 0) prep = 0;
+    if ((maxMs | 0) > 0 && prep > (maxMs | 0)) prep = maxMs | 0;
+    return prep | 0;
+}
+
+function _strengthPrepFrameCol(elapsedMs: number, prepMs: number): number {
+    const frames = STR_SWING_WINDUP_FRAME_COLS;
+    if (!frames || !frames.length) return 0;
+    const frameMs = STR_SWING_WINDUP_FRAME_MS;
+    const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+    const elapsed = clampInt(elapsedMs | 0, 0, Math.max(1, prepMs | 0));
+    if (frameMs && frameMs.length === frames.length) {
+        let acc = 0;
+        for (let i = 0; i < frameMs.length; i++) {
+            const base = Math.max(1, frameMs[i] | 0);
+            const scaled = (mult > 1) ? Math.max(1, (base * mult) | 0) : base;
+            acc += scaled;
+            if (elapsed < acc || i === frameMs.length - 1) return frames[i] | 0;
+        }
+    }
+    const slice = Math.max(1, Math.idiv(Math.max(1, prepMs | 0), Math.max(1, frames.length)));
+    const idx = Math.min(frames.length - 1, Math.idiv(elapsed | 0, slice));
+    return frames[idx] | 0;
+}
 
 
 
@@ -40394,64 +40461,49 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
     }
 
+    const slashMs = Math.min(phaseDur | 0, STR_SLASH_CLIP_MS | 0)
+    const resetStart = (phaseStart + (slashMs | 0)) | 0
+    let partName = segName
+    let partStart = segStart | 0
+    let partDur = segDur | 0
+    if (segName === "release" && (nowMs | 0) >= (resetStart | 0)) {
+        partName = "reset"
+        partStart = resetStart | 0
+        partDur = Math.max(1, ((phaseStart + phaseDur) | 0) - (resetStart | 0)) | 0
+    }
+
     // Only rewrite when segment actually changes (less churn)
+    const prevSegName = sprites.readDataString(hero, STR_SEG_NAME_KEY) || ""
+    const prevSegStart = sprites.readDataNumber(hero, STR_SEG_START_MS_KEY) | 0
+    const prevSegDur = sprites.readDataNumber(hero, STR_SEG_DUR_MS_KEY) | 0
+    const segChanged = (prevSegName !== segName) || (prevSegStart !== (segStart | 0)) || (prevSegDur !== (segDur | 0))
 
-    const prevName = sprites.readDataString(hero, STR_SEG_NAME_KEY) || ""
-
-    const prevStart = sprites.readDataNumber(hero, STR_SEG_START_MS_KEY) | 0
-
-    const prevDur = sprites.readDataNumber(hero, STR_SEG_DUR_MS_KEY) | 0
-
-
-
-    const changed = (prevName !== segName) || (prevStart !== (segStart | 0)) || (prevDur !== (segDur | 0))
-
-
-
-    if (changed) {
-
+    if (segChanged) {
         // Side-channel keys (optional but fine)
-
         sprites.setDataString(hero, STR_SEG_NAME_KEY, segName)
-
         sprites.setDataNumber(hero, STR_SEG_START_MS_KEY, segStart | 0)
-
         sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, segDur | 0)
 
-
-
-        // ? CANONICAL CONTRACT: publish PhasePart so heroAnimGlue/weaponAnimGlue can consume it
-
-        // NOTE: This must exist already in your codebase (you referenced it earlier).
-
-        // AFTER
-
-        _animKeys_setPhasePart(
-
-            heroIndex,
-
-            hero,
-
-            segName,
-
-            segStart | 0,
-
-            segDur | 0,
-
-            nowMs | 0,
-
-            "STRENGTH_CHARGE_TICK",
-
-            "_strPublishSwingSegForHero(segChange)"
-
-        )
-
-
-
         // Debug only on segment transitions (not every frame)
-
         console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
+    }
 
+    const prevPartName = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+    const prevPartStart = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0
+    const prevPartDur = sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0
+    const partChanged = (prevPartName !== partName) || (prevPartStart !== (partStart | 0)) || (prevPartDur !== (partDur | 0))
+
+    if (partChanged) {
+        _animKeys_setPhasePart(
+            heroIndex,
+            hero,
+            partName,
+            partStart | 0,
+            partDur | 0,
+            nowMs | 0,
+            "STRENGTH_CHARGE_TICK",
+            "_strPublishSwingSegForHero(partChange)"
+        )
     }
 
 
@@ -40534,32 +40586,19 @@ function updateStrengthChargingAllHeroes(nowMs: number): void {
 
 
 
-        // 2) Release if the initiating button is no longer pressed
-
+        // 2) Release if the initiating button is no longer pressed,
+        // but never before the prep window finishes (guaranteed frames 0..2).
         const ownerId = (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0)
-
         const btnId = (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0)
-
-
-
         const held = isStrBtnIdPressedForOwner(ownerId, btnId)
 
+        const startMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0
+        const maxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0
+        let prepMs = _strengthPrepMsFromFrames(maxMs | 0)
+        const minHoldUntil = (startMs | 0) + (prepMs | 0)
 
-
-//        console.log(`[STR][CHARGE][HELD?] hi=${heroIndex} owner=${ownerId} btnId=${btnId} held=${held} locked=${sprites.readDataBoolean(hero, HERO_DATA.LOCKED) ? 1 : 0}`)
-
-
-
-        if (!held) releaseStrengthCharge(heroIndex, hero, nowMs)
-
-
-
-
-
-        if (!isStrBtnIdPressedForOwner(ownerId, btnId)) {
-
+        if (!held && (nowMs | 0) >= (minHoldUntil | 0)) {
             releaseStrengthCharge(heroIndex, hero, nowMs)
-
         }
 
     }
@@ -40676,6 +40715,9 @@ function beginStrengthCharge(
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_REM_X1000, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_SPENT, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD, false)
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD, false)
+    sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD, false)
 
 
 
@@ -40722,14 +40764,7 @@ function beginStrengthCharge(
 
     // ? Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
 
-    let prepMs = STR_PREP_VISIBLE_MS | 0
-
-    if (prepMs < 0) prepMs = 0
-
-    if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
-    if (STR_DEBUG_FRAME_MS_MULT > 1 && prepMs > 0) {
-        prepMs = Math.min(maxMs | 0, (prepMs | 0) * (STR_DEBUG_FRAME_MS_MULT | 0)) | 0
-    }
+    let prepMs = _strengthPrepMsFromFrames(maxMs | 0)
 
 
 
@@ -41041,11 +41076,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
     // ----------------------------
 
-    let prepMs = STR_PREP_VISIBLE_MS | 0
-
-    if (prepMs < 0) prepMs = 0
-
-    if (prepMs > (maxMs | 0)) prepMs = maxMs | 0
+    let prepMs = _strengthPrepMsFromFrames(maxMs | 0)
 
 
 
@@ -41138,6 +41169,7 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
             )
 
         }
+        sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD, true)
 
     }
 
@@ -41167,8 +41199,9 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
     if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_SCHEDULE_ENABLE) {
         if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
-            // Let the animation play naturally during prep.
-            clearHeroFrameColOverride(heroIndex);
+            const elapsed = ((nowMs | 0) - (prepStart | 0)) | 0;
+            const col = _strengthPrepFrameCol(elapsed | 0, prepMs | 0);
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0);
         } else {
             // Hold on the last windup frame while charging.
             const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
@@ -41260,10 +41293,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
-    const chargeStartMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0;
-    let prepMs = STR_PREP_VISIBLE_MS | 0;
-    if (prepMs < 0) prepMs = 0;
-    const wasHolding = (chargeStartMs > 0) && ((nowMs | 0) - (chargeStartMs | 0) >= (prepMs | 0));
+    const wasHolding = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD);
     sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
     const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
     sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, wasHolding ? ((holdCol + 1) | 0) : 0);
@@ -41609,6 +41639,22 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
             arcDeg: arcDeg | 0,
             swingMs: swingDurationMs | 0,
             reachExtra: reachExtraPx | 0
+        });
+    }
+    if (DEBUG_STR_PROJECTILE_METRICS) {
+        console.log("[STR][RELEASE][METRICS]", {
+            heroIndex,
+            actionSeq: sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0,
+            arcDeg: arcDeg | 0,
+            arcMaxDeg: arcMaxDeg0 | 0,
+            minArcDeg,
+            reachExtraPx: reachExtraPx | 0,
+            swingMs: swingDurationMs | 0,
+            chargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
+            chargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
+            wasHeld: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD) ? 1 : 0,
+            button,
+            element: el | 0
         });
     }
 
@@ -42180,6 +42226,9 @@ function spawnStrengthSwingProjectile(
             }
         }
     }
+    const arcBaseMin = STR_USE_WPN_AURA_OUTLINE_ONLY
+        ? Math.max(1, Math.min((STR_ARC_BASE_MIN_WIDTH_PX | 0), (arcBaseW | 0)))
+        : (STR_ARC_MIN_WIDTH_PX | 0);
 
 
 
@@ -42315,6 +42364,31 @@ function spawnStrengthSwingProjectile(
         sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipInitX)
         sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipInitY)
 
+        if (DEBUG_STR_PROJECTILE_METRICS) {
+            console.log("[STR][PROJ][SPAWN]", {
+                heroIndex,
+                side: arcSide | 0,
+                arcDeg: totalArcDeg | 0,
+                swingMs: swingDuration | 0,
+                arcStartFracX1000: arcStartFracX1000 | 0,
+                arcStartMs: arcStartMs | 0,
+                windMs: segs.windMs | 0,
+                fwdMs: segs.fwdMs | 0,
+                landMs: segs.landMs | 0,
+                innerR: inner0 | 0,
+                leadEdge: leadEdge | 0,
+                frontStartR: frontStartR | 0,
+                reachFromInner: reachFromInner | 0,
+                outerR: outerR | 0,
+                arcBaseW: arcBaseW | 0,
+                arcBaseMin: arcBaseMin | 0,
+                nx: +nx.toFixed(3),
+                ny: +ny.toFixed(3),
+                tipLocalX: +tipInitX.toFixed(2),
+                tipLocalY: +tipInitY.toFixed(2)
+            });
+        }
+
         proj.lifespan = swingDuration
         heroProjectiles.push(proj)
 
@@ -42418,6 +42492,23 @@ function updateStrengthProjectilesMotionFor(
         console.log("S-UPDATE: DONE heroIndex=" + heroIndex +
 
             " age=" + age + " swingMs=" + swingMs)
+        if (DEBUG_STR_PROJECTILE_METRICS) {
+            console.log("[STR][PROJ][END]", {
+                heroIndex,
+                age: age | 0,
+                swingMs: swingMs | 0,
+                t: +(Math.max(0, Math.min(1, age / Math.max(1, swingMs)))).toFixed(3),
+                arcT: sprites.readDataNumber(proj, "SS_LAST_ARC_T") | 0,
+                arcActive: (sprites.readDataNumber(proj, "SS_LAST_ARC_ACTIVE") | 0),
+                segName: sprites.readDataString(proj, "SS_LAST_SEG") || "",
+                segElapsed: sprites.readDataNumber(proj, "SS_LAST_SEG_EL") | 0,
+                segDur: sprites.readDataNumber(proj, "SS_LAST_SEG_DUR") | 0,
+                arcStartFracX1000: sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0,
+                arcStartSegMs: sprites.readDataNumber(proj, "SS_LAST_ARC_START_SEG_MS") | 0,
+                arcDeg: sprites.readDataNumber(proj, "SS_ARC_DEG") | 0,
+                reachFromFront: sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0
+            });
+        }
 
         _destroyHeroBodyPaintFxForProj(proj)
         _destroyProjectileMaskFxForProj(proj)
@@ -42494,19 +42585,31 @@ function updateStrengthProjectilesMotionFor(
     const rule = _strengthFrameRuleFor(segName, frameCol | 0);
 
     const arcStartFrac = sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0;
-    const arcStart = STR_USE_WPN_AURA_OUTLINE_ONLY
-        ? 0
-        : Math.max(0, Math.min(1, (arcStartFrac | 0) / 1000));
-    let arcStartSegMs = 0;
-    if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "charging") {
-        arcStartSegMs = 0;
-    }
-    const arcActive = rule.allowArc && (segElapsed >= arcStartSegMs) && (t >= arcStart);
+    const arcStart = Math.max(0, Math.min(1, (arcStartFrac | 0) / 1000));
+    const arcReady = rule.allowArc;
+    const arcActive = arcReady && (t >= arcStart);
     const arcT = arcActive
-        ? (STR_USE_WPN_AURA_OUTLINE_ONLY
-            ? Math.min(1, Math.max(0, (segElapsed - arcStartSegMs) / Math.max(1, (segDur - arcStartSegMs))))
-            : Math.min(1, (t - arcStart) / Math.max(0.0001, (1 - arcStart))))
+        ? Math.min(1, (t - arcStart) / Math.max(0.0001, (1 - arcStart)))
         : 0;
+    const prevArcActive = (sprites.readDataNumber(proj, "SS_LAST_ARC_ACTIVE") | 0) !== 0;
+    if (_wpnTraceEnabled() && prevArcActive !== arcActive) {
+        _wpnTraceLog("str.arc", {
+            id: _wpnTraceAssignId(proj),
+            heroIndex,
+            seg: segName,
+            frameCol,
+            t: +t.toFixed(3),
+            arcStart: +arcStart.toFixed(3),
+            arcT: +arcT.toFixed(3),
+            active: arcActive ? 1 : 0
+        });
+    }
+    sprites.setDataNumber(proj, "SS_LAST_ARC_T", arcT | 0);
+    sprites.setDataNumber(proj, "SS_LAST_ARC_ACTIVE", arcActive ? 1 : 0);
+    sprites.setDataString(proj, "SS_LAST_SEG", segName);
+    sprites.setDataNumber(proj, "SS_LAST_SEG_EL", segElapsed | 0);
+    sprites.setDataNumber(proj, "SS_LAST_SEG_DUR", segDur | 0);
+    sprites.setDataNumber(proj, "SS_LAST_ARC_START_SEG_MS", 0);
 
 
 
@@ -42639,7 +42742,7 @@ function updateStrengthProjectilesMotionFor(
                         clip
                     )
                 }
-                if (rule.allowLine && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+                if (!STR_USE_WPN_AURA_OUTLINE_ONLY && rule.allowLine) {
                     const useSlashMask = !!rule.allowSlashMask
                     if (useSlashMask) {
                         const maskShape = _getWeaponMaskShape(auraPack.info, 0)
@@ -42675,23 +42778,6 @@ function updateStrengthProjectilesMotionFor(
                             clip
                         )
                     }
-                } else {
-                    _stampWeaponAuraLine(
-                        img,
-                        -halfW,
-                        -halfH,
-                        lastX,
-                        lastY,
-                        tipLocalX,
-                        tipLocalY,
-                        auraPack.shapes,
-                        auraR1 | 0,
-                        rule.lineMaxIdx,
-                        auraEdge | 0,
-                        STR_OUTLINE_CARDINAL_ONLY,
-                        auraColorsByIdx,
-                        clip
-                    )
                 }
                 }
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
@@ -42949,7 +43035,7 @@ function updateStrengthProjectilesMotionFor(
                     clip
                 )
             }
-            if (rule.allowLine && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+            if (!STR_USE_WPN_AURA_OUTLINE_ONLY && rule.allowLine) {
                 const useSlashMask = !!rule.allowSlashMask
                 if (useSlashMask) {
                     const maskShape = _getWeaponMaskShape(auraPack.info, 0)
@@ -53040,7 +53126,7 @@ function updateHeroBuffs(now: number) {
 
         if (hero) {
 
-            sprites.setDataNumber(hero, HERO_DATA.MOVE_SPEED_MULT, hasteMult)
+            sprites.setDataNumber(hero, HERO_DATA._MULT, hasteMult)
 
             sprites.setDataNumber(hero, HERO_DATA.DAMAGE_AMP_MULT, dmgMult)
 
@@ -55734,8 +55820,7 @@ function listLivingPlayerHeroIndices(): number[] {
 
 
         const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-        if (owner < 1 || owner > 4) continue
+        if (owner < 1) continue
 
 
 
@@ -55768,8 +55853,7 @@ function findNearestLivingPlayerHeroIndex(x: number, y: number): number {
 
 
         const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-        if (owner < 1 || owner > 4) continue
+        if (owner < 1) continue
 
 
 
@@ -55905,7 +55989,7 @@ function addHeroCoins(hi: number, delta: number, popX: number, popY: number): nu
 
                 try { pid = hero2 ? (sprites.readDataNumber(hero2, HERO_DATA.OWNER) | 0) : 0 } catch { pid = 0 }
 
-                if (pid < 1 || pid > 4) pid = 0
+                if (pid < 1) pid = 0
 
 
 
@@ -67780,6 +67864,12 @@ if (typeof globalThis !== "undefined") {
                     removed++
                 }
 
+                // Also dedupe any remaining connected profiles.
+                for (const prof of Object.keys(allowed)) {
+                    if (!allowed[prof]) continue
+                    _dedupeHeroesForProfile(prof, _findPidForProfileKey(prof), -1, "prune:dedupe")
+                }
+
                 if (DEBUG_NET_IDENTITY && removed > 0) {
                     console.log("[profile.identity] pruned unconnected heroes", {
                         removed,
@@ -71217,13 +71307,10 @@ function _uiResolveHeroIndexForPid(pid: number): number {
 
     // Preferred: profile mapping (pid -> profile -> hero)
     try {
-        const prof = playerIdToProfile[pid] || ""
+        const prof = _resolveProfileKeyForPlayerId(pid)
         if (prof) {
-            const hi = profileToHeroIndex[prof]
-            if (hi != null && hi >= 0 && hi < heroes.length) {
-                const h = heroes[hi]
-                if (h && !(h.flags & sprites.Flag.Destroyed)) return hi | 0
-            }
+            const hi = _resolveHeroIndexForProfile(prof)
+            if (hi >= 0) return hi | 0
         }
     } catch { }
 

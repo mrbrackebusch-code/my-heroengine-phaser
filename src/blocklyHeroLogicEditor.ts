@@ -286,6 +286,17 @@ let _heReservedVarIds: Partial<Record<HeOutputVarName, string>> = {};
 let _heRepairing = false;
 let _heLoadingXml = false;
 let _heSuppressNameExistsUi = false;
+let _heSuppressNameExistsUntilMs = 0;
+
+function _heSuppressNameExistsFor(ms: number): void {
+  const until = Date.now() + Math.max(0, ms | 0);
+  if (until > _heSuppressNameExistsUntilMs) _heSuppressNameExistsUntilMs = until;
+}
+
+function _heShouldSuppressNameExistsUi(): boolean {
+  if (_heLoadingXml || _heRepairing || _heSuppressNameExistsUi) return true;
+  return Date.now() < _heSuppressNameExistsUntilMs;
+}
 
 let _heStatusOverride: { msg: string; untilMs: number } | null = null;
 
@@ -328,7 +339,7 @@ function _heBlocklyAlert(msg: string): void {
 function _heWarnNameExists(ttlMs: number = 2200): void {
   // During XML loads / template repairs we may create reserved vars before IDs are known.
   // Never spam modal UI during those internal operations.
-  if (_heLoadingXml || _heSuppressNameExistsUi || _heRepairing) return;
+  if (_heShouldSuppressNameExistsUi()) return;
   _heSetStatus("A variable with that name already exists", ttlMs);
   _heBlocklyAlert("A variable with that name already exists");
 }
@@ -367,7 +378,7 @@ function _heDeleteVariableById(workspace: Blockly.WorkspaceSvg, varId: string): 
 
 function _heEnforceReservedVarsOnEvent(workspace: Blockly.WorkspaceSvg, e: any): void {
   if (!e) return;
-  if (_heLoadingXml || _heRepairing || _heSuppressNameExistsUi) return;
+  if (_heShouldSuppressNameExistsUi()) return;
   const t = String(e.type || "").toLowerCase();
   if (!t.startsWith("var_") && !t.includes("var_")) return;
 
@@ -1089,11 +1100,12 @@ let _saveTimer: any = null;
 function _getProfileName(): string {
   const g: any = globalThis as any;
   const p = g.__localHeroProfileName;
-  return (typeof p === "string" && p.trim()) ? p.trim() : "Default";
+  return (typeof p === "string" && p.trim()) ? p.trim() : "";
 }
 
-function _storageKey(): string {
+function _storageKey(): string | null {
   const profile = _getProfileName();
+  if (!profile) return null;
   return STORAGE_PREFIX + encodeURIComponent(profile);
 }
 
@@ -1102,6 +1114,7 @@ function _publishXmlToRuntime(xmlText: string): void {
     const g: any = globalThis as any;
     if (!g.__heBlocklyXmlByProfile) g.__heBlocklyXmlByProfile = {};
     const prof = _getProfileName();
+    if (!prof) return;
     const text = String(xmlText || "");
     g.__heBlocklyXmlByProfile[prof] = text;
     _syncBlocklyXmlToNet(prof, text);
@@ -1111,7 +1124,8 @@ function _publishXmlToRuntime(xmlText: string): void {
 const _lastNetXmlByProfile: Record<string, string> = Object.create(null);
 
 function _syncBlocklyXmlToNet(profile: string, xmlText: string): void {
-  const p = (typeof profile === "string" && profile.trim()) ? profile.trim() : "Default";
+  const p = (typeof profile === "string" && profile.trim()) ? profile.trim() : "";
+  if (!p) return;
   const text = String(xmlText || "");
   if (!text.trim()) return;
   if (_lastNetXmlByProfile[p] === text) return;
@@ -1496,13 +1510,14 @@ function _ensureWorkspace(): Blockly.WorkspaceSvg {
   });
 
   // Initial load
-  const saved = localStorage.getItem(_storageKey());
+  const storageKey = _storageKey();
+  const saved = storageKey ? localStorage.getItem(storageKey) : null;
   if (saved && saved.trim()) {
     _loadFromXmlText(saved);
     _publishXmlToRuntime(saved);
   } else {
     _loadFromXmlText(DEFAULT_WORKSPACE_XML);
-    _saveWorkspace();
+    if (storageKey) _saveWorkspace();
   }
 
   // Required template enforcement (main + terminal return + reserved output vars)
@@ -1524,6 +1539,7 @@ function _loadFromXmlText(xmlText: string): void {
   // Suppress "name exists" UI during load to avoid modal spam / loops (e.g., on Reset).
   _heLoadingXml = true;
   _heSuppressNameExistsUi = true;
+  _heSuppressNameExistsFor(2000);
   try {
     Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, _workspace);
   } finally {
@@ -1561,13 +1577,16 @@ function _saveWorkspace(): void {
     ? uxml.domToText(dom)
     : Blockly.Xml.domToText(dom);
 
-  localStorage.setItem(_storageKey(), xmlText);
+  const storageKey = _storageKey();
+  if (!storageKey) return;
+  localStorage.setItem(storageKey, xmlText);
   _publishXmlToRuntime(xmlText);
 }
 
 export function syncBlocklyXmlFromStorage(): void {
   try {
     const key = _storageKey();
+    if (!key) return;
     const xml = localStorage.getItem(key);
     if (xml && xml.trim()) {
       _publishXmlToRuntime(xml);
@@ -1582,7 +1601,8 @@ export function openBlocklyHeroLogicEditor(): void {
   overlay.style.display = "block";
 
   const profSpan = overlay.querySelector("#he-blockly-prof") as HTMLSpanElement;
-  profSpan.textContent = _getProfileName();
+  const prof = _getProfileName();
+  profSpan.textContent = prof || "(no profile)";
 
   const ws = _ensureWorkspace();
   // Must resize after becoming visible
@@ -1595,6 +1615,22 @@ export function openBlocklyHeroLogicEditor(): void {
 
 export function closeBlocklyHeroLogicEditor(): void {
   const overlay = document.getElementById(OVERLAY_ID);
+  try {
+    const active = document.activeElement as HTMLElement | null;
+    if (overlay && active && overlay.contains(active) && typeof active.blur === "function") {
+      active.blur();
+    }
+  } catch {}
+  try {
+    const B: any = Blockly as any;
+    if (B && typeof B.hideChaff === "function") {
+      B.hideChaff();
+    } else {
+      try { B?.WidgetDiv?.hide?.(); } catch {}
+      try { B?.DropDownDiv?.hideWithoutAnimation?.(); } catch {}
+      try { B?.DropDownDiv?.hide?.(); } catch {}
+    }
+  } catch {}
   if (overlay) overlay.style.display = "none";
 }
 

@@ -219,6 +219,140 @@ export function listWeaponVariants(model: string): string[] {
 }
 
 // ----------------------------------------------------------
+// Lazy-load helpers
+// ----------------------------------------------------------
+
+const WEAPON_LAZY_REQUESTED = new Set<string>();
+const WEAPON_SHEETS_BY_MODEL_VARIANT = new Map<string, WeaponPngMeta[]>();
+
+function _weaponSheetsCacheKey(model: string, variant?: string): string {
+  return `${String(model || "").trim()}::${String(variant || "").trim()}`;
+}
+
+function _pickVariantForModel(model: string, desiredVariant?: string): string | null {
+  const byVariant = INDEX.get(model);
+  if (!byVariant) return null;
+  const order = [String(desiredVariant || "").trim(), "base", ...Array.from(byVariant.keys())];
+  const tried = new Set<string>();
+  for (const v of order) {
+    const vv = String(v || "").trim();
+    if (!vv || tried.has(vv)) continue;
+    tried.add(vv);
+    if (byVariant.has(vv)) return vv;
+  }
+  return null;
+}
+
+function _listSheetsForModelVariant(model: string, variant?: string): WeaponPngMeta[] {
+  const cacheKey = _weaponSheetsCacheKey(model, variant);
+  const cached = WEAPON_SHEETS_BY_MODEL_VARIANT.get(cacheKey);
+  if (cached) return cached.slice();
+
+  const byVariant = INDEX.get(model);
+  if (!byVariant) {
+    WEAPON_SHEETS_BY_MODEL_VARIANT.set(cacheKey, []);
+    return [];
+  }
+  const picked = _pickVariantForModel(model, variant);
+  if (!picked) {
+    WEAPON_SHEETS_BY_MODEL_VARIANT.set(cacheKey, []);
+    return [];
+  }
+  const byTile = byVariant.get(picked);
+  if (!byTile) {
+    WEAPON_SHEETS_BY_MODEL_VARIANT.set(cacheKey, []);
+    return [];
+  }
+
+  const out = new Map<string, WeaponPngMeta>();
+  for (const byAnim of byTile.values()) {
+    for (const leaf of byAnim.values()) {
+      if (leaf.bg) out.set(leaf.bg.key, leaf.bg);
+      if (leaf.fg) out.set(leaf.fg.key, leaf.fg);
+    }
+  }
+
+  const list = Array.from(out.values());
+  WEAPON_SHEETS_BY_MODEL_VARIANT.set(cacheKey, list);
+  return list.slice();
+}
+
+export function listWeaponSheetsForModel(weaponId: WeaponId, variant?: string): WeaponPngMeta[] {
+  const model = String(weaponId || "").trim();
+  if (!model) return [];
+
+  const composite = WEAPON_MODEL_COMPOSITES[model];
+  if (composite) {
+    const merged = new Map<string, WeaponPngMeta>();
+    if (composite.bg) {
+      for (const meta of _listSheetsForModelVariant(composite.bg, variant)) {
+        merged.set(meta.key, meta);
+      }
+    }
+    if (composite.fg) {
+      for (const meta of _listSheetsForModelVariant(composite.fg, variant)) {
+        merged.set(meta.key, meta);
+      }
+    }
+    return Array.from(merged.values());
+  }
+
+  return _listSheetsForModelVariant(model, variant);
+}
+
+function _loaderIsLoading(loader: any): boolean {
+  if (!loader) return false;
+  try {
+    if (typeof loader.isLoading === "function") return !!loader.isLoading();
+    if (typeof loader.isLoading === "boolean") return loader.isLoading;
+    if (typeof loader.loading === "boolean") return loader.loading;
+  } catch {}
+  return false;
+}
+
+function _startWeaponLoader(scene: Phaser.Scene): void {
+  try {
+    const loader: any = (scene as any).load;
+    if (!loader) return;
+    if (_loaderIsLoading(loader)) return;
+    if (typeof loader.start === "function") loader.start();
+  } catch { }
+}
+
+export function ensureWeaponSheetsLoaded(
+  scene: Phaser.Scene,
+  weaponId: WeaponId,
+  variant?: string
+): { ready: boolean; queued: number; total: number } {
+  const model = String(weaponId || "").trim();
+  if (!model || !scene) return { ready: false, queued: 0, total: 0 };
+
+  const metas = listWeaponSheetsForModel(model, variant);
+  if (!metas.length) return { ready: false, queued: 0, total: 0 };
+
+  const textures = scene.textures;
+  let loaded = 0;
+  let queued = 0;
+
+  for (const meta of metas) {
+    const key = meta.key;
+    if (textures && typeof textures.exists === "function" && textures.exists(key)) {
+      loaded++;
+      continue;
+    }
+    if (WEAPON_LAZY_REQUESTED.has(key)) continue;
+    const didQueue = queueSpritesheetOnce(scene, key, meta.url, meta.tile, meta.tile);
+    if (didQueue) queued++;
+    WEAPON_LAZY_REQUESTED.add(key);
+  }
+
+  if (queued > 0) _startWeaponLoader(scene);
+
+  const ready = loaded >= metas.length;
+  return { ready, queued, total: metas.length };
+}
+
+// ----------------------------------------------------------
 // Loader (preload)
 // ----------------------------------------------------------
 

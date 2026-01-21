@@ -71,6 +71,15 @@ const HERO_STR_TRACE_LAST_FRAME_KEY = "__strTraceLastFrame";
 const HERO_AIM_TILT_MAX_DEG = 8;
 const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
 
+// Strength swing reset tuning (manual frame timeline)
+const STR_RESET_ENABLE = true;
+const STR_CUSTOM_TIMELINE_ENABLE = true;
+const STR_RESET_INTRO_MS = 80;   // 1 -> 2
+const STR_RESET_OUTRO_MS = 120;  // 1 -> 0
+const STR_RESET_MIN_MS = 180;    // ensure reset is visible when swing duration allows it
+const STR_RESET_WOBBLE_SCALE = 0.02;
+const STR_RESET_WOBBLE_MS = 200;
+
 
 // Local phase window tracking (because engine PhaseStartMs is Arcade time, not Phaser time)
 const HERO_LOCAL_PHASE_ACTIONSEQ_KEY = "__heroLocalPhaseActionSequence";
@@ -511,10 +520,20 @@ function _debugStrengthFrameTrace(
         const startKind = String(anySprite.getData(HERO_STR_TRACE_START_KIND_KEY) || "");
         const heroName = req.heroName || "";
         const seq = Number(anySprite.getData(HERO_STR_TRACE_SEQ_KEY));
+        const phase = req.phase || "";
+        const part = String((req as any).phasePartName || "");
+        const seg = String((req as any).strSegName || "");
+        const durMs = (req.phaseDurationMs | 0);
+        const partDur = (req as any).phasePartDurationMs | 0;
         const msg =
             "[HERO-ANIM][STRENGTH-TRACE]" +
             " heroName=" + heroName +
             " actionSeq=" + (Number.isFinite(seq) ? (seq | 0) : -1) +
+            " phase=" + phase +
+            " part=" + part +
+            " seg=" + seg +
+            " durMs=" + durMs +
+            " partDurMs=" + partDur +
             " startKind=" + (startKind || "") +
             " endKind=" + (endKind || "") +
             " start=" + (Number.isFinite(startMs) ? (startMs | 0) : -1) +
@@ -1160,6 +1179,7 @@ function _tryStrengthChargeThrob(
     def: any,
     shouldProve: boolean
 ): boolean {
+    if (STR_CUSTOM_TIMELINE_ENABLE) return false;
     const anySprite = sprite as any;
     const PAUSED_KEY = "__strChPaused";
 
@@ -1366,6 +1386,335 @@ function _tryStrengthChargeThrob(
     return true;
 }
 
+function _strengthProgressToElapsed(progressInt: number, durMs: number): number {
+    const p = clampInt(progressInt | 0, 0, 1000);
+    const d = Math.max(1, durMs | 0);
+    return Math.round((d * p) / 1000) | 0;
+}
+
+function _strengthPickFrameFromProgress(
+    frameCols: number[],
+    progressInt: number,
+    durMs: number
+): number {
+    if (!frameCols || !frameCols.length) return 0;
+    const elapsed = _strengthProgressToElapsed(progressInt | 0, durMs | 0);
+    const slice = Math.max(1, Math.idiv(Math.max(1, durMs | 0), Math.max(1, frameCols.length)));
+    const idx = Math.min(frameCols.length - 1, Math.idiv(elapsed | 0, slice));
+    return frameCols[idx] | 0;
+}
+
+function _applyStrengthFrameCol(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    frameCol: number,
+    shouldProve: boolean,
+    tag: string
+): void {
+    const frames: number[] = (def.frameIndices || []) as any;
+    if (!frames.length) return;
+    const col = clampInt(frameCol | 0, 0, frames.length - 1);
+    const frameIndex = frames[col];
+    const animKey = buildHeroAnimKey(req.heroName!, def);
+
+    if (!scene.anims.exists(animKey)) {
+        scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(def.textureKey, { frames: def.frameIndices }),
+            frameRate: def.frameRate,
+            repeat: def.repeat,
+            yoyo: def.yoyo
+        });
+    }
+
+    _ensureHeroAnimPlayingThenPause({ sprite, expectedAnimKey: animKey });
+
+    try {
+        const anim = sprite.anims.currentAnim as any;
+        const aframes = anim?.frames as any[] | undefined;
+        if (aframes && aframes.length) {
+            const safeIdx = clampInt(col | 0, 0, aframes.length - 1);
+            sprite.anims.setCurrentFrame(aframes[safeIdx]);
+        } else {
+            sprite.setTexture(def.textureKey, frameIndex);
+        }
+    } catch {
+        sprite.setTexture(def.textureKey, frameIndex);
+    }
+
+    const anySprite: any = sprite as any;
+    if (anySprite.setData) {
+        anySprite.setData(LAST_ANIM_KEY, animKey);
+        anySprite.setData(LAST_PHASE_KEY, def.phase);
+        anySprite.setData(LAST_DIR_KEY, def.dir);
+        anySprite.setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
+    }
+
+    if (shouldProve) {
+        console.log(
+            "[PROVE][STR-CUSTOM]",
+            "| tag", tag,
+            "| heroName", req.heroName,
+            "| frameCol", col,
+            "| frameIndex", frameIndex,
+            "| part", String((req as any).phasePartName || ""),
+            "| seg", String((req as any).strSegName || "")
+        );
+    }
+}
+
+function _tryStrengthCustomTimeline(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    if (!STR_CUSTOM_TIMELINE_ENABLE) return false;
+    const actionKind = (req.actionKind || "").toLowerCase();
+    if (!(actionKind === "strength_charge" || actionKind === "strength_swing")) return false;
+    if (def.phase !== "slash") return false;
+
+    const frames: number[] = Array.isArray(def.frameIndices) ? def.frameIndices : [];
+    if (frames.length < 6) return false;
+
+    const partRaw = String((req as any).phasePartName || "");
+    const part = partRaw.trim().toLowerCase();
+    const partDur = (req as any).phasePartDurationMs | 0;
+    const partProg = (req as any).phasePartProgress | 0;
+
+    if (actionKind === "strength_charge") {
+        if (part === "preparetocharge") {
+            const col = _strengthPickFrameFromProgress([0, 1, 2], partProg | 0, partDur | 0);
+            _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "charge.prepare");
+        } else {
+            _applyStrengthFrameCol(scene, sprite, req, def, 2, shouldProve, "charge.hold");
+        }
+        return true;
+    }
+
+    // strength_swing
+    if (part === "reset") {
+        const resetMs = Math.max(1, partDur | 0);
+        let introMs = Math.max(1, STR_RESET_INTRO_MS | 0);
+        let outroMs = Math.max(1, STR_RESET_OUTRO_MS | 0);
+        if ((introMs + outroMs) > resetMs && resetMs > 0) {
+            const scale = resetMs / (introMs + outroMs);
+            introMs = Math.max(1, Math.round(introMs * scale));
+            outroMs = Math.max(1, resetMs - introMs);
+        }
+        const holdMs = Math.max(0, (resetMs - introMs - outroMs) | 0);
+        const elapsed = _strengthProgressToElapsed(partProg | 0, resetMs | 0);
+        let col = 0;
+        let inHold = false;
+        if (elapsed < introMs) {
+            const half = Math.max(1, Math.round(introMs / 2));
+            col = (elapsed < half) ? 1 : 2;
+        } else if (elapsed < (introMs + holdMs)) {
+            col = 2;
+            inHold = true;
+        } else {
+            const outroElapsed = (elapsed - introMs - holdMs) | 0;
+            const half = Math.max(1, Math.round(outroMs / 2));
+            col = (outroElapsed < half) ? 1 : 0;
+        }
+        _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "swing.reset");
+        if (inHold) {
+            const anySprite: any = sprite as any;
+            const baseX = (() => {
+                const v = Number(anySprite.getData?.(HERO_BASE_SCALE_X_KEY));
+                if (Number.isFinite(v) && v !== 0) return v;
+                const cur = (sprite as any).scaleX;
+                if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+                    try { anySprite.setData(HERO_BASE_SCALE_X_KEY, cur); } catch {}
+                    return cur;
+                }
+                try { anySprite.setData(HERO_BASE_SCALE_X_KEY, 1); } catch {}
+                return 1;
+            })();
+            const baseY = (() => {
+                const v = Number(anySprite.getData?.(HERO_BASE_SCALE_Y_KEY));
+                if (Number.isFinite(v) && v !== 0) return v;
+                const cur = (sprite as any).scaleY;
+                if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+                    try { anySprite.setData(HERO_BASE_SCALE_Y_KEY, cur); } catch {}
+                    return cur;
+                }
+                try { anySprite.setData(HERO_BASE_SCALE_Y_KEY, 1); } catch {}
+                return 1;
+            })();
+            const nowLocal = (scene as any)?.time?.now ?? Date.now();
+            const wob = STR_RESET_WOBBLE_SCALE;
+            const s = 1 + (wob * Math.sin(nowLocal / STR_RESET_WOBBLE_MS));
+            (sprite as any).scaleX = baseX * s;
+            (sprite as any).scaleY = baseY * (1 - (wob * 0.6));
+        } else {
+            _restoreBaseScaleIfPresent(sprite);
+        }
+        return true;
+    }
+
+    const col = _strengthPickFrameFromProgress([3, 4, 5], partProg | 0, partDur | 0);
+    _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "swing.slash");
+    return true;
+}
+
+function _tryStrengthSwingResetTimeline(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    if (STR_CUSTOM_TIMELINE_ENABLE) return false;
+    if (!STR_RESET_ENABLE) return false;
+    if (!(req.actionKind === "strength_swing" && def.phase === "slash")) return false;
+
+    const totalMs = (req.phaseDurationMs | 0);
+    if (!(totalMs > 0)) return false;
+
+    const frames: number[] = Array.isArray(def.frameIndices) ? def.frameIndices : [];
+    if (frames.length < 2) return false;
+
+    const fps = (def.frameRate | 0) > 0 ? (def.frameRate | 0) : 12;
+    let slashMs = Math.min(totalMs, Math.max(1, Math.round((frames.length / fps) * 1000)));
+    if (totalMs > (STR_RESET_MIN_MS | 0)) {
+        const maxSlash = Math.max(0, (totalMs - (STR_RESET_MIN_MS | 0)) | 0);
+        if (slashMs > maxSlash) slashMs = maxSlash;
+    }
+    const resetMs = Math.max(0, (totalMs - slashMs) | 0);
+
+    let introMs = Math.max(1, STR_RESET_INTRO_MS | 0);
+    let outroMs = Math.max(1, STR_RESET_OUTRO_MS | 0);
+    if ((introMs + outroMs) > resetMs && resetMs > 0) {
+        const scale = resetMs / (introMs + outroMs);
+        introMs = Math.max(1, Math.round(introMs * scale));
+        outroMs = Math.max(1, resetMs - introMs);
+    }
+    const holdMs = Math.max(0, (resetMs - introMs - outroMs) | 0);
+
+    const phaseProg = Math.max(0, Math.min(1000, (req.phaseProgressInt | 0)));
+    const elapsedMs = Math.round((totalMs * phaseProg) / 1000);
+
+    let frameIndex = frames[0];
+    let inHold = false;
+
+    if (elapsedMs < slashMs) {
+        const idx = Math.min(frames.length - 1, Math.floor((elapsedMs / Math.max(1, slashMs)) * frames.length));
+        frameIndex = frames[idx | 0];
+    } else {
+        const resetElapsed = (elapsedMs - slashMs) | 0;
+        if (resetMs <= 0) {
+            frameIndex = frames[frames.length - 1];
+        } else if (resetElapsed < introMs) {
+            const half = Math.max(1, Math.round(introMs / 2));
+            frameIndex = (resetElapsed < half) ? (frames[1] ?? frames[0]) : (frames[2] ?? frames[1] ?? frames[0]);
+        } else if (resetElapsed < (introMs + holdMs)) {
+            frameIndex = (frames[2] ?? frames[1] ?? frames[0]);
+            inHold = true;
+        } else {
+            const outroElapsed = resetElapsed - introMs - holdMs;
+            const half = Math.max(1, Math.round(outroMs / 2));
+            frameIndex = (outroElapsed < half) ? (frames[1] ?? frames[0]) : (frames[0]);
+        }
+    }
+
+    const animKey = buildHeroAnimKey(req.heroName!, def);
+    if (!scene.anims.exists(animKey)) {
+        scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(def.textureKey, { frames: def.frameIndices }),
+            frameRate: def.frameRate,
+            repeat: def.repeat,
+            yoyo: def.yoyo
+        });
+    }
+
+    const curKey = (sprite.anims && sprite.anims.currentAnim) ? sprite.anims.currentAnim.key : "";
+    if (!curKey || curKey !== animKey) {
+        try { sprite.anims.play(animKey, true); } catch { return false; }
+    }
+
+    const animState: any = sprite.anims as any;
+    if (animState && typeof animState.pause === "function") {
+        try { animState.pause(); } catch { /* ignore */ }
+    } else {
+        try { sprite.anims.stop(); } catch { /* ignore */ }
+    }
+
+    try {
+        const anim = sprite.anims.currentAnim as any;
+        const aframes = anim?.frames as any[] | undefined;
+        if (aframes && aframes.length) {
+            const idx = Math.max(0, Math.min(aframes.length - 1, aframes.findIndex((f: any) => f.index === frameIndex || f.frame?.name === frameIndex)));
+            const safeIdx = idx >= 0 ? idx : Math.max(0, Math.min(aframes.length - 1, 0));
+            sprite.anims.setCurrentFrame(aframes[safeIdx]);
+        } else {
+            sprite.setTexture(def.textureKey, frameIndex);
+        }
+    } catch {
+        sprite.setTexture(def.textureKey, frameIndex);
+    }
+
+    if (inHold) {
+        const baseX = (() => {
+            const v = Number((sprite as any).getData?.(HERO_BASE_SCALE_X_KEY));
+            if (Number.isFinite(v) && v !== 0) return v;
+            const cur = (sprite as any).scaleX;
+            if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+                try { (sprite as any).setData?.(HERO_BASE_SCALE_X_KEY, cur); } catch {}
+                return cur;
+            }
+            try { (sprite as any).setData?.(HERO_BASE_SCALE_X_KEY, 1); } catch {}
+            return 1;
+        })();
+        const baseY = (() => {
+            const v = Number((sprite as any).getData?.(HERO_BASE_SCALE_Y_KEY));
+            if (Number.isFinite(v) && v !== 0) return v;
+            const cur = (sprite as any).scaleY;
+            if (typeof cur === "number" && Number.isFinite(cur) && cur !== 0) {
+                try { (sprite as any).setData?.(HERO_BASE_SCALE_Y_KEY, cur); } catch {}
+                return cur;
+            }
+            try { (sprite as any).setData?.(HERO_BASE_SCALE_Y_KEY, 1); } catch {}
+            return 1;
+        })();
+        const nowLocal = (scene as any)?.time?.now ?? Date.now();
+        const wob = STR_RESET_WOBBLE_SCALE;
+        const s = 1 + (wob * Math.sin(nowLocal / STR_RESET_WOBBLE_MS));
+        (sprite as any).scaleX = baseX * s;
+        (sprite as any).scaleY = baseY * (1 - (wob * 0.6));
+    } else {
+        _restoreBaseScaleIfPresent(sprite);
+    }
+
+    if ((sprite as any).setData) {
+        (sprite as any).setData(LAST_ANIM_KEY, animKey);
+        (sprite as any).setData(LAST_PHASE_KEY, def.phase);
+        (sprite as any).setData(LAST_DIR_KEY, def.dir);
+        (sprite as any).setData(HERO_REST_PHASE_KEY, getRestPhase(def.phase));
+    }
+
+    try { _publishHeroFollowFrameKeys(sprite, def); } catch {}
+    if (shouldProve) {
+        console.log(
+            "[PROVE][STR-RESET]",
+            "| heroName", req.heroName,
+            "| frame", frameIndex,
+            "| elapsed", elapsedMs,
+            "| total", totalMs,
+            "| slashMs", slashMs,
+            "| resetMs", resetMs,
+            "| holdMs", holdMs,
+            "| inHold", inHold ? 1 : 0
+        );
+    }
+
+    return true;
+}
+
 function _applyHeroAimTilt(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequest): void {
     const anySprite: any = sprite as any;
     const baseKey = "__heroBaseRotation";
@@ -1443,7 +1792,15 @@ function _playDefaultAnimPath(
         if (rep !== 0) return;
 
         // Want clip to occupy entire engine phase window
-        const desiredMs = Math.max(1, durMs);
+        let desiredMs = Math.max(1, durMs);
+        // Strength charge prep should use the prep-part duration, not the full charge window.
+        if (req.actionKind === "strength_charge") {
+            const part = String((req as any).phasePartName || "").trim().toLowerCase();
+            if (part === "preparetocharge") {
+                const partDur = Number((req as any).phasePartDurationMs) | 0;
+                if (partDur > 0) desiredMs = partDur;
+            }
+        }
 
         // Phaser uses timeScale where 1.0 = normal speed.
         // If desired is longer than authored → timeScale < 1.
@@ -1657,6 +2014,26 @@ function applyHeroAnimationForSpriteInternal(
         return;
     } else {
         _restoreBaseScaleIfPresent(sprite);
+    }
+
+    // ------------------------------------------------------------
+    // Strength custom timeline (early return)
+    // ------------------------------------------------------------
+    if (_tryStrengthCustomTimeline(scene, sprite, req, def, shouldProve)) {
+        _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // Strength swing reset timeline (early return)
+    // ------------------------------------------------------------
+    if (_tryStrengthSwingResetTimeline(scene, sprite, req, def, shouldProve)) {
+        _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
+        return;
     }
 
     // ------------------------------------------------------------

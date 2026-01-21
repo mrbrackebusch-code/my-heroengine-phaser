@@ -10,6 +10,7 @@ import {
   type WeaponId,
   type WeaponMode,
   type WeaponSheetRef,
+  ensureWeaponSheetsLoaded,
   resolveWeaponLayerPair,
   resolveWeaponSheet,
   resolveAnyWeaponLayerPair,
@@ -699,6 +700,13 @@ export function syncWeaponLayersToHero(args: {
   aimAngleMdeg?: number;
   allowAimRotate?: boolean;
 }): WeaponRenderResolve | null {
+  const model = String(args.weaponId || "").trim();
+  if (!model) {
+    args.weaponBg.setVisible(false);
+    args.weaponFg.setVisible(false);
+    return null;
+  }
+
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
 
   const dbgOn = _weaponDebugEnabled();
@@ -881,6 +889,21 @@ export function syncWeaponLayersToHero(args: {
     return null;
   }
 
+  const textures = args.scene?.textures as any;
+  if (textures && typeof textures.exists === "function") {
+    const keys = [
+      (pair as any).bg?.key,
+      (pair as any).fg?.key
+    ].filter(Boolean) as string[];
+    const missing = keys.some((key) => !textures.exists(key));
+    if (missing) {
+      ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      args.weaponBg.setVisible(false);
+      args.weaponFg.setVisible(false);
+      return null;
+    }
+  }
+
   if (dbgOn && dbgVerbose) {
     _logWeaponResolveHitOnce(missKey, {
       weaponId: args.weaponId,
@@ -1049,6 +1072,12 @@ export function syncWeaponToHero(args: {
   // For our projectile crystal path, we treat this as an *absolute* frame index.
   frameColOverride?: number;
 }): void {
+  const model = String(args.weaponId || "").trim();
+  if (!model) {
+    args.weaponSprite.setVisible(false);
+    return;
+  }
+
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
   const tile = tileForWeaponMode(mode);
 
@@ -1060,6 +1089,13 @@ export function syncWeaponToHero(args: {
   });
 
   if (!sheet) {
+    args.weaponSprite.setVisible(false);
+    return;
+  }
+
+  const textures = args.scene?.textures as any;
+  if (textures && typeof textures.exists === "function" && !textures.exists(sheet.key)) {
+    ensureWeaponSheetsLoaded(args.scene, model, args.variant);
     args.weaponSprite.setVisible(false);
     return;
   }

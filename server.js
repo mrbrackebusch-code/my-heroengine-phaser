@@ -19,11 +19,10 @@ const DEBUG_TILEMAP = false;
 const HOST_LEASE_MS = 5000;
 
 // ------------------------------------------------------------
-// Phase 1 bridge:
+// Identity:
 // - playerId: stable identity (unbounded, token-stable)
-// - controlSlot: engine control lane (1..4), 0 = limbo/spectator
+// - controlSlot: legacy field; now equals playerId (unbounded)
 // ------------------------------------------------------------
-const CONTROL_SLOTS = 4;
 
 // ------------------------------------------------------------
 // Server config
@@ -66,7 +65,7 @@ const wsToToken = new Map(); // Map<WebSocket, string>
 
 // Identity + slot
 const tokenToPlayerId = new Map();     // Map<string, number>
-const tokenToControlSlot = new Map();  // Map<string, number> (0|1..CONTROL_SLOTS)
+const tokenToControlSlot = new Map();  // Map<string, number> (controlSlot == playerId)
 const tokenToProfile = new Map();      // Map<string, string>
 const profileToToken = new Map();      // Map<string, string> (authoritative owner of a profile)
 
@@ -169,23 +168,17 @@ function dumpClients(tag) {
 }
 
 // ============================================================
-// Allocation (Phase 1 bridge)
+// Allocation
 // ============================================================
 
 function allocateIdentityPlayerId() {
   return nextPlayerId++;
 }
 
-function allocateControlSlotIfAvailable() {
-  const used = new Set();
-  for (const s of tokenToControlSlot.values()) {
-    const slot = s | 0;
-    if (slot >= 1 && slot <= CONTROL_SLOTS) used.add(slot);
-  }
-  for (let slot = 1; slot <= CONTROL_SLOTS; slot++) {
-    if (!used.has(slot)) return slot;
-  }
-  return 0; // limbo
+function ensureControlSlot(token, playerId) {
+  const slot = playerId | 0;
+  tokenToControlSlot.set(token, slot);
+  return slot;
 }
 
 // ============================================================
@@ -375,14 +368,11 @@ function bindHello(ws, msg) {
     playerId = allocateIdentityPlayerId();
     tokenToPlayerId.set(token, playerId);
 
-    // Allocate control slot (Phase 1: max 4)
-    const slot = allocateControlSlotIfAvailable();
-    tokenToControlSlot.set(token, slot);
+    // Control slot equals playerId (unbounded)
+    ensureControlSlot(token, playerId);
   } else {
-    // Ensure controlSlot exists even if older saved state is missing it
-    if (!tokenToControlSlot.has(token)) {
-      tokenToControlSlot.set(token, allocateControlSlotIfAvailable());
-    }
+    // Ensure controlSlot exists (legacy field)
+    ensureControlSlot(token, playerId);
   }
 
   // Determine profile for this token (client is authoritative)
