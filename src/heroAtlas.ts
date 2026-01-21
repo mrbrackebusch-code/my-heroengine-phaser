@@ -766,7 +766,7 @@ export function buildHeroAtlas(scene: Phaser.Scene): HeroAtlas {
         // ULDR = rows 12,13,14,15
         const slashRowBase64 = 12;
         const slashCols64 = cols0to(5); // 6 frames
-        const slashYoyo = true;
+        const slashYoyo = false;
 
         addPhaseDir("slash", "up",    slashRowBase64 + 0, slashCols64, 12, 0, slashYoyo);
         addPhaseDir("slash", "left",  slashRowBase64 + 1, slashCols64, 12, 0, slashYoyo);

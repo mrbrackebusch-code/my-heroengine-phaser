@@ -68,6 +68,7 @@ import * as heroAnimGlue from "./heroAnimGlue";
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
 import * as effectAnimGlue from "./effectAnimGlue";
+import type { EffectAtlas } from "./effectAtlas";
 import { listWeaponVariants } from "./weaponAtlas";
 import {
     DECOR_ENABLED,
@@ -1290,6 +1291,87 @@ const MAKECODE_PALETTE: number[][] = [
     [0, 0, 0]          // 15 - #000000
 ];
 
+const __effectPaletteCache = new Map<string, number[]>();
+
+function _closestMakecodePaletteIndex(rgb: number): number {
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = rgb & 0xff;
+    let bestIdx = 1;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (let i = 1; i < MAKECODE_PALETTE.length; i++) {
+        const p = MAKECODE_PALETTE[i];
+        const dr = (p[0] | 0) - r;
+        const dg = (p[1] | 0) - g;
+        const db = (p[2] | 0) - b;
+        const dist = (dr * dr) + (dg * dg) + (db * db);
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = i;
+        }
+    }
+    return bestIdx | 0;
+}
+
+function _resolveEffectAtlasEntry(
+    atlas: EffectAtlas | undefined,
+    skinId: string,
+    dir?: string
+): any | null {
+    if (!atlas || !skinId) return null;
+    let resolved = (atlas as any)[skinId];
+    if (!resolved && dir) {
+        const dirLower = String(dir || "").trim().toLowerCase();
+        const suffixes = [`_${dirLower}`, `-${dirLower}`, ` ${dirLower}`];
+        for (const suffix of suffixes) {
+            const candidate = `${skinId}${suffix}`;
+            if ((atlas as any)[candidate]) {
+                resolved = (atlas as any)[candidate];
+                break;
+            }
+        }
+    }
+    return resolved || null;
+}
+
+function __installEffectPaletteHook(g: any): void {
+    g.__HeroEngineHooks = g.__HeroEngineHooks || {};
+    if (g.__HeroEngineHooks.getEffectPaletteIndices) return;
+    g.__HeroEngineHooks.getEffectPaletteIndices = function (
+        skinId: string,
+        dir?: string
+    ): number[] | null {
+        const key = `${skinId || ""}|${dir || ""}`;
+        const cached = __effectPaletteCache.get(key);
+        if (cached) return cached.slice();
+
+        const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
+        const atlas =
+            (scene?.registry?.get?.("effectAtlas") as EffectAtlas | undefined) ||
+            ((scene as any)?.effectAtlas as EffectAtlas | undefined) ||
+            ((scene as any)?.__effectAtlas as EffectAtlas | undefined) ||
+            ((globalThis as any).__effectAtlas as EffectAtlas | undefined);
+        if (!atlas) return null;
+
+        const resolved = _resolveEffectAtlasEntry(atlas, String(skinId || ""), dir);
+        const palette = resolved?.palette;
+        const colors: number[] = Array.isArray(palette?.colors) ? palette.colors : [];
+        if (!colors.length) return null;
+
+        const picked: number[] = [];
+        for (const rgb of colors) {
+            const idx = _closestMakecodePaletteIndex(rgb >>> 0);
+            if (!idx) continue;
+            if (picked.indexOf(idx) >= 0) continue;
+            picked.push(idx | 0);
+        }
+        if (!picked.length) return null;
+
+        __effectPaletteCache.set(key, picked);
+        return picked.slice();
+    };
+}
+
 
 
 
@@ -1368,20 +1450,6 @@ function _getEffectAtlasFromScene(scene: Phaser.Scene): any | null {
         ((globalThis as any).__effectAtlas as any) ||
         null
     );
-}
-
-function _resolveEffectAtlasEntry(atlas: any, skin: string, dir: string): any | null {
-    if (!atlas || !skin) return null;
-    const direct = atlas[skin];
-    if (direct) return direct;
-    const dirLower = String(dir || "").trim().toLowerCase();
-    if (!dirLower) return null;
-    const suffixes = [`_${dirLower}`, `-${dirLower}`, ` ${dirLower}`];
-    for (const suffix of suffixes) {
-        const candidate = `${skin}${suffix}`;
-        if (atlas[candidate]) return atlas[candidate];
-    }
-    return null;
 }
 
 function _ensureEffectBlankTexture(sc: Phaser.Scene): string {
@@ -2799,6 +2867,7 @@ function __installHeroVisualInfoHookOnce(): void {
         const g: any = (globalThis as any);
         g.__HeroEngineHooks = g.__HeroEngineHooks || {};
         __installAuraMaskBitsHook(g);
+        __installEffectPaletteHook(g);
 
         g.__HeroEngineHooks.getHeroVisualInfo = function (hero: any, nx: number, ny: number): number[] {
             // 1) Try cached silhouette-derived values first
@@ -9951,8 +10020,8 @@ function _syncHeroPath(
             if (typeof nativeAny.setVisible === "function") nativeAny.setVisible(true);
             if (typeof nativeAny.setAlpha === "function") nativeAny.setAlpha(ghostAlpha);
             else nativeAny.alpha = ghostAlpha;
-            if (typeof nativeAny.setTintFill === "function") nativeAny.setTintFill(ghostTint);
-            else if (typeof nativeAny.setTint === "function") nativeAny.setTint(ghostTint);
+            if (typeof nativeAny.setTint === "function") nativeAny.setTint(ghostTint);
+            else if (typeof nativeAny.setTintFill === "function") nativeAny.setTintFill(ghostTint);
             nativeAny.__ghostVisActive = true;
         } else if (nativeAny.__ghostVisActive) {
             if (typeof nativeAny.setAlpha === "function") nativeAny.setAlpha(1);

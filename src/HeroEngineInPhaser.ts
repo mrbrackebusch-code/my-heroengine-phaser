@@ -1372,7 +1372,7 @@ const BALANCE = {
 
     MOVEMENT: {
 
-        HERO_BASE_SPEED: 300
+        HERO_BASE_SPEED: 120
 
     },
 
@@ -2631,25 +2631,40 @@ const STR_USE_WPN_AURA_OUTLINE_ONLY = true;
 const STR_WPN_AURA_OUTLINE_RADIUS = 3;
 const STR_ARC_BASE_MAX_WIDTH_PX = 32;
 const STR_ARC_BASE_MIN_WIDTH_PX = 1;
+const STR_ARC_BASE_WPN_THICKNESS_BIAS_PX = 2;
 const STR_ARC_MAX_FRONT_DEG = 180;
 const STR_SHOW_CHARGE_TRAIL = false;
 const STR_ARC_MAX_WIDTH_PX = 32;
 const STR_ARC_MIN_WIDTH_PX = 1;
 const STR_ARC_STEP_DEG = 3;
+const STR_ARC_TRAVEL_WAVE = true;
+const STR_ARC_WAVE_DEG = 32;
 const STR_ARC_SWEEP_START_FRAC = 0.25;
 const STR_SLASH_MASK_START_FRAC = STR_ARC_SWEEP_START_FRAC;
 const STR_TIP_TRACE_SIZE_PX = 16;
 const STR_CHARGE_TRACE_SIZE_PX = 6;
 const STR_CHARGE_TIP_RADII = [3, 2];
-const STR_DEBUG_FRAME_MS_MULT = 1;
+const STR_DEBUG_FRAME_MS_MULT = 1; //This multiplies the strength move slow-mo strength slowmo
 const STR_TIP_TRACE_COLOR = 2;
 const STR_TIP_TRACE_EDGE_COLOR = 15;
 const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
 const STR_ARC_START_FRAC_KEY = "SS_ARC_START_FRAC";
+const STR_ARC_BASE_WIDTH_KEY = "SS_ARC_BASE_W";
+const STR_ARC_SIDE_KEY = "SS_ARC_SIDE";
+const STR_SWING_SHARED_HIT_MASK_KEY = "strSwingHitMask";
+const STR_SWING_DUAL_ARC = true;
+const STR_PROJECTILE_MAX_FPS = true;
+const STR_PROJECTILE_MAX_FPS_FRAME_MS = 1;
 const STR_WIND_MS_KEY = "SS_WIND_MS";
 const STR_FWD_MS_KEY = "SS_FWD_MS";
 const STR_LAND_MS_KEY = "SS_LAND_MS";
 const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
+const STR_SWING_START_COL_KEY = "SS_START_COL";
+
+const WPN_AURA_COL_R1_KEY = "wpnAuraR1";
+const WPN_AURA_COL_R2_KEY = "wpnAuraR2";
+const WPN_AURA_COL_R3_KEY = "wpnAuraR3";
+const WPN_AURA_COL_EDGE_KEY = "wpnAuraEdge";
 
 type StrengthFrameRule = {
     tipRadii: number[];
@@ -2667,7 +2682,7 @@ const STR_SWING_FRAME_RULES: StrengthFrameRule[] = [
     { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
     { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
     // frames 4..6 (forward): weapon trail + slash mask, arc begins at frame 5
-    { tipRadii: [2, 1], lineMaxIdx: 2, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: false },
+    { tipRadii: [2, 1], lineMaxIdx: 2, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true },
     { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true },
     { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true }
 ];
@@ -2881,6 +2896,49 @@ function _projectileEmergencyColors(element: number): number[] {
         case ELEM.NONE: return [8, 9, 1];
         default: return [1, 13, 11];
     }
+}
+
+type WeaponAuraPalette = { r1: number; r2: number; r3: number; edge: number };
+const __weaponAuraPaletteCache: { [k: string]: WeaponAuraPalette } = Object.create(null);
+
+function _weaponAuraPaletteForElement(
+    element: number,
+    dir: string,
+    mode?: HeroElementEffectMode
+): WeaponAuraPalette {
+    const pick = _heroSpellEffectPick(element | 0, dir || "", mode);
+    const skinId = pick?.skinId || "";
+    const pickDir = pick?.dir || "";
+    const cacheKey = skinId ? `${skinId}|${pickDir}` : `elem:${element | 0}`;
+    const cached = __weaponAuraPaletteCache[cacheKey];
+    if (cached) return cached;
+
+    let colors: number[] | null = null;
+    if (skinId) {
+        const g: any = globalThis as any;
+        const hook = g && g.__HeroEngineHooks && g.__HeroEngineHooks.getEffectPaletteIndices;
+        if (typeof hook === "function") {
+            try { colors = hook(skinId, pickDir); } catch { /* ignore */ }
+        }
+    }
+    if (!colors || colors.length === 0) colors = _projectileEmergencyColors(element | 0);
+
+    const deduped: number[] = [];
+    for (const c of colors) {
+        const v = c | 0;
+        if (!v) continue;
+        if (deduped.indexOf(v) >= 0) continue;
+        deduped.push(v);
+    }
+    if (!deduped.length) deduped.push(1);
+
+    const base = deduped[0] | 0;
+    const mid = (deduped[1] != null ? deduped[1] : base) | 0;
+    const hi = (deduped[2] != null ? deduped[2] : mid) | 0;
+
+    const out: WeaponAuraPalette = { r1: base, r2: mid, r3: hi, edge: hi };
+    __weaponAuraPaletteCache[cacheKey] = out;
+    return out;
 }
 
 function _projectileEmergencyFill(img: Image, element: number): void {
@@ -3306,8 +3364,8 @@ const HERO_DATA: Record<string, string> = {
     STR_PAYLOAD_ANIM: "strPayAnim",    // string
 
 
-
     STR_CHARGE_ARC_MAX_DEG: "strChgMaxD",
+    STR_SWING_HIT_MASK: "strSwingHitMask",
 
 
 
@@ -3351,6 +3409,7 @@ const HERO_DATA: Record<string, string> = {
     DEAD_DIALOG: "deadDialog",
     GHOST_ALPHA: "ghostAlpha",
     GHOST_TINT: "ghostTint",
+    GHOST_ACTIVE: "ghostActive",
     DEAD_ANCHOR_X: "deadAnchorX",
     DEAD_ANCHOR_Y: "deadAnchorY",
     DEAD_LEASH_PX: "deadLeashPx",
@@ -3723,6 +3782,7 @@ const PROJ_DATA = {
 
 
     HIT_MASK: "hitMask",          // bookkeeping for multi-hit behavior
+    SHARED_HIT: "sharedHit",      // when 1, use hero-level hit mask (shared across sibling projectiles)
 
 
 
@@ -7927,6 +7987,7 @@ const INTERACT_DATA = {
 }
 
 const INTERACT_ACTION_PROP = "prop"
+const INTERACT_ACTION_HEADSTONE = "headstone"
 const INTERACT_ACTION_RELIC_OFFER = "relic_offer"
 
 type PropAuraStyle = {
@@ -9503,6 +9564,13 @@ function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: numbe
             x: it.x | 0,
             y: it.y | 0,
         })
+    }
+    if (action === INTERACT_ACTION_HEADSTONE || baseName === HERO_DEATH_HEADSTONE_PROP) {
+        const profile = sprites.readDataString(it, "headstoneProfile") || ""
+        if (profile) {
+            _heroDeath_showDialog(hero, pid | 0, profile, HERO_DEATH_HEADSTONE_OWNER_PREFIX, true)
+            return true
+        }
     }
     if (baseName === TRAP_TOTEM_BASE) {
         _dunFireTotemTriggerActivation(nowMs | 0)
@@ -11509,6 +11577,31 @@ let _dunBookLiftLastMs = 0
 let _dunBookBaseY = NaN
 let _dunBookNextSparkleMs = 0
 let _dunBookSaveEntries: { file: string; label: string }[] = []
+let _dunReservedSpawnTiles: Record<string, number> = Object.create(null)
+
+function _dunClearReservedSpawnTiles(): void {
+    _dunReservedSpawnTiles = Object.create(null)
+}
+
+function _dunReserveSpawnTilesFromHeroes(): void {
+    const tile = WORLD_TILE_SIZE | 0
+    if (tile <= 0) return
+    const next: Record<string, number> = Object.create(null)
+    for (let i = 0; i < heroes.length; i++) {
+        const hero = heroes[i]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0) continue
+        const r = Math.idiv(hero.y | 0, tile) | 0
+        const c = Math.idiv(hero.x | 0, tile) | 0
+        next[`${r | 0}:${c | 0}`] = 1
+    }
+    _dunReservedSpawnTiles = next
+}
+
+function _dunIsReservedSpawnTile(r: number, c: number): boolean {
+    return !!_dunReservedSpawnTiles[`${r | 0}:${c | 0}`]
+}
 
 
 
@@ -12785,6 +12878,15 @@ function _dunClearTransientFloorEntities(): void {
     _dunResetFireTotemState()
     _dunResetBookRuntime()
     _trapClearState()
+    _heroDeath_clearAllHeadstones()
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD) || sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) {
+            sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false)
+            sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, false)
+        }
+    }
 
     if (_dunStoryNpcs && _dunStoryNpcs.length) {
         for (let i = 0; i < _dunStoryNpcs.length; i++) {
@@ -13256,6 +13358,8 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
 
     _dunAllReadySinceMs = 0
 
+    _dunClearReservedSpawnTiles()
+
     for (let hi = 0; hi < heroes.length; hi++) {
         const h = heroes[hi]
         if (!h || (h.flags & sprites.Flag.Destroyed)) continue
@@ -13353,13 +13457,12 @@ function _dunEnterFloor_placeHeroesAtSpawn(
         const xy = coords[i % coords.length]
         const spawn = _heroSpawnFindClearXY(xy[0], xy[1])
 
-
+        let profileKey = _resolveProfileKeyForPlayerId(pid)
 
         let hi = playerToHeroIndex[pid] | 0
 
         if (hi < 0) {
 
-            const profileKey = _resolveProfileKeyForPlayerId(pid)
             if (!profileKey) continue
             createHeroForPlayer(pid, xy[0], xy[1], profileKey, undefined, undefined, undefined, "dungeon:enter_floor")
 
@@ -13400,6 +13503,16 @@ function _dunEnterFloor_placeHeroesAtSpawn(
         sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, 0)
 
         sprites.setDataString(hero, "dir", "up")
+
+        if (!profileKey) profileKey = _heroProfileKeyForIndex(hi) || sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) {
+            sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false)
+            sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, true)
+            sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_X, hero.x | 0)
+            sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_Y, hero.y | 0)
+            sprites.setDataNumber(hero, HERO_DATA.DEAD_LEASH_PX, HERO_DEATH_LEASH_PX | 0)
+            _heroDeath_spawnHeadstone(hero, profileKey || "")
+        }
 
     }
 
@@ -13535,13 +13648,14 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     const padLeft = (padC - 2) | 0
     const padRight = (padC + 2) | 0
 
+    const starterOffX = -16
+    const starterOffY = 16
+
     if (padR >= 0 && padC >= 0) {
         // Place the starter relic chest offset from the pad's bottom-left tile.
         const anchorR = Math.max(0, Math.min(rows - 1, (padR + 1) | 0)) | 0
         const anchorC = Math.max(0, Math.min(cols - 1, (padC - 2) | 0)) | 0
-        const offX = -16
-        const offY = 16
-        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", offX, offY)
+        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", starterOffX, starterOffY)
         if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
             _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
             _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
@@ -13617,7 +13731,7 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
         pick = { r: targetR | 0, c: targetC | 0 }
     }
 
-    const chest = _dunSpawnChest(nowMs, _dunColToX(pick.c | 0), _dunRowToY(pick.r | 0), "chest_rainbow")
+    const chest = _dunSpawnChest(nowMs, _dunColToX(pick.c | 0), _dunRowToY(pick.r | 0), "chest_rainbow", starterOffX, starterOffY)
     if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
         _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
         _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
@@ -14700,6 +14814,7 @@ function _dunSetFireTotemMenuActive(active: boolean): void {
 try { (globalThis as any).dun_setFireTotemMenuActive = _dunSetFireTotemMenuActive } catch { /* ignore */ }
 
 const TRAP_CENTER_SEARCH_RADIUS = 6
+const TRAP_ENTRANCE_USE_CENTER_SPAWN = false
 const TRAP_SHRINE_MIN_CHEB = 2
 
 function _dunFindShrineTile(): { r: number, c: number } | null {
@@ -14791,6 +14906,7 @@ function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | nul
 
     function isTrapTileValid(rr: number, cc: number): boolean {
         if (!isTileFree(rr, cc)) return false
+        if (_dunIsReservedSpawnTile(rr | 0, cc | 0)) return false
         if ((shrineR | 0) >= 0 && (shrineC | 0) >= 0) {
             const dr = Math.abs((rr | 0) - (shrineR | 0)) | 0
             const dc = Math.abs((cc | 0) - (shrineC | 0)) | 0
@@ -14852,7 +14968,7 @@ function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | nul
         return null
     }
 
-    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+    if (TRAP_ENTRANCE_USE_CENTER_SPAWN && _dunFloorKind === DUNGEON_KIND_ENTRANCE) {
         const maxRadius = TRAP_CENTER_SEARCH_RADIUS | 0
         let pick: { r: number, c: number } | null = null
         const tries = Math.max(12, (maxRadius * maxRadius) | 0) | 0
@@ -15186,6 +15302,7 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
 
     _dunEnterFloor_placeHeroesAtSpawn(activePids, coords, nowMs)
+    _dunReserveSpawnTilesFromHeroes()
 
     _dunEnterFloor_setupKind(_dunFloorKind, nowMs, pad.padX, pad.padY)
 
@@ -15901,15 +16018,69 @@ const PHASE_PROGRESS_MAX = 1024   // PhaseProgressInt is 0..PHASE_PROGRESS_MAX
 const HERO_DEATH_ANIM_MS = 600;
 const HERO_DEATH_HEADSTONE_PROP = "headstone";
 const HERO_DEATH_DIALOG_OWNER_PREFIX = "death";
+const HERO_DEATH_HEADSTONE_OWNER_PREFIX = "headstone";
 const HERO_DEATH_DIALOG_CHOICE_LOAD = "loadRecent";
+const HERO_DEATH_DIALOG_CHOICE_START_OVER = "startOver";
+const HERO_DEATH_DIALOG_CHOICE_RESPAWN = "respawn";
+const HERO_DEATH_DIALOG_CHOICE_CONTRIBUTE = "contribute";
 const HERO_DEATH_DIALOG_CHOICE_STAY = "stayDead";
-const HERO_DEATH_GHOST_ALPHA = 0.35;
-const HERO_DEATH_GHOST_TINT = 0xf0f8ff;
-const HERO_DEATH_LEASH_PX = 10;
+const HERO_DEATH_GHOST_ALPHA = 0.25;
+const HERO_DEATH_GHOST_TINT = 0xbdd1ea;
+const HERO_DEATH_LEASH_PX = 4;
+const HERO_RESPAWN_COST_BASE = 10;
+const HERO_RESPAWN_COST_PER_LEVEL = 6;
 
 
 
 let nextIntentDispatchMs = 0
+
+const _deathRespawnFundByProfile: Record<string, number> = Object.create(null)
+const _deathHeadstoneByProfile: Record<string, Sprite | null> = Object.create(null)
+const _deathHeadstoneInteractByProfile: Record<string, Sprite | null> = Object.create(null)
+
+function _death_normProfileKey(raw: any): string {
+    const key = (typeof raw === "string") ? raw.trim() : ""
+    return key
+}
+
+function _death_getRespawnFund(profileKey: string): number {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return 0
+    return (_deathRespawnFundByProfile[key] | 0) || 0
+}
+
+function _death_addRespawnFund(profileKey: string, delta: number): number {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return 0
+    const cur = (_deathRespawnFundByProfile[key] | 0) || 0
+    const next = Math.max(0, (cur + (delta | 0)) | 0) | 0
+    _deathRespawnFundByProfile[key] = next
+    return next
+}
+
+function _death_spendRespawnFund(profileKey: string, cost: number): boolean {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return false
+    const cur = (_deathRespawnFundByProfile[key] | 0) || 0
+    const c = Math.max(0, cost | 0) | 0
+    if (cur < c) return false
+    _deathRespawnFundByProfile[key] = (cur - c) | 0
+    return true
+}
+
+function _death_respawnCostForProfile(profileKey: string): number {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return HERO_RESPAWN_COST_BASE | 0
+    const hi = (profileToHeroIndex[key] | 0)
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    let lvl = 1
+    if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+        lvl = sprites.readDataNumber(hero, HERO_XP_DATA.LEVEL) | 0
+        if (lvl <= 0) lvl = 1
+    }
+    const cost = (HERO_RESPAWN_COST_BASE + Math.max(0, (lvl - 1) | 0) * (HERO_RESPAWN_COST_PER_LEVEL | 0)) | 0
+    return Math.max(1, cost | 0) | 0
+}
 
 
 
@@ -32452,6 +32623,7 @@ function createHeroForPlayer(
     sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false)
     sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false)
     sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, false)
+    sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, false)
 
 
 
@@ -37108,6 +37280,16 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number, source?: Hero
 
         updateHeroHPBar(heroIndex);
 
+        // Safety: clear any lingering death state so the revive isn't blocked.
+        sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, false);
+        sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0);
+        sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0);
+        sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false);
+        if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) {
+            sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false);
+            hero.setFlag(SpriteFlag.Ghost, false);
+        }
+
 
 
         // RELIC HOOK: afterHeroDamage (death prevented)
@@ -38959,11 +39141,17 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Enemy, function (weapon, ene
 
     const hero = heroes[heroIndex]; if (!hero) return
 
-    let hitMask = sprites.readDataNumber(weapon, PROJ_DATA.HIT_MASK) | 0
-
-    const bit = 1 << eIndex; if (hitMask & bit) return
-
-    sprites.setDataNumber(weapon, PROJ_DATA.HIT_MASK, hitMask | bit)
+    const sharedHit = sprites.readDataNumber(weapon, PROJ_DATA.SHARED_HIT) | 0
+    const bit = 1 << eIndex
+    if (sharedHit) {
+        let hitMask = sprites.readDataNumber(hero, HERO_DATA.STR_SWING_HIT_MASK) | 0
+        if (hitMask & bit) return
+        sprites.setDataNumber(hero, HERO_DATA.STR_SWING_HIT_MASK, hitMask | bit)
+    } else {
+        let hitMask = sprites.readDataNumber(weapon, PROJ_DATA.HIT_MASK) | 0
+        if (hitMask & bit) return
+        sprites.setDataNumber(weapon, PROJ_DATA.HIT_MASK, hitMask | bit)
+    }
 
     const now = game.runtime()
 
@@ -39485,6 +39673,8 @@ const STR_SWING_SEG_LANDING_MIN_MS =
     Math.idiv((STR_SWING_SEG_LANDING_FRAMES * 1000 + STR_SWING_SEG_FPS - 1), STR_SWING_SEG_FPS) | 0
 const STR_SWING_FRAME_OVERRIDE_ENABLE = true;
 const STR_SWING_FRAME_SCHEDULE_ENABLE = true;
+const STR_SWING_FRAME_OVERRIDE_RELEASE = false;
+const STR_SWING_FRAME_OVERRIDE_ENABLE_FOR_SWING = false;
 const STR_SWING_RETURN_FCO_KEY = "strSwingRetFco";
 const STR_SWING_WINDUP_FRAME_COLS = [0, 1, 2];
 const STR_SWING_FORWARD_FRAME_COLS = [3, 4, 5];
@@ -39727,7 +39917,7 @@ function _strengthSwingSegmentDurations(phaseDur: number): { windMs: number; fwd
     let fwdMs = Math.idiv((dur | 0) * STR_SWING_SEG_FORWARD_FRAC_X1000, 1000) | 0;
     let landMs = (dur - windMs - fwdMs) | 0;
 
-    if (STR_SWING_FRAME_SCHEDULE_ENABLE) {
+    if (STR_SWING_FRAME_SCHEDULE_ENABLE && !STR_PROJECTILE_MAX_FPS) {
         const mult = STR_DEBUG_FRAME_MS_MULT | 0;
         const scaleMs = (v: number): number => {
             const base = v | 0;
@@ -39786,6 +39976,7 @@ function _pickFrameBySchedule(
     const mult = STR_DEBUG_FRAME_MS_MULT | 0;
     const scaleMs = (v: number): number => {
         const base = v | 0;
+        if (STR_PROJECTILE_MAX_FPS) return STR_PROJECTILE_MAX_FPS_FRAME_MS | 0;
         if (mult <= 1 || base <= 0) return base;
         return Math.max(1, (base * mult) | 0);
     };
@@ -39913,6 +40104,9 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         if ((sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0) !== 0) {
             sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, 0);
         }
+        if ((sprites.readDataNumber(hero, STR_SWING_START_COL_KEY) | 0) !== 0) {
+            sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, 0);
+        }
 
         return
 
@@ -39986,7 +40180,7 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
 
     // Strength swing return-to-guard frame override
-    if (STR_SWING_FRAME_OVERRIDE_ENABLE) {
+    if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_OVERRIDE_ENABLE_FOR_SWING) {
         const elapsed = Math.max(0, (nowMs - segStart) | 0);
         let frames: number[] | null = null;
         let frameMs: number[] | undefined;
@@ -39998,11 +40192,16 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         } else if (segName === "charging") {
             frames = STR_SWING_FORWARD_FRAME_COLS;
             frameMs = STR_SWING_FORWARD_FRAME_MS;
-        } else if (segName === "release") {
+        } else if (segName === "release" && STR_SWING_FRAME_OVERRIDE_RELEASE) {
             frames = STR_SWING_RETURN_FRAME_COLS;
             frameMs = STR_SWING_RETURN_FRAME_MS;
         }
-        if (frames && frames.length) {
+        if (!frames && segName === "release" && !STR_SWING_FRAME_OVERRIDE_RELEASE) {
+            if ((sprites.readDataNumber(hero, STR_SWING_RETURN_FCO_KEY) | 0) !== 0) {
+                clearHeroFrameColOverride(heroIndex);
+                sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
+            }
+        } else if (frames && frames.length) {
             const col = _pickFrameBySchedule(elapsed | 0, frames, frameMs, maxMs | 0);
             sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0);
             sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 1);
@@ -40010,6 +40209,9 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
             clearHeroFrameColOverride(heroIndex);
             sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
         }
+    } else if ((sprites.readDataNumber(hero, STR_SWING_RETURN_FCO_KEY) | 0) !== 0) {
+        clearHeroFrameColOverride(heroIndex);
+        sprites.setDataNumber(hero, STR_SWING_RETURN_FCO_KEY, 0);
     }
 
     // Only rewrite when segment actually changes (less churn)
@@ -40398,10 +40600,12 @@ function beginStrengthCharge(
     }
 
     if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_SCHEDULE_ENABLE) {
-        const initCol = (prepMs > 0)
-            ? (STR_SWING_WINDUP_FRAME_COLS[0] | 0)
-            : (STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0);
-        sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, initCol | 0);
+        if (prepMs <= 0) {
+            const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, holdCol | 0);
+        } else {
+            clearHeroFrameColOverride(heroIndex);
+        }
     }
 
     // Let slash play. Prep is visible; charging hold is done by heroAnimGlue when part=="charging".
@@ -40591,7 +40795,10 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
         arcMaxDeg | 0,
         drawT,
         STR_TIP_TRACE_COLOR | 0,
-        STR_TIP_TRACE_EDGE_COLOR | 0
+        STR_TIP_TRACE_EDGE_COLOR | 0,
+        undefined,
+        undefined,
+        0
     );
     const element = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0;
     _clearStrengthProjectileFill(img, element | 0);
@@ -40780,15 +40987,10 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
     if (STR_SWING_FRAME_OVERRIDE_ENABLE && STR_SWING_FRAME_SCHEDULE_ENABLE) {
         if (prepMs > 0 && (nowMs | 0) < (holdStart | 0)) {
-            const elapsed = Math.max(0, (nowMs | 0) - (prepStart | 0));
-            const col = _pickFrameBySchedule(
-                elapsed | 0,
-                STR_SWING_WINDUP_FRAME_COLS,
-                STR_SWING_WINDUP_FRAME_MS,
-                STR_SWING_WINDUP_FCO_MAX_MS | 0
-            );
-            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0);
+            // Let the animation play naturally during prep.
+            clearHeroFrameColOverride(heroIndex);
         } else {
+            // Hold on the last windup frame while charging.
             const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
             sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, holdCol | 0);
         }
@@ -40881,6 +41083,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const partBeforeRelease = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "");
     const wasHolding = (partBeforeRelease === "charging");
     sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
+    const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
+    sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, wasHolding ? ((holdCol + 1) | 0) : 0);
 
     _destroyStrengthChargeTrail(heroIndex, hero)
 
@@ -41232,6 +41436,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     // ------------------------------------------------------------
     // Spawn projectile immediately at swing start (first aggressive frame)
     // ------------------------------------------------------------
+    sprites.setDataNumber(hero, HERO_DATA.STR_SWING_HIT_MASK, 0)
     spawnStrengthSwingProjectile(
         heroIndex, hero,
         dmg, false, button,
@@ -41779,18 +41984,17 @@ function spawnStrengthSwingProjectile(
         const tipR = Math.round(wTipProj)
         if (tipR > frontStartR) frontStartR = tipR
     }
+    let arcBaseW = STR_ARC_BASE_MAX_WIDTH_PX | 0;
     if (STR_USE_WPN_AURA_OUTLINE_ONLY) {
         const info = _getHeroWeaponFgInfo(hero);
         if (info) {
-            const shape = _getWeaponMaskShape(info, STR_WPN_AURA_OUTLINE_RADIUS | 0);
-            if (shape) {
-                const baseLocalX = (info.offX || 0);
-                const baseLocalY = (info.offY || 0);
-                const leadR = _weaponMaskLeadingEdge(shape, baseLocalX, baseLocalY, nx, ny);
-                if (Number.isFinite(leadR)) {
-                    const leadRInt = Math.round(leadR);
-                    if (leadRInt > frontStartR) frontStartR = leadRInt;
-                }
+            const leadR0 = _weaponLeadingEdgeForFrameIndex(info, STR_WPN_AURA_OUTLINE_RADIUS | 0, nx, ny, 0);
+            if (Number.isFinite(leadR0) && leadR0 > 0) {
+                const leadRInt = Math.round(leadR0);
+                if (leadRInt > frontStartR) frontStartR = leadRInt;
+                arcBaseW = _strengthArcBaseWidthFromWeaponLen(leadR0);
+            } else {
+                arcBaseW = _strengthArcBaseWidthFromWeaponLen(frontStartR);
             }
         }
     }
@@ -41804,221 +42008,207 @@ function spawnStrengthSwingProjectile(
     if (reachFromInner < minReach) reachFromInner = minReach
     if (reachFromInner < 1) reachFromInner = 1
 
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const auraPalette = _weaponAuraPaletteForElement(element | 0, dirKey, "offense");
+
 
 
     const outerBase = (frontStartR | 0) + (reachFromInner | 0);
     const outerR = (outerBase | 0) + 3
-    const img0 = _createStrengthTraceImage(outerR)
-
-
-
-    const proj = sprites.create(img0, SpriteKind.HeroWeapon)
-    sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
-    sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
-
-    proj.setFlag(SpriteFlag.Invisible, false)
-    proj.z = hero.z + 12
-
-    proj.vx = 0
-
-    proj.vy = 0
-
-    proj.setPosition(hero.x, hero.y)
-    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
-    sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
-    const halfW = (img0.width | 0) >> 1
-    const halfH = (img0.height | 0) >> 1
-    let tipInitX = wTipX
-    let tipInitY = wTipY
-    const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.spawn")
-    if (auraPack && auraPack.shapes[3] && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
-        const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
-        const baseX = hero.x + (auraPack.info.offX || 0)
-        const baseY = hero.y + (auraPack.info.offY || 0)
-        const tipWorldX = baseX + tipShape.tipDx
-        const tipWorldY = baseY + tipShape.tipDy
-        tipInitX = tipWorldX - hero.x
-        tipInitY = tipWorldY - hero.y
-        const heroLocalX = hero.x - hero.x
-        const heroLocalY = hero.y - hero.y
-        let sideSign = _tipSideSign(tipInitX, tipInitY, heroLocalX, heroLocalY, nx, ny)
-        if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
-        const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
-        const rule = _strengthFrameRuleFor("prepareToCharge", STR_SWING_WINDUP_FRAME_COLS[0] | 0);
-        if (rule.allowTip) {
-            _stampStrengthTipRadii(
-                img0,
-                -halfW,
-                -halfH,
-                tipInitX,
-                tipInitY,
-                auraPack.shapes,
-                rule.tipRadii,
-                STR_TIP_TRACE_COLOR,
-                STR_TIP_TRACE_EDGE_COLOR,
-                clip
-            );
-        }
-        if (_wpnTraceEnabled()) {
-            const traceId = _wpnTraceAssignId(proj)
-            _wpnTraceLog("str.spawn.auraTip", {
-                id: traceId,
-                heroIndex,
-                dir: _weaponDirKeyFromVector(nx, ny),
-                texKey: auraPack.info.texKey,
-                frame: auraPack.info.frameName,
-                offX: auraPack.info.offX | 0,
-                offY: auraPack.info.offY | 0,
-                tipDx: +tipShape.tipDx.toFixed(2),
-                tipDy: +tipShape.tipDy.toFixed(2),
-                tipLocalX: +tipInitX.toFixed(2),
-                tipLocalY: +tipInitY.toFixed(2),
-                imgW: img0.width | 0,
-                imgH: img0.height | 0
-            });
-        }
-    } else {
-        if (!tipInitX && !tipInitY) {
-            tipInitX = nx * frontStartR
-            tipInitY = ny * frontStartR
-        }
-        // No fallback square at spawn; wait for real weapon aura data.
-    }
-    // Aura-only mode: do not draw any outline at spawn.
-
-    _updateProjectileMaskSpriteForProj(proj, img0)
-    _clearStrengthProjectileFill(img0, element | 0)
-
-    let tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
-    if (!tipSide) tipSide = _weaponDefaultSideSign(nx, ny)
-    sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, tipSide)
-
-
-
     const swingDuration = swingDurationMs || 220
 
+    const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
+        const img0 = _createStrengthTraceImage(outerR)
+        const proj = sprites.create(img0, SpriteKind.HeroWeapon)
+        sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
+        sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
 
+        proj.setFlag(SpriteFlag.Invisible, false)
+        proj.z = hero.z + 12
 
-    // Persist parameters for per-frame updater
+        proj.vx = 0
+        proj.vy = 0
 
-    sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
-
-    sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
-    const segs = _strengthSwingSegmentDurations(swingDuration | 0);
-    sprites.setDataNumber(proj, STR_WIND_MS_KEY, segs.windMs | 0);
-    sprites.setDataNumber(proj, STR_FWD_MS_KEY, segs.fwdMs | 0);
-    sprites.setDataNumber(proj, STR_LAND_MS_KEY, segs.landMs | 0);
-    const mult = STR_DEBUG_FRAME_MS_MULT | 0;
-    const scaleMs = (v: number): number => {
-        const base = v | 0;
-        if (mult <= 1 || base <= 0) return base;
-        return Math.max(1, (base * mult) | 0);
-    };
-    const fwdSum = (STR_SWING_FORWARD_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
-    const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length) ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0) : 0;
-    const arcStartMs = (segs.windMs | 0) + Math.round(((segs.fwdMs | 0) * (fwdFirst | 0)) / Math.max(1, fwdSum | 0));
-    const arcStartFracX1000 = Math.idiv(Math.max(0, arcStartMs | 0) * 1000, Math.max(1, swingDuration | 0)) | 0;
-    sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
-
-    sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg)
-
-    sprites.setDataNumber(proj, "SS_NX", nx)
-
-    sprites.setDataNumber(proj, "SS_NY", ny)
-
-
-
-    sprites.setDataNumber(proj, "SS_ATTACH", inner0)
-
-    sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner)
-
-
-
-    sprites.setDataNumber(proj, "SS_FRONT_START", frontStartR)
-
-    sprites.setDataNumber(proj, "SS_WTIP_X", wTipX)
-
-    sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY)
-    sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipInitX)
-    sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipInitY)
-
-
-
-    proj.lifespan = swingDuration
-
-    heroProjectiles.push(proj)
-
-
-
-    // Standard projectile data (unchanged)
-
-    sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex)
-
-    sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.STRENGTH)
-
-    sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
-
-    sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0)
-
-    sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, dmg)
-
-    sprites.setDataNumber(proj, PROJ_DATA.IS_HEAL, isHeal ? 1 : 0)
-
-    sprites.setDataNumber(proj, PROJ_DATA.SLOW_PCT, slowPct)
-
-    sprites.setDataNumber(proj, PROJ_DATA.SLOW_DURATION_MS, slowDurMs)
-
-    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_PCT, weakenPct)
-
-    sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs)
-
-    sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct)
-
-    sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing")
-    sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
-
-    if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
-        const bodyFx = _spawnHeroBodyPaintFxForMove(
-            heroIndex,
-            hero,
-            FAMILY.STRENGTH,
-            element | 0,
-            nx,
-            ny,
-            swingDuration | 0,
-            "strengthSwing"
-        )
-        if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
-
-        _spawnStrengthSwingFxSegments(
-            proj,
-            heroIndex,
-            hero,
-            element | 0,
-            nx,
-            ny,
-            inner0,
-            reachFromInner,
-            totalArcDeg,
-            swingDuration | 0
-        )
-        if ((sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0) > 0) {
-            _setStrengthSwingFxSegmentsVisible(proj, false);
+        proj.setPosition(hero.x, hero.y)
+        sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x)
+        sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y)
+        const halfW = (img0.width | 0) >> 1
+        const halfH = (img0.height | 0) >> 1
+        let tipInitX = wTipX
+        let tipInitY = wTipY
+        const auraPack = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "str.spawn")
+        if (auraPack && auraPack.shapes[3] && !STR_USE_WPN_AURA_OUTLINE_ONLY) {
+            const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
+            const baseX = hero.x + (auraPack.info.offX || 0)
+            const baseY = hero.y + (auraPack.info.offY || 0)
+            const tipWorldX = baseX + tipShape.tipDx
+            const tipWorldY = baseY + tipShape.tipDy
+            tipInitX = tipWorldX - hero.x
+            tipInitY = tipWorldY - hero.y
+            const heroLocalX = hero.x - hero.x
+            const heroLocalY = hero.y - hero.y
+            let sideSign = _tipSideSign(tipInitX, tipInitY, heroLocalX, heroLocalY, nx, ny)
+            if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
+            const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
+            const rule = _strengthFrameRuleFor("prepareToCharge", STR_SWING_WINDUP_FRAME_COLS[0] | 0);
+            if (rule.allowTip) {
+                _stampStrengthTipRadii(
+                    img0,
+                    -halfW,
+                    -halfH,
+                    tipInitX,
+                    tipInitY,
+                    auraPack.shapes,
+                    rule.tipRadii,
+                    STR_TIP_TRACE_COLOR,
+                    STR_TIP_TRACE_EDGE_COLOR,
+                    clip
+                );
+            }
+            if (_wpnTraceEnabled()) {
+                const traceId = _wpnTraceAssignId(proj)
+                _wpnTraceLog("str.spawn.auraTip", {
+                    id: traceId,
+                    heroIndex,
+                    dir: _weaponDirKeyFromVector(nx, ny),
+                    texKey: auraPack.info.texKey,
+                    frame: auraPack.info.frameName,
+                    offX: auraPack.info.offX | 0,
+                    offY: auraPack.info.offY | 0,
+                    tipDx: +tipShape.tipDx.toFixed(2),
+                    tipDy: +tipShape.tipDy.toFixed(2),
+                    tipLocalX: +tipInitX.toFixed(2),
+                    tipLocalY: +tipInitY.toFixed(2),
+                    imgW: img0.width | 0,
+                    imgH: img0.height | 0
+                });
+            }
+        } else {
+            if (!tipInitX && !tipInitY) {
+                tipInitX = nx * frontStartR
+                tipInitY = ny * frontStartR
+            }
+            // No fallback square at spawn; wait for real weapon aura data.
         }
-        if (STR_USE_PROJECTILE_MASK_FX) {
-            const trailFx = _spawnProjectileMaskFxForMove(
-                proj,
+        // Aura-only mode: do not draw any outline at spawn.
+
+        _updateProjectileMaskSpriteForProj(proj, img0)
+        _clearStrengthProjectileFill(img0, element | 0)
+
+        let tipSide = _tipSideSign(tipInitX, tipInitY, 0, 0, nx, ny)
+        if (!tipSide) tipSide = _weaponDefaultSideSign(nx, ny)
+        sprites.setDataNumber(proj, STR_TIP_SIDE_SIGN_KEY, tipSide)
+
+        // Persist parameters for per-frame updater
+        sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now)
+        sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration)
+        const segs = _strengthSwingSegmentDurations(swingDuration | 0);
+        sprites.setDataNumber(proj, STR_WIND_MS_KEY, segs.windMs | 0);
+        sprites.setDataNumber(proj, STR_FWD_MS_KEY, segs.fwdMs | 0);
+        sprites.setDataNumber(proj, STR_LAND_MS_KEY, segs.landMs | 0);
+        const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+        const scaleMs = (v: number): number => {
+            const base = v | 0;
+            if (mult <= 1 || base <= 0) return base;
+            return Math.max(1, (base * mult) | 0);
+        };
+        const fwdSum = (STR_SWING_FORWARD_FRAME_MS || []).reduce((a, b) => a + Math.max(1, scaleMs(b | 0)), 0) | 0;
+        const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length) ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0) : 0;
+        const arcStartMs = (segs.windMs | 0) + Math.round(((segs.fwdMs | 0) * (fwdFirst | 0)) / Math.max(1, fwdSum | 0));
+        const arcStartFracX1000 = Math.idiv(Math.max(0, arcStartMs | 0) * 1000, Math.max(1, swingDuration | 0)) | 0;
+        sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
+        sprites.setDataNumber(proj, STR_ARC_BASE_WIDTH_KEY, arcBaseW | 0);
+        sprites.setDataNumber(proj, STR_ARC_SIDE_KEY, arcSide | 0);
+
+        sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg)
+        sprites.setDataNumber(proj, "SS_NX", nx)
+        sprites.setDataNumber(proj, "SS_NY", ny)
+
+        sprites.setDataNumber(proj, "SS_ATTACH", inner0)
+        sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner)
+
+        sprites.setDataNumber(proj, "SS_FRONT_START", frontStartR)
+        sprites.setDataNumber(proj, "SS_WTIP_X", wTipX)
+        sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY)
+        sprites.setDataNumber(proj, "SS_LAST_TIP_X", tipInitX)
+        sprites.setDataNumber(proj, "SS_LAST_TIP_Y", tipInitY)
+
+        proj.lifespan = swingDuration
+        heroProjectiles.push(proj)
+
+        // Standard projectile data (unchanged)
+        sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex)
+        sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.STRENGTH)
+        sprites.setDataString(proj, PROJ_DATA.BUTTON, button)
+        sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0)
+        sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, dmg)
+        sprites.setDataNumber(proj, PROJ_DATA.IS_HEAL, isHeal ? 1 : 0)
+        sprites.setDataNumber(proj, PROJ_DATA.SLOW_PCT, slowPct)
+        sprites.setDataNumber(proj, PROJ_DATA.SLOW_DURATION_MS, slowDurMs)
+        sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_PCT, weakenPct)
+        sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs)
+        sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct)
+        sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing")
+        sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
+        sprites.setDataNumber(proj, PROJ_DATA.SHARED_HIT, sharedHit ? 1 : 0)
+        sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_R1_KEY, auraPalette.r1 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_R2_KEY, auraPalette.r2 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_R3_KEY, auraPalette.r3 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_EDGE_KEY, auraPalette.edge | 0)
+
+        if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
+            const bodyFx = _spawnHeroBodyPaintFxForMove(
                 heroIndex,
                 hero,
-                FAMILY.STRENGTH | 0,
+                FAMILY.STRENGTH,
                 element | 0,
                 nx,
                 ny,
                 swingDuration | 0,
-                "strengthTrail"
+                "strengthSwing"
             )
-            if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+            if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
+
+            _spawnStrengthSwingFxSegments(
+                proj,
+                heroIndex,
+                hero,
+                element | 0,
+                nx,
+                ny,
+                inner0,
+                reachFromInner,
+                totalArcDeg,
+                swingDuration | 0
+            )
+            if ((sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0) > 0) {
+                _setStrengthSwingFxSegmentsVisible(proj, false);
+            }
+            if (STR_USE_PROJECTILE_MASK_FX) {
+                const trailFx = _spawnProjectileMaskFxForMove(
+                    proj,
+                    heroIndex,
+                    hero,
+                    FAMILY.STRENGTH | 0,
+                    element | 0,
+                    nx,
+                    ny,
+                    swingDuration | 0,
+                    "strengthTrail"
+                )
+                if (trailFx) proj.setFlag(SpriteFlag.Invisible, false);
+            }
         }
+        return proj
+    };
+
+    const sharedHit = STR_SWING_DUAL_ARC;
+    if (STR_SWING_DUAL_ARC) {
+        spawnSide(1, sharedHit);
+        spawnSide(-1, sharedHit);
+    } else {
+        spawnSide(0, sharedHit);
     }
 
 }
@@ -42127,16 +42317,7 @@ function updateStrengthProjectilesMotionFor(
         : Math.max(0, Math.min(1, (arcStartFrac | 0) / 1000));
     let arcStartSegMs = 0;
     if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "charging") {
-        const mult = STR_DEBUG_FRAME_MS_MULT | 0;
-        const scaleMs = (v: number): number => {
-            const base = v | 0;
-            if (mult <= 1 || base <= 0) return base;
-            return Math.max(1, (base * mult) | 0);
-        };
-        const fwdFirst = (STR_SWING_FORWARD_FRAME_MS && STR_SWING_FORWARD_FRAME_MS.length)
-            ? scaleMs(STR_SWING_FORWARD_FRAME_MS[0] | 0)
-            : 0;
-        arcStartSegMs = Math.max(0, fwdFirst | 0);
+        arcStartSegMs = 0;
     }
     const arcActive = rule.allowArc && (segElapsed >= arcStartSegMs) && (t >= arcStart);
     const arcT = arcActive
@@ -42179,6 +42360,18 @@ function updateStrengthProjectilesMotionFor(
     
 
     const frontStart = sprites.readDataNumber(proj, "SS_FRONT_START") || attachPx
+    const arcBaseW = STR_USE_WPN_AURA_OUTLINE_ONLY
+        ? Math.max(1, (sprites.readDataNumber(proj, STR_ARC_BASE_WIDTH_KEY) | 0) || (STR_ARC_BASE_MAX_WIDTH_PX | 0))
+        : (STR_ARC_MAX_WIDTH_PX | 0);
+    const arcBaseMin = STR_USE_WPN_AURA_OUTLINE_ONLY
+        ? Math.max(1, Math.min((STR_ARC_BASE_MIN_WIDTH_PX | 0), (arcBaseW | 0)))
+        : (STR_ARC_MIN_WIDTH_PX | 0);
+
+    const auraR1 = (sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0) || (STR_TIP_TRACE_COLOR | 0);
+    const auraR2 = (sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0) || auraR1;
+    const auraR3 = (sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0) || auraR2;
+    const auraEdge = (sprites.readDataNumber(proj, WPN_AURA_COL_EDGE_KEY) | 0) || (STR_TIP_TRACE_EDGE_COLOR | 0);
+    const auraColorsByIdx = [auraR1 | 0, auraR1 | 0, auraR2 | 0, auraR3 | 0];
 
 
 
@@ -42191,7 +42384,10 @@ function updateStrengthProjectilesMotionFor(
         proj.setPosition(anchorX, anchorY)
         const img = proj.image
         if (img) {
-            if (PROJECTILE_TRACE_INSTANT) {
+            const forceClear = STR_ARC_TRAVEL_WAVE && arcActive;
+            if (forceClear) {
+                _projectileClearImage(img);
+            } else if (PROJECTILE_TRACE_INSTANT) {
                 _projectileClearImage(img);
             } else {
                 const fadeStart = startMs | 0;
@@ -42268,34 +42464,17 @@ function updateStrengthProjectilesMotionFor(
                         if (maskShape) {
                             const baseLocalX = (hero.x + (auraPack.info.offX || 0)) - anchorX
                             const baseLocalY = (hero.y + (auraPack.info.offY || 0)) - anchorY
-                            _stampWeaponMaskAt(
-                                img,
-                                -halfW,
-                                -halfH,
-                                baseLocalX,
-                                baseLocalY,
-                                maskShape,
-                                STR_TIP_TRACE_COLOR,
-                                STR_TIP_TRACE_EDGE_COLOR,
-                                STR_OUTLINE_CARDINAL_ONLY
-                            )
-                        } else {
-                            _stampWeaponAuraLine(
-                                img,
-                                -halfW,
-                                -halfH,
-                                lastX,
-                                lastY,
-                                tipLocalX,
-                                tipLocalY,
-                                auraPack.shapes,
-                                STR_TIP_TRACE_COLOR,
-                                rule.lineMaxIdx,
-                                STR_TIP_TRACE_EDGE_COLOR,
-                                STR_OUTLINE_CARDINAL_ONLY,
-                                clip
-                            )
-                        }
+                        _stampWeaponMaskAt(
+                            img,
+                            -halfW,
+                            -halfH,
+                            baseLocalX,
+                            baseLocalY,
+                            maskShape,
+                            auraR1 | 0,
+                            auraEdge | 0,
+                            STR_OUTLINE_CARDINAL_ONLY
+                        )
                     } else {
                         _stampWeaponAuraLine(
                             img,
@@ -42306,13 +42485,32 @@ function updateStrengthProjectilesMotionFor(
                             tipLocalX,
                             tipLocalY,
                             auraPack.shapes,
-                            STR_TIP_TRACE_COLOR,
+                            auraR1 | 0,
                             rule.lineMaxIdx,
-                            STR_TIP_TRACE_EDGE_COLOR,
+                            auraEdge | 0,
                             STR_OUTLINE_CARDINAL_ONLY,
+                            auraColorsByIdx,
                             clip
                         )
                     }
+                } else {
+                    _stampWeaponAuraLine(
+                        img,
+                        -halfW,
+                        -halfH,
+                        lastX,
+                        lastY,
+                        tipLocalX,
+                        tipLocalY,
+                        auraPack.shapes,
+                        auraR1 | 0,
+                        rule.lineMaxIdx,
+                        auraEdge | 0,
+                        STR_OUTLINE_CARDINAL_ONLY,
+                        auraColorsByIdx,
+                        clip
+                    )
+                }
                 }
                 if (_wpnTraceShouldLog(proj, nowMs | 0)) {
                     _wpnTraceLog("str.tick.auraTip", {
@@ -42421,8 +42619,8 @@ function updateStrengthProjectilesMotionFor(
                             shape,
                             nx,
                             ny,
-                            STR_TIP_TRACE_COLOR,
-                            STR_TIP_TRACE_EDGE_COLOR,
+                            auraR3 | 0,
+                            auraEdge | 0,
                             STR_OUTLINE_CARDINAL_ONLY,
                             0
                         );
@@ -42435,8 +42633,9 @@ function updateStrengthProjectilesMotionFor(
                 ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
                 : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
             const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
-                ? Math.max(0, (arcOuter | 0) - (STR_ARC_BASE_MAX_WIDTH_PX | 0))
+                ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
                 : (attachPx | 0);
+            const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
             if (arcActive) {
                 _stampStrengthArcTrail(
                     img,
@@ -42449,13 +42648,16 @@ function updateStrengthProjectilesMotionFor(
                     totalArcDeg | 0,
                     arcT,
                     STR_TIP_TRACE_COLOR | 0,
-                    STR_TIP_TRACE_EDGE_COLOR | 0
+                    STR_TIP_TRACE_EDGE_COLOR | 0,
+                    arcBaseW | 0,
+                    arcBaseMin | 0,
+                    arcSide
                 )
             }
             if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
             const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
             _clearStrengthProjectileFill(img, element | 0)
-            _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, STR_TIP_TRACE_COLOR | 0, STR_TIP_TRACE_EDGE_COLOR | 0)
+            _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, auraR1 | 0, auraEdge | 0)
         }
         if (!STR_USE_WPN_AURA_OUTLINE_ONLY) {
             _updateHeroBodyPaintFxForProj(proj, hero)
@@ -42488,7 +42690,10 @@ function updateStrengthProjectilesMotionFor(
 
     const img = proj.image
     if (img) {
-        if (PROJECTILE_TRACE_INSTANT) {
+        const forceClear = STR_ARC_TRAVEL_WAVE && arcActive;
+        if (forceClear) {
+            _projectileClearImage(img);
+        } else if (PROJECTILE_TRACE_INSTANT) {
             _projectileClearImage(img);
         } else {
             const fadeStart = startMs | 0;
@@ -42573,8 +42778,8 @@ function updateStrengthProjectilesMotionFor(
                             baseLocalX,
                             baseLocalY,
                             maskShape,
-                            STR_TIP_TRACE_COLOR,
-                            STR_TIP_TRACE_EDGE_COLOR,
+                            auraR1 | 0,
+                            auraEdge | 0,
                             STR_OUTLINE_CARDINAL_ONLY
                         )
                     } else {
@@ -42587,10 +42792,11 @@ function updateStrengthProjectilesMotionFor(
                             tipLocalX,
                             tipLocalY,
                             auraPack.shapes,
-                            STR_TIP_TRACE_COLOR,
+                            auraR1 | 0,
                             rule.lineMaxIdx,
-                            STR_TIP_TRACE_EDGE_COLOR,
+                            auraEdge | 0,
                             STR_OUTLINE_CARDINAL_ONLY,
+                            auraColorsByIdx,
                             clip
                         )
                     }
@@ -42604,10 +42810,11 @@ function updateStrengthProjectilesMotionFor(
                         tipLocalX,
                         tipLocalY,
                         auraPack.shapes,
-                        STR_TIP_TRACE_COLOR,
+                        auraR1 | 0,
                         rule.lineMaxIdx,
-                        STR_TIP_TRACE_EDGE_COLOR,
+                        auraEdge | 0,
                         STR_OUTLINE_CARDINAL_ONLY,
+                        auraColorsByIdx,
                         clip
                     )
                 }
@@ -42710,21 +42917,21 @@ function updateStrengthProjectilesMotionFor(
                 if (shape) {
                     const baseLocalX = (hero.x + (info.offX || 0)) - anchorX;
                     const baseLocalY = (hero.y + (info.offY || 0)) - anchorY;
-                    _stampWeaponMaskFrontAt(
-                        img,
-                        -halfW,
-                        -halfH,
-                        baseLocalX,
-                        baseLocalY,
-                        shape,
-                        nx,
-                        ny,
-                        STR_TIP_TRACE_COLOR,
-                        STR_TIP_TRACE_EDGE_COLOR,
-                        STR_OUTLINE_CARDINAL_ONLY,
-                        0
-                    );
-                }
+                        _stampWeaponMaskFrontAt(
+                            img,
+                            -halfW,
+                            -halfH,
+                            baseLocalX,
+                            baseLocalY,
+                            shape,
+                            nx,
+                            ny,
+                            auraR3 | 0,
+                            auraEdge | 0,
+                            STR_OUTLINE_CARDINAL_ONLY,
+                            0
+                        );
+                    }
             }
         }
         const minReach = Math.max(0, ((frontStart | 0) - (attachPx | 0)) | 0);
@@ -42732,24 +42939,28 @@ function updateStrengthProjectilesMotionFor(
         const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
             ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
             : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
-        const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
-            ? Math.max(0, (arcOuter | 0) - (STR_ARC_BASE_MAX_WIDTH_PX | 0))
-            : (attachPx | 0);
-        if (arcActive) {
-            _stampStrengthArcTrail(
-                img,
-                -halfW,
-                -halfH,
-                nx,
-                ny,
-                (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
-                arcOuter,
-                totalArcDeg | 0,
-                arcT,
-                STR_TIP_TRACE_COLOR | 0,
-                STR_TIP_TRACE_EDGE_COLOR | 0
-            )
-        }
+            const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
+                ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
+                : (attachPx | 0);
+            const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
+            if (arcActive) {
+                _stampStrengthArcTrail(
+                    img,
+                    -halfW,
+                    -halfH,
+                    nx,
+                    ny,
+                    (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
+                    arcOuter,
+                    totalArcDeg | 0,
+                    arcT,
+                    auraR1 | 0,
+                    auraEdge | 0,
+                    arcBaseW | 0,
+                    arcBaseMin | 0,
+                    arcSide
+                )
+            }
         if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
         const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
         _clearStrengthProjectileFill(img, element | 0)
@@ -43209,6 +43420,21 @@ function _strengthArcSweepT(t: number): number {
     return Math.max(0, Math.min(1, (tt - startFrac) / denom));
 }
 
+function _strengthArcBaseWidthFromWeaponLen(wpnLen: number): number {
+    const g: any = globalThis as any;
+    const override = g && g.__STR_ARC_BASE_W_PX;
+    if (typeof override === "number" && override > 0) return override | 0;
+    const bias = STR_ARC_BASE_WPN_THICKNESS_BIAS_PX | 0;
+    let width = Math.round(Number.isFinite(wpnLen) ? wpnLen : 0);
+    if (width <= 0) width = STR_ARC_BASE_MAX_WIDTH_PX | 0;
+    else width = (width | 0) + (bias | 0);
+    const maxW = STR_ARC_BASE_MAX_WIDTH_PX | 0;
+    const minW = STR_ARC_BASE_MIN_WIDTH_PX | 0;
+    if (maxW > 0 && width > maxW) width = maxW;
+    if (width < minW) width = minW;
+    return width | 0;
+}
+
 function _stampStrengthArcTrail(
     img: Image,
     minX: number,
@@ -43220,7 +43446,10 @@ function _stampStrengthArcTrail(
     arcDeg: number,
     t: number,
     fillColor: number,
-    edgeColor: number
+    edgeColor: number,
+    baseWidthMax?: number,
+    baseWidthMin?: number,
+    sideSign?: number
 ): void {
     if (!img) return;
     const maxR = Math.max(1, Math.round(outerR));
@@ -43234,12 +43463,48 @@ function _stampStrengthArcTrail(
     const sx = -ny;
     const sy = nx;
     const stepRad = (STR_ARC_STEP_DEG | 0) * (Math.PI / 180);
-    let steps = Math.floor(halfArcRad / stepRad) * 2 + 1;
-    if (steps < 1) steps = 1;
-    const centerIndex = (steps - 1) / 2;
+    const side = (sideSign || 0) > 0 ? 1 : ((sideSign || 0) < 0 ? -1 : 0);
+    let waveSpanRad = 0;
+    if (STR_ARC_TRAVEL_WAVE) {
+        const g: any = globalThis as any;
+        const waveDeg = (typeof g.__STR_ARC_WAVE_DEG === "number") ? g.__STR_ARC_WAVE_DEG : STR_ARC_WAVE_DEG;
+        if (Number.isFinite(waveDeg) && waveDeg > 0) {
+            waveSpanRad = Math.max(0, (waveDeg | 0) * (Math.PI / 180));
+            if (waveSpanRad > halfArcRad) waveSpanRad = halfArcRad;
+        }
+    }
+    let steps = 1;
+    let centerIndex = 0;
+    let startAlpha = -halfArcRad;
+    let alphaStep = stepRad;
+    if (side === 0) {
+        steps = Math.floor(halfArcRad / stepRad) * 2 + 1;
+        if (steps < 1) steps = 1;
+        centerIndex = (steps - 1) / 2;
+        startAlpha = -halfArcRad;
+        alphaStep = stepRad;
+    } else {
+        const span = Math.abs(halfArcRad);
+        const endAlpha = side * halfArcRad;
+        const useSpan = (waveSpanRad > 0) ? Math.min(span, waveSpanRad) : span;
+        steps = Math.max(1, Math.floor(useSpan / stepRad) + 1);
+        centerIndex = 0;
+        const denom = Math.max(1, (steps - 1));
+        startAlpha = (waveSpanRad > 0)
+            ? (endAlpha - (side * useSpan))
+            : 0;
+        alphaStep = (endAlpha - startAlpha) / denom;
+    }
     const scale = STR_USE_WPN_AURA_OUTLINE_ONLY ? 1 : ((PROJECTILE_EMERGENCY_SCALE | 0) > 1 ? (PROJECTILE_EMERGENCY_SCALE | 0) : 1);
-    const baseMax = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MAX_WIDTH_PX | 0) : (STR_ARC_MAX_WIDTH_PX | 0);
-    const baseMin = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MIN_WIDTH_PX | 0) : (STR_ARC_MIN_WIDTH_PX | 0);
+    let baseMax = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MAX_WIDTH_PX | 0) : (STR_ARC_MAX_WIDTH_PX | 0);
+    let baseMin = STR_USE_WPN_AURA_OUTLINE_ONLY ? (STR_ARC_BASE_MIN_WIDTH_PX | 0) : (STR_ARC_MIN_WIDTH_PX | 0);
+    if (STR_USE_WPN_AURA_OUTLINE_ONLY && typeof baseWidthMax === "number" && baseWidthMax > 0) {
+        baseMax = baseWidthMax | 0;
+    }
+    if (STR_USE_WPN_AURA_OUTLINE_ONLY && typeof baseWidthMin === "number" && baseWidthMin > 0) {
+        baseMin = baseWidthMin | 0;
+    }
+    if (baseMin > baseMax) baseMin = baseMax;
     let maxWidth = Math.min(baseMax * scale, (maxR - (inner0 | 0)) | 0);
     if (maxWidth < 1) maxWidth = 1;
     const minWidth = Math.max(1, Math.min(baseMin, baseMax) * scale);
@@ -43248,10 +43513,12 @@ function _stampStrengthArcTrail(
     const w = img.width | 0;
     const h = img.height | 0;
     const widthSpan = Math.max(0, (maxWidth - minWidth) | 0);
-    const widthStep = centerIndex > 0 ? (widthSpan / centerIndex) : 0;
+    const widthStep = (side !== 0)
+        ? (widthSpan / Math.max(1, (steps - 1)))
+        : (centerIndex > 0 ? (widthSpan / centerIndex) : 0);
     for (let i = 0; i < steps; i++) {
-        const alpha = -halfArcRad + i * stepRad;
-        const dist = Math.abs(i - centerIndex);
+        const alpha = startAlpha + i * alphaStep;
+        const dist = (side !== 0) ? i : Math.abs(i - centerIndex);
         let width = (maxWidth | 0) - Math.round(dist * widthStep);
         if (width < minWidth) width = minWidth;
         if (width > maxWidth) width = maxWidth;
@@ -43360,6 +43627,10 @@ const __weaponAuraTipStable: { [k: string]: WeaponAuraTipShape } = Object.create
 const __heroAuraMaskCache: { [k: string]: HeroAuraMaskShape } = Object.create(null);
 const __weaponMaskCache: { [k: string]: HeroAuraMaskShape } = Object.create(null);
 
+// Optional per-frame weapon tip overrides (local offsets in pixels).
+// Key format: `${texKey}|${frameName}|${dirKey}|r${radius}` => { x, y }
+const WPN_TIP_OVERRIDES: { [k: string]: { x: number; y: number } } = Object.create(null);
+
 function _weaponDirKeyFromVector(nx: number, ny: number): string {
     if (!nx && !ny) return "down";
     if (!nx) return ny >= 0 ? "down" : "up";
@@ -43379,6 +43650,20 @@ function _frameNameToIndex(frameName: string): number {
     if (!match) return -1;
     const val = parseInt(match[1], 10);
     return Number.isFinite(val) ? (val | 0) : -1;
+}
+
+function _frameNameWithIndex(frameName: string, frameIndex: number): string {
+    const idx = Math.max(0, frameIndex | 0);
+    const trimmed = String(frameName ?? "").trim();
+    if (!trimmed) return String(idx);
+    if (/^\d+$/.test(trimmed)) return String(idx);
+    const match = trimmed.match(/(\d+)(?!.*\d)/);
+    if (!match || match.index === undefined) return trimmed;
+    const digits = match[1] || "";
+    const start = match.index | 0;
+    const end = (start + digits.length) | 0;
+    const replacement = String(idx).padStart(digits.length || 1, "0");
+    return trimmed.slice(0, start) + replacement + trimmed.slice(end);
 }
 
 function _agiShouldSkipDownWeaponFrame(
@@ -43412,6 +43697,15 @@ function _weaponAuraStableKey(info: WeaponFgInfo, dirKey: string, radius: number
         info.flipX ? "fx1" : "fx0",
         info.flipY ? "fy1" : "fy0"
     ].join("|");
+}
+
+function _weaponTipOverride(
+    info: WeaponFgInfo,
+    dirKey: string,
+    radius: number
+): { x: number; y: number } | null {
+    const key = `${info.texKey}|${info.frameName}|${dirKey}|r${radius | 0}`;
+    return WPN_TIP_OVERRIDES[key] || null;
 }
 
 function _pickAuraGrowthIdx(t: number): number {
@@ -43821,6 +44115,12 @@ function _getWeaponAuraTipShape(
         return null;
     }
 
+    const override = _weaponTipOverride(info, dirKey, radius);
+    if (override) {
+        tipDx = override.x;
+        tipDy = override.y;
+    }
+
     const cutoff = maxDot - Math.max(0, depthPx | 0);
     const offsets: number[] = [];
 
@@ -43986,6 +44286,7 @@ function _stampWeaponAuraLine(
     maxIdx: number = 3,
     edgeColor: number = 0,
     edgeCardinalOnly: boolean = true,
+    colorsByIdx?: number[] | null,
     clip?: WeaponAuraClip | null
 ): void {
     const dx = x1 - x0;
@@ -43993,7 +44294,10 @@ function _stampWeaponAuraLine(
     const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
     if (steps <= 0) {
         const shape = shapes[Math.min(maxIdx, 3)] || shapes[0];
-        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color, edgeColor, edgeCardinalOnly, clip);
+        const useColor = (colorsByIdx && colorsByIdx.length)
+            ? (colorsByIdx[Math.min(maxIdx, 3)] ?? color)
+            : color;
+        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, useColor, edgeColor, edgeCardinalOnly, clip);
         return;
     }
     for (let i = 0; i <= steps; i++) {
@@ -44007,7 +44311,10 @@ function _stampWeaponAuraLine(
         if (!shape) continue;
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
-        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color, edgeColor, edgeCardinalOnly, clip);
+        const useColor = (colorsByIdx && colorsByIdx.length)
+            ? (colorsByIdx[idx] ?? color)
+            : color;
+        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, useColor, edgeColor, edgeCardinalOnly, clip);
     }
 }
 
@@ -44053,6 +44360,7 @@ function _stampWeaponAuraLineTaper(
     color: number,
     edgeColor: number = 0,
     edgeCardinalOnly: boolean = true,
+    colorsByIdx?: number[] | null,
     clip?: WeaponAuraClip | null
 ): void {
     if (!shapes || shapes.length === 0) return;
@@ -44061,7 +44369,10 @@ function _stampWeaponAuraLineTaper(
     const steps = Math.max(Math.abs(dx), Math.abs(dy)) | 0;
     if (steps <= 0) {
         const shape = shapes[3] || shapes[2] || shapes[1] || shapes[0];
-        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, color, edgeColor, edgeCardinalOnly, clip);
+        const useColor = (colorsByIdx && colorsByIdx.length)
+            ? (colorsByIdx[3] ?? colorsByIdx[2] ?? colorsByIdx[1] ?? colorsByIdx[0] ?? color)
+            : color;
+        if (shape) _stampWeaponAuraAt(img, minX, minY, x1, y1, shape, useColor, edgeColor, edgeCardinalOnly, clip);
         return;
     }
     for (let i = 0; i <= steps; i++) {
@@ -44074,7 +44385,10 @@ function _stampWeaponAuraLineTaper(
         if (!shape) continue;
         const lx = x0 + dx * t;
         const ly = y0 + dy * t;
-        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, color, edgeColor, edgeCardinalOnly, clip);
+        const useColor = (colorsByIdx && colorsByIdx.length)
+            ? (colorsByIdx[idx] ?? color)
+            : color;
+        _stampWeaponAuraAt(img, minX, minY, lx, ly, shape, useColor, edgeColor, edgeCardinalOnly, clip);
     }
 }
 
@@ -44176,6 +44490,38 @@ function _getWeaponMaskShape(info: WeaponFgInfo, radius: number): HeroAuraMaskSh
     const out: HeroAuraMaskShape = { offsets };
     __weaponMaskCache[key] = out;
     return out;
+}
+
+function _getWeaponMaskShapeForFrameIndex(
+    info: WeaponFgInfo,
+    radius: number,
+    frameIndex: number
+): HeroAuraMaskShape | null {
+    const frameName = _frameNameWithIndex(info.frameName, frameIndex | 0);
+    if (!frameName || frameName === info.frameName) return _getWeaponMaskShape(info, radius);
+    const infoOverride: WeaponFgInfo = {
+        ...info,
+        frameName,
+        frameRef: null
+    };
+    return _getWeaponMaskShape(infoOverride, radius);
+}
+
+function _weaponLeadingEdgeForFrameIndex(
+    info: WeaponFgInfo,
+    radius: number,
+    nx: number,
+    ny: number,
+    frameIndex: number
+): number {
+    const baseLocalX = (info.offX || 0);
+    const baseLocalY = (info.offY || 0);
+    let shape = _getWeaponMaskShapeForFrameIndex(info, radius, frameIndex | 0);
+    if (!shape && (frameIndex | 0) !== _frameNameToIndex(info.frameName)) {
+        shape = _getWeaponMaskShape(info, radius);
+    }
+    if (!shape) return 0;
+    return _weaponMaskLeadingEdge(shape, baseLocalX, baseLocalY, nx, ny);
 }
 
 function _stampWeaponMaskAt(
@@ -47844,6 +48190,14 @@ function spawnAgilityThrustProjectile(
     sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.AGILITY)
 
     sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0)
+    {
+        const dirKey = _weaponDirKeyFromVector(nx, ny);
+        const auraPalette = _weaponAuraPaletteForElement(element | 0, dirKey, "offense");
+        sprites.setDataNumber(proj, WPN_AURA_COL_R1_KEY, auraPalette.r1 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_R2_KEY, auraPalette.r2 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_R3_KEY, auraPalette.r3 | 0)
+        sprites.setDataNumber(proj, WPN_AURA_COL_EDGE_KEY, auraPalette.edge | 0)
+    }
 
 
 
@@ -48762,6 +49116,12 @@ function updateAgilityProjectilesMotionFor(
     const minY = sprites.readDataNumber(proj, AGI_TEX_MIN_Y_KEY) | 0
     const maxY = sprites.readDataNumber(proj, AGI_TEX_MAX_Y_KEY) | 0
 
+    const auraR1 = (sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0) || (AGI_TIP_TRACE_COLOR | 0);
+    const auraR2 = (sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0) || auraR1;
+    const auraR3 = (sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0) || auraR2;
+    const auraEdge = (sprites.readDataNumber(proj, WPN_AURA_COL_EDGE_KEY) | 0) || (AGI_TIP_TRACE_EDGE_COLOR | 0);
+    const auraColorsByIdx = [auraR1 | 0, auraR1 | 0, auraR2 | 0, auraR3 | 0];
+
     proj.vx = 0
     proj.vy = 0
     proj.x = anchorX + (minX + maxX) / 2
@@ -48844,10 +49204,11 @@ function updateAgilityProjectilesMotionFor(
                 tipLocalX,
                 tipLocalY,
                 auraPack.shapes,
-                AGI_TIP_TRACE_COLOR,
+                auraR1 | 0,
                 growthIdx,
-                AGI_TIP_TRACE_EDGE_COLOR,
+                auraEdge | 0,
                 true,
+                auraColorsByIdx,
                 clip
             )
             if (_wpnTraceShouldLog(proj, nowMs | 0)) {
@@ -49033,6 +49394,7 @@ function updateAgilityProjectilesMotionFor(
                             pulseColor,
                             0,
                             true,
+                            auraColorsByIdx,
                             clip
                         )
                     } else {
@@ -49071,7 +49433,7 @@ function updateAgilityProjectilesMotionFor(
         _updateProjectileMaskSpriteForProj(proj, img)
         const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
         _clearAgilityProjectileFill(img, element | 0)
-        _wpnTraceLogPixels(proj, nowMs | 0, "agi.tracePixels", img, AGI_TIP_TRACE_COLOR | 0, AGI_TIP_TRACE_EDGE_COLOR | 0)
+        _wpnTraceLogPixels(proj, nowMs | 0, "agi.tracePixels", img, auraR1 | 0, auraEdge | 0)
     }
 
     _updateHeroBodyPaintFxForProj(proj, hero)
@@ -59025,6 +59387,9 @@ const ENEMY_AI_BOSS_STUCK_LAST_MS = "__aiBossStuckLastMs"
 const ENEMY_AI_BOSS_STUCK_LAST_X = "__aiBossStuckLastX"
 const ENEMY_AI_BOSS_STUCK_LAST_Y = "__aiBossStuckLastY"
 const ENEMY_AI_BOSS_TELEPORT_LAST_MS = "__aiBossTeleportLastMs"
+const ENEMY_AI_BAT_ORBIT_SIGN = "__aiBatOrbitSign"
+const ENEMY_AI_BAT_DODGE_UNTIL = "__aiBatDodgeUntil"
+const ENEMY_AI_BAT_DODGE_COOLDOWN_UNTIL = "__aiBatDodgeCooldownUntil"
 
 const ENEMY_NAV_COLLISION_SCAN_MAX_TILES = 128  // safety cap; avoids runaway scans if something goes weird
 const ENEMY_AGGRO_HALF_LIFE_MS = 4500
@@ -59055,6 +59420,12 @@ const ENEMY_BOSS_STUCK_TELEPORT_MS = 4000
 const ENEMY_BOSS_STUCK_TELEPORT_COOLDOWN_MS = 6000
 const ENEMY_BOSS_STUCK_TELEPORT_MIN_PAD_DIST = 2
 const ENEMY_BOSS_STUCK_TELEPORT_MAX_PAD_DIST = 6
+const BAT_KEEP_OUT_BUFFER_PX = 12
+const BAT_KEEP_OUT_BAND_PX = 18
+const BAT_ORBIT_SPEED_PCT = 85
+const BAT_DODGE_WINDUP_MS = 220
+const BAT_DODGE_SPEED_PCT = 185
+const BAT_DODGE_COOLDOWN_MS = 520
 const ENEMY_CASTER_EVADE_CHANCE_PCT = 18
 const ENEMY_CASTER_EVADE_COOLDOWN_MS = 900
 const ENEMY_CASTER_EVADE_DURATION_MS = 200
@@ -59228,6 +59599,158 @@ function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
     sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, base.baseProj || "")
     sprites.setDataNumber(enemy, "__projSpeed", base.baseProjSpeed | 0)
     return false
+}
+
+function _enemyIsBat(enemy: Sprite): boolean {
+    if (!enemy) return false
+    const id = (sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "").toLowerCase()
+    return id === "bat" || id.startsWith("bat ")
+}
+
+function _heroStrengthOuterReachPx(hero: Sprite): number {
+    if (!hero) return 64
+    const inner = getStrengthInnerRadiusForHero(hero) | 0
+    let reachExtra = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REACH_PX) | 0
+    if (reachExtra <= 0) {
+        const base = (BALANCE && BALANCE.MOVES && BALANCE.MOVES.STRENGTH)
+            ? (BALANCE.MOVES.STRENGTH.REACH_BASE_PX | 0)
+            : 0
+        reachExtra = base > 0 ? (base | 0) : 12
+    }
+    return Math.max(1, (inner | 0) + (reachExtra | 0)) | 0
+}
+
+function _enemyBatEnsureOrbitSign(enemy: Sprite): number {
+    let sign = sprites.readDataNumber(enemy, ENEMY_AI_BAT_ORBIT_SIGN) | 0
+    if (sign !== 1 && sign !== -1) {
+        sign = (Math.randomRange(0, 1) | 0) === 0 ? -1 : 1
+        sprites.setDataNumber(enemy, ENEMY_AI_BAT_ORBIT_SIGN, sign | 0)
+    }
+    return sign | 0
+}
+
+function _enemyBatBehavior(
+    enemy: Sprite,
+    pick: EnemyEdgePick,
+    nowMs: number,
+    baseSpeed: number,
+    speed: number,
+    trace: string[] | null
+): string | null {
+    if (!_enemyIsBat(enemy)) return null
+    const hero = pick.target
+    if (!hero) return null
+
+    const heroFoot = _heroFeetPointForEnemyTarget(hero)
+    let dx = (enemy.x | 0) - (heroFoot.x | 0)
+    let dy = (enemy.y | 0) - (heroFoot.y | 0)
+    let dist = Math.sqrt(dx * dx + dy * dy)
+    if (!Number.isFinite(dist) || dist <= 0) {
+        dist = 1
+        dx = 1
+        dy = 0
+    }
+
+    const desired = (_heroStrengthOuterReachPx(hero) | 0) + (BAT_KEEP_OUT_BUFFER_PX | 0)
+    const band = BAT_KEEP_OUT_BAND_PX | 0
+    const minR = Math.max(1, (desired - Math.idiv(band, 2)) | 0) | 0
+    const maxR = Math.max(minR + 1, (desired + Math.idiv(band, 2)) | 0) | 0
+
+    const strCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)
+    const strSwingPending = (sprites.readDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY) | 0) !== 0
+    const dodgeUntil = sprites.readDataNumber(enemy, ENEMY_AI_BAT_DODGE_UNTIL) | 0
+    const dodgeCooldownUntil = sprites.readDataNumber(enemy, ENEMY_AI_BAT_DODGE_COOLDOWN_UNTIL) | 0
+    const canDodge = nowMs >= (dodgeCooldownUntil | 0)
+
+    if ((strCharging || strSwingPending) && canDodge) {
+        sprites.setDataNumber(enemy, ENEMY_AI_BAT_DODGE_UNTIL, (nowMs + (BAT_DODGE_WINDUP_MS | 0)) | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BAT_DODGE_COOLDOWN_UNTIL, (nowMs + (BAT_DODGE_COOLDOWN_MS | 0)) | 0)
+    }
+
+    let intent = ""
+    if (nowMs < (sprites.readDataNumber(enemy, ENEMY_AI_BAT_DODGE_UNTIL) | 0)) {
+        const n = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+        const ux = dx / n
+        const uy = dy / n
+        const dodgeSpeed = Math.max(1, Math.idiv((baseSpeed | 0) * (BAT_DODGE_SPEED_PCT | 0), 100)) | 0
+        enemy.vx = Math.round(ux * dodgeSpeed) | 0
+        enemy.vy = Math.round(uy * dodgeSpeed) | 0
+        _enemySetIntent(enemy, "batDodge")
+        intent = "batDodge"
+        _enemyAiTraceAdd(trace, "bat.dodge", true)
+    } else if (dist < (minR | 0)) {
+        const n = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+        const ux = dx / n
+        const uy = dy / n
+        const backSpeed = Math.max(1, speed | 0) | 0
+        enemy.vx = Math.round(ux * backSpeed) | 0
+        enemy.vy = Math.round(uy * backSpeed) | 0
+        _enemySetIntent(enemy, "batBack")
+        intent = "batBack"
+        _enemyAiTraceAdd(trace, "bat.back", true)
+    } else if (dist > (maxR | 0)) {
+        const n = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+        const ux = dx / n
+        const uy = dy / n
+        const inSpeed = Math.max(1, speed | 0) | 0
+        enemy.vx = Math.round(-ux * inSpeed) | 0
+        enemy.vy = Math.round(-uy * inSpeed) | 0
+        _enemySetIntent(enemy, "batClose")
+        intent = "batClose"
+        _enemyAiTraceAdd(trace, "bat.close", true)
+    } else {
+        const sign = _enemyBatEnsureOrbitSign(enemy)
+        const n = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+        const tx = (-dy / n) * sign
+        const ty = (dx / n) * sign
+        const orbitSpeed = Math.max(1, Math.idiv((baseSpeed | 0) * (BAT_ORBIT_SPEED_PCT | 0), 100)) | 0
+        enemy.vx = Math.round(tx * orbitSpeed) | 0
+        enemy.vy = Math.round(ty * orbitSpeed) | 0
+        _enemySetIntent(enemy, "batOrbit")
+        intent = "batOrbit"
+        _enemyAiTraceAdd(trace, "bat.orbit", true)
+    }
+
+    _enemySetDirFromVelocityOrFacing(enemy, pick)
+    return intent || "bat"
+}
+
+type EnemyBehaviorOverride = {
+    id: string
+    applies: (enemy: Sprite) => boolean
+    update: (
+        enemy: Sprite,
+        pick: EnemyEdgePick,
+        nowMs: number,
+        baseSpeed: number,
+        speed: number,
+        trace: string[] | null
+    ) => string | null
+}
+
+const ENEMY_BEHAVIOR_OVERRIDES: EnemyBehaviorOverride[] = [
+    {
+        id: "bat",
+        applies: _enemyIsBat,
+        update: _enemyBatBehavior
+    }
+]
+
+function _enemyApplyBehaviorOverrides(
+    enemy: Sprite,
+    pick: EnemyEdgePick,
+    nowMs: number,
+    baseSpeed: number,
+    speed: number,
+    trace: string[] | null
+): string | null {
+    for (let i = 0; i < ENEMY_BEHAVIOR_OVERRIDES.length; i++) {
+        const ov = ENEMY_BEHAVIOR_OVERRIDES[i]
+        if (!ov || !ov.applies(enemy)) continue
+        const intent = ov.update(enemy, pick, nowMs, baseSpeed, speed, trace)
+        if (intent) return intent
+    }
+    return null
 }
 
 function _enemyBossPickTeleportNearPad(): { x: number, y: number } | null {
@@ -62200,6 +62723,13 @@ function updateEnemyHoming(nowMs: number) {
 
         }
 
+        const overrideIntent = _enemyApplyBehaviorOverrides(enemy, pick, nowMs, baseSpeed, speed, trace)
+        if (overrideIntent) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, overrideIntent)
+            continue
+        }
+
         if (commitActive) {
             _enemySetNavHeroTargetFromPick(enemy, pick)
             const allowNavField = (pick.useNavField !== false)
@@ -63650,12 +64180,67 @@ function _heroDeath_pickTileRC(hero: Sprite): { r: number; c: number } {
     return { r, c }
 }
 
-function _heroDeath_spawnHeadstone(hero: Sprite): void {
+function _heroDeath_spawnHeadstoneInteractable(tileR: number, tileC: number, profileKey: string): Sprite | null {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return null
+
+    const img = image.create(1, 1)
+    img.fill(0)
+
+    const it = sprites.create(img, (SpriteKind as any).FloorInteractable)
+    it.setFlag(SpriteFlag.Ghost, true)
+    it.setFlag(SpriteFlag.Invisible, true)
+    it.setPosition(_dunColToX(tileC | 0), _dunRowToY(tileR | 0))
+    it.z = 6
+
+    sprites.setDataString(it, DECOR_DATA.NAME, HERO_DEATH_HEADSTONE_PROP)
+    sprites.setDataNumber(it, "decorTileR", tileR | 0)
+    sprites.setDataNumber(it, "decorTileC", tileC | 0)
+    sprites.setDataString(it, INTERACT_DATA.KIND, INTERACT_ACTION_PROP)
+    sprites.setDataString(it, INTERACT_DATA.ACTION, INTERACT_ACTION_HEADSTONE)
+    sprites.setDataNumber(it, INTERACT_DATA.USED, 0)
+    sprites.setDataNumber(it, INTERACT_DATA.OPENED, 0)
+    sprites.setDataNumber(it, INTERACT_DATA.FOCUSABLE, 1)
+    sprites.setDataString(it, "headstoneProfile", key)
+
+    _dunInteractables.push(it)
+    return it
+}
+
+function _heroDeath_clearHeadstone(profileKey: string): void {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return
+
+    const decor = _deathHeadstoneByProfile[key]
+    if (decor && !(decor.flags & sprites.Flag.Destroyed)) _dunDestroySprite(decor)
+    _deathHeadstoneByProfile[key] = null
+
+    const it = _deathHeadstoneInteractByProfile[key]
+    if (it && !(it.flags & sprites.Flag.Destroyed)) _dunDestroySprite(it)
+    _deathHeadstoneInteractByProfile[key] = null
+}
+
+function _heroDeath_clearAllHeadstones(): void {
+    for (const key of Object.keys(_deathHeadstoneByProfile)) {
+        _heroDeath_clearHeadstone(key)
+    }
+}
+
+function _heroDeath_spawnHeadstone(hero: Sprite, profileKey?: string): void {
     if (!hero) return
     if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_MARKER)) return
 
+    const key = _death_normProfileKey(profileKey || sprites.readDataString(hero, HERO_DATA.NAME) || "")
+    if (!key) return
+
+    const existing = _deathHeadstoneByProfile[key]
+    if (existing && !(existing.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, true)
+        return
+    }
+
     const pick = _heroDeath_pickTileRC(hero)
-    _dunDecor_spawnAtTile({
+    const decor = _dunDecor_spawnAtTile({
         name: HERO_DEATH_HEADSTONE_PROP,
         role: DECOR_ROLE.TRIGGER,
         tileR: pick.r | 0,
@@ -63663,26 +64248,47 @@ function _heroDeath_spawnHeadstone(hero: Sprite): void {
         pxW: WORLD_TILE_SIZE | 0,
         pxH: WORLD_TILE_SIZE | 0
     })
+    sprites.setDataString(decor, "headstoneProfile", key)
+
+    _deathHeadstoneByProfile[key] = decor
+    _deathHeadstoneInteractByProfile[key] = _heroDeath_spawnHeadstoneInteractable(pick.r | 0, pick.c | 0, key)
 
     sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, true)
 }
 
-function _heroDeath_showDialog(hero: Sprite, pid: number, profileKey: string): void {
+function _heroDeath_showDialog(hero: Sprite, pid: number, profileKey: string, ownerPrefix?: string, force?: boolean): void {
     if (!hero) return
     if ((pid | 0) <= 0) return
-    if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_DIALOG)) return
+    const prefix = ownerPrefix || HERO_DEATH_DIALOG_OWNER_PREFIX
+    const isHeadstone = prefix === HERO_DEATH_HEADSTONE_OWNER_PREFIX
+    if (!force && !isHeadstone && sprites.readDataBoolean(hero, HERO_DATA.DEAD_DIALOG)) return
 
     const g: any = globalThis as any
     const dlg = g ? g.__heDialog : null
     const net: any = g ? g.__net : null
     const localPid = (net && typeof net.playerId === "number") ? (net.playerId | 0) : 0
-    const owner = `${HERO_DEATH_DIALOG_OWNER_PREFIX}:${profileKey || pid}`
+    const owner = `${prefix}:${profileKey || pid}:${pid | 0}`
+    const cost = _death_respawnCostForProfile(profileKey || "")
+    const fund = _death_getRespawnFund(profileKey || "")
+    const need = Math.max(0, (cost | 0) - (fund | 0)) | 0
+    const respawnLabel = need > 0
+        ? `Respawn (${cost} gold, need ${need})`
+        : `Respawn (${cost} gold)`
+    const viewerHi = _uiResolveHeroIndexForPid(pid | 0)
+    const coins = (viewerHi >= 0) ? (getHeroCoins(viewerHi) | 0) : 0
+    const contributeLabel = `Contribute all (${coins} gold)`
+    const hint = need > 0
+        ? `Respawn costs ${cost}g. Fund has ${fund}g (${need} short).`
+        : `Respawn ready: ${fund}g of ${cost}g.`
     const payload = {
         speaker: "YOU DIED!",
         text: "Your spirit lingers by your headstone.",
-        hint: "Choose what to do next.",
+        hint,
         choices: [
+            { id: HERO_DEATH_DIALOG_CHOICE_RESPAWN, label: respawnLabel },
+            { id: HERO_DEATH_DIALOG_CHOICE_CONTRIBUTE, label: contributeLabel },
             { id: HERO_DEATH_DIALOG_CHOICE_LOAD, label: "Load most recent floor" },
+            { id: HERO_DEATH_DIALOG_CHOICE_START_OVER, label: "Start over" },
             { id: HERO_DEATH_DIALOG_CHOICE_STAY, label: "Stay here" }
         ],
         owner
@@ -63698,7 +64304,9 @@ function _heroDeath_showDialog(hero: Sprite, pid: number, profileKey: string): v
         }
     }
 
-    sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, true)
+    if (!isHeadstone) {
+        sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, true)
+    }
 }
 
 function _heroDeath_enterGhost(heroIndex: number, hero: Sprite, now: number): void {
@@ -63710,7 +64318,9 @@ function _heroDeath_enterGhost(heroIndex: number, hero: Sprite, now: number): vo
     sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
     sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
 
-    sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
+    const wasLocked = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+    if (!wasLocked) lockHeroControls(heroIndex)
+    else sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, true)
     sprites.setDataNumber(hero, HERO_DATA.BUSY_UNTIL, 0)
     sprites.setDataString(hero, HERO_DATA.ActionKind, "deadGhost")
     hero.setFlag(SpriteFlag.Ghost, true)
@@ -63725,6 +64335,7 @@ function _heroDeath_enterGhost(heroIndex: number, hero: Sprite, now: number): vo
     sprites.setDataNumber(hero, HERO_DATA.DEAD_LEASH_PX, HERO_DEATH_LEASH_PX | 0)
     sprites.setDataNumber(hero, HERO_DATA.GHOST_ALPHA, HERO_DEATH_GHOST_ALPHA)
     sprites.setDataNumber(hero, HERO_DATA.GHOST_TINT, HERO_DEATH_GHOST_TINT | 0)
+    sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, true)
 
     const idleDur = _ambientPhaseWindowMs("idle") | 0
     setHeroPhaseString(heroIndex, "idle", "heroDeathGhost")
@@ -63734,10 +64345,24 @@ function _heroDeath_enterGhost(heroIndex: number, hero: Sprite, now: number): vo
     sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0)
 }
 
-function _heroDeath_ownerToProfile(owner: string): string {
-    const prefix = HERO_DEATH_DIALOG_OWNER_PREFIX + ":"
-    if (owner && owner.indexOf(prefix) === 0) return owner.slice(prefix.length)
-    return ""
+function _heroDeath_parseDialogOwner(owner: string): { prefix: string; profile: string; pid: number } {
+    const raw = String(owner || "")
+    const idx = raw.indexOf(":")
+    if (idx <= 0) return { prefix: "", profile: "", pid: 0 }
+    const prefix = raw.slice(0, idx)
+    const rest = raw.slice(idx + 1)
+    if (!rest) return { prefix, profile: "", pid: 0 }
+    const parts = rest.split(":")
+    let pid = 0
+    if (parts.length > 1) {
+        const last = parts[parts.length - 1]
+        if (/^\d+$/.test(last)) {
+            pid = parseInt(last, 10) | 0
+            parts.pop()
+        }
+    }
+    const profile = parts.join(":")
+    return { prefix, profile, pid }
 }
 
 function _heroDeath_applyGhostLeash(): void {
@@ -63745,6 +64370,22 @@ function _heroDeath_applyGhostLeash(): void {
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
         if (!sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) continue
+
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (profileKey) {
+            const st = _getInputStateForProfile(profileKey)
+            if (st) {
+                let fx = sprites.readDataNumber(hero, HERO_DATA.FACING_X) | 0
+                let fy = sprites.readDataNumber(hero, HERO_DATA.FACING_Y) | 0
+                if (st.left) fx = -1
+                else if (st.right) fx = 1
+                if (st.up) fy = -1
+                else if (st.down) fy = 1
+                _setHeroFacingX(hi, fx)
+                _setHeroFacingY(hi, fy)
+                syncHeroDirData(hi)
+            }
+        }
 
         const anchorX = sprites.readDataNumber(hero, HERO_DATA.DEAD_ANCHOR_X) | 0
         const anchorY = sprites.readDataNumber(hero, HERO_DATA.DEAD_ANCHOR_Y) | 0
@@ -63769,17 +64410,19 @@ function _heroDeath_applyGhostLeash(): void {
     }
 }
 
-function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number): void {
+function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number, mode?: "latest" | "floor0"): void {
     const g: any = globalThis as any
     if (!g) return
     if (g.__deathLoadInFlight) return
 
     const net: any = g.__net
     const isHost = (typeof g.__isHost === "boolean") ? !!g.__isHost : true
+    const loadMode = mode === "floor0" ? "floor0" : "latest"
 
     if (!isHost) {
         if (net && typeof net.sendUiCommand === "function") {
-            try { net.sendUiCommand({ type: "loadRecentSave", profile: profileKey || "", reason: "death", playerId: pid | 0 }) } catch { }
+            const type = loadMode === "floor0" ? "loadStartOver" : "loadRecentSave"
+            try { net.sendUiCommand({ type, profile: profileKey || "", reason: "death", playerId: pid | 0 }) } catch { }
         }
         return
     }
@@ -63790,7 +64433,7 @@ function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number): void
     g.__deathLoadInFlight = true
     let out: any = null
     try {
-        out = fn({ profile: profileKey || "", reason: "death", pid: pid | 0 })
+        out = fn({ profile: profileKey || "", reason: "death", pid: pid | 0, mode: loadMode })
     } catch {
         g.__deathLoadInFlight = false
         return
@@ -63800,6 +64443,62 @@ function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number): void
     } else {
         g.__deathLoadInFlight = false
     }
+}
+
+function _heroDeath_tryRespawn(profileKey: string): { ok: boolean; reason: string } {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return { ok: false, reason: "no-profile" }
+    const cost = _death_respawnCostForProfile(key)
+    if (!_death_spendRespawnFund(key, cost)) {
+        return { ok: false, reason: "insufficient-fund" }
+    }
+    const hi = (profileToHeroIndex[key] | 0)
+    if (hi < 0 || hi >= heroes.length) return { ok: false, reason: "no-hero" }
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, false)
+    sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, false)
+    sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false)
+    sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, false)
+    sprites.setDataNumber(hero, HERO_DATA.GHOST_ALPHA, 0)
+    sprites.setDataNumber(hero, HERO_DATA.GHOST_TINT, 0)
+    sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_X, 0)
+    sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_Y, 0)
+    sprites.setDataNumber(hero, HERO_DATA.DEAD_LEASH_PX, 0)
+    sprites.setDataString(hero, HERO_DATA.ActionKind, "none")
+    sprites.setDataNumber(hero, HERO_DATA.ActionVariantBtnId, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionSeed, 0)
+    sprites.setDataNumber(hero, HERO_DATA.ActionTargetSpriteId, 0)
+
+    hero.setFlag(SpriteFlag.Ghost, false)
+
+    const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+    const newHp = maxHp > 0 ? maxHp : 1
+    sprites.setDataNumber(hero, HERO_DATA.HP, newHp)
+    updateHeroHPBar(hi)
+
+    unlockHeroControls(hi)
+    setHeroPhaseString(hi, "idle")
+    _animKeys_stampPhaseWindow(hi, hero, "idle", game.runtime() | 0, _ambientPhaseWindowMs("idle"), "respawn")
+
+    _heroDeath_clearHeadstone(key)
+    _beginHeroTeleportFx(hi, hero, 1, key, "respawn")
+    return { ok: true, reason: "respawned" }
+}
+
+function _heroDeath_contribute(profileKey: string, contributorPid: number): { ok: boolean; reason: string } {
+    const key = _death_normProfileKey(profileKey)
+    if (!key) return { ok: false, reason: "no-profile" }
+    const hi = _uiResolveHeroIndexForPid(contributorPid | 0)
+    if (hi < 0) return { ok: false, reason: "no-hero" }
+    const coins = getHeroCoins(hi) | 0
+    if (coins <= 0) return { ok: false, reason: "no-coins" }
+    setHeroCoins(hi, 0)
+    _death_addRespawnFund(key, coins | 0)
+    return { ok: true, reason: "contributed" }
 }
 
 // New helper: clean up heroes after their death animation finishes
@@ -66965,6 +67664,37 @@ if (typeof globalThis !== "undefined") {
         internals.setNpcLpcPhase = HeroEngine.setNpcLpcPhase
         internals.setNpcLpcWeapons = HeroEngine.setNpcLpcWeapons
         internals.isNpcLpc = HeroEngine.isNpcLpc
+
+        internals.spawnEnemy = function (monsterId: string, x?: number, y?: number, elite?: boolean): Sprite | null {
+            const id = String(monsterId || "").trim()
+            if (!id) return null
+
+            let sx = (typeof x === "number" && Number.isFinite(x)) ? (x | 0) : NaN
+            let sy = (typeof y === "number" && Number.isFinite(y)) ? (y | 0) : NaN
+
+            if (!Number.isFinite(sx) || !Number.isFinite(sy)) {
+                let hero: Sprite | null = null
+                for (let i = 0; i < heroes.length; i++) {
+                    const h = heroes[i]
+                    if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+                    if (sprites.readDataBoolean(h, HERO_DATA.IS_NPC)) continue
+                    hero = h
+                    break
+                }
+                if (hero) {
+                    sx = (hero.x | 0) + 40
+                    sy = (hero.y | 0)
+                } else if ((_dunPadTileR | 0) >= 0 && (_dunPadTileC | 0) >= 0) {
+                    sx = _dunColToX(_dunPadTileC | 0)
+                    sy = _dunRowToY(_dunPadTileR | 0)
+                } else {
+                    sx = userconfig.ARCADE_SCREEN_WIDTH >> 1
+                    sy = userconfig.ARCADE_SCREEN_HEIGHT >> 1
+                }
+            }
+
+            return spawnEnemyOfKind(id, sx | 0, sy | 0, !!elite)
+        }
 
 
 
@@ -71364,8 +72094,23 @@ g.__heUiCommand = function (cmd: any): any {
 
     if (t === "loadRecentSave") {
         const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
-        _heroDeath_requestLoadLatestSave(String(prof || ""), pid | 0)
+        _heroDeath_requestLoadLatestSave(String(prof || ""), pid | 0, "latest")
         return { ok: true, reason: "load-started", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "loadStartOver") {
+        const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
+        _heroDeath_requestLoadLatestSave(String(prof || ""), pid | 0, "floor0")
+        return { ok: true, reason: "load-started", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "respawnHero") {
+        const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
+        const r = _heroDeath_tryRespawn(String(prof || ""))
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "contributeRespawn") {
+        const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
+        const r = _heroDeath_contribute(String(prof || ""), pid | 0)
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
     }
 
 
@@ -71717,15 +72462,44 @@ try {
                 const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
                     ? String(g.__heDialog.__heOwner || "")
                     : ""
-                if (!owner || owner.indexOf(HERO_DEATH_DIALOG_OWNER_PREFIX + ":") !== 0) return
+                if (!owner) return
+                const info = _heroDeath_parseDialogOwner(owner)
+                if (info.prefix !== HERO_DEATH_DIALOG_OWNER_PREFIX && info.prefix !== HERO_DEATH_HEADSTONE_OWNER_PREFIX) return
                 const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
                 const choice = String(id || "")
-                const profile = _heroDeath_ownerToProfile(owner)
+                const profile = info.profile || ""
+                const pid = (info.pid | 0) > 0 ? (info.pid | 0) : ((g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0)
+                const isHost = (typeof g.__isHost === "boolean") ? !!g.__isHost : true
+                const net: any = g.__net
+                const hi = profile ? (profileToHeroIndex[profile] | 0) : -1
+                const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
                 if (choice === HERO_DEATH_DIALOG_CHOICE_LOAD) {
-                    _heroDeath_requestLoadLatestSave(profile, 0)
+                    _heroDeath_requestLoadLatestSave(profile, pid | 0, "latest")
                     try { g.__heDialog?.hide?.() } catch { }
-                }
-                if (choice === HERO_DEATH_DIALOG_CHOICE_STAY) {
+                } else if (choice === HERO_DEATH_DIALOG_CHOICE_START_OVER) {
+                    _heroDeath_requestLoadLatestSave(profile, pid | 0, "floor0")
+                    try { g.__heDialog?.hide?.() } catch { }
+                } else if (choice === HERO_DEATH_DIALOG_CHOICE_RESPAWN) {
+                    if (!isHost && net && typeof net.sendUiCommand === "function") {
+                        try { net.sendUiCommand({ type: "respawnHero", profile, playerId: pid | 0 }) } catch { }
+                        try { g.__heDialog?.hide?.() } catch { }
+                    } else {
+                        const r = _heroDeath_tryRespawn(profile)
+                        if (r.ok) {
+                            try { g.__heDialog?.hide?.() } catch { }
+                        } else if (hero) {
+                            _heroDeath_showDialog(hero, pid | 0, profile, info.prefix, true)
+                        }
+                    }
+                } else if (choice === HERO_DEATH_DIALOG_CHOICE_CONTRIBUTE) {
+                    if (!isHost && net && typeof net.sendUiCommand === "function") {
+                        try { net.sendUiCommand({ type: "contributeRespawn", profile, playerId: pid | 0 }) } catch { }
+                        try { g.__heDialog?.hide?.() } catch { }
+                    } else {
+                        _heroDeath_contribute(profile, pid | 0)
+                        if (hero) _heroDeath_showDialog(hero, pid | 0, profile, info.prefix, true)
+                    }
+                } else if (choice === HERO_DEATH_DIALOG_CHOICE_STAY) {
                     try { g.__heDialog?.hide?.() } catch { }
                 }
             })
@@ -71733,9 +72507,12 @@ try {
                 const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
                     ? String(g.__heDialog.__heOwner || "")
                     : ""
-                if (!owner || owner.indexOf(HERO_DEATH_DIALOG_OWNER_PREFIX + ":") !== 0) return
-                const profile = _heroDeath_ownerToProfile(owner)
-                _heroDeath_requestLoadLatestSave(profile, 0)
+                if (!owner) return
+                const info = _heroDeath_parseDialogOwner(owner)
+                if (info.prefix !== HERO_DEATH_DIALOG_OWNER_PREFIX && info.prefix !== HERO_DEATH_HEADSTONE_OWNER_PREFIX) return
+                const profile = info.profile || ""
+                const pid = (info.pid | 0) > 0 ? (info.pid | 0) : ((g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0)
+                _heroDeath_requestLoadLatestSave(profile, pid | 0, "latest")
                 try { g.__heDialog?.hide?.() } catch { }
             })
         }

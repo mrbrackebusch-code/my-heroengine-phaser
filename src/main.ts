@@ -1172,6 +1172,7 @@ type LoadLatestSaveOpts = {
   reason?: string;
   profile?: string;
   pid?: number;
+  mode?: "latest" | "floor0";
 };
 
 function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
@@ -1186,6 +1187,7 @@ function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
 
   const reason = opts && typeof opts.reason === "string" ? opts.reason : "";
   const profile = opts && typeof opts.profile === "string" ? opts.profile : "";
+  const mode = (opts && opts.mode === "floor0") ? "floor0" : "latest";
 
   g.__heroLoadLatestInFlight = true;
 
@@ -1194,12 +1196,21 @@ function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
     .then((res: any) => {
       const entries = res && Array.isArray(res.entries) ? res.entries : [];
       if (!entries.length) return { ok: false, reason: "no-saves" };
-      const best = entries[0];
+      let best = entries[0];
+      if (mode === "floor0") {
+        const floor0 = entries.find((e: any) => {
+          const idx = (typeof e?.floorIndex === "number") ? (e.floorIndex | 0) : -1;
+          return idx <= 0;
+        });
+        if (floor0) best = floor0;
+        else best = entries[entries.length - 1] || entries[0];
+      }
       const file = best && typeof best.file === "string" ? best.file : "";
       if (!file) return { ok: false, reason: "no-file" };
       logSave("[save] loading latest autosave", {
         file,
         savedAt: best.savedAt ?? null,
+        mode,
         reason: reason || null,
         profile: profile || null,
       });

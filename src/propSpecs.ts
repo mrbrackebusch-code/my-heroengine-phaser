@@ -118,6 +118,17 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       floorKinds: ["entrance"],
     },
   },
+  headstone: {
+    name: "headstone",
+    collision: {
+      mode: "none",
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+  },
   treasure_marker_a: {
     name: "treasure_marker_a",
     collision: {

@@ -94,6 +94,8 @@ const STR_SEG_NAME_KEY = "STR_SEG_NAME";
 const STR_SEG_START_MS_KEY = "STR_SEG_START_MS";
 const STR_SEG_DUR_MS_KEY = "STR_SEG_DUR_MS";
 const STR_SEG_PROGRESS_INT_KEY = "STR_SEG_PROGRESS_INT";
+const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
+const STR_SWING_START_COL_KEY = "SS_START_COL";
 
 
 // Debug flags live in src/debugFlags.ts
@@ -1081,9 +1083,18 @@ function _tryStrengthChargeThrob(
     shouldProve: boolean
 ): boolean {
     const anySprite = sprite as any;
+    const PAUSED_KEY = "__strChPaused";
 
     // Only for strength charge while in slash phase
     if (!(req.actionKind === "strength_charge" && def.phase === "slash")) {
+        const wasPaused = !!anySprite.getData?.(PAUSED_KEY);
+        if (wasPaused) {
+            const animState: any = sprite.anims as any;
+            if (animState && typeof animState.resume === "function") {
+                try { animState.resume(); } catch { /* ignore */ }
+            }
+            try { anySprite.setData?.(PAUSED_KEY, 0); } catch {}
+        }
         try { anySprite.setData?.("strCh_holdCol", undefined); } catch {}
         _restoreBaseScaleIfPresent(sprite);
         return false;
@@ -1201,6 +1212,7 @@ function _tryStrengthChargeThrob(
     } else {
         try { sprite.anims.stop(); } catch { /* ignore */ }
     }
+    try { anySprite.setData?.(PAUSED_KEY, 1); } catch {}
 
     // Set the SAME pose frame in the animation timeline (preferred), fallback to setTexture
     try {
@@ -1279,6 +1291,29 @@ function _applyHeroAimTilt(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequ
     sprite.rotation = baseRot + tilt;
 }
 
+function _maybeStrengthStartFrameIndex(
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any
+): number | null {
+    if (!(req.actionKind === "strength_swing" && def.phase === "slash")) return null;
+    const anySprite = sprite as any;
+    const skipWindup = (anySprite.getData?.(STR_SWING_SKIP_WINDUP_KEY) | 0) !== 0;
+    if (!skipWindup) return null;
+
+    const startColRaw = anySprite.getData?.(STR_SWING_START_COL_KEY);
+    const startCol = Number(startColRaw);
+    if (!Number.isFinite(startCol)) return null;
+    try { anySprite.setData?.(STR_SWING_START_COL_KEY, 0); } catch { /* ignore */ }
+
+    const frames: number[] = Array.isArray(def.frameIndices) ? def.frameIndices : [];
+    if (!frames.length) return null;
+
+    let idx = frames.indexOf(startCol | 0);
+    if (idx < 0) return null;
+    idx = clampInt(idx | 0, 0, frames.length - 1);
+    return idx | 0;
+}
 
 function _playDefaultAnimPath(
     scene: Phaser.Scene,
@@ -1288,7 +1323,8 @@ function _playDefaultAnimPath(
     def: any,
     effectivePhase: any,
     allowFallback: boolean, // unused here but kept to mirror the old signature intent
-    shouldProve: boolean
+    shouldProve: boolean,
+    startFrameIndex: number | null
 ): void {
     const anySprite = sprite as any;
 
@@ -1351,6 +1387,7 @@ function _playDefaultAnimPath(
     };
 
     if (
+        startFrameIndex == null &&
         lastAnimKey === animKey &&
         lastPhase === def.phase &&
         lastDir === def.dir &&
@@ -1384,7 +1421,13 @@ function _playDefaultAnimPath(
     if (anySprite.setData) anySprite.setData(HERO_REST_PHASE_KEY, restPhase);
 
     if (shouldProve) _proveLogPlayBefore(sprite, req, animKey, restPhase);
-    sprite.anims.play(animKey, true);
+    if (startFrameIndex != null) {
+        const framesLen = Array.isArray(def.frameIndices) ? (def.frameIndices.length | 0) : 0;
+        const startIdx = framesLen > 0 ? clampInt(startFrameIndex | 0, 0, framesLen - 1) : 0;
+        sprite.anims.play({ key: animKey, startFrame: startIdx }, true);
+    } else {
+        sprite.anims.play(animKey, true);
+    }
 
     // ✅ Immediately apply timeScale so it doesn't finish early.
     _applyPhaseTimeScaleIfPossible();
@@ -1550,7 +1593,8 @@ function applyHeroAnimationForSpriteInternal(
     // ------------------------------------------------------------
     // Default anim-based path
     // ------------------------------------------------------------
-    _playDefaultAnimPath(scene, sprite, req, set, def, effectivePhase, allowFallback, shouldProve);
+    const startFrameIndex = _maybeStrengthStartFrameIndex(sprite, req, def);
+    _playDefaultAnimPath(scene, sprite, req, set, def, effectivePhase, allowFallback, shouldProve, startFrameIndex);
     _debugHeroAnimFrame(scene, sprite, req, def);
 }
 
