@@ -11,6 +11,7 @@ const EFFECT_DEBUG_ID_KEY = "effectDebugId";
 const EFFECT_ANIM_DELAY_MS_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
 const EFFECT_FRAME_WINDOW_MS_KEY = "effectFrameWindowMs";
+const EFFECT_FRAME_WINDOW_START_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_KEY = "effectFrameIndex";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
@@ -327,6 +328,8 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
 
     const windowMsRaw = data.get(EFFECT_FRAME_WINDOW_MS_KEY);
     const windowMs = (typeof windowMsRaw === "number") ? windowMsRaw : Number(windowMsRaw);
+    const windowStartRaw = data.get(EFFECT_FRAME_WINDOW_START_KEY);
+    const windowStart = (typeof windowStartRaw === "number") ? windowStartRaw : Number(windowStartRaw);
 
     let useFrames = resolved.frameIndices;
     let frameWindowCount = 0;
@@ -337,10 +340,19 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         const calc = Math.floor((windowMs * frameRate) / 1000);
         frameWindowCount = Math.max(1, Math.min(useFrames.length, calc | 0));
         if (frameWindowCount > 0 && frameWindowCount < useFrames.length) {
-            const picked = selectCenteredFrameWindow(useFrames, frameWindowCount | 0);
-            useFrames = picked.frames;
-            frameWindowStart = picked.start | 0;
-            frameWindowEnd = picked.end | 0;
+            const useStartOverride = Number.isFinite(windowStart) && (windowStart | 0) >= 0;
+            if (useStartOverride) {
+                const startIdx = Math.max(0, Math.min(useFrames.length - 1, windowStart | 0));
+                const endIdx = Math.max(startIdx, Math.min(useFrames.length - 1, (startIdx + frameWindowCount - 1) | 0));
+                useFrames = useFrames.slice(startIdx, endIdx + 1);
+                frameWindowStart = startIdx | 0;
+                frameWindowEnd = endIdx | 0;
+            } else {
+                const picked = selectCenteredFrameWindow(useFrames, frameWindowCount | 0);
+                useFrames = picked.frames;
+                frameWindowStart = picked.start | 0;
+                frameWindowEnd = picked.end | 0;
+            }
         } else {
             frameWindowStart = 0;
             frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;

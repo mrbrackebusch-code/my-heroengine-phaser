@@ -196,15 +196,67 @@ function parseRadii(args) {
   return radii;
 }
 
+function parseFiles(args) {
+  const files = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--file" && i + 1 < args.length) {
+      files.push(String(args[i + 1] || ""));
+      i++;
+    } else if (a === "--files" && i + 1 < args.length) {
+      const list = String(args[i + 1] || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      files.push(...list);
+      i++;
+    }
+  }
+  return files;
+}
+
+function resolveFilterFile(raw) {
+  if (!raw) return null;
+  const candidate = path.resolve(ROOT, raw);
+  if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+
+  const base = raw.toLowerCase().endsWith(".png") ? raw : `${raw}.png`;
+  const heroMatch = path.join(HERO_DIR, base);
+  if (fs.existsSync(heroMatch)) return heroMatch;
+  const humanoidMatch = path.join(HUMANOID_DIR, base);
+  if (fs.existsSync(humanoidMatch)) return humanoidMatch;
+  return null;
+}
+
 async function main() {
-  const radii = parseRadii(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const radii = parseRadii(args);
+  const fileFilters = parseFiles(args);
+
+  let filterSet = null;
+  if (fileFilters.length) {
+    filterSet = new Set();
+    for (const raw of fileFilters) {
+      const resolved = resolveFilterFile(raw);
+      if (!resolved) {
+        console.error(`[gen-auras] ERROR: could not find file "${raw}" in assets/heroes or assets/enemies/humanoid`);
+        process.exit(1);
+      }
+      filterSet.add(path.resolve(resolved));
+    }
+  }
   for (const input of INPUTS) ensureDir(input.outDir);
 
   const batches = INPUTS.map((input) => ({
     label: input.label,
     outDir: input.outDir,
-    files: listPngs(input.dir),
+    files: listPngs(input.dir).map((f) => path.resolve(f)),
   }));
+  if (filterSet) {
+    for (const batch of batches) {
+      batch.files = batch.files.filter((f) => filterSet.has(f));
+    }
+  }
   const totalFiles = batches.reduce((sum, b) => sum + b.files.length, 0);
   if (totalFiles === 0) {
     console.error(`[gen-auras] No PNGs found in hero inputs.`);
@@ -213,7 +265,8 @@ async function main() {
 
   console.log(
     `[gen-auras] heroes=${batches[0]?.files.length ?? 0} humanoid=${batches[1]?.files.length ?? 0} ` +
-    `radii=${radii.join(",")} skipExisting=${SKIP_EXISTING ? "yes" : "no"}`
+    `radii=${radii.join(",")} skipExisting=${SKIP_EXISTING ? "yes" : "no"}` +
+    (filterSet ? " filtered=yes" : "")
   );
 
   for (const batch of batches) {

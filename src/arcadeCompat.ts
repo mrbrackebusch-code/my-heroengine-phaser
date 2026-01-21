@@ -1417,6 +1417,7 @@ const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_MASK_PAD_OUT_PX_DATA_KEY = "effectMaskPadOutPx";
 const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
+const EFFECT_FRAME_WINDOW_START_DATA_KEY = "effectFrameWindowStart";
 const EFFECT_FPS_DATA_KEY = "effectFps";
 const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
 const EFFECT_MODE_DATA_KEY = "effectMode";
@@ -10780,6 +10781,7 @@ function _syncEffectPath(
     const hasRot = Object.prototype.hasOwnProperty.call(data, EFFECT_ROT_DATA_KEY);
     const hasForceTop = Object.prototype.hasOwnProperty.call(data, EFFECT_FORCE_TOP_DATA_KEY);
     const hasFrameWindowMs = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_MS_DATA_KEY);
+    const hasFrameWindowStart = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_START_DATA_KEY);
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
     const hasRepeat = Object.prototype.hasOwnProperty.call(data, EFFECT_REPEAT_DATA_KEY);
     const hasScale = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_DATA_KEY);
@@ -10807,6 +10809,7 @@ function _syncEffectPath(
     const forceTopRaw = hasForceTop ? sprites.readDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY) : 0;
     const forceTop = (forceTopRaw | 0) !== 0;
     const frameWindowMs = hasFrameWindowMs ? sprites.readDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY) : 0;
+    const frameWindowStart = hasFrameWindowStart ? sprites.readDataNumber(s, EFFECT_FRAME_WINDOW_START_DATA_KEY) : 0;
     const fps = hasFps ? sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY) : 0;
     const repeat = hasRepeat ? sprites.readDataNumber(s, EFFECT_REPEAT_DATA_KEY) : 0;
     const scale = hasScale ? sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY) : 0;
@@ -10847,6 +10850,7 @@ function _syncEffectPath(
     if (hasRot) data[EFFECT_ROT_DATA_KEY] = rot;
     if (hasForceTop) data[EFFECT_FORCE_TOP_DATA_KEY] = forceTopRaw;
     if (hasFrameWindowMs) data[EFFECT_FRAME_WINDOW_MS_DATA_KEY] = frameWindowMs;
+    if (hasFrameWindowStart) data[EFFECT_FRAME_WINDOW_START_DATA_KEY] = frameWindowStart;
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
     if (hasRepeat) data[EFFECT_REPEAT_DATA_KEY] = repeat;
     if (hasScale) data[EFFECT_SCALE_DATA_KEY] = scale;
@@ -10899,6 +10903,7 @@ function _syncEffectPath(
     if (hasRot) nativeAny.setData(EFFECT_ROT_DATA_KEY, rot);
     if (hasForceTop) nativeAny.setData(EFFECT_FORCE_TOP_DATA_KEY, forceTopRaw);
     if (hasFrameWindowMs) nativeAny.setData(EFFECT_FRAME_WINDOW_MS_DATA_KEY, frameWindowMs);
+    if (hasFrameWindowStart) nativeAny.setData(EFFECT_FRAME_WINDOW_START_DATA_KEY, frameWindowStart);
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
     if (hasRepeat) nativeAny.setData(EFFECT_REPEAT_DATA_KEY, repeat);
     if (hasScale) nativeAny.setData(EFFECT_SCALE_DATA_KEY, scale);

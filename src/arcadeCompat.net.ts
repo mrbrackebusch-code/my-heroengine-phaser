@@ -280,6 +280,8 @@ type NetMessage =
     | { type: "uiCommand"; requestId: string; playerId: number; cmd: any }
     | { type: "uiCommandForward"; requestId: string; fromToken: string; playerId: number; cmd: any }
     | { type: "uiCommandResult"; requestId: string; toToken?: string | null; playerId?: number | null; ok?: boolean; reason?: string | null; snapshot?: any }
+    | { type: "profileUpload"; requestId: string; profile: string; dataUrl?: string; base64?: string; fileName?: string; size?: number }
+    | { type: "profileUploadResult"; requestId: string; ok: boolean; reason?: string | null; profile?: string | null }
     | { type: "blocklyXml"; playerId?: number; profile: string; xml: string }
     | {
           type: "playerState";
@@ -378,6 +380,7 @@ class NetworkClient {
     // Save list/load resolvers (host -> server)
     private saveListResolvers: Map<string, (res: any) => void> = new Map();
     private saveLoadResolvers: Map<string, (res: any) => void> = new Map();
+    private profileUploadResolvers: Map<string, (res: any) => void> = new Map();
 
     // Latest tilemap revision we've accepted (monotonic)
     private _tilemapRev: number = 0;
@@ -451,6 +454,15 @@ class NetworkClient {
                 allowed: (msg as any).allowed || null
             });
         }
+        if (reason === "profileUnknown" && profile) {
+            try {
+                const fn = (globalThis as any).__showProfileUpload;
+                if (typeof fn === "function") fn(profile, reason);
+            } catch (_e) {}
+            // Keep the socket open so we can upload the profile PNG.
+            return;
+        }
+
         try { alert(txt); } catch (_e) {}
 
         if (this.ws) {
@@ -713,6 +725,52 @@ class NetworkClient {
         });
     }
 
+    // Client uploads a new hero sheet for an unknown profile
+    sendProfileUpload(opts: { profile: string; dataUrl?: string; base64?: string; fileName?: string; size?: number }): Promise<any> {
+        const requestId = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const profile = (opts && typeof opts.profile === "string") ? opts.profile.trim() : "";
+        const dataUrl = (opts && typeof opts.dataUrl === "string") ? opts.dataUrl : "";
+        const base64 = (opts && typeof opts.base64 === "string") ? opts.base64 : "";
+        const fileName = (opts && typeof opts.fileName === "string") ? opts.fileName : "";
+        const size = (opts && typeof opts.size === "number") ? (opts.size | 0) : undefined;
+
+        if (!profile) return Promise.resolve({ ok: false, reason: "no-profile" });
+        if (!dataUrl && !base64) return Promise.resolve({ ok: false, reason: "no-data" });
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return Promise.resolve({ ok: false, reason: "ws-closed" });
+        }
+
+        const msg: NetMessage = { type: "profileUpload", requestId, profile, dataUrl, base64, fileName, size };
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                if (this.profileUploadResolvers.has(requestId)) {
+                    this.profileUploadResolvers.delete(requestId);
+                    resolve({ ok: false, reason: "timeout" });
+                }
+            }, 10000);
+
+            this.profileUploadResolvers.set(requestId, (res: any) => {
+                clearTimeout(timeout);
+                resolve(res);
+            });
+
+            try {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(msg));
+                } else {
+                    this.profileUploadResolvers.delete(requestId);
+                    clearTimeout(timeout);
+                    resolve({ ok: false, reason: "ws-closed" });
+                }
+            } catch (e: any) {
+                this.profileUploadResolvers.delete(requestId);
+                clearTimeout(timeout);
+                resolve({ ok: false, reason: String(e?.message || "send-failed") });
+            }
+        });
+    }
+
     // Any client can send their Blockly XML for their profile
     sendBlocklyXml(profile: string, xml: string) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -838,6 +896,10 @@ private handleMessage(msg: NetMessage) {
 
         case "uiCommandResult":
             this.onUiCommandResult(msg as any);
+            return;
+
+        case "profileUploadResult":
+            this.onProfileUploadResult(msg as any);
             return;
 
         case "blocklyXml":
@@ -1399,6 +1461,14 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         const resolver = this.saveLoadResolvers.get(msg.requestId);
         if (resolver) {
             this.saveLoadResolvers.delete(msg.requestId);
+            resolver(msg);
+        }
+    }
+
+    private onProfileUploadResult(msg: any) {
+        const resolver = this.profileUploadResolvers.get(msg.requestId);
+        if (resolver) {
+            this.profileUploadResolvers.delete(msg.requestId);
             resolver(msg);
         }
     }

@@ -88,6 +88,60 @@
       }
 
       /* -----------------------------
+         Profile upload overlay
+         ----------------------------- */
+      #profile-upload-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(8, 8, 12, 0.85);
+        z-index: 10000;
+      }
+
+      #profile-upload-card {
+        width: 360px;
+        max-width: 90vw;
+        background: #ffffff;
+        color: #111111;
+        border-radius: 12px;
+        padding: 16px 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        text-align: center;
+      }
+
+      #profile-upload-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      #profile-upload-msg {
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      #profile-upload-file {
+        width: 100%;
+        margin: 6px 0 8px;
+      }
+
+      #profile-upload-status {
+        min-height: 18px;
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 10px;
+      }
+
+      .profile-upload-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      /* -----------------------------
          Game + HUD wrapper
          ----------------------------- */
       #game-wrap {
@@ -158,6 +212,23 @@
         opacity: 0.82;
         min-height: 16px;
         margin-bottom: 10px;
+      }
+      #loading-meta {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 11px;
+        opacity: 0.65;
+        margin-bottom: 6px;
+      }
+      #loading-steps {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 10px;
+        opacity: 0.6;
+        margin-bottom: 10px;
+        text-align: left;
+        line-height: 1.2;
+        white-space: pre-line;
       }
       #loading-bar {
         position: relative;
@@ -1736,6 +1807,8 @@
       <div id="loading-card">
         <div id="loading-title">Loading...</div>
         <div id="loading-msg">Preparing assets</div>
+        <div id="loading-meta"></div>
+        <div id="loading-steps"></div>
         <div id="loading-bar">
           <div id="loading-bar-fill"></div>
         </div>
@@ -1760,6 +1833,23 @@
         <div id="load-save-status" style="font-size:0.9rem;color:#666;"></div>
         <div id="lan-ip-hint"></div>
       </form>
+    </div>
+
+    <!-- Profile upload overlay (when profile is missing) -->
+    <div id="profile-upload-overlay" aria-hidden="true">
+      <div id="profile-upload-card">
+        <div id="profile-upload-title">Profile not found</div>
+        <div id="profile-upload-msg"></div>
+        <div style="font-size:0.85rem;color:#555;margin:6px 0;">
+          <a href="https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/" target="_blank" rel="noopener noreferrer">Create a hero (LPC generator)</a>
+        </div>
+        <input type="file" id="profile-upload-file" accept="image/png" />
+        <div id="profile-upload-status"></div>
+        <div class="profile-upload-actions">
+          <button type="button" id="profile-upload-send">Upload and join</button>
+          <button type="button" id="profile-upload-cancel">Cancel</button>
+        </div>
+      </div>
     </div>
 
     <!-- GAME + HUD (hidden until profile exists) -->
@@ -2073,80 +2163,207 @@
         if (hasProfile) {
           landing.style.display = "none";
           gameWrap.style.display = "flex";
-          return;
-        }
+        } else {
+          gameWrap.style.display = "none";
 
-        gameWrap.style.display = "none";
+          const form = document.getElementById("join-form");
+          const nameInput = document.getElementById("player-name");
+          const loadBtn = document.getElementById("load-save-btn");
+          const loadFile = document.getElementById("load-save-file");
+          const loadStatus = document.getElementById("load-save-status");
+          const lanHintEl = document.getElementById("lan-ip-hint");
+          if (form && nameInput) {
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const name = nameInput.value.trim();
+            if (!name) return;
 
-        const form = document.getElementById("join-form");
-        const nameInput = document.getElementById("player-name");
-        const loadBtn = document.getElementById("load-save-btn");
-        const loadFile = document.getElementById("load-save-file");
-        const loadStatus = document.getElementById("load-save-status");
-        const lanHintEl = document.getElementById("lan-ip-hint");
-        if (!form || !nameInput) return;
+            params.set("profile", name);
 
-        form.addEventListener("submit", function (e) {
-          e.preventDefault();
-          const name = nameInput.value.trim();
-          if (!name) return;
+            const newUrl =
+              window.location.origin +
+              window.location.pathname +
+              "?" +
+              params.toString();
 
-          params.set("profile", name);
-
-          const newUrl =
-            window.location.origin +
-            window.location.pathname +
-            "?" +
-            params.toString();
-
-          window.location.href = newUrl;
-        });
-
-        const loadInput = (loadFile && loadFile.tagName === "INPUT") ? loadFile : null;
-
-        if (loadBtn && loadInput) {
-          loadBtn.addEventListener("click", () => {
-            loadInput.value = "";
-            loadInput.click();
+            window.location.href = newUrl;
           });
 
-          loadInput.addEventListener("change", () => {
-            const file = loadInput.files && loadInput.files[0];
-            if (!file) return;
+          const loadInput = (loadFile && loadFile.tagName === "INPUT") ? loadFile : null;
+
+          if (loadBtn && loadInput) {
+            loadBtn.addEventListener("click", () => {
+              loadInput.value = "";
+              loadInput.click();
+            });
+
+            loadInput.addEventListener("change", () => {
+              const file = loadInput.files && loadInput.files[0];
+              if (!file) return;
+
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const text = String(reader.result || "");
+                  const parsed = JSON.parse(text);
+                  window.__pendingSaveFromFile = { name: file.name, text, parsed };
+                  if (loadStatus) loadStatus.textContent = `Loaded save: ${file.name}`;
+                  console.log("[landing] loaded save file", file.name, parsed);
+                } catch (err) {
+                  console.warn("[landing] failed to parse save", err);
+                  if (loadStatus) loadStatus.textContent = "Failed to load save (invalid JSON)";
+                }
+              };
+              reader.readAsText(file);
+            });
+          }
+
+          if (lanHintEl) {
+            try {
+              const host = window.location.hostname || "localhost";
+              const port = window.location.port || "5173";
+              const is192 = /^192\./.test(host);
+              const is10 = /^10\./.test(host);
+              const is172 = /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
+              if (is192 || is10 || is172) {
+                lanHintEl.textContent = `LAN IP: ${host}:${port}`;
+              } else {
+                lanHintEl.textContent = `LAN IP: (use your 192.168.x.x):${port}`;
+              }
+            } catch (_e) {
+              lanHintEl.textContent = "LAN IP: (use your 192.168.x.x)";
+            }
+          }
+          }
+        }
+
+        // Profile upload overlay (for missing hero sheets)
+        const uploadOverlay = document.getElementById("profile-upload-overlay");
+        const uploadMsg = document.getElementById("profile-upload-msg");
+        const uploadFile = document.getElementById("profile-upload-file");
+        const uploadStatus = document.getElementById("profile-upload-status");
+        const uploadSend = document.getElementById("profile-upload-send");
+        const uploadCancel = document.getElementById("profile-upload-cancel");
+
+        let pendingProfile = "";
+        let pendingFile = null;
+        let uploadInFlight = false;
+
+        function setUploadStatus(text, isError) {
+          if (!uploadStatus) return;
+          uploadStatus.textContent = text || "";
+          uploadStatus.style.color = isError ? "#b00020" : "#666";
+        }
+
+        function showUploadOverlay(profile, reason) {
+          if (!uploadOverlay) return;
+          pendingProfile = String(profile || "").trim();
+          pendingFile = null;
+          if (uploadFile) uploadFile.value = "";
+          if (uploadMsg) {
+            const nice = pendingProfile ? `"${pendingProfile}"` : "(unknown)";
+            const hint = pendingProfile ? `${pendingProfile}Hero.png` : "ProfileHero.png";
+            uploadMsg.textContent = `No hero sheet for ${nice}. Please choose ${hint}.`;
+          }
+          setUploadStatus(reason ? `Reason: ${reason}` : "", false);
+          uploadOverlay.style.display = "flex";
+          uploadOverlay.setAttribute("aria-hidden", "false");
+          try { uploadFile && uploadFile.click(); } catch (_e) {}
+        }
+
+        function hideUploadOverlay() {
+          if (!uploadOverlay) return;
+          uploadOverlay.style.display = "none";
+          uploadOverlay.setAttribute("aria-hidden", "true");
+        }
+
+        function validateFile(file) {
+          if (!file) return "Please choose a PNG file.";
+          const name = String(file.name || "").toLowerCase();
+          const okExt = name.endsWith(".png");
+          if (!okExt) return "File must be a .png spritesheet.";
+          if (file.size > 8 * 1024 * 1024) return "File is too large (max 8MB).";
+          return "";
+        }
+
+        if (uploadFile) {
+          uploadFile.addEventListener("change", () => {
+            const file = uploadFile.files && uploadFile.files[0];
+            const err = validateFile(file);
+            if (err) {
+              pendingFile = null;
+              setUploadStatus(err, true);
+              return;
+            }
+            pendingFile = file;
+            setUploadStatus(file ? `Selected: ${file.name}` : "", false);
+          });
+        }
+
+        if (uploadSend) {
+          uploadSend.addEventListener("click", () => {
+            if (uploadInFlight) return;
+            if (!pendingProfile) {
+              setUploadStatus("Missing profile name.", true);
+              return;
+            }
+            const err = validateFile(pendingFile);
+            if (err) {
+              setUploadStatus(err, true);
+              return;
+            }
+            const net = window.__net;
+            if (!net || typeof net.sendProfileUpload !== "function") {
+              setUploadStatus("Network not ready yet. Try again in a moment.", true);
+              return;
+            }
+
+            uploadInFlight = true;
+            setUploadStatus("Uploading... this may take a few seconds.", false);
 
             const reader = new FileReader();
             reader.onload = () => {
-              try {
-                const text = String(reader.result || "");
-                const parsed = JSON.parse(text);
-                window.__pendingSaveFromFile = { name: file.name, text, parsed };
-                if (loadStatus) loadStatus.textContent = `Loaded save: ${file.name}`;
-                console.log("[landing] loaded save file", file.name, parsed);
-              } catch (err) {
-                console.warn("[landing] failed to parse save", err);
-                if (loadStatus) loadStatus.textContent = "Failed to load save (invalid JSON)";
-              }
+              const dataUrl = String(reader.result || "");
+              net
+                .sendProfileUpload({
+                  profile: pendingProfile,
+                  dataUrl,
+                  fileName: pendingFile ? pendingFile.name : "",
+                  size: pendingFile ? pendingFile.size : undefined,
+                })
+                .then((res) => {
+                  if (res && res.ok) {
+                    setUploadStatus("Upload complete. Reloading...", false);
+                    setTimeout(() => window.location.reload(), 800);
+                  } else {
+                    const reason = res && res.reason ? String(res.reason) : "upload failed";
+                    setUploadStatus(`Upload failed: ${reason}`, true);
+                  }
+                })
+                .catch((e) => {
+                  setUploadStatus(`Upload failed: ${e}`, true);
+                })
+                .finally(() => {
+                  uploadInFlight = false;
+                });
             };
-            reader.readAsText(file);
+            reader.onerror = () => {
+              uploadInFlight = false;
+              setUploadStatus("Failed to read file.", true);
+            };
+            reader.readAsDataURL(pendingFile);
           });
         }
 
-        if (lanHintEl) {
-          try {
-            const host = window.location.hostname || "localhost";
-            const port = window.location.port || "5173";
-            const is192 = /^192\./.test(host);
-            const is10 = /^10\./.test(host);
-            const is172 = /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
-            if (is192 || is10 || is172) {
-              lanHintEl.textContent = `LAN IP: ${host}:${port}`;
-            } else {
-              lanHintEl.textContent = `LAN IP: (use your 192.168.x.x):${port}`;
-            }
-          } catch (_e) {
-            lanHintEl.textContent = "LAN IP: (use your 192.168.x.x)";
-          }
+        if (uploadCancel) {
+          uploadCancel.addEventListener("click", () => {
+            hideUploadOverlay();
+          });
         }
+
+        window.__showProfileUpload = function (profile, reason) {
+          showUploadOverlay(profile, reason);
+        };
       })();
     </script>
 
@@ -2306,6 +2523,8 @@
           hud: document.getElementById("hud"),
           loadingOverlay: document.getElementById("loading-overlay"),
           loadingMsg: document.getElementById("loading-msg"),
+          loadingMeta: document.getElementById("loading-meta"),
+          loadingSteps: document.getElementById("loading-steps"),
           loadingBar: document.getElementById("loading-bar-fill"),
           zoomValue: document.getElementById("zoom-value"),
           zoomOutBtn: document.getElementById("zoom-out-btn"),
@@ -2595,24 +2814,114 @@
         (function () {
           const overlay = R.loadingOverlay;
           const msgEl = R.loadingMsg;
+          const metaEl = R.loadingMeta;
+          const stepsEl = R.loadingSteps;
           const bar = R.loadingBar;
           let hidden = false;
           const clampPct = (p) => Math.max(0, Math.min(100, +p || 0));
+          const nowMs = () => (window.performance && typeof performance.now === "function")
+            ? performance.now()
+            : Date.now();
+          const fmtMs = (ms) => {
+            const s = Math.max(0, +ms || 0) / 1000;
+            return s.toFixed(2) + "s";
+          };
+          const timing = {
+            startAt: 0,
+            lastStepAt: 0,
+            lastMsg: "",
+            steps: [],
+            timer: 0,
+          };
+
+          const updateSteps = () => {
+            if (!stepsEl) return;
+            const now = nowMs();
+            const recent = timing.steps.slice(-4);
+            stepsEl.textContent = recent
+              .map((s, i) => {
+                let dt = s.dt;
+                if ((!dt || dt <= 0) && i === recent.length - 1 && timing.lastStepAt) {
+                  dt = now - timing.lastStepAt;
+                }
+                return `${fmtMs(dt)} ${s.msg}`;
+              })
+              .join("\n");
+          };
+
+          const updateMeta = () => {
+            if (!metaEl) return;
+            if (!timing.startAt) {
+              metaEl.textContent = "";
+              return;
+            }
+            const now = nowMs();
+            const total = now - timing.startAt;
+            const step = timing.lastStepAt ? (now - timing.lastStepAt) : total;
+            metaEl.textContent = `t+${fmtMs(total)} | step ${fmtMs(step)}`;
+            updateSteps();
+          };
+
+          const noteStep = (msg) => {
+            const clean = String(msg || "").trim();
+            if (!clean) return;
+            const now = nowMs();
+            if (!timing.startAt) {
+              timing.startAt = now;
+              timing.lastStepAt = now;
+            }
+            if (clean === timing.lastMsg) return;
+            if (timing.steps.length) {
+              const last = timing.steps[timing.steps.length - 1];
+              if (last && (!last.dt || last.dt <= 0)) last.dt = now - timing.lastStepAt;
+            }
+            timing.steps.push({ msg: clean, dt: 0 });
+            timing.lastMsg = clean;
+            timing.lastStepAt = now;
+            updateSteps();
+          };
+
+          const startTimer = () => {
+            if (timing.timer) return;
+            timing.timer = window.setInterval(updateMeta, 200);
+          };
+          const stopTimer = () => {
+            if (!timing.timer) return;
+            window.clearInterval(timing.timer);
+            timing.timer = 0;
+          };
 
           const set = (pct, msg) => {
             if (hidden) return;
             const hasPct = typeof pct === "number" && isFinite(pct);
             if (hasPct && bar) bar.style.width = clampPct(pct).toFixed(1) + "%";
             if (msgEl && typeof msg === "string" && msg.trim()) msgEl.textContent = msg;
+            if (typeof msg === "string" && msg.trim()) noteStep(msg);
+            updateMeta();
+            startTimer();
           };
           const show = (msg) => {
             hidden = false;
             if (overlay) overlay.classList.remove("hidden");
+            if (!timing.startAt) {
+              const now = nowMs();
+              timing.startAt = now;
+              timing.lastStepAt = now;
+            }
             if (msg) set(undefined, msg);
+            updateMeta();
+            startTimer();
           };
           const done = () => {
             if (hidden) return;
             hidden = true;
+            const now = nowMs();
+            if (timing.steps.length) {
+              const last = timing.steps[timing.steps.length - 1];
+              if (last && (!last.dt || last.dt <= 0)) last.dt = now - timing.lastStepAt;
+              updateSteps();
+            }
+            stopTimer();
             if (overlay) overlay.classList.add("hidden");
             setTimeout(() => overlay && overlay.remove && overlay.remove(), 800);
           };

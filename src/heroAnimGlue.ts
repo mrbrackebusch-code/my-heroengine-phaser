@@ -19,6 +19,7 @@ import {
     DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES,
     DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY,
     DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS,
+    DEBUG_HERO_ANIM_STRENGTH_TRACE,
     DEBUG_INT_HERO_ANIM,
     DEBUG_INT_HERO_NAME_FILTER,
     DEBUG_NPC_PIPELINE,
@@ -60,6 +61,12 @@ const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
 const HERO_FRAME_LOG_LAST_IDX_KEY = "__heroFrameLogIdx";
 const HERO_FRAME_LOG_LAST_MS_KEY = "__heroFrameLogAt";
+const HERO_STR_TRACE_ACTIVE_KEY = "__strTraceActive";
+const HERO_STR_TRACE_SEQ_KEY = "__strTraceSeq";
+const HERO_STR_TRACE_START_MS_KEY = "__strTraceStartMs";
+const HERO_STR_TRACE_START_KIND_KEY = "__strTraceStartKind";
+const HERO_STR_TRACE_ENTRIES_KEY = "__strTraceEntries";
+const HERO_STR_TRACE_LAST_FRAME_KEY = "__strTraceLastFrame";
 
 const HERO_AIM_TILT_MAX_DEG = 8;
 const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
@@ -475,6 +482,77 @@ function _debugHeroAnimFrame(
         " frameName=" + (frame?.name ?? "") +
         " t=" + (nowMs | 0);
     console.log(msg);
+}
+
+function _debugStrengthFrameTrace(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest
+): void {
+    if (!DEBUG_HERO_ANIM_STRENGTH_TRACE) return;
+    const actionKindRaw = (req.actionKind || "");
+    const actionKind = actionKindRaw.toLowerCase();
+    const isStrength = actionKind.startsWith("strength");
+    const anySprite = sprite as any;
+    if (!anySprite.getData || !anySprite.setData) return;
+
+    const nowMs = (scene as any)?.time?.now ?? Date.now();
+    const frame = sprite.frame as any;
+    const frameIndex = (frame?.index ?? frame?.name ?? -1);
+    const actionSeq = (req.actionSequence | 0);
+
+    const active = !!anySprite.getData(HERO_STR_TRACE_ACTIVE_KEY);
+    const activeSeq = Number(anySprite.getData(HERO_STR_TRACE_SEQ_KEY));
+
+    const flush = (endKind: string): void => {
+        const entries = anySprite.getData(HERO_STR_TRACE_ENTRIES_KEY);
+        const frames = Array.isArray(entries) ? entries : [];
+        const startMs = Number(anySprite.getData(HERO_STR_TRACE_START_MS_KEY));
+        const startKind = String(anySprite.getData(HERO_STR_TRACE_START_KIND_KEY) || "");
+        const heroName = req.heroName || "";
+        const seq = Number(anySprite.getData(HERO_STR_TRACE_SEQ_KEY));
+        const msg =
+            "[HERO-ANIM][STRENGTH-TRACE]" +
+            " heroName=" + heroName +
+            " actionSeq=" + (Number.isFinite(seq) ? (seq | 0) : -1) +
+            " startKind=" + (startKind || "") +
+            " endKind=" + (endKind || "") +
+            " start=" + (Number.isFinite(startMs) ? (startMs | 0) : -1) +
+            " end=" + (nowMs | 0) +
+            " frames=" + frames.join(",");
+        console.log(msg);
+        anySprite.setData(HERO_STR_TRACE_ACTIVE_KEY, 0);
+        anySprite.setData(HERO_STR_TRACE_SEQ_KEY, 0);
+        anySprite.setData(HERO_STR_TRACE_START_MS_KEY, 0);
+        anySprite.setData(HERO_STR_TRACE_START_KIND_KEY, "");
+        anySprite.setData(HERO_STR_TRACE_ENTRIES_KEY, []);
+        anySprite.setData(HERO_STR_TRACE_LAST_FRAME_KEY, undefined);
+    };
+
+    if (!isStrength) {
+        if (active) flush(actionKindRaw || "");
+        return;
+    }
+
+    if (!active || (Number.isFinite(activeSeq) && activeSeq !== (actionSeq | 0))) {
+        if (active) flush(actionKindRaw || "");
+        anySprite.setData(HERO_STR_TRACE_ACTIVE_KEY, 1);
+        anySprite.setData(HERO_STR_TRACE_SEQ_KEY, actionSeq | 0);
+        anySprite.setData(HERO_STR_TRACE_START_MS_KEY, nowMs | 0);
+        anySprite.setData(HERO_STR_TRACE_START_KIND_KEY, actionKindRaw || "");
+        anySprite.setData(HERO_STR_TRACE_ENTRIES_KEY, []);
+        anySprite.setData(HERO_STR_TRACE_LAST_FRAME_KEY, undefined);
+    }
+
+    const lastFrame = anySprite.getData(HERO_STR_TRACE_LAST_FRAME_KEY);
+    if (lastFrame === frameIndex) return;
+    const entries = anySprite.getData(HERO_STR_TRACE_ENTRIES_KEY);
+    if (Array.isArray(entries)) {
+        entries.push(`${frameIndex}@${nowMs | 0}`);
+    } else {
+        anySprite.setData(HERO_STR_TRACE_ENTRIES_KEY, [`${frameIndex}@${nowMs | 0}`]);
+    }
+    anySprite.setData(HERO_STR_TRACE_LAST_FRAME_KEY, frameIndex);
 }
 
 function _proveLogHeroAnimReq(sprite: Phaser.GameObjects.Sprite, req: _HeroAnimRequest): void {
@@ -1118,6 +1196,14 @@ function _tryStrengthChargeThrob(
     })();
 
     if (!(partLooksLikeCharging || isLocked)) {
+        const wasPaused = !!anySprite.getData?.(PAUSED_KEY);
+        if (wasPaused) {
+            const animState: any = sprite.anims as any;
+            if (animState && typeof animState.resume === "function") {
+                try { animState.resume(); } catch { /* ignore */ }
+            }
+            try { anySprite.setData?.(PAUSED_KEY, 0); } catch {}
+        }
         try { anySprite.setData?.("strCh_holdCol", undefined); } catch {}
         _restoreBaseScaleIfPresent(sprite);
         return false;
@@ -1309,9 +1395,9 @@ function _maybeStrengthStartFrameIndex(
     const frames: number[] = Array.isArray(def.frameIndices) ? def.frameIndices : [];
     if (!frames.length) return null;
 
-    let idx = frames.indexOf(startCol | 0);
-    if (idx < 0) return null;
-    idx = clampInt(idx | 0, 0, frames.length - 1);
+    const col = startCol | 0;
+    if (col < 0) return null;
+    const idx = clampInt(col | 0, 0, frames.length - 1);
     return idx | 0;
 }
 
@@ -1567,6 +1653,7 @@ function applyHeroAnimationForSpriteInternal(
     if (_tryStrengthChargeThrob(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
         _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
         return;
     } else {
         _restoreBaseScaleIfPresent(sprite);
@@ -1578,6 +1665,7 @@ function applyHeroAnimationForSpriteInternal(
     if (_tryHoldSingleFrame(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
         _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
         return;
     }
 
@@ -1587,6 +1675,7 @@ function applyHeroAnimationForSpriteInternal(
     if (_tryCastPartFrameControl(scene, sprite, req, def, shouldProve)) {
         _publishHeroFollowFrameKeys(sprite, def);
         _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
         return;
     }
 
@@ -1596,6 +1685,7 @@ function applyHeroAnimationForSpriteInternal(
     const startFrameIndex = _maybeStrengthStartFrameIndex(sprite, req, def);
     _playDefaultAnimPath(scene, sprite, req, set, def, effectivePhase, allowFallback, shouldProve, startFrameIndex);
     _debugHeroAnimFrame(scene, sprite, req, def);
+    _debugStrengthFrameTrace(scene, sprite, req);
 }
 
 

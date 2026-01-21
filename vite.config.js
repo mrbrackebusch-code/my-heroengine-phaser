@@ -2,6 +2,18 @@ import { defineConfig } from "vite";
 import { spawn } from "child_process";
 import os from "os";
 
+const ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const ASSET_EXT_RE = /\.(png|jpe?g|gif|webp|svg|mp3|ogg|wav|json|atlas|bin|ttf|otf|woff2?)$/i;
+
+function shouldCacheAssetUrl(url) {
+    if (!url) return false;
+    const path = url.split("?")[0] || "";
+    if (path.startsWith("/assets/")) return true;
+    if (path.startsWith("/src/assets/")) return true;
+    if (path.includes("/assets/")) return true;
+    return ASSET_EXT_RE.test(path);
+}
+
 function pickDefaultHost() {
     if (process.env.DEV_HOST) return process.env.DEV_HOST;
 
@@ -39,6 +51,20 @@ export default defineConfig({
         {
             name: "multiplayer-server",
             configureServer(server) {
+                server.middlewares.use((req, res, next) => {
+                    if (req && shouldCacheAssetUrl(req.url || "")) {
+                        const prev = res.setHeader;
+                        res.setHeader = function (name, value) {
+                            if (String(name || "").toLowerCase() === "cache-control") {
+                                return prev.call(this, name, ASSET_CACHE_CONTROL);
+                            }
+                            return prev.call(this, name, value);
+                        };
+                        res.setHeader("Cache-Control", ASSET_CACHE_CONTROL);
+                    }
+                    next();
+                });
+
                 // Use Vite's configured dev port if present, else default 5173
                 const devPort = server.config.server.port ?? 5173;
                 const wsPort = process.env.GAME_WS_PORT || 8080;

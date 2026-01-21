@@ -2,6 +2,7 @@
 import WebSocket, { WebSocketServer } from "ws";
 import fs from "fs";
 import path from "path";
+import { spawn } from "child_process";
 
 // ------------------------------------------------------------
 // Debug / logging
@@ -31,6 +32,7 @@ const PORT = Number(process.env.GAME_WS_PORT || 8080);
 const HOST = process.env.GAME_HOST || "0.0.0.0";
 const SAVE_DIR = path.resolve("saves");
 const HERO_ASSETS_DIR = path.resolve("assets", "heroes");
+const PROFILE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 
@@ -391,7 +393,6 @@ function bindHello(ws, msg) {
   if (profile && !allowedProfiles.has(profile)) {
     console.warn("[server] HELLO rejected: profile not found in assets", profile, "allowed:", Array.from(allowedProfiles).sort());
     sendJson(ws, { type: "helloError", reason: "profileUnknown", profile, allowed: Array.from(allowedProfiles) });
-    ws.close(1008, "Profile not available");
     return;
   }
 
@@ -835,6 +836,169 @@ try {
 }
 loadAllowedProfilesFromAssets();
 
+// Live reload allowed profiles when hero assets change (no server restart needed)
+let _profileWatchTimer = null;
+function _scheduleAllowedProfilesReload(reason, filename) {
+  if (_profileWatchTimer) clearTimeout(_profileWatchTimer);
+  _profileWatchTimer = setTimeout(() => {
+    _profileWatchTimer = null;
+    loadAllowedProfilesFromAssets();
+    if (filename) {
+      console.log("[server] profiles reloaded (assets changed)", { reason, file: filename });
+    } else {
+      console.log("[server] profiles reloaded (assets changed)", { reason });
+    }
+  }, 200);
+}
+try {
+  fs.watch(HERO_ASSETS_DIR, { persistent: false }, (eventType, filename) => {
+    const name = filename ? String(filename) : "";
+    if (!name || !name.toLowerCase().endsWith(".png")) return;
+    if (!/Hero\.png$/i.test(name)) return;
+    _scheduleAllowedProfilesReload(eventType || "change", name);
+  });
+  console.log("[server] watching hero assets for profile updates");
+} catch (e) {
+  console.warn("[server] failed to watch hero assets for updates", e);
+}
+
+// ============================================================
+// Profile upload (new hero sheet)
+// ============================================================
+let profileUploadInFlight = false;
+
+function isValidProfileName(name) {
+  if (!name) return false;
+  return /^[A-Za-z0-9_-]{1,32}$/.test(name);
+}
+
+function _decodeBase64Payload(msg) {
+  const base64 = (msg && typeof msg.base64 === "string") ? msg.base64.trim() : "";
+  if (base64) return base64;
+  const dataUrl = (msg && typeof msg.dataUrl === "string") ? msg.dataUrl.trim() : "";
+  if (!dataUrl) return "";
+  const comma = dataUrl.indexOf(",");
+  if (comma >= 0) return dataUrl.slice(comma + 1).trim();
+  return "";
+}
+
+function _isPngSignature(buf) {
+  if (!buf || buf.length < 24) return false;
+  return (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47 &&
+    buf[4] === 0x0d &&
+    buf[5] === 0x0a &&
+    buf[6] === 0x1a &&
+    buf[7] === 0x0a
+  );
+}
+
+function _readPngSize(buf) {
+  if (!_isPngSignature(buf)) return { width: 0, height: 0 };
+  // IHDR chunk starts at byte 8+4+4; width/height at offsets 16/20
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  return { width, height };
+}
+
+function _runAuraGenForFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const script = path.resolve("scripts", "genheroauras.mjs");
+    const child = spawn(process.execPath, [script, "--file", filePath], {
+      stdio: "inherit",
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) resolve(true);
+      else reject(new Error("gen-auras exit " + code));
+    });
+  });
+}
+
+async function handleProfileUpload(ws, msg) {
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  if (!requestId) return;
+
+  const profile = (msg && typeof msg.profile === "string") ? msg.profile.trim() : "";
+  if (!profile) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "no-profile" });
+    return;
+  }
+  if (!isValidProfileName(profile)) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "invalid-profile", profile });
+    return;
+  }
+  if (allowedProfiles.has(profile)) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "profile-exists", profile });
+    return;
+  }
+  if (profileUploadInFlight) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "busy", profile });
+    return;
+  }
+
+  const b64 = _decodeBase64Payload(msg);
+  if (!b64) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "no-data", profile });
+    return;
+  }
+
+  let buf = null;
+  try {
+    buf = Buffer.from(b64, "base64");
+  } catch (_e) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "bad-base64", profile });
+    return;
+  }
+  if (!buf || buf.length <= 0) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "empty-file", profile });
+    return;
+  }
+  if (buf.length > PROFILE_UPLOAD_MAX_BYTES) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "too-large", profile });
+    return;
+  }
+  if (!_isPngSignature(buf)) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "not-png", profile });
+    return;
+  }
+  const { width, height } = _readPngSize(buf);
+  if (!width || !height || (width % 64) !== 0 || (height % 64) !== 0) {
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "invalid-sheet-size", profile });
+    return;
+  }
+
+  profileUploadInFlight = true;
+  const fileName = `${profile}Hero.png`;
+  const dest = path.join(HERO_ASSETS_DIR, fileName);
+  try {
+    fs.mkdirSync(HERO_ASSETS_DIR, { recursive: true });
+    fs.writeFileSync(dest, buf);
+  } catch (e) {
+    profileUploadInFlight = false;
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "write-failed", profile });
+    return;
+  }
+
+  console.log("[server] profile upload saved", { profile, file: dest, bytes: buf.length });
+  try {
+    await _runAuraGenForFile(dest);
+  } catch (e) {
+    try { fs.unlinkSync(dest); } catch (_e2) {}
+    profileUploadInFlight = false;
+    console.warn("[server] aura generation failed for profile", profile, e);
+    sendJson(ws, { type: "profileUploadResult", requestId, ok: false, reason: "aura-failed", profile });
+    return;
+  }
+
+  loadAllowedProfilesFromAssets();
+  profileUploadInFlight = false;
+  sendJson(ws, { type: "profileUploadResult", requestId, ok: true, reason: "ok", profile });
+}
+
 function writeSaveFile(payload) {
   if (!payload || typeof payload !== "object") {
     throw new Error("invalid payload");
@@ -952,6 +1116,14 @@ function onSocketMessage(ws, data) {
   const msg = parseJsonOrNull(data);
   if (!msg || typeof msg.type !== "string") {
     console.warn("[server] invalid/malformed JSON:", data.toString());
+    return;
+  }
+
+  // Profile upload is allowed before HELLO (for missing profiles)
+  if (msg.type === "profileUpload") {
+    handleProfileUpload(ws, msg).catch((e) => {
+      console.warn("[server] profile upload failed", e);
+    });
     return;
   }
 

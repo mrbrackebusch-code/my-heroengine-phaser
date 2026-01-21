@@ -117,6 +117,12 @@ function _uiLoadingSet(pct?: number, msg?: string): void {
     if (ui && typeof ui.set === "function") ui.set(pct, msg);
   } catch {}
 }
+try {
+  (globalThis as any).__heLoadingNote = (msg: string) => {
+    if (typeof msg !== "string" || !msg.trim()) return;
+    _uiLoadingSet(undefined, msg);
+  };
+} catch { }
 function _uiLoadingDone(): void {
   try {
     _uiLoadingState.done = true;
@@ -1298,9 +1304,9 @@ class HeroScene extends Phaser.Scene {
 
     preload() {
         _uiLoadingShow("Loading assets…");
-        _uiLoadingSet(5, "Loading assets…");
+        _uiLoadingSet(5, "Loading assets: monsters");
         this.load.on("progress", (v: number) => {
-            _uiLoadingSet(Math.round(v * 40), "Loading assets…");
+            _uiLoadingSet(Math.round(v * 40));
         });
         this.load.once("complete", () => {
             _uiLoadingSet(50, "Assets loaded");
@@ -1308,15 +1314,19 @@ class HeroScene extends Phaser.Scene {
         logMain(">>> [HeroScene.preload] loading LPC monster sheets");
         preloadMonsterSheets(this);
 
+        _uiLoadingSet(10, "Loading assets: heroes");
         logMain(">>> [HeroScene.preload] loading hero spritesheets");
         preloadHeroSheets(this);
 
+        _uiLoadingSet(15, "Loading assets: tiles");
         logMain(">>> [HeroScene.preload] loading tile sheets");
         preloadTileSheets(this);
 
+        _uiLoadingSet(20, "Loading assets: weapons");
         logMain(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
 
+        _uiLoadingSet(25, "Loading assets: effects");
         logMain(">>> [HeroScene.preload] loading effect sheets");
         preloadEffectSheets(this);
 
@@ -1342,18 +1352,20 @@ async create() {
 
     // 2) Loading indicator
     const loadingText = this.createLoadingText();
-    _uiLoadingSet(55, "Preparing world…");
+    _uiLoadingSet(52, "Initializing scene…");
 
     // 3) Hero atlas + aura validation
+    _uiLoadingSet(56, "Building hero atlas…");
     buildHeroAtlas(this);
     this.validateHeroAuras(loadingText);
-    _uiLoadingSet(65, "Building effects…");
+    _uiLoadingSet(62, "Building effect atlas…");
     loadingText.destroy();
 
     // 3b) Effect atlas
-    buildEffectAtlas(this);
+    await buildEffectAtlas(this);
 
     // 4) Tile atlas + net tilemap hook (+ apply pending cached tilemap)
+    _uiLoadingSet(68, "Building tile atlas…");
     this.initTileAtlasAndInstallTilemapHook();
     _uiLoadingSet(75, "Waiting for tilemap…");
 
@@ -1361,28 +1373,33 @@ async create() {
     this.ensureHostFlagInitialized();
 
     // 6) Import MakeCode-ish modules (compat + extensions)
+    _uiLoadingSet(78, "Loading MakeCode modules…");
     const compatMod = await this.importMakeCodeModules();
 
     // 7) Hook: network will call this when we become host
     this.installStartHeroEngineHostHook();
 
     // 8) Network init (all clients)
+    _uiLoadingSet(82, "Initializing network…");
     this.initNetwork(compatMod);
     _tryPruneUnconnectedHeroes("scene-create");
 
     // 9) Keyboard -> controller wiring (all clients)
+    _uiLoadingSet(86, "Wiring input…");
     this.wireKeyboardToController();
 
     // 9b) Gamepad -> controller wiring (all clients)
     this.wireGamepadToController();
 
     // 10) Monster atlas + registry exposure
+    _uiLoadingSet(90, "Building monster atlas…");
     this.buildMonsterAtlasAndRegistry();
 
     // 11) Optional hero anim tester
     this.maybeInstallHeroAnimTester();
 
     // 12) DOM dialog test (timed splash)
+    _uiLoadingSet(95, "Finalizing startup…");
     this.runStartupDialogTest();
 
     logMain(">>> [HeroScene.create] complete (refactored)");

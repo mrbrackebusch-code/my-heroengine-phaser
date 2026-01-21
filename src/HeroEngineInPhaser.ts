@@ -2544,6 +2544,8 @@ function _setStrengthSwingFxSegmentsVisible(proj: Sprite, visible: boolean): voi
 }
 
 const EFFECT_TINT_DATA_KEY = "effectTint";
+const EFFECT_OFFX_DATA_KEY = "effectOffX";
+const EFFECT_OFFY_DATA_KEY = "effectOffY";
 const EFFECT_MODE_DATA_KEY = "effectMode";
 const EFFECT_SCALE_DATA_KEY = "effectScale";
 const EFFECT_BRUSH_PX_DATA_KEY = "effectBrushPx";
@@ -2556,6 +2558,7 @@ const EFFECT_BLEND_DATA_KEY = "effectBlend";
 const EFFECT_ROT_DATA_KEY = "effectRot";
 const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
+const EFFECT_FRAME_WINDOW_START_DATA_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
 const EFFECT_SCALE_X_DATA_KEY = "effectScaleX";
 const EFFECT_SCALE_Y_DATA_KEY = "effectScaleY";
@@ -2682,7 +2685,7 @@ const STR_SWING_FRAME_RULES: StrengthFrameRule[] = [
     { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
     { tipRadii: [3, 2], lineMaxIdx: 3, allowTip: true, allowLine: false, allowBackWave: false, allowSlashMask: false, allowArc: false },
     // frames 4..6 (forward): weapon trail + slash mask, arc begins at frame 5
-    { tipRadii: [2, 1], lineMaxIdx: 2, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true },
+    { tipRadii: [2, 1], lineMaxIdx: 2, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: false },
     { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true },
     { tipRadii: [1, 0], lineMaxIdx: 1, allowTip: true, allowLine: true, allowBackWave: true, allowSlashMask: true, allowArc: true }
 ];
@@ -3341,6 +3344,7 @@ const HERO_DATA: Record<string, string> = {
     STR_CHARGE_REACH_PX: "strChgReach",// number (reach extra for charge visuals)
 
     STR_CHARGE_FX_SPR: "strChgFx",     // sprite (charge trail visual)
+    STR_CHARGE_HELD: "strChgHeld",     // boolean (true once hold phase starts)
     WPN_AURA_DEBUG_SPR: "wpnAuraDbg",  // sprite (weapon aura debug overlay)
 
 
@@ -4062,6 +4066,143 @@ function _resolveHeroIndexForProfile(profileRaw: any): number {
         return -1
     }
     return idx | 0
+}
+
+function _findHeroIndicesForProfileKey(profileKey: string): number[] {
+    const out: number[] = []
+    if (!profileKey) return out
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+        const prof = _normalizeProfileKey(_getProfileFromHeroSprite(hero))
+        if (prof && prof === profileKey) out.push(hi)
+    }
+    return out
+}
+
+function _findPidForProfileKey(profileKey: string): number {
+    if (!profileKey) return 0
+    try {
+        for (const pidStr of Object.keys(playerIdToProfile)) {
+            const pid = (Number(pidStr) | 0)
+            if (pid > 0 && playerIdToProfile[pid] === profileKey) return pid
+        }
+    } catch { }
+    return 0
+}
+
+function _pickHeroIndexForProfileKey(
+    profileKey: string,
+    indices: number[],
+    preferredPid: number,
+    preferredHeroIndex: number
+): number {
+    if (!indices.length) return -1
+    if (preferredHeroIndex >= 0 && indices.indexOf(preferredHeroIndex) >= 0) return preferredHeroIndex | 0
+
+    const pidHint = (preferredPid | 0) > 0 ? (preferredPid | 0) : (_findPidForProfileKey(profileKey) | 0)
+    const mapped = profileToHeroIndex[profileKey]
+    let best = -1
+    let bestScore = -999999
+
+    for (let i = 0; i < indices.length; i++) {
+        const hi = indices[i] | 0
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        let score = 0
+        if (hi === preferredHeroIndex) score += 1000
+        if (mapped != null && (mapped | 0) === hi) score += 200
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pidHint > 0 && owner === (pidHint | 0)) score += 300
+        const teleMode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+        if (teleMode !== 2) score += 50
+        if (score > bestScore) {
+            bestScore = score
+            best = hi
+        }
+    }
+
+    return best >= 0 ? (best | 0) : (indices[0] | 0)
+}
+
+function _dedupeHeroesForProfile(
+    profileRaw: any,
+    preferredPid?: number,
+    preferredHeroIndex?: number,
+    reason?: string
+): number {
+    const key = _normalizeProfileKey(profileRaw)
+    if (!key) return -1
+
+    const indices = _findHeroIndicesForProfileKey(key)
+    if (!indices.length) {
+        const mapped = profileToHeroIndex[key]
+        if (mapped != null) {
+            delete profileToHeroIndex[key]
+            delete heroIndexToProfile[mapped]
+        }
+        return -1
+    }
+
+    const keep = _pickHeroIndexForProfileKey(
+        key,
+        indices,
+        (preferredPid as any) | 0,
+        (preferredHeroIndex as any) | 0
+    )
+    if (keep < 0) return -1
+
+    let ownerHint = (preferredPid as any) | 0
+    if (ownerHint <= 0) {
+        for (let i = 0; i < indices.length; i++) {
+            const hero = heroes[indices[i]]
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+            const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+            if (owner > 0 && ownerHint <= 0) ownerHint = owner | 0
+            else if (owner > 0 && ownerHint > 0 && ownerHint !== owner) {
+                ownerHint = 0
+                break
+            }
+        }
+    }
+
+    _registerHeroProfile(key, keep)
+    const keepHero = heroes[keep]
+    if (keepHero && ownerHint > 0) {
+        sprites.setDataNumber(keepHero, HERO_DATA.OWNER, ownerHint | 0)
+        playerIdToProfile[ownerHint] = key
+        playerToHeroIndex[ownerHint] = keep
+    }
+
+    let removed = 0
+    for (let i = 0; i < indices.length; i++) {
+        const hi = indices[i] | 0
+        if (hi === keep) continue
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (owner > 0) {
+            if (playerToHeroIndex[owner] === hi) playerToHeroIndex[owner] = keep
+            if (ownerHint > 0 && owner !== ownerHint && playerIdToProfile[owner] === key) {
+                delete playerIdToProfile[owner]
+            }
+        }
+        _clearHeroProfile(key, hi)
+        hero.destroy()
+        removed++
+    }
+
+    if (DEBUG_NET_IDENTITY && removed > 0) {
+        console.log("[profile.identity] deduped heroes", {
+            profile: key,
+            keep,
+            removed,
+            reason: reason || ""
+        })
+    }
+
+    return keep
 }
 
 function _heroProfileKeyForIndex(heroIndex: number): string {
@@ -9413,6 +9554,8 @@ type EffectApplyOpts = {
     animDelayMs?: number
     forceTop?: boolean
     frameWindowMs?: number
+    frameWindowStart?: number
+    frameIndex?: number
     maskSprite?: Sprite | null
     maskPadOutPx?: number
     flipX?: boolean
@@ -9441,6 +9584,16 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
         sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, opts.frameWindowMs | 0)
     } else {
         sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0)
+    }
+    if (typeof opts?.frameWindowStart === "number") {
+        sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_START_DATA_KEY, opts.frameWindowStart | 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_FRAME_WINDOW_START_DATA_KEY, 0)
+    }
+    if (typeof opts?.frameIndex === "number") {
+        sprites.setDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY, opts.frameIndex | 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY, -1)
     }
     if (typeof opts?.maskPadOutPx === "number") {
         sprites.setDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY, opts.maskPadOutPx | 0)
@@ -11953,16 +12106,13 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 
 
 
-    // If a hero already exists for this pid, treat it as active.
-
-    const hi = (playerToHeroIndex as any)[p] | 0
-
-    if (hi >= 0 && hi < heroes.length) {
-
-        const h = heroes[hi]
-
-        if (h && !(h.flags & sprites.Flag.Destroyed)) return true
-
+    const prof = _resolveProfileKeyForPlayerId(p)
+    if (prof) {
+        const hi = _resolveHeroIndexForProfile(prof)
+        if (hi >= 0 && hi < heroes.length) {
+            const h = heroes[hi]
+            if (h && !(h.flags & sprites.Flag.Destroyed)) return true
+        }
     }
 
 
@@ -11971,13 +12121,13 @@ function _dunIsPidActiveUpTo4(pid: number): boolean {
 
         const g: any = globalThis as any
 
-        const prof = (g && g.__netProfileByPid && typeof g.__netProfileByPid[p] === "string")
+        const prof2 = (g && g.__netProfileByPid && typeof g.__netProfileByPid[p] === "string")
             ? g.__netProfileByPid[p]
             : (playerIdToProfile[p] || "")
 
-        if (prof && g && g.__netProfileConnected && typeof g.__netProfileConnected[prof] !== "undefined") {
+        if (prof2 && g && g.__netProfileConnected && typeof g.__netProfileConnected[prof2] !== "undefined") {
 
-            return !!g.__netProfileConnected[prof]
+            return !!g.__netProfileConnected[prof2]
 
         }
 
@@ -13458,16 +13608,21 @@ function _dunEnterFloor_placeHeroesAtSpawn(
         const spawn = _heroSpawnFindClearXY(xy[0], xy[1])
 
         let profileKey = _resolveProfileKeyForPlayerId(pid)
+        if (!profileKey) continue
 
-        let hi = playerToHeroIndex[pid] | 0
-
+        let hi = _resolveHeroIndexForProfile(profileKey)
         if (hi < 0) {
-
-            if (!profileKey) continue
+            try {
+                const g: any = globalThis as any
+                const internals = g && g.__HeroEnginePhaserInternals
+                if (internals && typeof internals.ensureHeroForProfile === "function") {
+                    hi = internals.ensureHeroForProfile(profileKey, pid)
+                }
+            } catch { }
+        }
+        if (hi < 0) {
             createHeroForPlayer(pid, xy[0], xy[1], profileKey, undefined, undefined, undefined, "dungeon:enter_floor")
-
-            hi = playerToHeroIndex[pid] | 0
-
+            hi = _resolveHeroIndexForProfile(profileKey)
         }
 
         if (hi < 0) continue
@@ -13649,7 +13804,7 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     const padRight = (padC + 2) | 0
 
     const starterOffX = -16
-    const starterOffY = 16
+    const starterOffY = 48
 
     if (padR >= 0 && padC >= 0) {
         // Place the starter relic chest offset from the pad's bottom-left tile.
@@ -15308,7 +15463,9 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
     for (let i = 0; i < activePids.length; i++) {
         const pid = activePids[i] | 0
-        const hi = playerToHeroIndex[pid] | 0
+        const profileKey = _resolveProfileKeyForPlayerId(pid)
+        if (!profileKey) continue
+        const hi = _dedupeHeroesForProfile(profileKey, pid, -1, "floor:rescue")
         if (hi < 0 || hi >= heroes.length) continue
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
@@ -25879,7 +26036,8 @@ function _shopToggleForPlayer(playerId: number): void {
 
 
 
-    const hi = (playerToHeroIndex && (playerToHeroIndex[pid] | 0) >= 0) ? (playerToHeroIndex[pid] | 0) : -1
+    const prof = _resolveProfileKeyForPlayerId(pid)
+    const hi = prof ? _resolveHeroIndexForProfile(prof) : -1
 
     if (hi < 0 || hi >= heroes.length) return
 
@@ -31683,7 +31841,7 @@ function getHeroProfileForHeroIndex(heroIndex: number): string {
     const mapped = heroIndexToProfile[heroIndex]
     if (mapped) return mapped
 
-    return "Default"
+    return ""
 
 }
 
@@ -32743,14 +32901,15 @@ function createHeroForPlayer(
 
     let profileName = profileNameOverride
 
-
+    // If caller didn't override, resolve from pid -> profile before falling back.
+    if (!profileName) {
+        const fromPid = (pid > 0) ? _resolveProfileKeyForPlayerId(pid) : ""
+        if (fromPid) profileName = fromPid
+    }
 
     // If caller didn't override, keep your existing profile resolution
-
     if (!profileName) {
-
         profileName = getHeroProfileForHeroIndex(heroIndex)
-
     }
 
 
@@ -32763,7 +32922,8 @@ function createHeroForPlayer(
 
     }
 
-    profileName = _normalizeProfileKey(profileName) || "Default"
+    profileName = _normalizeProfileKey(profileName)
+    if (!profileName) profileName = "Default"
     const profileKey = _registerHeroProfile(profileName, heroIndex)
     if ((pid | 0) > 0 && profileKey) {
         playerIdToProfile[pid] = profileKey
@@ -33144,12 +33304,20 @@ function setupHeroes() {
     const slotIndex = (pid | 0) > 0 ? (pid - 1) : 0
     const coordIndex = (slotIndex >= 0 && slotIndex < coords.length) ? slotIndex : 0
     if (DEBUG_SETUP_HEROES_LOGS) {
-        console.log("[setupHeroes] local spawn", {
+        console.log("[setupHeroes] local ensure", {
             pid,
             profileOverride: profileOverride || null,
             coordIndex
         })
     }
+    try {
+        const g: any = globalThis as any
+        const internals = g && g.__HeroEnginePhaserInternals
+        if (internals && typeof internals.ensureHeroForProfile === "function") {
+            const hi = internals.ensureHeroForProfile(profileOverride, pid)
+            if (hi >= 0) return
+        }
+    } catch { }
     createHeroForPlayer(
         pid,
         coords[coordIndex][0],
@@ -35633,10 +35801,13 @@ function _doHeroMoveDbgReset(playerId: number): void {
 // ------------------------------------------------------------
 
 function _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId: number): number {
+    const pid = playerId | 0
+    if (pid <= 0) return -1
 
-    let heroIndex = playerToHeroIndex[playerId]
+    const profileKey = _resolveProfileKeyForPlayerId(pid)
+    if (!profileKey) return -1
 
-
+    let heroIndex = _resolveHeroIndexForProfile(profileKey)
 
     if ((heroIndex == null || heroIndex < 0 || heroIndex >= heroes.length) && isPhaserRuntime()) {
         let W = userconfig.ARCADE_SCREEN_WIDTH
@@ -35660,28 +35831,36 @@ function _doHeroMoveResolveHeroIndexSpawnOnDemand(playerId: number): number {
             [centerW - offset, centerH - offset]
         ]
 
-        const slotIndex = Math.max(0, (playerId | 0) - 1) % coords.length
-        const profileKey = _resolveProfileKeyForPlayerId(playerId)
-        if (!profileKey) return -1
-        console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: creating hero for playerId =", playerId)
-        createHeroForPlayer(
-            playerId,
-            coords[slotIndex][0],
-            coords[slotIndex][1],
-            profileKey,
-            undefined,
-            undefined,
-            undefined,
-            "move:spawn_on_demand"
-        )
+        const slotIndex = Math.max(0, (pid | 0) - 1) % coords.length
+        console.log("[doHeroMoveForPlayer] Phaser spawn-on-demand: ensure hero for profile =", profileKey)
+        try {
+            const g: any = globalThis as any
+            const internals = g && g.__HeroEnginePhaserInternals
+            if (internals && typeof internals.ensureHeroForProfile === "function") {
+                heroIndex = internals.ensureHeroForProfile(profileKey, pid)
+            }
+        } catch { }
 
-        heroIndex = playerToHeroIndex[playerId]
+        if (heroIndex == null || heroIndex < 0) {
+            createHeroForPlayer(
+                pid,
+                coords[slotIndex][0],
+                coords[slotIndex][1],
+                profileKey,
+                undefined,
+                undefined,
+                undefined,
+                "move:spawn_on_demand"
+            )
+            heroIndex = _resolveHeroIndexForProfile(profileKey)
+        }
     }
 
+    if (heroIndex >= 0) {
+        return _dedupeHeroesForProfile(profileKey, pid, heroIndex, "move:resolve")
+    }
 
-
-    return (heroIndex as any) | 0
-
+    return -1
 }
 
 
@@ -37287,6 +37466,7 @@ function applyDamageToHeroIndex(heroIndex: number, amount: number, source?: Hero
         sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false);
         if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) {
             sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false);
+            sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, false);
             hero.setFlag(SpriteFlag.Ghost, false);
         }
 
@@ -41080,8 +41260,10 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
-    const partBeforeRelease = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "");
-    const wasHolding = (partBeforeRelease === "charging");
+    const chargeStartMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0;
+    let prepMs = STR_PREP_VISIBLE_MS | 0;
+    if (prepMs < 0) prepMs = 0;
+    const wasHolding = (chargeStartMs > 0) && ((nowMs | 0) - (chargeStartMs | 0) >= (prepMs | 0));
     sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
     const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
     sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, wasHolding ? ((holdCol + 1) | 0) : 0);
@@ -42636,6 +42818,9 @@ function updateStrengthProjectilesMotionFor(
                 ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
                 : (attachPx | 0);
             const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
+            const waveTaper = STR_ARC_TRAVEL_WAVE ? Math.max(0.5, 1 - (arcT * 0.5)) : 1;
+            const arcWidthMax = Math.max(1, Math.round((arcBaseW | 0) * waveTaper));
+            const arcWidthMin = Math.max(1, Math.round((arcBaseMin | 0) * waveTaper));
             if (arcActive) {
                 _stampStrengthArcTrail(
                     img,
@@ -42649,8 +42834,8 @@ function updateStrengthProjectilesMotionFor(
                     arcT,
                     STR_TIP_TRACE_COLOR | 0,
                     STR_TIP_TRACE_EDGE_COLOR | 0,
-                    arcBaseW | 0,
-                    arcBaseMin | 0,
+                    arcWidthMax | 0,
+                    arcWidthMin | 0,
                     arcSide
                 )
             }
@@ -42939,28 +43124,31 @@ function updateStrengthProjectilesMotionFor(
         const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
             ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
             : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
-            const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
-                ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
-                : (attachPx | 0);
-            const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
-            if (arcActive) {
-                _stampStrengthArcTrail(
-                    img,
-                    -halfW,
-                    -halfH,
-                    nx,
-                    ny,
-                    (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
-                    arcOuter,
-                    totalArcDeg | 0,
-                    arcT,
-                    auraR1 | 0,
-                    auraEdge | 0,
-                    arcBaseW | 0,
-                    arcBaseMin | 0,
-                    arcSide
-                )
-            }
+        const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
+            ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
+            : (attachPx | 0);
+        const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
+        const waveTaper = STR_ARC_TRAVEL_WAVE ? Math.max(0.5, 1 - (arcT * 0.5)) : 1;
+        const arcWidthMax = Math.max(1, Math.round((arcBaseW | 0) * waveTaper));
+        const arcWidthMin = Math.max(1, Math.round((arcBaseMin | 0) * waveTaper));
+        if (arcActive) {
+            _stampStrengthArcTrail(
+                img,
+                -halfW,
+                -halfH,
+                nx,
+                ny,
+                (STR_USE_WPN_AURA_OUTLINE_ONLY ? (arcInner | 0) : (attachPx | 0)),
+                arcOuter,
+                totalArcDeg | 0,
+                arcT,
+                auraR1 | 0,
+                auraEdge | 0,
+                arcWidthMax | 0,
+                arcWidthMin | 0,
+                arcSide
+            )
+        }
         if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
         const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
         _clearStrengthProjectileFill(img, element | 0)
@@ -67405,70 +67593,30 @@ if (typeof globalThis !== "undefined") {
                 return -1
             }
 
-            const existing = _resolveHeroIndexForProfile(key)
-            if (existing >= 0) {
-                const hero = heroes[existing]
-                if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
-                    const mode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
-                    if (mode === 2) {
-                        if (DEBUG_NET_IDENTITY) {
-                            console.log("[profile.identity] reconnect; cancel teleport-out", { profile: key, heroIndex: existing })
-                        }
-                        _beginHeroTeleportFx(existing, hero, 1, key, "reconnect")
+        const existing = _resolveHeroIndexForProfile(key)
+        if (existing >= 0) {
+            const deduped = _dedupeHeroesForProfile(key, playerId, existing, "ensureHeroForProfile")
+            const heroIndex = (deduped >= 0) ? deduped : existing
+            const hero = heroes[heroIndex]
+            if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                const mode = sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0
+                if (mode === 2) {
+                    if (DEBUG_NET_IDENTITY) {
+                        console.log("[profile.identity] reconnect; cancel teleport-out", { profile: key, heroIndex })
                     }
+                    _beginHeroTeleportFx(heroIndex, hero, 1, key, "reconnect")
                 }
-                return existing
             }
+            return heroIndex
+        }
 
-            // Repair: if mapping was cleared but a hero already exists with this profile,
-            // re-register it instead of spawning a duplicate.
-            let found = -1
-            const extras: number[] = []
-            for (let hi = 0; hi < heroes.length; hi++) {
-                const hero = heroes[hi]
-                if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-                if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
-                const prof = _normalizeProfileKey(_getProfileFromHeroSprite(hero))
-                if (prof && prof === key) {
-                    if (found < 0) found = hi
-                    else extras.push(hi)
-                }
-            }
-            if (found >= 0) {
-                _registerHeroProfile(key, found)
-                const hero = heroes[found]
-                const pid = (typeof playerId === "number") ? (playerId | 0) : 0
-                if (hero && pid > 0) {
-                    sprites.setDataNumber(hero, HERO_DATA.OWNER, pid)
-                    playerIdToProfile[pid] = key
-                    playerToHeroIndex[pid] = found
-                }
-                if (extras.length) {
-                    for (const hi of extras) {
-                        const extra = heroes[hi]
-                        if (!extra || (extra.flags & sprites.Flag.Destroyed)) continue
-                        const owner = sprites.readDataNumber(extra, HERO_DATA.OWNER) | 0
-                        if (owner > 0 && playerToHeroIndex[owner] === hi) {
-                            playerToHeroIndex[owner] = found
-                        }
-                        _clearHeroProfile(key, hi)
-                        extra.destroy()
-                    }
-                }
-                if (DEBUG_NET_IDENTITY) {
-                    console.log("[profile.identity] mapping repaired", {
-                        profile: key,
-                        heroIndex: found,
-                        extras: extras.length
-                    })
-                }
-                return found
-            }
+        const repaired = _dedupeHeroesForProfile(key, playerId, -1, "ensureHeroForProfile:repair")
+        if (repaired >= 0) return repaired
 
-            const pid = (typeof playerId === "number") ? (playerId | 0) : 0
-            if (DEBUG_NET_IDENTITY) {
-                console.log("[profile.identity] spawn request", { profile: key, pid })
-            }
+        const pid = (typeof playerId === "number") ? (playerId | 0) : 0
+        if (DEBUG_NET_IDENTITY) {
+            console.log("[profile.identity] spawn request", { profile: key, pid })
+        }
             const coords = _pickSpawnCoords(pid > 0 ? (pid - 1) : -1)
             createHeroForPlayer(pid, coords[0], coords[1], key, undefined, undefined, undefined, "ensureHeroForProfile")
 
@@ -67559,15 +67707,7 @@ if (typeof globalThis !== "undefined") {
             if (pid <= 0) return false
             const prof = _resolveProfileForPlayerId(pid)
             if (prof) return internals.despawnHeroForProfile(prof)
-
-            const hi = playerToHeroIndex[pid] | 0
-            if (hi < 0 || hi >= heroes.length) return false
-            const hero = heroes[hi]
-            if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
-                hero.destroy()
-            }
-            playerToHeroIndex[pid] = -1
-            return true
+            return false
         }
 
         // Remove stray heroes that do not map to any connected profile.
@@ -67627,7 +67767,6 @@ if (typeof globalThis !== "undefined") {
 
                     if (profile) _clearHeroProfile(profile, hi)
                     if (owner > 0) {
-                        if (playerToHeroIndex[owner] === hi) playerToHeroIndex[owner] = -1
                         const mapped = playerIdToProfile[owner]
                         if (typeof mapped === "string") {
                             const mappedKey = _normalizeProfileKey(mapped)
@@ -69574,26 +69713,12 @@ function _relicResolveHeroIndexForPid(pid: number): number {
     if ((pid | 0) <= 0) return -1
 
     try {
-
-        const idx = playerToHeroIndex[pid] | 0
-
-        if (idx >= 0 && idx < heroes.length) {
-
-            const h = heroes[idx]
-
-            if (h && !(h.flags & sprites.Flag.Destroyed)) {
-
-                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-                if ((owner | 0) === (pid | 0)) return idx
-
-            }
-
+        const prof = _resolveProfileKeyForPlayerId(pid)
+        if (prof) {
+            const hi = _resolveHeroIndexForProfile(prof)
+            if (hi >= 0) return hi | 0
         }
-
     } catch { }
-
-
 
     for (let i = 0; i < heroes.length; i++) {
 
@@ -71100,27 +71225,6 @@ function _uiResolveHeroIndexForPid(pid: number): number {
                 if (h && !(h.flags & sprites.Flag.Destroyed)) return hi | 0
             }
         }
-    } catch { }
-
-    // Fallback: legacy playerToHeroIndex (validate owner matches pid)
-    try {
-
-        const idx = playerToHeroIndex[pid] | 0
-
-        if (idx >= 0 && idx < heroes.length) {
-
-            const h = heroes[idx]
-
-            if (h && !(h.flags & sprites.Flag.Destroyed)) {
-
-                const owner = sprites.readDataNumber(h, HERO_DATA.OWNER) | 0
-
-                if ((owner | 0) === (pid | 0)) return idx
-
-            }
-
-        }
-
     } catch { }
 
     return -1
