@@ -1327,7 +1327,7 @@ const BALANCE = {
 
         START_HP: 10,
 
-        START_MANA: 1000, //Base mana spawn mana starting mana
+        START_MANA: 10, //Base mana spawn mana starting mana
 
         MANA_REGEN_PCT_PER_TICK: 2
 
