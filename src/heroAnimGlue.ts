@@ -37,6 +37,8 @@ import {
 } from "./debugFlags";
 import {
     STR_SWING_FORWARD_FRAME_MS,
+    STR_SWING_RESET_FRAME_COLS,
+    STR_SWING_RESET_FRAME_MS,
     STR_SWING_RESET_INTRO_MS,
     STR_SWING_RESET_OUTRO_MS,
     STR_SWING_WINDUP_FRAME_MS,
@@ -83,7 +85,15 @@ const STR_CUSTOM_TIMELINE_ENABLE = true;
 const STR_CUSTOM_PART_KEY = "__strCustomPart";
 const STR_CUSTOM_PART_START_MS_KEY = "__strCustomPartStartMs";
 const STR_CUSTOM_PART_SEQ_KEY = "__strCustomPartSeq";
-const STR_RESET_MIN_MS = Math.max(1, (STR_SWING_RESET_INTRO_MS + STR_SWING_RESET_OUTRO_MS) | 0);
+const STR_RESET_MIN_MS = (() => {
+    const ms = STR_SWING_RESET_FRAME_MS;
+    if (ms && ms.length) {
+        let sum = 0;
+        for (let i = 0; i < ms.length; i++) sum += Math.max(1, ms[i] | 0);
+        return Math.max(1, sum | 0);
+    }
+    return 1;
+})();
 const STR_RESET_WOBBLE_SCALE = 0.02;
 const STR_RESET_WOBBLE_MS = 200;
 
@@ -1555,30 +1565,19 @@ function _tryStrengthCustomTimeline(
     const isReset = (part === "strengthreset" || part === "reset");
     if (isReset) {
         const resetMs = Math.max(1, safePartDur | 0);
-        let introMs = Math.max(1, STR_SWING_RESET_INTRO_MS | 0);
-        let outroMs = Math.max(1, STR_SWING_RESET_OUTRO_MS | 0);
-        if ((introMs + outroMs) > resetMs && resetMs > 0) {
-            const scale = resetMs / (introMs + outroMs);
-            introMs = Math.max(1, Math.round(introMs * scale));
-            outroMs = Math.max(1, resetMs - introMs);
-        }
-        const holdMs = Math.max(0, (resetMs - introMs - outroMs) | 0);
-        const elapsed = clampInt(elapsedLocal | 0, 0, resetMs | 0);
-        let col = 0;
-        let inHold = false;
-        if (elapsed < introMs) {
-            const half = Math.max(1, Math.round(introMs / 2));
-            col = (elapsed < half) ? 1 : 2;
-        } else if (elapsed < (introMs + holdMs)) {
-            col = 2;
-            inHold = true;
-        } else {
-            const outroElapsed = (elapsed - introMs - holdMs) | 0;
-            const half = Math.max(1, Math.round(outroMs / 2));
-            col = (outroElapsed < half) ? 1 : 0;
-        }
+        const frames = (STR_SWING_RESET_FRAME_COLS && STR_SWING_RESET_FRAME_COLS.length)
+            ? STR_SWING_RESET_FRAME_COLS
+            : [1, 2, 1, 0];
+        const baseMs = (STR_SWING_RESET_FRAME_MS && STR_SWING_RESET_FRAME_MS.length === frames.length)
+            ? STR_SWING_RESET_FRAME_MS
+            : frames.map(() => Math.max(1, Math.idiv(resetMs | 0, Math.max(1, frames.length))));
+        const msList = baseMs.map((v) => Math.max(1, v | 0));
+        const baseSum = msList.reduce((a, b) => a + b, 0);
+        const extra = Math.max(0, (resetMs - baseSum) | 0);
+        if (extra > 0 && msList.length > 1) msList[1] = (msList[1] + extra) | 0;
+        const col = _pickStrengthFrameBySchedule(elapsedLocal | 0, frames, msList);
         _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "swing.reset");
-        if (inHold) {
+        if (col === (frames[1] | 0) && extra > 0) {
             const anySprite: any = sprite as any;
             const baseX = (() => {
                 const v = Number(anySprite.getData?.(HERO_BASE_SCALE_X_KEY));
