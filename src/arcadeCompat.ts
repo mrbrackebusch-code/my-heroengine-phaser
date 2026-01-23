@@ -9015,6 +9015,11 @@ const LAYER_SNAPSHOT_MAX_FOCUS = 12;
 const LAYER_SNAPSHOT_ALPHA_CACHE = new Map<string, number>();
 const LAYER_SNAPSHOT_FRAME_CACHE = new Map<string, { w: number; h: number; data: Uint8ClampedArray }>();
 const LAYER_SNAPSHOT_TIP_CACHE = new Map<string, { px: number; py: number; a: number; score: number }>();
+const LAYER_SNAPSHOT_EXTREME_CACHE = new Map<string, {
+    tip: { px: number; py: number; a: number; score: number };
+    hilt: { px: number; py: number; a: number; score: number };
+    mid: { px: number; py: number; a: number; score: number };
+}>();
 const LAYER_SNAPSHOT_HASH_CACHE = new Map<string, number>();
 let _layerSnapRenderReqId = 0;
 
@@ -9199,6 +9204,35 @@ function _dbgLayerSnapshotSampleAlphaAt(
     return { a, px, py };
 }
 
+function _dbgLayerSnapshotExpectedRGBA(
+    obj: any,
+    px: number,
+    py: number
+): { r: number; g: number; b: number; a: number } {
+    const frameData = _dbgLayerSnapshotFrameData(obj);
+    if (!frameData) return { r: 0, g: 0, b: 0, a: 0 };
+    if (px < 0 || py < 0 || px >= frameData.w || py >= frameData.h) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+    }
+    const idx = (py * frameData.w + px) * 4;
+    const data = frameData.data;
+    return {
+        r: data[idx] | 0,
+        g: data[idx + 1] | 0,
+        b: data[idx + 2] | 0,
+        a: data[idx + 3] | 0
+    };
+}
+
+type LayerSnapshotSample = {
+    kind: string;
+    worldX: number;
+    worldY: number;
+    screenX: number;
+    screenY: number;
+    expected: { r: number; g: number; b: number; a: number };
+};
+
 function _dbgLayerSnapshotWorldCorners(
     obj: any,
     frameW: number,
@@ -9264,6 +9298,7 @@ function _dbgLayerSnapshotRenderPixel(
     scene: Phaser.Scene,
     label: string,
     who: string,
+    sample: string,
     worldX: number,
     worldY: number,
     meta: { heroFrame: number; wpnFrame: number; tex: string }
@@ -9286,7 +9321,7 @@ function _dbgLayerSnapshotRenderPixel(
             const mapCamY = map?.cam?.y ?? null;
             console.log(
                 `[LAYER][SNAP][RENDER-SKIP] ` +
-                `label=${label} who=${who} world=${Math.round(worldX)},${Math.round(worldY)} ` +
+                `label=${label} who=${who} sample=${sample} world=${Math.round(worldX)},${Math.round(worldY)} ` +
                 `screen=${sx},${sy} reason=offscreen ` +
                 `zoom=${mapZoom ?? "?"} scroll=${mapScrollX ?? "?"},${mapScrollY ?? "?"} ` +
                 `cam=${mapCamX ?? "?"},${mapCamY ?? "?"}`
@@ -9301,7 +9336,7 @@ function _dbgLayerSnapshotRenderPixel(
         const mapCamY = map?.cam?.y ?? null;
         console.log(
             `[LAYER][SNAP][RENDER-REQ] ` +
-            `id=${reqId} label=${label} who=${who} ` +
+            `id=${reqId} label=${label} who=${who} sample=${sample} ` +
             `world=${Math.round(worldX)},${Math.round(worldY)} ` +
             `screen=${sx},${sy} ` +
             `heroFrame=${meta.heroFrame ?? -1} wpnFrame=${meta.wpnFrame ?? -1} tex=${meta.tex ?? ""} ` +
@@ -9318,7 +9353,7 @@ function _dbgLayerSnapshotRenderPixel(
                 const hex = "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
                 console.log(
                     `[LAYER][SNAP][RENDER] ` +
-                    `id=${reqId} label=${label} who=${who} ` +
+                    `id=${reqId} label=${label} who=${who} sample=${sample} ` +
                     `screen=${sx},${sy} rgba=${r},${g},${b},${a} hex=${hex}`
                 );
             });
@@ -9342,15 +9377,133 @@ function _dbgLayerSnapshotRenderPixel(
                     const hex = "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
                     console.log(
                         `[LAYER][SNAP][RENDER] ` +
-                        `id=${reqId} label=${label} who=${who} ` +
+                        `id=${reqId} label=${label} who=${who} sample=${sample} ` +
                         `screen=${sx},${sy} rgba=${r},${g},${b},${a} hex=${hex}`
                     );
+                } catch {
+                    console.log(
+                        `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} sample=${sample} error=snapshotAreaParseFail`
+                    );
+                }
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+function _dbgLayerSnapshotRenderSamples(
+    scene: Phaser.Scene,
+    label: string,
+    who: string,
+    samples: LayerSnapshotSample[],
+    meta: { heroFrame: number; wpnFrame: number; tex: string }
+): void {
+    try {
+        if (!samples.length) return;
+        const renderer: any = (scene as any)?.sys?.game?.renderer ?? null;
+        if (!renderer) return;
+        const rw = (renderer.width ?? renderer.canvas?.width ?? scene.scale?.width ?? 0) | 0;
+        const rh = (renderer.height ?? renderer.canvas?.height ?? scene.scale?.height ?? 0) | 0;
+        if (rw <= 0 || rh <= 0) return;
+
+        const valid: LayerSnapshotSample[] = [];
+        for (const s of samples) {
+            if (s.screenX < 0 || s.screenY < 0 || s.screenX >= rw || s.screenY >= rh) {
+                console.log(
+                    `[LAYER][SNAP][RENDER-SKIP] ` +
+                    `label=${label} who=${who} sample=${s.kind} ` +
+                    `world=${Math.round(s.worldX)},${Math.round(s.worldY)} screen=${s.screenX},${s.screenY} ` +
+                    `reason=offscreen`
+                );
+                continue;
+            }
+            valid.push(s);
+        }
+        if (!valid.length) return;
+
+        let minX = valid[0].screenX;
+        let minY = valid[0].screenY;
+        let maxX = valid[0].screenX;
+        let maxY = valid[0].screenY;
+        for (const s of valid) {
+            if (s.screenX < minX) minX = s.screenX;
+            if (s.screenY < minY) minY = s.screenY;
+            if (s.screenX > maxX) maxX = s.screenX;
+            if (s.screenY > maxY) maxY = s.screenY;
+        }
+        const w = Math.max(1, (maxX - minX + 1) | 0);
+        const h = Math.max(1, (maxY - minY + 1) | 0);
+
+        const reqId = (++_layerSnapRenderReqId) | 0;
+        const map = _dbgLayerSnapshotWorldToScreen(scene, valid[0].worldX, valid[0].worldY);
+        const mapZoom = map?.zoom ?? null;
+        const mapScrollX = map?.scroll?.x ?? null;
+        const mapScrollY = map?.scroll?.y ?? null;
+        const mapCamX = map?.cam?.x ?? null;
+        const mapCamY = map?.cam?.y ?? null;
+        console.log(
+            `[LAYER][SNAP][RENDER-REQ] ` +
+            `id=${reqId} label=${label} who=${who} ` +
+            `area=${minX},${minY},${w},${h} ` +
+            `heroFrame=${meta.heroFrame ?? -1} wpnFrame=${meta.wpnFrame ?? -1} tex=${meta.tex ?? ""} ` +
+            `zoom=${mapZoom ?? "?"} scroll=${mapScrollX ?? "?"},${mapScrollY ?? "?"} ` +
+            `cam=${mapCamX ?? "?"},${mapCamY ?? "?"}`
+        );
+
+        const logSample = (s: LayerSnapshotSample, rgba: { r: number; g: number; b: number; a: number }) => {
+            const exp = s.expected;
+            const hex = "#" + ((rgba.r << 16) | (rgba.g << 8) | rgba.b).toString(16).padStart(6, "0");
+            const expHex = "#" + ((exp.r << 16) | (exp.g << 8) | exp.b).toString(16).padStart(6, "0");
+            console.log(
+                `[LAYER][SNAP][RENDER] ` +
+                `id=${reqId} label=${label} who=${who} sample=${s.kind} ` +
+                `screen=${s.screenX},${s.screenY} rgba=${rgba.r},${rgba.g},${rgba.b},${rgba.a} hex=${hex} ` +
+                `exp=${exp.r},${exp.g},${exp.b},${exp.a} expHex=${expHex}`
+            );
+        };
+
+        if (typeof renderer.snapshotArea === "function") {
+            renderer.snapshotArea(minX, minY, w, h, (image: any) => {
+                try {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) return;
+                    ctx.drawImage(image, 0, 0);
+                    const data = ctx.getImageData(0, 0, w, h).data;
+                    for (const s of valid) {
+                        const ox = s.screenX - minX;
+                        const oy = s.screenY - minY;
+                        const idx = (oy * w + ox) * 4;
+                        const rgba = {
+                            r: data[idx] | 0,
+                            g: data[idx + 1] | 0,
+                            b: data[idx + 2] | 0,
+                            a: data[idx + 3] | 0
+                        };
+                        logSample(s, rgba);
+                    }
                 } catch {
                     console.log(
                         `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} error=snapshotAreaParseFail`
                     );
                 }
             });
+            return;
+        }
+
+        if (typeof renderer.snapshotPixel === "function") {
+            for (const s of valid) {
+                renderer.snapshotPixel(s.screenX, s.screenY, (color: any) => {
+                    const rgba = {
+                        r: (color?.r ?? color?.red ?? 0) | 0,
+                        g: (color?.g ?? color?.green ?? 0) | 0,
+                        b: (color?.b ?? color?.blue ?? 0) | 0,
+                        a: (color?.a ?? color?.alpha ?? 255) | 0
+                    };
+                    logSample(s, rgba);
+                });
+            }
         }
     } catch { /* ignore */ }
 }
@@ -9391,6 +9544,85 @@ function _dbgLayerSnapshotFindTip(
     if (bestX < 0 || bestY < 0) return null;
     const res = { px: bestX, py: bestY, a: bestA, score: bestScore };
     LAYER_SNAPSHOT_TIP_CACHE.set(cacheKey, res);
+    return res;
+}
+
+function _dbgLayerSnapshotFindExtremes(
+    obj: any,
+    dir: { dx: number; dy: number; key: string }
+): {
+    tip: { px: number; py: number; a: number; score: number };
+    hilt: { px: number; py: number; a: number; score: number };
+    mid: { px: number; py: number; a: number; score: number };
+} | null {
+    const frameData = _dbgLayerSnapshotFrameData(obj);
+    if (!frameData) return null;
+    const texKey = String(obj.texture?.key ?? "");
+    const frameKey = String(obj.frame?.name ?? obj.frame?.index ?? 0);
+    const cacheKey = `${texKey}::${frameKey}::${dir.key}::ext`;
+    const cached = LAYER_SNAPSHOT_EXTREME_CACHE.get(cacheKey);
+    if (cached) return cached;
+
+    const ox = (obj.displayOriginX ?? (frameData.w / 2)) as number;
+    const oy = (obj.displayOriginY ?? (frameData.h / 2)) as number;
+    let maxScore = -Infinity;
+    let minScore = Infinity;
+    let maxX = -1;
+    let maxY = -1;
+    let maxA = 0;
+    let minX = -1;
+    let minY = -1;
+    let minA = 0;
+    const data = frameData.data;
+    for (let y = 0; y < frameData.h; y++) {
+        for (let x = 0; x < frameData.w; x++) {
+            const idx = (y * frameData.w + x) * 4 + 3;
+            const a = data[idx];
+            if (a <= 0) continue;
+            const score = (x - ox) * dir.dx + (y - oy) * dir.dy;
+            if (score > maxScore) {
+                maxScore = score;
+                maxX = x;
+                maxY = y;
+                maxA = a;
+            }
+            if (score < minScore) {
+                minScore = score;
+                minX = x;
+                minY = y;
+                minA = a;
+            }
+        }
+    }
+    if (maxX < 0 || maxY < 0 || minX < 0 || minY < 0) return null;
+
+    const midScore = (minScore + maxScore) * 0.5;
+    let midX = maxX;
+    let midY = maxY;
+    let midA = maxA;
+    let bestMidDist = Infinity;
+    for (let y = 0; y < frameData.h; y++) {
+        for (let x = 0; x < frameData.w; x++) {
+            const idx = (y * frameData.w + x) * 4 + 3;
+            const a = data[idx];
+            if (a <= 0) continue;
+            const score = (x - ox) * dir.dx + (y - oy) * dir.dy;
+            const dist = Math.abs(score - midScore);
+            if (dist < bestMidDist) {
+                bestMidDist = dist;
+                midX = x;
+                midY = y;
+                midA = a;
+            }
+        }
+    }
+
+    const res = {
+        tip: { px: maxX, py: maxY, a: maxA, score: maxScore },
+        hilt: { px: minX, py: minY, a: minA, score: minScore },
+        mid: { px: midX, py: midY, a: midA, score: midScore }
+    };
+    LAYER_SNAPSHOT_EXTREME_CACHE.set(cacheKey, res);
     return res;
 }
 
@@ -9583,17 +9815,16 @@ function _dbgLayerSnapshot(
     logCorners("fg", fgIt);
 
     const dirVec = _dbgLayerSnapshotDirVec(renderDir);
-    const logTip = (label: string, it: any): void => {
-        if (!it || !it.obj || !dirVec) return;
+    const logSample = (label: string, it: any, kind: string, point: { px: number; py: number; a: number }): LayerSnapshotSample | null => {
+        if (!it || !it.obj || !dirVec) return null;
         const obj = it.obj;
-        const tip = _dbgLayerSnapshotFindTip(obj, dirVec);
-        if (!tip) return;
+        if (!point) return null;
         const mat: any = obj.getWorldTransformMatrix?.();
-        if (!mat || typeof mat.transformPoint !== "function") return;
+        if (!mat || typeof mat.transformPoint !== "function") return null;
         const ox = (obj.displayOriginX ?? 0) as number;
         const oy = (obj.displayOriginY ?? 0) as number;
-        const localX = tip.px - ox;
-        const localY = tip.py - oy;
+        const localX = point.px - ox;
+        const localY = point.py - oy;
         const out = mat.transformPoint(localX, localY, { x: 0, y: 0 });
         const heroS = _dbgLayerSnapshotSampleAlphaAt(nativeHero, out.x, out.y);
         const wpnS = _dbgLayerSnapshotSampleAlphaAt(obj, out.x, out.y);
@@ -9601,35 +9832,63 @@ function _dbgLayerSnapshot(
         const wpnDepthNow = (obj.depth ?? 0);
         const above = wpnDepthNow > heroDepthNow ? 1 : (wpnDepthNow < heroDepthNow ? -1 : 0);
         console.log(
-            `[LAYER][SNAP][TIP] who=${label} dir=${dirVec.key} ` +
-            `tipPx=${tip.px},${tip.py} tipA=${tip.a} ` +
-            `tipWorld=${Math.round(out.x)},${Math.round(out.y)} ` +
+            `[LAYER][SNAP][SAMPLE] who=${label} kind=${kind} dir=${dirVec.key} ` +
+            `px=${point.px},${point.py} a=${point.a} ` +
+            `world=${Math.round(out.x)},${Math.round(out.y)} ` +
             `heroA=${heroS.a} heroHit=${heroS.a > 0 ? 1 : 0} ` +
             `wpnA=${wpnS.a} wpnHit=${wpnS.a > 0 ? 1 : 0} ` +
             `depthHero=${heroDepthNow} depthWpn=${wpnDepthNow} above=${above}`
         );
-
-        if (DEBUG_LAYER_SNAPSHOT_RENDER) {
-            try {
-                const sig = `${label}|${it.tex}|${it.idx}|${Math.round(out.x)}|${Math.round(out.y)}`;
-                const lastSig = String(nativeHero.getData(LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY) ?? "");
-                if (sig !== lastSig) {
-                    nativeHero.setData(LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY, sig);
-                    _dbgLayerSnapshotRenderPixel(
-                        sc,
-                        label,
-                        label,
-                        out.x,
-                        out.y,
-                        { heroFrame: (nativeHero as any).frame?.index ?? -1, wpnFrame: it.idx ?? -1, tex: it.tex }
-                    );
-                }
-            } catch { /* ignore */ }
-        }
+        const exp = _dbgLayerSnapshotExpectedRGBA(obj, point.px, point.py);
+        const map = _dbgLayerSnapshotWorldToScreen(sc, out.x, out.y);
+        const screenX = map?.screen?.x ?? -1;
+        const screenY = map?.screen?.y ?? -1;
+        return {
+            kind,
+            worldX: out.x,
+            worldY: out.y,
+            screenX,
+            screenY,
+            expected: exp
+        };
     };
 
-    logTip("bg", bgIt);
-    logTip("fg", fgIt);
+    if (dirVec) {
+        const logExtremes = (label: string, it: any): void => {
+            if (!it || !it.obj) return;
+            const obj = it.obj;
+            const ext = _dbgLayerSnapshotFindExtremes(obj, dirVec);
+            if (!ext) return;
+            const samples: LayerSnapshotSample[] = [];
+            const tip = logSample(label, it, "tip", ext.tip);
+            const mid = logSample(label, it, "mid", ext.mid);
+            const hilt = logSample(label, it, "hilt", ext.hilt);
+            if (tip) samples.push(tip);
+            if (mid) samples.push(mid);
+            if (hilt) samples.push(hilt);
+
+            if (DEBUG_LAYER_SNAPSHOT_RENDER && samples.length) {
+                try {
+                    const sig = `${label}|${it.tex}|${it.idx}|` +
+                        samples.map((s) => `${s.kind}:${Math.round(s.worldX)},${Math.round(s.worldY)}`).join("|");
+                    const sigKey = `${LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY}:${label}`;
+                    const lastSig = String(nativeHero.getData(sigKey) ?? "");
+                    if (sig !== lastSig) {
+                        nativeHero.setData(sigKey, sig);
+                        _dbgLayerSnapshotRenderSamples(
+                            sc,
+                            label,
+                            label,
+                            samples,
+                            { heroFrame: (nativeHero as any).frame?.index ?? -1, wpnFrame: it.idx ?? -1, tex: it.tex }
+                        );
+                    }
+                } catch { /* ignore */ }
+            }
+        };
+        logExtremes("bg", bgIt);
+        logExtremes("fg", fgIt);
+    }
 }
 
 function _legacyWeaponPathForSheetKey(sheetKey: string): { url: string; key: string } | null {
