@@ -14,7 +14,8 @@
     "gen-monster-feet": "node scripts/genMonsterAuraFeet.mjs",
     "gen-prop-auras": "node scripts/genpropauras.mjs --overwrite",
     "gen-effect-meta": "node scripts/genEffectAtlasMeta.mjs",
-    "check-effects": "node scripts/checkeffects.mjs"
+    "check-effects": "node scripts/checkeffects.mjs",
+    "gen-weapon-atlases": "node scripts/genweaponmodelatlas.mjs"
   },
   "devDependencies": {
     "pngjs": "^7.0.0",

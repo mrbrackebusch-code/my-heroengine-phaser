@@ -406,6 +406,7 @@ class NetworkClient {
     }
 
     private _logNetDiagnostic(tag: string, detail: string, ev?: any) {
+        if (!DEBUG_NET) return;
         const g: any = (globalThis as any);
         const token: string = (typeof g.__netHelloToken === "string") ? g.__netHelloToken : "";
         const profile: string | null = (typeof g.__netHelloProfile === "string") ? g.__netHelloProfile : null;

@@ -26,3 +26,21 @@ export function queueSpritesheetOnce(
     });
     return true;
 }
+
+export function queueAtlasOnce(
+    scene: Phaser.Scene,
+    textureKey: string,
+    url: string,
+    atlasData: any
+): boolean {
+    const tex: any = scene.textures;
+    if (tex && typeof tex.exists === "function") {
+        if (tex.exists(textureKey)) return false;
+    } else {
+        const existing = scene.textures.get(textureKey);
+        if (existing) return false;
+    }
+    if (!url) return false;
+    scene.load.atlas(textureKey, url, atlasData);
+    return true;
+}

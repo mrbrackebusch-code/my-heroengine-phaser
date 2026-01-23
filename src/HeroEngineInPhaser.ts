@@ -99,6 +99,7 @@ import {
 } from "./debugFlags";
 import {
     STR_SWING_FORWARD_FRAME_MS,
+    STR_SWING_RESET_FRAME_MS,
     STR_SWING_RETURN_FRAME_COLS,
     STR_SWING_RETURN_FRAME_MS,
     STR_SWING_WINDUP_FRAME_MS,
@@ -2651,6 +2652,18 @@ const STR_ARC_MIN_WIDTH_PX = 1;
 const STR_ARC_STEP_DEG = 3;
 const STR_ARC_TRAVEL_WAVE = true;
 const STR_ARC_WAVE_DEG = 32;
+const STR_ARC_TRANSITION_STEPS = 3;
+const STR_ARC_TRANSITION_SPLIT_DEG = 12;
+const STR_ARC_TRAVEL_STEP_PX = 6;
+const STR_ARC_TRAVEL_BASE_FRAMES = 24;
+const STR_ARC_TRAVEL_MIN_FRAMES = 4;
+const STR_ARC_TRAVEL_FRAME_MS = 55;
+const STR_ARC_TRAVEL_MIN_FRAME_MS = 30;
+const STR_ARC_TRAVEL_SPEEDUP_BASE = 0.8;
+const STR_ARC_HEAD_LEN_SCALE = 0.5;
+const STR_ARC_HEAD_LEN_GROW = 1.4;
+const STR_ARC_HEAD_THICK_SCALE = 0.5;
+const STR_ARC_HEAD_TAPER_MIN = 0.05;
 const STR_ARC_SWEEP_START_FRAC = 0.25;
 const STR_SLASH_MASK_START_FRAC = STR_ARC_SWEEP_START_FRAC;
 const STR_TIP_TRACE_SIZE_PX = 16;
@@ -2663,6 +2676,8 @@ const STR_TIP_SIDE_SIGN_KEY = "SS_TIP_SIDE";
 const STR_ARC_START_FRAC_KEY = "SS_ARC_START_FRAC";
 const STR_ARC_BASE_WIDTH_KEY = "SS_ARC_BASE_W";
 const STR_ARC_SIDE_KEY = "SS_ARC_SIDE";
+const STR_ARC_TRAVEL_FRAMES_KEY = "SS_ARC_FRAMES";
+const STR_ARC_TRAVEL_FRAME_MS_KEY = "SS_ARC_FMS";
 const STR_SWING_SHARED_HIT_MASK_KEY = "strSwingHitMask";
 const STR_SWING_DUAL_ARC = true;
 const STR_PROJECTILE_MAX_FPS = true;
@@ -17494,7 +17509,7 @@ const DEFAULT_WEAPON_STRENGTH_ID = "arming"
 
 const DEFAULT_WEAPON_AGILITY_ID = "spear"
 
-const DEFAULT_WEAPON_INTELLIGENCE_ID = "simple"
+const DEFAULT_WEAPON_INTELLIGENCE_ID = "gnarled"
 
 const DEFAULT_WEAPON_SUPPORT_ID = "simple"
 
@@ -39990,6 +40005,32 @@ function _strengthSwingResetMinMs(): number {
     return Math.max(1, 1);
 }
 
+function _strengthSwingResetTailMs(): number {
+    const ms = STR_SWING_RESET_FRAME_MS;
+    if (!ms || ms.length < 2) return Math.max(1, STR_SWING_RESET_OUTRO_MS | 0);
+    const last = Math.max(1, ms[ms.length - 1] | 0);
+    const prev = Math.max(1, ms[ms.length - 2] | 0);
+    return (last + prev) | 0;
+}
+
+function _strengthArcTravelFrames(arcDeg: number, outerR: number): number {
+    const halfArcRad = Math.abs(arcDeg) * 0.5 * (Math.PI / 180);
+    const travelPx = Math.max(1, Math.round(Math.max(1, outerR | 0) * halfArcRad));
+    const step = Math.max(1, STR_ARC_TRAVEL_STEP_PX | 0);
+    return Math.max(STR_ARC_TRAVEL_MIN_FRAMES | 0, Math.ceil(travelPx / step));
+}
+
+function _strengthArcTravelFrameMs(frameCount: number): number {
+    const base = Math.max(1, STR_ARC_TRAVEL_FRAME_MS | 0);
+    const baseFrames = Math.max(1, STR_ARC_TRAVEL_BASE_FRAMES | 0);
+    if (!(frameCount > baseFrames)) return base;
+    const ratio = frameCount / baseFrames;
+    const power = Math.max(0, Math.log2(ratio));
+    const factor = Math.pow(STR_ARC_TRAVEL_SPEEDUP_BASE, power);
+    const ms = Math.max(1, Math.round(base * factor));
+    return Math.max(STR_ARC_TRAVEL_MIN_FRAME_MS | 0, ms);
+}
+
 function _estimateStrengthArcTravelMs(
     heroIndex: number,
     hero: Sprite,
@@ -40042,14 +40083,9 @@ function _estimateStrengthArcTravelMs(
 
     const outerBase = (frontStartR | 0) + (reachFromInner | 0);
     const outerR = (outerBase | 0) + 3;
-    const arcRad = Math.abs(arcDeg) * (Math.PI / 180);
-    const travelPx = outerR * arcRad;
-    const g: any = globalThis as any;
-    const speed = (typeof g.__STR_ARC_TRAVEL_PX_PER_MS === "number" && g.__STR_ARC_TRAVEL_PX_PER_MS > 0)
-        ? g.__STR_ARC_TRAVEL_PX_PER_MS
-        : STR_ARC_TRAVEL_PX_PER_MS;
-    if (!(speed > 0)) return 0;
-    return Math.max(1, Math.ceil(travelPx / speed));
+    const frames = _strengthArcTravelFrames(arcDeg | 0, outerR | 0);
+    const frameMs = _strengthArcTravelFrameMs(frames | 0);
+    return Math.max(1, (frames | 0) * (frameMs | 0));
 }
 
 
@@ -40380,10 +40416,18 @@ function _strengthFrameColForSeg(segName: string, elapsedMs: number, segDurMs: n
         );
     }
     if (segName === "strengthReset") {
+        const frames = STR_SWING_RETURN_FRAME_COLS;
+        const baseMs = (STR_SWING_RETURN_FRAME_MS && STR_SWING_RETURN_FRAME_MS.length === frames.length)
+            ? STR_SWING_RETURN_FRAME_MS
+            : frames.map(() => Math.max(1, Math.idiv(Math.max(1, segDurMs | 0), Math.max(1, frames.length))));
+        const msList = baseMs.map((v) => Math.max(1, v | 0));
+        const baseSum = msList.reduce((a, b) => a + b, 0);
+        const extra = Math.max(0, (segDurMs | 0) - (baseSum | 0));
+        if (extra > 0 && msList.length > 1) msList[1] = (msList[1] + extra) | 0;
         return _pickFrameBySchedule(
             elapsedMs | 0,
-            STR_SWING_RETURN_FRAME_COLS,
-            STR_SWING_RETURN_FRAME_MS
+            frames,
+            msList
         );
     }
     if (segName === "prepareToCharge") {
@@ -40589,7 +40633,9 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
         sprites.setDataNumber(hero, STR_SEG_DUR_MS_KEY, segDur | 0)
 
         // Debug only on segment transitions (not every frame)
-        console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
+        if (DEBUG_STR_PROJECTILE_FRAMES) {
+            console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
+        }
     }
 
     const prevPartName = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
@@ -41029,19 +41075,25 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
     }
 
     const partName = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "").toLowerCase();
-    let prepCol = 2;
+    let prepColNow = 2;
     if (partName === "preparetocharge") {
         const partStart = sprites.readDataNumber(hero, HERO_DATA.PhasePartStartMs) | 0;
         const partDur = Math.max(1, sprites.readDataNumber(hero, HERO_DATA.PhasePartDurationMs) | 0);
         const elapsed = clampInt((nowMs | 0) - (partStart | 0), 0, partDur | 0);
-        prepCol = _strengthFrameColForSeg("prepareToCharge", elapsed | 0, partDur | 0);
-        if ((prepCol | 0) !== 2) {
+        prepColNow = _strengthFrameColForSeg("prepareToCharge", elapsed | 0, partDur | 0);
+        if ((prepColNow | 0) !== 2) {
+            if (DEBUG_STR_PROJECTILE_FRAMES) {
+                console.log("[STR][CHARGEPIX][HIDE] part=" + partName + " col=" + (prepColNow | 0));
+            }
             _destroyStrengthChargeTrail(heroIndex, hero);
             return;
         }
     } else if (partName === "charging") {
         // Keep the outline visible during charge hold.
     } else {
+        if (DEBUG_STR_PROJECTILE_FRAMES) {
+            console.log("[STR][CHARGEPIX][HIDE] part=" + partName + " col=2");
+        }
         _destroyStrengthChargeTrail(heroIndex, hero);
         return;
     }
@@ -41131,7 +41183,7 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
             }
         }
         console.log("[STR][CHARGEPIX] part=" + partName +
-            " col=" + (partName === "preparetocharge" ? prepCol : 2) +
+            " col=" + (partName === "preparetocharge" ? prepColNow : 2) +
             " nz=" + nz +
             " r1=" + r1 +
             " edge=" + edge);
@@ -41601,9 +41653,11 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         ) | 0
 
     const slashMinBase = _strengthSwingSlashMinMs() | 0
-    let resetMinBase = _strengthSwingResetMinMs() | 0
+    const resetBase = _strengthSwingResetMinMs() | 0
+    const tailMs = _strengthSwingResetTailMs() | 0
     const travelMsBase = _estimateStrengthArcTravelMs(heroIndex, hero, arcDeg | 0, reachExtraPx | 0) | 0
-    if (travelMsBase > resetMinBase) resetMinBase = travelMsBase | 0
+    const extraHold = Math.max(0, (travelMsBase | 0) - (tailMs | 0)) | 0
+    let resetMinBase = (resetBase | 0) + (extraHold | 0)
     const swingMinAnim = Math.max(1, (slashMinBase + resetMinBase) | 0)
     if (swingDurationMs < swingMinAnim) swingDurationMs = swingMinAnim
 
@@ -42373,6 +42427,8 @@ function spawnStrengthSwingProjectile(
 
     const outerBase = (frontStartR | 0) + (reachFromInner | 0);
     const outerR = (outerBase | 0) + 3
+    const travelFrames = _strengthArcTravelFrames(totalArcDeg | 0, outerR | 0) | 0;
+    const travelFrameMs = _strengthArcTravelFrameMs(travelFrames | 0) | 0;
     const swingDuration = swingDurationMs || 220
 
     const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
@@ -42475,6 +42531,8 @@ function spawnStrengthSwingProjectile(
         sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
         sprites.setDataNumber(proj, STR_ARC_BASE_WIDTH_KEY, arcBaseW | 0);
         sprites.setDataNumber(proj, STR_ARC_SIDE_KEY, arcSide | 0);
+        sprites.setDataNumber(proj, STR_ARC_TRAVEL_FRAMES_KEY, travelFrames | 0);
+        sprites.setDataNumber(proj, STR_ARC_TRAVEL_FRAME_MS_KEY, travelFrameMs | 0);
 
         sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg)
         sprites.setDataNumber(proj, "SS_NX", nx)
@@ -42613,11 +42671,9 @@ function updateStrengthProjectilesMotionFor(
     const age = nowMs - startMs
 
     if (age >= swingMs) {
-
-        console.log("S-UPDATE: DONE heroIndex=" + heroIndex +
-
-            " age=" + age + " swingMs=" + swingMs)
         if (DEBUG_STR_PROJECTILE_METRICS) {
+            console.log("S-UPDATE: DONE heroIndex=" + heroIndex +
+                " age=" + age + " swingMs=" + swingMs)
             console.log("[STR][PROJ][END]", {
                 heroIndex,
                 age: age | 0,
@@ -42673,13 +42729,11 @@ function updateStrengthProjectilesMotionFor(
     // Optional sanity fallback if something ever stored (0,0)
 
     if (nx == 0 && ny == 0) {
-
         nx = 1
-
         ny = 0
-
-        console.log("S-UPDATE: WARNING nx,ny were (0,0); defaulted to (1,0)")
-
+        if (DEBUG_STR_PROJECTILE_FRAMES) {
+            console.log("S-UPDATE: WARNING nx,ny were (0,0); defaulted to (1,0)")
+        }
     }
 
 
@@ -42707,12 +42761,25 @@ function updateStrengthProjectilesMotionFor(
     if (segName !== "strengthSlash") {
         sprites.setDataNumber(proj, "SS_SLASH_FORCED", 0);
         sprites.setDataNumber(proj, "SS_SLASH_LOGGED", 0);
+        sprites.setDataNumber(proj, "SS_SLASH_STARTED", 0);
     } else {
         const frame3Window = _strengthFrameWindowMs(
             STR_SWING_FORWARD_FRAME_COLS,
             STR_SWING_FORWARD_FRAME_MS,
             3
         );
+        const slashStarted = sprites.readDataNumber(proj, "SS_SLASH_STARTED") | 0;
+        if (slashStarted === 0) {
+            forceFrame3 = true;
+            frameCol = 3;
+            segElapsed = 0;
+            sprites.setDataNumber(proj, "SS_SLASH_STARTED", 1);
+            if (DEBUG_STR_PROJECTILE_FRAMES) {
+                console.log("[STR][FORCE_FRAME3] heroIndex=" + heroIndex +
+                    " segElapsed=" + (segElapsed | 0) +
+                    " segDur=" + (segDur | 0));
+            }
+        }
         if ((sprites.readDataNumber(proj, "SS_SLASH_LOGGED") | 0) === 0) {
             if (DEBUG_STR_PROJECTILE_FRAMES) {
                 _wpnTraceLog("str.slash.start", {
@@ -42746,7 +42813,21 @@ function updateStrengthProjectilesMotionFor(
     const rule = _strengthFrameRuleFor(segName, frameCol | 0);
 
     const arcReady = rule.allowArc;
-    const arcActive = arcReady && (segName === "strengthReset");
+    let transitionMs = 0;
+    if (segName === "strengthReset") {
+        const resetMs = STR_SWING_RESET_FRAME_MS;
+        if (resetMs && resetMs.length >= 2) {
+            let sum = 0;
+            const count = Math.min(resetMs.length, STR_ARC_TRANSITION_STEPS | 0);
+            for (let i = 0; i < count; i++) sum += Math.max(1, resetMs[i] | 0);
+            transitionMs = Math.max(0, sum | 0);
+        }
+        const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+        if (mult > 1 && transitionMs > 0) transitionMs = Math.max(1, (transitionMs | 0) * mult);
+        if (transitionMs > (segDur | 0)) transitionMs = segDur | 0;
+    }
+    const inTransition = arcReady && segName === "strengthReset" && transitionMs > 0 && (segElapsed | 0) < (transitionMs | 0);
+    const arcActive = arcReady && (segName === "strengthReset") && !inTransition;
     let arcT = 0;
     if (arcActive) {
         let tailMs = 0;
@@ -42754,8 +42835,12 @@ function updateStrengthProjectilesMotionFor(
         if (rMs && rMs.length >= 2) {
             tailMs = Math.max(0, (rMs[rMs.length - 1] | 0) + (rMs[rMs.length - 2] | 0));
         }
-        const arcDur = Math.max(1, (segDur | 0) - (tailMs | 0));
-        arcT = Math.min(1, (segElapsed | 0) / arcDur);
+        const arcDur = Math.max(1, (segDur | 0) - (tailMs | 0) - (transitionMs | 0));
+        const arcElapsed = Math.max(0, (segElapsed | 0) - (transitionMs | 0));
+        const travelFrames = Math.max(2, sprites.readDataNumber(proj, STR_ARC_TRAVEL_FRAMES_KEY) | 0);
+        const frameMs = Math.max(1, sprites.readDataNumber(proj, STR_ARC_TRAVEL_FRAME_MS_KEY) | 0);
+        const frameIdx = Math.min(travelFrames - 1, Math.idiv(arcElapsed | 0, frameMs | 0));
+        arcT = (travelFrames > 1) ? (frameIdx / Math.max(1, travelFrames - 1)) : 1;
     }
     let logFrameChange = false;
     if (DEBUG_STR_PROJECTILE_FRAMES) {
@@ -42769,7 +42854,7 @@ function updateStrengthProjectilesMotionFor(
             (throttle > 0 && ((nowMs | 0) - (lastLog | 0) >= throttle));
         if (shouldLog) {
             logFrameChange = true;
-            _wpnTraceLog("str.proj.frame", {
+            const frameLog = {
                 id: _wpnTraceAssignId(proj),
                 heroIndex,
                 seg: segName,
@@ -42779,8 +42864,18 @@ function updateStrengthProjectilesMotionFor(
                 arcActive: arcActive ? 1 : 0,
                 arcT: +arcT.toFixed(3),
                 arcDeg: sprites.readDataNumber(proj, "SS_ARC_DEG") | 0,
-                swingMs: swingMs | 0
-            });
+                swingMs: swingMs | 0,
+                inTransition: inTransition ? 1 : 0,
+                transitionMs: transitionMs | 0
+            };
+            _wpnTraceLog("str.proj.frame", frameLog);
+            console.log("[STR][PROJFRAME] seg=" + frameLog.seg +
+                " col=" + frameLog.frameCol +
+                " segElapsed=" + frameLog.segElapsed +
+                " segDur=" + frameLog.segDur +
+                " arcActive=" + frameLog.arcActive +
+                " arcT=" + frameLog.arcT +
+                " trans=" + frameLog.inTransition);
             sprites.setDataString(proj, STR_PROJ_LAST_SEG_LOG_KEY, segName || "");
             sprites.setDataNumber(proj, STR_PROJ_LAST_FRAME_COL_KEY, frameCol | 0);
             sprites.setDataNumber(proj, STR_PROJ_LAST_LOG_MS_KEY, nowMs | 0);
@@ -43071,7 +43166,7 @@ function updateStrengthProjectilesMotionFor(
                     growthIdx
                 )
             }
-            if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "strengthReset" && (frameCol | 0) !== 0) {
+            if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "strengthReset" && (frameCol | 0) !== 0 && !inTransition) {
                 const info = auraPack ? auraPack.info : _getHeroWeaponFgInfo(hero);
                 if (info) {
                     const shape = _getWeaponMaskShape(info, STR_WPN_AURA_OUTLINE_RADIUS | 0);
@@ -43119,16 +43214,18 @@ function updateStrengthProjectilesMotionFor(
                 4
             );
             const segThird = Math.max(1, Math.idiv((segDur | 0), 3));
-            const inFrame3 = isSlashSeg && (forceFrame3 || (frame3Window
-                ? ((segElapsed | 0) >= (frame3Window.start | 0) && (segElapsed | 0) < (frame3Window.end | 0))
-                : ((segElapsed | 0) < segThird)));
+    const inFrame3 = isSlashSeg && ((frameCol | 0) === 3 || forceFrame3 || (frame3Window
+        ? ((segElapsed | 0) >= (frame3Window.start | 0) && (segElapsed | 0) < (frame3Window.end | 0))
+        : ((segElapsed | 0) < segThird)));
             const inFrame4 = isSlashSeg && (frame4Window
                 ? ((segElapsed | 0) >= (frame4Window.start | 0) && (segElapsed | 0) < (frame4Window.end | 0))
                 : ((segElapsed | 0) >= segThird && (segElapsed | 0) < Math.max(segThird + 1, Math.idiv((segDur | 0) * 2, 3))));
             let seedCenterR = frontStart | 0;
+            const storedSeed = sprites.readDataNumber(proj, "SS_SEED_CENTER_R") | 0;
+            if (!isSlashSeg && storedSeed > 0) seedCenterR = storedSeed | 0;
             let seedInfo: WeaponFgInfo | null = null;
             let seedShape: HeroAuraMaskShape | null = null;
-            if (STR_USE_WPN_AURA_OUTLINE_ONLY && isSlashSeg && (inFrame4 || (frameCol | 0) === 5)) {
+            if (STR_USE_WPN_AURA_OUTLINE_ONLY && isSlashSeg && (inFrame3 || inFrame4 || (frameCol | 0) === 5)) {
                 seedInfo = auraPack ? auraPack.info : _getHeroWeaponFgInfo(hero);
                 if (seedInfo) {
                     seedShape = _getWeaponMaskShape(seedInfo, STR_WPN_AURA_OUTLINE_RADIUS | 0);
@@ -43141,31 +43238,32 @@ function updateStrengthProjectilesMotionFor(
                             ny
                         );
                         if (Number.isFinite(leadR) && leadR > 0) seedCenterR = Math.round(leadR);
+                        if (seedCenterR > 0) sprites.setDataNumber(proj, "SS_SEED_CENTER_R", seedCenterR | 0);
                     }
                 }
             }
             if (STR_USE_WPN_AURA_OUTLINE_ONLY && inFrame3) {
-                if (auraShapesNow && auraShapesNow[1]) {
-                    _stampStrengthTipRadii(
+                if (seedInfo && seedShape) {
+                    const baseLocalX = (hero.x + (seedInfo.offX || 0)) - anchorX;
+                    const baseLocalY = (hero.y + (seedInfo.offY || 0)) - anchorY;
+                    _stampWeaponMaskFrontAt(
                         img,
                         -halfW,
                         -halfH,
-                        tipLocalXNow,
-                        tipLocalYNow,
-                        auraShapesNow,
-                        [1],
+                        baseLocalX,
+                        baseLocalY,
+                        seedShape,
+                        nx,
+                        ny,
                         auraR1 | 0,
                         auraEdge | 0,
-                        tipClip
+                        STR_OUTLINE_CARDINAL_ONLY,
+                        0
                     );
-                } else if (DEBUG_STR_PROJECTILE_FRAMES && _wpnTraceShouldLog(proj, nowMs | 0)) {
-                    _wpnTraceLog("str.proj.frame3MissingTip", {
-                        id: _wpnTraceAssignId(proj),
-                        heroIndex,
-                        hasShapes: !!auraShapesNow,
-                        tipX: +tipLocalXNow.toFixed(2),
-                        tipY: +tipLocalYNow.toFixed(2)
-                    });
+                } else if (DEBUG_STR_PROJECTILE_FRAMES) {
+                    console.log("[STR][FRAME3_MISSING] heroIndex=" + heroIndex +
+                        " hasSeedInfo=" + (!!seedInfo ? 1 : 0) +
+                        " hasSeedShape=" + (!!seedShape ? 1 : 0));
                 }
             }
             if (STR_USE_WPN_AURA_OUTLINE_ONLY && inFrame4) {
@@ -43185,15 +43283,6 @@ function updateStrengthProjectilesMotionFor(
                         auraEdge | 0,
                         STR_OUTLINE_CARDINAL_ONLY,
                         STR_SEED_LEAD_EDGE_EPS_PX | 0
-                    );
-                    _stampStrengthSeedDot(
-                        img,
-                        -halfW,
-                        -halfH,
-                        nx * (seedCenterR | 0),
-                        ny * (seedCenterR | 0),
-                        auraR3 | 0,
-                        STR_SEED_ARC_CENTER_RADIUS_PX | 0
                     );
                     _stampStrengthSeedEllipse(
                         img,
@@ -43237,6 +43326,79 @@ function updateStrengthProjectilesMotionFor(
                 proj,
                 nowMs | 0
             );
+            if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "strengthReset" && inTransition) {
+                const transitionSteps = STR_ARC_TRANSITION_STEPS | 0;
+                const stepMs = Math.max(1, Math.idiv(Math.max(1, transitionMs | 0), Math.max(1, transitionSteps)));
+                const stepIndex = Math.min(Math.max(transitionSteps - 1, 0), Math.idiv(Math.max(0, segElapsed | 0), stepMs));
+                const tStep = (stepIndex + 1) / (transitionSteps + 1);
+                const isSplit = stepIndex >= (transitionSteps - 1);
+                const useT = isSplit ? 1 : tStep;
+                const travelR = Math.round(((arcInner | 0) + (arcOuter | 0)) * 0.5);
+                const targetR = Math.max(1, travelR | 0);
+                const interpR = Math.round((seedCenterR | 0) + ((targetR | 0) - (seedCenterR | 0)) * useT);
+                const baseRx = Math.max(1, STR_SEED_ELLIPSE_RX_PX | 0);
+                const baseRy = Math.max(1, STR_SEED_ELLIPSE_RY_PX | 0);
+                const baseThick = Math.max(1, Math.round(Math.max(arcBaseW | 0, arcBaseMin | 0) * STR_ARC_HEAD_THICK_SCALE));
+                const baseLen = Math.max(1, Math.round(Math.max(arcBaseW | 0, arcBaseMin | 0) * STR_ARC_HEAD_LEN_SCALE));
+                const lengthScale = 1 + ((STR_ARC_HEAD_LEN_GROW - 1) * useT);
+                const targetRx = Math.max(baseRx, baseThick | 0);
+                const targetRy = Math.max(baseRy, Math.round((baseLen | 0) * lengthScale));
+                const interpRx = Math.round(baseRx + ((targetRx - baseRx) * useT));
+                const interpRy = Math.max(1, Math.round(baseRy + ((targetRy - baseRy) * useT)));
+                if (!isSplit) {
+                    _stampStrengthSeedEllipse(
+                        img,
+                        -halfW,
+                        -halfH,
+                        nx * (interpR | 0),
+                        ny * (interpR | 0),
+                        nx,
+                        ny,
+                        interpRx | 0,
+                        interpRy | 0,
+                        auraR1 | 0,
+                        auraEdge | 0,
+                        auraR3 | 0
+                    );
+                } else {
+                    const halfArcRadMax = Math.abs(totalArcDeg) * 0.5 * (Math.PI / 180);
+                    const splitRad = Math.min(halfArcRadMax, (STR_ARC_TRANSITION_SPLIT_DEG | 0) * (Math.PI / 180));
+                    const sx = -ny;
+                    const sy = nx;
+                    const baseR = Math.max(1, Math.round(interpR | 0));
+                    const splitSigns = arcSide ? [arcSide] : [-1, 1];
+                    for (const sgn of splitSigns) {
+                        const ang = sgn * splitRad;
+                        const cosA = Math.cos(ang);
+                        const sinA = Math.sin(ang);
+                        const dxDir = (nx * cosA) + (sx * sinA);
+                        const dyDir = (ny * cosA) + (sy * sinA);
+                        _stampStrengthSeedEllipse(
+                            img,
+                            -halfW,
+                            -halfH,
+                            dxDir * baseR,
+                            dyDir * baseR,
+                            dxDir,
+                            dyDir,
+                            interpRx | 0,
+                            interpRy | 0,
+                            auraR1 | 0,
+                            auraEdge | 0,
+                            auraR3 | 0
+                        );
+                    }
+                }
+                if (DEBUG_STR_PROJECTILE_FRAMES) {
+                    console.log("[STR][PROJ][TRANS] step=" + (stepIndex | 0) +
+                        " t=" + tStep.toFixed(2) +
+                        " seedR=" + (seedCenterR | 0) +
+                        " targetR=" + (targetR | 0) +
+                        " interpR=" + (interpR | 0) +
+                        " rx=" + (interpRx | 0) +
+                        " ry=" + (interpRy | 0));
+                }
+            }
             if (_wpnTraceShouldLog(proj, nowMs | 0) && segName === "strengthSlash") {
                 if ((frameCol | 0) === 4 || (frameCol | 0) === 5) {
                     _wpnTraceLog("str.seed", {
@@ -43250,7 +43412,7 @@ function updateStrengthProjectilesMotionFor(
                 }
             }
             if (arcActive) {
-                _stampStrengthArcTrail(
+                _stampStrengthArcHeads(
                     img,
                     -halfW,
                     -halfH,
@@ -43260,11 +43422,11 @@ function updateStrengthProjectilesMotionFor(
                     arcOuter,
                     totalArcDeg | 0,
                     arcT,
+                    arcBaseW | 0,
+                    arcBaseMin | 0,
                     STR_TIP_TRACE_COLOR | 0,
                     STR_TIP_TRACE_EDGE_COLOR | 0,
-                    arcWidthMax | 0,
-                    arcWidthMin | 0,
-                    arcSide
+                    arcSide | 0
                 )
             }
             if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
@@ -43294,20 +43456,6 @@ function updateStrengthProjectilesMotionFor(
                     " nz=" + nonZero +
                     " r1=" + r1Count +
                     " edge=" + edgeCount);
-            }
-            if (STR_USE_WPN_AURA_OUTLINE_ONLY && inFrame3 && auraShapesNow && auraShapesNow[1]) {
-                _stampStrengthTipRadii(
-                    img,
-                    -halfW,
-                    -halfH,
-                    tipLocalXNow,
-                    tipLocalYNow,
-                    auraShapesNow,
-                    [1],
-                    auraR1 | 0,
-                    auraEdge | 0,
-                    tipClip
-                );
             }
             _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, auraR1 | 0, auraEdge | 0)
         }
@@ -43644,7 +43792,7 @@ function updateStrengthProjectilesMotionFor(
             }
         }
         if (arcActive) {
-            _stampStrengthArcTrail(
+            _stampStrengthArcHeads(
                 img,
                 -halfW,
                 -halfH,
@@ -43654,11 +43802,11 @@ function updateStrengthProjectilesMotionFor(
                 arcOuter,
                 totalArcDeg | 0,
                 arcT,
+                arcBaseW | 0,
+                arcBaseMin | 0,
                 auraR1 | 0,
                 auraEdge | 0,
-                arcWidthMax | 0,
-                arcWidthMin | 0,
-                arcSide
+                arcSide | 0
             )
         }
         if (!STR_USE_WPN_AURA_OUTLINE_ONLY) _updateProjectileMaskSpriteForProj(proj, img)
@@ -44368,6 +44516,63 @@ function _stampStrengthArcTrail(
                 img.setPixel(px, py, fillColor | 0);
             }
         }
+    }
+}
+
+function _stampStrengthArcHeads(
+    img: Image,
+    minX: number,
+    minY: number,
+    nx: number,
+    ny: number,
+    inner0: number,
+    outerR: number,
+    arcDeg: number,
+    t: number,
+    arcBaseW: number,
+    arcBaseMin: number,
+    fillColor: number,
+    edgeColor: number,
+    sideSign: number
+): void {
+    if (!img) return;
+    const halfArcRadMax = Math.abs(arcDeg) * 0.5 * (Math.PI / 180);
+    if (!(halfArcRadMax > 0)) return;
+    const sweepT = _strengthArcSweepT(t);
+    if (sweepT <= 0) return;
+    const alpha = halfArcRadMax * sweepT;
+    const sx = -ny;
+    const sy = nx;
+    const centerR = Math.round(((inner0 | 0) + (outerR | 0)) * 0.5);
+    const baseThick = Math.max(1, Math.round(Math.max(arcBaseW | 0, arcBaseMin | 0) * STR_ARC_HEAD_THICK_SCALE));
+    const baseLen = Math.max(1, Math.round(Math.max(arcBaseW | 0, arcBaseMin | 0) * STR_ARC_HEAD_LEN_SCALE));
+    const taper = Math.max(0, Math.min(1, sweepT));
+    const minThick = Math.max(1, Math.round(baseThick * STR_ARC_HEAD_TAPER_MIN));
+    const rx = Math.max(1, Math.round(minThick + ((baseThick - minThick) * (1 - taper))));
+    const ry = Math.max(1, Math.round(baseLen * (1 + ((STR_ARC_HEAD_LEN_GROW - 1) * taper))));
+    const signs = (sideSign || 0) ? [sideSign] : [-1, 1];
+    for (const sgn of signs) {
+        const ang = sgn * alpha;
+        const cosA = Math.cos(ang);
+        const sinA = Math.sin(ang);
+        const dxDir = (nx * cosA) + (sx * sinA);
+        const dyDir = (ny * cosA) + (sy * sinA);
+        const cx = dxDir * centerR;
+        const cy = dyDir * centerR;
+        _stampStrengthSeedEllipse(
+            img,
+            minX,
+            minY,
+            cx,
+            cy,
+            dxDir,
+            dyDir,
+            rx | 0,
+            ry | 0,
+            fillColor | 0,
+            edgeColor | 0,
+            0
+        );
     }
 }
 

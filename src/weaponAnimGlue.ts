@@ -41,6 +41,7 @@ const WEAPON_OFFSET_BY_DIR: Record<Dir4, { x: number; y: number }> = {
 
 const _WEAPON_RESOLVE_MISS_ONCE = new Set<string>();
 const _WEAPON_RESOLVE_HIT_ONCE = new Set<string>();
+const _WEAPON_TEX_MISS_ONCE = new Set<string>();
 
 
 
@@ -69,6 +70,7 @@ const WPN_EXEC_YOYO_STEP_MS = 90;
 
 const _WEAPON_PLACED_ONCE = new Set<string>();
 const _WEAPON_HIDDEN_ONCE = new Set<string>();
+const _WPN_ROW_LOG_ONCE = new Set<string>();
 
 
 // ------------------------------------------------------------
@@ -144,6 +146,12 @@ function _logWeaponHiddenOnce(key: string, payload: any): void {
   if (_WEAPON_HIDDEN_ONCE.has(key)) return;
   _WEAPON_HIDDEN_ONCE.add(key);
   console.log("[WPN-HIDDEN]", payload);
+}
+
+function _logWeaponMissingTexOnce(key: string, payload: any): void {
+  if (_WEAPON_TEX_MISS_ONCE.has(key)) return;
+  _WEAPON_TEX_MISS_ONCE.add(key);
+  console.warn("[WPN-MISSING-TEX]", payload);
 }
 
 
@@ -294,6 +302,26 @@ export function syncStandaloneWeaponLayers(args: {
       return undefined;
     }
 
+    const textures: any = args.scene?.textures;
+    if (textures && typeof textures.exists === "function" && !textures.exists(layerRef.key)) {
+      if (dbgOn) {
+        _logWeaponMissingTexOnce(missKey + "|layer:" + layerRef.key, {
+          weaponId: args.weaponId,
+          heroPhase: args.sourcePhase,
+          usedPhase,
+          mode,
+          variant: args.variant ?? "base",
+          dir: args.dir,
+          heroFrameIndex: -1,
+          missing: [layerRef.key],
+          keys: [layerRef.key]
+        });
+      }
+      ensureWeaponSheetsLoaded(args.scene, args.weaponId, args.variant);
+      try { spr.setVisible(false); } catch { }
+      return undefined;
+    }
+
     if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
 
     // Choose a fixed column (recommended), else map time01 -> col, else 0.
@@ -427,20 +455,33 @@ function clampInt(v: number, lo: number, hi: number): number {
 type SheetGrid = { cols: number; rows: number; total: number };
 const GRID_CACHE = new Map<string, SheetGrid>();
 
+function _weaponRowForDir(_scene: Phaser.Scene, _ref: WeaponSheetRef, dir: Dir4, rows: number): number {
+  return rows >= 4 ? dirIndex(dir) : 0;
+}
+
 function getSheetGrid(scene: Phaser.Scene, ref: WeaponSheetRef): SheetGrid {
   const key = ref.key;
   const cached = GRID_CACHE.get(key);
   if (cached) return cached;
 
-  const tex = scene.textures.get(key);
-  const src: any = tex?.getSourceImage?.();
-  const w = (src?.width ?? 0) | 0;
-  const h = (src?.height ?? 0) | 0;
-  const tile = ref.frameW | 0;
+  const refCols = (ref.cols ?? 0) | 0;
+  const refRows = (ref.rows ?? 0) | 0;
+  let cols = refCols;
+  let rows = refRows;
+  let total = 0;
 
-  const cols = tile > 0 ? Math.max(1, Math.floor(w / tile)) : 1;
-  const rows = tile > 0 ? Math.max(1, Math.floor(h / tile)) : 1;
-  const total = cols * rows;
+  if (cols > 0 && rows > 0) {
+    total = cols * rows;
+  } else {
+    const tex = scene.textures.get(key);
+    const src: any = tex?.getSourceImage?.();
+    const w = (src?.width ?? 0) | 0;
+    const h = (src?.height ?? 0) | 0;
+    const tile = ref.frameW | 0;
+    cols = tile > 0 ? Math.max(1, Math.floor(w / tile)) : 1;
+    rows = tile > 0 ? Math.max(1, Math.floor(h / tile)) : 1;
+    total = cols * rows;
+  }
 
   const grid = { cols, rows, total };
   GRID_CACHE.set(key, grid);
@@ -515,7 +556,7 @@ export function resolveWeaponFrameIndexForDirAndCol(args: {
   const grid = getSheetGrid(args.scene, args.sheet);
   const weaponCols = grid.cols;
   const weaponRows = grid.rows;
-  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
+  const row = _weaponRowForDir(args.scene, args.sheet, args.dir, weaponRows);
   const col = clampInt(args.colIndex | 0, 0, Math.max(0, weaponCols - 1));
   const idx = row * weaponCols + col;
   return clampInt(idx, 0, Math.max(0, grid.total - 1));
@@ -538,11 +579,35 @@ export function resolveWeaponFrameIndexForLayer(args: {
   const weaponCols = grid.cols;
   const weaponRows = grid.rows;
 
-  const row = weaponRows >= 4 ? dirIndex(args.dir) : 0;
+  const row = _weaponRowForDir(args.scene, args.sheet, args.dir, weaponRows);
+
+  if (_weaponDebugVerbose()) {
+    const refRows = (args.sheet.rows ?? 0) | 0;
+    const refCols = (args.sheet.cols ?? 0) | 0;
+    const rawCol = (args.frameColOverride ?? -9999) | 0;
+    const colKey = (rawCol === -9999) ? "auto" : String(rawCol);
+    const sig = `${args.sheet.key}|${args.dir}|${row}|${weaponRows}|${weaponCols}|${colKey}`;
+    if (!_WPN_ROW_LOG_ONCE.has(sig)) {
+      _WPN_ROW_LOG_ONCE.add(sig);
+      console.log("[WPN-ROW]", {
+        key: args.sheet.key,
+        dir: args.dir,
+        row,
+        rows: weaponRows,
+        cols: weaponCols,
+        refRows,
+        refCols,
+        frameColOverride: (args.frameColOverride ?? null)
+      });
+    }
+  }
 
   // Explicit override (treated as *column*, not absolute frame index)
   if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
-    const col = clampInt(args.frameColOverride | 0, 0, Math.max(0, weaponCols - 1));
+    const rawCol = args.frameColOverride | 0;
+    const col = (rawCol < 0)
+      ? Math.max(0, weaponCols - 1)
+      : clampInt(rawCol, 0, Math.max(0, weaponCols - 1));
     const idx = row * weaponCols + col;
     return clampInt(idx, 0, Math.max(0, grid.total - 1));
   }
@@ -608,7 +673,7 @@ export function resolveWeaponFrameIndexForLayer(args: {
   const frameInClip = (typeof fincRaw === "number" && Number.isFinite(fincRaw)) ? (fincRaw | 0) : -1;
   const clipLen = (typeof clenRaw === "number" && Number.isFinite(clenRaw) && clenRaw > 0) ? (clenRaw | 0) : 0;
 
-  if (frameInClip >= 0 && clipLen > 0 && weaponCols > 1) {
+  if (frameInClip >= 0 && clipLen > 1 && weaponCols > 1) {
     const safeClipLen = Math.max(1, clipLen);
     const safeF = clampInt(frameInClip, 0, safeClipLen - 1);
 
@@ -775,8 +840,8 @@ export function syncWeaponLayersToHero(args: {
   const extraX = (typeof args.posOffsetX === "number") ? args.posOffsetX : 0;
   const extraY = (typeof args.posOffsetY === "number") ? args.posOffsetY : 0;
 
-  const x = heroCx + (wpnOx | 0) + off.x + extraX;
-  const y = heroCy + (wpnOy | 0) + off.y + extraY;
+  let x = heroCx + (wpnOx | 0) + off.x + extraX;
+  let y = heroCy + (wpnOy | 0) + off.y + extraY;
 
   // For debug reuse across blocks
   let dbgHeroName = "";
@@ -789,6 +854,28 @@ export function syncWeaponLayersToHero(args: {
   ): WeaponResolvedLayer | undefined => {
     if (!layerRef) {
       spr.setVisible(false);
+      return undefined;
+    }
+
+    const textures: any = args.scene?.textures;
+    if (textures && typeof textures.exists === "function" && !textures.exists(layerRef.key)) {
+      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
+        _logWeaponMissingTexOnce(missKey + "|layer:" + layerRef.key, {
+          weaponId: args.weaponId,
+          heroPhase: args.heroPhase,
+          usedPhase,
+          mode,
+          variant: args.variant ?? "base",
+          dir: args.dir,
+          heroFrameIndex: args.heroFrameIndex,
+          missing: [layerRef.key],
+          keys: [layerRef.key],
+          queued: loadStatus.queued,
+          total: loadStatus.total
+        });
+      }
+      try { spr.setVisible(false); } catch { }
       return undefined;
     }
 
@@ -897,11 +984,42 @@ export function syncWeaponLayersToHero(args: {
     ].filter(Boolean) as string[];
     const missing = keys.some((key) => !textures.exists(key));
     if (missing) {
-      ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
+        _logWeaponMissingTexOnce(missKey, {
+          weaponId: args.weaponId,
+          heroPhase: args.heroPhase,
+          usedPhase,
+          mode,
+          variant: args.variant ?? "base",
+          dir: args.dir,
+          heroFrameIndex: args.heroFrameIndex,
+          missing: keys.filter((k) => !textures.exists(k)),
+          keys,
+          queued: loadStatus.queued,
+          total: loadStatus.total
+        });
+      }
       args.weaponBg.setVisible(false);
       args.weaponFg.setVisible(false);
       return null;
     }
+  }
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    if (dbgOn) {
+      console.log("[WPN-PLACE-CLAMP]", {
+        weaponId: args.weaponId,
+        heroPhase: args.heroPhase,
+        usedPhase,
+        x,
+        y,
+        heroCx,
+        heroCy
+      });
+    }
+    x = heroCx;
+    y = heroCy;
   }
 
   if (dbgOn && dbgVerbose) {
@@ -1072,6 +1190,7 @@ export function syncWeaponToHero(args: {
   // For our projectile crystal path, we treat this as an *absolute* frame index.
   frameColOverride?: number;
 }): void {
+  const dbgOn = _weaponDebugEnabled();
   const model = String(args.weaponId || "").trim();
   if (!model) {
     args.weaponSprite.setVisible(false);
@@ -1080,6 +1199,7 @@ export function syncWeaponToHero(args: {
 
   const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
   const tile = tileForWeaponMode(mode);
+  const missKey = `${args.weaponId}|${args.heroPhase}|${mode}|${args.variant ?? ""}|single`;
 
   const sheet = resolveWeaponSheet({
     weaponId: args.weaponId,
@@ -1095,6 +1215,19 @@ export function syncWeaponToHero(args: {
 
   const textures = args.scene?.textures as any;
   if (textures && typeof textures.exists === "function" && !textures.exists(sheet.key)) {
+    if (dbgOn) {
+      _logWeaponMissingTexOnce(missKey, {
+        weaponId: args.weaponId,
+        heroPhase: args.heroPhase,
+        usedPhase: args.heroPhase,
+        mode,
+        variant: args.variant ?? "base",
+        dir: args.dir,
+        heroFrameIndex: args.heroFrameIndex,
+        missing: [sheet.key],
+        keys: [sheet.key]
+      });
+    }
     ensureWeaponSheetsLoaded(args.scene, model, args.variant);
     args.weaponSprite.setVisible(false);
     return;

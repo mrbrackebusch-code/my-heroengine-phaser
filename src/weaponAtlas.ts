@@ -16,7 +16,9 @@
 
 
 import type Phaser from "phaser";
-import { queueSpritesheetOnce } from "./loaderCache";
+import { WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
+import { queueAtlasOnce } from "./loaderCache";
+import { WEAPON_ATLAS_SHEETS, WEAPON_ATLAS_DATA } from "./generated/weaponAtlasMeta";
 
 // ----------------------------------------------------------
 // Legacy-exported types (kept so other code can keep importing)
@@ -67,6 +69,8 @@ export interface WeaponSheetRef {
   frameW: number;
   frameH: number;
   totalFrames?: number; // optional hint; usually omitted because we can derive from texture
+  cols?: number;
+  rows?: number;
 }
 
 // ----------------------------------------------------------
@@ -78,13 +82,18 @@ export type WeaponLayer = "bg" | "fg";
 
 export interface WeaponPngMeta {
   key: string;          // base filename (no .png) – used as Phaser texture key
-  url: string;          // resolved by Vite import
   tile: WeaponTile;     // 64 / 128 / 192
   category: string;
   model: string;        // weaponId
   anim: string;         // one anim per file
   layer: WeaponLayer;   // bg / fg
   variant: string;      // e.g. base, gold, steel
+  atlasKey: string;     // atlas texture key (model+anim)
+  frameW: number;
+  frameH: number;
+  totalFrames: number;
+  cols: number;
+  rows: number;
 }
 
 export interface WeaponLayerPair {
@@ -97,77 +106,44 @@ export interface WeaponLayerPair {
 }
 
 // ----------------------------------------------------------
-// Vite discovery (eager URL map)
+// Weapon atlas discovery (eager URL map)
 // ----------------------------------------------------------
 
-// OLD (example)
-// const weaponPngs = import.meta.glob("../assets/weapons/**/*.png", { ... })
-
-// NEW (explicit tile folders; matches your structure)
-const weaponPngs = import.meta.glob("../assets/weapons/t{064,128,192}/**/*.png", {
+const weaponAtlasPngs = import.meta.glob("../assets/weapons/_atlas/*.png", {
   as: "url",
   eager: true
 }) as Record<string, string>;
 
-
-function basenameNoExt(p: string): string {
-  const file = p.split(/[\\/]/).pop() || p;
-  return file.replace(/\.png$/i, "");
-}
-
-function parseWeaponFilename(base: string): WeaponPngMeta | null {
-  // base is already filename without .png
-  const parts = base.split("__").filter(Boolean);
-  if (parts.length < 6) return null;
-
-  const tPart = parts[0];
-  const category = parts[1];
-
-  let vIndex = -1;
-  for (let i = parts.length - 1; i >= 0; i--) {
-    if (/^v.+/i.test(parts[i])) {
-      vIndex = i;
-      break;
-    }
-  }
-  if (vIndex < 5) return null;
-
-  const layer = parts[vIndex - 1] as WeaponLayer;
-  const anim = parts[vIndex - 2];
-  const modelTokens = parts.slice(2, vIndex - 2);
-  if (!modelTokens.length) return null;
-  const model = modelTokens.join("_");
-  const vPart = parts[vIndex];
-
-  if (!/^t(064|128|192)$/.test(tPart)) return null;
-  if (layer !== "bg" && layer !== "fg") return null;
-  if (!/^v.+/i.test(vPart)) return null;
-
-  const tileNum = Number(tPart.slice(1));
-  const tile = (tileNum === 64 ? 64 : tileNum === 128 ? 128 : 192) as WeaponTile;
-  const variant = vPart.slice(1); // strip leading "v"
-
-  // minimal sanity
-  if (!category || !model || !anim || !variant) return null;
-
-  // NOTE: url is injected later by the discovery loop.
-  return {
-    key: base,
-    url: "",
-    tile,
-    category,
-    model,
-    anim,
-    layer,
-    variant
-  };
+function _weaponAtlasUrl(atlasKey: string): string {
+  const rel = `../assets/weapons/_atlas/${atlasKey}.png`;
+  return weaponAtlasPngs[rel] || "";
 }
 
 // ----------------------------------------------------------
 // Build an in-memory index at module load time
 // ----------------------------------------------------------
 
-const ALL_WEAPON_SHEETS: WeaponPngMeta[] = [];
+const ALL_WEAPON_SHEETS: WeaponPngMeta[] = WEAPON_ATLAS_SHEETS.map((meta: any) => ({
+  key: String(meta.key || ""),
+  atlasKey: String(meta.atlasKey || ""),
+  tile: meta.tile as WeaponTile,
+  category: String(meta.category || ""),
+  model: String(meta.model || ""),
+  anim: String(meta.anim || ""),
+  layer: meta.layer as WeaponLayer,
+  variant: String(meta.variant || ""),
+  frameW: meta.frameW | 0,
+  frameH: meta.frameH | 0,
+  totalFrames: meta.totalFrames | 0,
+  cols: meta.cols | 0,
+  rows: meta.rows | 0
+}));
+
+const SHEET_META_BY_KEY = new Map<string, WeaponPngMeta>();
+for (const meta of ALL_WEAPON_SHEETS) {
+  if (!meta.key) continue;
+  SHEET_META_BY_KEY.set(meta.key, meta);
+}
 
 // model -> variant -> tile -> anim -> pair
 type PairLeaf = { bg?: WeaponPngMeta; fg?: WeaponPngMeta };
@@ -179,14 +155,7 @@ const WEAPON_MODEL_COMPOSITES: Record<string, { bg?: string; fg?: string }> = {
   skeleton_bow: { bg: "quiver", fg: "bow_normal" }
 };
 
-for (const [path, url] of Object.entries(weaponPngs)) {
-  const base = basenameNoExt(path);
-  const meta = parseWeaponFilename(base);
-  if (!meta) continue;
-  meta.url = url;
-
-  ALL_WEAPON_SHEETS.push(meta);
-
+for (const meta of ALL_WEAPON_SHEETS) {
   let byVariant = INDEX.get(meta.model);
   if (!byVariant) INDEX.set(meta.model, (byVariant = new Map()));
 
@@ -223,7 +192,57 @@ export function listWeaponVariants(model: string): string[] {
 // ----------------------------------------------------------
 
 const WEAPON_LAZY_REQUESTED = new Set<string>();
+const WEAPON_LAZY_REQUESTED_ATLAS = new Set<string>();
 const WEAPON_SHEETS_BY_MODEL_VARIANT = new Map<string, WeaponPngMeta[]>();
+
+const _WEAPON_ATLAS_RESOLVE_ONCE = new Set<string>();
+const _WEAPON_ATLAS_LOAD_ONCE = new Set<string>();
+const _WEAPON_ATLAS_SHEET_ONCE = new Set<string>();
+const _WEAPON_ATLAS_SHEET_FAIL_ONCE = new Set<string>();
+
+function _weaponDebugEnabled(): boolean {
+  if (WEAPON_DEBUG) return true;
+  try {
+    return !!(globalThis as any).WEAPON_DEBUG;
+  } catch { }
+  return false;
+}
+
+function _weaponDebugVerbose(): boolean {
+  if (WEAPON_DEBUG_VERBOSE) return true;
+  try {
+    return !!(globalThis as any).WEAPON_DEBUG_VERBOSE;
+  } catch { }
+  return false;
+}
+
+function _logWeaponAtlasResolveOnce(sig: string, payload: any): void {
+  if (!_weaponDebugEnabled()) return;
+  if (_WEAPON_ATLAS_RESOLVE_ONCE.has(sig)) return;
+  _WEAPON_ATLAS_RESOLVE_ONCE.add(sig);
+  console.log("[WPN-ATLAS-RESOLVE]", payload);
+}
+
+function _logWeaponAtlasLoadOnce(sig: string, payload: any): void {
+  if (!_weaponDebugEnabled()) return;
+  if (_WEAPON_ATLAS_LOAD_ONCE.has(sig)) return;
+  _WEAPON_ATLAS_LOAD_ONCE.add(sig);
+  console.log("[WPN-ATLAS-LOAD]", payload);
+}
+
+function _logWeaponAtlasSheetOnce(sig: string, payload: any): void {
+  if (!_weaponDebugVerbose()) return;
+  if (_WEAPON_ATLAS_SHEET_ONCE.has(sig)) return;
+  _WEAPON_ATLAS_SHEET_ONCE.add(sig);
+  console.log("[WPN-ATLAS-SHEET]", payload);
+}
+
+function _logWeaponAtlasSheetFailOnce(sig: string, payload: any): void {
+  if (!_weaponDebugEnabled()) return;
+  if (_WEAPON_ATLAS_SHEET_FAIL_ONCE.has(sig)) return;
+  _WEAPON_ATLAS_SHEET_FAIL_ONCE.add(sig);
+  console.warn("[WPN-ATLAS-SHEET-FAIL]", payload);
+}
 
 function _weaponSheetsCacheKey(model: string, variant?: string): string {
   return `${String(model || "").trim()}::${String(variant || "").trim()}`;
@@ -333,6 +352,8 @@ export function ensureWeaponSheetsLoaded(
   const textures = scene.textures;
   let loaded = 0;
   let queued = 0;
+  const dbg = _weaponDebugEnabled();
+  const dbgVerbose = _weaponDebugVerbose();
 
   for (const meta of metas) {
     const key = meta.key;
@@ -340,10 +361,75 @@ export function ensureWeaponSheetsLoaded(
       loaded++;
       continue;
     }
-    if (WEAPON_LAZY_REQUESTED.has(key)) continue;
-    const didQueue = queueSpritesheetOnce(scene, key, meta.url, meta.tile, meta.tile);
-    if (didQueue) queued++;
-    WEAPON_LAZY_REQUESTED.add(key);
+
+    const atlasKey = meta.atlasKey;
+    if (atlasKey) {
+      if (dbg && dbgVerbose) {
+        _logWeaponAtlasLoadOnce(
+          `atlas:${atlasKey}`,
+          { atlasKey, sheetKey: key, tile: meta.tile, layer: meta.layer, variant: meta.variant }
+        );
+      }
+      if (dbg && !textures.exists(atlasKey)) {
+        _logWeaponAtlasLoadOnce(
+          `atlas-missing-in-textures:${atlasKey}`,
+          { atlasKey, sheetKey: key, queued: WEAPON_LAZY_REQUESTED_ATLAS.has(atlasKey) }
+        );
+      }
+      if (!textures.exists(atlasKey) && !WEAPON_LAZY_REQUESTED_ATLAS.has(atlasKey)) {
+        const atlasUrl = _weaponAtlasUrl(atlasKey);
+        const atlasData = (WEAPON_ATLAS_DATA as Record<string, unknown>)[atlasKey];
+        const didQueue = atlasUrl && atlasData
+          ? queueAtlasOnce(scene, atlasKey, atlasUrl, atlasData)
+          : false;
+        if (didQueue) queued++;
+        WEAPON_LAZY_REQUESTED_ATLAS.add(atlasKey);
+        if (dbg && (!atlasUrl || !atlasData)) {
+          _logWeaponAtlasLoadOnce(
+            `atlas-missing:${atlasKey}`,
+            { atlasKey, hasUrl: !!atlasUrl, hasData: !!atlasData }
+          );
+        }
+      }
+      if (textures.exists(atlasKey)) {
+        let created = false;
+        if (!textures.exists(key)) {
+          try {
+            textures.addSpriteSheetFromAtlas(key, {
+              atlas: atlasKey,
+              frame: key,
+              frameWidth: meta.frameW,
+              frameHeight: meta.frameH
+            });
+            created = true;
+          } catch (err) {
+            if (dbg) {
+              _logWeaponAtlasSheetFailOnce(`sheet:${key}`, {
+                sheetKey: key,
+                atlasKey,
+                error: String(err && (err as any).message ? (err as any).message : err)
+              });
+            }
+          }
+        }
+        if (dbg && created) {
+          _logWeaponAtlasSheetOnce(`sheet:${key}`, {
+            sheetKey: key,
+            atlasKey,
+            tile: meta.tile,
+            layer: meta.layer,
+            variant: meta.variant,
+            frameW: meta.frameW,
+            frameH: meta.frameH
+          });
+        }
+        if (textures.exists(key)) {
+          WEAPON_LAZY_REQUESTED.add(key);
+          loaded++;
+        }
+      }
+      continue;
+    }
   }
 
   if (queued > 0) _startWeaponLoader(scene);
@@ -362,16 +448,18 @@ export function ensureWeaponSheetsLoaded(
  */
 export function loadWeaponAtlases(scene: Phaser.Scene): void {
   const loaded = new Set<string>();
-  for (const meta of ALL_WEAPON_SHEETS) {
-    if (loaded.has(meta.key)) continue;
-    loaded.add(meta.key);
-    queueSpritesheetOnce(
-      scene,
-      meta.key,
-      meta.url,
-      meta.tile,
-      meta.tile
-    );
+  const atlasData = WEAPON_ATLAS_DATA as Record<string, unknown>;
+  let queued = 0;
+  let missingUrl = 0;
+  for (const atlasKey of Object.keys(atlasData)) {
+    if (loaded.has(atlasKey)) continue;
+    loaded.add(atlasKey);
+    const atlasUrl = _weaponAtlasUrl(atlasKey);
+    if (!atlasUrl) missingUrl++;
+    if (queueAtlasOnce(scene, atlasKey, atlasUrl, atlasData[atlasKey])) queued++;
+  }
+  if (_weaponDebugEnabled()) {
+    console.log("[WPN-ATLAS-PRELOAD]", { total: loaded.size, queued, missingUrl });
   }
 }
 
@@ -459,6 +547,11 @@ function candidatesForHeroPhase(heroPhase: string): string[] {
   // Normalize oversize phase names -> base phase name
   const base = snake.replace(/_oversize$/i, "");
 
+  // Strength sub-phases should still use slash assets.
+  if (base.startsWith("slash_")) {
+    return ["slash", "attack_slash", "slash_oversize", "slashOversize", "slashoversize"];
+  }
+
   // Movement
   if (base === "run") return ["walk", "move"];
   if (base === "walk") return ["walk", "move"];
@@ -515,7 +608,14 @@ function candidatesForHeroPhase(heroPhase: string): string[] {
 
 
 function toSheetRef(meta: WeaponPngMeta): WeaponSheetRef {
-  return { key: meta.key, frameW: meta.tile, frameH: meta.tile };
+  return {
+    key: meta.key,
+    frameW: meta.tile,
+    frameH: meta.tile,
+    totalFrames: meta.totalFrames | 0,
+    cols: meta.cols | 0,
+    rows: meta.rows | 0
+  };
 }
 
 /**
@@ -595,6 +695,8 @@ function _resolveWeaponLayerPairForModel(args: {
   const tried = new Set<string>();
 
   const animCandidates = candidatesForHeroPhase(args.heroPhase);
+  const dbg = _weaponDebugEnabled();
+  const dbgVerbose = _weaponDebugVerbose();
 
   for (const v of variantOrder) {
     const vv = String(v || "").trim();
@@ -615,16 +717,65 @@ function _resolveWeaponLayerPairForModel(args: {
         if (!leaf) continue;
         if (!leaf.bg && !leaf.fg) continue;
 
+        const bg = leaf.bg ? toSheetRef(leaf.bg) : undefined;
+        const fg = leaf.fg ? toSheetRef(leaf.fg) : undefined;
+
+        if (dbg) {
+          const sig = [
+            model,
+            args.heroPhase,
+            vv,
+            tile,
+            key,
+            bg?.key || "",
+            fg?.key || ""
+          ].join("|");
+          const bgMeta = bg?.key ? SHEET_META_BY_KEY.get(bg.key) : undefined;
+          const fgMeta = fg?.key ? SHEET_META_BY_KEY.get(fg.key) : undefined;
+          _logWeaponAtlasResolveOnce(sig, {
+            model,
+            heroPhase: args.heroPhase,
+            variant: vv,
+            anim: key,
+            tile,
+            bg: bg?.key || "",
+            bgAtlas: bgMeta?.atlasKey || "",
+            fg: fg?.key || "",
+            fgAtlas: fgMeta?.atlasKey || ""
+          });
+          if (dbgVerbose && (!bg || !fg)) {
+            _logWeaponAtlasResolveOnce(sig + ":missing", {
+              model,
+              heroPhase: args.heroPhase,
+              variant: vv,
+              anim: key,
+              tile,
+              bgFound: !!bg,
+              fgFound: !!fg
+            });
+          }
+        }
+
         return {
           tile,
           model,
           variant: vv,
           anim: key,
-          bg: leaf.bg ? toSheetRef(leaf.bg) : undefined,
-          fg: leaf.fg ? toSheetRef(leaf.fg) : undefined
+          bg,
+          fg
         };
       }
     }
+  }
+
+  if (dbg) {
+    const sig = [model, args.heroPhase, desiredVariant].join("|");
+    _logWeaponAtlasResolveOnce(sig + ":miss", {
+      model,
+      heroPhase: args.heroPhase,
+      variant: desiredVariant,
+      animCandidates
+    });
   }
 
   return null;

@@ -788,10 +788,16 @@ function _ensureHeroAnimPlayingThenPause(args: {
     const curKey = String(anims.currentAnim?.key ?? "");
     if (curKey !== args.expectedAnimKey) {
         // Force correct base animation for the current phase/dir
+        if (DEBUG_HERO_ANIM_STRENGTH_TRACE) {
+            console.log("[STR][ANIM_PLAY] expected=" + args.expectedAnimKey + " prev=" + curKey);
+        }
         try { anims.play(args.expectedAnimKey, true); } catch { /* ignore */ }
     } else {
         // If it's the right key but not actually active, re-play to restore currentAnim frames
         if (!anims.currentAnim) {
+            if (DEBUG_HERO_ANIM_STRENGTH_TRACE) {
+                console.log("[STR][ANIM_PLAY] expected=" + args.expectedAnimKey + " prev=none");
+            }
             try { anims.play(args.expectedAnimKey, true); } catch { /* ignore */ }
         }
     }
@@ -1486,6 +1492,22 @@ function _applyStrengthFrameCol(
         }
     } catch {
         sprite.setTexture(def.textureKey, frameIndex);
+    }
+    if (DEBUG_HERO_ANIM_STRENGTH_TRACE) {
+        const anims: any = (sprite as any).anims;
+        const curKey = String(anims?.currentAnim?.key ?? "");
+        const playing = anims?.isPlaying ? 1 : 0;
+        const paused = (anims?.isPaused || anims?.paused) ? 1 : 0;
+        console.log("[STR][APPLY] tag=" + tag +
+            " col=" + (col | 0) +
+            " frameIndex=" + (frameIndex ?? -1) +
+            " phase=" + (req.phase || "") +
+            " part=" + String((req as any).phasePartName || "") +
+            " actionKind=" + (req.actionKind || "") +
+            " animKey=" + animKey +
+            " curKey=" + curKey +
+            " playing=" + playing +
+            " paused=" + paused);
     }
 
     const anySprite: any = sprite as any;

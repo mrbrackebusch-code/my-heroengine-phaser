@@ -67,9 +67,12 @@ import * as heroAnimGlue from "./heroAnimGlue";
 
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
+import { queueSpritesheetOnce } from "./loaderCache";
+import { resolveWeaponLayerPair, weaponModeForHeroPhase } from "./weaponAtlas";
 import * as effectAnimGlue from "./effectAnimGlue";
 import type { EffectAtlas } from "./effectAtlas";
-import { listWeaponVariants } from "./weaponAtlas";
+import { listWeaponVariants, ensureWeaponSheetsLoaded, resolveWeaponSheet } from "./weaponAtlas";
+import type { WeaponSheetRef } from "./weaponAtlas";
 import {
     DECOR_ENABLED,
     DECOR_DEBUG,
@@ -140,6 +143,10 @@ import {
     DEBUG_SPRITE_PIXELS_ALL,
     DEBUG_SPRITE_SYNC,
     DEBUG_WEAPON_SYNC,
+    DEBUG_WEAPON_TICK,
+    DEBUG_WEAPON_ATLAS_COMPARE,
+    DEBUG_LAYER_SNAPSHOT,
+    DEBUG_LAYER_SNAPSHOT_RENDER,
     DEBUG_WRAP_TEX,
     FORCE_PROP_PREBAKED_OUTLINE,
     MAX_OVERLAP_DEBUG_LOGS,
@@ -1080,12 +1087,18 @@ const WPN_AIM_GHOST_OFFSET_PX = 6;
 const STAFF_CAST_DEFAULT_CLIP_LEN = 7;
 const STAFF_CAST_RETURN_FRAMES = 2;
 const STAFF_CAST_X_OFF_PX = 14;
+const STAFF_CAST_X_OFF_PX_BY_DIR: Record<string, number> = {
+    up: STAFF_CAST_X_OFF_PX,
+    down: STAFF_CAST_X_OFF_PX + 15,
+    left: STAFF_CAST_X_OFF_PX + 12,
+    right: STAFF_CAST_X_OFF_PX + 15
+};
 const STAFF_CAST_BASE_Y_OFF_PX = -4;
 const STAFF_CAST_HOVER_AMP_PX = 2;
 const STAFF_CAST_HOVER_PERIOD_MS = 500;
 const STAFF_CAST_FRAME_COL_BY_ID: Record<string, number> = {
     gnarled: 0,
-    simple: 0,
+    simple: 6,
     loop: 0,
     diamond: 0,
     s: 0,
@@ -2071,17 +2084,57 @@ function _intProj_logCreateOnce(anyNative: any, s: any, heroIndex: number, nativ
     }
 }
 
+function _intProj_resolveCrystalSheet(variant?: string): WeaponSheetRef | null {
+    const desiredVariant = String(variant ?? "base").trim() || "base";
+    return resolveWeaponSheet({
+        weaponId: "crystal",
+        mode: "normal",
+        heroPhase: "thrust",
+        variant: desiredVariant
+    });
+}
+
 function _intProj_applyTexturePickFrameOrHide(args: {
     sc: any;
     anyNative: any;
     s: any;
     heroIndex: number;
     spr: Phaser.GameObjects.Sprite;
-    texKey: string;
+    weaponId: string;
+    variant: string;
+    sheet: WeaponSheetRef | null;
 }): number {
-    const { sc, anyNative, s, heroIndex, spr, texKey } = args;
+    const { sc, anyNative, s, heroIndex, spr, weaponId, variant, sheet } = args;
+    const texKey = sheet?.key ?? "";
 
-    const picked = _intProj_findFirstNonEmptyFrame(sc, texKey, 128);
+    if (!texKey) {
+        try { spr.setVisible(false); } catch { }
+        if (!anyNative.__intProjLoggedNoSheet) {
+            anyNative.__intProjLoggedNoSheet = true;
+            console.log("[INTPROJ][FAIL] no weapon sheet resolved",
+                "| s.id", s?.id,
+                "| heroIndex", heroIndex,
+                "| weaponId", weaponId,
+                "| variant", variant
+            );
+        }
+        return -1;
+    }
+
+    const textures: any = sc?.textures;
+    if (textures && typeof textures.exists === "function" && !textures.exists(texKey)) {
+        if (!anyNative.__intProjWeaponLoadRequested) {
+            anyNative.__intProjWeaponLoadRequested = true;
+            try { ensureWeaponSheetsLoaded(sc, weaponId, variant); } catch { }
+        }
+        try { spr.setVisible(false); } catch { }
+        return -1;
+    }
+
+    const scanMax = (sheet?.cols ?? 0) > 0 && (sheet?.rows ?? 0) > 0
+        ? ((sheet!.cols as number) * (sheet!.rows as number))
+        : 128;
+    const picked = _intProj_findFirstNonEmptyFrame(sc, texKey, scanMax);
     if (picked >= 0) {
         // Only apply texture/frame if it actually changed.
         if (anyNative.__intProjAppliedTexKey !== texKey || anyNative.__intProjAppliedFrame !== picked) {
@@ -2268,6 +2321,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
 
     const heroIndex = (dataAny[PROJ_HERO_INDEX_KEY] as any | 0);
     const weaponId = "crystal";
+    const weaponVariant = "base";
 
     // --------------------------------------------------
     // Create / reuse overlay sprite
@@ -2285,7 +2339,7 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     // --------------------------------------------------
     // Resolve texture + pick a non-empty frame (cached)
     // --------------------------------------------------
-    const texKey = "t192__magic__crystal__thrust__fg__vbase";
+    const sheet = _intProj_resolveCrystalSheet(weaponVariant);
 
     const picked = _intProj_applyTexturePickFrameOrHide({
         sc,
@@ -2293,8 +2347,12 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
         s,
         heroIndex,
         spr,
-        texKey
+        weaponId,
+        variant: weaponVariant,
+        sheet
     });
+
+    const texKey = sheet?.key ?? "";
 
     if (picked < 0) {
         try { anyNative.__intProjCrystalHalo?.setVisible?.(false); } catch { }
@@ -5500,6 +5558,10 @@ function _attachEnsureIntellectProjectileVisual(ctx: AttachContext): void {
     if (!modelRaw) return;
 
     const modelLower = modelRaw.toLowerCase();
+
+    // Crystal projectiles are now handled by the dedicated intellect overlay path.
+    // Avoid spawning a second Phaser visual here (it causes duplicate crystals).
+    if (modelLower === "crystal") return;
 
     // One-time: dump texture keys that look relevant (helps confirm what Phaser loaded)
     if (!__projVisualLoggedTextureKeysOnce) {
@@ -8713,10 +8775,10 @@ function _ensureWeaponOverlaysForHeroNative(
     } catch { /* ignore */ }
 
     // Defensive defaults (per-tick sync will override, but creation-time matters).
-    try { (weaponBg as any).setDepth?.(((nativeHero as any).depth ?? 0) - 1); } catch { }
-    try { (weaponFg as any).setDepth?.(((nativeHero as any).depth ?? 0) + 1); } catch { }
-    for (const g of ghostsBg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
-    for (const g of ghostsFg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
+    try { (weaponBg as any).setDepth?.(((nativeHero as any).depth ?? 0) - 2); } catch { }
+    try { (weaponFg as any).setDepth?.(((nativeHero as any).depth ?? 0) + 2); } catch { }
+    for (const g of ghostsBg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 3); } catch { }
+    for (const g of ghostsFg) try { (g as any).setDepth?.(((nativeHero as any).depth ?? 0) - 3); } catch { }
 
     // Hidden until Step 6 chooses to show them.
     try { weaponBg.setVisible(false); } catch { /* ignore */ }
@@ -8945,6 +9007,683 @@ function _fmtWpnFrameResultLine(args: {
 const WPN_TICK_LOG_MIN_MS = 250; // tweak: 100/250/500
 const WPN_TICK_LOG_KEY_LAST_MS = "__wpnTickLastMs";
 const WPN_TICK_LOG_KEY_LAST_SIG = "__wpnTickLastSig";
+const LAYER_SNAPSHOT_LAST_SIG_KEY = "__layerSnapLastSig";
+const LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY = "__layerSnapRenderLastSig";
+const LAYER_SNAPSHOT_RADIUS_PX = 72;
+const LAYER_SNAPSHOT_MAX_ITEMS = 30;
+const LAYER_SNAPSHOT_MAX_FOCUS = 12;
+const LAYER_SNAPSHOT_ALPHA_CACHE = new Map<string, number>();
+const LAYER_SNAPSHOT_FRAME_CACHE = new Map<string, { w: number; h: number; data: Uint8ClampedArray }>();
+const LAYER_SNAPSHOT_TIP_CACHE = new Map<string, { px: number; py: number; a: number; score: number }>();
+const LAYER_SNAPSHOT_HASH_CACHE = new Map<string, number>();
+let _layerSnapRenderReqId = 0;
+
+// Legacy weapon PNGs (for compare/debug): map relative path -> URL
+const LEGACY_WEAPON_PNGS = import.meta.glob("../assets/weapons/**/*.png", {
+    as: "url",
+    eager: true
+}) as Record<string, string>;
+
+function _dbgLayerSnapshotAlphaCount(obj: any): number {
+    try {
+        if (!obj || !obj.frame) return 0;
+        const texKey = String(obj.texture?.key ?? "");
+        const frameKey = String(obj.frame?.name ?? obj.frame?.index ?? 0);
+        if (!texKey) return 0;
+
+        const cacheKey = texKey + "::" + frameKey;
+        const cached = LAYER_SNAPSHOT_ALPHA_CACHE.get(cacheKey);
+        if (cached !== undefined) return cached;
+
+        const fr: any = obj.frame;
+        const srcImg =
+            fr?.source?.image ||
+            fr?.texture?.source?.[0]?.image ||
+            fr?.texture?.source?.[0]?.source ||
+            obj.texture?.source?.[0]?.image ||
+            obj.texture?.source?.[0]?.source;
+        if (!srcImg) {
+            LAYER_SNAPSHOT_ALPHA_CACHE.set(cacheKey, 0);
+            return 0;
+        }
+
+        const sw = (fr.cutWidth ?? fr.width ?? fr.realWidth ?? 0) | 0;
+        const sh = (fr.cutHeight ?? fr.height ?? fr.realHeight ?? 0) | 0;
+        const sx = (fr.cutX ?? fr.x ?? 0) | 0;
+        const sy = (fr.cutY ?? fr.y ?? 0) | 0;
+        if (sw <= 0 || sh <= 0) {
+            LAYER_SNAPSHOT_ALPHA_CACHE.set(cacheKey, 0);
+            return 0;
+        }
+
+        const g: any = globalThis as any;
+        const doc: any = g.document as any;
+        if (!doc || typeof doc.createElement !== "function") {
+            LAYER_SNAPSHOT_ALPHA_CACHE.set(cacheKey, 0);
+            return 0;
+        }
+
+        let canvas: any = g.__layerSnapScanCanvas || null;
+        if (!canvas) {
+            canvas = doc.createElement("canvas");
+            g.__layerSnapScanCanvas = canvas;
+        }
+        canvas.width = sw;
+        canvas.height = sh;
+
+        const ctx2d: any = canvas.getContext?.("2d", { willReadFrequently: true } as any);
+        if (!ctx2d) {
+            LAYER_SNAPSHOT_ALPHA_CACHE.set(cacheKey, 0);
+            return 0;
+        }
+
+        ctx2d.clearRect(0, 0, sw, sh);
+        ctx2d.drawImage(srcImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        const imgData = ctx2d.getImageData(0, 0, sw, sh);
+        const data = imgData.data;
+        let alphaCount = 0;
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] > 0) alphaCount++;
+        }
+
+        LAYER_SNAPSHOT_ALPHA_CACHE.set(cacheKey, alphaCount);
+        return alphaCount;
+    } catch {
+        return 0;
+    }
+}
+
+function _dbgLayerSnapshotFrameData(
+    obj: any
+): { w: number; h: number; data: Uint8ClampedArray } | null {
+    try {
+        if (!obj || !obj.frame) return null;
+        const texKey = String(obj.texture?.key ?? "");
+        const frameKey = String(obj.frame?.name ?? obj.frame?.index ?? 0);
+        if (!texKey) return null;
+
+        const cacheKey = texKey + "::" + frameKey;
+        const cached = LAYER_SNAPSHOT_FRAME_CACHE.get(cacheKey);
+        if (cached) return cached;
+
+        const fr: any = obj.frame;
+        const srcImg =
+            fr?.source?.image ||
+            fr?.texture?.source?.[0]?.image ||
+            fr?.texture?.source?.[0]?.source ||
+            obj.texture?.source?.[0]?.image ||
+            obj.texture?.source?.[0]?.source;
+        if (!srcImg) return null;
+
+        const sw = (fr.cutWidth ?? fr.width ?? fr.realWidth ?? 0) | 0;
+        const sh = (fr.cutHeight ?? fr.height ?? fr.realHeight ?? 0) | 0;
+        const sx = (fr.cutX ?? fr.x ?? 0) | 0;
+        const sy = (fr.cutY ?? fr.y ?? 0) | 0;
+        if (sw <= 0 || sh <= 0) return null;
+
+        const g: any = globalThis as any;
+        const doc: any = g.document as any;
+        if (!doc || typeof doc.createElement !== "function") return null;
+
+        let canvas: any = g.__layerSnapScanCanvas || null;
+        if (!canvas) {
+            canvas = doc.createElement("canvas");
+            g.__layerSnapScanCanvas = canvas;
+        }
+        canvas.width = sw;
+        canvas.height = sh;
+
+        const ctx2d: any = canvas.getContext?.("2d", { willReadFrequently: true } as any);
+        if (!ctx2d) return null;
+
+        ctx2d.clearRect(0, 0, sw, sh);
+        ctx2d.drawImage(srcImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        const imgData = ctx2d.getImageData(0, 0, sw, sh);
+        const data = new Uint8ClampedArray(imgData.data);
+        const entry = { w: sw, h: sh, data };
+        LAYER_SNAPSHOT_FRAME_CACHE.set(cacheKey, entry);
+        return entry;
+    } catch {
+        return null;
+    }
+}
+
+function _dbgLayerSnapshotFrameHash(obj: any): number {
+    try {
+        if (!obj || !obj.frame) return 0;
+        const texKey = String(obj.texture?.key ?? "");
+        const frameKey = String(obj.frame?.name ?? obj.frame?.index ?? 0);
+        if (!texKey) return 0;
+        const cacheKey = texKey + "::" + frameKey;
+        const cached = LAYER_SNAPSHOT_HASH_CACHE.get(cacheKey);
+        if (cached !== undefined) return cached;
+        const frameData = _dbgLayerSnapshotFrameData(obj);
+        if (!frameData) {
+            LAYER_SNAPSHOT_HASH_CACHE.set(cacheKey, 0);
+            return 0;
+        }
+        const data = frameData.data;
+        let hash = 2166136261 >>> 0;
+        for (let i = 0; i < data.length; i++) {
+            hash ^= data[i];
+            hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        LAYER_SNAPSHOT_HASH_CACHE.set(cacheKey, hash >>> 0);
+        return hash >>> 0;
+    } catch {
+        return 0;
+    }
+}
+
+function _dbgLayerSnapshotSampleAlphaAt(
+    obj: any,
+    worldX: number,
+    worldY: number
+): { a: number; px: number; py: number } {
+    const frameData = _dbgLayerSnapshotFrameData(obj);
+    if (!frameData) return { a: -1, px: -1, py: -1 };
+    const mat: any = obj.getWorldTransformMatrix?.();
+    if (!mat || typeof mat.applyInverse !== "function") return { a: -1, px: -1, py: -1 };
+    const tmp: any = (globalThis as any).__layerSnapTmpVec || { x: 0, y: 0 };
+    (globalThis as any).__layerSnapTmpVec = tmp;
+    mat.applyInverse(worldX, worldY, tmp);
+    const ox = (obj.displayOriginX ?? 0) as number;
+    const oy = (obj.displayOriginY ?? 0) as number;
+    const px = Math.floor(tmp.x + ox);
+    const py = Math.floor(tmp.y + oy);
+    if (px < 0 || py < 0 || px >= frameData.w || py >= frameData.h) {
+        return { a: -1, px, py };
+    }
+    const idx = (py * frameData.w + px) * 4 + 3;
+    const a = frameData.data[idx] ?? 0;
+    return { a, px, py };
+}
+
+function _dbgLayerSnapshotWorldCorners(
+    obj: any,
+    frameW: number,
+    frameH: number
+): Array<{ wx: number; wy: number; lx: number; ly: number }> {
+    const mat: any = obj.getWorldTransformMatrix?.();
+    if (!mat || typeof mat.transformPoint !== "function") return [];
+    const ox = (obj.displayOriginX ?? 0) as number;
+    const oy = (obj.displayOriginY ?? 0) as number;
+    const locals = [
+        { lx: -ox, ly: -oy },
+        { lx: frameW - ox, ly: -oy },
+        { lx: frameW - ox, ly: frameH - oy },
+        { lx: -ox, ly: frameH - oy }
+    ];
+    return locals.map((p) => {
+        const out = mat.transformPoint(p.lx, p.ly, { x: 0, y: 0 });
+        return { wx: out.x, wy: out.y, lx: p.lx, ly: p.ly };
+    });
+}
+
+function _dbgLayerSnapshotDirVec(dir: string): { dx: number; dy: number; key: string } | null {
+    const raw = String(dir || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (!raw) return null;
+    if (raw === "up") return { dx: 0, dy: -1, key: "up" };
+    if (raw === "down") return { dx: 0, dy: 1, key: "down" };
+    if (raw === "left") return { dx: -1, dy: 0, key: "left" };
+    if (raw === "right") return { dx: 1, dy: 0, key: "right" };
+    if (raw === "upleft" || raw === "leftup") return { dx: -0.7071, dy: -0.7071, key: "upleft" };
+    if (raw === "upright" || raw === "rightup") return { dx: 0.7071, dy: -0.7071, key: "upright" };
+    if (raw === "downleft" || raw === "leftdown") return { dx: -0.7071, dy: 0.7071, key: "downleft" };
+    if (raw === "downright" || raw === "rightdown") return { dx: 0.7071, dy: 0.7071, key: "downright" };
+    return null;
+}
+
+function _dbgLayerSnapshotWorldToScreen(scene: Phaser.Scene, worldX: number, worldY: number): any {
+    try {
+        const cam: any = scene.cameras?.main ?? null;
+        if (!cam) return null;
+        const wv: any = cam.worldView ?? null;
+        const zoom = (typeof cam.zoom === "number") ? cam.zoom : 1;
+        const cx = (typeof cam.x === "number") ? cam.x : 0;
+        const cy = (typeof cam.y === "number") ? cam.y : 0;
+        const wx = (wv && typeof wv.x === "number") ? wv.x : (cam.scrollX ?? 0);
+        const wy = (wv && typeof wv.y === "number") ? wv.y : (cam.scrollY ?? 0);
+        const sx = Math.round((worldX - wx) * zoom + cx);
+        const sy = Math.round((worldY - wy) * zoom + cy);
+        const on = (wv && typeof wv.contains === "function") ? !!wv.contains(worldX, worldY) : null;
+        return {
+            screen: { x: sx, y: sy },
+            on,
+            zoom,
+            scroll: { x: cam.scrollX ?? null, y: cam.scrollY ?? null },
+            worldView: wv ? { x: wv.x, y: wv.y, w: wv.width, h: wv.height } : null,
+            cam: { x: cx, y: cy, w: cam.width ?? null, h: cam.height ?? null }
+        };
+    } catch {
+        return null;
+    }
+}
+
+function _dbgLayerSnapshotRenderPixel(
+    scene: Phaser.Scene,
+    label: string,
+    who: string,
+    worldX: number,
+    worldY: number,
+    meta: { heroFrame: number; wpnFrame: number; tex: string }
+): void {
+    try {
+        const renderer: any = (scene as any)?.sys?.game?.renderer ?? null;
+        if (!renderer) return;
+        const map = _dbgLayerSnapshotWorldToScreen(scene, worldX, worldY);
+        if (!map || !map.screen) return;
+        const sx = map.screen.x | 0;
+        const sy = map.screen.y | 0;
+        const rw = (renderer.width ?? renderer.canvas?.width ?? scene.scale?.width ?? 0) | 0;
+        const rh = (renderer.height ?? renderer.canvas?.height ?? scene.scale?.height ?? 0) | 0;
+        if (rw <= 0 || rh <= 0) return;
+        if (sx < 0 || sy < 0 || sx >= rw || sy >= rh) {
+            const mapZoom = map?.zoom ?? null;
+            const mapScrollX = map?.scroll?.x ?? null;
+            const mapScrollY = map?.scroll?.y ?? null;
+            const mapCamX = map?.cam?.x ?? null;
+            const mapCamY = map?.cam?.y ?? null;
+            console.log(
+                `[LAYER][SNAP][RENDER-SKIP] ` +
+                `label=${label} who=${who} world=${Math.round(worldX)},${Math.round(worldY)} ` +
+                `screen=${sx},${sy} reason=offscreen ` +
+                `zoom=${mapZoom ?? "?"} scroll=${mapScrollX ?? "?"},${mapScrollY ?? "?"} ` +
+                `cam=${mapCamX ?? "?"},${mapCamY ?? "?"}`
+            );
+            return;
+        }
+        const reqId = (++_layerSnapRenderReqId) | 0;
+        const mapZoom = map?.zoom ?? null;
+        const mapScrollX = map?.scroll?.x ?? null;
+        const mapScrollY = map?.scroll?.y ?? null;
+        const mapCamX = map?.cam?.x ?? null;
+        const mapCamY = map?.cam?.y ?? null;
+        console.log(
+            `[LAYER][SNAP][RENDER-REQ] ` +
+            `id=${reqId} label=${label} who=${who} ` +
+            `world=${Math.round(worldX)},${Math.round(worldY)} ` +
+            `screen=${sx},${sy} ` +
+            `heroFrame=${meta.heroFrame ?? -1} wpnFrame=${meta.wpnFrame ?? -1} tex=${meta.tex ?? ""} ` +
+            `zoom=${mapZoom ?? "?"} scroll=${mapScrollX ?? "?"},${mapScrollY ?? "?"} ` +
+            `cam=${mapCamX ?? "?"},${mapCamY ?? "?"}`
+        );
+
+        if (typeof renderer.snapshotPixel === "function") {
+            renderer.snapshotPixel(sx, sy, (color: any) => {
+                const r = (color?.r ?? color?.red ?? 0) | 0;
+                const g = (color?.g ?? color?.green ?? 0) | 0;
+                const b = (color?.b ?? color?.blue ?? 0) | 0;
+                const a = (color?.a ?? color?.alpha ?? 255) | 0;
+                const hex = "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+                console.log(
+                    `[LAYER][SNAP][RENDER] ` +
+                    `id=${reqId} label=${label} who=${who} ` +
+                    `screen=${sx},${sy} rgba=${r},${g},${b},${a} hex=${hex}`
+                );
+            });
+            return;
+        }
+
+        if (typeof renderer.snapshotArea === "function") {
+            renderer.snapshotArea(sx, sy, 1, 1, (image: any) => {
+                try {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) return;
+                    ctx.drawImage(image, 0, 0);
+                    const data = ctx.getImageData(0, 0, 1, 1).data;
+                    const r = data[0] | 0;
+                    const g = data[1] | 0;
+                    const b = data[2] | 0;
+                    const a = data[3] | 0;
+                    const hex = "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+                    console.log(
+                        `[LAYER][SNAP][RENDER] ` +
+                        `id=${reqId} label=${label} who=${who} ` +
+                        `screen=${sx},${sy} rgba=${r},${g},${b},${a} hex=${hex}`
+                    );
+                } catch {
+                    console.log(
+                        `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} error=snapshotAreaParseFail`
+                    );
+                }
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+function _dbgLayerSnapshotFindTip(
+    obj: any,
+    dir: { dx: number; dy: number; key: string }
+): { px: number; py: number; a: number; score: number } | null {
+    const frameData = _dbgLayerSnapshotFrameData(obj);
+    if (!frameData) return null;
+    const texKey = String(obj.texture?.key ?? "");
+    const frameKey = String(obj.frame?.name ?? obj.frame?.index ?? 0);
+    const cacheKey = `${texKey}::${frameKey}::${dir.key}`;
+    const cached = LAYER_SNAPSHOT_TIP_CACHE.get(cacheKey);
+    if (cached) return cached;
+
+    const ox = (obj.displayOriginX ?? (frameData.w / 2)) as number;
+    const oy = (obj.displayOriginY ?? (frameData.h / 2)) as number;
+    let bestScore = -Infinity;
+    let bestX = -1;
+    let bestY = -1;
+    let bestA = 0;
+    const data = frameData.data;
+    for (let y = 0; y < frameData.h; y++) {
+        for (let x = 0; x < frameData.w; x++) {
+            const idx = (y * frameData.w + x) * 4 + 3;
+            const a = data[idx];
+            if (a <= 0) continue;
+            const score = (x - ox) * dir.dx + (y - oy) * dir.dy;
+            if (score > bestScore) {
+                bestScore = score;
+                bestX = x;
+                bestY = y;
+                bestA = a;
+            }
+        }
+    }
+    if (bestX < 0 || bestY < 0) return null;
+    const res = { px: bestX, py: bestY, a: bestA, score: bestScore };
+    LAYER_SNAPSHOT_TIP_CACHE.set(cacheKey, res);
+    return res;
+}
+
+function _dbgLayerSnapshot(
+    sc: any,
+    nativeHero: Phaser.GameObjects.Sprite,
+    label: string,
+    centerX: number,
+    centerY: number,
+    radiusPx: number,
+    focusKeys: string[],
+    ctx?: { renderDir?: string; expectedRow?: number }
+): void {
+    if (!DEBUG_LAYER_SNAPSHOT) return;
+    if (!sc || !nativeHero) return;
+    const list: any[] = (sc.children && typeof sc.children.getChildren === "function")
+        ? (sc.children.getChildren() as any[])
+        : ((sc.children && sc.children.list) ? sc.children.list : []);
+    if (!list || !list.length) return;
+
+    const rect = {
+        x: (centerX | 0) - (radiusPx | 0),
+        y: (centerY | 0) - (radiusPx | 0),
+        w: (radiusPx | 0) * 2,
+        h: (radiusPx | 0) * 2
+    };
+
+    const items: any[] = [];
+    for (let i = 0; i < list.length; i++) {
+        const obj: any = list[i];
+        if (!obj) continue;
+        if (typeof obj.getBounds !== "function") continue;
+        const b = obj.getBounds();
+        if (!b) continue;
+        const intersects =
+            b.x < rect.x + rect.w &&
+            b.x + b.width > rect.x &&
+            b.y < rect.y + rect.h &&
+            b.y + b.height > rect.y;
+        if (!intersects) continue;
+        const texKey = String(obj.texture?.key ?? "");
+        const frame = obj.frame?.name ?? obj.frame?.index ?? 0;
+        let frameIndex = -1;
+        if (typeof obj.frame?.index === "number" && Number.isFinite(obj.frame.index)) {
+            frameIndex = obj.frame.index | 0;
+        } else if (typeof frame === "number" && Number.isFinite(frame)) {
+            frameIndex = frame | 0;
+        } else if (typeof frame === "string" && /^[0-9]+$/.test(frame)) {
+            frameIndex = parseInt(frame, 10) | 0;
+        }
+        const frAny: any = obj.frame ?? null;
+        const fw = (frAny?.cutWidth ?? frAny?.width ?? frAny?.realWidth ?? 0) | 0;
+        const fh = (frAny?.cutHeight ?? frAny?.height ?? frAny?.realHeight ?? 0) | 0;
+        const baseFrame: any = obj.texture?.frames?.__BASE ?? obj.texture?.frames?.["__BASE"] ?? null;
+        const sheetW = (baseFrame?.width ?? baseFrame?.realWidth ?? obj.texture?.source?.[0]?.width ?? 0) | 0;
+        const cols = (fw > 0 && sheetW > 0) ? Math.max(1, Math.floor(sheetW / fw)) : 0;
+        const rows = (fh > 0 && sheetW > 0 && fw > 0)
+            ? Math.max(1, Math.floor((obj.texture?.source?.[0]?.height ?? 0) / fh))
+            : 0;
+        const row = (cols > 0 && frameIndex >= 0) ? Math.floor(frameIndex / cols) : -1;
+        const col = (cols > 0 && frameIndex >= 0) ? (frameIndex % cols) : -1;
+        const relIndex = (row >= 0 && col >= 0 && cols > 0) ? ((row * cols + col) | 0) : frameIndex;
+        items.push({
+            i,
+            depth: (obj.depth ?? 0),
+            vis: !!obj.visible,
+            alpha: typeof obj.alpha === "number" ? Number(obj.alpha.toFixed(2)) : 1,
+            tex: texKey,
+            frame,
+            idx: frameIndex,
+            row,
+            col,
+            rel: relIndex,
+            cols,
+            rows,
+            nz: _dbgLayerSnapshotAlphaCount(obj),
+            x: Math.round(obj.x ?? 0),
+            y: Math.round(obj.y ?? 0),
+            name: String(obj.name ?? ""),
+            obj
+        });
+    }
+
+    items.sort((a, b) => (a.depth - b.depth) || (a.i - b.i));
+    const heroDepth = (nativeHero as any).depth ?? 0;
+    const focusSet = (focusKeys || []).map((k) => String(k || "")).filter(Boolean);
+    const focus = items.filter((it) => {
+        if (!focusSet.length) return Math.abs((it.depth | 0) - (heroDepth | 0)) <= 3;
+        return focusSet.some((k) => it.tex === k || it.tex.includes(k));
+    });
+    const focusTrim = focus.slice(0, Math.max(1, LAYER_SNAPSHOT_MAX_FOCUS));
+    const trimmed = items.filter((it) => Math.abs((it.depth | 0) - (heroDepth | 0)) <= 5)
+        .slice(0, Math.max(1, LAYER_SNAPSHOT_MAX_ITEMS));
+
+    const renderDir = String(ctx?.renderDir ?? "");
+    const expectedRow = (typeof ctx?.expectedRow === "number") ? (ctx!.expectedRow | 0) : -1;
+    const header =
+        `[LAYER][SNAP] label=${label} center=${Math.round(centerX)},${Math.round(centerY)} ` +
+        `r=${radiusPx | 0} count=${items.length} heroDepth=${heroDepth | 0}` +
+        (renderDir ? ` dir=${renderDir}` : "") +
+        (expectedRow >= 0 ? ` expRow=${expectedRow}` : "");
+    console.log(header);
+
+    const fmtItem = (it: any): string => {
+        const tex = it.tex || "-";
+        const rc = (it.row >= 0 && it.col >= 0) ? `${it.row},${it.col}` : "-,-";
+        const abs = (typeof it.idx === "number") ? it.idx : -1;
+        const rel = (typeof it.rel === "number") ? it.rel : -1;
+        const dx = (typeof it.x === "number") ? ((it.x | 0) - (centerX | 0)) : 0;
+        const dy = (typeof it.y === "number") ? ((it.y | 0) - (centerY | 0)) : 0;
+        const rowOk = (expectedRow >= 0 && it.row >= 0) ? (it.row === expectedRow ? 1 : 0) : -1;
+        const hash = _dbgLayerSnapshotFrameHash(it.obj);
+        const hashHex = hash ? hash.toString(16).padStart(8, "0") : "00000000";
+        return `d=${it.depth} v=${it.vis ? 1 : 0} a=${it.alpha} nz=${it.nz | 0} ` +
+            `abs=${abs} rel=${rel} rc=${rc} rows=${it.rows | 0} cols=${it.cols | 0} rowOk=${rowOk} ` +
+            `hash=${hashHex} ` +
+            `dx=${dx} dy=${dy} tex=${tex} f=${it.frame} x=${it.x} y=${it.y}`;
+    };
+
+    const logLines = (tag: string, arr: any[]): void => {
+        if (!arr.length) return;
+        const perLine = 6;
+        for (let i = 0; i < arr.length; i += perLine) {
+            const line = arr.slice(i, i + perLine).map(fmtItem).join(" | ");
+            console.log(`${tag} ${line}`);
+        }
+    };
+
+    logLines("[LAYER][SNAP][FOCUS]", focusTrim);
+    logLines("[LAYER][SNAP][ITEMS]", trimmed);
+
+    const heroKey = String(focusKeys?.[0] ?? "");
+    const bgKey = String(focusKeys?.[1] ?? "");
+    const fgKey = String(focusKeys?.[2] ?? "");
+    const findByTex = (key: string) => key ? items.find((it) => it.tex === key) : undefined;
+    const heroIt = findByTex(heroKey);
+    const bgIt = findByTex(bgKey);
+    const fgIt = findByTex(fgKey);
+    const orderIndex = (key: string) => key ? items.findIndex((it) => it.tex === key) : -1;
+    const heroOrd = orderIndex(heroKey);
+    const bgOrd = orderIndex(bgKey);
+    const fgOrd = orderIndex(fgKey);
+    if (heroIt || bgIt || fgIt) {
+        const fmt = (label: string, it: any, ord: number) => {
+            if (!it) return `${label}=none`;
+            return `${label}=d${it.depth}/i${it.i}/o${ord}/v${it.vis ? 1 : 0}/nz${it.nz ?? 0}`;
+        };
+        console.log(
+            "[LAYER][SNAP][ORDER]",
+            fmt("hero", heroIt, heroOrd),
+            fmt("bg", bgIt, bgOrd),
+            fmt("fg", fgIt, fgOrd)
+        );
+    }
+
+    const logCorners = (label: string, it: any): void => {
+        if (!it || !it.obj) return;
+        const obj = it.obj;
+        const fr: any = obj.frame ?? null;
+        const fw = (fr?.cutWidth ?? fr?.width ?? fr?.realWidth ?? 0) | 0;
+        const fh = (fr?.cutHeight ?? fr?.height ?? fr?.realHeight ?? 0) | 0;
+        if (fw <= 0 || fh <= 0) return;
+        const corners = _dbgLayerSnapshotWorldCorners(obj, fw, fh);
+        if (!corners.length) return;
+        const rotDeg = (typeof obj.rotation === "number")
+            ? Math.round((obj.rotation * 180 / Math.PI) * 10) / 10
+            : 0;
+        const scaleX = (typeof obj.scaleX === "number") ? Number(obj.scaleX.toFixed(3)) : 1;
+        const scaleY = (typeof obj.scaleY === "number") ? Number(obj.scaleY.toFixed(3)) : 1;
+        console.log(
+            `[LAYER][SNAP][CORNERS] who=${label} rotDeg=${rotDeg} ` +
+            `scale=${scaleX},${scaleY} origin=${Math.round(obj.displayOriginX ?? 0)},${Math.round(obj.displayOriginY ?? 0)}`
+        );
+        for (let i = 0; i < corners.length; i++) {
+            const c = corners[i];
+            const heroS = _dbgLayerSnapshotSampleAlphaAt(nativeHero, c.wx, c.wy);
+            const wpnS = _dbgLayerSnapshotSampleAlphaAt(obj, c.wx, c.wy);
+            const heroHit = heroS.a > 0 ? 1 : 0;
+            const wpnHit = wpnS.a > 0 ? 1 : 0;
+            console.log(
+                `[LAYER][SNAP][CORNER] who=${label} idx=${i} ` +
+                `wx=${Math.round(c.wx)} wy=${Math.round(c.wy)} ` +
+                `heroA=${heroS.a} heroPx=${heroS.px},${heroS.py} heroHit=${heroHit} ` +
+                `wpnA=${wpnS.a} wpnPx=${wpnS.px},${wpnS.py} wpnHit=${wpnHit}`
+            );
+        }
+    };
+
+    logCorners("bg", bgIt);
+    logCorners("fg", fgIt);
+
+    const dirVec = _dbgLayerSnapshotDirVec(renderDir);
+    const logTip = (label: string, it: any): void => {
+        if (!it || !it.obj || !dirVec) return;
+        const obj = it.obj;
+        const tip = _dbgLayerSnapshotFindTip(obj, dirVec);
+        if (!tip) return;
+        const mat: any = obj.getWorldTransformMatrix?.();
+        if (!mat || typeof mat.transformPoint !== "function") return;
+        const ox = (obj.displayOriginX ?? 0) as number;
+        const oy = (obj.displayOriginY ?? 0) as number;
+        const localX = tip.px - ox;
+        const localY = tip.py - oy;
+        const out = mat.transformPoint(localX, localY, { x: 0, y: 0 });
+        const heroS = _dbgLayerSnapshotSampleAlphaAt(nativeHero, out.x, out.y);
+        const wpnS = _dbgLayerSnapshotSampleAlphaAt(obj, out.x, out.y);
+        const heroDepthNow = (nativeHero as any).depth ?? 0;
+        const wpnDepthNow = (obj.depth ?? 0);
+        const above = wpnDepthNow > heroDepthNow ? 1 : (wpnDepthNow < heroDepthNow ? -1 : 0);
+        console.log(
+            `[LAYER][SNAP][TIP] who=${label} dir=${dirVec.key} ` +
+            `tipPx=${tip.px},${tip.py} tipA=${tip.a} ` +
+            `tipWorld=${Math.round(out.x)},${Math.round(out.y)} ` +
+            `heroA=${heroS.a} heroHit=${heroS.a > 0 ? 1 : 0} ` +
+            `wpnA=${wpnS.a} wpnHit=${wpnS.a > 0 ? 1 : 0} ` +
+            `depthHero=${heroDepthNow} depthWpn=${wpnDepthNow} above=${above}`
+        );
+
+        if (DEBUG_LAYER_SNAPSHOT_RENDER) {
+            try {
+                const sig = `${label}|${it.tex}|${it.idx}|${Math.round(out.x)}|${Math.round(out.y)}`;
+                const lastSig = String(nativeHero.getData(LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY) ?? "");
+                if (sig !== lastSig) {
+                    nativeHero.setData(LAYER_SNAPSHOT_RENDER_LAST_SIG_KEY, sig);
+                    _dbgLayerSnapshotRenderPixel(
+                        sc,
+                        label,
+                        label,
+                        out.x,
+                        out.y,
+                        { heroFrame: (nativeHero as any).frame?.index ?? -1, wpnFrame: it.idx ?? -1, tex: it.tex }
+                    );
+                }
+            } catch { /* ignore */ }
+        }
+    };
+
+    logTip("bg", bgIt);
+    logTip("fg", fgIt);
+}
+
+function _legacyWeaponPathForSheetKey(sheetKey: string): { url: string; key: string } | null {
+    const cleanKey = String(sheetKey || "").replace(/__dup\\d+$/i, "");
+    const parts = cleanKey.split("__").filter(Boolean);
+    if (parts.length < 6) return null;
+    const tileTag = parts[0];
+    const category = parts[1];
+    if (!tileTag || !category) return null;
+    const rel = `../assets/weapons/${tileTag}/${category}/${cleanKey}.png`;
+    const url = LEGACY_WEAPON_PNGS[rel] || "";
+    if (!url) return null;
+    return { url, key: cleanKey };
+}
+
+function _ensureLegacyWeaponSheet(
+    sc: any,
+    sheetKey: string,
+    frameW: number,
+    frameH: number
+): string | null {
+    const info = _legacyWeaponPathForSheetKey(sheetKey);
+    if (!info) return null;
+    const legacyKey = `legacy__${info.key}`;
+    const textures: any = sc?.textures;
+    if (textures && typeof textures.exists === "function" && textures.exists(legacyKey)) return legacyKey;
+    const queued = queueSpritesheetOnce(sc, legacyKey, info.url, frameW, frameH);
+    if (queued) {
+        try {
+            const logSet: Set<string> = (globalThis as any).__legacyWpnLoadLogSet || new Set();
+            (globalThis as any).__legacyWpnLoadLogSet = logSet;
+            if (!logSet.has(legacyKey)) {
+                logSet.add(legacyKey);
+                const loader: any = sc?.load;
+                if (loader && typeof loader.once === "function") {
+                    loader.once(`filecomplete-spritesheet-${legacyKey}`, () => {
+                        console.log("[WPN-COMPARE]", { event: "legacy_loaded", legacyKey, url: info.url });
+                    });
+                    loader.once("loaderror", (file: any) => {
+                        if (file && file.key === legacyKey) {
+                            console.log("[WPN-COMPARE]", { event: "legacy_load_error", legacyKey, url: info.url });
+                        }
+                    });
+                }
+            }
+        } catch { /* ignore */ }
+        try {
+            const loader: any = sc?.load;
+            if (loader && typeof loader.start === "function") loader.start();
+        } catch { /* ignore */ }
+    }
+    if (textures && typeof textures.exists === "function" && textures.exists(legacyKey)) return legacyKey;
+    return null;
+}
 
 function _shouldLogWeaponTick(nativeHero: Phaser.GameObjects.Sprite, nowMs: number, sig: string): boolean {
     const anyH: any = nativeHero as any;
@@ -9030,7 +9769,7 @@ function _wpnInferDisplayedHeroPhase(nativeHero: Phaser.GameObjects.Sprite, fall
 }
 
 function _wpnMaybeLogTick(ctx: SyncContext, s: any, nativeHero: Phaser.GameObjects.Sprite): void {
-    if (!DEBUG_WEAPON_SYNC) return;
+    if (!DEBUG_WEAPON_SYNC || !DEBUG_WEAPON_TICK) return;
 
     const dataAny: any = (s as any).data || {};
     const phaseRaw = (typeof dataAny.phase === "string" && dataAny.phase) ? dataAny.phase : "idle";
@@ -9196,7 +9935,7 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
                 staffCast = true;
                 const staffId = isIntFamily ? wInt : wSup;
                 weaponId = staffId || wCast;
-                weaponPhase = "thrust";
+                weaponPhase = "cast";
             } else {
                 weaponId = wCast;
             }
@@ -9686,8 +10425,20 @@ function _syncWeaponOverlaysForHeroNative(
     // Mirror keys for glue (unchanged)
     _wpnMirrorKeysForGlue(nativeHero, dataAny);
 
+    const _preloadHeroWeapon = (wid: string) => {
+        if (!wid) return;
+        const v = _weaponVariantForHero(heroIndex, wid);
+        try { ensureWeaponSheetsLoaded(sc, wid, v); } catch { }
+    };
+
     // Hide everything if no weapon (unchanged)
     if (!weaponId) {
+        // Preload hero loadout so the first combat frames aren't missing.
+        _preloadHeroWeapon(sel.wSlash || "");
+        _preloadHeroWeapon(sel.wThrust || "");
+        _preloadHeroWeapon(sel.wCast || "");
+        _preloadHeroWeapon(sel.wExec || "");
+        _preloadHeroWeapon(sel.wCombo || "");
         _wpnHideAllIfNoWeapon(anyHero, sc, overlays, nativeHero);
         return;
     }
@@ -9729,6 +10480,7 @@ function _syncWeaponOverlaysForHeroNative(
 
         const dir = requestedDir;
         const xSign = (dir === "down" || dir === "right") ? 1 : -1;
+        const xBase = (STAFF_CAST_X_OFF_PX_BY_DIR[dir] ?? STAFF_CAST_X_OFF_PX);
 
         const clipLenRaw = nativeHero.getData("HeroFollowClipLen");
         const frameRaw = nativeHero.getData("HeroFollowFrameInClip");
@@ -9746,12 +10498,18 @@ function _syncWeaponOverlaysForHeroNative(
         const nowMs = (sc?.time?.now ?? Date.now()) as number;
         const hover = Math.sin((nowMs / STAFF_CAST_HOVER_PERIOD_MS) * Math.PI * 2) * STAFF_CAST_HOVER_AMP_PX;
 
-        staffOffsetX = (STAFF_CAST_X_OFF_PX * xSign) * retreatScale;
+        staffOffsetX = (xBase * xSign) * retreatScale;
         staffOffsetY = (STAFF_CAST_BASE_Y_OFF_PX + hover) * retreatScale;
     }
 
     const glueAny: any = (globalThis as any).weaponAnimGlue || weaponAnimGlue;
-    const glueFrameColOverride = staffCast ? staffFrameColOverride : ((nativeFco >= 0) ? nativeFco : undefined);
+    const partNameRaw = String((nativeHero.getData("PhasePartName") ?? "") as any);
+    const partName = partNameRaw.toLowerCase();
+    const actionKindLower = actionKind.toLowerCase();
+
+    const glueFrameColOverride = staffCast
+        ? staffFrameColOverride
+        : ((nativeFco >= 0) ? nativeFco : undefined);
     const glueFrameDirOverride = staffCast ? staffFrameDirOverride : undefined;
 
     // Glue sync (unchanged)
@@ -9774,6 +10532,191 @@ function _syncWeaponOverlaysForHeroNative(
         aimAngleMdeg,
         allowAimRotate
     });
+
+    if (DEBUG_LAYER_SNAPSHOT) {
+        try {
+            const seq = (dataAny["ActionSequence"] as any | 0);
+            const heroKey = String((nativeHero as any).name ?? "");
+            const sig = `${actionKindLower}|${partName}|${seq}|${heroCol}`;
+            const prevSig = String(nativeHero.getData(LAYER_SNAPSHOT_LAST_SIG_KEY) ?? "");
+            const isStrength = actionKindLower.startsWith("strength");
+            const wantsPart = (
+                partName === "preparetocharge" ||
+                partName === "charging" ||
+                partName === "reset" ||
+                partName === "strengthreset"
+            );
+            const wantsCol = (heroCol >= 0 && heroCol <= 2);
+            if (isStrength && wantsPart && wantsCol && sig !== prevSig) {
+                nativeHero.setData(LAYER_SNAPSHOT_LAST_SIG_KEY, sig);
+                const radius = Math.max(LAYER_SNAPSHOT_RADIUS_PX, ((nativeHero as any).frame?.width ?? 0) | 0);
+                const focusKeys = [
+                    String((nativeHero as any).texture?.key ?? ""),
+                    String((overlays.weaponBg as any)?.texture?.key ?? ""),
+                    String((overlays.weaponFg as any)?.texture?.key ?? "")
+                ];
+                const expectedRow = (renderDir === "up") ? 0
+                    : (renderDir === "left") ? 1
+                        : (renderDir === "down") ? 2
+                            : (renderDir === "right") ? 3
+                                : -1;
+                _dbgLayerSnapshot(
+                    sc,
+                    nativeHero,
+                    `strength_${partName}_col${heroCol}`,
+                    nativeHero.x ?? 0,
+                    nativeHero.y ?? 0,
+                    radius,
+                    focusKeys,
+                    { renderDir, expectedRow }
+                );
+            }
+        } catch { /* ignore */ }
+    }
+
+    // Staff-cast: keep both layers above the hero so the staff is visible even
+    // when the artwork lives on the BG layer.
+    if (staffCast) {
+        try {
+            const heroDepth = (nativeHero as any).depth ?? 0;
+            const fgDepth = (overlays.weaponFg as any).depth ?? (heroDepth + 2);
+            const bgDepth = Math.max(fgDepth - 1, heroDepth + 1);
+            overlays.weaponBg.setDepth(bgDepth);
+            overlays.weaponFg.setDepth(fgDepth);
+            overlays.weaponBg.setVisible(true);
+            overlays.weaponFg.setVisible(true);
+        } catch { /* ignore */ }
+    }
+
+    // ------------------------------------------------------------
+    // DEBUG: Compare atlas sheet vs raw PNG (arming slash + sticky)
+    // ------------------------------------------------------------
+    const nowMsForCompare = (sc?.time?.now ?? Date.now()) as number;
+    const compareStickyMs = 1500;
+    if (DEBUG_WEAPON_ATLAS_COMPARE && weaponId === "arming" && weaponPhase === "slash") {
+        try {
+            (nativeHero as any).__wpnCompareUntilMs = (nowMsForCompare + compareStickyMs) | 0;
+        } catch { /* ignore */ }
+    }
+
+    const compareUntilMs = ((nativeHero as any).__wpnCompareUntilMs as any | 0);
+    const compareStored = (nativeHero as any).__wpnCompareLast as any;
+    const compareActive = DEBUG_WEAPON_ATLAS_COMPARE &&
+        ((weaponId === "arming" && weaponPhase === "slash") ||
+            (compareStored && compareUntilMs > 0 && nowMsForCompare <= compareUntilMs));
+
+    if (compareActive) {
+        try {
+            const compareWeaponId = (weaponId === "arming" && weaponPhase === "slash") ? weaponId : (compareStored?.weaponId || weaponId);
+            const comparePhase = (weaponId === "arming" && weaponPhase === "slash") ? weaponPhase : (compareStored?.weaponPhase || weaponPhase);
+            const compareVariant = (weaponId === "arming" && weaponPhase === "slash") ? weaponVariant : (compareStored?.variant || weaponVariant);
+            const compareDir = (weaponId === "arming" && weaponPhase === "slash") ? renderDir : (compareStored?.dir || renderDir);
+            const compareHeroFrameIndex = (weaponId === "arming" && weaponPhase === "slash") ? heroFrameIndex : (compareStored?.heroFrameIndex ?? heroFrameIndex);
+            const compareFcoOverride = (weaponId === "arming" && weaponPhase === "slash") ? glueFrameColOverride : (compareStored?.frameColOverride ?? glueFrameColOverride);
+
+            const mode = weaponModeForHeroPhase(comparePhase);
+            const pair = resolveWeaponLayerPair({
+                weaponId: compareWeaponId,
+                heroPhase: comparePhase,
+                mode,
+                variant: compareVariant
+            });
+
+            const cmpOnceKey = "__wpnCompareOnce";
+            const cmpOnceRaw = (nativeHero as any).getData?.(cmpOnceKey);
+            const cmpOnce: Record<string, number> =
+                (cmpOnceRaw && typeof cmpOnceRaw === "object") ? cmpOnceRaw : {};
+            const cmpLogOnce = (key: string, payload: any) => {
+                if (cmpOnce[key]) return;
+                cmpOnce[key] = 1;
+                console.log("[WPN-COMPARE]", payload);
+                try { (nativeHero as any).setData?.(cmpOnceKey, cmpOnce); } catch { }
+            };
+
+            cmpLogOnce("enter", {
+                event: "enter",
+                weaponId: compareWeaponId,
+                weaponPhase: comparePhase,
+                variant: compareVariant,
+                dir: compareDir
+            });
+
+            if (weaponId === "arming" && weaponPhase === "slash") {
+                try {
+                    (nativeHero as any).__wpnCompareLast = {
+                        weaponId: compareWeaponId,
+                        weaponPhase: comparePhase,
+                        variant: compareVariant,
+                        dir: compareDir,
+                        heroFrameIndex: compareHeroFrameIndex,
+                        frameColOverride: compareFcoOverride
+                    };
+                } catch { /* ignore */ }
+            }
+
+            if (pair) {
+                const legacyBg = (nativeHero as any).__weaponLegacyBg ||
+                    ((nativeHero as any).__weaponLegacyBg = sc.add.sprite(0, 0, "__MISSING", 0));
+                const legacyFg = (nativeHero as any).__weaponLegacyFg ||
+                    ((nativeHero as any).__weaponLegacyFg = sc.add.sprite(0, 0, "__MISSING", 0));
+
+                const applyLegacy = (spr: any, ref?: any, label?: string): void => {
+                    if (!ref) {
+                        cmpLogOnce(`skip_${label}_no_ref`, {
+                            event: "skip",
+                            reason: "no_ref",
+                            layer: label
+                        });
+                        try { spr.setVisible(false); } catch { }
+                        return;
+                    }
+                    const legacyKey = _ensureLegacyWeaponSheet(sc, ref.key, ref.frameW, ref.frameH);
+                    if (!legacyKey) {
+                        cmpLogOnce(`skip_${label}_no_legacy`, {
+                            event: "skip",
+                            reason: "no_legacy",
+                            layer: label,
+                            sheetKey: ref.key
+                        });
+                        try { spr.setVisible(false); } catch { }
+                        return;
+                    }
+
+                    const legacyRef = { ...ref, key: legacyKey };
+                    const frameIndex = weaponAnimGlue.resolveWeaponFrameIndexForLayer({
+                        scene: sc,
+                        sheet: legacyRef,
+                        dir: compareDir as any,
+                        heroSprite: nativeHero,
+                        heroFrameIndex: compareHeroFrameIndex,
+                        frameColOverride: compareFcoOverride
+                    });
+
+                    spr.setTexture(legacyKey);
+                    spr.setFrame(frameIndex);
+                    spr.x = overlays.weaponBg.x;
+                    spr.y = overlays.weaponBg.y;
+                    try { spr.setOrigin?.(0.5, 0.5); } catch { }
+                    spr.setAlpha(0.5);
+                    spr.setDepth((overlays.weaponFg.depth ?? 0) + 1);
+                    spr.setVisible(true);
+
+                    cmpLogOnce(`ok_${label}_${legacyKey}`, {
+                        event: "ok",
+                        layer: label,
+                        newKey: ref.key,
+                        legacyKey,
+                        frameIndex,
+                        x: spr.x | 0,
+                        y: spr.y | 0
+                    });
+                };
+
+                applyLegacy(legacyBg, (pair as any).bg, "bg");
+                applyLegacy(legacyFg, (pair as any).fg, "fg");
+            }
+        } catch { /* ignore */ }
+    }
 
     // Post-glue: compute actual weapon frame cols/names + apply nativeFco if present (unchanged)
     const nativeFcoForWeapon = staffCast ? -1 : nativeFco;

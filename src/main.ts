@@ -24,7 +24,7 @@ import { AURA_RADII } from "./auraConfig";
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
-import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
+import { loadWeaponAtlases, runWeaponAudit, ensureWeaponSheetsLoaded } from "./weaponAtlas";
 import {
   DEBUG_COINFX,
   DEBUG_MAIN_LIFECYCLE,
@@ -1493,6 +1493,23 @@ async create() {
     // 10) Monster atlas + registry exposure
     _uiLoadingSet(90, "Building monster atlas…");
     this.buildMonsterAtlasAndRegistry();
+
+    // 10b) Warm base weapon sheets (slash/thrust/exec/cast) to avoid lazy-load gaps.
+    try {
+      ensureWeaponSheetsLoaded(this, "arming", "base");    // strength
+      ensureWeaponSheetsLoaded(this, "spear", "base");     // agility
+      ensureWeaponSheetsLoaded(this, "dagger", "base");    // exec
+      ensureWeaponSheetsLoaded(this, "simple", "base");    // fallback cast
+      ensureWeaponSheetsLoaded(this, "crystal", "base");   // intellect projectile overlay
+      // Staff-style casts (int/support) — preload common staff ids.
+      ensureWeaponSheetsLoaded(this, "gnarled", "base");
+      ensureWeaponSheetsLoaded(this, "loop", "base");
+      ensureWeaponSheetsLoaded(this, "diamond", "base");
+      ensureWeaponSheetsLoaded(this, "s", "base");
+      ensureWeaponSheetsLoaded(this, "wand_female", "wand");
+      ensureWeaponSheetsLoaded(this, "wand_male", "wand");
+      ensureWeaponSheetsLoaded(this, "rod", "base");
+    } catch { }
 
     // 11) Optional hero anim tester
     this.maybeInstallHeroAnimTester();
