@@ -98,9 +98,13 @@ function basenameNoExt(p: string): string {
 }
 
 function parseSizeFromName(name: string): { id: string; frameW: number; frameH: number } | null {
-    const match = /^(.*?)(?:\s+)(\d+)x(\d+)$/i.exec(name);
+    const match = /^(.*?)(?:\s+)(\d+)x(\d+)(.*)?$/i.exec(name);
     if (!match) return null;
-    const id = String(match[1] || "").trim();
+    const base = String(match[1] || "").trim();
+    const suffix = String(match[4] || "").trim();
+    if (!base) return null;
+    if (suffix && !/^_aura_r\d+$/i.test(suffix)) return null;
+    const id = (base + (suffix || "")).trim();
     if (!id) return null;
     const frameW = parseInt(match[2], 10) | 0;
     const frameH = parseInt(match[3], 10) | 0;
@@ -323,7 +327,6 @@ const EFFECT_SHEETS: EffectSheetDef[] = [];
 const EFFECT_MISSING_SIZE: string[] = [];
 
 for (const [path, url] of Object.entries(effectPngs)) {
-    if (/[\\/](?:auras)[\\/]/i.test(path)) continue;
     const baseName = basenameNoExt(path);
     const size = parseSizeFromName(baseName);
     if (!size) {

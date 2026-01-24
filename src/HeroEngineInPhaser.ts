@@ -2305,6 +2305,230 @@ function _destroyStrengthSwingFxSegments(proj: Sprite): void {
     sprites.setDataNumber(proj, STR_FX_SEG_COUNT_KEY, 0);
 }
 
+function _destroyStrengthArcFxForProj(proj: Sprite): void {
+    if (!proj) return;
+    const keys = [STR_ARC_MASK_FX_KEY, STR_ARC_FILL_FX_KEY, STR_ARC_OUTLINE_FX_KEY];
+    for (const key of keys) {
+        const fx = sprites.readDataSprite(proj, key);
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
+        sprites.setDataSprite(proj, key, null as any);
+    }
+    sprites.setDataSprite(proj, PROJ_COLLIDER_SPRITE_KEY, null as any);
+}
+
+function _spawnStrengthArcFxForProj(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    element: number,
+    nx: number,
+    ny: number,
+    lifespanMs: number
+): void {
+    if (!proj || !hero) return;
+    _destroyStrengthArcFxForProj(proj);
+
+    const zBase = (hero.z | 0) + 12;
+    const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+    maskFx.setFlag(SpriteFlag.Ghost, true);
+    maskFx.setFlag(SpriteFlag.Invisible, true);
+    maskFx.x = hero.x;
+    maskFx.y = hero.y;
+    maskFx.z = zBase;
+    if ((lifespanMs | 0) > 0) maskFx.lifespan = lifespanMs | 0;
+
+    applyEffectToSprite(maskFx, STR_ARC_SKIN_ID, { mode: "full", repeat: -1, frameIndex: 0 });
+    sprites.setDataSprite(proj, STR_ARC_MASK_FX_KEY, maskFx);
+    sprites.setDataSprite(proj, PROJ_COLLIDER_SPRITE_KEY, maskFx);
+    sprites.setDataNumber(proj, PROJ_COLLIDER_SCALE_X1000_KEY, STR_ARC_COLLIDER_SCALE_X1000 | 0);
+
+    const dir = _enemyDirFromVector(nx, ny);
+    const texPick = _strengthArcTexturePick(element | 0, dir || "down");
+    if (texPick && texPick.skinId) {
+        const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+        fillFx.setFlag(SpriteFlag.Ghost, true);
+        fillFx.x = hero.x;
+        fillFx.y = hero.y;
+        fillFx.z = zBase + 1;
+        if ((lifespanMs | 0) > 0) fillFx.lifespan = lifespanMs | 0;
+
+        const opts: EffectApplyOpts = {
+            mode: "projectile",
+            repeat: -1,
+            frameIndex: 0,
+            maskSprite: maskFx
+        };
+        if (texPick.dir) opts.dir = texPick.dir;
+        applyEffectToSprite(fillFx, texPick.skinId, opts);
+        sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, fillFx);
+    }
+
+    const outlineId = _strengthArcOutlineSkinId();
+    if (outlineId) {
+        const outlineFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+        outlineFx.setFlag(SpriteFlag.Ghost, true);
+        outlineFx.x = hero.x;
+        outlineFx.y = hero.y;
+        outlineFx.z = zBase + 2;
+        if ((lifespanMs | 0) > 0) outlineFx.lifespan = lifespanMs | 0;
+
+        applyEffectToSprite(outlineFx, outlineId, { mode: "full", repeat: -1, frameIndex: 0 });
+        sprites.setDataSprite(proj, STR_ARC_OUTLINE_FX_KEY, outlineFx);
+    }
+}
+
+function _updateStrengthArcFxForProj(
+    proj: Sprite,
+    hero: Sprite,
+    heroIndex: number,
+    nowMs: number,
+    segName: string,
+    frameCol: number,
+    segElapsed: number,
+    segDur: number,
+    t: number,
+    nx: number,
+    ny: number,
+    totalArcDeg: number,
+    frontStart: number,
+    reachFromFront: number
+): boolean {
+    if (!proj || !hero) return true;
+    let maskFx = sprites.readDataSprite(proj, STR_ARC_MASK_FX_KEY);
+    if (!maskFx || (maskFx.flags & sprites.Flag.Destroyed)) {
+        _spawnStrengthArcFxForProj(proj, heroIndex, hero, sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0, nx, ny, proj.lifespan | 0);
+        maskFx = sprites.readDataSprite(proj, STR_ARC_MASK_FX_KEY);
+        if (!maskFx || (maskFx.flags & sprites.Flag.Destroyed)) return true;
+    }
+
+    const arcSideRaw = sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0;
+    const arcSide = arcSideRaw === 0 ? 1 : arcSideRaw;
+    const flipX = arcSide < 0;
+    const anchorX = (sprites.readDataNumber(proj, PROJ_DATA.START_HERO_X) | 0) || hero.x;
+    const anchorY = (sprites.readDataNumber(proj, PROJ_DATA.START_HERO_Y) | 0) || hero.y;
+    const reach = Math.max(0, reachFromFront | 0);
+    const ringR = Math.max(1, (frontStart | 0) + (reach | 0));
+    const slashT = segName === "strengthSlash"
+        ? Math.max(0, Math.min(1, (segDur | 0) > 0 ? (segElapsed / Math.max(1, segDur)) : 1))
+        : 1;
+    const resetT = segName === "strengthReset"
+        ? Math.max(0, Math.min(1, (segDur | 0) > 0 ? (segElapsed / Math.max(1, segDur)) : 1))
+        : 0;
+    const sweepT = resetT;
+
+    const arcAbs = Math.abs(totalArcDeg | 0);
+    const halfArcRad = (arcAbs * 0.5) * (Math.PI / 180);
+    const arcSign = (totalArcDeg | 0) < 0 ? -1 : 1;
+    const sx = -ny;
+    const sy = nx;
+
+    let posX = anchorX;
+    let posY = anchorY;
+    let moveDx = nx;
+    let moveDy = ny;
+
+    if (segName === "strengthReset") {
+        const ang = arcSide * arcSign * halfArcRad * sweepT;
+        const cosA = Math.cos(ang);
+        const sinA = Math.sin(ang);
+        const dxDir = (nx * cosA) + (sx * sinA);
+        const dyDir = (ny * cosA) + (sy * sinA);
+        posX = anchorX + dxDir * ringR;
+        posY = anchorY + dyDir * ringR;
+        moveDx = (-nx * sinA) + (sx * cosA);
+        moveDy = (-ny * sinA) + (sy * cosA);
+    } else {
+        const travelR = (frontStart | 0) + Math.round((reach | 0) * slashT);
+        posX = anchorX + (nx * travelR);
+        posY = anchorY + (ny * travelR);
+        moveDx = nx;
+        moveDy = ny;
+    }
+
+    proj.x = posX;
+    proj.y = posY;
+    proj.z = (hero.z | 0) + 12;
+    proj.setFlag(SpriteFlag.Invisible, true);
+
+    const moveAngle = Math.atan2(moveDy, moveDx);
+    let framePick: StrengthArcFramePick;
+    if (segName === "strengthSlash") {
+        if ((frameCol | 0) <= 4) {
+            framePick = _strengthArcPickNearestFrame(moveAngle, STR_ARC_WISPY_FRAME_CANDIDATES);
+        } else {
+            framePick = flipX ? STR_ARC_PRECURSOR_LEFT : STR_ARC_PRECURSOR_RIGHT;
+        }
+    } else {
+        framePick = _strengthArcPickNearestFrame(moveAngle, STR_ARC_FULL_FRAME_CANDIDATES);
+    }
+
+    let baseAngle = framePick.baseAngle;
+    if (flipX) baseAngle = Math.PI - baseAngle;
+
+    const crossStart = 0.6;
+    let crossStrength = 0;
+    if (segName === "strengthSlash") {
+        crossStrength = Math.max(0, Math.min(1, (slashT - crossStart) / Math.max(0.0001, 1 - crossStart)));
+    } else {
+        const decay = 0.35;
+        crossStrength = Math.max(0, Math.min(1, 1 - (resetT / Math.max(0.0001, decay))));
+    }
+    const crossRot = (STR_ARC_CROSS_ROT_DEG * (Math.PI / 180)) * crossStrength * (arcSide >= 0 ? 1 : -1);
+
+    let spinRot = 0;
+    if (segName === "strengthReset" && (arcAbs | 0) > 0) {
+        const turns = STR_ARC_BASE_TURNS_AT_360 * (arcAbs / 360);
+        const spinDir = arcSign * (arcSide >= 0 ? 1 : -1);
+        spinRot = spinDir * turns * Math.PI * 2 * sweepT;
+    }
+
+    let rot = moveAngle - baseAngle + crossRot + spinRot;
+    if (rot > Math.PI) rot -= Math.PI * 2;
+    if (rot < -Math.PI) rot += Math.PI * 2;
+
+    const scale = (segName === "strengthReset")
+        ? (1 + ((STR_ARC_END_SCALE - 1) * sweepT))
+        : Math.max(STR_ARC_EMERGE_SCALE_MIN, slashT);
+
+    const frameIdx = _strengthArcFrameIndexForCell(STR_ARC_SKIN_ID, framePick.row, framePick.col);
+    sprites.setDataNumber(maskFx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
+    sprites.setDataNumber(maskFx, EFFECT_ROT_DATA_KEY, rot);
+    sprites.setDataNumber(maskFx, EFFECT_SCALE_DATA_KEY, scale);
+    sprites.setDataNumber(maskFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+    maskFx.x = posX;
+    maskFx.y = posY;
+    maskFx.z = (hero.z | 0) + 12;
+
+    const fillFx = sprites.readDataSprite(proj, STR_ARC_FILL_FX_KEY);
+    if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
+        const skinId = sprites.readDataString(fillFx, "effectSkin") || "";
+        const dir = sprites.readDataString(fillFx, "effectDir") || "";
+        const fillIdx = _strengthArcFillFrameIndex(skinId, dir, t);
+        sprites.setDataNumber(fillFx, EFFECT_FRAME_INDEX_DATA_KEY, fillIdx | 0);
+        sprites.setDataNumber(fillFx, EFFECT_ROT_DATA_KEY, rot);
+        sprites.setDataNumber(fillFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(fillFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+        fillFx.x = posX;
+        fillFx.y = posY;
+        fillFx.z = (hero.z | 0) + 13;
+    }
+
+    const outlineFx = sprites.readDataSprite(proj, STR_ARC_OUTLINE_FX_KEY);
+    if (outlineFx && !(outlineFx.flags & sprites.Flag.Destroyed)) {
+        const outlineSkin = sprites.readDataString(outlineFx, "effectSkin") || "";
+        const outlineIdx = _strengthArcFrameIndexForCell(outlineSkin || STR_ARC_SKIN_ID, framePick.row, framePick.col);
+        sprites.setDataNumber(outlineFx, EFFECT_FRAME_INDEX_DATA_KEY, outlineIdx | 0);
+        sprites.setDataNumber(outlineFx, EFFECT_ROT_DATA_KEY, rot);
+        sprites.setDataNumber(outlineFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(outlineFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+        outlineFx.x = posX;
+        outlineFx.y = posY;
+        outlineFx.z = (hero.z | 0) + 14;
+    }
+
+    return true;
+}
+
 function _agilityTrailFxSegKey(i: number): string {
     return AGI_FX_SEG_BASE_KEY + (i | 0);
 }
@@ -2691,6 +2915,25 @@ const STR_FWD_MS_KEY = "SS_FWD_MS";
 const STR_LAND_MS_KEY = "SS_LAND_MS";
 const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
 const STR_SWING_START_COL_KEY = "SS_START_COL";
+const STR_USE_ARC_SPRITE_PROJECTILES = true;
+const STR_ARC_SKIN_ID = "Sword Arcs";
+const STR_ARC_SHEET_COLS = 12;
+const STR_ARC_SHEET_ROWS = 10;
+const STR_ARC_CORE_COLS = 6;
+const STR_ARC_CORE_ROWS = 5;
+const STR_ARC_END_SCALE = 0.25;
+const STR_ARC_BASE_TURNS_AT_360 = 5;
+const STR_ARC_CROSS_ROT_DEG = 35;
+const STR_ARC_EMERGE_SCALE_MIN = 0.4;
+const STR_ARC_FILL_CLIMAX_START = 0.8;
+const STR_ARC_FILL_CLIMAX_FRAMES = 3;
+const STR_ARC_OUTLINE_RADIUS = 2;
+const STR_ARC_COLLIDER_SCALE_X1000 = 900;
+const PROJ_COLLIDER_SPRITE_KEY = "projColliderSprite";
+const PROJ_COLLIDER_SCALE_X1000_KEY = "projColliderScaleX1000";
+const STR_ARC_MASK_FX_KEY = "strArcMaskFx";
+const STR_ARC_FILL_FX_KEY = "strArcFillFx";
+const STR_ARC_OUTLINE_FX_KEY = "strArcOutlineFx";
 
 const WPN_AURA_COL_R1_KEY = "wpnAuraR1";
 const WPN_AURA_COL_R2_KEY = "wpnAuraR2";
@@ -2800,6 +3043,126 @@ function _resolveEffectEntry(atlas: any, skinId: string, dir?: string): any {
         }
     }
     return resolved;
+}
+
+const __strengthArcFrameIndexCache: { [k: string]: number } = Object.create(null);
+const __strengthArcTexturePickCache: { [k: string]: { skinId: string; dir?: string } | null } = Object.create(null);
+
+type StrengthArcFramePick = { row: number; col: number; baseAngle: number };
+
+const STR_ARC_FULL_FRAME_CANDIDATES: StrengthArcFramePick[] = [
+    { row: 0, col: 0, baseAngle: Math.PI / 2 },           // down
+    { row: 0, col: 1, baseAngle: Math.PI / 4 },           // down-right
+    { row: 0, col: 2, baseAngle: -Math.PI / 4 },          // up-right
+    { row: 0, col: 3, baseAngle: -3 * Math.PI / 4 },      // up-left
+    { row: 0, col: 4, baseAngle: Math.PI },               // left
+    { row: 1, col: 1, baseAngle: 3 * Math.PI / 4 },       // down-left
+    { row: 1, col: 3, baseAngle: 0 },                     // right
+    { row: 1, col: 2, baseAngle: Math.PI / 2 }            // almost down
+];
+
+const STR_ARC_WISPY_FRAME_CANDIDATES: StrengthArcFramePick[] = [
+    { row: 2, col: 0, baseAngle: Math.PI },               // left
+    { row: 2, col: 1, baseAngle: Math.PI / 4 },           // down-right
+    { row: 2, col: 2, baseAngle: Math.PI / 2.6 },         // down-ish
+    { row: 2, col: 3, baseAngle: Math.PI / 2 },           // down
+    { row: 2, col: 4, baseAngle: Math.PI / 2 },           // down
+    { row: 2, col: 5, baseAngle: Math.PI / 2 }            // down
+];
+
+const STR_ARC_PRECURSOR_LEFT: StrengthArcFramePick = { row: 1, col: 5, baseAngle: -Math.PI / 4 };
+const STR_ARC_PRECURSOR_RIGHT: StrengthArcFramePick = { row: 1, col: 0, baseAngle: Math.PI / 2 };
+
+function _strengthArcPickNearestFrame(angleRad: number, candidates: StrengthArcFramePick[]): StrengthArcFramePick {
+    let best = candidates[0];
+    let bestDiff = 999;
+    const ang = angleRad;
+    for (const cand of candidates) {
+        let diff = Math.abs(ang - cand.baseAngle);
+        if (diff > Math.PI) diff = (Math.PI * 2) - diff;
+        if (diff < bestDiff) {
+            bestDiff = diff;
+            best = cand;
+        }
+    }
+    return best;
+}
+
+function _strengthArcFrameIndexForCell(skinId: string, row: number, col: number): number {
+    const rawIndex = (row * STR_ARC_SHEET_COLS) + col;
+    const cacheKey = `${skinId}|${rawIndex}`;
+    if (Object.prototype.hasOwnProperty.call(__strengthArcFrameIndexCache, cacheKey)) {
+        return __strengthArcFrameIndexCache[cacheKey] | 0;
+    }
+    const atlas = _getEffectAtlasAny();
+    if (!atlas) {
+        __strengthArcFrameIndexCache[cacheKey] = rawIndex | 0;
+        return rawIndex | 0;
+    }
+    const resolved = _resolveEffectEntry(atlas, skinId, "");
+    const frames = resolved?.frameIndices as number[] | undefined;
+    if (!frames || !frames.length) {
+        __strengthArcFrameIndexCache[cacheKey] = rawIndex | 0;
+        return rawIndex | 0;
+    }
+    const found = frames.indexOf(rawIndex | 0);
+    const idx = (found >= 0) ? found : Math.max(0, Math.min(frames.length - 1, rawIndex | 0));
+    __strengthArcFrameIndexCache[cacheKey] = idx | 0;
+    return idx | 0;
+}
+
+function _strengthArcTexturePick(element: number, dir: string): { skinId: string; dir?: string } | null {
+    const key = `${element | 0}|${dir || ""}`;
+    if (Object.prototype.hasOwnProperty.call(__strengthArcTexturePickCache, key)) {
+        return __strengthArcTexturePickCache[key];
+    }
+    const pick = _heroSpellEffectPick(element | 0, dir || "down", "offense");
+    if (!pick || !pick.skinId) {
+        __strengthArcTexturePickCache[key] = null;
+        return null;
+    }
+    const atlas = _getEffectAtlasAny();
+    const baseId = pick.skinId;
+    const texId = `${baseId} texture`;
+    const useDir = pick.dir || "";
+    if (!atlas) {
+        const fallback = { skinId: texId, dir: useDir || undefined };
+        __strengthArcTexturePickCache[key] = fallback;
+        return fallback;
+    }
+    if (_resolveEffectEntry(atlas, texId, useDir)) {
+        const out = { skinId: texId, dir: useDir || undefined };
+        __strengthArcTexturePickCache[key] = out;
+        return out;
+    }
+    const out = { skinId: baseId, dir: useDir || undefined };
+    __strengthArcTexturePickCache[key] = out;
+    return out;
+}
+
+function _strengthArcOutlineSkinId(): string | null {
+    const id = `${STR_ARC_SKIN_ID}_aura_r${STR_ARC_OUTLINE_RADIUS | 0}`;
+    const atlas = _getEffectAtlasAny();
+    if (atlas && !_resolveEffectEntry(atlas, id, "")) return null;
+    return id;
+}
+
+function _strengthArcFillFrameIndex(skinId: string, dir: string | undefined, t: number): number {
+    const atlas = _getEffectAtlasAny();
+    if (!atlas || !skinId) return 0;
+    const resolved = _resolveEffectEntry(atlas, skinId, dir || "");
+    const frameCount = resolved?.frameIndices ? (resolved.frameIndices.length | 0) : 0;
+    if (frameCount <= 0) return 0;
+    const clamped = Math.max(0, Math.min(1, t));
+    if (frameCount > 1 && clamped >= STR_ARC_FILL_CLIMAX_START) {
+        const denom = Math.max(0.0001, 1 - STR_ARC_FILL_CLIMAX_START);
+        const localT = Math.max(0, Math.min(1, (clamped - STR_ARC_FILL_CLIMAX_START) / denom));
+        const span = Math.max(1, Math.min(frameCount - 1, STR_ARC_FILL_CLIMAX_FRAMES | 0));
+        const pulse = Math.sin(Math.PI * localT);
+        const offset = Math.round(pulse * Math.max(0, span - 1));
+        return Math.min(frameCount - 1, Math.max(0, (frameCount - span) + offset));
+    }
+    return Math.min(frameCount - 1, Math.max(0, Math.round(clamped * (frameCount - 1))));
 }
 
 const EFFECT_SCALE_STEPS: number[] = [0.25, 0.5, 1, 2, 3];
@@ -29532,7 +29895,7 @@ function _resolveHeroCollisionsUnified(): void {
         if (!h) continue
         if (h.flags & sprites.Flag.Ghost) continue
         const hookSt = agiHookshotStateByHeroIndex[hi]
-        if (hookSt && hookSt.state === AGI_HOOK_STATE.RETRACT && hookSt.targetKind !== AGI_HOOK_TARGET.MONSTER && !hookSt.returnOnly) {
+        if (hookSt && hookSt.state !== AGI_HOOK_STATE.NONE) {
             continue
         }
 
@@ -31724,6 +32087,8 @@ function decorSolids_blockingHook(nowMs: number): void {
         const h = heroes[hi]
         if (!h) continue
         if (h.flags & sprites.Flag.Ghost) continue
+        const hookSt = agiHookshotStateByHeroIndex[hi]
+        if (hookSt && hookSt.state !== AGI_HOOK_STATE.NONE) continue
 
         const cx = h.x | 0
         const cy = h.y | 0
@@ -42475,6 +42840,90 @@ function spawnStrengthSwingProjectile(
     const travelFrameMs = _strengthArcTravelFrameMs(travelFrames | 0) | 0;
     const swingDuration = swingDurationMs || 220
 
+    if (STR_USE_ARC_SPRITE_PROJECTILES) {
+        const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
+            const img0 = _getEffectDummyImage();
+            const proj = sprites.create(img0, SpriteKind.HeroWeapon);
+            sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0);
+            sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0);
+
+            proj.setFlag(SpriteFlag.Invisible, true);
+            proj.z = hero.z + 12;
+            proj.vx = 0;
+            proj.vy = 0;
+            proj.setPosition(hero.x, hero.y);
+            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_X, hero.x);
+            sprites.setDataNumber(proj, PROJ_DATA.START_HERO_Y, hero.y);
+
+            sprites.setDataNumber(proj, PROJ_DATA.START_TIME, now);
+            sprites.setDataNumber(proj, "SS_SWING_MS", swingDuration);
+            const mult = STR_DEBUG_FRAME_MS_MULT | 0;
+            const slashBase = _strengthSwingSlashMinMs() | 0;
+            const slashMs = Math.min(
+                swingDuration | 0,
+                (mult > 1) ? Math.max(1, (slashBase | 0) * mult) : (slashBase | 0)
+            );
+            const resetMs = Math.max(1, ((swingDuration | 0) - (slashMs | 0)) | 0);
+            sprites.setDataNumber(proj, STR_WIND_MS_KEY, 0);
+            sprites.setDataNumber(proj, STR_FWD_MS_KEY, slashMs | 0);
+            sprites.setDataNumber(proj, STR_LAND_MS_KEY, resetMs | 0);
+            const arcStartMs = slashMs | 0;
+            const arcStartFracX1000 = Math.idiv(Math.max(0, arcStartMs | 0) * 1000, Math.max(1, swingDuration | 0)) | 0;
+            sprites.setDataNumber(proj, STR_ARC_START_FRAC_KEY, arcStartFracX1000 | 0);
+            sprites.setDataNumber(proj, STR_ARC_BASE_WIDTH_KEY, arcBaseW | 0);
+            sprites.setDataNumber(proj, STR_ARC_SIDE_KEY, arcSide | 0);
+            sprites.setDataNumber(proj, STR_ARC_TRAVEL_FRAMES_KEY, travelFrames | 0);
+            sprites.setDataNumber(proj, STR_ARC_TRAVEL_FRAME_MS_KEY, travelFrameMs | 0);
+
+            sprites.setDataNumber(proj, "SS_ARC_DEG", totalArcDeg);
+            sprites.setDataNumber(proj, "SS_NX", nx);
+            sprites.setDataNumber(proj, "SS_NY", ny);
+            sprites.setDataNumber(proj, "SS_ATTACH", inner0);
+            sprites.setDataNumber(proj, "SS_REACH_FRONT", reachFromInner);
+            sprites.setDataNumber(proj, "SS_FRONT_START", frontStartR);
+            sprites.setDataNumber(proj, "SS_WTIP_X", wTipX);
+            sprites.setDataNumber(proj, "SS_WTIP_Y", wTipY);
+            sprites.setDataNumber(proj, "SS_LAST_TIP_X", wTipX);
+            sprites.setDataNumber(proj, "SS_LAST_TIP_Y", wTipY);
+            sprites.setDataNumber(proj, "SS_LAST_T", 0);
+
+            proj.lifespan = swingDuration;
+            heroProjectiles.push(proj);
+
+            sprites.setDataNumber(proj, PROJ_DATA.HERO_INDEX, heroIndex);
+            sprites.setDataNumber(proj, PROJ_DATA.FAMILY, FAMILY.STRENGTH);
+            sprites.setDataString(proj, PROJ_DATA.BUTTON, button);
+            sprites.setDataNumber(proj, PROJ_DATA.ELEMENT, element | 0);
+            sprites.setDataNumber(proj, PROJ_DATA.DAMAGE, dmg);
+            sprites.setDataNumber(proj, PROJ_DATA.IS_HEAL, isHeal ? 1 : 0);
+            sprites.setDataNumber(proj, PROJ_DATA.SLOW_PCT, slowPct);
+            sprites.setDataNumber(proj, PROJ_DATA.SLOW_DURATION_MS, slowDurMs);
+            sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_PCT, weakenPct);
+            sprites.setDataNumber(proj, PROJ_DATA.WEAKEN_DURATION_MS, weakenDurMs);
+            sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct);
+            sprites.setDataString(proj, PROJ_DATA.MOVE_TYPE, "strengthSwing");
+            sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, 1);
+            sprites.setDataNumber(proj, PROJ_DATA.SHARED_HIT, sharedHit ? 1 : 0);
+            sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0);
+            sprites.setDataNumber(proj, WPN_AURA_COL_R1_KEY, auraPalette.r1 | 0);
+            sprites.setDataNumber(proj, WPN_AURA_COL_R2_KEY, auraPalette.r2 | 0);
+            sprites.setDataNumber(proj, WPN_AURA_COL_R3_KEY, auraPalette.r3 | 0);
+            sprites.setDataNumber(proj, WPN_AURA_COL_EDGE_KEY, auraPalette.edge | 0);
+
+            _spawnStrengthArcFxForProj(proj, heroIndex, hero, element | 0, nx, ny, swingDuration | 0);
+            return proj;
+        };
+
+        const sharedHit = STR_SWING_DUAL_ARC;
+        if (STR_SWING_DUAL_ARC) {
+            spawnSide(1, sharedHit);
+            spawnSide(-1, sharedHit);
+        } else {
+            spawnSide(0, sharedHit);
+        }
+        return;
+    }
+
     const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
         const img0 = _createStrengthTraceImage(outerR)
         const proj = sprites.create(img0, SpriteKind.HeroWeapon)
@@ -42738,6 +43187,7 @@ function updateStrengthProjectilesMotionFor(
         _destroyHeroBodyPaintFxForProj(proj)
         _destroyProjectileMaskFxForProj(proj)
         _destroyProjectileMaskSpriteForProj(proj)
+        _destroyStrengthArcFxForProj(proj)
         _destroyStrengthSwingFxSegments(proj)
         proj.destroy()
 
@@ -42855,6 +43305,27 @@ function updateStrengthProjectilesMotionFor(
         }
     }
     const rule = _strengthFrameRuleFor(segName, frameCol | 0);
+
+    if (STR_USE_ARC_SPRITE_PROJECTILES) {
+        const totalArcDeg = sprites.readDataNumber(proj, "SS_ARC_DEG") || 150;
+        const frontStart = sprites.readDataNumber(proj, "SS_FRONT_START") || attachPx;
+        return _updateStrengthArcFxForProj(
+            proj,
+            hero,
+            heroIndex,
+            nowMs,
+            segName,
+            frameCol | 0,
+            segElapsed | 0,
+            segDur | 0,
+            t,
+            nx,
+            ny,
+            totalArcDeg | 0,
+            frontStart | 0,
+            reachFromFront | 0
+        );
+    }
 
     const arcReady = rule.allowArc;
     let transitionMs = 0;
@@ -46425,11 +46896,16 @@ const AGI_HOOKSHOT_BASE_LEN_ADD_PX = 0
 const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-length of travel
 const AGI_HOOKSHOT_MIN_SPEED_PX_S = 20
 const AGI_HOOKSHOT_TIP_FORGIVENESS_PX = 10        // min tip box width/height
+const AGI_HOOKSHOT_PROP_TIP_HALF_PX = 4           // tighter prop collision than monsters
 const AGI_HOOKSHOT_WALL_EMBED_PX = (WORLD_TILE_SIZE >> 1)
 const AGI_HOOKSHOT_MARKER_SIZE_PX = 10
 const AGI_HOOKSHOT_TRACE_STEP_PX = 2
 const AGI_HOOKSHOT_WINDUP_HOLD_FRAME_COL = 3
 const AGI_HOOKSHOT_HAND_Y_OFFS_SIDE = 6
+const AGI_HOOKSHOT_PROP_BOUNCE_BACK_PX = 10
+const AGI_HOOKSHOT_PROP_BOUNCE_UP_PX = 4
+const AGI_HOOKSHOT_PROP_BOUNCE_STEPS = 6
+const AGI_HOOKSHOT_RESCUE_FWD_PX = 24
 const AGI_USE_LEGACY_THRUST_PROJECTILE = false
 
 // OUT[6] mode string: keep in data for future; ignore for anim for now.
@@ -49929,8 +50405,13 @@ function _agiHookCheckTipHit(
         }
     }
 
-    // Decor/props
-    if (_boxOverlapsDecorSolidsBounds(left, right, top, bottom)) {
+    // Decor/props (tighter than monster forgiveness)
+    const propHalf = Math.max(1, Math.min(half, AGI_HOOKSHOT_PROP_TIP_HALF_PX | 0))
+    const pLeft = Math.round(tx - propHalf)
+    const pRight = Math.round(tx + propHalf)
+    const pTop = Math.round(ty - propHalf)
+    const pBottom = Math.round(ty + propHalf)
+    if (_boxOverlapsDecorSolidsBounds(pLeft, pRight, pTop, pBottom)) {
         return { kind: AGI_HOOK_TARGET.PROP, spriteId: 0 }
     }
 
@@ -50044,6 +50525,80 @@ function _agiHookApplyEnemyHit(st: AgiHookshotState, heroIndex: number, enemy: S
     st.hitApplied = 1
 }
 
+function _agiHookApplyPropBounce(heroIndex: number, hero: Sprite, st: AgiHookshotState, nx: number, ny: number): void {
+    if (!hero) return
+    const backPx = Math.max(0, AGI_HOOKSHOT_PROP_BOUNCE_BACK_PX | 0)
+    const upPx = Math.max(0, AGI_HOOKSHOT_PROP_BOUNCE_UP_PX | 0)
+    if (backPx <= 0 && upPx <= 0) return
+
+    const wallsBlock = _agiHookWallsBlock()
+    const steps = Math.max(1, AGI_HOOKSHOT_PROP_BOUNCE_STEPS | 0)
+    let bestX = hero.x
+    let bestY = hero.y
+    let found = false
+
+    for (let i = 1; i <= steps; i++) {
+        const t = i / steps
+        const dx = -nx * (backPx * t)
+        const dy = -ny * (backPx * t)
+        const lift = -(upPx * t)
+        const tx = hero.x + dx
+        const ty = hero.y + dy + lift
+        if (_agiHookHeroBlockedAt(hero, tx, ty, nx, ny, wallsBlock)) continue
+        if (_agiHookHeroHitsAnyEnemyAt(hero, heroIndex, tx, ty)) continue
+        bestX = tx
+        bestY = ty
+        found = true
+    }
+
+    if (found) {
+        hero.x = bestX
+        hero.y = bestY
+        hero.vx = 0
+        hero.vy = 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x | 0)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y | 0)
+    }
+}
+
+function _agiHookRescueIfBlocked(hero: Sprite, st: AgiHookshotState): void {
+    if (!hero) return
+    const nx = st.dirX || 1
+    const ny = st.dirY || 0
+    const wallsBlock = _agiHookWallsBlock()
+    if (!_agiHookHeroBlockedAt(hero, hero.x, hero.y, nx, ny, wallsBlock)) return
+
+    const maxDist = Math.max(2, AGI_HOOKSHOT_RESCUE_FWD_PX | 0)
+    const step = 2
+    let bestX = hero.x
+    let bestY = hero.y
+    let found = false
+
+    for (let d = step; d <= maxDist; d += step) {
+        const tx = hero.x + nx * d
+        const ty = hero.y + ny * d
+        if (_agiHookHeroBlockedAt(hero, tx, ty, nx, ny, wallsBlock)) continue
+        bestX = tx
+        bestY = ty
+        found = true
+    }
+
+    if (found) {
+        hero.x = bestX
+        hero.y = bestY
+        hero.vx = 0
+        hero.vy = 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_X, hero.x | 0)
+        sprites.setDataNumber(hero, HERO_DATA.PREV_Y, hero.y | 0)
+    } else {
+        _heroSpawnRescueIfBlocked(hero)
+    }
+}
+
 function _agiHookRecoverMs(hero: Sprite): number {
     const total = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
     if (total > 0) {
@@ -50105,6 +50660,8 @@ function _agiHookFinish(
     sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
     _agiHookClearVisuals(st)
     if (unlockNow) unlockHeroControls(heroIndex)
+
+    _agiHookRescueIfBlocked(hero, st)
 
     if (busyUntilNew > 0) setHeroBusyUntil(heroIndex, busyUntilNew | 0)
     else setHeroBusyUntil(heroIndex, 0)
@@ -50609,7 +51166,12 @@ function updateAgilityHookshotAll(nowMs: number): void {
 
                 if (newDist <= 0.1) {
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
-                    _agiHookFinish(hi, hero, st, now, false, "ground_done")
+                    if (st.targetKind === AGI_HOOK_TARGET.PROP) {
+                        _agiHookApplyPropBounce(hi, hero, st, nx, ny)
+                        _agiHookFinish(hi, hero, st, now, false, "prop_done")
+                    } else {
+                        _agiHookFinish(hi, hero, st, now, false, "ground_done")
+                    }
                 }
             }
 
@@ -66554,6 +67116,7 @@ function updateHeroProjectiles() {
             if (proj) _destroyHeroBodyPaintFxForProj(proj)
             if (proj) _destroyProjectileMaskSpriteForProj(proj)
             if (proj) _destroyAgilityTrailFxSegments(proj)
+            if (proj) _destroyStrengthArcFxForProj(proj)
             if (proj) _destroyStrengthSwingFxSegments(proj)
             heroProjectiles.removeAt(i)
 
@@ -66572,6 +67135,7 @@ function updateHeroProjectiles() {
             _destroyHeroBodyPaintFxForProj(proj)
             _destroyProjectileMaskSpriteForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
+            _destroyStrengthArcFxForProj(proj)
             _destroyStrengthSwingFxSegments(proj)
             proj.destroy()
 

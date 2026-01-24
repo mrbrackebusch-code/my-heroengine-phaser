@@ -919,8 +919,26 @@ export function syncWeaponLayersToHero(args: {
     });
     spr.setFrame(frameIndex);
 
-    spr.x = x;
-    spr.y = y;
+    // Tight nudge: down-slash cols 4/5 need a tiny hand alignment fix.
+    let nudgeX = 0;
+    let nudgeY = 0;
+    if (baseDir === "down") {
+      const phaseLower = String(args.heroPhase || "").toLowerCase();
+      if (phaseLower.includes("slash") && String(args.weaponId || "").toLowerCase() === "arming") {
+        const grid = getSheetGrid(args.scene, layerRef);
+        const cols = grid.cols | 0;
+        if (cols > 0) {
+          const col = Math.max(0, (frameIndex % cols) | 0);
+          if (col === 4 || col === 5) {
+            nudgeX = 2;
+            nudgeY = -2;
+          }
+        }
+      }
+    }
+
+    spr.x = x + nudgeX;
+    spr.y = y + nudgeY;
 
     // Legacy weapon overlays were authored around center anchoring.
     // Keep that stable even if the hero-native is feet-anchored.

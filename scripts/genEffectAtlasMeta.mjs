@@ -16,7 +16,7 @@ const ROOT = path.resolve(path.join(__dirname, ".."));
 const EFFECTS_DIR = path.join(ROOT, "assets", "effects");
 const OUT_TS = path.join(ROOT, "src", "generated", "effectAtlasMeta.ts");
 
-const SIZE_RE = /^(.*?)(?:\s+)(\d+)x(\d+)$/i;
+const SIZE_RE = /^(.*?)(?:\s+)(\d+)x(\d+)(?:_aura_r\d+)?$/i;
 const EFFECT_SKIP_EMPTY_FRAMES = true;
 const EFFECT_EMPTY_ALPHA_MIN = 8;
 const EFFECT_PALETTE_MAX_COLORS = 8;
@@ -114,7 +114,6 @@ function walkEffects(dir, out) {
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
-      if (ent.name.toLowerCase() === "auras") continue;
       walkEffects(full, out);
       continue;
     }

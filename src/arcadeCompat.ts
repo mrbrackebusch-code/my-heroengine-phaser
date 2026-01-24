@@ -11024,15 +11024,10 @@ function _wpnPostGlueComputeWeaponFrameInfoAndApplyFco(sc: any, overlays: any, n
     const bgTexKey = (bgAny.texture?.key ?? "") + "";
     const fgTexKey = (fgAny.texture?.key ?? "") + "";
 
-    if (nativeFco >= 0) {
-        _forceSpriteColByName(bgAny, bgCols, nativeFco);
-        _forceSpriteColByName(fgAny, fgCols, nativeFco);
-
-        bgName = _getFrameName(bgAny);
-        fgName = _getFrameName(fgAny);
-        bgCol = _colFromFrame(_getTextureFrameIndex(bgAny), bgName, bgCols);
-        fgCol = _colFromFrame(_getTextureFrameIndex(fgAny), fgName, fgCols);
-    }
+    // NOTE: Do not force weapon columns by name here.
+    // With the composite weapon atlas, frame indices are sheet-local but the
+    // texture source is atlas-wide; forcing cols via atlas width can shift to
+    // the wrong frames. Glue already applies frame overrides when needed.
 
     return { bgTexKey, fgTexKey, bgCols, fgCols, bgName, fgName, bgCol, fgCol };
 }
@@ -14218,7 +14213,45 @@ function _syncFocusOutlineForNativeOLDCODETODELETE(
     heroAnimGlue.syncOutlineForNative(targetNative, active !== 0, color, radius, depthBias);
 }
 
+const PROJ_COLLIDER_SPRITE_REF_KEY = "projColliderSprite";
+const PROJ_COLLIDER_SCALE_X1000_KEY = "projColliderScaleX1000";
+
 function _getEngineCollisionBounds(s: Sprite): any | null {
+    try {
+        const collider = sprites.readDataSprite(s, PROJ_COLLIDER_SPRITE_REF_KEY);
+        if (collider && !(collider.flags & SpriteFlag.Destroyed)) {
+            const nativeAny = (collider as any).native;
+            if (nativeAny && typeof nativeAny.getBounds === "function") {
+                const rect = nativeAny.getBounds();
+                if (rect) {
+                    let left = Number.isFinite(rect.left) ? rect.left : rect.x;
+                    let right = Number.isFinite(rect.right) ? rect.right : (rect.x + rect.width);
+                    let top = Number.isFinite(rect.top) ? rect.top : rect.y;
+                    let bottom = Number.isFinite(rect.bottom) ? rect.bottom : (rect.y + rect.height);
+                    if (
+                        Number.isFinite(left) &&
+                        Number.isFinite(right) &&
+                        Number.isFinite(top) &&
+                        Number.isFinite(bottom)
+                    ) {
+                        const scaleRaw = sprites.readDataNumber(s, PROJ_COLLIDER_SCALE_X1000_KEY);
+                        const scale = Number.isFinite(scaleRaw) ? (scaleRaw as number) / 1000 : 0;
+                        if (scale > 0 && scale !== 1) {
+                            const cx = (left + right) * 0.5;
+                            const cy = (top + bottom) * 0.5;
+                            const halfW = (right - left) * 0.5 * scale;
+                            const halfH = (bottom - top) * 0.5 * scale;
+                            left = cx - halfW;
+                            right = cx + halfW;
+                            top = cy - halfH;
+                            bottom = cy + halfH;
+                        }
+                        return { left, right, top, bottom };
+                    }
+                }
+            }
+        }
+    } catch { /* ignore */ }
     try {
         const g: any = (globalThis as any);
         const internals = g ? g.__HeroEnginePhaserInternals : null;
