@@ -147,6 +147,10 @@ import {
     DEBUG_WEAPON_ATLAS_COMPARE,
     DEBUG_LAYER_SNAPSHOT,
     DEBUG_LAYER_SNAPSHOT_RENDER,
+    DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_AREA,
+    DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_SNAPSHOT,
+    DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL,
+    DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA,
     DEBUG_WRAP_TEX,
     FORCE_PROP_PREBAKED_OUTLINE,
     MAX_OVERLAP_DEBUG_LOGS,
@@ -1696,7 +1700,8 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
             dir: dir as any,
             heroFrameIndex: 0,
             variant: weaponVariant,
-            frameColOverride: 0
+            frameColOverride: 0,
+            frameColOverrideMode: "absFrame"
         });
 
         // Orbit + bob + jitter around the hero
@@ -3764,7 +3769,8 @@ function _shopRing_pickBestStaticFrameColCached(args: {
                 dir: args.dir,
                 heroFrameIndex: args.heroFrameIndex,
                 variant: args.variant,
-                frameColOverride: col
+                frameColOverride: col,
+                frameColOverrideMode: "weaponCol"
             })
         } catch {
             continue
@@ -3908,7 +3914,8 @@ function _shopRing_applyGlueOrPlaceholder(args: {
                 dir: args.dir,
                 heroFrameIndex: 0,               // <-- force [row][frame] = [U][0]
                 variant: args.variant,
-                frameColOverride: 0              // <-- force col 0
+                frameColOverride: 0,             // <-- force col 0
+                frameColOverrideMode: "weaponCol"
             })
 
             // Glue overwrites x/y -> restore ring placement AFTER glue.
@@ -9020,8 +9027,17 @@ const LAYER_SNAPSHOT_EXTREME_CACHE = new Map<string, {
     hilt: { px: number; py: number; a: number; score: number };
     mid: { px: number; py: number; a: number; score: number };
 }>();
+let LAYER_SNAPSHOT_RENDER_PENDING = false;
+let LAYER_SNAPSHOT_RENDER_PENDING_AT = 0;
+let LAYER_SNAPSHOT_RENDER_PENDING_REQ = 0;
 const LAYER_SNAPSHOT_HASH_CACHE = new Map<string, number>();
+const LAYER_SNAPSHOT_COMPARE_CACHE = new Map<string, {
+    prepare?: { sig: number; line: string; heroState: string; bgState: string; fgState: string; camState: string };
+    reset?: { sig: number; line: string; heroState: string; bgState: string; fgState: string; camState: string };
+    lastSig?: number;
+}>();
 let _layerSnapRenderReqId = 0;
+let _layerSnapPixelRoundRobin = 0;
 
 // Legacy weapon PNGs (for compare/debug): map relative path -> URL
 const LEGACY_WEAPON_PNGS = import.meta.glob("../assets/weapons/**/*.png", {
@@ -9180,6 +9196,86 @@ function _dbgLayerSnapshotFrameHash(obj: any): number {
     }
 }
 
+function _dbgLayerSnapshotHashStr(s: string): number {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+}
+
+function _dbgLayerSnapshotFmtTint(v: number): string {
+    const n = (typeof v === "number" ? v : 0xffffff) >>> 0;
+    return `#${n.toString(16).padStart(6, "0")}`;
+}
+
+function _dbgLayerSnapshotObjState(label: string, it: any, obj: any): string {
+    if (!obj) return `${label}=none`;
+    const fr: any = obj.frame ?? null;
+    const base: any = obj.texture?.frames?.__BASE ?? obj.texture?.frames?.["__BASE"] ?? null;
+    const tex = String(obj.texture?.key ?? "-");
+    const idx = (typeof fr?.index === "number") ? fr.index : (typeof it?.idx === "number" ? it.idx : -1);
+    const rel = (typeof it?.rel === "number") ? it.rel : -1;
+    const row = (typeof it?.row === "number") ? it.row : -1;
+    const col = (typeof it?.col === "number") ? it.col : -1;
+    const name = (fr?.name ?? idx);
+    const cutW = (fr?.cutWidth ?? fr?.width ?? 0) | 0;
+    const cutH = (fr?.cutHeight ?? fr?.height ?? 0) | 0;
+    const cutX = (fr?.cutX ?? fr?.x ?? 0) | 0;
+    const cutY = (fr?.cutY ?? fr?.y ?? 0) | 0;
+    const srcW = (fr?.sourceSize?.w ?? base?.width ?? obj.texture?.source?.[0]?.width ?? 0) | 0;
+    const srcH = (fr?.sourceSize?.h ?? base?.height ?? obj.texture?.source?.[0]?.height ?? 0) | 0;
+    const ss = fr?.spriteSourceSize
+        ? `${fr.spriteSourceSize.x | 0},${fr.spriteSourceSize.y | 0},${fr.spriteSourceSize.w | 0},${fr.spriteSourceSize.h | 0}`
+        : "-";
+    const trim = fr?.trim ? 1 : 0;
+    const u0 = (typeof fr?.u0 === "number") ? Number(fr.u0.toFixed(4)) : -1;
+    const v0 = (typeof fr?.v0 === "number") ? Number(fr.v0.toFixed(4)) : -1;
+    const u1 = (typeof fr?.u1 === "number") ? Number(fr.u1.toFixed(4)) : -1;
+    const v1 = (typeof fr?.v1 === "number") ? Number(fr.v1.toFixed(4)) : -1;
+    const rotF = fr?.rotated ? 1 : 0;
+    const x = Math.round(obj.x ?? 0);
+    const y = Math.round(obj.y ?? 0);
+    const sx = (typeof obj.scaleX === "number") ? Number(obj.scaleX.toFixed(3)) : 1;
+    const sy = (typeof obj.scaleY === "number") ? Number(obj.scaleY.toFixed(3)) : 1;
+    const rot = (typeof obj.rotation === "number") ? Number((obj.rotation * 180 / Math.PI).toFixed(2)) : 0;
+    const fx = obj.flipX ? 1 : 0;
+    const fy = obj.flipY ? 1 : 0;
+    const ox = Math.round(obj.displayOriginX ?? 0);
+    const oy = Math.round(obj.displayOriginY ?? 0);
+    const dw = Math.round(obj.displayWidth ?? 0);
+    const dh = Math.round(obj.displayHeight ?? 0);
+    const alpha = (typeof obj.alpha === "number") ? Number(obj.alpha.toFixed(2)) : 1;
+    const tint = _dbgLayerSnapshotFmtTint((typeof obj.tint === "number") ? obj.tint : (typeof obj.tintTopLeft === "number" ? obj.tintTopLeft : 0xffffff));
+    const tintFill = obj.tintFill ? 1 : 0;
+    const blend = (typeof obj.blendMode === "number") ? obj.blendMode : -1;
+    const pipe = String(obj.pipeline?.name ?? obj.pipeline?.type ?? obj.pipeline?.constructor?.name ?? "-");
+    const maskKey = String(obj.mask?.maskObject?.texture?.key ?? obj.mask?.geometryMask?.geometry?.texture?.key ?? "-");
+    const preFx = Array.isArray(obj.preFX) ? obj.preFX.length : 0;
+    const postFx = Array.isArray(obj.postFX) ? obj.postFX.length : 0;
+    const cont = obj.parentContainer ? 1 : 0;
+    return `${label} tex=${tex} name=${name} idx=${idx} rel=${rel} rc=${row},${col} ` +
+        `trim=${trim} cut=${cutW}x${cutH} cutXY=${cutX},${cutY} src=${srcW}x${srcH} ss=${ss} ` +
+        `uv=${u0},${v0},${u1},${v1} rotf=${rotF} ` +
+        `pos=${x},${y} sc=${sx},${sy} rot=${rot} flip=${fx},${fy} ` +
+        `ori=${ox},${oy} disp=${dw}x${dh} a=${alpha} tint=${tint} tfill=${tintFill} ` +
+        `blend=${blend} pipe=${pipe} mask=${maskKey} prefx=${preFx} postfx=${postFx} cont=${cont}`;
+}
+
+function _dbgLayerSnapshotCamState(scene: Phaser.Scene | null | undefined): string {
+    const cam = scene?.cameras?.main;
+    if (!cam) return "cam=-";
+    const round = cam.roundPixels ? 1 : 0;
+    const zoom = (typeof cam.zoom === "number") ? Number(cam.zoom.toFixed(3)) : 1;
+    const scrollX = Math.round(cam.scrollX ?? 0);
+    const scrollY = Math.round(cam.scrollY ?? 0);
+    const res = (scene?.game?.config?.resolution ?? (scene?.sys as any)?.game?.config?.resolution ?? 1) as number;
+    const pixelArt = (scene?.game?.config?.pixelArt ? 1 : 0);
+    const antialias = (scene?.game?.config?.antialias ? 1 : 0);
+    return `cam zoom=${zoom} scroll=${scrollX},${scrollY} round=${round} res=${res} pixelArt=${pixelArt} aa=${antialias}`;
+}
+
 function _dbgLayerSnapshotSampleAlphaAt(
     obj: any,
     worldX: number,
@@ -9231,6 +9327,26 @@ type LayerSnapshotSample = {
     screenX: number;
     screenY: number;
     expected: { r: number; g: number; b: number; a: number };
+    expectedHero: { r: number; g: number; b: number; a: number };
+    heroA: number;
+    wpnA: number;
+    heroDepth: number;
+    wpnDepth: number;
+    above: number;
+    wpnAlpha: number;
+    wpnTint: number;
+    wpnTintFill: number;
+    wpnBlend: number;
+    heroListIdx: number;
+    wpnListIdx: number;
+    heroListMain: number;
+    wpnListMain: number;
+    heroContainer: number;
+    wpnContainer: number;
+    sortFlag: number;
+    heroRef: any;
+    wpnRef: any;
+    overA?: string;
 };
 
 function _dbgLayerSnapshotWorldCorners(
@@ -9252,6 +9368,90 @@ function _dbgLayerSnapshotWorldCorners(
         const out = mat.transformPoint(p.lx, p.ly, { x: 0, y: 0 });
         return { wx: out.x, wy: out.y, lx: p.lx, ly: p.ly };
     });
+}
+
+function _dbgLayerSnapshotListIdx(list: any, obj: any): number {
+    try {
+        if (!list || !obj) return -1;
+        const idx = list.indexOf(obj);
+        return (typeof idx === "number") ? idx : -1;
+    } catch {
+        return -1;
+    }
+}
+
+function _dbgLayerSnapshotStack(
+    scene: Phaser.Scene,
+    worldX: number,
+    worldY: number,
+    maxItems: number
+): string {
+    try {
+        const list = scene?.sys?.displayList?.list;
+        if (!Array.isArray(list) || !list.length) return "";
+        const sortFlag = scene?.sys?.displayList?.sortChildrenFlag ? 1 : 0;
+        const hits: Array<{ tex: string; depth: number; idx: number }> = [];
+        for (let i = 0; i < list.length; i++) {
+            const obj: any = list[i];
+            if (!obj || !obj.visible) continue;
+            if (typeof obj.alpha === "number" && obj.alpha <= 0) continue;
+            if (typeof obj.getBounds !== "function") continue;
+            const b = obj.getBounds();
+            if (!b || typeof b.contains !== "function") continue;
+            if (!b.contains(worldX, worldY)) continue;
+            const tex = String(obj.texture?.key ?? "");
+            const depth = (obj.depth ?? 0) | 0;
+            hits.push({ tex, depth, idx: i });
+        }
+        if (!hits.length) return "";
+        if (sortFlag) {
+            hits.sort((a, b) => a.depth - b.depth || a.idx - b.idx);
+        } else {
+            hits.sort((a, b) => a.idx - b.idx);
+        }
+        const top = hits.slice(-maxItems).reverse();
+        return top.map((h) => `${h.tex}@d${h.depth}@i${h.idx}`).join("|");
+    } catch {
+        return "";
+    }
+}
+
+function _dbgLayerSnapshotStackAlpha(
+    scene: Phaser.Scene,
+    worldX: number,
+    worldY: number,
+    maxItems: number
+): string {
+    try {
+        const list = scene?.sys?.displayList?.list;
+        if (!Array.isArray(list) || !list.length) return "";
+        const sortFlag = scene?.sys?.displayList?.sortChildrenFlag ? 1 : 0;
+        const hits: Array<{ tex: string; depth: number; idx: number; a: number }> = [];
+        for (let i = 0; i < list.length; i++) {
+            const obj: any = list[i];
+            if (!obj || !obj.visible) continue;
+            if (typeof obj.alpha === "number" && obj.alpha <= 0) continue;
+            if (typeof obj.getBounds !== "function") continue;
+            const b = obj.getBounds();
+            if (!b || typeof b.contains !== "function") continue;
+            if (!b.contains(worldX, worldY)) continue;
+            const s = _dbgLayerSnapshotSampleAlphaAt(obj, worldX, worldY);
+            if (!s || s.a <= 0) continue;
+            const tex = String(obj.texture?.key ?? obj.name ?? "");
+            const depth = (obj.depth ?? 0) | 0;
+            hits.push({ tex, depth, idx: i, a: s.a | 0 });
+        }
+        if (!hits.length) return "";
+        if (sortFlag) {
+            hits.sort((a, b) => a.depth - b.depth || a.idx - b.idx);
+        } else {
+            hits.sort((a, b) => a.idx - b.idx);
+        }
+        const top = hits.slice(-maxItems).reverse();
+        return top.map((h) => `${h.tex}@d${h.depth}@i${h.idx}@a${h.a}`).join("|");
+    } catch {
+        return "";
+    }
 }
 
 function _dbgLayerSnapshotDirVec(dir: string): { dx: number; dy: number; key: string } | null {
@@ -9401,6 +9601,22 @@ function _dbgLayerSnapshotRenderSamples(
         if (!samples.length) return;
         const renderer: any = (scene as any)?.sys?.game?.renderer ?? null;
         if (!renderer) return;
+        const now =
+            (scene as any)?.time?.now ??
+            (scene as any)?.game?.loop?.time ??
+            Date.now();
+        if (LAYER_SNAPSHOT_RENDER_PENDING) {
+            if (now - LAYER_SNAPSHOT_RENDER_PENDING_AT < 250) {
+                console.log(
+                    `[LAYER][SNAP][RENDER-SKIP] label=${label} who=${who} reason=pending`
+                );
+                return;
+            }
+            console.log(
+                `[LAYER][SNAP][RENDER-PENDING-CLEAR] label=${label} who=${who} ageMs=${Math.round(now - LAYER_SNAPSHOT_RENDER_PENDING_AT)}`
+            );
+            LAYER_SNAPSHOT_RENDER_PENDING = false;
+        }
         const rw = (renderer.width ?? renderer.canvas?.width ?? scene.scale?.width ?? 0) | 0;
         const rh = (renderer.height ?? renderer.canvas?.height ?? scene.scale?.height ?? 0) | 0;
         if (rw <= 0 || rh <= 0) return;
@@ -9440,61 +9656,279 @@ function _dbgLayerSnapshotRenderSamples(
         const mapScrollY = map?.scroll?.y ?? null;
         const mapCamX = map?.cam?.x ?? null;
         const mapCamY = map?.cam?.y ?? null;
+        const reqAt = now;
         console.log(
             `[LAYER][SNAP][RENDER-REQ] ` +
             `id=${reqId} label=${label} who=${who} ` +
             `area=${minX},${minY},${w},${h} ` +
             `heroFrame=${meta.heroFrame ?? -1} wpnFrame=${meta.wpnFrame ?? -1} tex=${meta.tex ?? ""} ` +
             `zoom=${mapZoom ?? "?"} scroll=${mapScrollX ?? "?"},${mapScrollY ?? "?"} ` +
-            `cam=${mapCamX ?? "?"},${mapCamY ?? "?"}`
+            `cam=${mapCamX ?? "?"},${mapCamY ?? "?"} t=${Math.round(reqAt)}`
         );
+        LAYER_SNAPSHOT_RENDER_PENDING = true;
+        LAYER_SNAPSHOT_RENDER_PENDING_AT = now;
+        LAYER_SNAPSHOT_RENDER_PENDING_REQ = reqId;
 
         const logSample = (s: LayerSnapshotSample, rgba: { r: number; g: number; b: number; a: number }) => {
             const exp = s.expected;
+            const heroExp = s.expectedHero ?? { r: 0, g: 0, b: 0, a: 0 };
+            const tint = (s.wpnTint ?? 0xffffff) >>> 0;
+            const tr = (tint >> 16) & 0xff;
+            const tg = (tint >> 8) & 0xff;
+            const tb = tint & 0xff;
+            const expTint = {
+                r: Math.round((exp.r * tr) / 255),
+                g: Math.round((exp.g * tg) / 255),
+                b: Math.round((exp.b * tb) / 255),
+                a: exp.a
+            };
             const hex = "#" + ((rgba.r << 16) | (rgba.g << 8) | rgba.b).toString(16).padStart(6, "0");
             const expHex = "#" + ((exp.r << 16) | (exp.g << 8) | exp.b).toString(16).padStart(6, "0");
+            const heroHex = "#" + ((heroExp.r << 16) | (heroExp.g << 8) | heroExp.b).toString(16).padStart(6, "0");
+            const expTintHex = "#" + ((expTint.r << 16) | (expTint.g << 8) | expTint.b).toString(16).padStart(6, "0");
+            let pred = "none";
+            if (s.wpnA > 0 && s.above === 1) pred = "weapon";
+            else if (s.heroA > 0) pred = "hero";
+            else if (s.wpnA > 0) pred = "weapon_below";
+            const distWpn =
+                Math.abs(rgba.r - expTint.r) +
+                Math.abs(rgba.g - expTint.g) +
+                Math.abs(rgba.b - expTint.b);
+            const distHero =
+                Math.abs(rgba.r - heroExp.r) +
+                Math.abs(rgba.g - heroExp.g) +
+                Math.abs(rgba.b - heroExp.b);
+            let winner = "none";
+            if (distWpn < distHero) winner = "weapon";
+            else if (distHero < distWpn) winner = "hero";
+            const heroNow = s.heroRef;
+            const wpnNow = s.wpnRef;
+            const heroListNow = _dbgLayerSnapshotListIdx(heroNow?.displayList?.list, heroNow);
+            const wpnListNow = _dbgLayerSnapshotListIdx(wpnNow?.displayList?.list, wpnNow);
+        const sceneListNow = scene?.sys?.displayList?.list ?? null;
+            const heroMainNow = _dbgLayerSnapshotListIdx(sceneListNow, heroNow);
+            const wpnMainNow = _dbgLayerSnapshotListIdx(sceneListNow, wpnNow);
+        const heroContNow = (heroNow?.parentContainer ? 1 : 0);
+        const wpnContNow = (wpnNow?.parentContainer ? 1 : 0);
+        const sortNow = (scene?.sys?.displayList?.sortChildrenFlag ? 1 : 0);
+            const stack = _dbgLayerSnapshotStack(scene, s.worldX, s.worldY, 5);
+            const stackA = DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA
+                ? _dbgLayerSnapshotStackAlpha(scene, s.worldX, s.worldY, 5)
+                : "";
             console.log(
                 `[LAYER][SNAP][RENDER] ` +
                 `id=${reqId} label=${label} who=${who} sample=${s.kind} ` +
                 `screen=${s.screenX},${s.screenY} rgba=${rgba.r},${rgba.g},${rgba.b},${rgba.a} hex=${hex} ` +
-                `exp=${exp.r},${exp.g},${exp.b},${exp.a} expHex=${expHex}`
+                `exp=${exp.r},${exp.g},${exp.b},${exp.a} expHex=${expHex} ` +
+                `expTint=${expTint.r},${expTint.g},${expTint.b},${expTint.a} expTintHex=${expTintHex} ` +
+                `heroExp=${heroExp.r},${heroExp.g},${heroExp.b},${heroExp.a} heroHex=${heroHex} ` +
+                `heroA=${s.heroA} wpnA=${s.wpnA} above=${s.above} ` +
+                `dHero=${s.heroDepth} dWpn=${s.wpnDepth} pred=${pred} ` +
+                `distWpn=${distWpn} distHero=${distHero} winner=${winner} ` +
+                `listHero=${s.heroListIdx} listWpn=${s.wpnListIdx} ` +
+                `mainHero=${s.heroListMain} mainWpn=${s.wpnListMain} ` +
+                `heroCont=${s.heroContainer} wpnCont=${s.wpnContainer} sort=${s.sortFlag} ` +
+                `listHeroNow=${heroListNow} listWpnNow=${wpnListNow} ` +
+                `mainHeroNow=${heroMainNow} mainWpnNow=${wpnMainNow} ` +
+                `heroContNow=${heroContNow} wpnContNow=${wpnContNow} sortNow=${sortNow} ` +
+                `wpnAlpha=${s.wpnAlpha} wpnTint=0x${tint.toString(16)} tintFill=${s.wpnTintFill} blend=${s.wpnBlend} ` +
+                `stack=${stack || "-"}${stackA ? ` stackA=${stackA}` : ""}`
             );
         };
 
-        if (typeof renderer.snapshotArea === "function") {
-            renderer.snapshotArea(minX, minY, w, h, (image: any) => {
-                try {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext("2d");
-                    if (!ctx) return;
-                    ctx.drawImage(image, 0, 0);
-                    const data = ctx.getImageData(0, 0, w, h).data;
-                    for (const s of valid) {
-                        const ox = s.screenX - minX;
-                        const oy = s.screenY - minY;
-                        const idx = (oy * w + ox) * 4;
-                        const rgba = {
-                            r: data[idx] | 0,
-                            g: data[idx + 1] | 0,
-                            b: data[idx + 2] | 0,
-                            a: data[idx + 3] | 0
-                        };
-                        logSample(s, rgba);
-                    }
-                } catch {
-                    console.log(
-                        `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} error=snapshotAreaParseFail`
-                    );
-                }
-            });
-            return;
-        }
+        const doSnapshot = () => {
+            const gl: any = (renderer as any).gl || (renderer as any)._gl || (renderer as any).context || null;
+            const hasGL = !!(gl && typeof gl.readPixels === "function");
+            const hasArea = typeof renderer.snapshotArea === "function";
+            const hasPixel = typeof renderer.snapshotPixel === "function";
+            const hasSnapshot = typeof (renderer as any).snapshot === "function";
+            const forcePixel = DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL && hasPixel;
+            const forceSnapshot = !forcePixel && DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_SNAPSHOT && hasSnapshot;
+            const forceArea = !forcePixel && !forceSnapshot && DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_AREA && hasArea;
+            const mode = forcePixel
+                ? "pixel"
+                : (forceSnapshot
+                    ? "snapshot"
+                    : (forceArea
+                        ? "area"
+                        : (hasGL ? "gl" : (hasArea ? "area" : (hasPixel ? "pixel" : (hasSnapshot ? "snapshot" : "none"))))));
+            console.log(
+                `[LAYER][SNAP][RENDER-DO] ` +
+                `id=${reqId} label=${label} who=${who} ` +
+                `mode=${mode}`
+            );
 
-        if (typeof renderer.snapshotPixel === "function") {
-            for (const s of valid) {
-                renderer.snapshotPixel(s.screenX, s.screenY, (color: any) => {
+            if (mode === "none") {
+                console.log(
+                    `[LAYER][SNAP][RENDER-NO-SNAPSHOT] id=${reqId} label=${label} who=${who}`
+                );
+                LAYER_SNAPSHOT_RENDER_PENDING = false;
+                return;
+            }
+
+            let cbFired = false;
+            const cbTimeout = () => {
+                if (cbFired) return;
+                console.log(
+                    `[LAYER][SNAP][RENDER-CB-TIMEOUT] ` +
+                    `id=${reqId} label=${label} who=${who}`
+                );
+            };
+            try {
+                const timer = (scene as any)?.time;
+                if (timer && typeof timer.delayedCall === "function") {
+                    timer.delayedCall(250, cbTimeout);
+                } else {
+                    setTimeout(cbTimeout, 250);
+                }
+            } catch { /* ignore */ }
+
+            if (mode === "gl") {
+                const res = (renderer.resolution ?? 1) as number;
+                const glW = (renderer.gl?.drawingBufferWidth ?? renderer.width ?? renderer.canvas?.width ?? 0) | 0;
+                const glH = (renderer.gl?.drawingBufferHeight ?? renderer.height ?? renderer.canvas?.height ?? 0) | 0;
+                const camW = (map?.cam?.w ?? (scene.scale?.width ?? glW)) | 0;
+                const camH = (map?.cam?.h ?? (scene.scale?.height ?? glH)) | 0;
+                const scaleX = (camW > 0) ? (glW / camW) : 1;
+                const scaleY = (camH > 0) ? (glH / camH) : 1;
+                if (glW <= 0 || glH <= 0) {
+                    console.log(
+                        `[LAYER][SNAP][RENDER-GL-FAIL] id=${reqId} label=${label} who=${who} reason=badSize`
+                    );
+                } else {
+                    console.log(
+                        `[LAYER][SNAP][RENDER-GL] id=${reqId} label=${label} who=${who} ` +
+                        `glSize=${glW}x${glH} res=${res} camSize=${camW}x${camH} scale=${scaleX.toFixed(3)},${scaleY.toFixed(3)}`
+                    );
+                    for (const s of valid) {
+                        const gx = Math.round(s.screenX * scaleX);
+                        const gy = Math.round(glH - 1 - (s.screenY * scaleY));
+                        const buf = new Uint8Array(4);
+                        try {
+                            gl.readPixels(gx, gy, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+                            const rgba = {
+                                r: buf[0] | 0,
+                                g: buf[1] | 0,
+                                b: buf[2] | 0,
+                                a: buf[3] | 0
+                            };
+                            logSample(s, rgba);
+                        } catch (err) {
+                            console.log(
+                                `[LAYER][SNAP][RENDER-GL-FAIL] id=${reqId} label=${label} who=${who} ` +
+                                `sample=${s.kind} err=${(err as any)?.message ?? "readPixelsFail"}`
+                            );
+                        }
+                    }
+                }
+                LAYER_SNAPSHOT_RENDER_PENDING = false;
+                return;
+            }
+
+            if (mode === "area") {
+                renderer.snapshotArea(minX, minY, w, h, (image: any) => {
+                    cbFired = true;
+                    console.log(
+                        `[LAYER][SNAP][RENDER-CB] id=${reqId} label=${label} who=${who} mode=area`
+                    );
+                    try {
+                        const canvas = document.createElement("canvas");
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext("2d");
+                        if (!ctx) return;
+                        ctx.drawImage(image, 0, 0);
+                        const data = ctx.getImageData(0, 0, w, h).data;
+                        for (const s of valid) {
+                            const ox = s.screenX - minX;
+                            const oy = s.screenY - minY;
+                            const idx = (oy * w + ox) * 4;
+                            const rgba = {
+                                r: data[idx] | 0,
+                                g: data[idx + 1] | 0,
+                                b: data[idx + 2] | 0,
+                                a: data[idx + 3] | 0
+                            };
+                            logSample(s, rgba);
+                        }
+                        LAYER_SNAPSHOT_RENDER_PENDING = false;
+                    } catch {
+                        console.log(
+                            `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} error=snapshotAreaParseFail`
+                        );
+                        LAYER_SNAPSHOT_RENDER_PENDING = false;
+                    }
+                });
+                return;
+            }
+
+            if (mode === "snapshot") {
+                (renderer as any).snapshot((image: any) => {
+                    cbFired = true;
+                    const imgW = image?.width ?? image?.naturalWidth ?? rw;
+                    const imgH = image?.height ?? image?.naturalHeight ?? rh;
+                    console.log(
+                        `[LAYER][SNAP][RENDER-CB] id=${reqId} label=${label} who=${who} mode=snapshot img=${imgW}x${imgH}`
+                    );
+                    try {
+                        const canvas = document.createElement("canvas");
+                        canvas.width = imgW;
+                        canvas.height = imgH;
+                        const ctx = canvas.getContext("2d");
+                        if (!ctx) return;
+                        ctx.drawImage(image, 0, 0);
+                        const data = ctx.getImageData(0, 0, imgW, imgH).data;
+                        for (const s of valid) {
+                            const sx = Math.max(0, Math.min(imgW - 1, s.screenX));
+                            const sy = Math.max(0, Math.min(imgH - 1, s.screenY));
+                            const idx = (sy * imgW + sx) * 4;
+                            const rgba = {
+                                r: data[idx] | 0,
+                                g: data[idx + 1] | 0,
+                                b: data[idx + 2] | 0,
+                                a: data[idx + 3] | 0
+                            };
+                            logSample(s, rgba);
+                        }
+                        LAYER_SNAPSHOT_RENDER_PENDING = false;
+                    } catch {
+                        console.log(
+                            `[LAYER][SNAP][RENDER] id=${reqId} label=${label} who=${who} error=snapshotParseFail`
+                        );
+                        LAYER_SNAPSHOT_RENDER_PENDING = false;
+                    }
+                });
+                return;
+            }
+
+            if (mode === "pixel") {
+                const canvas = renderer.canvas ?? (scene as any)?.game?.canvas;
+                const rect = canvas?.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
+                const scaleX = (canvas && rect && rect.width > 0) ? (canvas.width / rect.width) : 1;
+                const scaleY = (canvas && rect && rect.height > 0) ? (canvas.height / rect.height) : 1;
+                const idx = Math.abs(_layerSnapPixelRoundRobin++) % valid.length;
+                const s = valid[idx];
+                const pxRaw = Math.round(s.screenX);
+                const pyRaw = Math.round(s.screenY);
+                const pxScaled = Math.round(s.screenX * scaleX);
+                const pyScaled = Math.round(s.screenY * scaleY);
+                const clampW = (canvas?.width ?? rw) | 0;
+                const clampH = (canvas?.height ?? rh) | 0;
+                const px = Math.max(0, Math.min(clampW - 1, pxScaled));
+                const py = Math.max(0, Math.min(clampH - 1, pyScaled));
+                renderer.snapshotPixel(px, py, (color: any) => {
+                    cbFired = true;
+                    const cbAt =
+                        (scene as any)?.time?.now ??
+                        (scene as any)?.game?.loop?.time ??
+                        Date.now();
+                    console.log(
+                        `[LAYER][SNAP][RENDER-CB] ` +
+                        `id=${reqId} label=${label} who=${who} mode=pixel sample=${s.kind} ` +
+                        `pxRaw=${pxRaw},${pyRaw} pxScaled=${pxScaled},${pyScaled} ` +
+                        `px=${px},${py} pxScale=${scaleX.toFixed(3)},${scaleY.toFixed(3)} ` +
+                        `dtMs=${Math.round(cbAt - reqAt)}`
+                    );
                     const rgba = {
                         r: (color?.r ?? color?.red ?? 0) | 0,
                         g: (color?.g ?? color?.green ?? 0) | 0,
@@ -9502,9 +9936,79 @@ function _dbgLayerSnapshotRenderSamples(
                         a: (color?.a ?? color?.alpha ?? 255) | 0
                     };
                     logSample(s, rgba);
+                    LAYER_SNAPSHOT_RENDER_PENDING = false;
                 });
             }
+        };
+
+        const queuePost = (emitter: any, tag: string) => {
+            const hasEmitter = !!emitter;
+            const hasOnce = !!(emitter && typeof emitter.once === "function");
+            console.log(
+                `[LAYER][SNAP][RENDER-QUEUE-TRY] ` +
+                `id=${reqId} label=${label} who=${who} tag=${tag} hasEmitter=${hasEmitter ? 1 : 0} hasOnce=${hasOnce ? 1 : 0}`
+            );
+            if (!hasOnce) return false;
+            emitter.once("postrender", () => {
+                console.log(
+                    `[LAYER][SNAP][RENDER-QUEUE-FIRE] ` +
+                    `id=${reqId} label=${label} who=${who} tag=${tag}`
+                );
+                doSnapshot();
+            });
+            console.log(
+                `[LAYER][SNAP][RENDER-QUEUE] ` +
+                `id=${reqId} label=${label} who=${who} tag=${tag} stage=postrender`
+            );
+            return true;
+        };
+
+        if (DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL) {
+            console.log(
+                `[LAYER][SNAP][RENDER-QUEUE] ` +
+                `id=${reqId} label=${label} who=${who} tag=immediate stage=immediate`
+            );
+            doSnapshot();
+            return;
         }
+
+        if (!queuePost((renderer as any)?.events, "renderer.events")) {
+            if (!queuePost((scene as any).events, "scene.events")) {
+                if (!queuePost((scene as any)?.sys?.events, "scene.sys.events")) {
+                    if (!queuePost((scene as any)?.game?.events, "game.events")) {
+                        console.log(
+                            `[LAYER][SNAP][RENDER-QUEUE] ` +
+                            `id=${reqId} label=${label} who=${who} tag=immediate stage=immediate`
+                        );
+                        doSnapshot();
+                    }
+                }
+            }
+        }
+
+        try {
+            const delayMs = 50;
+            const timer = (scene as any)?.time;
+            const fallback = () => {
+                if (!LAYER_SNAPSHOT_RENDER_PENDING) return;
+                if (LAYER_SNAPSHOT_RENDER_PENDING_REQ !== reqId) return;
+                const now2 =
+                    (scene as any)?.time?.now ??
+                    (scene as any)?.game?.loop?.time ??
+                    Date.now();
+                const age = Math.round(now2 - LAYER_SNAPSHOT_RENDER_PENDING_AT);
+                console.log(
+                    `[LAYER][SNAP][RENDER-QUEUE-TIMEOUT] ` +
+                    `id=${reqId} label=${label} who=${who} ageMs=${age}`
+                );
+                doSnapshot();
+            };
+            if (timer && typeof timer.delayedCall === "function") {
+                timer.delayedCall(delayMs, fallback);
+            } else {
+                setTimeout(fallback, delayMs);
+            }
+        } catch { /* ignore */ }
     } catch { /* ignore */ }
 }
 
@@ -9634,7 +10138,7 @@ function _dbgLayerSnapshot(
     centerY: number,
     radiusPx: number,
     focusKeys: string[],
-    ctx?: { renderDir?: string; expectedRow?: number }
+    ctx?: { renderDir?: string; expectedRow?: number; segment?: string; heroCol?: number }
 ): void {
     if (!DEBUG_LAYER_SNAPSHOT) return;
     if (!sc || !nativeHero) return;
@@ -9814,6 +10318,7 @@ function _dbgLayerSnapshot(
     logCorners("bg", bgIt);
     logCorners("fg", fgIt);
 
+    let fgSampleSig = "";
     const dirVec = _dbgLayerSnapshotDirVec(renderDir);
     const logSample = (label: string, it: any, kind: string, point: { px: number; py: number; a: number }): LayerSnapshotSample | null => {
         if (!it || !it.obj || !dirVec) return null;
@@ -9831,15 +10336,33 @@ function _dbgLayerSnapshot(
         const heroDepthNow = (nativeHero as any).depth ?? 0;
         const wpnDepthNow = (obj.depth ?? 0);
         const above = wpnDepthNow > heroDepthNow ? 1 : (wpnDepthNow < heroDepthNow ? -1 : 0);
+        const heroDisplayList = (nativeHero as any).displayList?.list ?? null;
+        const wpnDisplayList = obj.displayList?.list ?? null;
+        const sceneList = sc?.sys?.displayList?.list ?? null;
+        const heroListIdx = _dbgLayerSnapshotListIdx(heroDisplayList, nativeHero);
+        const wpnListIdx = _dbgLayerSnapshotListIdx(wpnDisplayList, obj);
+        const heroListMain = _dbgLayerSnapshotListIdx(sceneList, nativeHero);
+        const wpnListMain = _dbgLayerSnapshotListIdx(sceneList, obj);
+        const heroContainer = (nativeHero as any).parentContainer ? 1 : 0;
+        const wpnContainer = obj.parentContainer ? 1 : 0;
+        const sortFlag = (sc?.sys?.displayList?.sortChildrenFlag ? 1 : 0);
+        const overA = DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA
+            ? _dbgLayerSnapshotStackAlpha(sc, out.x, out.y, 6)
+            : "";
         console.log(
             `[LAYER][SNAP][SAMPLE] who=${label} kind=${kind} dir=${dirVec.key} ` +
             `px=${point.px},${point.py} a=${point.a} ` +
             `world=${Math.round(out.x)},${Math.round(out.y)} ` +
             `heroA=${heroS.a} heroHit=${heroS.a > 0 ? 1 : 0} ` +
             `wpnA=${wpnS.a} wpnHit=${wpnS.a > 0 ? 1 : 0} ` +
-            `depthHero=${heroDepthNow} depthWpn=${wpnDepthNow} above=${above}`
+            `depthHero=${heroDepthNow} depthWpn=${wpnDepthNow} above=${above} ` +
+            `listHero=${heroListIdx} listWpn=${wpnListIdx} ` +
+            `mainHero=${heroListMain} mainWpn=${wpnListMain} ` +
+            `heroCont=${heroContainer} wpnCont=${wpnContainer} sort=${sortFlag}` +
+            (overA ? ` overA=${overA}` : "")
         );
         const exp = _dbgLayerSnapshotExpectedRGBA(obj, point.px, point.py);
+        const heroExp = _dbgLayerSnapshotExpectedRGBA(nativeHero, heroS.px, heroS.py);
         const map = _dbgLayerSnapshotWorldToScreen(sc, out.x, out.y);
         const screenX = map?.screen?.x ?? -1;
         const screenY = map?.screen?.y ?? -1;
@@ -9849,7 +10372,27 @@ function _dbgLayerSnapshot(
             worldY: out.y,
             screenX,
             screenY,
-            expected: exp
+            expected: exp,
+            expectedHero: heroExp,
+            heroA: heroS.a,
+            wpnA: wpnS.a,
+            heroDepth: heroDepthNow,
+            wpnDepth: wpnDepthNow,
+            above,
+            wpnAlpha: (typeof obj.alpha === "number") ? obj.alpha : 1,
+            wpnTint: (typeof obj.tint === "number") ? obj.tint : (typeof obj.tintTopLeft === "number" ? obj.tintTopLeft : 0xffffff),
+            wpnTintFill: (obj.tintFill ? 1 : 0),
+            wpnBlend: (typeof obj.blendMode === "number") ? obj.blendMode : -1,
+            heroListIdx,
+            wpnListIdx,
+            heroListMain,
+            wpnListMain,
+            heroContainer,
+            wpnContainer,
+            sortFlag,
+            heroRef: nativeHero,
+            wpnRef: obj,
+            overA
         };
     };
 
@@ -9866,6 +10409,12 @@ function _dbgLayerSnapshot(
             if (tip) samples.push(tip);
             if (mid) samples.push(mid);
             if (hilt) samples.push(hilt);
+            if (samples.length) {
+                const sampleSig = samples
+                    .map((s) => `${s.kind}:${s.heroA}/${s.wpnA}${s.overA ? `:${s.overA}` : ""}`)
+                    .join("|");
+                if (label === "fg") fgSampleSig = sampleSig;
+            }
 
             if (DEBUG_LAYER_SNAPSHOT_RENDER && samples.length) {
                 try {
@@ -9889,6 +10438,58 @@ function _dbgLayerSnapshot(
         logExtremes("bg", bgIt);
         logExtremes("fg", fgIt);
     }
+
+    // ------------------------------------------------------------
+    // Compare log: prepare vs reset for same frame col (strength)
+    // ------------------------------------------------------------
+    try {
+        const segRaw = String(ctx?.segment ?? "");
+        const seg = segRaw.includes("prepare") || segRaw.includes("charging") ? "prepare"
+            : (segRaw.includes("reset") ? "reset" : "");
+        const colKey = (typeof ctx?.heroCol === "number") ? (ctx!.heroCol | 0) : -1;
+        if (seg && fgIt) {
+            const camState = _dbgLayerSnapshotCamState(sc);
+            const heroState = _dbgLayerSnapshotObjState("hero", heroIt, nativeHero);
+            const fgState = _dbgLayerSnapshotObjState("fg", fgIt, fgIt.obj);
+            const bgState = _dbgLayerSnapshotObjState("bg", bgIt, bgIt?.obj);
+            const heroDisplayList = (nativeHero as any).displayList?.list ?? null;
+            const wpnDisplayList = fgIt?.obj?.displayList?.list ?? null;
+            const sceneList = sc?.sys?.displayList?.list ?? null;
+            const heroListIdx = _dbgLayerSnapshotListIdx(heroDisplayList, nativeHero);
+            const wpnListIdx = _dbgLayerSnapshotListIdx(wpnDisplayList, fgIt?.obj);
+            const heroListMain = _dbgLayerSnapshotListIdx(sceneList, nativeHero);
+            const wpnListMain = _dbgLayerSnapshotListIdx(sceneList, fgIt?.obj);
+            const heroContainer = (nativeHero as any).parentContainer ? 1 : 0;
+            const wpnContainer = fgIt?.obj?.parentContainer ? 1 : 0;
+            const sortFlag = (sc?.sys?.displayList?.sortChildrenFlag ? 1 : 0);
+            const keyBase = `${String(renderDir)}|col${colKey}|${String(fgIt.tex ?? "")}`;
+            const line = `key=${keyBase} seg=${seg} label=${label} ` +
+                `${camState} lists hero=${heroListIdx}/${heroListMain} wpn=${wpnListIdx}/${wpnListMain} ` +
+                `cont hero=${heroContainer} wpn=${wpnContainer} sort=${sortFlag} ` +
+                `${heroState} ${bgState} ${fgState}` +
+                (fgSampleSig ? ` samples=${fgSampleSig}` : "");
+            const sig = _dbgLayerSnapshotHashStr(line);
+            const entry = LAYER_SNAPSHOT_COMPARE_CACHE.get(keyBase) ?? {};
+            if (seg === "prepare") entry.prepare = { sig, line, heroState, bgState, fgState, camState };
+            if (seg === "reset") entry.reset = { sig, line, heroState, bgState, fgState, camState };
+            if (entry.prepare && entry.reset) {
+                const comboSig = (entry.prepare.sig ^ entry.reset.sig) >>> 0;
+                if (entry.lastSig !== comboSig) {
+                    entry.lastSig = comboSig;
+                    const diffHero = entry.prepare.heroState === entry.reset.heroState ? 0 : 1;
+                    const diffBg = entry.prepare.bgState === entry.reset.bgState ? 0 : 1;
+                    const diffFg = entry.prepare.fgState === entry.reset.fgState ? 0 : 1;
+                    const diffCam = entry.prepare.camState === entry.reset.camState ? 0 : 1;
+                    console.log(
+                        `[LAYER][SNAP][COMPARE] key=${keyBase} ` +
+                        `diff=hero:${diffHero},bg:${diffBg},fg:${diffFg},cam:${diffCam} ` +
+                        `A{${entry.prepare.line}} B{${entry.reset.line}}`
+                    );
+                }
+            }
+            LAYER_SNAPSHOT_COMPARE_CACHE.set(keyBase, entry);
+        }
+    } catch { /* ignore */ }
 }
 
 function _legacyWeaponPathForSheetKey(sheetKey: string): { url: string; key: string } | null {
@@ -10672,6 +11273,7 @@ function _syncWeaponOverlaysForHeroNative(
     const weaponId = sel.weaponId;
     const aState = sel.aState;
     const staffCast = sel.staffCast;
+    try { anyHero.__weaponStaffCast = staffCast ? 1 : 0; } catch { /* ignore */ }
     const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
     const weaponVariant = _weaponVariantForHero(heroIndex, weaponId);
     const aimDx1000 = (dataAny[HERO_AIM_DIR_X1000_KEY] as any | 0);
@@ -10766,9 +11368,16 @@ function _syncWeaponOverlaysForHeroNative(
     const partName = partNameRaw.toLowerCase();
     const actionKindLower = actionKind.toLowerCase();
 
-    const glueFrameColOverride = staffCast
+    const isStrCharge = (actionKindLower === "strength_charge");
+    let glueFrameColOverride = staffCast
         ? staffFrameColOverride
-        : ((nativeFco >= 0) ? nativeFco : undefined);
+        : (isStrCharge ? undefined : ((nativeFco >= 0) ? nativeFco : undefined));
+    if (!staffCast && actionKindLower.startsWith("strength") && weaponPhase === "slash") {
+        if (nativeFco < 0 && heroCol >= 0) {
+            glueFrameColOverride = heroCol;
+        }
+    }
+    const glueFrameColOverrideMode = staffCast ? "weaponCol" : "heroClip";
     const glueFrameDirOverride = staffCast ? staffFrameDirOverride : undefined;
 
     // Glue sync (unchanged)
@@ -10783,6 +11392,7 @@ function _syncWeaponOverlaysForHeroNative(
         heroFrameIndex,
         variant: weaponVariant,
         frameColOverride: glueFrameColOverride,
+        frameColOverrideMode: glueFrameColOverrideMode,
         frameDirOverride: glueFrameDirOverride,
         posOffsetX: staffOffsetX,
         posOffsetY: staffOffsetY,
@@ -10791,6 +11401,15 @@ function _syncWeaponOverlaysForHeroNative(
         aimAngleMdeg,
         allowAimRotate
     });
+
+    // Force explicit draw order: bg below hero, fg above hero (bypass depth-sort reliance).
+    try {
+        const dl: any = sc?.sys?.displayList;
+        if (dl && nativeHero) {
+            if (typeof dl.moveBelow === "function") dl.moveBelow(overlays.weaponBg, nativeHero);
+            if (typeof dl.moveAbove === "function") dl.moveAbove(overlays.weaponFg, nativeHero);
+        }
+    } catch { /* ignore */ }
 
     if (DEBUG_LAYER_SNAPSHOT) {
         try {
@@ -10827,7 +11446,7 @@ function _syncWeaponOverlaysForHeroNative(
                     nativeHero.y ?? 0,
                     radius,
                     focusKeys,
-                    { renderDir, expectedRow }
+                    { renderDir, expectedRow, segment: partName, heroCol }
                 );
             }
         } catch { /* ignore */ }
@@ -12571,6 +13190,8 @@ function _syncVisibilityAndDebugTail(
     const dataKeys = Object.keys(dataAny || {});
     const role = _classifySpriteRole((s.kind as any) | 0, dataKeys);
     const forceTop = (role === "EFFECT") && (((dataAny[EFFECT_FORCE_TOP_DATA_KEY] as any) | 0) !== 0);
+    const nativeAny: any = native as any;
+    const isHeroNative = !!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"));
 
     // ------------------------------------------------------------
     // Y-SORT DEPTH (NEW): apply only to non-UI native sprites
@@ -12585,13 +13206,39 @@ function _syncVisibilityAndDebugTail(
         } else {
             _applyWorldDepthForNative(s, native);
         }
+
+        // Re-assert weapon overlay ordering after depth updates (heroes only).
+        if (role === "HERO" && isHeroNative) {
+            try {
+                const bg = (nativeAny as any).__weaponBg;
+                const fg = (nativeAny as any).__weaponFg;
+                if (bg && fg) {
+                    const heroDepth = ((nativeAny as any).depth ?? 0) | 0;
+                    const staffCast = !!((nativeAny as any).__weaponStaffCast);
+
+                    if (staffCast) {
+                        const bgDepth = (heroDepth + 1) | 0;
+                        const fgDepth = (heroDepth + 2) | 0;
+                        try { bg.setDepth?.(bgDepth); } catch { }
+                        try { fg.setDepth?.(fgDepth); } catch { }
+                    } else {
+                        try { bg.setDepth?.((heroDepth - 1) | 0); } catch { }
+                        try { fg.setDepth?.((heroDepth + 1) | 0); } catch { }
+                    }
+
+                    const dl: any = ctx?.sc?.sys?.displayList;
+                    if (dl && native) {
+                        if (typeof dl.moveBelow === "function") dl.moveBelow(bg, native);
+                        if (typeof dl.moveAbove === "function") dl.moveAbove(fg, native);
+                    }
+                }
+            } catch { /* ignore */ }
+        }
     }
 
     // ------------------------------------------------------------
     // DEBUG SNAPSHOT (heroes only, cast only)
     // ------------------------------------------------------------
-    const nativeAny: any = native as any;
-    const isHeroNative = !!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"));
     const heroName = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("heroName") as any) || "") : "";
     const phase = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("phase") as any) || "") : "";
     const dir = (nativeAny && nativeAny.getData) ? ((nativeAny.getData("dir") as any) || "") : "";

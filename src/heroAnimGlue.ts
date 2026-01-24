@@ -1,6 +1,5 @@
 // src/heroAnimGlue.ts
 import type Phaser from "phaser";
-import type { HeroDir, HeroPhase, HeroAnimSet } from "./heroAtlas";
 
 import {
     findHeroAnimSet,
@@ -67,6 +66,7 @@ const HERO_REST_PHASE_KEY = "__heroRestPhase";
 const HERO_ANIMCOMPLETE_HANDLER_KEY = "__heroAnimCompleteHandler";
 
 const HERO_FRAME_COL_OVERRIDE_KEY = "frameColOverride"
+const HERO_ANIM_HOLD_KEY = "animHold"
 const HERO_FRAME_LOG_LAST_IDX_KEY = "__heroFrameLogIdx";
 const HERO_FRAME_LOG_LAST_MS_KEY = "__heroFrameLogAt";
 const HERO_STR_TRACE_ACTIVE_KEY = "__strTraceActive";
@@ -955,6 +955,9 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     strSegStartMs: number;
     strSegDurationMs: number;
     strSegProgressInt: number; // 0..1000, -1 if missing
+
+    // Optional: pause current animation without forcing a frame
+    animHold: boolean;
 } {
     const anySprite = sprite as any;
 
@@ -970,6 +973,7 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     const aimAngRaw = anySprite.getData ? (anySprite.getData(HERO_AIM_ANGLE_MDEG_KEY) as any) : undefined;
 
     const frameColOverrideRaw = anySprite.getData ? (anySprite.getData(HERO_FRAME_COL_OVERRIDE_KEY) as any) : undefined;
+    const animHoldRaw = anySprite.getData ? (anySprite.getData(HERO_ANIM_HOLD_KEY) as any) : undefined;
 
     const actionKindRaw = anySprite.getData ? (anySprite.getData(HERO_ACTION_KIND_KEY) as any) : undefined;
     const actionSeqRaw = anySprite.getData ? (anySprite.getData(HERO_ACTION_SEQUENCE_KEY) as any) : undefined;
@@ -1035,6 +1039,8 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         if (p === "slashoversize") return "slashOversize";
         return null;
     })();
+
+    const animHold = !!animHoldRaw;
 
     let dir: HeroDir = (() => {
         if (!dirRaw) return "down";
@@ -1174,6 +1180,8 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
         strSegStartMs,
         strSegDurationMs,
         strSegProgressInt,
+
+        animHold,
 
         aimDx1000,
         aimDy1000,
@@ -1339,6 +1347,19 @@ function _tryStrengthChargeThrob(
     } else {
         try { sprite.anims.stop(); } catch { /* ignore */ }
     }
+
+    try {
+        const holdColRaw = anySprite.getData?.(HERO_CANON_FRAME_IN_CANON_CLIP_KEY);
+        const holdCol = Number(holdColRaw);
+        if (Number.isFinite(holdCol)) {
+            const anim = sprite.anims.currentAnim as any;
+            const aframes = anim?.frames as any[] | undefined;
+            if (aframes && aframes.length) {
+                const safeIdx = clampInt(holdCol | 0, 0, aframes.length - 1);
+                sprite.anims.setCurrentFrame(aframes[safeIdx]);
+            }
+        }
+    } catch { /* ignore */ }
     try { anySprite.setData?.(PAUSED_KEY, 1); } catch {}
 
     // Set the SAME pose frame in the animation timeline (preferred), fallback to setTexture
@@ -1573,12 +1594,16 @@ function _tryStrengthCustomTimeline(
     })();
     const elapsedLocal = clampInt((nowLocal | 0) - (partStartMs | 0), 0, safePartDur | 0);
 
-        if (actionKind === "strength_charge") {
+    if (actionKind === "strength_charge") {
+        const fco = (req.frameColOverride | 0);
         if (part === "preparetocharge") {
-            const col = _pickStrengthFrameBySchedule(elapsedLocal | 0, [0, 1, 2], STR_SWING_WINDUP_FRAME_MS);
+            const col = (fco >= 0)
+                ? fco
+                : _pickStrengthFrameBySchedule(elapsedLocal | 0, [0, 1, 2], STR_SWING_WINDUP_FRAME_MS);
             _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "charge.prepare");
         } else {
-            _applyStrengthFrameCol(scene, sprite, req, def, 2, shouldProve, "charge.hold");
+            const col = (fco >= 0) ? fco : 2;
+            _applyStrengthFrameCol(scene, sprite, req, def, col, shouldProve, "charge.hold");
         }
         return true;
     }
@@ -2125,6 +2150,16 @@ function applyHeroAnimationForSpriteInternal(
     }
 
     // ------------------------------------------------------------
+    // Pause/resume current anim without forcing a frame (early return)
+    // ------------------------------------------------------------
+    if (_tryAnimHold(scene, sprite, req, def, shouldProve)) {
+        _publishHeroFollowFrameKeys(sprite, def);
+        _debugHeroAnimFrame(scene, sprite, req, def);
+        _debugStrengthFrameTrace(scene, sprite, req);
+        return;
+    }
+
+    // ------------------------------------------------------------
     // Cast part frame control (early return)
     // ------------------------------------------------------------
     if (_tryCastPartFrameControl(scene, sprite, req, def, shouldProve)) {
@@ -2228,6 +2263,92 @@ function _tryHoldSingleFrame(
     if (prevHandler) {
         sprite.off("animationcomplete", prevHandler);
         anySprite[HERO_ANIMCOMPLETE_HANDLER_KEY] = undefined;
+    }
+
+    if (anySprite.setData) {
+        anySprite.setData(LAST_ANIM_KEY, animKey);
+        anySprite.setData(LAST_PHASE_KEY, def.phase);
+        anySprite.setData(LAST_DIR_KEY, def.dir);
+    }
+
+    return true;
+}
+
+function _tryAnimHold(
+    scene: Phaser.Scene,
+    sprite: Phaser.GameObjects.Sprite,
+    req: _HeroAnimRequest,
+    def: any,
+    shouldProve: boolean
+): boolean {
+    const hold = !!(req as any).animHold;
+    const animKey = buildHeroAnimKey(req.heroName!, def);
+    const anySprite = sprite as any;
+    const animState: any = sprite.anims as any;
+    const curAnim = (animState && animState.currentAnim) ? animState.currentAnim : null;
+    const curKey = curAnim ? curAnim.key : "";
+    const isPaused = !!(animState && animState.isPaused);
+
+    const applyPhaseTimeScaleIfPossible = (): void => {
+        const durMs = (req.phaseDurationMs | 0);
+        if (!(durMs > 0)) return;
+        const framesLen = Array.isArray(def.frameIndices) ? (def.frameIndices.length | 0) : 0;
+        const fps = (def.frameRate | 0) > 0 ? (def.frameRate | 0) : 0;
+        if (!(framesLen > 0 && fps > 0)) return;
+        const rep = (def.repeat | 0);
+        if (rep !== 0) return;
+        const authoredMs = Math.max(1, Math.floor((framesLen / fps) * 1000));
+        let desiredMs = Math.max(1, durMs);
+        if (req.actionKind === "strength_charge") {
+            const part = String((req as any).phasePartName || "").trim().toLowerCase();
+            if (part === "preparetocharge") {
+                const partDur = Number((req as any).phasePartDurationMs) | 0;
+                if (partDur > 0) desiredMs = partDur;
+            }
+        }
+        const ts = authoredMs / desiredMs;
+        const safe = Math.max(0.02, Math.min(5, ts));
+        try { (sprite.anims as any).timeScale = safe; } catch {}
+    };
+
+    if (!hold) {
+        if (isPaused && curKey === animKey) {
+            try { animState.resume(); } catch { /* ignore */ }
+            applyPhaseTimeScaleIfPossible();
+            return true;
+        }
+        return false;
+    }
+
+    if (!scene.anims.exists(animKey)) {
+        scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(def.textureKey, { frames: def.frameIndices }),
+            frameRate: def.frameRate,
+            repeat: def.repeat,
+            yoyo: def.yoyo
+        });
+    }
+
+    if (!curKey || curKey !== animKey) {
+        try { sprite.anims.play(animKey, true); } catch { return true; }
+        applyPhaseTimeScaleIfPossible();
+    }
+
+    if (animState && typeof animState.pause === "function") {
+        try { animState.pause(); } catch { /* ignore */ }
+    } else {
+        try { sprite.anims.stop(); } catch { /* ignore */ }
+    }
+
+    if (shouldProve) {
+        console.log(
+            "[PROVE][HERO-ANIM][HOLD-PAUSE]",
+            "| heroName", req.heroName,
+            "| phase", def.phase,
+            "| dir", def.dir,
+            "| animKey", animKey
+        );
     }
 
     if (anySprite.setData) {

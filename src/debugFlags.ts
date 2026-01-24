@@ -49,6 +49,10 @@ export const DEBUG_AGI_COMBO_BUILD = false;
 export const DEBUG_AGI_AIM = false;
 export const DEBUG_AGI_AIM_HERO_INDEX = 0;   // 0 = hero 0, 1 = hero 1, etc.
 export const DEBUG_AGI_AIM_THROTTLE_MS = 250;
+export const DEBUG_AGI_HOOKSHOT_LOGS = true;
+export const DEBUG_AGI_HOOKSHOT_THROTTLE_MS = 50;
+export const DEBUG_AGI_HOOKSHOT_TICK_LOGS = true;
+export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 0.2;
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -180,6 +184,11 @@ export const DEBUG_WEAPON_TICK = false;
 export const DEBUG_WEAPON_ATLAS_COMPARE = false;
 export const DEBUG_LAYER_SNAPSHOT = true;
 export const DEBUG_LAYER_SNAPSHOT_RENDER = true;
+export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_AREA = false;
+export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_SNAPSHOT = false;
+export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL = true;
+export const DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA = true;
+export const DEBUG_FORCE_RENDERER_RESOLUTION_1 = true; // Force Phaser renderer resolution=1 (no DPR scaling).
 export const WEAPON_USE_FRAME_ANCHOR = false;
 export const DEBUG_SPRITE_ATTACH = false;
 export const DEBUG_PROJECTILE_NATIVE = false;

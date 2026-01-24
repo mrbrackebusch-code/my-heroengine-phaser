@@ -34,6 +34,7 @@ import {
   DEBUG_RELIC_LOGS,
   DEBUG_RELICTIP_LOGS,
   DEBUG_SAVE_LOGS,
+  DEBUG_FORCE_RENDERER_RESOLUTION_1,
   DEBUG_TILEMAP_APPLY_NET,
   DEBUG_TILEMAP_MAIN,
   WORLD_SYNC_HASH_WARN_THRESHOLD_MS,
@@ -3670,6 +3671,7 @@ const CAMERA_FOLLOW_SANITY_TILES = 6;
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
+    ...(DEBUG_FORCE_RENDERER_RESOLUTION_1 ? { resolution: 1 } : {}),
 
     width: INITIAL_VIEW_W,
     height: INITIAL_VIEW_H,

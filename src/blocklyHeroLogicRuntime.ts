@@ -812,8 +812,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
       }
       function __heNum(v) { const n = Number(v); return (typeof n === "number" && isFinite(n)) ? n : 0; }
       function __heIdOut(forcedId, v) {
-        if (typeof forcedId !== "undefined") return forcedId;
-        if (v == null) { __heDefaultsUsed.id = true; return undefined; }
+        if (v == null) { __heDefaultsUsed.id = true; return (forcedId !== undefined) ? forcedId : undefined; }
         return v;
       }
       function __heStatusOut(v1, v2) {

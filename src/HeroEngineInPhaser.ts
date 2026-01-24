@@ -9,6 +9,10 @@ import {
     DEBUG_AGI_AIM,
     DEBUG_AGI_AIM_HERO_INDEX,
     DEBUG_AGI_AIM_THROTTLE_MS,
+    DEBUG_AGI_HOOKSHOT_LOGS,
+    DEBUG_AGI_HOOKSHOT_THROTTLE_MS,
+    DEBUG_AGI_HOOKSHOT_TICK_LOGS,
+    DEBUG_AGI_HOOKSHOT_SLOW_MULT,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -3326,6 +3330,13 @@ const HERO_DATA: Record<string, string> = {
 
     AGI_CANCEL_LAST_TICK_MS: "aCanT",
 
+    // NEW (Agility hookshot): per-hero hookshot state + mode string (future)
+    AGI_HOOK_STATE: "aHookSt",         // number enum (see AGI_HOOK_STATE below)
+    MOVE_MODE_STR: "moveMode",         // string (OUT[6] passthrough; unused for now)
+
+    // NEW (Animation): pause current anim without forcing a specific frame
+    ANIM_HOLD: "animHold",             // 0/1 (Phaser-only hook; see heroAnimGlue)
+
 
 
     // NEW (Bug2 fix): cancel direction must be steady to cancel
@@ -3700,6 +3711,7 @@ const ENEMY_DATA = {
     WEAKEN_UNTIL: "weakUntil",
 
     KNOCKBACK_UNTIL: "kbUntil",
+    HOOKSHOT_PULLING: "hookPull",
 
 
 
@@ -29519,6 +29531,10 @@ function _resolveHeroCollisionsUnified(): void {
         const h = heroes[hi]
         if (!h) continue
         if (h.flags & sprites.Flag.Ghost) continue
+        const hookSt = agiHookshotStateByHeroIndex[hi]
+        if (hookSt && hookSt.state === AGI_HOOK_STATE.RETRACT && hookSt.targetKind !== AGI_HOOK_TARGET.MONSTER && !hookSt.returnOnly) {
+            continue
+        }
 
         const curX = h.x | 0
         const curY = h.y | 0
@@ -31102,6 +31118,8 @@ function resolveHeroTilemapCollisions(): void {
         if (!h) continue
 
         if (h.flags & sprites.Flag.Ghost) continue
+        const hookSt = agiHookshotStateByHeroIndex[hi]
+        if (hookSt && hookSt.state === AGI_HOOK_STATE.RETRACT && hookSt.targetKind !== AGI_HOOK_TARGET.MONSTER && !hookSt.returnOnly) continue
 
         resolveForSprite(h)
 
@@ -31369,7 +31387,9 @@ function resolveEnemyTilemapCollisions(): void {
     // Apply to all enemies
     for (let ei = 0; ei < enemies.length; ei++) {
         const e = enemies[ei]
-        if (e) resolveForEnemy(e)
+        if (!e) continue
+        if ((sprites.readDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING) | 0) !== 0) continue
+        resolveForEnemy(e)
     }
 }
 
@@ -32715,6 +32735,9 @@ function createHeroForPlayer(
     setHeroPhaseString(heroIndex, "idle")
 
     clearHeroFrameColOverride(heroIndex) // IMPORTANT: seed to -1 so run/idle logic works
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
+    sprites.setDataString(hero, HERO_DATA.MOVE_MODE_STR, "")
+    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
 
 
 
@@ -33092,7 +33115,9 @@ function createHeroForPlayer(
 
     initHeroHP(heroIndex, hero, BALANCE.HERO.START_HP)
 
-    initHeroMana(heroIndex, hero, BALANCE.HERO.START_MANA)
+    let startMana = BALANCE.HERO.START_MANA | 0
+    if (profileName === "LongBlond") startMana = 1000
+    initHeroMana(heroIndex, hero, startMana)
 
     refreshHeroController(heroIndex)
 
@@ -34393,7 +34418,7 @@ function _doHeroMoveValidateHookOut(heroIndex: number, button: string, out: any[
 
 
 
-function _doHeroMoveParseHookOut(out: any[]): {
+function _doHeroMoveParseHookOut(out: any[], button: string): {
 
     family: number
 
@@ -34410,6 +34435,8 @@ function _doHeroMoveParseHookOut(out: any[]): {
     traits: number[]
 
     animKey: string
+
+    modeStr: string
 
 } {
 
@@ -34433,11 +34460,15 @@ function _doHeroMoveParseHookOut(out: any[]): {
 
 
 
-    const animKey = coerceAnimKey(out[6])
+    const modeRaw = out[6]
+    const modeStr = USE_OUT_MODE_STRING ? ((modeRaw == null) ? "" : String(modeRaw)) : ""
+
+    // OUT[6] is reserved for a future mode string; ignore for anim for now.
+    const animKey = coerceAnimKey(button)
 
 
 
-    return { family, t1, t2, t3, t4, element, traits, animKey }
+    return { family, t1, t2, t3, t4, element, traits, animKey, modeStr }
 
 }
 
@@ -36138,6 +36169,15 @@ function _doHeroMoveGuardAndLogEarlyReturns(
 
     }
 
+    const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
+    if (hookState === AGI_HOOK_STATE.PENDING || hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+        if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
+            console.log(DEBUG_FILTER_PHRASE + " IGNORE agiHook timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex + " hookState=" + hookState)
+            _doHeroMoveDbgReset(playerId)
+        }
+        return true
+    }
+
 
 
     return false
@@ -36173,6 +36213,8 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
     traits: number[]
 
     animKey: string
+
+    modeStr: string
 
 } | null {
 
@@ -36229,7 +36271,7 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
     }
 
 
-    const parsed = _doHeroMoveParseHookOut(out)
+    const parsed = _doHeroMoveParseHookOut(out, button)
 
 
 
@@ -36720,10 +36762,12 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
     const traits = parsed.traits
 
     const animKey = parsed.animKey
+    const modeStr = parsed.modeStr
 
 
 
     _doHeroMoveApplyBaseHeroMoveData(hero, family, button, t1, t2, t3, t4)
+    sprites.setDataString(hero, HERO_DATA.MOVE_MODE_STR, modeStr || "")
 
 
 
@@ -46054,6 +46098,24 @@ const AGI_STATE = {
 
 }
 
+// Agility hookshot state (separate from combo AGI_STATE)
+const AGI_HOOK_STATE = {
+    NONE: 0,
+    PENDING: 1,   // waiting for windup end to decide tap vs hold
+    AIMING: 2,    // aim mode (held)
+    EXTEND: 3,    // spear extending
+    RETRACT: 4,   // retracting (pulling hero/monster or return-only)
+}
+
+const AGI_HOOK_TARGET = {
+    NONE: 0,
+    GROUND: 1,
+    MONSTER: 2,
+    HERO: 3,
+    PROP: 4,
+    WALL: 5,
+}
+
 
 
 // Default UI layout for the pendulum meter (pixels)
@@ -46107,6 +46169,59 @@ const AGI_METER_PERIOD_MS = 1200
 // Keyed by heroIndex for simplicity/stability.
 
 let agiPacketBankByHeroIndex = new Map<number, number[]>()
+
+type AgiHookshotState = {
+    state: number
+    button: string
+    ownerId: number
+    pendingWindupEndMs: number
+    forwardMs: number
+    waitRelease: number
+    lastBtnHeld: boolean
+    lastJumpHeld: boolean
+    lastInteractHeld: boolean
+    aimAngleMdeg: number
+    dirX: number
+    dirY: number
+    targetKind: number
+    targetSpriteId: number
+    targetX: number
+    targetY: number
+    targetDist: number
+    tipDist: number
+    speed: number
+    minThrustEndMs: number
+    hitReady: number
+    returnOnly: number
+    weaponLen: number
+    maxDist: number
+    tipHalf: number
+    reachExtra: number
+    baseSpeed: number
+    dmg: number
+    slowPct: number
+    slowMs: number
+    weakenPct: number
+    weakenMs: number
+    knockbackPct: number
+    element: number
+    hitApplied: number
+    lastGroundDist: number
+    recoverHoldPending: number
+    lastAnimFrame: number
+    lastLogMs: number
+    lastAimKind: number
+    lastAimSpriteId: number
+    lastAimDist: number
+    lastAimAngleMdeg: number
+    spear: Sprite | null
+    chain: Sprite[] | null
+    marker: Sprite | null
+    aimSpear: Sprite | null
+    lastTickMs: number
+}
+
+const agiHookshotStateByHeroIndex: AgiHookshotState[] = []
 
 
 
@@ -46299,6 +46414,26 @@ const AGI_THRUST_WINDUP_MIN_MS = 400
 const AGI_THRUST_FORWARD_MIN_MS = 200
 const AGI_THRUST_LANDING_MIN_MS = 200
 const AGI_THRUST_WINDUP_PULLBACK_PCT_X1000 = 200
+const AGI_WINDUP_PULLBACK_ENABLED = false
+
+// Hookshot tuning
+const AGI_HOOKSHOT_AIM_STEP_MDEG = 5000           // 5 deg per frame
+const AGI_HOOKSHOT_CHAIN_LINK_PX = 10
+const AGI_HOOKSHOT_CHAIN_SPACING_PX = 5           // half-link overlap
+const AGI_HOOKSHOT_BASE_LEN_MULT_X1000 = 1000     // base reach = 1.0 * weapon length
+const AGI_HOOKSHOT_BASE_LEN_ADD_PX = 0
+const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-length of travel
+const AGI_HOOKSHOT_MIN_SPEED_PX_S = 20
+const AGI_HOOKSHOT_TIP_FORGIVENESS_PX = 10        // min tip box width/height
+const AGI_HOOKSHOT_WALL_EMBED_PX = (WORLD_TILE_SIZE >> 1)
+const AGI_HOOKSHOT_MARKER_SIZE_PX = 10
+const AGI_HOOKSHOT_TRACE_STEP_PX = 2
+const AGI_HOOKSHOT_WINDUP_HOLD_FRAME_COL = 3
+const AGI_HOOKSHOT_HAND_Y_OFFS_SIDE = 6
+const AGI_USE_LEGACY_THRUST_PROJECTILE = false
+
+// OUT[6] mode string: keep in data for future; ignore for anim for now.
+const USE_OUT_MODE_STRING = false
 
 
 
@@ -47651,6 +47786,15 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
         if (lungeStart <= 0 || lungeEnd <= 0) continue
 
+        const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
+        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+            continue
+        }
+
 
 
         // If we’re in build/execute mode, never apply lunge velocity or phase parts
@@ -47789,20 +47933,27 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
         if (desiredPart === "windup") {
 
-            const ax1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirX1000) | 0
-            const ay1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirY1000) | 0
-            const speed = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeSpeed) | 0
-            let pull = Math.idiv(speed * AGI_THRUST_WINDUP_PULLBACK_PCT_X1000, 1000) | 0
-            if (pull < 0) pull = 0
+            if (AGI_WINDUP_PULLBACK_ENABLED) {
+                const ax1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirX1000) | 0
+                const ay1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirY1000) | 0
+                const speed = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeSpeed) | 0
+                let pull = Math.idiv(speed * AGI_THRUST_WINDUP_PULLBACK_PCT_X1000, 1000) | 0
+                if (pull < 0) pull = 0
 
-            const vx = -Math.idiv(ax1000 * pull, 1000)
-            const vy = -Math.idiv(ay1000 * pull, 1000)
+                const vx = -Math.idiv(ax1000 * pull, 1000)
+                const vy = -Math.idiv(ay1000 * pull, 1000)
 
-            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, vx)
-            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, vy)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, vx)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, vy)
 
-            hero.vx = vx
-            hero.vy = vy
+                hero.vx = vx
+                hero.vy = vy
+            } else {
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+                hero.vx = 0
+                hero.vy = 0
+            }
 
         } else if (desiredPart === "forward") {
 
@@ -48887,6 +49038,31 @@ function executeAgilityMove(
         return
     }
 
+    // Hookshot pending: decide tap vs hold at windup end.
+    const comboMode0 = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0
+    if (state === AGI_STATE.NONE && !comboMode0) {
+        const st = _agiHookStateEnsure(heroIndex)
+        const ownerId = (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0)
+        st.button = String(button || "")
+        st.ownerId = ownerId | 0
+        st.pendingWindupEndMs = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0
+        st.forwardMs = Math.max(0, (sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0) - (st.pendingWindupEndMs | 0))
+        st.waitRelease = 0
+        st.lastBtnHeld = _agiHookIsMoveBtnHeld(ownerId, button)
+        st.lastTickMs = game.runtime() | 0
+        st.hitReady = 0
+        st.returnOnly = 0
+        _agiHookSetState(heroIndex, hero, st, AGI_HOOK_STATE.PENDING)
+        _agiHookLog(
+            heroIndex,
+            hero,
+            st,
+            "BEGIN",
+            `windupEnd=${st.pendingWindupEndMs | 0} fwdMs=${st.forwardMs | 0} held=${st.lastBtnHeld ? 1 : 0}`,
+            true
+        )
+    }
+
 
 
     // Base damage from family + trait-driven multiplier (legacy)
@@ -48895,7 +49071,9 @@ function executeAgilityMove(
 
     const damageMult = stats[STAT.DAMAGE_MULT] | 0
 
-    let dmg = Math.max(0, Math.idiv(baseDamage * damageMult, 100))
+    const dmgHook = Math.max(0, Math.idiv(baseDamage * damageMult, 100))
+
+    let dmg = dmgHook
 
 
 
@@ -48926,22 +49104,31 @@ function executeAgilityMove(
     const isHeal = false
     const element = traits[OUT.ELEMENT] | 0
 
+    if (state === AGI_STATE.NONE && !comboMode0) {
+        const st = _agiHookStateEnsure(heroIndex)
+        let baseSpeed = stats[STAT.LUNGE_SPEED] | 0
+        if (baseSpeed <= 0) baseSpeed = BALANCE.MOVES.AGILITY.LUNGE_BASE | 0
+        st.baseSpeed = baseSpeed | 0
+        st.reachExtra = stats[STAT.AGILITY_REACH_PX] | 0
+        st.dmg = dmgHook | 0
+        st.slowPct = slowPct | 0
+        st.slowMs = slowDurationMs | 0
+        st.weakenPct = weakenPct | 0
+        st.weakenMs = weakenDurationMs | 0
+        st.knockbackPct = knockbackPct | 0
+        st.element = element | 0
+    }
 
-
-    spawnAgilityThrustProjectile(
-
-        heroIndex, hero,
-
-        dmg, isHeal, button,
-
-        slowPct, slowDurationMs,
-
-        weakenPct, weakenDurationMs,
-
-        knockbackPct,
-        element
-
-    )
+    if (AGI_USE_LEGACY_THRUST_PROJECTILE) {
+        spawnAgilityThrustProjectile(
+            heroIndex, hero,
+            dmg, isHeal, button,
+            slowPct, slowDurationMs,
+            weakenPct, weakenDurationMs,
+            knockbackPct,
+            element
+        )
+    }
 
 }
 
@@ -48999,6 +49186,1436 @@ function getComboDamageMultPct(heroIndex: number) {
 
     return val > 0 ? val : 100
 
+}
+
+// --------------------------------------------------------------
+// AGILITY HOOKSHOT – state + helpers
+// --------------------------------------------------------------
+
+const HERO_CANON_FRAME_IN_CANON_CLIP_KEY = "HeroCanonFrameInCanonClip"
+
+function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
+    let st = agiHookshotStateByHeroIndex[heroIndex]
+    if (st) return st
+    st = {
+        state: AGI_HOOK_STATE.NONE,
+        button: "",
+        ownerId: 0,
+        pendingWindupEndMs: 0,
+        forwardMs: 0,
+        waitRelease: 0,
+        lastBtnHeld: false,
+        lastJumpHeld: false,
+        lastInteractHeld: false,
+        aimAngleMdeg: 0,
+        dirX: 1,
+        dirY: 0,
+        targetKind: AGI_HOOK_TARGET.NONE,
+        targetSpriteId: 0,
+        targetX: 0,
+        targetY: 0,
+        targetDist: 0,
+        tipDist: 0,
+        speed: 0,
+        minThrustEndMs: 0,
+        hitReady: 0,
+        returnOnly: 0,
+        weaponLen: 0,
+        maxDist: 0,
+        tipHalf: 0,
+        reachExtra: 0,
+        baseSpeed: 0,
+        dmg: 0,
+        slowPct: 0,
+        slowMs: 0,
+        weakenPct: 0,
+        weakenMs: 0,
+        knockbackPct: 0,
+        element: 0,
+        hitApplied: 0,
+        lastGroundDist: 0,
+        recoverHoldPending: 0,
+        lastAnimFrame: -1,
+        lastLogMs: 0,
+        lastAimKind: 0,
+        lastAimSpriteId: 0,
+        lastAimDist: 0,
+        lastAimAngleMdeg: 0,
+        spear: null,
+        chain: null,
+        marker: null,
+        aimSpear: null,
+        lastTickMs: 0,
+    }
+    agiHookshotStateByHeroIndex[heroIndex] = st
+    return st
+}
+
+function _agiHookSetState(heroIndex: number, hero: Sprite, st: AgiHookshotState, next: number): void {
+    st.state = next | 0
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, next | 0)
+}
+
+let _agiHookChainImg: Image | null = null
+function _agiHookChainImage(): Image {
+    if (_agiHookChainImg) return _agiHookChainImg
+    const w = Math.max(2, AGI_HOOKSHOT_CHAIN_LINK_PX | 0)
+    const h = Math.max(2, Math.idiv(w, 3))
+    const img = image.create(w, h)
+    img.fill(1)
+    _agiHookChainImg = img
+    return img
+}
+
+let _agiHookMarkerImg: Image | null = null
+function _agiHookMarkerImage(): Image {
+    if (_agiHookMarkerImg) return _agiHookMarkerImg
+    const s = Math.max(2, AGI_HOOKSHOT_MARKER_SIZE_PX | 0)
+    const img = image.create(s, s)
+    img.fill(0)
+    const mid = Math.idiv(s, 2)
+    const fill = 1
+    const border = 15
+    for (let y = 0; y < s; y++) {
+        for (let x = 0; x < s; x++) {
+            const man = Math.abs(x - mid) + Math.abs(y - mid)
+            if (man > mid) continue
+            const isBorder = man === mid
+            img.setPixel(x, y, isBorder ? border : fill)
+        }
+    }
+    _agiHookMarkerImg = img
+    return img
+}
+
+function _agiHookDestroySprite(s: Sprite | null): void {
+    if (!s) return
+    if (!(s.flags & sprites.Flag.Destroyed)) s.destroy()
+}
+
+function _agiHookClearVisuals(st: AgiHookshotState): void {
+    if (st.spear) _agiHookDestroySprite(st.spear)
+    st.spear = null
+    if (st.aimSpear) _agiHookDestroySprite(st.aimSpear)
+    st.aimSpear = null
+    if (st.marker) _agiHookDestroySprite(st.marker)
+    st.marker = null
+    if (st.chain && st.chain.length) {
+        for (const c of st.chain) _agiHookDestroySprite(c)
+    }
+    st.chain = null
+}
+
+function _agiHookNormalizeAngleMdeg(a: number): number {
+    let v = a | 0
+    v %= 360000
+    if (v < 0) v += 360000
+    return v
+}
+
+function _agiHookStateLabel(state: number): string {
+    switch (state | 0) {
+        case AGI_HOOK_STATE.PENDING: return "PENDING"
+        case AGI_HOOK_STATE.AIMING: return "AIMING"
+        case AGI_HOOK_STATE.EXTEND: return "EXTEND"
+        case AGI_HOOK_STATE.RETRACT: return "RETRACT"
+    }
+    return "NONE"
+}
+
+function _agiHookTargetLabel(kind: number): string {
+    switch (kind | 0) {
+        case AGI_HOOK_TARGET.GROUND: return "GROUND"
+        case AGI_HOOK_TARGET.MONSTER: return "MONSTER"
+        case AGI_HOOK_TARGET.HERO: return "HERO"
+        case AGI_HOOK_TARGET.PROP: return "PROP"
+        case AGI_HOOK_TARGET.WALL: return "WALL"
+    }
+    return "NONE"
+}
+
+function _agiHookLog(
+    heroIndex: number,
+    hero: Sprite,
+    st: AgiHookshotState,
+    tag: string,
+    extra?: string,
+    force?: boolean
+): void {
+    if (!DEBUG_AGI_HOOKSHOT_LOGS) return
+    const now = game.runtime() | 0
+    const throttle = DEBUG_AGI_HOOKSHOT_THROTTLE_MS | 0
+    if (!force && throttle > 0) {
+        const since = (now - (st.lastLogMs | 0)) | 0
+        if (since >= 0 && since < throttle) return
+    }
+    st.lastLogMs = now | 0
+
+    const pid = (st.ownerId | 0) || (sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0)
+    const profile = _heroProfileKeyForIndex(heroIndex) || ""
+    const posX = hero.x | 0
+    const posY = hero.y | 0
+    const dirX = Math.round((st.dirX || 0) * 1000)
+    const dirY = Math.round((st.dirY || 0) * 1000)
+    const tgtKind = _agiHookTargetLabel(st.targetKind | 0)
+    const tgtId = st.targetSpriteId | 0
+    const tgtX = st.targetX | 0
+    const tgtY = st.targetY | 0
+    const busyUntil = sprites.readDataNumber(hero, HERO_DATA.BUSY_UNTIL) | 0
+    const dashUntil = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+    const animHold = sprites.readDataNumber(hero, HERO_DATA.ANIM_HOLD) | 0
+    const fco = sprites.readDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE) | 0
+    let slowMult = Number(DEBUG_AGI_HOOKSHOT_SLOW_MULT)
+    if (!Number.isFinite(slowMult) || slowMult <= 0) slowMult = 1
+
+    let line =
+        `[AGI][HOOK] tag=${tag}` +
+        ` hi=${heroIndex}` +
+        ` pid=${pid}` +
+        ` prof=${profile}` +
+        ` btn=${st.button || ""}` +
+        ` state=${_agiHookStateLabel(st.state | 0)}` +
+        ` t=${now}` +
+        ` pos=${posX},${posY}` +
+        ` dir=${dirX},${dirY}` +
+        ` ang=${st.aimAngleMdeg | 0}` +
+        ` wLen=${st.weaponLen | 0}` +
+        ` max=${st.maxDist | 0}` +
+        ` tip=${Math.round(st.tipDist || 0)}` +
+        ` tgt=${tgtKind}:${tgtId}` +
+        ` tpos=${tgtX},${tgtY}` +
+        ` tdist=${st.targetDist | 0}` +
+        ` ro=${st.returnOnly | 0}` +
+        ` hit=${st.hitReady | 0}` +
+        ` spd=${Math.round(st.speed || 0)}` +
+        ` baseSpd=${st.baseSpeed | 0}` +
+        ` reach=${st.reachExtra | 0}` +
+        ` animHold=${animHold}` +
+        ` fco=${fco}` +
+        ` slow=${slowMult}` +
+        ` busyUntil=${busyUntil}` +
+        ` dashUntil=${dashUntil}`
+    if (extra) line += ` ${extra}`
+    console.log(line)
+}
+
+function _agiHookAngleToDir(angleMdeg: number): { nx: number; ny: number } {
+    const ang = (_agiHookNormalizeAngleMdeg(angleMdeg) * Math.PI) / 180000
+    const nx = Math.cos(ang)
+    const ny = -Math.sin(ang)
+    return { nx, ny }
+}
+
+function _agiHookDirToAngleMdeg(dx: number, dy: number): number {
+    const ang = Math.atan2(-dy, dx)
+    return _agiHookNormalizeAngleMdeg(Math.round((ang * 180000) / Math.PI))
+}
+
+function _agiHookRotateToward(currentMdeg: number, targetMdeg: number): number {
+    const cur = _agiHookNormalizeAngleMdeg(currentMdeg)
+    const tgt = _agiHookNormalizeAngleMdeg(targetMdeg)
+    let delta = ((tgt - cur + 540000) % 360000) - 180000
+    const step = AGI_HOOKSHOT_AIM_STEP_MDEG | 0
+    if (Math.abs(delta) <= step) return tgt
+    const dir = delta > 0 ? 1 : -1
+    return _agiHookNormalizeAngleMdeg(cur + dir * step)
+}
+
+function _agiHookSnapFacingFromAngle(heroIndex: number, angleMdeg: number): void {
+    const ang = _agiHookNormalizeAngleMdeg(angleMdeg)
+    const oct = Math.round(ang / 45000) % 8
+    const dirs = [
+        [1, 0], [1, -1], [0, -1], [-1, -1],
+        [-1, 0], [-1, 1], [0, 1], [1, 1],
+    ]
+    const d = dirs[oct] || [1, 0]
+    _setHeroFacingX(heroIndex, d[0] | 0)
+    _setHeroFacingY(heroIndex, d[1] | 0)
+}
+
+function _agiHookGetInputStateForOwner(ownerId: number): HeroInputState | null {
+    return _getInputStateForOwnerId(ownerId)
+}
+
+function _agiHookIsMoveBtnHeld(ownerId: number, button: string): boolean {
+    const btnId = encodeIntentToStrBtnId(button)
+    return isStrBtnIdPressedForOwner(ownerId, btnId | 0)
+}
+
+function _agiHookUtilityEdges(st: AgiHookshotState, input: HeroInputState | null): { jumpEdge: boolean; interactEdge: boolean } {
+    const jumpNow = !!(input && input.Jump)
+    const interactNow = !!(input && input.Interact)
+    const jumpEdge = jumpNow && !st.lastJumpHeld
+    const interactEdge = interactNow && !st.lastInteractHeld
+    st.lastJumpHeld = jumpNow
+    st.lastInteractHeld = interactNow
+    return { jumpEdge, interactEdge }
+}
+
+function _agiHookWeaponLength(hero: Sprite, nx: number, ny: number): number {
+    let len = 0
+    const info = _getHeroWeaponFgInfo(hero)
+    if (info) {
+        const lead = _weaponLeadingEdgeForFrameIndex(info, STR_WPN_AURA_OUTLINE_RADIUS | 0, nx, ny, 0)
+        if (Number.isFinite(lead) && lead > 0) len = Math.round(lead)
+    }
+    if (len <= 0) {
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+        const wTipX = (vis[2] || 0)
+        const wTipY = (vis[3] || 0)
+        const proj = (wTipX * nx) + (wTipY * ny)
+        if (proj > 0) len = Math.round(proj)
+        else len = (vis[1] || 0) | 0
+    }
+    if (len <= 0) len = 12
+    return len | 0
+}
+
+function _agiHookTipHalf(hero: Sprite, nx: number, ny: number, heroIndex: number): number {
+    const aura = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.hook.tip")
+    const minHalf = Math.max(1, Math.idiv(AGI_HOOKSHOT_TIP_FORGIVENESS_PX | 0, 2))
+    if (aura && aura.shapes && aura.shapes[3]) {
+        return Math.max(minHalf, aura.shapes[3].sideHalf | 0)
+    }
+    return minHalf
+}
+
+function _agiHookOutOfBounds(left: number, right: number, top: number, bottom: number): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return false
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+    const tile = WORLD_TILE_SIZE | 0
+    if (rows <= 0 || cols <= 0 || tile <= 0) return false
+    const worldW = (cols * tile) | 0
+    const worldH = (rows * tile) | 0
+    return (left < 0 || top < 0 || right >= worldW || bottom >= worldH)
+}
+
+function _agiHookHandBase(hero: Sprite, nx: number, ny: number): { x: number; y: number } {
+    const weaponLen = _agiHookWeaponLength(hero, nx, ny)
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+    const wTipX = Number.isFinite(vis[2]) ? (vis[2] || 0) : 0
+    const wTipY = Number.isFinite(vis[3]) ? (vis[3] || 0) : 0
+    const tipHasData = (Math.abs(wTipX) + Math.abs(wTipY)) > 0.1
+    if (tipHasData && weaponLen > 0) {
+        const dir = _enemyDirFromVector(nx, ny)
+        const sideOffY = (dir === "left" || dir === "right") ? (AGI_HOOKSHOT_HAND_Y_OFFS_SIDE | 0) : 0
+        return { x: hero.x + wTipX - (nx * weaponLen), y: hero.y + wTipY - (ny * weaponLen) + sideOffY }
+    }
+    const info = _getHeroWeaponFgInfo(hero)
+    if (info) {
+        const dir = _enemyDirFromVector(nx, ny)
+        const sideOffY = (dir === "left" || dir === "right") ? (AGI_HOOKSHOT_HAND_Y_OFFS_SIDE | 0) : 0
+        return { x: hero.x + (info.offX || 0), y: hero.y + (info.offY || 0) + sideOffY }
+    }
+    const off = _agiThrustOffsets(nx, ny)
+    const dir = _enemyDirFromVector(nx, ny)
+    const sideOffY = (dir === "left" || dir === "right") ? (AGI_HOOKSHOT_HAND_Y_OFFS_SIDE | 0) : 0
+    return { x: hero.x + (off.ox | 0), y: hero.y + (off.oy | 0) + sideOffY }
+}
+
+function _agiHookBuildSpearImage(hero: Sprite, nx: number, ny: number, heroIndex: number, element: number): {
+    img: Image; minX: number; maxX: number; minY: number; maxY: number; length: number; sideHalf: number
+} {
+    const len = _agiHookWeaponLength(hero, nx, ny)
+    const aura = _getWeaponAuraTipShapes(hero, nx, ny, heroIndex, "agi.hook.spear")
+    const dirKey = aura ? aura.dirKey : _weaponDirKeyFromVector(nx, ny)
+    const palette = _weaponAuraPaletteForElement(element | 0, dirKey, "offense")
+    const auraR1 = palette.r1 | 0
+    const auraR2 = palette.r2 | 0
+    const auraR3 = palette.r3 | 0
+    const auraEdge = palette.edge | 0
+    const colorsByIdx = [auraR1, auraR1, auraR2, auraR3]
+    let sideHalf = _agiHookTipHalf(hero, nx, ny, heroIndex)
+
+    const x0 = 0
+    const y0 = 0
+    const x1 = nx * len
+    const y1 = ny * len
+    const pad = 1 + sideHalf
+    let minX = Math.floor(Math.min(x0, x1) - pad)
+    let maxX = Math.ceil(Math.max(x0, x1) + pad)
+    let minY = Math.floor(Math.min(y0, y1) - pad)
+    let maxY = Math.ceil(Math.max(y0, y1) + pad)
+    if (minX === maxX) maxX = minX + 1
+    if (minY === maxY) maxY = minY + 1
+    const img = image.create(Math.max(1, (maxX - minX + 1) | 0), Math.max(1, (maxY - minY + 1) | 0))
+    img.fill(0)
+    if (aura && aura.shapes && aura.shapes.length) {
+        _stampWeaponAuraLine(
+            img,
+            minX,
+            minY,
+            x0,
+            y0,
+            x1,
+            y1,
+            aura.shapes,
+            auraR1 | 0,
+            3,
+            auraEdge | 0,
+            true,
+            colorsByIdx,
+            null
+        )
+    } else {
+        img.drawLine(
+            Math.round(x0 - minX),
+            Math.round(y0 - minY),
+            Math.round(x1 - minX),
+            Math.round(y1 - minY),
+            auraR1 | 0
+        )
+    }
+    return { img, minX, maxX, minY, maxY, length: len | 0, sideHalf: sideHalf | 0 }
+}
+
+const AGI_HOOK_MIN_X_KEY = "agiHookMinX"
+const AGI_HOOK_MAX_X_KEY = "agiHookMaxX"
+const AGI_HOOK_MIN_Y_KEY = "agiHookMinY"
+const AGI_HOOK_MAX_Y_KEY = "agiHookMaxY"
+const AGI_HOOK_LEN_KEY = "agiHookLen"
+
+function _agiHookEnsureSpearSprite(st: AgiHookshotState, hero: Sprite, heroIndex: number, nx: number, ny: number, element: number, isGhost: boolean): Sprite {
+    const pack = _agiHookBuildSpearImage(hero, nx, ny, heroIndex, element | 0)
+    let spr = isGhost ? st.aimSpear : st.spear
+    if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
+        spr = sprites.create(pack.img, SpriteKind.HeroWeapon)
+        spr.setFlag(SpriteFlag.Ghost, true)
+        spr.setFlag(SpriteFlag.Invisible, false)
+        spr.z = hero.z + 2
+    } else {
+        spr.setImage(pack.img)
+    }
+    sprites.setDataNumber(spr, AGI_HOOK_MIN_X_KEY, pack.minX | 0)
+    sprites.setDataNumber(spr, AGI_HOOK_MAX_X_KEY, pack.maxX | 0)
+    sprites.setDataNumber(spr, AGI_HOOK_MIN_Y_KEY, pack.minY | 0)
+    sprites.setDataNumber(spr, AGI_HOOK_MAX_Y_KEY, pack.maxY | 0)
+    sprites.setDataNumber(spr, AGI_HOOK_LEN_KEY, pack.length | 0)
+    if (!isGhost) {
+        sprites.setDataNumber(spr, PROJ_DATA.FAMILY, FAMILY.AGILITY)
+        sprites.setDataNumber(spr, PROJ_DATA.HERO_INDEX, heroIndex)
+        sprites.setDataNumber(spr, PROJ_DATA.ELEMENT, element | 0)
+    }
+    if (isGhost) st.aimSpear = spr
+    else st.spear = spr
+    return spr
+}
+
+function _agiHookPositionSpear(spr: Sprite, baseX: number, baseY: number): void {
+    const minX = sprites.readDataNumber(spr, AGI_HOOK_MIN_X_KEY) | 0
+    const maxX = sprites.readDataNumber(spr, AGI_HOOK_MAX_X_KEY) | 0
+    const minY = sprites.readDataNumber(spr, AGI_HOOK_MIN_Y_KEY) | 0
+    const maxY = sprites.readDataNumber(spr, AGI_HOOK_MAX_Y_KEY) | 0
+    spr.x = baseX + (minX + maxX) / 2
+    spr.y = baseY + (minY + maxY) / 2
+}
+
+function _agiHookWallsBlock(): boolean {
+    const fam = String((_dunWallFamily as any) || "").toLowerCase()
+    if (!fam) return true
+    return fam.indexOf("chasm") < 0
+}
+
+function _agiHookRaycast(
+    heroIndex: number,
+    hero: Sprite,
+    baseX: number,
+    baseY: number,
+    nx: number,
+    ny: number,
+    maxDist: number,
+    tipHalf: number
+): { kind: number; spriteId: number; x: number; y: number; dist: number; lastGroundDist: number } {
+    const step = Math.max(1, AGI_HOOKSHOT_TRACE_STEP_PX | 0)
+    const maxD = Math.max(0, maxDist | 0)
+    const wallsBlock = _agiHookWallsBlock()
+    let lastGroundDist = 0
+    let hitKind = AGI_HOOK_TARGET.NONE
+    let hitSpriteId = 0
+    let hitDist = maxD
+
+    for (let d = 0; d <= maxD; d += step) {
+        const tx = baseX + nx * d
+        const ty = baseY + ny * d
+        const half = tipHalf | 0
+        const left = Math.round(tx - half)
+        const right = Math.round(tx + half)
+        const top = Math.round(ty - half)
+        const bottom = Math.round(ty + half)
+
+        const oob = _agiHookOutOfBounds(left, right, top, bottom)
+        const wallHit = wallsBlock && _boxOverlapsWorldCollisionBounds(left, right, top, bottom)
+        if (!oob && (!wallsBlock || !wallHit)) {
+            lastGroundDist = d
+        }
+
+        if (oob) {
+            hitKind = AGI_HOOK_TARGET.WALL
+            hitSpriteId = 0
+            const embed = Math.max(0, AGI_HOOKSHOT_WALL_EMBED_PX | 0)
+            const finalDist = Math.min(maxD, (lastGroundDist + embed) | 0)
+            const fx = baseX + nx * finalDist
+            const fy = baseY + ny * finalDist
+            hitDist = finalDist
+            return { kind: hitKind, spriteId: hitSpriteId, x: fx, y: fy, dist: hitDist, lastGroundDist }
+        }
+
+        // Monsters
+        for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i]
+            if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+            const deathUntil = sprites.readDataNumber(e, ENEMY_DATA.DEATH_UNTIL) | 0
+            if (deathUntil > 0) continue
+            const ex = e.x
+            const ey = e.y
+            const ew = (e.width | 0) || 0
+            const eh = (e.height | 0) || 0
+            if (Math.abs(tx - ex) <= (ew / 2 + half) && Math.abs(ty - ey) <= (eh / 2 + half)) {
+                hitKind = AGI_HOOK_TARGET.MONSTER
+                hitSpriteId = (e as any).id | 0
+                hitDist = d
+                return { kind: hitKind, spriteId: hitSpriteId, x: tx, y: ty, dist: hitDist, lastGroundDist }
+            }
+        }
+
+        // Allies
+        for (let i = 0; i < heroes.length; i++) {
+            if (i === heroIndex) continue
+            const h = heroes[i]
+            if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+            if (sprites.readDataBoolean(h, HERO_DATA.IS_DEAD)) continue
+            const hx = h.x
+            const hy = h.y
+            const hw = (h.width | 0) || 0
+            const hh = (h.height | 0) || 0
+            if (Math.abs(tx - hx) <= (hw / 2 + half) && Math.abs(ty - hy) <= (hh / 2 + half)) {
+                hitKind = AGI_HOOK_TARGET.HERO
+                hitSpriteId = (h as any).id | 0
+                hitDist = d
+                return { kind: hitKind, spriteId: hitSpriteId, x: tx, y: ty, dist: hitDist, lastGroundDist }
+            }
+        }
+
+        // Decor/props
+        if (_boxOverlapsDecorSolidsBounds(left, right, top, bottom)) {
+            hitKind = AGI_HOOK_TARGET.PROP
+            hitSpriteId = 0
+            hitDist = d
+            return { kind: hitKind, spriteId: hitSpriteId, x: tx, y: ty, dist: hitDist, lastGroundDist }
+        }
+
+        // Walls
+        if (wallsBlock && _boxOverlapsWorldCollisionBounds(left, right, top, bottom)) {
+            hitKind = AGI_HOOK_TARGET.WALL
+            hitSpriteId = 0
+            const embed = Math.max(0, AGI_HOOKSHOT_WALL_EMBED_PX | 0)
+            const finalDist = Math.min(maxD, (lastGroundDist + embed) | 0)
+            const fx = baseX + nx * finalDist
+            const fy = baseY + ny * finalDist
+            hitDist = finalDist
+            return { kind: hitKind, spriteId: hitSpriteId, x: fx, y: fy, dist: hitDist, lastGroundDist }
+        }
+    }
+
+    const endX = baseX + nx * maxD
+    const endY = baseY + ny * maxD
+    return { kind: AGI_HOOK_TARGET.GROUND, spriteId: 0, x: endX, y: endY, dist: maxD, lastGroundDist }
+}
+
+function _agiHookUpdateChain(
+    st: AgiHookshotState,
+    hero: Sprite,
+    baseX: number,
+    baseY: number,
+    endX: number,
+    endY: number
+): void {
+    const dx = endX - baseX
+    const dy = endY - baseY
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (!(dist > 0.5)) {
+        if (st.chain && st.chain.length) {
+            for (const c of st.chain) c.setFlag(SpriteFlag.Invisible, true)
+        }
+        return
+    }
+    const spacing = Math.max(1, AGI_HOOKSHOT_CHAIN_SPACING_PX | 0)
+    let count = Math.floor(dist / spacing)
+    if (count < 1) count = 1
+
+    if (!st.chain) st.chain = []
+    const img = _agiHookChainImage()
+    while (st.chain.length < count) {
+        const link = sprites.create(img, SpriteKind.HeroEffect)
+        link.setFlag(SpriteFlag.Ghost, true)
+        link.setFlag(SpriteFlag.Invisible, false)
+        link.z = hero.z + 1
+        st.chain.push(link)
+    }
+    for (let i = 0; i < st.chain.length; i++) {
+        const link = st.chain[i]
+        if (i >= count) {
+            link.setFlag(SpriteFlag.Invisible, true)
+            continue
+        }
+        const t = (count <= 1) ? 0 : (i * spacing) / dist
+        link.x = baseX + dx * t
+        link.y = baseY + dy * t
+        link.setFlag(SpriteFlag.Invisible, false)
+    }
+}
+
+function _agiHookClearLungeSchedule(hero: Sprite): void {
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeStartMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeEndMs, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+}
+
+function _agiHookFindEnemyById(id: number): Sprite | null {
+    if (!id) return null
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        if (((e as any).id | 0) === (id | 0)) return e
+    }
+    return null
+}
+
+function _agiHookFindHeroById(id: number): Sprite | null {
+    if (!id) return null
+    for (let i = 0; i < heroes.length; i++) {
+        const h = heroes[i]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        if (((h as any).id | 0) === (id | 0)) return h
+    }
+    return null
+}
+
+function _agiHookHeroBoundsAt(hero: Sprite, x: number, y: number, movingDiag: boolean): {
+    left: number; right: number; top: number; bottom: number
+} {
+    const dims = _heroEnvColliderDimsForMove(hero, movingDiag)
+    const halfW = (dims.w | 0) >> 1
+    const halfH = (dims.h | 0) >> 1
+    const offY = _heroCollisionOffsetY(hero) | 0
+    const cx = x | 0
+    const cy = ((y | 0) + offY) | 0
+    return {
+        left: (cx - halfW) | 0,
+        right: (cx + halfW - 1) | 0,
+        top: (cy - halfH) | 0,
+        bottom: (cy + halfH - 1) | 0,
+    }
+}
+
+function _agiHookEnemyBoundsAt(enemy: Sprite, x: number, y: number): {
+    left: number; right: number; top: number; bottom: number
+} {
+    const dims = _enemyGetColliderDims(enemy)
+    const halfW = (dims.w | 0) >> 1
+    const halfH = (dims.h | 0) >> 1
+    const cx = x | 0
+    const cy = y | 0
+    return {
+        left: (cx - halfW) | 0,
+        right: (cx + halfW - 1) | 0,
+        top: (cy - halfH) | 0,
+        bottom: (cy + halfH - 1) | 0,
+    }
+}
+
+function _agiHookHeroBlockedAt(hero: Sprite, x: number, y: number, nx: number, ny: number, wallsBlock: boolean): boolean {
+    const movingDiag = (Math.abs(nx) > 0.1) && (Math.abs(ny) > 0.1)
+    const b = _agiHookHeroBoundsAt(hero, x, y, movingDiag)
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+        const tile = WORLD_TILE_SIZE | 0
+        if (rows > 0 && cols > 0 && tile > 0) {
+            const worldW = (cols * tile) | 0
+            const worldH = (rows * tile) | 0
+            if (b.left < 0 || b.top < 0 || b.right >= worldW || b.bottom >= worldH) return true
+        }
+    }
+    if (wallsBlock && _boxOverlapsWorldCollisionBounds(b.left, b.right, b.top, b.bottom)) return true
+    if (_boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)) return true
+    return false
+}
+
+function _agiHookEnemyBlockedAt(enemy: Sprite, x: number, y: number, wallsBlock: boolean): boolean {
+    const b = _agiHookEnemyBoundsAt(enemy, x, y)
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+        const tile = WORLD_TILE_SIZE | 0
+        if (rows > 0 && cols > 0 && tile > 0) {
+            const worldW = (cols * tile) | 0
+            const worldH = (rows * tile) | 0
+            if (b.left < 0 || b.top < 0 || b.right >= worldW || b.bottom >= worldH) return true
+        }
+    }
+    if (wallsBlock && _boxOverlapsWorldCollisionBounds(b.left, b.right, b.top, b.bottom)) return true
+    if (_boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)) return true
+    return false
+}
+
+function _agiHookHeroHitsAnyEnemyAt(hero: Sprite, heroIndex: number, x: number, y: number): boolean {
+    const b = _agiHookHeroBoundsAt(hero, x, y, false)
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        const deathUntil = sprites.readDataNumber(e, ENEMY_DATA.DEATH_UNTIL) | 0
+        if (deathUntil > 0) continue
+        const eb = _agiHookEnemyBoundsAt(e, e.x, e.y)
+        if (b.left < eb.right && b.right > eb.left && b.top < eb.bottom && b.bottom > eb.top) return true
+    }
+    return false
+}
+
+function _agiHookEnemyOverlapsHeroAt(enemy: Sprite, ex: number, ey: number, hero: Sprite): boolean {
+    const eb = _agiHookEnemyBoundsAt(enemy, ex, ey)
+    const hb = _agiHookHeroBoundsAt(hero, hero.x, hero.y, false)
+    if (hb.left >= eb.right) return false
+    if (hb.right <= eb.left) return false
+    if (hb.top >= eb.bottom) return false
+    if (hb.bottom <= eb.top) return false
+    return true
+}
+
+function _agiHookCheckTipHit(
+    heroIndex: number,
+    hero: Sprite,
+    tx: number,
+    ty: number,
+    tipHalf: number,
+    wallsBlock: boolean
+): { kind: number; spriteId: number } {
+    const half = tipHalf | 0
+    const left = Math.round(tx - half)
+    const right = Math.round(tx + half)
+    const top = Math.round(ty - half)
+    const bottom = Math.round(ty + half)
+
+    // Monsters
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        const deathUntil = sprites.readDataNumber(e, ENEMY_DATA.DEATH_UNTIL) | 0
+        if (deathUntil > 0) continue
+        const ex = e.x
+        const ey = e.y
+        const ew = (e.width | 0) || 0
+        const eh = (e.height | 0) || 0
+        if (Math.abs(tx - ex) <= (ew / 2 + half) && Math.abs(ty - ey) <= (eh / 2 + half)) {
+            return { kind: AGI_HOOK_TARGET.MONSTER, spriteId: (e as any).id | 0 }
+        }
+    }
+
+    // Allies
+    for (let i = 0; i < heroes.length; i++) {
+        if (i === heroIndex) continue
+        const h = heroes[i]
+        if (!h || (h.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(h, HERO_DATA.IS_DEAD)) continue
+        const hx = h.x
+        const hy = h.y
+        const hw = (h.width | 0) || 0
+        const hh = (h.height | 0) || 0
+        if (Math.abs(tx - hx) <= (hw / 2 + half) && Math.abs(ty - hy) <= (hh / 2 + half)) {
+            return { kind: AGI_HOOK_TARGET.HERO, spriteId: (h as any).id | 0 }
+        }
+    }
+
+    // Decor/props
+    if (_boxOverlapsDecorSolidsBounds(left, right, top, bottom)) {
+        return { kind: AGI_HOOK_TARGET.PROP, spriteId: 0 }
+    }
+
+    if (_agiHookOutOfBounds(left, right, top, bottom)) {
+        return { kind: AGI_HOOK_TARGET.WALL, spriteId: 0 }
+    }
+
+    // Walls
+    if (wallsBlock && _boxOverlapsWorldCollisionBounds(left, right, top, bottom)) {
+        return { kind: AGI_HOOK_TARGET.WALL, spriteId: 0 }
+    }
+
+    return { kind: AGI_HOOK_TARGET.NONE, spriteId: 0 }
+}
+
+function _agiHookScanSegment(
+    heroIndex: number,
+    hero: Sprite,
+    baseX: number,
+    baseY: number,
+    nx: number,
+    ny: number,
+    startDist: number,
+    endDist: number,
+    tipHalf: number,
+    wallsBlock: boolean,
+    maxDist: number,
+    lastGroundDist: number
+): { kind: number; spriteId: number; x: number; y: number; dist: number; lastGroundDist: number } {
+    const step = Math.max(1, AGI_HOOKSHOT_TRACE_STEP_PX | 0)
+    let lastGround = lastGroundDist | 0
+    let d = startDist
+    if (d < 0) d = 0
+    const end = Math.max(0, endDist)
+    for (; d <= end; d += step) {
+        const tx = baseX + nx * d
+        const ty = baseY + ny * d
+        const half = tipHalf | 0
+        const left = Math.round(tx - half)
+        const right = Math.round(tx + half)
+        const top = Math.round(ty - half)
+        const bottom = Math.round(ty + half)
+
+        const oob = _agiHookOutOfBounds(left, right, top, bottom)
+        const wallHit = wallsBlock && _boxOverlapsWorldCollisionBounds(left, right, top, bottom)
+        if (!oob && (!wallsBlock || !wallHit)) {
+            lastGround = d | 0
+        }
+
+        const hit = _agiHookCheckTipHit(heroIndex, hero, tx, ty, tipHalf | 0, wallsBlock)
+        if (hit.kind === AGI_HOOK_TARGET.NONE) continue
+
+        if (hit.kind === AGI_HOOK_TARGET.WALL) {
+            const embed = Math.max(0, AGI_HOOKSHOT_WALL_EMBED_PX | 0)
+            const finalDist = Math.min(maxDist, (lastGround + embed) | 0)
+            const fx = baseX + nx * finalDist
+            const fy = baseY + ny * finalDist
+            return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
+        }
+
+        return { kind: hit.kind, spriteId: hit.spriteId, x: tx, y: ty, dist: d, lastGroundDist: lastGround }
+    }
+
+    // Ensure we check the final endDist if the step skipped it
+    if (end >= 0) {
+        const tx = baseX + nx * end
+        const ty = baseY + ny * end
+        const hit = _agiHookCheckTipHit(heroIndex, hero, tx, ty, tipHalf | 0, wallsBlock)
+        if (hit.kind !== AGI_HOOK_TARGET.NONE) {
+            if (hit.kind === AGI_HOOK_TARGET.WALL) {
+                const embed = Math.max(0, AGI_HOOKSHOT_WALL_EMBED_PX | 0)
+                const finalDist = Math.min(maxDist, (lastGround + embed) | 0)
+                const fx = baseX + nx * finalDist
+                const fy = baseY + ny * finalDist
+                return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
+            }
+            return { kind: hit.kind, spriteId: hit.spriteId, x: tx, y: ty, dist: end, lastGroundDist: lastGround }
+        }
+    }
+    const fx = baseX + nx * end
+    const fy = baseY + ny * end
+    return { kind: AGI_HOOK_TARGET.NONE, spriteId: 0, x: fx, y: fy, dist: end, lastGroundDist: lastGround }
+}
+
+function _agiHookApplyEnemyHit(st: AgiHookshotState, heroIndex: number, enemy: Sprite): void {
+    if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
+    if (st.hitApplied) return
+    const eIndex = getEnemyIndex(enemy)
+    if (eIndex < 0) return
+
+    let dmg = st.dmg | 0
+    if (dmg > 0) {
+        const comboMultPct = getComboDamageMultPct(heroIndex)
+        dmg = Math.idiv(dmg * comboMultPct, 100)
+        updateAgilityComboOnHit(heroIndex, st.button || "")
+    }
+
+    const hit: EnemyHitPacket = {
+        family: FAMILY.AGILITY,
+        button: st.button || "",
+        sourceTag: "AGI_HOOKSHOT",
+        slowPct: st.slowPct | 0,
+        slowMs: st.slowMs | 0,
+        weakenPct: st.weakenPct | 0,
+        weakenMs: st.weakenMs | 0,
+        knockbackPct: st.knockbackPct | 0,
+        element: st.element | 0,
+    }
+
+    applyDamageToEnemyIndex(eIndex, dmg | 0, heroIndex, hit)
+    st.hitApplied = 1
+}
+
+function _agiHookRecoverMs(hero: Sprite): number {
+    const total = sprites.readDataNumber(hero, HERO_DATA.PhaseDurationMs) | 0
+    if (total > 0) {
+        const parts = splitAgiThrustDurations(total | 0)
+        return parts[2] | 0
+    }
+    return AGI_THRUST_LANDING_MIN_MS | 0
+}
+
+function _agiHookFinish(
+    heroIndex: number,
+    hero: Sprite,
+    st: AgiHookshotState,
+    now: number,
+    unlockNow: boolean,
+    reason: string
+): void {
+    const landMs = _agiHookRecoverMs(hero) | 0
+    const busyUntilNew = (landMs > 0) ? ((now + landMs) | 0) : 0
+    _agiHookLog( heroIndex, hero, st, "FINISH", `reason=${reason} unlock=${unlockNow ? 1 : 0} landMs=${landMs | 0} busyUntil=${busyUntilNew}`, true)
+
+    _agiHookClearLungeSchedule(hero)
+    if (st.targetKind === AGI_HOOK_TARGET.MONSTER && st.targetSpriteId) {
+        const e = _agiHookFindEnemyById(st.targetSpriteId | 0)
+        if (e) sprites.setDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING, 0)
+    }
+    st.state = AGI_HOOK_STATE.NONE
+    st.waitRelease = 0
+    st.hitReady = 0
+    st.returnOnly = 0
+    st.button = ""
+    st.ownerId = 0
+    st.lastBtnHeld = false
+    st.lastJumpHeld = false
+    st.lastInteractHeld = false
+    st.lastAimKind = 0
+    st.lastAimSpriteId = 0
+    st.lastAimDist = 0
+    st.lastAimAngleMdeg = 0
+    st.lastLogMs = 0
+    st.targetKind = AGI_HOOK_TARGET.NONE
+    st.targetSpriteId = 0
+    st.targetX = 0
+    st.targetY = 0
+    st.targetDist = 0
+    st.tipDist = 0
+    st.speed = 0
+    st.minThrustEndMs = 0
+    st.hitApplied = 0
+    st.lastGroundDist = 0
+    st.recoverHoldPending = 0
+    st.lastAnimFrame = -1
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
+    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+    clearHeroFrameColOverride(heroIndex)
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    _agiHookClearVisuals(st)
+    if (unlockNow) unlockHeroControls(heroIndex)
+
+    if (busyUntilNew > 0) setHeroBusyUntil(heroIndex, busyUntilNew | 0)
+    else setHeroBusyUntil(heroIndex, 0)
+}
+
+function updateAgilityHookshotAll(nowMs: number): void {
+    const now = nowMs | 0
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        if (hero.flags & sprites.Flag.Destroyed) continue
+
+        const st = _agiHookStateEnsure(hi)
+        const state = st.state | 0
+
+        if (state === AGI_HOOK_STATE.NONE) {
+            if (st.spear || st.marker || st.aimSpear || (st.chain && st.chain.length)) {
+                _agiHookClearVisuals(st)
+            }
+            sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
+            sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+            continue
+        }
+
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
+            _agiHookFinish(hi, hero, st, now, true, "dead")
+            continue
+        }
+
+        if (!st.ownerId) st.ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        const input = _agiHookGetInputStateForOwner(st.ownerId)
+        const btnHeld = st.button ? _agiHookIsMoveBtnHeld(st.ownerId, st.button) : false
+        const btnEdge = btnHeld && !st.lastBtnHeld
+        const edges = _agiHookUtilityEdges(st, input)
+        const cancelEdge = edges.jumpEdge || edges.interactEdge
+        st.lastBtnHeld = btnHeld
+        const cancelKind = edges.jumpEdge ? "jump" : (edges.interactEdge ? "interact" : "")
+
+        let dt = (now - (st.lastTickMs | 0)) | 0
+        if (dt <= 0) dt = 1
+        st.lastTickMs = now
+
+        if (state === AGI_HOOK_STATE.PENDING) {
+            if (now < (st.pendingWindupEndMs | 0)) continue
+
+            if (btnHeld) {
+                _agiHookClearVisuals(st)
+                _agiHookClearLungeSchedule(hero)
+                _agiHookSetState(hi, hero, st, AGI_HOOK_STATE.AIMING)
+                st.waitRelease = 1
+                st.hitReady = 0
+                st.returnOnly = 0
+                st.hitApplied = 0
+                st.recoverHoldPending = 0
+                st.lastAnimFrame = -1
+
+                let fx = _getHeroFacingX(hi) || 0
+                let fy = _getHeroFacingY(hi) || 0
+                if (fx === 0 && fy === 0) { fx = 1; fy = 0 }
+                st.aimAngleMdeg = _agiHookDirToAngleMdeg(fx, fy)
+                const dir = _agiHookAngleToDir(st.aimAngleMdeg)
+                st.dirX = dir.nx
+                st.dirY = dir.ny
+                sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, Math.round(dir.nx * 1000))
+                sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, Math.round(dir.ny * 1000))
+                sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, st.aimAngleMdeg | 0)
+
+                const holdCol = AGI_HOOKSHOT_WINDUP_HOLD_FRAME_COL | 0
+                sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, holdCol)
+                sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+                hero.vx = 0
+                hero.vy = 0
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+                lockHeroControls(hi)
+                _agiHookLog(hi, hero, st, "AIM_START", `waitRelease=1`, true)
+            } else {
+                st.state = AGI_HOOK_STATE.NONE
+                sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
+                _agiHookLog(hi, hero, st, "TAP_DASH", "", true)
+            }
+            continue
+        }
+
+        if (state === AGI_HOOK_STATE.AIMING) {
+            if (cancelEdge) {
+                _agiHookLog(hi, hero, st, "AIM_CANCEL", `cancel=${cancelKind}`, true)
+                _agiHookClearLungeSchedule(hero)
+                _agiHookFinish(hi, hero, st, now, true, "aim_cancel")
+                setHeroBusyUntil(hi, 0)
+                continue
+            }
+
+            let dx = 0
+            let dy = 0
+            if (input) {
+                if (input.left) dx = -1
+                else if (input.right) dx = 1
+                if (input.up) dy = -1
+                else if (input.down) dy = 1
+            }
+            if (dx !== 0 || dy !== 0) {
+                const targetAng = _agiHookDirToAngleMdeg(dx, dy)
+                st.aimAngleMdeg = _agiHookRotateToward(st.aimAngleMdeg, targetAng)
+            }
+            const dir = _agiHookAngleToDir(st.aimAngleMdeg)
+            st.dirX = dir.nx
+            st.dirY = dir.ny
+            _agiHookSnapFacingFromAngle(hi, st.aimAngleMdeg)
+            syncHeroDirData(hi)
+
+            const nx = st.dirX || 1
+            const ny = st.dirY || 0
+            const base = _agiHookHandBase(hero, nx, ny)
+            const weaponLen = _agiHookWeaponLength(hero, nx, ny)
+            const tipHalf = _agiHookTipHalf(hero, nx, ny, hi)
+            const reachExtra = Math.max(0, st.reachExtra | 0)
+            const baseLen = Math.idiv((weaponLen * AGI_HOOKSHOT_BASE_LEN_MULT_X1000) | 0, 1000) + (AGI_HOOKSHOT_BASE_LEN_ADD_PX | 0)
+            const maxDist = Math.max(weaponLen | 0, ((baseLen + reachExtra) | 0))
+
+            const ray = _agiHookRaycast(hi, hero, base.x, base.y, nx, ny, maxDist, tipHalf)
+            st.targetKind = ray.kind | 0
+            st.targetSpriteId = ray.spriteId | 0
+            st.targetX = ray.x
+            st.targetY = ray.y
+            st.targetDist = ray.dist | 0
+            st.weaponLen = weaponLen | 0
+            st.tipHalf = tipHalf | 0
+            st.maxDist = maxDist | 0
+            const aimChanged =
+                (st.lastAimKind | 0) !== (st.targetKind | 0) ||
+                (st.lastAimSpriteId | 0) !== (st.targetSpriteId | 0) ||
+                Math.abs((st.lastAimDist | 0) - (st.targetDist | 0)) >= 2 ||
+                (st.lastAimAngleMdeg | 0) !== (st.aimAngleMdeg | 0)
+            if (aimChanged) {
+                st.lastAimKind = st.targetKind | 0
+                st.lastAimSpriteId = st.targetSpriteId | 0
+                st.lastAimDist = st.targetDist | 0
+                st.lastAimAngleMdeg = st.aimAngleMdeg | 0
+                const wallsBlock = _agiHookWallsBlock()
+                const wallFam = String((_dunWallFamily as any) || "")
+                const gmax = ((ray.lastGroundDist | 0) >= ((maxDist | 0) - 1)) ? 1 : 0
+                _agiHookLog(
+                    hi,
+                    hero,
+                    st,
+                    "AIM_TARGET",
+                    `kind=${_agiHookTargetLabel(st.targetKind | 0)} dist=${st.targetDist | 0} lg=${ray.lastGroundDist | 0} gmax=${gmax} walls=${wallsBlock ? 1 : 0} wallFam=${wallFam || "-"}`,
+                    false
+                )
+            }
+
+            let marker = st.marker
+            if (!marker || (marker.flags & sprites.Flag.Destroyed)) {
+                marker = sprites.create(_agiHookMarkerImage(), SpriteKind.HeroEffect)
+                marker.setFlag(SpriteFlag.Ghost, true)
+                marker.setFlag(SpriteFlag.Invisible, false)
+                marker.z = hero.z + 2
+                st.marker = marker
+            }
+            if (marker) {
+                marker.x = ray.x
+                marker.y = ray.y
+                marker.setFlag(SpriteFlag.Invisible, false)
+            }
+
+            const aimSpear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, true)
+            _agiHookPositionSpear(aimSpear, base.x, base.y)
+            aimSpear.setFlag(SpriteFlag.Invisible, false)
+
+            _agiHookUpdateChain(st, hero, base.x, base.y, base.x, base.y)
+
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, Math.round(nx * 1000))
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, Math.round(ny * 1000))
+            sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, st.aimAngleMdeg | 0)
+            sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+
+            if (st.waitRelease) {
+                if (!btnHeld) st.waitRelease = 0
+                continue
+            }
+
+            if (btnEdge) {
+                const aimKind = st.targetKind | 0
+                const aimId = st.targetSpriteId | 0
+                const aimDist = st.targetDist | 0
+                clearHeroFrameColOverride(hi)
+                _agiHookClearVisuals(st)
+                _agiHookSetState(hi, hero, st, AGI_HOOK_STATE.EXTEND)
+                st.hitReady = 0
+                st.returnOnly = 0
+                st.hitApplied = 0
+                st.recoverHoldPending = 0
+                st.lastAnimFrame = -1
+
+                st.weaponLen = weaponLen | 0
+                st.tipHalf = tipHalf | 0
+                st.reachExtra = reachExtra | 0
+                st.maxDist = maxDist | 0
+                st.tipDist = weaponLen | 0
+                st.lastGroundDist = weaponLen | 0
+
+                const baseSpeed = st.baseSpeed | 0
+                const lenUnits = (weaponLen > 0) ? (maxDist / weaponLen) : 1
+                let penaltyPct = (AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN | 0) * lenUnits
+                if (penaltyPct < 0) penaltyPct = 0
+                if (penaltyPct > 95) penaltyPct = 95
+                let speed = (baseSpeed > 0 ? baseSpeed : (AGI_HOOKSHOT_MIN_SPEED_PX_S | 0))
+                speed = (speed * (100 - penaltyPct)) / 100
+                const minSpeed = AGI_HOOKSHOT_MIN_SPEED_PX_S | 0
+                if (speed < minSpeed) speed = minSpeed
+                st.speed = speed
+
+                const fwdMs = Math.max(st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0)
+                st.minThrustEndMs = (now + fwdMs) | 0
+                st.targetKind = AGI_HOOK_TARGET.NONE
+                st.targetSpriteId = 0
+                st.targetX = 0
+                st.targetY = 0
+                st.targetDist = 0
+
+                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                _agiHookPositionSpear(spear, base.x, base.y)
+
+                sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                _agiHookLog(
+                    hi,
+                    hero,
+                    st,
+                    "FIRE",
+                    `aim=${_agiHookTargetLabel(aimKind)}:${aimId} adist=${aimDist} wLen=${weaponLen | 0} max=${maxDist | 0} tipHalf=${tipHalf | 0}`,
+                    true
+                )
+            }
+
+            continue
+        }
+
+        if (state === AGI_HOOK_STATE.EXTEND) {
+            const nx = st.dirX || 1
+            const ny = st.dirY || 0
+            const base = _agiHookHandBase(hero, nx, ny)
+            const wallsBlock = _agiHookWallsBlock()
+            let weaponLen = st.weaponLen | 0
+            if (weaponLen <= 0) weaponLen = _agiHookWeaponLength(hero, nx, ny)
+            let tipHalf = st.tipHalf | 0
+            if (tipHalf <= 0) tipHalf = _agiHookTipHalf(hero, nx, ny, hi)
+            let maxDist = st.maxDist | 0
+            if (maxDist <= 0) {
+                const reachExtra = Math.max(0, st.reachExtra | 0)
+                const baseLen = Math.idiv((weaponLen * AGI_HOOKSHOT_BASE_LEN_MULT_X1000) | 0, 1000) + (AGI_HOOKSHOT_BASE_LEN_ADD_PX | 0)
+                maxDist = Math.max(weaponLen | 0, ((baseLen + reachExtra) | 0))
+                st.maxDist = maxDist | 0
+            }
+
+            let slowMult = Number(DEBUG_AGI_HOOKSHOT_SLOW_MULT)
+            if (!Number.isFinite(slowMult) || slowMult <= 0) slowMult = 1
+            const stepPx = (st.speed * dt * slowMult) / 1000
+            if (DEBUG_AGI_HOOKSHOT_TICK_LOGS) {
+                _agiHookLog(hi, hero, st, "TICK_EXT", `dt=${dt | 0} step=${Math.round(stepPx)}`, false)
+            }
+            let tipDist = st.tipDist
+
+            if (!st.hitReady) {
+                const newDist = Math.min(maxDist, tipDist + stepPx)
+                const scan = _agiHookScanSegment(hi, hero, base.x, base.y, nx, ny, tipDist, newDist, tipHalf, wallsBlock, maxDist, st.lastGroundDist | 0)
+                st.lastGroundDist = scan.lastGroundDist | 0
+
+                if (scan.kind !== AGI_HOOK_TARGET.NONE) {
+                    st.hitReady = 1
+                    st.targetKind = scan.kind | 0
+                    st.targetSpriteId = scan.spriteId | 0
+                    st.targetX = scan.x
+                    st.targetY = scan.y
+                    st.targetDist = scan.dist | 0
+                    st.tipDist = scan.dist
+
+                    if (scan.kind === AGI_HOOK_TARGET.MONSTER) {
+                        const enemy = _agiHookFindEnemyById(scan.spriteId | 0)
+                        if (enemy) _agiHookApplyEnemyHit(st, hi, enemy)
+                    }
+                    _agiHookLog(hi, hero, st, "HIT", `kind=${_agiHookTargetLabel(scan.kind | 0)} dist=${scan.dist | 0}`, true)
+                } else {
+                    st.tipDist = newDist
+                    if (newDist >= maxDist) {
+                        st.hitReady = 1
+                        st.targetKind = AGI_HOOK_TARGET.GROUND
+                        st.targetSpriteId = 0
+                        st.targetDist = maxDist | 0
+                        st.targetX = base.x + nx * maxDist
+                        st.targetY = base.y + ny * maxDist
+                        st.tipDist = maxDist
+                        _agiHookLog(hi, hero, st, "MAX", `dist=${maxDist | 0}`, true)
+                    }
+                }
+            }
+
+            const buttDist = Math.max(0, (st.tipDist - weaponLen))
+            const buttX = base.x + nx * buttDist
+            const buttY = base.y + ny * buttDist
+            const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+            _agiHookPositionSpear(spear, buttX, buttY)
+            _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+            if (st.hitReady && now >= (st.minThrustEndMs | 0)) {
+                st.returnOnly = 0
+                _agiHookSetState(hi, hero, st, AGI_HOOK_STATE.RETRACT)
+                st.recoverHoldPending = 1
+                st.lastAnimFrame = sprites.readDataNumber(hero, HERO_CANON_FRAME_IN_CANON_CLIP_KEY) | 0
+                sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                _agiHookLog(hi, hero, st, "RETRACT_START", `returnOnly=${st.returnOnly | 0}`, true)
+            } else {
+                if (now >= (st.minThrustEndMs | 0) && !st.hitReady) {
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+                } else {
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                }
+            }
+
+            continue
+        }
+
+        if (state === AGI_HOOK_STATE.RETRACT) {
+            const nx = st.dirX || 1
+            const ny = st.dirY || 0
+            const wallsBlock = _agiHookWallsBlock()
+            let weaponLen = st.weaponLen | 0
+            if (weaponLen <= 0) weaponLen = _agiHookWeaponLength(hero, nx, ny)
+
+            const curFrame = sprites.readDataNumber(hero, HERO_CANON_FRAME_IN_CANON_CLIP_KEY) | 0
+            if (st.recoverHoldPending) {
+                if (st.lastAnimFrame >= 0 && curFrame !== st.lastAnimFrame) {
+                    st.recoverHoldPending = 0
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+                } else {
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                }
+                st.lastAnimFrame = curFrame | 0
+            } else {
+                sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+            }
+
+            if (!st.returnOnly && st.targetKind !== AGI_HOOK_TARGET.MONSTER) {
+                if (btnEdge || cancelEdge) {
+                    if (st.tipDist <= (weaponLen + 0.1)) {
+                        _agiHookFinish(hi, hero, st, now, false, "dismount_return")
+                        continue
+                    }
+                    st.returnOnly = 1
+                    st.tipDist = Math.max(st.tipDist, weaponLen)
+                    _agiHookLog(hi, hero, st, "DISMOUNT", `cancel=${btnEdge ? "btn" : (cancelKind || "other")}`, true)
+                }
+            }
+
+            let slowMult = Number(DEBUG_AGI_HOOKSHOT_SLOW_MULT)
+            if (!Number.isFinite(slowMult) || slowMult <= 0) slowMult = 1
+            const stepPx = (st.speed * dt * slowMult) / 1000
+            if (DEBUG_AGI_HOOKSHOT_TICK_LOGS) {
+                _agiHookLog(hi, hero, st, "TICK_RET", `dt=${dt | 0} step=${Math.round(stepPx)}`, false)
+            }
+
+            if (st.returnOnly) {
+                const base = _agiHookHandBase(hero, nx, ny)
+                const newDist = Math.max(weaponLen, st.tipDist - stepPx)
+                st.tipDist = newDist
+                const buttDist = Math.max(0, (newDist - weaponLen))
+                const buttX = base.x + nx * buttDist
+                const buttY = base.y + ny * buttDist
+                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                _agiHookPositionSpear(spear, buttX, buttY)
+                _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+
+                hero.vx = 0
+                hero.vy = 0
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+                if (newDist <= (weaponLen + 0.1)) {
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                    _agiHookFinish(hi, hero, st, now, false, "return_only_done")
+                }
+                continue
+            }
+
+            if (st.targetKind === AGI_HOOK_TARGET.MONSTER) {
+                const enemy = _agiHookFindEnemyById(st.targetSpriteId | 0)
+                if (!enemy) {
+                    _agiHookLog(hi, hero, st, "RETURN_ONLY", "reason=enemy_gone", true)
+                    st.returnOnly = 1
+                    continue
+                }
+                // Hook for future variants: throw/slingshot monster instead of pull.
+                sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 1)
+                const base = _agiHookHandBase(hero, nx, ny)
+                const newDist = Math.max(weaponLen, st.tipDist - stepPx)
+                const newX = base.x + nx * newDist
+                const newY = base.y + ny * newDist
+
+                if (_agiHookEnemyBlockedAt(enemy, newX, newY, wallsBlock)) {
+                    sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
+                    _agiHookLog(hi, hero, st, "RETURN_ONLY", "reason=enemy_blocked", true)
+                    st.returnOnly = 1
+                    continue
+                }
+
+                const deltaX = newX - enemy.x
+                const deltaY = newY - enemy.y
+                if (deltaX !== 0 || deltaY !== 0) {
+                    let blockedByHero = false
+                    for (let hj = 0; hj < heroes.length; hj++) {
+                        if (hj === hi) continue
+                        const h2 = heroes[hj]
+                        if (!h2 || (h2.flags & sprites.Flag.Destroyed)) continue
+                        if (sprites.readDataBoolean(h2, HERO_DATA.IS_DEAD)) continue
+                        if (_agiHookEnemyOverlapsHeroAt(enemy, newX, newY, h2)) {
+                            const dragX = h2.x + deltaX
+                            const dragY = h2.y + deltaY
+                            if (_agiHookHeroBlockedAt(h2, dragX, dragY, nx, ny, wallsBlock)) {
+                                blockedByHero = true
+                                break
+                            }
+                            h2.x = dragX
+                            h2.y = dragY
+                            h2.vx = 0
+                            h2.vy = 0
+                            sprites.setDataNumber(h2, HERO_DATA.STORED_VX, 0)
+                            sprites.setDataNumber(h2, HERO_DATA.STORED_VY, 0)
+                        }
+                    }
+                    if (blockedByHero) {
+                        sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
+                        _agiHookLog(hi, hero, st, "RETURN_ONLY", "reason=drag_blocked_by_hero", true)
+                        st.returnOnly = 1
+                        continue
+                    }
+                }
+
+                enemy.x = newX
+                enemy.y = newY
+                enemy.vx = 0
+                enemy.vy = 0
+                st.tipDist = newDist
+
+                const buttDist = Math.max(0, (newDist - weaponLen))
+                const buttX = base.x + nx * buttDist
+                const buttY = base.y + ny * buttDist
+                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                _agiHookPositionSpear(spear, buttX, buttY)
+                _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+
+                if (newDist <= (weaponLen + 0.1)) {
+                    sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                    _agiHookFinish(hi, hero, st, now, false, "monster_done")
+                }
+                continue
+            }
+
+            // Pull hero to ground/ally target
+            {
+                const base = _agiHookHandBase(hero, nx, ny)
+                const offX = base.x - hero.x
+                const offY = base.y - hero.y
+                const newDist = Math.max(0, st.tipDist - stepPx)
+                const handX = st.targetX - nx * newDist
+                const handY = st.targetY - ny * newDist
+                const newHeroX = handX - offX
+                const newHeroY = handY - offY
+
+                const heroBlocked = _agiHookHeroBlockedAt(hero, newHeroX, newHeroY, nx, ny, wallsBlock)
+                const heroHitEnemy = _agiHookHeroHitsAnyEnemyAt(hero, hi, newHeroX, newHeroY)
+                if (heroBlocked || heroHitEnemy) {
+                    _agiHookLog(hi, hero, st, "RETURN_ONLY", heroBlocked ? "reason=hero_blocked" : "reason=hero_hit_enemy", true)
+                    st.returnOnly = 1
+                    continue
+                }
+
+                hero.x = newHeroX
+                hero.y = newHeroY
+                hero.vx = 0
+                hero.vy = 0
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+                sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+                st.tipDist = newDist
+
+                const buttX = st.targetX - nx * weaponLen
+                const buttY = st.targetY - ny * weaponLen
+                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                _agiHookPositionSpear(spear, buttX, buttY)
+                const handNow = _agiHookHandBase(hero, nx, ny)
+                _agiHookUpdateChain(st, hero, handNow.x, handNow.y, buttX, buttY)
+
+                if (newDist <= 0.1) {
+                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+                    _agiHookFinish(hi, hero, st, now, false, "ground_done")
+                }
+            }
+
+            continue
+        }
+    }
 }
 
 
@@ -65722,6 +67339,7 @@ function updateHeroMovementPhase(now: number) {
         // Agility execute owns the phase entirely
 
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
 
         if (agiState === AGI_STATE.EXECUTING) {
 
@@ -65731,6 +67349,12 @@ function updateHeroMovementPhase(now: number) {
 
             continue
 
+        }
+
+        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+            _dbgContract_noteWhy(hi, "AMBIENT_SKIP_AGI_EXEC", "updateHeroMovementPhase(hookshot)")
+            _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=AGI_HOOKSHOT")
+            continue
         }
 
 
@@ -65956,10 +67580,12 @@ function updateHeroControlLocks(now: number) {
 
 
         const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+        const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
 
         const isAgiBuildMode = (agiState === AGI_STATE.ARMED)
 
         const isAgiExecuting = (agiState === AGI_STATE.EXECUTING)
+        const isHookActive = (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT)
 
 
 
@@ -66117,6 +67743,16 @@ function updateHeroControlLocks(now: number) {
 
             continue
 
+        }
+
+        // Agility hookshot owns the lock while aiming/extend/retract
+        if (isHookActive) {
+            if (!lockedNow) lockHeroControls(i)
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            continue
         }
 
 
@@ -66601,6 +68237,7 @@ if (SHOP_MODE_ACTIVE) {
 
     updateSupportPuzzles(now)
 
+    updateAgilityHookshotAll(now)
     updateAgilityThrustMotionAll(now)
 
 

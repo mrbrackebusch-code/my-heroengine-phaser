@@ -522,6 +522,8 @@ export type WeaponResolvedLayer = {
   frameIndex: number;
 };
 
+export type WeaponFrameOverrideMode = "weaponCol" | "heroClip" | "absFrame";
+
 export type WeaponRenderResolve = {
   weaponId: WeaponId;
   heroPhase: string;
@@ -574,6 +576,7 @@ export function resolveWeaponFrameIndexForLayer(args: {
   heroSprite: Phaser.GameObjects.Sprite;
   heroFrameIndex: number;
   frameColOverride?: number;
+  frameColOverrideMode?: WeaponFrameOverrideMode;
 }): number {
   const grid = getSheetGrid(args.scene, args.sheet);
   const weaponCols = grid.cols;
@@ -602,16 +605,6 @@ export function resolveWeaponFrameIndexForLayer(args: {
     }
   }
 
-  // Explicit override (treated as *column*, not absolute frame index)
-  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
-    const rawCol = args.frameColOverride | 0;
-    const col = (rawCol < 0)
-      ? Math.max(0, weaponCols - 1)
-      : clampInt(rawCol, 0, Math.max(0, weaponCols - 1));
-    const idx = row * weaponCols + col;
-    return clampInt(idx, 0, Math.max(0, grid.total - 1));
-  }
-
   const anyHero: any = args.heroSprite as any;
 
   const getData = (k: string): any => {
@@ -622,6 +615,39 @@ export function resolveWeaponFrameIndexForLayer(args: {
       return undefined;
     }
   };
+
+  // Explicit override (mode controls meaning)
+  if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
+    const rawCol = args.frameColOverride | 0;
+    const mode = args.frameColOverrideMode ?? "weaponCol";
+
+    if (mode === "absFrame") {
+      const total = Math.max(0, grid.total - 1);
+      const idx = (rawCol < 0) ? total : clampInt(rawCol, 0, total);
+      return clampInt(idx, 0, Math.max(0, grid.total - 1));
+    }
+
+    if (mode === "heroClip") {
+      const clenRaw = getData(HERO_FOLLOW_CLIP_LEN_KEY);
+      const clipLen = (typeof clenRaw === "number" && Number.isFinite(clenRaw) && clenRaw > 0) ? (clenRaw | 0) : 0;
+      if (clipLen > 1 && weaponCols > 1) {
+        const safeF = clampInt((rawCol < 0) ? (clipLen - 1) : rawCol, 0, clipLen - 1);
+        const den = Math.max(1, clipLen - 1);
+        const wden = Math.max(1, weaponCols - 1);
+        const weaponCol = clampInt(Math.round((safeF * wden) / den), 0, weaponCols - 1);
+        const idx = row * weaponCols + weaponCol;
+        return clampInt(idx, 0, Math.max(0, grid.total - 1));
+      }
+      // Fallback to weaponCol if clip length isn't available.
+    }
+
+    // Default: treat override as weapon column.
+    const col = (rawCol < 0)
+      ? Math.max(0, weaponCols - 1)
+      : clampInt(rawCol, 0, Math.max(0, weaponCols - 1));
+    const idx = row * weaponCols + col;
+    return clampInt(idx, 0, Math.max(0, grid.total - 1));
+  }
 
   const nowLocal =
     (args.scene as any)?.time?.now ??
@@ -757,6 +783,7 @@ export function syncWeaponLayersToHero(args: {
   heroFrameIndex: number;
   variant?: string; // without leading "v"
   frameColOverride?: number;
+  frameColOverrideMode?: WeaponFrameOverrideMode;
   frameDirOverride?: Dir4;
   posOffsetX?: number;
   posOffsetY?: number;
@@ -887,7 +914,8 @@ export function syncWeaponLayersToHero(args: {
       dir: args.frameDirOverride ?? args.dir,
       heroSprite: args.heroSprite,
       heroFrameIndex: args.heroFrameIndex,
-      frameColOverride: args.frameColOverride
+      frameColOverride: args.frameColOverride,
+      frameColOverrideMode: args.frameColOverrideMode
     });
     spr.setFrame(frameIndex);
 
@@ -1040,6 +1068,16 @@ export function syncWeaponLayersToHero(args: {
   const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
   const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
 
+  // Ensure depth ordering is applied immediately so weapons render above/below hero as intended.
+  const dlAny: any = args.scene?.sys?.displayList;
+  if (dlAny) {
+    try {
+      if (typeof dlAny.depthSort === "function") dlAny.depthSort();
+      else if (typeof dlAny.queueDepthSort === "function") dlAny.queueDepthSort();
+      else if (typeof dlAny.sortChildrenFlag === "boolean") dlAny.sortChildrenFlag = true;
+    } catch { /* ignore */ }
+  }
+
   if (DEBUG_NPC_PIPELINE && isNpcHeroSprite(args.heroSprite)) {
     const already = heroAny.getData ? heroAny.getData(NPC_WEAPON_LOG_ONCE_KEY) : 0;
     if (!already && (bg || fg)) {
@@ -1189,6 +1227,7 @@ export function syncWeaponToHero(args: {
   // Optional explicit override for "single frame" poses.
   // For our projectile crystal path, we treat this as an *absolute* frame index.
   frameColOverride?: number;
+  frameColOverrideMode?: WeaponFrameOverrideMode;
 }): void {
   const dbgOn = _weaponDebugEnabled();
   const model = String(args.weaponId || "").trim();
@@ -1245,12 +1284,26 @@ export function syncWeaponToHero(args: {
 
   // --------------------------------------------------
   // Dedicated single-frame override support:
-  // If frameColOverride is provided, treat it as an ABSOLUTE frame index.
+  // If frameColOverride is provided, mode controls how we interpret it.
   // This avoids resolver math producing out-of-range frames (e.g., 48).
   // --------------------------------------------------
   let frameIndex: number;
   if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
-    frameIndex = (args.frameColOverride as any) | 0; // absolute frame index (0 = first frame)
+    const mode = args.frameColOverrideMode ?? "absFrame";
+    if (mode === "absFrame") {
+      frameIndex = (args.frameColOverride as any) | 0; // absolute frame index (0 = first frame)
+    } else {
+      frameIndex = resolveWeaponFrameIndexForLayer({
+        scene: args.scene,
+        sheet: fixedSheet,
+        dir: args.dir,
+        heroSprite: args.heroSprite,
+        heroFrameIndex: args.heroFrameIndex,
+        frameColOverride: args.frameColOverride,
+        frameColOverrideMode: mode
+      }) as any;
+      frameIndex = (frameIndex as any) | 0;
+    }
   } else {
     frameIndex = resolveWeaponFrameIndexForLayer({
       scene: args.scene,
