@@ -1,6 +1,6 @@
 // src/effectAtlas.ts
 import type Phaser from "phaser";
-import { DEBUG_EFFECT_ATLAS, WEAPON_DEBUG } from "./debugFlags";
+import { DEBUG_EFFECT_ATLAS, DEBUG_EFFECT_PURGE_CACHES, WEAPON_DEBUG } from "./debugFlags";
 import { queueSpritesheetOnce } from "./loaderCache";
 import { EFFECT_ATLAS_META } from "./generated/effectAtlasMeta";
 
@@ -495,6 +495,7 @@ function _warnEffectSheetIssues(): void {
 }
 
 function _purgeEffectCaches(scene: Phaser.Scene): void {
+    if (!DEBUG_EFFECT_PURGE_CACHES) return;
     const texMgr: any = scene?.textures as any;
     const texList = texMgr?.list as Record<string, any> | undefined;
     if (texList) {
