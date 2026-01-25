@@ -1,4 +1,5 @@
 import type Phaser from "phaser";
+import { DEBUG_EFFECT_FORCE_RELOAD } from "./debugFlags";
 
 const FORCE_RELOAD_PREFIXES = ["effects."];
 
@@ -11,6 +12,7 @@ function _toAbsUrl(url: string): string {
 }
 
 function _forceReload(textureKey: string): boolean {
+    if (!DEBUG_EFFECT_FORCE_RELOAD) return false;
     const key = String(textureKey || "");
     for (const prefix of FORCE_RELOAD_PREFIXES) {
         if (key.startsWith(prefix)) return true;
