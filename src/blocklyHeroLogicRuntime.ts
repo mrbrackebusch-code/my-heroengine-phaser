@@ -799,6 +799,20 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
           }
         } catch {}
       }
+      function __heTraceReset() {
+        try {
+          if (typeof globalThis !== "undefined") {
+            globalThis.__heBlocklyTrace = { usedSingleEnemy: false };
+          }
+        } catch {}
+      }
+      function __heTraceSingleEnemy() {
+        try {
+          if (typeof globalThis !== "undefined" && globalThis.__heBlocklyTrace) {
+            globalThis.__heBlocklyTrace.usedSingleEnemy = true;
+          }
+        } catch {}
+      }
       function __heValOut(name, v, def) {
         if (v == null) { __heDefaultsUsed[name] = true; return undefined; }
         return v;
@@ -845,6 +859,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
 
       function __heRO_enemyCount() { const ro = __heRO(); return (ro.enemyCount|0) || 0; }
       function __heRO_enemyHpAt(i) {
+        __heTraceSingleEnemy();
         const ro = __heRO();
         const a = (ro.enemyHp && ro.enemyHp.length) ? ro.enemyHp : [];
         const idx = (i|0);
@@ -871,6 +886,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         return a.slice(0);
       }
       function __heRO_enemyDistAt(i) {
+        __heTraceSingleEnemy();
         const ds = __heRO_enemyDistSqAt(i);
         return Math.sqrt(Math.max(0, ds));
       }
@@ -951,6 +967,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         return a.slice(0);
       }
       function __heEnemyField(i, field) {
+        __heTraceSingleEnemy();
         const arr = __heEnemies();
         const obj = arr[i|0];
         if (!obj) return 0;
@@ -998,6 +1015,7 @@ function _compileFromXml(xmlText: string): { ok: true; fn: (button: string) => a
         return [];
       }
       function __heClosestEnemyField(field) {
+        __heTraceSingleEnemy();
         const idx = __heRO_closestEnemyIndex();
         if (idx < 0) return 0;
         return __heEnemyField(idx, field);
@@ -1215,6 +1233,10 @@ export function tryRunBlocklyHeroLogic(profile: string, button: string): HeroLog
   if (!entry.fn) return null;
 
   try {
+    try {
+      const g: any = (typeof globalThis !== "undefined") ? (globalThis as any) : null;
+      if (g) g.__heBlocklyTrace = { usedSingleEnemy: false };
+    } catch {}
     const rawOut = entry.fn(button);
     entry.lastRaw = rawOut;
     entry.lastRawByButton[button] = rawOut;

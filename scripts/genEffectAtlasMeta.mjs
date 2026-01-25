@@ -23,6 +23,9 @@ const EFFECT_PALETTE_MAX_COLORS = 8;
 const EFFECT_PALETTE_ALPHA_MIN = 12;
 const EFFECT_PALETTE_SAMPLE_TARGET = 20000;
 const EFFECT_PALETTE_SAMPLE_MAX_STRIDE = 8;
+const EFFECT_SIZE_OVERRIDES = {
+  "sword arcs": { frameW: 125, frameH: 150 },
+};
 
 function paletteSampleStride(totalPixels) {
   const target = EFFECT_PALETTE_SAMPLE_TARGET | 0;
@@ -144,7 +147,11 @@ for (const file of files) {
   }
   const frameW = parseInt(match[2], 10) | 0;
   const frameH = parseInt(match[3], 10) | 0;
-  if (frameW <= 0 || frameH <= 0) {
+  const baseId = String(match[1] || "").trim().toLowerCase();
+  const override = EFFECT_SIZE_OVERRIDES[baseId];
+  const useFrameW = override ? (override.frameW | 0) : frameW;
+  const useFrameH = override ? (override.frameH | 0) : frameH;
+  if (useFrameW <= 0 || useFrameH <= 0) {
     missingSize.push(baseName);
     continue;
   }
@@ -161,14 +168,14 @@ for (const file of files) {
   const h = png.height | 0;
   if (w <= 0 || h <= 0) continue;
 
-  const cols = Math.floor(w / frameW);
-  const rows = Math.floor(h / frameH);
+  const cols = Math.floor(w / useFrameW);
+  const rows = Math.floor(h / useFrameH);
   if (cols <= 0 || rows <= 0) {
-    warnings.push(`[gen-effect-meta] invalid grid: ${baseName} size=${w}x${h} frame=${frameW}x${frameH}`);
+    warnings.push(`[gen-effect-meta] invalid grid: ${baseName} size=${w}x${h} frame=${useFrameW}x${useFrameH}`);
     continue;
   }
-  if ((w % frameW) !== 0 || (h % frameH) !== 0) {
-    warnings.push(`[gen-effect-meta] not divisible: ${baseName} size=${w}x${h} frame=${frameW}x${frameH}`);
+  if ((w % useFrameW) !== 0 || (h % useFrameH) !== 0) {
+    warnings.push(`[gen-effect-meta] not divisible: ${baseName} size=${w}x${h} frame=${useFrameW}x${useFrameH}`);
   }
 
   const data = png.data;
@@ -177,19 +184,19 @@ for (const file of files) {
   let emptyCount = 0;
   const wantPalette = (EFFECT_PALETTE_MAX_COLORS | 0) > 0;
   const counts = wantPalette ? new Map() : null;
-  const stride = wantPalette ? paletteSampleStride(cols * rows * frameW * frameH) : 1;
+  const stride = wantPalette ? paletteSampleStride(cols * rows * useFrameW * useFrameH) : 1;
   let sampleCountdown = 0;
 
   for (let r = 0; r < rows; r++) {
-    const baseY = r * frameH;
+    const baseY = r * useFrameH;
     for (let c = 0; c < cols; c++) {
-      const baseX = c * frameW;
+      const baseX = c * useFrameW;
       const frameIndex = r * cols + c;
       let hasPixel = !EFFECT_SKIP_EMPTY_FRAMES;
-      for (let y = 0; y < frameH; y++) {
+      for (let y = 0; y < useFrameH; y++) {
         const rowStart = (baseY + y) * w + baseX;
         let idx = (rowStart << 2);
-        for (let x = 0; x < frameW; x++) {
+        for (let x = 0; x < useFrameW; x++) {
           const a = data[idx + 3] | 0;
           if (wantPalette) {
             let sampleOk = true;
@@ -226,8 +233,8 @@ for (const file of files) {
     data,
     w,
     h,
-    frameW,
-    frameH,
+    useFrameW,
+    useFrameH,
     collisionFrameIndex,
     EFFECT_EMPTY_ALPHA_MIN
   );

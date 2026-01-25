@@ -16,8 +16,8 @@
 
 
 import type Phaser from "phaser";
-import { WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
-import { queueAtlasOnce } from "./loaderCache";
+import { WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE, DEBUG_WPN_USE_ORIGINALS_SUBDIR, DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY } from "./debugFlags";
+import { queueAtlasOnce, queueSpritesheetOnce } from "./loaderCache";
 import { WEAPON_ATLAS_SHEETS, WEAPON_ATLAS_DATA } from "./generated/weaponAtlasMeta";
 
 // ----------------------------------------------------------
@@ -109,14 +109,29 @@ export interface WeaponLayerPair {
 // Weapon atlas discovery (eager URL map)
 // ----------------------------------------------------------
 
-const weaponAtlasPngs = import.meta.glob("../assets/weapons/_atlas/*.png", {
+const WEAPON_ATLAS_DIR = "../assets/weapons/_atlas";
+const WEAPON_ATLAS_ORIGINALS_SUBDIR = "../assets/weapons/_atlas/originals to use";
+
+const weaponAtlasPngs = import.meta.glob("../assets/weapons/_atlas/**/*.png", {
   as: "url",
   eager: true
 }) as Record<string, string>;
 
 function _weaponAtlasUrl(atlasKey: string): string {
-  const rel = `../assets/weapons/_atlas/${atlasKey}.png`;
-  return weaponAtlasPngs[rel] || "";
+  const relBase = `${WEAPON_ATLAS_DIR}/${atlasKey}.png`;
+  const relOrig = `${WEAPON_ATLAS_ORIGINALS_SUBDIR}/${atlasKey}.png`;
+  return weaponAtlasPngs[relBase] || weaponAtlasPngs[relOrig] || "";
+}
+
+function _weaponOriginalSheetUrl(sheetKey: string): string {
+  const relOrig = `${WEAPON_ATLAS_ORIGINALS_SUBDIR}/${sheetKey}.png`;
+  return weaponAtlasPngs[relOrig] || "";
+}
+
+function _cacheBustUrl(url: string, token: string): string {
+  if (!url) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return url + sep + "v=" + token;
 }
 
 // ----------------------------------------------------------
@@ -140,13 +155,50 @@ const ALL_WEAPON_SHEETS: WeaponPngMeta[] = WEAPON_ATLAS_SHEETS.map((meta: any) =
 }));
 
 const SHEET_META_BY_KEY = new Map<string, WeaponPngMeta>();
+const SHEETS_BY_ATLAS = new Map<string, WeaponPngMeta[]>();
 for (const meta of ALL_WEAPON_SHEETS) {
   if (!meta.key) continue;
   SHEET_META_BY_KEY.set(meta.key, meta);
+  if (meta.atlasKey) {
+    const list = SHEETS_BY_ATLAS.get(meta.atlasKey) ?? [];
+    list.push(meta);
+    SHEETS_BY_ATLAS.set(meta.atlasKey, list);
+  }
+}
+
+export function getWeaponSheetMeta(sheetKey: string): WeaponPngMeta | null {
+  const key = String(sheetKey || "");
+  return SHEET_META_BY_KEY.get(key) ?? null;
+}
+
+export function getWeaponAtlasFrameForSheet(sheetKey: string): {
+  atlasKey: string;
+  image: string;
+  frame: { x: number; y: number; w: number; h: number };
+} | null {
+  const meta = getWeaponSheetMeta(sheetKey);
+  if (!meta || !meta.atlasKey) return null;
+  const atlas: any = (WEAPON_ATLAS_DATA as Record<string, unknown>)[meta.atlasKey] as any;
+  const frame = atlas?.frames?.[meta.key]?.frame;
+  if (!frame) return null;
+  return {
+    atlasKey: meta.atlasKey,
+    image: String(atlas?.meta?.image ?? ""),
+    frame: {
+      x: frame.x | 0,
+      y: frame.y | 0,
+      w: frame.w | 0,
+      h: frame.h | 0
+    }
+  };
 }
 
 // model -> variant -> tile -> anim -> pair
 type PairLeaf = { bg?: WeaponPngMeta; fg?: WeaponPngMeta };
+
+function _isDupSheetKey(key: string): boolean {
+  return /__dup\d+$/i.test(String(key || ""));
+}
 const INDEX = new Map<string, Map<string, Map<WeaponTile, Map<string, PairLeaf>>>>();
 
 // Composite weapon models: allow bg/fg to come from different source models.
@@ -169,8 +221,24 @@ for (const meta of ALL_WEAPON_SHEETS) {
   let leaf = byAnim.get(animKey);
   if (!leaf) byAnim.set(animKey, (leaf = {}));
 
-  if (meta.layer === "bg") leaf.bg = meta;
-  else leaf.fg = meta;
+  const isDup = _isDupSheetKey(meta.key);
+  if (meta.layer === "bg") {
+    if (!leaf.bg) {
+      leaf.bg = meta;
+    } else {
+      const existingDup = _isDupSheetKey(leaf.bg.key);
+      if (existingDup && !isDup) leaf.bg = meta;
+      // If existing is non-dup, keep it (ignore dup).
+    }
+  } else {
+    if (!leaf.fg) {
+      leaf.fg = meta;
+    } else {
+      const existingDup = _isDupSheetKey(leaf.fg.key);
+      if (existingDup && !isDup) leaf.fg = meta;
+      // If existing is non-dup, keep it (ignore dup).
+    }
+  }
 }
 
 export function listAllWeaponSheets(): WeaponPngMeta[] {
@@ -188,17 +256,75 @@ export function listWeaponVariants(model: string): string[] {
 }
 
 // ----------------------------------------------------------
-// Lazy-load helpers
+// Load / cache helpers
 // ----------------------------------------------------------
 
-const WEAPON_LAZY_REQUESTED = new Set<string>();
-const WEAPON_LAZY_REQUESTED_ATLAS = new Set<string>();
 const WEAPON_SHEETS_BY_MODEL_VARIANT = new Map<string, WeaponPngMeta[]>();
 
 const _WEAPON_ATLAS_RESOLVE_ONCE = new Set<string>();
 const _WEAPON_ATLAS_LOAD_ONCE = new Set<string>();
 const _WEAPON_ATLAS_SHEET_ONCE = new Set<string>();
 const _WEAPON_ATLAS_SHEET_FAIL_ONCE = new Set<string>();
+const _WEAPON_ATLAS_RELOAD_ONCE = new Set<string>();
+
+function _atlasExpectedSize(atlasData: any): { w: number; h: number } | null {
+  const w = (atlasData?.meta?.size?.w ?? 0) | 0;
+  const h = (atlasData?.meta?.size?.h ?? 0) | 0;
+  if (w > 0 && h > 0) return { w, h };
+  return null;
+}
+
+function _atlasActualSize(scene: Phaser.Scene, atlasKey: string): { w: number; h: number; src?: string } | null {
+  try {
+    const tex: any = scene?.textures?.get?.(atlasKey);
+    if (!tex) return null;
+    const src: any = tex.getSourceImage?.() ?? tex?.source?.[0]?.image ?? null;
+    const w = (src?.width ?? 0) | 0;
+    const h = (src?.height ?? 0) | 0;
+    if (w <= 0 || h <= 0) return null;
+    const srcUrl = typeof src?.src === "string" ? src.src : "";
+    return { w, h, src: srcUrl };
+  } catch {
+    return null;
+  }
+}
+
+function _logWeaponAtlasReloadOnce(sig: string, payload: any): void {
+  if (!_weaponDebugEnabled()) return;
+  if (_WEAPON_ATLAS_RELOAD_ONCE.has(sig)) return;
+  _WEAPON_ATLAS_RELOAD_ONCE.add(sig);
+  console.log("[WPN-ATLAS-RELOAD] " + payload);
+}
+
+function _reloadAtlasIfSizeMismatch(scene: Phaser.Scene, atlasKey: string, atlasData: any): boolean {
+  try {
+    const textures: any = scene?.textures;
+    if (!textures || typeof textures.exists !== "function") return false;
+    if (!textures.exists(atlasKey)) return false;
+    const expected = _atlasExpectedSize(atlasData);
+    if (!expected) return false;
+    const actual = _atlasActualSize(scene, atlasKey);
+    if (!actual) return false;
+    if (actual.w === expected.w && actual.h === expected.h) return false;
+
+    const msg =
+      "atlasKey=" + atlasKey +
+      " expected=" + expected.w + "x" + expected.h +
+      " actual=" + actual.w + "x" + actual.h +
+      (actual.src ? (" src=" + actual.src) : "");
+    _logWeaponAtlasReloadOnce(atlasKey, msg);
+
+    try { textures.remove(atlasKey); } catch { /* ignore */ }
+    const metas = SHEETS_BY_ATLAS.get(atlasKey) ?? [];
+    for (const meta of metas) {
+      if (!meta?.key) continue;
+      try { if (textures.exists(meta.key)) textures.remove(meta.key); } catch { /* ignore */ }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function _weaponDebugEnabled(): boolean {
   if (WEAPON_DEBUG) return true;
@@ -220,7 +346,7 @@ function _logWeaponAtlasResolveOnce(sig: string, payload: any): void {
   if (!_weaponDebugEnabled()) return;
   if (_WEAPON_ATLAS_RESOLVE_ONCE.has(sig)) return;
   _WEAPON_ATLAS_RESOLVE_ONCE.add(sig);
-  console.log("[WPN-ATLAS-RESOLVE]", payload);
+  console.log("[WPN-ATLAS-RESOLVE] " + _fmtWeaponAtlasResolveOneLine(payload));
 }
 
 function _logWeaponAtlasLoadOnce(sig: string, payload: any): void {
@@ -242,6 +368,31 @@ function _logWeaponAtlasSheetFailOnce(sig: string, payload: any): void {
   if (_WEAPON_ATLAS_SHEET_FAIL_ONCE.has(sig)) return;
   _WEAPON_ATLAS_SHEET_FAIL_ONCE.add(sig);
   console.warn("[WPN-ATLAS-SHEET-FAIL]", payload);
+}
+
+function _fmtWeaponAtlasResolveOneLine(payload: any): string {
+  const model = payload?.model ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const variant = payload?.variant ?? "";
+  const anim = payload?.anim ?? "";
+  const tile = payload?.tile ?? "";
+  const bg = payload?.bg ?? "";
+  const bgAtlas = payload?.bgAtlas ?? "";
+  const fg = payload?.fg ?? "";
+  const fgAtlas = payload?.fgAtlas ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "model=" + model +
+    " heroPhase=" + heroPhase +
+    " variant=" + variant +
+    " anim=" + anim +
+    " tile=" + tile +
+    " bg=" + bg +
+    " bgAtlas=" + bgAtlas +
+    " fg=" + fg +
+    " fgAtlas=" + fgAtlas
+  );
 }
 
 function _weaponSheetsCacheKey(model: string, variant?: string): string {
@@ -319,25 +470,7 @@ export function listWeaponSheetsForModel(weaponId: WeaponId, variant?: string): 
   return _listSheetsForModelVariant(model, variant);
 }
 
-function _loaderIsLoading(loader: any): boolean {
-  if (!loader) return false;
-  try {
-    if (typeof loader.isLoading === "function") return !!loader.isLoading();
-    if (typeof loader.isLoading === "boolean") return loader.isLoading;
-    if (typeof loader.loading === "boolean") return loader.loading;
-  } catch {}
-  return false;
-}
-
-function _startWeaponLoader(scene: Phaser.Scene): void {
-  try {
-    const loader: any = (scene as any).load;
-    if (!loader) return;
-    if (_loaderIsLoading(loader)) return;
-    if (typeof loader.start === "function") loader.start();
-  } catch { }
-}
-
+// No lazy queuing here; this only registers sheet keys from already-preloaded atlases.
 export function ensureWeaponSheetsLoaded(
   scene: Phaser.Scene,
   weaponId: WeaponId,
@@ -351,9 +484,11 @@ export function ensureWeaponSheetsLoaded(
 
   const textures = scene.textures;
   let loaded = 0;
-  let queued = 0;
+  let queuedAtlases = 0;
+  let needsLoaderStart = false;
   const dbg = _weaponDebugEnabled();
   const dbgVerbose = _weaponDebugVerbose();
+  const checkedAtlas = new Set<string>();
 
   for (const meta of metas) {
     const key = meta.key;
@@ -364,6 +499,29 @@ export function ensureWeaponSheetsLoaded(
 
     const atlasKey = meta.atlasKey;
     if (atlasKey) {
+      if (!checkedAtlas.has(atlasKey)) {
+        checkedAtlas.add(atlasKey);
+        const atlasData = (WEAPON_ATLAS_DATA as Record<string, unknown>)[atlasKey];
+        const reloaded = _reloadAtlasIfSizeMismatch(scene, atlasKey, atlasData);
+        if (reloaded || !textures.exists(atlasKey)) {
+          const atlasUrlBase = _weaponAtlasUrl(atlasKey);
+          const bustToken = reloaded ? Date.now().toString(36) : "";
+          const atlasUrl = reloaded ? _cacheBustUrl(atlasUrlBase, bustToken) : atlasUrlBase;
+          const queued = queueAtlasOnce(scene, atlasKey, atlasUrl, atlasData);
+          if (queued) {
+            needsLoaderStart = true;
+            queuedAtlases++;
+          }
+          if (dbg && (reloaded || queued)) {
+            const line =
+              "atlasKey=" + atlasKey +
+              " reloaded=" + (reloaded ? 1 : 0) +
+              " queued=" + (queued ? 1 : 0) +
+              " hasUrl=" + (atlasUrl ? 1 : 0);
+            _logWeaponAtlasLoadOnce(`atlas-requeue:${atlasKey}`, line);
+          }
+        }
+      }
       if (dbg && dbgVerbose) {
         _logWeaponAtlasLoadOnce(
           `atlas:${atlasKey}`,
@@ -373,23 +531,8 @@ export function ensureWeaponSheetsLoaded(
       if (dbg && !textures.exists(atlasKey)) {
         _logWeaponAtlasLoadOnce(
           `atlas-missing-in-textures:${atlasKey}`,
-          { atlasKey, sheetKey: key, queued: WEAPON_LAZY_REQUESTED_ATLAS.has(atlasKey) }
+          { atlasKey, sheetKey: key }
         );
-      }
-      if (!textures.exists(atlasKey) && !WEAPON_LAZY_REQUESTED_ATLAS.has(atlasKey)) {
-        const atlasUrl = _weaponAtlasUrl(atlasKey);
-        const atlasData = (WEAPON_ATLAS_DATA as Record<string, unknown>)[atlasKey];
-        const didQueue = atlasUrl && atlasData
-          ? queueAtlasOnce(scene, atlasKey, atlasUrl, atlasData)
-          : false;
-        if (didQueue) queued++;
-        WEAPON_LAZY_REQUESTED_ATLAS.add(atlasKey);
-        if (dbg && (!atlasUrl || !atlasData)) {
-          _logWeaponAtlasLoadOnce(
-            `atlas-missing:${atlasKey}`,
-            { atlasKey, hasUrl: !!atlasUrl, hasData: !!atlasData }
-          );
-        }
       }
       if (textures.exists(atlasKey)) {
         let created = false;
@@ -424,18 +567,24 @@ export function ensureWeaponSheetsLoaded(
           });
         }
         if (textures.exists(key)) {
-          WEAPON_LAZY_REQUESTED.add(key);
           loaded++;
         }
       }
       continue;
     }
   }
-
-  if (queued > 0) _startWeaponLoader(scene);
-
+  if (needsLoaderStart) {
+    try {
+      const loader: any = scene.load;
+      if (loader && typeof loader.isLoading === "function" && !loader.isLoading()) {
+        loader.start();
+      }
+    } catch {
+      // Ignore loader start failures; missing textures will surface in debug logs.
+    }
+  }
   const ready = loaded >= metas.length;
-  return { ready, queued, total: metas.length };
+  return { ready, queued: queuedAtlases, total: metas.length };
 }
 
 // ----------------------------------------------------------
@@ -454,12 +603,47 @@ export function loadWeaponAtlases(scene: Phaser.Scene): void {
   for (const atlasKey of Object.keys(atlasData)) {
     if (loaded.has(atlasKey)) continue;
     loaded.add(atlasKey);
-    const atlasUrl = _weaponAtlasUrl(atlasKey);
+    const reloaded = _reloadAtlasIfSizeMismatch(scene, atlasKey, atlasData[atlasKey]);
+    const atlasUrlBase = _weaponAtlasUrl(atlasKey);
+    const bustToken = reloaded ? Date.now().toString(36) : "";
+    const atlasUrl = reloaded ? _cacheBustUrl(atlasUrlBase, bustToken) : atlasUrlBase;
     if (!atlasUrl) missingUrl++;
     if (queueAtlasOnce(scene, atlasKey, atlasUrl, atlasData[atlasKey])) queued++;
   }
+  let originalsFound = 0;
+  let originalsQueued = 0;
+  let originalsMissingMeta = 0;
+  const originalsMode = DEBUG_WPN_USE_ORIGINALS_SUBDIR || DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY;
+  if (originalsMode) {
+    const prefix = `${WEAPON_ATLAS_ORIGINALS_SUBDIR}/`;
+    for (const relPath of Object.keys(weaponAtlasPngs)) {
+      if (!relPath.startsWith(prefix)) continue;
+      const file = relPath.split("/").pop() || "";
+      const sheetKey = file.replace(/\.png$/i, "");
+      if (!sheetKey) continue;
+      const meta = SHEET_META_BY_KEY.get(sheetKey);
+      if (!meta) {
+        originalsMissingMeta++;
+        continue;
+      }
+      const url = _weaponOriginalSheetUrl(sheetKey);
+      if (!url) continue;
+      originalsFound++;
+      if (queueSpritesheetOnce(scene, sheetKey, url, meta.frameW, meta.frameH)) {
+        originalsQueued++;
+      }
+    }
+  }
   if (_weaponDebugEnabled()) {
-    console.log("[WPN-ATLAS-PRELOAD]", { total: loaded.size, queued, missingUrl });
+    const line =
+      "total=" + loaded.size +
+      " queued=" + queued +
+      " missingUrl=" + missingUrl +
+      " originalsMode=" + (originalsMode ? 1 : 0) +
+      " originalsFound=" + originalsFound +
+      " originalsQueued=" + originalsQueued +
+      " originalsMissingMeta=" + originalsMissingMeta;
+    console.log("[WPN-ATLAS-PRELOAD] " + line);
   }
 }
 
@@ -553,8 +737,8 @@ function candidatesForHeroPhase(heroPhase: string): string[] {
   }
 
   // Movement
-  if (base === "run") return ["walk", "move"];
-  if (base === "walk") return ["walk", "move"];
+  if (base === "run") return ["run"];
+  if (base === "walk") return ["walk", "universal_walk"];
 
   // Idle
   if (base === "idle") return ["idle", "universal_idle"];
@@ -580,6 +764,9 @@ function candidatesForHeroPhase(heroPhase: string): string[] {
       "universal_idle",
     ];
   }
+
+  // Hurt
+  if (base === "hurt") return ["hurt", "universal_hurt"];
 
   // One-hand phases
   if (base === "one_hand_slash") return ["attack_slash", "one_hand_slash", "onehand_slash"];

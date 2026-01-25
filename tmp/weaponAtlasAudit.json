@@ -1,11 +1,688 @@
 {
   "run": {
-    "startedAt": "2026-01-23T02:34:24.265Z",
-    "groups": 1,
-    "sheets": 18
+    "startedAt": "2026-01-25T16:05:13.195Z",
+    "groups": 54,
+    "sheets": 984
+  },
+  "atlasMeta": {
+    "tall__consolidated__hurt__6x1": {
+      "size": {
+        "w": 768,
+        "h": 64
+      },
+      "images": 2,
+      "fill": 1
+    },
+    "tall__consolidated__walk__9x4": {
+      "size": {
+        "w": 1152,
+        "h": 512
+      },
+      "images": 3,
+      "fill": 0.75
+    },
+    "tall__consolidated__thrust__8x4": {
+      "size": {
+        "w": 1024,
+        "h": 512
+      },
+      "images": 3,
+      "fill": 0.75
+    },
+    "t064__magic__crystal__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 448
+      },
+      "images": 14,
+      "fill": 1
+    },
+    "t064__magic__crystal__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 1792
+      },
+      "images": 14,
+      "fill": 1
+    },
+    "t064__magic__diamond__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__diamond__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__gnarled__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__gnarled__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__loop__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__loop__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__s__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__magic__s__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "tall__consolidated__spellcast__7x4": {
+      "size": {
+        "w": 896,
+        "h": 256
+      },
+      "images": 2,
+      "fill": 1
+    },
+    "t064__polearm__spear__hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__polearm__spear__thrust": {
+      "size": {
+        "w": 1024,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__polearm__spear__walk": {
+      "size": {
+        "w": 1152,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "tall__consolidated__shoot__13x4": {
+      "size": {
+        "w": 1664,
+        "h": 256
+      },
+      "images": 2,
+      "fill": 1
+    },
+    "tall__consolidated__slash__6x4": {
+      "size": {
+        "w": 768,
+        "h": 256
+      },
+      "images": 2,
+      "fill": 1
+    },
+    "t064__ranged__bow_great__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__ranged__bow_great__universal_shoot": {
+      "size": {
+        "w": 832,
+        "h": 3328
+      },
+      "images": 13,
+      "fill": 1
+    },
+    "t064__ranged__bow_normal__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__ranged__bow_normal__universal_shoot": {
+      "size": {
+        "w": 1664,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__ranged__bow_recurve__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 832
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__ranged__bow_recurve__universal_shoot": {
+      "size": {
+        "w": 1664,
+        "h": 3328
+      },
+      "images": 26,
+      "fill": 1
+    },
+    "t064__sword__arming__universal_combat_idle": {
+      "size": {
+        "w": 256,
+        "h": 2304
+      },
+      "images": 18,
+      "fill": 1
+    },
+    "t064__sword__arming__universal_hurt": {
+      "size": {
+        "w": 768,
+        "h": 576
+      },
+      "images": 18,
+      "fill": 1
+    },
+    "t064__sword__arming__universal_idle": {
+      "size": {
+        "w": 256,
+        "h": 2304
+      },
+      "images": 18,
+      "fill": 1
+    },
+    "t064__sword__arming__universal_walk": {
+      "size": {
+        "w": 1152,
+        "h": 2304
+      },
+      "images": 18,
+      "fill": 1
+    },
+    "t064__sword__glowsword__hurt": {
+      "size": {
+        "w": 768,
+        "h": 128
+      },
+      "images": 4,
+      "fill": 1
+    },
+    "t064__sword__glowsword__walk": {
+      "size": {
+        "w": 1152,
+        "h": 512
+      },
+      "images": 4,
+      "fill": 1
+    },
+    "t064__tools__smash__universal_walk": {
+      "size": {
+        "w": 576,
+        "h": 768
+      },
+      "images": 3,
+      "fill": 1
+    },
+    "t064__tools__x__thrust": {
+      "size": {
+        "w": 1024,
+        "h": 768
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t064__tools__x__walk": {
+      "size": {
+        "w": 1152,
+        "h": 768
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t128__polearm__dragonspear__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__polearm__dragonspear__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__polearm__longspear__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__polearm__longspear__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__polearm__trident__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__polearm__trident__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__ranged__bow_great__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__ranged__bow_great__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__ranged__bow_normal__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__ranged__bow_normal__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__ranged__bow_recurve__walk__p1": {
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__ranged__bow_recurve__walk__p2": {
+      "size": {
+        "w": 2304,
+        "h": 2560
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t128__sword__arming__attack_backslash__p1": {
+      "size": {
+        "w": 3328,
+        "h": 4096
+      },
+      "images": 16,
+      "fill": 1
+    },
+    "t128__sword__arming__attack_backslash__p2": {
+      "size": {
+        "w": 3328,
+        "h": 512
+      },
+      "images": 2,
+      "fill": 1
+    },
+    "t128__sword__arming__attack_halfslash": {
+      "size": {
+        "w": 3072,
+        "h": 4096
+      },
+      "images": 18,
+      "fill": 0.5625
+    },
+    "t128__sword__arming__attack_slash": {
+      "size": {
+        "w": 3072,
+        "h": 4096
+      },
+      "images": 18,
+      "fill": 0.5625
+    },
+    "t128__tools__smash__slash": {
+      "size": {
+        "w": 1536,
+        "h": 1536
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__magic__crystal__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__crystal__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 1536
+      },
+      "images": 4,
+      "fill": 1
+    },
+    "t192__magic__diamond__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__diamond__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__diamond__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__magic__gnarled__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__gnarled__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__gnarled__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__magic__loop__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__loop__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__loop__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__magic__s__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__s__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__magic__s__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__polearm__dragonspear__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__dragonspear__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__dragonspear__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__polearm__longspear__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__longspear__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__longspear__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__polearm__trident__thrust__p1": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__trident__thrust__p2": {
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "images": 10,
+      "fill": 1
+    },
+    "t192__polearm__trident__thrust__p3": {
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "images": 6,
+      "fill": 1
+    },
+    "t192__sword__glowsword__attack_slash": {
+      "size": {
+        "w": 2304,
+        "h": 1536
+      },
+      "images": 4,
+      "fill": 1
+    },
+    "tall__consolidated__slash_reverse__6x4": {
+      "size": {
+        "w": 2304,
+        "h": 768
+      },
+      "images": 2,
+      "fill": 1
+    }
   },
   "pixelMismatches": [],
   "variantDimMismatches": [],
   "notDivisible": [],
-  "outOfBounds": []
+  "outOfBounds": [],
+  "universalBgRemaps": [
+    {
+      "key": "t064__blunt__mace__universal_hurt__bg__vbase",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__blunt__mace__universal_walk__bg__vbase",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__polearm__scythe__universal_hurt__bg__vbase",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__polearm__scythe__universal_walk__bg__vbase",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__sword__glowsword__universal_hurt__bg__vblue",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__sword__glowsword__universal_hurt__bg__vred",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__sword__glowsword__universal_walk__bg__vblue",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__sword__glowsword__universal_walk__bg__vred",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__sword__longsword__universal_hurt__bg__vbase",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__sword__longsword__universal_walk__bg__vbase",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__sword__rapier__universal_walk__bg__vbase",
+      "from": "universal_walk",
+      "to": "walk"
+    },
+    {
+      "key": "t064__sword__saber__universal_hurt__bg__vbase",
+      "from": "universal_hurt",
+      "to": "hurt"
+    },
+    {
+      "key": "t064__sword__saber__universal_walk__bg__vbase",
+      "from": "universal_walk",
+      "to": "walk"
+    }
+  ]
 }

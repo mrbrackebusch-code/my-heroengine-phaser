@@ -24,7 +24,7 @@ import { AURA_RADII } from "./auraConfig";
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
-import { loadWeaponAtlases, runWeaponAudit, ensureWeaponSheetsLoaded } from "./weaponAtlas";
+import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
 import {
   DEBUG_COINFX,
   DEBUG_MAIN_LIFECYCLE,
@@ -1290,6 +1290,12 @@ class HeroScene extends Phaser.Scene {
     private _textureFiltersInstalled: boolean = false;
     private _cameraRoundOverrideInstalled: boolean = false;
     private _camFollowSanityAtMs: number = 0;
+    private _bossIntroActive: boolean = false;
+    private _bossIntroFloorIndex: number = -1;
+    private _bossIntroHoldActive: boolean = false;
+    private _bossIntroHoldUntilMs: number = 0;
+    private _bossIntroHoldShadowX: number = 0;
+    private _bossIntroHoldShadowY: number = 0;
 
 
     // NEW: track dims too (lets us force-reapply if needed)
@@ -1494,23 +1500,6 @@ async create() {
     // 10) Monster atlas + registry exposure
     _uiLoadingSet(90, "Building monster atlas…");
     this.buildMonsterAtlasAndRegistry();
-
-    // 10b) Warm base weapon sheets (slash/thrust/exec/cast) to avoid lazy-load gaps.
-    try {
-      ensureWeaponSheetsLoaded(this, "arming", "base");    // strength
-      ensureWeaponSheetsLoaded(this, "spear", "base");     // agility
-      ensureWeaponSheetsLoaded(this, "dagger", "base");    // exec
-      ensureWeaponSheetsLoaded(this, "simple", "base");    // fallback cast
-      ensureWeaponSheetsLoaded(this, "crystal", "base");   // intellect projectile overlay
-      // Staff-style casts (int/support) — preload common staff ids.
-      ensureWeaponSheetsLoaded(this, "gnarled", "base");
-      ensureWeaponSheetsLoaded(this, "loop", "base");
-      ensureWeaponSheetsLoaded(this, "diamond", "base");
-      ensureWeaponSheetsLoaded(this, "s", "base");
-      ensureWeaponSheetsLoaded(this, "wand_female", "wand");
-      ensureWeaponSheetsLoaded(this, "wand_male", "wand");
-      ensureWeaponSheetsLoaded(this, "rod", "base");
-    } catch { }
 
     // 11) Optional hero anim tester
     this.maybeInstallHeroAnimTester();
@@ -2002,6 +1991,345 @@ private _checkCameraFollowSanity(nowMs: number): void {
     if (!isFollowing || !inView || dist > threshold) {
         this._forceCameraFollowNow("sanity");
     }
+}
+
+private _findLocalHeroNative(): Phaser.GameObjects.GameObject | null {
+    const g: any = globalThis as any;
+    const net = g.__net || g.net;
+    const pid = ((net?.playerId ?? 0) | 0);
+    const spritesNS: any = g?.sprites;
+    if (!spritesNS || typeof spritesNS.allSprites !== "function") return null;
+
+    const all = spritesNS.allSprites() as any[];
+    for (const s of all) {
+        if (!s) continue;
+        const native = (s as any).native as Phaser.GameObjects.GameObject | undefined;
+        if (!native) continue;
+        let owner = 0;
+        try {
+            owner = (spritesNS.readDataNumber(s, "owner") | 0);
+        } catch {
+            owner = 0;
+        }
+        if (pid > 0 && owner === pid) return native;
+    }
+
+    for (const s of all) {
+        if (!s) continue;
+        const native = (s as any).native as Phaser.GameObjects.GameObject | undefined;
+        if (native) return native;
+    }
+
+    return null;
+}
+
+private _findEnemyNativeById(monsterId: string, x: number, y: number): Phaser.GameObjects.GameObject | null {
+    const g: any = globalThis as any;
+    const spritesNS: any = g?.sprites;
+    if (!spritesNS || typeof spritesNS.allSprites !== "function") return null;
+    const want = String(monsterId || "").trim().toLowerCase();
+    if (!want) return null;
+
+    const all = spritesNS.allSprites() as any[];
+    let best: Phaser.GameObjects.GameObject | null = null;
+    let bestD2 = 1e18;
+    for (const s of all) {
+        if (!s) continue;
+        const native = (s as any).native as Phaser.GameObjects.GameObject | undefined;
+        if (!native) continue;
+        let mid = "";
+        try {
+            mid = String(spritesNS.readDataString(s, "monsterId") || "").trim().toLowerCase();
+        } catch {
+            mid = "";
+        }
+        if (!mid || mid !== want) continue;
+        const dx = (native.x as number) - x;
+        const dy = (native.y as number) - y;
+        const d2 = (dx * dx) + (dy * dy);
+        if (d2 < bestD2) {
+            bestD2 = d2;
+            best = native;
+        }
+    }
+    return best;
+}
+
+private _startBossIntro(evt: any): void {
+    const cam = this.cameras?.main as any;
+    if (!cam) return;
+
+    const g: any = globalThis as any;
+    const internals = g.__HeroEnginePhaserInternals || {};
+    try { internals.setBossIntroHeroLock?.(true); } catch { }
+    try { internals.setEnginePaused?.(true, "bossIntro"); } catch { }
+
+    this._bossIntroActive = true;
+    this._bossIntroFloorIndex = (evt?.floorIndex | 0) || -1;
+
+    const INTRO_PAN_MS = 700;
+    const INTRO_ZOOM_OUT_PCT = 72;
+    const INTRO_SHAKE_MS = 320;
+    const JUMP_START_DELAY_MS = INTRO_PAN_MS + 80;
+    const RETURN_DELAY_MS = 1200;
+    const SHADOW_MARGIN_PX = 170;
+    const SHADOW_START_SCALE = 0.25;
+    const SHADOW_END_SCALE = 3.2;
+    const CONTROL_RELEASE_EARLY_MS = 500;
+    const SPARK_TEX = "__bossShadowSpark";
+    const SPARK_TINT = 0xbbe6ff;
+    const DEFAULT_CONTROL_LEAD_MS = 4000;
+
+    const targetX = (evt?.x != null ? (evt.x | 0) : cam.midPoint?.x || 0);
+    const targetY = (evt?.y != null ? (evt.y | 0) : cam.midPoint?.y || 0);
+    const monsterId = String(evt?.monsterId || "").trim();
+
+    let bossNative: any = null;
+    if (monsterId) {
+        bossNative = this._findEnemyNativeById(monsterId, targetX, targetY);
+    }
+
+    const prevZoom = (cam.zoom || 1);
+    try { cam.stopFollow(); } catch { }
+
+    if (bossNative) {
+        try { bossNative.setAlpha?.(0); } catch { bossNative.alpha = 0; }
+    }
+
+    const zoomOut = Math.max(0.55, prevZoom * (INTRO_ZOOM_OUT_PCT / 100));
+
+    cam.pan(targetX, targetY, INTRO_PAN_MS, "Sine.easeInOut");
+    cam.zoomTo(zoomOut, INTRO_PAN_MS, "Sine.easeInOut");
+
+    this.time.delayedCall(INTRO_PAN_MS + 40, () => {
+        if (bossNative) {
+            this.tweens.add({
+                targets: bossNative,
+                alpha: { from: 0.2, to: 1 },
+                duration: 220,
+                yoyo: true,
+                repeat: 2,
+                onComplete: () => {
+                    try { bossNative.setAlpha?.(1); } catch { bossNative.alpha = 1; }
+                }
+            });
+        }
+        try { cam.shake(INTRO_SHAKE_MS, 0.012); } catch { }
+    });
+
+    let finished = false;
+    const finishIntro = (restoreFollow: boolean): void => {
+        if (finished) return;
+        finished = true;
+        this._bossIntroActive = false;
+        this._camFollowPid = 0;
+        this._camFollowNative = undefined;
+        try { cam.stopFollow(); } catch { }
+        if (restoreFollow) this._updateCameraFollowLocalHero();
+        try { internals.setBossIntroHeroLock?.(false); } catch { }
+    };
+
+    const getRuntimeNow = (): number => {
+        try {
+            const gg: any = (globalThis as any).game;
+            if (gg && typeof gg.runtime === "function") return gg.runtime() | 0;
+        } catch { }
+        return (this.time?.now | 0) || 0;
+    };
+
+    this.time.delayedCall(JUMP_START_DELAY_MS, () => {
+        try { internals.setEnginePaused?.(false, "bossIntro"); } catch { }
+        let jumpInfo: any = null;
+        try { jumpInfo = internals.startBossIntroJump?.(evt); } catch { jumpInfo = null; }
+
+        const landAtMs = (jumpInfo && jumpInfo.ok) ? (jumpInfo.landAtMs | 0) : 0;
+        const controlLeadMs = (jumpInfo && jumpInfo.controlLeadMs != null) ? (jumpInfo.controlLeadMs | 0) : DEFAULT_CONTROL_LEAD_MS;
+        const shadowX = (jumpInfo && jumpInfo.targetX != null) ? (jumpInfo.targetX | 0) : targetX;
+        const shadowY = (jumpInfo && jumpInfo.targetY != null) ? (jumpInfo.targetY | 0) : targetY;
+
+        const runtimeNow = getRuntimeNow();
+        const landDelay = landAtMs > 0 ? Math.max(0, landAtMs - runtimeNow) : 0;
+
+        if (jumpInfo && jumpInfo.ok) {
+            this._bossIntroHoldActive = true;
+            this._bossIntroHoldUntilMs = (jumpInfo.endMs | 0) || (landAtMs | 0);
+            this._bossIntroHoldShadowX = shadowX | 0;
+            this._bossIntroHoldShadowY = shadowY | 0;
+        }
+
+        let shadow: any = null;
+        let sparkFx: any = null;
+        let unlockDelay = RETURN_DELAY_MS + 1600;
+        let returnPanMs = 2000;
+
+        if (landDelay > 0) {
+            const minUnlockDelay = RETURN_DELAY_MS + 1600;
+            const effectiveLeadMs = Math.max(0, (controlLeadMs | 0) + (CONTROL_RELEASE_EARLY_MS | 0));
+            const unlockAtLead = Math.max(0, landDelay - effectiveLeadMs);
+            unlockDelay = Math.min(landDelay, Math.max(minUnlockDelay, unlockAtLead));
+            const panBudget = Math.max(800, unlockDelay - RETURN_DELAY_MS - 200);
+            returnPanMs = Math.min(3600, Math.max(1600, panBudget));
+        }
+
+        if (landDelay > 0) {
+            shadow = this.add.ellipse(shadowX, shadowY, 34, 20, 0x000000, 0.55);
+            try { shadow.setDepth(10000); } catch { }
+            try { shadow.setScale(SHADOW_START_SCALE); } catch { }
+            const growthDur = Math.max(600, landDelay);
+            this.tweens.add({
+                targets: shadow,
+                scaleX: SHADOW_END_SCALE,
+                scaleY: SHADOW_END_SCALE,
+                duration: growthDur,
+                ease: "Sine.easeIn"
+            });
+
+            try {
+                if (!this.textures.exists(SPARK_TEX)) {
+                    const gg = this.make.graphics({ x: 0, y: 0, add: false });
+                    gg.fillStyle(0xffffff, 1);
+                    gg.fillCircle(3, 3, 3);
+                    gg.generateTexture(SPARK_TEX, 6, 6);
+                    gg.destroy();
+                }
+                sparkFx = this.add.particles(shadowX, shadowY, SPARK_TEX, {
+                    lifespan: { min: 600, max: 1100 },
+                    speed: { min: 6, max: 42 },
+                    angle: { min: 0, max: 360 },
+                    quantity: 1,
+                    frequency: 70,
+                    scale: { start: 1.1, end: 0 },
+                    alpha: { start: 0.85, end: 0 },
+                    tint: SPARK_TINT,
+                    blendMode: "ADD"
+                });
+                try { sparkFx.setDepth?.(10020); } catch { }
+            } catch { sparkFx = null; }
+
+            this.time.delayedCall(landDelay, () => {
+                try { cam.shake(420, 0.018); } catch { }
+                try { shadow?.destroy?.(); } catch { }
+                try { sparkFx?.destroy?.(); } catch { }
+            });
+        }
+
+        this.time.delayedCall(RETURN_DELAY_MS, () => {
+            const heroNative = this._findLocalHeroNative();
+            let focusX = shadowX;
+            let focusY = shadowY;
+            let zoomTarget = zoomOut;
+
+            if (heroNative && Number.isFinite((heroNative as any).x) && Number.isFinite((heroNative as any).y)) {
+                const hx = (heroNative as any).x as number;
+                const hy = (heroNative as any).y as number;
+                focusX = (hx + shadowX) * 0.5;
+                focusY = (hy + shadowY) * 0.5;
+
+                const dx = Math.abs(hx - shadowX);
+                const dy = Math.abs(hy - shadowY);
+                const wNeed = Math.max(1, dx + SHADOW_MARGIN_PX * 2);
+                const hNeed = Math.max(1, dy + SHADOW_MARGIN_PX * 2);
+                const zoomFitX = cam.width / wNeed;
+                const zoomFitY = cam.height / hNeed;
+                const zoomFit = Math.max(0.55, Math.min(zoomFitX, zoomFitY));
+                zoomTarget = Math.min(prevZoom, zoomFit);
+                zoomTarget = Math.max(zoomOut * 0.98, zoomTarget);
+            }
+
+            cam.pan(focusX, focusY, returnPanMs, "Sine.easeInOut");
+            cam.zoomTo(zoomTarget, returnPanMs, "Sine.easeInOut");
+        });
+
+        if (landDelay > 0) {
+            this.time.delayedCall(unlockDelay, () => finishIntro(true));
+        } else {
+            const fallbackDelay = RETURN_DELAY_MS + returnPanMs;
+            this.time.delayedCall(fallbackDelay, () => finishIntro(true));
+        }
+    });
+}
+
+private _updateBossIntro(nowMs: number): boolean {
+    if (this._bossIntroActive) return true;
+    const g: any = globalThis as any;
+    const internals = g.__HeroEnginePhaserInternals || {};
+    const evt = internals.consumeBossIntroEvent?.();
+    if (!evt) return false;
+    if ((evt.floorIndex | 0) === (this._bossIntroFloorIndex | 0)) return false;
+    this._startBossIntro(evt);
+    return true;
+}
+
+private _updateBossIntroHoldCamera(nowMs: number, deltaMs: number): boolean {
+    const cam = this.cameras?.main as any;
+    if (!cam) return false;
+
+    const g: any = globalThis as any;
+    const internals = g.__HeroEnginePhaserInternals || {};
+    let holdInfo: any = null;
+    try { holdInfo = internals.getBossIntroCameraHoldInfo?.(); } catch { holdInfo = null; }
+
+    if (holdInfo && holdInfo.active && (holdInfo.holdUntilMs | 0) > (nowMs | 0)) {
+        this._bossIntroHoldActive = true;
+        this._bossIntroHoldUntilMs = holdInfo.holdUntilMs | 0;
+        if (Number.isFinite(holdInfo.shadowX) && Number.isFinite(holdInfo.shadowY)) {
+            this._bossIntroHoldShadowX = holdInfo.shadowX | 0;
+            this._bossIntroHoldShadowY = holdInfo.shadowY | 0;
+        }
+    } else if ((this._bossIntroHoldUntilMs | 0) <= (nowMs | 0)) {
+        if (this._bossIntroHoldActive) {
+            this._bossIntroHoldActive = false;
+            this._bossIntroHoldUntilMs = 0;
+            try { cam.stopFollow(); } catch { }
+            this._camFollowPid = 0;
+            this._camFollowNative = undefined;
+        }
+        return false;
+    }
+
+    const shadowX = this._bossIntroHoldShadowX | 0;
+    const shadowY = this._bossIntroHoldShadowY | 0;
+    if (!shadowX && !shadowY) return false;
+
+    try { cam.stopFollow(); } catch { }
+
+    const heroNative = this._findLocalHeroNative();
+    const marginPx = 190;
+    const minZoom = 0.55;
+    const maxZoom = 1.0;
+
+    let focusX = shadowX;
+    let focusY = shadowY;
+    let targetZoom = Math.max(minZoom, Math.min(maxZoom, cam.zoom || 1));
+
+    if (heroNative && Number.isFinite((heroNative as any).x) && Number.isFinite((heroNative as any).y)) {
+        const hx = (heroNative as any).x as number;
+        const hy = (heroNative as any).y as number;
+        focusX = (hx + shadowX) * 0.5;
+        focusY = (hy + shadowY) * 0.5;
+
+        const dx = Math.abs(hx - shadowX);
+        const dy = Math.abs(hy - shadowY);
+        const wNeed = Math.max(1, dx + marginPx * 2);
+        const hNeed = Math.max(1, dy + marginPx * 2);
+        const zoomFitX = cam.width / wNeed;
+        const zoomFitY = cam.height / hNeed;
+        const zoomFit = Math.min(zoomFitX, zoomFitY);
+        targetZoom = Math.max(minZoom, Math.min(maxZoom, zoomFit));
+    }
+
+    const lerp = Math.min(0.16, Math.max(0.06, (deltaMs | 0) / 900));
+    const curZoom = cam.zoom || 1;
+    const nextZoom = curZoom + (targetZoom - curZoom) * lerp;
+    cam.setZoom(nextZoom);
+
+    const curX = cam.midPoint?.x ?? focusX;
+    const curY = cam.midPoint?.y ?? focusY;
+    const nextX = curX + (focusX - curX) * lerp;
+    const nextY = curY + (focusY - curY) * lerp;
+    cam.centerOn(nextX, nextY);
+
+    return true;
 }
 
 
@@ -3515,9 +3843,14 @@ update(time: number, delta: number) {
     // Keep canvas size locked to DOM game-area
     this._resizeGameToDomViewport("update");
 
+    const bossIntroActive = this._updateBossIntro(time | 0);
+    const bossHoldActive = bossIntroActive ? false : this._updateBossIntroHoldCamera(time | 0, delta | 0);
+
     // Keep camera following local player hero (works on host + clients)
-    this._updateCameraFollowLocalHero();
-    this._checkCameraFollowSanity(time | 0);
+    if (!bossIntroActive && !bossHoldActive) {
+        this._updateCameraFollowLocalHero();
+        this._checkCameraFollowSanity(time | 0);
+    }
     this._snapCameraScrollToPixelGrid();
 
     this._updateLegacyHostTick(g);
@@ -3742,5 +4075,35 @@ function _mapDecalIdToKey(id: number): string {
   if (v === 120) return "stairs_statue_top";
   if (v === 121) return "stairs_statue_mid";
   if (v === 122) return "stairs_statue_bot";
+
+  // Trial arena decals (magecity.png)
+  if (v === 3000) return "trial_floor_corner_nw";
+  if (v === 3001) return "trial_floor_edge_n";
+  if (v === 3002) return "trial_floor_corner_ne";
+  if (v === 3003) return "trial_floor_edge_w";
+  if (v === 3004) return "trial_floor_center";
+  if (v === 3005) return "trial_floor_edge_e";
+  if (v === 3006) return "trial_floor_corner_sw";
+  if (v === 3007) return "trial_floor_edge_s";
+  if (v === 3008) return "trial_floor_corner_se";
+
+  if (v === 3010) return "trial_floor_interior_a";
+  if (v === 3011) return "trial_floor_interior_b";
+  if (v === 3012) return "trial_floor_interior_c";
+  if (v === 3013) return "trial_floor_interior_d";
+
+  if (v === 3020) return "trial_patch_a";
+  if (v === 3021) return "trial_patch_b";
+  if (v === 3022) return "trial_patch_c";
+  if (v === 3023) return "trial_patch_d";
+
+  if (v === 3030) return "trial_patch_edge_n";
+  if (v === 3031) return "trial_patch_edge_s";
+  if (v === 3032) return "trial_patch_edge_e";
+  if (v === 3033) return "trial_patch_edge_w";
+  if (v === 3034) return "trial_patch_corner_sw";
+  if (v === 3035) return "trial_patch_corner_se";
+  if (v === 3036) return "trial_patch_corner_nw";
+  if (v === 3037) return "trial_patch_corner_ne";
   return "";
 }

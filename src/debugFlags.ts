@@ -49,9 +49,9 @@ export const DEBUG_AGI_COMBO_BUILD = false;
 export const DEBUG_AGI_AIM = false;
 export const DEBUG_AGI_AIM_HERO_INDEX = 0;   // 0 = hero 0, 1 = hero 1, etc.
 export const DEBUG_AGI_AIM_THROTTLE_MS = 250;
-export const DEBUG_AGI_HOOKSHOT_LOGS = true;
+export const DEBUG_AGI_HOOKSHOT_LOGS = false;
 export const DEBUG_AGI_HOOKSHOT_THROTTLE_MS = 50;
-export const DEBUG_AGI_HOOKSHOT_TICK_LOGS = true;
+export const DEBUG_AGI_HOOKSHOT_TICK_LOGS = false;
 export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 0.2;
 
 // Move pipeline debug
@@ -114,6 +114,9 @@ export const DEBUG_UI_LOGS = false;
 export const DEBUG_UIAPI_LOGS = false;
 export const DEBUG_SHOP_LOGS = false;
 export const DEBUG_COINS_LOGS = false;
+export const DEBUG_DEV_COMMANDS = true; // Allow __heUiCommand debug actions (teleport, etc).
+export const DEBUG_TOWER_TRIAL_LOGS = false; // Tower Trial lifecycle + gating logs.
+export const DEBUG_TOWER_TRIAL_SIM = false; // Tower Trial simulator details.
 
 // Intellect debug (HeroEngineInPhaser.ts)
 export const DEBUG_INT_DET = false;
@@ -165,6 +168,17 @@ export const DEBUG_DRAW_DECOR_COLLIDERS = false; // Decor prop collider bounds (
 export const DEBUG_EFFECT_ANIMS = false; // Effect anim application logs (effects.*)
 export const DEBUG_EFFECT_MASKS = false; // Effect mask debug logs (silhouette / mask attach)
 export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
+export const DEBUG_STR_ARC_GALLERY = true; // Strength arc frame gallery overlay (arc/fill/aura sheets)
+export const DEBUG_STR_ARC_GALLERY_SKIN = "Sword Arcs";
+export const DEBUG_STR_ARC_GALLERY_FILL_SKIN = "torrentacle texture";
+export const DEBUG_STR_ARC_GALLERY_AURA_RADIUS = 2;
+export const DEBUG_STR_ARC_GALLERY_CORE_COLS = 6;
+export const DEBUG_STR_ARC_GALLERY_CORE_ROWS = 5;
+export const DEBUG_STR_ARC_GALLERY_SCALE = 0.55;
+export const DEBUG_STR_ARC_GALLERY_PADDING = 6;
+export const DEBUG_STR_ARC_GALLERY_ANIM_FPS = 120;
+export const DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS = "1,2,3,4";
+export const DEBUG_STR_ARC_GALLERY_ALPHA = 1;
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 export const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
 export const DEBUG_COLLIDER_SPRITE_COLOR = 0x00b7ff;
@@ -182,12 +196,12 @@ export const DEBUG_ENEMY_WALL_FOOTPRINT_PX = 32;
 export const DEBUG_WEAPON_SYNC = false;
 export const DEBUG_WEAPON_TICK = false;
 export const DEBUG_WEAPON_ATLAS_COMPARE = false;
-export const DEBUG_LAYER_SNAPSHOT = true;
-export const DEBUG_LAYER_SNAPSHOT_RENDER = true;
+export const DEBUG_LAYER_SNAPSHOT = false;
+export const DEBUG_LAYER_SNAPSHOT_RENDER = false;
 export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_AREA = false;
 export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_SNAPSHOT = false;
-export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL = true;
-export const DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA = true;
+export const DEBUG_LAYER_SNAPSHOT_RENDER_FORCE_PIXEL = false;
+export const DEBUG_LAYER_SNAPSHOT_OVERLAP_ALPHA = false;
 export const DEBUG_FORCE_RENDERER_RESOLUTION_1 = true; // Force Phaser renderer resolution=1 (no DPR scaling).
 export const WEAPON_USE_FRAME_ANCHOR = false;
 export const DEBUG_SPRITE_ATTACH = false;
@@ -285,8 +299,11 @@ export const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 // ------------------------------------------------------------
 // Weapon debug (weaponAnimGlue.ts + main.ts)
 // ------------------------------------------------------------
-export const WEAPON_DEBUG = false;
+export const WEAPON_DEBUG = true;
 export const WEAPON_DEBUG_VERBOSE = false;
+export const DEBUG_WPN_PIXEL_LOG = true; // Log weapon frame pixel samples (resolve/place).
+export const DEBUG_WPN_USE_ORIGINALS_SUBDIR = false; // Prefer _atlas/"originals to use" spritesheets when present.
+export const DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY = false; // Force per-family "originals" weapon ids/phases for debugging.
 export const DEBUG_WPN_AURA_ALWAYS_SHOW = false; // Always render weapon aura masks on the hero (visual overlay).
 export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
 export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;

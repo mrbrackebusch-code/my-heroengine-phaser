@@ -4850,10 +4850,89 @@ private _propReapplyFocusAuraCache(): void {
   } catch { /* ignore */ }
 }
 
+private _propGridMatchesInstances(
+  nextByAnchor: Record<string, string>,
+  instByAnchor: Record<string, any>
+): boolean {
+  const nextKeys = Object.keys(nextByAnchor);
+  const instKeys = Object.keys(instByAnchor || Object.create(null));
+  if (nextKeys.length !== instKeys.length) return false;
+  for (let i = 0; i < nextKeys.length; i++) {
+    const k = nextKeys[i];
+    const inst = instByAnchor[k];
+    if (!inst) return false;
+    const raw = String(inst.rawKey ?? "");
+    if (raw !== String(nextByAnchor[k] || "")) return false;
+  }
+  return true;
+}
+
+private _propShiftDisplayObj(obj: any, dx: number, dy: number, dd: number): void {
+  if (!obj) return;
+  const nextX = ((obj.x ?? 0) + (dx | 0));
+  const nextY = ((obj.y ?? 0) + (dy | 0));
+  try {
+    if (typeof obj.setPosition === "function") obj.setPosition(nextX, nextY);
+    else { obj.x = nextX; obj.y = nextY; }
+  } catch {
+    obj.x = nextX;
+    obj.y = nextY;
+  }
+  const curDepth = (obj.depth ?? 0) | 0;
+  const nextDepth = (curDepth + (dd | 0)) | 0;
+  try {
+    if (typeof obj.setDepth === "function") obj.setDepth(nextDepth);
+    else obj.depth = nextDepth;
+  } catch {
+    obj.depth = nextDepth;
+  }
+}
+
+private _propUpdateOffsetForInstance(inst: any, nextOffX: number, nextOffY: number): void {
+  if (!inst) return;
+  const curOffX = (inst.offsetX ?? 0) | 0;
+  const curOffY = (inst.offsetY ?? 0) | 0;
+  const nx = nextOffX | 0;
+  const ny = nextOffY | 0;
+  const dx = (nx - curOffX) | 0;
+  const dy = (ny - curOffY) | 0;
+  if ((dx | 0) === 0 && (dy | 0) === 0) return;
+
+  inst.offsetX = nx | 0;
+  inst.offsetY = ny | 0;
+
+  const depthDelta = ((dy | 0) * (WORLD_DEPTH_Y_SCALE | 0)) | 0;
+  inst.baseDepth = ((inst.baseDepth ?? 0) + depthDelta) | 0;
+
+  const objs: any[] = Array.isArray(inst.objs) ? inst.objs : [];
+  for (let i = 0; i < objs.length; i++) {
+    this._propShiftDisplayObj(objs[i], dx | 0, dy | 0, depthDelta | 0);
+  }
+
+  const overlayObjs: any[] = Array.isArray(inst.overlayObjs) ? inst.overlayObjs : [];
+  for (let i = 0; i < overlayObjs.length; i++) {
+    this._propShiftDisplayObj(overlayObjs[i], dx | 0, dy | 0, depthDelta | 0);
+  }
+
+  const layers: any[] = Array.isArray(inst.focusAuraLayers) ? inst.focusAuraLayers : [];
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    if (!layer) continue;
+    this._propShiftDisplayObj(layer.cont, dx | 0, dy | 0, depthDelta | 0);
+    const kids: any[] = Array.isArray(layer.children) ? layer.children : [];
+    for (let ki = 0; ki < kids.length; ki++) {
+      const ch: any = kids[ki];
+      this._propShiftDisplayObj(ch, dx | 0, dy | 0, depthDelta | 0);
+      try {
+        const mask = (ch as any).__auraTrimMask;
+        if (mask) this._propShiftDisplayObj(mask, dx | 0, dy | 0, 0);
+      } catch { /* ignore */ }
+    }
+  }
+}
+
 syncPropGridByName(propNameGrid: string[][]): void {
   if (!this.map) return;
-
-  const st = this._propBeginSync();
 
   const rows = (propNameGrid.length | 0);
   // Some callers may provide sparse rows; find the first populated row to size cols defensively.
@@ -4865,6 +4944,39 @@ syncPropGridByName(propNameGrid: string[][]): void {
       break;
     }
   }
+
+  const anyThis: any = this as any;
+  const nextByAnchor: Record<string, string> = Object.create(null);
+
+  for (let r = 0; r < rows; r++) {
+    const row = propNameGrid[r];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < cols; c++) {
+      const rawKey = row[c] ?? "";
+      if (!rawKey) continue;
+      nextByAnchor[String(r | 0) + "," + String(c | 0)] = String(rawKey || "");
+    }
+  }
+
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || null;
+  const offsetsByAnchor: Record<string, { offX?: number; offY?: number; x?: number; y?: number }> =
+    anyThis.__propOffsetsByAnchor || Object.create(null);
+
+  if (instByAnchor && this._propGridMatchesInstances(nextByAnchor, instByAnchor)) {
+    const keys = Object.keys(instByAnchor);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const inst = instByAnchor[k];
+      if (!inst) continue;
+      const off = offsetsByAnchor[k] || null;
+      const offX = (off?.offX ?? off?.x ?? 0) | 0;
+      const offY = (off?.offY ?? off?.y ?? 0) | 0;
+      this._propUpdateOffsetForInstance(inst, offX | 0, offY | 0);
+    }
+    return;
+  }
+
+  const st = this._propBeginSync();
 
   for (let r = 0; r < rows; r++) {
     const row = propNameGrid[r];
@@ -5092,21 +5204,32 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
 
   // Tileset plumbing (unchanged)
   const keysRaw = this.atlas.allTextureKeys.slice();
-  const seen: Record<string, 1> = Object.create(null);
+  const seenEffective: Record<string, 1> = Object.create(null);
+  const effectiveByRaw: Record<string, string> = Object.create(null);
 
   const ordered: string[] = [];
   const primary = this.atlas.primaryTextureKey;
 
-  if (primary && !seen[primary]) {
-    ordered.push(primary);
-    seen[primary] = 1;
+  if (primary) {
+    const primaryInfo = this.atlas.getSheetInfo(primary);
+    const primaryEff = (primaryInfo?.textureKey || primary).trim();
+    if (primaryEff && !seenEffective[primaryEff]) {
+      ordered.push(primaryEff);
+      seenEffective[primaryEff] = 1;
+    }
+    effectiveByRaw[primary] = primaryEff || primary;
   }
 
   keysRaw.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   for (const tk of keysRaw) {
-    if (!tk || seen[tk]) continue;
-    ordered.push(tk);
-    seen[tk] = 1;
+    const raw = (tk || "").trim();
+    if (!raw) continue;
+    const info = this.atlas.getSheetInfo(raw);
+    const eff = (info?.textureKey || raw).trim();
+    effectiveByRaw[raw] = eff || raw;
+    if (!eff || seenEffective[eff]) continue;
+    ordered.push(eff);
+    seenEffective[eff] = 1;
   }
 
   this._tilesetsAll = [];
@@ -5143,6 +5266,14 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
     });
 
     gidCursor = (gidCursor + total) | 0;
+  }
+
+  // Map raw keys (e.g., tiles.magecity) to the effective trimmed tileset gid.
+  for (const raw of Object.keys(effectiveByRaw)) {
+    const eff = (effectiveByRaw[raw] || raw).trim();
+    if (!eff || eff === raw) continue;
+    const gid = this._firstGidByTextureKey[eff];
+    if (gid != null) this._firstGidByTextureKey[raw] = gid;
   }
 
   // Layers

@@ -4,6 +4,14 @@ import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDia
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 import {
+    TOWER_TRIAL_BUTTONS,
+    towerTrialButtonLabel,
+    towerTrialRequirementSetForFloor,
+    towerTrialSimulateProfile,
+    towerTrialShouldRequireTrial,
+} from "./towerTrial";
+import type { TowerTrialIssue, TowerTrialRequirementSet, TowerTrialSimResult } from "./towerTrial";
+import {
     DBG_INT_INTERVAL_MS,
     DBG_INTERVAL_MS,
     DEBUG_AGI_AIM,
@@ -39,6 +47,7 @@ import {
     DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
     DEBUG_DECOR_ENGINE_LOGS,
     DEBUG_DUNGEON_LOGS,
+    DEBUG_DEV_COMMANDS,
     DEBUG_FORCE_HALL_OF_ENEMIES,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
     DEBUG_DISABLE_ENEMY_WALL_COLLISIONS,
@@ -56,6 +65,8 @@ import {
     DEBUG_INTERACT_LOGS,
     DEBUG_INTERACT_TICK_LOGS,
     DEBUG_PROP_INTERACT_LOGS,
+    DEBUG_TOWER_TRIAL_LOGS,
+    DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
@@ -2501,10 +2512,40 @@ function _updateStrengthArcFxForProj(
 
     const fillFx = sprites.readDataSprite(proj, STR_ARC_FILL_FX_KEY);
     if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
-        const skinId = sprites.readDataString(fillFx, "effectSkin") || "";
-        const dir = sprites.readDataString(fillFx, "effectDir") || "";
-        const fillIdx = _strengthArcFillFrameIndex(skinId, dir, t);
-        sprites.setDataNumber(fillFx, EFFECT_FRAME_INDEX_DATA_KEY, fillIdx | 0);
+        let phase = 1;
+        if (segName === "strengthSlash") {
+            phase = 0;
+        } else if (segName === "strengthReset") {
+            phase = (sweepT >= STR_ARC_FILL_END_START) ? 2 : 1;
+        }
+        const lastPhase = sprites.readDataNumber(fillFx, STR_ARC_FILL_PHASE_KEY) | 0;
+        if (phase !== lastPhase) {
+            let list = STR_ARC_FILL_TRAVEL_LIST;
+            let phaseMs = segDur | 0;
+            if (phase === 0) {
+                list = STR_ARC_FILL_INTRO_LIST;
+                phaseMs = segDur | 0;
+            } else if (phase === 2) {
+                list = STR_ARC_FILL_END_LIST;
+                phaseMs = Math.max(1, (segDur | 0) - Math.round((segDur | 0) * STR_ARC_FILL_END_START));
+            } else {
+                list = STR_ARC_FILL_TRAVEL_LIST;
+                phaseMs = Math.max(1, Math.round((segDur | 0) * STR_ARC_FILL_END_START));
+            }
+            const listCount = _strengthArcFillListCount(list);
+            const baseFps = (phaseMs > 0 && listCount > 0) ? (listCount / (phaseMs / 1000)) : 30;
+            const fps = Math.max(1, Math.round(baseFps * Math.max(1, STR_ARC_FILL_SPEED_MULT | 0)));
+            sprites.setDataString(fillFx, EFFECT_FRAME_LIST_DATA_KEY, list);
+            sprites.setDataNumber(fillFx, EFFECT_FRAME_INDEX_DATA_KEY, -1);
+            sprites.setDataNumber(fillFx, EFFECT_YOYO_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, EFFECT_FRAME_WINDOW_START_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, EFFECT_ANIM_DELAY_MS_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, EFFECT_FPS_DATA_KEY, fps | 0);
+            sprites.setDataNumber(fillFx, EFFECT_REPEAT_DATA_KEY, 0);
+            sprites.setDataNumber(fillFx, STR_ARC_FILL_PHASE_KEY, phase | 0);
+        }
         sprites.setDataNumber(fillFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(fillFx, EFFECT_SCALE_DATA_KEY, scale);
         sprites.setDataNumber(fillFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
@@ -2798,6 +2839,8 @@ const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
 const EFFECT_FRAME_WINDOW_START_DATA_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
+const EFFECT_FRAME_LIST_DATA_KEY = "effectFrameList";
+const EFFECT_YOYO_DATA_KEY = "effectYoyo";
 const EFFECT_SCALE_X_DATA_KEY = "effectScaleX";
 const EFFECT_SCALE_Y_DATA_KEY = "effectScaleY";
 const EFFECT_INTRO_MS_DATA_KEY = "effectIntroMs";
@@ -2805,6 +2848,8 @@ const EFFECT_INTRO_SCALE_DATA_KEY = "effectIntroScale";
 const EFFECT_INTRO_START_MS_DATA_KEY = "effectIntroStartMs";
 const EFFECT_ANIM_DELAY_MS_DATA_KEY = "effectAnimDelayMs";
 const EFFECT_ANIM_DELAY_START_MS_DATA_KEY = "effectAnimDelayStartMs";
+const EFFECT_FPS_DATA_KEY = "effectFps";
+const EFFECT_REPEAT_DATA_KEY = "effectRepeat";
 const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
@@ -2917,16 +2962,21 @@ const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
 const STR_SWING_START_COL_KEY = "SS_START_COL";
 const STR_USE_ARC_SPRITE_PROJECTILES = true;
 const STR_ARC_SKIN_ID = "Sword Arcs";
-const STR_ARC_SHEET_COLS = 12;
-const STR_ARC_SHEET_ROWS = 10;
+const STR_ARC_SHEET_COLS = 6;
+const STR_ARC_SHEET_ROWS = 20;
 const STR_ARC_CORE_COLS = 6;
 const STR_ARC_CORE_ROWS = 5;
 const STR_ARC_END_SCALE = 0.25;
-const STR_ARC_BASE_TURNS_AT_360 = 5;
+const STR_ARC_BASE_TURNS_AT_360 = 20;
 const STR_ARC_CROSS_ROT_DEG = 35;
 const STR_ARC_EMERGE_SCALE_MIN = 0.4;
 const STR_ARC_FILL_CLIMAX_START = 0.8;
 const STR_ARC_FILL_CLIMAX_FRAMES = 3;
+const STR_ARC_FILL_SPEED_MULT = 2;
+const STR_ARC_FILL_INTRO_LIST = "0,1,2,3,2,1,2,3";
+const STR_ARC_FILL_TRAVEL_LIST = "4,5,6,7,8,9,10,11,12,11,10,9,8,7,6,5,6,7,8,9,10,11,12";
+const STR_ARC_FILL_END_LIST = "13,14,15,14,13,14,15";
+const STR_ARC_FILL_END_START = 0.75;
 const STR_ARC_OUTLINE_RADIUS = 2;
 const STR_ARC_COLLIDER_SCALE_X1000 = 900;
 const PROJ_COLLIDER_SPRITE_KEY = "projColliderSprite";
@@ -2934,6 +2984,7 @@ const PROJ_COLLIDER_SCALE_X1000_KEY = "projColliderScaleX1000";
 const STR_ARC_MASK_FX_KEY = "strArcMaskFx";
 const STR_ARC_FILL_FX_KEY = "strArcFillFx";
 const STR_ARC_OUTLINE_FX_KEY = "strArcOutlineFx";
+const STR_ARC_FILL_PHASE_KEY = "strArcFillPhase";
 
 const WPN_AURA_COL_R1_KEY = "wpnAuraR1";
 const WPN_AURA_COL_R2_KEY = "wpnAuraR2";
@@ -3154,6 +3205,13 @@ function _strengthArcFillFrameIndex(skinId: string, dir: string | undefined, t: 
     const frameCount = resolved?.frameIndices ? (resolved.frameIndices.length | 0) : 0;
     if (frameCount <= 0) return 0;
     const clamped = Math.max(0, Math.min(1, t));
+    let baseT = clamped;
+    const speed = Math.max(1, STR_ARC_FILL_SPEED_MULT | 0);
+    if (speed > 1) {
+        const scaled = clamped * speed;
+        const loop = Math.min(speed - 1, Math.floor(scaled));
+        baseT = Math.min(1, scaled - loop);
+    }
     if (frameCount > 1 && clamped >= STR_ARC_FILL_CLIMAX_START) {
         const denom = Math.max(0.0001, 1 - STR_ARC_FILL_CLIMAX_START);
         const localT = Math.max(0, Math.min(1, (clamped - STR_ARC_FILL_CLIMAX_START) / denom));
@@ -3162,7 +3220,13 @@ function _strengthArcFillFrameIndex(skinId: string, dir: string | undefined, t: 
         const offset = Math.round(pulse * Math.max(0, span - 1));
         return Math.min(frameCount - 1, Math.max(0, (frameCount - span) + offset));
     }
-    return Math.min(frameCount - 1, Math.max(0, Math.round(clamped * (frameCount - 1))));
+    return Math.min(frameCount - 1, Math.max(0, Math.round(baseT * (frameCount - 1))));
+}
+
+function _strengthArcFillListCount(list: string): number {
+    if (!list) return 0;
+    const tokens = String(list).split(/[\s,]+/).filter((t) => !!t);
+    return tokens.length | 0;
 }
 
 const EFFECT_SCALE_STEPS: number[] = [0.25, 0.5, 1, 2, 3];
@@ -8090,6 +8154,24 @@ const DECOR_DATA = {
 
 } as const
 
+const DECOR_SOLID_AABB_LOCAL_X_KEY = "decorSolidAabbLocalX"
+const DECOR_SOLID_AABB_LOCAL_Y_KEY = "decorSolidAabbLocalY"
+const DECOR_SOLID_AABB_RAW_X_KEY = "decorSolidAabbRawX"
+const DECOR_SOLID_AABB_RAW_Y_KEY = "decorSolidAabbRawY"
+const DECOR_SOLID_AABB_W_KEY = "decorSolidAabbW"
+const DECOR_SOLID_AABB_H_KEY = "decorSolidAabbH"
+const DECOR_SOLID_AABB_TEX_KEY = "decorSolidAabbTex"
+const DECOR_SOLID_AABB_FRAME_KEY = "decorSolidAabbFrame"
+const DECOR_SOLID_AABB_MODE_KEY = "decorSolidAabbMode"
+const DECOR_SOLID_AABB_USE_AURA_KEY = "decorSolidAabbUseAura"
+const DECOR_SOLID_BASE_MIN_X_KEY = "decorSolidBaseMinX"
+const DECOR_SOLID_BASE_MAX_X_KEY = "decorSolidBaseMaxX"
+const DECOR_SOLID_BASE_H_KEY = "decorSolidBaseH"
+const DECOR_SOLID_BASE_FRAME_W_KEY = "decorSolidBaseFrameW"
+const DECOR_SOLID_BASE_FRAME_H_KEY = "decorSolidBaseFrameH"
+const DECOR_SOLID_AABB_MODE_BASE = 1
+const DECOR_SOLID_AABB_MODE_FULL = 2
+
 
 
 
@@ -8329,6 +8411,70 @@ const STORY_NPC_TALK_UNTIL_MS_KEY = "storyTalkUntilMs"
 const STORY_NPC_EMOTE_UNTIL_MS_KEY = "storyEmoteUntilMs"
 
 
+
+// ------------------------------
+// Tower Trial (shop/safe floor)
+// ------------------------------
+const TOWER_TRIAL_ANNOUNCER_ROLE = "towerTrialAnnouncer"
+const TOWER_TRIAL_ANNOUNCER_NAME = "Announcer"
+const TOWER_TRIAL_DIALOG_OWNER = "tower-trial"
+const TOWER_TRIAL_PHASE_SWITCH_COOLDOWN_MS = 800
+const TOWER_TRIAL_ENEMY_ID = "slime"
+const TOWER_TRIAL_ENEMY_COUNT = 2
+
+type TowerTrialLiveEvidence = {
+    pressCount: Record<string, number>
+    lastOutputByButton: Record<string, any[] | null>
+    repeatViolationByButton: Record<string, boolean>
+    familyByPhase: Record<string, Record<number, string>>
+    invalidOutputCount: number
+}
+
+type TowerTrialSession = {
+    active: boolean
+    completed: boolean
+    floorIndex: number
+    participants: string[]
+    pids: number[]
+    startXmlByProfile: Record<string, string>
+    simByProfile: Record<string, TowerTrialSimResult>
+    liveByProfile: Record<string, TowerTrialLiveEvidence>
+    warnedRepeatByProfile: Record<string, Record<string, boolean>>
+    phaseIndex: number
+    lastPhaseChangeMs: number
+    enemies: Sprite[]
+    requirementSet: TowerTrialRequirementSet
+    lastDialogAtMs: number
+}
+
+type TowerTrialProfileSnapshot = {
+    profile: string
+    displayName: string
+    blockingIssue: string
+    simIssues: TowerTrialIssue[]
+    missingButtons: string[]
+    repeatButtons: string[]
+    dynamicOk: boolean
+    needsPhasePress: boolean
+    minPressesPerButton: number
+    pressCount: Record<string, number>
+    phaseFamily: Record<string, Record<number, string>>
+}
+
+type TowerTrialStatusSnapshot = {
+    active: boolean
+    completed: boolean
+    floorIndex: number
+    floorKind: number
+    trialRequired: boolean
+    inShopFloor: boolean
+    phaseIndex: number
+    requirementIds: string[]
+    profiles: Record<string, TowerTrialProfileSnapshot>
+}
+
+let _towerTrialAnnouncerNpc: Sprite = null
+let _towerTrialSession: TowerTrialSession | null = null
 
 const DUNGEON_SHOP_EVERY_N_FLOORS = 0 //Shop knob (0 = disabled; use elite/boss cadence)
 
@@ -9965,6 +10111,8 @@ type EffectApplyOpts = {
     frameWindowMs?: number
     frameWindowStart?: number
     frameIndex?: number
+    frameList?: number[] | string
+    yoyo?: boolean
     maskSprite?: Sprite | null
     maskPadOutPx?: number
     flipX?: boolean
@@ -10003,6 +10151,18 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
         sprites.setDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY, opts.frameIndex | 0)
     } else {
         sprites.setDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY, -1)
+    }
+    if (opts && Object.prototype.hasOwnProperty.call(opts, "frameList")) {
+        let listVal = opts.frameList as any;
+        if (Array.isArray(listVal)) listVal = listVal.join(",");
+        sprites.setDataString(s, EFFECT_FRAME_LIST_DATA_KEY, String(listVal || ""))
+    } else {
+        sprites.setDataString(s, EFFECT_FRAME_LIST_DATA_KEY, "")
+    }
+    if (typeof opts?.yoyo === "boolean") {
+        sprites.setDataNumber(s, EFFECT_YOYO_DATA_KEY, opts.yoyo ? 1 : 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_YOYO_DATA_KEY, 0)
     }
     if (typeof opts?.maskPadOutPx === "number") {
         sprites.setDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY, opts.maskPadOutPx | 0)
@@ -10964,6 +11124,19 @@ let _dunPadHintActive = false
 
 let _dunFloorStartedMs = 0
 
+type BossIntroEvent = {
+    floorIndex: number
+    x: number
+    y: number
+    monsterId: string
+}
+
+let _dunBossIntroFloor = -1
+let _dunBossIntroEvent: BossIntroEvent | null = null
+let _bossIntroShadowX = 0
+let _bossIntroShadowY = 0
+let _bossIntroShadowUntilMs = 0
+
 
 
 let _dunExitPad: Sprite = null
@@ -10973,6 +11146,20 @@ let _dunInteractables: Sprite[] = []
 let _dunStoryNpcs: Sprite[] = []
 
 let _dunAllReadySinceMs = 0
+
+let _dunDoorDecor: Sprite = null
+let _dunDoorSolid: Sprite = null
+let _dunDoorTileR = -1
+let _dunDoorTileC = -1
+let _dunDoorState = ""
+let _dunDoorOpenAtMs = 0
+let _dunDoorAllReadySinceMs = 0
+let _dunPadSinkAtMs = 0
+let _dunPadSunk = false
+let _dunPadSinkAnimStartMs = 0
+let _dunPadSinkAnimUntilMs = 0
+let _dunPadSinkOffYLast = 0
+let _dunEntryFromDoor = false
 
 
 
@@ -11043,6 +11230,21 @@ const HERO_LOCO_RUN_VEL_SQ_THRESHOLD = 1600 // 40^2; adjust if your vx/vy scale 
 const DUNGEON_TELEPORT_CHARGE_MS = 1400
 
 const DUNGEON_TELEPORT_FLASH_DELAY_MS = 160
+
+const DUNGEON_DOOR_PX = 160
+const DUNGEON_DOOR_W_TILES = Math.max(1, Math.idiv(DUNGEON_DOOR_PX, WORLD_TILE_SIZE))
+const DUNGEON_DOOR_H_TILES = DUNGEON_DOOR_W_TILES
+const DUNGEON_DOOR_ZONE_W_TILES = 3
+const DUNGEON_DOOR_ZONE_H_TILES = 2
+const DUNGEON_DOOR_OPEN_FRAMES = 11
+const DUNGEON_DOOR_OPEN_FPS = 12
+const DUNGEON_DOOR_OPEN_MS = Math.max(1, Math.idiv((DUNGEON_DOOR_OPEN_FRAMES * 1000), DUNGEON_DOOR_OPEN_FPS))
+const DUNGEON_DOOR_READY_HOLD_MS = 200
+const DUNGEON_PAD_SINK_DELAY_MS = 500
+const DUNGEON_PAD_SINK_ANIM_MS = 520
+const DUNGEON_PAD_SINK_OFFY_PX = 32
+const DUNGEON_PAD_SINK_SHAKE_MS = 420
+const DUNGEON_PAD_SINK_SHAKE_INTENSITY = 0.008
 
 
 
@@ -11231,6 +11433,16 @@ function _dunDecor_setName(s: Sprite, name: string): void {
 
     sprites.setDataString(s, DECOR_DATA.NAME, name)
 
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+
+}
+
+function _dunDecor_setOffset(s: Sprite, offX: number, offY: number): void {
+
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return
+
+    sprites.setDataNumber(s, "decorOffX", offX | 0)
+    sprites.setDataNumber(s, "decorOffY", offY | 0)
     _engineDecorRev = (_engineDecorRev + 1) | 0
 
 }
@@ -12279,6 +12491,8 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
         sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
         sprites.setDataString(s, DECOR_DATA.NAME, "stairs_statue")
+        sprites.setDataNumber(s, "decorOffX", 0)
+        sprites.setDataNumber(s, "decorOffY", _dunPadSinkOffYLast | 0)
 
 
 
@@ -12309,6 +12523,8 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
         sprites.setDataNumber(_dunStairsStatueSolid, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
         sprites.setDataString(_dunStairsStatueSolid, DECOR_DATA.NAME, "stairs_statue")
+        sprites.setDataNumber(_dunStairsStatueSolid, "decorOffX", 0)
+        sprites.setDataNumber(_dunStairsStatueSolid, "decorOffY", _dunPadSinkOffYLast | 0)
 
     }
 
@@ -12346,6 +12562,31 @@ function _dunDecor_setDecalSafe(r: number, c: number, id: number): void {
 
     _engineDecalGrid[r][c] = id | 0
 
+}
+
+function _dunDecor_clearPadVisual(): void {
+    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
+    const pr = _dunPadTileR | 0
+    const pc = _dunPadTileC | 0
+    const leftC = (pc - 2) | 0
+
+    for (let x = 0; x < 5; x++) {
+        const col = (leftC + x) | 0
+        _dunDecor_setDecalSafe(pr + 0, col, DECAL_NONE)
+        _dunDecor_setDecalSafe(pr + 1, col, DECAL_NONE)
+    }
+
+    if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+        _dunDestroySprite(_dunStairsStatueSolid)
+    }
+    _dunStairsStatueSolid = null
+
+    if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, "")
+        _dunTeleportRuneName = ""
+    }
+
+    _engineDecorRev = (_engineDecorRev + 1) | 0
 }
 
 
@@ -12693,6 +12934,54 @@ function _dunCarveFloorRect(r0: number, c0: number, rh: number, cw: number): voi
 
 }
 
+function _dunDoorClampCenterC(cols: number): number {
+    const halfW = Math.max(0, Math.idiv(DUNGEON_DOOR_W_TILES | 0, 2)) | 0
+    const minC = Math.max(0, halfW) | 0
+    const maxC = Math.max(minC | 0, ((cols - 1) - halfW) | 0) | 0
+    const midC = Math.idiv(cols | 0, 2) | 0
+    return Math.max(minC | 0, Math.min(maxC | 0, midC | 0)) | 0
+}
+
+function _dunDoorAnchorTop(rows: number, cols: number): { r: number; c: number } {
+    const halfH = Math.max(0, Math.idiv(DUNGEON_DOOR_H_TILES | 0, 2)) | 0
+    const minR = Math.max(1, halfH | 0) | 0
+    const maxR = Math.max(minR | 0, ((rows - 1) - halfH) | 0) | 0
+    const r = Math.max(1, Math.min(minR | 0, maxR | 0)) | 0
+    const c = _dunDoorClampCenterC(cols | 0) | 0
+    return { r, c }
+}
+
+function _dunDoorAnchorBottom(rows: number, cols: number): { r: number; c: number } {
+    const halfH = Math.max(0, Math.idiv(DUNGEON_DOOR_H_TILES | 0, 2)) | 0
+    const maxR = Math.max(1, ((rows - 1) - halfH) | 0) | 0
+    const r = Math.max(1, maxR | 0) | 0
+    const c = _dunDoorClampCenterC(cols | 0) | 0
+    return { r, c }
+}
+
+function _dunPrepareDoorExitArea(): void {
+    if (!_dunFloorUsesDoorExit()) return
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const anchor = _dunDoorAnchorTop(rows | 0, cols | 0)
+    _dunDoorTileR = anchor.r | 0
+    _dunDoorTileC = anchor.c | 0
+
+    const halfW = Math.max(0, Math.idiv(DUNGEON_DOOR_W_TILES | 0, 2)) | 0
+    const doorLeft = ((anchor.c | 0) - halfW) | 0
+    const doorWidth = Math.max(1, (DUNGEON_DOOR_W_TILES | 0)) | 0
+    const doorHeight = Math.max(1, ((DUNGEON_DOOR_H_TILES | 0) + 1) | 0) | 0
+
+    _dunCarveFloorRect(0, doorLeft, doorHeight | 0, doorWidth | 0)
+
+    const centerR = Math.idiv(rows | 0, 2) | 0
+    const laneTop = doorHeight | 0
+    const laneH = Math.max(1, (centerR - laneTop) | 0) | 0
+    _dunCarveFloorRect(laneTop | 0, ((anchor.c | 0) - 1) | 0, laneH | 0, 3)
+}
+
 
 
 function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
@@ -12840,6 +13129,57 @@ function _dunReadyMaskAndCountInPadZone(): { mask: number, ready: number } {
 
 }
 
+function _dunReadyMaskAndCountInDoorZone(): { mask: number, ready: number } {
+
+    if ((_dunDoorTileR | 0) < 0 || (_dunDoorTileC | 0) < 0) return { mask: 0, ready: 0 }
+
+    const needed = _dunRequiredHeroCount() | 0
+
+    const w = (WORLD_TILE_SIZE * (DUNGEON_DOOR_ZONE_W_TILES | 0)) | 0
+    const h = (WORLD_TILE_SIZE * (DUNGEON_DOOR_ZONE_H_TILES | 0)) | 0
+
+    const doorHalfH = Math.max(0, Math.idiv(DUNGEON_DOOR_H_TILES | 0, 2)) | 0
+    const zoneR = ((_dunDoorTileR | 0) + doorHalfH) | 0
+
+    const cx = _dunColToX(_dunDoorTileC | 0) | 0
+    const cy = _dunRowToY(zoneR | 0) | 0
+
+    const left = (cx - (w >> 1)) | 0
+    const right = (left + w) | 0
+    const top = (cy - (h >> 1)) | 0
+    const bottom = (top + h) | 0
+
+    let mask = 0
+    let ready = 0
+
+    const connectedMap = (isPhaserRuntime() && (globalThis as any).__netProfileConnected)
+        ? ((globalThis as any).__netProfileConnected as Record<string, boolean>)
+        : null
+
+    for (let hi = 0; hi < heroes.length; hi++) {
+
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+
+        const profileKey = _heroProfileKeyForIndex(hi)
+        if (connectedMap && profileKey && !connectedMap[profileKey]) continue
+
+        const hx = hero.x | 0
+        const hy = hero.y | 0
+
+        const inZone = (hx >= left && hx <= right && hy >= top && hy <= bottom)
+        if (inZone) {
+            ready++
+            if (hi >= 0 && hi < 31) mask |= (1 << hi)
+        }
+    }
+
+    if (ready > needed) ready = needed
+
+    return { mask, ready }
+
+}
+
 
 
 function _dunSpawnExitPad(): void {
@@ -12855,6 +13195,21 @@ function _dunSpawnExitPad(): void {
     _dunTeleportRuneTrig = null
 
     _dunTeleportRuneName = ""
+
+    _dunDestroySprite(_dunDoorDecor)
+    _dunDestroySprite(_dunDoorSolid)
+    _dunDoorDecor = null
+    _dunDoorSolid = null
+    _dunDoorTileR = -1
+    _dunDoorTileC = -1
+    _dunDoorState = ""
+    _dunDoorOpenAtMs = 0
+    _dunDoorAllReadySinceMs = 0
+    _dunPadSinkAtMs = 0
+    _dunPadSunk = false
+    _dunPadSinkAnimStartMs = 0
+    _dunPadSinkAnimUntilMs = 0
+    _dunPadSinkOffYLast = 0
 
     _dunTeleportCommitAtMs = 0
 
@@ -12880,9 +13235,15 @@ function _dunSpawnExitPad(): void {
 
     if (rows > 0 && cols > 0) {
 
-        padRow = (rows >> 1) | 0
-
-        padCol = (cols >> 1) | 0
+        if (_dunFloorKind === DUNGEON_KIND_SHOP) {
+            const anchor = _dunDoorAnchorTop(rows | 0, cols | 0)
+            const down = Math.min((rows - 2) | 0, ((anchor.r | 0) + 1) | 0) | 0
+            padRow = down | 0
+            padCol = anchor.c | 0
+        } else {
+            padRow = (rows >> 1) | 0
+            padCol = (cols >> 1) | 0
+        }
 
 
 
@@ -12990,6 +13351,192 @@ function _dunSpawnExitPad(): void {
 
     _dunDecor_placePadAndStairsVisual(0)
 
+}
+
+function _dunSchedulePadSink(nowMs: number): void {
+    _dunPadSinkAtMs = ((nowMs | 0) + (DUNGEON_PAD_SINK_DELAY_MS | 0)) | 0
+    _dunPadSunk = false
+    _dunPadSinkAnimStartMs = 0
+    _dunPadSinkAnimUntilMs = 0
+    _dunPadSinkOffYLast = 0
+}
+
+function _dunTickPadSink(nowMs: number): void {
+    if (_dunPadSunk) return
+
+    const now = nowMs | 0
+    if ((_dunPadSinkAnimUntilMs | 0) > 0) {
+        const start = _dunPadSinkAnimStartMs | 0
+        const end = _dunPadSinkAnimUntilMs | 0
+        const span = Math.max(1, (end - start) | 0) | 0
+        const t = Math.max(0, Math.min(span | 0, ((now - start) | 0))) | 0
+        const progress = t / span
+        const offY = Math.round((DUNGEON_PAD_SINK_OFFY_PX | 0) * progress) | 0
+        if ((offY | 0) !== (_dunPadSinkOffYLast | 0)) {
+            _dunPadSinkOffYLast = offY | 0
+            if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+                _dunDecor_setOffset(_dunStairsStatueSolid, 0, offY | 0)
+            }
+        }
+        if ((now | 0) >= (end | 0)) {
+            _dunPadSinkAnimStartMs = 0
+            _dunPadSinkAnimUntilMs = 0
+            _dunPadSunk = true
+            _dunDecor_clearPadVisual()
+        }
+        return
+    }
+
+    if ((_dunPadSinkAtMs | 0) == 0) return
+    if ((now | 0) < (_dunPadSinkAtMs | 0)) return
+
+    _dunPadSinkAtMs = 0
+    _dunPadSinkAnimStartMs = now | 0
+    _dunPadSinkAnimUntilMs = ((now | 0) + (DUNGEON_PAD_SINK_ANIM_MS | 0)) | 0
+    _dunPadSinkOffYLast = 0
+    _enemyScreenShake(DUNGEON_PAD_SINK_SHAKE_MS | 0, DUNGEON_PAD_SINK_SHAKE_INTENSITY)
+}
+
+function _dunSpawnDoorExit(nowMs: number): void {
+    void nowMs
+    if (!_dunFloorUsesDoorExit()) return
+
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    let r = _dunDoorTileR | 0
+    let c = _dunDoorTileC | 0
+    if ((r | 0) < 0 || (c | 0) < 0) {
+        const anchor = _dunDoorAnchorTop(rows | 0, cols | 0)
+        r = anchor.r | 0
+        c = anchor.c | 0
+        _dunDoorTileR = r | 0
+        _dunDoorTileC = c | 0
+    }
+
+    _dunDestroySprite(_dunDoorDecor)
+    _dunDestroySprite(_dunDoorSolid)
+    _dunDoorDecor = null
+    _dunDoorSolid = null
+
+    _dunDoorDecor = _dunDecor_spawnAtTile({
+        name: "stone_door",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: r | 0,
+        tileC: c | 0,
+        pxW: DUNGEON_DOOR_PX | 0,
+        pxH: DUNGEON_DOOR_PX | 0,
+    })
+
+    _dunDoorSolid = _dunDecor_spawnAtTile({
+        name: "",
+        role: DECOR_ROLE.SOLID,
+        tileR: r | 0,
+        tileC: c | 0,
+        pxW: DUNGEON_DOOR_PX | 0,
+        pxH: DUNGEON_DOOR_PX | 0,
+    })
+    if (_dunDoorSolid && !(_dunDoorSolid.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataString(_dunDoorSolid, DECOR_DATA.NAME, "")
+    }
+
+    _dunDoorState = "closed"
+    _dunDoorOpenAtMs = 0
+    _dunDoorAllReadySinceMs = 0
+}
+
+function _dunSpawnShopEntryDoor(nowMs: number): void {
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_SHOP) return
+    if (!_dunEntryFromDoor) return
+
+    const rows = _dunWorldRows() | 0
+    const cols = _dunWorldCols() | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const anchor = _dunDoorAnchorBottom(rows | 0, cols | 0)
+    _dunDoorTileR = anchor.r | 0
+    _dunDoorTileC = anchor.c | 0
+
+    _dunDestroySprite(_dunDoorDecor)
+    _dunDestroySprite(_dunDoorSolid)
+    _dunDoorDecor = null
+    _dunDoorSolid = null
+
+    _dunDoorDecor = _dunDecor_spawnAtTile({
+        name: "stone_door_opening",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: anchor.r | 0,
+        tileC: anchor.c | 0,
+        pxW: DUNGEON_DOOR_PX | 0,
+        pxH: DUNGEON_DOOR_PX | 0,
+    })
+
+    _dunDoorState = "opening"
+    _dunDoorOpenAtMs = ((nowMs | 0) + (DUNGEON_DOOR_OPEN_MS | 0)) | 0
+    _dunDoorAllReadySinceMs = 0
+}
+
+function _dunDoorBeginOpen(nowMs: number): void {
+    if (!_dunDoorDecor || (_dunDoorDecor.flags & sprites.Flag.Destroyed)) return
+    if (_dunDoorState === "open" || _dunDoorState === "opening") return
+    _dunDoorState = "opening"
+    _dunDoorOpenAtMs = ((nowMs | 0) + (DUNGEON_DOOR_OPEN_MS | 0)) | 0
+    _dunDecor_setName(_dunDoorDecor, "stone_door_opening")
+}
+
+function _dunDoorTickOpen(nowMs: number): void {
+    if (!_dunDoorDecor || (_dunDoorDecor.flags & sprites.Flag.Destroyed)) return
+    if (_dunDoorState !== "opening") return
+    if ((_dunDoorOpenAtMs | 0) == 0) return
+    if ((nowMs | 0) < (_dunDoorOpenAtMs | 0)) return
+
+    _dunDoorOpenAtMs = 0
+
+    if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
+        _dunDoorState = "closed"
+        _dunDecor_setName(_dunDoorDecor, "stone_door")
+        return
+    }
+
+    _dunDoorState = "open"
+    _dunDecor_setName(_dunDoorDecor, "stone_door_open")
+    if (_dunDoorSolid && !(_dunDoorSolid.flags & sprites.Flag.Destroyed)) {
+        _dunDestroySprite(_dunDoorSolid)
+    }
+    _dunDoorSolid = null
+}
+
+function _dunDoorTickExit(nowMs: number): boolean {
+    if (!_dunFloorUsesDoorExit()) return false
+    if (!_dunObjectiveDone) return true
+    if (_dunDoorState !== "open") return true
+
+    const needed = _dunRequiredHeroCount() | 0
+    const rc = _dunReadyMaskAndCountInDoorZone()
+    const allReady = (needed > 0 && rc.ready >= needed)
+
+    if (!allReady) {
+        _dunDoorAllReadySinceMs = 0
+        return true
+    }
+
+    if (_dunDoorAllReadySinceMs == 0) _dunDoorAllReadySinceMs = nowMs | 0
+    const held = ((nowMs | 0) - (_dunDoorAllReadySinceMs | 0)) | 0
+    if ((held | 0) < (DUNGEON_DOOR_READY_HOLD_MS | 0)) return true
+
+    _dunDoorAllReadySinceMs = 0
+
+    try {
+        const g: any = (globalThis as any)
+        if (g && typeof g.__hero_saveBeforeTeleport === "function") {
+            g.__hero_saveBeforeTeleport((_dunFloorIndex | 0), DUNGEON_KIND_SHOP)
+        }
+    } catch { }
+
+    _dunEntryFromDoor = true
+    _dunEnterFloor(_dunFloorIndex | 0, DUNGEON_KIND_SHOP, nowMs | 0)
+    return true
 }
 
 
@@ -13547,6 +14094,8 @@ function _dunClearTransientFloorEntities(): void {
 
     // Platform visuals/colliders
     _shopPlatformDestroy()
+    _towerTrialEnd("floor-clear", game.runtime() | 0)
+    _towerTrialDestroyAnnouncer()
 
     // 4b) Phaser: purge any lingering weapon overlay sprites
 
@@ -13797,6 +14346,10 @@ function _dunShouldShopAfterFloor(floor1: number): boolean {
     return _dunIsEliteFloor(floor1 | 0) || _dunIsBossFloor(floor1 | 0)
 }
 
+function _dunFloorUsesDoorExit(): boolean {
+    return (_dunFloorKind === DUNGEON_KIND_COMBAT) && _dunShouldShopAfterFloor(_dunFloorIndex | 0)
+}
+
 function _dunPickNextFloorKind(nextIndex: number): string {
     const cur = _dunFloorIndex | 0
     if (_dunFloorKind !== DUNGEON_KIND_SHOP && _dunShouldShopAfterFloor(cur | 0)) {
@@ -13915,6 +14468,12 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
 
     _dunObjectiveDone = false
 
+    _dunBossIntroFloor = -1
+    _dunBossIntroEvent = null
+    _bossIntroShadowX = 0
+    _bossIntroShadowY = 0
+    _bossIntroShadowUntilMs = 0
+
     _dunFloorStartedMs = nowMs | 0
 
     _dunAllReadySinceMs = 0
@@ -13979,21 +14538,36 @@ function _dunEnterFloor_spawnCoordsAroundPad(padX: number, padY: number): number
 
     // Spawn points (we assign sequentially so 2 players don't leave "gaps")
 
-    const spawnYOffsetPx = (WORLD_TILE_SIZE * 2) | 0
+    let baseX = padX | 0
+    let baseY = padY | 0
+    let spawnYOffsetPx = (WORLD_TILE_SIZE * 2) | 0
 
-    const baseY = (padY + spawnYOffsetPx) | 0
+    if (_dunEntryFromDoor && _dunFloorKind === DUNGEON_KIND_SHOP) {
+        spawnYOffsetPx = 0
+        const rows = _dunWorldRows() | 0
+        const cols = _dunWorldCols() | 0
+        if (rows > 0 && cols > 0) {
+            const anchor = _dunDoorAnchorBottom(rows | 0, cols | 0)
+            const halfH = Math.max(0, Math.idiv(DUNGEON_DOOR_H_TILES | 0, 2)) | 0
+            const spawnRow = Math.max(1, ((anchor.r | 0) - halfH - 1) | 0) | 0
+            baseX = _dunColToX(anchor.c | 0) | 0
+            baseY = _dunRowToY(spawnRow | 0) | 0
+        }
+    }
+
+    const baseY2 = (baseY + spawnYOffsetPx) | 0
 
     const offset = 28
 
     return [
 
-        [padX + offset, baseY + offset],
+        [baseX + offset, baseY2 + offset],
 
-        [padX - offset, baseY + offset],
+        [baseX - offset, baseY2 + offset],
 
-        [padX + offset, baseY + (offset + 16)],
+        [baseX + offset, baseY2 + (offset + 16)],
 
-        [padX - offset, baseY + (offset + 16)],
+        [baseX - offset, baseY2 + (offset + 16)],
 
     ]
 
@@ -15748,6 +16322,8 @@ function _dunEnterFloor_setupShopFloor(padX: number, padY: number): void {
 
     // Layout picker handles "not on telepad" and chooses a clean rectangle.
 
+    _dunSpawnShopEntryDoor(nowMs | 0)
+
 }
 
 
@@ -15761,6 +16337,11 @@ function _dunEnterFloor_setupCombatFloor(nowMs: number): void {
     startEnemyWaves()
 
     _dunEnterFloor_spawnTreasureChest(nowMs)
+
+    if (_dunFloorUsesDoorExit()) {
+        _dunSpawnDoorExit(nowMs | 0)
+        _dunSchedulePadSink(nowMs | 0)
+    }
 
 }
 
@@ -15846,6 +16427,8 @@ function _dunEnterFloor_finish(nowMs: number, activePidsCount: number): void {
         }
 
     } catch { }
+
+    _dunEntryFromDoor = false
 
 }
 
@@ -15963,6 +16546,17 @@ function _dunObjectiveUiText(nowMs: number): ObjectiveUiInfo {
     const done = !!_dunObjectiveDone
     const padPowered = _dunIsPadPowered()
 
+    if (_dunFloorUsesDoorExit() && done) {
+        const needed = _dunRequiredHeroCount() | 0
+        const rc = _dunReadyMaskAndCountInDoorZone()
+        let sub = "Walk through the door"
+        if (_dunDoorState === "opening") sub = "Door opening..."
+        else if (_dunDoorState !== "open") sub = "Door locked"
+        else if (rc.ready >= (needed | 0)) sub = "Entering..."
+        else if (rc.ready > 0) sub = `${rc.ready}/${needed} at door`
+        return { title: "Exit Door", sub, state: "exit" }
+    }
+
     if (done && padPowered) {
         const needed = _dunRequiredHeroCount() | 0
         const rc = _dunReadyMaskAndCountInPadZone()
@@ -15985,6 +16579,9 @@ function _dunObjectiveUiText(nowMs: number): ObjectiveUiInfo {
         return { title: "Monsters", sub, state: "objective" }
     }
     if (kind === DUNGEON_KIND_SHOP) {
+        if (towerTrialShouldRequireTrial(_dunFloorIndex | 0) && (!_towerTrialSession || !_towerTrialSession.completed)) {
+            return { title: "Tower Trial", sub: "Talk to the Announcer", state: "objective" }
+        }
         return { title: "Shopkeeper", sub: "Talk to unlock the pad", state: "objective" }
     }
     if (kind === DUNGEON_KIND_STORY) {
@@ -15999,6 +16596,7 @@ function _dunObjectiveUiText(nowMs: number): ObjectiveUiInfo {
 
 function _dunTickObjectivePadHint(nowMs: number): void {
     if (!DUNGEON_MODE_ACTIVE) return
+    if (_dunFloorUsesDoorExit()) return
     if (!_dunExitPad || (_dunExitPad.flags & sprites.Flag.Destroyed)) return
 
     const rc = _dunReadyMaskAndCountInPadZone()
@@ -16085,9 +16683,13 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
 
-            _dunSetPadPowered(true)
-
-            _dunLog(`combat cleared; pad powered`)
+            if (_dunFloorUsesDoorExit()) {
+                _dunDoorBeginOpen(nowMs | 0)
+                _dunLog(`combat cleared; door opening`)
+            } else {
+                _dunSetPadPowered(true)
+                _dunLog(`combat cleared; pad powered`)
+            }
 
         }
 
@@ -16480,6 +17082,8 @@ function dungeonTick(nowMs: number): void {
 
     _dunStoryTick(now)
 
+    _dunTickPadSink(now)
+
 
 
     // Keep pad contract fresh for renderer
@@ -16491,6 +17095,13 @@ function dungeonTick(nowMs: number): void {
     // Objective evaluation (combat + interact)
 
     _dunTickObjectiveEvaluation(now)
+    _dunDoorTickOpen(now)
+
+    if (_dunFloorUsesDoorExit()) {
+        _dunDoorTickExit(now)
+        return
+    }
+
     _dunTickObjectivePadHint(now)
 
 
@@ -20105,6 +20716,14 @@ let _shopLayout_baseR = -1
 let _shopLayout_baseC = -1
 
 let _shopLayout_worldRev = -1
+const SHOP_TRIAL_AREA_H = 18
+const SHOP_TRIAL_AREA_W = 18
+let _shopTrialAreaR = -1
+let _shopTrialAreaC = -1
+let _shopTrialAreaH = 0
+let _shopTrialAreaW = 0
+let _shopTrialArenaStampedSig = ""
+let _shopTrialArenaProps: Sprite[] = []
 
 // Shop platform placement (visual + collision)
 const SHOP_PLATFORM_SIZE_TILES = 9
@@ -20521,6 +21140,51 @@ function _shopRectAllEmpty(baseR: number, baseC: number, h: number, w: number): 
 
 
 
+function _shopComputeTrialArea(
+    rows: number,
+    cols: number,
+    padRect: { r: number; c: number; h: number; w: number },
+    layoutRect: { r: number; c: number; h: number; w: number } | null
+): { r: number; c: number; h: number; w: number } {
+    const h = SHOP_TRIAL_AREA_H | 0
+    const w = SHOP_TRIAL_AREA_W | 0
+    const maxR = Math.max(0, (rows - h - 1) | 0)
+    const maxC = Math.max(0, (cols - w - 1) | 0)
+    const topRMax = Math.min(maxR | 0, Math.max(1, Math.idiv(rows | 0, 2) | 0)) | 0
+    const rightCMin = Math.max(1, Math.idiv(cols | 0, 2) | 0) | 0
+
+    for (let r = 1; r <= topRMax; r++) {
+        for (let c = (maxC | 0); c >= rightCMin; c--) {
+            const rr = r | 0
+            const cc = c | 0
+            if (_shopRectsOverlap(rr, cc, h, w, padRect.r, padRect.c, padRect.h, padRect.w)) continue
+            if (layoutRect && _shopRectsOverlap(rr, cc, h, w, layoutRect.r, layoutRect.c, layoutRect.h, layoutRect.w)) continue
+            if (!_shopRectAllEmpty(rr, cc, h, w)) continue
+            return { r: rr, c: cc, h, w }
+        }
+    }
+
+    const candidates = [
+        { r: 1, c: maxC },
+        { r: 1, c: 1 },
+        { r: maxR, c: maxC },
+        { r: maxR, c: 1 },
+    ]
+    for (let i = 0; i < candidates.length; i++) {
+        const cand = candidates[i]
+        const r = cand.r | 0
+        const c = cand.c | 0
+        if (r < 0 || c < 0 || r > maxR || c > maxC) continue
+        if (_shopRectsOverlap(r, c, h, w, padRect.r, padRect.c, padRect.h, padRect.w)) continue
+        if (layoutRect && _shopRectsOverlap(r, c, h, w, layoutRect.r, layoutRect.c, layoutRect.h, layoutRect.w)) continue
+        if (!_shopRectAllEmpty(r, c, h, w)) continue
+        return { r, c, h, w }
+    }
+    return { r: -1, c: -1, h: 0, w: 0 }
+}
+
+
+
 function _shopRectsOverlap(r0: number, c0: number, h0: number, w0: number,
 
                           r1: number, c1: number, h1: number, w1: number): boolean {
@@ -20723,6 +21387,7 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
         let bestScore = 999999999
 
         let tried = 0
+        let forced = false
 
 
 
@@ -20803,8 +21468,27 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
         if (rows > 0 && cols > 0) {
 
+            const baseH = SHOP_PLATFORM_SIZE_TILES | 0
+            const baseW = SHOP_PLATFORM_SIZE_TILES | 0
+            const safeH = ((baseH | 0) + SHOP_LAYOUT_SAFE_EXTRA_ROWS) | 0
+            const maxBaseR = (rows - 1 - safeH) | 0
+            const maxBaseC = (cols - 1 - baseW) | 0
+
+            if (maxBaseR >= 1 && maxBaseC >= 1) {
+                const baseR = Math.max(1, Math.min(1, maxBaseR | 0)) | 0
+                const baseC = Math.max(1, Math.min(1, maxBaseC | 0)) | 0
+                if (!_shopRectsOverlap(baseR, baseC, baseH, baseW, padRectR, padRectC, padRectH, padRectW) &&
+                    _shopRectAllEmpty(baseR, baseC, safeH, baseW)) {
+                    forced = true
+                    bestKind = 3
+                    bestBaseR = baseR | 0
+                    bestBaseC = baseC | 0
+                    bestScore = 0
+                }
+            }
+
             // Preferred: dedicated platform (9x9 tiles)
-            consider(3, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SHOP_ROW, SHOP_PLATFORM_SHOP_COL, 1)
+            if (!forced) consider(3, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SIZE_TILES, SHOP_PLATFORM_SHOP_ROW, SHOP_PLATFORM_SHOP_COL, 1)
 
             // Legacy fallbacks
             if (bestKind === 0) consider(2, 4, 10, 2, 4, 2) // 2x5 slots => 4x10 base tiles
@@ -20820,6 +21504,21 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
         _shopLayout_baseR = bestBaseR | 0
 
         _shopLayout_baseC = bestBaseC | 0
+
+        const padRect = { r: padRectR | 0, c: padRectC | 0, h: padRectH | 0, w: padRectW | 0 }
+        let layoutRect: { r: number; c: number; h: number; w: number } | null = null
+        if ((bestKind | 0) === 3) {
+            layoutRect = { r: bestBaseR | 0, c: bestBaseC | 0, h: SHOP_PLATFORM_SIZE_TILES | 0, w: SHOP_PLATFORM_SIZE_TILES | 0 }
+        } else if ((bestKind | 0) === 2) {
+            layoutRect = { r: bestBaseR | 0, c: bestBaseC | 0, h: 4, w: 10 }
+        } else if ((bestKind | 0) === 1) {
+            layoutRect = { r: bestBaseR | 0, c: bestBaseC | 0, h: 2, w: 10 }
+        }
+        const trial = _shopComputeTrialArea(rows | 0, cols | 0, padRect, layoutRect)
+        _shopTrialAreaR = trial.r | 0
+        _shopTrialAreaC = trial.c | 0
+        _shopTrialAreaH = trial.h | 0
+        _shopTrialAreaW = trial.w | 0
 
 
 
@@ -20904,19 +21603,993 @@ function _shopComputeAndApplyLayoutForShopFloor(padX: number, padY: number, nowM
 
 
     if (kind === 3) _shopPlatformPlace(baseR, baseC)
-
-
+    _shopTrialArenaEnsureStamped()
 
     // Statues will be positioned by _shopEnsureStatueRow using this layout
 
 }
 
+// ---------------------------------------------------------------------------
+// Shop Trial arena stamping (decals + props)
+// ---------------------------------------------------------------------------
+const SHOP_TRIAL_ARENA_GATE_W_TILES = 6
+const SHOP_TRIAL_ARENA_GATE_INSET_ROWS = 1
 
+const SHOP_TRIAL_ARENA_FENCE_MID_W_TILES = 2
+const SHOP_TRIAL_ARENA_FENCE_L_W_TILES = 2
+const SHOP_TRIAL_ARENA_FENCE_R_W_TILES = 4
 
+// Decal ids for the trial arena (mapped to keys in main.ts).
+const DECAL_TRIAL_FLOOR_CORNER_NW = 3000
+const DECAL_TRIAL_FLOOR_EDGE_N = 3001
+const DECAL_TRIAL_FLOOR_CORNER_NE = 3002
+const DECAL_TRIAL_FLOOR_EDGE_W = 3003
+const DECAL_TRIAL_FLOOR_CENTER = 3004
+const DECAL_TRIAL_FLOOR_EDGE_E = 3005
+const DECAL_TRIAL_FLOOR_CORNER_SW = 3006
+const DECAL_TRIAL_FLOOR_EDGE_S = 3007
+const DECAL_TRIAL_FLOOR_CORNER_SE = 3008
 
+const DECAL_TRIAL_INTERIOR_A = 3010
+const DECAL_TRIAL_INTERIOR_B = 3011
+const DECAL_TRIAL_INTERIOR_C = 3012
+const DECAL_TRIAL_INTERIOR_D = 3013
 
+const DECAL_TRIAL_PATCH_A = 3020
+const DECAL_TRIAL_PATCH_B = 3021
+const DECAL_TRIAL_PATCH_C = 3022
+const DECAL_TRIAL_PATCH_D = 3023
 
+const DECAL_TRIAL_PATCH_EDGE_N = 3030
+const DECAL_TRIAL_PATCH_EDGE_S = 3031
+const DECAL_TRIAL_PATCH_EDGE_E = 3032
+const DECAL_TRIAL_PATCH_EDGE_W = 3033
+const DECAL_TRIAL_PATCH_CORNER_SW = 3034
+const DECAL_TRIAL_PATCH_CORNER_SE = 3035
+const DECAL_TRIAL_PATCH_CORNER_NW = 3036
+const DECAL_TRIAL_PATCH_CORNER_NE = 3037
 
+function _shopTrialArenaDestroyProps(): void {
+    if (!_shopTrialArenaProps || _shopTrialArenaProps.length <= 0) return
+    for (let i = 0; i < _shopTrialArenaProps.length; i++) {
+        const s = _shopTrialArenaProps[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        _dunDestroySprite(s)
+    }
+    _shopTrialArenaProps.length = 0
+}
+
+function _shopTrialArenaHash(a: number, b: number, c: number, d: number): number {
+    let h = (a | 0) * 374761393
+    h = (h + ((b | 0) * 668265263)) | 0
+    h = (h + ((c | 0) * 2147483647)) | 0
+    h = (h + ((d | 0) * 1274126177)) | 0
+    h = (h ^ (h >>> 13)) | 0
+    h = Math.imul(h, 1274126177) | 0
+    h = (h ^ (h >>> 16)) | 0
+    return (h >>> 0)
+}
+
+function _shopTrialArenaInteriorVariantId(r: number, c: number, r1: number, c1: number): number {
+    const rr = ((r | 0) - (r1 | 0)) & 1
+    const cc = ((c | 0) - (c1 | 0)) & 1
+    const idx = ((rr << 1) | cc) | 0
+    if (idx === 0) return DECAL_TRIAL_INTERIOR_A
+    if (idx === 1) return DECAL_TRIAL_INTERIOR_B
+    if (idx === 2) return DECAL_TRIAL_INTERIOR_C
+    return DECAL_TRIAL_INTERIOR_D
+}
+
+function _shopTrialArenaPatchVariantId(seed: number): number {
+    const idx = Math.abs(seed | 0) % 4
+    if (idx === 0) return DECAL_TRIAL_PATCH_A
+    if (idx === 1) return DECAL_TRIAL_PATCH_B
+    if (idx === 2) return DECAL_TRIAL_PATCH_C
+    return DECAL_TRIAL_PATCH_D
+}
+
+function _shopTrialArenaPatchDecalId(
+    hasN: boolean,
+    hasE: boolean,
+    hasS: boolean,
+    hasW: boolean,
+    seed: number
+): number {
+    if (!hasN && hasS && hasE && hasW) return DECAL_TRIAL_PATCH_EDGE_N
+    if (hasN && !hasS && hasE && hasW) return DECAL_TRIAL_PATCH_EDGE_S
+    if (hasN && hasS && hasE && !hasW) return DECAL_TRIAL_PATCH_EDGE_W
+    if (hasN && hasS && !hasE && hasW) return DECAL_TRIAL_PATCH_EDGE_E
+
+    if (!hasN && !hasW && hasS && hasE) return DECAL_TRIAL_PATCH_CORNER_NW
+    if (!hasN && !hasE && hasS && hasW) return DECAL_TRIAL_PATCH_CORNER_NE
+    if (!hasS && !hasW && hasN && hasE) return DECAL_TRIAL_PATCH_CORNER_SW
+    if (!hasS && !hasE && hasN && hasW) return DECAL_TRIAL_PATCH_CORNER_SE
+
+    return _shopTrialArenaPatchVariantId(seed | 0)
+}
+
+function _shopTrialArenaSpawnTrigger(name: string, tileR: number, tileC: number): Sprite {
+    const s = _dunDecor_spawnAtTile({
+        name: name || "",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: tileR | 0,
+        tileC: tileC | 0,
+        pxW: WORLD_TILE_SIZE | 0,
+        pxH: WORLD_TILE_SIZE | 0,
+    })
+    _shopTrialArenaProps.push(s)
+    return s
+}
+
+function _shopTrialArenaSpawnCollider(tileR: number, tileC: number): void {
+    const s = _dunDecor_spawnAtTile({
+        name: "",
+        role: DECOR_ROLE.SOLID,
+        tileR: tileR | 0,
+        tileC: tileC | 0,
+        pxW: WORLD_TILE_SIZE | 0,
+        pxH: WORLD_TILE_SIZE | 0,
+    })
+    if (s && !(s.flags & sprites.Flag.Destroyed)) {
+        sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataString(s, DECOR_DATA.NAME, "")
+    }
+    _shopTrialArenaProps.push(s)
+}
+
+function _shopTrialArenaStampProps(r0: number, c0: number, h: number, w: number): void {
+    const bottom = (r0 + h - 1) | 0
+    const left = c0 | 0
+    const gateRow = (bottom - SHOP_TRIAL_ARENA_GATE_INSET_ROWS) | 0
+    const gateCol = (left + Math.idiv((w - SHOP_TRIAL_ARENA_GATE_W_TILES) | 0, 2)) | 0
+
+    _shopTrialArenaSpawnTrigger("trial_gate_6x6", gateRow | 0, gateCol | 0)
+
+    // Gate blockers: bottom-left two tiles + bottom-right two tiles.
+    _shopTrialArenaSpawnCollider(gateRow | 0, gateCol | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + 1) | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES - 2) | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES - 1) | 0)
+
+    const leftCornerCol = (left + 1) | 0
+    const rightCornerCol = (left + w - SHOP_TRIAL_ARENA_FENCE_R_W_TILES - 1) | 0
+
+    _shopTrialArenaSpawnTrigger("trial_fence_corner_l_2x6", gateRow | 0, leftCornerCol | 0)
+    _shopTrialArenaSpawnTrigger("trial_fence_corner_r_4x4", gateRow | 0, rightCornerCol | 0)
+
+    // Fence blockers: base-only (bottom row).
+    _shopTrialArenaSpawnCollider(gateRow | 0, leftCornerCol | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, (leftCornerCol + SHOP_TRIAL_ARENA_FENCE_L_W_TILES - 1) | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, rightCornerCol | 0)
+    _shopTrialArenaSpawnCollider(gateRow | 0, (rightCornerCol + SHOP_TRIAL_ARENA_FENCE_R_W_TILES - 1) | 0)
+
+    const fillFenceRange = (startC: number, endCExclusive: number): void => {
+        let c = startC | 0
+        while ((c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES) <= (endCExclusive | 0)) {
+            _shopTrialArenaSpawnTrigger("trial_fence_mid_2x4", gateRow | 0, c | 0)
+            _shopTrialArenaSpawnCollider(gateRow | 0, c | 0)
+            _shopTrialArenaSpawnCollider(gateRow | 0, (c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES - 1) | 0)
+            c = (c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES) | 0
+        }
+    }
+
+    const leftFenceStart = (leftCornerCol + SHOP_TRIAL_ARENA_FENCE_L_W_TILES) | 0
+    const leftFenceEnd = gateCol | 0
+    fillFenceRange(leftFenceStart | 0, leftFenceEnd | 0)
+
+    const rightFenceStart = (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES) | 0
+    const rightFenceEnd = rightCornerCol | 0
+    fillFenceRange(rightFenceStart | 0, rightFenceEnd | 0)
+}
+
+function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number): void {
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return
+
+    const r1 = (r0 + 1) | 0
+    const c1 = (c0 + 1) | 0
+    const r2 = (r0 + h - 2) | 0
+    const c2 = (c0 + w - 2) | 0
+
+    // Clear region first so restamps never accumulate stale decals.
+    for (let r = r0; r <= (r0 + h - 1); r++) {
+        for (let c = c0; c <= (c0 + w - 1); c++) {
+            _dunDecor_setDecalSafe(r | 0, c | 0, DECAL_NONE)
+        }
+    }
+
+    // Base floor: border tiles + tiled interior variants.
+    for (let r = r0; r <= (r0 + h - 1); r++) {
+        for (let c = c0; c <= (c0 + w - 1); c++) {
+            const isTop = (r | 0) === (r0 | 0)
+            const isBot = (r | 0) === ((r0 + h - 1) | 0)
+            const isLeft = (c | 0) === (c0 | 0)
+            const isRight = (c | 0) === ((c0 + w - 1) | 0)
+
+            let id = DECAL_TRIAL_FLOOR_CENTER
+
+            if (isTop && isLeft) id = DECAL_TRIAL_FLOOR_CORNER_NW
+            else if (isTop && isRight) id = DECAL_TRIAL_FLOOR_CORNER_NE
+            else if (isBot && isLeft) id = DECAL_TRIAL_FLOOR_CORNER_SW
+            else if (isBot && isRight) id = DECAL_TRIAL_FLOOR_CORNER_SE
+            else if (isTop) id = DECAL_TRIAL_FLOOR_EDGE_N
+            else if (isBot) id = DECAL_TRIAL_FLOOR_EDGE_S
+            else if (isLeft) id = DECAL_TRIAL_FLOOR_EDGE_W
+            else if (isRight) id = DECAL_TRIAL_FLOOR_EDGE_E
+            else id = _shopTrialArenaInteriorVariantId(r | 0, c | 0, r1 | 0, c1 | 0)
+
+            _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
+        }
+    }
+
+    // Deterministic patch mask inside the arena interior.
+    const rows = (r2 - r1 + 1) | 0
+    const cols = (c2 - c1 + 1) | 0
+    const seedFloor = _dunFloorIndex | 0
+    const mask0: boolean[][] = []
+    const mask1: boolean[][] = []
+    const avoidBottomRows = 4
+    const avoidBottomStart = (r0 + h - avoidBottomRows) | 0
+
+    for (let rr = 0; rr < rows; rr++) {
+        const row0: boolean[] = []
+        const row1: boolean[] = []
+        for (let cc = 0; cc < cols; cc++) {
+            const r = (r1 + rr) | 0
+            const c = (c1 + cc) | 0
+            const hash = _shopTrialArenaHash(seedFloor | 0, r | 0, c | 0, 9157)
+            const base = ((hash % 100) | 0) < 11
+            const allowed = (r | 0) < (avoidBottomStart | 0)
+            row0.push(base && allowed)
+            row1.push(false)
+        }
+        mask0.push(row0)
+        mask1.push(row1)
+    }
+
+    const has0 = (rr: number, cc: number): boolean => {
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
+        return !!mask0[rr]?.[cc]
+    }
+
+    for (let rr = 0; rr < rows; rr++) {
+        for (let cc = 0; cc < cols; cc++) {
+            if (has0(rr | 0, cc | 0)) {
+                mask1[rr][cc] = true
+                continue
+            }
+            const n = has0(rr - 1, cc) ? 1 : 0
+            const e = has0(rr, cc + 1) ? 1 : 0
+            const s = has0(rr + 1, cc) ? 1 : 0
+            const w0 = has0(rr, cc - 1) ? 1 : 0
+            const count = (n + e + s + w0) | 0
+            if (count <= 0) continue
+
+            const r = (r1 + rr) | 0
+            const c = (c1 + cc) | 0
+            const hash = _shopTrialArenaHash(seedFloor | 0, r | 0, c | 0, 1337)
+
+            if (count >= 2) {
+                if (((hash % 100) | 0) < 80) mask1[rr][cc] = true
+            } else if (count === 1) {
+                if (((hash % 100) | 0) < 15) mask1[rr][cc] = true
+            }
+        }
+    }
+
+    const has1 = (rr: number, cc: number): boolean => {
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) return false
+        return !!mask1[rr]?.[cc]
+    }
+
+    // Stamp patch decals with edge/corner selection.
+    for (let rr = 0; rr < rows; rr++) {
+        for (let cc = 0; cc < cols; cc++) {
+            if (!has1(rr | 0, cc | 0)) continue
+            const r = (r1 + rr) | 0
+            const c = (c1 + cc) | 0
+            const hasN = has1(rr - 1, cc)
+            const hasE = has1(rr, cc + 1)
+            const hasS = has1(rr + 1, cc)
+            const hasW = has1(rr, cc - 1)
+            const seed = _shopTrialArenaHash(seedFloor | 0, r | 0, c | 0, 777)
+            const id = _shopTrialArenaPatchDecalId(hasN, hasE, hasS, hasW, seed | 0)
+            _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
+        }
+    }
+}
+
+function _shopTrialArenaEnsureStamped(): void {
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_SHOP) {
+        _shopTrialArenaStampedSig = ""
+        _shopTrialArenaDestroyProps()
+        return
+    }
+    if (!_engineWorldTileMap || _engineWorldTileMap.length <= 0) return
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return
+
+    const r0 = _shopTrialAreaR | 0
+    const c0 = _shopTrialAreaC | 0
+    const h = _shopTrialAreaH | 0
+    const w = _shopTrialAreaW | 0
+    if (r0 < 0 || c0 < 0 || h <= 0 || w <= 0) return
+
+    const sig = [
+        _dunFloorIndex | 0,
+        _engineWorldRev | 0,
+        r0 | 0, c0 | 0, h | 0, w | 0
+    ].join("|")
+
+    if (sig === _shopTrialArenaStampedSig) return
+
+    _shopTrialArenaDestroyProps()
+    _shopTrialArenaStampDecals(r0 | 0, c0 | 0, h | 0, w | 0)
+    _shopTrialArenaStampProps(r0 | 0, c0 | 0, h | 0, w | 0)
+
+    _shopTrialArenaStampedSig = sig
+    _engineDecorRev = (_engineDecorRev + 1) | 0
+}
+
+// ---------------------------------------------------------------------------
+// Tower Trial helpers (shop/safe floor)
+// ---------------------------------------------------------------------------
+type TowerTrialArena = {
+    left: number
+    top: number
+    right: number
+    bottom: number
+    centerX: number
+    centerY: number
+    tileR: number
+    tileC: number
+    tileH: number
+    tileW: number
+}
+
+function _towerTrialLog(msg: string, data?: any): void {
+    if (!DEBUG_TOWER_TRIAL_LOGS) return
+    if (data) {
+        try {
+            console.log(`[TOWER_TRIAL] ${msg} ${JSON.stringify(data)}`)
+        } catch {
+            console.log(`[TOWER_TRIAL] ${msg}`)
+        }
+        return
+    }
+    console.log(`[TOWER_TRIAL] ${msg}`)
+}
+
+function _towerTrialArenaRect(): TowerTrialArena | null {
+    const r = _shopTrialAreaR | 0
+    const c = _shopTrialAreaC | 0
+    const h = _shopTrialAreaH | 0
+    const w = _shopTrialAreaW | 0
+    if (r < 0 || c < 0 || h <= 0 || w <= 0) return null
+    const tileSize = WORLD_TILE_SIZE | 0
+    const left = ((_dunColToX(c) | 0) - (tileSize >> 1)) | 0
+    const top = ((_dunRowToY(r) | 0) - (tileSize >> 1)) | 0
+    const widthPx = (w * tileSize) | 0
+    const heightPx = (h * tileSize) | 0
+    const right = (left + widthPx) | 0
+    const bottom = (top + heightPx) | 0
+    const centerX = (left + (widthPx >> 1)) | 0
+    const centerY = (top + (heightPx >> 1)) | 0
+    return { left, top, right, bottom, centerX, centerY, tileR: r, tileC: c, tileH: h, tileW: w }
+}
+
+function _towerTrialEnsureAnnouncer(): void {
+    if (_towerTrialAnnouncerNpc && !(_towerTrialAnnouncerNpc.flags & sprites.Flag.Destroyed)) return
+    const arena = _towerTrialArenaRect()
+    const tileSize = WORLD_TILE_SIZE | 0
+    let x = 0
+    let y = 0
+    if (arena) {
+        x = (arena.left + (tileSize * 2)) | 0
+        y = (arena.top + (tileSize * 2)) | 0
+    } else if (shopkeeperNpc && !(shopkeeperNpc.flags & sprites.Flag.Destroyed)) {
+        x = ((shopkeeperNpc.x | 0) + (tileSize * 2)) | 0
+        y = ((shopkeeperNpc.y | 0) - (tileSize * 2)) | 0
+    } else {
+        return
+    }
+    const npc = _spawnNpcLpcActor(
+        TOWER_TRIAL_ANNOUNCER_NAME,
+        0,
+        x,
+        y,
+        {
+            family: STORY_ANNOUNCER_FAMILY,
+            dir: "down",
+            phase: "idle",
+            frameColOverride: -1,
+            npcRole: TOWER_TRIAL_ANNOUNCER_ROLE,
+            ghost: true,
+            z: 9,
+        }
+    )
+    _towerTrialAnnouncerNpc = npc
+    if (npc) _shopRegisterNpc(npc)
+    _towerTrialLog("announcer_spawn", { x: x | 0, y: y | 0 })
+}
+
+function _towerTrialDestroyAnnouncer(): void {
+    if (!_towerTrialAnnouncerNpc) return
+    if (!(_towerTrialAnnouncerNpc.flags & sprites.Flag.Destroyed)) {
+        _dunDestroySprite(_towerTrialAnnouncerNpc)
+    }
+    _towerTrialAnnouncerNpc = null
+}
+
+function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: boolean): void {
+    const session = _towerTrialSession
+    if (!force && session) {
+        const since = (nowMs | 0) - (session.lastDialogAtMs | 0)
+        if (since < 450) return
+        session.lastDialogAtMs = nowMs | 0
+    }
+    const g: any = globalThis as any
+    const dlg = g ? g.__heDialog : null
+    if (!dlg || typeof dlg.show !== "function") return
+    const isOpen = (typeof dlg.isOpen === "function") ? !!dlg.isOpen() : false
+    const owner = (dlg && typeof dlg.__heOwner === "string") ? String(dlg.__heOwner || "") : ""
+    if (!force && isOpen && owner && owner !== TOWER_TRIAL_DIALOG_OWNER) return
+    try {
+        dlg.show({
+            speaker: TOWER_TRIAL_ANNOUNCER_NAME,
+            text: text || "",
+            hint: hint || "",
+            owner: TOWER_TRIAL_DIALOG_OWNER,
+        })
+    } catch { }
+}
+
+function _towerTrialInitEvidence(): TowerTrialLiveEvidence {
+    const pressCount: Record<string, number> = Object.create(null)
+    const lastOutputByButton: Record<string, any[] | null> = Object.create(null)
+    const repeatViolationByButton: Record<string, boolean> = Object.create(null)
+    const familyByPhase: Record<string, Record<number, string>> = Object.create(null)
+    for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
+        const b = TOWER_TRIAL_BUTTONS[i]
+        pressCount[b] = 0
+        lastOutputByButton[b] = null
+        repeatViolationByButton[b] = false
+        familyByPhase[b] = Object.create(null)
+    }
+    return { pressCount, lastOutputByButton, repeatViolationByButton, familyByPhase, invalidOutputCount: 0 }
+}
+
+function _towerTrialResetEvidence(session: TowerTrialSession): void {
+    session.liveByProfile = {}
+    session.warnedRepeatByProfile = {}
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        session.liveByProfile[profile] = _towerTrialInitEvidence()
+        session.warnedRepeatByProfile[profile] = Object.create(null)
+    }
+}
+
+function _towerTrialPhaseEnemyPositions(phaseIndex: number): Array<{ x: number; y: number }> {
+    const arena = _towerTrialArenaRect()
+    if (!arena) return []
+    const tileSize = WORLD_TILE_SIZE | 0
+    const minX = (arena.left + tileSize) | 0
+    const maxX = (arena.right - tileSize) | 0
+    let nearX = (arena.centerX - tileSize) | 0
+    let farX = (arena.centerX + (tileSize * 3)) | 0
+    if (nearX < minX) nearX = minX
+    if (nearX > maxX) nearX = maxX
+    if (farX < minX) farX = minX
+    if (farX > maxX) farX = maxX
+    const y0 = (arena.centerY - (tileSize >> 1)) | 0
+    const y1 = (arena.centerY + (tileSize >> 1)) | 0
+    const a = { x: nearX | 0, y: y0 | 0 }
+    const b = { x: farX | 0, y: y1 | 0 }
+    if (((phaseIndex | 0) % 2) === 0) return [a, b]
+    return [b, a]
+}
+
+function _towerTrialConfigureEnemySafe(enemy: Sprite): void {
+    if (!enemy || (enemy.flags & sprites.Flag.Destroyed)) return
+    enemy.setFlag(SpriteFlag.Ghost, true)
+    sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, 999999)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.KNOCKBACK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_PHASE, ENEMY_ATK_PHASE_IDLE)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATK_COOLDOWN_UNTIL, 0)
+    sprites.setDataNumber(enemy, "__towerTrial", 1)
+}
+
+function _towerTrialDestroyEnemies(): void {
+    const session = _towerTrialSession
+    if (!session || !session.enemies) return
+    for (let i = 0; i < session.enemies.length; i++) {
+        const e = session.enemies[i]
+        if (e && !(e.flags & sprites.Flag.Destroyed)) _dunDestroySprite(e)
+    }
+    session.enemies = []
+}
+
+function _towerTrialSpawnEnemies(nowMs: number): void {
+    const session = _towerTrialSession
+    if (!session) return
+    _towerTrialDestroyEnemies()
+    const positions = _towerTrialPhaseEnemyPositions(session.phaseIndex | 0)
+    session.enemies = []
+    if (!positions.length) return
+    const phase = session.phaseIndex | 0
+    const hpVals = (phase === 0) ? [45, 20] : [20, 45]
+    for (let i = 0; i < positions.length && i < TOWER_TRIAL_ENEMY_COUNT; i++) {
+        const p = positions[i]
+        const enemy = spawnEnemyOfKind(TOWER_TRIAL_ENEMY_ID, p.x | 0, p.y | 0, false)
+        if (!enemy) continue
+        _towerTrialConfigureEnemySafe(enemy)
+        _enemySetHpAndBar(enemy, hpVals[i] || 30)
+        session.enemies.push(enemy)
+    }
+    if (DEBUG_TOWER_TRIAL_SIM) {
+        _towerTrialLog("spawn_enemies", {
+            phase: session.phaseIndex | 0,
+            count: session.enemies.length | 0,
+            now: nowMs | 0,
+        })
+    }
+}
+
+function _towerTrialStart(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) return
+    const floor = _dunFloorIndex | 0
+    const requirementSet = towerTrialRequirementSetForFloor(floor)
+    if (!requirementSet.ids.length) return
+
+    if (_towerTrialSession && _towerTrialSession.active) {
+        _towerTrialEnd("restart", nowMs | 0)
+    }
+
+    const participants: string[] = []
+    const pids: number[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0 || !_dunIsPidActive(pid)) continue
+        let profile = _heroProfileKeyForIndex(hi) || ""
+        if (!profile) profile = sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        if (!profile) continue
+        if (participants.indexOf(profile) < 0) participants.push(profile)
+        if (pids.indexOf(pid) < 0) pids.push(pid)
+    }
+    if (!participants.length) {
+        _towerTrialDialog(nowMs, "No active heroes found.", "Join the trial before starting.", true)
+        return
+    }
+
+    const g: any = globalThis as any
+    const xmlByProfile = (g && g.__heBlocklyXmlByProfile) ? g.__heBlocklyXmlByProfile : {}
+    const startXmlByProfile: Record<string, string> = {}
+    const simByProfile: Record<string, TowerTrialSimResult> = {}
+    for (let i = 0; i < participants.length; i++) {
+        const profile = participants[i]
+        const xml = String(xmlByProfile?.[profile] || "")
+        startXmlByProfile[profile] = xml
+        simByProfile[profile] = towerTrialSimulateProfile(profile, xml, floor)
+    }
+
+    _towerTrialSession = {
+        active: true,
+        completed: false,
+        floorIndex: floor,
+        participants,
+        pids,
+        startXmlByProfile,
+        simByProfile,
+        liveByProfile: {},
+        warnedRepeatByProfile: {},
+        phaseIndex: 0,
+        lastPhaseChangeMs: nowMs | 0,
+        enemies: [],
+        requirementSet,
+        lastDialogAtMs: 0,
+    }
+    _towerTrialResetEvidence(_towerTrialSession)
+    _towerTrialSpawnEnemies(nowMs | 0)
+
+    const intro = requirementSet.ids.length > 0
+        ? "Tower Trial started."
+        : "Trial ready."
+    _towerTrialDialog(nowMs, intro, "Press each button to prove your moves.", true)
+    _towerTrialLog("start", {
+        floor: floor | 0,
+        participants: participants.length | 0,
+        reqs: requirementSet.ids.join(","),
+    })
+}
+
+function _towerTrialEnd(reason: string, nowMs: number): void {
+    const session = _towerTrialSession
+    if (!session) return
+    _towerTrialDestroyEnemies()
+    _towerTrialSession = null
+    _towerTrialLog("end", { reason: reason || "", now: nowMs | 0 })
+}
+
+function _towerTrialAdvancePhase(nowMs: number): void {
+    const session = _towerTrialSession
+    if (!session || !session.requirementSet.needsPhases) return
+    if ((session.phaseIndex | 0) >= 1) return
+    if (((nowMs | 0) - (session.lastPhaseChangeMs | 0)) < TOWER_TRIAL_PHASE_SWITCH_COOLDOWN_MS) return
+    session.phaseIndex = 1
+    session.lastPhaseChangeMs = nowMs | 0
+    _towerTrialSpawnEnemies(nowMs | 0)
+    _towerTrialDialog(nowMs, "Phase 2 unlocked.", "Press any button and show a new family.")
+    _towerTrialLog("phase_change", { phase: session.phaseIndex | 0, now: nowMs | 0 })
+}
+
+function _towerTrialCheckXmlChanges(nowMs: number): boolean {
+    const session = _towerTrialSession
+    if (!session || !session.active) return false
+    const g: any = globalThis as any
+    const xmlByProfile = (g && g.__heBlocklyXmlByProfile) ? g.__heBlocklyXmlByProfile : {}
+    let changed = false
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        const xml = String(xmlByProfile?.[profile] || "")
+        if (xml !== session.startXmlByProfile[profile]) {
+            session.startXmlByProfile[profile] = xml
+            changed = true
+        }
+    }
+    if (!changed) return false
+    session.completed = false
+    session.phaseIndex = 0
+    session.lastPhaseChangeMs = nowMs | 0
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        session.simByProfile[profile] = towerTrialSimulateProfile(profile, session.startXmlByProfile[profile] || "", session.floorIndex | 0)
+    }
+    _towerTrialResetEvidence(session)
+    _towerTrialSpawnEnemies(nowMs | 0)
+    _towerTrialDialog(nowMs, "Blockly updated.", "Trial reset. Run it start to finish.", true)
+    _towerTrialLog("xml_reset", { now: nowMs | 0 })
+    return true
+}
+
+function _towerTrialDisplayNameForProfile(profile: string): string {
+    const key = String(profile || "")
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (_heroProfileKeyForIndex(hi) !== key) continue
+        const name = sprites.readDataString(hero, "heroName") || sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        if (name) return name
+    }
+    return key || "Hero"
+}
+
+function _towerTrialIsBlockingIssue(reqId: string): boolean {
+    return reqId === "noHardcodedTraits" || reqId === "noSingleEnemyBlocks" || reqId === "capOnlyFunctions" || reqId === "invalidOutput"
+}
+
+type TowerTrialProfileStatus = {
+    ok: boolean
+    blockingIssue: { message: string } | null
+    missingButtons: string[]
+    repeatButtons: string[]
+    dynamicOk: boolean
+    needsPhasePress: boolean
+}
+
+function _towerTrialProfileStatus(profile: string, session: TowerTrialSession): TowerTrialProfileStatus {
+    const status: TowerTrialProfileStatus = {
+        ok: false,
+        blockingIssue: null,
+        missingButtons: [],
+        repeatButtons: [],
+        dynamicOk: true,
+        needsPhasePress: false,
+    }
+    const sim = session.simByProfile[profile]
+    if (sim && sim.issues && sim.issues.length) {
+        for (let i = 0; i < sim.issues.length; i++) {
+            const it = sim.issues[i]
+            if (_towerTrialIsBlockingIssue(it.requirementId || "")) {
+                status.blockingIssue = { message: it.message || "Code issue detected." }
+                break
+            }
+        }
+    }
+
+    const live = session.liveByProfile[profile] || _towerTrialInitEvidence()
+    const reqSet = session.requirementSet
+    for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
+        const b = TOWER_TRIAL_BUTTONS[i]
+        const count = (live.pressCount[b] | 0)
+        if (count < (reqSet.minPressesPerButton | 0)) status.missingButtons.push(b)
+        if (reqSet.ids.indexOf("noRepeatPerButton") >= 0 && live.repeatViolationByButton[b]) {
+            status.repeatButtons.push(b)
+        }
+    }
+
+    if (reqSet.ids.indexOf("dynamicFamilyOneButton") >= 0) {
+        let hasDynamic = false
+        let hasTwoPhase = false
+        for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
+            const b = TOWER_TRIAL_BUTTONS[i]
+            const fam0 = live.familyByPhase[b]?.[0]
+            const fam1 = live.familyByPhase[b]?.[1]
+            if (fam0 != null && fam1 != null) {
+                hasTwoPhase = true
+                if (String(fam0) !== String(fam1)) {
+                    hasDynamic = true
+                    break
+                }
+            }
+        }
+        status.dynamicOk = hasDynamic
+        status.needsPhasePress = !hasTwoPhase
+    }
+
+    status.ok = !status.blockingIssue && status.missingButtons.length === 0 && status.repeatButtons.length === 0 && status.dynamicOk
+    return status
+}
+
+function _towerTrialSnapshot(session: TowerTrialSession): TowerTrialStatusSnapshot {
+    const profiles: Record<string, TowerTrialProfileSnapshot> = {}
+    const requirementIds = session.requirementSet.ids.slice()
+    const minPressesPerButton = session.requirementSet.minPressesPerButton | 0
+    const floorKind = _dunFloorKind | 0
+    const trialRequired = requirementIds.length > 0
+    const inShopFloor = _dunFloorKind === DUNGEON_KIND_SHOP
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        const status = _towerTrialProfileStatus(profile, session)
+        const live = session.liveByProfile[profile] || _towerTrialInitEvidence()
+        const sim = session.simByProfile[profile]
+        const simIssues = (sim?.issues || []).map((it) => ({ ...it }))
+        const pressCount: Record<string, number> = Object.create(null)
+        const phaseFamily: Record<string, Record<number, string>> = Object.create(null)
+        for (let j = 0; j < TOWER_TRIAL_BUTTONS.length; j++) {
+            const b = TOWER_TRIAL_BUTTONS[j]
+            pressCount[b] = live.pressCount[b] | 0
+            const famSrc = live.familyByPhase[b] || Object.create(null)
+            const famDst: Record<number, string> = Object.create(null)
+            for (const k in famSrc) famDst[k as any] = String(famSrc[k])
+            phaseFamily[b] = famDst
+        }
+        profiles[profile] = {
+            profile,
+            displayName: _towerTrialDisplayNameForProfile(profile),
+            blockingIssue: status.blockingIssue?.message || "",
+            simIssues,
+            missingButtons: status.missingButtons.slice(),
+            repeatButtons: status.repeatButtons.slice(),
+            dynamicOk: !!status.dynamicOk,
+            needsPhasePress: !!status.needsPhasePress,
+            minPressesPerButton,
+            pressCount,
+            phaseFamily,
+        }
+    }
+    return {
+        active: !!session.active,
+        completed: !!session.completed,
+        floorIndex: session.floorIndex | 0,
+        floorKind,
+        trialRequired,
+        inShopFloor,
+        phaseIndex: session.phaseIndex | 0,
+        requirementIds,
+        profiles,
+    }
+}
+
+function _towerTrialGetStatusSnapshot(): TowerTrialStatusSnapshot {
+    const floorIndex = _dunFloorIndex | 0
+    const requirementIds = towerTrialRequirementSetForFloor(floorIndex).ids.slice()
+    const floorKind = _dunFloorKind | 0
+    const trialRequired = requirementIds.length > 0
+    const inShopFloor = _dunFloorKind === DUNGEON_KIND_SHOP
+    const session = _towerTrialSession
+    if (!session) {
+        return {
+            active: false,
+            completed: false,
+            floorIndex,
+            floorKind,
+            trialRequired,
+            inShopFloor,
+            phaseIndex: 0,
+            requirementIds,
+            profiles: {},
+        }
+    }
+    return _towerTrialSnapshot(session)
+}
+
+(() => {
+    const g: any = globalThis as any
+    if (!g || typeof g.__heTowerTrialGetStatus === "function") return
+    g.__heTowerTrialGetStatus = () => _towerTrialGetStatusSnapshot()
+})()
+
+function _towerTrialFindFirstIssue(session: TowerTrialSession): { text: string; hint: string } | null {
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        const name = _towerTrialDisplayNameForProfile(profile)
+        const status = _towerTrialProfileStatus(profile, session)
+        if (status.ok) continue
+        if (status.blockingIssue) {
+            return { text: `${name}: ${status.blockingIssue.message}`, hint: "Fix this in Blockly, then retry." }
+        }
+        if (status.missingButtons.length) {
+            const labels = status.missingButtons.map(towerTrialButtonLabel).join(", ")
+            return { text: `${name}: Use ${labels}.`, hint: "Each button must be tested." }
+        }
+        if (status.repeatButtons.length) {
+            const labels = status.repeatButtons.map(towerTrialButtonLabel).join(", ")
+            return { text: `${name}: ${labels} repeats the same move.`, hint: "Change the output between presses." }
+        }
+        if (!status.dynamicOk) {
+            if (status.needsPhasePress) {
+                return { text: `${name}: Try a button in both phases.`, hint: "Phase 2 is required for a dynamic family." }
+            }
+            return { text: `${name}: Make one button change family.`, hint: "Use enemy data or sensors." }
+        }
+    }
+    return null
+}
+
+function _towerTrialEvaluateCompletion(nowMs: number, showDialogIfFail: boolean): void {
+    const session = _towerTrialSession
+    if (!session || !session.active) return
+
+    let allOk = true
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        const status = _towerTrialProfileStatus(profile, session)
+        if (!status.ok) { allOk = false; break }
+    }
+
+    if (allOk) {
+        if (!session.completed) {
+            session.completed = true
+            _towerTrialDialog(nowMs, "Trial complete.", "The exit pad is now powered.", true)
+            _towerTrialLog("complete", { now: nowMs | 0 })
+        }
+        _shopUnlockExitPadIfInShopFloor(nowMs | 0)
+        return
+    }
+
+    if (showDialogIfFail) {
+        const issue = _towerTrialFindFirstIssue(session)
+        if (issue) _towerTrialDialog(nowMs, issue.text, issue.hint)
+    }
+}
+
+function _towerTrialRecordMove(
+    heroIndex: number,
+    button: string,
+    parsed: { family: number; t1: number; t2: number; t3: number; t4: number; element: number; animKey: string } | null,
+    nowMs: number
+): void {
+    const session = _towerTrialSession
+    if (!session || !session.active || session.completed) return
+    if (_dunFloorKind !== DUNGEON_KIND_SHOP) return
+    const profileKey = _heroProfileKeyForIndex(heroIndex)
+    if (!profileKey || session.participants.indexOf(profileKey) < 0) return
+
+    const live = session.liveByProfile[profileKey] || _towerTrialInitEvidence()
+    session.liveByProfile[profileKey] = live
+
+    if (!parsed) {
+        live.invalidOutputCount = (live.invalidOutputCount | 0) + 1
+        _towerTrialEvaluateCompletion(nowMs | 0, false)
+        return
+    }
+
+    const out: any[] = [
+        parsed.family | 0,
+        parsed.t1 | 0,
+        parsed.t2 | 0,
+        parsed.t3 | 0,
+        parsed.t4 | 0,
+        parsed.element | 0,
+        parsed.animKey || "",
+    ]
+
+    live.pressCount[button] = ((live.pressCount[button] | 0) + 1) | 0
+
+    if (session.requirementSet.ids.indexOf("noRepeatPerButton") >= 0) {
+        const sim = session.simByProfile[profileKey]
+        const warned = session.warnedRepeatByProfile[profileKey] || Object.create(null)
+        session.warnedRepeatByProfile[profileKey] = warned
+        if (sim && sim.predictedRepeatButtons && sim.predictedRepeatButtons.indexOf(button) >= 0) {
+            if ((live.pressCount[button] | 0) === 1 && !warned[button]) {
+                warned[button] = true
+                _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} may repeat.`, "Change the output before the next press.")
+            }
+        }
+    }
+
+    if (session.requirementSet.ids.indexOf("noRepeatPerButton") >= 0) {
+        const prev = live.lastOutputByButton[button]
+        if (prev && prev.length === out.length) {
+            let same = true
+            for (let i = 0; i < out.length; i++) {
+                if (prev[i] !== out[i]) { same = false; break }
+            }
+            if (same) {
+                live.repeatViolationByButton[button] = true
+                _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} repeats the same move.`, "Change the output and try again.")
+            }
+        }
+    }
+
+    if (session.requirementSet.ids.indexOf("dynamicFamilyOneButton") >= 0) {
+        const phase = session.phaseIndex | 0
+        if (!live.familyByPhase[button]) live.familyByPhase[button] = Object.create(null)
+        live.familyByPhase[button][phase] = String(parsed.family | 0)
+    }
+
+    live.lastOutputByButton[button] = out
+
+    if (session.requirementSet.needsPhases && (session.phaseIndex | 0) === 0) {
+        let ready = true
+        for (let i = 0; i < session.participants.length; i++) {
+            const prof = session.participants[i]
+            const ev = session.liveByProfile[prof] || _towerTrialInitEvidence()
+            for (let j = 0; j < TOWER_TRIAL_BUTTONS.length; j++) {
+                const b = TOWER_TRIAL_BUTTONS[j]
+                if ((ev.pressCount[b] | 0) < 1) { ready = false; break }
+            }
+            if (!ready) break
+        }
+        if (ready) _towerTrialAdvancePhase(nowMs | 0)
+    }
+
+    _towerTrialEvaluateCompletion(nowMs | 0, false)
+}
+
+function _towerTrialTryHandleInteract(hero: Sprite, heroIndex: number, nowMs: number): boolean {
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return false
+    if (_dunFloorKind !== DUNGEON_KIND_SHOP) return false
+    if (!towerTrialShouldRequireTrial(_dunFloorIndex | 0)) return false
+
+    _towerTrialEnsureAnnouncer()
+    const npc = _towerTrialAnnouncerNpc
+    if (!npc || (npc.flags & sprites.Flag.Destroyed)) return false
+    const inRange = _isHeroInInteractRange(hero, npc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
+    if (!inRange) return false
+
+    if (!_towerTrialSession || !_towerTrialSession.active) {
+        _towerTrialStart(nowMs | 0)
+        return true
+    }
+
+    _towerTrialEvaluateCompletion(nowMs | 0, true)
+    return true
+}
+
+function _towerTrialTick(nowMs: number): void {
+    if (!DUNGEON_MODE_ACTIVE || _dunFloorKind !== DUNGEON_KIND_SHOP) {
+        _towerTrialEnd("floor-exit", nowMs | 0)
+        _towerTrialDestroyAnnouncer()
+        return
+    }
+    if (!towerTrialShouldRequireTrial(_dunFloorIndex | 0)) {
+        _towerTrialEnd("not-required", nowMs | 0)
+        _towerTrialDestroyAnnouncer()
+        return
+    }
+    _towerTrialEnsureAnnouncer()
+    if (!_towerTrialSession || !_towerTrialSession.active) return
+    _towerTrialCheckXmlChanges(nowMs | 0)
+    _towerTrialEvaluateCompletion(nowMs | 0, false)
+}
 
 
 function _shopSplitPipeKeepEmpty(s: string): string[] {
@@ -22449,6 +24122,17 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
 
     if (_dunObjectiveDone && _dunIsPadPowered()) return
 
+    if (towerTrialShouldRequireTrial(_dunFloorIndex | 0)) {
+        if (!_towerTrialSession || !_towerTrialSession.completed) {
+            if (_towerTrialSession) {
+                _towerTrialEvaluateCompletion(now | 0, true)
+            } else {
+                _towerTrialDialog(now | 0, "Tower Trial required.", "Talk to the Announcer.")
+            }
+            return
+        }
+    }
+
 
 
     _dunObjectiveDone = true
@@ -22476,6 +24160,10 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
     }
 
 
+
+    const trialRequired = towerTrialShouldRequireTrial(_dunFloorIndex | 0)
+    const trialComplete = !!_towerTrialSession && _towerTrialSession.completed
+    if (trialRequired && trialComplete) return
 
     // Optional: quick DOM hint
 
@@ -22636,6 +24324,7 @@ function shopTick(nowMs: number): void {
     }
 
     _shopEnsurePerHeroStateArrays()
+    _towerTrialTick(now)
 
 
 
@@ -23347,6 +25036,7 @@ function shopHandleControls(nowMs: number): void {
         // ------------------------------------------------------------
 
         if (ctrl.Interact_edge) {
+            if (_towerTrialTryHandleInteract(hero, hi, now)) continue
 
             const inRange = _isHeroInInteractRange(hero, shopkeeperNpc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)
 
@@ -29515,6 +31205,8 @@ function initWorldDecorPostPass(): void {
     _destroyAllInPlace(_engineDecorTriggers)
 
     _destroyAllInPlace(_engineDecorSolids)
+    _shopTrialArenaStampedSig = ""
+    if (_shopTrialArenaProps) _shopTrialArenaProps.length = 0
     _dunChestSolidsByKey = Object.create(null)
     _dunChestTileR = -1
     _dunChestTileC = -1
@@ -29625,6 +31317,10 @@ function initWorldTileMap(): void {
         }
     } else {
         _engineWorldTileMap = _createTileMap2D()
+    }
+
+    if (_dunFloorUsesDoorExit()) {
+        _dunPrepareDoorExitArea()
     }
 
     // Decor post-pass (decals + trigger/solid colliders), art-agnostic.
@@ -31507,6 +33203,7 @@ function resolveEnemyTilemapCollisions(): void {
     // Resolve collision for a single enemy using feet collider
     function resolveForEnemy(e: Sprite) {
         if (!e) return
+        if ((sprites.readDataNumber(e, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return
 
         // Use feet-aligned collider bounds (bottom-anchored) with a fixed wall footprint.
         const dims = _enemyGetColliderDims(e)
@@ -33478,7 +35175,9 @@ function createHeroForPlayer(
 
 
 
-    initHeroHP(heroIndex, hero, BALANCE.HERO.START_HP)
+    let startHp = BALANCE.HERO.START_HP | 0
+    if (profileName === "LongBlond") startHp = 1000
+    initHeroHP(heroIndex, hero, startHp | 0)
 
     let startMana = BALANCE.HERO.START_MANA | 0
     if (profileName === "LongBlond") startMana = 1000
@@ -36590,6 +38289,7 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
     if (!out) {
         // Invalid/missing blockly output: play sit feedback instead of falling through to defaults.
         publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.logicNull")
+        _towerTrialRecordMove(heroIndex, button, null, now)
 
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
 
@@ -36608,6 +38308,7 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
     if (!_doHeroMoveValidateHookOut(heroIndex, button, out)) {
         // Invalid blockly output (or defaulted fields): play sit feedback and stop.
         publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.invalidOut")
+        _towerTrialRecordMove(heroIndex, button, null, now)
 
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
 
@@ -36632,11 +38333,13 @@ function _doHeroMoveTryGetParsedHookOutOrNull(
         publishHeroSpecialPhase(heroIndex, "sit", SPECIAL_SIT_PHASE_DUR_MS, "SPECIAL_SIT", "doHeroMoveForPlayer.invalidSentinel");
         console.log(DEBUG_FILTER_PHRASE + " INVALID_SENTINEL timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex);
         _doHeroMoveDbgReset(playerId);
+        _towerTrialRecordMove(heroIndex, button, null, now);
         return null;
     }
 
 
     const parsed = _doHeroMoveParseHookOut(out, button)
+    _towerTrialRecordMove(heroIndex, button, parsed, now)
 
 
 
@@ -50093,6 +51796,145 @@ function _agiHookWallsBlock(): boolean {
     return fam.indexOf("chasm") < 0
 }
 
+function _agiHookFindDecorSolidOverlap(
+    left: number,
+    right: number,
+    top: number,
+    bottom: number,
+    tipX: number,
+    tipY: number
+): { s: Sprite; left: number; right: number; top: number; bottom: number } | null {
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return null
+    let best: { s: Sprite; left: number; right: number; top: number; bottom: number } | null = null
+    let bestDist = 1e18
+    for (let i = 0; i < _engineDecorSolids.length; i++) {
+        const s = _engineDecorSolids[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const img: any = (s as any).image
+        let w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) | 0
+        let h = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) | 0
+        if (w <= 0) w = WORLD_TILE_SIZE | 0
+        if (h <= 0) h = WORLD_TILE_SIZE | 0
+
+        let l = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+        let t = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (h >> 1))
+        let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
+        let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
+
+        if (left < r && right > l && top < b && bottom > t) {
+            const nearX = Math.min(Math.max(tipX, l), r)
+            const nearY = Math.min(Math.max(tipY, t), b)
+            const dx = tipX - nearX
+            const dy = tipY - nearY
+            const dist = dx * dx + dy * dy
+            if (dist < bestDist) {
+                bestDist = dist
+                best = { s, left: l | 0, right: r | 0, top: t | 0, bottom: b | 0 }
+            }
+        }
+    }
+    return best
+}
+
+function _agiHookLogPropAura(
+    heroIndex: number,
+    hero: Sprite,
+    tag: string,
+    tipX: number,
+    tipY: number,
+    left: number,
+    right: number,
+    top: number,
+    bottom: number
+): void {
+    if (!DEBUG_AGI_HOOKSHOT_LOGS) return
+    const hit = _agiHookFindDecorSolidOverlap(left, right, top, bottom, tipX, tipY)
+    if (!hit) return
+
+    const s = hit.s
+    const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+    const propId = sprites.readDataNumber(s, DECOR_DATA.ID) | 0
+    const r = sprites.readDataNumber(s, "decorTileR") | 0
+    const c = sprites.readDataNumber(s, "decorTileC") | 0
+    const offX = sprites.readDataNumber(s, "decorOffX") | 0
+    const offY = sprites.readDataNumber(s, "decorOffY") | 0
+
+    const aabbLocalX = sprites.readDataNumber(s, DECOR_SOLID_AABB_LOCAL_X_KEY) | 0
+    const aabbLocalY = sprites.readDataNumber(s, DECOR_SOLID_AABB_LOCAL_Y_KEY) | 0
+    const aabbRawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0
+    const aabbRawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0
+    const aabbW = sprites.readDataNumber(s, DECOR_SOLID_AABB_W_KEY) | 0
+    const aabbH = sprites.readDataNumber(s, DECOR_SOLID_AABB_H_KEY) | 0
+    const aabbMode = sprites.readDataNumber(s, DECOR_SOLID_AABB_MODE_KEY) | 0
+    const aabbUseAura = sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0
+    const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
+    const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
+    const baseMinX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY) | 0
+    const baseMaxX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY) | 0
+    const baseH = sprites.readDataNumber(s, DECOR_SOLID_BASE_H_KEY) | 0
+    const baseFrameW = sprites.readDataNumber(s, DECOR_SOLID_BASE_FRAME_W_KEY) | 0
+    const baseFrameH = sprites.readDataNumber(s, DECOR_SOLID_BASE_FRAME_H_KEY) | 0
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const tileX = (c * tileSize) | 0
+    const tileY = (r * tileSize) | 0
+    const tipLocalX = Math.round(tipX - tileX)
+    const tipLocalY = Math.round(tipY - tileY)
+    const tipLocalOffX = Math.round(tipX - (tileX + offX))
+    const tipLocalOffY = Math.round(tipY - (tileY + offY))
+
+    const aabbLocalMaxX = (aabbW > 0 ? ((aabbLocalX + aabbW - 1) | 0) : 0)
+    const aabbLocalMaxY = (aabbH > 0 ? ((aabbLocalY + aabbH - 1) | 0) : 0)
+    const aabbRawMaxX = (aabbW > 0 ? ((aabbRawX + aabbW - 1) | 0) : 0)
+    const aabbRawMaxY = (aabbH > 0 ? ((aabbRawY + aabbH - 1) | 0) : 0)
+
+    const nearX = Math.min(Math.max(tipX, hit.left), hit.right)
+    const nearY = Math.min(Math.max(tipY, hit.top), hit.bottom)
+    const dTipX = Math.round(tipX - nearX)
+    const dTipY = Math.round(tipY - nearY)
+
+    let modeLabel = "unk"
+    if ((aabbMode | 0) === DECOR_SOLID_AABB_MODE_BASE) modeLabel = "base"
+    else if ((aabbMode | 0) === DECOR_SOLID_AABB_MODE_FULL) modeLabel = "full"
+
+    const now = game.runtime() | 0
+    const hposX = hero ? (hero.x | 0) : 0
+    const hposY = hero ? (hero.y | 0) : 0
+
+    let line =
+        `[AGI][HOOK][PROP_AURA] tag=${tag}` +
+        ` t=${now}` +
+        ` hi=${heroIndex}` +
+        ` hpos=${hposX},${hposY}` +
+        ` tip=${Math.round(tipX)},${Math.round(tipY)}` +
+        ` tipBox=${left | 0},${top | 0},${right | 0},${bottom | 0}` +
+        ` tipLocal=${tipLocalX},${tipLocalY}` +
+        ` tipLocalOff=${tipLocalOffX},${tipLocalOffY}` +
+        ` prop=${name || "-"}` +
+        ` pid=${propId}` +
+        ` rc=${r},${c}` +
+        ` off=${offX},${offY}` +
+        ` bounds=${hit.left},${hit.top},${hit.right},${hit.bottom}` +
+        ` dTip=${dTipX},${dTipY}` +
+        ` aabbLocal=${aabbLocalX},${aabbLocalY},${aabbW},${aabbH}` +
+        ` aabbLocalMax=${aabbLocalMaxX},${aabbLocalMaxY}` +
+        ` aabbRaw=${aabbRawX},${aabbRawY}` +
+        ` aabbRawMax=${aabbRawMaxX},${aabbRawMaxY}` +
+        ` mode=${modeLabel}` +
+        ` aura=${aabbUseAura ? 1 : 0}` +
+        ` tex=${aabbTex || "-"}` +
+        ` frame=${aabbFrame | 0}`
+
+    if ((aabbMode | 0) === DECOR_SOLID_AABB_MODE_BASE) {
+        line +=
+            ` baseMinMax=${baseMinX},${baseMaxX}` +
+            ` baseH=${baseH}` +
+            ` baseFrame=${baseFrameW}x${baseFrameH}`
+    }
+
+    console.log(line)
+}
+
 function _agiHookRaycast(
     heroIndex: number,
     hero: Sprite,
@@ -50412,6 +52254,7 @@ function _agiHookCheckTipHit(
     const pTop = Math.round(ty - propHalf)
     const pBottom = Math.round(ty + propHalf)
     if (_boxOverlapsDecorSolidsBounds(pLeft, pRight, pTop, pBottom)) {
+        _agiHookLogPropAura(heroIndex, hero, "HIT_PROP", tx, ty, pLeft, pRight, pTop, pBottom)
         return { kind: AGI_HOOK_TARGET.PROP, spriteId: 0 }
     }
 
@@ -50813,6 +52656,14 @@ function updateAgilityHookshotAll(nowMs: number): void {
                     `kind=${_agiHookTargetLabel(st.targetKind | 0)} dist=${st.targetDist | 0} lg=${ray.lastGroundDist | 0} gmax=${gmax} walls=${wallsBlock ? 1 : 0} wallFam=${wallFam || "-"}`,
                     false
                 )
+                if ((st.targetKind | 0) === AGI_HOOK_TARGET.PROP) {
+                    const half = Math.max(1, tipHalf | 0)
+                    const l = Math.round(st.targetX - half)
+                    const r = Math.round(st.targetX + half)
+                    const t = Math.round(st.targetY - half)
+                    const b = Math.round(st.targetY + half)
+                    _agiHookLogPropAura(hi, hero, "AIM_PROP", st.targetX, st.targetY, l, r, t, b)
+                }
             }
 
             let marker = st.marker
@@ -59738,6 +61589,10 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
 
     sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, -1)
 
+    if (isBoss) {
+        _dunQueueBossIntroForEnemy(enemy, monsterIdNorm)
+    }
+
 
 
     return enemy
@@ -59829,7 +61684,23 @@ function _applyEnemyVariant(enemy: Sprite, baseId: string, variant: string): voi
             sprites.setDataNumber(enemy, "__slimeSplitStage", 2)
             sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, SLIME_BOSS_RANGE_PX | 0)
             sprites.setDataNumber(enemy, "__projSpeed", SLIME_BOSS_PROJ_SPEED | 0)
+            _dunQueueBossIntroForEnemy(enemy, baseId)
         }
+    }
+}
+
+function _dunQueueBossIntroForEnemy(enemy: Sprite, monsterId: string): void {
+    if (!enemy) return
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_COMBAT) return
+    if ((_dunFloorIndex | 0) <= 0) return
+    if ((_dunBossIntroFloor | 0) === (_dunFloorIndex | 0) && _dunBossIntroEvent) return
+
+    _dunBossIntroFloor = _dunFloorIndex | 0
+    _dunBossIntroEvent = {
+        floorIndex: _dunFloorIndex | 0,
+        x: enemy.x | 0,
+        y: enemy.y | 0,
+        monsterId: String(monsterId || "").trim()
     }
 }
 
@@ -62641,6 +64512,7 @@ const ENEMY_AI_BOSS_INTENDED_MOVE = "__aiBossIntendedMove"
 const ENEMY_AI_BOSS_BASE_INIT = "__aiBossBaseInit"
 const ENEMY_AI_BOSS_BASE_RANGE = "__aiBossBaseRange"
 const ENEMY_AI_BOSS_BASE_PROJ = "__aiBossBaseProj"
+const ENEMY_AI_BOSS_BASE_PROJ_SPEED = "__aiBossBaseProjSpeed"
 const ENEMY_AI_BOSS_RANGED_UNTIL = "__aiBossRangedUntil"
 const ENEMY_AI_BOSS_STUCK_MS = "__aiBossStuckMs"
 const ENEMY_AI_BOSS_STUCK_LAST_MS = "__aiBossStuckLastMs"
@@ -62797,6 +64669,54 @@ const ENEMY_BOSS_IDS = new Set<string>([
     "minion",
     "shadow"
 ])
+
+const BOSS_JUMP_WINDUP_MS = 420
+const BOSS_JUMP_ASCEND_MS = 650
+const BOSS_JUMP_APEX_HOLD_MS = 5200
+const BOSS_JUMP_DESCEND_MS = 1100
+const BOSS_JUMP_LAND_MS = 420
+const BOSS_INTRO_CONTROL_LEAD_MS = 4000
+const BOSS_JUMP_COMPRESS_SCALE_X1000 = 820
+const BOSS_JUMP_LAUNCH_SCALE_X1000 = 1120
+const BOSS_JUMP_LAND_SCALE_X1000 = 920
+const BOSS_JUMP_COMPRESS_OFFY_PX = 6
+const BOSS_JUMP_ARC_PX = 520
+const BOSS_JUMP_ASCEND_SHIFT_PCT = 0.2
+
+const ENEMY_BOSS_JUMP_ACTIVE_KEY = "__bossJumpActive"
+const ENEMY_BOSS_JUMP_START_MS = "__bossJumpStartMs"
+const ENEMY_BOSS_JUMP_END_MS = "__bossJumpEndMs"
+const ENEMY_BOSS_JUMP_LAND_AT_MS = "__bossJumpLandAtMs"
+const ENEMY_BOSS_JUMP_LANDED_KEY = "__bossJumpLanded"
+const ENEMY_BOSS_JUMP_FROM_X = "__bossJumpFromX"
+const ENEMY_BOSS_JUMP_FROM_Y = "__bossJumpFromY"
+const ENEMY_BOSS_JUMP_MID_X = "__bossJumpMidX"
+const ENEMY_BOSS_JUMP_MID_Y = "__bossJumpMidY"
+const ENEMY_BOSS_JUMP_TO_X = "__bossJumpToX"
+const ENEMY_BOSS_JUMP_TO_Y = "__bossJumpToY"
+
+const HERO_BOSS_INTRO_LOCK_KEY = "__bossIntroLock"
+const HERO_BOSS_KNOCK_ACTIVE_KEY = "__bossKnockActive"
+const HERO_BOSS_KNOCK_STAGE_KEY = "__bossKnockStage"
+const HERO_BOSS_KNOCK_START_MS = "__bossKnockStartMs"
+const HERO_BOSS_KNOCK_AIR_END_MS = "__bossKnockAirEndMs"
+const HERO_BOSS_KNOCK_BOUNCE_END_MS = "__bossKnockBounceEndMs"
+const HERO_BOSS_KNOCK_END_MS = "__bossKnockEndMs"
+const HERO_BOSS_KNOCK_FROM_X = "__bossKnockFromX"
+const HERO_BOSS_KNOCK_FROM_Y = "__bossKnockFromY"
+const HERO_BOSS_KNOCK_TO_X = "__bossKnockToX"
+const HERO_BOSS_KNOCK_TO_Y = "__bossKnockToY"
+const HERO_BOSS_KNOCK_BOUNCE_X = "__bossKnockBounceX"
+const HERO_BOSS_KNOCK_BOUNCE_Y = "__bossKnockBounceY"
+const HERO_BOSS_KNOCK_GHOST_PREV = "__bossKnockGhostPrev"
+
+const BOSS_KNOCK_TILE_DIST = 1
+const BOSS_KNOCK_AIR_MS = 520
+const BOSS_KNOCK_BOUNCE_MS = 220
+const BOSS_KNOCK_LAND_HOLD_MS = 260
+const BOSS_KNOCK_ARC_PX = 18
+const BOSS_KNOCK_BOUNCE_ARC_PX = 8
+const BOSS_KNOCK_BOUNCE_EXTRA_PCT = 0.18
 
 function _enemyIsBoss(enemy: Sprite): boolean {
     if (!enemy) return false
@@ -63013,7 +64933,591 @@ function _enemyApplyBehaviorOverrides(
     return null
 }
 
-function _enemyBossPickTeleportNearPad(): { x: number, y: number } | null {
+function _enemyBossMoveFeetCenterTo(enemy: Sprite, targetCenterX: number, targetCenterY: number): void {
+    if (!enemy) return
+    const dims = _enemyGetColliderDims(enemy)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const dx = (targetCenterX | 0) - (feet.centerX | 0)
+    const dy = (targetCenterY | 0) - (feet.centerY | 0)
+    if (dx || dy) {
+        enemy.x = ((enemy.x | 0) + (dx | 0)) | 0
+        enemy.y = ((enemy.y | 0) + (dy | 0)) | 0
+    }
+}
+
+function _enemyBossPickIntroJumpTarget(enemy: Sprite): { centerX: number, centerY: number } | null {
+    const padR = _dunPadTileR | 0
+    const padC = _dunPadTileC | 0
+    if (padR >= 0 && padC >= 0) {
+        const dims = _enemyGetColliderDims(enemy)
+        if (_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, padR | 0, padC | 0)) {
+            return { centerX: _dunColToX(padC | 0), centerY: _dunRowToY(padR | 0) }
+        }
+    }
+    return _enemyBossPickTeleportNearPad(enemy)
+}
+
+function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCenterY: number, nowMs: number): any {
+    if (!enemy || !_enemyIsBoss(enemy)) return { ok: false }
+
+    const existingActive = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0
+    const existingLandAt = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS) | 0
+    const existingEnd = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS) | 0
+    if (existingActive && (existingLandAt > 0 || existingEnd > 0)) {
+        const landAtMs = existingLandAt > 0 ? (existingLandAt | 0) : (existingEnd | 0)
+        const endMs = existingEnd > 0 ? (existingEnd | 0) : landAtMs
+        const sx = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X) | 0
+        const sy = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0
+        if (sx || sy) {
+            _bossIntroShadowX = sx | 0
+            _bossIntroShadowY = sy | 0
+            _bossIntroShadowUntilMs = Math.max(_bossIntroShadowUntilMs | 0, endMs | 0) | 0
+        }
+        return {
+            ok: true,
+            enemyId: enemy.id | 0,
+            startMs: sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS) | 0,
+            landAtMs,
+            endMs,
+            targetX: sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X) | 0,
+            targetY: sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0,
+            controlLeadMs: BOSS_INTRO_CONTROL_LEAD_MS | 0
+        }
+    }
+
+    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return { ok: false }
+    if ((sprites.readDataNumber(enemy, "__bossIntroJumpDone") | 0) !== 0) return { ok: false }
+
+    const dims = _enemyGetColliderDims(enemy)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const fromX = feet.centerX | 0
+    const fromY = feet.centerY | 0
+    const toX = targetCenterX | 0
+    const toY = targetCenterY | 0
+    const shiftPct = Math.max(0, Math.min(0.45, BOSS_JUMP_ASCEND_SHIFT_PCT))
+    const midX = (fromX + Math.round((toX - fromX) * shiftPct)) | 0
+    const midY = (fromY + Math.round((toY - fromY) * shiftPct)) | 0
+
+    const impactMs =
+        (BOSS_JUMP_WINDUP_MS | 0) +
+        (BOSS_JUMP_ASCEND_MS | 0) +
+        (BOSS_JUMP_APEX_HOLD_MS | 0) +
+        (BOSS_JUMP_DESCEND_MS | 0)
+    const landAtMs = (nowMs + impactMs) | 0
+    const endMs = (landAtMs + (BOSS_JUMP_LAND_MS | 0)) | 0
+
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY, 1)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS, nowMs | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS, endMs | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS, landAtMs | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_X, fromX | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_Y, fromY | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_MID_X, midX | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_MID_Y, midY | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X, toX | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y, toY | 0)
+    sprites.setDataNumber(enemy, "__bossIntroJumpDone", 1)
+
+    _bossIntroShadowX = toX | 0
+    _bossIntroShadowY = toY | 0
+    if ((_bossIntroShadowUntilMs | 0) < (endMs | 0)) _bossIntroShadowUntilMs = endMs | 0
+
+    enemy.vx = 0
+    enemy.vy = 0
+    _enemySetIntent(enemy, "bossJump")
+
+    return {
+        ok: true,
+        enemyId: enemy.id | 0,
+        startMs: nowMs | 0,
+        landAtMs: landAtMs | 0,
+        endMs: endMs | 0,
+        targetX: toX | 0,
+        targetY: toY | 0,
+        controlLeadMs: BOSS_INTRO_CONTROL_LEAD_MS | 0
+    }
+}
+
+function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
+    if (!enemy || !_enemyIsBoss(enemy)) return false
+    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) === 0) return false
+
+    const startMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS) | 0
+    const endMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS) | 0
+    const landAtMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS) | 0
+    const fromX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_X) | 0
+    const fromY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_Y) | 0
+    const midX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_MID_X) | 0
+    const midY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_MID_Y) | 0
+    const toX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X) | 0
+    const toY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0
+
+    if (startMs <= 0 || endMs <= 0 || nowMs >= endMs) {
+        _enemyBossMoveFeetCenterTo(enemy, toX | 0, toY | 0)
+        enemy.vx = 0
+        enemy.vy = 0
+        sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY, 0)
+        sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+        sprites.setDataNumber(enemy, "__atkVisOffY", 0)
+        sprites.setDataNumber(enemy, "__atkVisScaleX1000", 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x | 0)
+        sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, enemy.y | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_MS, 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS, nowMs | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_X, enemy.x | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_Y, enemy.y | 0)
+        return true
+    }
+
+    const windupEnd = (startMs + (BOSS_JUMP_WINDUP_MS | 0)) | 0
+    const ascendEnd = (windupEnd + (BOSS_JUMP_ASCEND_MS | 0)) | 0
+    const holdEnd = (ascendEnd + (BOSS_JUMP_APEX_HOLD_MS | 0)) | 0
+    const descendEnd = (holdEnd + (BOSS_JUMP_DESCEND_MS | 0)) | 0
+    const impactAt = landAtMs > 0 ? (landAtMs | 0) : descendEnd
+    const landEnd = endMs | 0
+
+    const landed = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY) | 0
+    if (!landed && nowMs >= impactAt) {
+        sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY, 1)
+        _bossIntroKnockdownHeroes(enemy, nowMs | 0)
+    }
+
+    let offY = 0
+    let scaleX1000 = 1000
+
+    if (nowMs < windupEnd) {
+        const t = Math.min(1, Math.max(0, (nowMs - startMs) / Math.max(1, (BOSS_JUMP_WINDUP_MS | 0))))
+        const ease = Math.sin(t * Math.PI * 0.5)
+        scaleX1000 = Math.round(1000 + (BOSS_JUMP_COMPRESS_SCALE_X1000 - 1000) * ease)
+        offY = Math.round((BOSS_JUMP_COMPRESS_OFFY_PX | 0) * ease)
+        _enemyBossMoveFeetCenterTo(enemy, fromX | 0, fromY | 0)
+    } else if (nowMs < ascendEnd) {
+        const t = Math.min(1, Math.max(0, (nowMs - windupEnd) / Math.max(1, (BOSS_JUMP_ASCEND_MS | 0))))
+        const ease = Math.sin(t * Math.PI * 0.5)
+        const cx = Math.round(fromX + (midX - fromX) * ease)
+        const cy = Math.round(fromY + (midY - fromY) * ease)
+        _enemyBossMoveFeetCenterTo(enemy, cx | 0, cy | 0)
+        offY = Math.round(-Math.sin(t * Math.PI * 0.5) * (BOSS_JUMP_ARC_PX | 0))
+        scaleX1000 = Math.round(1000 + (BOSS_JUMP_LAUNCH_SCALE_X1000 - 1000) * (1 - t))
+    } else if (nowMs < holdEnd) {
+        _enemyBossMoveFeetCenterTo(enemy, midX | 0, midY | 0)
+        offY = -(BOSS_JUMP_ARC_PX | 0)
+        scaleX1000 = 1000
+    } else if (nowMs < impactAt) {
+        const t = Math.min(1, Math.max(0, (nowMs - holdEnd) / Math.max(1, (BOSS_JUMP_DESCEND_MS | 0))))
+        const ease = 0.5 - 0.5 * Math.cos(t * Math.PI)
+        const cx = Math.round(midX + (toX - midX) * ease)
+        const cy = Math.round(midY + (toY - midY) * ease)
+        _enemyBossMoveFeetCenterTo(enemy, cx | 0, cy | 0)
+        offY = Math.round(-Math.sin((1 - t) * Math.PI * 0.5) * (BOSS_JUMP_ARC_PX | 0))
+        scaleX1000 = Math.round(1000 + (BOSS_JUMP_LAND_SCALE_X1000 - 1000) * t)
+    } else {
+        const t = Math.min(1, Math.max(0, (nowMs - impactAt) / Math.max(1, (BOSS_JUMP_LAND_MS | 0))))
+        _enemyBossMoveFeetCenterTo(enemy, toX | 0, toY | 0)
+        scaleX1000 = Math.round(BOSS_JUMP_LAND_SCALE_X1000 + (1000 - BOSS_JUMP_LAND_SCALE_X1000) * t)
+        offY = Math.round((BOSS_JUMP_COMPRESS_OFFY_PX | 0) * (1 - t) * 0.7)
+    }
+
+    sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffY", offY | 0)
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", scaleX1000 | 0)
+
+    enemy.vx = 0
+    enemy.vy = 0
+    _enemySetIntent(enemy, "bossJump")
+    return true
+}
+
+function _bossIntroHeroHasOtherLockOwner(hero: Sprite, hi: number, nowMs: number): boolean {
+    if (!hero) return false
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_CONTROLLING_SPELL)) return true
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return true
+    const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
+    if (agiState === AGI_STATE.ARMED || agiState === AGI_STATE.EXECUTING) return true
+    const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
+    if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) return true
+    const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
+    if (landEnd > 0 && nowMs < landEnd) return true
+    if (supportPuzzleActive && supportPuzzleActive[hi]) return true
+    if ((sprites.readDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY) | 0) !== 0) return true
+    return false
+}
+
+function _bossIntroSetHeroLock(flag: boolean): void {
+    const nowMs = game.runtime() | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) continue
+        const lockedNow = sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)
+        if (flag) {
+            sprites.setDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY, 1)
+            if (!lockedNow) lockHeroControls(hi)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+            hero.vx = 0
+            hero.vy = 0
+        } else {
+            const hadLock = (sprites.readDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY) | 0) !== 0
+            if (!hadLock) continue
+            sprites.setDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY, 0)
+            if (!lockedNow) continue
+            const busyUntil = getHeroBusyUntil(hi) | 0
+            if (busyUntil > nowMs) continue
+            if (_bossIntroHeroHasOtherLockOwner(hero, hi, nowMs)) continue
+            unlockHeroControls(hi)
+        }
+    }
+}
+
+function _bossIntroHeroBoundsAt(hero: Sprite, x: number, y: number) {
+    const dims = _readSpriteColliderDims(hero)
+    const halfW = (dims.w | 0) >> 1
+    const halfH = (dims.h | 0) >> 1
+    const offY = _heroCollisionOffsetY(hero) | 0
+    const cx = x | 0
+    const cy = ((y | 0) + offY) | 0
+    return {
+        left: (cx - halfW) | 0,
+        right: (cx + halfW - 1) | 0,
+        top: (cy - halfH) | 0,
+        bottom: (cy + halfH - 1) | 0
+    }
+}
+
+function _bossIntroHeroCanStandAt(hero: Sprite, x: number, y: number): boolean {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return true
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+    const tile = WORLD_TILE_SIZE | 0
+    if (rows <= 0 || cols <= 0 || tile <= 0) return true
+    const worldW = (cols * tile) | 0
+    const worldH = (rows * tile) | 0
+    const b = _bossIntroHeroBoundsAt(hero, x | 0, y | 0)
+    if (b.left < 0 || b.top < 0 || b.right >= worldW || b.bottom >= worldH) return false
+    if (_boxOverlapsWorldCollisionBounds(b.left, b.right, b.top, b.bottom)) return false
+    if (_boxOverlapsDecorSolidsBounds(b.left, b.right, b.top, b.bottom)) return false
+    return true
+}
+
+function _bossIntroBuildDirOrder(prefDr: number, prefDc: number): number[][] {
+    const dirs: number[][] = [
+        [-1, 0], [1, 0], [0, -1], [0, 1],
+        [-1, -1], [-1, 1], [1, -1], [1, 1]
+    ]
+    const out: number[][] = []
+    const usePref = (prefDr | 0) !== 0 || (prefDc | 0) !== 0
+    let start = Math.randomRange(0, dirs.length - 1) | 0
+    if (usePref) {
+        for (let i = 0; i < dirs.length; i++) {
+            const d = dirs[i]
+            if ((d[0] | 0) === (prefDr | 0) && (d[1] | 0) === (prefDc | 0)) {
+                out.push([d[0] | 0, d[1] | 0])
+                dirs.splice(i, 1)
+                break
+            }
+        }
+        if (dirs.length > 0) start = Math.randomRange(0, dirs.length - 1) | 0
+    }
+    for (let i = 0; i < dirs.length; i++) {
+        const d = dirs[(start + i) % dirs.length]
+        out.push([d[0] | 0, d[1] | 0])
+    }
+    return out
+}
+
+function _bossIntroPickKnockTarget(hero: Sprite, sourceX: number, sourceY: number, tilesAway: number): { x: number, y: number } {
+    const tile = WORLD_TILE_SIZE | 0
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0 || tile <= 0) {
+        return { x: hero.x | 0, y: hero.y | 0 }
+    }
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0)
+    if (rows <= 0 || cols <= 0) return { x: hero.x | 0, y: hero.y | 0 }
+
+    const feet = _heroFeetPointForEnemyTarget(hero)
+    let baseR = Math.idiv(feet.y | 0, tile) | 0
+    let baseC = Math.idiv(feet.x | 0, tile) | 0
+    if (baseR < 0) baseR = 0
+    else if (baseR >= rows) baseR = rows - 1
+    if (baseC < 0) baseC = 0
+    else if (baseC >= cols) baseC = cols - 1
+
+    const srcR = Math.idiv(sourceY | 0, tile) | 0
+    const srcC = Math.idiv(sourceX | 0, tile) | 0
+    const prefDr = baseR === srcR ? 0 : (baseR > srcR ? 1 : -1)
+    const prefDc = baseC === srcC ? 0 : (baseC > srcC ? 1 : -1)
+    const dirOrder = _bossIntroBuildDirOrder(prefDr | 0, prefDc | 0)
+    const dist = Math.max(1, tilesAway | 0) | 0
+
+    for (let i = 0; i < dirOrder.length; i++) {
+        const dr = dirOrder[i][0] | 0
+        const dc = dirOrder[i][1] | 0
+        const rr = (baseR + dr * dist) | 0
+        const cc = (baseC + dc * dist) | 0
+        if (rr < 0 || cc < 0 || rr >= rows || cc >= cols) continue
+        const tx = _dunColToX(cc | 0)
+        const ty = _dunRowToY(rr | 0)
+        if (_bossIntroHeroCanStandAt(hero, tx | 0, ty | 0)) {
+            return { x: tx | 0, y: ty | 0 }
+        }
+    }
+
+    const curX = _dunColToX(baseC | 0)
+    const curY = _dunRowToY(baseR | 0)
+    return { x: curX | 0, y: curY | 0 }
+}
+
+function _bossIntroStartHeroKnockdown(hi: number, hero: Sprite, sourceX: number, sourceY: number, nowMs: number): void {
+    if (!hero) return
+    if ((sprites.readDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY) | 0) !== 0) return
+    sprites.setDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY, 0)
+
+    const fromX = hero.x | 0
+    const fromY = hero.y | 0
+    const target = _bossIntroPickKnockTarget(hero, sourceX | 0, sourceY | 0, BOSS_KNOCK_TILE_DIST | 0)
+    let toX = target.x | 0
+    let toY = target.y | 0
+    if (!_bossIntroHeroCanStandAt(hero, toX | 0, toY | 0)) {
+        toX = fromX | 0
+        toY = fromY | 0
+    }
+
+    let dx = (toX - fromX) | 0
+    let dy = (toY - fromY) | 0
+    if (dx === 0 && dy === 0) {
+        dx = (fromX - (sourceX | 0)) | 0
+        dy = (fromY - (sourceY | 0)) | 0
+    }
+    let mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag < 0.001) mag = 1
+    const dirX = dx / mag
+    const dirY = dy / mag
+    const bounceExtraPx = Math.max(4, Math.round((WORLD_TILE_SIZE | 0) * BOSS_KNOCK_BOUNCE_EXTRA_PCT)) | 0
+    let bounceX = Math.round((toX | 0) + dirX * bounceExtraPx) | 0
+    let bounceY = Math.round((toY | 0) + dirY * bounceExtraPx) | 0
+    if (!_bossIntroHeroCanStandAt(hero, bounceX | 0, bounceY | 0)) {
+        bounceX = toX | 0
+        bounceY = toY | 0
+    }
+
+    const airEnd = (nowMs + (BOSS_KNOCK_AIR_MS | 0)) | 0
+    const bounceEnd = (airEnd + (BOSS_KNOCK_BOUNCE_MS | 0)) | 0
+    const endMs = (bounceEnd + (BOSS_KNOCK_LAND_HOLD_MS | 0)) | 0
+
+    const ghostPrev = hero.isFlagSet(sprites.Flag.Ghost) ? 1 : 0
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_GHOST_PREV, ghostPrev | 0)
+    hero.setFlag(sprites.Flag.Ghost, true)
+
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY, 1)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_STAGE_KEY, 1)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_START_MS, nowMs | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_AIR_END_MS, airEnd | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_END_MS, bounceEnd | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_END_MS, endMs | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_FROM_X, fromX | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_FROM_Y, fromY | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_TO_X, toX | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_TO_Y, toY | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_X, bounceX | 0)
+    sprites.setDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_Y, bounceY | 0)
+
+    lockHeroControls(hi)
+    setHeroBusyUntil(hi, endMs | 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+    hero.vx = 0
+    hero.vy = 0
+
+    const dir = _enemyDirFromVector(dx, dy)
+    sprites.setDataString(hero, "dir", dir)
+    setHeroPhaseString(hi, "hurt", "bossKnockdown")
+    sprites.setDataNumber(hero, HERO_DATA.PhaseStartMs, nowMs | 0)
+    sprites.setDataNumber(hero, HERO_DATA.PhaseDurationMs, Math.max(1, (endMs - nowMs) | 0))
+    sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, 4)
+    sprites.setDataNumber(hero, "__atkVisOffX", 0)
+    sprites.setDataNumber(hero, "__atkVisOffY", 0)
+    sprites.setDataNumber(hero, "__atkVisScaleX1000", 0)
+}
+
+function _bossIntroUpdateHeroKnockdown(nowMs: number): void {
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if ((sprites.readDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY) | 0) === 0) continue
+
+        const startMs = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_START_MS) | 0
+        const airEnd = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_AIR_END_MS) | 0
+        const bounceEnd = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_END_MS) | 0
+        const endMs = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_END_MS) | 0
+        const fromX = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_FROM_X) | 0
+        const fromY = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_FROM_Y) | 0
+        const toX = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_TO_X) | 0
+        const toY = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_TO_Y) | 0
+        const bounceX = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_X) | 0
+        const bounceY = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_BOUNCE_Y) | 0
+
+        if (startMs <= 0 || endMs <= 0 || nowMs >= endMs) {
+            hero.x = bounceX | 0
+            hero.y = bounceY | 0
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY, 0)
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_STAGE_KEY, 0)
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, HERO_FRAME_COL_OVERRIDE_NONE)
+            sprites.setDataNumber(hero, "__atkVisOffX", 0)
+            sprites.setDataNumber(hero, "__atkVisOffY", 0)
+            sprites.setDataNumber(hero, "__atkVisScaleX1000", 0)
+            const ghostPrev = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_GHOST_PREV) | 0
+            hero.setFlag(sprites.Flag.Ghost, ghostPrev !== 0)
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_GHOST_PREV, 0)
+            if ((sprites.readDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY) | 0) === 0) {
+                const busyUntil = getHeroBusyUntil(hi) | 0
+                const shouldClearBusy = busyUntil <= nowMs || busyUntil === (endMs | 0)
+                if (shouldClearBusy) setHeroBusyUntil(hi, 0)
+                if (shouldClearBusy && !_bossIntroHeroHasOtherLockOwner(hero, hi, nowMs | 0)) unlockHeroControls(hi)
+            }
+            continue
+        }
+
+        let posX = hero.x | 0
+        let posY = hero.y | 0
+        let offY = 0
+
+        if (nowMs < airEnd) {
+            const t = Math.min(1, Math.max(0, (nowMs - startMs) / Math.max(1, (airEnd - startMs))))
+            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI)
+            posX = Math.round(fromX + (toX - fromX) * ease) | 0
+            posY = Math.round(fromY + (toY - fromY) * ease) | 0
+            offY = Math.round(-Math.sin(t * Math.PI) * (BOSS_KNOCK_ARC_PX | 0)) | 0
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_STAGE_KEY, 1)
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, 4)
+        } else if (nowMs < bounceEnd) {
+            const t = Math.min(1, Math.max(0, (nowMs - airEnd) / Math.max(1, (bounceEnd - airEnd))))
+            const ease = Math.sin(t * Math.PI * 0.5)
+            posX = Math.round(toX + (bounceX - toX) * ease) | 0
+            posY = Math.round(toY + (bounceY - toY) * ease) | 0
+            offY = Math.round(-Math.sin(t * Math.PI) * (BOSS_KNOCK_BOUNCE_ARC_PX | 0)) | 0
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_STAGE_KEY, 2)
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, 4)
+        } else {
+            posX = bounceX | 0
+            posY = bounceY | 0
+            const t = Math.min(1, Math.max(0, (nowMs - bounceEnd) / Math.max(1, (endMs - bounceEnd))))
+            offY = Math.round((1 - t) * (BOSS_KNOCK_BOUNCE_ARC_PX | 0) * -0.4) | 0
+            sprites.setDataNumber(hero, HERO_BOSS_KNOCK_STAGE_KEY, 3)
+            sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, 5)
+        }
+
+        hero.x = posX | 0
+        hero.y = posY | 0
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        hero.vx = 0
+        hero.vy = 0
+        sprites.setDataNumber(hero, "__atkVisOffX", 0)
+        sprites.setDataNumber(hero, "__atkVisOffY", offY | 0)
+        sprites.setDataNumber(hero, "__atkVisScaleX1000", 0)
+    }
+}
+
+function _bossIntroKnockdownHeroes(enemy: Sprite, nowMs: number): void {
+    const sourceX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X) | 0
+    const sourceY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST)) continue
+        _bossIntroStartHeroKnockdown(hi, hero, sourceX | 0, sourceY | 0, nowMs | 0)
+    }
+}
+
+function _bossIntroCameraHoldInfo(): any {
+    const nowMs = game.runtime() | 0
+
+    let shadowX = _bossIntroShadowX | 0
+    let shadowY = _bossIntroShadowY | 0
+    let bossUntil = (_bossIntroShadowUntilMs | 0) > nowMs ? (_bossIntroShadowUntilMs | 0) : 0
+
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        if (!_enemyIsBoss(e)) continue
+        const endMs = sprites.readDataNumber(e, ENEMY_BOSS_JUMP_END_MS) | 0
+        const active = sprites.readDataNumber(e, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0
+        if (!active && endMs <= nowMs) continue
+        const toX = sprites.readDataNumber(e, ENEMY_BOSS_JUMP_TO_X) | 0
+        const toY = sprites.readDataNumber(e, ENEMY_BOSS_JUMP_TO_Y) | 0
+        if (endMs > bossUntil) {
+            bossUntil = endMs | 0
+            if (toX || toY) {
+                shadowX = toX | 0
+                shadowY = toY | 0
+            }
+        } else if ((!shadowX && !shadowY) && (toX || toY)) {
+            shadowX = toX | 0
+            shadowY = toY | 0
+        }
+    }
+
+    if ((!shadowX && !shadowY) && (_dunPadTileR | 0) >= 0 && (_dunPadTileC | 0) >= 0) {
+        shadowX = _dunColToX(_dunPadTileC | 0)
+        shadowY = _dunRowToY(_dunPadTileR | 0)
+    }
+
+    let heroUntil = 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        const endMs = sprites.readDataNumber(hero, HERO_BOSS_KNOCK_END_MS) | 0
+        if (endMs > heroUntil) heroUntil = endMs | 0
+    }
+
+    const holdUntilMs = Math.max(bossUntil | 0, heroUntil | 0) | 0
+    if (holdUntilMs <= nowMs) return { active: false }
+    return { active: true, holdUntilMs: holdUntilMs | 0, shadowX: shadowX | 0, shadowY: shadowY | 0 }
+}
+
+function _enemyFindBossForIntro(evt: any): Sprite | null {
+    let wantId = String(evt?.monsterId || "").trim().toLowerCase()
+    const ex = (evt && typeof evt.x === "number") ? (evt.x | 0) : NaN
+    const ey = (evt && typeof evt.y === "number") ? (evt.y | 0) : NaN
+    let best: Sprite | null = null
+    let bestD2 = 1e18
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+        if (!_enemyIsBoss(e)) continue
+        if (wantId) {
+            const id = (sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || "").toLowerCase()
+            if (id && id !== wantId && id.indexOf(wantId) < 0 && wantId.indexOf(id) < 0) continue
+        }
+        if (Number.isFinite(ex) && Number.isFinite(ey)) {
+            const dx = (e.x | 0) - (ex | 0)
+            const dy = (e.y | 0) - (ey | 0)
+            const d2 = (dx * dx) + (dy * dy)
+            if (d2 < bestD2) {
+                bestD2 = d2
+                best = e
+            }
+        } else if (!best) {
+            best = e
+        }
+    }
+    return best
+}
+
+function _enemyBossStartIntroJumpForEvent(evt: any): any {
+    const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    const enemy = _enemyFindBossForIntro(evt)
+    if (!enemy) return { ok: false }
+    const target = _enemyBossPickIntroJumpTarget(enemy)
+    if (!target) return { ok: false }
+    return _enemyBossStartIntroJump(enemy, target.centerX | 0, target.centerY | 0, nowMs | 0)
+}
+
+function _enemyBossPickTeleportNearPad(enemy: Sprite): { centerX: number, centerY: number } | null {
     const padR = _dunPadTileR | 0
     const padC = _dunPadTileC | 0
     if (padR < 0 || padC < 0) return null
@@ -63022,6 +65526,10 @@ function _enemyBossPickTeleportNearPad(): { x: number, y: number } | null {
     const rows = _dunWorldRows() | 0
     const cols = _dunWorldCols() | 0
     if (rows <= 0 || cols <= 0) return null
+
+    const dims = _enemyGetColliderDims(enemy)
+    const cw = dims.w | 0
+    const ch = dims.h | 0
 
     const minDist = ENEMY_BOSS_STUCK_TELEPORT_MIN_PAD_DIST | 0
     const maxDist = ENEMY_BOSS_STUCK_TELEPORT_MAX_PAD_DIST | 0
@@ -63040,19 +65548,41 @@ function _enemyBossPickTeleportNearPad(): { x: number, y: number } | null {
             const dist = (Math.abs((rr | 0) - padR) + Math.abs((cc | 0) - padC)) | 0
             if (dist < (minDist | 0) || dist > (maxDist | 0)) continue
             if (isPadTile(rr | 0, cc | 0)) continue
-            if (_tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) continue
+            if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0)) continue
             if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
             candidates.push({ r: rr | 0, c: cc | 0 })
         }
     }
 
-    if (!candidates.length) return null
+    if (!candidates.length) {
+        for (let rr = 1; rr < (rows - 1); rr++) {
+            for (let cc = 1; cc < (cols - 1); cc++) {
+                if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0)) continue
+                if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
+                return { centerX: _dunColToX(cc | 0), centerY: _dunRowToY(rr | 0) }
+            }
+        }
+        return null
+    }
+
     const pick = candidates[Math.randomRange(0, (candidates.length - 1) | 0) | 0]
-    return { x: _dunColToX(pick.c | 0), y: _dunRowToY(pick.r | 0) }
+    return { centerX: _dunColToX(pick.c | 0), centerY: _dunRowToY(pick.r | 0) }
 }
 
 function _enemyBossUpdateStuck(enemy: Sprite, nowMs: number): boolean {
     if (!_enemyIsBoss(enemy)) return false
+    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return false
+    const dims = _enemyGetColliderDims(enemy)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const tile = WORLD_TILE_SIZE | 0
+    let forceTeleport = false
+    if (tile > 0) {
+        const r = Math.idiv((feet.centerY | 0), tile) | 0
+        const c = Math.idiv((feet.centerX | 0), tile) | 0
+        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0)) {
+            forceTeleport = true
+        }
+    }
     const intended = (sprites.readDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE) | 0) !== 0
     const lastMs = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS) | 0
     const lastX = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_X)
@@ -63081,13 +65611,14 @@ function _enemyBossUpdateStuck(enemy: Sprite, nowMs: number): boolean {
     const teleportCooldown = ENEMY_BOSS_STUCK_TELEPORT_COOLDOWN_MS | 0
     const canTeleport = (nowMs - lastTeleport) >= teleportCooldown
 
-    if (intended && stuckMs >= (ENEMY_BOSS_STUCK_TELEPORT_MS | 0) && canTeleport) {
-        const spot = _enemyBossPickTeleportNearPad()
+    if ((forceTeleport || (intended && stuckMs >= (ENEMY_BOSS_STUCK_TELEPORT_MS | 0))) && canTeleport) {
+        const spot = _enemyBossPickTeleportNearPad(enemy)
         if (spot) {
-            enemy.x = spot.x | 0
-            enemy.y = spot.y | 0
+            _enemyBossMoveFeetCenterTo(enemy, spot.centerX | 0, spot.centerY | 0)
             enemy.vx = 0
             enemy.vy = 0
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x)
+            sprites.setDataNumber(enemy, ENEMY_DATA.HOME_Y, enemy.y)
             sprites.setDataNumber(enemy, ENEMY_AI_BOSS_TELEPORT_LAST_MS, nowMs | 0)
             sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_MS, 0)
             sprites.setDataNumber(enemy, ENEMY_AI_BOSS_STUCK_LAST_MS, nowMs | 0)
@@ -65857,6 +68388,17 @@ function updateEnemyHoming(nowMs: number) {
 
         if (_enemyTickDeathCleanupIfNeeded(ei, enemy, nowMs)) continue
 
+        const bossJump = _enemyBossUpdateIntroJump(enemy, nowMs | 0)
+        _enemyAiTraceAdd(trace, "bossJump", bossJump)
+        if (bossJump) {
+
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "bossJump")
+
+            continue
+
+        }
+
 
 
         // Phase/knockback short-circuits
@@ -68267,6 +70809,40 @@ function updateHeroControlLocks(now: number) {
 
         }
 
+        const bossKnock = (sprites.readDataNumber(hero, HERO_BOSS_KNOCK_ACTIVE_KEY) | 0) !== 0
+        if (bossKnock) {
+
+            if (!lockedNow) lockHeroControls(i)
+
+            hero.vx = 0
+
+            hero.vy = 0
+
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+            continue
+
+        }
+
+        const bossIntroLock = (sprites.readDataNumber(hero, HERO_BOSS_INTRO_LOCK_KEY) | 0) !== 0
+        if (bossIntroLock) {
+
+            if (!lockedNow) lockHeroControls(i)
+
+            hero.vx = 0
+
+            hero.vy = 0
+
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+            continue
+
+        }
+
 
 
         // Strength charging owns the lock. Never auto-unlock, never allow velocity.
@@ -68825,6 +71401,8 @@ if (SHOP_MODE_ACTIVE) {
 
 
     updateHeroControlLocks(now)
+
+    _bossIntroUpdateHeroKnockdown(now)
 
     updateHeroMovementPhase(now)
 
@@ -70933,6 +73511,28 @@ if (typeof globalThis !== "undefined") {
             }
 
             return spawnEnemyOfKind(id, sx | 0, sy | 0, !!elite)
+        }
+
+        internals.consumeBossIntroEvent = function (): any {
+            const evt = _dunBossIntroEvent
+            if (evt) _dunBossIntroEvent = null
+            return evt || null
+        }
+
+        internals.setEnginePaused = function (flag: boolean, reason?: string): void {
+            _engineSetPaused(!!flag, reason)
+        }
+
+        internals.startBossIntroJump = function (evt: any): any {
+            return _enemyBossStartIntroJumpForEvent(evt)
+        }
+
+        internals.setBossIntroHeroLock = function (flag: boolean): void {
+            _bossIntroSetHeroLock(!!flag)
+        }
+
+        internals.getBossIntroCameraHoldInfo = function (): any {
+            return _bossIntroCameraHoldInfo()
         }
 
 
@@ -74406,7 +77006,11 @@ function _uiGetSafeForSpend(hi: number): { ok: boolean, reason: string } {
 
         if (!_dunObjectiveDone) return { ok: false, reason: "combat-not-cleared" }
 
-        if (!_dunIsPadPowered()) return { ok: false, reason: "pad-not-powered" }
+        const doorReady = _dunFloorUsesDoorExit() && _dunDoorState === "open"
+        if (!_dunIsPadPowered() && !doorReady) {
+            const reason = _dunFloorUsesDoorExit() ? "door-not-ready" : "pad-not-powered"
+            return { ok: false, reason }
+        }
 
         if ((_dunCountLiveEnemies() | 0) != 0) return { ok: false, reason: "enemies-alive" }
 
@@ -75312,6 +77916,31 @@ g.__heUiCommand = function (cmd: any): any {
         const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
         const r = _heroDeath_contribute(String(prof || ""), pid | 0)
         return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "teleportFloor" || t === "teleportShop") {
+        if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        if (!DUNGEON_MODE_ACTIVE) return { ok: false, reason: "no-dungeon", snapshot: g.__heGetUiSnapshot(pid) }
+        const floorRaw = (cmd && typeof cmd.floorIndex === "number") ? (cmd.floorIndex | 0) : (_dunFloorIndex | 0)
+        let kindRaw = cmd && typeof cmd.kind === "string" ? String(cmd.kind || "") : ""
+        if (t === "teleportShop") kindRaw = "shop"
+        kindRaw = kindRaw.trim().toLowerCase()
+        let kind = ""
+        if (kindRaw === "shop" || kindRaw === "safe") kind = DUNGEON_KIND_SHOP
+        else if (kindRaw === "combat" || kindRaw === "fight") kind = DUNGEON_KIND_COMBAT
+        else if (kindRaw === "story") kind = DUNGEON_KIND_STORY
+        else if (kindRaw === "treasure" || kindRaw === "relic") kind = DUNGEON_KIND_TREASURE
+        else if (kindRaw === "hall" || kindRaw === "hallof_enemies") kind = DUNGEON_KIND_HALL
+        else if (kindRaw === "entrance") kind = DUNGEON_KIND_ENTRANCE
+        else if (kindRaw) kind = String(kindRaw || "")
+        if (!kind) kind = _dunPickNextFloorKind(floorRaw | 0)
+        if (!kind) kind = DUNGEON_KIND_COMBAT
+
+        _dunTeleportCommitAtMs = 0
+        _dunAllReadySinceMs = 0
+        _dunRuneSpinSinceMs = 0
+        relic_cancelNextFloorChoiceIfPending("dev-teleport")
+        _dunEnterFloor(Math.max(0, floorRaw | 0), kind, game.runtime() | 0)
+        return { ok: true, reason: "teleport", snapshot: g.__heGetUiSnapshot(pid) }
     }
 
 

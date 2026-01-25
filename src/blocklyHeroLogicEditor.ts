@@ -1594,6 +1594,124 @@ export function syncBlocklyXmlFromStorage(): void {
   } catch {}
 }
 
+const TOWER_TRIAL_REQ_LABEL: Record<string, string> = {
+  noHardcodedTraits: "Traits must use variables or sensors",
+  noRepeatPerButton: "No button can repeat the same move twice",
+  dynamicFamilyOneButton: "At least one button must change family",
+  noSingleEnemyBlocks: "Single-enemy blocks are not allowed",
+  capOnlyFunctions: "Caps can only call functions, then return",
+};
+
+const TOWER_TRIAL_BTN_LABEL: Record<string, string> = {
+  "A": "Q",
+  "B": "W",
+  "A+B": "E",
+  "R": "R",
+};
+
+let _towerTrialStatusInterval: number | null = null;
+let _towerTrialStatusWasTrial = false;
+
+function _heTowerTrialButtonsLabel(buttons: string[] | null | undefined): string {
+  if (!buttons || !buttons.length) return "";
+  const labels: string[] = [];
+  for (let i = 0; i < buttons.length; i++) {
+    const b = String(buttons[i] || "");
+    labels.push(TOWER_TRIAL_BTN_LABEL[b] || b);
+  }
+  return labels.join(", ");
+}
+
+function _heTowerTrialReqSummary(ids: string[] | null | undefined): string {
+  if (!ids || !ids.length) return "";
+  const labels: string[] = [];
+  for (let i = 0; i < ids.length; i++) {
+    const id = String(ids[i] || "");
+    labels.push(TOWER_TRIAL_REQ_LABEL[id] || id);
+  }
+  return labels.join(" | ");
+}
+
+function _heUpdateTowerTrialStatus(): void {
+  const st = document.getElementById("he-blockly-status") as HTMLSpanElement | null;
+  if (!st) return;
+
+  const g: any = globalThis as any;
+  const getStatus = g?.__heTowerTrialGetStatus;
+  if (typeof getStatus !== "function") {
+    if (_towerTrialStatusWasTrial) st.textContent = "";
+    _towerTrialStatusWasTrial = false;
+    return;
+  }
+
+  let snap: any = null;
+  try {
+    snap = getStatus();
+  } catch {
+    snap = null;
+  }
+
+  const trialRelevant = !!snap && !!snap.trialRequired && !!snap.inShopFloor;
+  if (!trialRelevant) {
+    if (_towerTrialStatusWasTrial) st.textContent = "";
+    _towerTrialStatusWasTrial = false;
+    return;
+  }
+
+  const prof = _getProfileName();
+  const profSnap = snap?.profiles?.[prof] || null;
+  const parts: string[] = [];
+  parts.push(`Trial F${snap?.floorIndex ?? "?"}`);
+  const reqSummary = _heTowerTrialReqSummary(snap?.requirementIds);
+  if (reqSummary) parts.push(reqSummary);
+
+  if (!snap?.active) {
+    parts.push("Talk to the Announcer to start");
+  } else if (!profSnap) {
+    parts.push("Trial running for party");
+  } else if (profSnap.blockingIssue) {
+    parts.push(String(profSnap.blockingIssue || "Fix Blockly issues"));
+  } else {
+    const missing = _heTowerTrialButtonsLabel(profSnap.missingButtons);
+    if (missing) parts.push(`Test: ${missing}`);
+    const repeats = _heTowerTrialButtonsLabel(profSnap.repeatButtons);
+    if (repeats) parts.push(`Repeats: ${repeats}`);
+    if (!profSnap.dynamicOk) {
+      parts.push(profSnap.needsPhasePress ? "Use a button in both phases" : "Make one button change family");
+    }
+    const reqIds: string[] = snap?.requirementIds || [];
+    if (reqIds.indexOf("dynamicFamilyOneButton") >= 0 && snap?.active) {
+      const phaseNum = ((snap.phaseIndex | 0) + 1) | 0;
+      parts.push(`Phase ${phaseNum}`);
+    }
+    if (snap?.completed) parts.push("Complete");
+  }
+
+  st.textContent = parts.join(" - ");
+  _towerTrialStatusWasTrial = true;
+}
+
+function _heStartTowerTrialStatusLoop(): void {
+  if (_towerTrialStatusInterval != null) {
+    try { clearInterval(_towerTrialStatusInterval); } catch {}
+    _towerTrialStatusInterval = null;
+  }
+  _heUpdateTowerTrialStatus();
+  _towerTrialStatusInterval = window.setInterval(() => _heUpdateTowerTrialStatus(), 900);
+}
+
+function _heStopTowerTrialStatusLoop(): void {
+  if (_towerTrialStatusInterval != null) {
+    try { clearInterval(_towerTrialStatusInterval); } catch {}
+    _towerTrialStatusInterval = null;
+  }
+  if (_towerTrialStatusWasTrial) {
+    const st = document.getElementById("he-blockly-status") as HTMLSpanElement | null;
+    if (st) st.textContent = "";
+    _towerTrialStatusWasTrial = false;
+  }
+}
+
 export function openBlocklyHeroLogicEditor(): void {
   _ensureDomInstalled();
 
@@ -1605,6 +1723,7 @@ export function openBlocklyHeroLogicEditor(): void {
   profSpan.textContent = prof || "(no profile)";
 
   const ws = _ensureWorkspace();
+  _heStartTowerTrialStatusLoop();
   // Must resize after becoming visible
   setTimeout(() => {
     try {
@@ -1631,6 +1750,7 @@ export function closeBlocklyHeroLogicEditor(): void {
       try { B?.DropDownDiv?.hide?.(); } catch {}
     }
   } catch {}
+  _heStopTowerTrialStatusLoop();
   if (overlay) overlay.style.display = "none";
 }
 

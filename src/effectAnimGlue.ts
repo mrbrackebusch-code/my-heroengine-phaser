@@ -13,6 +13,8 @@ const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
 const EFFECT_FRAME_WINDOW_MS_KEY = "effectFrameWindowMs";
 const EFFECT_FRAME_WINDOW_START_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_KEY = "effectFrameIndex";
+const EFFECT_FRAME_LIST_KEY = "effectFrameList";
+const EFFECT_YOYO_KEY = "effectYoyo";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
 const LAST_EFFECT_SKIN_KEY = "__effectLastSkin";
@@ -51,6 +53,50 @@ function selectCenteredFrameWindow(
         end = total - 1;
     }
     return { frames: frames.slice(start, end + 1), start, end };
+}
+
+function _parseFrameList(raw: unknown, maxFrames: number): number[] | null {
+    if (raw == null) return null;
+    const max = Math.max(0, maxFrames | 0);
+    if (Array.isArray(raw)) {
+        const out: number[] = [];
+        for (const v of raw) {
+            const n = (typeof v === "number") ? v : parseInt(String(v || ""), 10);
+            if (!Number.isFinite(n)) continue;
+            const idx = Math.max(0, Math.min(max - 1, n | 0));
+            out.push(idx);
+        }
+        return out.length ? out : null;
+    }
+    if (typeof raw === "number") {
+        if (!Number.isFinite(raw)) return null;
+        const idx = Math.max(0, Math.min(max - 1, raw | 0));
+        return [idx];
+    }
+    const s = String(raw || "").trim();
+    if (!s) return null;
+    const out: number[] = [];
+    const tokens = s.split(/[\s,]+/);
+    for (const tok of tokens) {
+        if (!tok) continue;
+        const rangeMatch = tok.match(/^(-?\d+)\s*-\s*(-?\d+)$/);
+        if (rangeMatch) {
+            const a = parseInt(rangeMatch[1], 10);
+            const b = parseInt(rangeMatch[2], 10);
+            if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+            const step = a <= b ? 1 : -1;
+            for (let v = a; step > 0 ? v <= b : v >= b; v += step) {
+                const idx = Math.max(0, Math.min(max - 1, v | 0));
+                out.push(idx);
+            }
+            continue;
+        }
+        const n = parseInt(tok, 10);
+        if (!Number.isFinite(n)) continue;
+        const idx = Math.max(0, Math.min(max - 1, n | 0));
+        out.push(idx);
+    }
+    return out.length ? out : null;
 }
 
 function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
@@ -330,45 +376,73 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
     const windowMs = (typeof windowMsRaw === "number") ? windowMsRaw : Number(windowMsRaw);
     const windowStartRaw = data.get(EFFECT_FRAME_WINDOW_START_KEY);
     const windowStart = (typeof windowStartRaw === "number") ? windowStartRaw : Number(windowStartRaw);
+    const frameListRaw = data.get(EFFECT_FRAME_LIST_KEY);
+    const frameList = _parseFrameList(frameListRaw, resolved.frameIndices.length);
+    const yoyoRaw = data.get(EFFECT_YOYO_KEY);
+    let yoyo = false;
+    if (typeof yoyoRaw === "boolean") yoyo = yoyoRaw;
+    else if (typeof yoyoRaw === "number") yoyo = yoyoRaw !== 0;
+    else if (typeof yoyoRaw === "string") {
+        const s = yoyoRaw.trim().toLowerCase();
+        yoyo = s === "1" || s === "true" || s === "yes" || s === "on";
+    }
 
     let useFrames = resolved.frameIndices;
     let frameWindowCount = 0;
     let frameWindowStart = 0;
     let frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
-
-    if (Number.isFinite(windowMs) && windowMs > 0 && frameRate > 0) {
-        const calc = Math.floor((windowMs * frameRate) / 1000);
-        frameWindowCount = Math.max(1, Math.min(useFrames.length, calc | 0));
-        if (frameWindowCount > 0 && frameWindowCount < useFrames.length) {
-            const useStartOverride = Number.isFinite(windowStart) && (windowStart | 0) >= 0;
-            if (useStartOverride) {
-                const startIdx = Math.max(0, Math.min(useFrames.length - 1, windowStart | 0));
-                const endIdx = Math.max(startIdx, Math.min(useFrames.length - 1, (startIdx + frameWindowCount - 1) | 0));
-                useFrames = useFrames.slice(startIdx, endIdx + 1);
-                frameWindowStart = startIdx | 0;
-                frameWindowEnd = endIdx | 0;
+    let usingFrameList = false;
+    if (frameList && frameList.length) {
+        const mapped: number[] = [];
+        for (const idx of frameList) {
+            if (!(idx >= 0)) continue;
+            if (idx >= resolved.frameIndices.length) continue;
+            mapped.push(resolved.frameIndices[idx]);
+        }
+        if (mapped.length) {
+            useFrames = mapped;
+            usingFrameList = true;
+            frameWindowCount = mapped.length | 0;
+            frameWindowStart = 0;
+            frameWindowEnd = mapped.length ? (mapped.length - 1) : 0;
+        }
+    }
+    if (!usingFrameList) {
+        if (Number.isFinite(windowMs) && windowMs > 0 && frameRate > 0) {
+            const calc = Math.floor((windowMs * frameRate) / 1000);
+            frameWindowCount = Math.max(1, Math.min(useFrames.length, calc | 0));
+            if (frameWindowCount > 0 && frameWindowCount < useFrames.length) {
+                const useStartOverride = Number.isFinite(windowStart) && (windowStart | 0) >= 0;
+                if (useStartOverride) {
+                    const startIdx = Math.max(0, Math.min(useFrames.length - 1, windowStart | 0));
+                    const endIdx = Math.max(startIdx, Math.min(useFrames.length - 1, (startIdx + frameWindowCount - 1) | 0));
+                    useFrames = useFrames.slice(startIdx, endIdx + 1);
+                    frameWindowStart = startIdx | 0;
+                    frameWindowEnd = endIdx | 0;
+                } else {
+                    const picked = selectCenteredFrameWindow(useFrames, frameWindowCount | 0);
+                    useFrames = picked.frames;
+                    frameWindowStart = picked.start | 0;
+                    frameWindowEnd = picked.end | 0;
+                }
             } else {
-                const picked = selectCenteredFrameWindow(useFrames, frameWindowCount | 0);
-                useFrames = picked.frames;
-                frameWindowStart = picked.start | 0;
-                frameWindowEnd = picked.end | 0;
+                frameWindowStart = 0;
+                frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
             }
         } else {
             frameWindowStart = 0;
             frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
         }
-    } else {
-        frameWindowStart = 0;
-        frameWindowEnd = useFrames.length ? (useFrames.length - 1) : 0;
     }
 
     const safeSkin = resolvedId.replace(/\s+/g, "_").toLowerCase();
     const dirKey = String(dir || "none").toLowerCase();
-    const animKeyBase = (frameRate === resolved.frameRate && repeat === resolved.repeat)
+    const animKeyBase = (frameRate === resolved.frameRate && repeat === resolved.repeat && !yoyo)
         ? `effect_${safeSkin}`
-        : `effect_${safeSkin}_fps${frameRate}_r${repeat}`;
-    const animKey = (useFrames.length < resolved.frameIndices.length)
-        ? `${animKeyBase}_w${useFrames.length}_s${frameWindowStart}`
+        : `effect_${safeSkin}_fps${frameRate}_r${repeat}${yoyo ? "_y" : ""}`;
+    const listKey = usingFrameList ? `_list${useFrames.join("_")}` : "";
+    const animKey = (usingFrameList || useFrames.length < resolved.frameIndices.length)
+        ? `${animKeyBase}${listKey}_w${useFrames.length}_s${frameWindowStart}`
         : animKeyBase;
 
     if (lastAnim && lastAnim === animKey && lastSkin === resolvedId && lastDir === dirKey) {
@@ -381,7 +455,8 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
             key: animKey,
             frames: mgr.generateFrameNumbers(resolved.textureKey, { frames: useFrames }),
             frameRate,
-            repeat
+            repeat,
+            yoyo
         });
     }
 
@@ -411,6 +486,8 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
             textureKey: resolved.textureKey,
             texExists,
             frameCount: resolved.frameIndices.length,
+            frameListCount: usingFrameList ? useFrames.length : 0,
+            yoyo: !!yoyo,
             fps: frameRate,
             repeat,
             played,

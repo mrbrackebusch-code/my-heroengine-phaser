@@ -70,6 +70,11 @@ const EFFECT_DEBUG_SLOW_MS = 20;
 const EFFECT_PALETTE_SAMPLE_TARGET = 20000;
 const EFFECT_PALETTE_SAMPLE_MAX_STRIDE = 8;
 const EFFECT_YIELD_EVERY_MS = 12;
+const EFFECT_SIZE_OVERRIDES: Record<string, { frameW: number; frameH: number }> = {
+    // Sword arcs sheet is authored as 12x10 on a 1500x1500 image.
+    // Despite the filename "150x125", the correct slice is 125x150.
+    "sword arcs": { frameW: 125, frameH: 150 }
+};
 
 type EffectSheetPixels = {
     data: Uint8ClampedArray;
@@ -106,8 +111,13 @@ function parseSizeFromName(name: string): { id: string; frameW: number; frameH: 
     if (suffix && !/^_aura_r\d+$/i.test(suffix)) return null;
     const id = (base + (suffix || "")).trim();
     if (!id) return null;
-    const frameW = parseInt(match[2], 10) | 0;
-    const frameH = parseInt(match[3], 10) | 0;
+    let frameW = parseInt(match[2], 10) | 0;
+    let frameH = parseInt(match[3], 10) | 0;
+    const override = EFFECT_SIZE_OVERRIDES[base.toLowerCase()];
+    if (override) {
+        frameW = override.frameW | 0;
+        frameH = override.frameH | 0;
+    }
     if (frameW <= 0 || frameH <= 0) return null;
     return { id, frameW, frameH };
 }

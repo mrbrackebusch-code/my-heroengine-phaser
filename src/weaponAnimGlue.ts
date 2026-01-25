@@ -3,13 +3,15 @@
 // and deterministic frame resolution utilities.
 
 import type Phaser from "phaser";
-import { DEBUG_NPC_PIPELINE, WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
+import { DEBUG_NPC_PIPELINE, DEBUG_WPN_PIXEL_LOG, DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY, WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
 
 import {
   type Dir4,
   type WeaponId,
   type WeaponMode,
   type WeaponSheetRef,
+  getWeaponAtlasFrameForSheet,
+  getWeaponSheetMeta,
   ensureWeaponSheetsLoaded,
   resolveWeaponLayerPair,
   resolveWeaponSheet,
@@ -31,6 +33,75 @@ const WEAPON_OFFSET_BY_DIR: Record<Dir4, { x: number; y: number }> = {
   left: { x: 0, y: 0 },
   right: { x: 0, y: 0 }
 };
+
+// Staff-family phase overrides. This keeps "which anim token to ask for"
+// centralized and independent from atlas layout details.
+const FAMILY_PHASE_OVERRIDE_BY_WEAPON: Record<string, Record<string, string>> = {
+  wisdom: { simple: "cast" },
+  support: { simple: "cast" },
+  heal: { simple: "cast" },
+  healing: { simple: "cast" },
+  intelligence: { simple: "cast" },
+  intellect: { simple: "cast" }
+};
+
+const FAMILY_PHASE_OVERRIDE_DEFAULT: Record<string, string> = {
+  wisdom: "thrust",
+  support: "thrust",
+  heal: "thrust",
+  healing: "thrust",
+  intelligence: "thrust",
+  intellect: "thrust"
+};
+
+function _normFamily(family: string): string {
+  return String(family || "").trim().toLowerCase();
+}
+
+function _isCastLikePhase(phase: string): boolean {
+  const p = String(phase || "").trim().toLowerCase();
+  return p === "cast" || p === "spellcast" || p === "spell_cast";
+}
+
+function _phaseOverrideForFamily(family: string, weaponId: string, heroPhase: string): string | null {
+  const fam = _normFamily(family);
+  if (!fam || !_isCastLikePhase(heroPhase)) return null;
+  const wid = String(weaponId || "").trim().toLowerCase();
+  const perWeapon = FAMILY_PHASE_OVERRIDE_BY_WEAPON[fam];
+  if (perWeapon && perWeapon[wid]) return perWeapon[wid];
+  return FAMILY_PHASE_OVERRIDE_DEFAULT[fam] ?? null;
+}
+
+const DEBUG_ORIGINALS_BY_FAMILY: Record<string, { weaponId: string; heroPhase: string; variant: string }> = {
+  strength: { weaponId: "arming", heroPhase: "slash", variant: "base" },
+  agility: { weaponId: "spear", heroPhase: "thrust", variant: "base" },
+  intelligence: { weaponId: "gnarled", heroPhase: "thrust", variant: "base" },
+  intellect: { weaponId: "gnarled", heroPhase: "thrust", variant: "base" },
+  wisdom: { weaponId: "simple", heroPhase: "cast", variant: "base" },
+  support: { weaponId: "simple", heroPhase: "cast", variant: "base" },
+  heal: { weaponId: "simple", heroPhase: "cast", variant: "base" },
+  healing: { weaponId: "simple", heroPhase: "cast", variant: "base" }
+};
+
+function _isAttackLikePhase(phase: string): boolean {
+  const p = String(phase || "").trim().toLowerCase();
+  if (!p) return false;
+  return (
+    p.includes("slash") ||
+    p.includes("thrust") ||
+    p.includes("cast") ||
+    p.includes("spellcast") ||
+    p.includes("shoot") ||
+    p.includes("attack_")
+  );
+}
+
+function _debugOriginalOverrideForFamily(family: string, heroPhase: string): { weaponId: string; heroPhase: string; variant: string } | null {
+  if (!DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY) return null;
+  if (!_isAttackLikePhase(heroPhase)) return null;
+  const fam = _normFamily(family);
+  return fam ? (DEBUG_ORIGINALS_BY_FAMILY[fam] ?? null) : null;
+}
 
 
 // ----------------------------------------------------------
@@ -71,6 +142,11 @@ const WPN_EXEC_YOYO_STEP_MS = 90;
 const _WEAPON_PLACED_ONCE = new Set<string>();
 const _WEAPON_HIDDEN_ONCE = new Set<string>();
 const _WPN_ROW_LOG_ONCE = new Set<string>();
+const _WPN_PIXEL_RESOLVE_ONCE = new Set<string>();
+const _WPN_PIXEL_PLACE_ONCE = new Set<string>();
+const _WPN_FAMILY_OVERRIDE_ONCE = new Set<string>();
+const _WPN_DEBUG_ORIGINALS_ONCE = new Set<string>();
+const _WPN_PIXEL_CTX_CACHE = new Map<string, { src: any; w: number; h: number; ctx: CanvasRenderingContext2D }>();
 
 
 // ------------------------------------------------------------
@@ -103,6 +179,225 @@ function _weaponDebugVerbose(): boolean {
   }
 }
 
+function _weaponPixelDebugEnabled(): boolean {
+  if (!DEBUG_WPN_PIXEL_LOG) return false;
+  return _weaponDebugEnabled() || _weaponDebugVerbose();
+}
+
+function _toHex2(v: number): string {
+  const n = Math.max(0, Math.min(255, v | 0));
+  return n.toString(16).padStart(2, "0");
+}
+
+function _rgbaToHex(r: number, g: number, b: number, a: number): string {
+  return "#" + _toHex2(r) + _toHex2(g) + _toHex2(b) + _toHex2(a);
+}
+
+function _getPixelCtxForSource(texKey: string, src: any): { ctx: CanvasRenderingContext2D; w: number; h: number } | null {
+  try {
+    const w = (src?.width ?? 0) | 0;
+    const h = (src?.height ?? 0) | 0;
+    if (w <= 0 || h <= 0) return null;
+
+    if (src && typeof src.getContext === "function") {
+      const ctx = src.getContext("2d") as CanvasRenderingContext2D | null;
+      if (ctx) return { ctx, w, h };
+    }
+
+    const cached = _WPN_PIXEL_CTX_CACHE.get(texKey);
+    if (cached && cached.src === src && cached.w === w && cached.h === h) {
+      return { ctx: cached.ctx, w: cached.w, h: cached.h };
+    }
+
+    if (typeof document === "undefined" || !document.createElement) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | null;
+    if (!ctx) return null;
+    ctx.drawImage(src, 0, 0);
+    _WPN_PIXEL_CTX_CACHE.set(texKey, { src, w, h, ctx });
+    return { ctx, w, h };
+  } catch {
+    return null;
+  }
+}
+
+type PixelPalette = {
+  total: number;
+  transparent: number;
+  unique: number;
+  uniqueOpaque: number;
+  top: Array<{ hex: string; count: number }>;
+  truncated: boolean;
+};
+
+function _rgbaFromUint(u: number): { r: number; g: number; b: number; a: number } {
+  const n = u >>> 0;
+  return {
+    r: (n >>> 24) & 0xff,
+    g: (n >>> 16) & 0xff,
+    b: (n >>> 8) & 0xff,
+    a: n & 0xff
+  };
+}
+
+function _scanFramePalette(scene: Phaser.Scene, texKey: string, frameIndex: number, frameW: number, frameH: number): {
+  palette: PixelPalette | null;
+  error?: string;
+  debug?: { srcW: number; srcH: number; cutX: number; cutY: number; frameW: number; frameH: number };
+} {
+  try {
+    const textures: any = scene?.textures;
+    if (!textures || typeof textures.exists !== "function" || !textures.exists(texKey)) {
+      return { palette: null, error: "missing_texture" };
+    }
+    const tex = textures.get(texKey);
+    if (!tex) return { palette: null, error: "missing_texture" };
+    const frame = tex.get(frameIndex);
+    if (!frame) return { palette: null, error: "missing_frame" };
+    const src: any = frame?.source?.image ?? tex?.getSourceImage?.();
+    if (!src) return { palette: null, error: "missing_source" };
+    const ctxInfo = _getPixelCtxForSource(texKey, src);
+    if (!ctxInfo) return { palette: null, error: "no_context" };
+    const cutX = (frame.cutX ?? 0) | 0;
+    const cutY = (frame.cutY ?? 0) | 0;
+    const w = Math.max(0, frameW | 0);
+    const h = Math.max(0, frameH | 0);
+    if (w === 0 || h === 0) return { palette: null, error: "bad_frame_size" };
+    const srcW = ctxInfo.w | 0;
+    const srcH = ctxInfo.h | 0;
+    if (cutX < 0 || cutY < 0 || (cutX + w) > srcW || (cutY + h) > srcH) {
+      return {
+        palette: null,
+        error: "oob",
+        debug: { srcW, srcH, cutX, cutY, frameW: w, frameH: h }
+      };
+    }
+
+    const img = ctxInfo.ctx.getImageData(cutX, cutY, w, h);
+    const data = img.data;
+    const counts = new Map<number, number>();
+    let transparent = 0;
+    const total = w * h;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i] | 0;
+      const g = data[i + 1] | 0;
+      const b = data[i + 2] | 0;
+      const a = data[i + 3] | 0;
+      if (a === 0) transparent++;
+      const key = (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const entries = Array.from(counts.entries());
+    entries.sort((a, b) => (b[1] - a[1]));
+    const maxTop = 8;
+    const top: Array<{ hex: string; count: number }> = [];
+    for (let i = 0; i < entries.length && i < maxTop; i++) {
+      const [key, count] = entries[i];
+      const c = _rgbaFromUint(key);
+      top.push({ hex: _rgbaToHex(c.r, c.g, c.b, c.a), count });
+    }
+
+    let uniqueOpaque = 0;
+    for (const [key] of entries) {
+      if ((key & 0xff) !== 0) uniqueOpaque++;
+    }
+
+    const palette: PixelPalette = {
+      total,
+      transparent,
+      unique: entries.length,
+      uniqueOpaque,
+      top,
+      truncated: entries.length > maxTop
+    };
+
+    return { palette };
+  } catch {
+    return { palette: null, error: "scan_failed" };
+  }
+}
+
+function _fmtPixelPalette(palette: PixelPalette | null): string {
+  if (!palette) return "";
+  const topStr = palette.top.map((t) => `${t.hex}:${t.count}`).join(",");
+  return (
+    "palette=uniq=" + palette.unique +
+    " uniqOpaque=" + palette.uniqueOpaque +
+    " total=" + palette.total +
+    " transparent=" + palette.transparent +
+    (topStr ? (" top=" + topStr) : "") +
+    (palette.truncated ? " truncated=1" : "")
+  );
+}
+
+function _logWeaponPixelResolveOnce(sig: string, line: string): void {
+  if (_WPN_PIXEL_RESOLVE_ONCE.has(sig)) return;
+  _WPN_PIXEL_RESOLVE_ONCE.add(sig);
+  console.log("[WPN-PIX-RESOLVE] " + line);
+}
+
+function _logWeaponPixelPlaceOnce(sig: string, line: string): void {
+  if (_WPN_PIXEL_PLACE_ONCE.has(sig)) return;
+  _WPN_PIXEL_PLACE_ONCE.add(sig);
+  console.log("[WPN-PIX-PLACE] " + line);
+}
+
+function _buildWeaponPixelLine(args: {
+  weaponId: string;
+  heroPhase: string;
+  usedPhase: string;
+  variant: string;
+  dir?: string;
+  layer: string;
+  sheetKey: string;
+  frameIndex: number;
+  frameW: number;
+  frameH: number;
+  cols: number;
+  rows: number;
+  row: number;
+  col: number;
+  atlasKey: string;
+  atlasImage?: string;
+  atlasFrame?: { x: number; y: number; w: number; h: number };
+  palette: PixelPalette | null;
+  error?: string;
+}): string {
+  const atlasFrame = args.atlasFrame
+    ? `${args.atlasFrame.x},${args.atlasFrame.y},${args.atlasFrame.w},${args.atlasFrame.h}`
+    : "";
+  const paletteStr = _fmtPixelPalette(args.palette);
+  const oob = (args as any).oobInfo;
+  const oobStr = oob
+    ? (" oob=src(" + oob.srcW + "x" + oob.srcH + ") cut(" + oob.cutX + "," + oob.cutY + ") frame(" + oob.frameW + "x" + oob.frameH + ")")
+    : "";
+  return (
+    "weaponId=" + args.weaponId +
+    " heroPhase=" + args.heroPhase +
+    " usedPhase=" + args.usedPhase +
+    (args.dir ? (" dir=" + args.dir) : "") +
+    " variant=" + args.variant +
+    " layer=" + args.layer +
+    " key=" + args.sheetKey +
+    " frame=" + (args.frameIndex | 0) +
+    " row=" + (args.row | 0) +
+    " col=" + (args.col | 0) +
+    " tile=" + (args.frameW | 0) + "x" + (args.frameH | 0) +
+    " cols=" + (args.cols | 0) +
+    " rows=" + (args.rows | 0) +
+    (args.atlasKey ? (" atlas=" + args.atlasKey) : "") +
+    (args.atlasImage ? (" atlasImg=" + args.atlasImage) : "") +
+    (atlasFrame ? (" atlasFrame=" + atlasFrame) : "") +
+    (args.error ? (" error=" + args.error) : "") +
+    oobStr +
+    (paletteStr ? (" " + paletteStr) : "")
+  );
+}
+
 function isNpcHeroSprite(sprite: Phaser.GameObjects.Sprite): boolean {
   const anySprite: any = sprite as any;
   const getData = (anySprite && typeof anySprite.getData === "function") ? anySprite.getData.bind(anySprite) : null;
@@ -128,7 +423,7 @@ function _logWeaponPlace(dbgVerbose: boolean, sig: string, line: string): void {
 function _logWeaponResolveMissOnce(key: string, payload: any): void {
   if (_WEAPON_RESOLVE_MISS_ONCE.has(key)) return;
   _WEAPON_RESOLVE_MISS_ONCE.add(key);
-  console.warn("[WPN-RESOLVE-MISS]", payload);
+  console.warn("[WPN-RESOLVE-MISS] " + _fmtWeaponResolveMissOneLine(payload));
 }
 function _logWeaponResolveHitOnce(key: string, payload: any): void {
   if (_WEAPON_RESOLVE_HIT_ONCE.has(key)) return;
@@ -139,19 +434,31 @@ function _logWeaponResolveHitOnce(key: string, payload: any): void {
 function _logWeaponPlacedOnce(key: string, payload: any): void {
   if (_WEAPON_PLACED_ONCE.has(key)) return;
   _WEAPON_PLACED_ONCE.add(key);
-  console.log("[WPN-PLACED]", payload);
+  console.log("[WPN-PLACED] " + _fmtWeaponPlacedOneLine(payload));
 }
 
 function _logWeaponHiddenOnce(key: string, payload: any): void {
   if (_WEAPON_HIDDEN_ONCE.has(key)) return;
   _WEAPON_HIDDEN_ONCE.add(key);
-  console.log("[WPN-HIDDEN]", payload);
+  console.log("[WPN-HIDDEN] " + _fmtWeaponHiddenOneLine(payload));
 }
 
 function _logWeaponMissingTexOnce(key: string, payload: any): void {
   if (_WEAPON_TEX_MISS_ONCE.has(key)) return;
   _WEAPON_TEX_MISS_ONCE.add(key);
-  console.warn("[WPN-MISSING-TEX]", payload);
+  console.warn("[WPN-MISSING-TEX] " + _fmtWeaponMissingTexOneLine(payload));
+}
+
+function _logWeaponFamilyOverrideOnce(key: string, payload: string): void {
+  if (_WPN_FAMILY_OVERRIDE_ONCE.has(key)) return;
+  _WPN_FAMILY_OVERRIDE_ONCE.add(key);
+  console.log("[WPN-FAMILY-OVERRIDE] " + payload);
+}
+
+function _logWeaponDebugOriginalsOnce(key: string, payload: string): void {
+  if (_WPN_DEBUG_ORIGINALS_ONCE.has(key)) return;
+  _WPN_DEBUG_ORIGINALS_ONCE.add(key);
+  console.log("[WPN-DEBUG-ORIGINALS] " + payload);
 }
 
 
@@ -295,7 +602,8 @@ export function syncStandaloneWeaponLayers(args: {
   const applyOne = (
     spr: Phaser.GameObjects.Sprite,
     layerRef: WeaponSheetRef | undefined,
-    depth: number
+    depth: number,
+    layerLabel: "bg" | "fg"
   ): WeaponResolvedLayer | undefined => {
     if (!layerRef) {
       try { spr.setVisible(false); } catch { }
@@ -324,6 +632,47 @@ export function syncStandaloneWeaponLayers(args: {
 
     if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
 
+    const pixelDbg = _weaponPixelDebugEnabled();
+    let gridCols = 0;
+    let gridRows = 0;
+    let atlasKey = "";
+    let atlasImage = "";
+    let atlasFrame: { x: number; y: number; w: number; h: number } | undefined;
+    if (pixelDbg) {
+      const meta = getWeaponSheetMeta(layerRef.key);
+      const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
+      atlasKey = meta?.atlasKey ?? atlasInfo?.atlasKey ?? "";
+      atlasImage = atlasInfo?.image ?? "";
+      atlasFrame = atlasInfo?.frame;
+      const grid = getSheetGrid(args.scene, layerRef);
+      gridCols = Math.max(1, grid.cols | 0);
+      gridRows = Math.max(1, grid.rows | 0);
+      const sample0 = _scanFramePalette(args.scene, layerRef.key, 0, layerRef.frameW | 0, layerRef.frameH | 0);
+      const line0 = _buildWeaponPixelLine({
+        weaponId: String(args.weaponId || ""),
+        heroPhase: String(args.sourcePhase || ""),
+        usedPhase: String(usedPhase || ""),
+        variant: String(args.variant ?? "base"),
+        dir: String(args.dir || ""),
+        layer: layerLabel,
+        sheetKey: layerRef.key,
+        frameIndex: 0,
+        frameW: layerRef.frameW | 0,
+        frameH: layerRef.frameH | 0,
+        cols: gridCols,
+        rows: gridRows,
+        row: 0,
+        col: 0,
+        atlasKey,
+        atlasImage,
+        atlasFrame,
+        palette: sample0.palette,
+        error: sample0.error,
+        oobInfo: sample0.debug
+      });
+      _logWeaponPixelResolveOnce(`resolve|${layerRef.key}`, line0);
+    }
+
     // Choose a fixed column (recommended), else map time01 -> col, else 0.
     let col = 0;
     if (args.frameColOverride !== undefined && args.frameColOverride !== null) {
@@ -351,14 +700,45 @@ export function syncStandaloneWeaponLayers(args: {
     spr.setDepth(depth);
     try { spr.setVisible(true); } catch { }
 
+    if (pixelDbg) {
+      const cols = Math.max(1, gridCols | 0);
+      const row = Math.max(0, ((frameIndex / cols) | 0));
+      const colNow = Math.max(0, (frameIndex % cols) | 0);
+      const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
+      const line = _buildWeaponPixelLine({
+        weaponId: String(args.weaponId || ""),
+        heroPhase: String(args.sourcePhase || ""),
+        usedPhase: String(usedPhase || ""),
+        variant: String(args.variant ?? "base"),
+        dir: String(args.dir || ""),
+        layer: layerLabel,
+        sheetKey: layerRef.key,
+        frameIndex,
+        frameW: layerRef.frameW | 0,
+        frameH: layerRef.frameH | 0,
+        cols,
+        rows: Math.max(1, gridRows | 0),
+        row,
+        col: colNow,
+        atlasKey,
+        atlasImage,
+        atlasFrame,
+        palette: sample.palette,
+        error: sample.error,
+        oobInfo: sample.debug
+      }) + " heroFrameIndex=-1 frameColOverride=" + (args.frameColOverride ?? -1);
+      const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${args.variant ?? ""}|${args.sourcePhase}`;
+      _logWeaponPixelPlaceOnce(sig, line);
+    }
+
     return { key: layerRef.key, frameIndex };
   };
 
   const bgDepth = heroDepth - 1;
   const fgDepth = heroDepth + 1;
 
-  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
-  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
+  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth, "bg");
+  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth, "fg");
 
   // Optional highlight knob (simple: alpha bump; keep your tint logic in arcadeCompat if you prefer)
   if (args.highlight != null) {
@@ -506,6 +886,163 @@ function _fmtWeaponResolveHitOneLine(payload: any): string {
     " variant=" + variant +
     " bg=" + bg +
     " fg=" + fg
+  );
+}
+
+function _fmtWeaponResolveMissOneLine(payload: any): string {
+  const weaponId = payload?.weaponId ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const mode = payload?.mode ?? "";
+  const variant = payload?.variant ?? "";
+  const reason = payload?.reason ?? "";
+  const bg = payload?.bg ?? "";
+  const fg = payload?.fg ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "weaponId=" + weaponId +
+    " heroPhase=" + heroPhase +
+    " mode=" + mode +
+    " variant=" + variant +
+    " reason=" + reason +
+    " bg=" + bg +
+    " fg=" + fg
+  );
+}
+
+function _fmtWeaponHiddenOneLine(payload: any): string {
+  const note = payload?.note ?? "";
+  const weaponId = payload?.weaponId ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const usedPhase = payload?.usedPhase ?? "";
+  const mode = payload?.mode ?? "";
+  const dir = payload?.dir ?? "";
+  const variant = payload?.variant ?? "";
+  const x = payload?.x ?? "";
+  const y = payload?.y ?? "";
+  const bgRef = payload?.bgRef ?? "";
+  const fgRef = payload?.fgRef ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "note=" + note +
+    " weaponId=" + weaponId +
+    " heroPhase=" + heroPhase +
+    " usedPhase=" + usedPhase +
+    " mode=" + mode +
+    " dir=" + dir +
+    " variant=" + variant +
+    " x=" + x +
+    " y=" + y +
+    " bgRef=" + bgRef +
+    " fgRef=" + fgRef
+  );
+}
+
+function _fmtWeaponMissingTexOneLine(payload: any): string {
+  const weaponId = payload?.weaponId ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const usedPhase = payload?.usedPhase ?? "";
+  const mode = payload?.mode ?? "";
+  const variant = payload?.variant ?? "";
+  const bgKey = payload?.bgKey ?? "";
+  const fgKey = payload?.fgKey ?? "";
+  const missingKey = payload?.missingKey ?? "";
+  const missing = Array.isArray(payload?.missing) ? payload.missing.join(",") : (payload?.missing ?? "");
+  const keys = Array.isArray(payload?.keys) ? payload.keys.join(",") : (payload?.keys ?? "");
+  const queued = Number.isFinite(payload?.queued) ? String(payload.queued) : "";
+  const total = Number.isFinite(payload?.total) ? String(payload.total) : "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "weaponId=" + weaponId +
+    " heroPhase=" + heroPhase +
+    " usedPhase=" + usedPhase +
+    " mode=" + mode +
+    " variant=" + variant +
+    " bgKey=" + bgKey +
+    " fgKey=" + fgKey +
+    " missingKey=" + missingKey +
+    " missing=" + missing +
+    " keys=" + keys +
+    " queued=" + queued +
+    " total=" + total
+  );
+}
+
+function _fmtNpcWeaponMapOneLine(payload: any): string {
+  const heroName = payload?.heroName ?? "";
+  const heroFamily = payload?.heroFamily ?? "";
+  const npcRole = payload?.npcRole ?? "";
+  const weaponId = payload?.weaponId ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const usedPhase = payload?.usedPhase ?? "";
+  const dir = payload?.dir ?? "";
+  const heroFrameIndex = payload?.heroFrameIndex ?? "";
+  const bg = payload?.bg ?? "";
+  const fg = payload?.fg ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "heroName=" + heroName +
+    " heroFamily=" + heroFamily +
+    " npcRole=" + npcRole +
+    " weaponId=" + weaponId +
+    " heroPhase=" + heroPhase +
+    " usedPhase=" + usedPhase +
+    " dir=" + dir +
+    " heroFrameIndex=" + heroFrameIndex +
+    " bg=" + bg +
+    " fg=" + fg
+  );
+}
+
+function _fmtWeaponPlacedOneLine(payload: any): string {
+  const weaponId = payload?.weaponId ?? "";
+  const heroName = payload?.heroName ?? "";
+  const heroFamily = payload?.heroFamily ?? "";
+  const heroPhase = payload?.heroPhase ?? "";
+  const usedPhase = payload?.usedPhase ?? "";
+  const mode = payload?.mode ?? "";
+  const dir = payload?.dir ?? "";
+  const variant = payload?.variant ?? "";
+  const heroFrameIndex = payload?.heroFrameIndex ?? "";
+  const frameColOverride = payload?.frameColOverride ?? "";
+  const x = payload?.x ?? "";
+  const y = payload?.y ?? "";
+  const heroDepth = payload?.heroDepth ?? "";
+  const bgDepth = payload?.bgDepth ?? "";
+  const fgDepth = payload?.fgDepth ?? "";
+  const bgVisible = payload?.bgVisible ?? "";
+  const fgVisible = payload?.fgVisible ?? "";
+  const bgKey = payload?.bgKey ?? "";
+  const bgFrame = payload?.bgFrame ?? "";
+  const fgKey = payload?.fgKey ?? "";
+  const fgFrame = payload?.fgFrame ?? "";
+
+  // Keep this stable + grep-friendly
+  return (
+    "weaponId=" + weaponId +
+    " heroName=" + heroName +
+    " heroFamily=" + heroFamily +
+    " heroPhase=" + heroPhase +
+    " usedPhase=" + usedPhase +
+    " mode=" + mode +
+    " dir=" + dir +
+    " variant=" + variant +
+    " heroFrameIndex=" + heroFrameIndex +
+    " frameColOverride=" + frameColOverride +
+    " x=" + x +
+    " y=" + y +
+    " heroDepth=" + heroDepth +
+    " bgDepth=" + bgDepth +
+    " fgDepth=" + fgDepth +
+    " bgVisible=" + bgVisible +
+    " fgVisible=" + fgVisible +
+    " bgKey=" + bgKey +
+    " bgFrame=" + bgFrame +
+    " fgKey=" + fgKey +
+    " fgFrame=" + fgFrame
   );
 }
 
@@ -792,20 +1329,44 @@ export function syncWeaponLayersToHero(args: {
   aimAngleMdeg?: number;
   allowAimRotate?: boolean;
 }): WeaponRenderResolve | null {
-  const model = String(args.weaponId || "").trim();
+  let model = String(args.weaponId || "").trim();
   if (!model) {
     args.weaponBg.setVisible(false);
     args.weaponFg.setVisible(false);
     return null;
   }
 
-  const mode: WeaponMode = weaponModeForHeroPhase(args.heroPhase);
-
+  const heroAny: any = args.heroSprite as any;
+  const heroFamilyLower = _normFamily(String(heroAny.getData?.("heroFamily") || ""));
+  let heroPhase = String(args.heroPhase || "");
+  let variant = args.variant;
   const dbgOn = _weaponDebugEnabled();
   const dbgVerbose = _weaponDebugVerbose();
-  const missKey = `${args.weaponId}|${args.heroPhase}|${mode}|${args.variant ?? ""}`;
 
-  const heroAny: any = args.heroSprite as any;
+  const dbgOrigOverride = _debugOriginalOverrideForFamily(heroFamilyLower, heroPhase);
+  if (dbgOrigOverride) {
+    const requestedWeaponId = model;
+    const requestedPhase = heroPhase;
+    model = dbgOrigOverride.weaponId;
+    heroPhase = dbgOrigOverride.heroPhase;
+    variant = dbgOrigOverride.variant;
+    if (dbgOn) {
+      const sig = `dbgorig|${heroFamilyLower}|${requestedWeaponId}|${requestedPhase}|${model}|${heroPhase}`;
+      _logWeaponDebugOriginalsOnce(
+        sig,
+        "family=" + heroFamilyLower +
+        " requestedWeaponId=" + requestedWeaponId +
+        " requestedPhase=" + requestedPhase +
+        " forcedWeaponId=" + model +
+        " forcedPhase=" + heroPhase +
+        " forcedVariant=" + (variant ?? "base")
+      );
+    }
+  }
+
+  const mode: WeaponMode = weaponModeForHeroPhase(heroPhase);
+  const missKey = `${model}|${heroPhase}|${mode}|${variant ?? ""}`;
+
   const heroDepth = heroAny.depth ?? 0;
   const off = WEAPON_OFFSET_BY_DIR[args.dir] ?? { x: 0, y: 0 };
   const aimDx1000 = (typeof args.aimDx1000 === "number") ? (args.aimDx1000 | 0) : 0;
@@ -877,7 +1438,8 @@ export function syncWeaponLayersToHero(args: {
   const applyOne = (
     spr: Phaser.GameObjects.Sprite,
     layerRef: WeaponSheetRef | undefined,
-    depth: number
+    depth: number,
+    layerLabel: "bg" | "fg"
   ): WeaponResolvedLayer | undefined => {
     if (!layerRef) {
       spr.setVisible(false);
@@ -886,14 +1448,14 @@ export function syncWeaponLayersToHero(args: {
 
     const textures: any = args.scene?.textures;
     if (textures && typeof textures.exists === "function" && !textures.exists(layerRef.key)) {
-      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, variant);
       if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
         _logWeaponMissingTexOnce(missKey + "|layer:" + layerRef.key, {
-          weaponId: args.weaponId,
-          heroPhase: args.heroPhase,
+          weaponId: model,
+          heroPhase,
           usedPhase,
           mode,
-          variant: args.variant ?? "base",
+          variant: variant ?? "base",
           dir: args.dir,
           heroFrameIndex: args.heroFrameIndex,
           missing: [layerRef.key],
@@ -923,8 +1485,8 @@ export function syncWeaponLayersToHero(args: {
     let nudgeX = 0;
     let nudgeY = 0;
     if (baseDir === "down") {
-      const phaseLower = String(args.heroPhase || "").toLowerCase();
-      if (phaseLower.includes("slash") && String(args.weaponId || "").toLowerCase() === "arming") {
+      const phaseLower = String(heroPhase || "").toLowerCase();
+      if (phaseLower.includes("slash") && String(model || "").toLowerCase() === "arming") {
         const grid = getSheetGrid(args.scene, layerRef);
         const cols = grid.cols | 0;
         if (cols > 0) {
@@ -955,13 +1517,50 @@ export function syncWeaponLayersToHero(args: {
     spr.setDepth(depth);
     spr.setVisible(true);
 
+    if (_weaponPixelDebugEnabled()) {
+      const grid = getSheetGrid(args.scene, layerRef);
+      const cols = Math.max(1, grid.cols | 0);
+      const rows = Math.max(1, grid.rows | 0);
+      const row = Math.max(0, ((frameIndex / cols) | 0));
+      const colNow = Math.max(0, (frameIndex % cols) | 0);
+      const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
+      const atlasKey = atlasInfo?.atlasKey ?? "";
+      const atlasImage = atlasInfo?.image ?? "";
+      const atlasFrame = atlasInfo?.frame;
+      const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
+      const line = _buildWeaponPixelLine({
+        weaponId: String(model || ""),
+        heroPhase: String(heroPhase || ""),
+        usedPhase: String(usedPhase || ""),
+        variant: String(variant ?? "base"),
+        dir: String(args.dir || ""),
+        layer: layerLabel,
+        sheetKey: layerRef.key,
+        frameIndex,
+        frameW: layerRef.frameW | 0,
+        frameH: layerRef.frameH | 0,
+        cols,
+        rows,
+        row,
+        col: colNow,
+        atlasKey,
+        atlasImage,
+        atlasFrame,
+        palette: sample.palette,
+        error: sample.error,
+        oobInfo: sample.debug
+      }) + " heroFrameIndex=" + (args.heroFrameIndex | 0) + " frameColOverride=" + (args.frameColOverride ?? -1);
+      const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${variant ?? ""}|${heroPhase}`;
+      _logWeaponPixelPlaceOnce(sig, line);
+    }
+
     return { key: layerRef.key, frameIndex };
   };
 
   // -----------------------------
   // phase fallback chain
   // -----------------------------
-  const rawPhase = String(args.heroPhase || "").trim();
+  const rawPhase = String(heroPhase || "").trim();
   const snake = rawPhase
     .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
     .replace(/\s+/g, "_")
@@ -969,23 +1568,48 @@ export function syncWeaponLayersToHero(args: {
     .replace(/_+/g, "_")
     .toLowerCase();
 
-  const phaseTry: string[] = [args.heroPhase];
+  const overridePhase = _phaseOverrideForFamily(heroFamilyLower, model, rawPhase);
+  const phaseTry: string[] = [];
+  const pushPhase = (p: string | null | undefined) => {
+    const v = String(p || "").trim();
+    if (!v) return;
+    if (!phaseTry.includes(v)) phaseTry.push(v);
+  };
+
+  pushPhase(overridePhase);
+  pushPhase(heroPhase);
+
+  if (dbgOn && overridePhase && overridePhase !== heroPhase) {
+    const sig = `${heroFamilyLower}|${model}|${heroPhase}|${overridePhase}`;
+    _logWeaponFamilyOverrideOnce(
+      sig,
+      `family=${heroFamilyLower} weaponId=${model} heroPhase=${heroPhase} override=${overridePhase}`
+    );
+  }
 
   if (snake === "combat_idle" || snake === "combatidle") {
-    phaseTry.push("idle", "slash", "attack_slash", "thrust", "walk");
+    pushPhase("idle");
+    pushPhase("slash");
+    pushPhase("attack_slash");
+    pushPhase("thrust");
+    pushPhase("walk");
   } else if (snake === "idle") {
-    phaseTry.push("combatIdle", "slash", "attack_slash", "thrust", "walk");
+    pushPhase("combatIdle");
+    pushPhase("slash");
+    pushPhase("attack_slash");
+    pushPhase("thrust");
+    pushPhase("walk");
   }
 
   let pair: ReturnType<typeof resolveWeaponLayerPair> = null;
-  let usedPhase = args.heroPhase;
+  let usedPhase = heroPhase;
 
   for (const p of phaseTry) {
     const attempt = resolveWeaponLayerPair({
-      weaponId: args.weaponId,
+      weaponId: model,
       heroPhase: p,
       mode,
-      variant: args.variant
+      variant
     });
     if (attempt) {
       pair = attempt;
@@ -997,8 +1621,8 @@ export function syncWeaponLayersToHero(args: {
   // Final fallback: if the specific phase(s) don't exist, pick ANY anim for this weapon.
   if (!pair) {
     const anyPair = resolveAnyWeaponLayerPair({
-      weaponId: args.weaponId,
-      variant: args.variant
+      weaponId: model,
+      variant
     });
     if (anyPair) {
       pair = anyPair as any;
@@ -1012,10 +1636,10 @@ export function syncWeaponLayersToHero(args: {
 
     if (dbgOn) {
       _logWeaponResolveMissOnce(missKey, {
-        weaponId: args.weaponId,
-        heroPhase: args.heroPhase,
+        weaponId: model,
+        heroPhase,
         mode,
-        variant: args.variant ?? "base",
+        variant: variant ?? "base",
         note: "resolve failed (phase candidates + any-anim fallback all missed)"
       });
     }
@@ -1030,14 +1654,14 @@ export function syncWeaponLayersToHero(args: {
     ].filter(Boolean) as string[];
     const missing = keys.some((key) => !textures.exists(key));
     if (missing) {
-      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, args.variant);
+      const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, variant);
       if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
         _logWeaponMissingTexOnce(missKey, {
-          weaponId: args.weaponId,
-          heroPhase: args.heroPhase,
+          weaponId: model,
+          heroPhase,
           usedPhase,
           mode,
-          variant: args.variant ?? "base",
+          variant: variant ?? "base",
           dir: args.dir,
           heroFrameIndex: args.heroFrameIndex,
           missing: keys.filter((k) => !textures.exists(k)),
@@ -1055,8 +1679,8 @@ export function syncWeaponLayersToHero(args: {
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     if (dbgOn) {
       console.log("[WPN-PLACE-CLAMP]", {
-        weaponId: args.weaponId,
-        heroPhase: args.heroPhase,
+        weaponId: model,
+        heroPhase,
         usedPhase,
         x,
         y,
@@ -1070,21 +1694,60 @@ export function syncWeaponLayersToHero(args: {
 
   if (dbgOn && dbgVerbose) {
     _logWeaponResolveHitOnce(missKey, {
-      weaponId: args.weaponId,
-      heroPhase: `${args.heroPhase}->${usedPhase}`,
+      weaponId: model,
+      heroPhase: `${heroPhase}->${usedPhase}`,
       mode,
-      variant: args.variant ?? "base",
+      variant: variant ?? "base",
       bg: (pair as any).bg?.key ?? null,
       fg: (pair as any).fg?.key ?? null,
       anim: (pair as any).anim ?? null
     });
   }
 
+  if (_weaponPixelDebugEnabled()) {
+    const logResolve = (layerRef: WeaponSheetRef | undefined, layerLabel: "bg" | "fg"): void => {
+      if (!layerRef) return;
+      const grid = getSheetGrid(args.scene, layerRef);
+      const cols = Math.max(1, grid.cols | 0);
+      const rows = Math.max(1, grid.rows | 0);
+      const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
+      const atlasKey = atlasInfo?.atlasKey ?? "";
+      const atlasImage = atlasInfo?.image ?? "";
+      const atlasFrame = atlasInfo?.frame;
+      const sample0 = _scanFramePalette(args.scene, layerRef.key, 0, layerRef.frameW | 0, layerRef.frameH | 0);
+      const line0 = _buildWeaponPixelLine({
+        weaponId: String(model || ""),
+        heroPhase: String(heroPhase || ""),
+        usedPhase: String(usedPhase || ""),
+        variant: String(variant ?? "base"),
+        dir: String(args.dir || ""),
+        layer: layerLabel,
+        sheetKey: layerRef.key,
+        frameIndex: 0,
+        frameW: layerRef.frameW | 0,
+        frameH: layerRef.frameH | 0,
+        cols,
+        rows,
+        row: 0,
+        col: 0,
+        atlasKey,
+        atlasImage,
+        atlasFrame,
+        palette: sample0.palette,
+        error: sample0.error,
+        oobInfo: sample0.debug
+      });
+      _logWeaponPixelResolveOnce(`resolve|${layerRef.key}`, line0);
+    };
+    logResolve((pair as any).bg, "bg");
+    logResolve((pair as any).fg, "fg");
+  }
+
   // Sandwich: bg behind hero, fg in front
   const bgDepth = heroDepth - 1;
   const fgDepth = heroDepth + 1;
-  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth);
-  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth);
+  const bg = applyOne(args.weaponBg, (pair as any).bg, bgDepth, "bg");
+  const fg = applyOne(args.weaponFg, (pair as any).fg, fgDepth, "fg");
 
   // Ensure depth ordering is applied immediately so weapons render above/below hero as intended.
   const dlAny: any = args.scene?.sys?.displayList;
@@ -1103,18 +1766,21 @@ export function syncWeaponLayersToHero(args: {
       const heroName = String(heroAny.getData?.("heroName") || "");
       const heroFamily = String(heroAny.getData?.("heroFamily") || "");
       const npcRole = String(heroAny.getData?.("_npcRole") || "");
-      console.log("[NPC-PIPE][weapon.map]", {
-        heroName,
-        heroFamily,
-        npcRole,
-        weaponId: args.weaponId,
-        heroPhase: args.heroPhase,
-        usedPhase,
-        dir: args.dir,
-        heroFrameIndex: args.heroFrameIndex,
-        bg: bg?.key ?? null,
-        fg: fg?.key ?? null
-      });
+      console.log(
+        "[NPC-PIPE][weapon.map] " +
+        _fmtNpcWeaponMapOneLine({
+          heroName,
+          heroFamily,
+          npcRole,
+          weaponId: model,
+          heroPhase,
+          usedPhase,
+          dir: args.dir,
+          heroFrameIndex: args.heroFrameIndex,
+          bg: bg?.key ?? null,
+          fg: fg?.key ?? null
+        })
+      );
     }
   }
 
@@ -1137,22 +1803,22 @@ export function syncWeaponLayersToHero(args: {
 
     dbgHeroName = String(safeGet(args.heroSprite as any, "heroName", "") || "");
     dbgHeroFamily = String(safeGet(args.heroSprite as any, "heroFamily", "") || "");
-    const placedKey = `${args.weaponId}|${dbgHeroName}|${dbgHeroFamily}|${args.heroPhase}|${usedPhase}|${args.dir}|${args.variant ?? ""}|${args.frameColOverride ?? -1}`;
+    const placedKey = `${model}|${dbgHeroName}|${dbgHeroFamily}|${heroPhase}|${usedPhase}|${args.dir}|${variant ?? ""}|${args.frameColOverride ?? -1}`;
 
     const bgVis = !!(args.weaponBg as any).visible;
     const fgVis = !!(args.weaponFg as any).visible;
 
     _logWeaponPlacedOnce(placedKey, {
-      weaponId: args.weaponId,
+      weaponId: model,
       heroName: dbgHeroName,
       heroFamily: dbgHeroFamily,
-      heroPhase: args.heroPhase,
+      heroPhase,
       usedPhase,
       mode,
       dir: args.dir,
       heroFrameIndex: args.heroFrameIndex,
       frameColOverride: args.frameColOverride ?? -1,
-      variant: args.variant ?? "base",
+      variant: variant ?? "base",
       x,
       y,
       heroDepth,
@@ -1169,12 +1835,12 @@ export function syncWeaponLayersToHero(args: {
     if (!bgVis && !fgVis) {
       _logWeaponHiddenOnce(placedKey, {
         note: "resolved pair but both layers ended up invisible (missing refs?)",
-        weaponId: args.weaponId,
-        heroPhase: args.heroPhase,
+        weaponId: model,
+        heroPhase,
         usedPhase,
         mode,
         dir: args.dir,
-        variant: args.variant ?? "base",
+        variant: variant ?? "base",
         x,
         y,
         bgRef: (pair as any).bg?.key ?? null,
@@ -1193,16 +1859,16 @@ export function syncWeaponLayersToHero(args: {
 
     // Signature: keep it stable and “once per placement signature” unless verbose
     const sig =
-      `WPN|wid=${args.weaponId}|hero=${dbgHeroName}|fam=${dbgHeroFamily}` +
-      `|phase=${args.heroPhase}->${usedPhase}|dir=${args.dir}` +
-      `|v=${args.variant ?? ""}|fco=${args.frameColOverride ?? -1}` +
+      `WPN|wid=${model}|hero=${dbgHeroName}|fam=${dbgHeroFamily}` +
+      `|phase=${heroPhase}->${usedPhase}|dir=${args.dir}` +
+      `|v=${variant ?? ""}|fco=${args.frameColOverride ?? -1}` +
       `|hfi=${args.heroFrameIndex}|x=${x | 0}|y=${y | 0}|bg=${bgStr}|fg=${fgStr}`;
 
     _logWeaponPlace(
       dbgVerbose,
       sig,
-      `[WPN-PLACE] wid=${args.weaponId} hero=${dbgHeroName} fam=${dbgHeroFamily} ` +
-      `phase=${args.heroPhase} used=${usedPhase} mode=${mode} dir=${args.dir} heroFrame=${args.heroFrameIndex} ` +
+      `[WPN-PLACE] wid=${model} hero=${dbgHeroName} fam=${dbgHeroFamily} ` +
+      `phase=${heroPhase} used=${usedPhase} mode=${mode} dir=${args.dir} heroFrame=${args.heroFrameIndex} ` +
       `heroXY=${((args.heroSprite.x) | 0)},${((args.heroSprite.y) | 0)} heroOrigin=${heroOx.toFixed(2)},${heroOy.toFixed(2)} ` +
       `heroCenter=${(heroCx | 0)},${(heroCy | 0)} ` +
       `wpnOxOy=${(wpnOx | 0)},${(wpnOy | 0)} off=${(off.x | 0)},${(off.y | 0)} ` +
@@ -1212,10 +1878,10 @@ export function syncWeaponLayersToHero(args: {
   }
 
   return {
-    weaponId: args.weaponId,
-    heroPhase: args.heroPhase,
+    weaponId: model,
+    heroPhase,
     dir: args.dir,
-    variant: args.variant ?? "base",
+    variant: variant ?? "base",
     mode,
     resolvedAnim: (pair as any).anim,
     resolvedTile: (pair as any).tile,

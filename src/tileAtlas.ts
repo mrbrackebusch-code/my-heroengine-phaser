@@ -192,6 +192,36 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 
     telepad4_top: { atlas: "build_atlas", ref: { row: 13, col: 14 } },
     telepad4_bot: { atlas: "build_atlas", ref: { row: 14, col: 14 } },
+
+    // Trial arena tiles (magecity.png)
+    trial_floor_corner_nw: { atlas: "magecity", ref: { row: 9, col: 0 } },
+    trial_floor_edge_n: { atlas: "magecity", ref: { row: 9, col: 1 } },
+    trial_floor_corner_ne: { atlas: "magecity", ref: { row: 9, col: 2 } },
+    trial_floor_edge_w: { atlas: "magecity", ref: { row: 10, col: 0 } },
+    trial_floor_center: { atlas: "magecity", ref: { row: 10, col: 1 } },
+    trial_floor_edge_e: { atlas: "magecity", ref: { row: 10, col: 2 } },
+    trial_floor_corner_sw: { atlas: "magecity", ref: { row: 11, col: 0 } },
+    trial_floor_edge_s: { atlas: "magecity", ref: { row: 11, col: 1 } },
+    trial_floor_corner_se: { atlas: "magecity", ref: { row: 11, col: 2 } },
+
+    trial_floor_interior_a: { atlas: "magecity", ref: { row: 9, col: 3 } },
+    trial_floor_interior_b: { atlas: "magecity", ref: { row: 9, col: 4 } },
+    trial_floor_interior_c: { atlas: "magecity", ref: { row: 10, col: 3 } },
+    trial_floor_interior_d: { atlas: "magecity", ref: { row: 10, col: 4 } },
+
+    trial_patch_a: { atlas: "magecity", ref: { row: 0, col: 1 } },
+    trial_patch_b: { atlas: "magecity", ref: { row: 1, col: 1 } },
+    trial_patch_c: { atlas: "magecity", ref: { row: 41, col: 2 } },
+    trial_patch_d: { atlas: "magecity", ref: { row: 41, col: 4 } },
+
+    trial_patch_edge_n: { atlas: "magecity", ref: { row: 29, col: 3 } },
+    trial_patch_edge_s: { atlas: "magecity", ref: { row: 28, col: 3 } },
+    trial_patch_edge_e: { atlas: "magecity", ref: { row: 27, col: 3 } },
+    trial_patch_edge_w: { atlas: "magecity", ref: { row: 26, col: 3 } },
+    trial_patch_corner_sw: { atlas: "magecity", ref: { row: 29, col: 4 } },
+    trial_patch_corner_se: { atlas: "magecity", ref: { row: 29, col: 5 } },
+    trial_patch_corner_nw: { atlas: "magecity", ref: { row: 29, col: 6 } },
+    trial_patch_corner_ne: { atlas: "magecity", ref: { row: 29, col: 7 } },
 };
 
 
@@ -268,6 +298,32 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         wTiles: 3,
         hTiles: 1,
         depthBias: -500000, // above platform (–1e6) but behind heroes/statues
+    },
+
+    // Trial arena props (build_atlas)
+    trial_gate_6x6: {
+        atlas: "build_atlas",
+        ref: { row: 37, col: 42 },
+        wTiles: 6,
+        hTiles: 6,
+    },
+    trial_fence_mid_2x4: {
+        atlas: "build_atlas",
+        ref: { row: 39, col: 36 },
+        wTiles: 2,
+        hTiles: 4,
+    },
+    trial_fence_corner_l_2x6: {
+        atlas: "build_atlas",
+        ref: { row: 39, col: 34 },
+        wTiles: 2,
+        hTiles: 6,
+    },
+    trial_fence_corner_r_4x4: {
+        atlas: "build_atlas",
+        ref: { row: 39, col: 38 },
+        wTiles: 4,
+        hTiles: 4,
     },
 
     // Bridges (visuals only; collision comes from world grid)
@@ -425,6 +481,33 @@ teleport_rune_flash: {
         key: "flash",
         frames: [0, 1, 2, 3],
         frameRate: 28,
+        repeat: -1
+    }
+},
+
+stone_door: {
+    atlas: "anims.stone door 160x160",
+    ref: { row: 0, col: 0 },
+},
+
+stone_door_opening: {
+    atlas: "anims.stone door 160x160",
+    ref: { row: 0, col: 1 },
+    anim: {
+        key: "open",
+        frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        frameRate: 12,
+        repeat: 0
+    }
+},
+
+stone_door_open: {
+    atlas: "anims.stone door 160x160",
+    ref: { row: 3, col: 0 },
+    anim: {
+        key: "open_loop",
+        frames: [12, 13, 14, 15],
+        frameRate: 8,
         repeat: -1
     }
 },
@@ -1061,11 +1144,6 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     const keys = _computeDefaultAtlasTextureKeys();
     const baseTextureKey = keys.baseTextureKey;
 
-    // Deterministic list of texture keys.
-    const allTextureKeys: string[] = Array.from(new Set(TILE_SHEETS.map(s => s.textureKey)))
-        .filter(Boolean)
-        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-
     // -----------------------------------------------------------------------
     // Compute cols/rows for ALL loaded sheets from the actual loaded texture.
     // This is required because sheets may have different dimensions.
@@ -1115,22 +1193,107 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     
     _registerAuraSheetInfos(scene, sheetInfoByKey);
 
+    // Some tilesheets are not exact tile-size multiples (e.g., magecity).
+    // Phaser warns when adding such sheets as tilemap tilesets. To keep the
+    // warnings away without editing assets, we trim them at runtime to the
+    // nearest valid multiple and route atlas lookups to the trimmed texture.
+    const effectiveByRaw = new Map<string, string>();
+    for (const sh of TILE_SHEETS) effectiveByRaw.set(sh.textureKey, sh.textureKey);
+
+    const trimTileSheetIfNeeded = (sh: TileSheetDef): void => {
+        const rawKey = sh.textureKey;
+        if (!rawKey.startsWith("tiles.")) return;
+
+        const fw = Math.max(1, sh.frameW | 0);
+        const fh = Math.max(1, sh.frameH | 0);
+
+        let texObj: any = null;
+        let img: any = null;
+        try {
+            texObj = (scene as any)?.textures?.get?.(rawKey);
+            img = texObj?.getSourceImage?.() ?? texObj?.source?.[0]?.image ?? null;
+        } catch {
+            img = null;
+        }
+        const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
+        const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
+        if (w <= 0 || h <= 0) return;
+
+        const cols = Math.floor(w / fw) | 0;
+        const rows = Math.floor(h / fh) | 0;
+        if (cols <= 0 || rows <= 0) return;
+
+        const trimW = (cols * fw) | 0;
+        const trimH = (rows * fh) | 0;
+        const needsTrim = (trimW !== (w | 0)) || (trimH !== (h | 0));
+
+        if (!needsTrim) {
+            const info: TileSheetInfo = { textureKey: rawKey, cols, rows, tileSize: fw };
+            sheetInfoByKey.set(rawKey, info);
+            effectiveByRaw.set(rawKey, rawKey);
+            return;
+        }
+
+        const trimKey = `${rawKey}__trim${fw}x${fh}`;
+        try {
+            const hasTrim = !!((scene as any)?.textures?.exists?.(trimKey));
+            if (!hasTrim) {
+                const canvasTex: any = (scene as any)?.textures?.createCanvas?.(trimKey, trimW, trimH);
+                const ctx: any = canvasTex?.context;
+                if (ctx && img) {
+                    ctx.clearRect(0, 0, trimW, trimH);
+                    ctx.drawImage(img, 0, 0, trimW, trimH, 0, 0, trimW, trimH);
+                    canvasTex.refresh();
+                }
+            }
+            const infoTrim: TileSheetInfo = { textureKey: trimKey, cols, rows, tileSize: fw };
+            sheetInfoByKey.set(trimKey, infoTrim);
+            sheetInfoByKey.set(rawKey, infoTrim);
+            effectiveByRaw.set(rawKey, trimKey);
+        } catch {
+            // Fall back to the raw sheet if trim fails for any reason.
+            const infoRaw: TileSheetInfo = { textureKey: rawKey, cols, rows, tileSize: fw };
+            sheetInfoByKey.set(rawKey, infoRaw);
+            effectiveByRaw.set(rawKey, rawKey);
+        }
+    };
+
+    for (const sh of TILE_SHEETS) trimTileSheetIfNeeded(sh);
+
+    const toEffectiveKey = (tk: string): string => effectiveByRaw.get(tk) ?? tk;
+
+    const rawByEffective = new Map<string, string>();
+    for (const sh of TILE_SHEETS) {
+        const raw = sh.textureKey;
+        const eff = toEffectiveKey(raw);
+        if (!rawByEffective.has(eff)) rawByEffective.set(eff, raw);
+    }
+
+    const allTextureKeys: string[] = Array.from(
+        new Set(
+            TILE_SHEETS.map(sh => toEffectiveKey(sh.textureKey)).filter(Boolean)
+        )
+    ).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
     // Base sheet dims (fatal if missing — autotiles cannot index safely).
     const baseDef = TILE_SHEETS.find(s => s.textureKey === baseTextureKey) ?? TILE_SHEETS[0];
     if (!baseDef) throw new Error("[tileAtlas.build] no tilesheets available");
+    const baseEffectiveKey = toEffectiveKey(baseDef.textureKey);
     const baseInfo =
+        sheetInfoByKey.get(baseEffectiveKey) ??
         sheetInfoByKey.get(baseDef.textureKey) ??
-        computeSheetInfo(baseDef.textureKey, baseDef.frameW | 0, baseDef.frameH | 0, baseDef.cols | 0, baseDef.rows | 0);
+        computeSheetInfo(baseEffectiveKey, baseDef.frameW | 0, baseDef.frameH | 0, baseDef.cols | 0, baseDef.rows | 0);
     if (!baseInfo) {
         throw new Error(`[tileAtlas.build] unable to resolve sheet dimensions for base sheet: ${baseDef.textureKey}`);
     }
+    sheetInfoByKey.set(baseEffectiveKey, baseInfo);
     sheetInfoByKey.set(baseDef.textureKey, baseInfo);
 
     const resolvedCols = baseInfo.cols | 0;
 
     logTiles(
         "[tileAtlas.build] base autotile sheet:",
-        `${baseDef.textureKey} (${baseInfo.cols}x${baseInfo.rows} tiles)`
+        `${baseEffectiveKey} (${baseInfo.cols}x${baseInfo.rows} tiles)`
     );
 
     if (DEBUG_TILE_ATLAS_GLOBAL) {
@@ -1168,7 +1331,7 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         arr.push(def);
     }
 
-    const tex = baseDef.textureKey;
+    const tex = baseEffectiveKey;
 
     function frameFromRef(ref: TileRef): number {
         return idx(ref.col, ref.row);
@@ -1234,9 +1397,9 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     logTiles("[tileAtlas.build] decor tiles (family → count):", decorSummary);
 
     const atlas: TileAtlas = {
-        textureKey: baseDef.textureKey,
+        textureKey: baseEffectiveKey,
         tileSize: TILE_SIZE,
-        primaryTextureKey: baseDef.textureKey,
+        primaryTextureKey: baseEffectiveKey,
 
         allTextureKeys,
 
@@ -1249,35 +1412,42 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         getSheetUrl(textureKey: string): string | undefined {
             const tk = (textureKey ?? "").trim();
             if (!tk) return undefined;
-            return __SHEET_URL_BY_KEY.get(tk);
+            const urlDirect = __SHEET_URL_BY_KEY.get(tk);
+            if (urlDirect) return urlDirect;
+            const raw = rawByEffective.get(tk);
+            return raw ? __SHEET_URL_BY_KEY.get(raw) : undefined;
         },
 
 
         resolveAtlasTextureKey(aliasOrTextureKey: string): string {
             const s = (aliasOrTextureKey ?? "").trim();
-            if (!s) return keys.decorTextureKey;
+            if (!s) return toEffectiveKey(keys.decorTextureKey);
 
             // Direct textureKey passthrough
-            if (s.startsWith("tiles.")) return s;
-            if (s.startsWith("anims.")) return s;
+            if (s.startsWith("tiles.")) return toEffectiveKey(s);
+            if (s.startsWith("anims.")) return toEffectiveKey(s);
 
             // 1) Known semantic alias
             const hit = keys.aliasToTextureKey[s];
-            if (hit) return hit;
+            if (hit) return toEffectiveKey(hit);
 
             // 2) Bare sheet name → tiles.${name} if it exists
             const directTiles = `tiles.${s}`;
-            if (sheetInfoByKey.has(directTiles) || TILE_SHEETS.some(sh => sh.textureKey === directTiles)) return directTiles;
+            if (sheetInfoByKey.has(directTiles) || TILE_SHEETS.some(sh => sh.textureKey === directTiles)) {
+                return toEffectiveKey(directTiles);
+            }
 
             // 3) Bare animation sheet name → anims.${name} if it exists
             const directAnims = `anims.${s}`;
-            if (sheetInfoByKey.has(directAnims) || TILE_SHEETS.some(sh => sh.textureKey === directAnims)) return directAnims;
+            if (sheetInfoByKey.has(directAnims) || TILE_SHEETS.some(sh => sh.textureKey === directAnims)) {
+                return toEffectiveKey(directAnims);
+            }
 
             if (!__warnedUnknownAtlasAliases[s]) {
                 __warnedUnknownAtlasAliases[s] = 1;
                 console.warn("[tileAtlas] unknown atlas alias:", s, "→ falling back to", keys.decorTextureKey);
             }
-            return keys.decorTextureKey;
+            return toEffectiveKey(keys.decorTextureKey);
         },
 
         getAutoTile(family: TileFamily, shape: AutoShape): AutoTileDef | undefined {

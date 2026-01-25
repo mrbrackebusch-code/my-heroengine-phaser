@@ -125,6 +125,17 @@ import {
     DEBUG_NET_SNAPSHOT,
     DEBUG_NPC_PIPELINE,
     DEBUG_EFFECT_MASKS,
+    DEBUG_STR_ARC_GALLERY,
+    DEBUG_STR_ARC_GALLERY_SKIN,
+    DEBUG_STR_ARC_GALLERY_FILL_SKIN,
+    DEBUG_STR_ARC_GALLERY_AURA_RADIUS,
+    DEBUG_STR_ARC_GALLERY_CORE_COLS,
+    DEBUG_STR_ARC_GALLERY_CORE_ROWS,
+    DEBUG_STR_ARC_GALLERY_SCALE,
+    DEBUG_STR_ARC_GALLERY_PADDING,
+    DEBUG_STR_ARC_GALLERY_ANIM_FPS,
+    DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS,
+    DEBUG_STR_ARC_GALLERY_ALPHA,
     DEBUG_OVERLAPS,
     DEBUG_PROJECTILE_NATIVE,
     DEBUG_PROP_OUTLINE_VERBOSE,
@@ -211,6 +222,23 @@ const DECOR_DATA_TILE_R = "decorTileR";
 const DECOR_DATA_TILE_C = "decorTileC";
 const DECOR_SOLID_BASE_PX_KEY = "decorSolidBasePx";
 const DECOR_SOLID_USE_AURA_KEY = "decorSolidUseAura";
+const DECOR_SOLID_AABB_LOCAL_X_KEY = "decorSolidAabbLocalX";
+const DECOR_SOLID_AABB_LOCAL_Y_KEY = "decorSolidAabbLocalY";
+const DECOR_SOLID_AABB_RAW_X_KEY = "decorSolidAabbRawX";
+const DECOR_SOLID_AABB_RAW_Y_KEY = "decorSolidAabbRawY";
+const DECOR_SOLID_AABB_W_KEY = "decorSolidAabbW";
+const DECOR_SOLID_AABB_H_KEY = "decorSolidAabbH";
+const DECOR_SOLID_AABB_TEX_KEY = "decorSolidAabbTex";
+const DECOR_SOLID_AABB_FRAME_KEY = "decorSolidAabbFrame";
+const DECOR_SOLID_AABB_MODE_KEY = "decorSolidAabbMode";
+const DECOR_SOLID_AABB_USE_AURA_KEY = "decorSolidAabbUseAura";
+const DECOR_SOLID_BASE_MIN_X_KEY = "decorSolidBaseMinX";
+const DECOR_SOLID_BASE_MAX_X_KEY = "decorSolidBaseMaxX";
+const DECOR_SOLID_BASE_H_KEY = "decorSolidBaseH";
+const DECOR_SOLID_BASE_FRAME_W_KEY = "decorSolidBaseFrameW";
+const DECOR_SOLID_BASE_FRAME_H_KEY = "decorSolidBaseFrameH";
+const DECOR_SOLID_AABB_MODE_BASE = 1;
+const DECOR_SOLID_AABB_MODE_FULL = 2;
 
 type OpaqueAabb = { ox: number; oy: number; w: number; h: number };
 const _decorOpaqueAabbCache: Record<string, OpaqueAabb> = Object.create(null);
@@ -707,6 +735,24 @@ function decor_applyTightOpaqueAabbToSolids(args: {
                 s.left = (left | 0);
                 s.top = (top | 0);
 
+                const localLeft = ((left - (c * tileSize)) | 0);
+                const localTop = ((top - (r * tileSize)) | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_MODE_KEY, DECOR_SOLID_AABB_MODE_BASE);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY, useAura ? 1 : 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_X_KEY, localLeft | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_Y_KEY, localTop | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY, bbBase.minX | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY, ((bbBase.frameH - bbBase.baseH) | 0));
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_W_KEY, w | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_H_KEY, h | 0);
+                sprites.setDataString(s, DECOR_SOLID_AABB_TEX_KEY, srcKey);
+                sprites.setDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY, info.frameIndex | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY, bbBase.minX | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY, bbBase.maxX | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_BASE_H_KEY, bbBase.baseH | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_W_KEY, bbBase.frameW | 0);
+                sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_H_KEY, bbBase.frameH | 0);
+
                 if (DECOR_DEBUG) {
                     _decor_dbg("AABB", "tightened base-only solid", { name, tileR: r, tileC: c, info, bbBase });
                 }
@@ -715,7 +761,8 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         }
 
         let fullKey = info.textureKey;
-        if (forceAura && useAura) {
+        const usedAura = !!(forceAura && useAura);
+        if (usedAura) {
             const auraTexKey = auraKey(info.textureKey, 0);
             if (!scene?.textures?.exists?.(auraTexKey)) {
                 throw new Error(
@@ -735,6 +782,22 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         // Reposition inside the tile
         s.left = ((c * tileSize + (bb.ox | 0) + instOffX) | 0);
         s.top  = ((r * tileSize + (bb.oy | 0) + instOffY) | 0);
+
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_MODE_KEY, DECOR_SOLID_AABB_MODE_FULL);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY, usedAura ? 1 : 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_X_KEY, ((bb.ox | 0) + instOffX) | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_Y_KEY, ((bb.oy | 0) + instOffY) | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY, bb.ox | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY, bb.oy | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_W_KEY, bb.w | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_H_KEY, bb.h | 0);
+        sprites.setDataString(s, DECOR_SOLID_AABB_TEX_KEY, fullKey);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY, info.frameIndex | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY, 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY, 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_H_KEY, 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_W_KEY, 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_H_KEY, 0);
 
         if (DECOR_DEBUG) {
             _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, info, bb });
@@ -1465,6 +1528,8 @@ const EFFECT_FLIP_X_DATA_KEY = "effectFlipX";
 const EFFECT_FLIP_Y_DATA_KEY = "effectFlipY";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
 const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
+const EFFECT_FRAME_LIST_DATA_KEY = "effectFrameList";
+const EFFECT_YOYO_DATA_KEY = "effectYoyo";
 
 const EFFECT_BLANK_TEX_KEY = "__effectBlankTex";
 const EFFECT_FORCE_TOP_DEPTH = 2000000000;
@@ -5160,6 +5225,9 @@ const ENEMY_POS_GUARD_ALLOWLIST: string[] = [
     "resolveForEnemy",
     "_enemyHitRunEffects",
     "_enemyApplyAntiStuckSlide",
+    "_enemyBossMoveFeetCenterTo",
+    "_enemyBossUpdateIntroJump",
+    "_enemyBossStartIntroJump",
     "_resolveSpriteOverlap",
     "spawnEnemyOfKind",
     "spawnDummyEnemy",
@@ -6083,6 +6151,18 @@ function _attachEarlySceneGuard(ctx: AttachContext): boolean {
     if (!sc) {
         if (ctx.shouldLog) {
             console.log("[_attachNativeSprite] NO SCENE — skipping for sprite", ctx.s.id);
+        }
+        _attachFinalizeEarlyOutOnly(ctx);
+        return false;
+    }
+    const sys: any = sc.sys;
+    const dl: any = sys?.displayList;
+    const ul: any = sys?.updateList;
+    const listsOk = !!(dl && ul && typeof dl.add === "function" && typeof ul.add === "function");
+    if (!listsOk) {
+        if (ctx.shouldLog) {
+            console.log("[_attachNativeSprite] SCENE_NOT_READY id=" + (ctx.s.id | 0) +
+                " hasDL=" + (!!dl ? 1 : 0) + " hasUL=" + (!!ul ? 1 : 0));
         }
         _attachFinalizeEarlyOutOnly(ctx);
         return false;
@@ -7860,6 +7940,16 @@ function _syncBeginFrame(): SyncContext {
 function _syncEarlySceneGuard(ctx: SyncContext): boolean {
     if (!ctx.sc) {
         if (DEBUG_SPRITE_SYNC && ctx.shouldLog) console.log("[_syncNativeSprites] no scene yet");
+        return false;
+    }
+    const sys: any = (ctx.sc as any).sys;
+    const dl: any = sys?.displayList;
+    const ul: any = sys?.updateList;
+    const listsOk = !!(dl && ul && typeof dl.add === "function" && typeof ul.add === "function");
+    if (!listsOk) {
+        if (DEBUG_SPRITE_SYNC && ctx.shouldLog) {
+            console.log("[_syncNativeSprites] sceneNotReady hasDL=" + (!!dl ? 1 : 0) + " hasUL=" + (!!ul ? 1 : 0));
+        }
         return false;
     }
     return true;
@@ -12633,6 +12723,8 @@ function _syncEffectPath(
     const hasScaleY = Object.prototype.hasOwnProperty.call(data, EFFECT_SCALE_Y_DATA_KEY);
     const hasBrush = Object.prototype.hasOwnProperty.call(data, EFFECT_BRUSH_PX_DATA_KEY);
     const hasFrameIndex = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_INDEX_DATA_KEY);
+    const hasFrameList = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_LIST_DATA_KEY);
+    const hasYoyo = Object.prototype.hasOwnProperty.call(data, EFFECT_YOYO_DATA_KEY);
     const hasPopMs = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_MS_DATA_KEY);
     const hasPopScale = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_SCALE_DATA_KEY);
     const hasPopStart = Object.prototype.hasOwnProperty.call(data, EFFECT_POP_START_MS_DATA_KEY);
@@ -12677,6 +12769,8 @@ function _syncEffectPath(
     const maskPadOutRaw = hasMaskPadOut ? sprites.readDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY) : 0;
     const rot = hasRot ? sprites.readDataNumber(s, EFFECT_ROT_DATA_KEY) : 0;
     const frameIndex = hasFrameIndex ? sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY) : 0;
+    const frameList = hasFrameList ? (sprites.readDataString(s, EFFECT_FRAME_LIST_DATA_KEY) || "") : "";
+    const yoyoRaw = hasYoyo ? sprites.readDataNumber(s, EFFECT_YOYO_DATA_KEY) : 0;
     const maskInvert = (maskInvertRaw | 0) !== 0;
     const modeRaw = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim().toLowerCase();
     const tint = Number.isFinite(tintRaw) ? (tintRaw as number) | 0 : 0;
@@ -12702,6 +12796,8 @@ function _syncEffectPath(
     if (hasScaleY) data[EFFECT_SCALE_Y_DATA_KEY] = scaleY;
     if (hasBrush) data[EFFECT_BRUSH_PX_DATA_KEY] = brushPx;
     if (hasFrameIndex) data[EFFECT_FRAME_INDEX_DATA_KEY] = frameIndex;
+    if (hasFrameList) data[EFFECT_FRAME_LIST_DATA_KEY] = frameList;
+    if (hasYoyo) data[EFFECT_YOYO_DATA_KEY] = yoyoRaw;
     if (modeRaw) data[EFFECT_MODE_DATA_KEY] = modeRaw;
     if (hasPopMs) data[EFFECT_POP_MS_DATA_KEY] = popMs;
     if (hasPopScale) data[EFFECT_POP_SCALE_DATA_KEY] = popScale;
@@ -12755,6 +12851,8 @@ function _syncEffectPath(
     if (hasScaleY) nativeAny.setData(EFFECT_SCALE_Y_DATA_KEY, scaleY);
     if (hasBrush) nativeAny.setData(EFFECT_BRUSH_PX_DATA_KEY, brushPx);
     if (hasFrameIndex) nativeAny.setData(EFFECT_FRAME_INDEX_DATA_KEY, frameIndex);
+    if (hasFrameList) nativeAny.setData(EFFECT_FRAME_LIST_DATA_KEY, frameList);
+    if (hasYoyo) nativeAny.setData(EFFECT_YOYO_DATA_KEY, yoyoRaw);
     nativeAny.setData(EFFECT_MODE_DATA_KEY, modeRaw);
     if (hasPopMs) nativeAny.setData(EFFECT_POP_MS_DATA_KEY, popMs);
     if (hasPopScale) nativeAny.setData(EFFECT_POP_SCALE_DATA_KEY, popScale);
@@ -13411,6 +13509,7 @@ function _syncEndFrame(ctx: SyncContext): void {
     if (ctx.sc) {
         _debugDrawEnemyWallColliders(ctx.sc);
         _debugDrawEffectBounds(ctx.sc);
+        _debugUpdateStrengthArcGallery(ctx.sc);
     }
 
     if (!ctx.shouldLog) return;
@@ -13637,6 +13736,8 @@ let _dbgColliderGfxEnemies: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxHeroes: Phaser.GameObjects.Graphics | null = null;
 let _dbgColliderGfxDecor: Phaser.GameObjects.Graphics | null = null;
 let _dbgEffectGfx: Phaser.GameObjects.Graphics | null = null;
+let _dbgStrArcGalleryContainer: Phaser.GameObjects.Container | null = null;
+let _dbgStrArcGalleryKey = "";
 let _dbgLoggedEnemyColliderOnce = false;
 let _dbgLoggedHeroColliderOnce = false;
 
@@ -13686,6 +13787,241 @@ function _debugEnsureEffectGfx(sc: Phaser.Scene): void {
     if (_dbgEffectGfx) return;
     _dbgEffectGfx = sc.add.graphics();
     try { (_dbgEffectGfx as any).setDepth?.(999999); } catch { }
+}
+
+function _dbgParseNumList(raw: string): number[] {
+    const tokens = String(raw || "").split(/[\s,]+/).filter((t) => !!t);
+    const out: number[] = [];
+    for (const tok of tokens) {
+        const n = Number(tok);
+        if (!Number.isFinite(n)) continue;
+        if (n <= 0) continue;
+        out.push(n);
+    }
+    return out.length ? out : [1];
+}
+
+function _dbgTextureDims(sc: Phaser.Scene, textureKey: string): { w: number; h: number } {
+    try {
+        const tex = sc.textures.get(textureKey);
+        if (!tex) return { w: 0, h: 0 };
+        const srcAny: any = tex.getSourceImage ? tex.getSourceImage() : null;
+        const src = Array.isArray(srcAny) ? srcAny[0] : srcAny;
+        const w = (src && src.width) ? (src.width | 0) : 0;
+        const h = (src && src.height) ? (src.height | 0) : 0;
+        return { w, h };
+    } catch {
+        return { w: 0, h: 0 };
+    }
+}
+
+function _dbgRawColsRows(
+    sc: Phaser.Scene,
+    textureKey: string,
+    frameW: number,
+    frameH: number,
+    fallbackCount: number
+): { cols: number; rows: number } {
+    const fw = Math.max(1, frameW | 0);
+    const fh = Math.max(1, frameH | 0);
+    const dims = _dbgTextureDims(sc, textureKey);
+    let cols = dims.w > 0 ? Math.max(1, Math.round(dims.w / fw)) : 0;
+    let rows = dims.h > 0 ? Math.max(1, Math.round(dims.h / fh)) : 0;
+    if (cols <= 0 || rows <= 0) {
+        const count = Math.max(1, fallbackCount | 0);
+        const guessCols = Math.max(1, Math.round(Math.sqrt(count)));
+        cols = cols > 0 ? cols : guessCols;
+        rows = rows > 0 ? rows : Math.max(1, Math.ceil(count / cols));
+    }
+    return { cols: Math.max(1, cols | 0), rows: Math.max(1, rows | 0) };
+}
+
+function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
+    if (!DEBUG_STR_ARC_GALLERY) {
+        if (_dbgStrArcGalleryContainer) {
+            try { _dbgStrArcGalleryContainer.destroy(true); } catch { }
+            _dbgStrArcGalleryContainer = null;
+            _dbgStrArcGalleryKey = "";
+        }
+        return;
+    }
+    if (!sc) return;
+    if (_dbgStrArcGalleryContainer && _dbgStrArcGalleryContainer.scene !== sc) {
+        try { _dbgStrArcGalleryContainer.destroy(true); } catch { }
+        _dbgStrArcGalleryContainer = null;
+        _dbgStrArcGalleryKey = "";
+    }
+
+    const atlas = _getEffectAtlasFromScene(sc);
+    const skin = String(DEBUG_STR_ARC_GALLERY_SKIN || "").trim();
+    if (!atlas || !skin) return;
+
+    const coreCols = Math.max(1, DEBUG_STR_ARC_GALLERY_CORE_COLS | 0);
+    const coreRows = Math.max(1, DEBUG_STR_ARC_GALLERY_CORE_ROWS | 0);
+    const scale = Math.max(0.1, Number.isFinite(DEBUG_STR_ARC_GALLERY_SCALE) ? DEBUG_STR_ARC_GALLERY_SCALE : 0.5);
+    const pad = Math.max(0, DEBUG_STR_ARC_GALLERY_PADDING | 0);
+    const animFps = Math.max(1, DEBUG_STR_ARC_GALLERY_ANIM_FPS | 0);
+    const alpha = Math.max(0, Math.min(1, Number.isFinite(DEBUG_STR_ARC_GALLERY_ALPHA) ? DEBUG_STR_ARC_GALLERY_ALPHA : 1));
+    const speedsRaw = String(DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS || "");
+    const speeds = _dbgParseNumList(speedsRaw);
+
+    const arcResolved = _resolveEffectAtlasEntry(atlas as any, skin, "none");
+    if (!arcResolved || !arcResolved.textureKey || !arcResolved.frameIndices?.length) {
+        if (_dbgStrArcGalleryContainer) {
+            try { _dbgStrArcGalleryContainer.destroy(true); } catch { }
+            _dbgStrArcGalleryContainer = null;
+            _dbgStrArcGalleryKey = "";
+        }
+        return;
+    }
+
+    const auraRadius = Math.max(1, DEBUG_STR_ARC_GALLERY_AURA_RADIUS | 0);
+    const auraId = `${skin}_aura_r${auraRadius}`;
+    const auraResolved = _resolveEffectAtlasEntry(atlas as any, auraId, "none");
+
+    const fillSkin = String(DEBUG_STR_ARC_GALLERY_FILL_SKIN || "").trim();
+    const fillResolved = fillSkin ? _resolveEffectAtlasEntry(atlas as any, fillSkin, "none") : null;
+
+    const key = [
+        sc.sys.settings.key || "",
+        arcResolved.textureKey,
+        arcResolved.frameW | 0,
+        arcResolved.frameH | 0,
+        auraResolved?.textureKey || "",
+        fillResolved?.textureKey || "",
+        coreCols,
+        coreRows,
+        scale,
+        pad,
+        animFps,
+        speedsRaw
+    ].join("|");
+
+    if (_dbgStrArcGalleryContainer && _dbgStrArcGalleryKey === key) return;
+    if (_dbgStrArcGalleryContainer) {
+        try { _dbgStrArcGalleryContainer.destroy(true); } catch { }
+        _dbgStrArcGalleryContainer = null;
+    }
+    _dbgStrArcGalleryKey = key;
+
+    const container = sc.add.container(8, 8);
+    container.setDepth(999999);
+    container.setScrollFactor(0);
+
+    const labelStyle = { fontFamily: "monospace", fontSize: "11px", color: "#ffffff", stroke: "#000000", strokeThickness: 3 } as const;
+    const cellLabelStyle = { fontFamily: "monospace", fontSize: "10px", color: "#ffffff", stroke: "#000000", strokeThickness: 2 } as const;
+
+    let cursorY = 0;
+    const arcLabel = sc.add.text(0, cursorY, `[ARC] ${skin}`, labelStyle).setOrigin(0, 0);
+    arcLabel.setScrollFactor(0);
+    container.add(arcLabel);
+    cursorY += (arcLabel.height | 0) + 4;
+
+    const arcFrameW = Math.max(1, arcResolved.frameW | 0);
+    const arcFrameH = Math.max(1, arcResolved.frameH | 0);
+    const arcDims = _dbgRawColsRows(sc, arcResolved.textureKey, arcFrameW, arcFrameH, arcResolved.frameIndices.length | 0);
+    const rawCols = arcDims.cols;
+    const cellW = Math.round(arcFrameW * scale) + pad;
+    const cellH = Math.round(arcFrameH * scale) + pad;
+
+    const coreFrameIndices: number[] = [];
+    for (let r = 0; r < coreRows; r++) {
+        for (let c = 0; c < coreCols; c++) {
+            const sheetIdx = (r * rawCols + c) | 0;
+            if (sheetIdx < 0 || sheetIdx >= arcResolved.frameIndices.length) continue;
+            const frame = arcResolved.frameIndices[sheetIdx];
+            coreFrameIndices.push(frame);
+            const x = c * cellW;
+            const y = cursorY + (r * cellH);
+            const arcSprite = sc.add.sprite(x, y, arcResolved.textureKey, frame).setOrigin(0, 0);
+            arcSprite.setScale(scale);
+            arcSprite.setAlpha(alpha);
+            arcSprite.setScrollFactor(0);
+            container.add(arcSprite);
+
+            if (auraResolved && auraResolved.textureKey && auraResolved.frameIndices?.length > sheetIdx) {
+                const auraFrame = auraResolved.frameIndices[sheetIdx];
+                const auraSprite = sc.add.sprite(x, y, auraResolved.textureKey, auraFrame).setOrigin(0, 0);
+                auraSprite.setScale(scale);
+                auraSprite.setAlpha(Math.min(1, alpha * 0.9));
+                auraSprite.setScrollFactor(0);
+                container.add(auraSprite);
+            }
+
+            const tag = sc.add.text(x + 2, y + 2, `r${r}c${c}#${sheetIdx}`, cellLabelStyle).setOrigin(0, 0);
+            tag.setScrollFactor(0);
+            container.add(tag);
+        }
+    }
+
+    cursorY += (coreRows * cellH) + pad + 8;
+
+    if (coreFrameIndices.length > 0) {
+        const animKey = `dbg_str_arc_core_${arcResolved.textureKey}_${arcFrameW}x${arcFrameH}_n${coreFrameIndices.length}_fps${animFps}`;
+        if (!sc.anims.exists(animKey)) {
+            sc.anims.create({
+                key: animKey,
+                frames: coreFrameIndices.map((f) => ({ key: arcResolved.textureKey, frame: f })),
+                frameRate: animFps,
+                repeat: -1,
+                yoyo: true
+            });
+        }
+        const animLabel = sc.add.text(0, cursorY, `[ARC ANIM] fps=${animFps}`, labelStyle).setOrigin(0, 0);
+        animLabel.setScrollFactor(0);
+        container.add(animLabel);
+        cursorY += (animLabel.height | 0) + 4;
+
+        for (let i = 0; i < speeds.length; i++) {
+            const speed = speeds[i];
+            const x = i * cellW;
+            const y = cursorY;
+            const spr = sc.add.sprite(x, y, arcResolved.textureKey, coreFrameIndices[0]).setOrigin(0, 0);
+            spr.setScale(scale);
+            spr.setAlpha(alpha);
+            spr.setScrollFactor(0);
+            spr.play(animKey, true);
+            if (spr.anims) spr.anims.timeScale = speed;
+            container.add(spr);
+            const spdTag = sc.add.text(x + 2, y + 2, `${speed}x`, cellLabelStyle).setOrigin(0, 0);
+            spdTag.setScrollFactor(0);
+            container.add(spdTag);
+        }
+
+        cursorY += cellH + pad + 8;
+    }
+
+    if (fillResolved && fillResolved.textureKey && fillResolved.frameIndices?.length) {
+        const fillLabel = sc.add.text(0, cursorY, `[FILL] ${fillSkin}`, labelStyle).setOrigin(0, 0);
+        fillLabel.setScrollFactor(0);
+        container.add(fillLabel);
+        cursorY += (fillLabel.height | 0) + 4;
+
+        const fillFrameW = Math.max(1, fillResolved.frameW | 0);
+        const fillFrameH = Math.max(1, fillResolved.frameH | 0);
+        const fillDims = _dbgRawColsRows(sc, fillResolved.textureKey, fillFrameW, fillFrameH, fillResolved.frameIndices.length | 0);
+        const fillCols = fillDims.cols;
+        const fillCellW = Math.round(fillFrameW * scale) + pad;
+        const fillCellH = Math.round(fillFrameH * scale) + pad;
+
+        for (let i = 0; i < fillResolved.frameIndices.length; i++) {
+            const frame = fillResolved.frameIndices[i];
+            const col = (i % fillCols) | 0;
+            const row = Math.floor(i / fillCols) | 0;
+            const x = col * fillCellW;
+            const y = cursorY + (row * fillCellH);
+            const spr = sc.add.sprite(x, y, fillResolved.textureKey, frame).setOrigin(0, 0);
+            spr.setScale(scale);
+            spr.setAlpha(alpha);
+            spr.setScrollFactor(0);
+            container.add(spr);
+            const tag = sc.add.text(x + 2, y + 2, `#${i}`, cellLabelStyle).setOrigin(0, 0);
+            tag.setScrollFactor(0);
+            container.add(tag);
+        }
+    }
+
+    _dbgStrArcGalleryContainer = container;
 }
 
 function _debugDrawEffectBounds(sc: Phaser.Scene): void {

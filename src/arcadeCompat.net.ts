@@ -332,7 +332,7 @@ type NetMessage =
           baseFamily?: string;
           wallFamily?: string;
           decorOnly?: boolean;
-          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number }> };
+          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number; offX?: number; offY?: number }> };
           baseSig?: number;
           decorSig?: number;
           worldSig?: number;
@@ -351,7 +351,7 @@ type NetMessage =
           baseFamily?: string;
           wallFamily?: string;
           decorOnly?: boolean;
-          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number }> };
+          decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number; offX?: number; offY?: number }> };
           baseSig?: number;
           decorSig?: number;
           worldSig?: number;

@@ -3,7 +3,7 @@
 export const WEAPON_ATLAS_SHEETS = [
   {
     "key": "t064__blunt__flail__hurt__bg__vbase",
-    "atlasKey": "t064__blunt__flail__hurt",
+    "atlasKey": "tall__consolidated__hurt__6x1",
     "tile": 64,
     "category": "blunt",
     "model": "flail",
@@ -18,7 +18,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__blunt__flail__hurt__fg__vbase",
-    "atlasKey": "t064__blunt__flail__hurt",
+    "atlasKey": "tall__consolidated__hurt__6x1",
     "tile": 64,
     "category": "blunt",
     "model": "flail",
@@ -33,7 +33,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__blunt__flail__walk__bg__vbase",
-    "atlasKey": "t064__blunt__flail__walk",
+    "atlasKey": "tall__consolidated__walk__9x4",
     "tile": 64,
     "category": "blunt",
     "model": "flail",
@@ -48,7 +48,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__blunt__flail__walk__fg__vbase",
-    "atlasKey": "t064__blunt__flail__walk",
+    "atlasKey": "tall__consolidated__walk__9x4",
     "tile": 64,
     "category": "blunt",
     "model": "flail",
@@ -62,23 +62,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__blunt__mace__hurt__fg__vbase",
-    "atlasKey": "t064__blunt__mace__hurt",
-    "tile": 64,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__blunt__mace__thrust__fg__vbase",
-    "atlasKey": "t064__blunt__mace__thrust",
+    "atlasKey": "tall__consolidated__thrust__8x4",
     "tile": 64,
     "category": "blunt",
     "model": "mace",
@@ -92,113 +77,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__blunt__mace__universal_hurt__bg__vbase",
-    "atlasKey": "t064__blunt__mace__universal_hurt",
-    "tile": 64,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__blunt__mace__universal_walk__bg__vbase",
-    "atlasKey": "t064__blunt__mace__universal_walk",
-    "tile": 64,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__blunt__mace__walk__fg__vbase",
-    "atlasKey": "t064__blunt__mace__walk",
-    "tile": 64,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__blunt__waraxe__hurt__fg__vbase",
-    "atlasKey": "t064__blunt__waraxe__hurt",
-    "tile": 64,
-    "category": "blunt",
-    "model": "waraxe",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__blunt__waraxe__walk__bg__vbase",
-    "atlasKey": "t064__blunt__waraxe__walk",
-    "tile": 64,
-    "category": "blunt",
-    "model": "waraxe",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__blunt__waraxe__walk__fg__vbase",
-    "atlasKey": "t064__blunt__waraxe__walk",
-    "tile": 64,
-    "category": "blunt",
-    "model": "waraxe",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__gear__quiver__hurt__bg__vbase",
-    "atlasKey": "t064__gear__quiver__hurt",
-    "tile": 64,
-    "category": "gear",
-    "model": "quiver",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__gear__quiver__shoot__bg__vbase",
-    "atlasKey": "t064__gear__quiver__shoot",
+    "atlasKey": "tall__consolidated__shoot__13x4",
     "tile": 64,
     "category": "gear",
     "model": "quiver",
@@ -213,7 +93,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__gear__quiver__slash__bg__vbase",
-    "atlasKey": "t064__gear__quiver__slash",
+    "atlasKey": "tall__consolidated__slash__6x4",
     "tile": 64,
     "category": "gear",
     "model": "quiver",
@@ -228,7 +108,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__gear__quiver__spellcast__bg__vbase",
-    "atlasKey": "t064__gear__quiver__spellcast",
+    "atlasKey": "tall__consolidated__spellcast__7x4",
     "tile": 64,
     "category": "gear",
     "model": "quiver",
@@ -243,7 +123,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__gear__quiver__thrust__bg__vbase",
-    "atlasKey": "t064__gear__quiver__thrust",
+    "atlasKey": "tall__consolidated__thrust__8x4",
     "tile": 64,
     "category": "gear",
     "model": "quiver",
@@ -257,37 +137,7 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__gear__quiver__walk__bg__vbase",
-    "atlasKey": "t064__gear__quiver__walk",
-    "tile": 64,
-    "category": "gear",
-    "model": "quiver",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__crystal__universal_hurt__bg__vbase",
-    "atlasKey": "t064__magic__crystal__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__crystal__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__magic__crystal__universal_hurt",
     "tile": 64,
     "category": "magic",
@@ -407,21 +257,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__magic__crystal__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__magic__crystal__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__magic__crystal__universal_hurt__fg__vblue",
     "atlasKey": "t064__magic__crystal__universal_hurt",
     "tile": 64,
@@ -513,21 +348,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__crystal__universal_walk__bg__vbase",
-    "atlasKey": "t064__magic__crystal__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__crystal__universal_walk__bg__vbase__dup2",
     "atlasKey": "t064__magic__crystal__universal_walk",
     "tile": 64,
     "category": "magic",
@@ -647,21 +467,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__crystal__universal_walk__fg__vbase__dup2",
-    "atlasKey": "t064__magic__crystal__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__crystal__universal_walk__fg__vblue",
     "atlasKey": "t064__magic__crystal__universal_walk",
     "tile": 64,
@@ -753,21 +558,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__diamond__universal_hurt__bg__vbase",
-    "atlasKey": "t064__magic__diamond__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__diamond__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__magic__diamond__universal_hurt",
     "tile": 64,
     "category": "magic",
@@ -977,21 +767,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__magic__diamond__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__magic__diamond__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__magic__diamond__universal_hurt__fg__vbrass",
     "atlasKey": "t064__magic__diamond__universal_hurt",
     "tile": 64,
@@ -1173,21 +948,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__diamond__universal_walk__bg__vbase",
-    "atlasKey": "t064__magic__diamond__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__diamond__universal_walk__bg__vbase__dup2",
     "atlasKey": "t064__magic__diamond__universal_walk",
     "tile": 64,
     "category": "magic",
@@ -1397,21 +1157,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__diamond__universal_walk__fg__vbase__dup2",
-    "atlasKey": "t064__magic__diamond__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__diamond__universal_walk__fg__vbrass",
     "atlasKey": "t064__magic__diamond__universal_walk",
     "tile": 64,
@@ -1593,21 +1338,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__gnarled__universal_hurt__bg__vbase",
-    "atlasKey": "t064__magic__gnarled__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__gnarled__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__magic__gnarled__universal_hurt",
     "tile": 64,
     "category": "magic",
@@ -1817,21 +1547,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__magic__gnarled__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__magic__gnarled__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__magic__gnarled__universal_hurt__fg__vbrass",
     "atlasKey": "t064__magic__gnarled__universal_hurt",
     "tile": 64,
@@ -2013,21 +1728,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__gnarled__universal_walk__bg__vbase",
-    "atlasKey": "t064__magic__gnarled__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__gnarled__universal_walk__bg__vbase__dup2",
     "atlasKey": "t064__magic__gnarled__universal_walk",
     "tile": 64,
     "category": "magic",
@@ -2237,21 +1937,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__gnarled__universal_walk__fg__vbase__dup2",
-    "atlasKey": "t064__magic__gnarled__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__gnarled__universal_walk__fg__vbrass",
     "atlasKey": "t064__magic__gnarled__universal_walk",
     "tile": 64,
@@ -2433,21 +2118,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__loop__universal_hurt__bg__vbase",
-    "atlasKey": "t064__magic__loop__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "loop",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__loop__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__magic__loop__universal_hurt",
     "tile": 64,
     "category": "magic",
@@ -2657,21 +2327,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__magic__loop__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__magic__loop__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "loop",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__magic__loop__universal_hurt__fg__vbrass",
     "atlasKey": "t064__magic__loop__universal_hurt",
     "tile": 64,
@@ -2853,21 +2508,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__loop__universal_walk__bg__vbase",
-    "atlasKey": "t064__magic__loop__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "loop",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__loop__universal_walk__bg__vbase__dup2",
     "atlasKey": "t064__magic__loop__universal_walk",
     "tile": 64,
     "category": "magic",
@@ -3077,21 +2717,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__loop__universal_walk__fg__vbase__dup2",
-    "atlasKey": "t064__magic__loop__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "loop",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__loop__universal_walk__fg__vbrass",
     "atlasKey": "t064__magic__loop__universal_walk",
     "tile": 64,
@@ -3273,21 +2898,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__s__universal_hurt__bg__vbase",
-    "atlasKey": "t064__magic__s__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "s",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__s__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__magic__s__universal_hurt",
     "tile": 64,
     "category": "magic",
@@ -3497,21 +3107,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__magic__s__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__magic__s__universal_hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "s",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__magic__s__universal_hurt__fg__vbrass",
     "atlasKey": "t064__magic__s__universal_hurt",
     "tile": 64,
@@ -3693,21 +3288,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__magic__s__universal_walk__bg__vbase",
-    "atlasKey": "t064__magic__s__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "s",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__s__universal_walk__bg__vbase__dup2",
     "atlasKey": "t064__magic__s__universal_walk",
     "tile": 64,
     "category": "magic",
@@ -3917,21 +3497,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__s__universal_walk__fg__vbase__dup2",
-    "atlasKey": "t064__magic__s__universal_walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "s",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__s__universal_walk__fg__vbrass",
     "atlasKey": "t064__magic__s__universal_walk",
     "tile": 64,
@@ -4112,53 +3677,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__magic__simple__hurt__bg__vbase",
-    "atlasKey": "t064__magic__simple__hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__simple__hurt__fg__vbase",
-    "atlasKey": "t064__magic__simple__hurt",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__magic__simple__spellcast__bg__vbase",
-    "atlasKey": "t064__magic__simple__spellcast",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "spellcast",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 28,
-    "cols": 7,
-    "rows": 4
-  },
-  {
     "key": "t064__magic__simple__spellcast__fg__vbase",
-    "atlasKey": "t064__magic__simple__spellcast",
+    "atlasKey": "tall__consolidated__spellcast__7x4",
     "tile": 64,
     "category": "magic",
     "model": "simple",
@@ -4169,131 +3689,11 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 28,
     "cols": 7,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__simple__thrust__bg__vbase",
-    "atlasKey": "t064__magic__simple__thrust",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__simple__thrust__fg__vbase",
-    "atlasKey": "t064__magic__simple__thrust",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__simple__walk__bg__vbase",
-    "atlasKey": "t064__magic__simple__walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__simple__walk__fg__vbase",
-    "atlasKey": "t064__magic__simple__walk",
-    "tile": 64,
-    "category": "magic",
-    "model": "simple",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__wand__female__slash__fg__vwand",
-    "atlasKey": "t064__magic__wand_female__slash",
-    "tile": 64,
-    "category": "magic",
-    "model": "wand_female",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "wand",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t064__magic__wand__male__slash__fg__vwand",
-    "atlasKey": "t064__magic__wand_male__slash",
-    "tile": 64,
-    "category": "magic",
-    "model": "wand_male",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "wand",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__cane__female__thrust__fg__vcane",
-    "atlasKey": "t064__polearm__cane_female__thrust",
-    "tile": 64,
-    "category": "polearm",
-    "model": "cane_female",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "cane",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__cane__female__walk__fg__vcane",
-    "atlasKey": "t064__polearm__cane_female__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "cane_female",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "cane",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
     "rows": 4
   },
   {
     "key": "t064__polearm__cane__male__thrust__fg__vcane",
-    "atlasKey": "t064__polearm__cane_male__thrust",
+    "atlasKey": "tall__consolidated__thrust__8x4",
     "tile": 64,
     "category": "polearm",
     "model": "cane_male",
@@ -4308,7 +3708,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__polearm__cane__male__walk__fg__vcane",
-    "atlasKey": "t064__polearm__cane_male__walk",
+    "atlasKey": "tall__consolidated__walk__9x4",
     "tile": 64,
     "category": "polearm",
     "model": "cane_male",
@@ -4322,142 +3722,7 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__polearm__halberd__hurt__bg__vbase",
-    "atlasKey": "t064__polearm__halberd__hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__polearm__halberd__hurt__fg__vbase",
-    "atlasKey": "t064__polearm__halberd__hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__polearm__halberd__walk__bg__vbase",
-    "atlasKey": "t064__polearm__halberd__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__halberd__walk__fg__vbase",
-    "atlasKey": "t064__polearm__halberd__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__scythe__hurt__fg__vbase",
-    "atlasKey": "t064__polearm__scythe__hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__polearm__scythe__universal_hurt__bg__vbase",
-    "atlasKey": "t064__polearm__scythe__universal_hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__polearm__scythe__universal_walk__bg__vbase",
-    "atlasKey": "t064__polearm__scythe__universal_walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__scythe__walk__fg__vbase",
-    "atlasKey": "t064__polearm__scythe__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__polearm__spear__hurt__bg__vbase",
-    "atlasKey": "t064__polearm__spear__hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__polearm__spear__hurt__bg__vbase__dup2",
     "atlasKey": "t064__polearm__spear__hurt",
     "tile": 64,
     "category": "polearm",
@@ -4667,21 +3932,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__polearm__spear__hurt__fg__vbase__dup2",
-    "atlasKey": "t064__polearm__spear__hurt",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__polearm__spear__hurt__fg__vbrass",
     "atlasKey": "t064__polearm__spear__hurt",
     "tile": 64,
@@ -4863,21 +4113,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__polearm__spear__thrust__bg__vbase",
-    "atlasKey": "t064__polearm__spear__thrust",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__spear__thrust__bg__vbase__dup2",
     "atlasKey": "t064__polearm__spear__thrust",
     "tile": 64,
     "category": "polearm",
@@ -5087,21 +4322,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__polearm__spear__thrust__fg__vbase__dup2",
-    "atlasKey": "t064__polearm__spear__thrust",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
     "key": "t064__polearm__spear__thrust__fg__vbrass",
     "atlasKey": "t064__polearm__spear__thrust",
     "tile": 64,
@@ -5283,21 +4503,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__polearm__spear__walk__bg__vbase",
-    "atlasKey": "t064__polearm__spear__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__polearm__spear__walk__bg__vbase__dup2",
     "atlasKey": "t064__polearm__spear__walk",
     "tile": 64,
     "category": "polearm",
@@ -5507,21 +4712,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__polearm__spear__walk__fg__vbase__dup2",
-    "atlasKey": "t064__polearm__spear__walk",
-    "tile": 64,
-    "category": "polearm",
-    "model": "spear",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__polearm__spear__walk__fg__vbrass",
     "atlasKey": "t064__polearm__spear__walk",
     "tile": 64,
@@ -5703,7 +4893,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__arrow__shoot__fg__vbase",
-    "atlasKey": "t064__ranged__bow_arrow__shoot",
+    "atlasKey": "tall__consolidated__shoot__13x4",
     "tile": 64,
     "category": "ranged",
     "model": "bow_arrow",
@@ -5718,21 +4908,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__great__universal_hurt__bg__vbase",
-    "atlasKey": "t064__ranged__bow_great__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_great",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__bow__great__universal_hurt__bg__vbase__dup2",
     "atlasKey": "t064__ranged__bow_great__universal_hurt",
     "tile": 64,
     "category": "ranged",
@@ -5942,21 +5117,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__ranged__bow__great__universal_hurt__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_great__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_great",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__ranged__bow__great__universal_hurt__fg__vbrass",
     "atlasKey": "t064__ranged__bow_great__universal_hurt",
     "tile": 64,
@@ -6138,21 +5298,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__great__universal_shoot__fg__vbase",
-    "atlasKey": "t064__ranged__bow_great__universal_shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_great",
-    "anim": "universal_shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__bow__great__universal_shoot__fg__vbase__dup2",
     "atlasKey": "t064__ranged__bow_great__universal_shoot",
     "tile": 64,
     "category": "ranged",
@@ -6362,21 +5507,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__ranged__bow__normal__universal_hurt__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_normal__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__ranged__bow__normal__universal_hurt__bg__vbrass",
     "atlasKey": "t064__ranged__bow_normal__universal_hurt",
     "tile": 64,
@@ -6558,21 +5688,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__normal__universal_hurt__fg__vbase",
-    "atlasKey": "t064__ranged__bow_normal__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__bow__normal__universal_hurt__fg__vbase__dup2",
     "atlasKey": "t064__ranged__bow_normal__universal_hurt",
     "tile": 64,
     "category": "ranged",
@@ -6782,21 +5897,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__ranged__bow__normal__universal_shoot__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_normal__universal_shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "universal_shoot",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
     "key": "t064__ranged__bow__normal__universal_shoot__bg__vbrass",
     "atlasKey": "t064__ranged__bow_normal__universal_shoot",
     "tile": 64,
@@ -6978,21 +6078,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__normal__universal_shoot__fg__vbase",
-    "atlasKey": "t064__ranged__bow_normal__universal_shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "universal_shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__bow__normal__universal_shoot__fg__vbase__dup2",
     "atlasKey": "t064__ranged__bow_normal__universal_shoot",
     "tile": 64,
     "category": "ranged",
@@ -7202,21 +6287,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 1
   },
   {
-    "key": "t064__ranged__bow__recurve__universal_hurt__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_recurve__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
     "key": "t064__ranged__bow__recurve__universal_hurt__bg__vbrass",
     "atlasKey": "t064__ranged__bow_recurve__universal_hurt",
     "tile": 64,
@@ -7398,21 +6468,6 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__ranged__bow__recurve__universal_hurt__fg__vbase",
-    "atlasKey": "t064__ranged__bow_recurve__universal_hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "universal_hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__bow__recurve__universal_hurt__fg__vbase__dup2",
     "atlasKey": "t064__ranged__bow_recurve__universal_hurt",
     "tile": 64,
     "category": "ranged",
@@ -7622,21 +6677,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__ranged__bow__recurve__universal_shoot__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_recurve__universal_shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "universal_shoot",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
     "key": "t064__ranged__bow__recurve__universal_shoot__bg__vbrass",
     "atlasKey": "t064__ranged__bow_recurve__universal_shoot",
     "tile": 64,
@@ -7832,21 +6872,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__ranged__bow__recurve__universal_shoot__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__bow_recurve__universal_shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "universal_shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
     "key": "t064__ranged__bow__recurve__universal_shoot__fg__vbrass",
     "atlasKey": "t064__ranged__bow_recurve__universal_shoot",
     "tile": 64,
@@ -8024,276 +7049,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 52,
     "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__hurt__bg__vbase",
-    "atlasKey": "t064__ranged__crossbow__hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__crossbow__hurt__fg__vbase",
-    "atlasKey": "t064__ranged__crossbow__hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__crossbow__thrust__bg__vbase",
-    "atlasKey": "t064__ranged__crossbow__thrust",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__thrust__fg__vbase",
-    "atlasKey": "t064__ranged__crossbow__thrust",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__thrust__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__crossbow__thrust",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__walk__bg__vbase",
-    "atlasKey": "t064__ranged__crossbow__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__walk__fg__vbase",
-    "atlasKey": "t064__ranged__crossbow__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__crossbow__walk__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__crossbow__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "crossbow",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__hurt__bg__vbase",
-    "atlasKey": "t064__ranged__slingshot__hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__slingshot__hurt__fg__vbase",
-    "atlasKey": "t064__ranged__slingshot__hurt",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__ranged__slingshot__shoot__bg__vbase",
-    "atlasKey": "t064__ranged__slingshot__shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "shoot",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__shoot__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__slingshot__shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "shoot",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__shoot__fg__vbase",
-    "atlasKey": "t064__ranged__slingshot__shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__shoot__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__slingshot__shoot",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__walk__bg__vbase",
-    "atlasKey": "t064__ranged__slingshot__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__walk__bg__vbase__dup2",
-    "atlasKey": "t064__ranged__slingshot__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__walk__fg__vbase",
-    "atlasKey": "t064__ranged__slingshot__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__ranged__slingshot__walk__fg__vbase__dup2",
-    "atlasKey": "t064__ranged__slingshot__walk",
-    "tile": 64,
-    "category": "ranged",
-    "model": "slingshot",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
     "rows": 4
   },
   {
@@ -9377,38 +8132,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__sword__dagger__hurt__fg__vbase",
-    "atlasKey": "t064__sword__dagger__hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "dagger",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__dagger__slash__bg__vbase",
-    "atlasKey": "t064__sword__dagger__slash",
-    "tile": 64,
-    "category": "sword",
-    "model": "dagger",
-    "anim": "slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
     "key": "t064__sword__dagger__slash__fg__vbase",
-    "atlasKey": "t064__sword__dagger__slash",
+    "atlasKey": "tall__consolidated__slash__6x4",
     "tile": 64,
     "category": "sword",
     "model": "dagger",
@@ -9419,51 +8144,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 24,
     "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__dagger__thrust__fg__vbase",
-    "atlasKey": "t064__sword__dagger__thrust",
-    "tile": 64,
-    "category": "sword",
-    "model": "dagger",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__dagger__walk__bg__vbase",
-    "atlasKey": "t064__sword__dagger__walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "dagger",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__dagger__walk__fg__vbase",
-    "atlasKey": "t064__sword__dagger__walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "dagger",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
     "rows": 4
   },
   {
@@ -9498,11 +8178,11 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__sword__glowsword__universal_hurt__bg__vblue",
-    "atlasKey": "t064__sword__glowsword__universal_hurt",
+    "atlasKey": "t064__sword__glowsword__hurt",
     "tile": 64,
     "category": "sword",
     "model": "glowsword",
-    "anim": "universal_hurt",
+    "anim": "hurt",
     "layer": "bg",
     "variant": "blue",
     "frameW": 64,
@@ -9513,11 +8193,11 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__sword__glowsword__universal_hurt__bg__vred",
-    "atlasKey": "t064__sword__glowsword__universal_hurt",
+    "atlasKey": "t064__sword__glowsword__hurt",
     "tile": 64,
     "category": "sword",
     "model": "glowsword",
-    "anim": "universal_hurt",
+    "anim": "hurt",
     "layer": "bg",
     "variant": "red",
     "frameW": 64,
@@ -9528,11 +8208,11 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__sword__glowsword__universal_walk__bg__vblue",
-    "atlasKey": "t064__sword__glowsword__universal_walk",
+    "atlasKey": "t064__sword__glowsword__walk",
     "tile": 64,
     "category": "sword",
     "model": "glowsword",
-    "anim": "universal_walk",
+    "anim": "walk",
     "layer": "bg",
     "variant": "blue",
     "frameW": 64,
@@ -9543,11 +8223,11 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__sword__glowsword__universal_walk__bg__vred",
-    "atlasKey": "t064__sword__glowsword__universal_walk",
+    "atlasKey": "t064__sword__glowsword__walk",
     "tile": 64,
     "category": "sword",
     "model": "glowsword",
-    "anim": "universal_walk",
+    "anim": "walk",
     "layer": "bg",
     "variant": "red",
     "frameW": 64,
@@ -9587,187 +8267,7 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__sword__longsword__hurt__fg__vbase",
-    "atlasKey": "t064__sword__longsword__hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__longsword__universal_hurt__bg__vbase",
-    "atlasKey": "t064__sword__longsword__universal_hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__longsword__universal_walk__bg__vbase",
-    "atlasKey": "t064__sword__longsword__universal_walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__longsword__walk__fg__vbase",
-    "atlasKey": "t064__sword__longsword__walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__rapier__hurt__fg__vbase",
-    "atlasKey": "t064__sword__rapier__hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "rapier",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__rapier__universal_walk__bg__vbase",
-    "atlasKey": "t064__sword__rapier__universal_walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "rapier",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__rapier__walk__fg__vbase",
-    "atlasKey": "t064__sword__rapier__walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "rapier",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__saber__hurt__fg__vbase",
-    "atlasKey": "t064__sword__saber__hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "saber",
-    "anim": "hurt",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__saber__universal_hurt__bg__vbase",
-    "atlasKey": "t064__sword__saber__universal_hurt",
-    "tile": 64,
-    "category": "sword",
-    "model": "saber",
-    "anim": "universal_hurt",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 6,
-    "cols": 6,
-    "rows": 1
-  },
-  {
-    "key": "t064__sword__saber__universal_walk__bg__vbase",
-    "atlasKey": "t064__sword__saber__universal_walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "saber",
-    "anim": "universal_walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__sword__saber__walk__fg__vbase",
-    "atlasKey": "t064__sword__saber__walk",
-    "tile": 64,
-    "category": "sword",
-    "model": "saber",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__tools__smash__universal_walk__fg__vaxe",
-    "atlasKey": "t064__tools__smash__universal_walk",
-    "tile": 64,
-    "category": "tools",
-    "model": "smash",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "axe",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__tools__smash__universal_walk__fg__vaxe__dup2",
     "atlasKey": "t064__tools__smash__universal_walk",
     "tile": 64,
     "category": "tools",
@@ -9797,37 +8297,7 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t064__tools__smash__universal_walk__fg__vhammer__dup2",
-    "atlasKey": "t064__tools__smash__universal_walk",
-    "tile": 64,
-    "category": "tools",
-    "model": "smash",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "hammer",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
     "key": "t064__tools__smash__universal_walk__fg__vpickaxe",
-    "atlasKey": "t064__tools__smash__universal_walk",
-    "tile": 64,
-    "category": "tools",
-    "model": "smash",
-    "anim": "universal_walk",
-    "layer": "fg",
-    "variant": "pickaxe",
-    "frameW": 64,
-    "frameH": 64,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t064__tools__smash__universal_walk__fg__vpickaxe__dup2",
     "atlasKey": "t064__tools__smash__universal_walk",
     "tile": 64,
     "category": "tools",
@@ -10023,22 +8493,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vbase",
-    "atlasKey": "t128__polearm__dragonspear__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "dragonspear",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__dragonspear__walk__bg__vbase__dup2",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10053,7 +8508,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vbrass",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10068,7 +8523,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vbronze",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10083,7 +8538,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vceramic",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10098,7 +8553,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vcopper",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10113,7 +8568,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vdark",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10128,7 +8583,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vgold",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10143,7 +8598,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__viron",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10158,7 +8613,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vlight",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10173,7 +8628,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vmedium",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10188,7 +8643,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vred",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10203,7 +8658,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vsilver",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10218,7 +8673,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__bg__vsteel",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10233,22 +8688,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vbase",
-    "atlasKey": "t128__polearm__dragonspear__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "dragonspear",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__dragonspear__walk__fg__vbase__dup2",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10263,7 +8703,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vbrass",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10278,7 +8718,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vbronze",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10293,7 +8733,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vceramic",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10308,7 +8748,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vcopper",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10323,7 +8763,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vdark",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10338,7 +8778,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vgold",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10353,7 +8793,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__viron",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10368,7 +8808,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vlight",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10383,7 +8823,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vmedium",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10398,7 +8838,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vred",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10413,7 +8853,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vsilver",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10428,7 +8868,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__dragonspear__walk__fg__vsteel",
-    "atlasKey": "t128__polearm__dragonspear__walk",
+    "atlasKey": "t128__polearm__dragonspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "dragonspear",
@@ -10443,22 +8883,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vbase",
-    "atlasKey": "t128__polearm__longspear__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "longspear",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__longspear__walk__bg__vbase__dup2",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10473,7 +8898,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vbrass",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10488,7 +8913,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vbronze",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10503,7 +8928,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vceramic",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10518,7 +8943,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vcopper",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10533,7 +8958,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vdark",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10548,7 +8973,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vgold",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10563,7 +8988,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__viron",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10578,7 +9003,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vlight",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10593,7 +9018,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vmedium",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10608,7 +9033,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vred",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10623,7 +9048,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vsilver",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10638,7 +9063,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__bg__vsteel",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10653,22 +9078,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vbase",
-    "atlasKey": "t128__polearm__longspear__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "longspear",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__longspear__walk__fg__vbase__dup2",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10683,7 +9093,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vbrass",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10698,7 +9108,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vbronze",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10713,7 +9123,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vceramic",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10728,7 +9138,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vcopper",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10743,7 +9153,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vdark",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10758,7 +9168,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vgold",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10773,7 +9183,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__viron",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10788,7 +9198,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vlight",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10803,7 +9213,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vmedium",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10818,7 +9228,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vred",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10833,7 +9243,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vsilver",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10848,7 +9258,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__longspear__walk__fg__vsteel",
-    "atlasKey": "t128__polearm__longspear__walk",
+    "atlasKey": "t128__polearm__longspear__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "longspear",
@@ -10863,22 +9273,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vbase",
-    "atlasKey": "t128__polearm__trident__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "trident",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__trident__walk__bg__vbase__dup2",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10893,7 +9288,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vbrass",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10908,7 +9303,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vbronze",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10923,7 +9318,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vceramic",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10938,7 +9333,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vcopper",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10953,7 +9348,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vdark",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10968,7 +9363,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vgold",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10983,7 +9378,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__viron",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -10998,7 +9393,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vlight",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11013,7 +9408,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vmedium",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11028,7 +9423,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vred",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11043,7 +9438,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vsilver",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11058,7 +9453,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__bg__vsteel",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11073,22 +9468,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vbase",
-    "atlasKey": "t128__polearm__trident__walk",
-    "tile": 128,
-    "category": "polearm",
-    "model": "trident",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__polearm__trident__walk__fg__vbase__dup2",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11103,7 +9483,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vbrass",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11118,7 +9498,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vbronze",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11133,7 +9513,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vceramic",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11148,7 +9528,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vcopper",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11163,7 +9543,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vdark",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11178,7 +9558,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vgold",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11193,7 +9573,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__viron",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p1",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11208,7 +9588,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vlight",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11223,7 +9603,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vmedium",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11238,7 +9618,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vred",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11253,7 +9633,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vsilver",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11268,7 +9648,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__polearm__trident__walk__fg__vsteel",
-    "atlasKey": "t128__polearm__trident__walk",
+    "atlasKey": "t128__polearm__trident__walk__p2",
     "tile": 128,
     "category": "polearm",
     "model": "trident",
@@ -11283,22 +9663,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vbase",
-    "atlasKey": "t128__ranged__bow_great__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_great",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__great__walk__bg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11313,7 +9678,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vbrass",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11328,7 +9693,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vbronze",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11343,7 +9708,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vceramic",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11358,7 +9723,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vcopper",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11373,7 +9738,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vdark",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11388,7 +9753,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vgold",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11403,7 +9768,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__viron",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11418,7 +9783,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vlight",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11433,7 +9798,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vmedium",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11448,7 +9813,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vred",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11463,7 +9828,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vsilver",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11478,7 +9843,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__bg__vsteel",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11493,22 +9858,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vbase",
-    "atlasKey": "t128__ranged__bow_great__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_great",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__great__walk__fg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11523,7 +9873,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vbrass",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11538,7 +9888,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vbronze",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11553,7 +9903,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vceramic",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11568,7 +9918,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vcopper",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11583,7 +9933,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vdark",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11598,7 +9948,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vgold",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11613,7 +9963,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__viron",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11628,7 +9978,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vlight",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11643,7 +9993,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vmedium",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11658,7 +10008,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vred",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11673,7 +10023,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vsilver",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11688,7 +10038,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__great__walk__fg__vsteel",
-    "atlasKey": "t128__ranged__bow_great__walk",
+    "atlasKey": "t128__ranged__bow_great__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_great",
@@ -11703,22 +10053,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vbase",
-    "atlasKey": "t128__ranged__bow_normal__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__normal__walk__bg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11733,7 +10068,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vbrass",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11748,7 +10083,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vbronze",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11763,7 +10098,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vceramic",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11778,7 +10113,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vcopper",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11793,7 +10128,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vdark",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11808,7 +10143,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vgold",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11823,7 +10158,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__viron",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11838,7 +10173,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vlight",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11853,7 +10188,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vmedium",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11868,7 +10203,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vred",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11883,7 +10218,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vsilver",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11898,7 +10233,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__bg__vsteel",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11913,22 +10248,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vbase",
-    "atlasKey": "t128__ranged__bow_normal__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_normal",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__normal__walk__fg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11943,7 +10263,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vbrass",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11958,7 +10278,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vbronze",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11973,7 +10293,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vceramic",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -11988,7 +10308,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vcopper",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12003,7 +10323,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vdark",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12018,7 +10338,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vgold",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12033,7 +10353,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__viron",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12048,7 +10368,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vlight",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12063,7 +10383,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vmedium",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12078,7 +10398,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vred",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12093,7 +10413,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vsilver",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12108,7 +10428,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__normal__walk__fg__vsteel",
-    "atlasKey": "t128__ranged__bow_normal__walk",
+    "atlasKey": "t128__ranged__bow_normal__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_normal",
@@ -12123,22 +10443,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vbase",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__recurve__walk__bg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12153,7 +10458,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vbrass",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12168,7 +10473,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vbronze",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12183,7 +10488,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vceramic",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12198,7 +10503,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vcopper",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12213,7 +10518,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vdark",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12228,7 +10533,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vgold",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12243,7 +10548,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__viron",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12258,7 +10563,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vlight",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12273,7 +10578,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vmedium",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12288,7 +10593,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vred",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12303,7 +10608,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vsilver",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12318,7 +10623,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__bg__vsteel",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12333,22 +10638,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vbase",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
-    "tile": 128,
-    "category": "ranged",
-    "model": "bow_recurve",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__ranged__bow__recurve__walk__fg__vbase__dup2",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12363,7 +10653,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vbrass",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12378,7 +10668,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vbronze",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12393,7 +10683,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vceramic",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12408,7 +10698,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vcopper",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12423,7 +10713,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vdark",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12438,7 +10728,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vgold",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12453,7 +10743,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__viron",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p1",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12468,7 +10758,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vlight",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12483,7 +10773,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vmedium",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12498,7 +10788,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vred",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12513,7 +10803,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vsilver",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12528,7 +10818,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__ranged__bow__recurve__walk__fg__vsteel",
-    "atlasKey": "t128__ranged__bow_recurve__walk",
+    "atlasKey": "t128__ranged__bow_recurve__walk__p2",
     "tile": 128,
     "category": "ranged",
     "model": "bow_recurve",
@@ -12543,7 +10833,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vbase",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12558,7 +10848,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vbrass",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12573,7 +10863,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vbronze",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12588,7 +10878,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vceramic",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12603,7 +10893,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vcopper",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12618,7 +10908,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vgold",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12633,7 +10923,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__viron",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12648,7 +10938,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vsilver",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12663,7 +10953,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__bg__vsteel",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p2",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12678,7 +10968,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vbase",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12693,7 +10983,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vbrass",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12708,7 +10998,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vbronze",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12723,7 +11013,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vceramic",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12738,7 +11028,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vcopper",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12753,7 +11043,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vgold",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12768,7 +11058,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__viron",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12783,7 +11073,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vsilver",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p1",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -12798,7 +11088,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t128__sword__arming__attack_backslash__fg__vsteel",
-    "atlasKey": "t128__sword__arming__attack_backslash",
+    "atlasKey": "t128__sword__arming__attack_backslash__p2",
     "tile": 128,
     "category": "sword",
     "model": "arming",
@@ -13352,216 +11642,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t128__sword__katana__slash__bg__vbase",
-    "atlasKey": "t128__sword__katana__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "katana",
-    "anim": "slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__katana__slash__fg__vbase",
-    "atlasKey": "t128__sword__katana__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "katana",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__katana__walk__bg__vbase",
-    "atlasKey": "t128__sword__katana__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "katana",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__katana__walk__fg__vbase",
-    "atlasKey": "t128__sword__katana__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "katana",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__longsword_alt__slash__bg__vbase",
-    "atlasKey": "t128__sword__longsword_alt__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "longsword_alt",
-    "anim": "slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__longsword_alt__slash__fg__vbase",
-    "atlasKey": "t128__sword__longsword_alt__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "longsword_alt",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__longsword_alt__walk__bg__vbase",
-    "atlasKey": "t128__sword__longsword_alt__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "longsword_alt",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__longsword_alt__walk__fg__vbase",
-    "atlasKey": "t128__sword__longsword_alt__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "longsword_alt",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__scimitar__slash__bg__vbase",
-    "atlasKey": "t128__sword__scimitar__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "scimitar",
-    "anim": "slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__scimitar__slash__fg__vbase",
-    "atlasKey": "t128__sword__scimitar__slash",
-    "tile": 128,
-    "category": "sword",
-    "model": "scimitar",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__scimitar__walk__bg__vbase",
-    "atlasKey": "t128__sword__scimitar__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "scimitar",
-    "anim": "walk",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__sword__scimitar__walk__fg__vbase",
-    "atlasKey": "t128__sword__scimitar__walk",
-    "tile": 128,
-    "category": "sword",
-    "model": "scimitar",
-    "anim": "walk",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 36,
-    "cols": 9,
-    "rows": 4
-  },
-  {
-    "key": "t128__tools__rod__shoot__bg__vbase",
-    "atlasKey": "t128__tools__rod__shoot",
-    "tile": 128,
-    "category": "tools",
-    "model": "rod",
-    "anim": "shoot",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
-    "key": "t128__tools__rod__shoot__fg__vbase",
-    "atlasKey": "t128__tools__rod__shoot",
-    "tile": 128,
-    "category": "tools",
-    "model": "rod",
-    "anim": "shoot",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 128,
-    "frameH": 128,
-    "totalFrames": 52,
-    "cols": 13,
-    "rows": 4
-  },
-  {
     "key": "t128__tools__smash__slash__bg__vaxe",
     "atlasKey": "t128__tools__smash__slash",
     "tile": 128,
@@ -13652,143 +11732,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t192__blunt__club__slash__bg__vbase",
-    "atlasKey": "t192__blunt__club__slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "club",
-    "anim": "slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__club__slash__fg__vbase",
-    "atlasKey": "t192__blunt__club__slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "club",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__flail__attack_slash__bg__vbase",
-    "atlasKey": "t192__blunt__flail__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "flail",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__flail__attack_slash__fg__vbase",
-    "atlasKey": "t192__blunt__flail__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "flail",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__mace__attack_slash__bg__vbase",
-    "atlasKey": "t192__blunt__mace__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__mace__attack_slash__fg__vbase",
-    "atlasKey": "t192__blunt__mace__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "mace",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__waraxe__attack_slash__bg__vbase",
-    "atlasKey": "t192__blunt__waraxe__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "waraxe",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__blunt__waraxe__attack_slash__fg__vbase",
-    "atlasKey": "t192__blunt__waraxe__attack_slash",
-    "tile": 192,
-    "category": "blunt",
-    "model": "waraxe",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
     "key": "t192__magic__crystal__thrust__bg__vbase",
-    "atlasKey": "t192__magic__crystal__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__crystal__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13803,7 +11748,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vblue",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13818,7 +11763,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vgreen",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13833,7 +11778,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vorange",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13848,7 +11793,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vpurple",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13863,7 +11808,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vred",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13878,7 +11823,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__bg__vyellow",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13893,22 +11838,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vbase",
-    "atlasKey": "t192__magic__crystal__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "crystal",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__crystal__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13923,7 +11853,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vblue",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13938,7 +11868,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vgreen",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13953,7 +11883,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vorange",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13968,7 +11898,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vpurple",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13983,7 +11913,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vred",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -13998,7 +11928,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__crystal__thrust__fg__vyellow",
-    "atlasKey": "t192__magic__crystal__thrust",
+    "atlasKey": "t192__magic__crystal__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "crystal",
@@ -14013,22 +11943,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vbase",
-    "atlasKey": "t192__magic__diamond__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__diamond__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14043,7 +11958,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vbrass",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14058,7 +11973,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vbronze",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14073,7 +11988,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vceramic",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14088,7 +12003,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vcopper",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14103,7 +12018,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vdark",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14118,7 +12033,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vgold",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14133,7 +12048,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__viron",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14148,7 +12063,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vlight",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14163,7 +12078,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vmedium",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14178,7 +12093,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vred",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14193,7 +12108,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vsilver",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14208,7 +12123,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__bg__vsteel",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14223,22 +12138,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vbase",
-    "atlasKey": "t192__magic__diamond__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "diamond",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__diamond__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14253,7 +12153,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vbrass",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14268,7 +12168,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vbronze",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14283,7 +12183,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vceramic",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14298,7 +12198,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vcopper",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14313,7 +12213,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vdark",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14328,7 +12228,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vgold",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14343,7 +12243,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__viron",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14358,7 +12258,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vlight",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14373,7 +12273,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vmedium",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14388,7 +12288,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vred",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14403,7 +12303,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vsilver",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14418,7 +12318,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__diamond__thrust__fg__vsteel",
-    "atlasKey": "t192__magic__diamond__thrust",
+    "atlasKey": "t192__magic__diamond__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "diamond",
@@ -14433,22 +12333,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vbase",
-    "atlasKey": "t192__magic__gnarled__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__gnarled__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14463,7 +12348,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vbrass",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14478,7 +12363,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vbronze",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14493,7 +12378,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vceramic",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14508,7 +12393,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vcopper",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14523,7 +12408,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vdark",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14538,7 +12423,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vgold",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14553,7 +12438,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__viron",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14568,7 +12453,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vlight",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14583,7 +12468,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vmedium",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14598,7 +12483,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vred",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14613,7 +12498,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vsilver",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14628,7 +12513,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__bg__vsteel",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14643,22 +12528,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vbase",
-    "atlasKey": "t192__magic__gnarled__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "gnarled",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__gnarled__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14673,7 +12543,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vbrass",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14688,7 +12558,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vbronze",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14703,7 +12573,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vceramic",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14718,7 +12588,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vcopper",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14733,7 +12603,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vdark",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14748,7 +12618,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vgold",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14763,7 +12633,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__viron",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14778,7 +12648,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vlight",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14793,7 +12663,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vmedium",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14808,7 +12678,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vred",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14823,7 +12693,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vsilver",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14838,7 +12708,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__gnarled__thrust__fg__vsteel",
-    "atlasKey": "t192__magic__gnarled__thrust",
+    "atlasKey": "t192__magic__gnarled__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "gnarled",
@@ -14853,22 +12723,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vbase",
-    "atlasKey": "t192__magic__loop__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "loop",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__loop__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14883,7 +12738,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vbrass",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14898,7 +12753,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vbronze",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14913,7 +12768,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vceramic",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14928,7 +12783,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vcopper",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14943,7 +12798,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vdark",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14958,7 +12813,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vgold",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14973,7 +12828,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__viron",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -14988,7 +12843,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vlight",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15003,7 +12858,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vmedium",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15018,7 +12873,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vred",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15033,7 +12888,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vsilver",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15048,7 +12903,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__bg__vsteel",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15063,22 +12918,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vbase",
-    "atlasKey": "t192__magic__loop__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "loop",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__loop__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15093,7 +12933,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vbrass",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15108,7 +12948,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vbronze",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15123,7 +12963,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vceramic",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15138,7 +12978,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vcopper",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15153,7 +12993,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vdark",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15168,7 +13008,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vgold",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15183,7 +13023,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__viron",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15198,7 +13038,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vlight",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15213,7 +13053,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vmedium",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15228,7 +13068,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vred",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15243,7 +13083,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vsilver",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15258,7 +13098,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__loop__thrust__fg__vsteel",
-    "atlasKey": "t192__magic__loop__thrust",
+    "atlasKey": "t192__magic__loop__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "loop",
@@ -15273,22 +13113,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vbase",
-    "atlasKey": "t192__magic__s__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "s",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__s__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15303,7 +13128,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vbrass",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15318,7 +13143,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vbronze",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15333,7 +13158,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vceramic",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15348,7 +13173,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vcopper",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15363,7 +13188,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vdark",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15378,7 +13203,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vgold",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15393,7 +13218,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__viron",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15408,7 +13233,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vlight",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15423,7 +13248,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vmedium",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15438,7 +13263,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vred",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15453,7 +13278,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vsilver",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15468,7 +13293,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__bg__vsteel",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15483,22 +13308,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vbase",
-    "atlasKey": "t192__magic__s__thrust",
-    "tile": 192,
-    "category": "magic",
-    "model": "s",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__magic__s__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15513,7 +13323,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vbrass",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15528,7 +13338,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vbronze",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15543,7 +13353,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vceramic",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15558,7 +13368,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vcopper",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p1",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15573,7 +13383,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vdark",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15588,7 +13398,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vgold",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15603,7 +13413,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__viron",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15618,7 +13428,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vlight",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15633,7 +13443,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vmedium",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p2",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15648,7 +13458,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vred",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15663,7 +13473,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vsilver",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15678,7 +13488,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__magic__s__thrust__fg__vsteel",
-    "atlasKey": "t192__magic__s__thrust",
+    "atlasKey": "t192__magic__s__thrust__p3",
     "tile": 192,
     "category": "magic",
     "model": "s",
@@ -15693,22 +13503,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vbase",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "dragonspear",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__dragonspear__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15723,7 +13518,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vbrass",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15738,7 +13533,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vbronze",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15753,7 +13548,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vceramic",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15768,7 +13563,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vcopper",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15783,7 +13578,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vdark",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15798,7 +13593,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vgold",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15813,7 +13608,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__viron",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15828,7 +13623,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vlight",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15843,7 +13638,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vmedium",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15858,7 +13653,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vred",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15873,7 +13668,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vsilver",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15888,7 +13683,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__bg__vsteel",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15903,22 +13698,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vbase",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "dragonspear",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__dragonspear__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15933,7 +13713,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vbrass",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15948,7 +13728,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vbronze",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15963,7 +13743,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vceramic",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15978,7 +13758,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vcopper",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -15993,7 +13773,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vdark",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16008,7 +13788,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vgold",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16023,7 +13803,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__viron",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16038,7 +13818,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vlight",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16053,7 +13833,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vmedium",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16068,7 +13848,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vred",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16083,7 +13863,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vsilver",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16098,7 +13878,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__dragonspear__thrust__fg__vsteel",
-    "atlasKey": "t192__polearm__dragonspear__thrust",
+    "atlasKey": "t192__polearm__dragonspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "dragonspear",
@@ -16112,83 +13892,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t192__polearm__halberd__attack_slash__bg__vbase",
-    "atlasKey": "t192__polearm__halberd__attack_slash",
-    "tile": 192,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__halberd__attack_slash__fg__vbase",
-    "atlasKey": "t192__polearm__halberd__attack_slash",
-    "tile": 192,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__halberd__attack_thrust__bg__vbase",
-    "atlasKey": "t192__polearm__halberd__attack_thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "attack_thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__halberd__attack_thrust__fg__vbase",
-    "atlasKey": "t192__polearm__halberd__attack_thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "halberd",
-    "anim": "attack_thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
     "key": "t192__polearm__longspear__thrust__bg__vbase",
-    "atlasKey": "t192__polearm__longspear__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "longspear",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__longspear__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16203,7 +13908,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vbrass",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16218,7 +13923,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vbronze",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16233,7 +13938,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vceramic",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16248,7 +13953,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vcopper",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16263,7 +13968,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vdark",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16278,7 +13983,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vgold",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16293,7 +13998,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__viron",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16308,7 +14013,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vlight",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16323,7 +14028,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vmedium",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16338,7 +14043,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vred",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16353,7 +14058,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vsilver",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16368,7 +14073,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__bg__vsteel",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16383,22 +14088,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vbase",
-    "atlasKey": "t192__polearm__longspear__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "longspear",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__longspear__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16413,7 +14103,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vbrass",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16428,7 +14118,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vbronze",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16443,7 +14133,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vceramic",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16458,7 +14148,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vcopper",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16473,7 +14163,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vdark",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16488,7 +14178,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vgold",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16503,7 +14193,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__viron",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16518,7 +14208,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vlight",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16533,7 +14223,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vmedium",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16548,7 +14238,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vred",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16563,7 +14253,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vsilver",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16578,7 +14268,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__longspear__thrust__fg__vsteel",
-    "atlasKey": "t192__polearm__longspear__thrust",
+    "atlasKey": "t192__polearm__longspear__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "longspear",
@@ -16592,53 +14282,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t192__polearm__scythe__attack_slash__bg__vbase",
-    "atlasKey": "t192__polearm__scythe__attack_slash",
-    "tile": 192,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__scythe__attack_slash__fg__vbase",
-    "atlasKey": "t192__polearm__scythe__attack_slash",
-    "tile": 192,
-    "category": "polearm",
-    "model": "scythe",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
     "key": "t192__polearm__trident__thrust__bg__vbase",
-    "atlasKey": "t192__polearm__trident__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "trident",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__trident__thrust__bg__vbase__dup2",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16653,7 +14298,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vbrass",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16668,7 +14313,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vbronze",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16683,7 +14328,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vceramic",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16698,7 +14343,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vcopper",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16713,7 +14358,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vdark",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16728,7 +14373,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vgold",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16743,7 +14388,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__viron",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16758,7 +14403,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vlight",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16773,7 +14418,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vmedium",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16788,7 +14433,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vred",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16803,7 +14448,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vsilver",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16818,7 +14463,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__bg__vsteel",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16833,22 +14478,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vbase",
-    "atlasKey": "t192__polearm__trident__thrust",
-    "tile": 192,
-    "category": "polearm",
-    "model": "trident",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__polearm__trident__thrust__fg__vbase__dup2",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16863,7 +14493,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vbrass",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16878,7 +14508,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vbronze",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16893,7 +14523,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vceramic",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16908,7 +14538,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vcopper",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p1",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16923,7 +14553,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vdark",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16938,7 +14568,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vgold",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16953,7 +14583,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__viron",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16968,7 +14598,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vlight",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16983,7 +14613,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vmedium",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p2",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -16998,7 +14628,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vred",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -17013,7 +14643,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vsilver",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -17028,7 +14658,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__polearm__trident__thrust__fg__vsteel",
-    "atlasKey": "t192__polearm__trident__thrust",
+    "atlasKey": "t192__polearm__trident__thrust__p3",
     "tile": 192,
     "category": "polearm",
     "model": "trident",
@@ -17039,21 +14669,6 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 192,
     "totalFrames": 32,
     "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__ranged__boomerang__slash__fg__vbase",
-    "atlasKey": "t192__ranged__boomerang__slash",
-    "tile": 192,
-    "category": "ranged",
-    "model": "boomerang",
-    "anim": "slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
     "rows": 4
   },
   {
@@ -17117,38 +14732,8 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
-    "key": "t192__sword__longsword__attack_slash__bg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__longsword__attack_slash__fg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
     "key": "t192__sword__longsword__attack_slash_reverse__bg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_slash_reverse",
+    "atlasKey": "tall__consolidated__slash_reverse__6x4",
     "tile": 192,
     "category": "sword",
     "model": "longsword",
@@ -17163,7 +14748,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t192__sword__longsword__attack_slash_reverse__fg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_slash_reverse",
+    "atlasKey": "tall__consolidated__slash_reverse__6x4",
     "tile": 192,
     "category": "sword",
     "model": "longsword",
@@ -17175,132 +14760,12 @@ export const WEAPON_ATLAS_SHEETS = [
     "totalFrames": 24,
     "cols": 6,
     "rows": 4
-  },
-  {
-    "key": "t192__sword__longsword__attack_thrust__bg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_thrust",
-    "tile": 192,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "attack_thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__longsword__attack_thrust__fg__vbase",
-    "atlasKey": "t192__sword__longsword__attack_thrust",
-    "tile": 192,
-    "category": "sword",
-    "model": "longsword",
-    "anim": "attack_thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__rapier__attack_slash__bg__vbase",
-    "atlasKey": "t192__sword__rapier__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "rapier",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__rapier__attack_slash__fg__vbase",
-    "atlasKey": "t192__sword__rapier__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "rapier",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__saber__attack_slash__bg__vbase",
-    "atlasKey": "t192__sword__saber__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "saber",
-    "anim": "attack_slash",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__sword__saber__attack_slash__fg__vbase",
-    "atlasKey": "t192__sword__saber__attack_slash",
-    "tile": 192,
-    "category": "sword",
-    "model": "saber",
-    "anim": "attack_slash",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 24,
-    "cols": 6,
-    "rows": 4
-  },
-  {
-    "key": "t192__tools__whip__thrust__bg__vbase",
-    "atlasKey": "t192__tools__whip__thrust",
-    "tile": 192,
-    "category": "tools",
-    "model": "whip",
-    "anim": "thrust",
-    "layer": "bg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
-  },
-  {
-    "key": "t192__tools__whip__thrust__fg__vbase",
-    "atlasKey": "t192__tools__whip__thrust",
-    "tile": 192,
-    "category": "tools",
-    "model": "whip",
-    "anim": "thrust",
-    "layer": "fg",
-    "variant": "base",
-    "frameW": 192,
-    "frameH": 192,
-    "totalFrames": 32,
-    "cols": 8,
-    "rows": 4
   }
 ];
 export const WEAPON_ATLAS_DATA = {
-  "t064__blunt__flail__hurt": {
+  "tall__consolidated__hurt__6x1": {
     "frames": {
-      "t064__blunt__flail__hurt__bg__vbase": {
+      "t064__blunt__flail__hurt__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -17320,7 +14785,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__blunt__flail__hurt__fg__vbase": {
+      "t064__blunt__flail__hurt__bg__vbase": {
         "frame": {
           "x": 384,
           "y": 0,
@@ -17343,7 +14808,7 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__flail__hurt.png",
+      "image": "tall__consolidated__hurt__6x1.png",
       "size": {
         "w": 768,
         "h": 64
@@ -17351,9 +14816,9 @@ export const WEAPON_ATLAS_DATA = {
       "scale": "1"
     }
   },
-  "t064__blunt__flail__walk": {
+  "tall__consolidated__walk__9x4": {
     "frames": {
-      "t064__blunt__flail__walk__bg__vbase": {
+      "t064__blunt__flail__walk__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -17373,7 +14838,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__blunt__flail__walk__fg__vbase": {
+      "t064__blunt__flail__walk__bg__vbase": {
         "frame": {
           "x": 576,
           "y": 0,
@@ -17392,52 +14857,39 @@ export const WEAPON_ATLAS_DATA = {
           "w": 576,
           "h": 256
         }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__flail__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 256
       },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__mace__hurt": {
-    "frames": {
-      "t064__blunt__mace__hurt__fg__vbase": {
+      "t064__polearm__cane__male__walk__fg__vcane": {
         "frame": {
           "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
+          "y": 256,
+          "w": 576,
+          "h": 256
         },
         "rotated": false,
         "trimmed": false,
         "spriteSourceSize": {
           "x": 0,
           "y": 0,
-          "w": 384,
-          "h": 64
+          "w": 576,
+          "h": 256
         },
         "sourceSize": {
-          "w": 384,
-          "h": 64
+          "w": 576,
+          "h": 256
         }
       }
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__mace__hurt.png",
+      "image": "tall__consolidated__walk__9x4.png",
       "size": {
-        "w": 384,
-        "h": 64
+        "w": 1152,
+        "h": 512
       },
       "scale": "1"
     }
   },
-  "t064__blunt__mace__thrust": {
+  "tall__consolidated__thrust__8x4": {
     "frames": {
       "t064__blunt__mace__thrust__fg__vbase": {
         "frame": {
@@ -17458,58 +14910,12 @@ export const WEAPON_ATLAS_DATA = {
           "w": 512,
           "h": 256
         }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__mace__thrust.png",
-      "size": {
-        "w": 512,
-        "h": 256
       },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__mace__universal_hurt": {
-    "frames": {
-      "t064__blunt__mace__universal_hurt__bg__vbase": {
+      "t064__gear__quiver__thrust__bg__vbase": {
         "frame": {
-          "x": 0,
+          "x": 512,
           "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__mace__universal_hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__mace__universal_walk": {
-    "frames": {
-      "t064__blunt__mace__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
+          "w": 512,
           "h": 256
         },
         "rotated": false,
@@ -17517,32 +14923,19 @@ export const WEAPON_ATLAS_DATA = {
         "spriteSourceSize": {
           "x": 0,
           "y": 0,
-          "w": 576,
+          "w": 512,
           "h": 256
         },
         "sourceSize": {
-          "w": 576,
+          "w": 512,
           "h": 256
         }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__mace__universal_walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
       },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__mace__walk": {
-    "frames": {
-      "t064__blunt__mace__walk__fg__vbase": {
+      "t064__polearm__cane__male__thrust__fg__vcane": {
         "frame": {
           "x": 0,
-          "y": 0,
-          "w": 576,
+          "y": 256,
+          "w": 512,
           "h": 256
         },
         "rotated": false,
@@ -17550,114 +14943,28 @@ export const WEAPON_ATLAS_DATA = {
         "spriteSourceSize": {
           "x": 0,
           "y": 0,
-          "w": 576,
+          "w": 512,
           "h": 256
         },
         "sourceSize": {
-          "w": 576,
+          "w": 512,
           "h": 256
         }
       }
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__mace__walk.png",
+      "image": "tall__consolidated__thrust__8x4.png",
       "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__waraxe__hurt": {
-    "frames": {
-      "t064__blunt__waraxe__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__waraxe__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__blunt__waraxe__walk": {
-    "frames": {
-      "t064__blunt__waraxe__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__blunt__waraxe__walk__fg__vbase": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__blunt__waraxe__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 256
+        "w": 1024,
+        "h": 512
       },
       "scale": "1"
     }
   },
   "t064__magic__crystal__universal_hurt": {
     "frames": {
-      "t064__magic__crystal__universal_hurt__bg__vbase": {
+      "t064__magic__crystal__universal_hurt__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -17677,70 +14984,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vbase__dup2": {
+      "t064__magic__crystal__universal_hurt__bg__vbase": {
         "frame": {
           "x": 384,
           "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__crystal__universal_hurt__fg__vbase": {
-        "frame": {
-          "x": 768,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__crystal__universal_hurt__fg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__crystal__universal_hurt__bg__vblue": {
-        "frame": {
-          "x": 0,
-          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -17759,7 +15006,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vblue": {
         "frame": {
-          "x": 384,
+          "x": 0,
           "y": 64,
           "w": 384,
           "h": 64
@@ -17777,9 +15024,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vgreen": {
+      "t064__magic__crystal__universal_hurt__bg__vblue": {
         "frame": {
-          "x": 768,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -17799,8 +15046,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vgreen": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -17817,9 +15064,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vorange": {
+      "t064__magic__crystal__universal_hurt__bg__vgreen": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 128,
           "w": 384,
           "h": 64
@@ -17839,8 +15086,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vorange": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -17857,10 +15104,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vpurple": {
+      "t064__magic__crystal__universal_hurt__bg__vorange": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -17879,8 +15126,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vpurple": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -17897,10 +15144,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vred": {
+      "t064__magic__crystal__universal_hurt__bg__vpurple": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -17919,8 +15166,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vred": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -17937,10 +15184,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__crystal__universal_hurt__bg__vyellow": {
+      "t064__magic__crystal__universal_hurt__bg__vred": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -17959,8 +15206,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_hurt__fg__vyellow": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 384,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__crystal__universal_hurt__bg__vyellow": {
+        "frame": {
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -17982,15 +15249,15 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__crystal__universal_hurt.png",
       "size": {
-        "w": 1536,
-        "h": 256
+        "w": 768,
+        "h": 448
       },
       "scale": "1"
     }
   },
   "t064__magic__crystal__universal_walk": {
     "frames": {
-      "t064__magic__crystal__universal_walk__bg__vbase": {
+      "t064__magic__crystal__universal_walk__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -18010,70 +15277,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vbase__dup2": {
+      "t064__magic__crystal__universal_walk__bg__vbase": {
         "frame": {
           "x": 576,
           "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__crystal__universal_walk__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__crystal__universal_walk__fg__vbase__dup2": {
-        "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__crystal__universal_walk__bg__vblue": {
-        "frame": {
-          "x": 0,
-          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -18092,7 +15299,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vblue": {
         "frame": {
-          "x": 576,
+          "x": 0,
           "y": 256,
           "w": 576,
           "h": 256
@@ -18110,9 +15317,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vgreen": {
+      "t064__magic__crystal__universal_walk__bg__vblue": {
         "frame": {
-          "x": 1152,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -18132,8 +15339,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vgreen": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -18150,9 +15357,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vorange": {
+      "t064__magic__crystal__universal_walk__bg__vgreen": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 512,
           "w": 576,
           "h": 256
@@ -18172,8 +15379,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vorange": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -18190,10 +15397,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vpurple": {
+      "t064__magic__crystal__universal_walk__bg__vorange": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -18212,8 +15419,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vpurple": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -18230,10 +15437,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vred": {
+      "t064__magic__crystal__universal_walk__bg__vpurple": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -18252,8 +15459,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vred": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -18270,10 +15477,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__crystal__universal_walk__bg__vyellow": {
+      "t064__magic__crystal__universal_walk__bg__vred": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -18292,8 +15499,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__crystal__universal_walk__fg__vyellow": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__crystal__universal_walk__bg__vyellow": {
+        "frame": {
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -18315,57 +15542,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__crystal__universal_walk.png",
       "size": {
-        "w": 2304,
-        "h": 1024
+        "w": 1152,
+        "h": 1792
       },
       "scale": "1"
     }
   },
   "t064__magic__diamond__universal_hurt": {
     "frames": {
-      "t064__magic__diamond__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__diamond__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__magic__diamond__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -18383,29 +15570,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__fg__vbase__dup2": {
+      "t064__magic__diamond__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__diamond__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -18425,8 +15592,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -18443,9 +15610,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vbronze": {
+      "t064__magic__diamond__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -18465,8 +15632,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -18483,10 +15650,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vceramic": {
+      "t064__magic__diamond__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -18505,8 +15672,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -18523,10 +15690,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vcopper": {
+      "t064__magic__diamond__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -18545,8 +15712,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -18563,10 +15730,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vdark": {
+      "t064__magic__diamond__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -18585,8 +15752,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -18603,10 +15770,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vgold": {
+      "t064__magic__diamond__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -18625,8 +15792,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -18643,10 +15810,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__viron": {
+      "t064__magic__diamond__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -18665,8 +15832,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -18683,10 +15850,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vlight": {
+      "t064__magic__diamond__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -18705,8 +15872,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -18723,10 +15890,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vmedium": {
+      "t064__magic__diamond__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -18745,8 +15912,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -18763,10 +15930,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vred": {
+      "t064__magic__diamond__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -18785,8 +15952,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -18803,10 +15970,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vsilver": {
+      "t064__magic__diamond__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -18825,8 +15992,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -18843,10 +16010,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__diamond__universal_hurt__bg__vsteel": {
+      "t064__magic__diamond__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -18865,8 +16032,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__diamond__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -18888,57 +16075,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__diamond__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__magic__diamond__universal_walk": {
     "frames": {
-      "t064__magic__diamond__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__diamond__universal_walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__magic__diamond__universal_walk__fg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -18956,29 +16103,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__fg__vbase__dup2": {
+      "t064__magic__diamond__universal_walk__bg__vbase": {
         "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__diamond__universal_walk__bg__vbrass": {
-        "frame": {
-          "x": 2304,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -18998,8 +16125,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vbrass": {
         "frame": {
-          "x": 2880,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -19016,9 +16143,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vbronze": {
+      "t064__magic__diamond__universal_walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -19038,8 +16165,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vbronze": {
         "frame": {
-          "x": 576,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -19056,10 +16183,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vceramic": {
+      "t064__magic__diamond__universal_walk__bg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -19078,8 +16205,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vceramic": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -19096,10 +16223,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vcopper": {
+      "t064__magic__diamond__universal_walk__bg__vceramic": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -19118,8 +16245,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vcopper": {
         "frame": {
-          "x": 2880,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -19136,10 +16263,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vdark": {
+      "t064__magic__diamond__universal_walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -19158,8 +16285,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vdark": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -19176,10 +16303,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vgold": {
+      "t064__magic__diamond__universal_walk__bg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -19198,8 +16325,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vgold": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -19216,10 +16343,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__viron": {
+      "t064__magic__diamond__universal_walk__bg__vgold": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -19238,8 +16365,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__viron": {
         "frame": {
-          "x": 2880,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -19256,10 +16383,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vlight": {
+      "t064__magic__diamond__universal_walk__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -19278,8 +16405,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vlight": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -19296,10 +16423,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vmedium": {
+      "t064__magic__diamond__universal_walk__bg__vlight": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -19318,8 +16445,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vmedium": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -19336,10 +16463,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vred": {
+      "t064__magic__diamond__universal_walk__bg__vmedium": {
         "frame": {
-          "x": 2304,
-          "y": 768,
+          "x": 576,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -19358,8 +16485,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vred": {
         "frame": {
-          "x": 2880,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -19376,10 +16503,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vsilver": {
+      "t064__magic__diamond__universal_walk__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 576,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -19398,8 +16525,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vsilver": {
         "frame": {
-          "x": 576,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -19416,10 +16543,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__diamond__universal_walk__bg__vsteel": {
+      "t064__magic__diamond__universal_walk__bg__vsilver": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 576,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -19438,8 +16565,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__diamond__universal_walk__fg__vsteel": {
         "frame": {
-          "x": 1728,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__diamond__universal_walk__bg__vsteel": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
           "w": 576,
           "h": 256
         },
@@ -19461,57 +16608,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__diamond__universal_walk.png",
       "size": {
-        "w": 3456,
-        "h": 1280
+        "w": 1152,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__magic__gnarled__universal_hurt": {
     "frames": {
-      "t064__magic__gnarled__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__gnarled__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__magic__gnarled__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -19529,29 +16636,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__fg__vbase__dup2": {
+      "t064__magic__gnarled__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__gnarled__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -19571,8 +16658,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -19589,9 +16676,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vbronze": {
+      "t064__magic__gnarled__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -19611,8 +16698,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -19629,10 +16716,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vceramic": {
+      "t064__magic__gnarled__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -19651,8 +16738,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -19669,10 +16756,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vcopper": {
+      "t064__magic__gnarled__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -19691,8 +16778,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -19709,10 +16796,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vdark": {
+      "t064__magic__gnarled__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -19731,8 +16818,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -19749,10 +16836,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vgold": {
+      "t064__magic__gnarled__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -19771,8 +16858,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -19789,10 +16876,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__viron": {
+      "t064__magic__gnarled__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -19811,8 +16898,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -19829,10 +16916,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vlight": {
+      "t064__magic__gnarled__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -19851,8 +16938,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -19869,10 +16956,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vmedium": {
+      "t064__magic__gnarled__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -19891,8 +16978,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -19909,10 +16996,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vred": {
+      "t064__magic__gnarled__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -19931,8 +17018,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -19949,10 +17036,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vsilver": {
+      "t064__magic__gnarled__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -19971,8 +17058,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -19989,10 +17076,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__gnarled__universal_hurt__bg__vsteel": {
+      "t064__magic__gnarled__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -20011,8 +17098,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__gnarled__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -20034,57 +17141,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__gnarled__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__magic__gnarled__universal_walk": {
     "frames": {
-      "t064__magic__gnarled__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__gnarled__universal_walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__magic__gnarled__universal_walk__fg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -20102,29 +17169,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__fg__vbase__dup2": {
+      "t064__magic__gnarled__universal_walk__bg__vbase": {
         "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__gnarled__universal_walk__bg__vbrass": {
-        "frame": {
-          "x": 2304,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -20144,8 +17191,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vbrass": {
         "frame": {
-          "x": 2880,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -20162,9 +17209,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vbronze": {
+      "t064__magic__gnarled__universal_walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -20184,8 +17231,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vbronze": {
         "frame": {
-          "x": 576,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -20202,10 +17249,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vceramic": {
+      "t064__magic__gnarled__universal_walk__bg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -20224,8 +17271,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vceramic": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -20242,10 +17289,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vcopper": {
+      "t064__magic__gnarled__universal_walk__bg__vceramic": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -20264,8 +17311,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vcopper": {
         "frame": {
-          "x": 2880,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -20282,10 +17329,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vdark": {
+      "t064__magic__gnarled__universal_walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -20304,8 +17351,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vdark": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -20322,10 +17369,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vgold": {
+      "t064__magic__gnarled__universal_walk__bg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -20344,8 +17391,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vgold": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -20362,10 +17409,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__viron": {
+      "t064__magic__gnarled__universal_walk__bg__vgold": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -20384,8 +17431,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__viron": {
         "frame": {
-          "x": 2880,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -20402,10 +17449,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vlight": {
+      "t064__magic__gnarled__universal_walk__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -20424,8 +17471,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vlight": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -20442,10 +17489,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vmedium": {
+      "t064__magic__gnarled__universal_walk__bg__vlight": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -20464,8 +17511,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vmedium": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -20482,10 +17529,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vred": {
+      "t064__magic__gnarled__universal_walk__bg__vmedium": {
         "frame": {
-          "x": 2304,
-          "y": 768,
+          "x": 576,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -20504,8 +17551,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vred": {
         "frame": {
-          "x": 2880,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -20522,10 +17569,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vsilver": {
+      "t064__magic__gnarled__universal_walk__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 576,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -20544,8 +17591,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vsilver": {
         "frame": {
-          "x": 576,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -20562,10 +17609,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__gnarled__universal_walk__bg__vsteel": {
+      "t064__magic__gnarled__universal_walk__bg__vsilver": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 576,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -20584,8 +17631,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__gnarled__universal_walk__fg__vsteel": {
         "frame": {
-          "x": 1728,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__gnarled__universal_walk__bg__vsteel": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
           "w": 576,
           "h": 256
         },
@@ -20607,57 +17674,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__gnarled__universal_walk.png",
       "size": {
-        "w": 3456,
-        "h": 1280
+        "w": 1152,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__magic__loop__universal_hurt": {
     "frames": {
-      "t064__magic__loop__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__loop__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__magic__loop__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -20675,29 +17702,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__fg__vbase__dup2": {
+      "t064__magic__loop__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__loop__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -20717,8 +17724,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -20735,9 +17742,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vbronze": {
+      "t064__magic__loop__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -20757,8 +17764,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -20775,10 +17782,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vceramic": {
+      "t064__magic__loop__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -20797,8 +17804,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -20815,10 +17822,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vcopper": {
+      "t064__magic__loop__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -20837,8 +17844,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -20855,10 +17862,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vdark": {
+      "t064__magic__loop__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -20877,8 +17884,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -20895,10 +17902,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vgold": {
+      "t064__magic__loop__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -20917,8 +17924,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -20935,10 +17942,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__viron": {
+      "t064__magic__loop__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -20957,8 +17964,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -20975,10 +17982,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vlight": {
+      "t064__magic__loop__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -20997,8 +18004,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -21015,10 +18022,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vmedium": {
+      "t064__magic__loop__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -21037,8 +18044,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -21055,10 +18062,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vred": {
+      "t064__magic__loop__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -21077,8 +18084,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -21095,10 +18102,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vsilver": {
+      "t064__magic__loop__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -21117,8 +18124,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -21135,10 +18142,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__loop__universal_hurt__bg__vsteel": {
+      "t064__magic__loop__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -21157,8 +18164,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__loop__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -21180,57 +18207,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__loop__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__magic__loop__universal_walk": {
     "frames": {
-      "t064__magic__loop__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__loop__universal_walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__magic__loop__universal_walk__fg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -21248,29 +18235,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__fg__vbase__dup2": {
+      "t064__magic__loop__universal_walk__bg__vbase": {
         "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__loop__universal_walk__bg__vbrass": {
-        "frame": {
-          "x": 2304,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -21290,8 +18257,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vbrass": {
         "frame": {
-          "x": 2880,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -21308,9 +18275,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vbronze": {
+      "t064__magic__loop__universal_walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -21330,8 +18297,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vbronze": {
         "frame": {
-          "x": 576,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -21348,10 +18315,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vceramic": {
+      "t064__magic__loop__universal_walk__bg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -21370,8 +18337,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vceramic": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -21388,10 +18355,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vcopper": {
+      "t064__magic__loop__universal_walk__bg__vceramic": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -21410,8 +18377,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vcopper": {
         "frame": {
-          "x": 2880,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -21428,10 +18395,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vdark": {
+      "t064__magic__loop__universal_walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -21450,8 +18417,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vdark": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -21468,10 +18435,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vgold": {
+      "t064__magic__loop__universal_walk__bg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -21490,8 +18457,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vgold": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -21508,10 +18475,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__viron": {
+      "t064__magic__loop__universal_walk__bg__vgold": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -21530,8 +18497,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__viron": {
         "frame": {
-          "x": 2880,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -21548,10 +18515,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vlight": {
+      "t064__magic__loop__universal_walk__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -21570,8 +18537,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vlight": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -21588,10 +18555,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vmedium": {
+      "t064__magic__loop__universal_walk__bg__vlight": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -21610,8 +18577,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vmedium": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -21628,10 +18595,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vred": {
+      "t064__magic__loop__universal_walk__bg__vmedium": {
         "frame": {
-          "x": 2304,
-          "y": 768,
+          "x": 576,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -21650,8 +18617,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vred": {
         "frame": {
-          "x": 2880,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -21668,10 +18635,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vsilver": {
+      "t064__magic__loop__universal_walk__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 576,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -21690,8 +18657,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vsilver": {
         "frame": {
-          "x": 576,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -21708,10 +18675,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__loop__universal_walk__bg__vsteel": {
+      "t064__magic__loop__universal_walk__bg__vsilver": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 576,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -21730,8 +18697,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__loop__universal_walk__fg__vsteel": {
         "frame": {
-          "x": 1728,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__loop__universal_walk__bg__vsteel": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
           "w": 576,
           "h": 256
         },
@@ -21753,57 +18740,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__loop__universal_walk.png",
       "size": {
-        "w": 3456,
-        "h": 1280
+        "w": 1152,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__magic__s__universal_hurt": {
     "frames": {
-      "t064__magic__s__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__s__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__magic__s__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -21821,29 +18768,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__fg__vbase__dup2": {
+      "t064__magic__s__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__s__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -21863,8 +18790,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -21881,9 +18808,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vbronze": {
+      "t064__magic__s__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -21903,8 +18830,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -21921,10 +18848,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vceramic": {
+      "t064__magic__s__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -21943,8 +18870,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -21961,10 +18888,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vcopper": {
+      "t064__magic__s__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -21983,8 +18910,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -22001,10 +18928,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vdark": {
+      "t064__magic__s__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -22023,8 +18950,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -22041,10 +18968,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vgold": {
+      "t064__magic__s__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -22063,8 +18990,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -22081,10 +19008,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__viron": {
+      "t064__magic__s__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -22103,8 +19030,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -22121,10 +19048,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vlight": {
+      "t064__magic__s__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -22143,8 +19070,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -22161,10 +19088,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vmedium": {
+      "t064__magic__s__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -22183,8 +19110,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -22201,10 +19128,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vred": {
+      "t064__magic__s__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -22223,8 +19150,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -22241,10 +19168,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vsilver": {
+      "t064__magic__s__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -22263,8 +19190,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -22281,10 +19208,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__magic__s__universal_hurt__bg__vsteel": {
+      "t064__magic__s__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -22303,8 +19230,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__s__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -22326,57 +19273,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__s__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__magic__s__universal_walk": {
     "frames": {
-      "t064__magic__s__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__s__universal_walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__magic__s__universal_walk__fg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -22394,29 +19301,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__fg__vbase__dup2": {
+      "t064__magic__s__universal_walk__bg__vbase": {
         "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__s__universal_walk__bg__vbrass": {
-        "frame": {
-          "x": 2304,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -22436,8 +19323,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vbrass": {
         "frame": {
-          "x": 2880,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -22454,9 +19341,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vbronze": {
+      "t064__magic__s__universal_walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -22476,8 +19363,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vbronze": {
         "frame": {
-          "x": 576,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -22494,10 +19381,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vceramic": {
+      "t064__magic__s__universal_walk__bg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -22516,8 +19403,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vceramic": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -22534,10 +19421,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vcopper": {
+      "t064__magic__s__universal_walk__bg__vceramic": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -22556,8 +19443,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vcopper": {
         "frame": {
-          "x": 2880,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -22574,10 +19461,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vdark": {
+      "t064__magic__s__universal_walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -22596,8 +19483,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vdark": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -22614,10 +19501,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vgold": {
+      "t064__magic__s__universal_walk__bg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -22636,8 +19523,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vgold": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -22654,10 +19541,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__viron": {
+      "t064__magic__s__universal_walk__bg__vgold": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -22676,8 +19563,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__viron": {
         "frame": {
-          "x": 2880,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -22694,10 +19581,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vlight": {
+      "t064__magic__s__universal_walk__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -22716,8 +19603,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vlight": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -22734,10 +19621,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vmedium": {
+      "t064__magic__s__universal_walk__bg__vlight": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -22756,8 +19643,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vmedium": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -22774,10 +19661,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vred": {
+      "t064__magic__s__universal_walk__bg__vmedium": {
         "frame": {
-          "x": 2304,
-          "y": 768,
+          "x": 576,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -22796,8 +19683,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vred": {
         "frame": {
-          "x": 2880,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -22814,10 +19701,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vsilver": {
+      "t064__magic__s__universal_walk__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 576,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -22836,8 +19723,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vsilver": {
         "frame": {
-          "x": 576,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -22854,10 +19741,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__magic__s__universal_walk__bg__vsteel": {
+      "t064__magic__s__universal_walk__bg__vsilver": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 576,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -22876,8 +19763,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__magic__s__universal_walk__fg__vsteel": {
         "frame": {
-          "x": 1728,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__s__universal_walk__bg__vsteel": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
           "w": 576,
           "h": 256
         },
@@ -22899,88 +19806,35 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__magic__s__universal_walk.png",
       "size": {
-        "w": 3456,
-        "h": 1280
+        "w": 1152,
+        "h": 3328
       },
       "scale": "1"
     }
   },
-  "t064__magic__simple__hurt": {
+  "tall__consolidated__spellcast__7x4": {
     "frames": {
-      "t064__magic__simple__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__magic__simple__hurt__fg__vbase": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__simple__hurt.png",
-      "size": {
-        "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__magic__simple__spellcast": {
-    "frames": {
-      "t064__magic__simple__spellcast__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 448,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 448,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 448,
-          "h": 256
-        }
-      },
       "t064__magic__simple__spellcast__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "w": 448,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 448,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 448,
+          "h": 256
+        }
+      },
+      "t064__gear__quiver__spellcast__bg__vbase": {
         "frame": {
           "x": 448,
           "y": 0,
@@ -23003,7 +19857,7 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__simple__spellcast.png",
+      "image": "tall__consolidated__spellcast__7x4.png",
       "size": {
         "w": 896,
         "h": 256
@@ -23011,593 +19865,11 @@ export const WEAPON_ATLAS_DATA = {
       "scale": "1"
     }
   },
-  "t064__magic__simple__thrust": {
-    "frames": {
-      "t064__magic__simple__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
-      "t064__magic__simple__thrust__fg__vbase": {
-        "frame": {
-          "x": 512,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__simple__thrust.png",
-      "size": {
-        "w": 1024,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__magic__simple__walk": {
-    "frames": {
-      "t064__magic__simple__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__magic__simple__walk__fg__vbase": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__simple__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__magic__wand_female__slash": {
-    "frames": {
-      "t064__magic__wand__female__slash__fg__vwand": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__wand_female__slash.png",
-      "size": {
-        "w": 384,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__magic__wand_male__slash": {
-    "frames": {
-      "t064__magic__wand__male__slash__fg__vwand": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__magic__wand_male__slash.png",
-      "size": {
-        "w": 384,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__cane_female__thrust": {
-    "frames": {
-      "t064__polearm__cane__female__thrust__fg__vcane": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__cane_female__thrust.png",
-      "size": {
-        "w": 512,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__cane_female__walk": {
-    "frames": {
-      "t064__polearm__cane__female__walk__fg__vcane": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__cane_female__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__cane_male__thrust": {
-    "frames": {
-      "t064__polearm__cane__male__thrust__fg__vcane": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__cane_male__thrust.png",
-      "size": {
-        "w": 512,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__cane_male__walk": {
-    "frames": {
-      "t064__polearm__cane__male__walk__fg__vcane": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__cane_male__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__halberd__hurt": {
-    "frames": {
-      "t064__polearm__halberd__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__polearm__halberd__hurt__fg__vbase": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__halberd__hurt.png",
-      "size": {
-        "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__halberd__walk": {
-    "frames": {
-      "t064__polearm__halberd__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__polearm__halberd__walk__fg__vbase": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__halberd__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__scythe__hurt": {
-    "frames": {
-      "t064__polearm__scythe__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__scythe__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__scythe__universal_hurt": {
-    "frames": {
-      "t064__polearm__scythe__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__scythe__universal_hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__scythe__universal_walk": {
-    "frames": {
-      "t064__polearm__scythe__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__scythe__universal_walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__polearm__scythe__walk": {
-    "frames": {
-      "t064__polearm__scythe__walk__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__polearm__scythe__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
   "t064__polearm__spear__hurt": {
     "frames": {
-      "t064__polearm__spear__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__polearm__spear__hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__polearm__spear__hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -23615,29 +19887,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__fg__vbase__dup2": {
+      "t064__polearm__spear__hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__polearm__spear__hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -23657,8 +19909,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -23675,9 +19927,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vbronze": {
+      "t064__polearm__spear__hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -23697,8 +19949,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -23715,10 +19967,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vceramic": {
+      "t064__polearm__spear__hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -23737,8 +19989,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -23755,10 +20007,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vcopper": {
+      "t064__polearm__spear__hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -23777,8 +20029,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -23795,10 +20047,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vdark": {
+      "t064__polearm__spear__hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -23817,8 +20069,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -23835,10 +20087,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vgold": {
+      "t064__polearm__spear__hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -23857,8 +20109,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -23875,10 +20127,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__viron": {
+      "t064__polearm__spear__hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -23897,8 +20149,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -23915,10 +20167,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vlight": {
+      "t064__polearm__spear__hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -23937,8 +20189,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -23955,10 +20207,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vmedium": {
+      "t064__polearm__spear__hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -23977,8 +20229,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -23995,10 +20247,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vred": {
+      "t064__polearm__spear__hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -24017,8 +20269,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -24035,10 +20287,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vsilver": {
+      "t064__polearm__spear__hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -24057,8 +20309,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -24075,10 +20327,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__polearm__spear__hurt__bg__vsteel": {
+      "t064__polearm__spear__hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -24097,8 +20349,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__polearm__spear__hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -24120,57 +20392,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__polearm__spear__hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__polearm__spear__thrust": {
     "frames": {
-      "t064__polearm__spear__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
-      "t064__polearm__spear__thrust__bg__vbase__dup2": {
-        "frame": {
-          "x": 512,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
       "t064__polearm__spear__thrust__fg__vbase": {
         "frame": {
-          "x": 1024,
+          "x": 0,
           "y": 0,
           "w": 512,
           "h": 256
@@ -24188,29 +20420,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__fg__vbase__dup2": {
+      "t064__polearm__spear__thrust__bg__vbase": {
         "frame": {
-          "x": 1536,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
-      "t064__polearm__spear__thrust__bg__vbrass": {
-        "frame": {
-          "x": 2048,
+          "x": 512,
           "y": 0,
           "w": 512,
           "h": 256
@@ -24230,8 +20442,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vbrass": {
         "frame": {
-          "x": 2560,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 512,
           "h": 256
         },
@@ -24248,9 +20460,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vbronze": {
+      "t064__polearm__spear__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 512,
           "y": 256,
           "w": 512,
           "h": 256
@@ -24270,8 +20482,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vbronze": {
         "frame": {
-          "x": 512,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 512,
           "h": 256
         },
@@ -24288,10 +20500,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vceramic": {
+      "t064__polearm__spear__thrust__bg__vbronze": {
         "frame": {
-          "x": 1024,
-          "y": 256,
+          "x": 512,
+          "y": 512,
           "w": 512,
           "h": 256
         },
@@ -24310,8 +20522,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 512,
           "h": 256
         },
@@ -24328,10 +20540,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vcopper": {
+      "t064__polearm__spear__thrust__bg__vceramic": {
         "frame": {
-          "x": 2048,
-          "y": 256,
+          "x": 512,
+          "y": 768,
           "w": 512,
           "h": 256
         },
@@ -24350,8 +20562,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vcopper": {
         "frame": {
-          "x": 2560,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 512,
           "h": 256
         },
@@ -24368,10 +20580,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vdark": {
+      "t064__polearm__spear__thrust__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 512,
+          "y": 1024,
           "w": 512,
           "h": 256
         },
@@ -24390,8 +20602,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vdark": {
         "frame": {
-          "x": 512,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 512,
           "h": 256
         },
@@ -24408,10 +20620,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vgold": {
+      "t064__polearm__spear__thrust__bg__vdark": {
         "frame": {
-          "x": 1024,
-          "y": 512,
+          "x": 512,
+          "y": 1280,
           "w": 512,
           "h": 256
         },
@@ -24430,8 +20642,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 512,
           "h": 256
         },
@@ -24448,10 +20660,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__viron": {
+      "t064__polearm__spear__thrust__bg__vgold": {
         "frame": {
-          "x": 2048,
-          "y": 512,
+          "x": 512,
+          "y": 1536,
           "w": 512,
           "h": 256
         },
@@ -24470,8 +20682,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__viron": {
         "frame": {
-          "x": 2560,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 512,
           "h": 256
         },
@@ -24488,10 +20700,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vlight": {
+      "t064__polearm__spear__thrust__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 512,
+          "y": 1792,
           "w": 512,
           "h": 256
         },
@@ -24510,8 +20722,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vlight": {
         "frame": {
-          "x": 512,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 512,
           "h": 256
         },
@@ -24528,10 +20740,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vmedium": {
+      "t064__polearm__spear__thrust__bg__vlight": {
         "frame": {
-          "x": 1024,
-          "y": 768,
+          "x": 512,
+          "y": 2048,
           "w": 512,
           "h": 256
         },
@@ -24550,8 +20762,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 512,
           "h": 256
         },
@@ -24568,10 +20780,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vred": {
+      "t064__polearm__spear__thrust__bg__vmedium": {
         "frame": {
-          "x": 2048,
-          "y": 768,
+          "x": 512,
+          "y": 2304,
           "w": 512,
           "h": 256
         },
@@ -24590,8 +20802,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vred": {
         "frame": {
-          "x": 2560,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 512,
           "h": 256
         },
@@ -24608,10 +20820,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vsilver": {
+      "t064__polearm__spear__thrust__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 512,
+          "y": 2560,
           "w": 512,
           "h": 256
         },
@@ -24630,8 +20842,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vsilver": {
         "frame": {
-          "x": 512,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 512,
           "h": 256
         },
@@ -24648,10 +20860,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__thrust__bg__vsteel": {
+      "t064__polearm__spear__thrust__bg__vsilver": {
         "frame": {
-          "x": 1024,
-          "y": 1024,
+          "x": 512,
+          "y": 2816,
           "w": 512,
           "h": 256
         },
@@ -24670,8 +20882,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__thrust__fg__vsteel": {
         "frame": {
-          "x": 1536,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__polearm__spear__thrust__bg__vsteel": {
+        "frame": {
+          "x": 512,
+          "y": 3072,
           "w": 512,
           "h": 256
         },
@@ -24693,57 +20925,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__polearm__spear__thrust.png",
       "size": {
-        "w": 3072,
-        "h": 1280
+        "w": 1024,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__polearm__spear__walk": {
     "frames": {
-      "t064__polearm__spear__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__polearm__spear__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__polearm__spear__walk__fg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -24761,29 +20953,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__fg__vbase__dup2": {
+      "t064__polearm__spear__walk__bg__vbase": {
         "frame": {
-          "x": 1728,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__polearm__spear__walk__bg__vbrass": {
-        "frame": {
-          "x": 2304,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -24803,8 +20975,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vbrass": {
         "frame": {
-          "x": 2880,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -24821,9 +20993,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vbronze": {
+      "t064__polearm__spear__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 576,
           "y": 256,
           "w": 576,
           "h": 256
@@ -24843,8 +21015,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vbronze": {
         "frame": {
-          "x": 576,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -24861,10 +21033,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vceramic": {
+      "t064__polearm__spear__walk__bg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -24883,8 +21055,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vceramic": {
         "frame": {
-          "x": 1728,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -24901,10 +21073,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vcopper": {
+      "t064__polearm__spear__walk__bg__vceramic": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 576,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -24923,8 +21095,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vcopper": {
         "frame": {
-          "x": 2880,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -24941,10 +21113,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vdark": {
+      "t064__polearm__spear__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -24963,8 +21135,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vdark": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -24981,10 +21153,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vgold": {
+      "t064__polearm__spear__walk__bg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -25003,8 +21175,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vgold": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -25021,10 +21193,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__viron": {
+      "t064__polearm__spear__walk__bg__vgold": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -25043,8 +21215,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__viron": {
         "frame": {
-          "x": 2880,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -25061,10 +21233,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vlight": {
+      "t064__polearm__spear__walk__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 576,
+          "y": 1792,
           "w": 576,
           "h": 256
         },
@@ -25083,8 +21255,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vlight": {
         "frame": {
-          "x": 576,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -25101,10 +21273,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vmedium": {
+      "t064__polearm__spear__walk__bg__vlight": {
         "frame": {
-          "x": 1152,
-          "y": 768,
+          "x": 576,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -25123,8 +21295,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vmedium": {
         "frame": {
-          "x": 1728,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -25141,10 +21313,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vred": {
+      "t064__polearm__spear__walk__bg__vmedium": {
         "frame": {
-          "x": 2304,
-          "y": 768,
+          "x": 576,
+          "y": 2304,
           "w": 576,
           "h": 256
         },
@@ -25163,8 +21335,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vred": {
         "frame": {
-          "x": 2880,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -25181,10 +21353,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vsilver": {
+      "t064__polearm__spear__walk__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 576,
+          "y": 2560,
           "w": 576,
           "h": 256
         },
@@ -25203,8 +21375,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vsilver": {
         "frame": {
-          "x": 576,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -25221,10 +21393,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__polearm__spear__walk__bg__vsteel": {
+      "t064__polearm__spear__walk__bg__vsilver": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 576,
+          "y": 2816,
           "w": 576,
           "h": 256
         },
@@ -25243,8 +21415,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__spear__walk__fg__vsteel": {
         "frame": {
-          "x": 1728,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__polearm__spear__walk__bg__vsteel": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
           "w": 576,
           "h": 256
         },
@@ -25266,211 +21458,13 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__polearm__spear__walk.png",
       "size": {
-        "w": 3456,
-        "h": 1280
+        "w": 1152,
+        "h": 3328
       },
       "scale": "1"
     }
   },
-  "t064__gear__quiver__hurt": {
-    "frames": {
-      "t064__gear__quiver__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__gear__quiver__shoot": {
-    "frames": {
-      "t064__gear__quiver__shoot__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__shoot.png",
-      "size": {
-        "w": 832,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__gear__quiver__slash": {
-    "frames": {
-      "t064__gear__quiver__slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__slash.png",
-      "size": {
-        "w": 384,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__gear__quiver__spellcast": {
-    "frames": {
-      "t064__gear__quiver__spellcast__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 448,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 448,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 448,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__spellcast.png",
-      "size": {
-        "w": 448,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__gear__quiver__thrust": {
-    "frames": {
-      "t064__gear__quiver__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__thrust.png",
-      "size": {
-        "w": 512,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__gear__quiver__walk": {
-    "frames": {
-      "t064__gear__quiver__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__gear__quiver__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__bow_arrow__shoot": {
+  "tall__consolidated__shoot__13x4": {
     "frames": {
       "t064__ranged__bow__arrow__shoot__fg__vbase": {
         "frame": {
@@ -25491,13 +21485,86 @@ export const WEAPON_ATLAS_DATA = {
           "w": 832,
           "h": 256
         }
+      },
+      "t064__gear__quiver__shoot__bg__vbase": {
+        "frame": {
+          "x": 832,
+          "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 832,
+          "h": 256
+        }
       }
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__bow_arrow__shoot.png",
+      "image": "tall__consolidated__shoot__13x4.png",
       "size": {
-        "w": 832,
+        "w": 1664,
+        "h": 256
+      },
+      "scale": "1"
+    }
+  },
+  "tall__consolidated__slash__6x4": {
+    "frames": {
+      "t064__sword__dagger__slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 256
+        }
+      },
+      "t064__gear__quiver__slash__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 0,
+          "w": 384,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 256
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "tall__consolidated__slash__6x4.png",
+      "size": {
+        "w": 768,
         "h": 256
       },
       "scale": "1"
@@ -25505,49 +21572,9 @@ export const WEAPON_ATLAS_DATA = {
   },
   "t064__ranged__bow_great__universal_hurt": {
     "frames": {
-      "t064__ranged__bow__great__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__great__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__ranged__bow__great__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -25565,29 +21592,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__fg__vbase__dup2": {
+      "t064__ranged__bow__great__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__great__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -25607,8 +21614,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -25625,9 +21632,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vbronze": {
+      "t064__ranged__bow__great__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -25647,8 +21654,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -25665,10 +21672,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vceramic": {
+      "t064__ranged__bow__great__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -25687,8 +21694,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -25705,10 +21712,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vcopper": {
+      "t064__ranged__bow__great__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -25727,8 +21734,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -25745,10 +21752,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vdark": {
+      "t064__ranged__bow__great__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -25767,8 +21774,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -25785,10 +21792,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vgold": {
+      "t064__ranged__bow__great__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -25807,8 +21814,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -25825,10 +21832,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__viron": {
+      "t064__ranged__bow__great__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -25847,8 +21854,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -25865,10 +21872,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vlight": {
+      "t064__ranged__bow__great__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -25887,8 +21894,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -25905,10 +21912,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vmedium": {
+      "t064__ranged__bow__great__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -25927,8 +21934,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -25945,10 +21952,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vred": {
+      "t064__ranged__bow__great__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -25967,8 +21974,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -25985,10 +21992,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vsilver": {
+      "t064__ranged__bow__great__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -26007,8 +22014,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -26025,10 +22032,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__great__universal_hurt__bg__vsteel": {
+      "t064__ranged__bow__great__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -26047,8 +22054,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__bow__great__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -26070,8 +22097,8 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_great__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
@@ -26098,30 +22125,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__great__universal_shoot__fg__vbase__dup2": {
-        "frame": {
-          "x": 832,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
       "t064__ranged__bow__great__universal_shoot__fg__vbrass": {
         "frame": {
-          "x": 1664,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 832,
           "h": 256
         },
@@ -26140,8 +22147,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vbronze": {
         "frame": {
-          "x": 2496,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -26161,7 +22168,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__ranged__bow__great__universal_shoot__fg__vceramic": {
         "frame": {
           "x": 0,
-          "y": 256,
+          "y": 768,
           "w": 832,
           "h": 256
         },
@@ -26180,8 +22187,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vcopper": {
         "frame": {
-          "x": 832,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -26200,8 +22207,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vdark": {
         "frame": {
-          "x": 1664,
-          "y": 256,
+          "x": 0,
+          "y": 1280,
           "w": 832,
           "h": 256
         },
@@ -26220,8 +22227,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vgold": {
         "frame": {
-          "x": 2496,
-          "y": 256,
+          "x": 0,
+          "y": 1536,
           "w": 832,
           "h": 256
         },
@@ -26241,7 +22248,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__ranged__bow__great__universal_shoot__fg__viron": {
         "frame": {
           "x": 0,
-          "y": 512,
+          "y": 1792,
           "w": 832,
           "h": 256
         },
@@ -26260,8 +22267,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vlight": {
         "frame": {
-          "x": 832,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 832,
           "h": 256
         },
@@ -26280,8 +22287,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vmedium": {
         "frame": {
-          "x": 1664,
-          "y": 512,
+          "x": 0,
+          "y": 2304,
           "w": 832,
           "h": 256
         },
@@ -26300,8 +22307,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vred": {
         "frame": {
-          "x": 2496,
-          "y": 512,
+          "x": 0,
+          "y": 2560,
           "w": 832,
           "h": 256
         },
@@ -26321,7 +22328,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__ranged__bow__great__universal_shoot__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 768,
+          "y": 2816,
           "w": 832,
           "h": 256
         },
@@ -26340,8 +22347,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__great__universal_shoot__fg__vsteel": {
         "frame": {
-          "x": 832,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
           "w": 832,
           "h": 256
         },
@@ -26363,57 +22370,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_great__universal_shoot.png",
       "size": {
-        "w": 3328,
-        "h": 1024
+        "w": 832,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__ranged__bow_normal__universal_hurt": {
     "frames": {
-      "t064__ranged__bow__normal__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__normal__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__ranged__bow__normal__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -26431,29 +22398,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__fg__vbase__dup2": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__normal__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -26473,8 +22420,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -26491,9 +22438,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vbronze": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -26513,8 +22460,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -26531,10 +22478,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vceramic": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -26553,8 +22500,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -26571,10 +22518,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vcopper": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -26593,8 +22540,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -26611,10 +22558,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vdark": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -26633,8 +22580,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -26651,10 +22598,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vgold": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -26673,8 +22620,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -26691,10 +22638,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__viron": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -26713,8 +22660,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -26731,10 +22678,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vlight": {
+      "t064__ranged__bow__normal__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -26753,8 +22700,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -26771,10 +22718,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vmedium": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -26793,8 +22740,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -26811,10 +22758,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vred": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -26833,8 +22780,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -26851,10 +22798,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vsilver": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -26873,8 +22820,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -26891,10 +22838,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__normal__universal_hurt__bg__vsteel": {
+      "t064__ranged__bow__normal__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -26913,8 +22860,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__bow__normal__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -26936,57 +22903,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_normal__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__ranged__bow_normal__universal_shoot": {
     "frames": {
-      "t064__ranged__bow__normal__universal_shoot__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__bow__normal__universal_shoot__bg__vbase__dup2": {
-        "frame": {
-          "x": 832,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
       "t064__ranged__bow__normal__universal_shoot__fg__vbase": {
         "frame": {
-          "x": 1664,
+          "x": 0,
           "y": 0,
           "w": 832,
           "h": 256
@@ -27004,29 +22931,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__fg__vbase__dup2": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vbase": {
         "frame": {
-          "x": 2496,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__bow__normal__universal_shoot__bg__vbrass": {
-        "frame": {
-          "x": 3328,
+          "x": 832,
           "y": 0,
           "w": 832,
           "h": 256
@@ -27046,8 +22953,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vbrass": {
         "frame": {
-          "x": 4160,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 832,
           "h": 256
         },
@@ -27064,9 +22971,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vbronze": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 832,
           "y": 256,
           "w": 832,
           "h": 256
@@ -27086,8 +22993,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vbronze": {
         "frame": {
-          "x": 832,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -27104,10 +23011,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vceramic": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vbronze": {
         "frame": {
-          "x": 1664,
-          "y": 256,
+          "x": 832,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -27126,8 +23033,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vceramic": {
         "frame": {
-          "x": 2496,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 832,
           "h": 256
         },
@@ -27144,10 +23051,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vcopper": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vceramic": {
         "frame": {
-          "x": 3328,
-          "y": 256,
+          "x": 832,
+          "y": 768,
           "w": 832,
           "h": 256
         },
@@ -27166,8 +23073,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vcopper": {
         "frame": {
-          "x": 4160,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -27184,10 +23091,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vdark": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 832,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -27206,8 +23113,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vdark": {
         "frame": {
-          "x": 832,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 832,
           "h": 256
         },
@@ -27224,10 +23131,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vgold": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vdark": {
         "frame": {
-          "x": 1664,
-          "y": 512,
+          "x": 832,
+          "y": 1280,
           "w": 832,
           "h": 256
         },
@@ -27246,8 +23153,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vgold": {
         "frame": {
-          "x": 2496,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 832,
           "h": 256
         },
@@ -27264,10 +23171,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__viron": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vgold": {
         "frame": {
-          "x": 3328,
-          "y": 512,
+          "x": 832,
+          "y": 1536,
           "w": 832,
           "h": 256
         },
@@ -27286,8 +23193,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__viron": {
         "frame": {
-          "x": 4160,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 832,
           "h": 256
         },
@@ -27304,10 +23211,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vlight": {
+      "t064__ranged__bow__normal__universal_shoot__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 832,
+          "y": 1792,
           "w": 832,
           "h": 256
         },
@@ -27326,8 +23233,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vlight": {
         "frame": {
-          "x": 832,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 832,
           "h": 256
         },
@@ -27344,10 +23251,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vmedium": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vlight": {
         "frame": {
-          "x": 1664,
-          "y": 768,
+          "x": 832,
+          "y": 2048,
           "w": 832,
           "h": 256
         },
@@ -27366,8 +23273,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vmedium": {
         "frame": {
-          "x": 2496,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 832,
           "h": 256
         },
@@ -27384,10 +23291,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vred": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vmedium": {
         "frame": {
-          "x": 3328,
-          "y": 768,
+          "x": 832,
+          "y": 2304,
           "w": 832,
           "h": 256
         },
@@ -27406,8 +23313,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vred": {
         "frame": {
-          "x": 4160,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 832,
           "h": 256
         },
@@ -27424,10 +23331,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vsilver": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 832,
+          "y": 2560,
           "w": 832,
           "h": 256
         },
@@ -27446,8 +23353,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vsilver": {
         "frame": {
-          "x": 832,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 832,
           "h": 256
         },
@@ -27464,10 +23371,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__normal__universal_shoot__bg__vsteel": {
+      "t064__ranged__bow__normal__universal_shoot__bg__vsilver": {
         "frame": {
-          "x": 1664,
-          "y": 1024,
+          "x": 832,
+          "y": 2816,
           "w": 832,
           "h": 256
         },
@@ -27486,8 +23393,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__normal__universal_shoot__fg__vsteel": {
         "frame": {
-          "x": 2496,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 832,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 832,
+          "h": 256
+        }
+      },
+      "t064__ranged__bow__normal__universal_shoot__bg__vsteel": {
+        "frame": {
+          "x": 832,
+          "y": 3072,
           "w": 832,
           "h": 256
         },
@@ -27509,57 +23436,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_normal__universal_shoot.png",
       "size": {
-        "w": 4992,
-        "h": 1280
+        "w": 1664,
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__ranged__bow_recurve__universal_hurt": {
     "frames": {
-      "t064__ranged__bow__recurve__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vbase__dup2": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__ranged__bow__recurve__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -27577,29 +23464,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__fg__vbase__dup2": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vbrass": {
-        "frame": {
-          "x": 1536,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -27619,8 +23486,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1920,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -27637,9 +23504,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vbronze": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 384,
           "y": 64,
           "w": 384,
           "h": 64
@@ -27659,8 +23526,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vbronze": {
         "frame": {
-          "x": 384,
-          "y": 64,
+          "x": 0,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -27677,10 +23544,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vceramic": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vbronze": {
         "frame": {
-          "x": 768,
-          "y": 64,
+          "x": 384,
+          "y": 128,
           "w": 384,
           "h": 64
         },
@@ -27699,8 +23566,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vceramic": {
         "frame": {
-          "x": 1152,
-          "y": 64,
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -27717,10 +23584,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vcopper": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vceramic": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 384,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -27739,8 +23606,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1920,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -27757,10 +23624,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vdark": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -27779,8 +23646,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vdark": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -27797,10 +23664,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vgold": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vdark": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -27819,8 +23686,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -27837,10 +23704,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__viron": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -27859,8 +23726,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1920,
-          "y": 128,
+          "x": 0,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -27877,10 +23744,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vlight": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 192,
+          "x": 384,
+          "y": 448,
           "w": 384,
           "h": 64
         },
@@ -27899,8 +23766,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vlight": {
         "frame": {
-          "x": 384,
-          "y": 192,
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -27917,10 +23784,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vmedium": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vlight": {
         "frame": {
-          "x": 768,
-          "y": 192,
+          "x": 384,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -27939,8 +23806,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vmedium": {
         "frame": {
-          "x": 1152,
-          "y": 192,
+          "x": 0,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -27957,10 +23824,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vred": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vmedium": {
         "frame": {
-          "x": 1536,
-          "y": 192,
+          "x": 384,
+          "y": 576,
           "w": 384,
           "h": 64
         },
@@ -27979,8 +23846,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vred": {
         "frame": {
-          "x": 1920,
-          "y": 192,
+          "x": 0,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -27997,10 +23864,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vsilver": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 384,
+          "y": 640,
           "w": 384,
           "h": 64
         },
@@ -28019,8 +23886,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vsilver": {
         "frame": {
-          "x": 384,
-          "y": 256,
+          "x": 0,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -28037,10 +23904,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__ranged__bow__recurve__universal_hurt__bg__vsteel": {
+      "t064__ranged__bow__recurve__universal_hurt__bg__vsilver": {
         "frame": {
-          "x": 768,
-          "y": 256,
+          "x": 384,
+          "y": 704,
           "w": 384,
           "h": 64
         },
@@ -28059,8 +23926,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_hurt__fg__vsteel": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__bow__recurve__universal_hurt__bg__vsteel": {
+        "frame": {
+          "x": 384,
+          "y": 768,
           "w": 384,
           "h": 64
         },
@@ -28082,57 +23969,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_recurve__universal_hurt.png",
       "size": {
-        "w": 2304,
-        "h": 320
+        "w": 768,
+        "h": 832
       },
       "scale": "1"
     }
   },
   "t064__ranged__bow_recurve__universal_shoot": {
     "frames": {
-      "t064__ranged__bow__recurve__universal_shoot__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vbase__dup2": {
-        "frame": {
-          "x": 832,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
       "t064__ranged__bow__recurve__universal_shoot__fg__vbase": {
         "frame": {
-          "x": 1664,
+          "x": 0,
           "y": 0,
           "w": 832,
           "h": 256
@@ -28150,29 +23997,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__fg__vbase__dup2": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vbase": {
         "frame": {
-          "x": 2496,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vbrass": {
-        "frame": {
-          "x": 3328,
+          "x": 832,
           "y": 0,
           "w": 832,
           "h": 256
@@ -28192,8 +24019,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vbrass": {
         "frame": {
-          "x": 4160,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 832,
           "h": 256
         },
@@ -28210,9 +24037,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vbronze": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 832,
           "y": 256,
           "w": 832,
           "h": 256
@@ -28232,8 +24059,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vbronze": {
         "frame": {
-          "x": 832,
-          "y": 256,
+          "x": 0,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -28250,10 +24077,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vceramic": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vbronze": {
         "frame": {
-          "x": 1664,
-          "y": 256,
+          "x": 832,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -28272,8 +24099,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vceramic": {
         "frame": {
-          "x": 2496,
-          "y": 256,
+          "x": 0,
+          "y": 768,
           "w": 832,
           "h": 256
         },
@@ -28290,10 +24117,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vcopper": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vceramic": {
         "frame": {
-          "x": 3328,
-          "y": 256,
+          "x": 832,
+          "y": 768,
           "w": 832,
           "h": 256
         },
@@ -28312,8 +24139,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vcopper": {
         "frame": {
-          "x": 4160,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -28330,10 +24157,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vdark": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 832,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -28352,8 +24179,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vdark": {
         "frame": {
-          "x": 832,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 832,
           "h": 256
         },
@@ -28370,10 +24197,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vgold": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vdark": {
         "frame": {
-          "x": 1664,
-          "y": 512,
+          "x": 832,
+          "y": 1280,
           "w": 832,
           "h": 256
         },
@@ -28392,8 +24219,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vgold": {
         "frame": {
-          "x": 2496,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 832,
           "h": 256
         },
@@ -28410,10 +24237,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__viron": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vgold": {
         "frame": {
-          "x": 3328,
-          "y": 512,
+          "x": 832,
+          "y": 1536,
           "w": 832,
           "h": 256
         },
@@ -28432,8 +24259,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__viron": {
         "frame": {
-          "x": 4160,
-          "y": 512,
+          "x": 0,
+          "y": 1792,
           "w": 832,
           "h": 256
         },
@@ -28450,10 +24277,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vlight": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__viron": {
         "frame": {
-          "x": 0,
-          "y": 768,
+          "x": 832,
+          "y": 1792,
           "w": 832,
           "h": 256
         },
@@ -28472,8 +24299,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vlight": {
         "frame": {
-          "x": 832,
-          "y": 768,
+          "x": 0,
+          "y": 2048,
           "w": 832,
           "h": 256
         },
@@ -28490,10 +24317,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vmedium": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vlight": {
         "frame": {
-          "x": 1664,
-          "y": 768,
+          "x": 832,
+          "y": 2048,
           "w": 832,
           "h": 256
         },
@@ -28512,8 +24339,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vmedium": {
         "frame": {
-          "x": 2496,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 832,
           "h": 256
         },
@@ -28530,10 +24357,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vred": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vmedium": {
         "frame": {
-          "x": 3328,
-          "y": 768,
+          "x": 832,
+          "y": 2304,
           "w": 832,
           "h": 256
         },
@@ -28552,8 +24379,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vred": {
         "frame": {
-          "x": 4160,
-          "y": 768,
+          "x": 0,
+          "y": 2560,
           "w": 832,
           "h": 256
         },
@@ -28570,10 +24397,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vsilver": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vred": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 832,
+          "y": 2560,
           "w": 832,
           "h": 256
         },
@@ -28592,8 +24419,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vsilver": {
         "frame": {
-          "x": 832,
-          "y": 1024,
+          "x": 0,
+          "y": 2816,
           "w": 832,
           "h": 256
         },
@@ -28610,10 +24437,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__ranged__bow__recurve__universal_shoot__bg__vsteel": {
+      "t064__ranged__bow__recurve__universal_shoot__bg__vsilver": {
         "frame": {
-          "x": 1664,
-          "y": 1024,
+          "x": 832,
+          "y": 2816,
           "w": 832,
           "h": 256
         },
@@ -28632,8 +24459,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__ranged__bow__recurve__universal_shoot__fg__vsteel": {
         "frame": {
-          "x": 2496,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
+          "w": 832,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 832,
+          "h": 256
+        }
+      },
+      "t064__ranged__bow__recurve__universal_shoot__bg__vsteel": {
+        "frame": {
+          "x": 832,
+          "y": 3072,
           "w": 832,
           "h": 256
         },
@@ -28655,475 +24502,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__ranged__bow_recurve__universal_shoot.png",
       "size": {
-        "w": 4992,
-        "h": 1280
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__crossbow__hurt": {
-    "frames": {
-      "t064__ranged__crossbow__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__crossbow__hurt__fg__vbase": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__crossbow__hurt.png",
-      "size": {
-        "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__crossbow__thrust": {
-    "frames": {
-      "t064__ranged__crossbow__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
-      "t064__ranged__crossbow__thrust__fg__vbase": {
-        "frame": {
-          "x": 512,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
-      "t064__ranged__crossbow__thrust__fg__vbase__dup2": {
-        "frame": {
-          "x": 0,
-          "y": 256,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__crossbow__thrust.png",
-      "size": {
-        "w": 1024,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__crossbow__walk": {
-    "frames": {
-      "t064__ranged__crossbow__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__ranged__crossbow__walk__fg__vbase": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__ranged__crossbow__walk__fg__vbase__dup2": {
-        "frame": {
-          "x": 0,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__crossbow__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__slingshot__hurt": {
-    "frames": {
-      "t064__ranged__slingshot__hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__ranged__slingshot__hurt__fg__vbase": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__slingshot__hurt.png",
-      "size": {
-        "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__slingshot__shoot": {
-    "frames": {
-      "t064__ranged__slingshot__shoot__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__shoot__bg__vbase__dup2": {
-        "frame": {
-          "x": 832,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__shoot__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 256,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__shoot__fg__vbase__dup2": {
-        "frame": {
-          "x": 832,
-          "y": 256,
-          "w": 832,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 832,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 832,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__slingshot__shoot.png",
-      "size": {
         "w": 1664,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t064__ranged__slingshot__walk": {
-    "frames": {
-      "t064__ranged__slingshot__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__walk__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__ranged__slingshot__walk__fg__vbase__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__ranged__slingshot__walk.png",
-      "size": {
-        "w": 1152,
-        "h": 512
+        "h": 3328
       },
       "scale": "1"
     }
   },
   "t064__sword__arming__universal_combat_idle": {
     "frames": {
-      "t064__sword__arming__universal_combat_idle__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
       "t064__sword__arming__universal_combat_idle__fg__vbase": {
         "frame": {
-          "x": 128,
+          "x": 0,
           "y": 0,
           "w": 128,
           "h": 256
@@ -29141,9 +24530,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_combat_idle__bg__vbrass": {
+      "t064__sword__arming__universal_combat_idle__bg__vbase": {
         "frame": {
-          "x": 256,
+          "x": 128,
           "y": 0,
           "w": 128,
           "h": 256
@@ -29163,8 +24552,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_combat_idle__fg__vbrass": {
         "frame": {
-          "x": 384,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 128,
           "h": 256
         },
@@ -29181,10 +24570,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_combat_idle__bg__vbronze": {
+      "t064__sword__arming__universal_combat_idle__bg__vbrass": {
         "frame": {
-          "x": 512,
-          "y": 0,
+          "x": 128,
+          "y": 256,
           "w": 128,
           "h": 256
         },
@@ -29204,7 +24593,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_combat_idle__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 256,
+          "y": 512,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_combat_idle__bg__vbronze": {
+        "frame": {
+          "x": 128,
+          "y": 512,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_combat_idle__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 768,
           "w": 128,
           "h": 256
         },
@@ -29224,47 +24653,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_combat_idle__bg__vceramic": {
         "frame": {
           "x": 128,
-          "y": 256,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_combat_idle__fg__vceramic": {
-        "frame": {
-          "x": 256,
-          "y": 256,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_combat_idle__bg__vcopper": {
-        "frame": {
-          "x": 384,
-          "y": 256,
+          "y": 768,
           "w": 128,
           "h": 256
         },
@@ -29283,8 +24672,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_combat_idle__fg__vcopper": {
         "frame": {
-          "x": 512,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 128,
           "h": 256
         },
@@ -29301,10 +24690,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_combat_idle__bg__vgold": {
+      "t064__sword__arming__universal_combat_idle__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 128,
+          "y": 1024,
           "w": 128,
           "h": 256
         },
@@ -29323,8 +24712,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_combat_idle__fg__vgold": {
         "frame": {
-          "x": 128,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 128,
           "h": 256
         },
@@ -29341,10 +24730,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_combat_idle__bg__viron": {
+      "t064__sword__arming__universal_combat_idle__bg__vgold": {
         "frame": {
-          "x": 256,
-          "y": 512,
+          "x": 128,
+          "y": 1280,
           "w": 128,
           "h": 256
         },
@@ -29363,8 +24752,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_combat_idle__fg__viron": {
         "frame": {
-          "x": 384,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 128,
           "h": 256
         },
@@ -29381,10 +24770,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_combat_idle__bg__vsilver": {
+      "t064__sword__arming__universal_combat_idle__bg__viron": {
         "frame": {
-          "x": 512,
-          "y": 512,
+          "x": 128,
+          "y": 1536,
           "w": 128,
           "h": 256
         },
@@ -29404,7 +24793,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_combat_idle__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 768,
+          "y": 1792,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_combat_idle__bg__vsilver": {
+        "frame": {
+          "x": 128,
+          "y": 1792,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_combat_idle__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 2048,
           "w": 128,
           "h": 256
         },
@@ -29424,27 +24853,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_combat_idle__bg__vsteel": {
         "frame": {
           "x": 128,
-          "y": 768,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_combat_idle__fg__vsteel": {
-        "frame": {
-          "x": 256,
-          "y": 768,
+          "y": 2048,
           "w": 128,
           "h": 256
         },
@@ -29466,37 +24875,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__sword__arming__universal_combat_idle.png",
       "size": {
-        "w": 640,
-        "h": 1024
+        "w": 256,
+        "h": 2304
       },
       "scale": "1"
     }
   },
   "t064__sword__arming__universal_hurt": {
     "frames": {
-      "t064__sword__arming__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
       "t064__sword__arming__universal_hurt__fg__vbase": {
         "frame": {
-          "x": 384,
+          "x": 0,
           "y": 0,
           "w": 384,
           "h": 64
@@ -29514,9 +24903,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__arming__universal_hurt__bg__vbrass": {
+      "t064__sword__arming__universal_hurt__bg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 384,
           "y": 0,
           "w": 384,
           "h": 64
@@ -29536,8 +24925,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_hurt__fg__vbrass": {
         "frame": {
-          "x": 1152,
-          "y": 0,
+          "x": 0,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -29554,10 +24943,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__arming__universal_hurt__bg__vbronze": {
+      "t064__sword__arming__universal_hurt__bg__vbrass": {
         "frame": {
-          "x": 1536,
-          "y": 0,
+          "x": 384,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -29577,7 +24966,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_hurt__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 64,
+          "y": 128,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__arming__universal_hurt__bg__vbronze": {
+        "frame": {
+          "x": 384,
+          "y": 128,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__arming__universal_hurt__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -29597,47 +25026,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_hurt__bg__vceramic": {
         "frame": {
           "x": 384,
-          "y": 64,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__sword__arming__universal_hurt__fg__vceramic": {
-        "frame": {
-          "x": 768,
-          "y": 64,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__sword__arming__universal_hurt__bg__vcopper": {
-        "frame": {
-          "x": 1152,
-          "y": 64,
+          "y": 192,
           "w": 384,
           "h": 64
         },
@@ -29656,8 +25045,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_hurt__fg__vcopper": {
         "frame": {
-          "x": 1536,
-          "y": 64,
+          "x": 0,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -29674,10 +25063,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__arming__universal_hurt__bg__vgold": {
+      "t064__sword__arming__universal_hurt__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 128,
+          "x": 384,
+          "y": 256,
           "w": 384,
           "h": 64
         },
@@ -29696,8 +25085,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_hurt__fg__vgold": {
         "frame": {
-          "x": 384,
-          "y": 128,
+          "x": 0,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -29714,10 +25103,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__arming__universal_hurt__bg__viron": {
+      "t064__sword__arming__universal_hurt__bg__vgold": {
         "frame": {
-          "x": 768,
-          "y": 128,
+          "x": 384,
+          "y": 320,
           "w": 384,
           "h": 64
         },
@@ -29736,8 +25125,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_hurt__fg__viron": {
         "frame": {
-          "x": 1152,
-          "y": 128,
+          "x": 0,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -29754,10 +25143,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__arming__universal_hurt__bg__vsilver": {
+      "t064__sword__arming__universal_hurt__bg__viron": {
         "frame": {
-          "x": 1536,
-          "y": 128,
+          "x": 384,
+          "y": 384,
           "w": 384,
           "h": 64
         },
@@ -29777,7 +25166,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_hurt__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 192,
+          "y": 448,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__arming__universal_hurt__bg__vsilver": {
+        "frame": {
+          "x": 384,
+          "y": 448,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__arming__universal_hurt__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -29797,27 +25226,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_hurt__bg__vsteel": {
         "frame": {
           "x": 384,
-          "y": 192,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__sword__arming__universal_hurt__fg__vsteel": {
-        "frame": {
-          "x": 768,
-          "y": 192,
+          "y": 512,
           "w": 384,
           "h": 64
         },
@@ -29839,37 +25248,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__sword__arming__universal_hurt.png",
       "size": {
-        "w": 1920,
-        "h": 256
+        "w": 768,
+        "h": 576
       },
       "scale": "1"
     }
   },
   "t064__sword__arming__universal_idle": {
     "frames": {
-      "t064__sword__arming__universal_idle__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
       "t064__sword__arming__universal_idle__fg__vbase": {
         "frame": {
-          "x": 128,
+          "x": 0,
           "y": 0,
           "w": 128,
           "h": 256
@@ -29887,9 +25276,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_idle__bg__vbrass": {
+      "t064__sword__arming__universal_idle__bg__vbase": {
         "frame": {
-          "x": 256,
+          "x": 128,
           "y": 0,
           "w": 128,
           "h": 256
@@ -29909,8 +25298,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_idle__fg__vbrass": {
         "frame": {
-          "x": 384,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 128,
           "h": 256
         },
@@ -29927,10 +25316,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_idle__bg__vbronze": {
+      "t064__sword__arming__universal_idle__bg__vbrass": {
         "frame": {
-          "x": 512,
-          "y": 0,
+          "x": 128,
+          "y": 256,
           "w": 128,
           "h": 256
         },
@@ -29950,7 +25339,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_idle__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 256,
+          "y": 512,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_idle__bg__vbronze": {
+        "frame": {
+          "x": 128,
+          "y": 512,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_idle__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 768,
           "w": 128,
           "h": 256
         },
@@ -29970,47 +25399,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_idle__bg__vceramic": {
         "frame": {
           "x": 128,
-          "y": 256,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_idle__fg__vceramic": {
-        "frame": {
-          "x": 256,
-          "y": 256,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_idle__bg__vcopper": {
-        "frame": {
-          "x": 384,
-          "y": 256,
+          "y": 768,
           "w": 128,
           "h": 256
         },
@@ -30029,8 +25418,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_idle__fg__vcopper": {
         "frame": {
-          "x": 512,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 128,
           "h": 256
         },
@@ -30047,10 +25436,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_idle__bg__vgold": {
+      "t064__sword__arming__universal_idle__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 128,
+          "y": 1024,
           "w": 128,
           "h": 256
         },
@@ -30069,8 +25458,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_idle__fg__vgold": {
         "frame": {
-          "x": 128,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 128,
           "h": 256
         },
@@ -30087,10 +25476,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_idle__bg__viron": {
+      "t064__sword__arming__universal_idle__bg__vgold": {
         "frame": {
-          "x": 256,
-          "y": 512,
+          "x": 128,
+          "y": 1280,
           "w": 128,
           "h": 256
         },
@@ -30109,8 +25498,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_idle__fg__viron": {
         "frame": {
-          "x": 384,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 128,
           "h": 256
         },
@@ -30127,10 +25516,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_idle__bg__vsilver": {
+      "t064__sword__arming__universal_idle__bg__viron": {
         "frame": {
-          "x": 512,
-          "y": 512,
+          "x": 128,
+          "y": 1536,
           "w": 128,
           "h": 256
         },
@@ -30150,7 +25539,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_idle__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 768,
+          "y": 1792,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_idle__bg__vsilver": {
+        "frame": {
+          "x": 128,
+          "y": 1792,
+          "w": 128,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 128,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_idle__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 2048,
           "w": 128,
           "h": 256
         },
@@ -30170,27 +25599,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_idle__bg__vsteel": {
         "frame": {
           "x": 128,
-          "y": 768,
-          "w": 128,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 128,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_idle__fg__vsteel": {
-        "frame": {
-          "x": 256,
-          "y": 768,
+          "y": 2048,
           "w": 128,
           "h": 256
         },
@@ -30212,37 +25621,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__sword__arming__universal_idle.png",
       "size": {
-        "w": 640,
-        "h": 1024
+        "w": 256,
+        "h": 2304
       },
       "scale": "1"
     }
   },
   "t064__sword__arming__universal_walk": {
     "frames": {
-      "t064__sword__arming__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__sword__arming__universal_walk__fg__vbase": {
         "frame": {
-          "x": 576,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -30260,9 +25649,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_walk__bg__vbrass": {
+      "t064__sword__arming__universal_walk__bg__vbase": {
         "frame": {
-          "x": 1152,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -30282,8 +25671,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_walk__fg__vbrass": {
         "frame": {
-          "x": 1728,
-          "y": 0,
+          "x": 0,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -30300,10 +25689,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_walk__bg__vbronze": {
+      "t064__sword__arming__universal_walk__bg__vbrass": {
         "frame": {
-          "x": 2304,
-          "y": 0,
+          "x": 576,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -30323,7 +25712,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_walk__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 256,
+          "y": 512,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_walk__bg__vbronze": {
+        "frame": {
+          "x": 576,
+          "y": 512,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_walk__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -30343,47 +25772,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_walk__bg__vceramic": {
         "frame": {
           "x": 576,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_walk__fg__vceramic": {
-        "frame": {
-          "x": 1152,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_walk__bg__vcopper": {
-        "frame": {
-          "x": 1728,
-          "y": 256,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -30402,8 +25791,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_walk__fg__vcopper": {
         "frame": {
-          "x": 2304,
-          "y": 256,
+          "x": 0,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -30420,10 +25809,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_walk__bg__vgold": {
+      "t064__sword__arming__universal_walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 512,
+          "x": 576,
+          "y": 1024,
           "w": 576,
           "h": 256
         },
@@ -30442,8 +25831,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_walk__fg__vgold": {
         "frame": {
-          "x": 576,
-          "y": 512,
+          "x": 0,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -30460,10 +25849,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_walk__bg__viron": {
+      "t064__sword__arming__universal_walk__bg__vgold": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 576,
+          "y": 1280,
           "w": 576,
           "h": 256
         },
@@ -30482,8 +25871,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__sword__arming__universal_walk__fg__viron": {
         "frame": {
-          "x": 1728,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -30500,10 +25889,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__arming__universal_walk__bg__vsilver": {
+      "t064__sword__arming__universal_walk__bg__viron": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 576,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -30523,7 +25912,47 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_walk__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 768,
+          "y": 1792,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_walk__bg__vsilver": {
+        "frame": {
+          "x": 576,
+          "y": 1792,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__arming__universal_walk__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -30543,27 +25972,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__sword__arming__universal_walk__bg__vsteel": {
         "frame": {
           "x": 576,
-          "y": 768,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__sword__arming__universal_walk__fg__vsteel": {
-        "frame": {
-          "x": 1152,
-          "y": 768,
+          "y": 2048,
           "w": 576,
           "h": 256
         },
@@ -30585,180 +25994,8 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__sword__arming__universal_walk.png",
       "size": {
-        "w": 2880,
-        "h": 1024
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__dagger__hurt": {
-    "frames": {
-      "t064__sword__dagger__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__dagger__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__dagger__slash": {
-    "frames": {
-      "t064__sword__dagger__slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 256
-        }
-      },
-      "t064__sword__dagger__slash__fg__vbase": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__dagger__slash.png",
-      "size": {
-        "w": 768,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__dagger__thrust": {
-    "frames": {
-      "t064__sword__dagger__thrust__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__dagger__thrust.png",
-      "size": {
-        "w": 512,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__dagger__walk": {
-    "frames": {
-      "t064__sword__dagger__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__sword__dagger__walk__fg__vbase": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__dagger__walk.png",
-      "size": {
         "w": 1152,
-        "h": 256
+        "h": 2304
       },
       "scale": "1"
     }
@@ -30785,10 +26022,50 @@ export const WEAPON_ATLAS_DATA = {
           "h": 64
         }
       },
-      "t064__sword__glowsword__hurt__fg__vred": {
+      "t064__sword__glowsword__universal_hurt__bg__vblue": {
         "frame": {
           "x": 384,
           "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__glowsword__hurt__fg__vred": {
+        "frame": {
+          "x": 0,
+          "y": 64,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__glowsword__universal_hurt__bg__vred": {
+        "frame": {
+          "x": 384,
+          "y": 64,
           "w": 384,
           "h": 64
         },
@@ -30811,113 +26088,7 @@ export const WEAPON_ATLAS_DATA = {
       "image": "t064__sword__glowsword__hurt.png",
       "size": {
         "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__glowsword__universal_hurt": {
-    "frames": {
-      "t064__sword__glowsword__universal_hurt__bg__vblue": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      },
-      "t064__sword__glowsword__universal_hurt__bg__vred": {
-        "frame": {
-          "x": 384,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__glowsword__universal_hurt.png",
-      "size": {
-        "w": 768,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__glowsword__universal_walk": {
-    "frames": {
-      "t064__sword__glowsword__universal_walk__bg__vblue": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__sword__glowsword__universal_walk__bg__vred": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__glowsword__universal_walk.png",
-      "size": {
-        "w": 1152,
-        "h": 256
+        "h": 128
       },
       "scale": "1"
     }
@@ -30944,10 +26115,50 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__sword__glowsword__walk__fg__vred": {
+      "t064__sword__glowsword__universal_walk__bg__vblue": {
         "frame": {
           "x": 576,
           "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__glowsword__walk__fg__vred": {
+        "frame": {
+          "x": 0,
+          "y": 256,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__glowsword__universal_walk__bg__vred": {
+        "frame": {
+          "x": 576,
+          "y": 256,
           "w": 576,
           "h": 256
         },
@@ -30970,370 +26181,7 @@ export const WEAPON_ATLAS_DATA = {
       "image": "t064__sword__glowsword__walk.png",
       "size": {
         "w": 1152,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__longsword__hurt": {
-    "frames": {
-      "t064__sword__longsword__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__longsword__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__longsword__universal_hurt": {
-    "frames": {
-      "t064__sword__longsword__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__longsword__universal_hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__longsword__universal_walk": {
-    "frames": {
-      "t064__sword__longsword__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__longsword__universal_walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__longsword__walk": {
-    "frames": {
-      "t064__sword__longsword__walk__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__longsword__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__rapier__hurt": {
-    "frames": {
-      "t064__sword__rapier__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__rapier__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__rapier__universal_walk": {
-    "frames": {
-      "t064__sword__rapier__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__rapier__universal_walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__rapier__walk": {
-    "frames": {
-      "t064__sword__rapier__walk__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__rapier__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__saber__hurt": {
-    "frames": {
-      "t064__sword__saber__hurt__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__saber__hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__saber__universal_hurt": {
-    "frames": {
-      "t064__sword__saber__universal_hurt__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 384,
-          "h": 64
-        },
-        "sourceSize": {
-          "w": 384,
-          "h": 64
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__saber__universal_hurt.png",
-      "size": {
-        "w": 384,
-        "h": 64
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__saber__universal_walk": {
-    "frames": {
-      "t064__sword__saber__universal_walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__saber__universal_walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
-      },
-      "scale": "1"
-    }
-  },
-  "t064__sword__saber__walk": {
-    "frames": {
-      "t064__sword__saber__walk__fg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t064__sword__saber__walk.png",
-      "size": {
-        "w": 576,
-        "h": 256
+        "h": 512
       },
       "scale": "1"
     }
@@ -31360,47 +26208,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__tools__smash__universal_walk__fg__vaxe__dup2": {
-        "frame": {
-          "x": 576,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__tools__smash__universal_walk__fg__vhammer": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__tools__smash__universal_walk__fg__vhammer__dup2": {
         "frame": {
           "x": 0,
           "y": 256,
@@ -31422,28 +26230,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__tools__smash__universal_walk__fg__vpickaxe": {
         "frame": {
-          "x": 576,
-          "y": 256,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
           "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
-      "t064__tools__smash__universal_walk__fg__vpickaxe__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 256,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -31465,37 +26253,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__tools__smash__universal_walk.png",
       "size": {
-        "w": 1728,
-        "h": 512
+        "w": 576,
+        "h": 768
       },
       "scale": "1"
     }
   },
   "t064__tools__x__thrust": {
     "frames": {
-      "t064__tools__x__thrust__bg__vhoe": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 512,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 512,
-          "h": 256
-        }
-      },
       "t064__tools__x__thrust__fg__vhoe": {
         "frame": {
-          "x": 512,
+          "x": 0,
           "y": 0,
           "w": 512,
           "h": 256
@@ -31513,9 +26281,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__tools__x__thrust__bg__vshovel": {
+      "t064__tools__x__thrust__bg__vhoe": {
         "frame": {
-          "x": 1024,
+          "x": 512,
           "y": 0,
           "w": 512,
           "h": 256
@@ -31553,7 +26321,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__tools__x__thrust__bg__vwatering": {
+      "t064__tools__x__thrust__bg__vshovel": {
         "frame": {
           "x": 512,
           "y": 256,
@@ -31575,8 +26343,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__tools__x__thrust__fg__vwatering": {
         "frame": {
-          "x": 1024,
-          "y": 256,
+          "x": 0,
+          "y": 512,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__tools__x__thrust__bg__vwatering": {
+        "frame": {
+          "x": 512,
+          "y": 512,
           "w": 512,
           "h": 256
         },
@@ -31598,37 +26386,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__tools__x__thrust.png",
       "size": {
-        "w": 1536,
-        "h": 512
+        "w": 1024,
+        "h": 768
       },
       "scale": "1"
     }
   },
   "t064__tools__x__walk": {
     "frames": {
-      "t064__tools__x__walk__bg__vhoe": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 576,
-          "h": 256
-        },
-        "sourceSize": {
-          "w": 576,
-          "h": 256
-        }
-      },
       "t064__tools__x__walk__fg__vhoe": {
         "frame": {
-          "x": 576,
+          "x": 0,
           "y": 0,
           "w": 576,
           "h": 256
@@ -31646,9 +26414,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__tools__x__walk__bg__vshovel": {
+      "t064__tools__x__walk__bg__vhoe": {
         "frame": {
-          "x": 1152,
+          "x": 576,
           "y": 0,
           "w": 576,
           "h": 256
@@ -31686,7 +26454,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__tools__x__walk__bg__vwatering": {
+      "t064__tools__x__walk__bg__vshovel": {
         "frame": {
           "x": 576,
           "y": 256,
@@ -31708,8 +26476,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__tools__x__walk__fg__vwatering": {
         "frame": {
-          "x": 1152,
-          "y": 256,
+          "x": 0,
+          "y": 512,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__tools__x__walk__bg__vwatering": {
+        "frame": {
+          "x": 576,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -31731,57 +26519,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t064__tools__x__walk.png",
       "size": {
-        "w": 1728,
-        "h": 512
+        "w": 1152,
+        "h": 768
       },
       "scale": "1"
     }
   },
-  "t128__polearm__dragonspear__walk": {
+  "t128__polearm__dragonspear__walk__p1": {
     "frames": {
-      "t128__polearm__dragonspear__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__dragonspear__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__polearm__dragonspear__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -31799,29 +26547,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__fg__vbase__dup2": {
+      "t128__polearm__dragonspear__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__dragonspear__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -31841,8 +26569,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -31859,9 +26587,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vbronze": {
+      "t128__polearm__dragonspear__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -31881,8 +26609,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -31899,10 +26627,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vceramic": {
+      "t128__polearm__dragonspear__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -31921,8 +26649,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -31939,10 +26667,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vcopper": {
+      "t128__polearm__dragonspear__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -31961,8 +26689,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -31979,10 +26707,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vdark": {
+      "t128__polearm__dragonspear__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -32001,8 +26729,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -32019,10 +26747,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vgold": {
+      "t128__polearm__dragonspear__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -32041,8 +26769,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -32059,10 +26787,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__viron": {
+      "t128__polearm__dragonspear__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -32081,8 +26809,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__dragonspear__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__polearm__dragonspear__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__polearm__dragonspear__walk__p2": {
+    "frames": {
+      "t128__polearm__dragonspear__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -32101,48 +26882,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__dragonspear__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__dragonspear__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32161,8 +26902,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -32179,10 +26920,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__bg__vred": {
+      "t128__polearm__dragonspear__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -32201,7 +26942,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__dragonspear__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__dragonspear__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -32221,8 +27002,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32239,9 +27020,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__dragonspear__walk__fg__vsilver": {
+      "t128__polearm__dragonspear__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -32261,27 +27042,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__dragonspear__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__dragonspear__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -32302,59 +27063,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__polearm__dragonspear__walk.png",
+      "image": "t128__polearm__dragonspear__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__polearm__longspear__walk": {
+  "t128__polearm__longspear__walk__p1": {
     "frames": {
-      "t128__polearm__longspear__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__longspear__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__polearm__longspear__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -32372,29 +27093,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__fg__vbase__dup2": {
+      "t128__polearm__longspear__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__longspear__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -32414,8 +27115,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -32432,9 +27133,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vbronze": {
+      "t128__polearm__longspear__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -32454,8 +27155,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -32472,10 +27173,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vceramic": {
+      "t128__polearm__longspear__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -32494,8 +27195,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32512,10 +27213,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vcopper": {
+      "t128__polearm__longspear__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32534,8 +27235,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -32552,10 +27253,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vdark": {
+      "t128__polearm__longspear__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -32574,8 +27275,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -32592,10 +27293,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vgold": {
+      "t128__polearm__longspear__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -32614,8 +27315,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -32632,10 +27333,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__viron": {
+      "t128__polearm__longspear__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -32654,8 +27355,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__longspear__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__polearm__longspear__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__polearm__longspear__walk__p2": {
+    "frames": {
+      "t128__polearm__longspear__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -32674,48 +27428,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__longspear__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__longspear__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32734,8 +27448,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -32752,10 +27466,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__bg__vred": {
+      "t128__polearm__longspear__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -32774,7 +27488,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__longspear__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__longspear__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -32794,8 +27548,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -32812,9 +27566,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__longspear__walk__fg__vsilver": {
+      "t128__polearm__longspear__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -32834,27 +27588,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__longspear__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__longspear__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -32875,59 +27609,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__polearm__longspear__walk.png",
+      "image": "t128__polearm__longspear__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__polearm__trident__walk": {
+  "t128__polearm__trident__walk__p1": {
     "frames": {
-      "t128__polearm__trident__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__trident__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__polearm__trident__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -32945,29 +27639,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__fg__vbase__dup2": {
+      "t128__polearm__trident__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__trident__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -32987,8 +27661,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33005,9 +27679,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vbronze": {
+      "t128__polearm__trident__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -33027,8 +27701,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -33045,10 +27719,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vceramic": {
+      "t128__polearm__trident__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -33067,8 +27741,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33085,10 +27759,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vcopper": {
+      "t128__polearm__trident__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33107,8 +27781,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -33125,10 +27799,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vdark": {
+      "t128__polearm__trident__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -33147,8 +27821,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -33165,10 +27839,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vgold": {
+      "t128__polearm__trident__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -33187,8 +27861,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -33205,10 +27879,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__viron": {
+      "t128__polearm__trident__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -33227,8 +27901,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__trident__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__polearm__trident__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__polearm__trident__walk__p2": {
+    "frames": {
+      "t128__polearm__trident__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -33247,48 +27974,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__trident__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__trident__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33307,8 +27994,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33325,10 +28012,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__bg__vred": {
+      "t128__polearm__trident__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33347,7 +28034,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__trident__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__polearm__trident__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -33367,8 +28094,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33385,9 +28112,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__polearm__trident__walk__fg__vsilver": {
+      "t128__polearm__trident__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -33407,27 +28134,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__polearm__trident__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__polearm__trident__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -33448,59 +28155,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__polearm__trident__walk.png",
+      "image": "t128__polearm__trident__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__ranged__bow_great__walk": {
+  "t128__ranged__bow_great__walk__p1": {
     "frames": {
-      "t128__ranged__bow__great__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__great__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__ranged__bow__great__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -33518,29 +28185,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__fg__vbase__dup2": {
+      "t128__ranged__bow__great__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__great__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -33560,8 +28207,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33578,9 +28225,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vbronze": {
+      "t128__ranged__bow__great__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -33600,8 +28247,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -33618,10 +28265,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vceramic": {
+      "t128__ranged__bow__great__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -33640,8 +28287,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33658,10 +28305,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vcopper": {
+      "t128__ranged__bow__great__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33680,8 +28327,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -33698,10 +28345,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vdark": {
+      "t128__ranged__bow__great__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -33720,8 +28367,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -33738,10 +28385,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vgold": {
+      "t128__ranged__bow__great__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -33760,8 +28407,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -33778,10 +28425,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__viron": {
+      "t128__ranged__bow__great__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -33800,8 +28447,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__great__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__ranged__bow_great__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__ranged__bow_great__walk__p2": {
+    "frames": {
+      "t128__ranged__bow__great__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -33820,48 +28520,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__great__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__great__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33880,8 +28540,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33898,10 +28558,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__bg__vred": {
+      "t128__ranged__bow__great__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -33920,7 +28580,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__great__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__great__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -33940,8 +28640,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -33958,9 +28658,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__great__walk__fg__vsilver": {
+      "t128__ranged__bow__great__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -33980,27 +28680,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__great__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__great__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -34021,59 +28701,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__ranged__bow_great__walk.png",
+      "image": "t128__ranged__bow_great__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__ranged__bow_normal__walk": {
+  "t128__ranged__bow_normal__walk__p1": {
     "frames": {
-      "t128__ranged__bow__normal__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__normal__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__ranged__bow__normal__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -34091,29 +28731,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__fg__vbase__dup2": {
+      "t128__ranged__bow__normal__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__normal__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -34133,8 +28753,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -34151,9 +28771,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vbronze": {
+      "t128__ranged__bow__normal__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -34173,8 +28793,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -34191,10 +28811,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vceramic": {
+      "t128__ranged__bow__normal__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -34213,8 +28833,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34231,10 +28851,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vcopper": {
+      "t128__ranged__bow__normal__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34253,8 +28873,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -34271,10 +28891,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vdark": {
+      "t128__ranged__bow__normal__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -34293,8 +28913,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -34311,10 +28931,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vgold": {
+      "t128__ranged__bow__normal__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -34333,8 +28953,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -34351,10 +28971,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__viron": {
+      "t128__ranged__bow__normal__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -34373,8 +28993,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__normal__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__ranged__bow_normal__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__ranged__bow_normal__walk__p2": {
+    "frames": {
+      "t128__ranged__bow__normal__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -34393,48 +29066,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__normal__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__normal__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34453,8 +29086,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -34471,10 +29104,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__bg__vred": {
+      "t128__ranged__bow__normal__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -34493,7 +29126,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__normal__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__normal__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -34513,8 +29186,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34531,9 +29204,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__normal__walk__fg__vsilver": {
+      "t128__ranged__bow__normal__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -34553,27 +29226,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__normal__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__normal__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -34594,59 +29247,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__ranged__bow_normal__walk.png",
+      "image": "t128__ranged__bow_normal__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__ranged__bow_recurve__walk": {
+  "t128__ranged__bow_recurve__walk__p1": {
     "frames": {
-      "t128__ranged__bow__recurve__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__recurve__walk__bg__vbase__dup2": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
       "t128__ranged__bow__recurve__walk__fg__vbase": {
         "frame": {
-          "x": 2304,
+          "x": 0,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -34664,29 +29277,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__fg__vbase__dup2": {
+      "t128__ranged__bow__recurve__walk__bg__vbase": {
         "frame": {
-          "x": 3456,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__recurve__walk__bg__vbrass": {
-        "frame": {
-          "x": 4608,
+          "x": 1152,
           "y": 0,
           "w": 1152,
           "h": 512
@@ -34706,8 +29299,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vbrass": {
         "frame": {
-          "x": 5760,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -34724,9 +29317,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vbronze": {
+      "t128__ranged__bow__recurve__walk__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1152,
           "y": 512,
           "w": 1152,
           "h": 512
@@ -34746,8 +29339,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vbronze": {
         "frame": {
-          "x": 1152,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -34764,10 +29357,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vceramic": {
+      "t128__ranged__bow__recurve__walk__bg__vbronze": {
         "frame": {
-          "x": 2304,
-          "y": 512,
+          "x": 1152,
+          "y": 1024,
           "w": 1152,
           "h": 512
         },
@@ -34786,8 +29379,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vceramic": {
         "frame": {
-          "x": 3456,
-          "y": 512,
+          "x": 0,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34804,10 +29397,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vcopper": {
+      "t128__ranged__bow__recurve__walk__bg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 512,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -34826,8 +29419,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vcopper": {
         "frame": {
-          "x": 5760,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -34844,10 +29437,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vdark": {
+      "t128__ranged__bow__recurve__walk__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1152,
+          "y": 2048,
           "w": 1152,
           "h": 512
         },
@@ -34866,8 +29459,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vdark": {
         "frame": {
-          "x": 1152,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -34884,10 +29477,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vgold": {
+      "t128__ranged__bow__recurve__walk__bg__vdark": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 1152,
+          "y": 2560,
           "w": 1152,
           "h": 512
         },
@@ -34906,8 +29499,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vgold": {
         "frame": {
-          "x": 3456,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -34924,10 +29517,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__viron": {
+      "t128__ranged__bow__recurve__walk__bg__vgold": {
         "frame": {
-          "x": 4608,
-          "y": 1024,
+          "x": 1152,
+          "y": 3072,
           "w": 1152,
           "h": 512
         },
@@ -34946,8 +29539,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__viron": {
         "frame": {
-          "x": 5760,
-          "y": 1024,
+          "x": 0,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__recurve__walk__bg__viron": {
+        "frame": {
+          "x": 1152,
+          "y": 3584,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__ranged__bow_recurve__walk__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__ranged__bow_recurve__walk__p2": {
+    "frames": {
+      "t128__ranged__bow__recurve__walk__fg__vlight": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1152,
           "h": 512
         },
@@ -34966,48 +29612,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__bg__vlight": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__recurve__walk__fg__vlight": {
-        "frame": {
           "x": 1152,
-          "y": 1536,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__recurve__walk__bg__vmedium": {
-        "frame": {
-          "x": 2304,
-          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -35026,8 +29632,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vmedium": {
         "frame": {
-          "x": 3456,
-          "y": 1536,
+          "x": 0,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -35044,10 +29650,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__bg__vred": {
+      "t128__ranged__bow__recurve__walk__bg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 1152,
+          "y": 512,
           "w": 1152,
           "h": 512
         },
@@ -35066,7 +29672,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__fg__vred": {
         "frame": {
-          "x": 5760,
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__recurve__walk__bg__vred": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__ranged__bow__recurve__walk__fg__vsilver": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1152,
           "h": 512
@@ -35086,8 +29732,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__bg__vsilver": {
         "frame": {
-          "x": 0,
-          "y": 2048,
+          "x": 1152,
+          "y": 1536,
           "w": 1152,
           "h": 512
         },
@@ -35104,9 +29750,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__ranged__bow__recurve__walk__fg__vsilver": {
+      "t128__ranged__bow__recurve__walk__fg__vsteel": {
         "frame": {
-          "x": 1152,
+          "x": 0,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -35126,27 +29772,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__ranged__bow__recurve__walk__bg__vsteel": {
         "frame": {
-          "x": 2304,
-          "y": 2048,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__ranged__bow__recurve__walk__fg__vsteel": {
-        "frame": {
-          "x": 3456,
+          "x": 1152,
           "y": 2048,
           "w": 1152,
           "h": 512
@@ -35167,39 +29793,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__ranged__bow_recurve__walk.png",
+      "image": "t128__ranged__bow_recurve__walk__p2.png",
       "size": {
-        "w": 6912,
+        "w": 2304,
         "h": 2560
       },
       "scale": "1"
     }
   },
-  "t128__sword__arming__attack_backslash": {
+  "t128__sword__arming__attack_backslash__p1": {
     "frames": {
-      "t128__sword__arming__attack_backslash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      },
       "t128__sword__arming__attack_backslash__fg__vbase": {
         "frame": {
-          "x": 1664,
+          "x": 0,
           "y": 0,
           "w": 1664,
           "h": 512
@@ -35217,9 +29823,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__vbrass": {
+      "t128__sword__arming__attack_backslash__bg__vbase": {
         "frame": {
-          "x": 3328,
+          "x": 1664,
           "y": 0,
           "w": 1664,
           "h": 512
@@ -35239,8 +29845,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_backslash__fg__vbrass": {
         "frame": {
-          "x": 4992,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 1664,
           "h": 512
         },
@@ -35257,10 +29863,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__vbronze": {
+      "t128__sword__arming__attack_backslash__bg__vbrass": {
         "frame": {
-          "x": 6656,
-          "y": 0,
+          "x": 1664,
+          "y": 512,
           "w": 1664,
           "h": 512
         },
@@ -35280,7 +29886,47 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_backslash__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 512,
+          "y": 1024,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_backslash__bg__vbronze": {
+        "frame": {
+          "x": 1664,
+          "y": 1024,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_backslash__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
           "w": 1664,
           "h": 512
         },
@@ -35300,47 +29946,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_backslash__bg__vceramic": {
         "frame": {
           "x": 1664,
-          "y": 512,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_backslash__fg__vceramic": {
-        "frame": {
-          "x": 3328,
-          "y": 512,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_backslash__bg__vcopper": {
-        "frame": {
-          "x": 4992,
-          "y": 512,
+          "y": 1536,
           "w": 1664,
           "h": 512
         },
@@ -35359,8 +29965,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_backslash__fg__vcopper": {
         "frame": {
-          "x": 6656,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 1664,
           "h": 512
         },
@@ -35377,10 +29983,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__vgold": {
+      "t128__sword__arming__attack_backslash__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 1664,
+          "y": 2048,
           "w": 1664,
           "h": 512
         },
@@ -35399,8 +30005,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_backslash__fg__vgold": {
         "frame": {
-          "x": 1664,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 1664,
           "h": 512
         },
@@ -35417,10 +30023,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__viron": {
+      "t128__sword__arming__attack_backslash__bg__vgold": {
         "frame": {
-          "x": 3328,
-          "y": 1024,
+          "x": 1664,
+          "y": 2560,
           "w": 1664,
           "h": 512
         },
@@ -35439,8 +30045,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_backslash__fg__viron": {
         "frame": {
-          "x": 4992,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 1664,
           "h": 512
         },
@@ -35457,10 +30063,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__vsilver": {
+      "t128__sword__arming__attack_backslash__bg__viron": {
         "frame": {
-          "x": 6656,
-          "y": 1024,
+          "x": 1664,
+          "y": 3072,
           "w": 1664,
           "h": 512
         },
@@ -35480,7 +30086,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_backslash__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 1536,
+          "y": 3584,
           "w": 1664,
           "h": 512
         },
@@ -35497,30 +30103,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_backslash__bg__vsteel": {
+      "t128__sword__arming__attack_backslash__bg__vsilver": {
         "frame": {
           "x": 1664,
-          "y": 1536,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_backslash__fg__vsteel": {
-        "frame": {
-          "x": 3328,
-          "y": 1536,
+          "y": 3584,
           "w": 1664,
           "h": 512
         },
@@ -35540,39 +30126,72 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__arming__attack_backslash.png",
+      "image": "t128__sword__arming__attack_backslash__p1.png",
       "size": {
-        "w": 8320,
-        "h": 2048
+        "w": 3328,
+        "h": 4096
+      },
+      "scale": "1"
+    }
+  },
+  "t128__sword__arming__attack_backslash__p2": {
+    "frames": {
+      "t128__sword__arming__attack_backslash__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_backslash__bg__vsteel": {
+        "frame": {
+          "x": 1664,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t128__sword__arming__attack_backslash__p2.png",
+      "size": {
+        "w": 3328,
+        "h": 512
       },
       "scale": "1"
     }
   },
   "t128__sword__arming__attack_halfslash": {
     "frames": {
-      "t128__sword__arming__attack_halfslash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
       "t128__sword__arming__attack_halfslash__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 768,
           "h": 512
@@ -35590,9 +30209,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__vbrass": {
+      "t128__sword__arming__attack_halfslash__bg__vbase": {
         "frame": {
-          "x": 1536,
+          "x": 768,
           "y": 0,
           "w": 768,
           "h": 512
@@ -35612,8 +30231,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_halfslash__fg__vbrass": {
         "frame": {
-          "x": 2304,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 768,
           "h": 512
         },
@@ -35630,10 +30249,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__vbronze": {
+      "t128__sword__arming__attack_halfslash__bg__vbrass": {
         "frame": {
-          "x": 3072,
-          "y": 0,
+          "x": 768,
+          "y": 512,
           "w": 768,
           "h": 512
         },
@@ -35653,7 +30272,47 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_halfslash__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 512,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_halfslash__bg__vbronze": {
+        "frame": {
+          "x": 768,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_halfslash__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
           "w": 768,
           "h": 512
         },
@@ -35673,47 +30332,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_halfslash__bg__vceramic": {
         "frame": {
           "x": 768,
-          "y": 512,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_halfslash__fg__vceramic": {
-        "frame": {
-          "x": 1536,
-          "y": 512,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_halfslash__bg__vcopper": {
-        "frame": {
-          "x": 2304,
-          "y": 512,
+          "y": 1536,
           "w": 768,
           "h": 512
         },
@@ -35732,8 +30351,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_halfslash__fg__vcopper": {
         "frame": {
-          "x": 3072,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 768,
           "h": 512
         },
@@ -35750,10 +30369,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__vgold": {
+      "t128__sword__arming__attack_halfslash__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 768,
+          "y": 2048,
           "w": 768,
           "h": 512
         },
@@ -35772,8 +30391,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_halfslash__fg__vgold": {
         "frame": {
-          "x": 768,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 768,
           "h": 512
         },
@@ -35790,10 +30409,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__viron": {
+      "t128__sword__arming__attack_halfslash__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 1024,
+          "x": 768,
+          "y": 2560,
           "w": 768,
           "h": 512
         },
@@ -35812,8 +30431,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_halfslash__fg__viron": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 768,
           "h": 512
         },
@@ -35830,10 +30449,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__vsilver": {
+      "t128__sword__arming__attack_halfslash__bg__viron": {
         "frame": {
-          "x": 3072,
-          "y": 1024,
+          "x": 768,
+          "y": 3072,
           "w": 768,
           "h": 512
         },
@@ -35853,7 +30472,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_halfslash__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 1536,
+          "y": 3584,
           "w": 768,
           "h": 512
         },
@@ -35870,10 +30489,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_halfslash__bg__vsteel": {
+      "t128__sword__arming__attack_halfslash__bg__vsilver": {
         "frame": {
           "x": 768,
-          "y": 1536,
+          "y": 3584,
           "w": 768,
           "h": 512
         },
@@ -35893,7 +30512,27 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_halfslash__fg__vsteel": {
         "frame": {
           "x": 1536,
-          "y": 1536,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_halfslash__bg__vsteel": {
+        "frame": {
+          "x": 2304,
+          "y": 0,
           "w": 768,
           "h": 512
         },
@@ -35915,37 +30554,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t128__sword__arming__attack_halfslash.png",
       "size": {
-        "w": 3840,
-        "h": 2048
+        "w": 3072,
+        "h": 4096
       },
       "scale": "1"
     }
   },
   "t128__sword__arming__attack_slash": {
     "frames": {
-      "t128__sword__arming__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
       "t128__sword__arming__attack_slash__fg__vbase": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 768,
           "h": 512
@@ -35963,9 +30582,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__vbrass": {
+      "t128__sword__arming__attack_slash__bg__vbase": {
         "frame": {
-          "x": 1536,
+          "x": 768,
           "y": 0,
           "w": 768,
           "h": 512
@@ -35985,8 +30604,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_slash__fg__vbrass": {
         "frame": {
-          "x": 2304,
-          "y": 0,
+          "x": 0,
+          "y": 512,
           "w": 768,
           "h": 512
         },
@@ -36003,10 +30622,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__vbronze": {
+      "t128__sword__arming__attack_slash__bg__vbrass": {
         "frame": {
-          "x": 3072,
-          "y": 0,
+          "x": 768,
+          "y": 512,
           "w": 768,
           "h": 512
         },
@@ -36026,7 +30645,47 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_slash__fg__vbronze": {
         "frame": {
           "x": 0,
-          "y": 512,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_slash__bg__vbronze": {
+        "frame": {
+          "x": 768,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_slash__fg__vceramic": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
           "w": 768,
           "h": 512
         },
@@ -36046,47 +30705,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_slash__bg__vceramic": {
         "frame": {
           "x": 768,
-          "y": 512,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_slash__fg__vceramic": {
-        "frame": {
-          "x": 1536,
-          "y": 512,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__arming__attack_slash__bg__vcopper": {
-        "frame": {
-          "x": 2304,
-          "y": 512,
+          "y": 1536,
           "w": 768,
           "h": 512
         },
@@ -36105,8 +30724,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_slash__fg__vcopper": {
         "frame": {
-          "x": 3072,
-          "y": 512,
+          "x": 0,
+          "y": 2048,
           "w": 768,
           "h": 512
         },
@@ -36123,10 +30742,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__vgold": {
+      "t128__sword__arming__attack_slash__bg__vcopper": {
         "frame": {
-          "x": 0,
-          "y": 1024,
+          "x": 768,
+          "y": 2048,
           "w": 768,
           "h": 512
         },
@@ -36145,8 +30764,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_slash__fg__vgold": {
         "frame": {
-          "x": 768,
-          "y": 1024,
+          "x": 0,
+          "y": 2560,
           "w": 768,
           "h": 512
         },
@@ -36163,10 +30782,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__viron": {
+      "t128__sword__arming__attack_slash__bg__vgold": {
         "frame": {
-          "x": 1536,
-          "y": 1024,
+          "x": 768,
+          "y": 2560,
           "w": 768,
           "h": 512
         },
@@ -36185,8 +30804,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__sword__arming__attack_slash__fg__viron": {
         "frame": {
-          "x": 2304,
-          "y": 1024,
+          "x": 0,
+          "y": 3072,
           "w": 768,
           "h": 512
         },
@@ -36203,10 +30822,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__vsilver": {
+      "t128__sword__arming__attack_slash__bg__viron": {
         "frame": {
-          "x": 3072,
-          "y": 1024,
+          "x": 768,
+          "y": 3072,
           "w": 768,
           "h": 512
         },
@@ -36226,7 +30845,7 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_slash__fg__vsilver": {
         "frame": {
           "x": 0,
-          "y": 1536,
+          "y": 3584,
           "w": 768,
           "h": 512
         },
@@ -36243,10 +30862,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__sword__arming__attack_slash__bg__vsteel": {
+      "t128__sword__arming__attack_slash__bg__vsilver": {
         "frame": {
           "x": 768,
-          "y": 1536,
+          "y": 3584,
           "w": 768,
           "h": 512
         },
@@ -36266,7 +30885,27 @@ export const WEAPON_ATLAS_DATA = {
       "t128__sword__arming__attack_slash__fg__vsteel": {
         "frame": {
           "x": 1536,
-          "y": 1536,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__arming__attack_slash__bg__vsteel": {
+        "frame": {
+          "x": 2304,
+          "y": 0,
           "w": 768,
           "h": 512
         },
@@ -36288,408 +30927,17 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t128__sword__arming__attack_slash.png",
       "size": {
-        "w": 3840,
-        "h": 2048
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__katana__slash": {
-    "frames": {
-      "t128__sword__katana__slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__katana__slash__fg__vbase": {
-        "frame": {
-          "x": 768,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__katana__slash.png",
-      "size": {
-        "w": 1536,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__katana__walk": {
-    "frames": {
-      "t128__sword__katana__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__sword__katana__walk__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__katana__walk.png",
-      "size": {
-        "w": 2304,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__longsword_alt__slash": {
-    "frames": {
-      "t128__sword__longsword_alt__slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__longsword_alt__slash__fg__vbase": {
-        "frame": {
-          "x": 768,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__longsword_alt__slash.png",
-      "size": {
-        "w": 1536,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__longsword_alt__walk": {
-    "frames": {
-      "t128__sword__longsword_alt__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__sword__longsword_alt__walk__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__longsword_alt__walk.png",
-      "size": {
-        "w": 2304,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__scimitar__slash": {
-    "frames": {
-      "t128__sword__scimitar__slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
-      "t128__sword__scimitar__slash__fg__vbase": {
-        "frame": {
-          "x": 768,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__scimitar__slash.png",
-      "size": {
-        "w": 1536,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__sword__scimitar__walk": {
-    "frames": {
-      "t128__sword__scimitar__walk__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      },
-      "t128__sword__scimitar__walk__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__sword__scimitar__walk.png",
-      "size": {
-        "w": 2304,
-        "h": 512
-      },
-      "scale": "1"
-    }
-  },
-  "t128__tools__rod__shoot": {
-    "frames": {
-      "t128__tools__rod__shoot__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      },
-      "t128__tools__rod__shoot__fg__vbase": {
-        "frame": {
-          "x": 1664,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1664,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 1664,
-          "h": 512
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t128__tools__rod__shoot.png",
-      "size": {
-        "w": 3328,
-        "h": 512
+        "w": 3072,
+        "h": 4096
       },
       "scale": "1"
     }
   },
   "t128__tools__smash__slash": {
     "frames": {
-      "t128__tools__smash__slash__bg__vaxe": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 768,
-          "h": 512
-        },
-        "sourceSize": {
-          "w": 768,
-          "h": 512
-        }
-      },
       "t128__tools__smash__slash__fg__vaxe": {
         "frame": {
-          "x": 768,
+          "x": 0,
           "y": 0,
           "w": 768,
           "h": 512
@@ -36707,9 +30955,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__tools__smash__slash__bg__vhammer": {
+      "t128__tools__smash__slash__bg__vaxe": {
         "frame": {
-          "x": 1536,
+          "x": 768,
           "y": 0,
           "w": 768,
           "h": 512
@@ -36747,7 +30995,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 512
         }
       },
-      "t128__tools__smash__slash__bg__vpickaxe": {
+      "t128__tools__smash__slash__bg__vhammer": {
         "frame": {
           "x": 768,
           "y": 512,
@@ -36769,8 +31017,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t128__tools__smash__slash__fg__vpickaxe": {
         "frame": {
-          "x": 1536,
-          "y": 512,
+          "x": 0,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__tools__smash__slash__bg__vpickaxe": {
+        "frame": {
+          "x": 768,
+          "y": 1024,
           "w": 768,
           "h": 512
         },
@@ -36792,19 +31060,19 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "t128__tools__smash__slash.png",
       "size": {
-        "w": 2304,
-        "h": 1024
+        "w": 1536,
+        "h": 1536
       },
       "scale": "1"
     }
   },
-  "t192__blunt__club__slash": {
+  "t192__magic__crystal__thrust__p1": {
     "frames": {
-      "t192__blunt__club__slash__bg__vbase": {
+      "t192__magic__crystal__thrust__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
-          "w": 1152,
+          "w": 1536,
           "h": 768
         },
         "rotated": false,
@@ -36812,290 +31080,18 @@ export const WEAPON_ATLAS_DATA = {
         "spriteSourceSize": {
           "x": 0,
           "y": 0,
-          "w": 1152,
+          "w": 1536,
           "h": 768
         },
         "sourceSize": {
-          "w": 1152,
+          "w": 1536,
           "h": 768
         }
       },
-      "t192__blunt__club__slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__blunt__club__slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__blunt__flail__attack_slash": {
-    "frames": {
-      "t192__blunt__flail__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__blunt__flail__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__blunt__flail__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__blunt__mace__attack_slash": {
-    "frames": {
-      "t192__blunt__mace__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__blunt__mace__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__blunt__mace__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__blunt__waraxe__attack_slash": {
-    "frames": {
-      "t192__blunt__waraxe__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__blunt__waraxe__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__blunt__waraxe__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__magic__crystal__thrust": {
-    "frames": {
       "t192__magic__crystal__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__bg__vbase__dup2": {
         "frame": {
           "x": 1536,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__fg__vbase": {
-        "frame": {
-          "x": 3072,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__fg__vbase__dup2": {
-        "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__bg__vblue": {
-        "frame": {
-          "x": 0,
-          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -37114,7 +31110,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__crystal__thrust__fg__vblue": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -37132,9 +31128,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__crystal__thrust__bg__vgreen": {
+      "t192__magic__crystal__thrust__bg__vblue": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -37154,8 +31150,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__crystal__thrust__fg__vgreen": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -37172,9 +31168,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__crystal__thrust__bg__vorange": {
+      "t192__magic__crystal__thrust__bg__vgreen": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -37194,8 +31190,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__crystal__thrust__fg__vorange": {
         "frame": {
-          "x": 1536,
-          "y": 1536,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -37212,10 +31208,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__crystal__thrust__bg__vpurple": {
+      "t192__magic__crystal__thrust__bg__vorange": {
         "frame": {
-          "x": 3072,
-          "y": 1536,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -37234,8 +31230,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__crystal__thrust__fg__vpurple": {
         "frame": {
-          "x": 4608,
-          "y": 1536,
+          "x": 0,
+          "y": 3072,
           "w": 1536,
           "h": 768
         },
@@ -37252,70 +31248,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__crystal__thrust__bg__vred": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__fg__vred": {
+      "t192__magic__crystal__thrust__bg__vpurple": {
         "frame": {
           "x": 1536,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__bg__vyellow": {
-        "frame": {
-          "x": 3072,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__crystal__thrust__fg__vyellow": {
-        "frame": {
-          "x": 4608,
-          "y": 2304,
+          "y": 3072,
           "w": 1536,
           "h": 768
         },
@@ -37335,17 +31271,17 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__magic__crystal__thrust.png",
+      "image": "t192__magic__crystal__thrust__p1.png",
       "size": {
-        "w": 6144,
-        "h": 3072
+        "w": 3072,
+        "h": 3840
       },
       "scale": "1"
     }
   },
-  "t192__magic__diamond__thrust": {
+  "t192__magic__crystal__thrust__p2": {
     "frames": {
-      "t192__magic__diamond__thrust__bg__vbase": {
+      "t192__magic__crystal__thrust__fg__vred": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -37365,7 +31301,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__bg__vbase__dup2": {
+      "t192__magic__crystal__thrust__bg__vred": {
         "frame": {
           "x": 1536,
           "y": 0,
@@ -37385,9 +31321,62 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
+      "t192__magic__crystal__thrust__fg__vyellow": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__crystal__thrust__bg__vyellow": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__crystal__thrust__p2.png",
+      "size": {
+        "w": 3072,
+        "h": 1536
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__diamond__thrust__p1": {
+    "frames": {
       "t192__magic__diamond__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -37405,29 +31394,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__fg__vbase__dup2": {
+      "t192__magic__diamond__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -37447,8 +31416,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -37465,9 +31434,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__bg__vbronze": {
+      "t192__magic__diamond__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -37487,8 +31456,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -37505,10 +31474,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__bg__vceramic": {
+      "t192__magic__diamond__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -37527,8 +31496,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -37545,10 +31514,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__bg__vcopper": {
+      "t192__magic__diamond__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -37567,8 +31536,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__diamond__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__diamond__thrust__p2": {
+    "frames": {
+      "t192__magic__diamond__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -37587,48 +31609,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -37647,7 +31629,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -37667,48 +31689,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -37727,7 +31709,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -37745,9 +31727,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__bg__vmedium": {
+      "t192__magic__diamond__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -37767,66 +31749,6 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__diamond__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vred": {
-        "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vsilver": {
-        "frame": {
           "x": 0,
           "y": 3072,
           "w": 1536,
@@ -37845,49 +31767,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__diamond__thrust__fg__vsilver": {
+      "t192__magic__diamond__thrust__bg__vmedium": {
         "frame": {
           "x": 1536,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__bg__vsteel": {
-        "frame": {
-          "x": 3072,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__diamond__thrust__fg__vsteel": {
-        "frame": {
-          "x": 4608,
           "y": 3072,
           "w": 1536,
           "h": 768
@@ -37908,17 +31790,17 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__magic__diamond__thrust.png",
+      "image": "t192__magic__diamond__thrust__p2.png",
       "size": {
-        "w": 9216,
+        "w": 3072,
         "h": 3840
       },
       "scale": "1"
     }
   },
-  "t192__magic__gnarled__thrust": {
+  "t192__magic__diamond__thrust__p3": {
     "frames": {
-      "t192__magic__gnarled__thrust__bg__vbase": {
+      "t192__magic__diamond__thrust__fg__vred": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -37938,7 +31820,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__bg__vbase__dup2": {
+      "t192__magic__diamond__thrust__bg__vred": {
         "frame": {
           "x": 1536,
           "y": 0,
@@ -37958,9 +31840,102 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
+      "t192__magic__diamond__thrust__fg__vsilver": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__bg__vsilver": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__diamond__thrust__bg__vsteel": {
+        "frame": {
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__diamond__thrust__p3.png",
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__gnarled__thrust__p1": {
+    "frames": {
       "t192__magic__gnarled__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -37978,29 +31953,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__fg__vbase__dup2": {
+      "t192__magic__gnarled__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -38020,8 +31975,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -38038,9 +31993,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__bg__vbronze": {
+      "t192__magic__gnarled__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -38060,8 +32015,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38078,10 +32033,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__bg__vceramic": {
+      "t192__magic__gnarled__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38100,8 +32055,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38118,10 +32073,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__bg__vcopper": {
+      "t192__magic__gnarled__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38140,8 +32095,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__gnarled__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__gnarled__thrust__p2": {
+    "frames": {
+      "t192__magic__gnarled__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -38160,48 +32168,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38220,7 +32188,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -38240,48 +32248,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38300,7 +32268,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -38318,9 +32286,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__bg__vmedium": {
+      "t192__magic__gnarled__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -38340,66 +32308,6 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__gnarled__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vred": {
-        "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vsilver": {
-        "frame": {
           "x": 0,
           "y": 3072,
           "w": 1536,
@@ -38418,49 +32326,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__gnarled__thrust__fg__vsilver": {
+      "t192__magic__gnarled__thrust__bg__vmedium": {
         "frame": {
           "x": 1536,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__bg__vsteel": {
-        "frame": {
-          "x": 3072,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__gnarled__thrust__fg__vsteel": {
-        "frame": {
-          "x": 4608,
           "y": 3072,
           "w": 1536,
           "h": 768
@@ -38481,17 +32349,17 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__magic__gnarled__thrust.png",
+      "image": "t192__magic__gnarled__thrust__p2.png",
       "size": {
-        "w": 9216,
+        "w": 3072,
         "h": 3840
       },
       "scale": "1"
     }
   },
-  "t192__magic__loop__thrust": {
+  "t192__magic__gnarled__thrust__p3": {
     "frames": {
-      "t192__magic__loop__thrust__bg__vbase": {
+      "t192__magic__gnarled__thrust__fg__vred": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -38511,7 +32379,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__bg__vbase__dup2": {
+      "t192__magic__gnarled__thrust__bg__vred": {
         "frame": {
           "x": 1536,
           "y": 0,
@@ -38531,9 +32399,102 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
+      "t192__magic__gnarled__thrust__fg__vsilver": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__bg__vsilver": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__gnarled__thrust__bg__vsteel": {
+        "frame": {
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__gnarled__thrust__p3.png",
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__loop__thrust__p1": {
+    "frames": {
       "t192__magic__loop__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -38551,29 +32512,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__fg__vbase__dup2": {
+      "t192__magic__loop__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -38593,8 +32534,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -38611,9 +32552,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__bg__vbronze": {
+      "t192__magic__loop__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -38633,8 +32574,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38651,10 +32592,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__bg__vceramic": {
+      "t192__magic__loop__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38673,8 +32614,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38691,10 +32632,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__bg__vcopper": {
+      "t192__magic__loop__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38713,8 +32654,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__loop__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__loop__thrust__p2": {
+    "frames": {
+      "t192__magic__loop__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -38733,48 +32727,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -38793,7 +32747,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -38813,48 +32807,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -38873,7 +32827,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -38891,9 +32845,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__bg__vmedium": {
+      "t192__magic__loop__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -38913,66 +32867,6 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__loop__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vred": {
-        "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vsilver": {
-        "frame": {
           "x": 0,
           "y": 3072,
           "w": 1536,
@@ -38991,49 +32885,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__loop__thrust__fg__vsilver": {
+      "t192__magic__loop__thrust__bg__vmedium": {
         "frame": {
           "x": 1536,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__bg__vsteel": {
-        "frame": {
-          "x": 3072,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__loop__thrust__fg__vsteel": {
-        "frame": {
-          "x": 4608,
           "y": 3072,
           "w": 1536,
           "h": 768
@@ -39054,17 +32908,17 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__magic__loop__thrust.png",
+      "image": "t192__magic__loop__thrust__p2.png",
       "size": {
-        "w": 9216,
+        "w": 3072,
         "h": 3840
       },
       "scale": "1"
     }
   },
-  "t192__magic__s__thrust": {
+  "t192__magic__loop__thrust__p3": {
     "frames": {
-      "t192__magic__s__thrust__bg__vbase": {
+      "t192__magic__loop__thrust__fg__vred": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -39084,7 +32938,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__bg__vbase__dup2": {
+      "t192__magic__loop__thrust__bg__vred": {
         "frame": {
           "x": 1536,
           "y": 0,
@@ -39104,9 +32958,102 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
+      "t192__magic__loop__thrust__fg__vsilver": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__bg__vsilver": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__loop__thrust__bg__vsteel": {
+        "frame": {
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__loop__thrust__p3.png",
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__s__thrust__p1": {
+    "frames": {
       "t192__magic__s__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -39124,29 +33071,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__fg__vbase__dup2": {
+      "t192__magic__s__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -39166,8 +33093,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -39184,9 +33111,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__bg__vbronze": {
+      "t192__magic__s__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -39206,8 +33133,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39224,10 +33151,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__bg__vceramic": {
+      "t192__magic__s__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39246,8 +33173,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -39264,10 +33191,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__bg__vcopper": {
+      "t192__magic__s__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -39286,8 +33213,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__s__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__magic__s__thrust__p2": {
+    "frames": {
+      "t192__magic__s__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -39306,48 +33286,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39366,7 +33306,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -39386,48 +33366,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -39446,7 +33386,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -39464,9 +33404,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__bg__vmedium": {
+      "t192__magic__s__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -39486,66 +33426,6 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__magic__s__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vred": {
-        "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vsilver": {
-        "frame": {
           "x": 0,
           "y": 3072,
           "w": 1536,
@@ -39564,49 +33444,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__magic__s__thrust__fg__vsilver": {
+      "t192__magic__s__thrust__bg__vmedium": {
         "frame": {
           "x": 1536,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__bg__vsteel": {
-        "frame": {
-          "x": 3072,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__magic__s__thrust__fg__vsteel": {
-        "frame": {
-          "x": 4608,
           "y": 3072,
           "w": 1536,
           "h": 768
@@ -39627,17 +33467,17 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__magic__s__thrust.png",
+      "image": "t192__magic__s__thrust__p2.png",
       "size": {
-        "w": 9216,
+        "w": 3072,
         "h": 3840
       },
       "scale": "1"
     }
   },
-  "t192__polearm__dragonspear__thrust": {
+  "t192__magic__s__thrust__p3": {
     "frames": {
-      "t192__polearm__dragonspear__thrust__bg__vbase": {
+      "t192__magic__s__thrust__fg__vred": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -39657,7 +33497,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vbase__dup2": {
+      "t192__magic__s__thrust__bg__vred": {
         "frame": {
           "x": 1536,
           "y": 0,
@@ -39677,9 +33517,102 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
+      "t192__magic__s__thrust__fg__vsilver": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__bg__vsilver": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__fg__vsteel": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__magic__s__thrust__bg__vsteel": {
+        "frame": {
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__magic__s__thrust__p3.png",
+      "size": {
+        "w": 3072,
+        "h": 2304
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__dragonspear__thrust__p1": {
+    "frames": {
       "t192__polearm__dragonspear__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -39697,29 +33630,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__fg__vbase__dup2": {
+      "t192__polearm__dragonspear__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -39739,8 +33652,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -39757,9 +33670,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vbronze": {
+      "t192__polearm__dragonspear__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -39779,8 +33692,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39797,10 +33710,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vceramic": {
+      "t192__polearm__dragonspear__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39819,8 +33732,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -39837,10 +33750,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vcopper": {
+      "t192__polearm__dragonspear__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -39859,8 +33772,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__dragonspear__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__dragonspear__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__dragonspear__thrust__p2": {
+    "frames": {
+      "t192__polearm__dragonspear__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -39879,48 +33845,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -39939,7 +33865,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__dragonspear__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__dragonspear__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -39959,48 +33925,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -40019,7 +33945,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -40037,9 +33963,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vmedium": {
+      "t192__polearm__dragonspear__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -40059,8 +33985,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__dragonspear__thrust__bg__vmedium": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__dragonspear__thrust__p2.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__dragonspear__thrust__p3": {
+    "frames": {
+      "t192__polearm__dragonspear__thrust__fg__vred": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -40079,48 +34058,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__bg__vred": {
         "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
+          "x": 1536,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__dragonspear__thrust__bg__vsilver": {
-        "frame": {
-          "x": 0,
-          "y": 3072,
           "w": 1536,
           "h": 768
         },
@@ -40139,8 +34078,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vsilver": {
         "frame": {
-          "x": 1536,
-          "y": 3072,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -40157,10 +34096,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__dragonspear__thrust__bg__vsteel": {
+      "t192__polearm__dragonspear__thrust__bg__vsilver": {
         "frame": {
-          "x": 3072,
-          "y": 3072,
+          "x": 1536,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -40179,94 +34118,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__dragonspear__thrust__fg__vsteel": {
         "frame": {
-          "x": 4608,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
           "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__dragonspear__thrust.png",
-      "size": {
-        "w": 9216,
-        "h": 3840
-      },
-      "scale": "1"
-    }
-  },
-  "t192__polearm__halberd__attack_slash": {
-    "frames": {
-      "t192__polearm__halberd__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__polearm__halberd__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__halberd__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__polearm__halberd__attack_thrust": {
-    "frames": {
-      "t192__polearm__halberd__attack_thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40283,10 +34136,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__halberd__attack_thrust__fg__vbase": {
+      "t192__polearm__dragonspear__thrust__bg__vsteel": {
         "frame": {
           "x": 1536,
-          "y": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40306,59 +34159,19 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__halberd__attack_thrust.png",
+      "image": "t192__polearm__dragonspear__thrust__p3.png",
       "size": {
         "w": 3072,
-        "h": 768
+        "h": 2304
       },
       "scale": "1"
     }
   },
-  "t192__polearm__longspear__thrust": {
+  "t192__polearm__longspear__thrust__p1": {
     "frames": {
-      "t192__polearm__longspear__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__bg__vbase__dup2": {
-        "frame": {
-          "x": 1536,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
       "t192__polearm__longspear__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -40376,29 +34189,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__fg__vbase__dup2": {
+      "t192__polearm__longspear__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -40418,8 +34211,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -40436,9 +34229,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__bg__vbronze": {
+      "t192__polearm__longspear__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -40458,8 +34251,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40476,10 +34269,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__bg__vceramic": {
+      "t192__polearm__longspear__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40498,8 +34291,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -40516,10 +34309,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__bg__vcopper": {
+      "t192__polearm__longspear__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -40538,8 +34331,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__longspear__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__longspear__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__longspear__thrust__p2": {
+    "frames": {
+      "t192__polearm__longspear__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -40558,48 +34404,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40618,7 +34424,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__longspear__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__longspear__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -40638,48 +34484,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -40698,7 +34504,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -40716,9 +34522,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__bg__vmedium": {
+      "t192__polearm__longspear__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -40738,8 +34544,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__longspear__thrust__bg__vmedium": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__longspear__thrust__p2.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__longspear__thrust__p3": {
+    "frames": {
+      "t192__polearm__longspear__thrust__fg__vred": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -40758,48 +34617,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__bg__vred": {
         "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
+          "x": 1536,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__longspear__thrust__bg__vsilver": {
-        "frame": {
-          "x": 0,
-          "y": 3072,
           "w": 1536,
           "h": 768
         },
@@ -40818,8 +34637,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vsilver": {
         "frame": {
-          "x": 1536,
-          "y": 3072,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -40836,10 +34655,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__longspear__thrust__bg__vsteel": {
+      "t192__polearm__longspear__thrust__bg__vsilver": {
         "frame": {
-          "x": 3072,
-          "y": 3072,
+          "x": 1536,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -40858,94 +34677,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__longspear__thrust__fg__vsteel": {
         "frame": {
-          "x": 4608,
-          "y": 3072,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
           "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__longspear__thrust.png",
-      "size": {
-        "w": 9216,
-        "h": 3840
-      },
-      "scale": "1"
-    }
-  },
-  "t192__polearm__scythe__attack_slash": {
-    "frames": {
-      "t192__polearm__scythe__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__polearm__scythe__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__scythe__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__polearm__trident__thrust": {
-    "frames": {
-      "t192__polearm__trident__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40962,10 +34695,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__bg__vbase__dup2": {
+      "t192__polearm__longspear__thrust__bg__vsteel": {
         "frame": {
           "x": 1536,
-          "y": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -40981,10 +34714,23 @@ export const WEAPON_ATLAS_DATA = {
           "w": 1536,
           "h": 768
         }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__longspear__thrust__p3.png",
+      "size": {
+        "w": 3072,
+        "h": 2304
       },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__trident__thrust__p1": {
+    "frames": {
       "t192__polearm__trident__thrust__fg__vbase": {
         "frame": {
-          "x": 3072,
+          "x": 0,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -41002,29 +34748,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__fg__vbase__dup2": {
+      "t192__polearm__trident__thrust__bg__vbase": {
         "frame": {
-          "x": 4608,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__bg__vbrass": {
-        "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 0,
           "w": 1536,
           "h": 768
@@ -41044,8 +34770,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vbrass": {
         "frame": {
-          "x": 7680,
-          "y": 0,
+          "x": 0,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -41062,9 +34788,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__bg__vbronze": {
+      "t192__polearm__trident__thrust__bg__vbrass": {
         "frame": {
-          "x": 0,
+          "x": 1536,
           "y": 768,
           "w": 1536,
           "h": 768
@@ -41084,8 +34810,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vbronze": {
         "frame": {
-          "x": 1536,
-          "y": 768,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -41102,10 +34828,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__bg__vceramic": {
+      "t192__polearm__trident__thrust__bg__vbronze": {
         "frame": {
-          "x": 3072,
-          "y": 768,
+          "x": 1536,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -41124,8 +34850,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vceramic": {
         "frame": {
-          "x": 4608,
-          "y": 768,
+          "x": 0,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -41142,10 +34868,10 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__bg__vcopper": {
+      "t192__polearm__trident__thrust__bg__vceramic": {
         "frame": {
-          "x": 6144,
-          "y": 768,
+          "x": 1536,
+          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -41164,8 +34890,61 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vcopper": {
         "frame": {
-          "x": 7680,
-          "y": 768,
+          "x": 0,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__bg__vcopper": {
+        "frame": {
+          "x": 1536,
+          "y": 3072,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__trident__thrust__p1.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "t192__polearm__trident__thrust__p2": {
+    "frames": {
+      "t192__polearm__trident__thrust__fg__vdark": {
+        "frame": {
+          "x": 0,
+          "y": 0,
           "w": 1536,
           "h": 768
         },
@@ -41184,48 +34963,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__bg__vdark": {
         "frame": {
-          "x": 0,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__fg__vdark": {
-        "frame": {
           "x": 1536,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
           "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__bg__vgold": {
-        "frame": {
-          "x": 3072,
-          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -41244,7 +34983,47 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vgold": {
         "frame": {
-          "x": 4608,
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__bg__vgold": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__fg__viron": {
+        "frame": {
+          "x": 0,
           "y": 1536,
           "w": 1536,
           "h": 768
@@ -41264,48 +35043,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__bg__viron": {
         "frame": {
-          "x": 6144,
+          "x": 1536,
           "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__fg__viron": {
-        "frame": {
-          "x": 7680,
-          "y": 1536,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__bg__vlight": {
-        "frame": {
-          "x": 0,
-          "y": 2304,
           "w": 1536,
           "h": 768
         },
@@ -41324,7 +35063,7 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vlight": {
         "frame": {
-          "x": 1536,
+          "x": 0,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -41342,9 +35081,9 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__bg__vmedium": {
+      "t192__polearm__trident__thrust__bg__vlight": {
         "frame": {
-          "x": 3072,
+          "x": 1536,
           "y": 2304,
           "w": 1536,
           "h": 768
@@ -41364,66 +35103,6 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vmedium": {
         "frame": {
-          "x": 4608,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__bg__vred": {
-        "frame": {
-          "x": 6144,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__fg__vred": {
-        "frame": {
-          "x": 7680,
-          "y": 2304,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__polearm__trident__thrust__bg__vsilver": {
-        "frame": {
           "x": 0,
           "y": 3072,
           "w": 1536,
@@ -41442,7 +35121,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__polearm__trident__thrust__fg__vsilver": {
+      "t192__polearm__trident__thrust__bg__vmedium": {
         "frame": {
           "x": 1536,
           "y": 3072,
@@ -41461,11 +35140,84 @@ export const WEAPON_ATLAS_DATA = {
           "w": 1536,
           "h": 768
         }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "t192__polearm__trident__thrust__p2.png",
+      "size": {
+        "w": 3072,
+        "h": 3840
       },
-      "t192__polearm__trident__thrust__bg__vsteel": {
+      "scale": "1"
+    }
+  },
+  "t192__polearm__trident__thrust__p3": {
+    "frames": {
+      "t192__polearm__trident__thrust__fg__vred": {
         "frame": {
-          "x": 3072,
-          "y": 3072,
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__bg__vred": {
+        "frame": {
+          "x": 1536,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__fg__vsilver": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__trident__thrust__bg__vsilver": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
           "w": 1536,
           "h": 768
         },
@@ -41484,8 +35236,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t192__polearm__trident__thrust__fg__vsteel": {
         "frame": {
-          "x": 4608,
-          "y": 3072,
+          "x": 0,
+          "y": 1536,
           "w": 1536,
           "h": 768
         },
@@ -41501,25 +35253,12 @@ export const WEAPON_ATLAS_DATA = {
           "w": 1536,
           "h": 768
         }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__polearm__trident__thrust.png",
-      "size": {
-        "w": 9216,
-        "h": 3840
       },
-      "scale": "1"
-    }
-  },
-  "t192__ranged__boomerang__slash": {
-    "frames": {
-      "t192__ranged__boomerang__slash__fg__vbase": {
+      "t192__polearm__trident__thrust__bg__vsteel": {
         "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
           "h": 768
         },
         "rotated": false,
@@ -41527,28 +35266,28 @@ export const WEAPON_ATLAS_DATA = {
         "spriteSourceSize": {
           "x": 0,
           "y": 0,
-          "w": 1152,
+          "w": 1536,
           "h": 768
         },
         "sourceSize": {
-          "w": 1152,
+          "w": 1536,
           "h": 768
         }
       }
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__ranged__boomerang__slash.png",
+      "image": "t192__polearm__trident__thrust__p3.png",
       "size": {
-        "w": 1152,
-        "h": 768
+        "w": 3072,
+        "h": 2304
       },
       "scale": "1"
     }
   },
   "t192__sword__glowsword__attack_slash": {
     "frames": {
-      "t192__sword__glowsword__attack_slash__bg__vblue": {
+      "t192__sword__glowsword__attack_slash__fg__vblue": {
         "frame": {
           "x": 0,
           "y": 0,
@@ -41568,7 +35307,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__sword__glowsword__attack_slash__fg__vblue": {
+      "t192__sword__glowsword__attack_slash__bg__vblue": {
         "frame": {
           "x": 1152,
           "y": 0,
@@ -41588,7 +35327,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__sword__glowsword__attack_slash__bg__vred": {
+      "t192__sword__glowsword__attack_slash__fg__vred": {
         "frame": {
           "x": 0,
           "y": 768,
@@ -41608,7 +35347,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__sword__glowsword__attack_slash__fg__vred": {
+      "t192__sword__glowsword__attack_slash__bg__vred": {
         "frame": {
           "x": 1152,
           "y": 768,
@@ -41639,169 +35378,10 @@ export const WEAPON_ATLAS_DATA = {
       "scale": "1"
     }
   },
-  "t192__sword__longsword__attack_slash": {
+  "tall__consolidated__slash_reverse__6x4": {
     "frames": {
-      "t192__sword__longsword__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__sword__longsword__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__sword__longsword__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__sword__longsword__attack_slash_reverse": {
-    "frames": {
-      "t192__sword__longsword__attack_slash_reverse__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
       "t192__sword__longsword__attack_slash_reverse__fg__vbase": {
         "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__sword__longsword__attack_slash_reverse.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__sword__longsword__attack_thrust": {
-    "frames": {
-      "t192__sword__longsword__attack_thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__sword__longsword__attack_thrust__fg__vbase": {
-        "frame": {
-          "x": 1536,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__sword__longsword__attack_thrust.png",
-      "size": {
-        "w": 3072,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__sword__rapier__attack_slash": {
-    "frames": {
-      "t192__sword__rapier__attack_slash__bg__vbase": {
-        "frame": {
           "x": 0,
           "y": 0,
           "w": 1152,
@@ -41820,7 +35400,7 @@ export const WEAPON_ATLAS_DATA = {
           "h": 768
         }
       },
-      "t192__sword__rapier__attack_slash__fg__vbase": {
+      "t192__sword__longsword__attack_slash_reverse__bg__vbase": {
         "frame": {
           "x": 1152,
           "y": 0,
@@ -41843,115 +35423,9 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "t192__sword__rapier__attack_slash.png",
+      "image": "tall__consolidated__slash_reverse__6x4.png",
       "size": {
         "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__sword__saber__attack_slash": {
-    "frames": {
-      "t192__sword__saber__attack_slash__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      },
-      "t192__sword__saber__attack_slash__fg__vbase": {
-        "frame": {
-          "x": 1152,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1152,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1152,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__sword__saber__attack_slash.png",
-      "size": {
-        "w": 2304,
-        "h": 768
-      },
-      "scale": "1"
-    }
-  },
-  "t192__tools__whip__thrust": {
-    "frames": {
-      "t192__tools__whip__thrust__bg__vbase": {
-        "frame": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      },
-      "t192__tools__whip__thrust__fg__vbase": {
-        "frame": {
-          "x": 1536,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "rotated": false,
-        "trimmed": false,
-        "spriteSourceSize": {
-          "x": 0,
-          "y": 0,
-          "w": 1536,
-          "h": 768
-        },
-        "sourceSize": {
-          "w": 1536,
-          "h": 768
-        }
-      }
-    },
-    "meta": {
-      "app": "heroengine-weapon-atlas",
-      "image": "t192__tools__whip__thrust.png",
-      "size": {
-        "w": 3072,
         "h": 768
       },
       "scale": "1"
