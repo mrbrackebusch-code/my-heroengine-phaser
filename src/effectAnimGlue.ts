@@ -13,7 +13,9 @@ const EFFECT_ANIM_DELAY_START_MS_KEY = "effectAnimDelayStartMs";
 const EFFECT_FRAME_WINDOW_MS_KEY = "effectFrameWindowMs";
 const EFFECT_FRAME_WINDOW_START_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_KEY = "effectFrameIndex";
+const EFFECT_FRAME_INDEX_IS_RAW_KEY = "effectFrameIndexIsRaw";
 const EFFECT_FRAME_LIST_KEY = "effectFrameList";
+const EFFECT_FRAME_LIST_IS_RAW_KEY = "effectFrameListIsRaw";
 const EFFECT_YOYO_KEY = "effectYoyo";
 
 const LAST_EFFECT_ANIM_KEY = "__effectLastAnimKey";
@@ -97,6 +99,24 @@ function _parseFrameList(raw: unknown, maxFrames: number): number[] | null {
         out.push(idx);
     }
     return out.length ? out : null;
+}
+
+function _parseBool(raw: unknown): boolean {
+    if (typeof raw === "boolean") return raw;
+    if (typeof raw === "number") return Number.isFinite(raw) && raw !== 0;
+    if (typeof raw === "string") {
+        const s = raw.trim().toLowerCase();
+        return s === "1" || s === "true" || s === "yes" || s === "on";
+    }
+    return false;
+}
+
+function _buildRawToLogical(frames: number[]): Map<number, number> {
+    const map = new Map<number, number>();
+    for (let i = 0; i < frames.length; i++) {
+        map.set(frames[i] | 0, i | 0);
+    }
+    return map;
 }
 
 function getEffectAtlasFromScene(scene: Phaser.Scene): EffectAtlas | undefined {
@@ -302,12 +322,21 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         return;
     }
 
+    const frameIndexIsRaw = _parseBool(data.get(EFFECT_FRAME_INDEX_IS_RAW_KEY));
+    const frameListIsRaw = _parseBool(data.get(EFFECT_FRAME_LIST_IS_RAW_KEY));
+    const rawToLogical = (frameIndexIsRaw || frameListIsRaw) ? _buildRawToLogical(resolved.frameIndices) : null;
+
     const frameIndexRaw = data.get(EFFECT_FRAME_INDEX_KEY);
     const frameIndex = (typeof frameIndexRaw === "number") ? frameIndexRaw : Number(frameIndexRaw);
     if (Number.isFinite(frameIndex) && frameIndex >= 0) {
         const frames = resolved.frameIndices;
         if (!frames || !frames.length) return;
-        const idx = Math.min(frames.length - 1, Math.max(0, (frameIndex | 0)));
+        let logicalIdx = frameIndex | 0;
+        if (frameIndexIsRaw && rawToLogical) {
+            const mapped = rawToLogical.get(logicalIdx | 0);
+            if (mapped != null) logicalIdx = mapped | 0;
+        }
+        const idx = Math.min(frames.length - 1, Math.max(0, logicalIdx | 0));
         const frame = frames[idx];
         try {
             sprite.setTexture(resolved.textureKey, frame);
@@ -396,8 +425,13 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
         const mapped: number[] = [];
         for (const idx of frameList) {
             if (!(idx >= 0)) continue;
-            if (idx >= resolved.frameIndices.length) continue;
-            mapped.push(resolved.frameIndices[idx]);
+            let logicalIdx = idx | 0;
+            if (frameListIsRaw && rawToLogical) {
+                const mappedIdx = rawToLogical.get(logicalIdx | 0);
+                if (mappedIdx != null) logicalIdx = mappedIdx | 0;
+            }
+            if (logicalIdx >= resolved.frameIndices.length) continue;
+            mapped.push(resolved.frameIndices[logicalIdx]);
         }
         if (mapped.length) {
             useFrames = mapped;

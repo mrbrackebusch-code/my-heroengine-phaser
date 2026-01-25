@@ -2688,6 +2688,180 @@ function _destroyAgilityTrailFxSegments(proj: Sprite): void {
     sprites.setDataNumber(proj, AGI_FX_SEG_COUNT_KEY, 0);
 }
 
+function _destroyAgilityCometFx(proj: Sprite): void {
+    if (!proj) return;
+    const fx = sprites.readDataSprite(proj, AGI_COMET_FX_KEY);
+    if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
+    sprites.setDataSprite(proj, AGI_COMET_FX_KEY, null as any);
+}
+
+function _ensureAgilityCometFx(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    element: number,
+    dashMs: number
+): Sprite | null {
+    if (!proj || !hero) return null;
+    let fx = sprites.readDataSprite(proj, AGI_COMET_FX_KEY);
+    if (fx && (fx.flags & sprites.Flag.Destroyed)) fx = null;
+    if (fx) return fx;
+
+    fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.setFlag(SpriteFlag.Invisible, false);
+    fx.x = hero.x;
+    fx.y = hero.y;
+    fx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0);
+
+    const dash = dashMs | 0;
+    if (dash > 0) {
+        const lifeMs = Math.max(300, (dash + 350) | 0);
+        fx.lifespan = lifeMs | 0;
+    }
+
+    sprites.setDataNumber(fx, PROJ_DATA.HERO_INDEX, heroIndex | 0);
+    sprites.setDataNumber(fx, PROJ_DATA.FAMILY, FAMILY.AGILITY | 0);
+    sprites.setDataNumber(fx, PROJ_DATA.ELEMENT, element | 0);
+
+    const elem = _heroBodyEffectElement(hero, element | 0);
+    const tint = _elementTintForMode(elem | 0, "offense") | 0;
+    const opts: EffectApplyOpts = {
+        mode: "full",
+        alpha: AGI_COMET_ALPHA,
+        blend: "normal",
+        repeat: -1,
+        tint: tint || undefined
+    };
+    applyEffectToSprite(fx, STR_ARC_SKIN_ID, opts);
+    sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, "");
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0);
+
+    sprites.setDataSprite(proj, AGI_COMET_FX_KEY, fx);
+    return fx;
+}
+
+function _agiCometPreT(preActive: boolean, activateAt: number, nowMs: number): number {
+    if (!preActive) return 1;
+    const actAt = activateAt | 0;
+    if (!(actAt > 0)) return 0;
+    const remain = Math.max(0, actAt - (nowMs | 0));
+    if (remain >= (AGI_COMET_PRE_MS | 0)) return 0;
+    const t = 1 - (remain / Math.max(1, AGI_COMET_PRE_MS));
+    return Math.max(0, Math.min(1, t));
+}
+
+function _agiCometTipDistance(sBack: number, sFront: number, maxLen: number, reelT: number): number {
+    const sb = sBack;
+    const sf = sFront;
+    if (reelT > 0) {
+        const backOff = (Math.max(0, maxLen | 0) * Math.max(0, Math.min(1, reelT)) * (AGI_COMET_REEL_BACK_PCT_X1000 / 1000));
+        const tip = sf - backOff;
+        return Math.max(sb, tip);
+    }
+    return Math.max(sb, sf - (AGI_COMET_TIP_BACK_PX | 0));
+}
+
+function _agiCometPickRawFrame(
+    preActive: boolean,
+    preT: number,
+    growthT: number,
+    reelT: number,
+    nowMs: number,
+    startMs: number
+): number {
+    const reel = Math.max(0, Math.min(1, reelT));
+    if (preActive) {
+        const t = Math.max(0, Math.min(1, preT));
+        return _strengthArcPickFromSequence(AGI_COMET_PRE_RAW, t, 1, false);
+    }
+    if (reel > 0) {
+        return _strengthArcPickFromSequence(AGI_ARC_SEQ_COMET_RAW, reel, 1, true);
+    }
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
+    if (growthT < AGI_COMET_GROW_END_T) {
+        return _strengthArcPickFromSequence(AGI_ARC_SEQ_COMET_RAW, growEase, 1, false);
+    }
+    const baseMs = (startMs | 0) > 0 ? (startMs | 0) : (nowMs | 0);
+    const loopT = ((((nowMs | 0) - baseMs) / Math.max(1, AGI_COMET_HOLD_LOOP_MS)) % 1 + 1) % 1;
+    return _strengthArcPickFromSequence(AGI_COMET_HOLD_RAW, loopT, 1, false);
+}
+
+function _updateAgilityCometFx(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    element: number,
+    nx: number,
+    ny: number,
+    anchorX: number,
+    anchorY: number,
+    sBack: number,
+    sFront: number,
+    maxLen: number,
+    growthT: number,
+    reelT: number,
+    preActive: boolean,
+    activateAt: number,
+    nowMs: number,
+    startMs: number,
+    dashMs: number
+): void {
+    const fx = _ensureAgilityCometFx(proj, heroIndex, hero, element | 0, dashMs | 0);
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return;
+
+    const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0);
+    if (preActive && preT <= 0) {
+        fx.setFlag(SpriteFlag.Invisible, true);
+        return;
+    }
+
+    const tipDist = _agiCometTipDistance(sBack, sFront, maxLen, reelT);
+    const tipX = anchorX + nx * tipDist;
+    const tipY = anchorY + ny * tipDist;
+
+    const moveAngle = Math.atan2(ny, nx);
+    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
+
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
+
+    let scale = AGI_COMET_SCALE * (0.55 + (0.45 * growEase));
+    if (preActive) scale *= 0.75;
+    if (reelT > 0) {
+        const reelEase = Math.max(0, Math.min(1, reelT));
+        scale *= Math.max(AGI_COMET_END_SCALE, 1 - (0.7 * reelEase));
+    }
+
+    let alpha = preActive ? (AGI_COMET_PREACTIVE_ALPHA * (0.4 + (0.6 * preT))) : (AGI_COMET_ALPHA * (0.6 + (0.4 * growEase)));
+    if (reelT > 0) {
+        const reelEase = Math.max(0, Math.min(1, reelT));
+        alpha *= Math.max(0, 1 - reelEase);
+    }
+    if (alpha <= 0.01 || scale <= 0.01) {
+        fx.setFlag(SpriteFlag.Invisible, true);
+        return;
+    }
+
+    const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs, startMs);
+    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
+    sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
+    sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
+    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
+    sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
+
+    fx.x = tipX;
+    fx.y = tipY;
+    fx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0);
+    fx.setFlag(SpriteFlag.Invisible, false);
+}
+
 function _updateAgilityTrailFxSegments(
     proj: Sprite,
     hero: Sprite,
@@ -2867,7 +3041,9 @@ const EFFECT_FORCE_TOP_DATA_KEY = "effectForceTop";
 const EFFECT_FRAME_WINDOW_MS_DATA_KEY = "effectFrameWindowMs";
 const EFFECT_FRAME_WINDOW_START_DATA_KEY = "effectFrameWindowStart";
 const EFFECT_FRAME_INDEX_DATA_KEY = "effectFrameIndex";
+const EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY = "effectFrameIndexIsRaw";
 const EFFECT_FRAME_LIST_DATA_KEY = "effectFrameList";
+const EFFECT_FRAME_LIST_IS_RAW_DATA_KEY = "effectFrameListIsRaw";
 const EFFECT_YOYO_DATA_KEY = "effectYoyo";
 const EFFECT_SCALE_X_DATA_KEY = "effectScaleX";
 const EFFECT_SCALE_Y_DATA_KEY = "effectScaleY";
@@ -3002,6 +3178,13 @@ const STR_ARC_EMERGE_SCALE_MIN = 0.4;
 const STR_ARC_SEQ_WISPY_RAW = [21, 15, 9, 3, 20, 14];
 const STR_ARC_SEQ_MEDIUM_RAW = [2, 7, 13, 19];
 const STR_ARC_SEQ_CLIMAX_RAW = [12, 18, 0, 6];
+// Agility sword-arc raw-frame notes (all authored pointing SW; rotate to aim).
+// Hole streak: 22 -> 16 -> 21 -> 29 -> 23 -> 17 -> 11
+// Solid streak: 22 -> 16 -> 21 -> 28 -> 5
+// Comet: 22 -> 16 -> 27 -> 10 -> 4
+const AGI_ARC_SEQ_STREAK_HOLE_RAW = [22, 16, 21, 29, 23, 17, 11];
+const AGI_ARC_SEQ_STREAK_SOLID_RAW = [22, 16, 21, 28, 5];
+const AGI_ARC_SEQ_COMET_RAW = [22, 16, 27, 10, 4];
 // Phase splits for the reset sweep (t in [0,1]).
 const STR_ARC_MEDIUM_END_T = 0.22;
 const STR_ARC_FADE_START_T = 0.86;
@@ -3016,17 +3199,64 @@ const STR_ARC_FILL_END_LIST = "13,14,15,14,13,14,15";
 const STR_ARC_FILL_END_START = 0.75;
 const STR_ARC_OUTLINE_RADIUS = 2;
 const STR_ARC_COLLIDER_SCALE_X1000 = 900;
+const STR_ARC_EDGE_BLEND = "add";
+const STR_ARC_EDGE_SPEED_MULT = 1.35;
+const STR_ARC_EDGE_RADIUS_BIAS_PX = 0;
+const STR_ARC_EDGE_ALPHA_SLASH_MIN = 0.14;
+const STR_ARC_EDGE_ALPHA_SLASH_MAX = 0.7;
+const STR_ARC_EDGE_ALPHA_RESET = 0.82;
+const STR_ARC_EDGE_ALPHA_END_MIN = 0.22;
+const STR_ARC_EDGE_ELLIPSE_MIN_R = 10;
+const STR_ARC_EDGE_ELLIPSE_STEP_R = 5;
+const STR_ARC_EDGE_ELLIPSE_ROWS = 21;
+const STR_ARC_EDGE_ELLIPSE_COLS = 6;
+const STR_ARC_EDGE_ELLIPSE_MAX_R = STR_ARC_EDGE_ELLIPSE_MIN_R + ((STR_ARC_EDGE_ELLIPSE_ROWS - 1) * STR_ARC_EDGE_ELLIPSE_STEP_R);
+const STR_ARC_AURA_BLEND = "add";
+const STR_ARC_AURA_RADII = [1, 2, 3];
+const STR_ARC_AURA_ALPHA_BY_RADIUS = [0.34, 0.28, 0.22];
+const STR_ARC_AURA_PAD_OUT_BY_RADIUS = [1, 2, 3];
+const STR_ARC_AURA_FALLBACK_TO_BASE = true;
 const PROJ_COLLIDER_SPRITE_KEY = "projColliderSprite";
 const PROJ_COLLIDER_SCALE_X1000_KEY = "projColliderScaleX1000";
 const STR_ARC_MASK_FX_KEY = "strArcMaskFx";
 const STR_ARC_FILL_FX_KEY = "strArcFillFx";
 const STR_ARC_OUTLINE_FX_KEY = "strArcOutlineFx";
 const STR_ARC_FILL_PHASE_KEY = "strArcFillPhase";
+const STR_ARC_EDGE_FX_KEY = "strArcEdgeFx";
+const STR_ARC_EDGE_PHASE_KEY = "strArcEdgePhase";
+const STR_ARC_EDGE_ROW_KEY = "strArcEdgeRow";
+const STR_ARC_AURA_R1_FX_KEY = "strArcAuraR1Fx";
+const STR_ARC_AURA_R2_FX_KEY = "strArcAuraR2Fx";
+const STR_ARC_AURA_R3_FX_KEY = "strArcAuraR3Fx";
 
 const WPN_AURA_COL_R1_KEY = "wpnAuraR1";
 const WPN_AURA_COL_R2_KEY = "wpnAuraR2";
 const WPN_AURA_COL_R3_KEY = "wpnAuraR3";
 const WPN_AURA_COL_EDGE_KEY = "wpnAuraEdge";
+
+const __arcadePaletteTintFx: number[] = [
+    0x000000, // 0 black
+    0xffffff, // 1 white
+    0xff2121, // 2 red
+    0xff93c4, // 3 pink
+    0xff8135, // 4 orange
+    0xfff609, // 5 yellow
+    0x249ca3, // 6 teal
+    0x78dc52, // 7 green
+    0x003fad, // 8 blue
+    0x87f2ff, // 9 light blue
+    0x8e2ec4, // 10 purple
+    0xa4839f, // 11 lavender/gray
+    0x5c406c, // 12 dark purple
+    0xe5cdc4, // 13 tan
+    0x91463d, // 14 brown
+    0xffffff, // 15 fallback to white
+];
+
+function _arcadeColorIndexToTint(idx: number): number {
+    const i = (idx | 0) & 0xf;
+    return __arcadePaletteTintFx[i] ?? 0xffffff;
+}
 
 type StrengthFrameRule = {
     tipRadii: number[];
@@ -3061,6 +3291,22 @@ const AGI_FX_INTRO_SCALE = 0.2;
 const ENABLE_AGI_FX_SEGMENTS = true;
 const AGI_FX_SEG_SPACING_PX = 24;
 const AGI_FX_SEG_MAX = 16;
+const AGI_COMET_FX_KEY = "agiCometFx";
+const AGI_COMET_Z_BIAS = 18;
+const AGI_COMET_ALPHA = 0.8;
+const AGI_COMET_PREACTIVE_ALPHA = 0.28;
+const AGI_COMET_SCALE = 0.95;
+const AGI_COMET_END_SCALE = 0.3;
+const AGI_COMET_SW_BASE_ANGLE = (3 * Math.PI) / 4; // authored pointing SW
+const AGI_COMET_GROW_END_T = 0.52;
+const AGI_COMET_GROW_EXP = 0.6;
+const AGI_COMET_TIP_BACK_PX = 6;
+const AGI_COMET_PRE_MS = 120;
+const AGI_COMET_REEL_MS = 200;
+const AGI_COMET_REEL_BACK_PCT_X1000 = 700;
+const AGI_COMET_HOLD_LOOP_MS = 80;
+const AGI_COMET_PRE_RAW = [22, 16, 21];
+const AGI_COMET_HOLD_RAW = [27, 10, 4];
 const WEAPON_TILE_FX_SIZE_PX = 32;
 const WEAPON_TILE_FX_MASK_OUT_PX = 2;
 const WEAPON_TILE_FX_MIRROR = true;
@@ -3136,6 +3382,9 @@ function _resolveEffectEntry(atlas: any, skinId: string, dir?: string): any {
 let __strengthArcRawToLogicalCache: { [k: string]: number } = Object.create(null);
 let __strengthArcFrameIndexCacheAtlasRef: any = null;
 const __strengthArcTexturePickCache: { [k: string]: { skinId: string; dir?: string } | null } = Object.create(null);
+const __strengthArcEllipsePickCache: { [k: string]: { skinId: string; dir?: string } | null } = Object.create(null);
+const __strengthArcEdgeFrameListCache: { [row: number]: string } = Object.create(null);
+const STR_ARC_EDGE_COL_YOYO = [0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 0];
 
 type StrengthArcFramePick = { row: number; col: number; baseAngle: number };
 
@@ -8586,8 +8835,35 @@ type TowerTrialStatusSnapshot = {
     profiles: Record<string, TowerTrialProfileSnapshot>
 }
 
+const TOWER_TRIAL_DEBUG_EVENT_LIMIT = 900
+
+type TowerTrialDebugEvent = {
+    t: number
+    type: string
+    data?: any
+}
+
+type TowerTrialDebugState = {
+    runId: number
+    startedAtMs: number
+    floorIndex: number
+    floorKind: number
+    events: TowerTrialDebugEvent[]
+    lastArtifact: any
+    lastSaveResult: any
+}
+
 let _towerTrialAnnouncerNpc: Sprite = null
 let _towerTrialSession: TowerTrialSession | null = null
+let _towerTrialDebugState: TowerTrialDebugState = {
+    runId: 0,
+    startedAtMs: 0,
+    floorIndex: -1,
+    floorKind: -1,
+    events: [],
+    lastArtifact: null,
+    lastSaveResult: null,
+}
 
 const DUNGEON_SHOP_EVERY_N_FLOORS = 0 //Shop knob (0 = disabled; use elite/boss cadence)
 
@@ -10224,7 +10500,9 @@ type EffectApplyOpts = {
     frameWindowMs?: number
     frameWindowStart?: number
     frameIndex?: number
+    frameIndexIsRaw?: boolean
     frameList?: number[] | string
+    frameListIsRaw?: boolean
     yoyo?: boolean
     maskSprite?: Sprite | null
     maskPadOutPx?: number
@@ -10265,6 +10543,7 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     } else {
         sprites.setDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY, -1)
     }
+    sprites.setDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, opts?.frameIndexIsRaw ? 1 : 0)
     if (opts && Object.prototype.hasOwnProperty.call(opts, "frameList")) {
         let listVal = opts.frameList as any;
         if (Array.isArray(listVal)) listVal = listVal.join(",");
@@ -10272,6 +10551,7 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     } else {
         sprites.setDataString(s, EFFECT_FRAME_LIST_DATA_KEY, "")
     }
+    sprites.setDataNumber(s, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, opts?.frameListIsRaw ? 1 : 0)
     if (typeof opts?.yoyo === "boolean") {
         sprites.setDataNumber(s, EFFECT_YOYO_DATA_KEY, opts.yoyo ? 1 : 0)
     } else {
@@ -22058,6 +22338,199 @@ type TowerTrialArena = {
     tileW: number
 }
 
+function _towerTrialDebugNowMs(): number {
+    return game.runtime() | 0
+}
+
+function _towerTrialDebugReset(runId: number, nowMs: number): void {
+    _towerTrialDebugState.runId = runId | 0
+    _towerTrialDebugState.startedAtMs = nowMs | 0
+    _towerTrialDebugState.floorIndex = _dunFloorIndex | 0
+    _towerTrialDebugState.floorKind = _dunFloorKind | 0
+    _towerTrialDebugState.events = []
+}
+
+function _towerTrialDebugLog(type: string, data?: any, nowMs?: number): void {
+    const t = (nowMs == null ? _towerTrialDebugNowMs() : (nowMs | 0)) | 0
+    const evt: TowerTrialDebugEvent = data === undefined
+        ? { t, type: String(type || "") }
+        : { t, type: String(type || ""), data }
+    const arr = _towerTrialDebugState.events
+    arr.push(evt)
+    const over = (arr.length - TOWER_TRIAL_DEBUG_EVENT_LIMIT) | 0
+    if (over > 0) arr.splice(0, over)
+}
+
+function _towerTrialEnemyHpPlan(phaseIndex: number): number[] {
+    const phase = phaseIndex | 0
+    return (phase === 0) ? [45, 20] : [20, 45]
+}
+
+function _towerTrialDebugCopy<T>(v: T): T {
+    try {
+        return JSON.parse(JSON.stringify(v))
+    } catch {
+        return v
+    }
+}
+
+function _towerTrialDebugBuildArtifact(tag?: string, sessionOverride?: TowerTrialSession | null, endReason?: string): any {
+    const nowMs = _towerTrialDebugNowMs() | 0
+    const session = sessionOverride ?? _towerTrialSession
+    const currentFloorIndex = _dunFloorIndex | 0
+    const currentFloorKind = _dunFloorKind | 0
+    const runFloorIndex = (_towerTrialDebugState.floorIndex | 0) >= 0 ? (_towerTrialDebugState.floorIndex | 0) : currentFloorIndex
+    const runFloorKind = (_towerTrialDebugState.floorKind | 0) >= 0 ? (_towerTrialDebugState.floorKind | 0) : currentFloorKind
+    const requirementFloorIndex = session?.floorIndex ?? runFloorIndex
+    const requirementSet = session?.requirementSet || towerTrialRequirementSetForFloor(requirementFloorIndex | 0)
+    const arena = _towerTrialArenaRect()
+    const arenaTiles = {
+        r: _shopTrialAreaR | 0,
+        c: _shopTrialAreaC | 0,
+        h: _shopTrialAreaH | 0,
+        w: _shopTrialAreaW | 0,
+    }
+    const phasePlans: any[] = []
+    for (let phase = 0; phase <= 1; phase++) {
+        const positions = _towerTrialPhaseEnemyPositions(phase)
+        const hp = _towerTrialEnemyHpPlan(phase)
+        phasePlans.push({
+            phase,
+            hp,
+            positions: positions.map((p, i) => ({ x: p.x | 0, y: p.y | 0, hp: hp[i] | 0 })),
+        })
+    }
+
+    const statusSnapshot = session ? _towerTrialSnapshot(session) : _towerTrialGetStatusSnapshot()
+    const profiles: Record<string, any> = Object.create(null)
+    const profileKeys = session?.participants || Object.keys(session?.simByProfile || {})
+    for (let i = 0; i < profileKeys.length; i++) {
+        const profile = String(profileKeys[i] || "")
+        if (!profile) continue
+        const sim = session?.simByProfile?.[profile]
+        const live = session?.liveByProfile?.[profile]
+        const status = session ? _towerTrialProfileStatus(profile, session) : null
+        profiles[profile] = {
+            displayName: _towerTrialDisplayNameForProfile(profile),
+            status: status ? {
+                ok: !!status.ok,
+                blockingIssue: status.blockingIssue?.message || "",
+                missingButtons: status.missingButtons.slice(),
+                repeatButtons: status.repeatButtons.slice(),
+                dynamicOk: !!status.dynamicOk,
+                needsPhasePress: !!status.needsPhasePress,
+            } : null,
+            sim: sim ? {
+                ok: !!sim.ok,
+                issues: _towerTrialDebugCopy(sim.issues || []),
+                predictedRepeatButtons: (sim.predictedRepeatButtons || []).slice(),
+                dynamicFamilyButtons: (sim.dynamicFamilyButtons || []).slice(),
+                buttonOutputs: _towerTrialDebugCopy(sim.buttonOutputs || {}),
+            } : null,
+            live: live ? {
+                invalidOutputCount: live.invalidOutputCount | 0,
+                pressCount: _towerTrialDebugCopy(live.pressCount || {}),
+                repeatViolationByButton: _towerTrialDebugCopy(live.repeatViolationByButton || {}),
+                familyByPhase: _towerTrialDebugCopy(live.familyByPhase || {}),
+                lastOutputByButton: _towerTrialDebugCopy(live.lastOutputByButton || {}),
+            } : null,
+        }
+    }
+
+    const artifact = {
+        scope: "tower-trial",
+        tag: String(tag || ""),
+        endReason: String(endReason || ""),
+        runId: _towerTrialDebugState.runId | 0,
+        startedAtMs: _towerTrialDebugState.startedAtMs | 0,
+        capturedAtMs: nowMs | 0,
+        runDurationMs: Math.max(0, (nowMs - (_towerTrialDebugState.startedAtMs | 0)) | 0),
+        floorIndex: runFloorIndex | 0,
+        floorKind: runFloorKind | 0,
+        currentFloorIndex,
+        currentFloorKind,
+        dungeonObjectiveDone: !!_dunObjectiveDone,
+        padPowered: !!_dunIsPadPowered(),
+        trialRequired: requirementSet.ids.length > 0,
+        requirementSet: {
+            ids: requirementSet.ids.slice(),
+            minPressesPerButton: requirementSet.minPressesPerButton | 0,
+            needsPhases: !!requirementSet.needsPhases,
+        },
+        arenaTiles,
+        arenaPx: arena ? {
+            left: arena.left | 0,
+            top: arena.top | 0,
+            right: arena.right | 0,
+            bottom: arena.bottom | 0,
+            centerX: arena.centerX | 0,
+            centerY: arena.centerY | 0,
+        } : null,
+        phasePlans,
+        session: session ? {
+            active: !!session.active,
+            completed: !!session.completed,
+            floorIndex: session.floorIndex | 0,
+            participants: session.participants.slice(),
+            pids: session.pids.slice(),
+            phaseIndex: session.phaseIndex | 0,
+            lastPhaseChangeMs: session.lastPhaseChangeMs | 0,
+            requirementIds: session.requirementSet.ids.slice(),
+        } : null,
+        statusSnapshot,
+        profiles,
+        events: _towerTrialDebugState.events.map((e) => _towerTrialDebugCopy(e)),
+    }
+    _towerTrialDebugState.lastArtifact = artifact
+    return artifact
+}
+
+function _towerTrialDebugGetArtifact(tag?: string): any {
+    const session = _towerTrialSession
+    if (session) return _towerTrialDebugBuildArtifact(tag)
+    return _towerTrialDebugState.lastArtifact || _towerTrialDebugBuildArtifact(tag)
+}
+
+async function _towerTrialDebugSaveArtifact(tag?: string): Promise<any> {
+    const artifact = _towerTrialDebugBuildArtifact(tag)
+    const hasFetch = typeof fetch === "function"
+    if (!hasFetch) {
+        const res = { ok: false, reason: "no-fetch", artifact }
+        _towerTrialDebugState.lastSaveResult = res
+        return res
+    }
+    try {
+        const resp = await fetch("/__he/tower-trial-artifact", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ artifact, tag: String(tag || "") }),
+        })
+        let payload: any = null
+        try {
+            payload = await resp.json()
+        } catch {
+            payload = { ok: resp.ok, status: resp.status | 0 }
+        }
+        const res = payload && typeof payload === "object" ? payload : { ok: resp.ok, status: resp.status | 0 }
+        _towerTrialDebugState.lastSaveResult = res
+        return res
+    } catch (err) {
+        const res = { ok: false, reason: "fetch-failed", error: String(err || ""), artifact }
+        _towerTrialDebugState.lastSaveResult = res
+        return res
+    }
+}
+
+function _towerTrialDebugClear(): void {
+    _towerTrialDebugState.events = []
+    _towerTrialDebugState.lastArtifact = null
+    _towerTrialDebugState.lastSaveResult = null
+}
+
+function _towerTrialDebugLastSave(): any {
+    return _towerTrialDebugState.lastSaveResult || null
+}
+
 function _towerTrialLog(msg: string, data?: any): void {
     if (!DEBUG_TOWER_TRIAL_LOGS) return
     if (data) {
@@ -22234,15 +22707,23 @@ function _towerTrialSpawnEnemies(nowMs: number): void {
     session.enemies = []
     if (!positions.length) return
     const phase = session.phaseIndex | 0
-    const hpVals = (phase === 0) ? [45, 20] : [20, 45]
+    const hpVals = _towerTrialEnemyHpPlan(phase)
+    const spawned: any[] = []
     for (let i = 0; i < positions.length && i < TOWER_TRIAL_ENEMY_COUNT; i++) {
         const p = positions[i]
         const enemy = spawnEnemyOfKind(TOWER_TRIAL_ENEMY_ID, p.x | 0, p.y | 0, false)
         if (!enemy) continue
         _towerTrialConfigureEnemySafe(enemy)
-        _enemySetHpAndBar(enemy, hpVals[i] || 30)
+        const hp = (hpVals[i] | 0) || 30
+        _enemySetHpAndBar(enemy, hp)
         session.enemies.push(enemy)
+        spawned.push({ i: i | 0, x: p.x | 0, y: p.y | 0, hp })
     }
+    _towerTrialDebugLog("spawn_enemies", {
+        phase: phase | 0,
+        count: session.enemies.length | 0,
+        spawned,
+    }, nowMs | 0)
     if (DEBUG_TOWER_TRIAL_SIM) {
         _towerTrialLog("spawn_enemies", {
             phase: session.phaseIndex | 0,
@@ -22281,6 +22762,9 @@ function _towerTrialStart(nowMs: number): void {
         return
     }
 
+    const runId = ((_towerTrialDebugState.runId | 0) + 1) | 0
+    _towerTrialDebugReset(runId, nowMs | 0)
+
     const g: any = globalThis as any
     const xmlByProfile = (g && g.__heBlocklyXmlByProfile) ? g.__heBlocklyXmlByProfile : {}
     const startXmlByProfile: Record<string, string> = {}
@@ -22290,6 +22774,21 @@ function _towerTrialStart(nowMs: number): void {
         const xml = String(xmlByProfile?.[profile] || "")
         startXmlByProfile[profile] = xml
         simByProfile[profile] = towerTrialSimulateProfile(profile, xml, floor)
+    }
+    const simSummary: Record<string, any> = Object.create(null)
+    for (let i = 0; i < participants.length; i++) {
+        const profile = participants[i]
+        const sim = simByProfile[profile]
+        const blockingIssues = (sim?.issues || [])
+            .filter((it) => _towerTrialIsBlockingIssue(String(it.requirementId || "")))
+            .map((it) => String(it.message || ""))
+        simSummary[profile] = {
+            ok: !!sim?.ok,
+            issueCount: (sim?.issues?.length || 0) | 0,
+            blockingIssues,
+            predictedRepeatButtons: (sim?.predictedRepeatButtons || []).slice(),
+            dynamicFamilyButtons: (sim?.dynamicFamilyButtons || []).slice(),
+        }
     }
 
     _towerTrialSession = {
@@ -22315,6 +22814,14 @@ function _towerTrialStart(nowMs: number): void {
         ? "Tower Trial started."
         : "Trial ready."
     _towerTrialDialog(nowMs, intro, "Press each button to prove your moves.", true)
+    _towerTrialDebugLog("start", {
+        runId: runId | 0,
+        floor: floor | 0,
+        requirementIds: requirementSet.ids.slice(),
+        participants: participants.slice(),
+        pids: pids.slice(),
+        simSummary,
+    }, nowMs | 0)
     _towerTrialLog("start", {
         floor: floor | 0,
         participants: participants.length | 0,
@@ -22325,7 +22832,9 @@ function _towerTrialStart(nowMs: number): void {
 function _towerTrialEnd(reason: string, nowMs: number): void {
     const session = _towerTrialSession
     if (!session) return
+    _towerTrialDebugLog("end", { reason: String(reason || "") }, nowMs | 0)
     _towerTrialDestroyEnemies()
+    _towerTrialDebugBuildArtifact("end", session, reason || "")
     _towerTrialSession = null
     _towerTrialLog("end", { reason: reason || "", now: nowMs | 0 })
 }
@@ -22337,6 +22846,7 @@ function _towerTrialAdvancePhase(nowMs: number): void {
     if (((nowMs | 0) - (session.lastPhaseChangeMs | 0)) < TOWER_TRIAL_PHASE_SWITCH_COOLDOWN_MS) return
     session.phaseIndex = 1
     session.lastPhaseChangeMs = nowMs | 0
+    _towerTrialDebugLog("phase_change", { phase: session.phaseIndex | 0 }, nowMs | 0)
     _towerTrialSpawnEnemies(nowMs | 0)
     _towerTrialDialog(nowMs, "Phase 2 unlocked.", "Press any button and show a new family.")
     _towerTrialLog("phase_change", { phase: session.phaseIndex | 0, now: nowMs | 0 })
@@ -48726,6 +49236,9 @@ type AgiHookshotState = {
     marker: Sprite | null
     aimSpear: Sprite | null
     lastTickMs: number
+    aimComet: Sprite | null
+    comet: Sprite | null
+    cometStartMs: number
 }
 
 const agiHookshotStateByHeroIndex: AgiHookshotState[] = []
@@ -51758,6 +52271,9 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
         marker: null,
         aimSpear: null,
         lastTickMs: 0,
+        aimComet: null,
+        comet: null,
+        cometStartMs: 0,
     }
     agiHookshotStateByHeroIndex[heroIndex] = st
     return st
@@ -51766,6 +52282,7 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
 function _agiHookSetState(heroIndex: number, hero: Sprite, st: AgiHookshotState, next: number): void {
     st.state = next | 0
     sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, next | 0)
+    st.cometStartMs = game.runtime() | 0
 }
 
 let _agiHookChainImg: Image | null = null
@@ -51810,6 +52327,10 @@ function _agiHookClearVisuals(st: AgiHookshotState): void {
     st.spear = null
     if (st.aimSpear) _agiHookDestroySprite(st.aimSpear)
     st.aimSpear = null
+    if (st.aimComet) _agiHookDestroySprite(st.aimComet)
+    st.aimComet = null
+    if (st.comet) _agiHookDestroySprite(st.comet)
+    st.comet = null
     if (st.marker) _agiHookDestroySprite(st.marker)
     st.marker = null
     if (st.chain && st.chain.length) {
@@ -53809,6 +54330,7 @@ function spawnAgilityThrustProjectile(
         ((dashMs | 0) + 200) | 0,
         maxLen | 0
     )
+    _ensureAgilityCometFx(proj, heroIndex, hero, element | 0, dashMs | 0)
     // Keep trail FX visible even during windup so the beam fills immediately.
 
     return proj
@@ -54499,7 +55021,7 @@ function updateAgilityProjectilesMotionFor(
 
         // Phase B — reel: keep head fixed at sFrontStop; pull tail forward over a fixed short time
 
-        const REEL_MS = 200
+        const REEL_MS = Math.max(1, AGI_COMET_REEL_MS | 0)
 
         const u = Math.max(0, Math.min(1, (nowMs - reachT) / REEL_MS))
 
@@ -54511,6 +55033,7 @@ function updateAgilityProjectilesMotionFor(
             _destroyProjectileMaskFxForProj(proj)
             _destroyProjectileMaskSpriteForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
+            _destroyAgilityCometFx(proj)
             proj.destroy()
 
             heroProjectiles.removeAt(iInArray)
@@ -54531,6 +55054,30 @@ function updateAgilityProjectilesMotionFor(
         const debugFront = (sBack + wantLen);
         if (debugFront > sFront) sFront = debugFront;
     }
+
+    const growthTComet = (maxLen > 0) ? Math.max(0, Math.min(1, arrowLen / maxLen)) : 0;
+    const reelTComet = (reachT > 0) ? Math.max(0, Math.min(1, (nowMs - reachT) / Math.max(1, AGI_COMET_REEL_MS))) : 0;
+    const elementNow = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
+    _updateAgilityCometFx(
+        proj,
+        heroIndex,
+        hero,
+        elementNow | 0,
+        nx,
+        ny,
+        anchorX,
+        anchorY,
+        sBack,
+        sFront,
+        maxLen,
+        growthTComet,
+        reelTComet,
+        preActive,
+        activateAt | 0,
+        nowMs | 0,
+        startMs | 0,
+        dashMs | 0
+    )
 
     _updateAgilityTrailFxSegments(
         proj,

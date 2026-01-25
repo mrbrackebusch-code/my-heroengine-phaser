@@ -20,6 +20,25 @@ function _forceReload(textureKey: string): boolean {
     return false;
 }
 
+function _existingFrameSize(texture: any): { w: number; h: number } | null {
+    if (!texture) return null;
+    try {
+        const names: any[] = (typeof texture.getFrameNames === "function") ? texture.getFrameNames() : [];
+        for (const name of names) {
+            if (name === "__BASE") continue;
+            const fr = (typeof texture.get === "function") ? texture.get(name) : null;
+            const w = fr?.width | 0;
+            const h = fr?.height | 0;
+            if (w > 0 && h > 0) return { w, h };
+        }
+        const base = (typeof texture.get === "function") ? texture.get("__BASE") : null;
+        const bw = base?.width | 0;
+        const bh = base?.height | 0;
+        if (bw > 0 && bh > 0) return { w: bw, h: bh };
+    } catch { }
+    return null;
+}
+
 export function queueSpritesheetOnce(
     scene: Phaser.Scene,
     textureKey: string,
@@ -31,10 +50,15 @@ export function queueSpritesheetOnce(
     const exists = (tex && typeof tex.exists === "function") ? !!tex.exists(textureKey) : false;
     const existing = exists ? scene.textures.get(textureKey) : null;
     const existingSrc = existing?.getSourceImage?.()?.src;
+    const existingSize = _existingFrameSize(existing);
     const nextSrc = _toAbsUrl(url);
     const forceReload = _forceReload(textureKey);
-    if (!forceReload && exists && existingSrc && existingSrc === nextSrc) return false;
-    if (exists && (forceReload || (existingSrc && existingSrc !== nextSrc))) {
+    const sizeMismatch = !!(
+        existingSize &&
+        ((existingSize.w | 0) !== (frameWidth | 0) || (existingSize.h | 0) !== (frameHeight | 0))
+    );
+    if (!forceReload && !sizeMismatch && exists && existingSrc && existingSrc === nextSrc) return false;
+    if (exists && (forceReload || sizeMismatch || (existingSrc && existingSrc !== nextSrc))) {
         // Hot-reload friendly: drop the old texture so the new sheet can load.
         try { scene.textures.remove(textureKey); } catch { }
     }

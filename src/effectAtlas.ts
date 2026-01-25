@@ -1,6 +1,15 @@
 // src/effectAtlas.ts
 import type Phaser from "phaser";
-import { DEBUG_EFFECT_ATLAS, DEBUG_EFFECT_PURGE_CACHES, WEAPON_DEBUG } from "./debugFlags";
+import {
+    DEBUG_EFFECT_ATLAS,
+    DEBUG_EFFECT_PURGE_CACHES,
+    DEBUG_EFFECT_AURA_PRIORITY_ENABLED,
+    DEBUG_EFFECT_AURA_PRIORITY_RADII,
+    DEBUG_EFFECT_AURA_STREAM_REST,
+    DEBUG_EFFECT_AURA_STREAM_DELAY_MS,
+    DEBUG_EFFECT_ATLAS_SKIP_AURA_SCAN,
+    WEAPON_DEBUG
+} from "./debugFlags";
 import { queueSpritesheetOnce } from "./loaderCache";
 import { EFFECT_ATLAS_META } from "./generated/effectAtlasMeta";
 
@@ -56,6 +65,7 @@ export interface EffectSheetDef {
     suffixLower: string;
     declaredW: number;
     declaredH: number;
+    sourcePath: string;
 }
 
 const effectPngs = import.meta.glob("../assets/effects/**/*.png", {
@@ -91,6 +101,18 @@ const EFFECT_FRAME_ORDER_OVERRIDES: Record<string, { mode: "column-major-blocks"
 const EFFECT_TEX_PREFIX = "effects.";
 const EFFECT_ANIM_PREFIXES = ["effect_", "dbg_str_arc_core_"];
 const EFFECT_ATLAS_BUST_TOKEN = (WEAPON_DEBUG || DEBUG_EFFECT_ATLAS) ? Date.now().toString(36) : "";
+export const EFFECT_ELLIPSE_MODIFIER = "ellipses";
+
+export function ellipseEffectId(baseId: string): string {
+    const base = String(baseId || "").trim();
+    if (!base) return EFFECT_ELLIPSE_MODIFIER;
+    if (base.toLowerCase().endsWith(` ${EFFECT_ELLIPSE_MODIFIER}`)) return base;
+    return `${base} ${EFFECT_ELLIPSE_MODIFIER}`;
+}
+
+let __effectAtlasBackgroundBuild = false;
+let __effectDeferredSheets: EffectSheetDef[] = [];
+let __effectDeferredSceneKey = "";
 
 type EffectSheetPixels = {
     data: Uint8ClampedArray;
@@ -106,6 +128,7 @@ function _perfNow(): number {
 }
 
 function _loadingNote(msg: string): void {
+    if (__effectAtlasBackgroundBuild) return;
     try {
         const g: any = globalThis as any;
         const fn = g.__heLoadingNote;
@@ -156,11 +179,34 @@ function parseSizeFromName(name: string): {
     return { id, frameW, frameH, baseLower, suffixLower, declaredW, declaredH };
 }
 
-function _dedupeOverrideVariants(sheets: EffectSheetDef[]): EffectSheetDef[] {
+function _preferDuplicateSheet(a: EffectSheetDef, b: EffectSheetDef): EffectSheetDef {
+    const aPath = String(a.sourcePath || "");
+    const bPath = String(b.sourcePath || "");
+    const aIsNestedEllipse = aPath.includes("/ellipses/ellipse_teeth_");
+    const bIsNestedEllipse = bPath.includes("/ellipses/ellipse_teeth_");
+    if (aIsNestedEllipse !== bIsNestedEllipse) return aIsNestedEllipse ? b : a;
+    if (aPath.length !== bPath.length) return aPath.length < bPath.length ? a : b;
+    return aPath <= bPath ? a : b;
+}
+
+function _dedupeEffectSheets(sheets: EffectSheetDef[]): EffectSheetDef[] {
+    // 1) Dedupe exact base-name duplicates (same sheet name in multiple folders).
+    const byBaseName = new Map<string, EffectSheetDef>();
+    for (const sheet of sheets) {
+        const prev = byBaseName.get(sheet.baseName);
+        if (!prev) {
+            byBaseName.set(sheet.baseName, sheet);
+        } else {
+            byBaseName.set(sheet.baseName, _preferDuplicateSheet(prev, sheet));
+        }
+    }
+    const uniqueByBase = Array.from(byBaseName.values());
+
+    // 2) Apply size override variant selection rules.
     const out: EffectSheetDef[] = [];
     const grouped = new Map<string, EffectSheetDef[]>();
 
-    for (const sheet of sheets) {
+    for (const sheet of uniqueByBase) {
         const override = EFFECT_SIZE_OVERRIDES[sheet.baseLower];
         if (!override) {
             out.push(sheet);
@@ -194,6 +240,105 @@ function _isRemainderAllowed(sheet: EffectSheetDef, remW: number, remH: number):
     const maxRemW = allowance.remW ?? 0;
     const maxRemH = allowance.remH ?? 0;
     return remW <= maxRemW && remH <= maxRemH;
+}
+
+function _parseIntList(raw: string): number[] {
+    if (!raw) return [];
+    const out: number[] = [];
+    const parts = String(raw || "").split(/[,|\s]+/g);
+    for (const part of parts) {
+        if (!part) continue;
+        const n = parseInt(part, 10) | 0;
+        if (n > 0) out.push(n);
+    }
+    return out;
+}
+
+function _auraRadiusFromSuffix(suffixLower: string): number {
+    const m = /_aura_r(\d+)/i.exec(String(suffixLower || ""));
+    if (!m) return 0;
+    const r = parseInt(m[1], 10) | 0;
+    return r > 0 ? r : 0;
+}
+
+function _priorityAuraSet(): Set<number> | null {
+    if (!DEBUG_EFFECT_AURA_PRIORITY_ENABLED) return null;
+    const nums = _parseIntList(DEBUG_EFFECT_AURA_PRIORITY_RADII);
+    if (!nums.length) return null;
+    return new Set(nums);
+}
+
+function _isPriorityAuraSheet(sheet: EffectSheetDef, prioritySet: Set<number> | null): boolean {
+    if (!prioritySet) return true;
+    const auraRadius = _auraRadiusFromSuffix(sheet.suffixLower);
+    if (auraRadius <= 0) return true;
+    return prioritySet.has(auraRadius);
+}
+
+function _partitionEffectSheetsForPreload(sheets: EffectSheetDef[]): {
+    now: EffectSheetDef[];
+    deferred: EffectSheetDef[];
+    prioritySet: Set<number> | null;
+} {
+    const prioritySet = _priorityAuraSet();
+    if (!prioritySet) {
+        return { now: sheets.slice(), deferred: [], prioritySet: null };
+    }
+    const now: EffectSheetDef[] = [];
+    const deferred: EffectSheetDef[] = [];
+    for (const sheet of sheets) {
+        if (_isPriorityAuraSheet(sheet, prioritySet)) now.push(sheet);
+        else deferred.push(sheet);
+    }
+    return { now, deferred, prioritySet };
+}
+
+function _streamDeferredEffectSheets(scene: Phaser.Scene): void {
+    if (!scene) return;
+    const sceneKey = String(scene.sys?.settings?.key || "");
+    if (__effectDeferredSceneKey && sceneKey !== __effectDeferredSceneKey) return;
+    if (!__effectDeferredSheets.length) return;
+
+    const load: any = scene.load as any;
+    if (!load) return;
+    if (typeof load.isLoading === "function" && load.isLoading()) {
+        load.once("complete", () => _streamDeferredEffectSheets(scene));
+        return;
+    }
+
+    const deferred = __effectDeferredSheets.slice();
+    __effectDeferredSheets = [];
+    let queued = 0;
+    for (const sheet of deferred) {
+        if (queueSpritesheetOnce(scene, sheet.textureKey, sheet.url, sheet.frameW, sheet.frameH)) {
+            queued++;
+        }
+    }
+    if (queued <= 0) return;
+
+    if (DEBUG_EFFECT_ATLAS) {
+        console.log(
+            `[effectAtlas][stream] queued=${queued} deferred=${deferred.length} scene=${sceneKey || "?"}`
+        );
+    }
+
+    load.once("complete", () => {
+        __effectAtlasBackgroundBuild = true;
+        const done = () => { __effectAtlasBackgroundBuild = false; };
+        try {
+            const p = buildEffectAtlas(scene);
+            if (p && typeof (p as any).then === "function") {
+                (p as Promise<any>).finally(done);
+            } else {
+                done();
+            }
+        } catch {
+            done();
+        }
+    });
+    if (typeof load.isLoading !== "function" || !load.isLoading()) {
+        try { load.start(); } catch { }
+    }
 }
 
 function _reorderFrameIndicesForSheet(
@@ -478,12 +623,13 @@ for (const [path, url] of Object.entries(effectPngs)) {
         baseLower: size.baseLower,
         suffixLower: size.suffixLower,
         declaredW: size.declaredW,
-        declaredH: size.declaredH
+        declaredH: size.declaredH,
+        sourcePath: path
     };
 
     EFFECT_SHEETS_RAW.push(sheet);
 }
-const EFFECT_SHEETS: EffectSheetDef[] = _dedupeOverrideVariants(EFFECT_SHEETS_RAW);
+const EFFECT_SHEETS: EffectSheetDef[] = _dedupeEffectSheets(EFFECT_SHEETS_RAW);
 
 function _warnEffectSheetIssues(): void {
     if (EFFECT_MISSING_SIZE.length) {
@@ -536,7 +682,19 @@ export function preloadEffectSheets(scene: Phaser.Scene): void {
         return;
     }
 
-    for (const sheet of EFFECT_SHEETS) {
+    const sceneKey = String(scene.sys?.settings?.key || "");
+    const parts = _partitionEffectSheetsForPreload(EFFECT_SHEETS);
+    const loadNow = parts.now;
+    __effectDeferredSheets = parts.deferred.slice();
+    __effectDeferredSceneKey = sceneKey;
+
+    if (DEBUG_EFFECT_ATLAS && parts.prioritySet) {
+        console.log(
+            `[effectAtlas][priority] radii=${Array.from(parts.prioritySet).join(",")} now=${loadNow.length} deferred=${parts.deferred.length}`
+        );
+    }
+
+    for (const sheet of loadNow) {
         queueSpritesheetOnce(
             scene,
             sheet.textureKey,
@@ -544,6 +702,21 @@ export function preloadEffectSheets(scene: Phaser.Scene): void {
             sheet.frameW,
             sheet.frameH
         );
+    }
+
+    if (parts.prioritySet && DEBUG_EFFECT_AURA_STREAM_REST && parts.deferred.length) {
+        const delayMs = Math.max(0, DEBUG_EFFECT_AURA_STREAM_DELAY_MS | 0);
+        scene.load.once("complete", () => {
+            const run = () => _streamDeferredEffectSheets(scene);
+            const time: any = (scene as any).time;
+            if (delayMs > 0 && time && typeof time.delayedCall === "function") {
+                try { time.delayedCall(delayMs, run); } catch { run(); }
+            } else if (delayMs > 0 && typeof setTimeout === "function") {
+                setTimeout(run, delayMs);
+            } else {
+                run();
+            }
+        });
     }
 }
 
@@ -577,7 +750,9 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
         if (!source) continue;
 
         const meta = (EFFECT_ATLAS_META as Record<string, EffectAtlasMetaEntry>)[sheet.baseName];
-        const pixels = meta ? null : _readSheetPixels(source);
+        const isAura = _auraRadiusFromSuffix(sheet.suffixLower) > 0;
+        const allowScan = !(DEBUG_EFFECT_ATLAS_SKIP_AURA_SCAN && isAura);
+        const pixels = (meta || !allowScan) ? null : _readSheetPixels(source);
         const sheetW = (pixels ? pixels.w : (source.width | 0)) | 0;
         const sheetH = (pixels ? pixels.h : (source.height | 0)) | 0;
         const remW = sheetW % sheet.frameW;

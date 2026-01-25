@@ -30,6 +30,7 @@ export type TowerTrialSimResult = {
   issues: TowerTrialIssue[];
   predictedRepeatButtons: string[];
   dynamicFamilyButtons: string[];
+  buttonOutputs: Record<string, { scenario0: any[] | null; scenario1: any[] | null; scenario0Repeat: any[] | null }>;
 };
 
 export const TOWER_TRIAL_BUTTONS: string[] = ["A", "B", "A+B", "R"];
@@ -305,6 +306,15 @@ function _outputsEqual(a: any[] | null, b: any[] | null): boolean {
   return true;
 }
 
+function _emptyButtonOutputs(): Record<string, { scenario0: any[] | null; scenario1: any[] | null; scenario0Repeat: any[] | null }> {
+  const out: Record<string, { scenario0: any[] | null; scenario1: any[] | null; scenario0Repeat: any[] | null }> = Object.create(null);
+  for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
+    const b = TOWER_TRIAL_BUTTONS[i];
+    out[b] = { scenario0: null, scenario1: null, scenario0Repeat: null };
+  }
+  return out;
+}
+
 type TrialScenario = {
   heroX: number;
   heroY: number;
@@ -403,6 +413,7 @@ export function towerTrialSimulateProfile(profileKey: string, xmlText: string, f
   const issues: TowerTrialIssue[] = [];
   const predictedRepeatButtons: string[] = [];
   const dynamicFamilyButtons: string[] = [];
+  const buttonOutputs = _emptyButtonOutputs();
 
   if (!xmlText || !xmlText.trim()) {
     issues.push({
@@ -410,7 +421,7 @@ export function towerTrialSimulateProfile(profileKey: string, xmlText: string, f
       kind: "code",
       message: "No Blockly XML found for this profile.",
     });
-    return { ok: false, issues, predictedRepeatButtons, dynamicFamilyButtons };
+    return { ok: false, issues, predictedRepeatButtons, dynamicFamilyButtons, buttonOutputs };
   }
 
   if (reqSet.ids.includes("noHardcodedTraits") || reqSet.ids.includes("noSingleEnemyBlocks") || reqSet.ids.includes("capOnlyFunctions")) {
@@ -423,49 +434,49 @@ export function towerTrialSimulateProfile(profileKey: string, xmlText: string, f
   const needRepeat = reqSet.ids.includes("noRepeatPerButton");
   const needDynamicFamily = reqSet.ids.includes("dynamicFamilyOneButton");
 
-  if (needRepeat || needDynamicFamily) {
-    const ro0 = _makeReadonlyCtx(profileKey, TRIAL_SCENARIOS[0]);
-    const ro1 = _makeReadonlyCtx(profileKey, TRIAL_SCENARIOS[1]);
+  const ro0 = _makeReadonlyCtx(profileKey, TRIAL_SCENARIOS[0]);
+  const ro1 = _makeReadonlyCtx(profileKey, TRIAL_SCENARIOS[1]);
 
-    for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
-      const button = TOWER_TRIAL_BUTTONS[i];
-      const out0 = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro0));
-      const out1 = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro1));
-      const out0b = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro0));
+  for (let i = 0; i < TOWER_TRIAL_BUTTONS.length; i++) {
+    const button = TOWER_TRIAL_BUTTONS[i];
+    const out0 = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro0));
+    const out1 = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro1));
+    const out0b = _normalizeOut(_runWithRo(profileKey, xmlText, button, ro0));
 
-      if (!out0 || !out1) {
-        issues.push({
-          requirementId: "invalidOutput",
-          kind: "code",
-          button,
-          message: `${towerTrialButtonLabel(button)}: Move output invalid in trial sim.`,
-        });
-        continue;
-      }
+    buttonOutputs[button] = { scenario0: out0, scenario1: out1, scenario0Repeat: out0b };
 
-      if (needRepeat && _outputsEqual(out0, out0b)) {
-        predictedRepeatButtons.push(button);
-        issues.push({
-          requirementId: "noRepeatPerButton",
-          kind: "code",
-          button,
-          message: `${towerTrialButtonLabel(button)} repeats the same move twice in a row.`,
-        });
-      }
-
-      if (needDynamicFamily && out0[0] !== out1[0]) {
-        dynamicFamilyButtons.push(button);
-      }
+    if (!out0 || !out1) {
+      issues.push({
+        requirementId: "invalidOutput",
+        kind: "code",
+        button,
+        message: `${towerTrialButtonLabel(button)}: Move output invalid in trial sim.`,
+      });
+      continue;
     }
 
-    if (needDynamicFamily && dynamicFamilyButtons.length === 0) {
+    if (needRepeat && _outputsEqual(out0, out0b)) {
+      predictedRepeatButtons.push(button);
       issues.push({
-        requirementId: "dynamicFamilyOneButton",
+        requirementId: "noRepeatPerButton",
         kind: "code",
-        message: "At least one button must change family across trial phases.",
+        button,
+        message: `${towerTrialButtonLabel(button)} repeats the same move twice in a row.`,
       });
+    }
+
+    if (needDynamicFamily && out0[0] !== out1[0]) {
+      dynamicFamilyButtons.push(button);
     }
   }
 
-  return { ok: issues.length === 0, issues, predictedRepeatButtons, dynamicFamilyButtons };
+  if (needDynamicFamily && dynamicFamilyButtons.length === 0) {
+    issues.push({
+      requirementId: "dynamicFamilyOneButton",
+      kind: "code",
+      message: "At least one button must change family across trial phases.",
+    });
+  }
+
+  return { ok: issues.length === 0, issues, predictedRepeatButtons, dynamicFamilyButtons, buttonOutputs };
 }
