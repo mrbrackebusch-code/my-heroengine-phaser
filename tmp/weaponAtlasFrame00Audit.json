@@ -2,11 +2,11 @@
   "metaPath": "/mnt/c/my-heroengine-phaser/src/generated/weaponAtlasMeta.ts",
   "atlasDir": "/mnt/c/my-heroengine-phaser/assets/weapons/_atlas",
   "totalOriginals": 1490,
-  "checked": 322,
-  "matched": 322,
+  "checked": 123,
+  "matched": 123,
   "mismatched": 0,
   "skippedExcluded": 0,
-  "missingMeta": 84,
+  "missingMeta": 9,
   "missingAtlasKey": 0,
   "missingAtlasFrame": 0,
   "missingAtlasImage": 0,
@@ -15,340 +15,40 @@
     "mismatches": [],
     "missingMeta": [
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vbase.png"
+        "key": "t064__magic__simple__spellcast__bg__vbase",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/magic/t064__magic__simple__spellcast__bg__vbase.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vbase__dup2.png"
+        "key": "t064__polearm__spear__thrust__bg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear__thrust__bg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vbrass.png"
+        "key": "t064__polearm__spear__thrust__fg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear__thrust__fg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vbronze.png"
+        "key": "t192__magic__gnarled__thrust__bg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/magic/t192__magic__gnarled__thrust__bg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vceramic.png"
+        "key": "t192__magic__gnarled__thrust__fg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/magic/t192__magic__gnarled__thrust__fg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vcopper.png"
+        "key": "t192__polearm__dragonspear__thrust__bg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/polearm/t192__polearm__dragonspear__thrust__bg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vdark.png"
+        "key": "t192__polearm__dragonspear__thrust__fg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/polearm/t192__polearm__dragonspear__thrust__fg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vgold.png"
+        "key": "t192__polearm__longspear__thrust__bg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/polearm/t192__polearm__longspear__thrust__bg__vbase__dup2.png"
       },
       {
-        "key": "t064__polearm__spear_off__hurt__bg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__bg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__bg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__bg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__bg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__bg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__bg__vsteel.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vbase.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vbase__dup2.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vbrass.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vbronze.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vceramic.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vcopper.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vdark.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vgold.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__hurt__fg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__hurt__fg__vsteel.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vbase.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vbase__dup2.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vbrass.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vbronze.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vceramic.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vcopper.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vdark.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vgold.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__bg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__bg__vsteel.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vbase.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vbase__dup2.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vbrass.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vbronze.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vceramic.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vcopper.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vdark.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vgold.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__thrust__fg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__thrust__fg__vsteel.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vbase.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vbase__dup2.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vbrass.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vbronze.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vceramic.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vcopper.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vdark.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vgold.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__bg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__bg__vsteel.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vbase",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vbase.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vbase__dup2",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vbase__dup2.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vbrass",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vbrass.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vbronze",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vbronze.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vceramic",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vceramic.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vcopper",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vcopper.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vdark",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vdark.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vgold",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vgold.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__viron",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__viron.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vlight",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vlight.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vmedium",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vmedium.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vred",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vred.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vsilver",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vsilver.png"
-      },
-      {
-        "key": "t064__polearm__spear_off__walk__fg__vsteel",
-        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t064/polearm/t064__polearm__spear_off__walk__fg__vsteel.png"
+        "key": "t192__polearm__longspear__thrust__fg__vbase__dup2",
+        "file": "/mnt/c/my-heroengine-phaser/assets/weapons/t192/polearm/t192__polearm__longspear__thrust__fg__vbase__dup2.png"
       }
     ],
     "missingAtlasKey": [],

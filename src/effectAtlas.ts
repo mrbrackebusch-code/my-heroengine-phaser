@@ -1,6 +1,6 @@
 // src/effectAtlas.ts
 import type Phaser from "phaser";
-import { DEBUG_EFFECT_ATLAS } from "./debugFlags";
+import { DEBUG_EFFECT_ATLAS, WEAPON_DEBUG } from "./debugFlags";
 import { queueSpritesheetOnce } from "./loaderCache";
 import { EFFECT_ATLAS_META } from "./generated/effectAtlasMeta";
 
@@ -52,6 +52,10 @@ export interface EffectSheetDef {
     url: string;
     frameW: number;
     frameH: number;
+    baseLower: string;
+    suffixLower: string;
+    declaredW: number;
+    declaredH: number;
 }
 
 const effectPngs = import.meta.glob("../assets/effects/**/*.png", {
@@ -75,6 +79,18 @@ const EFFECT_SIZE_OVERRIDES: Record<string, { frameW: number; frameH: number }> 
     // Despite the filename "150x125", the correct slice is 125x150.
     "sword arcs": { frameW: 125, frameH: 150 }
 };
+const EFFECT_REMAINDER_ALLOWANCES: Record<string, { remW?: number; remH?: number }> = {
+    // Sword arcs has 6px of horizontal padding in the current sheet.
+    "sword arcs": { remW: 6 }
+};
+const EFFECT_FRAME_ORDER_OVERRIDES: Record<string, { mode: "column-major-blocks"; coreCols: number; blockRows: number }> = {
+    // Strength arc sheet is authored in vertical color blocks. We want numeric
+    // frame increments to walk down rows first: 0,6,12,18,...
+    "sword arcs": { mode: "column-major-blocks", coreCols: 6, blockRows: 5 }
+};
+const EFFECT_TEX_PREFIX = "effects.";
+const EFFECT_ANIM_PREFIXES = ["effect_", "dbg_str_arc_core_"];
+const EFFECT_ATLAS_BUST_TOKEN = (WEAPON_DEBUG || DEBUG_EFFECT_ATLAS) ? Date.now().toString(36) : "";
 
 type EffectSheetPixels = {
     data: Uint8ClampedArray;
@@ -102,7 +118,21 @@ function basenameNoExt(p: string): string {
     return file.replace(/\.png$/i, "");
 }
 
-function parseSizeFromName(name: string): { id: string; frameW: number; frameH: number } | null {
+function _cacheBustUrl(url: string, token: string): string {
+    if (!url || !token) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return url + sep + "v=" + token;
+}
+
+function parseSizeFromName(name: string): {
+    id: string;
+    frameW: number;
+    frameH: number;
+    baseLower: string;
+    suffixLower: string;
+    declaredW: number;
+    declaredH: number;
+} | null {
     const match = /^(.*?)(?:\s+)(\d+)x(\d+)(.*)?$/i.exec(name);
     if (!match) return null;
     const base = String(match[1] || "").trim();
@@ -111,15 +141,108 @@ function parseSizeFromName(name: string): { id: string; frameW: number; frameH: 
     if (suffix && !/^_aura_r\d+$/i.test(suffix)) return null;
     const id = (base + (suffix || "")).trim();
     if (!id) return null;
-    let frameW = parseInt(match[2], 10) | 0;
-    let frameH = parseInt(match[3], 10) | 0;
-    const override = EFFECT_SIZE_OVERRIDES[base.toLowerCase()];
+    const declaredW = parseInt(match[2], 10) | 0;
+    const declaredH = parseInt(match[3], 10) | 0;
+    let frameW = declaredW;
+    let frameH = declaredH;
+    const baseLower = base.toLowerCase();
+    const suffixLower = suffix.toLowerCase();
+    const override = EFFECT_SIZE_OVERRIDES[baseLower];
     if (override) {
         frameW = override.frameW | 0;
         frameH = override.frameH | 0;
     }
     if (frameW <= 0 || frameH <= 0) return null;
-    return { id, frameW, frameH };
+    return { id, frameW, frameH, baseLower, suffixLower, declaredW, declaredH };
+}
+
+function _dedupeOverrideVariants(sheets: EffectSheetDef[]): EffectSheetDef[] {
+    const out: EffectSheetDef[] = [];
+    const grouped = new Map<string, EffectSheetDef[]>();
+
+    for (const sheet of sheets) {
+        const override = EFFECT_SIZE_OVERRIDES[sheet.baseLower];
+        if (!override) {
+            out.push(sheet);
+            continue;
+        }
+        const key = `${sheet.baseLower}::${sheet.suffixLower}`;
+        const bucket = grouped.get(key);
+        if (bucket) bucket.push(sheet);
+        else grouped.set(key, [sheet]);
+    }
+
+    for (const bucket of grouped.values()) {
+        const baseLower = bucket[0]?.baseLower || "";
+        const override = EFFECT_SIZE_OVERRIDES[baseLower];
+        if (!override || bucket.length <= 1) {
+            out.push(...bucket);
+            continue;
+        }
+        const wantW = override.frameW | 0;
+        const wantH = override.frameH | 0;
+        const matching = bucket.filter((s) => (s.declaredW === wantW && s.declaredH === wantH));
+        out.push(...(matching.length ? matching : bucket));
+    }
+
+    return out;
+}
+
+function _isRemainderAllowed(sheet: EffectSheetDef, remW: number, remH: number): boolean {
+    const allowance = EFFECT_REMAINDER_ALLOWANCES[sheet.baseLower];
+    if (!allowance) return false;
+    const maxRemW = allowance.remW ?? 0;
+    const maxRemH = allowance.remH ?? 0;
+    return remW <= maxRemW && remH <= maxRemH;
+}
+
+function _reorderFrameIndicesForSheet(
+    sheet: EffectSheetDef,
+    frameIndices: number[],
+    cols: number,
+    rows: number
+): number[] {
+    const override = EFFECT_FRAME_ORDER_OVERRIDES[sheet.baseLower];
+    if (!override || !frameIndices.length || cols <= 0 || rows <= 0) return frameIndices;
+
+    if (override.mode !== "column-major-blocks") return frameIndices;
+
+    const coreCols = Math.max(1, Math.min(cols, override.coreCols | 0));
+    const blockRows = Math.max(1, Math.min(rows, override.blockRows | 0));
+    const blockCount = Math.floor(rows / blockRows);
+    if (blockCount <= 0) return frameIndices;
+
+    const counts = new Map<number, number>();
+    for (const raw of frameIndices) {
+        const key = raw | 0;
+        counts.set(key, (counts.get(key) || 0) + 1);
+    }
+
+    const ordered: number[] = [];
+    const tryPush = (rawIndex: number) => {
+        const key = rawIndex | 0;
+        const count = counts.get(key) || 0;
+        if (count <= 0) return;
+        ordered.push(key);
+        counts.set(key, count - 1);
+    };
+
+    for (let block = 0; block < blockCount; block++) {
+        const rowStart = block * blockRows;
+        for (let c = 0; c < coreCols; c++) {
+            for (let r = 0; r < blockRows; r++) {
+                const rawRow = rowStart + r;
+                const rawIndex = (rawRow * cols) + c;
+                tryPush(rawIndex);
+            }
+        }
+    }
+
+    // Preserve any remaining frames (including padding rows/cols) in their
+    // original order for stability.
+    for (const raw of frameIndices) tryPush(raw);
+
+    return ordered.length === frameIndices.length ? ordered : frameIndices;
 }
 
 let _scratchCanvas: HTMLCanvasElement | null = null;
@@ -333,7 +456,7 @@ function _yieldToMainThread(): Promise<void> {
     });
 }
 
-const EFFECT_SHEETS: EffectSheetDef[] = [];
+const EFFECT_SHEETS_RAW: EffectSheetDef[] = [];
 const EFFECT_MISSING_SIZE: string[] = [];
 
 for (const [path, url] of Object.entries(effectPngs)) {
@@ -349,13 +472,18 @@ for (const [path, url] of Object.entries(effectPngs)) {
         id: size.id,
         baseName,
         textureKey: `effects.${safeKey}`,
-        url,
+        url: EFFECT_ATLAS_BUST_TOKEN ? _cacheBustUrl(url, EFFECT_ATLAS_BUST_TOKEN) : url,
         frameW: size.frameW,
-        frameH: size.frameH
+        frameH: size.frameH,
+        baseLower: size.baseLower,
+        suffixLower: size.suffixLower,
+        declaredW: size.declaredW,
+        declaredH: size.declaredH
     };
 
-    EFFECT_SHEETS.push(sheet);
+    EFFECT_SHEETS_RAW.push(sheet);
 }
+const EFFECT_SHEETS: EffectSheetDef[] = _dedupeOverrideVariants(EFFECT_SHEETS_RAW);
 
 function _warnEffectSheetIssues(): void {
     if (EFFECT_MISSING_SIZE.length) {
@@ -366,8 +494,41 @@ function _warnEffectSheetIssues(): void {
     }
 }
 
+function _purgeEffectCaches(scene: Phaser.Scene): void {
+    const texMgr: any = scene?.textures as any;
+    const texList = texMgr?.list as Record<string, any> | undefined;
+    if (texList) {
+        const texKeys = Object.keys(texList).filter((k) => k.startsWith(EFFECT_TEX_PREFIX));
+        for (const k of texKeys) {
+            try { texMgr.remove(k); } catch { }
+        }
+    }
+
+    const animMgr: any = scene?.anims as any;
+    const anims: any = animMgr?.anims;
+    let animKeys: string[] = [];
+    if (anims) {
+        if (typeof anims.keys === "function") {
+            try { animKeys = Array.from(anims.keys()); } catch { animKeys = []; }
+        } else if (typeof anims.getKeys === "function") {
+            try { animKeys = anims.getKeys(); } catch { animKeys = []; }
+        } else if (anims.entries) {
+            animKeys = Object.keys(anims.entries);
+        }
+    }
+    for (const key of animKeys) {
+        let shouldRemove = false;
+        for (const prefix of EFFECT_ANIM_PREFIXES) {
+            if (key.startsWith(prefix)) { shouldRemove = true; break; }
+        }
+        if (!shouldRemove) continue;
+        try { animMgr.remove(key); } catch { }
+    }
+}
+
 export function preloadEffectSheets(scene: Phaser.Scene): void {
     _warnEffectSheetIssues();
+    _purgeEffectCaches(scene);
 
     if (!EFFECT_SHEETS.length) {
         console.warn("[effectAtlas] no effect sheets found with WxH in name under assets/effects");
@@ -420,7 +581,7 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
         const sheetH = (pixels ? pixels.h : (source.height | 0)) | 0;
         const remW = sheetW % sheet.frameW;
         const remH = sheetH % sheet.frameH;
-        if (remW || remH) {
+        if ((remW || remH) && !_isRemainderAllowed(sheet, remW, remH)) {
             console.warn(
                 "[effectAtlas] sheet not divisible by frame size",
                 sheet.baseName,
@@ -467,6 +628,8 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
             const lastIndex = Math.max(0, frameCount - 1);
             frameIndices = [lastIndex];
         }
+
+        frameIndices = _reorderFrameIndicesForSheet(sheet, frameIndices, cols, rows);
 
         if (!collisionBounds && frameCount > 0 && pixels) {
             const collisionFrameIndex = frameIndices.length ? (frameIndices[0] | 0) : 0;

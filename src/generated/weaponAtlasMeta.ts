@@ -62,6 +62,21 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t064__blunt__mace__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
     "key": "t064__blunt__mace__thrust__fg__vbase",
     "atlasKey": "tall__consolidated__thrust__8x4",
     "tile": 64,
@@ -75,6 +90,111 @@ export const WEAPON_ATLAS_SHEETS = [
     "totalFrames": 32,
     "cols": 8,
     "rows": 4
+  },
+  {
+    "key": "t064__blunt__mace__universal_hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__blunt__mace__universal_walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__blunt__mace__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__blunt__waraxe__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "blunt",
+    "model": "waraxe",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__blunt__waraxe__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "blunt",
+    "model": "waraxe",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__blunt__waraxe__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "blunt",
+    "model": "waraxe",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__gear__quiver__hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "gear",
+    "model": "quiver",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
   },
   {
     "key": "t064__gear__quiver__shoot__bg__vbase",
@@ -93,7 +213,7 @@ export const WEAPON_ATLAS_SHEETS = [
   },
   {
     "key": "t064__gear__quiver__slash__bg__vbase",
-    "atlasKey": "tall__consolidated__slash__6x4",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
     "tile": 64,
     "category": "gear",
     "model": "quiver",
@@ -134,6 +254,21 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 32,
     "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__gear__quiver__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "gear",
+    "model": "quiver",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
     "rows": 4
   },
   {
@@ -3677,6 +3812,51 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t064__magic__simple__hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__magic__simple__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__magic__simple__spellcast__bg__vbase",
+    "atlasKey": "tall__consolidated__spellcast__7x4",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "spellcast",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 28,
+    "cols": 7,
+    "rows": 4
+  },
+  {
     "key": "t064__magic__simple__spellcast__fg__vbase",
     "atlasKey": "tall__consolidated__spellcast__7x4",
     "tile": 64,
@@ -3689,6 +3869,66 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 28,
     "cols": 7,
+    "rows": 4
+  },
+  {
+    "key": "t064__magic__simple__thrust__bg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "thrust",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__magic__simple__thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__magic__simple__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__magic__simple__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "magic",
+    "model": "simple",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
     "rows": 4
   },
   {
@@ -3715,6 +3955,126 @@ export const WEAPON_ATLAS_SHEETS = [
     "anim": "walk",
     "layer": "fg",
     "variant": "cane",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__polearm__halberd__hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__polearm__halberd__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__polearm__halberd__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__polearm__halberd__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__polearm__scythe__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__polearm__scythe__universal_hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__polearm__scythe__universal_walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__polearm__scythe__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
     "frameW": 64,
     "frameH": 64,
     "totalFrames": 36,
@@ -7052,6 +7412,186 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t064__ranged__crossbow__hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__ranged__crossbow__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__ranged__crossbow__thrust__bg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "thrust",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__crossbow__thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__crossbow__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__crossbow__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "crossbow",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__slingshot__hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__ranged__slingshot__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__ranged__slingshot__shoot__bg__vbase",
+    "atlasKey": "tall__consolidated__shoot__13x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "shoot",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 52,
+    "cols": 13,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__slingshot__shoot__fg__vbase",
+    "atlasKey": "tall__consolidated__shoot__13x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "shoot",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 52,
+    "cols": 13,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__slingshot__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__ranged__slingshot__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "ranged",
+    "model": "slingshot",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
     "key": "t064__sword__arming__universal_combat_idle__bg__vbase",
     "atlasKey": "t064__sword__arming__universal_combat_idle",
     "tile": 64,
@@ -8132,8 +8672,38 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t064__sword__dagger__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "dagger",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__dagger__slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 64,
+    "category": "sword",
+    "model": "dagger",
+    "anim": "slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
     "key": "t064__sword__dagger__slash__fg__vbase",
-    "atlasKey": "tall__consolidated__slash__6x4",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
     "tile": 64,
     "category": "sword",
     "model": "dagger",
@@ -8144,6 +8714,51 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 64,
     "totalFrames": 24,
     "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__dagger__thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "dagger",
+    "anim": "thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__dagger__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "dagger",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__dagger__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "dagger",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
     "rows": 4
   },
   {
@@ -8260,6 +8875,171 @@ export const WEAPON_ATLAS_SHEETS = [
     "anim": "walk",
     "layer": "fg",
     "variant": "red",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__longsword__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__longsword__universal_hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__longsword__universal_walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__longsword__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__rapier__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "rapier",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__rapier__universal_walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "rapier",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__rapier__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "rapier",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__saber__hurt__fg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "saber",
+    "anim": "hurt",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__saber__universal_hurt__bg__vbase",
+    "atlasKey": "tall__consolidated__hurt__6x1",
+    "tile": 64,
+    "category": "sword",
+    "model": "saber",
+    "anim": "hurt",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 6,
+    "cols": 6,
+    "rows": 1
+  },
+  {
+    "key": "t064__sword__saber__universal_walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "saber",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 64,
+    "frameH": 64,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t064__sword__saber__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 64,
+    "category": "sword",
+    "model": "saber",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
     "frameW": 64,
     "frameH": 64,
     "totalFrames": 36,
@@ -11642,6 +12422,216 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t128__sword__katana__slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "katana",
+    "anim": "slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__katana__slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "katana",
+    "anim": "slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__katana__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "katana",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__katana__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "katana",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__longsword_alt__slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "longsword_alt",
+    "anim": "slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__longsword_alt__slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "longsword_alt",
+    "anim": "slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__longsword_alt__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "longsword_alt",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__longsword_alt__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "longsword_alt",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__scimitar__slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "scimitar",
+    "anim": "slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__scimitar__slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 128,
+    "category": "sword",
+    "model": "scimitar",
+    "anim": "slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__scimitar__walk__bg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "scimitar",
+    "anim": "walk",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__sword__scimitar__walk__fg__vbase",
+    "atlasKey": "tall__consolidated__walk__9x4",
+    "tile": 128,
+    "category": "sword",
+    "model": "scimitar",
+    "anim": "walk",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 36,
+    "cols": 9,
+    "rows": 4
+  },
+  {
+    "key": "t128__tools__rod__shoot__bg__vbase",
+    "atlasKey": "tall__consolidated__shoot__13x4",
+    "tile": 128,
+    "category": "tools",
+    "model": "rod",
+    "anim": "shoot",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 52,
+    "cols": 13,
+    "rows": 4
+  },
+  {
+    "key": "t128__tools__rod__shoot__fg__vbase",
+    "atlasKey": "tall__consolidated__shoot__13x4",
+    "tile": 128,
+    "category": "tools",
+    "model": "rod",
+    "anim": "shoot",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 128,
+    "frameH": 128,
+    "totalFrames": 52,
+    "cols": 13,
+    "rows": 4
+  },
+  {
     "key": "t128__tools__smash__slash__bg__vaxe",
     "atlasKey": "t128__tools__smash__slash",
     "tile": 128,
@@ -11727,6 +12717,126 @@ export const WEAPON_ATLAS_SHEETS = [
     "variant": "pickaxe",
     "frameW": 128,
     "frameH": 128,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__club__slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "club",
+    "anim": "slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__club__slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "club",
+    "anim": "slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__flail__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "flail",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__flail__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "flail",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__mace__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__mace__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "mace",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__waraxe__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "waraxe",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__blunt__waraxe__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "blunt",
+    "model": "waraxe",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
     "totalFrames": 24,
     "cols": 6,
     "rows": 4
@@ -13892,6 +15002,66 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t192__polearm__halberd__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__polearm__halberd__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p1",
+    "tile": 192,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__polearm__halberd__attack_thrust__bg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "attack_thrust",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t192__polearm__halberd__attack_thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "polearm",
+    "model": "halberd",
+    "anim": "attack_thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
     "key": "t192__polearm__longspear__thrust__bg__vbase",
     "atlasKey": "t192__polearm__longspear__thrust__p1",
     "tile": 192,
@@ -14279,6 +15449,36 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 192,
     "totalFrames": 32,
     "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t192__polearm__scythe__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__polearm__scythe__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "polearm",
+    "model": "scythe",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
     "rows": 4
   },
   {
@@ -14672,6 +15872,21 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t192__ranged__boomerang__slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "ranged",
+    "model": "boomerang",
+    "anim": "slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
     "key": "t192__sword__glowsword__attack_slash__bg__vblue",
     "atlasKey": "t192__sword__glowsword__attack_slash",
     "tile": 192,
@@ -14732,6 +15947,36 @@ export const WEAPON_ATLAS_SHEETS = [
     "rows": 4
   },
   {
+    "key": "t192__sword__longsword__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__longsword__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
     "key": "t192__sword__longsword__attack_slash_reverse__bg__vbase",
     "atlasKey": "tall__consolidated__slash_reverse__6x4",
     "tile": 192,
@@ -14759,6 +16004,126 @@ export const WEAPON_ATLAS_SHEETS = [
     "frameH": 192,
     "totalFrames": 24,
     "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__longsword__attack_thrust__bg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "attack_thrust",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__longsword__attack_thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "sword",
+    "model": "longsword",
+    "anim": "attack_thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__rapier__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "rapier",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__rapier__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "rapier",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__saber__attack_slash__bg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "saber",
+    "anim": "attack_slash",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__sword__saber__attack_slash__fg__vbase",
+    "atlasKey": "tall__consolidated__slash__6x4__p2",
+    "tile": 192,
+    "category": "sword",
+    "model": "saber",
+    "anim": "attack_slash",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 24,
+    "cols": 6,
+    "rows": 4
+  },
+  {
+    "key": "t192__tools__whip__thrust__bg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "tools",
+    "model": "whip",
+    "anim": "thrust",
+    "layer": "bg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
+    "rows": 4
+  },
+  {
+    "key": "t192__tools__whip__thrust__fg__vbase",
+    "atlasKey": "tall__consolidated__thrust__8x4",
+    "tile": 192,
+    "category": "tools",
+    "model": "whip",
+    "anim": "thrust",
+    "layer": "fg",
+    "variant": "base",
+    "frameW": 192,
+    "frameH": 192,
+    "totalFrames": 32,
+    "cols": 8,
     "rows": 4
   }
 ];
@@ -14804,6 +16169,406 @@ export const WEAPON_ATLAS_DATA = {
           "w": 384,
           "h": 64
         }
+      },
+      "t064__blunt__mace__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 64,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__blunt__mace__universal_hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 64,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__simple__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 128,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__magic__simple__hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 128,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__polearm__halberd__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 192,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__polearm__halberd__hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 192,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__polearm__scythe__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 256,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__polearm__scythe__universal_hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 256,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__crossbow__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 320,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__crossbow__hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 320,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__slingshot__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 384,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__ranged__slingshot__hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 384,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__longsword__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 448,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__longsword__universal_hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 448,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__saber__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 512,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__saber__universal_hurt__bg__vbase": {
+        "frame": {
+          "x": 384,
+          "y": 512,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__gear__quiver__hurt__bg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 576,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__blunt__waraxe__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 640,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__dagger__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 704,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
+      },
+      "t064__sword__rapier__hurt__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 384,
+          "h": 64
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 64
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 64
+        }
       }
     },
     "meta": {
@@ -14811,17 +16576,137 @@ export const WEAPON_ATLAS_DATA = {
       "image": "tall__consolidated__hurt__6x1.png",
       "size": {
         "w": 768,
-        "h": 64
+        "h": 832
       },
       "scale": "1"
     }
   },
   "tall__consolidated__walk__9x4": {
     "frames": {
-      "t064__blunt__flail__walk__fg__vbase": {
+      "t128__sword__katana__walk__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__sword__katana__walk__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__sword__longsword_alt__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 512,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__sword__longsword_alt__walk__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 512,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__sword__scimitar__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t128__sword__scimitar__walk__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 1024,
+          "w": 1152,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 512
+        }
+      },
+      "t064__blunt__flail__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
           "w": 576,
           "h": 256
         },
@@ -14841,7 +16726,467 @@ export const WEAPON_ATLAS_DATA = {
       "t064__blunt__flail__walk__bg__vbase": {
         "frame": {
           "x": 576,
+          "y": 1536,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
           "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__blunt__mace__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1792,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__blunt__mace__universal_walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 1792,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__blunt__waraxe__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2048,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__blunt__waraxe__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 2048,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__simple__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2304,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__magic__simple__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 2304,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__polearm__halberd__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2560,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__polearm__halberd__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 2560,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__polearm__scythe__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2816,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__polearm__scythe__universal_walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 2816,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__ranged__crossbow__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__ranged__crossbow__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 3072,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__ranged__slingshot__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3328,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__ranged__slingshot__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 3328,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__dagger__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3584,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__dagger__walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 3584,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__longsword__walk__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3840,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__longsword__universal_walk__bg__vbase": {
+        "frame": {
+          "x": 576,
+          "y": 3840,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__rapier__walk__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__rapier__universal_walk__bg__vbase": {
+        "frame": {
+          "x": 2880,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__saber__walk__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 256,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__sword__saber__universal_walk__bg__vbase": {
+        "frame": {
+          "x": 2880,
+          "y": 256,
+          "w": 576,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 576,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 576,
+          "h": 256
+        }
+      },
+      "t064__gear__quiver__walk__bg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 512,
           "w": 576,
           "h": 256
         },
@@ -14860,8 +17205,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__polearm__cane__male__walk__fg__vcane": {
         "frame": {
-          "x": 0,
-          "y": 256,
+          "x": 2304,
+          "y": 768,
           "w": 576,
           "h": 256
         },
@@ -14883,18 +17228,198 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "tall__consolidated__walk__9x4.png",
       "size": {
-        "w": 1152,
-        "h": 512
+        "w": 3456,
+        "h": 4096
       },
       "scale": "1"
     }
   },
   "tall__consolidated__thrust__8x4": {
     "frames": {
-      "t064__blunt__mace__thrust__fg__vbase": {
+      "t192__polearm__halberd__attack_thrust__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__polearm__halberd__attack_thrust__bg__vbase": {
+        "frame": {
+          "x": 1536,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__sword__longsword__attack_thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__sword__longsword__attack_thrust__bg__vbase": {
+        "frame": {
+          "x": 1536,
+          "y": 768,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__tools__whip__thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t192__tools__whip__thrust__bg__vbase": {
+        "frame": {
+          "x": 1536,
+          "y": 1536,
+          "w": 1536,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1536,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1536,
+          "h": 768
+        }
+      },
+      "t064__magic__simple__thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2304,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__magic__simple__thrust__bg__vbase": {
+        "frame": {
+          "x": 512,
+          "y": 2304,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__ranged__crossbow__thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2560,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__ranged__crossbow__thrust__bg__vbase": {
+        "frame": {
+          "x": 512,
+          "y": 2560,
           "w": 512,
           "h": 256
         },
@@ -14913,8 +17438,48 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__gear__quiver__thrust__bg__vbase": {
         "frame": {
-          "x": 512,
+          "x": 0,
+          "y": 2816,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
           "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__blunt__mace__thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3072,
+          "w": 512,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 512,
+          "h": 256
+        }
+      },
+      "t064__sword__dagger__thrust__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3328,
           "w": 512,
           "h": 256
         },
@@ -14934,7 +17499,7 @@ export const WEAPON_ATLAS_DATA = {
       "t064__polearm__cane__male__thrust__fg__vcane": {
         "frame": {
           "x": 0,
-          "y": 256,
+          "y": 3584,
           "w": 512,
           "h": 256
         },
@@ -14956,8 +17521,8 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "tall__consolidated__thrust__8x4.png",
       "size": {
-        "w": 1024,
-        "h": 512
+        "w": 3072,
+        "h": 3840
       },
       "scale": "1"
     }
@@ -19834,10 +22399,30 @@ export const WEAPON_ATLAS_DATA = {
           "h": 256
         }
       },
-      "t064__gear__quiver__spellcast__bg__vbase": {
+      "t064__magic__simple__spellcast__bg__vbase": {
         "frame": {
           "x": 448,
           "y": 0,
+          "w": 448,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 448,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 448,
+          "h": 256
+        }
+      },
+      "t064__gear__quiver__spellcast__bg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 256,
           "w": 448,
           "h": 256
         },
@@ -19860,7 +22445,7 @@ export const WEAPON_ATLAS_DATA = {
       "image": "tall__consolidated__spellcast__7x4.png",
       "size": {
         "w": 896,
-        "h": 256
+        "h": 512
       },
       "scale": "1"
     }
@@ -21466,10 +24051,70 @@ export const WEAPON_ATLAS_DATA = {
   },
   "tall__consolidated__shoot__13x4": {
     "frames": {
-      "t064__ranged__bow__arrow__shoot__fg__vbase": {
+      "t128__tools__rod__shoot__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      },
+      "t128__tools__rod__shoot__bg__vbase": {
+        "frame": {
+          "x": 1664,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1664,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 1664,
+          "h": 512
+        }
+      },
+      "t064__ranged__slingshot__shoot__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 512,
+          "w": 832,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 832,
+          "h": 256
+        }
+      },
+      "t064__ranged__slingshot__shoot__bg__vbase": {
+        "frame": {
+          "x": 832,
+          "y": 512,
           "w": 832,
           "h": 256
         },
@@ -21488,8 +24133,28 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__gear__quiver__shoot__bg__vbase": {
         "frame": {
-          "x": 832,
+          "x": 0,
+          "y": 768,
+          "w": 832,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
           "y": 0,
+          "w": 832,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 832,
+          "h": 256
+        }
+      },
+      "t064__ranged__bow__arrow__shoot__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1024,
           "w": 832,
           "h": 256
         },
@@ -21511,18 +24176,551 @@ export const WEAPON_ATLAS_DATA = {
       "app": "heroengine-weapon-atlas",
       "image": "tall__consolidated__shoot__13x4.png",
       "size": {
-        "w": 1664,
-        "h": 256
+        "w": 3328,
+        "h": 1280
       },
       "scale": "1"
     }
   },
-  "tall__consolidated__slash__6x4": {
+  "tall__consolidated__slash__6x4__p1": {
     "frames": {
-      "t064__sword__dagger__slash__fg__vbase": {
+      "t192__blunt__club__slash__fg__vbase": {
         "frame": {
           "x": 0,
           "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__club__slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__flail__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__flail__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 768,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__mace__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__mace__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 1536,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__waraxe__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2304,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__blunt__waraxe__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 2304,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__polearm__halberd__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3072,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__polearm__halberd__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 3072,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      }
+    },
+    "meta": {
+      "app": "heroengine-weapon-atlas",
+      "image": "tall__consolidated__slash__6x4__p1.png",
+      "size": {
+        "w": 2304,
+        "h": 3840
+      },
+      "scale": "1"
+    }
+  },
+  "tall__consolidated__slash__6x4__p2": {
+    "frames": {
+      "t192__polearm__scythe__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__polearm__scythe__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__longsword__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 768,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__longsword__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 768,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__rapier__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 1536,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__rapier__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 1536,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__saber__attack_slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 2304,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__sword__saber__attack_slash__bg__vbase": {
+        "frame": {
+          "x": 1152,
+          "y": 2304,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t192__ranged__boomerang__slash__fg__vbase": {
+        "frame": {
+          "x": 0,
+          "y": 3072,
+          "w": 1152,
+          "h": 768
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 1152,
+          "h": 768
+        },
+        "sourceSize": {
+          "w": 1152,
+          "h": 768
+        }
+      },
+      "t128__sword__katana__slash__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__katana__slash__bg__vbase": {
+        "frame": {
+          "x": 3072,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__longsword_alt__slash__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 512,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__longsword_alt__slash__bg__vbase": {
+        "frame": {
+          "x": 3072,
+          "y": 512,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__scimitar__slash__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t128__sword__scimitar__slash__bg__vbase": {
+        "frame": {
+          "x": 3072,
+          "y": 1024,
+          "w": 768,
+          "h": 512
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 512
+        },
+        "sourceSize": {
+          "w": 768,
+          "h": 512
+        }
+      },
+      "t064__sword__dagger__slash__fg__vbase": {
+        "frame": {
+          "x": 2304,
+          "y": 1536,
+          "w": 384,
+          "h": 256
+        },
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {
+          "x": 0,
+          "y": 0,
+          "w": 384,
+          "h": 256
+        },
+        "sourceSize": {
+          "w": 384,
+          "h": 256
+        }
+      },
+      "t064__sword__dagger__slash__bg__vbase": {
+        "frame": {
+          "x": 2688,
+          "y": 1536,
           "w": 384,
           "h": 256
         },
@@ -21541,8 +24739,8 @@ export const WEAPON_ATLAS_DATA = {
       },
       "t064__gear__quiver__slash__bg__vbase": {
         "frame": {
-          "x": 384,
-          "y": 0,
+          "x": 2304,
+          "y": 1792,
           "w": 384,
           "h": 256
         },
@@ -21562,10 +24760,10 @@ export const WEAPON_ATLAS_DATA = {
     },
     "meta": {
       "app": "heroengine-weapon-atlas",
-      "image": "tall__consolidated__slash__6x4.png",
+      "image": "tall__consolidated__slash__6x4__p2.png",
       "size": {
-        "w": 768,
-        "h": 256
+        "w": 3840,
+        "h": 3840
       },
       "scale": "1"
     }

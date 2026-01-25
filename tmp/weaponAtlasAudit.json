@@ -1,33 +1,33 @@
 {
   "run": {
-    "startedAt": "2026-01-25T16:05:13.195Z",
+    "startedAt": "2026-01-25T18:16:28.290Z",
     "groups": 54,
-    "sheets": 984
+    "sheets": 1075
   },
   "atlasMeta": {
     "tall__consolidated__hurt__6x1": {
       "size": {
         "w": 768,
-        "h": 64
+        "h": 832
       },
-      "images": 2,
-      "fill": 1
+      "images": 22,
+      "fill": 0.8461538461538461
     },
     "tall__consolidated__walk__9x4": {
       "size": {
-        "w": 1152,
-        "h": 512
+        "w": 3456,
+        "h": 4096
       },
-      "images": 3,
-      "fill": 0.75
+      "images": 32,
+      "fill": 0.5208333333333334
     },
     "tall__consolidated__thrust__8x4": {
       "size": {
-        "w": 1024,
-        "h": 512
+        "w": 3072,
+        "h": 3840
       },
-      "images": 3,
-      "fill": 0.75
+      "images": 14,
+      "fill": 0.6888888888888889
     },
     "t064__magic__crystal__universal_hurt": {
       "size": {
@@ -112,10 +112,10 @@
     "tall__consolidated__spellcast__7x4": {
       "size": {
         "w": 896,
-        "h": 256
+        "h": 512
       },
-      "images": 2,
-      "fill": 1
+      "images": 3,
+      "fill": 0.75
     },
     "t064__polearm__spear__hurt": {
       "size": {
@@ -143,19 +143,27 @@
     },
     "tall__consolidated__shoot__13x4": {
       "size": {
-        "w": 1664,
-        "h": 256
+        "w": 3328,
+        "h": 1280
       },
-      "images": 2,
+      "images": 6,
+      "fill": 0.6
+    },
+    "tall__consolidated__slash__6x4__p1": {
+      "size": {
+        "w": 2304,
+        "h": 3840
+      },
+      "images": 10,
       "fill": 1
     },
-    "tall__consolidated__slash__6x4": {
+    "tall__consolidated__slash__6x4__p2": {
       "size": {
-        "w": 768,
-        "h": 256
+        "w": 3840,
+        "h": 3840
       },
-      "images": 2,
-      "fill": 1
+      "images": 18,
+      "fill": 0.72
     },
     "t064__ranged__bow_great__universal_hurt": {
       "size": {

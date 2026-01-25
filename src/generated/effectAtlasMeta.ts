@@ -45,6 +45,155 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "Sword Arcs 125x150": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16723968,
+        10223871,
+        16754688,
+        16724992,
+        16725248,
+        16726016,
+        16725504,
+        16729088
+      ],
+      "tint": 16723968
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 57,
+      "maxX": 102,
+      "maxY": 109,
+      "w": 77,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
   "Sword Arcs 150x125": {
     "frameIndices": [
       0,
@@ -1142,6 +1291,1329 @@ export const EFFECT_ATLAS_META = {
       "centerY": 3
     }
   },
+  "firelion down 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 19,
+      "maxX": 102,
+      "maxY": 108,
+      "w": 78,
+      "h": 90,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 32,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 83,
+      "h": 59,
+      "centerX": 65,
+      "centerY": 61
+    }
+  },
+  "firelion down 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 38,
+      "maxX": 105,
+      "maxY": 91,
+      "w": 83,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion down 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 35,
+      "maxX": 110,
+      "maxY": 91,
+      "w": 92,
+      "h": 57,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion down 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 20,
+      "maxX": 100,
+      "maxY": 109,
+      "w": 75,
+      "h": 90,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion down 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 21,
+      "maxX": 101,
+      "maxY": 107,
+      "w": 76,
+      "h": 87,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 22,
+      "maxX": 96,
+      "maxY": 106,
+      "w": 67,
+      "h": 85,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 23,
+      "maxX": 96,
+      "maxY": 104,
+      "w": 66,
+      "h": 82,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 25,
+      "maxX": 95,
+      "maxY": 103,
+      "w": 62,
+      "h": 79,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 30,
+      "maxX": 92,
+      "maxY": 101,
+      "w": 58,
+      "h": 72,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "firelion down 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 27,
+      "maxX": 92,
+      "maxY": 100,
+      "w": 56,
+      "h": 74,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 27,
+      "maxX": 91,
+      "maxY": 99,
+      "w": 57,
+      "h": 73,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "firelion down 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 29,
+      "maxX": 91,
+      "maxY": 98,
+      "w": 53,
+      "h": 70,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 31,
+      "maxX": 90,
+      "maxY": 98,
+      "w": 52,
+      "h": 68,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion down 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 31,
+      "maxX": 92,
+      "maxY": 97,
+      "w": 57,
+      "h": 67,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 29,
+      "maxX": 93,
+      "maxY": 96,
+      "w": 65,
+      "h": 68,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
+  "firelion down 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 31,
+      "maxX": 94,
+      "maxY": 94,
+      "w": 62,
+      "h": 64,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion down 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 31,
+      "maxX": 103,
+      "maxY": 98,
+      "w": 72,
+      "h": 68,
+      "centerX": 68,
+      "centerY": 65
+    }
+  },
+  "firelion down 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 31,
+      "maxX": 102,
+      "maxY": 97,
+      "w": 80,
+      "h": 67,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 37,
+      "maxX": 99,
+      "maxY": 96,
+      "w": 72,
+      "h": 60,
+      "centerX": 64,
+      "centerY": 67
+    }
+  },
+  "firelion down 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 36,
+      "maxX": 102,
+      "maxY": 91,
+      "w": 78,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        1770498,
+        3868677,
+        6699009,
+        3016196,
+        5311239,
+        3411458
+      ],
+      "tint": 6699009
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 76,
+      "maxY": 79,
+      "w": 26,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        6236675,
+        4331266,
+        3411458,
+        590081,
+        3016195,
+        3935236
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 102,
+      "maxY": 87,
+      "w": 78,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        983553,
+        1245953,
+        524545,
+        6236675,
+        6236419,
+        2426115,
+        3411458
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 88,
+      "w": 83,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        6236675,
+        3016196,
+        2950659,
+        327936,
+        2426115,
+        6763777,
+        2950660
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 40,
+      "maxX": 107,
+      "maxY": 90,
+      "w": 84,
+      "h": 51,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "firelion down 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        6632449,
+        6236419,
+        2950659,
+        5836039,
+        5376775,
+        5770503,
+        5771014
+      ],
+      "tint": 6632449
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 49,
+      "maxX": 75,
+      "maxY": 79,
+      "w": 23,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2950915,
+        2885123,
+        6236419,
+        2754051,
+        2754307,
+        3476227,
+        459009,
+        1770498
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 23,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2229507,
+        6236419,
+        983553,
+        1245953,
+        5245447,
+        3411458,
+        5311494
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 73,
+      "maxY": 76,
+      "w": 22,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        3016196,
+        3409668,
+        6236675,
+        5641477,
+        5245447,
+        6168580,
+        6236419
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 52,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 27,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        5444357,
+        6236419,
+        6168580,
+        2950659,
+        3868677,
+        3475460,
+        2163970
+      ],
+      "tint": 5444357
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 53,
+      "maxX": 77,
+      "maxY": 74,
+      "w": 28,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1245953,
+        2885123,
+        2950915,
+        6168580,
+        6236419,
+        5836039,
+        6301187,
+        3213060
+      ],
+      "tint": 6168580
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 52,
+      "maxX": 80,
+      "maxY": 74,
+      "w": 32,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion down 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2950659,
+        2885123,
+        9510665,
+        6236419,
+        5311239,
+        3147524,
+        4331266,
+        1901570
+      ],
+      "tint": 9510665
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 52,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 36,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        6236419,
+        6236675,
+        1114625,
+        3016196,
+        3278595,
+        4331266
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 76,
+      "w": 40,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        3016196,
+        6236419,
+        6763777,
+        3409668,
+        2950659,
+        2819587,
+        590081
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 44,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        327936,
+        6236675,
+        2950915,
+        2819587,
+        5114630,
+        1049089
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 79,
+      "w": 46,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion down 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2950659,
+        2885123,
+        6236419,
+        5311494,
+        2819587,
+        5838597,
+        2032898,
+        459009
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 51,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        3016196,
+        6236675,
+        524545,
+        3081988,
+        3278595,
+        1245953
+      ],
+      "tint": 6236675
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 48,
+      "maxX": 91,
+      "maxY": 80,
+      "w": 54,
+      "h": 33,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        6236419,
+        327936,
+        3935236,
+        5245447,
+        1245953,
+        2950915,
+        3016196
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 46,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 60,
+      "h": 36,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        6168580,
+        6236419,
+        262400,
+        590081,
+        2688515,
+        983553
+      ],
+      "tint": 6168580
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 45,
+      "maxX": 94,
+      "maxY": 83,
+      "w": 61,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        3868677,
+        2950659,
+        459009,
+        590081,
+        6236419,
+        6236675,
+        2229507
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 46,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 68,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion down 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        6236419,
+        1245953,
+        2032898,
+        3869188,
+        2950659,
+        2622979,
+        3935236
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 85,
+      "w": 69,
+      "h": 43,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion down 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2885123,
+        2950659,
+        6236419,
+        6236675,
+        2754051,
+        590081,
+        2950915,
+        459009
+      ],
+      "tint": 6236419
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 101,
+      "maxY": 87,
+      "w": 74,
+      "h": 47,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
   "firelion down texture 128x128": {
     "frameIndices": [
       0,
@@ -1181,6 +2653,1350 @@ export const EFFECT_ATLAS_META = {
       "h": 128,
       "centerX": 64,
       "centerY": 64
+    }
+  },
+  "firelion left 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 22,
+      "maxX": 98,
+      "maxY": 103,
+      "w": 72,
+      "h": 82,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 36,
+      "maxX": 105,
+      "maxY": 88,
+      "w": 84,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "firelion left 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 41,
+      "maxX": 107,
+      "maxY": 87,
+      "w": 85,
+      "h": 47,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion left 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 37,
+      "maxX": 107,
+      "maxY": 90,
+      "w": 89,
+      "h": 54,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion left 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 25,
+      "maxX": 101,
+      "maxY": 103,
+      "w": 70,
+      "h": 79,
+      "centerX": 67,
+      "centerY": 64
+    }
+  },
+  "firelion left 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 24,
+      "maxX": 94,
+      "maxY": 100,
+      "w": 62,
+      "h": 77,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "firelion left 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 24,
+      "maxX": 86,
+      "maxY": 101,
+      "w": 56,
+      "h": 78,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 28,
+      "maxX": 93,
+      "maxY": 98,
+      "w": 60,
+      "h": 71,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 26,
+      "maxX": 92,
+      "maxY": 100,
+      "w": 58,
+      "h": 75,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 31,
+      "maxX": 87,
+      "maxY": 96,
+      "w": 49,
+      "h": 66,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion left 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 33,
+      "maxX": 85,
+      "maxY": 97,
+      "w": 45,
+      "h": 65,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion left 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 33,
+      "maxX": 87,
+      "maxY": 97,
+      "w": 49,
+      "h": 65,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion left 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 31,
+      "maxX": 92,
+      "maxY": 95,
+      "w": 55,
+      "h": 65,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 33,
+      "maxX": 94,
+      "maxY": 97,
+      "w": 59,
+      "h": 65,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion left 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 35,
+      "maxX": 95,
+      "maxY": 91,
+      "w": 59,
+      "h": 57,
+      "centerX": 66,
+      "centerY": 63
+    }
+  },
+  "firelion left 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 37,
+      "maxX": 90,
+      "maxY": 93,
+      "w": 59,
+      "h": 57,
+      "centerX": 61,
+      "centerY": 65
+    }
+  },
+  "firelion left 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 34,
+      "maxX": 98,
+      "maxY": 90,
+      "w": 70,
+      "h": 57,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "firelion left 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 37,
+      "maxX": 101,
+      "maxY": 83,
+      "w": 70,
+      "h": 47,
+      "centerX": 67,
+      "centerY": 60
+    }
+  },
+  "firelion left 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 38,
+      "maxX": 102,
+      "maxY": 93,
+      "w": 73,
+      "h": 56,
+      "centerX": 66,
+      "centerY": 66
+    }
+  },
+  "firelion left 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 98,
+      "maxY": 92,
+      "w": 71,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 67
+    }
+  },
+  "firelion left 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 39,
+      "maxX": 102,
+      "maxY": 91,
+      "w": 79,
+      "h": 53,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        4196613,
+        1377025,
+        15941133,
+        1901570,
+        918017,
+        2163971,
+        2951171
+      ],
+      "tint": 15941133
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 23,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        327936,
+        655617,
+        1901570,
+        852481,
+        196608,
+        918017,
+        786945,
+        393473
+      ],
+      "tint": 16745732
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 41,
+      "maxX": 101,
+      "maxY": 85,
+      "w": 75,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion left 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        655617,
+        590081,
+        459008,
+        262400,
+        327936,
+        196608,
+        524545
+      ],
+      "tint": 5573894
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 104,
+      "maxY": 87,
+      "w": 81,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        655617,
+        393472,
+        327936,
+        590081,
+        1901570,
+        196608,
+        918017
+      ],
+      "tint": 5184771
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 39,
+      "maxX": 106,
+      "maxY": 88,
+      "w": 86,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2426371,
+        2033410,
+        590081,
+        4656133,
+        9575177,
+        918017,
+        3147524,
+        2098946
+      ],
+      "tint": 9575177
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 53,
+      "maxX": 72,
+      "maxY": 76,
+      "w": 18,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2032642,
+        2819587,
+        3214850,
+        1507842,
+        2229250,
+        852481,
+        3278596,
+        1967106
+      ],
+      "tint": 6624774
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 53,
+      "maxX": 73,
+      "maxY": 75,
+      "w": 19,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3081731,
+        4793857,
+        4655365,
+        3606788,
+        2950659,
+        1245953,
+        918017,
+        327936
+      ],
+      "tint": 4793857
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 52,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 24,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion left 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        327936,
+        655617,
+        3213060,
+        4655621,
+        13719302,
+        3409924,
+        1180417,
+        918017
+      ],
+      "tint": 13719302
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 55,
+      "maxX": 75,
+      "maxY": 74,
+      "w": 24,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4196613,
+        3147524,
+        1180417,
+        1114881,
+        4066564,
+        3868677,
+        3016451,
+        983809
+      ],
+      "tint": 6831616
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 54,
+      "maxX": 77,
+      "maxY": 72,
+      "w": 28,
+      "h": 19,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion left 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        655617,
+        786945,
+        983553,
+        852481,
+        590081,
+        3016195,
+        10569732,
+        2950659
+      ],
+      "tint": 10569732
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 55,
+      "maxX": 78,
+      "maxY": 75,
+      "w": 30,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1508098,
+        524545,
+        918017,
+        852481,
+        2032642,
+        786945,
+        196608,
+        655617
+      ],
+      "tint": 12276485
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 54,
+      "maxX": 79,
+      "maxY": 74,
+      "w": 34,
+      "h": 21,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        590081,
+        196608,
+        327936,
+        1901570,
+        786945,
+        524545,
+        852481,
+        262144
+      ],
+      "tint": 5901575
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 74,
+      "w": 39,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion left 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        262400,
+        459008,
+        918017,
+        786945,
+        1311489,
+        590081,
+        4786949,
+        4590085
+      ],
+      "tint": 16338954
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 52,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 43,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        590081,
+        655617,
+        1901570,
+        918017,
+        262400,
+        327936,
+        459008
+      ],
+      "tint": 6831872
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 49,
+      "maxX": 87,
+      "maxY": 78,
+      "w": 46,
+      "h": 30,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        590081,
+        655617,
+        196608,
+        327936,
+        918017,
+        2032642,
+        1573634
+      ],
+      "tint": 5639686
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 50,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 51,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        196608,
+        327936,
+        1901570,
+        131072,
+        3803140,
+        786945,
+        2032642
+      ],
+      "tint": 12276485
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 90,
+      "maxY": 79,
+      "w": 54,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        459008,
+        262400,
+        196608,
+        393472,
+        1573634,
+        327936,
+        655617
+      ],
+      "tint": 7083527
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 58,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        655617,
+        590081,
+        393472,
+        852481,
+        918017,
+        196608,
+        2032642,
+        327936
+      ],
+      "tint": 14313220
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 44,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 61,
+      "h": 39,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "firelion left 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        327936,
+        196608,
+        393472,
+        655617,
+        786945,
+        2032642,
+        1901570
+      ],
+      "tint": 5184771
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 46,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 68,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion left 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        196608,
+        655617,
+        327936,
+        524545,
+        786945,
+        918017,
+        393472
+      ],
+      "tint": 5573894
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 84,
+      "w": 71,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        196608,
+        852481,
+        655617,
+        786945,
+        393472,
+        655873,
+        918017,
+        262400
+      ],
+      "tint": 5573894
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 41,
+      "maxX": 100,
+      "maxY": 85,
+      "w": 75,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 63
     }
   },
   "firelion left texture 128x128": {
@@ -1224,6 +4040,1350 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "firelion right 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 24,
+      "maxX": 101,
+      "maxY": 103,
+      "w": 71,
+      "h": 80,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 37,
+      "maxX": 103,
+      "maxY": 92,
+      "w": 80,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 38,
+      "maxX": 109,
+      "maxY": 88,
+      "w": 86,
+      "h": 51,
+      "centerX": 67,
+      "centerY": 63
+    }
+  },
+  "firelion right 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 17,
+      "minY": 35,
+      "maxX": 109,
+      "maxY": 94,
+      "w": 93,
+      "h": 60,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion right 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 24,
+      "maxX": 95,
+      "maxY": 103,
+      "w": 68,
+      "h": 80,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 26,
+      "maxX": 94,
+      "maxY": 101,
+      "w": 65,
+      "h": 76,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 27,
+      "maxX": 93,
+      "maxY": 101,
+      "w": 59,
+      "h": 75,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 29,
+      "maxX": 89,
+      "maxY": 98,
+      "w": 51,
+      "h": 70,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 29,
+      "maxX": 85,
+      "maxY": 103,
+      "w": 46,
+      "h": 75,
+      "centerX": 63,
+      "centerY": 66
+    }
+  },
+  "firelion right 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 29,
+      "maxX": 89,
+      "maxY": 96,
+      "w": 50,
+      "h": 68,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion right 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 31,
+      "maxX": 86,
+      "maxY": 97,
+      "w": 48,
+      "h": 67,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 31,
+      "maxX": 89,
+      "maxY": 95,
+      "w": 52,
+      "h": 65,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion right 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 34,
+      "maxX": 90,
+      "maxY": 94,
+      "w": 54,
+      "h": 61,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 35,
+      "maxX": 91,
+      "maxY": 94,
+      "w": 52,
+      "h": 60,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "firelion right 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 36,
+      "maxX": 90,
+      "maxY": 92,
+      "w": 57,
+      "h": 57,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "firelion right 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 37,
+      "maxX": 96,
+      "maxY": 92,
+      "w": 65,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 38,
+      "maxX": 97,
+      "maxY": 91,
+      "w": 67,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 39,
+      "maxX": 100,
+      "maxY": 95,
+      "w": 67,
+      "h": 57,
+      "centerX": 67,
+      "centerY": 67
+    }
+  },
+  "firelion right 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 41,
+      "maxX": 99,
+      "maxY": 93,
+      "w": 73,
+      "h": 53,
+      "centerX": 63,
+      "centerY": 67
+    }
+  },
+  "firelion right 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 37,
+      "maxX": 102,
+      "maxY": 94,
+      "w": 78,
+      "h": 58,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "firelion right 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688,
+        16769627
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 41,
+      "maxX": 103,
+      "maxY": 91,
+      "w": 77,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "firelion right 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        2032642,
+        655617,
+        2426115,
+        918017,
+        1770242,
+        6697217,
+        2950659
+      ],
+      "tint": 6697217
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 51,
+      "maxX": 74,
+      "maxY": 77,
+      "w": 22,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        327936,
+        459008,
+        262400,
+        393472,
+        918017,
+        590081,
+        655617
+      ],
+      "tint": 10571524
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 102,
+      "maxY": 87,
+      "w": 79,
+      "h": 47,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        655617,
+        918017,
+        590081,
+        459008,
+        786945,
+        655873,
+        1901570
+      ],
+      "tint": 10824457
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 104,
+      "maxY": 88,
+      "w": 81,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        196608,
+        393472,
+        655617,
+        786945,
+        327936,
+        262400,
+        590081
+      ],
+      "tint": 5836038
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 39,
+      "maxX": 107,
+      "maxY": 88,
+      "w": 86,
+      "h": 50,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        3149315,
+        2098178,
+        918017,
+        4656645,
+        983554,
+        1573634,
+        2557187
+      ],
+      "tint": 4656645
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 50,
+      "maxX": 74,
+      "maxY": 76,
+      "w": 21,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion right 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        3934213,
+        4728065,
+        3671812,
+        983553,
+        16670217,
+        4527364,
+        9841671
+      ],
+      "tint": 4728065
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 53,
+      "maxX": 73,
+      "maxY": 74,
+      "w": 21,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        7147784,
+        2819587,
+        459008,
+        5573894,
+        8920840,
+        524544,
+        16542983,
+        4655621
+      ],
+      "tint": 7147784
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 23,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1573634,
+        459008,
+        1573890,
+        1311489,
+        4327685,
+        3147523,
+        4132611,
+        13779977
+      ],
+      "tint": 13779977
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 55,
+      "maxX": 76,
+      "maxY": 75,
+      "w": 25,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2032642,
+        852481,
+        10304774,
+        393472,
+        6757638,
+        3607044,
+        6700288,
+        4852229
+      ],
+      "tint": 10304774
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 56,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 27,
+      "h": 19,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        3017218,
+        393473,
+        6434818,
+        262400,
+        1311489,
+        2032642,
+        655617
+      ],
+      "tint": 6434818
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2032642,
+        3016451,
+        655617,
+        393472,
+        1967106,
+        590081,
+        2950659,
+        1704962
+      ],
+      "tint": 12993032
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 55,
+      "maxX": 80,
+      "maxY": 75,
+      "w": 34,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        327936,
+        590081,
+        4196613,
+        4524549,
+        1573634,
+        918017,
+        655617
+      ],
+      "tint": 6631681
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 54,
+      "maxX": 82,
+      "maxY": 75,
+      "w": 39,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        327936,
+        852481,
+        196608,
+        262400,
+        4131077,
+        1377025,
+        2491651,
+        3540996
+      ],
+      "tint": 10426380
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 52,
+      "maxX": 85,
+      "maxY": 76,
+      "w": 44,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        655617,
+        918017,
+        852481,
+        590081,
+        1836034,
+        262144,
+        327936,
+        524545
+      ],
+      "tint": 9311498
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 51,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 46,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        590081,
+        852481,
+        459009,
+        393472,
+        262400,
+        5578244,
+        16282629,
+        3934724
+      ],
+      "tint": 5578244
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 51,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        918017,
+        327936,
+        590081,
+        852481,
+        2819587,
+        459008,
+        1442561,
+        721409
+      ],
+      "tint": 6692358
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 52,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion right 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        655617,
+        918017,
+        327936,
+        262400,
+        590081,
+        1901570,
+        393472
+      ],
+      "tint": 4723972
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 47,
+      "maxX": 91,
+      "maxY": 82,
+      "w": 56,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion right 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        196608,
+        327936,
+        459008,
+        524545,
+        786945,
+        852481,
+        262400,
+        393472
+      ],
+      "tint": 4656645
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 46,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 62,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        327936,
+        590081,
+        655617,
+        918017,
+        393472,
+        2754051,
+        2819587
+      ],
+      "tint": 11159046
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 44,
+      "maxX": 95,
+      "maxY": 81,
+      "w": 64,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion right 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        852481,
+        918017,
+        327936,
+        655617,
+        262400,
+        196608,
+        2819587,
+        786945
+      ],
+      "tint": 10426380
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 85,
+      "w": 68,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        918017,
+        327936,
+        262400,
+        852481,
+        459009,
+        459008,
+        655617,
+        590081
+      ],
+      "tint": 5378054
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 87,
+      "w": 73,
+      "h": 45,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
   "firelion right texture 128x128": {
     "frameIndices": [
       0,
@@ -1263,6 +5423,1329 @@ export const EFFECT_ATLAS_META = {
       "h": 128,
       "centerX": 64,
       "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 26,
+      "maxX": 101,
+      "maxY": 104,
+      "w": 75,
+      "h": 79,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 36,
+      "maxX": 111,
+      "maxY": 90,
+      "w": 93,
+      "h": 55,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion up 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 37,
+      "maxX": 108,
+      "maxY": 89,
+      "w": 89,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "firelion up 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 7,
+      "minY": 35,
+      "maxX": 110,
+      "maxY": 92,
+      "w": 104,
+      "h": 58,
+      "centerX": 59,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 26,
+      "maxX": 98,
+      "maxY": 102,
+      "w": 70,
+      "h": 77,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 26,
+      "maxX": 97,
+      "maxY": 102,
+      "w": 66,
+      "h": 77,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 26,
+      "maxX": 96,
+      "maxY": 101,
+      "w": 66,
+      "h": 76,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 28,
+      "maxX": 96,
+      "maxY": 100,
+      "w": 64,
+      "h": 73,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 28,
+      "maxX": 94,
+      "maxY": 101,
+      "w": 59,
+      "h": 74,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion up 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 31,
+      "maxX": 91,
+      "maxY": 98,
+      "w": 56,
+      "h": 68,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 28,
+      "maxX": 93,
+      "maxY": 98,
+      "w": 63,
+      "h": 71,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "firelion up 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 33,
+      "maxX": 94,
+      "maxY": 100,
+      "w": 58,
+      "h": 68,
+      "centerX": 66,
+      "centerY": 67
+    }
+  },
+  "firelion up 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 33,
+      "maxX": 98,
+      "maxY": 98,
+      "w": 65,
+      "h": 66,
+      "centerX": 66,
+      "centerY": 66
+    }
+  },
+  "firelion up 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 34,
+      "maxX": 96,
+      "maxY": 93,
+      "w": 65,
+      "h": 60,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 36,
+      "maxX": 96,
+      "maxY": 97,
+      "w": 63,
+      "h": 62,
+      "centerX": 65,
+      "centerY": 67
+    }
+  },
+  "firelion up 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 33,
+      "maxX": 97,
+      "maxY": 96,
+      "w": 66,
+      "h": 64,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion up 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 37,
+      "maxX": 100,
+      "maxY": 94,
+      "w": 70,
+      "h": 58,
+      "centerX": 66,
+      "centerY": 66
+    }
+  },
+  "firelion up 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 31,
+      "maxX": 101,
+      "maxY": 98,
+      "w": 69,
+      "h": 68,
+      "centerX": 67,
+      "centerY": 65
+    }
+  },
+  "firelion up 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 33,
+      "maxX": 96,
+      "maxY": 93,
+      "w": 75,
+      "h": 61,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "firelion up 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 33,
+      "maxX": 101,
+      "maxY": 84,
+      "w": 78,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 59
+    }
+  },
+  "firelion up 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13770000,
+        16146438,
+        16754688
+      ],
+      "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 36,
+      "maxX": 105,
+      "maxY": 90,
+      "w": 87,
+      "h": 55,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "firelion up 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1180417,
+        1114625,
+        1377025,
+        1377537,
+        983553,
+        1508609,
+        1245953
+      ],
+      "tint": 6631426
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 77,
+      "maxY": 79,
+      "w": 27,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        1180161,
+        918017,
+        2557187,
+        918784,
+        1443073
+      ],
+      "tint": 5903622
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 40,
+      "maxX": 105,
+      "maxY": 87,
+      "w": 80,
+      "h": 48,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        1245953,
+        1377025,
+        1049089,
+        1180161,
+        1180417
+      ],
+      "tint": 5705223
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 41,
+      "maxX": 103,
+      "maxY": 89,
+      "w": 79,
+      "h": 49,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        1180417,
+        1180161,
+        1245953,
+        1114881,
+        918017
+      ],
+      "tint": 5903622
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 37,
+      "maxX": 107,
+      "maxY": 91,
+      "w": 88,
+      "h": 55,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1114625,
+        1377025,
+        1311489,
+        918017,
+        852481,
+        1180417,
+        721409
+      ],
+      "tint": 6561285
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 50,
+      "maxX": 75,
+      "maxY": 79,
+      "w": 22,
+      "h": 30,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1180417,
+        786945,
+        1114625,
+        852481,
+        918784,
+        1180161,
+        3016707,
+        2032642
+      ],
+      "tint": 6566402
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 25,
+      "h": 26,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1049089,
+        918784,
+        1180161,
+        1114625,
+        1245953,
+        3016707,
+        1180417
+      ],
+      "tint": 3809792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 50,
+      "maxX": 77,
+      "maxY": 77,
+      "w": 28,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1114881,
+        918784,
+        852481,
+        1442562,
+        1180417,
+        1508609,
+        1377281
+      ],
+      "tint": 6167301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 51,
+      "maxX": 77,
+      "maxY": 74,
+      "w": 26,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion up 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        983553,
+        918784,
+        918017,
+        1245953,
+        1377281,
+        1114625,
+        1443073
+      ],
+      "tint": 6764545
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 54,
+      "maxX": 77,
+      "maxY": 73,
+      "w": 28,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1180417,
+        983553,
+        1114625,
+        1180161,
+        1377281,
+        1245953
+      ],
+      "tint": 5903366
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 54,
+      "maxX": 79,
+      "maxY": 75,
+      "w": 32,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        918784,
+        1049345,
+        1311489,
+        1180417,
+        1180161
+      ],
+      "tint": 5573895
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 54,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 38,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1114625,
+        918017,
+        852481,
+        1311489,
+        1049089,
+        1180161,
+        1311745
+      ],
+      "tint": 5705223
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 51,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 40,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1377025,
+        1245953,
+        1114881,
+        1378304,
+        852481,
+        1443073,
+        1311490
+      ],
+      "tint": 7215366
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 43,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1377025,
+        1180417,
+        1114625,
+        3083011,
+        1180161,
+        1114881
+      ],
+      "tint": 6101765
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 79,
+      "w": 46,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        1114625,
+        852481,
+        1377025,
+        1180161,
+        918017,
+        1049089,
+        1114881
+      ],
+      "tint": 6168580
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 90,
+      "maxY": 78,
+      "w": 52,
+      "h": 31,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "firelion up 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1180161,
+        1114625,
+        1442561,
+        1245953,
+        1377025,
+        1443073
+      ],
+      "tint": 5903622
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 47,
+      "maxX": 91,
+      "maxY": 81,
+      "w": 56,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        1180417,
+        1180161,
+        918017,
+        2688515,
+        918784
+      ],
+      "tint": 6167301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 61,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        1180417,
+        1180161,
+        721409,
+        459009,
+        1245953
+      ],
+      "tint": 5837830
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 45,
+      "maxX": 94,
+      "maxY": 83,
+      "w": 62,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        5837830,
+        1114625,
+        1180417,
+        1180161,
+        3016707,
+        1245953
+      ],
+      "tint": 5837830
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 83,
+      "w": 66,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1180417,
+        1377025,
+        1245953,
+        1114625,
+        918784,
+        262144
+      ],
+      "tint": 5705223
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 70,
+      "h": 45,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "firelion up 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        786945,
+        852481,
+        1114625,
+        918784,
+        1180417,
+        4133379,
+        1180161,
+        1377025
+      ],
+      "tint": 5903622
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 43,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 75,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 65
     }
   },
   "firelion up texture 128x128": {
@@ -1874,6 +7357,1329 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "iceshield 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 39,
+      "maxX": 90,
+      "maxY": 88,
+      "w": 53,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 41,
+      "maxX": 103,
+      "maxY": 85,
+      "w": 78,
+      "h": 45,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 39,
+      "maxX": 103,
+      "maxY": 89,
+      "w": 81,
+      "h": 51,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 36,
+      "maxX": 107,
+      "maxY": 90,
+      "w": 89,
+      "h": 55,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 38,
+      "maxX": 87,
+      "maxY": 88,
+      "w": 45,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 42,
+      "maxX": 84,
+      "maxY": 87,
+      "w": 43,
+      "h": 46,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "iceshield 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 39,
+      "maxX": 83,
+      "maxY": 86,
+      "w": 40,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 41,
+      "maxX": 84,
+      "maxY": 85,
+      "w": 40,
+      "h": 45,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 43,
+      "maxX": 83,
+      "maxY": 83,
+      "w": 39,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 44,
+      "maxX": 82,
+      "maxY": 84,
+      "w": 39,
+      "h": 41,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 42,
+      "maxX": 85,
+      "maxY": 82,
+      "w": 40,
+      "h": 41,
+      "centerX": 66,
+      "centerY": 62
+    }
+  },
+  "iceshield 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        11859446,
+        6791089
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 43,
+      "maxX": 84,
+      "maxY": 84,
+      "w": 41,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 45,
+      "maxX": 87,
+      "maxY": 80,
+      "w": 45,
+      "h": 36,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 43,
+      "maxX": 85,
+      "maxY": 81,
+      "w": 45,
+      "h": 39,
+      "centerX": 63,
+      "centerY": 62
+    }
+  },
+  "iceshield 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        11859446,
+        6791089
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 45,
+      "maxX": 90,
+      "maxY": 82,
+      "w": 53,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 42,
+      "maxX": 91,
+      "maxY": 84,
+      "w": 56,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 90,
+      "maxY": 81,
+      "w": 57,
+      "h": 36,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 45,
+      "maxX": 94,
+      "maxY": 83,
+      "w": 64,
+      "h": 39,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 42,
+      "maxX": 98,
+      "maxY": 84,
+      "w": 66,
+      "h": 43,
+      "centerX": 66,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 42,
+      "maxX": 99,
+      "maxY": 86,
+      "w": 72,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11000539,
+        6791089,
+        11859446
+      ],
+      "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 73,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        1053973,
+        2437168,
+        2371375,
+        2437425,
+        1647395,
+        2503218
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 48,
+      "maxX": 77,
+      "maxY": 80,
+      "w": 27,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        2437425,
+        2437168,
+        922130,
+        922387,
+        2503218,
+        1646881,
+        988180
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 78,
+      "h": 46,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        2371375,
+        2305326,
+        1053973,
+        2437425,
+        2503218
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 82,
+      "h": 49,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "iceshield 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        2371375,
+        2437425,
+        2437168,
+        2305326,
+        922387
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 39,
+      "maxX": 107,
+      "maxY": 89,
+      "w": 87,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        922130,
+        2305582,
+        2503218,
+        1053973,
+        2437168,
+        1647138,
+        988180,
+        922387
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 49,
+      "maxX": 75,
+      "maxY": 79,
+      "w": 24,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        1053973,
+        2437425,
+        1515038,
+        922387,
+        2503218
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 50,
+      "maxX": 77,
+      "maxY": 78,
+      "w": 27,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        922387,
+        988180,
+        2503218,
+        1053973,
+        1120023,
+        4611678
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 49,
+      "maxX": 77,
+      "maxY": 77,
+      "w": 25,
+      "h": 29,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        2437425,
+        988180,
+        1053973,
+        2437168,
+        2569268
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 79,
+      "maxY": 78,
+      "w": 28,
+      "h": 27,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "iceshield 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437425,
+        1053973,
+        922387,
+        2305326,
+        987923,
+        1515295
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 77,
+      "maxY": 74,
+      "w": 26,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "iceshield 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        1053973,
+        2437168,
+        2503475,
+        988180,
+        2503218,
+        1646881
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 51,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "iceshield 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437425,
+        988180,
+        2503218,
+        2437168,
+        1581088,
+        2569268
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 76,
+      "w": 36,
+      "h": 25,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        922387,
+        2437168,
+        2437425,
+        1910310,
+        2371375
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 51,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 39,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "iceshield 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        2371375,
+        2305326,
+        2437425,
+        1053973,
+        1910310
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 51,
+      "maxX": 86,
+      "maxY": 77,
+      "w": 45,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        1053973,
+        2371375,
+        1185816,
+        2437425,
+        1646881
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 51,
+      "maxX": 88,
+      "maxY": 77,
+      "w": 49,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        2437425,
+        2371375,
+        1053973,
+        2305326,
+        988180
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 50,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 52,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        2437425,
+        2371375,
+        1910310,
+        1646881,
+        1053973
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 48,
+      "maxX": 92,
+      "maxY": 80,
+      "w": 55,
+      "h": 33,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        1646881,
+        2437425,
+        2371375,
+        1053973,
+        2305326,
+        2503218
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 80,
+      "w": 60,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437425,
+        2437168,
+        2305326,
+        2371375,
+        1053973,
+        1119766
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 48,
+      "maxX": 95,
+      "maxY": 82,
+      "w": 64,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "iceshield 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2503218,
+        2437168,
+        2437425,
+        2305326,
+        2502962,
+        988180
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 45,
+      "maxX": 95,
+      "maxY": 83,
+      "w": 66,
+      "h": 39,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        2437425,
+        2503218,
+        2371375,
+        988180,
+        1646881
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 43,
+      "maxX": 100,
+      "maxY": 84,
+      "w": 73,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2305582,
+        922130,
+        2437168,
+        2371375,
+        1646881,
+        922387,
+        2503218,
+        2437425
+      ],
+      "tint": 2305582
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 44,
+      "maxX": 100,
+      "maxY": 85,
+      "w": 73,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
   "iceshield textrure 128x128": {
     "frameIndices": [
       0,
@@ -1955,6 +8761,1392 @@ export const EFFECT_ATLAS_META = {
       "h": 7,
       "centerX": 59,
       "centerY": 88
+    }
+  },
+  "icetacle 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 18,
+      "minY": 21,
+      "maxX": 106,
+      "maxY": 107,
+      "w": 89,
+      "h": 87,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        7052993,
+        9032935,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 38,
+      "maxX": 104,
+      "maxY": 90,
+      "w": 81,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 38,
+      "maxX": 106,
+      "maxY": 91,
+      "w": 84,
+      "h": 54,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 36,
+      "maxX": 107,
+      "maxY": 92,
+      "w": 89,
+      "h": 57,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 22,
+      "maxX": 101,
+      "maxY": 104,
+      "w": 77,
+      "h": 83,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "icetacle 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 24,
+      "maxX": 101,
+      "maxY": 106,
+      "w": 72,
+      "h": 83,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 24,
+      "maxX": 103,
+      "maxY": 104,
+      "w": 76,
+      "h": 81,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 25,
+      "maxX": 97,
+      "maxY": 97,
+      "w": 67,
+      "h": 73,
+      "centerX": 64,
+      "centerY": 61
+    }
+  },
+  "icetacle 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 27,
+      "maxX": 97,
+      "maxY": 102,
+      "w": 66,
+      "h": 76,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 28,
+      "maxX": 90,
+      "maxY": 100,
+      "w": 55,
+      "h": 73,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 29,
+      "maxX": 91,
+      "maxY": 100,
+      "w": 60,
+      "h": 72,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 29,
+      "maxX": 90,
+      "maxY": 97,
+      "w": 55,
+      "h": 69,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "icetacle 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 31,
+      "maxX": 90,
+      "maxY": 96,
+      "w": 55,
+      "h": 66,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 32,
+      "maxX": 91,
+      "maxY": 97,
+      "w": 54,
+      "h": 66,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        7052993,
+        9032935,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 33,
+      "maxX": 93,
+      "maxY": 96,
+      "w": 59,
+      "h": 64,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        8698576,
+        2506614
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 35,
+      "maxX": 92,
+      "maxY": 94,
+      "w": 59,
+      "h": 60,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 35,
+      "maxX": 93,
+      "maxY": 96,
+      "w": 58,
+      "h": 62,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "icetacle 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        2506614,
+        8698576
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 36,
+      "maxX": 94,
+      "maxY": 94,
+      "w": 61,
+      "h": 59,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "icetacle 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        8698576,
+        2506614
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 41,
+      "maxX": 95,
+      "maxY": 94,
+      "w": 71,
+      "h": 54,
+      "centerX": 60,
+      "centerY": 68
+    }
+  },
+  "icetacle 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        7052993,
+        9032935,
+        11991551,
+        8698576,
+        2506614
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 36,
+      "maxX": 96,
+      "maxY": 89,
+      "w": 64,
+      "h": 54,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "icetacle 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        9032935,
+        7052993,
+        11991551,
+        8698576,
+        2506614
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 36,
+      "maxX": 102,
+      "maxY": 93,
+      "w": 75,
+      "h": 58,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "icetacle 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1516845,
+        9689070,
+        198152,
+        4285299,
+        1450796,
+        1451315,
+        1386037,
+        528148
+      ],
+      "tint": 1516845
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 77,
+      "w": 26,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        593944,
+        1780016,
+        329740,
+        462098,
+        857373,
+        395790,
+        198152,
+        1517621
+      ],
+      "tint": 1780016
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 41,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 74,
+      "h": 47,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        857370,
+        594200,
+        593944,
+        659219,
+        593427,
+        395792,
+        857111,
+        395790
+      ],
+      "tint": 1319214
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 102,
+      "maxY": 89,
+      "w": 78,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "icetacle 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1517621,
+        1451054,
+        857629,
+        1582381,
+        923421,
+        527892,
+        1318697,
+        2175027
+      ],
+      "tint": 1517621
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 38,
+      "maxX": 105,
+      "maxY": 90,
+      "w": 82,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        856854,
+        1780016,
+        66051,
+        923421,
+        329739,
+        3295823,
+        1715515,
+        5081797
+      ],
+      "tint": 1780016
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 77,
+      "maxY": 77,
+      "w": 27,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        923422,
+        198154,
+        1516589,
+        2308427,
+        1715515,
+        2571851,
+        1912640,
+        791062
+      ],
+      "tint": 1516589
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 74,
+      "maxY": 75,
+      "w": 23,
+      "h": 24,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1450534,
+        857370,
+        8570604,
+        1055784,
+        528148,
+        1451308,
+        6723245,
+        1252645
+      ],
+      "tint": 1450534
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 74,
+      "w": 25,
+      "h": 24,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "icetacle 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        791578,
+        1385003,
+        857110,
+        1715515,
+        659219,
+        1319211,
+        2702403,
+        6397647
+      ],
+      "tint": 1385003
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 78,
+      "maxY": 72,
+      "w": 28,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 62
+    }
+  },
+  "icetacle 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1780532,
+        1780016,
+        856855,
+        1846066,
+        659218,
+        1845551,
+        7715291,
+        1451054
+      ],
+      "tint": 1780532
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 75,
+      "maxY": 72,
+      "w": 24,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 61
+    }
+  },
+  "icetacle 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1450796,
+        1451051,
+        791061,
+        1055525,
+        1648172,
+        1319213,
+        1385002,
+        1120542
+      ],
+      "tint": 1450796
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 54,
+      "maxX": 78,
+      "maxY": 73,
+      "w": 29,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1385519,
+        1319210,
+        923421,
+        1516845,
+        198152,
+        856855,
+        1517103,
+        1450797
+      ],
+      "tint": 1385519
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 54,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 39,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "icetacle 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1253677,
+        1713965,
+        2110525,
+        857373,
+        1122094,
+        857885,
+        725270,
+        659476
+      ],
+      "tint": 1253677
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 35,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        791837,
+        1451051,
+        462098,
+        593427,
+        132102,
+        1187884,
+        857110,
+        2374476
+      ],
+      "tint": 1451051
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 51,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 40,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        329996,
+        857627,
+        923421,
+        593942,
+        1977651,
+        2770261,
+        1846326,
+        791579
+      ],
+      "tint": 1977651
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 42,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        462098,
+        1516589,
+        2770261,
+        923421,
+        593944,
+        2966353,
+        7648730,
+        1450796
+      ],
+      "tint": 1516589
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 87,
+      "maxY": 80,
+      "w": 51,
+      "h": 33,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1451054,
+        198152,
+        923421,
+        857112,
+        791579,
+        462098,
+        593683,
+        1978429
+      ],
+      "tint": 1451054
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 90,
+      "maxY": 80,
+      "w": 52,
+      "h": 32,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "icetacle 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1978429,
+        857630,
+        329740,
+        593426,
+        5735831,
+        593944,
+        198152,
+        263946
+      ],
+      "tint": 1978429
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 47,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 56,
+      "h": 35,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1055264,
+        725526,
+        1715515,
+        725786,
+        1253677,
+        659219,
+        1648172,
+        1450796
+      ],
+      "tint": 1715515
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 45,
+      "maxX": 91,
+      "maxY": 82,
+      "w": 57,
+      "h": 38,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        198152,
+        1318953,
+        725785,
+        396050,
+        1715515,
+        593944,
+        527892,
+        725529
+      ],
+      "tint": 1715515
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 45,
+      "maxX": 94,
+      "maxY": 82,
+      "w": 61,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        593944,
+        1516587,
+        594200,
+        1516589,
+        857630,
+        725012,
+        5667462,
+        1582381
+      ],
+      "tint": 1516587
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 42,
+      "maxX": 97,
+      "maxY": 85,
+      "w": 68,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        462098,
+        857885,
+        593944,
+        66051,
+        7053229,
+        792353,
+        131844,
+        923421
+      ],
+      "tint": 7053229
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 98,
+      "maxY": 85,
+      "w": 71,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 63
     }
   },
   "icetacle texture 128x128": {
@@ -2117,6 +10309,1329 @@ export const EFFECT_ATLAS_META = {
       "h": 18,
       "centerX": 73,
       "centerY": 19
+    }
+  },
+  "lightningclaw 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 23,
+      "maxX": 99,
+      "maxY": 105,
+      "w": 74,
+      "h": 83,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 36,
+      "maxX": 100,
+      "maxY": 92,
+      "w": 77,
+      "h": 57,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 41,
+      "maxX": 102,
+      "maxY": 87,
+      "w": 78,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 35,
+      "maxX": 107,
+      "maxY": 87,
+      "w": 85,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 61
+    }
+  },
+  "lightningclaw 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 24,
+      "maxX": 103,
+      "maxY": 104,
+      "w": 74,
+      "h": 81,
+      "centerX": 67,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 27,
+      "maxX": 99,
+      "maxY": 101,
+      "w": 69,
+      "h": 75,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 26,
+      "maxX": 99,
+      "maxY": 101,
+      "w": 72,
+      "h": 76,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 28,
+      "maxX": 96,
+      "maxY": 101,
+      "w": 65,
+      "h": 74,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 29,
+      "maxX": 93,
+      "maxY": 98,
+      "w": 62,
+      "h": 70,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 29,
+      "maxX": 91,
+      "maxY": 97,
+      "w": 56,
+      "h": 69,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 28,
+      "maxX": 87,
+      "maxY": 97,
+      "w": 49,
+      "h": 70,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 33,
+      "maxX": 90,
+      "maxY": 97,
+      "w": 51,
+      "h": 65,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 33,
+      "maxX": 86,
+      "maxY": 96,
+      "w": 49,
+      "h": 64,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 33,
+      "maxX": 89,
+      "maxY": 92,
+      "w": 53,
+      "h": 60,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 33,
+      "maxX": 88,
+      "maxY": 93,
+      "w": 53,
+      "h": 61,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 30,
+      "maxX": 92,
+      "maxY": 91,
+      "w": 55,
+      "h": 62,
+      "centerX": 65,
+      "centerY": 61
+    }
+  },
+  "lightningclaw 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 32,
+      "maxX": 92,
+      "maxY": 93,
+      "w": 61,
+      "h": 62,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 38,
+      "maxX": 93,
+      "maxY": 91,
+      "w": 64,
+      "h": 54,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 37,
+      "maxX": 99,
+      "maxY": 92,
+      "w": 73,
+      "h": 56,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        15853243,
+        14454560
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 36,
+      "maxX": 97,
+      "maxY": 86,
+      "w": 68,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 61
+    }
+  },
+  "lightningclaw 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        15844153,
+        14454560,
+        15853243
+      ],
+      "tint": 15844153
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 37,
+      "maxX": 97,
+      "maxY": 89,
+      "w": 68,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        460033,
+        4734505,
+        4536080,
+        985859,
+        262913,
+        394757,
+        6775633,
+        1643787
+      ],
+      "tint": 4734505
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 74,
+      "maxY": 77,
+      "w": 23,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328705,
+        920323,
+        854274,
+        262913,
+        722690,
+        591618,
+        985859,
+        460033
+      ],
+      "tint": 2891015
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 40,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 74,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        525826,
+        591618,
+        262913,
+        460034,
+        854274,
+        394241,
+        986115,
+        591361
+      ],
+      "tint": 8020509
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 39,
+      "maxX": 103,
+      "maxY": 88,
+      "w": 79,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591618,
+        591361,
+        328705,
+        525826,
+        657410,
+        920323,
+        262913,
+        394757
+      ],
+      "tint": 3617829
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 38,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 85,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854274,
+        5653780,
+        1708292,
+        1380100,
+        985859,
+        1184013,
+        3024139,
+        1051652
+      ],
+      "tint": 5653780
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 53,
+      "maxX": 73,
+      "maxY": 76,
+      "w": 18,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591361,
+        1248515,
+        3942666,
+        2497031,
+        1905669,
+        262913,
+        3483146,
+        2234374
+      ],
+      "tint": 3942666
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 54,
+      "maxX": 76,
+      "maxY": 75,
+      "w": 25,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854274,
+        3484173,
+        8810541,
+        4008201,
+        9664550,
+        8481055,
+        6639382,
+        1577477
+      ],
+      "tint": 3484173
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 74,
+      "maxY": 74,
+      "w": 23,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1577220,
+        262913,
+        2037254,
+        1577477,
+        1051908,
+        3550221,
+        4996625,
+        5788997
+      ],
+      "tint": 3550221
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 55,
+      "maxX": 78,
+      "maxY": 76,
+      "w": 28,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "lightningclaw 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        985859,
+        1314821,
+        8089407,
+        4536848,
+        3024395,
+        460293,
+        9999481,
+        1971719
+      ],
+      "tint": 8089407
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 52,
+      "maxX": 76,
+      "maxY": 73,
+      "w": 28,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1445892,
+        986116,
+        591618,
+        722690,
+        1840647,
+        3024395,
+        789514,
+        4210228
+      ],
+      "tint": 3024395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1380613,
+        328705,
+        7496753,
+        263171,
+        8610331,
+        1577221,
+        920323,
+        1314051
+      ],
+      "tint": 7496753
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 52,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 34,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1183236,
+        460034,
+        2103046,
+        1445892,
+        1051651,
+        1380613,
+        3550221,
+        262913
+      ],
+      "tint": 3550221
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 53,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 39,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591361,
+        1314051,
+        262913,
+        1314821,
+        460033,
+        788995,
+        1184013,
+        6705944
+      ],
+      "tint": 6705944
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 41,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        919810,
+        526342,
+        394241,
+        1183236,
+        1511172,
+        2300936,
+        920324,
+        262913
+      ],
+      "tint": 4666895
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 51,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 47,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        919810,
+        591618,
+        1183236,
+        328705,
+        394241,
+        854274,
+        5653780,
+        2956551
+      ],
+      "tint": 5653780
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 88,
+      "maxY": 79,
+      "w": 50,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591618,
+        591361,
+        262913,
+        722690,
+        460034,
+        854531,
+        920323,
+        657410
+      ],
+      "tint": 2956551
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 89,
+      "maxY": 80,
+      "w": 52,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        262913,
+        722690,
+        920323,
+        591618,
+        854274,
+        525826,
+        657154,
+        328705
+      ],
+      "tint": 4336394
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 47,
+      "maxX": 91,
+      "maxY": 81,
+      "w": 56,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328705,
+        1051908,
+        460033,
+        3550221,
+        986115,
+        262913,
+        394498,
+        2234887
+      ],
+      "tint": 3550221
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 84,
+      "w": 60,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "lightningclaw 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        394757,
+        591618,
+        460290,
+        2956551,
+        591361,
+        328705,
+        854017,
+        460034
+      ],
+      "tint": 2956551
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 83,
+      "w": 66,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328705,
+        920323,
+        262913,
+        1051908,
+        722946,
+        985859,
+        1117700,
+        657154
+      ],
+      "tint": 8217887
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 83,
+      "w": 69,
+      "h": 41,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "lightningclaw 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591361,
+        591618,
+        262913,
+        525569,
+        657410,
+        1708292,
+        328705,
+        525826
+      ],
+      "tint": 3024139
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 41,
+      "maxX": 99,
+      "maxY": 85,
+      "w": 71,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
     }
   },
   "lightningclaw texture 128x128": {
@@ -3000,6 +12515,1329 @@ export const EFFECT_ATLAS_META = {
       "centerY": 68
     }
   },
+  "snakebite down 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 35,
+      "maxX": 89,
+      "maxY": 94,
+      "w": 51,
+      "h": 60,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 40,
+      "maxX": 104,
+      "maxY": 88,
+      "w": 79,
+      "h": 49,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 86,
+      "w": 85,
+      "h": 48,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 37,
+      "maxX": 108,
+      "maxY": 90,
+      "w": 89,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 35,
+      "maxX": 87,
+      "maxY": 91,
+      "w": 49,
+      "h": 57,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 37,
+      "maxX": 86,
+      "maxY": 90,
+      "w": 45,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 37,
+      "maxX": 85,
+      "maxY": 90,
+      "w": 42,
+      "h": 54,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 39,
+      "maxX": 78,
+      "maxY": 89,
+      "w": 32,
+      "h": 51,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 40,
+      "maxX": 81,
+      "maxY": 88,
+      "w": 37,
+      "h": 49,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 41,
+      "maxX": 81,
+      "maxY": 87,
+      "w": 36,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 42,
+      "maxX": 82,
+      "maxY": 85,
+      "w": 39,
+      "h": 44,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 44,
+      "maxX": 84,
+      "maxY": 84,
+      "w": 42,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 41,
+      "maxX": 88,
+      "maxY": 84,
+      "w": 49,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 46,
+      "maxX": 87,
+      "maxY": 83,
+      "w": 50,
+      "h": 38,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "snakebite down 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 44,
+      "maxX": 91,
+      "maxY": 84,
+      "w": 56,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 44,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 59,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 45,
+      "maxX": 95,
+      "maxY": 81,
+      "w": 61,
+      "h": 37,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 45,
+      "maxX": 96,
+      "maxY": 85,
+      "w": 66,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 100,
+      "maxY": 82,
+      "w": 71,
+      "h": 39,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite down 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 85,
+      "w": 74,
+      "h": 43,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite down 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 43,
+      "maxX": 102,
+      "maxY": 86,
+      "w": 75,
+      "h": 44,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "snakebite down 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404736,
+        404480,
+        470784,
+        404992,
+        201216,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 48,
+      "maxX": 77,
+      "maxY": 80,
+      "w": 27,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        470784,
+        135424,
+        404992,
+        201728,
+        470528
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 41,
+      "maxX": 103,
+      "maxY": 87,
+      "w": 79,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        470784,
+        404224,
+        404736,
+        135424,
+        269568,
+        201472,
+        404992
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 41,
+      "maxX": 105,
+      "maxY": 86,
+      "w": 85,
+      "h": 46,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        404736,
+        470784,
+        201216,
+        270597,
+        404992
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 38,
+      "maxX": 108,
+      "maxY": 90,
+      "w": 88,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404480,
+        470784,
+        201216,
+        404224,
+        404736,
+        336896,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 49,
+      "maxX": 74,
+      "maxY": 79,
+      "w": 22,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        201728,
+        201216,
+        201472,
+        470784,
+        404736
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 50,
+      "maxX": 74,
+      "maxY": 77,
+      "w": 22,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404480,
+        404224,
+        470784,
+        404736,
+        201216,
+        201728,
+        858369
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 77,
+      "w": 25,
+      "h": 27,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        201728,
+        404736,
+        201216,
+        470784,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 76,
+      "maxY": 77,
+      "w": 25,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        201472,
+        404736,
+        470528,
+        201216,
+        470784
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 78,
+      "maxY": 77,
+      "w": 30,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        470784,
+        404736,
+        201728,
+        201216,
+        135680
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 51,
+      "maxX": 78,
+      "maxY": 77,
+      "w": 31,
+      "h": 27,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        404736,
+        201216,
+        470784,
+        201728,
+        270080
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 52,
+      "maxX": 81,
+      "maxY": 76,
+      "w": 35,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        201728,
+        201216,
+        201472,
+        470784
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 53,
+      "maxX": 84,
+      "maxY": 75,
+      "w": 41,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        404736,
+        470784,
+        470528,
+        471040,
+        201728
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 52,
+      "maxX": 85,
+      "maxY": 74,
+      "w": 43,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite down 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        404736,
+        201728,
+        135424,
+        201216,
+        269568
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 87,
+      "maxY": 76,
+      "w": 47,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite down 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        470784,
+        135424,
+        201472,
+        404736,
+        201216,
+        471040
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 51,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        470784,
+        471040,
+        201728,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 49,
+      "maxX": 90,
+      "maxY": 80,
+      "w": 54,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        470784,
+        471040,
+        201728,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 79,
+      "w": 60,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite down 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        470784,
+        470528,
+        404736,
+        471040,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 46,
+      "maxX": 95,
+      "maxY": 82,
+      "w": 63,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        471040,
+        404992,
+        470784,
+        201988
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 83,
+      "w": 67,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        470784,
+        404736,
+        201472,
+        471040,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 44,
+      "maxX": 99,
+      "maxY": 85,
+      "w": 71,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        404992,
+        471040,
+        201728
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 85,
+      "w": 75,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "snakebite down textrue 128x128": {
     "frameIndices": [
       0,
@@ -3042,6 +13880,1329 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "snakebite side 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 31,
+      "maxX": 93,
+      "maxY": 97,
+      "w": 60,
+      "h": 67,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 40,
+      "maxX": 104,
+      "maxY": 86,
+      "w": 82,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite side 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 40,
+      "maxX": 106,
+      "maxY": 89,
+      "w": 85,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite side 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 38,
+      "maxX": 108,
+      "maxY": 90,
+      "w": 90,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 31,
+      "maxX": 90,
+      "maxY": 96,
+      "w": 55,
+      "h": 66,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 33,
+      "maxX": 90,
+      "maxY": 95,
+      "w": 54,
+      "h": 63,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 34,
+      "maxX": 89,
+      "maxY": 93,
+      "w": 51,
+      "h": 60,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 36,
+      "maxX": 86,
+      "maxY": 92,
+      "w": 45,
+      "h": 57,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 37,
+      "maxX": 84,
+      "maxY": 91,
+      "w": 40,
+      "h": 55,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 37,
+      "maxX": 83,
+      "maxY": 90,
+      "w": 39,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 37,
+      "maxX": 87,
+      "maxY": 89,
+      "w": 46,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite side 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 39,
+      "maxX": 87,
+      "maxY": 87,
+      "w": 48,
+      "h": 49,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite side 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 42,
+      "maxX": 89,
+      "maxY": 88,
+      "w": 51,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite side 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 42,
+      "maxX": 88,
+      "maxY": 85,
+      "w": 49,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 40,
+      "maxX": 90,
+      "maxY": 85,
+      "w": 56,
+      "h": 46,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite side 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 40,
+      "maxX": 96,
+      "maxY": 87,
+      "w": 63,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 43,
+      "maxX": 96,
+      "maxY": 83,
+      "w": 64,
+      "h": 41,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite side 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 40,
+      "maxX": 97,
+      "maxY": 89,
+      "w": 67,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite side 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 83,
+      "w": 70,
+      "h": 40,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite side 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 87,
+      "w": 77,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "snakebite side 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 43,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 75,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "snakebite side 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        201216,
+        404992,
+        404736,
+        471040
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 47,
+      "maxX": 78,
+      "maxY": 80,
+      "w": 28,
+      "h": 34,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        471040,
+        404992,
+        201216
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 78,
+      "h": 44,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "snakebite side 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        135424,
+        470784,
+        404992,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 40,
+      "maxX": 105,
+      "maxY": 87,
+      "w": 84,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        470784,
+        404992,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 40,
+      "maxX": 107,
+      "maxY": 90,
+      "w": 88,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite side 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        201216,
+        201472,
+        470784,
+        404736,
+        201728
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 48,
+      "maxX": 75,
+      "maxY": 78,
+      "w": 24,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite side 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        201728,
+        470784,
+        404736,
+        201216,
+        135680
+      ],
+      "tint": 472320
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 78,
+      "w": 24,
+      "h": 29,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        201472,
+        404224,
+        134912,
+        403712,
+        470784,
+        404480,
+        270080
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 77,
+      "w": 23,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        201216,
+        404736,
+        470784,
+        404992,
+        470528
+      ],
+      "tint": 1913859
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 77,
+      "maxY": 75,
+      "w": 26,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        404992,
+        404736,
+        470528,
+        471040,
+        269568
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 77,
+      "maxY": 76,
+      "w": 29,
+      "h": 23,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "snakebite side 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        470784,
+        404480,
+        201728,
+        201216,
+        201984,
+        201472
+      ],
+      "tint": 1979651
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 51,
+      "maxX": 79,
+      "maxY": 77,
+      "w": 31,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        404736,
+        470784,
+        201728,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 52,
+      "maxX": 81,
+      "maxY": 76,
+      "w": 36,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        404736,
+        470784,
+        201216,
+        404992,
+        67840
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 39,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        471296,
+        404992,
+        135680
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 75,
+      "w": 45,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite side 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        470784,
+        471040,
+        404736,
+        201216,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 88,
+      "maxY": 77,
+      "w": 48,
+      "h": 28,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        470784,
+        135424,
+        404736,
+        404992,
+        201472,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 51,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        470784,
+        404736,
+        270080,
+        1782531,
+        404992
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 48,
+      "maxX": 90,
+      "maxY": 79,
+      "w": 55,
+      "h": 32,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        135424,
+        404736,
+        404992,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 60,
+      "h": 35,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        470784,
+        404736,
+        135424,
+        471040,
+        404992,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 45,
+      "maxX": 95,
+      "maxY": 81,
+      "w": 63,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite side 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        470784,
+        404992,
+        135424,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 45,
+      "maxX": 97,
+      "maxY": 82,
+      "w": 66,
+      "h": 38,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        470784,
+        135424,
+        404992,
+        471040,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 85,
+      "w": 71,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        135424,
+        404736,
+        201984,
+        201472,
+        404992
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 42,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 76,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "snakebite side textrue 128x128": {
     "frameIndices": [
       0,
@@ -3079,6 +15240,1329 @@ export const EFFECT_ATLAS_META = {
       "maxY": 127,
       "w": 128,
       "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 33,
+      "maxX": 90,
+      "maxY": 92,
+      "w": 52,
+      "h": 60,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 104,
+      "maxY": 88,
+      "w": 81,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 38,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 84,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 18,
+      "minY": 37,
+      "maxX": 108,
+      "maxY": 89,
+      "w": 91,
+      "h": 53,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 34,
+      "maxX": 87,
+      "maxY": 94,
+      "w": 49,
+      "h": 61,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 36,
+      "maxX": 86,
+      "maxY": 92,
+      "w": 46,
+      "h": 57,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 37,
+      "maxX": 85,
+      "maxY": 91,
+      "w": 44,
+      "h": 55,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 38,
+      "maxX": 83,
+      "maxY": 88,
+      "w": 40,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 41,
+      "maxX": 82,
+      "maxY": 91,
+      "w": 38,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "snakebite up 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 41,
+      "maxX": 83,
+      "maxY": 91,
+      "w": 38,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "snakebite up 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 40,
+      "maxX": 85,
+      "maxY": 87,
+      "w": 43,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 43,
+      "maxX": 85,
+      "maxY": 87,
+      "w": 44,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 41,
+      "maxX": 88,
+      "maxY": 88,
+      "w": 48,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "snakebite up 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 42,
+      "maxX": 88,
+      "maxY": 86,
+      "w": 52,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite up 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 41,
+      "maxX": 92,
+      "maxY": 85,
+      "w": 60,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 42,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 62,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "snakebite up 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 42,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 65,
+      "h": 43,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 41,
+      "maxX": 98,
+      "maxY": 85,
+      "w": 70,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite up 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 44,
+      "maxX": 100,
+      "maxY": 86,
+      "w": 73,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 42,
+      "maxX": 102,
+      "maxY": 87,
+      "w": 78,
+      "h": 46,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 103,
+      "maxY": 85,
+      "w": 79,
+      "h": 46,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite up 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        269568,
+        201728,
+        470784,
+        270080,
+        404736
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 48,
+      "maxX": 77,
+      "maxY": 79,
+      "w": 26,
+      "h": 32,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        135424,
+        470784,
+        404992,
+        471040,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 101,
+      "maxY": 87,
+      "w": 78,
+      "h": 47,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        404736,
+        470784,
+        135424,
+        404992,
+        201472,
+        201216
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 39,
+      "maxX": 106,
+      "maxY": 86,
+      "w": 83,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite up 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        470784,
+        201472,
+        471040,
+        1782531
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 40,
+      "maxX": 108,
+      "maxY": 90,
+      "w": 90,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        201216,
+        470784,
+        471296,
+        134912
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 49,
+      "maxX": 76,
+      "maxY": 79,
+      "w": 25,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        201216,
+        471040,
+        404736,
+        201472,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 50,
+      "maxX": 77,
+      "maxY": 78,
+      "w": 25,
+      "h": 29,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        471040,
+        201728,
+        404736,
+        470784,
+        202240
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 51,
+      "maxX": 77,
+      "maxY": 77,
+      "w": 26,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404224,
+        404480,
+        471040,
+        404736,
+        404992,
+        470784,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 52,
+      "maxX": 77,
+      "maxY": 76,
+      "w": 27,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404480,
+        404224,
+        470784,
+        201472,
+        404992,
+        201216,
+        201728
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 53,
+      "maxX": 78,
+      "maxY": 75,
+      "w": 28,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        470784,
+        404480,
+        404736,
+        201472,
+        201728,
+        470528
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 80,
+      "maxY": 76,
+      "w": 32,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404736,
+        470784,
+        135424,
+        404224,
+        471040,
+        201216,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 53,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 38,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        470784,
+        404736,
+        201472,
+        201984,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 77,
+      "w": 39,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        201728,
+        471040,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 52,
+      "maxX": 85,
+      "maxY": 75,
+      "w": 42,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404992,
+        404736,
+        471040,
+        201984
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 51,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 47,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404736,
+        404224,
+        135424,
+        201472,
+        470784,
+        336896,
+        404992
+      ],
+      "tint": 1848067
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 50,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 51,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        404992,
+        201472,
+        471296
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 49,
+      "maxX": 92,
+      "maxY": 79,
+      "w": 57,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        471296,
+        404992,
+        135424,
+        404736,
+        470528
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 80,
+      "w": 59,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        404992,
+        471040,
+        471296
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 94,
+      "maxY": 83,
+      "w": 61,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        470784,
+        135424,
+        404736,
+        201472,
+        404992,
+        470528
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 82,
+      "w": 67,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "snakebite up 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        470784,
+        135424,
+        404992,
+        471040,
+        135680
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 45,
+      "maxX": 99,
+      "maxY": 85,
+      "w": 71,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite up 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404736,
+        470784,
+        201216,
+        404992,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 85,
+      "w": 76,
+      "h": 43,
       "centerX": 64,
       "centerY": 64
     }
@@ -3242,6 +16726,720 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "spikes 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        1117192,
+        1839885,
+        722949,
+        1511434,
+        1839628,
+        1708813
+      ],
+      "tint": 7490358
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 77,
+      "w": 25,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        920071,
+        525572,
+        657157,
+        985607,
+        328450
+      ],
+      "tint": 2825492
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 39,
+      "maxX": 102,
+      "maxY": 88,
+      "w": 76,
+      "h": 50,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        1248521,
+        722693,
+        920071,
+        459779,
+        1905678,
+        525572
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 39,
+      "maxX": 103,
+      "maxY": 90,
+      "w": 80,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        328450,
+        985607,
+        1248521,
+        722693,
+        1839885,
+        1314057
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 37,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 87,
+      "h": 54,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        657157,
+        788486,
+        2761752,
+        1511179,
+        854279,
+        1971469,
+        2299921
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 77,
+      "w": 23,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        657157,
+        788486,
+        1116936,
+        2761752,
+        854022,
+        1576715,
+        2299921
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 74,
+      "maxY": 75,
+      "w": 21,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2365711,
+        854278,
+        657157,
+        2761752,
+        328450,
+        1051399,
+        1642764,
+        788486
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 23,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        657157,
+        2761752,
+        722693,
+        2234384,
+        1905421,
+        1905933
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 54,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 25,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        1839885,
+        1576715,
+        1971469,
+        1577227,
+        657157,
+        2168592,
+        1905421
+      ],
+      "tint": 3943195
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 77,
+      "maxY": 73,
+      "w": 29,
+      "h": 20,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        1248521,
+        1117192,
+        1314568,
+        788486,
+        920071,
+        2564115
+      ],
+      "tint": 2564115
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 52,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        1905677,
+        1905421,
+        788486,
+        722693,
+        1380106,
+        920071,
+        2761752
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 53,
+      "maxX": 80,
+      "maxY": 75,
+      "w": 34,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        788486,
+        854278,
+        920071,
+        1971469,
+        656900,
+        722693,
+        1576715,
+        657157
+      ],
+      "tint": 2827028
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 76,
+      "w": 39,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        657157,
+        1051399,
+        920071,
+        1971469,
+        131329
+      ],
+      "tint": 4074270
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 43,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        1905421,
+        1116936,
+        788486,
+        722693,
+        657157,
+        1380106,
+        656900
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 49,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 46,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        1117192,
+        1905421,
+        1379850,
+        920071,
+        985607
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 51,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        920071,
+        1576715,
+        1774093,
+        722693,
+        1379850,
+        985607
+      ],
+      "tint": 8543805
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 47,
+      "maxX": 90,
+      "maxY": 81,
+      "w": 54,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        1314057,
+        1774093,
+        657157,
+        788486,
+        722949,
+        328450
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 46,
+      "maxX": 91,
+      "maxY": 81,
+      "w": 56,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        1576715,
+        788486,
+        328450,
+        722693,
+        920071,
+        1971470,
+        1051399
+      ],
+      "tint": 2826004
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 44,
+      "maxX": 94,
+      "maxY": 84,
+      "w": 61,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        131329,
+        591364,
+        788742,
+        1117192,
+        920071
+      ],
+      "tint": 2759956
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 68,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        920071,
+        328450,
+        657157,
+        788486,
+        1248521,
+        1905421
+      ],
+      "tint": 2825492
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 98,
+      "maxY": 86,
+      "w": 69,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        657157,
+        1905421,
+        920071,
+        985607,
+        1971469
+      ],
+      "tint": 2825492
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 42,
+      "maxX": 101,
+      "maxY": 87,
+      "w": 75,
+      "h": 46,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
   "spikes 64x64": {
     "frameIndices": [
       0,
@@ -3279,6 +17477,1408 @@ export const EFFECT_ATLAS_META = {
       "centerY": 59
     }
   },
+  "spikes 64x64 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 56,
+      "maxX": 73,
+      "maxY": 73,
+      "w": 18,
+      "h": 18,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "spikes 64x64 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 101,
+      "maxY": 88,
+      "w": 77,
+      "h": 49,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 37,
+      "maxX": 105,
+      "maxY": 91,
+      "w": 83,
+      "h": 55,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 35,
+      "maxX": 106,
+      "maxY": 91,
+      "w": 88,
+      "h": 57,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes 64x64 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 56,
+      "maxX": 71,
+      "maxY": 72,
+      "w": 16,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 57,
+      "maxX": 71,
+      "maxY": 73,
+      "w": 15,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes 64x64 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        13610346,
+        12818259,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 56,
+      "maxX": 73,
+      "maxY": 71,
+      "w": 20,
+      "h": 16,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 57,
+      "maxX": 74,
+      "maxY": 72,
+      "w": 22,
+      "h": 16,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes 64x64 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 54,
+      "maxX": 76,
+      "maxY": 71,
+      "w": 27,
+      "h": 18,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes 64x64 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 55,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 19,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 73,
+      "w": 35,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes 64x64 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 39,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 50,
+      "maxX": 85,
+      "maxY": 76,
+      "w": 42,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes 64x64 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 46,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 50,
+      "maxX": 88,
+      "maxY": 78,
+      "w": 50,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 48,
+      "maxX": 90,
+      "maxY": 80,
+      "w": 55,
+      "h": 33,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 59,
+      "h": 36,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 45,
+      "maxX": 96,
+      "maxY": 83,
+      "w": 64,
+      "h": 39,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 85,
+      "w": 68,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes 64x64 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 86,
+      "w": 69,
+      "h": 44,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "spikes 64x64 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 72,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        593946,
+        198154,
+        395792,
+        1120546,
+        330255,
+        1915737,
+        857119
+      ],
+      "tint": 1915737
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 78,
+      "w": 26,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263948,
+        1911599,
+        396049,
+        131846,
+        461844,
+        263947,
+        923169
+      ],
+      "tint": 1911599
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 103,
+      "maxY": 88,
+      "w": 79,
+      "h": 49,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        66051,
+        792100,
+        263949,
+        65794,
+        396049,
+        329741,
+        1976877
+      ],
+      "tint": 1976877
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 81,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        329741,
+        263949,
+        330255,
+        1977134,
+        66051,
+        395534,
+        329742
+      ],
+      "tint": 1977134
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 38,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 86,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        330255,
+        1252646,
+        1714477,
+        65794,
+        3363176,
+        396048,
+        1976877
+      ],
+      "tint": 1714477
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 51,
+      "maxX": 74,
+      "maxY": 76,
+      "w": 20,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263948,
+        856853,
+        527375,
+        263947,
+        1054753,
+        330255,
+        2835800
+      ],
+      "tint": 2835800
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 52,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 22,
+      "h": 25,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330255,
+        330256,
+        2043184,
+        2043440,
+        263948,
+        922908,
+        395534,
+        856853
+      ],
+      "tint": 2043184
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 52,
+      "maxX": 77,
+      "maxY": 77,
+      "w": 25,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263948,
+        1054753,
+        923686,
+        330255,
+        725786,
+        1055267,
+        264463
+      ],
+      "tint": 1714221
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 25,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        395534,
+        264206,
+        1648427,
+        263948,
+        330255,
+        1056049,
+        1911599,
+        461844
+      ],
+      "tint": 1648427
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 52,
+      "maxX": 77,
+      "maxY": 73,
+      "w": 26,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        395534,
+        263948,
+        330000,
+        1976877,
+        527375,
+        1450278,
+        264463
+      ],
+      "tint": 1976877
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 31,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        4746367,
+        263948,
+        1450538,
+        1252646,
+        659740,
+        263949,
+        1781313
+      ],
+      "tint": 4746367
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 54,
+      "maxX": 80,
+      "maxY": 74,
+      "w": 34,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263949,
+        263948,
+        791840,
+        1648688,
+        264463,
+        2043184,
+        330000
+      ],
+      "tint": 1648688
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 75,
+      "w": 38,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        264463,
+        857376,
+        65794,
+        1911599,
+        263949,
+        395534,
+        1252646
+      ],
+      "tint": 1911599
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 51,
+      "maxX": 84,
+      "maxY": 77,
+      "w": 42,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        1122355,
+        65794,
+        659740,
+        1252644,
+        264463,
+        1252646,
+        461844
+      ],
+      "tint": 2373711
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 87,
+      "maxY": 78,
+      "w": 47,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263947,
+        396050,
+        1054753,
+        2043184,
+        396049,
+        1977134,
+        263434
+      ],
+      "tint": 2043184
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 88,
+      "maxY": 79,
+      "w": 50,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        1977134,
+        263949,
+        330255,
+        1252644,
+        263948,
+        1977911,
+        659740
+      ],
+      "tint": 1977134
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 91,
+      "maxY": 80,
+      "w": 55,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263949,
+        263948,
+        65794,
+        263947,
+        396049,
+        66051,
+        1054753
+      ],
+      "tint": 2373711
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 59,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        396049,
+        329741,
+        594462,
+        462360,
+        264463,
+        1252644,
+        2112344
+      ],
+      "tint": 2112344
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 84,
+      "w": 60,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        65794,
+        395534,
+        3427157,
+        263948,
+        197897,
+        2043184,
+        1648427
+      ],
+      "tint": 3427157
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 45,
+      "maxX": 96,
+      "maxY": 84,
+      "w": 67,
+      "h": 40,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        1054753,
+        131846,
+        330255,
+        396049,
+        1056304,
+        329740,
+        857119
+      ],
+      "tint": 1977134
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 44,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 71,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "spikes blue multiple 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        263949,
+        198154,
+        329742,
+        264462,
+        461844,
+        330255,
+        197897
+      ],
+      "tint": 1977134
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 41,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 73,
+      "h": 47,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "spikes blue multiple 64x64": {
     "frameIndices": [
       0,
@@ -3313,6 +18913,678 @@ export const EFFECT_ATLAS_META = {
       "h": 8,
       "centerX": 31,
       "centerY": 59
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 55,
+      "maxX": 71,
+      "maxY": 72,
+      "w": 17,
+      "h": 18,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 38,
+      "maxX": 103,
+      "maxY": 87,
+      "w": 80,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 90,
+      "w": 84,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 37,
+      "maxX": 109,
+      "maxY": 89,
+      "w": 90,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 55,
+      "maxX": 72,
+      "maxY": 71,
+      "w": 16,
+      "h": 17,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 57,
+      "maxX": 72,
+      "maxY": 70,
+      "w": 17,
+      "h": 14,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 56,
+      "maxX": 74,
+      "maxY": 72,
+      "w": 21,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 56,
+      "maxX": 75,
+      "maxY": 72,
+      "w": 24,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 56,
+      "maxX": 77,
+      "maxY": 73,
+      "w": 29,
+      "h": 18,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 78,
+      "maxY": 73,
+      "w": 30,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 34,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 51,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 38,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 51,
+      "maxX": 84,
+      "maxY": 76,
+      "w": 42,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 49,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 44,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 49,
+      "maxX": 88,
+      "maxY": 79,
+      "w": 49,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 47,
+      "maxX": 90,
+      "maxY": 80,
+      "w": 55,
+      "h": 34,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 92,
+      "maxY": 80,
+      "w": 58,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 46,
+      "maxX": 95,
+      "maxY": 82,
+      "w": 63,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 84,
+      "w": 65,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 42,
+      "maxX": 97,
+      "maxY": 86,
+      "w": 68,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple 64x64 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 41,
+      "maxX": 100,
+      "maxY": 85,
+      "w": 73,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
     }
   },
   "spikes blue multiple texture 128x128": {
@@ -3352,6 +19624,720 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "spikes blue single 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        264205,
+        131845,
+        197898,
+        330255,
+        198155,
+        263948,
+        65794,
+        198154
+      ],
+      "tint": 3690329
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 74,
+      "maxY": 78,
+      "w": 23,
+      "h": 29,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197897,
+        65794,
+        329999,
+        198155,
+        197896,
+        132102,
+        131845,
+        263948
+      ],
+      "tint": 3098195
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 42,
+      "maxX": 103,
+      "maxY": 88,
+      "w": 79,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes blue single 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197897,
+        65794,
+        329999,
+        330256,
+        197896,
+        197640,
+        198155,
+        330255
+      ],
+      "tint": 1516074
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 40,
+      "maxX": 105,
+      "maxY": 88,
+      "w": 84,
+      "h": 49,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        65794,
+        197897,
+        263948,
+        197896,
+        198154,
+        197898,
+        131846,
+        330256
+      ],
+      "tint": 1516074
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 88,
+      "w": 84,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197898,
+        330256,
+        264462,
+        197897,
+        395534,
+        329999,
+        396050,
+        330255
+      ],
+      "tint": 2768466
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 51,
+      "maxX": 74,
+      "maxY": 77,
+      "w": 20,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        264462,
+        330255,
+        197899,
+        131846,
+        330256,
+        263692,
+        197896,
+        131589
+      ],
+      "tint": 1648694
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 53,
+      "maxX": 72,
+      "maxY": 75,
+      "w": 19,
+      "h": 23,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        329999,
+        330255,
+        726305,
+        264463,
+        461846,
+        197898,
+        330256,
+        263691
+      ],
+      "tint": 3827371
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 24,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes blue single 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197898,
+        329999,
+        396309,
+        264205,
+        263947,
+        197640,
+        263949,
+        330256
+      ],
+      "tint": 1452357
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 25,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        329999,
+        330256,
+        65794,
+        197897,
+        329742,
+        461845,
+        197898,
+        1452357
+      ],
+      "tint": 1452357
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 54,
+      "maxX": 77,
+      "maxY": 73,
+      "w": 27,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        329999,
+        330256,
+        197898,
+        264462,
+        264205,
+        1912902,
+        263948,
+        263691
+      ],
+      "tint": 1912902
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 79,
+      "maxY": 76,
+      "w": 31,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes blue single 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        329999,
+        197898,
+        198155,
+        330256,
+        198154,
+        131846,
+        396309,
+        197896
+      ],
+      "tint": 9036020
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 74,
+      "w": 34,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        132103,
+        131846,
+        197896,
+        198154,
+        264205,
+        197640,
+        528151
+      ],
+      "tint": 1516331
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 53,
+      "maxX": 82,
+      "maxY": 75,
+      "w": 37,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        330256,
+        329999,
+        197898,
+        197897,
+        1252904,
+        131846,
+        263948,
+        198410
+      ],
+      "tint": 1648172
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 53,
+      "maxX": 85,
+      "maxY": 75,
+      "w": 43,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197897,
+        65794,
+        329999,
+        198154,
+        263948,
+        197896,
+        197640,
+        330256
+      ],
+      "tint": 5669789
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 51,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 47,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197897,
+        329742,
+        197640,
+        198410,
+        65794,
+        197896,
+        66052,
+        264462
+      ],
+      "tint": 3558741
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 51,
+      "maxX": 88,
+      "maxY": 77,
+      "w": 51,
+      "h": 27,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        65794,
+        330256,
+        131846,
+        197898,
+        329999,
+        197896,
+        197640,
+        263948
+      ],
+      "tint": 1516074
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 90,
+      "maxY": 78,
+      "w": 54,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197896,
+        65794,
+        131846,
+        329999,
+        330256,
+        263948,
+        132104,
+        198410
+      ],
+      "tint": 3492947
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 91,
+      "maxY": 79,
+      "w": 55,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        65794,
+        330256,
+        197897,
+        263692,
+        197898,
+        198410,
+        329742,
+        329999
+      ],
+      "tint": 3558741
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 48,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 63,
+      "h": 34,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "spikes blue single 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        65794,
+        330256,
+        329999,
+        197896,
+        197898,
+        264206,
+        197897,
+        131845
+      ],
+      "tint": 1516331
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 82,
+      "w": 66,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        65794,
+        198155,
+        197640,
+        330256,
+        197897,
+        198154,
+        197896,
+        197898
+      ],
+      "tint": 1912902
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 82,
+      "w": 68,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        131846,
+        65794,
+        329999,
+        197897,
+        197896,
+        132104,
+        198154,
+        197640
+      ],
+      "tint": 3295828
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 74,
+      "h": 44,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
   "spikes blue single 64x64": {
     "frameIndices": [
       0,
@@ -3385,6 +20371,1392 @@ export const EFFECT_ATLAS_META = {
       "centerY": 59
     },
     "emptyCount": 3
+  },
+  "spikes blue single 64x64 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 59,
+      "minY": 59,
+      "maxX": 68,
+      "maxY": 69,
+      "w": 10,
+      "h": 11,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 36,
+      "maxX": 106,
+      "maxY": 89,
+      "w": 86,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 64x64 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 37,
+      "maxX": 108,
+      "maxY": 94,
+      "w": 87,
+      "h": 58,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "spikes blue single 64x64 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 18,
+      "minY": 35,
+      "maxX": 110,
+      "maxY": 92,
+      "w": 93,
+      "h": 58,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        11991551,
+        9032935,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 60,
+      "maxX": 70,
+      "maxY": 67,
+      "w": 15,
+      "h": 8,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 58,
+      "maxX": 70,
+      "maxY": 69,
+      "w": 14,
+      "h": 12,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 58,
+      "maxX": 73,
+      "maxY": 70,
+      "w": 19,
+      "h": 13,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        11991551,
+        9032935,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 57,
+      "maxX": 75,
+      "maxY": 71,
+      "w": 24,
+      "h": 15,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 57,
+      "maxX": 77,
+      "maxY": 70,
+      "w": 26,
+      "h": 14,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 55,
+      "maxX": 78,
+      "maxY": 73,
+      "w": 30,
+      "h": 19,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 74,
+      "w": 35,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 40,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 50,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 42,
+      "h": 27,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 64x64 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 49,
+      "maxX": 85,
+      "maxY": 78,
+      "w": 46,
+      "h": 30,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 48,
+      "maxX": 88,
+      "maxY": 80,
+      "w": 51,
+      "h": 33,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 44,
+      "maxX": 90,
+      "maxY": 81,
+      "w": 56,
+      "h": 38,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes blue single 64x64 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 81,
+      "w": 59,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 45,
+      "maxX": 95,
+      "maxY": 83,
+      "w": 63,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2506614,
+        3897274,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 2506614
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 44,
+      "maxX": 100,
+      "maxY": 83,
+      "w": 72,
+      "h": 40,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes blue single 64x64 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 38,
+      "maxX": 98,
+      "maxY": 84,
+      "w": 69,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 61
+    }
+  },
+  "spikes blue single 64x64 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3897274,
+        2506614,
+        8698576,
+        9032935,
+        11991551,
+        7052993
+      ],
+      "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 36,
+      "maxX": 102,
+      "maxY": 88,
+      "w": 78,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        788486,
+        854278,
+        657157,
+        722693,
+        2102799,
+        1051399,
+        1971469,
+        920071
+      ],
+      "tint": 3351063
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 75,
+      "maxY": 78,
+      "w": 24,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        920071,
+        1905421,
+        1576715,
+        919814,
+        328450
+      ],
+      "tint": 2825492
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 77,
+      "h": 47,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        328450,
+        788486,
+        920071,
+        657157,
+        525572,
+        1314057
+      ],
+      "tint": 2629908
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 38,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 83,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        920071,
+        722693,
+        1576715,
+        788486,
+        657157,
+        328450,
+        1314057
+      ],
+      "tint": 4733473
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 39,
+      "maxX": 107,
+      "maxY": 89,
+      "w": 86,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        1117192,
+        788486,
+        2430993,
+        1051399,
+        1708300,
+        2365711,
+        4140062
+      ],
+      "tint": 4140062
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 78,
+      "w": 23,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        1905421,
+        1971214,
+        1116936,
+        2564115,
+        656901,
+        1379850
+      ],
+      "tint": 2564115
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 25,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        656901,
+        854278,
+        788486,
+        1642763,
+        2825492,
+        920071,
+        1971469,
+        1511178
+      ],
+      "tint": 2825492
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 54,
+      "maxX": 75,
+      "maxY": 75,
+      "w": 21,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        2629908,
+        328450,
+        2761752,
+        2300432,
+        722693,
+        2564115
+      ],
+      "tint": 2629908
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 76,
+      "maxY": 73,
+      "w": 25,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        2234897,
+        722693,
+        854279,
+        1839885,
+        1905678,
+        657157
+      ],
+      "tint": 2695188
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 55,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 26,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        2761752,
+        1774093,
+        657157,
+        2825492,
+        656900,
+        985607
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 78,
+      "maxY": 74,
+      "w": 30,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        722693,
+        657157,
+        2759956,
+        1576715,
+        1905421,
+        854279
+      ],
+      "tint": 2759956
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 54,
+      "maxX": 80,
+      "maxY": 75,
+      "w": 33,
+      "h": 22,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        920071,
+        788486,
+        1576715,
+        2103312,
+        919558,
+        1905677,
+        2366225
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 76,
+      "w": 38,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        525572,
+        920071,
+        1314057,
+        1905933,
+        1051399
+      ],
+      "tint": 2498067
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 75,
+      "w": 42,
+      "h": 25,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        656900,
+        920071,
+        1116936,
+        1774093,
+        328450,
+        722693,
+        1905421
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 46,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        722693,
+        1116936,
+        1380106,
+        657157,
+        1117192,
+        1905421
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 51,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        985607,
+        920071,
+        525572,
+        656900,
+        854279,
+        788486
+      ],
+      "tint": 2564117
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 90,
+      "maxY": 81,
+      "w": 53,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        657157,
+        1905676,
+        1971469,
+        2234897,
+        985607
+      ],
+      "tint": 2498067
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 59,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        328450,
+        722693,
+        1576715,
+        1905421,
+        657157,
+        920071,
+        985607
+      ],
+      "tint": 4403999
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 45,
+      "maxX": 93,
+      "maxY": 84,
+      "w": 60,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        722693,
+        788486,
+        394243,
+        1248521,
+        1117192,
+        920071,
+        1314057
+      ],
+      "tint": 2761752
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 84,
+      "w": 65,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        920071,
+        1905421,
+        722693,
+        328450,
+        1576715,
+        1511434
+      ],
+      "tint": 2759956
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 42,
+      "maxX": 99,
+      "maxY": 86,
+      "w": 71,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788486,
+        722693,
+        525572,
+        920071,
+        985607,
+        1314057,
+        1905421
+      ],
+      "tint": 2630164
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 71,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 65
+    }
   },
   "spikes brown multiple 64x64": {
     "frameIndices": [
@@ -3423,6 +21795,1407 @@ export const EFFECT_ATLAS_META = {
       "centerY": 59
     }
   },
+  "spikes brown multiple 64x64 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 56,
+      "maxX": 73,
+      "maxY": 72,
+      "w": 19,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 39,
+      "maxX": 103,
+      "maxY": 86,
+      "w": 79,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 40,
+      "maxX": 106,
+      "maxY": 91,
+      "w": 82,
+      "h": 52,
+      "centerX": 66,
+      "centerY": 66
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 37,
+      "maxX": 106,
+      "maxY": 92,
+      "w": 85,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 56,
+      "maxX": 70,
+      "maxY": 72,
+      "w": 16,
+      "h": 17,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 56,
+      "maxX": 70,
+      "maxY": 71,
+      "w": 15,
+      "h": 16,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 56,
+      "maxX": 72,
+      "maxY": 72,
+      "w": 20,
+      "h": 17,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 55,
+      "maxX": 75,
+      "maxY": 71,
+      "w": 23,
+      "h": 17,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 56,
+      "maxX": 76,
+      "maxY": 72,
+      "w": 27,
+      "h": 17,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 78,
+      "maxY": 73,
+      "w": 30,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 35,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 51,
+      "maxX": 84,
+      "maxY": 76,
+      "w": 39,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 51,
+      "maxX": 83,
+      "maxY": 77,
+      "w": 42,
+      "h": 27,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 49,
+      "maxX": 87,
+      "maxY": 78,
+      "w": 46,
+      "h": 30,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 88,
+      "maxY": 79,
+      "w": 50,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 52,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 46,
+      "maxX": 92,
+      "maxY": 80,
+      "w": 58,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 83,
+      "w": 62,
+      "h": 38,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 65,
+      "h": 41,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 42,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 69,
+      "h": 46,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "spikes brown multiple 64x64 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 41,
+      "maxX": 102,
+      "maxY": 87,
+      "w": 76,
+      "h": 47,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        131329,
+        788486,
+        656901,
+        591364,
+        525572,
+        788485,
+        394243
+      ],
+      "tint": 4271390
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 74,
+      "maxY": 77,
+      "w": 23,
+      "h": 28,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        328450,
+        459779,
+        525571,
+        591364,
+        131329,
+        722693,
+        394243
+      ],
+      "tint": 4864288
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 42,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 76,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        328450,
+        459779,
+        591364,
+        131329,
+        788485,
+        525828,
+        591108
+      ],
+      "tint": 4008732
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 40,
+      "maxX": 105,
+      "maxY": 87,
+      "w": 82,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        131329,
+        854278,
+        459779,
+        591364,
+        788485,
+        328450,
+        656901,
+        788486
+      ],
+      "tint": 2761236
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 40,
+      "maxX": 108,
+      "maxY": 88,
+      "w": 86,
+      "h": 49,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591108,
+        459779,
+        788486,
+        854278,
+        854022,
+        1182729,
+        656901,
+        65793
+      ],
+      "tint": 3549208
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 77,
+      "w": 22,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591108,
+        788485,
+        854278,
+        1248265,
+        1117192,
+        788486,
+        657157,
+        591364
+      ],
+      "tint": 3417367
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 52,
+      "maxX": 74,
+      "maxY": 75,
+      "w": 21,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        788485,
+        525572,
+        328450,
+        591108,
+        854278,
+        788486,
+        1642764,
+        854279
+      ],
+      "tint": 2563346
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 54,
+      "maxX": 74,
+      "maxY": 74,
+      "w": 22,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591364,
+        459779,
+        722949,
+        722693,
+        854278,
+        328450,
+        1116936,
+        656901
+      ],
+      "tint": 3350808
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 54,
+      "maxX": 75,
+      "maxY": 74,
+      "w": 23,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        459779,
+        722693,
+        525572,
+        656900,
+        788485,
+        722949,
+        788742
+      ],
+      "tint": 3350808
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 53,
+      "maxX": 77,
+      "maxY": 72,
+      "w": 29,
+      "h": 20,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        591364,
+        722693,
+        1051143,
+        788485,
+        459779,
+        722949,
+        525572
+      ],
+      "tint": 3810843
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 55,
+      "maxX": 78,
+      "maxY": 72,
+      "w": 30,
+      "h": 18,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        788485,
+        1248265,
+        854278,
+        656901,
+        525572,
+        1116936,
+        722693,
+        788486
+      ],
+      "tint": 2891028
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 53,
+      "maxX": 81,
+      "maxY": 73,
+      "w": 36,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        525572,
+        722949,
+        788742,
+        788486,
+        1116936,
+        722693,
+        591364
+      ],
+      "tint": 2497809
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 53,
+      "maxX": 82,
+      "maxY": 75,
+      "w": 39,
+      "h": 23,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        131329,
+        591364,
+        459779,
+        788742,
+        919814,
+        525315,
+        656901
+      ],
+      "tint": 2497809
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 53,
+      "maxX": 84,
+      "maxY": 75,
+      "w": 42,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        131329,
+        854278,
+        328450,
+        1117192,
+        788486,
+        788485,
+        656901,
+        525572
+      ],
+      "tint": 3745564
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 51,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 46,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328450,
+        591108,
+        262914,
+        131329,
+        788485,
+        854278,
+        525828,
+        788486
+      ],
+      "tint": 5062184
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 50,
+      "maxX": 89,
+      "maxY": 78,
+      "w": 52,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        131329,
+        854278,
+        788485,
+        591364,
+        459779,
+        328450,
+        591108,
+        525828
+      ],
+      "tint": 2629396
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 49,
+      "maxX": 91,
+      "maxY": 79,
+      "w": 55,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        131329,
+        459779,
+        591108,
+        788485,
+        525571,
+        1182472,
+        394243
+      ],
+      "tint": 4535071
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 47,
+      "maxX": 92,
+      "maxY": 80,
+      "w": 57,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        854278,
+        788485,
+        459779,
+        722693,
+        131329,
+        262914,
+        328450,
+        65793
+      ],
+      "tint": 9592643
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 46,
+      "maxX": 95,
+      "maxY": 82,
+      "w": 62,
+      "h": 37,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        591364,
+        854278,
+        591108,
+        459779,
+        788486,
+        328450,
+        131329,
+        262914
+      ],
+      "tint": 5062184
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 45,
+      "maxX": 97,
+      "maxY": 83,
+      "w": 66,
+      "h": 39,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328450,
+        788485,
+        525828,
+        854278,
+        591364,
+        65793,
+        131329,
+        788486
+      ],
+      "tint": 3877917
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 43,
+      "maxX": 99,
+      "maxY": 83,
+      "w": 70,
+      "h": 41,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        131329,
+        591364,
+        459779,
+        854278,
+        722693,
+        460035,
+        525571,
+        262914
+      ],
+      "tint": 3286294
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 42,
+      "maxX": 99,
+      "maxY": 84,
+      "w": 74,
+      "h": 43,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
   "spikes brown single 64x64": {
     "frameIndices": [
       0,
@@ -3457,6 +23230,692 @@ export const EFFECT_ATLAS_META = {
       "centerY": 59
     },
     "emptyCount": 3
+  },
+  "spikes brown single 64x64 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 59,
+      "maxX": 69,
+      "maxY": 69,
+      "w": 13,
+      "h": 11,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 35,
+      "maxX": 103,
+      "maxY": 89,
+      "w": 83,
+      "h": 55,
+      "centerX": 62,
+      "centerY": 62
+    }
+  },
+  "spikes brown single 64x64 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 39,
+      "maxX": 109,
+      "maxY": 91,
+      "w": 91,
+      "h": 53,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown single 64x64 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 31,
+      "maxX": 111,
+      "maxY": 94,
+      "w": 93,
+      "h": 64,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 64x64 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        14467969,
+        13610346,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 58,
+      "minY": 60,
+      "maxX": 71,
+      "maxY": 68,
+      "w": 14,
+      "h": 9,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 58,
+      "maxX": 71,
+      "maxY": 69,
+      "w": 16,
+      "h": 12,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 57,
+      "maxX": 73,
+      "maxY": 68,
+      "w": 19,
+      "h": 12,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 64x64 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 57,
+      "maxX": 76,
+      "maxY": 70,
+      "w": 24,
+      "h": 14,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 55,
+      "maxX": 76,
+      "maxY": 72,
+      "w": 26,
+      "h": 18,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 55,
+      "maxX": 78,
+      "maxY": 73,
+      "w": 29,
+      "h": 19,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        13610346,
+        12818259,
+        14467969,
+        11433547
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 54,
+      "maxX": 80,
+      "maxY": 73,
+      "w": 34,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 75,
+      "w": 40,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 76,
+      "w": 46,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 64x64 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 49,
+      "maxX": 87,
+      "maxY": 79,
+      "w": 47,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 49,
+      "maxX": 89,
+      "maxY": 80,
+      "w": 51,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown single 64x64 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        6700590,
+        10054474,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 6700590
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 48,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 56,
+      "h": 34,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "spikes brown single 64x64 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 59,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "spikes brown single 64x64 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 45,
+      "maxX": 98,
+      "maxY": 83,
+      "w": 69,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 40,
+      "maxX": 96,
+      "maxY": 85,
+      "w": 69,
+      "h": 46,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "spikes brown single 64x64 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 42,
+      "maxX": 102,
+      "maxY": 86,
+      "w": 73,
+      "h": 45,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "spikes brown single 64x64 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        10054474,
+        6700590,
+        12818259,
+        13610346,
+        14467969,
+        11433547,
+        14268252
+      ],
+      "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 39,
+      "maxX": 100,
+      "maxY": 88,
+      "w": 79,
+      "h": 50,
+      "centerX": 61,
+      "centerY": 64
+    }
   },
   "spikes texture 128x128": {
     "frameIndices": [
@@ -3651,6 +24110,1350 @@ export const EFFECT_ATLAS_META = {
       "centerY": 91
     }
   },
+  "tornado 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 36,
+      "maxX": 88,
+      "maxY": 91,
+      "w": 51,
+      "h": 56,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 41,
+      "maxX": 107,
+      "maxY": 87,
+      "w": 84,
+      "h": 47,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 40,
+      "maxX": 104,
+      "maxY": 87,
+      "w": 83,
+      "h": 48,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 17,
+      "minY": 38,
+      "maxX": 108,
+      "maxY": 88,
+      "w": 92,
+      "h": 51,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "tornado 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 38,
+      "maxX": 87,
+      "maxY": 93,
+      "w": 40,
+      "h": 56,
+      "centerX": 68,
+      "centerY": 66
+    }
+  },
+  "tornado 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 38,
+      "maxX": 83,
+      "maxY": 89,
+      "w": 41,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 36,
+      "maxX": 83,
+      "maxY": 88,
+      "w": 38,
+      "h": 53,
+      "centerX": 65,
+      "centerY": 62
+    }
+  },
+  "tornado 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 39,
+      "maxX": 82,
+      "maxY": 86,
+      "w": 36,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "tornado 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 40,
+      "maxX": 84,
+      "maxY": 90,
+      "w": 37,
+      "h": 51,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "tornado 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 43,
+      "maxX": 84,
+      "maxY": 85,
+      "w": 41,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 44,
+      "maxX": 88,
+      "maxY": 89,
+      "w": 47,
+      "h": 46,
+      "centerX": 65,
+      "centerY": 67
+    }
+  },
+  "tornado 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 44,
+      "maxX": 84,
+      "maxY": 84,
+      "w": 42,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 41,
+      "maxX": 87,
+      "maxY": 82,
+      "w": 47,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "tornado 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 47,
+      "maxX": 87,
+      "maxY": 81,
+      "w": 49,
+      "h": 35,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 40,
+      "maxX": 95,
+      "maxY": 87,
+      "w": 61,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 42,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 60,
+      "h": 40,
+      "centerX": 65,
+      "centerY": 62
+    }
+  },
+  "tornado 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 41,
+      "maxX": 95,
+      "maxY": 85,
+      "w": 64,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "tornado 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 102,
+      "maxY": 85,
+      "w": 73,
+      "h": 42,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "tornado 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 97,
+      "maxY": 83,
+      "w": 69,
+      "h": 41,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "tornado 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 43,
+      "maxX": 102,
+      "maxY": 84,
+      "w": 80,
+      "h": 42,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        13094301,
+        8884064,
+        16316630,
+        5463117
+      ],
+      "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 86,
+      "w": 76,
+      "h": 44,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3619115,
+        5066556,
+        328964,
+        2764063,
+        789513,
+        13817767,
+        10002804,
+        5658947
+      ],
+      "tint": 3619115
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 53,
+      "maxX": 73,
+      "maxY": 74,
+      "w": 21,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328964,
+        855306,
+        592135,
+        4935481,
+        3948334,
+        2895135,
+        6185290,
+        460549
+      ],
+      "tint": 4935481
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 40,
+      "maxX": 99,
+      "maxY": 87,
+      "w": 71,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328964,
+        855306,
+        987148,
+        592135,
+        7040597,
+        723720,
+        2039578,
+        1974040
+      ],
+      "tint": 7040597
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 38,
+      "maxX": 101,
+      "maxY": 89,
+      "w": 77,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328964,
+        460549,
+        11778950,
+        197378,
+        4408629,
+        2631967,
+        395013,
+        592135
+      ],
+      "tint": 11778950
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 83,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9409140,
+        789514,
+        7632986,
+        3948334,
+        7632734,
+        8554086,
+        5658690,
+        10856835
+      ],
+      "tint": 9409140
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 53,
+      "maxX": 74,
+      "maxY": 74,
+      "w": 20,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1974040,
+        4935481,
+        3487531,
+        723720,
+        4606006,
+        7238485,
+        8685925,
+        987148
+      ],
+      "tint": 4935481
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 52,
+      "maxX": 73,
+      "maxY": 74,
+      "w": 19,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "tornado 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1447696,
+        197378,
+        12435615,
+        592135,
+        10659965,
+        2039578,
+        2566173,
+        1974040
+      ],
+      "tint": 12435615
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 55,
+      "maxX": 75,
+      "maxY": 73,
+      "w": 22,
+      "h": 19,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        789514,
+        1118477,
+        4803387,
+        526342,
+        7237718,
+        10659965,
+        3421737,
+        7435607
+      ],
+      "tint": 4803387
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 56,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 23,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "tornado 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        394757,
+        460549,
+        4474678,
+        1052685,
+        8027742,
+        7501400,
+        4014126,
+        1316110
+      ],
+      "tint": 4474678
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 26,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "tornado 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9870450,
+        987148,
+        8949099,
+        1974040,
+        9936242,
+        12304535,
+        6448972,
+        10659965
+      ],
+      "tint": 9870450
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 55,
+      "maxX": 76,
+      "maxY": 75,
+      "w": 28,
+      "h": 21,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        592135,
+        723720,
+        2237210,
+        9936242,
+        4343091,
+        11251085,
+        4211505,
+        5461568
+      ],
+      "tint": 2237210
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 80,
+      "maxY": 75,
+      "w": 32,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        11251085,
+        9079921,
+        592135,
+        4935481,
+        460549,
+        8093028,
+        11712652,
+        7764571
+      ],
+      "tint": 11251085
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 52,
+      "maxX": 82,
+      "maxY": 76,
+      "w": 37,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        2500382,
+        592135,
+        394757,
+        9607278,
+        3026726,
+        5395522,
+        5263935,
+        328964
+      ],
+      "tint": 2500382
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 77,
+      "w": 41,
+      "h": 26,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        855306,
+        394757,
+        5133115,
+        9277806,
+        5790529,
+        592391,
+        8422753,
+        2368796
+      ],
+      "tint": 5133115
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 88,
+      "maxY": 77,
+      "w": 48,
+      "h": 28,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        592135,
+        9738356,
+        4408629,
+        526342,
+        1447696,
+        328964,
+        4211249,
+        789514
+      ],
+      "tint": 9738356
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 50,
+      "maxX": 87,
+      "maxY": 80,
+      "w": 49,
+      "h": 31,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        592135,
+        987148,
+        1974040,
+        8685672,
+        723720,
+        789514,
+        855306,
+        526342
+      ],
+      "tint": 8685672
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 91,
+      "maxY": 79,
+      "w": 54,
+      "h": 33,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "tornado 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        592135,
+        526342,
+        723720,
+        8423272,
+        3355942,
+        7632986,
+        4935481,
+        2237210
+      ],
+      "tint": 8423272
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 46,
+      "maxX": 91,
+      "maxY": 81,
+      "w": 55,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328964,
+        592135,
+        1184526,
+        789513,
+        10594681,
+        7304024,
+        4606262,
+        4474678
+      ],
+      "tint": 10594681
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 44,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 61,
+      "h": 39,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "tornado 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        789514,
+        328964,
+        789513,
+        987148,
+        855306,
+        2500382,
+        6777170,
+        4935481
+      ],
+      "tint": 2500382
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 46,
+      "maxX": 95,
+      "maxY": 83,
+      "w": 63,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "tornado 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        987148,
+        789513,
+        460549,
+        4935481,
+        3619115,
+        9079921,
+        592135,
+        460550
+      ],
+      "tint": 4935481
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 43,
+      "maxX": 98,
+      "maxY": 85,
+      "w": 70,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        328964,
+        460549,
+        789770,
+        1447442,
+        855306,
+        4935481,
+        987148,
+        2697760
+      ],
+      "tint": 4935481
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 41,
+      "maxX": 98,
+      "maxY": 85,
+      "w": 69,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
   "tornado texture 128x128": {
     "frameIndices": [
       0,
@@ -3733,6 +25536,1350 @@ export const EFFECT_ATLAS_META = {
       "centerY": 89
     }
   },
+  "torrentacle 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 22,
+      "maxX": 103,
+      "maxY": 105,
+      "w": 83,
+      "h": 84,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 37,
+      "maxX": 100,
+      "maxY": 88,
+      "w": 76,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "torrentacle 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 38,
+      "maxX": 103,
+      "maxY": 91,
+      "w": 77,
+      "h": 54,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "torrentacle 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 18,
+      "minY": 36,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 89,
+      "h": 55,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "torrentacle 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 22,
+      "maxX": 101,
+      "maxY": 105,
+      "w": 75,
+      "h": 84,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 25,
+      "maxX": 100,
+      "maxY": 103,
+      "w": 72,
+      "h": 79,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 26,
+      "maxX": 96,
+      "maxY": 103,
+      "w": 66,
+      "h": 78,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "torrentacle 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 31,
+      "maxX": 100,
+      "maxY": 100,
+      "w": 73,
+      "h": 70,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "torrentacle 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 28,
+      "maxX": 92,
+      "maxY": 100,
+      "w": 62,
+      "h": 73,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 30,
+      "maxX": 96,
+      "maxY": 99,
+      "w": 62,
+      "h": 70,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "torrentacle 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 29,
+      "maxX": 93,
+      "maxY": 98,
+      "w": 58,
+      "h": 70,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 31,
+      "maxX": 92,
+      "maxY": 97,
+      "w": 59,
+      "h": 67,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 33,
+      "maxX": 92,
+      "maxY": 97,
+      "w": 56,
+      "h": 65,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "torrentacle 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 32,
+      "maxX": 91,
+      "maxY": 94,
+      "w": 59,
+      "h": 63,
+      "centerX": 62,
+      "centerY": 63
+    }
+  },
+  "torrentacle 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 34,
+      "maxX": 93,
+      "maxY": 94,
+      "w": 57,
+      "h": 61,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 36,
+      "maxX": 94,
+      "maxY": 95,
+      "w": 58,
+      "h": 60,
+      "centerX": 66,
+      "centerY": 66
+    }
+  },
+  "torrentacle 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 34,
+      "maxX": 94,
+      "maxY": 91,
+      "w": 58,
+      "h": 58,
+      "centerX": 66,
+      "centerY": 63
+    }
+  },
+  "torrentacle 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 37,
+      "maxX": 94,
+      "maxY": 91,
+      "w": 62,
+      "h": 55,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 33,
+      "maxX": 96,
+      "maxY": 94,
+      "w": 66,
+      "h": 62,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 37,
+      "maxX": 96,
+      "maxY": 87,
+      "w": 65,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "torrentacle 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        4746940,
+        994925,
+        9678823,
+        14544635
+      ],
+      "tint": 4746940
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 38,
+      "maxX": 102,
+      "maxY": 88,
+      "w": 75,
+      "h": 51,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "torrentacle 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        461328,
+        594207,
+        2305862,
+        395536,
+        1119518,
+        461329,
+        658708
+      ],
+      "tint": 2305862
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 25,
+      "h": 26,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        988190,
+        132621,
+        461329,
+        461328,
+        197896,
+        1383726,
+        527121
+      ],
+      "tint": 1521010
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 40,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 74,
+      "h": 48,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        461329,
+        132364,
+        197638,
+        263690,
+        1053983,
+        263433,
+        461328,
+        66310
+      ],
+      "tint": 1253695
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 38,
+      "maxX": 103,
+      "maxY": 89,
+      "w": 80,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        988190,
+        132621,
+        592916,
+        197896,
+        461329,
+        395536,
+        2636121,
+        3493505
+      ],
+      "tint": 2636121
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 36,
+      "maxX": 106,
+      "maxY": 91,
+      "w": 85,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        461329,
+        1193338,
+        1054760,
+        593170,
+        263433,
+        856863,
+        527380,
+        2635084
+      ],
+      "tint": 1193338
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 51,
+      "maxX": 75,
+      "maxY": 76,
+      "w": 23,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        461328,
+        592916,
+        659743,
+        725017,
+        1186086,
+        922656,
+        131588,
+        197896
+      ],
+      "tint": 2174537
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 52,
+      "maxX": 76,
+      "maxY": 75,
+      "w": 23,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        66051,
+        1389943,
+        461329,
+        3623797,
+        1317417,
+        594208,
+        5135998,
+        197896
+      ],
+      "tint": 1389943
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 53,
+      "maxX": 75,
+      "maxY": 78,
+      "w": 24,
+      "h": 26,
+      "centerX": 64,
+      "centerY": 66
+    }
+  },
+  "torrentacle 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        856863,
+        1054502,
+        790292,
+        395535,
+        2048390,
+        1777707,
+        131588,
+        663629
+      ],
+      "tint": 2048390
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 54,
+      "maxX": 76,
+      "maxY": 73,
+      "w": 24,
+      "h": 20,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        856345,
+        658708,
+        1515053,
+        132880,
+        1449515,
+        1383467,
+        663629
+      ],
+      "tint": 663629
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 55,
+      "maxX": 76,
+      "maxY": 74,
+      "w": 26,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "torrentacle 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        396571,
+        527382,
+        3295611,
+        1383467,
+        4150396,
+        461584,
+        592916
+      ],
+      "tint": 3295611
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 51,
+      "maxX": 77,
+      "maxY": 75,
+      "w": 28,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "torrentacle 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        592916,
+        658967,
+        659743,
+        329483,
+        527121,
+        2043469,
+        727349,
+        2766671
+      ],
+      "tint": 2043469
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 53,
+      "maxX": 80,
+      "maxY": 74,
+      "w": 36,
+      "h": 22,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1383467,
+        197896,
+        1054502,
+        988967,
+        4875934,
+        725017,
+        461070,
+        856084
+      ],
+      "tint": 4875934
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 52,
+      "maxX": 81,
+      "maxY": 75,
+      "w": 36,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        461329,
+        1054502,
+        1120294,
+        1383467,
+        857122,
+        724759,
+        197896,
+        5072792
+      ],
+      "tint": 5072792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 52,
+      "maxX": 83,
+      "maxY": 76,
+      "w": 39,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        197896,
+        1120294,
+        988190,
+        1054502,
+        2240071,
+        659225,
+        1053463,
+        2238512
+      ],
+      "tint": 2240071
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 50,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 46,
+      "h": 29,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1120294,
+        461329,
+        132364,
+        1054502,
+        659225,
+        856085,
+        1053983,
+        658708
+      ],
+      "tint": 1915770
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 48,
+      "maxX": 87,
+      "maxY": 79,
+      "w": 47,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        592916,
+        1119519,
+        527380,
+        857120,
+        922399,
+        527121,
+        1251883
+      ],
+      "tint": 2504019
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 88,
+      "maxY": 81,
+      "w": 51,
+      "h": 35,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        461329,
+        395535,
+        1120294,
+        132621,
+        263433,
+        922396,
+        1711913,
+        3887227
+      ],
+      "tint": 1711913
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 46,
+      "maxX": 92,
+      "maxY": 82,
+      "w": 57,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132364,
+        197896,
+        527121,
+        461328,
+        1711913,
+        1120294,
+        66051,
+        1910328
+      ],
+      "tint": 1711913
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 44,
+      "maxX": 93,
+      "maxY": 84,
+      "w": 59,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        132621,
+        66052,
+        658710,
+        395536,
+        263690,
+        724241,
+        1383467,
+        131846
+      ],
+      "tint": 2047612
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 43,
+      "maxX": 95,
+      "maxY": 85,
+      "w": 64,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        395535,
+        1646637,
+        263433,
+        66051,
+        592916,
+        724497,
+        1054502,
+        988965
+      ],
+      "tint": 1646637
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 44,
+      "maxX": 97,
+      "maxY": 86,
+      "w": 69,
+      "h": 43,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "torrentacle 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        263690,
+        132621,
+        597578,
+        197896,
+        856084,
+        132880,
+        132364,
+        658708
+      ],
+      "tint": 1779519
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 43,
+      "maxX": 98,
+      "maxY": 85,
+      "w": 71,
+      "h": 43,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "torrentacle texture 128x128": {
     "frameIndices": [
       0,
@@ -3806,6 +26953,1329 @@ export const EFFECT_ATLAS_META = {
       "centerY": 61
     }
   },
+  "turtleshell front 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 39,
+      "maxX": 86,
+      "maxY": 88,
+      "w": 47,
+      "h": 50,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 40,
+      "maxX": 102,
+      "maxY": 89,
+      "w": 79,
+      "h": 50,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 39,
+      "maxX": 105,
+      "maxY": 90,
+      "w": 83,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 38,
+      "maxX": 105,
+      "maxY": 89,
+      "w": 85,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 39,
+      "maxX": 82,
+      "maxY": 89,
+      "w": 39,
+      "h": 51,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 40,
+      "maxX": 81,
+      "maxY": 87,
+      "w": 37,
+      "h": 48,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 42,
+      "maxX": 78,
+      "maxY": 86,
+      "w": 31,
+      "h": 45,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 44,
+      "maxX": 79,
+      "maxY": 84,
+      "w": 33,
+      "h": 41,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 43,
+      "maxX": 79,
+      "maxY": 85,
+      "w": 32,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 46,
+      "maxX": 81,
+      "maxY": 84,
+      "w": 35,
+      "h": 39,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 48,
+      "maxX": 82,
+      "maxY": 82,
+      "w": 39,
+      "h": 35,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 48,
+      "maxX": 85,
+      "maxY": 80,
+      "w": 44,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 46,
+      "maxX": 84,
+      "maxY": 78,
+      "w": 43,
+      "h": 33,
+      "centerX": 63,
+      "centerY": 62
+    }
+  },
+  "turtleshell front 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 44,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 48,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 61
+    }
+  },
+  "turtleshell front 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        1217310,
+        9499662
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 44,
+      "maxX": 90,
+      "maxY": 78,
+      "w": 57,
+      "h": 35,
+      "centerX": 62,
+      "centerY": 61
+    }
+  },
+  "turtleshell front 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 48,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 59,
+      "h": 34,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 47,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 60,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 84,
+      "w": 64,
+      "h": 41,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 83,
+      "w": 67,
+      "h": 40,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 42,
+      "maxX": 100,
+      "maxY": 84,
+      "w": 73,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell front 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1953792,
+        9499662,
+        1217310
+      ],
+      "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 43,
+      "maxX": 101,
+      "maxY": 85,
+      "w": 75,
+      "h": 43,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        470784,
+        404224,
+        201472,
+        404736,
+        201728,
+        201216
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 48,
+      "maxX": 76,
+      "maxY": 80,
+      "w": 25,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        404736,
+        470784,
+        404992,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 43,
+      "maxX": 103,
+      "maxY": 87,
+      "w": 79,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        404992,
+        135424,
+        269824,
+        404736,
+        471040
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 42,
+      "maxX": 106,
+      "maxY": 86,
+      "w": 85,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        471040,
+        404736,
+        269568,
+        404992
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 21,
+      "minY": 40,
+      "maxX": 107,
+      "maxY": 89,
+      "w": 87,
+      "h": 50,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        404736,
+        470784,
+        404992,
+        201728,
+        471040
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 48,
+      "maxX": 75,
+      "maxY": 79,
+      "w": 24,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        201216,
+        470784,
+        201728,
+        270336,
+        336896
+      ],
+      "tint": 1848323
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 77,
+      "w": 24,
+      "h": 28,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        135424,
+        470784,
+        201472,
+        403712,
+        404736,
+        471040
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 52,
+      "minY": 50,
+      "maxX": 76,
+      "maxY": 76,
+      "w": 25,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell front 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        135424,
+        404480,
+        404224,
+        471040,
+        404992,
+        404736,
+        471296,
+        201216
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 50,
+      "maxX": 75,
+      "maxY": 75,
+      "w": 25,
+      "h": 26,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "turtleshell front 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        201472,
+        404992,
+        471296
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 50,
+      "maxX": 78,
+      "maxY": 77,
+      "w": 30,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        135424,
+        404224,
+        404736,
+        470784,
+        201216,
+        201728,
+        403712
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 54,
+      "maxX": 79,
+      "maxY": 76,
+      "w": 31,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        135424,
+        471296,
+        201216,
+        269568,
+        336896
+      ],
+      "tint": 471296
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 54,
+      "maxX": 82,
+      "maxY": 77,
+      "w": 35,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "turtleshell front 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404992,
+        135424,
+        404736,
+        201728,
+        471040,
+        201216
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 53,
+      "maxX": 84,
+      "maxY": 75,
+      "w": 40,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        135424,
+        404992,
+        1782531,
+        404736,
+        471040
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 52,
+      "maxX": 85,
+      "maxY": 76,
+      "w": 44,
+      "h": 25,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        404992,
+        470784,
+        269568,
+        404736,
+        470528
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 51,
+      "maxX": 86,
+      "maxY": 77,
+      "w": 46,
+      "h": 27,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        404480,
+        470784,
+        135424,
+        404736,
+        404992,
+        471040,
+        201472
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 50,
+      "maxX": 89,
+      "maxY": 77,
+      "w": 52,
+      "h": 28,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        135424,
+        404992,
+        471040,
+        201472,
+        270080
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 48,
+      "maxX": 91,
+      "maxY": 79,
+      "w": 54,
+      "h": 32,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        404736,
+        135424,
+        1782531,
+        201472,
+        134144
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 48,
+      "maxX": 93,
+      "maxY": 81,
+      "w": 60,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell front 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        135424,
+        470784,
+        404736,
+        471040,
+        404992,
+        269568
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 46,
+      "maxX": 94,
+      "maxY": 81,
+      "w": 62,
+      "h": 36,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404224,
+        135424,
+        404480,
+        470784,
+        404992,
+        269824,
+        470528,
+        1782531
+      ],
+      "tint": 1782531
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 45,
+      "maxX": 96,
+      "maxY": 82,
+      "w": 65,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        404736,
+        135424,
+        470784,
+        471040,
+        404992,
+        134144
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 98,
+      "maxY": 83,
+      "w": 69,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        404480,
+        404224,
+        470784,
+        135424,
+        404736,
+        404992,
+        471040,
+        471296
+      ],
+      "tint": 471040
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 42,
+      "maxX": 100,
+      "maxY": 86,
+      "w": 73,
+      "h": 45,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "turtleshell front texture 128x128": {
     "frameIndices": [
       0,
@@ -3845,6 +28315,1329 @@ export const EFFECT_ATLAS_META = {
       "h": 128,
       "centerX": 64,
       "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 45,
+      "maxX": 80,
+      "maxY": 85,
+      "w": 37,
+      "h": 41,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 40,
+      "maxX": 104,
+      "maxY": 90,
+      "w": 81,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 37,
+      "maxX": 106,
+      "maxY": 92,
+      "w": 85,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 37,
+      "maxX": 107,
+      "maxY": 93,
+      "w": 89,
+      "h": 57,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 45,
+      "maxX": 81,
+      "maxY": 85,
+      "w": 31,
+      "h": 41,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 47,
+      "maxX": 80,
+      "maxY": 84,
+      "w": 32,
+      "h": 38,
+      "centerX": 65,
+      "centerY": 66
+    }
+  },
+  "turtleshell side 128x128 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 43,
+      "maxX": 77,
+      "maxY": 82,
+      "w": 27,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 128x128 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 46,
+      "maxX": 80,
+      "maxY": 80,
+      "w": 32,
+      "h": 35,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 128x128 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 45,
+      "maxX": 81,
+      "maxY": 80,
+      "w": 37,
+      "h": 36,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 128x128 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 49,
+      "maxX": 82,
+      "maxY": 79,
+      "w": 38,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 48,
+      "maxX": 87,
+      "maxY": 77,
+      "w": 45,
+      "h": 30,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 128x128 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 50,
+      "maxX": 87,
+      "maxY": 78,
+      "w": 44,
+      "h": 29,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        1953792,
+        9499662
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 48,
+      "h": 31,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 128x128 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1217310,
+        9499662,
+        1953792
+      ],
+      "tint": 1217310
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 51,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1217310,
+        1953792
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 48,
+      "maxX": 92,
+      "maxY": 81,
+      "w": 58,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1217310,
+        1953792
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 46,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 59,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 44,
+      "maxX": 96,
+      "maxY": 84,
+      "w": 65,
+      "h": 41,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 44,
+      "maxX": 94,
+      "maxY": 84,
+      "w": 65,
+      "h": 41,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 44,
+      "maxX": 100,
+      "maxY": 85,
+      "w": 74,
+      "h": 42,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 128x128 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 40,
+      "maxX": 103,
+      "maxY": 87,
+      "w": 77,
+      "h": 48,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 128x128 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        9499662,
+        1953792,
+        1217310
+      ],
+      "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 39,
+      "maxX": 102,
+      "maxY": 89,
+      "w": 78,
+      "h": 51,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 10 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        3825926,
+        4023814,
+        2044931,
+        2176515,
+        2177027,
+        2045187
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 47,
+      "maxX": 77,
+      "maxY": 79,
+      "w": 27,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 32x32 ellipse 100 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2177027,
+        2440708,
+        3825926,
+        4023814,
+        2045187,
+        3826182
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 42,
+      "maxX": 102,
+      "maxY": 88,
+      "w": 77,
+      "h": 47,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 105 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3759622,
+        3826182,
+        2440708,
+        3760134,
+        2045187
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 39,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 84,
+      "h": 52,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 110 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3826182,
+        2440708,
+        3825926,
+        3759622,
+        2044931
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 36,
+      "maxX": 106,
+      "maxY": 90,
+      "w": 85,
+      "h": 55,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 32x32 ellipse 15 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3760134,
+        2440708,
+        3759622,
+        2045187,
+        3956998
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 48,
+      "maxX": 76,
+      "maxY": 79,
+      "w": 26,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 20 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        3826182,
+        4023814,
+        2045187,
+        2440708,
+        3759878,
+        2177027
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 50,
+      "maxX": 78,
+      "maxY": 77,
+      "w": 25,
+      "h": 28,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 25 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2177027,
+        2440708,
+        2242307,
+        3298309,
+        2111235,
+        3826182
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 52,
+      "maxX": 78,
+      "maxY": 78,
+      "w": 25,
+      "h": 27,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 30 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        3825926,
+        3760134,
+        4023814,
+        3891974,
+        4023302,
+        4351239
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 53,
+      "maxX": 78,
+      "maxY": 75,
+      "w": 26,
+      "h": 23,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 35 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2440708,
+        4023814,
+        3825926,
+        2177027,
+        2044931,
+        2177283
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 54,
+      "maxX": 78,
+      "maxY": 76,
+      "w": 28,
+      "h": 23,
+      "centerX": 65,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 40 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2440708,
+        2177027,
+        3298309,
+        4023814,
+        2044931,
+        2176515
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 51,
+      "maxX": 78,
+      "maxY": 75,
+      "w": 32,
+      "h": 25,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 32x32 ellipse 45 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        2440708,
+        3760134,
+        3825926,
+        2045187,
+        4023814,
+        3759878
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 51,
+      "maxX": 80,
+      "maxY": 74,
+      "w": 33,
+      "h": 24,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "turtleshell side 32x32 ellipse 50 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3760134,
+        2440708,
+        2176771,
+        3759878,
+        3826182
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 41,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 55 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2440708,
+        2177027,
+        2111235,
+        3826182,
+        4023814,
+        3760134
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 51,
+      "maxX": 85,
+      "maxY": 77,
+      "w": 42,
+      "h": 27,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 60 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2440708,
+        2177027,
+        3298309,
+        2111235,
+        4023814,
+        2044931
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 49,
+      "maxX": 86,
+      "maxY": 78,
+      "w": 46,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 65 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        3826182,
+        2045187,
+        4023814,
+        2044931,
+        2440708,
+        3760134
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 48,
+      "maxX": 89,
+      "maxY": 79,
+      "w": 51,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 70 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2044931,
+        2440708,
+        3826182,
+        4023814,
+        2177027,
+        2045187
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 47,
+      "maxX": 90,
+      "maxY": 80,
+      "w": 53,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 75 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3891974,
+        3825926,
+        3759622,
+        3826182,
+        3760134
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 46,
+      "maxX": 92,
+      "maxY": 82,
+      "w": 57,
+      "h": 37,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 80 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        3891974,
+        4023814,
+        3826182,
+        2440708,
+        2177027,
+        2044931
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 45,
+      "maxX": 93,
+      "maxY": 84,
+      "w": 61,
+      "h": 40,
+      "centerX": 63,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 85 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        3825926,
+        3826182,
+        4354054,
+        3760134,
+        3759878
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 45,
+      "maxX": 97,
+      "maxY": 84,
+      "w": 67,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "turtleshell side 32x32 ellipse 90 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        1979395,
+        3694086,
+        2440708,
+        2177027,
+        3891974,
+        2045187,
+        2177283,
+        3826182
+      ],
+      "tint": 1979395
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 42,
+      "maxX": 99,
+      "maxY": 85,
+      "w": 70,
+      "h": 44,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "turtleshell side 32x32 ellipse 95 128x128": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        3694086,
+        1979395,
+        4023814,
+        2440708,
+        3760134,
+        2177027,
+        3891974,
+        3825926
+      ],
+      "tint": 3694086
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 27,
+      "minY": 42,
+      "maxX": 100,
+      "maxY": 87,
+      "w": 74,
+      "h": 46,
+      "centerX": 64,
+      "centerY": 65
     }
   },
   "turtleshell side texture 128x128": {

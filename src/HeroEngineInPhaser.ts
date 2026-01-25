@@ -95,6 +95,7 @@ import {
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
     DEBUG_STATUE_STAMP,
+    DEBUG_STR_ARC_NO_FILL,
     DEBUG_STR_PROJECTILE_METRICS,
     DEBUG_STR_PROJECTILE_FRAMES,
     DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS,
@@ -111,6 +112,11 @@ import {
     DEBUG_WPN_AURA_TRACE,
     DEBUG_WPN_AURA_TRACE_INTERVAL_MS,
     DEBUG_WPN_AURA_TRACE_VERBOSE,
+    DEBUG_WPN_DROP_SIM,
+    DEBUG_WPN_DROP_SIM_HERO_INDEX,
+    DEBUG_WPN_DROP_SIM_FLOOR_START,
+    DEBUG_WPN_DROP_SIM_FLOOR_STEP_PER_ACTION,
+    DEBUG_WPN_DROP_SIM_TRAIT_PCT,
 } from "./debugFlags";
 import {
     STR_SWING_FORWARD_FRAME_MS,
@@ -2340,9 +2346,11 @@ function _spawnStrengthArcFxForProj(
     _destroyStrengthArcFxForProj(proj);
 
     const zBase = (hero.z | 0) + 12;
+    const showFill = !DEBUG_STR_ARC_NO_FILL;
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
     maskFx.setFlag(SpriteFlag.Ghost, true);
-    maskFx.setFlag(SpriteFlag.Invisible, true);
+    // Hide the mask only when a fill will render through it.
+    maskFx.setFlag(SpriteFlag.Invisible, showFill);
     maskFx.x = hero.x;
     maskFx.y = hero.y;
     maskFx.z = zBase;
@@ -2353,25 +2361,29 @@ function _spawnStrengthArcFxForProj(
     sprites.setDataSprite(proj, PROJ_COLLIDER_SPRITE_KEY, maskFx);
     sprites.setDataNumber(proj, PROJ_COLLIDER_SCALE_X1000_KEY, STR_ARC_COLLIDER_SCALE_X1000 | 0);
 
-    const dir = _enemyDirFromVector(nx, ny);
-    const texPick = _strengthArcTexturePick(element | 0, dir || "down");
-    if (texPick && texPick.skinId) {
-        const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
-        fillFx.setFlag(SpriteFlag.Ghost, true);
-        fillFx.x = hero.x;
-        fillFx.y = hero.y;
-        fillFx.z = zBase + 1;
-        if ((lifespanMs | 0) > 0) fillFx.lifespan = lifespanMs | 0;
+    if (showFill) {
+        const dir = _enemyDirFromVector(nx, ny);
+        const texPick = _strengthArcTexturePick(element | 0, dir || "down");
+        if (texPick && texPick.skinId) {
+            const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+            fillFx.setFlag(SpriteFlag.Ghost, true);
+            fillFx.x = hero.x;
+            fillFx.y = hero.y;
+            fillFx.z = zBase + 1;
+            if ((lifespanMs | 0) > 0) fillFx.lifespan = lifespanMs | 0;
 
-        const opts: EffectApplyOpts = {
-            mode: "projectile",
-            repeat: -1,
-            frameIndex: 0,
-            maskSprite: maskFx
-        };
-        if (texPick.dir) opts.dir = texPick.dir;
-        applyEffectToSprite(fillFx, texPick.skinId, opts);
-        sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, fillFx);
+            const opts: EffectApplyOpts = {
+                mode: "projectile",
+                repeat: -1,
+                frameIndex: 0,
+                maskSprite: maskFx
+            };
+            if (texPick.dir) opts.dir = texPick.dir;
+            applyEffectToSprite(fillFx, texPick.skinId, opts);
+            sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, fillFx);
+        }
+    } else {
+        sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, null as any);
     }
 
     const outlineId = _strengthArcOutlineSkinId();
@@ -2462,19 +2474,28 @@ function _updateStrengthArcFxForProj(
     proj.setFlag(SpriteFlag.Invisible, true);
 
     const moveAngle = Math.atan2(moveDy, moveDx);
-    let framePick: StrengthArcFramePick;
-    if (segName === "strengthSlash") {
-        if ((frameCol | 0) <= 4) {
-            framePick = _strengthArcPickNearestFrame(moveAngle, STR_ARC_WISPY_FRAME_CANDIDATES);
-        } else {
-            framePick = flipX ? STR_ARC_PRECURSOR_LEFT : STR_ARC_PRECURSOR_RIGHT;
-        }
-    } else {
-        framePick = _strengthArcPickNearestFrame(moveAngle, STR_ARC_FULL_FRAME_CANDIDATES);
-    }
+    const arcTurns = STR_ARC_BASE_TURNS_AT_360 * (arcAbs / 360);
 
-    let baseAngle = framePick.baseAngle;
-    if (flipX) baseAngle = Math.PI - baseAngle;
+    // Pick raw frames using your canonical #N references and sequences.
+    let rawFrame = STR_ARC_SEQ_CLIMAX_RAW[0] | 0;
+    if (segName === "strengthSlash") {
+        rawFrame = _strengthArcPickFromSequence(STR_ARC_SEQ_WISPY_RAW, slashT, 1, false);
+    } else {
+        if (sweepT <= STR_ARC_MEDIUM_END_T) {
+            const localT = STR_ARC_MEDIUM_END_T > 0 ? (sweepT / STR_ARC_MEDIUM_END_T) : 1;
+            rawFrame = _strengthArcPickFromSequence(STR_ARC_SEQ_MEDIUM_RAW, localT, 1, false);
+        } else if (sweepT >= STR_ARC_FADE_START_T) {
+            const denom = Math.max(0.0001, 1 - STR_ARC_FADE_START_T);
+            const localT = (sweepT - STR_ARC_FADE_START_T) / denom;
+            rawFrame = _strengthArcPickFromSequence(STR_ARC_SEQ_WISPY_RAW, localT, 1, true);
+        } else {
+            const midSpan = Math.max(0.0001, STR_ARC_FADE_START_T - STR_ARC_MEDIUM_END_T);
+            const midT = (sweepT - STR_ARC_MEDIUM_END_T) / midSpan;
+            const loops = Math.max(1, Math.round(arcTurns * STR_ARC_CLIMAX_LOOPS_PER_TURN));
+            rawFrame = _strengthArcPickFromSequence(STR_ARC_SEQ_CLIMAX_RAW, midT, loops, false);
+        }
+    }
+    const spineAngle = _strengthArcSpineAngleForRaw(rawFrame, flipX, moveAngle);
 
     const crossStart = 0.6;
     let crossStrength = 0;
@@ -2488,20 +2509,17 @@ function _updateStrengthArcFxForProj(
 
     let spinRot = 0;
     if (segName === "strengthReset" && (arcAbs | 0) > 0) {
-        const turns = STR_ARC_BASE_TURNS_AT_360 * (arcAbs / 360);
         const spinDir = arcSign * (arcSide >= 0 ? 1 : -1);
-        spinRot = spinDir * turns * Math.PI * 2 * sweepT;
+        spinRot = spinDir * arcTurns * Math.PI * 2 * sweepT;
     }
 
-    let rot = moveAngle - baseAngle + crossRot + spinRot;
-    if (rot > Math.PI) rot -= Math.PI * 2;
-    if (rot < -Math.PI) rot += Math.PI * 2;
+    const rot = _strengthArcNormalizeAngle(moveAngle - spineAngle + crossRot + spinRot);
 
     const scale = (segName === "strengthReset")
         ? (1 + ((STR_ARC_END_SCALE - 1) * sweepT))
         : Math.max(STR_ARC_EMERGE_SCALE_MIN, slashT);
 
-    const frameIdx = _strengthArcFrameIndexForCell(STR_ARC_SKIN_ID, framePick.row, framePick.col);
+    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame);
     sprites.setDataNumber(maskFx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(maskFx, EFFECT_ROT_DATA_KEY, rot);
     sprites.setDataNumber(maskFx, EFFECT_SCALE_DATA_KEY, scale);
@@ -2510,7 +2528,12 @@ function _updateStrengthArcFxForProj(
     maskFx.y = posY;
     maskFx.z = (hero.z | 0) + 12;
 
-    const fillFx = sprites.readDataSprite(proj, STR_ARC_FILL_FX_KEY);
+    let fillFx = sprites.readDataSprite(proj, STR_ARC_FILL_FX_KEY);
+    if (DEBUG_STR_ARC_NO_FILL) {
+        if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) fillFx.destroy();
+        sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, null as any);
+        fillFx = null as any;
+    }
     if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
         let phase = 1;
         if (segName === "strengthSlash") {
@@ -2554,10 +2577,15 @@ function _updateStrengthArcFxForProj(
         fillFx.z = (hero.z | 0) + 13;
     }
 
+    // If no fill is present (or fill is disabled), show the raw arc mask sprite.
+    const fillAlive = !!(fillFx && !(fillFx.flags & sprites.Flag.Destroyed));
+    const maskVisible = DEBUG_STR_ARC_NO_FILL || !fillAlive;
+    maskFx.setFlag(SpriteFlag.Invisible, !maskVisible);
+
     const outlineFx = sprites.readDataSprite(proj, STR_ARC_OUTLINE_FX_KEY);
     if (outlineFx && !(outlineFx.flags & sprites.Flag.Destroyed)) {
         const outlineSkin = sprites.readDataString(outlineFx, "effectSkin") || "";
-        const outlineIdx = _strengthArcFrameIndexForCell(outlineSkin || STR_ARC_SKIN_ID, framePick.row, framePick.col);
+        const outlineIdx = _strengthArcFrameIndexFromRaw(outlineSkin || STR_ARC_SKIN_ID, rawFrame);
         sprites.setDataNumber(outlineFx, EFFECT_FRAME_INDEX_DATA_KEY, outlineIdx | 0);
         sprites.setDataNumber(outlineFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(outlineFx, EFFECT_SCALE_DATA_KEY, scale);
@@ -2970,6 +2998,15 @@ const STR_ARC_END_SCALE = 0.25;
 const STR_ARC_BASE_TURNS_AT_360 = 20;
 const STR_ARC_CROSS_ROT_DEG = 35;
 const STR_ARC_EMERGE_SCALE_MIN = 0.4;
+// Raw sheet-frame sequences (these match the on-screen "#N" debug labels).
+const STR_ARC_SEQ_WISPY_RAW = [21, 15, 9, 3, 20, 14];
+const STR_ARC_SEQ_MEDIUM_RAW = [2, 7, 13, 19];
+const STR_ARC_SEQ_CLIMAX_RAW = [12, 18, 0, 6];
+// Phase splits for the reset sweep (t in [0,1]).
+const STR_ARC_MEDIUM_END_T = 0.22;
+const STR_ARC_FADE_START_T = 0.86;
+// Drive extremely fast frame changes during the sweep.
+const STR_ARC_CLIMAX_LOOPS_PER_TURN = 1.5;
 const STR_ARC_FILL_CLIMAX_START = 0.8;
 const STR_ARC_FILL_CLIMAX_FRAMES = 3;
 const STR_ARC_FILL_SPEED_MULT = 2;
@@ -3096,7 +3133,8 @@ function _resolveEffectEntry(atlas: any, skinId: string, dir?: string): any {
     return resolved;
 }
 
-const __strengthArcFrameIndexCache: { [k: string]: number } = Object.create(null);
+let __strengthArcRawToLogicalCache: { [k: string]: number } = Object.create(null);
+let __strengthArcFrameIndexCacheAtlasRef: any = null;
 const __strengthArcTexturePickCache: { [k: string]: { skinId: string; dir?: string } | null } = Object.create(null);
 
 type StrengthArcFramePick = { row: number; col: number; baseAngle: number };
@@ -3141,25 +3179,100 @@ function _strengthArcPickNearestFrame(angleRad: number, candidates: StrengthArcF
 
 function _strengthArcFrameIndexForCell(skinId: string, row: number, col: number): number {
     const rawIndex = (row * STR_ARC_SHEET_COLS) + col;
-    const cacheKey = `${skinId}|${rawIndex}`;
-    if (Object.prototype.hasOwnProperty.call(__strengthArcFrameIndexCache, cacheKey)) {
-        return __strengthArcFrameIndexCache[cacheKey] | 0;
-    }
+    return _strengthArcFrameIndexFromRaw(skinId, rawIndex);
+}
+
+function _strengthArcFrameIndexFromRaw(skinId: string, rawIndex: number): number {
+    const raw = Math.max(0, rawIndex | 0);
     const atlas = _getEffectAtlasAny();
+    if (atlas && atlas !== __strengthArcFrameIndexCacheAtlasRef) {
+        __strengthArcRawToLogicalCache = Object.create(null);
+        __strengthArcFrameIndexCacheAtlasRef = atlas;
+    }
+    const rawCacheKey = `${skinId}|raw|${raw}`;
+    if (Object.prototype.hasOwnProperty.call(__strengthArcRawToLogicalCache, rawCacheKey)) {
+        return __strengthArcRawToLogicalCache[rawCacheKey] | 0;
+    }
     if (!atlas) {
-        __strengthArcFrameIndexCache[cacheKey] = rawIndex | 0;
-        return rawIndex | 0;
+        __strengthArcRawToLogicalCache[rawCacheKey] = raw;
+        return raw;
     }
     const resolved = _resolveEffectEntry(atlas, skinId, "");
     const frames = resolved?.frameIndices as number[] | undefined;
     if (!frames || !frames.length) {
-        __strengthArcFrameIndexCache[cacheKey] = rawIndex | 0;
-        return rawIndex | 0;
+        __strengthArcRawToLogicalCache[rawCacheKey] = raw;
+        return raw;
     }
-    const found = frames.indexOf(rawIndex | 0);
-    const idx = (found >= 0) ? found : Math.max(0, Math.min(frames.length - 1, rawIndex | 0));
-    __strengthArcFrameIndexCache[cacheKey] = idx | 0;
+    const found = frames.indexOf(raw);
+    const idx = (found >= 0) ? found : Math.max(0, Math.min(frames.length - 1, raw));
+    __strengthArcRawToLogicalCache[rawCacheKey] = idx | 0;
     return idx | 0;
+}
+
+type StrengthArcCompassDir = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
+
+// Canonical raw-frame spine directions (based on your on-screen #N references).
+const __strengthArcSpineByRaw: Record<number, StrengthArcCompassDir> = {
+    0: "S",
+    1: "SW",
+    2: "E",
+    3: "SE",
+    6: "E",
+    7: "NW",
+    8: "NE",
+    9: "SE",
+    12: "NE",
+    13: "SW",
+    14: "SE",
+    15: "SE",
+    18: "NW",
+    19: "S",
+    20: "SE",
+    21: "SE"
+};
+
+function _strengthArcCompassAngle(dir: StrengthArcCompassDir): number {
+    switch (dir) {
+        case "N": return -Math.PI / 2;
+        case "NE": return -Math.PI / 4;
+        case "E": return 0;
+        case "SE": return Math.PI / 4;
+        case "S": return Math.PI / 2;
+        case "SW": return (3 * Math.PI) / 4;
+        case "W": return Math.PI;
+        case "NW": return (-3 * Math.PI) / 4;
+        default: return 0;
+    }
+}
+
+function _strengthArcNormalizeAngle(rad: number): number {
+    let out = rad;
+    while (out > Math.PI) out -= Math.PI * 2;
+    while (out < -Math.PI) out += Math.PI * 2;
+    return out;
+}
+
+function _strengthArcSpineAngleForRaw(rawFrame: number, flipX: boolean, fallbackAngle: number): number {
+    const dir = __strengthArcSpineByRaw[rawFrame | 0];
+    let ang = dir ? _strengthArcCompassAngle(dir) : fallbackAngle;
+    if (flipX) ang = Math.PI - ang;
+    return _strengthArcNormalizeAngle(ang);
+}
+
+function _strengthArcPickFromSequence(seq: number[], t: number, loops: number, reverse: boolean): number {
+    if (!seq.length) return 0;
+    const clampedT = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+    const loopCount = Math.max(1, Number.isFinite(loops) ? loops : 1);
+    const span = seq.length;
+    let idx = 0;
+    if (loopCount <= 1) {
+        idx = Math.min(span - 1, Math.floor(clampedT * span));
+    } else {
+        const steps = Math.floor(clampedT * span * loopCount);
+        idx = steps % span;
+    }
+    if (reverse) idx = (span - 1 - idx);
+    return seq[idx] | 0;
 }
 
 function _strengthArcTexturePick(element: number, dir: string): { skinId: string; dir?: string } | null {
@@ -27243,6 +27356,226 @@ const SHOP_ALLOWED_WPN_SUPPORT: string[] = [
     "simple",
 
 ]
+
+const DBG_WPN_DROP_LAST_SEQ_KEY = "__dbgWpnDropLastSeq"
+const DBG_WPN_DROP_FLOOR_KEY = "__dbgWpnDropFloor"
+const DBG_WPN_DROP_RARITY_KEY = "__dbgWpnDropRarity"
+
+const DBG_WPN_DROP_RARITIES = ["common", "uncommon", "rare", "epic", "legendary"]
+const DBG_WPN_DROP_RARITY_SCALE_X100: Record<string, number> = {
+    common: 70,
+    uncommon: 85,
+    rare: 100,
+    epic: 120,
+    legendary: 145,
+}
+
+type DbgWpnDropSlotDef = {
+    equipSlot: string
+    renderSlots: string[]
+    allowed: string[]
+}
+
+const DBG_WPN_DROP_SLOT_DEFS: DbgWpnDropSlotDef[] = [
+    { equipSlot: SHOP_EQUIP_SLOT_STRENGTH, renderSlots: ["slash", "exec", "combo"], allowed: SHOP_ALLOWED_WPN_STRENGTH },
+    { equipSlot: SHOP_EQUIP_SLOT_AGILITY, renderSlots: ["thrust"], allowed: SHOP_ALLOWED_WPN_AGILITY },
+    { equipSlot: SHOP_EQUIP_SLOT_INTELLIGENCE, renderSlots: ["cast"], allowed: SHOP_ALLOWED_WPN_INTELLIGENCE },
+    { equipSlot: SHOP_EQUIP_SLOT_SUPPORT, renderSlots: ["cast"], allowed: SHOP_ALLOWED_WPN_SUPPORT },
+]
+
+function _dbgWpnDropSimEnabledForHero(hi: number, hero: Sprite): boolean {
+    if (!DEBUG_WPN_DROP_SIM) return false
+    const target = DEBUG_WPN_DROP_SIM_HERO_INDEX | 0
+    if (target >= 0 && target !== (hi | 0)) return false
+    const pid = sprites.readDataNumber(hero, HERO_DATA.PID) | 0
+    if ((pid | 0) <= 0) return false
+    const profile = String(_getProfileFromHeroSprite(hero) || "").trim().toLowerCase()
+    if (profile !== "longblond") return false
+    return true
+}
+
+function _dbgWpnDropIsWeaponAction(kindRaw: string): boolean {
+    const k = String(kindRaw || "").toLowerCase()
+    if (!k || k === "none" || k === "spawn" || k === "death" || k === "deadghost") return false
+    return (
+        k.startsWith("strength") ||
+        k.startsWith("agility") ||
+        k.startsWith("intellect") ||
+        k.startsWith("intelligence") ||
+        k.startsWith("support") ||
+        k.startsWith("heal") ||
+        k.startsWith("wisdom")
+    )
+}
+
+function _dbgWpnDropHash(s: string): number {
+    let h = 2166136261 >>> 0
+    const str = String(s || "")
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i) & 0xff
+        h = Math.imul(h, 16777619) >>> 0
+    }
+    return h >>> 0
+}
+
+function _dbgWpnDropFloorScaleX100(floor: number): number {
+    const floorIdx = Math.max(1, floor | 0) | 0
+    const scaleBaseX100 = 100 + Math.max(0, (floorIdx - 1) * (BALANCE.SHOP.TRAIT_SCALE_PER_FLOOR_PCT | 0))
+    return Math.min(scaleBaseX100, BALANCE.SHOP.TRAIT_SCALE_PCT_MAX | 0) | 0
+}
+
+function _dbgWpnDropRarityForFloor(floor: number): { rarity: string; idx: number } {
+    const floorIdx = Math.max(1, floor | 0) | 0
+    const idx = Math.min(DBG_WPN_DROP_RARITIES.length - 1, Math.max(0, floorIdx - 1)) | 0
+    const rarity = DBG_WPN_DROP_RARITIES[idx] || "common"
+    return { rarity, idx }
+}
+
+function _dbgWpnDropPickWeapon(list: string[], floor: number, rarityIdx: number, slotKey: string): string {
+    if (!list || list.length === 0) return ""
+    const seed = `${slotKey}|${floor | 0}|${rarityIdx | 0}`
+    const h = _dbgWpnDropHash(seed)
+    const idx = (h % list.length) | 0
+    return String(list[idx] || "").trim().toLowerCase()
+}
+
+function _dbgWpnDropTraitBase(floor: number, rarity: string): number {
+    const traitLoAbs = BALANCE.SHOP.TRAIT_MIN_ABS | 0
+    const traitHiAbs = BALANCE.SHOP.TRAIT_MAX_ABS | 0
+    const pctRaw = DEBUG_WPN_DROP_SIM_TRAIT_PCT | 0
+    const pct = Math.max(1, Math.min(80, pctRaw)) | 0
+    const potentialMana = Math.max(1, _shopWeaponTraitMaxManaForTeam() | 0)
+    let base = Math.idiv(potentialMana * pct, 100)
+    const floorScale = _dbgWpnDropFloorScaleX100(floor | 0)
+    base = Math.idiv(base * floorScale, 100)
+    const rarityScale = DBG_WPN_DROP_RARITY_SCALE_X100[rarity] ?? 100
+    base = Math.idiv(base * (rarityScale | 0), 100)
+    return _clamp(base | 0, traitLoAbs, traitHiAbs)
+}
+
+function _dbgWpnDropRollTraits(fam: number, equipSlot: string, weaponId: string, floor: number, rarity: string): { t1: number; t2: number; t3: number; t4: number } {
+    const base = Math.max(1, _dbgWpnDropTraitBase(floor | 0, rarity))
+    const hash = _dbgWpnDropHash(`${equipSlot}|${weaponId}|${floor | 0}|${fam | 0}`)
+    const pattern = (hash % 3) | 0
+    let t1 = 0, t2 = 0, t3 = 0, t4 = 0
+    if (pattern === 0) {
+        t1 = base
+    } else if (pattern === 1) {
+        const v = Math.max(1, Math.idiv(base, 4))
+        t1 = v; t2 = v; t3 = v; t4 = v
+    } else {
+        const v = Math.max(1, Math.idiv(base, 2))
+        t1 = v; t2 = v
+    }
+    return { t1: t1 | 0, t2: t2 | 0, t3: t3 | 0, t4: t4 | 0 }
+}
+
+function _dbgWpnDropApplyTraits(hi: number, equipSlot: string, fam: number, traits: { t1: number; t2: number; t3: number; t4: number }): void {
+    const slotKey = (equipSlot || "").toLowerCase()
+    const base = `shop.weapon.${slotKey}`
+    heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT1)!, base + ".t1", traits.t1 | 0)
+    heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT2)!, base + ".t2", traits.t2 | 0)
+    heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT3)!, base + ".t3", traits.t3 | 0)
+    heroModSet(hi, _modBucketForFamilyAndTraitIndex(fam, OUT.TRAIT4)!, base + ".t4", traits.t4 | 0)
+}
+
+function _dbgWpnDropSetRenderWeapon(hero: Sprite, renderSlot: string, weaponId: string): void {
+    const slot = (renderSlot || "").toLowerCase()
+    if (!slot) return
+    if (slot === "slash") { sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, weaponId); return }
+    if (slot === "thrust") { sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, weaponId); return }
+    if (slot === "cast") { sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, weaponId); return }
+    if (slot === "exec") { sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, weaponId); return }
+    if (slot === "combo") { sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, weaponId); return }
+}
+
+function _dbgWpnDropApplyLoadoutForFloor(hi: number, hero: Sprite, floor: number, rarity: string): void {
+    const heroFam = sprites.readDataNumber(hero, HERO_DATA.FAMILY) | 0
+    let castIntId = ""
+    let castSupId = ""
+    const slotSummaries: string[] = []
+
+    for (let i = 0; i < DBG_WPN_DROP_SLOT_DEFS.length; i++) {
+        const def = DBG_WPN_DROP_SLOT_DEFS[i]
+        const equipSlot = (def.equipSlot || "").toLowerCase()
+        if (!equipSlot) continue
+        const fam = _shopFamilyFromEquipSlot(equipSlot)
+        const rarityInfo = _dbgWpnDropRarityForFloor(floor | 0)
+        const weaponId = _dbgWpnDropPickWeapon(def.allowed, floor | 0, rarityInfo.idx | 0, equipSlot)
+        if (!weaponId) continue
+
+        if (equipSlot === SHOP_EQUIP_SLOT_STRENGTH) sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, weaponId)
+        else if (equipSlot === SHOP_EQUIP_SLOT_AGILITY) sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, weaponId)
+        else if (equipSlot === SHOP_EQUIP_SLOT_INTELLIGENCE) sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, weaponId)
+        else if (equipSlot === SHOP_EQUIP_SLOT_SUPPORT) sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, weaponId)
+
+        for (let r = 0; r < def.renderSlots.length; r++) {
+            _dbgWpnDropSetRenderWeapon(hero, def.renderSlots[r], weaponId)
+        }
+
+        if (equipSlot === SHOP_EQUIP_SLOT_INTELLIGENCE) castIntId = weaponId
+        if (equipSlot === SHOP_EQUIP_SLOT_SUPPORT) castSupId = weaponId
+
+        const traits = _dbgWpnDropRollTraits(fam | 0, equipSlot, weaponId, floor | 0, rarity)
+        _dbgWpnDropApplyTraits(hi, equipSlot, fam | 0, traits)
+        slotSummaries.push(
+            equipSlot + "=" + weaponId +
+            "@t" + traits.t1 + "," + traits.t2 + "," + traits.t3 + "," + traits.t4
+        )
+    }
+
+    const castPick =
+        (heroFam === FAMILY.HEAL ? (castSupId || castIntId) :
+            (heroFam === FAMILY.INTELLECT ? (castIntId || castSupId) : (castIntId || castSupId)))
+    if (castPick) sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, castPick)
+    if (castIntId) sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, castIntId)
+    if (castSupId) sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, castSupId)
+
+    const line =
+        "hi=" + (hi | 0) +
+        " floor=" + (floor | 0) +
+        " rarity=" + String(rarity || "") +
+        " cast=" + String(castPick || "") +
+        " slots=" + slotSummaries.join("|")
+    console.log("[WPN-DROP-SIM] " + line)
+}
+
+function _dbgWpnDropSimTick(): void {
+    if (!DEBUG_WPN_DROP_SIM) return
+    const floorStart = Math.max(1, DEBUG_WPN_DROP_SIM_FLOOR_START | 0) | 0
+    const floorStep = Math.max(1, DEBUG_WPN_DROP_SIM_FLOOR_STEP_PER_ACTION | 0) | 0
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (!_dbgWpnDropSimEnabledForHero(hi, hero)) continue
+
+        let floorCur = sprites.readDataNumber(hero, DBG_WPN_DROP_FLOOR_KEY) | 0
+        let lastSeq = sprites.readDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY) | 0
+        const actionSeq = sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0
+        const actionKind = sprites.readDataString(hero, HERO_DATA.ActionKind) || ""
+
+        if ((floorCur | 0) <= 0) {
+            floorCur = floorStart | 0
+            sprites.setDataNumber(hero, DBG_WPN_DROP_FLOOR_KEY, floorCur | 0)
+            sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
+            const rarity0 = _dbgWpnDropRarityForFloor(floorCur | 0)
+            sprites.setDataString(hero, DBG_WPN_DROP_RARITY_KEY, rarity0.rarity)
+            _dbgWpnDropApplyLoadoutForFloor(hi, hero, floorCur | 0, rarity0.rarity)
+            continue
+        }
+
+        if ((actionSeq | 0) > (lastSeq | 0) && _dbgWpnDropIsWeaponAction(actionKind)) {
+            const floorNext = (floorCur + floorStep) | 0
+            const rarityInfo = _dbgWpnDropRarityForFloor(floorNext | 0)
+            sprites.setDataNumber(hero, DBG_WPN_DROP_FLOOR_KEY, floorNext | 0)
+            sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
+            sprites.setDataString(hero, DBG_WPN_DROP_RARITY_KEY, rarityInfo.rarity)
+            _dbgWpnDropApplyLoadoutForFloor(hi, hero, floorNext | 0, rarityInfo.rarity)
+        } else if ((actionSeq | 0) > (lastSeq | 0)) {
+            sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
+        }
+    }
+}
 
 
 
@@ -71263,6 +71596,8 @@ game.onUpdate(function () {
         consumeAndDispatchPlayerIntents(now)
 
     }
+
+    _dbgWpnDropSimTick()
 
 
 

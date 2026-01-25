@@ -3,7 +3,14 @@
 // and deterministic frame resolution utilities.
 
 import type Phaser from "phaser";
-import { DEBUG_NPC_PIPELINE, DEBUG_WPN_PIXEL_LOG, DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY, WEAPON_DEBUG, WEAPON_DEBUG_VERBOSE } from "./debugFlags";
+import {
+  DEBUG_NPC_PIPELINE,
+  DEBUG_WPN_PIXEL_LOG,
+  DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY,
+  DEBUG_WPN_COMPARE_ORIGINALS_RUNTIME,
+  WEAPON_DEBUG,
+  WEAPON_DEBUG_VERBOSE
+} from "./debugFlags";
 
 import {
   type Dir4,
@@ -11,6 +18,7 @@ import {
   type WeaponMode,
   type WeaponSheetRef,
   getWeaponAtlasFrameForSheet,
+  getWeaponOriginalRefKey,
   getWeaponSheetMeta,
   ensureWeaponSheetsLoaded,
   resolveWeaponLayerPair,
@@ -144,9 +152,16 @@ const _WEAPON_HIDDEN_ONCE = new Set<string>();
 const _WPN_ROW_LOG_ONCE = new Set<string>();
 const _WPN_PIXEL_RESOLVE_ONCE = new Set<string>();
 const _WPN_PIXEL_PLACE_ONCE = new Set<string>();
+const _WPN_PIXEL_COMPARE_ONCE = new Set<string>();
+const _WPN_ORIG_REF_MISS_ONCE = new Set<string>();
 const _WPN_FAMILY_OVERRIDE_ONCE = new Set<string>();
 const _WPN_DEBUG_ORIGINALS_ONCE = new Set<string>();
 const _WPN_PIXEL_CTX_CACHE = new Map<string, { src: any; w: number; h: number; ctx: CanvasRenderingContext2D }>();
+
+const WPN_ORIG_GHOST_BG_KEY = "__wpnOrigGhostBg";
+const WPN_ORIG_GHOST_FG_KEY = "__wpnOrigGhostFg";
+const WPN_ORIG_GHOST_ALPHA = 0.45;
+const WPN_ORIG_GHOST_TINT = 0x00ffff;
 
 
 // ------------------------------------------------------------
@@ -179,9 +194,18 @@ function _weaponDebugVerbose(): boolean {
   }
 }
 
-function _weaponPixelDebugEnabled(): boolean {
+function _weaponPixelPaletteDebugEnabled(): boolean {
   if (!DEBUG_WPN_PIXEL_LOG) return false;
   return _weaponDebugEnabled() || _weaponDebugVerbose();
+}
+
+function _weaponPixelCompareDebugEnabled(): boolean {
+  if (!DEBUG_WPN_COMPARE_ORIGINALS_RUNTIME) return false;
+  return _weaponDebugEnabled() || _weaponDebugVerbose();
+}
+
+function _weaponPixelDebugEnabled(): boolean {
+  return _weaponPixelPaletteDebugEnabled();
 }
 
 function _toHex2(v: number): string {
@@ -213,7 +237,7 @@ function _getPixelCtxForSource(texKey: string, src: any): { ctx: CanvasRendering
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | null;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
     if (!ctx) return null;
     ctx.drawImage(src, 0, 0);
     _WPN_PIXEL_CTX_CACHE.set(texKey, { src, w, h, ctx });
@@ -344,6 +368,179 @@ function _logWeaponPixelPlaceOnce(sig: string, line: string): void {
   if (_WPN_PIXEL_PLACE_ONCE.has(sig)) return;
   _WPN_PIXEL_PLACE_ONCE.add(sig);
   console.log("[WPN-PIX-PLACE] " + line);
+}
+
+function _logWeaponPixelCompareOnce(sig: string, line: string): void {
+  if (_WPN_PIXEL_COMPARE_ONCE.has(sig)) return;
+  _WPN_PIXEL_COMPARE_ONCE.add(sig);
+  console.log("[WPN-PIX-CMP] " + line);
+}
+
+function _logWeaponOriginalRefMissingOnce(sig: string, line: string): void {
+  if (_WPN_ORIG_REF_MISS_ONCE.has(sig)) return;
+  _WPN_ORIG_REF_MISS_ONCE.add(sig);
+  console.log("[WPN-ORIG-REF-MISS] " + line);
+}
+
+function _diffFrameRegions(args: {
+  origCtx: CanvasRenderingContext2D;
+  origW: number;
+  origH: number;
+  origX: number;
+  origY: number;
+  atlasCtx: CanvasRenderingContext2D;
+  atlasW: number;
+  atlasH: number;
+  atlasX: number;
+  atlasY: number;
+  frameW: number;
+  frameH: number;
+}): { diffPixels: number; totalPixels: number; error?: string } {
+  const frameW = args.frameW | 0;
+  const frameH = args.frameH | 0;
+  const totalPixels = Math.max(0, frameW * frameH);
+  if (frameW <= 0 || frameH <= 0) return { diffPixels: -1, totalPixels, error: "bad_frame_size" };
+
+  const ox = args.origX | 0;
+  const oy = args.origY | 0;
+  const ax = args.atlasX | 0;
+  const ay = args.atlasY | 0;
+
+  if (ox < 0 || oy < 0 || ox + frameW > args.origW || oy + frameH > args.origH) {
+    return { diffPixels: -1, totalPixels, error: "orig_oob" };
+  }
+  if (ax < 0 || ay < 0 || ax + frameW > args.atlasW || ay + frameH > args.atlasH) {
+    return { diffPixels: -1, totalPixels, error: "atlas_oob" };
+  }
+
+  try {
+    const oImg = args.origCtx.getImageData(ox, oy, frameW, frameH);
+    const aImg = args.atlasCtx.getImageData(ax, ay, frameW, frameH);
+    const od = oImg.data;
+    const ad = aImg.data;
+    let diff = 0;
+    for (let i = 0; i < od.length; i += 4) {
+      if (od[i] !== ad[i] || od[i + 1] !== ad[i + 1] || od[i + 2] !== ad[i + 2] || od[i + 3] !== ad[i + 3]) {
+        diff++;
+      }
+    }
+    return { diffPixels: diff, totalPixels };
+  } catch {
+    return { diffPixels: -1, totalPixels, error: "read_failed" };
+  }
+}
+
+function _compareWeaponFrameToOriginal(args: {
+  scene: Phaser.Scene;
+  weaponId: string;
+  heroPhase: string;
+  usedPhase: string;
+  variant: string;
+  dir: string;
+  layer: string;
+  sheetKey: string;
+  atlasKey: string;
+  atlasImage: string;
+  atlasFrame?: { x: number; y: number; w: number; h: number };
+  frameIndex: number;
+  frameW: number;
+  frameH: number;
+  cols: number;
+  rows: number;
+  x?: number;
+  y?: number;
+  depth?: number;
+}): void {
+  if (!_weaponPixelCompareDebugEnabled()) return;
+
+  const textures: any = args.scene?.textures;
+  if (!textures || typeof textures.exists !== "function") return;
+
+  const origKey = getWeaponOriginalRefKey(args.sheetKey);
+  if (!origKey || !textures.exists(origKey)) {
+    const missLine = "key=" + args.sheetKey + " origKey=" + origKey;
+    _logWeaponOriginalRefMissingOnce(args.sheetKey, missLine);
+    return;
+  }
+
+  const atlasInfo = args.atlasFrame;
+  if (!atlasInfo) {
+    const sig = `cmp|${args.sheetKey}|${args.frameIndex}|noatlas`;
+    const line = "key=" + args.sheetKey + " frame=" + (args.frameIndex | 0) + " error=no_atlas_frame";
+    _logWeaponPixelCompareOnce(sig, line);
+    return;
+  }
+
+  const origTex: any = textures.get(origKey);
+  const atlasTex: any = textures.get(args.sheetKey);
+  const origSrc: any = origTex?.getSourceImage?.();
+  const atlasSrc: any = atlasTex?.getSourceImage?.();
+  const origCtxInfo = _getPixelCtxForSource(origKey, origSrc);
+  const atlasCtxInfo = _getPixelCtxForSource(args.sheetKey, atlasSrc);
+  if (!origCtxInfo || !atlasCtxInfo) {
+    const sig = `cmp|${args.sheetKey}|${args.frameIndex}|nctx`;
+    const line =
+      "key=" + args.sheetKey +
+      " origKey=" + origKey +
+      " frame=" + (args.frameIndex | 0) +
+      " error=no_ctx";
+    _logWeaponPixelCompareOnce(sig, line);
+    return;
+  }
+
+  const cols = Math.max(1, args.cols | 0);
+  const rows = Math.max(1, args.rows | 0);
+  const frameIndex = Math.max(0, args.frameIndex | 0);
+  const row = Math.max(0, Math.min(rows - 1, ((frameIndex / cols) | 0)));
+  const col = Math.max(0, Math.min(cols - 1, (frameIndex % cols) | 0));
+
+  const frameW = args.frameW | 0;
+  const frameH = args.frameH | 0;
+  const ox = col * frameW;
+  const oy = row * frameH;
+  const ax = (atlasInfo.x | 0) + ox;
+  const ay = (atlasInfo.y | 0) + oy;
+
+  const diff = _diffFrameRegions({
+    origCtx: origCtxInfo.ctx,
+    origW: origCtxInfo.w,
+    origH: origCtxInfo.h,
+    origX: ox,
+    origY: oy,
+    atlasCtx: atlasCtxInfo.ctx,
+    atlasW: atlasCtxInfo.w,
+    atlasH: atlasCtxInfo.h,
+    atlasX: ax,
+    atlasY: ay,
+    frameW,
+    frameH
+  });
+
+  const sig = `cmp|${args.sheetKey}|${frameIndex}`;
+  const line =
+    "weaponId=" + args.weaponId +
+    " heroPhase=" + args.heroPhase +
+    " usedPhase=" + args.usedPhase +
+    (args.dir ? (" dir=" + args.dir) : "") +
+    " variant=" + args.variant +
+    " layer=" + args.layer +
+    " key=" + args.sheetKey +
+    " origKey=" + origKey +
+    " frame=" + frameIndex +
+    " row=" + row +
+    " col=" + col +
+    " diff=" + diff.diffPixels +
+    " total=" + diff.totalPixels +
+    " match=" + (diff.diffPixels === 0 ? 1 : 0) +
+    (diff.error ? (" error=" + diff.error) : "") +
+    (args.atlasKey ? (" atlas=" + args.atlasKey) : "") +
+    (args.atlasImage ? (" atlasImg=" + args.atlasImage) : "") +
+    " atlasAbs=" + ax + "," + ay +
+    " origAbs=" + ox + "," + oy +
+    (Number.isFinite(args.x as number) ? (" x=" + Math.round(args.x as number)) : "") +
+    (Number.isFinite(args.y as number) ? (" y=" + Math.round(args.y as number)) : "") +
+    (Number.isFinite(args.depth as number) ? (" depth=" + Math.round(args.depth as number)) : "");
+  _logWeaponPixelCompareOnce(sig, line);
 }
 
 function _buildWeaponPixelLine(args: {
@@ -613,6 +810,8 @@ export function syncStandaloneWeaponLayers(args: {
     const textures: any = args.scene?.textures;
     if (textures && typeof textures.exists === "function" && !textures.exists(layerRef.key)) {
       if (dbgOn) {
+        const atlasDbg = _atlasDebugFields(args.scene, [layerRef.key]);
+        const loaderDbg = _loaderDebugFields(args.scene);
         _logWeaponMissingTexOnce(missKey + "|layer:" + layerRef.key, {
           weaponId: args.weaponId,
           heroPhase: args.sourcePhase,
@@ -622,7 +821,15 @@ export function syncStandaloneWeaponLayers(args: {
           dir: args.dir,
           heroFrameIndex: -1,
           missing: [layerRef.key],
-          keys: [layerRef.key]
+          keys: [layerRef.key],
+          atlasKeys: atlasDbg.atlasKeys,
+          atlasExists: atlasDbg.atlasExists,
+          atlasFrames: atlasDbg.atlasFrames,
+          atlasImages: atlasDbg.atlasImages,
+          loaderLoading: loaderDbg.loaderLoading,
+          loaderList: loaderDbg.loaderList,
+          loaderInflight: loaderDbg.loaderInflight,
+          loaderQueue: loaderDbg.loaderQueue
         });
       }
       ensureWeaponSheetsLoaded(args.scene, args.weaponId, args.variant);
@@ -632,13 +839,15 @@ export function syncStandaloneWeaponLayers(args: {
 
     if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
 
-    const pixelDbg = _weaponPixelDebugEnabled();
+    const paletteDbg = _weaponPixelPaletteDebugEnabled();
+    const compareDbg = _weaponPixelCompareDebugEnabled();
+    const debugNeedsMeta = paletteDbg || compareDbg;
     let gridCols = 0;
     let gridRows = 0;
     let atlasKey = "";
     let atlasImage = "";
     let atlasFrame: { x: number; y: number; w: number; h: number } | undefined;
-    if (pixelDbg) {
+    if (debugNeedsMeta) {
       const meta = getWeaponSheetMeta(layerRef.key);
       const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
       atlasKey = meta?.atlasKey ?? atlasInfo?.atlasKey ?? "";
@@ -647,6 +856,8 @@ export function syncStandaloneWeaponLayers(args: {
       const grid = getSheetGrid(args.scene, layerRef);
       gridCols = Math.max(1, grid.cols | 0);
       gridRows = Math.max(1, grid.rows | 0);
+    }
+    if (paletteDbg) {
       const sample0 = _scanFramePalette(args.scene, layerRef.key, 0, layerRef.frameW | 0, layerRef.frameH | 0);
       const line0 = _buildWeaponPixelLine({
         weaponId: String(args.weaponId || ""),
@@ -700,35 +911,63 @@ export function syncStandaloneWeaponLayers(args: {
     spr.setDepth(depth);
     try { spr.setVisible(true); } catch { }
 
-    if (pixelDbg) {
+    if (compareDbg || paletteDbg) {
       const cols = Math.max(1, gridCols | 0);
+      const rows = Math.max(1, gridRows | 0);
       const row = Math.max(0, ((frameIndex / cols) | 0));
       const colNow = Math.max(0, (frameIndex % cols) | 0);
-      const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
-      const line = _buildWeaponPixelLine({
-        weaponId: String(args.weaponId || ""),
-        heroPhase: String(args.sourcePhase || ""),
-        usedPhase: String(usedPhase || ""),
-        variant: String(args.variant ?? "base"),
-        dir: String(args.dir || ""),
-        layer: layerLabel,
-        sheetKey: layerRef.key,
-        frameIndex,
-        frameW: layerRef.frameW | 0,
-        frameH: layerRef.frameH | 0,
-        cols,
-        rows: Math.max(1, gridRows | 0),
-        row,
-        col: colNow,
-        atlasKey,
-        atlasImage,
-        atlasFrame,
-        palette: sample.palette,
-        error: sample.error,
-        oobInfo: sample.debug
-      }) + " heroFrameIndex=-1 frameColOverride=" + (args.frameColOverride ?? -1);
-      const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${args.variant ?? ""}|${args.sourcePhase}`;
-      _logWeaponPixelPlaceOnce(sig, line);
+
+      if (compareDbg) {
+        _compareWeaponFrameToOriginal({
+          scene: args.scene,
+          weaponId: String(args.weaponId || ""),
+          heroPhase: String(args.sourcePhase || ""),
+          usedPhase: String(usedPhase || ""),
+          variant: String(args.variant ?? "base"),
+          dir: String(args.dir || ""),
+          layer: layerLabel,
+          sheetKey: layerRef.key,
+          atlasKey,
+          atlasImage,
+          atlasFrame,
+          frameIndex,
+          frameW: layerRef.frameW | 0,
+          frameH: layerRef.frameH | 0,
+          cols,
+          rows,
+          x: args.x,
+          y: args.y,
+          depth
+        });
+      }
+
+      if (paletteDbg) {
+        const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
+        const line = _buildWeaponPixelLine({
+          weaponId: String(args.weaponId || ""),
+          heroPhase: String(args.sourcePhase || ""),
+          usedPhase: String(usedPhase || ""),
+          variant: String(args.variant ?? "base"),
+          dir: String(args.dir || ""),
+          layer: layerLabel,
+          sheetKey: layerRef.key,
+          frameIndex,
+          frameW: layerRef.frameW | 0,
+          frameH: layerRef.frameH | 0,
+          cols,
+          rows,
+          row,
+          col: colNow,
+          atlasKey,
+          atlasImage,
+          atlasFrame,
+          palette: sample.palette,
+          error: sample.error,
+          oobInfo: sample.debug
+        }) + " heroFrameIndex=-1 frameColOverride=" + (args.frameColOverride ?? -1);
+        const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${args.variant ?? ""}|${args.sourcePhase}`;
+        _logWeaponPixelPlaceOnce(sig, line);
+      }
     }
 
     return { key: layerRef.key, frameIndex };
@@ -939,6 +1178,64 @@ function _fmtWeaponHiddenOneLine(payload: any): string {
   );
 }
 
+function _atlasDebugFields(scene: Phaser.Scene | undefined, keys: string[] | undefined): {
+  atlasKeys: string;
+  atlasExists: string;
+  atlasFrames: string;
+  atlasImages: string;
+} {
+  const list = Array.isArray(keys) ? keys.filter(Boolean).map((k) => String(k)) : [];
+  if (!scene || list.length === 0) {
+    return { atlasKeys: "", atlasExists: "", atlasFrames: "", atlasImages: "" };
+  }
+  const textures: any = scene.textures as any;
+  const atlasKeys: string[] = [];
+  const atlasExists: string[] = [];
+  const atlasFrames: string[] = [];
+  const atlasImages: string[] = [];
+  for (const key of list) {
+    const meta = getWeaponSheetMeta(key);
+    const atlasInfo = getWeaponAtlasFrameForSheet(key);
+    const atlasKey = String(atlasInfo?.atlasKey || meta?.atlasKey || "");
+    atlasKeys.push(key + ":" + atlasKey);
+    const exists = atlasKey && textures && typeof textures.exists === "function" && textures.exists(atlasKey) ? 1 : 0;
+    atlasExists.push(key + ":" + exists);
+    if (atlasInfo?.frame) {
+      const f = atlasInfo.frame;
+      atlasFrames.push(key + ":" + [f.x | 0, f.y | 0, f.w | 0, f.h | 0].join(","));
+    }
+    if (atlasInfo?.image) atlasImages.push(key + ":" + String(atlasInfo.image));
+  }
+  return {
+    atlasKeys: atlasKeys.join(","),
+    atlasExists: atlasExists.join(","),
+    atlasFrames: atlasFrames.join(","),
+    atlasImages: atlasImages.join(",")
+  };
+}
+
+function _loaderDebugFields(scene: Phaser.Scene | undefined): {
+  loaderLoading: string;
+  loaderList: string;
+  loaderInflight: string;
+  loaderQueue: string;
+} {
+  const loader: any = scene?.load as any;
+  if (!loader) {
+    return { loaderLoading: "", loaderList: "", loaderInflight: "", loaderQueue: "" };
+  }
+  const loading = (typeof loader.isLoading === "function") ? (loader.isLoading() ? 1 : 0) : 0;
+  const listSize = Number.isFinite(loader?.list?.size) ? loader.list.size : "";
+  const inflightSize = Number.isFinite(loader?.inflight?.size) ? loader.inflight.size : "";
+  const queueSize = Number.isFinite(loader?.queue?.size) ? loader.queue.size : "";
+  return {
+    loaderLoading: String(loading),
+    loaderList: String(listSize),
+    loaderInflight: String(inflightSize),
+    loaderQueue: String(queueSize)
+  };
+}
+
 function _fmtWeaponMissingTexOneLine(payload: any): string {
   const weaponId = payload?.weaponId ?? "";
   const heroPhase = payload?.heroPhase ?? "";
@@ -952,6 +1249,14 @@ function _fmtWeaponMissingTexOneLine(payload: any): string {
   const keys = Array.isArray(payload?.keys) ? payload.keys.join(",") : (payload?.keys ?? "");
   const queued = Number.isFinite(payload?.queued) ? String(payload.queued) : "";
   const total = Number.isFinite(payload?.total) ? String(payload.total) : "";
+  const atlasKeys = payload?.atlasKeys ?? "";
+  const atlasExists = payload?.atlasExists ?? "";
+  const atlasFrames = payload?.atlasFrames ?? "";
+  const atlasImages = payload?.atlasImages ?? "";
+  const loaderLoading = payload?.loaderLoading ?? "";
+  const loaderList = payload?.loaderList ?? "";
+  const loaderInflight = payload?.loaderInflight ?? "";
+  const loaderQueue = payload?.loaderQueue ?? "";
 
   // Keep this stable + grep-friendly
   return (
@@ -965,6 +1270,14 @@ function _fmtWeaponMissingTexOneLine(payload: any): string {
     " missingKey=" + missingKey +
     " missing=" + missing +
     " keys=" + keys +
+    " atlasKeys=" + atlasKeys +
+    " atlasExists=" + atlasExists +
+    " atlasFrames=" + atlasFrames +
+    " atlasImages=" + atlasImages +
+    " loaderLoading=" + loaderLoading +
+    " loaderList=" + loaderList +
+    " loaderInflight=" + loaderInflight +
+    " loaderQueue=" + loaderQueue +
     " queued=" + queued +
     " total=" + total
   );
@@ -1435,6 +1748,99 @@ export function syncWeaponLayersToHero(args: {
   let dbgHeroName = "";
   let dbgHeroFamily = "";
 
+  const paletteDbg = _weaponPixelPaletteDebugEnabled();
+  const compareDbg = _weaponPixelCompareDebugEnabled();
+
+  const _getHeroData = (k: string): any => {
+    try {
+      if (heroAny && typeof heroAny.getData === "function") return heroAny.getData(k);
+      return heroAny?.data?.values?.[k];
+    } catch {
+      return undefined;
+    }
+  };
+  const _setHeroData = (k: string, v: any): void => {
+    try {
+      if (heroAny && typeof heroAny.setData === "function") {
+        heroAny.setData(k, v);
+        return;
+      }
+      if (heroAny?.data?.values) heroAny.data.values[k] = v;
+    } catch {
+      // ignore
+    }
+  };
+
+  const _ghostKeyForLayer = (layer: "bg" | "fg"): string =>
+    layer === "bg" ? WPN_ORIG_GHOST_BG_KEY : WPN_ORIG_GHOST_FG_KEY;
+
+  const _hideGhostsIfDisabled = (): void => {
+    if (compareDbg) return;
+    const bgGhost = _getHeroData(WPN_ORIG_GHOST_BG_KEY) as Phaser.GameObjects.Sprite | undefined;
+    const fgGhost = _getHeroData(WPN_ORIG_GHOST_FG_KEY) as Phaser.GameObjects.Sprite | undefined;
+    try { bgGhost?.setVisible(false); } catch { /* ignore */ }
+    try { fgGhost?.setVisible(false); } catch { /* ignore */ }
+  };
+  _hideGhostsIfDisabled();
+
+  const _getOrCreateGhost = (layer: "bg" | "fg"): Phaser.GameObjects.Sprite | null => {
+    if (!compareDbg) return null;
+    const keyName = _ghostKeyForLayer(layer);
+    let ghost = _getHeroData(keyName) as Phaser.GameObjects.Sprite | undefined;
+    if (ghost && ghost.scene !== args.scene) ghost = undefined;
+    if (!ghost) {
+      ghost = args.scene.add.sprite(heroCx, heroCy, args.heroSprite.texture.key);
+      ghost.setAlpha(WPN_ORIG_GHOST_ALPHA);
+      ghost.setTint(WPN_ORIG_GHOST_TINT);
+      ghost.setVisible(false);
+      _setHeroData(keyName, ghost);
+      try {
+        args.heroSprite.once("destroy", () => {
+          try { ghost?.destroy(); } catch { /* ignore */ }
+        });
+      } catch {
+        // ignore
+      }
+    }
+    return ghost;
+  };
+
+  const _syncOriginalGhost = (
+    layer: "bg" | "fg",
+    layerRef: WeaponSheetRef,
+    frameIndex: number,
+    gx: number,
+    gy: number,
+    depth: number
+  ): void => {
+    if (!compareDbg) return;
+    const textures: any = args.scene?.textures;
+    const origKey = getWeaponOriginalRefKey(layerRef.key);
+    const ghost = _getOrCreateGhost(layer);
+    if (!ghost || !textures || typeof textures.exists !== "function" || !origKey || !textures.exists(origKey)) {
+      try { ghost?.setVisible(false); } catch { /* ignore */ }
+      if (origKey && (!textures || !textures.exists(origKey))) {
+        _logWeaponOriginalRefMissingOnce(layerRef.key, "key=" + layerRef.key + " origKey=" + origKey);
+      }
+      return;
+    }
+    if (ghost.texture?.key !== origKey) ghost.setTexture(origKey);
+    ghost.setFrame(frameIndex);
+    ghost.x = gx;
+    ghost.y = gy;
+    try { (ghost as any).setOrigin?.(0.5, 0.5); } catch { /* ignore */ }
+    ghost.scaleX = heroAny.scaleX ?? 1;
+    ghost.scaleY = heroAny.scaleY ?? 1;
+    const baseRot = heroAny.rotation ?? 0;
+    (ghost as any).rotation = baseRot + (useAimRotate ? aimRot : 0);
+    if (typeof (ghost as any).setFlipX === "function") (ghost as any).setFlipX(!!heroAny.flipX);
+    if (typeof (ghost as any).setFlipY === "function") (ghost as any).setFlipY(!!heroAny.flipY);
+    ghost.setDepth(depth + (layer === "fg" ? 0.25 : -0.25));
+    ghost.setAlpha(WPN_ORIG_GHOST_ALPHA);
+    ghost.setTint(WPN_ORIG_GHOST_TINT);
+    ghost.setVisible(true);
+  };
+
   const applyOne = (
     spr: Phaser.GameObjects.Sprite,
     layerRef: WeaponSheetRef | undefined,
@@ -1449,7 +1855,9 @@ export function syncWeaponLayersToHero(args: {
     const textures: any = args.scene?.textures;
     if (textures && typeof textures.exists === "function" && !textures.exists(layerRef.key)) {
       const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, variant);
-      if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
+      if (dbgOn && !loadStatus.ready) {
+        const atlasDbg = _atlasDebugFields(args.scene, [layerRef.key]);
+        const loaderDbg = _loaderDebugFields(args.scene);
         _logWeaponMissingTexOnce(missKey + "|layer:" + layerRef.key, {
           weaponId: model,
           heroPhase,
@@ -1460,6 +1868,14 @@ export function syncWeaponLayersToHero(args: {
           heroFrameIndex: args.heroFrameIndex,
           missing: [layerRef.key],
           keys: [layerRef.key],
+          atlasKeys: atlasDbg.atlasKeys,
+          atlasExists: atlasDbg.atlasExists,
+          atlasFrames: atlasDbg.atlasFrames,
+          atlasImages: atlasDbg.atlasImages,
+          loaderLoading: loaderDbg.loaderLoading,
+          loaderList: loaderDbg.loaderList,
+          loaderInflight: loaderDbg.loaderInflight,
+          loaderQueue: loaderDbg.loaderQueue,
           queued: loadStatus.queued,
           total: loadStatus.total
         });
@@ -1469,6 +1885,23 @@ export function syncWeaponLayersToHero(args: {
     }
 
     if (spr.texture?.key !== layerRef.key) spr.setTexture(layerRef.key);
+
+    const debugNeedsMeta = paletteDbg || compareDbg;
+    let gridCols = 0;
+    let gridRows = 0;
+    let atlasKey = "";
+    let atlasImage = "";
+    let atlasFrame: { x: number; y: number; w: number; h: number } | undefined;
+    if (debugNeedsMeta) {
+      const meta = getWeaponSheetMeta(layerRef.key);
+      const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
+      atlasKey = meta?.atlasKey ?? atlasInfo?.atlasKey ?? "";
+      atlasImage = atlasInfo?.image ?? "";
+      atlasFrame = atlasInfo?.frame;
+      const grid = getSheetGrid(args.scene, layerRef);
+      gridCols = Math.max(1, grid.cols | 0);
+      gridRows = Math.max(1, grid.rows | 0);
+    }
 
     const frameIndex = resolveWeaponFrameIndexForLayer({
       scene: args.scene,
@@ -1517,41 +1950,65 @@ export function syncWeaponLayersToHero(args: {
     spr.setDepth(depth);
     spr.setVisible(true);
 
-    if (_weaponPixelDebugEnabled()) {
-      const grid = getSheetGrid(args.scene, layerRef);
-      const cols = Math.max(1, grid.cols | 0);
-      const rows = Math.max(1, grid.rows | 0);
+    _syncOriginalGhost(layerLabel, layerRef, frameIndex, spr.x, spr.y, depth);
+
+    if (compareDbg || paletteDbg) {
+      const cols = Math.max(1, gridCols | 0);
+      const rows = Math.max(1, gridRows | 0);
       const row = Math.max(0, ((frameIndex / cols) | 0));
       const colNow = Math.max(0, (frameIndex % cols) | 0);
-      const atlasInfo = getWeaponAtlasFrameForSheet(layerRef.key);
-      const atlasKey = atlasInfo?.atlasKey ?? "";
-      const atlasImage = atlasInfo?.image ?? "";
-      const atlasFrame = atlasInfo?.frame;
-      const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
-      const line = _buildWeaponPixelLine({
-        weaponId: String(model || ""),
-        heroPhase: String(heroPhase || ""),
-        usedPhase: String(usedPhase || ""),
-        variant: String(variant ?? "base"),
-        dir: String(args.dir || ""),
-        layer: layerLabel,
-        sheetKey: layerRef.key,
-        frameIndex,
-        frameW: layerRef.frameW | 0,
-        frameH: layerRef.frameH | 0,
-        cols,
-        rows,
-        row,
-        col: colNow,
-        atlasKey,
-        atlasImage,
-        atlasFrame,
-        palette: sample.palette,
-        error: sample.error,
-        oobInfo: sample.debug
-      }) + " heroFrameIndex=" + (args.heroFrameIndex | 0) + " frameColOverride=" + (args.frameColOverride ?? -1);
-      const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${variant ?? ""}|${heroPhase}`;
-      _logWeaponPixelPlaceOnce(sig, line);
+
+      if (compareDbg) {
+        _compareWeaponFrameToOriginal({
+          scene: args.scene,
+          weaponId: String(model || ""),
+          heroPhase: String(heroPhase || ""),
+          usedPhase: String(usedPhase || ""),
+          variant: String(variant ?? "base"),
+          dir: String(args.dir || ""),
+          layer: layerLabel,
+          sheetKey: layerRef.key,
+          atlasKey,
+          atlasImage,
+          atlasFrame,
+          frameIndex,
+          frameW: layerRef.frameW | 0,
+          frameH: layerRef.frameH | 0,
+          cols,
+          rows,
+          x: spr.x,
+          y: spr.y,
+          depth
+        });
+      }
+
+      if (paletteDbg) {
+        const sample = _scanFramePalette(args.scene, layerRef.key, frameIndex, layerRef.frameW | 0, layerRef.frameH | 0);
+        const line = _buildWeaponPixelLine({
+          weaponId: String(model || ""),
+          heroPhase: String(heroPhase || ""),
+          usedPhase: String(usedPhase || ""),
+          variant: String(variant ?? "base"),
+          dir: String(args.dir || ""),
+          layer: layerLabel,
+          sheetKey: layerRef.key,
+          frameIndex,
+          frameW: layerRef.frameW | 0,
+          frameH: layerRef.frameH | 0,
+          cols,
+          rows,
+          row,
+          col: colNow,
+          atlasKey,
+          atlasImage,
+          atlasFrame,
+          palette: sample.palette,
+          error: sample.error,
+          oobInfo: sample.debug
+        }) + " heroFrameIndex=" + (args.heroFrameIndex | 0) + " frameColOverride=" + (args.frameColOverride ?? -1);
+        const sig = `place|${layerRef.key}|${frameIndex}|${args.dir}|${variant ?? ""}|${heroPhase}`;
+        _logWeaponPixelPlaceOnce(sig, line);
+      }
     }
 
     return { key: layerRef.key, frameIndex };
@@ -1655,7 +2112,9 @@ export function syncWeaponLayersToHero(args: {
     const missing = keys.some((key) => !textures.exists(key));
     if (missing) {
       const loadStatus = ensureWeaponSheetsLoaded(args.scene, model, variant);
-      if (dbgOn && !loadStatus.ready && loadStatus.queued === 0) {
+      if (dbgOn && !loadStatus.ready) {
+        const atlasDbg = _atlasDebugFields(args.scene, keys);
+        const loaderDbg = _loaderDebugFields(args.scene);
         _logWeaponMissingTexOnce(missKey, {
           weaponId: model,
           heroPhase,
@@ -1666,6 +2125,14 @@ export function syncWeaponLayersToHero(args: {
           heroFrameIndex: args.heroFrameIndex,
           missing: keys.filter((k) => !textures.exists(k)),
           keys,
+          atlasKeys: atlasDbg.atlasKeys,
+          atlasExists: atlasDbg.atlasExists,
+          atlasFrames: atlasDbg.atlasFrames,
+          atlasImages: atlasDbg.atlasImages,
+          loaderLoading: loaderDbg.loaderLoading,
+          loaderList: loaderDbg.loaderList,
+          loaderInflight: loaderDbg.loaderInflight,
+          loaderQueue: loaderDbg.loaderQueue,
           queued: loadStatus.queued,
           total: loadStatus.total
         });
@@ -1704,7 +2171,7 @@ export function syncWeaponLayersToHero(args: {
     });
   }
 
-  if (_weaponPixelDebugEnabled()) {
+  if (paletteDbg) {
     const logResolve = (layerRef: WeaponSheetRef | undefined, layerLabel: "bg" | "fg"): void => {
       if (!layerRef) return;
       const grid = getSheetGrid(args.scene, layerRef);
@@ -1939,6 +2406,8 @@ export function syncWeaponToHero(args: {
   const textures = args.scene?.textures as any;
   if (textures && typeof textures.exists === "function" && !textures.exists(sheet.key)) {
     if (dbgOn) {
+      const atlasDbg = _atlasDebugFields(args.scene, [sheet.key]);
+      const loaderDbg = _loaderDebugFields(args.scene);
       _logWeaponMissingTexOnce(missKey, {
         weaponId: args.weaponId,
         heroPhase: args.heroPhase,
@@ -1948,7 +2417,15 @@ export function syncWeaponToHero(args: {
         dir: args.dir,
         heroFrameIndex: args.heroFrameIndex,
         missing: [sheet.key],
-        keys: [sheet.key]
+        keys: [sheet.key],
+        atlasKeys: atlasDbg.atlasKeys,
+        atlasExists: atlasDbg.atlasExists,
+        atlasFrames: atlasDbg.atlasFrames,
+        atlasImages: atlasDbg.atlasImages,
+        loaderLoading: loaderDbg.loaderLoading,
+        loaderList: loaderDbg.loaderList,
+        loaderInflight: loaderDbg.loaderInflight,
+        loaderQueue: loaderDbg.loaderQueue
       });
     }
     ensureWeaponSheetsLoaded(args.scene, model, args.variant);

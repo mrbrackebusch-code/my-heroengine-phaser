@@ -182,10 +182,12 @@ function packIntoBins(images, maxSize) {
   const isDupKey = (key) => /__dup\d+$/i.test(String(key || ""));
   for (const { meta, png } of images) {
     const vKey = String(meta.variant || "base");
-    let pair = byVariant.get(vKey);
+    // Variant alone is not unique during consolidation; key by model+variant.
+    const mvKey = `${meta.category}__${meta.model}__${vKey}`;
+    let pair = byVariant.get(mvKey);
     if (!pair) {
       pair = { variant: vKey, fg: null, bg: null };
-      byVariant.set(vKey, pair);
+      byVariant.set(mvKey, pair);
     }
     const box = {
       key: meta.key,

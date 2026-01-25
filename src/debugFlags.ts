@@ -179,6 +179,15 @@ export const DEBUG_STR_ARC_GALLERY_PADDING = 6;
 export const DEBUG_STR_ARC_GALLERY_ANIM_FPS = 120;
 export const DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS = "1,2,3,4";
 export const DEBUG_STR_ARC_GALLERY_ALPHA = 1;
+export const DEBUG_STR_ARC_GALLERY_TRANSPOSE = false; // Column-major ordering (0,6,12,...) for core frames.
+export const DEBUG_STR_ARC_CAPTURE = false; // Dump arc source frames to a PNG download for comparison.
+export const DEBUG_STR_ARC_CAPTURE_SKIN = "Sword Arcs";
+export const DEBUG_STR_ARC_CAPTURE_FILL_SKIN = "torrentacle texture";
+export const DEBUG_STR_ARC_CAPTURE_AURA_RADIUS = 2;
+export const DEBUG_STR_ARC_CAPTURE_CORE_COLS = 6;
+export const DEBUG_STR_ARC_CAPTURE_CORE_ROWS = 5;
+export const DEBUG_STR_ARC_CAPTURE_FILENAME = "debug_strength_arc_capture.png";
+export const DEBUG_STR_ARC_NO_FILL = true; // Strength arcs: render only the source arc (no element fill).
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 export const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
 export const DEBUG_COLLIDER_SPRITE_COLOR = 0x00b7ff;
@@ -304,6 +313,16 @@ export const WEAPON_DEBUG_VERBOSE = false;
 export const DEBUG_WPN_PIXEL_LOG = true; // Log weapon frame pixel samples (resolve/place).
 export const DEBUG_WPN_USE_ORIGINALS_SUBDIR = false; // Prefer _atlas/"originals to use" spritesheets when present.
 export const DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY = false; // Force per-family "originals" weapon ids/phases for debugging.
+export const DEBUG_WPN_COMPARE_ORIGINALS_RUNTIME = true; // Load originals as reference and compare atlas frames pixel-by-pixel at runtime.
+export const DEBUG_WPN_VARIANT_CYCLE = false; // Cycle weapon variants at runtime (debug atlas coverage).
+export const DEBUG_WPN_VARIANT_CYCLE_HERO_INDEX = 0; // -1 = all heroes
+export const DEBUG_WPN_VARIANT_CYCLE_INTERVAL_MS = 1500;
+export const DEBUG_WPN_VARIANT_CYCLE_WEAPONS = ""; // comma-separated weapon ids; empty = all
+export const DEBUG_WPN_DROP_SIM = true; // Simulate floor-based weapon drops/rarity for a debug hero.
+export const DEBUG_WPN_DROP_SIM_HERO_INDEX = 0; // -1 = all heroes
+export const DEBUG_WPN_DROP_SIM_FLOOR_START = 1;
+export const DEBUG_WPN_DROP_SIM_FLOOR_STEP_PER_ACTION = 1;
+export const DEBUG_WPN_DROP_SIM_TRAIT_PCT = 20; // Approx % of theoretical mana budget used for trait rolls.
 export const DEBUG_WPN_AURA_ALWAYS_SHOW = false; // Always render weapon aura masks on the hero (visual overlay).
 export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
 export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;

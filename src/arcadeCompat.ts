@@ -71,7 +71,7 @@ import { queueSpritesheetOnce } from "./loaderCache";
 import { resolveWeaponLayerPair, weaponModeForHeroPhase } from "./weaponAtlas";
 import * as effectAnimGlue from "./effectAnimGlue";
 import type { EffectAtlas } from "./effectAtlas";
-import { listWeaponVariants, ensureWeaponSheetsLoaded, resolveWeaponSheet } from "./weaponAtlas";
+import { listWeaponModels, listWeaponVariants, ensureWeaponSheetsLoaded, resolveWeaponSheet } from "./weaponAtlas";
 import type { WeaponSheetRef } from "./weaponAtlas";
 import {
     DECOR_ENABLED,
@@ -136,6 +136,14 @@ import {
     DEBUG_STR_ARC_GALLERY_ANIM_FPS,
     DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS,
     DEBUG_STR_ARC_GALLERY_ALPHA,
+    DEBUG_STR_ARC_GALLERY_TRANSPOSE,
+    DEBUG_STR_ARC_CAPTURE,
+    DEBUG_STR_ARC_CAPTURE_SKIN,
+    DEBUG_STR_ARC_CAPTURE_FILL_SKIN,
+    DEBUG_STR_ARC_CAPTURE_AURA_RADIUS,
+    DEBUG_STR_ARC_CAPTURE_CORE_COLS,
+    DEBUG_STR_ARC_CAPTURE_CORE_ROWS,
+    DEBUG_STR_ARC_CAPTURE_FILENAME,
     DEBUG_OVERLAPS,
     DEBUG_PROJECTILE_NATIVE,
     DEBUG_PROP_OUTLINE_VERBOSE,
@@ -165,6 +173,13 @@ import {
     DEBUG_WRAP_TEX,
     FORCE_PROP_PREBAKED_OUTLINE,
     MAX_OVERLAP_DEBUG_LOGS,
+    DEBUG_WPN_VARIANT_CYCLE,
+    DEBUG_WPN_VARIANT_CYCLE_HERO_INDEX,
+    DEBUG_WPN_VARIANT_CYCLE_INTERVAL_MS,
+    DEBUG_WPN_VARIANT_CYCLE_WEAPONS,
+    DEBUG_WPN_DROP_SIM,
+    DEBUG_WPN_DROP_SIM_HERO_INDEX,
+    WEAPON_DEBUG,
 } from "./debugFlags";
 import { auraKey } from "./auraConfig";
 
@@ -1263,6 +1278,178 @@ const HERO_AGI_PKT_COUNT_FALLBACK_KEY = "aPkC"  // fallback (old stored hits)
 const DEFAULT_WEAPON_VARIANT = "base";
 const _weaponVariantByHeroIndex: Record<number, Record<string, string>> = Object.create(null);
 const _weaponVariantByKey: Record<string, string> = Object.create(null);
+const _weaponVariantLogOnce: Record<string, 1> = Object.create(null);
+const _wpnCyclePhaseModels: Record<string, string[]> = Object.create(null);
+const _wpnCycleIndexByHero: Record<number, Record<string, number>> = Object.create(null);
+const _wpnCycleNextAtByHero: Record<number, number> = Object.create(null);
+const _wpnCycleTickByHero: Record<number, number> = Object.create(null);
+const _wpnCycleLastSelByHeroPhase: Record<string, string> = Object.create(null);
+let _wpnCycleWeaponFilterKey = "";
+let _wpnCycleWeaponFilterSet: Set<string> | null = null;
+
+function _wpnNowMs(): number {
+    const perf: any = (globalThis as any).performance;
+    if (perf && typeof perf.now === "function") return perf.now();
+    return Date.now();
+}
+
+function _wpnCycleIntervalMs(): number {
+    const v = DEBUG_WPN_VARIANT_CYCLE_INTERVAL_MS | 0;
+    return v > 0 ? v : 1500;
+}
+
+function _wpnCycleEnabledForHero(heroIndex: number): boolean {
+    if (!DEBUG_WPN_VARIANT_CYCLE) return false;
+    const target = DEBUG_WPN_VARIANT_CYCLE_HERO_INDEX | 0;
+    return target < 0 || target === (heroIndex | 0);
+}
+
+function _wpnDropSimEnabledForHero(heroIndex: number): boolean {
+    if (!DEBUG_WPN_DROP_SIM) return false;
+    const target = DEBUG_WPN_DROP_SIM_HERO_INDEX | 0;
+    return target < 0 || target === (heroIndex | 0);
+}
+
+function _wpnCycleResetPhaseCache(): void {
+    for (const k of Object.keys(_wpnCyclePhaseModels)) delete _wpnCyclePhaseModels[k];
+}
+
+function _wpnCycleWeaponFilter(): Set<string> | null {
+    const raw = String(DEBUG_WPN_VARIANT_CYCLE_WEAPONS || "").trim().toLowerCase();
+    if (raw === _wpnCycleWeaponFilterKey) return _wpnCycleWeaponFilterSet;
+    _wpnCycleWeaponFilterKey = raw;
+    if (!raw) {
+        _wpnCycleWeaponFilterSet = null;
+        _wpnCycleResetPhaseCache();
+        return null;
+    }
+    const next = new Set<string>();
+    for (const token of raw.split(",")) {
+        const id = token.trim();
+        if (id) next.add(id);
+    }
+    _wpnCycleWeaponFilterSet = next.size > 0 ? next : null;
+    _wpnCycleResetPhaseCache();
+    return _wpnCycleWeaponFilterSet;
+}
+
+function _wpnCycleAllowsWeapon(id: string): boolean {
+    const set = _wpnCycleWeaponFilter();
+    if (!set) return true;
+    return set.has(String(id || "").trim().toLowerCase());
+}
+
+function _wpnCycleIndexMap(heroIndex: number): Record<string, number> {
+    const hi = heroIndex | 0;
+    let map = _wpnCycleIndexByHero[hi];
+    if (!map) _wpnCycleIndexByHero[hi] = map = Object.create(null);
+    return map;
+}
+
+function _wpnCycleModelListForPhase(heroPhase: string): string[] {
+    const phase = _wpnSnake(heroPhase || "");
+    const hit = _wpnCyclePhaseModels[phase];
+    if (hit) return hit;
+    const mode = weaponModeForHeroPhase(phase);
+    const models = listWeaponModels();
+    const supported: string[] = [];
+    for (const model of models) {
+        const id = String(model || "").trim();
+        if (!id || !_wpnCycleAllowsWeapon(id)) continue;
+        try {
+            const pair = resolveWeaponLayerPair({
+                weaponId: id,
+                heroPhase: phase,
+                mode,
+                variant: DEFAULT_WEAPON_VARIANT
+            });
+            if (pair?.bg?.key || pair?.fg?.key) supported.push(id);
+        } catch {
+            // ignore debug scan failures
+        }
+    }
+    supported.sort();
+    _wpnCyclePhaseModels[phase] = supported;
+    return supported;
+}
+
+function _wpnCycleAdvance(heroIndex: number): void {
+    if (!_wpnCycleEnabledForHero(heroIndex)) return;
+    const hi = heroIndex | 0;
+    const now = _wpnNowMs();
+    const interval = Math.max(250, _wpnCycleIntervalMs());
+    const nextAt = (_wpnCycleNextAtByHero[hi] ?? 0);
+    if (now < nextAt) return;
+    _wpnCycleNextAtByHero[hi] = now + interval;
+    _wpnCycleTickByHero[hi] = ((_wpnCycleTickByHero[hi] ?? 0) + 1) | 0;
+    const map = _wpnCycleIndexMap(hi);
+    for (const phase of ["slash", "thrust", "cast", "shoot"]) {
+        const list = _wpnCycleModelListForPhase(phase);
+        if (!list.length) {
+            map[phase] = 0;
+            continue;
+        }
+        const prev = map[phase] | 0;
+        map[phase] = ((prev + 1) % list.length) | 0;
+    }
+    map.combo = map.slash | 0;
+    map.exec = map.slash | 0;
+}
+
+function _wpnCycleWeaponIdForPhase(heroIndex: number, heroPhase: string, fallback: string): string {
+    if (!_wpnCycleEnabledForHero(heroIndex)) return fallback;
+    const phase = _wpnSnake(heroPhase || "");
+    const list = _wpnCycleModelListForPhase(phase);
+    if (!list.length) return fallback;
+    const map = _wpnCycleIndexMap(heroIndex);
+    let idx = map[phase] | 0;
+    if (idx < 0) idx = 0;
+    idx %= list.length;
+    const pick = list[idx] || fallback;
+    if (WEAPON_DEBUG) {
+        const key = `${heroIndex}|${phase}`;
+        const sig = String(pick || "");
+        if (sig && _wpnCycleLastSelByHeroPhase[key] !== sig) {
+            _wpnCycleLastSelByHeroPhase[key] = sig;
+            console.log(
+                "[WPN-VARIANT-CYCLE] heroIndex=" + (heroIndex | 0) +
+                " phase=" + phase +
+                " weaponId=" + sig +
+                " idx=" + idx +
+                "/" + list.length
+            );
+        }
+    }
+    return pick;
+}
+
+function _wpnHashId(id: string): number {
+    let h = 0;
+    const s = String(id || "");
+    for (let i = 0; i < s.length; i++) {
+        h = ((h * 31) + s.charCodeAt(i)) >>> 0;
+    }
+    return h >>> 0;
+}
+
+function _wpnCycleVariantOrder(id: string): string[] {
+    const variants = listWeaponVariants(id);
+    if (!variants || variants.length === 0) return [];
+    const ordered = variants.slice().sort();
+    const baseIdx = ordered.indexOf(DEFAULT_WEAPON_VARIANT);
+    if (baseIdx > 0) {
+        ordered.splice(baseIdx, 1);
+        ordered.unshift(DEFAULT_WEAPON_VARIANT);
+    }
+    return ordered;
+}
+
+function _logWeaponVariantOnce(key: string, line: string): void {
+    if (!WEAPON_DEBUG) return;
+    if (_weaponVariantLogOnce[key]) return;
+    _weaponVariantLogOnce[key] = 1;
+    console.log("[WPN-VARIANT] " + line);
+}
 
 function _pickWeaponVariantForModel(weaponId: string): string {
     const id = String(weaponId || "").trim();
@@ -1273,6 +1460,15 @@ function _pickWeaponVariantForModel(weaponId: string): string {
     return variants[idx] || DEFAULT_WEAPON_VARIANT;
 }
 
+function _pickBaseVariantForModel(weaponId: string): string {
+    const id = String(weaponId || "").trim();
+    if (!id) return DEFAULT_WEAPON_VARIANT;
+    const variants = listWeaponVariants(id);
+    if (!variants || variants.length === 0) return DEFAULT_WEAPON_VARIANT;
+    if (variants.includes(DEFAULT_WEAPON_VARIANT)) return DEFAULT_WEAPON_VARIANT;
+    return variants[0] || DEFAULT_WEAPON_VARIANT;
+}
+
 function _weaponVariantForHero(heroIndex: number, weaponId: string): string {
     const id = String(weaponId || "").trim();
     if (!id) return DEFAULT_WEAPON_VARIANT;
@@ -1280,10 +1476,52 @@ function _weaponVariantForHero(heroIndex: number, weaponId: string): string {
     if (hi < 0) return _weaponVariantForKey("hero", id);
     let map = _weaponVariantByHeroIndex[hi];
     if (!map) _weaponVariantByHeroIndex[hi] = map = Object.create(null);
+    const variants = listWeaponVariants(id);
+    const baseAvailable = variants.includes(DEFAULT_WEAPON_VARIANT);
+    if (_wpnCycleEnabledForHero(hi) && _wpnCycleAllowsWeapon(id)) {
+        const ordered = _wpnCycleVariantOrder(id);
+        if (!ordered.length) return DEFAULT_WEAPON_VARIANT;
+        const tick = _wpnCycleTickByHero[hi] | 0;
+        const offset = _wpnHashId(id) % ordered.length;
+        const idx = (tick + offset) % ordered.length;
+        const pick = ordered[idx] || DEFAULT_WEAPON_VARIANT;
+        const prev = map[id];
+        map[id] = pick;
+        if (WEAPON_DEBUG && prev !== pick) {
+            console.log(
+                "[WPN-VARIANT-CYCLE] heroIndex=" + hi +
+                " weaponId=" + id +
+                " variant=" + pick +
+                " idx=" + idx +
+                "/" + ordered.length +
+                " tick=" + tick
+            );
+        }
+        return pick;
+    }
     const hit = map[id];
-    if (hit) return hit;
-    const pick = _pickWeaponVariantForModel(id);
+    if (hit) {
+        if (baseAvailable && hit !== DEFAULT_WEAPON_VARIANT) {
+            map[id] = DEFAULT_WEAPON_VARIANT;
+            _logWeaponVariantOnce(
+                `hero:${hi}|${id}|override`,
+                `heroIndex=${hi} weaponId=${id} cached=${hit} forced=${DEFAULT_WEAPON_VARIANT} variants=${variants.join(",")}`
+            );
+            return DEFAULT_WEAPON_VARIANT;
+        }
+        _logWeaponVariantOnce(
+            `hero:${hi}|${id}|cached`,
+            `heroIndex=${hi} weaponId=${id} cached=${hit} baseAvailable=${baseAvailable ? 1 : 0}`
+        );
+        return hit;
+    }
+    // Heroes should spawn/test with base gear unless base is unavailable.
+    const pick = baseAvailable ? DEFAULT_WEAPON_VARIANT : _pickBaseVariantForModel(id);
     map[id] = pick;
+    _logWeaponVariantOnce(
+        `hero:${hi}|${id}|pick`,
+        `heroIndex=${hi} weaponId=${id} pick=${pick} baseAvailable=${baseAvailable ? 1 : 0} variants=${variants.join(",")}`
+    );
     return pick;
 }
 
@@ -10808,13 +11046,35 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
 
     const aState = (dataAny[HERO_AGI_STATE_KEY] as any | 0);
 
-    const wSlash = (typeof dataAny[HERO_WPN_SLASH_KEY] === "string") ? String(dataAny[HERO_WPN_SLASH_KEY]) : "";
-    const wThrust = (typeof dataAny[HERO_WPN_THRUST_KEY] === "string") ? String(dataAny[HERO_WPN_THRUST_KEY]) : "";
-    const wCast = (typeof dataAny[HERO_WPN_CAST_KEY] === "string") ? String(dataAny[HERO_WPN_CAST_KEY]) : "";
-    const wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
-    const wCombo = (typeof dataAny[HERO_WPN_COMBO_KEY] === "string") ? String(dataAny[HERO_WPN_COMBO_KEY]) : "";
-    const wInt = (typeof dataAny[HERO_WPN_INT_KEY] === "string") ? String(dataAny[HERO_WPN_INT_KEY]) : "";
-    const wSup = (typeof dataAny[HERO_WPN_SUP_KEY] === "string") ? String(dataAny[HERO_WPN_SUP_KEY]) : "";
+    let wSlash = (typeof dataAny[HERO_WPN_SLASH_KEY] === "string") ? String(dataAny[HERO_WPN_SLASH_KEY]) : "";
+    let wThrust = (typeof dataAny[HERO_WPN_THRUST_KEY] === "string") ? String(dataAny[HERO_WPN_THRUST_KEY]) : "";
+    let wCast = (typeof dataAny[HERO_WPN_CAST_KEY] === "string") ? String(dataAny[HERO_WPN_CAST_KEY]) : "";
+    let wExec = (typeof dataAny[HERO_WPN_EXEC_KEY] === "string") ? String(dataAny[HERO_WPN_EXEC_KEY]) : "";
+    let wCombo = (typeof dataAny[HERO_WPN_COMBO_KEY] === "string") ? String(dataAny[HERO_WPN_COMBO_KEY]) : "";
+    let wInt = (typeof dataAny[HERO_WPN_INT_KEY] === "string") ? String(dataAny[HERO_WPN_INT_KEY]) : "";
+    let wSup = (typeof dataAny[HERO_WPN_SUP_KEY] === "string") ? String(dataAny[HERO_WPN_SUP_KEY]) : "";
+    const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
+    const variantCycleEnabled = _wpnCycleEnabledForHero(heroIndex);
+    if (variantCycleEnabled) _wpnCycleAdvance(heroIndex);
+    const cycleEnabled = variantCycleEnabled && !_wpnDropSimEnabledForHero(heroIndex);
+    if (cycleEnabled) {
+        const slashCycle = _wpnCycleWeaponIdForPhase(heroIndex, "slash", wSlash);
+        const thrustCycle = _wpnCycleWeaponIdForPhase(heroIndex, "thrust", wThrust);
+        const castCycle = _wpnCycleWeaponIdForPhase(heroIndex, "cast", wCast);
+        const shootCycle = _wpnCycleWeaponIdForPhase(heroIndex, "shoot", wCast);
+        if (slashCycle) {
+            wSlash = slashCycle;
+            wExec = slashCycle;
+            wCombo = slashCycle;
+        }
+        if (thrustCycle) wThrust = thrustCycle;
+        if (castCycle) {
+            wInt = castCycle;
+            wSup = castCycle;
+        }
+        // wCast serves both shoot + cast; prefer shoot-capable for bows.
+        wCast = shootCycle || castCycle || wCast;
+    }
 
     const heroFamilyRaw = (typeof dataAny.heroFamily === "string") ? dataAny.heroFamily : "";
     const heroFamily = String(heroFamilyRaw || "").toLowerCase();
@@ -10878,16 +11138,17 @@ function _wpnSelectWeaponAndPhase(dataAny: any, nativeHero: Phaser.GameObjects.S
         } else if (dpSnake === "thrust" || dpSnake === "attack_thrust") {
             weaponId = wThrust;
         } else if (dpSnake === "shoot" || dpSnake === "bow") {
-            weaponId = wCast;
+            weaponId = cycleEnabled ? _wpnCycleWeaponIdForPhase(heroIndex, "shoot", wCast) : wCast;
             weaponPhase = "shoot";
         } else if (castPhaseByDisplay || castPhaseByRaw) {
             if (isIntFamily || isSupportFamily) {
                 staffCast = true;
                 const staffId = isIntFamily ? wInt : wSup;
-                weaponId = staffId || wCast;
+                const castPick = cycleEnabled ? _wpnCycleWeaponIdForPhase(heroIndex, "cast", staffId || wCast) : (staffId || wCast);
+                weaponId = castPick;
                 weaponPhase = "cast";
             } else {
-                weaponId = wCast;
+                weaponId = cycleEnabled ? _wpnCycleWeaponIdForPhase(heroIndex, "cast", wCast) : wCast;
             }
         } else {
             // IMPORTANT per your requirement:
@@ -13510,6 +13771,7 @@ function _syncEndFrame(ctx: SyncContext): void {
         _debugDrawEnemyWallColliders(ctx.sc);
         _debugDrawEffectBounds(ctx.sc);
         _debugUpdateStrengthArcGallery(ctx.sc);
+        _debugCaptureStrengthArcSheets(ctx.sc);
     }
 
     if (!ctx.shouldLog) return;
@@ -13738,6 +14000,7 @@ let _dbgColliderGfxDecor: Phaser.GameObjects.Graphics | null = null;
 let _dbgEffectGfx: Phaser.GameObjects.Graphics | null = null;
 let _dbgStrArcGalleryContainer: Phaser.GameObjects.Container | null = null;
 let _dbgStrArcGalleryKey = "";
+let _dbgStrArcCaptureDone = false;
 let _dbgLoggedEnemyColliderOnce = false;
 let _dbgLoggedHeroColliderOnce = false;
 
@@ -13815,6 +14078,21 @@ function _dbgTextureDims(sc: Phaser.Scene, textureKey: string): { w: number; h: 
     }
 }
 
+function _dbgTextureSource(sc: Phaser.Scene, textureKey: string): any | null {
+    try {
+        const tex = sc.textures.get(textureKey);
+        if (!tex) return null;
+        const srcAny: any = tex.getSourceImage ? tex.getSourceImage() : null;
+        const src = Array.isArray(srcAny) ? srcAny[0] : srcAny;
+        const w = (src && src.width) ? (src.width | 0) : 0;
+        const h = (src && src.height) ? (src.height | 0) : 0;
+        if (w <= 0 || h <= 0) return null;
+        return src;
+    } catch {
+        return null;
+    }
+}
+
 function _dbgRawColsRows(
     sc: Phaser.Scene,
     textureKey: string,
@@ -13834,6 +14112,175 @@ function _dbgRawColsRows(
         rows = rows > 0 ? rows : Math.max(1, Math.ceil(count / cols));
     }
     return { cols: Math.max(1, cols | 0), rows: Math.max(1, rows | 0) };
+}
+
+function _dbgDrawFrameCell(
+    ctx: CanvasRenderingContext2D,
+    src: any,
+    frameW: number,
+    frameH: number,
+    rawCols: number,
+    frameIndex: number,
+    dx: number,
+    dy: number
+): boolean {
+    if (!ctx || !src) return false;
+    const fw = Math.max(1, frameW | 0);
+    const fh = Math.max(1, frameH | 0);
+    const cols = Math.max(1, rawCols | 0);
+    const idx = Math.max(0, frameIndex | 0);
+    const col = (idx % cols) | 0;
+    const row = Math.floor(idx / cols) | 0;
+    const sx = col * fw;
+    const sy = row * fh;
+    const sw = (src.width | 0);
+    const sh = (src.height | 0);
+    if (sx < 0 || sy < 0 || sx + fw > sw || sy + fh > sh) return false;
+    ctx.drawImage(src, sx, sy, fw, fh, dx | 0, dy | 0, fw, fh);
+    return true;
+}
+
+function _dbgDownloadCanvas(canvas: HTMLCanvasElement, filename: string): void {
+    if (typeof document === "undefined") return;
+    try {
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = filename || "debug_capture.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch { /* ignore */ }
+}
+
+function _debugCaptureStrengthArcSheets(sc: Phaser.Scene): void {
+    if (!DEBUG_STR_ARC_CAPTURE) {
+        _dbgStrArcCaptureDone = false;
+        return;
+    }
+    if (_dbgStrArcCaptureDone) return;
+    if (!sc || typeof document === "undefined") return;
+
+    const atlas = _getEffectAtlasFromScene(sc);
+    const skin = String(DEBUG_STR_ARC_CAPTURE_SKIN || "").trim();
+    if (!atlas || !skin) return;
+
+    const arcResolved = _resolveEffectAtlasEntry(atlas as any, skin, "none");
+    if (!arcResolved || !arcResolved.textureKey) return;
+    const arcSource = _dbgTextureSource(sc, arcResolved.textureKey);
+    if (!arcSource) return;
+
+    const coreCols = Math.max(1, DEBUG_STR_ARC_CAPTURE_CORE_COLS | 0);
+    const coreRows = Math.max(1, DEBUG_STR_ARC_CAPTURE_CORE_ROWS | 0);
+    const arcFrameW = Math.max(1, arcResolved.frameW | 0);
+    const arcFrameH = Math.max(1, arcResolved.frameH | 0);
+    const arcDims = _dbgRawColsRows(sc, arcResolved.textureKey, arcFrameW, arcFrameH, arcResolved.frameIndices?.length | 0);
+    if (arcDims.cols < coreCols || arcDims.rows < coreRows) return;
+
+    const auraRadius = Math.max(1, DEBUG_STR_ARC_CAPTURE_AURA_RADIUS | 0);
+    const auraId = `${skin}_aura_r${auraRadius}`;
+    const auraResolved = _resolveEffectAtlasEntry(atlas as any, auraId, "none");
+    const auraSource = auraResolved?.textureKey ? _dbgTextureSource(sc, auraResolved.textureKey) : null;
+
+    const fillSkin = String(DEBUG_STR_ARC_CAPTURE_FILL_SKIN || "").trim();
+    const fillResolved = fillSkin ? _resolveEffectAtlasEntry(atlas as any, fillSkin, "none") : null;
+    const fillSource = fillResolved?.textureKey ? _dbgTextureSource(sc, fillResolved.textureKey) : null;
+    if (fillResolved && !fillSource) return;
+
+    const gap = 8;
+    const sectionGap = 16;
+    const pad = 6;
+
+    const arcW = coreCols * arcFrameW;
+    const arcH = coreRows * arcFrameH;
+    const auraEnabled = !!(auraResolved && auraSource);
+    const row1W = auraEnabled ? (arcW + gap + arcW) : arcW;
+
+    let fillW = 0;
+    let fillH = 0;
+    let fillColsCap = 0;
+    let fillRowsCap = 0;
+    let fillCountCap = 0;
+    let fillFrameW = 0;
+    let fillFrameH = 0;
+    let fillRawCols = 0;
+    if (fillResolved && fillSource) {
+        fillFrameW = Math.max(1, fillResolved.frameW | 0);
+        fillFrameH = Math.max(1, fillResolved.frameH | 0);
+        const fillDims = _dbgRawColsRows(sc, fillResolved.textureKey, fillFrameW, fillFrameH, fillResolved.frameIndices?.length | 0);
+        fillRawCols = fillDims.cols | 0;
+        fillCountCap = Math.max(1, Math.min(fillResolved.frameIndices?.length | 0, fillRawCols * fillDims.rows, 16));
+        fillColsCap = Math.max(1, Math.min(8, fillCountCap));
+        fillRowsCap = Math.max(1, Math.ceil(fillCountCap / fillColsCap));
+        fillW = fillColsCap * fillFrameW;
+        fillH = fillRowsCap * fillFrameH;
+    }
+
+    const canvasW = Math.max(row1W, fillW) + (pad * 2);
+    const canvasH = pad + arcH + (fillH > 0 ? (sectionGap + fillH) : 0) + pad;
+    if (canvasW <= 0 || canvasH <= 0) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasW | 0;
+    canvas.height = canvasH | 0;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "12px monospace";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+
+    const arcX = pad;
+    const arcY = pad;
+    for (let r = 0; r < coreRows; r++) {
+        for (let c = 0; c < coreCols; c++) {
+            const idx = (r * arcDims.cols + c) | 0;
+            const dx = arcX + (c * arcFrameW);
+            const dy = arcY + (r * arcFrameH);
+            _dbgDrawFrameCell(ctx, arcSource, arcFrameW, arcFrameH, arcDims.cols, idx, dx, dy);
+        }
+    }
+    ctx.strokeText("[ARC]", arcX + 2, arcY + 2);
+    ctx.fillText("[ARC]", arcX + 2, arcY + 2);
+
+    if (auraEnabled && auraResolved && auraSource) {
+        const auraFrameW = Math.max(1, auraResolved.frameW | 0);
+        const auraFrameH = Math.max(1, auraResolved.frameH | 0);
+        const auraDims = _dbgRawColsRows(sc, auraResolved.textureKey, auraFrameW, auraFrameH, auraResolved.frameIndices?.length | 0);
+        const auraX = arcX + arcW + gap;
+        const auraY = arcY;
+        for (let r = 0; r < coreRows; r++) {
+            for (let c = 0; c < coreCols; c++) {
+                const idx = (r * auraDims.cols + c) | 0;
+                const dx = auraX + (c * auraFrameW);
+                const dy = auraY + (r * auraFrameH);
+                _dbgDrawFrameCell(ctx, auraSource, auraFrameW, auraFrameH, auraDims.cols, idx, dx, dy);
+            }
+        }
+        ctx.strokeText(`[AURA r${auraRadius}]`, auraX + 2, auraY + 2);
+        ctx.fillText(`[AURA r${auraRadius}]`, auraX + 2, auraY + 2);
+    }
+
+    if (fillResolved && fillSource && fillW > 0 && fillH > 0) {
+        const fillY = arcY + arcH + sectionGap;
+        const fillX = pad;
+        for (let i = 0; i < fillCountCap; i++) {
+            const col = (i % fillColsCap) | 0;
+            const row = Math.floor(i / fillColsCap) | 0;
+            const dx = fillX + (col * fillFrameW);
+            const dy = fillY + (row * fillFrameH);
+            _dbgDrawFrameCell(ctx, fillSource, fillFrameW, fillFrameH, fillRawCols, i, dx, dy);
+        }
+        ctx.strokeText("[FILL]", fillX + 2, fillY + 2);
+        ctx.fillText("[FILL]", fillX + 2, fillY + 2);
+    }
+
+    const filename = String(DEBUG_STR_ARC_CAPTURE_FILENAME || "debug_strength_arc_capture.png").trim();
+    _dbgDownloadCanvas(canvas, filename || "debug_strength_arc_capture.png");
+    _dbgStrArcCaptureDone = true;
+    console.log(`[STR][ARC][CAPTURE] file=${filename || "debug_strength_arc_capture.png"} tex=${arcResolved.textureKey} raw=${arcDims.cols}x${arcDims.rows} core=${coreCols}x${coreRows} aura=${auraEnabled ? 1 : 0} fill=${fillResolved ? 1 : 0}`);
 }
 
 function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
@@ -13862,6 +14309,8 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
     const pad = Math.max(0, DEBUG_STR_ARC_GALLERY_PADDING | 0);
     const animFps = Math.max(1, DEBUG_STR_ARC_GALLERY_ANIM_FPS | 0);
     const alpha = Math.max(0, Math.min(1, Number.isFinite(DEBUG_STR_ARC_GALLERY_ALPHA) ? DEBUG_STR_ARC_GALLERY_ALPHA : 1));
+    const transpose = !!DEBUG_STR_ARC_GALLERY_TRANSPOSE;
+    const orderLabel = transpose ? "col-major" : "row-major";
     const speedsRaw = String(DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS || "");
     const speeds = _dbgParseNumList(speedsRaw);
 
@@ -13894,7 +14343,8 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
         scale,
         pad,
         animFps,
-        speedsRaw
+        speedsRaw,
+        orderLabel
     ].join("|");
 
     if (_dbgStrArcGalleryContainer && _dbgStrArcGalleryKey === key) return;
@@ -13912,7 +14362,7 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
     const cellLabelStyle = { fontFamily: "monospace", fontSize: "10px", color: "#ffffff", stroke: "#000000", strokeThickness: 2 } as const;
 
     let cursorY = 0;
-    const arcLabel = sc.add.text(0, cursorY, `[ARC] ${skin}`, labelStyle).setOrigin(0, 0);
+    const arcLabel = sc.add.text(0, cursorY, `[ARC] ${skin} order=${orderLabel}`, labelStyle).setOrigin(0, 0);
     arcLabel.setScrollFactor(0);
     container.add(arcLabel);
     cursorY += (arcLabel.height | 0) + 4;
@@ -13921,15 +14371,25 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
     const arcFrameH = Math.max(1, arcResolved.frameH | 0);
     const arcDims = _dbgRawColsRows(sc, arcResolved.textureKey, arcFrameW, arcFrameH, arcResolved.frameIndices.length | 0);
     const rawCols = arcDims.cols;
+    const rawRows = arcDims.rows;
+    const rawTotal = Math.max(1, rawCols * rawRows);
     const cellW = Math.round(arcFrameW * scale) + pad;
     const cellH = Math.round(arcFrameH * scale) + pad;
+
+    const toSheetIdx = (logicalIndex: number): number => {
+        if (!transpose) return logicalIndex | 0;
+        const tRow = logicalIndex % coreRows;
+        const tCol = Math.floor(logicalIndex / coreRows);
+        return ((tRow * rawCols) + tCol) | 0;
+    };
 
     const coreFrameIndices: number[] = [];
     for (let r = 0; r < coreRows; r++) {
         for (let c = 0; c < coreCols; c++) {
-            const sheetIdx = (r * rawCols + c) | 0;
-            if (sheetIdx < 0 || sheetIdx >= arcResolved.frameIndices.length) continue;
-            const frame = arcResolved.frameIndices[sheetIdx];
+            const logicalIndex = (r * coreCols + c) | 0;
+            const sheetIdx = toSheetIdx(logicalIndex);
+            if (sheetIdx < 0 || sheetIdx >= rawTotal) continue;
+            const frame = sheetIdx;
             coreFrameIndices.push(frame);
             const x = c * cellW;
             const y = cursorY + (r * cellH);
@@ -13939,8 +14399,8 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
             arcSprite.setScrollFactor(0);
             container.add(arcSprite);
 
-            if (auraResolved && auraResolved.textureKey && auraResolved.frameIndices?.length > sheetIdx) {
-                const auraFrame = auraResolved.frameIndices[sheetIdx];
+            if (auraResolved && auraResolved.textureKey) {
+                const auraFrame = sheetIdx;
                 const auraSprite = sc.add.sprite(x, y, auraResolved.textureKey, auraFrame).setOrigin(0, 0);
                 auraSprite.setScale(scale);
                 auraSprite.setAlpha(Math.min(1, alpha * 0.9));
@@ -13949,6 +14409,11 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
             }
 
             const tag = sc.add.text(x + 2, y + 2, `r${r}c${c}#${sheetIdx}`, cellLabelStyle).setOrigin(0, 0);
+            if (transpose) {
+                const rawRow = Math.floor(sheetIdx / rawCols) | 0;
+                const rawCol = (sheetIdx % rawCols) | 0;
+                tag.setText(`i${logicalIndex}#${sheetIdx} r${rawRow}c${rawCol}`);
+            }
             tag.setScrollFactor(0);
             container.add(tag);
         }
@@ -13957,7 +14422,7 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
     cursorY += (coreRows * cellH) + pad + 8;
 
     if (coreFrameIndices.length > 0) {
-        const animKey = `dbg_str_arc_core_${arcResolved.textureKey}_${arcFrameW}x${arcFrameH}_n${coreFrameIndices.length}_fps${animFps}`;
+        const animKey = `dbg_str_arc_core_${arcResolved.textureKey}_${arcFrameW}x${arcFrameH}_n${coreFrameIndices.length}_fps${animFps}_order${orderLabel}`;
         if (!sc.anims.exists(animKey)) {
             sc.anims.create({
                 key: animKey,
@@ -13967,7 +14432,7 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
                 yoyo: true
             });
         }
-        const animLabel = sc.add.text(0, cursorY, `[ARC ANIM] fps=${animFps}`, labelStyle).setOrigin(0, 0);
+        const animLabel = sc.add.text(0, cursorY, `[ARC ANIM] fps=${animFps} order=${orderLabel}`, labelStyle).setOrigin(0, 0);
         animLabel.setScrollFactor(0);
         container.add(animLabel);
         cursorY += (animLabel.height | 0) + 4;

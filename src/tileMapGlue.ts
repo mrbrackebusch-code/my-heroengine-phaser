@@ -2033,6 +2033,22 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
   const hTiles = (inst.hTiles | 0) || 1;
 
   const byRc: any = inst.byRc || anyThis.__propTileInfoByRC || null;
+  const texObj: any = this.scene?.textures?.get?.(textureKey) || null;
+  const hasFrame = (frame: any): boolean => {
+    if (!texObj) return true;
+    try {
+      if (typeof texObj.has === "function" && (texObj.has(frame) || texObj.has(String(frame)))) return true;
+    } catch { /* ignore */ }
+    try {
+      if (typeof texObj.get === "function") {
+        const f0 = texObj.get(frame);
+        if (f0 && f0.name !== "__MISSING") return true;
+        const f1 = texObj.get(String(frame));
+        if (f1 && f1.name !== "__MISSING") return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  };
 
   let objIdx = 0;
   for (let dy = 0; dy < hTiles; dy++) {
@@ -2043,15 +2059,53 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
       const atlasCol = (baseRef.col + dx) | 0;
       const atlasRow = (baseRef.row - (hTiles - 1) + dy) | 0;
       const fi = (atlasRow * cols + atlasCol) | 0;
+      let safeFrame: any = fi;
+      let safeFrameIndex = fi | 0;
+      let canSetFrame = true;
+
+      if (!hasFrame(safeFrame)) {
+        let maxNumeric = -1;
+        try {
+          const names: any[] = (texObj && typeof texObj.getFrameNames === "function") ? texObj.getFrameNames() : [];
+          for (let i = 0; i < names.length; i++) {
+            const n = parseInt(String(names[i] ?? ""), 10);
+            if (Number.isFinite(n)) maxNumeric = Math.max(maxNumeric, n | 0);
+          }
+        } catch { /* ignore */ }
+
+        if (maxNumeric >= 0) {
+          safeFrameIndex = Math.max(0, Math.min(safeFrameIndex | 0, maxNumeric | 0));
+          safeFrame = safeFrameIndex;
+        }
+
+        if (!hasFrame(safeFrame)) {
+          safeFrame = 0;
+          safeFrameIndex = 0;
+        }
+
+      }
+
+      if (!hasFrame(safeFrame)) {
+        canSetFrame = false;
+      }
+
+      if (DEBUG_TILEMAP_GLUE) {
+        const used = canSetFrame ? String(safeFrame) : "NONE";
+        if (used !== String(fi)) {
+          console.warn(`[tileMapGlue][frameMissing] tex=${textureKey} want=${fi} use=${used}`);
+        }
+      }
 
       const obj: any = inst.objs?.[objIdx++] ?? null;
       if (obj) {
         try { obj.anims?.stop?.(); } catch { /* ignore */ }
-        try { obj.setFrame?.(fi); } catch { /* ignore */ }
+        if (canSetFrame) {
+          try { obj.setFrame?.(safeFrame); } catch { /* ignore */ }
+        }
       }
 
-      if (byRc) {
-        byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex: fi };
+      if (byRc && canSetFrame) {
+        byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex: safeFrameIndex };
       }
     }
   }

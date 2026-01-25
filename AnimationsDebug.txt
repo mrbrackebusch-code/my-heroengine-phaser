@@ -1,399 +1,318 @@
-weaponAtlas.ts:642 [WPN-ATLAS-PRELOAD] total=76 queued=76 missingUrl=0 originalsMode=0 originalsFound=0 originalsQueued=0 originalsMissingMeta=0
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__sword__arming__universal_combat_idle expected=256x2304 actual=640x1024 src=blob:http://192.168.68.56:5173/63c60505-e2e1-48e9-8956-cd01faaa77f2
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__sword__arming__universal_combat_idle reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__sword__arming__universal_hurt expected=768x576 actual=1920x256 src=blob:http://192.168.68.56:5173/4da3a911-4260-4a01-8d19-f4faeb488213
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__sword__arming__universal_hurt reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__sword__arming__universal_idle expected=256x2304 actual=640x1024 src=blob:http://192.168.68.56:5173/711a572e-5a66-4f91-8e29-f6f6338944a8
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__sword__arming__universal_idle reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__sword__arming__universal_walk expected=1152x2304 actual=2880x1024 src=blob:http://192.168.68.56:5173/a00a6e73-87d6-44b7-93f9-5421d87c978f
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__sword__arming__universal_walk reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t128__sword__arming__attack_halfslash expected=3072x4096 actual=3840x2048 src=blob:http://192.168.68.56:5173/70ef8a71-7fc4-4838-93c9-94ed09398010
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t128__sword__arming__attack_halfslash reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t128__sword__arming__attack_slash expected=3072x4096 actual=3840x2048 src=blob:http://192.168.68.56:5173/1526faca-8f26-4b88-9a49-57a5c14d4fda
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t128__sword__arming__attack_slash reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__polearm__spear__hurt expected=768x832 actual=2304x320 src=blob:http://192.168.68.56:5173/3381b74a-2dd0-4f0c-bc94-0c58e4fd3756
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__polearm__spear__hurt reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__polearm__spear__thrust expected=1024x3328 actual=3072x1280 src=blob:http://192.168.68.56:5173/31c6755c-deee-402a-ae2e-ce38f5ce9474
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__polearm__spear__thrust reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__polearm__spear__walk expected=1152x3328 actual=3456x1280 src=blob:http://192.168.68.56:5173/cb30810c-8847-4a1b-a33c-c612c609913a
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__polearm__spear__walk reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=tall__consolidated__spellcast__7x4 expected=896x256 actual=448x768 src=blob:http://192.168.68.56:5173/c576e9ab-056f-4766-b187-0730a3005c99
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=tall__consolidated__spellcast__7x4 reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=tall__consolidated__slash__6x4 expected=768x256 actual=8064x8192 src=blob:http://192.168.68.56:5173/163e4183-e53d-4600-871c-b3381d4d7936
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=tall__consolidated__slash__6x4 reloaded=1 queued=1 hasUrl=1
-weaponAnimGlue.ts:449  [WPN-MISSING-TEX] weaponId=arming heroPhase=slash usedPhase=slash mode=normal variant=gold bgKey= fgKey= missingKey= missing=t128__sword__arming__attack_slash__bg__vgold,t128__sword__arming__attack_slash__fg__vgold keys=t128__sword__arming__attack_slash__bg__vgold,t128__sword__arming__attack_slash__fg__vgold queued=0 total=14
-_logWeaponMissingTexOnce @ weaponAnimGlue.ts:449
-syncWeaponLayersToHero @ weaponAnimGlue.ts:1659
-_syncWeaponOverlaysForHeroNative @ arcadeCompat.ts:11469
-_syncHeroPath @ arcadeCompat.ts:11999
-_syncSpriteLoop @ arcadeCompat.ts:8139
-_syncNativeSprites2 @ arcadeCompat.ts:7833
-_tick @ arcadeCompat.ts:15163
-frame @ arcadeCompat.ts:16260
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-weaponAnimGlue.ts:449  [WPN-MISSING-TEX] weaponId=spear heroPhase=thrust usedPhase=thrust mode=normal variant=copper bgKey= fgKey= missingKey= missing=t064__polearm__spear__thrust__bg__vcopper,t064__polearm__spear__thrust__fg__vcopper keys=t064__polearm__spear__thrust__bg__vcopper,t064__polearm__spear__thrust__fg__vcopper queued=0 total=6
-_logWeaponMissingTexOnce @ weaponAnimGlue.ts:449
-syncWeaponLayersToHero @ weaponAnimGlue.ts:1659
-_syncWeaponOverlaysForHeroNative @ arcadeCompat.ts:11469
-_syncHeroPath @ arcadeCompat.ts:11999
-_syncSpriteLoop @ arcadeCompat.ts:8139
-_syncNativeSprites2 @ arcadeCompat.ts:7833
-_tick @ arcadeCompat.ts:15163
-frame @ arcadeCompat.ts:16260
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__magic__gnarled__universal_hurt expected=768x832 actual=2304x320 src=blob:http://192.168.68.56:5173/2cc01058-477f-4ace-9688-99553cb7f958
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__magic__gnarled__universal_hurt reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__magic__gnarled__universal_walk expected=1152x3328 actual=3456x1280 src=blob:http://192.168.68.56:5173/97f20f70-3329-40d4-8015-5fb704450034
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__magic__gnarled__universal_walk reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t192__magic__gnarled__thrust__p3 expected=3072x2304 actual=3072x3072 src=blob:http://192.168.68.56:5173/91119084-1ec4-457e-a4fe-56f26fb6ac68
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t192__magic__gnarled__thrust__p3 reloaded=1 queued=1 hasUrl=1
-weaponAnimGlue.ts:449  [WPN-MISSING-TEX] weaponId=gnarled heroPhase=cast usedPhase=thrust mode=normal variant=silver bgKey= fgKey= missingKey= missing=t192__magic__gnarled__thrust__bg__vsilver,t192__magic__gnarled__thrust__fg__vsilver keys=t192__magic__gnarled__thrust__bg__vsilver,t192__magic__gnarled__thrust__fg__vsilver queued=0 total=6
-_logWeaponMissingTexOnce @ weaponAnimGlue.ts:449
-syncWeaponLayersToHero @ weaponAnimGlue.ts:1659
-_syncWeaponOverlaysForHeroNative @ arcadeCompat.ts:11469
-_syncHeroPath @ arcadeCompat.ts:11999
-_syncSpriteLoop @ arcadeCompat.ts:8139
-_syncNativeSprites2 @ arcadeCompat.ts:7833
-_tick @ arcadeCompat.ts:15163
-frame @ arcadeCompat.ts:16260
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-weaponAnimGlue.ts:449  [WPN-MISSING-TEX] weaponId=simple heroPhase=cast usedPhase=cast mode=normal variant=base bgKey= fgKey= missingKey= missing=t064__magic__simple__spellcast__fg__vbase keys=t064__magic__simple__spellcast__fg__vbase queued= total=
-_logWeaponMissingTexOnce @ weaponAnimGlue.ts:449
-syncWeaponToHero @ weaponAnimGlue.ts:1942
-_syncHeroIntellectCastCrystals @ arcadeCompat.ts:1759
-_syncHeroPath @ arcadeCompat.ts:12005
-_syncSpriteLoop @ arcadeCompat.ts:8139
-_syncNativeSprites2 @ arcadeCompat.ts:7833
-_tick @ arcadeCompat.ts:15163
-frame @ arcadeCompat.ts:16260
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-arcadeCompat.ts:2146 [INTPROJ][CREATE] | s.id 119 | heroIndex 0 | nativeXY 832 737.3899999999983 | startTex __MISSING | startFrame __BASE | alpha 0.95
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__magic__crystal__universal_hurt expected=768x448 actual=1536x256 src=blob:http://192.168.68.56:5173/0aba0a10-2557-4bb3-ad95-d6bdadc9e2d4
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__magic__crystal__universal_hurt reloaded=1 queued=1 hasUrl=1
-weaponAtlas.ts:296 [WPN-ATLAS-RELOAD] atlasKey=t064__magic__crystal__universal_walk expected=1152x1792 actual=2304x1024 src=blob:http://192.168.68.56:5173/22ce3916-00af-4eb2-8298-4d918beafd7a
-weaponAtlas.ts:356 [WPN-ATLAS-LOAD] atlasKey=t064__magic__crystal__universal_walk reloaded=1 queued=1 hasUrl=1
-weaponAnimGlue.ts:449  [WPN-MISSING-TEX] weaponId=simple heroPhase=cast usedPhase=cast mode=normal variant=base bgKey= fgKey= missingKey= missing=t064__magic__simple__spellcast__fg__vbase keys=t064__magic__simple__spellcast__fg__vbase queued=0 total=1
-_logWeaponMissingTexOnce @ weaponAnimGlue.ts:449
-syncWeaponLayersToHero @ weaponAnimGlue.ts:1659
-_syncWeaponOverlaysForHeroNative @ arcadeCompat.ts:11469
-_syncHeroPath @ arcadeCompat.ts:11999
-_syncSpriteLoop @ arcadeCompat.ts:8139
-_syncNativeSprites2 @ arcadeCompat.ts:7833
-_tick @ arcadeCompat.ts:15163
-frame @ arcadeCompat.ts:16260
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
-requestAnimationFrame
-frame @ arcadeCompat.ts:16268
+weaponAtlas.ts:747 [WPN-ATLAS-PRELOAD] total=77 queued=77 missingUrl=0 originalsMode=0 originalsRefMode=1 originalsFound=12 originalsQueued=12 originalsMissingMeta=0
+weaponAtlas.ts:747 [WPN-ATLAS-PRELOAD] total=77 queued=77 missingUrl=0 originalsMode=0 originalsRefMode=1 originalsFound=12 originalsQueued=12 originalsMissingMeta=0
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__hurt__6x1 type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=76
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__walk__9x4 type=atlasjson hasAtlas=1 actual=3456x4096 expected=3456x4096 pending=75
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__crystal__universal_hurt type=atlasjson hasAtlas=1 actual=768x448 expected=768x448 pending=74
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__crystal__universal_walk type=atlasjson hasAtlas=1 actual=1152x1792 expected=1152x1792 pending=73
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__diamond__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=72
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__thrust__8x4 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=71
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__diamond__universal_walk type=atlasjson hasAtlas=1 actual=1152x3328 expected=1152x3328 pending=70
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__gnarled__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=69
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__gnarled__universal_walk type=atlasjson hasAtlas=1 actual=1152x3328 expected=1152x3328 pending=68
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__loop__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=67
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__loop__universal_walk type=atlasjson hasAtlas=1 actual=1152x3328 expected=1152x3328 pending=66
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__s__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=65
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__magic__s__universal_walk type=atlasjson hasAtlas=1 actual=1152x3328 expected=1152x3328 pending=64
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__spellcast__7x4 type=atlasjson hasAtlas=1 actual=896x512 expected=896x512 pending=63
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__polearm__spear__hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=62
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__polearm__spear__thrust type=atlasjson hasAtlas=1 actual=1024x3328 expected=1024x3328 pending=61
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__polearm__spear__walk type=atlasjson hasAtlas=1 actual=1152x3328 expected=1152x3328 pending=60
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__shoot__13x4 type=atlasjson hasAtlas=1 actual=3328x1280 expected=3328x1280 pending=59
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__slash__6x4__p1 type=atlasjson hasAtlas=1 actual=2304x3840 expected=2304x3840 pending=58
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__slash__6x4__p2 type=atlasjson hasAtlas=1 actual=3840x3840 expected=3840x3840 pending=57
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_great__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=56
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_great__universal_shoot type=atlasjson hasAtlas=1 actual=832x3328 expected=832x3328 pending=55
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_normal__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=54
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_normal__universal_shoot type=atlasjson hasAtlas=1 actual=1664x3328 expected=1664x3328 pending=53
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_recurve__universal_hurt type=atlasjson hasAtlas=1 actual=768x832 expected=768x832 pending=52
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__ranged__bow_recurve__universal_shoot type=atlasjson hasAtlas=1 actual=1664x3328 expected=1664x3328 pending=51
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__arming__universal_combat_idle type=atlasjson hasAtlas=1 actual=256x2304 expected=256x2304 pending=50
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__arming__universal_hurt type=atlasjson hasAtlas=1 actual=768x576 expected=768x576 pending=49
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__arming__universal_idle type=atlasjson hasAtlas=1 actual=256x2304 expected=256x2304 pending=48
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__arming__universal_walk type=atlasjson hasAtlas=1 actual=1152x2304 expected=1152x2304 pending=47
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__glowsword__hurt type=atlasjson hasAtlas=1 actual=768x128 expected=768x128 pending=46
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__sword__glowsword__walk type=atlasjson hasAtlas=1 actual=1152x512 expected=1152x512 pending=45
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__tools__smash__universal_walk type=atlasjson hasAtlas=1 actual=576x768 expected=576x768 pending=44
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__tools__x__thrust type=atlasjson hasAtlas=1 actual=1024x768 expected=1024x768 pending=43
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t064__tools__x__walk type=atlasjson hasAtlas=1 actual=1152x768 expected=1152x768 pending=42
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__dragonspear__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=41
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__dragonspear__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=40
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__longspear__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=39
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__longspear__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=38
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__trident__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=37
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__polearm__trident__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=36
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_great__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=35
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_great__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=34
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_normal__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=33
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_normal__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=32
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_recurve__walk__p2 type=atlasjson hasAtlas=1 actual=2304x2560 expected=2304x2560 pending=31
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__ranged__bow_recurve__walk__p1 type=atlasjson hasAtlas=1 actual=2304x4096 expected=2304x4096 pending=30
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__sword__arming__attack_backslash__p1 type=atlasjson hasAtlas=1 actual=3328x4096 expected=3328x4096 pending=29
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__sword__arming__attack_halfslash type=atlasjson hasAtlas=1 actual=3072x4096 expected=3072x4096 pending=28
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__sword__arming__attack_backslash__p2 type=atlasjson hasAtlas=1 actual=3328x512 expected=3328x512 pending=27
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__tools__smash__slash type=atlasjson hasAtlas=1 actual=1536x1536 expected=1536x1536 pending=26
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t128__sword__arming__attack_slash type=atlasjson hasAtlas=1 actual=3072x4096 expected=3072x4096 pending=25
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__crystal__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=24
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__crystal__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x1536 expected=3072x1536 pending=23
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__diamond__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=22
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__diamond__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=21
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__diamond__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=20
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__gnarled__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=19
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__gnarled__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=18
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__gnarled__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=17
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__loop__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=16
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__loop__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=15
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__loop__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=14
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__s__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=13
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__s__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=12
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__magic__s__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=11
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__dragonspear__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=10
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__dragonspear__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=9
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__dragonspear__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=8
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__longspear__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=7
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__longspear__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=6
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__longspear__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=5
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__trident__thrust__p1 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=4
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__trident__thrust__p2 type=atlasjson hasAtlas=1 actual=3072x3840 expected=3072x3840 pending=3
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__polearm__trident__thrust__p3 type=atlasjson hasAtlas=1 actual=3072x2304 expected=3072x2304 pending=2
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=t192__sword__glowsword__attack_slash type=atlasjson hasAtlas=1 actual=2304x1536 expected=2304x1536 pending=1
+weaponAtlas.ts:325 [WPN-ATLAS-FILE] atlasKey=tall__consolidated__slash_reverse__6x4 type=atlasjson hasAtlas=1 actual=2304x768 expected=2304x768 pending=0
+weaponAtlas.ts:335 [WPN-ATLAS-LOADER] pending=0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=arming pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,gold,iron,silver,steel
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=spear pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,dark,gold,iron,light,medium,red,silver,steel
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=simple pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=dagger pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=arming cached=base baseAvailable=1
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=1 rarity=common cast=gnarled slots=strength=rapier@t140,0,0,0|agility=halberd@t35,35,35,35|intelligence=gnarled@t140,0,0,0|support=loop@t35,35,35,35
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=rapier pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=halberd pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=gnarled pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,dark,gold,iron,light,medium,red,silver,steel
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=rapier cached=base baseAvailable=1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=halberd cached=base baseAvailable=1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=gnarled cached=base baseAvailable=1
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=2 rarity=uncommon cast=gnarled slots=strength=arming@t47,47,47,47|agility=halberd@t190,0,0,0|intelligence=gnarled@t95,95,0,0|support=loop@t190,0,0,0
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=arming heroPhase=slash variant=base anim=attack_slash tile=128 bg=t128__sword__arming__attack_slash__bg__vbase bgAtlas=t128__sword__arming__attack_slash fg=t128__sword__arming__attack_slash__fg__vbase fgAtlas=t128__sword__arming__attack_slash
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=0 row=0 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=2 uniqOpaque=1 total=16384 transparent=16379 top=#00000000:16379,#484152ff:5
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=0 row=0 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=4 uniqOpaque=3 total=16384 transparent=16376 top=#00000000:16376,#484152ff:4,#726b7eff:3,#867e7fff:1
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=6 row=1 col=0 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=768,128 origAbs=0,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=6 row=1 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=169 frameColOverride=-1
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=6 row=1 col=0 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=0,128 origAbs=0,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=6 row=1 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16340 top=#00000000:16340,#867e7fff:12,#484152ff:10,#726b7eff:8,#1b192bff:6,#a8b3b8ff:5,#e3e7d3ff:3 heroFrameIndex=169 frameColOverride=-1
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=169 frameColOverride=-1 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=6 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=6
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=169 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#6 fg=t128__sword__arming__attack_slash__fg__vbase#6 depthH=51720 depthBg=51719 depthFg=51721
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=9 row=1 col=3 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=1152,128 origAbs=384,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=9 row=1 col=3 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=172 frameColOverride=3
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=9 row=1 col=3 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=384,128 origAbs=384,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=9 row=1 col=3 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16113 top=#00000000:16113,#a8b3b8ff:112,#e3e7d3ff:68,#867e7fff:32,#484152ff:23,#726b7eff:21,#1b192bff:15 heroFrameIndex=172 frameColOverride=3
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=172 frameColOverride=3 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=9 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=9
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=172 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#9 fg=t128__sword__arming__attack_slash__fg__vbase#9 depthH=51720 depthBg=51719 depthFg=51721
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=3 rarity=rare cast=gnarled slots=strength=arming@t248,0,0,0|agility=halberd@t124,124,0,0|intelligence=gnarled@t62,62,62,62|support=loop@t248,0,0,0
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=10 row=1 col=4 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=1280,128 origAbs=512,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=10 row=1 col=4 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=173 frameColOverride=4
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=10 row=1 col=4 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=512,128 origAbs=512,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=10 row=1 col=4 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=15973 top=#00000000:15973,#a8b3b8ff:199,#e3e7d3ff:111,#867e7fff:40,#726b7eff:25,#1b192bff:20,#484152ff:16 heroFrameIndex=173 frameColOverride=4
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=173 frameColOverride=4 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=10 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=10
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=173 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#10 fg=t128__sword__arming__attack_slash__fg__vbase#10 depthH=51720 depthBg=51719 depthFg=51721
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=11 row=1 col=5 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=1408,128 origAbs=640,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=11 row=1 col=5 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=174 frameColOverride=5
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=11 row=1 col=5 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=640,128 origAbs=640,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=11 row=1 col=5 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16152 top=#00000000:16152,#a8b3b8ff:118,#e3e7d3ff:63,#867e7fff:19,#484152ff:14,#726b7eff:9,#1b192bff:9 heroFrameIndex=174 frameColOverride=5
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=174 frameColOverride=5 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=11 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=11
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=174 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#11 fg=t128__sword__arming__attack_slash__fg__vbase#11 depthH=51720 depthBg=51719 depthFg=51721
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=7 row=1 col=1 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=896,128 origAbs=128,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=7 row=1 col=1 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=170 frameColOverride=1
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=7 row=1 col=1 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=128,128 origAbs=128,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=7 row=1 col=1 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16320 top=#00000000:16320,#484152ff:20,#726b7eff:16,#867e7fff:11,#a8b3b8ff:8,#1b192bff:6,#e3e7d3ff:3 heroFrameIndex=170 frameColOverride=1
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=170 frameColOverride=1 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=7 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=7
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=170 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#7 fg=t128__sword__arming__attack_slash__fg__vbase#7 depthH=51720 depthBg=51719 depthFg=51721
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=8 row=1 col=2 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=1024,128 origAbs=256,128 x=596 y=493 depth=51719
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=8 row=1 col=2 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=171 frameColOverride=2
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=8 row=1 col=2 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=256,128 origAbs=256,128 x=596 y=493 depth=51721
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=left variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=8 row=1 col=2 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16311 top=#00000000:16311,#484152ff:20,#726b7eff:16,#867e7fff:15,#a8b3b8ff:10,#1b192bff:9,#e3e7d3ff:3 heroFrameIndex=171 frameColOverride=2
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=171 frameColOverride=2 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=8 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=8
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=171 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#8 fg=t128__sword__arming__attack_slash__fg__vbase#8 depthH=51720 depthBg=51719 depthFg=51721
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=left variant=base heroFrameIndex=169 frameColOverride=0 x=596.3999999999997 y=493.19999999999993 heroDepth=51720 bgDepth=51719 fgDepth=51721 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=6 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=6
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=left heroFrame=169 heroXY=596,493 heroOrigin=0.50,0.50 heroCenter=596,493 wpnOxOy=0,0 off=0,0 WXY=596,493 bg=t128__sword__arming__attack_slash__bg__vbase#6 fg=t128__sword__arming__attack_slash__fg__vbase#6 depthH=51720 depthBg=51719 depthFg=51721
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=4 rarity=epic cast=gnarled slots=strength=arming@t163,163,0,0|agility=spear@t326,0,0,0|intelligence=gnarled@t81,81,81,81|support=simple@t163,163,0,0
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=12 row=2 col=0 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=768,256 origAbs=0,256 x=596 y=547 depth=57019
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=12 row=2 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=182 frameColOverride=-1
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=12 row=2 col=0 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=0,256 origAbs=0,256 x=596 y=547 depth=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=12 row=2 col=0 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16315 top=#00000000:16315,#726b7eff:19,#484152ff:17,#867e7fff:13,#1b192bff:9,#a8b3b8ff:8,#e3e7d3ff:3 heroFrameIndex=182 frameColOverride=-1
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=182 frameColOverride=-1 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=12 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=12
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=182 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t128__sword__arming__attack_slash__bg__vbase#12 fg=t128__sword__arming__attack_slash__fg__vbase#12 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase origKey=t128__sword__arming__attack_slash__bg__vbase__origref frame=15 row=2 col=3 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=1152,256 origAbs=384,256 x=596 y=547 depth=57019
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__arming__attack_slash__bg__vbase frame=15 row=2 col=3 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=768,0,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:376 [WPN-PIX-CMP] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase origKey=t128__sword__arming__attack_slash__fg__vbase__origref frame=15 row=2 col=3 diff=0 total=16384 match=1 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasAbs=384,256 origAbs=384,256 x=596 y=547 depth=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=arming heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__arming__attack_slash__fg__vbase frame=15 row=2 col=3 tile=128x128 cols=6 rows=4 atlas=t128__sword__arming__attack_slash atlasImg=t128__sword__arming__attack_slash.png atlasFrame=0,0,768,512 palette=uniq=7 uniqOpaque=6 total=16384 transparent=16208 top=#00000000:16208,#a8b3b8ff:56,#e3e7d3ff:47,#867e7fff:24,#726b7eff:22,#484152ff:18,#1b192bff:9 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=arming heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=185 frameColOverride=3 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t128__sword__arming__attack_slash__bg__vbase bgFrame=15 fgKey=t128__sword__arming__attack_slash__fg__vbase fgFrame=15
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=arming hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=185 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t128__sword__arming__attack_slash__bg__vbase#15 fg=t128__sword__arming__attack_slash__fg__vbase#15 depthH=57020 depthBg=57019 depthFg=57021
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=5 rarity=legendary cast=gnarled slots=strength=waraxe@t400,0,0,0|agility=whip@t400,0,0,0|intelligence=gnarled@t400,0,0,0|support=diamond@t200,200,0,0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=waraxe pick=base baseAvailable=1 variants=base
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=waraxe heroPhase=slash variant=base anim=attack_slash tile=192 bg=t192__blunt__waraxe__attack_slash__bg__vbase bgAtlas=tall__consolidated__slash__6x4__p1 fg=t192__blunt__waraxe__attack_slash__fg__vbase fgAtlas=tall__consolidated__slash__6x4__p1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=waraxe cached=base baseAvailable=1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36488 top=#00000000:36488,#1d131eff:121,#4a5057ff:97,#411e05ff:43,#62351cff:43,#a9c9caff:37,#8aaaabff:35
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__blunt__waraxe__attack_slash__bg__vbase origKey=t192__blunt__waraxe__attack_slash__bg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=15 row=2 col=3 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__blunt__waraxe__attack_slash__fg__vbase origKey=t192__blunt__waraxe__attack_slash__fg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=15 row=2 col=3 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36538 top=#00000000:36538,#1d131eff:82,#4a5057ff:79,#62351cff:49,#8aaaabff:43,#411e05ff:41,#a9c9caff:32 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=185 frameColOverride=3 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=15 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=15
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=185 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#15 fg=t192__blunt__waraxe__attack_slash__fg__vbase#15 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=16 row=2 col=4 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=186 frameColOverride=4
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=16 row=2 col=4 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=35964 top=#00000000:35964,#4a5057ff:263,#8aaaabff:248,#a9c9caff:126,#1d131eff:108,#62351cff:85,#411e05ff:70 heroFrameIndex=186 frameColOverride=4
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=186 frameColOverride=4 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=16 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=16
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=186 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#16 fg=t192__blunt__waraxe__attack_slash__fg__vbase#16 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=17 row=2 col=5 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=187 frameColOverride=5
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=17 row=2 col=5 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36307 top=#00000000:36307,#8aaaabff:190,#1d131eff:95,#4a5057ff:90,#a9c9caff:88,#62351cff:54,#411e05ff:40 heroFrameIndex=187 frameColOverride=5
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=187 frameColOverride=5 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=17 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=17
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=187 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#17 fg=t192__blunt__waraxe__attack_slash__fg__vbase#17 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=13 row=2 col=1 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=183 frameColOverride=1
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=13 row=2 col=1 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36503 top=#00000000:36503,#1d131eff:119,#4a5057ff:100,#a9c9caff:37,#62351cff:36,#8aaaabff:35,#411e05ff:34 heroFrameIndex=183 frameColOverride=1
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=183 frameColOverride=1 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=13 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=13
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=183 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#13 fg=t192__blunt__waraxe__attack_slash__fg__vbase#13 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=14 row=2 col=2 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=184 frameColOverride=2
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=14 row=2 col=2 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36607 top=#00000000:36607,#1d131eff:99,#411e05ff:37,#62351cff:37,#a9c9caff:32,#4a5057ff:28,#8aaaabff:24 heroFrameIndex=184 frameColOverride=2
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=184 frameColOverride=2 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=14 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=14
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=184 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#14 fg=t192__blunt__waraxe__attack_slash__fg__vbase#14 depthH=57020 depthBg=57019 depthFg=57021
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__waraxe__attack_slash__bg__vbase frame=12 row=2 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,2304,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=182 frameColOverride=0
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=waraxe heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__waraxe__attack_slash__fg__vbase frame=12 row=2 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,2304,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36506 top=#00000000:36506,#1d131eff:116,#4a5057ff:97,#a9c9caff:37,#62351cff:37,#411e05ff:36,#8aaaabff:35 heroFrameIndex=182 frameColOverride=0
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=waraxe heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=182 frameColOverride=0 x=596.3999999999997 y=546.5999999999999 heroDepth=57020 bgDepth=57019 fgDepth=57021 bgVisible=true fgVisible=true bgKey=t192__blunt__waraxe__attack_slash__bg__vbase bgFrame=12 fgKey=t192__blunt__waraxe__attack_slash__fg__vbase fgFrame=12
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=waraxe hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=182 heroXY=596,546 heroOrigin=0.50,0.50 heroCenter=596,546 wpnOxOy=0,0 off=0,0 WXY=596,546 bg=t192__blunt__waraxe__attack_slash__bg__vbase#12 fg=t192__blunt__waraxe__attack_slash__fg__vbase#12 depthH=57020 depthBg=57019 depthFg=57021
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=whip pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=whip cached=base baseAvailable=1
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=6 rarity=legendary cast=s slots=strength=mace@t400,0,0,0|agility=longspear@t200,200,0,0|intelligence=s@t400,0,0,0|support=simple@t200,200,0,0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=mace pick=base baseAvailable=1 variants=base
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=mace heroPhase=slash variant=base anim=attack_slash tile=192 bg=t192__blunt__mace__attack_slash__bg__vbase bgAtlas=tall__consolidated__slash__6x4__p1 fg=t192__blunt__mace__attack_slash__fg__vbase fgAtlas=tall__consolidated__slash__6x4__p1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=mace cached=base baseAvailable=1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=mace heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__mace__attack_slash__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,1536,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36754 top=#00000000:36754,#000000ff:48,#3a3737ff:21,#88817fff:14,#d2cdc6ff:13,#635b5bff:13,#a7a3a2ff:1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=mace heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__mace__attack_slash__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,1536,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__blunt__mace__attack_slash__bg__vbase origKey=t192__blunt__mace__attack_slash__bg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=mace heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t192__blunt__mace__attack_slash__bg__vbase frame=15 row=2 col=3 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=1152,1536,1152,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__blunt__mace__attack_slash__fg__vbase origKey=t192__blunt__mace__attack_slash__fg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=mace heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t192__blunt__mace__attack_slash__fg__vbase frame=15 row=2 col=3 tile=192x192 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p1 atlasImg=tall__consolidated__slash__6x4__p1.png atlasFrame=0,1536,1152,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36742 top=#00000000:36742,#000000ff:56,#3a3737ff:20,#88817fff:18,#d2cdc6ff:14,#635b5bff:13,#a7a3a2ff:1 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=mace heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=185 frameColOverride=3 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t192__blunt__mace__attack_slash__bg__vbase bgFrame=15 fgKey=t192__blunt__mace__attack_slash__fg__vbase fgFrame=15
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=mace hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=185 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t192__blunt__mace__attack_slash__bg__vbase#15 fg=t192__blunt__mace__attack_slash__fg__vbase#15 depthH=60320 depthBg=60319 depthFg=60321
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=7 rarity=legendary cast=gnarled slots=strength=scimitar@t100,100,100,100|agility=spear@t100,100,100,100|intelligence=gnarled@t100,100,100,100|support=loop@t200,200,0,0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=scimitar pick=base baseAvailable=1 variants=base
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=scimitar heroPhase=slash variant=base anim=slash tile=128 bg=t128__sword__scimitar__slash__bg__vbase bgAtlas=tall__consolidated__slash__6x4__p2 fg=t128__sword__scimitar__slash__fg__vbase fgAtlas=tall__consolidated__slash__6x4__p2
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=scimitar cached=base baseAvailable=1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=0 row=0 col=0 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=12 uniqOpaque=11 total=16384 transparent=16175 top=#00000000:16175,#000000ff:79,#abaeacff:32,#8d8e90ff:25,#d7d9d6ff:21,#555856ff:13,#8d6811ff:12,#e4ac26ff:9 truncated=1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=0 row=0 col=0 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t128__sword__scimitar__slash__bg__vbase origKey=t128__sword__scimitar__slash__bg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=15 row=2 col=3 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t128__sword__scimitar__slash__fg__vbase origKey=t128__sword__scimitar__slash__fg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=15 row=2 col=3 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=8 uniqOpaque=7 total=16384 transparent=16199 top=#00000000:16199,#000000ff:81,#8d8e90ff:33,#abaeacff:28,#d7d9d6ff:20,#e4ac26ff:11,#8d6811ff:10,#ede075ff:2 heroFrameIndex=185 frameColOverride=3
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=185 frameColOverride=3 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=15 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=15
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=185 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#15 fg=t128__sword__scimitar__slash__fg__vbase#15 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=16 row=2 col=4 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=186 frameColOverride=4
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=16 row=2 col=4 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=8 uniqOpaque=7 total=16384 transparent=16203 top=#00000000:16203,#000000ff:78,#8d8e90ff:33,#abaeacff:28,#d7d9d6ff:20,#e4ac26ff:11,#8d6811ff:9,#ede075ff:2 heroFrameIndex=186 frameColOverride=4
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=186 frameColOverride=4 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=16 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=16
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=186 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#16 fg=t128__sword__scimitar__slash__fg__vbase#16 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=17 row=2 col=5 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=187 frameColOverride=5
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=17 row=2 col=5 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=12 uniqOpaque=11 total=16384 transparent=16205 top=#00000000:16205,#000000ff:65,#abaeacff:32,#8d8e90ff:25,#d7d9d6ff:21,#555856ff:13,#8d6811ff:10,#e4ac26ff:7 truncated=1 heroFrameIndex=187 frameColOverride=5
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=187 frameColOverride=5 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=17 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=17
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=187 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#17 fg=t128__sword__scimitar__slash__fg__vbase#17 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=13 row=2 col=1 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=183 frameColOverride=1
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=13 row=2 col=1 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=10 uniqOpaque=9 total=16384 transparent=16191 top=#00000000:16191,#000000ff:82,#8d8e90ff:33,#abaeacff:28,#d7d9d6ff:20,#e4ac26ff:11,#8d6811ff:10,#401000ff:4 truncated=1 heroFrameIndex=183 frameColOverride=1
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=183 frameColOverride=1 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=13 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=13
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=183 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#13 fg=t128__sword__scimitar__slash__fg__vbase#13 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=14 row=2 col=2 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=184 frameColOverride=2
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=14 row=2 col=2 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=12 uniqOpaque=11 total=16384 transparent=16197 top=#00000000:16197,#000000ff:69,#abaeacff:32,#8d8e90ff:25,#d7d9d6ff:21,#555856ff:13,#8d6811ff:12,#e4ac26ff:9 truncated=1 heroFrameIndex=184 frameColOverride=2
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=184 frameColOverride=2 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=14 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=14
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=184 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#14 fg=t128__sword__scimitar__slash__fg__vbase#14 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=bg key=t128__sword__scimitar__slash__bg__vbase frame=12 row=2 col=0 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=3072,1024,768,512 palette=uniq=1 uniqOpaque=0 total=16384 transparent=16384 top=#00000000:16384 heroFrameIndex=182 frameColOverride=0
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=scimitar heroPhase=slash usedPhase=slash dir=down variant=base layer=fg key=t128__sword__scimitar__slash__fg__vbase frame=12 row=2 col=0 tile=128x128 cols=6 rows=4 atlas=tall__consolidated__slash__6x4__p2 atlasImg=tall__consolidated__slash__6x4__p2.png atlasFrame=2304,1024,768,512 palette=uniq=10 uniqOpaque=9 total=16384 transparent=16190 top=#00000000:16190,#000000ff:82,#8d8e90ff:33,#abaeacff:28,#d7d9d6ff:20,#e4ac26ff:12,#8d6811ff:10,#401000ff:4 truncated=1 heroFrameIndex=182 frameColOverride=0
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=scimitar heroName=LongBlond heroFamily=strength heroPhase=slash usedPhase=slash mode=normal dir=down variant=base heroFrameIndex=182 frameColOverride=0 x=596.3999999999997 y=579.8 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t128__sword__scimitar__slash__bg__vbase bgFrame=12 fgKey=t128__sword__scimitar__slash__fg__vbase fgFrame=12
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=scimitar hero=LongBlond fam=strength phase=slash used=slash mode=normal dir=down heroFrame=182 heroXY=596,579 heroOrigin=0.50,0.50 heroCenter=596,579 wpnOxOy=0,0 off=0,0 WXY=596,579 bg=t128__sword__scimitar__slash__bg__vbase#12 fg=t128__sword__scimitar__slash__fg__vbase#12 depthH=60320 depthBg=60319 depthFg=60321
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=spear cached=base baseAvailable=1
+HeroEngineInPhaser.ts:55509 Set the intellect spell lifetime to  547672
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=8 rarity=legendary cast=s slots=strength=flail@t200,200,0,0|agility=trident@t100,100,100,100|intelligence=s@t200,200,0,0|support=simple@t100,100,100,100
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=s pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,dark,gold,iron,light,medium,red,silver,steel
+weaponAnimGlue.ts:652 [WPN-FAMILY-OVERRIDE] family=intelligence weaponId=s heroPhase=cast override=thrust
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=s heroPhase=thrust variant=base anim=thrust tile=192 bg=t192__magic__s__thrust__bg__vbase bgAtlas=t192__magic__s__thrust__p1 fg=t192__magic__s__thrust__fg__vbase fgAtlas=t192__magic__s__thrust__p1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=s cached=base baseAvailable=1
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=s heroPhase=cast variant=base anim= tile= bg= bgAtlas= fg= fgAtlas=
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=s heroPhase=cast usedPhase=thrust dir=right variant=base layer=bg key=t192__magic__s__thrust__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__s__thrust__p1 atlasImg=t192__magic__s__thrust__p1.png atlasFrame=1536,0,1536,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36505 top=#00000000:36505,#2b1c1dff:180,#996b4aff:52,#744b30ff:37,#ae764bff:31,#62351cff:30,#c39753ff:29
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=s heroPhase=cast usedPhase=thrust dir=right variant=base layer=fg key=t192__magic__s__thrust__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__s__thrust__p1 atlasImg=t192__magic__s__thrust__p1.png atlasFrame=0,0,1536,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__magic__s__thrust__bg__vbase origKey=t192__magic__s__thrust__bg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=s heroPhase=cast usedPhase=thrust dir=right variant=base layer=bg key=t192__magic__s__thrust__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__s__thrust__p1 atlasImg=t192__magic__s__thrust__p1.png atlasFrame=1536,0,1536,768 palette=uniq=7 uniqOpaque=6 total=36864 transparent=36505 top=#00000000:36505,#2b1c1dff:180,#996b4aff:52,#744b30ff:37,#ae764bff:31,#62351cff:30,#c39753ff:29 heroFrameIndex=39 frameColOverride=0
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__magic__s__thrust__fg__vbase origKey=t192__magic__s__thrust__fg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=s heroPhase=cast usedPhase=thrust dir=right variant=base layer=fg key=t192__magic__s__thrust__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__s__thrust__p1 atlasImg=t192__magic__s__thrust__p1.png atlasFrame=0,0,1536,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=39 frameColOverride=0
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=s heroName=LongBlond heroFamily=intelligence heroPhase=cast usedPhase=thrust mode=normal dir=right variant=base heroFrameIndex=39 frameColOverride=0 x=648.7999999999997 y=577.0729104624331 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t192__magic__s__thrust__bg__vbase bgFrame=0 fgKey=t192__magic__s__thrust__fg__vbase fgFrame=0
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=39 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=40 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=40 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=40 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=40 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,574 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=40 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,573 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=41 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,573 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=41 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,574 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=41 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=41 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=41 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=42 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=42 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=42 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=42 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,574 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=42 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,573 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+HeroEngineInPhaser.ts:56323 [INT][SPAWN] hi=0 now=43672 spawnAt=43672
+HeroEngineInPhaser.ts:55746 [INT][SPAWN-KIND] heroIndex 0 | spell.id 242 | spell.kind 51 | SK.HeroWeapon 51 | flags 0 | ghost? 0
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 619 587 | spellV 0 0 | termHit 0 | life 0 | now 43672
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=43 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,573 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=43 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,574 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=43 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=43 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=43 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 621 587 | spellV 10 0 | termHit 0 | life 0 | now 43938
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 625 587 | spellV 20 0 | termHit 0 | life 0 | now 44188
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 631 587 | spellV 32 0 | termHit 0 | life 0 | now 44438
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 641 587 | spellV 43 0 | termHit 0 | life 0 | now 44688
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 653 587 | spellV 56 0 | termHit 0 | life 0 | now 44938
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 668 587 | spellV 60 0 | termHit 0 | life 0 | now 45188
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 683 587 | spellV 60 0 | termHit 0 | life 0 | now 45438
+HeroEngineInPhaser.ts:56543 [INT][DRIVE] | hero 0 | input 1 0 | aim 1 0 | spellXY 698 587 | spellV 60 0 | termHit 0 | life 0 | now 45688
+HeroEngineInPhaser.ts:55310 [INT][WALL] detonate request hero=0 at tile=(18,22)
+HeroEngineInPhaser.ts:56691 We are detonating the spell and doing the contract writes and land signaling in detonateIntellectSpellForHero
+HeroEngineInPhaser.ts:56881 [INT DEBUG] DETONATE intellect hero=0 family=2 at=(705,587) dmg=8 why=INTELLECT_DETONATE_REQUEST_HIT_WALL who=detonateIntellectSpellForHero<maybeDetonateIntellectSpellsOnWall>
+HeroEngineInPhaser.ts:56885 We are running detonateIntellectSpellAt within detonateIntellectSpellForHero
+HeroEngineInPhaser.ts:56901 We are detonating the spell AT and doing the contract writes and land signaling in detonateIntellectSpellAt
+HeroEngineInPhaser.ts:56921 [INT DEBUG] DETONATE intellect hero=0 family=2 at=(705,587) dmg=8
+HeroEngineInPhaser.ts:56971 We cleaned up the detonation here in detonateIntellectSpellAt
+HeroEngineInPhaser.ts:56889 We cleaned up the detonation here in detonateIntellectSpellForHero
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=44 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=44 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=44 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,577 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=45 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,576 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=45 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,575 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=45 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,574 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=s hero=LongBlond fam=intelligence phase=cast used=thrust mode=normal dir=right heroFrame=45 heroXY=619,579 heroOrigin=0.50,0.50 heroCenter=619,579 wpnOxOy=0,0 off=0,0 WXY=648,573 bg=t192__magic__s__thrust__bg__vbase#0 fg=t192__magic__s__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=flail pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=trident pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,dark,gold,iron,light,medium,red,silver,steel
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=flail cached=base baseAvailable=1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=trident cached=base baseAvailable=1
+HeroEngineInPhaser.ts:27443 [WPN-DROP-SIM] hi=0 floor=9 rarity=legendary cast=loop slots=strength=katana@t400,0,0,0|agility=spear@t100,100,100,100|intelligence=gnarled@t100,100,100,100|support=loop@t200,200,0,0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=loop pick=base baseAvailable=1 variants=base,brass,bronze,ceramic,copper,dark,gold,iron,light,medium,red,silver,steel
+weaponAnimGlue.ts:652 [WPN-FAMILY-OVERRIDE] family=wisdom weaponId=loop heroPhase=cast override=thrust
+weaponAtlas.ts:421 [WPN-ATLAS-RESOLVE] model=loop heroPhase=thrust variant=base anim=thrust tile=192 bg=t192__magic__loop__thrust__bg__vbase bgAtlas=t192__magic__loop__thrust__p1 fg=t192__magic__loop__thrust__fg__vbase fgAtlas=t192__magic__loop__thrust__p1
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=loop cached=base baseAvailable=1
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=loop heroPhase=cast usedPhase=thrust dir=right variant=base layer=bg key=t192__magic__loop__thrust__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__loop__thrust__p1 atlasImg=t192__magic__loop__thrust__p1.png atlasFrame=1536,0,1536,768 palette=uniq=5 uniqOpaque=4 total=36864 transparent=36655 top=#00000000:36655,#62351cff:83,#2b1c1dff:51,#ae764bff:49,#c39753ff:26
+weaponAnimGlue.ts:364 [WPN-PIX-RESOLVE] weaponId=loop heroPhase=cast usedPhase=thrust dir=right variant=base layer=fg key=t192__magic__loop__thrust__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__loop__thrust__p1 atlasImg=t192__magic__loop__thrust__p1.png atlasFrame=0,0,1536,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__magic__loop__thrust__bg__vbase origKey=t192__magic__loop__thrust__bg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=loop heroPhase=cast usedPhase=thrust dir=right variant=base layer=bg key=t192__magic__loop__thrust__bg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__loop__thrust__p1 atlasImg=t192__magic__loop__thrust__p1.png atlasFrame=1536,0,1536,768 palette=uniq=5 uniqOpaque=4 total=36864 transparent=36655 top=#00000000:36655,#62351cff:83,#2b1c1dff:51,#ae764bff:49,#c39753ff:26 heroFrameIndex=325 frameColOverride=0
+weaponAnimGlue.ts:382 [WPN-ORIG-REF-MISS] key=t192__magic__loop__thrust__fg__vbase origKey=t192__magic__loop__thrust__fg__vbase__origref
+weaponAnimGlue.ts:370 [WPN-PIX-PLACE] weaponId=loop heroPhase=cast usedPhase=thrust dir=right variant=base layer=fg key=t192__magic__loop__thrust__fg__vbase frame=0 row=0 col=0 tile=192x192 cols=8 rows=4 atlas=t192__magic__loop__thrust__p1 atlasImg=t192__magic__loop__thrust__p1.png atlasFrame=0,0,1536,768 palette=uniq=1 uniqOpaque=0 total=36864 transparent=36864 top=#00000000:36864 heroFrameIndex=325 frameColOverride=0
+weaponAnimGlue.ts:634 [WPN-PLACED] weaponId=loop heroName=LongBlond heroFamily=wisdom heroPhase=cast usedPhase=thrust mode=normal dir=right variant=base heroFrameIndex=325 frameColOverride=0 x=724.9999999999997 y=577.0709709352694 heroDepth=60320 bgDepth=60319 fgDepth=60321 bgVisible=true fgVisible=true bgKey=t192__magic__loop__thrust__bg__vbase bgFrame=0 fgKey=t192__magic__loop__thrust__fg__vbase fgFrame=0
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=325 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,577 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=326 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,577 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=326 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,576 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=326 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,575 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=326 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,574 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=326 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,573 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=325 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,576 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=325 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,575 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=325 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,574 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+weaponAnimGlue.ts:616 [WPN-PLACE] wid=loop hero=LongBlond fam=wisdom phase=cast used=thrust mode=normal dir=right heroFrame=325 heroXY=695,579 heroOrigin=0.50,0.50 heroCenter=695,579 wpnOxOy=0,0 off=0,0 WXY=724,573 bg=t192__magic__loop__thrust__bg__vbase#0 fg=t192__magic__loop__thrust__fg__vbase#0 depthH=60320 depthBg=60319 depthFg=60321
+HeroEngineInPhaser.ts:57796 SUPPORT BEAM: very short, applying buff immediately to hero 0
+HeroEngineInPhaser.ts:58078 SUPPORT BUFF: adding buff kind=1 power=1230 durMs=12250 to hero 0
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=katana pick=base baseAvailable=1 variants=base
+arcadeCompat.ts:1450 [WPN-VARIANT] heroIndex=0 weaponId=katana cached=base baseAvailable=1
