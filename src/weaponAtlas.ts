@@ -119,6 +119,11 @@ const WEAPON_ATLAS_DIR = "../assets/weapons/_atlas";
 const WEAPON_ATLAS_ORIGINALS_SUBDIR = "../assets/weapons/_atlas/originals to use";
 const WEAPON_ORIGINAL_REF_SUFFIX = "__origref";
 const WEAPON_ATLAS_BUST_TOKEN = WEAPON_DEBUG ? Date.now().toString(36) : "";
+const WEAPON_CHAIN_KEYS = {
+  loop: "chain loop 128x128",
+  middle: "chain middle 128x128",
+  end: "chain end 128x128"
+} as const;
 
 const weaponAtlasPngs = import.meta.glob("../assets/weapons/_atlas/**/*.png", {
   as: "url",
@@ -746,6 +751,23 @@ export function loadWeaponAtlases(scene: Phaser.Scene): void {
       " originalsMissingMeta=" + originalsMissingMeta;
     console.log("[WPN-ATLAS-PRELOAD] " + line);
   }
+}
+
+export function preloadWeaponChainImages(scene: Phaser.Scene): void {
+  if (!scene || !scene.load || !scene.textures) return;
+  const textures = scene.textures;
+  const keys = [WEAPON_CHAIN_KEYS.loop, WEAPON_CHAIN_KEYS.middle, WEAPON_CHAIN_KEYS.end];
+  for (const key of keys) {
+    if (textures.exists(key)) continue;
+    const urlBase = _weaponAtlasUrl(key);
+    if (!urlBase) continue;
+    const url = WEAPON_ATLAS_BUST_TOKEN ? _cacheBustUrl(urlBase, WEAPON_ATLAS_BUST_TOKEN) : urlBase;
+    try { scene.load.image(key, url); } catch { }
+  }
+}
+
+export function getWeaponChainTextureKeys(): { loop: string; middle: string; end: string } {
+  return { ...WEAPON_CHAIN_KEYS };
 }
 
 // ----------------------------------------------------------

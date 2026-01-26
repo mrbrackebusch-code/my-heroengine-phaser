@@ -318,7 +318,10 @@ function _streamDeferredEffectSheets(scene: Phaser.Scene): void {
 
     if (DEBUG_EFFECT_ATLAS) {
         console.log(
-            `[effectAtlas][stream] queued=${queued} deferred=${deferred.length} scene=${sceneKey || "?"}`
+            "[EFFECT][ATLAS][STREAM]" +
+            " queued=" + (queued | 0) +
+            " deferred=" + (deferred.length | 0) +
+            " scene=" + (sceneKey || "?")
         );
     }
 
@@ -690,7 +693,10 @@ export function preloadEffectSheets(scene: Phaser.Scene): void {
 
     if (DEBUG_EFFECT_ATLAS && parts.prioritySet) {
         console.log(
-            `[effectAtlas][priority] radii=${Array.from(parts.prioritySet).join(",")} now=${loadNow.length} deferred=${parts.deferred.length}`
+            "[EFFECT][ATLAS][PRIORITY]" +
+            " radii=" + Array.from(parts.prioritySet).join(",") +
+            " now=" + (loadNow.length | 0) +
+            " deferred=" + (parts.deferred.length | 0)
         );
     }
 
@@ -759,10 +765,12 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
         const remH = sheetH % sheet.frameH;
         if ((remW || remH) && !_isRemainderAllowed(sheet, remW, remH)) {
             console.warn(
-                "[effectAtlas] sheet not divisible by frame size",
-                sheet.baseName,
-                `size=${sheetW}x${sheetH}`,
-                `frame=${sheet.frameW}x${sheet.frameH}`
+                "[EFFECT][ATLAS][WARN]" +
+                " issue=sheetNotDivisible" +
+                " base=" + sheet.baseName +
+                " size=" + sheetW + "x" + sheetH +
+                " frame=" + sheet.frameW + "x" + sheet.frameH +
+                " rem=" + remW + "x" + remH
             );
         }
 
@@ -833,17 +841,18 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
         };
 
         if (DEBUG_EFFECT_ATLAS) {
-            console.log("[effectAtlas] sheet", {
-                id: sheet.id,
-                variant: sheet.baseName,
-                tex: sheet.textureKey,
-                size: `${sheetW}x${sheetH}`,
-                frame: `${sheet.frameW}x${sheet.frameH}`,
-                cols,
-                rows,
-                frames: frameIndices.length,
-                emptySkipped
-            });
+            console.log(
+                "[EFFECT][ATLAS][SHEET]" +
+                " id=" + sheet.id +
+                " variant=" + sheet.baseName +
+                " tex=" + sheet.textureKey +
+                " size=" + sheetW + "x" + sheetH +
+                " frame=" + sheet.frameW + "x" + sheet.frameH +
+                " cols=" + (cols | 0) +
+                " rows=" + (rows | 0) +
+                " frames=" + (frameIndices.length | 0) +
+                " emptySkipped=" + (emptySkipped | 0)
+            );
         }
 
         const dt = _perfNow() - t0;
@@ -864,7 +873,14 @@ export async function buildEffectAtlas(scene: Phaser.Scene): Promise<EffectAtlas
         const summary = top.map((s) => `${s.name} ${s.ms.toFixed(0)}ms`).join(", ");
         _loadingNote(`Effects slow: ${summary}`);
         if (DEBUG_EFFECT_ATLAS) {
-            console.log("[effectAtlas] slow sheets (ms)", slowSheets);
+            const slowLine = slowSheets
+                .map((s) => `${s.name}:${s.ms.toFixed(0)}ms`)
+                .join(",");
+            console.log(
+                "[EFFECT][ATLAS][SLOW]" +
+                " count=" + (slowSheets.length | 0) +
+                " sheets=" + slowLine
+            );
         }
     }
 

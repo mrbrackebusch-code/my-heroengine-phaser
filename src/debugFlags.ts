@@ -33,8 +33,8 @@ export const DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY = false;
 export const DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES = false;
 export const DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS = 0;
 export const DEBUG_HERO_ANIM_STRENGTH_TRACE = false;
-export const DEBUG_STR_PROJECTILE_METRICS = false;
-export const DEBUG_STR_PROJECTILE_FRAMES = false;
+export const DEBUG_STR_PROJECTILE_METRICS = true;
+export const DEBUG_STR_PROJECTILE_FRAMES = true;
 export const DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS = 0;
 
 // Agility/integrator debug
@@ -53,6 +53,9 @@ export const DEBUG_AGI_HOOKSHOT_LOGS = false;
 export const DEBUG_AGI_HOOKSHOT_THROTTLE_MS = 50;
 export const DEBUG_AGI_HOOKSHOT_TICK_LOGS = false;
 export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 0.2;
+export const DEBUG_AGI_COMET_LOGS = false;
+export const DEBUG_AGI_COMET_LOG_THROTTLE_MS = 120;
+export const DEBUG_AGI_COMET_LOG_VERBOSE = false;
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -93,6 +96,9 @@ export const DEBUG_STATUE_PEDESTAL = false;
 
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
 export const DEBUG_DUNGEON_LOGS = false;
+export const DEBUG_BOSS_INTRO = true; // Boss intro/jump/pad sink lifecycle logs.
+export const DEBUG_PAD_SINK_PROP_LOGS = true; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
+export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
@@ -117,6 +123,7 @@ export const DEBUG_COINS_LOGS = false;
 export const DEBUG_DEV_COMMANDS = true; // Allow __heUiCommand debug actions (teleport, etc).
 export const DEBUG_TOWER_TRIAL_LOGS = false; // Tower Trial lifecycle + gating logs.
 export const DEBUG_TOWER_TRIAL_SIM = false; // Tower Trial simulator details.
+export const DEBUG_TOWER_TRIAL_ARTIFACT_AUTOSAVE = false; // Auto-save Tower Trial artifacts via dev server.
 
 // Intellect debug (HeroEngineInPhaser.ts)
 export const DEBUG_INT_DET = false;
@@ -165,9 +172,9 @@ export const DEBUG_DRAW_HERO_NATIVE_BOUNDS = false; // Hero native sprite bounds
 export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint
 export const DEBUG_DRAW_HERO_NAV_FOOTPRINT = false; // Hero nav footprint (same as wall for now)
 export const DEBUG_DRAW_DECOR_COLLIDERS = false; // Decor prop collider bounds (triggers + solids)
-export const DEBUG_EFFECT_ANIMS = false; // Effect anim application logs (effects.*)
-export const DEBUG_EFFECT_MASKS = false; // Effect mask debug logs (silhouette / mask attach)
-export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
+export const DEBUG_EFFECT_ANIMS = true; // Effect anim application logs (effects.*)
+export const DEBUG_EFFECT_MASKS = true; // Effect mask debug logs (silhouette / mask attach)
+export const DEBUG_EFFECT_ATLAS = true; // Effect atlas load summary (frames/cols/rows)
 export const DEBUG_EFFECT_FORCE_RELOAD = false; // Force reload effects.* textures even when URL matches (hot-reload only).
 export const DEBUG_EFFECT_PURGE_CACHES = false; // Purge effects.* textures/anims on preload (hot-reload only).
 export const DEBUG_EFFECT_AURA_PRIORITY_ENABLED = false; // Load only selected aura radii during preload.
@@ -315,12 +322,12 @@ export const DEBUG_PROP_FOCUS_AURA_BLINK = false;
 // ------------------------------------------------------------
 // Weapon debug (weaponAnimGlue.ts + main.ts)
 // ------------------------------------------------------------
-export const WEAPON_DEBUG = true;
+export const WEAPON_DEBUG = false;
 export const WEAPON_DEBUG_VERBOSE = false;
-export const DEBUG_WPN_PIXEL_LOG = true; // Log weapon frame pixel samples (resolve/place).
+export const DEBUG_WPN_PIXEL_LOG = false; // Log weapon frame pixel samples (resolve/place).
 export const DEBUG_WPN_USE_ORIGINALS_SUBDIR = false; // Prefer _atlas/"originals to use" spritesheets when present.
 export const DEBUG_WPN_FORCE_ORIGINALS_BY_FAMILY = false; // Force per-family "originals" weapon ids/phases for debugging.
-export const DEBUG_WPN_COMPARE_ORIGINALS_RUNTIME = true; // Load originals as reference and compare atlas frames pixel-by-pixel at runtime.
+export const DEBUG_WPN_COMPARE_ORIGINALS_RUNTIME = false; // Load originals as reference and compare atlas frames pixel-by-pixel at runtime.
 export const DEBUG_WPN_VARIANT_CYCLE = false; // Cycle weapon variants at runtime (debug atlas coverage).
 export const DEBUG_WPN_VARIANT_CYCLE_HERO_INDEX = 0; // -1 = all heroes
 export const DEBUG_WPN_VARIANT_CYCLE_INTERVAL_MS = 1500;

@@ -513,34 +513,35 @@ export function applyEffectAnimationForSprite(sprite: Phaser.GameObjects.Sprite)
 
     if (DEBUG_EFFECT_ANIMS) {
         const curAnim = sprite.anims ? sprite.anims.currentAnim : null;
-        console.log("[effectAnim] apply", {
-            skin: resolvedId,
-            dir: dirKey,
-            animKey,
-            textureKey: resolved.textureKey,
-            texExists,
-            frameCount: resolved.frameIndices.length,
-            frameListCount: usingFrameList ? useFrames.length : 0,
-            yoyo: !!yoyo,
-            fps: frameRate,
-            repeat,
-            played,
-            playErr,
-            windowMs: Number.isFinite(windowMs) ? (windowMs | 0) : 0,
-            windowFrames: useFrames.length,
-            windowStart: frameWindowStart,
-            windowEnd: frameWindowEnd,
-            curAnimKey: curAnim ? curAnim.key : "",
-            isPlaying: sprite.anims ? !!sprite.anims.isPlaying : false,
-            nativeTex: (sprite as any).texture?.key ?? "",
-            nativeFrame: (sprite as any).frame?.name ?? "",
-            visible: (sprite as any).visible ?? true,
-            alpha: (sprite as any).alpha ?? 1,
-            depth: (sprite as any).depth ?? 0,
-            displayW: (sprite as any).displayWidth ?? (sprite as any).width ?? 0,
-            displayH: (sprite as any).displayHeight ?? (sprite as any).height ?? 0,
-            hasAnims: !!(sprite as any).anims
-        });
+        console.log(
+            "[EFFECT][ANIM]" +
+            " skin=" + resolvedId +
+            " dir=" + dirKey +
+            " anim=" + animKey +
+            " tex=" + resolved.textureKey +
+            " texExists=" + (texExists ? 1 : 0) +
+            " frames=" + (resolved.frameIndices.length | 0) +
+            " listFrames=" + (usingFrameList ? (useFrames.length | 0) : 0) +
+            " yoyo=" + (yoyo ? 1 : 0) +
+            " fps=" + (frameRate | 0) +
+            " repeat=" + (repeat | 0) +
+            " played=" + (played ? 1 : 0) +
+            " err=" + (playErr || "") +
+            " windowMs=" + (Number.isFinite(windowMs) ? (windowMs | 0) : 0) +
+            " windowFrames=" + (useFrames.length | 0) +
+            " windowStart=" + (frameWindowStart | 0) +
+            " windowEnd=" + (frameWindowEnd | 0) +
+            " curAnim=" + (curAnim ? curAnim.key : "") +
+            " isPlaying=" + (sprite.anims ? (sprite.anims.isPlaying ? 1 : 0) : 0) +
+            " nativeTex=" + ((sprite as any).texture?.key ?? "") +
+            " nativeFrame=" + ((sprite as any).frame?.name ?? "") +
+            " visible=" + (((sprite as any).visible ?? true) ? 1 : 0) +
+            " alpha=" + ((sprite as any).alpha ?? 1) +
+            " depth=" + ((sprite as any).depth ?? 0) +
+            " displayW=" + ((sprite as any).displayWidth ?? (sprite as any).width ?? 0) +
+            " displayH=" + ((sprite as any).displayHeight ?? (sprite as any).height ?? 0) +
+            " hasAnims=" + ((sprite as any).anims ? 1 : 0)
+        );
     }
 
     data.set(LAST_EFFECT_ANIM_KEY, animKey);

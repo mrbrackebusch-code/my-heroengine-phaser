@@ -26,6 +26,9 @@ const EFFECT_PALETTE_SAMPLE_MAX_STRIDE = 8;
 const EFFECT_SIZE_OVERRIDES = {
   "sword arcs": { frameW: 125, frameH: 150 },
 };
+const EFFECT_REMAINDER_ALLOWANCES = {
+  "sword arcs": { remW: 6 },
+};
 
 function paletteSampleStride(totalPixels) {
   const target = EFFECT_PALETTE_SAMPLE_TARGET | 0;
@@ -174,8 +177,17 @@ for (const file of files) {
     warnings.push(`[gen-effect-meta] invalid grid: ${baseName} size=${w}x${h} frame=${useFrameW}x${useFrameH}`);
     continue;
   }
-  if ((w % useFrameW) !== 0 || (h % useFrameH) !== 0) {
-    warnings.push(`[gen-effect-meta] not divisible: ${baseName} size=${w}x${h} frame=${useFrameW}x${useFrameH}`);
+  const remW = (w % useFrameW) | 0;
+  const remH = (h % useFrameH) | 0;
+  if (remW !== 0 || remH !== 0) {
+    const allowance = EFFECT_REMAINDER_ALLOWANCES[baseId];
+    const allowW = allowance && typeof allowance.remW === "number" ? (allowance.remW | 0) : 0;
+    const allowH = allowance && typeof allowance.remH === "number" ? (allowance.remH | 0) : 0;
+    const okW = remW === 0 || (allowW > 0 && remW === allowW);
+    const okH = remH === 0 || (allowH > 0 && remH === allowH);
+    if (!(okW && okH)) {
+      warnings.push(`[gen-effect-meta] not divisible: ${baseName} size=${w}x${h} frame=${useFrameW}x${useFrameH}`);
+    }
   }
 
   const data = png.data;

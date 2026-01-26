@@ -351,6 +351,11 @@
       .dialog-choice-btn:hover {
         background: rgba(255, 255, 255, 0.14);
       }
+      .dialog-choice-btn.selected {
+        border-color: rgba(255, 230, 120, 0.9);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 214, 90, 0.45);
+        background: rgba(255, 230, 120, 0.18);
+      }
 
       /* -----------------------------
         Level Up overlay (DOM)
@@ -5309,6 +5314,9 @@ function _readTeamCoins(pid, hero, spritesNS) {
         const hintEl = document.getElementById("dialog-hint");
         const choicesEl = document.getElementById("dialog-choices");
         let dialogOwner = "";
+        let choiceButtons = [];
+        let choiceIndex = 0;
+        let hasChoices = false;
 
         function isOpen() {
           return !!layer && layer.classList.contains("he-show");
@@ -5323,6 +5331,33 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function _clearChoices() {
           if (!choicesEl) return;
           choicesEl.innerHTML = "";
+          choiceButtons = [];
+          choiceIndex = 0;
+          hasChoices = false;
+        }
+
+        function _applyChoiceSelection() {
+          if (!choiceButtons || !choiceButtons.length) return;
+          const len = choiceButtons.length | 0;
+          if (choiceIndex < 0) choiceIndex = 0;
+          if (choiceIndex >= len) choiceIndex = len - 1;
+          for (let i = 0; i < len; i++) {
+            const btn = choiceButtons[i];
+            if (!btn) continue;
+            btn.classList.toggle("selected", i === choiceIndex);
+          }
+        }
+
+        function _emitChoice(idx) {
+          if (!choiceButtons || !choiceButtons.length) return;
+          const i = Math.max(0, Math.min(choiceButtons.length - 1, idx | 0));
+          const btn = choiceButtons[i];
+          if (!btn) return;
+          const id = btn.dataset && btn.dataset.choiceId ? btn.dataset.choiceId : String(btn.textContent || "");
+          const label = String(btn.textContent || "");
+          window.dispatchEvent(
+            new CustomEvent("he:dialogChoice", { detail: { index: i, id, label } })
+          );
         }
 
         function show(opts) {
@@ -5334,7 +5369,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _setText(speakerEl, o.speaker || "");
           _setText(textEl, o.text || "");
 
-          const hasChoices = Array.isArray(o.choices) && o.choices.length > 0;
+          hasChoices = Array.isArray(o.choices) && o.choices.length > 0;
           _setText(
             hintEl,
             o.hint ?? (hasChoices ? "Click a choice" : "Space/Enter: next â€¢ Esc: close")
@@ -5352,15 +5387,20 @@ function _readTeamCoins(pid, hero, spritesNS) {
               btn.type = "button";
               btn.className = "dialog-choice-btn";
               btn.textContent = label;
+              btn.dataset.choiceId = id;
               btn.addEventListener("click", () => {
+                choiceIndex = i | 0;
+                _applyChoiceSelection();
                 window.dispatchEvent(
                   new CustomEvent("he:dialogChoice", { detail: { index: i, id, label } })
                 );
               });
 
               choicesEl.appendChild(btn);
+              choiceButtons.push(btn);
             }
           }
+          _applyChoiceSelection();
 
           layer.classList.add("he-show");
           layer.setAttribute("aria-hidden", "false");
@@ -5399,11 +5439,35 @@ function _readTeamCoins(pid, hero, spritesNS) {
               return;
             }
 
-            if (e.key === " " || e.key === "Enter") {
-              e.preventDefault();
-              e.stopPropagation();
-              advance();
-              return;
+            if (hasChoices && choiceButtons && choiceButtons.length) {
+              const len = choiceButtons.length | 0;
+              if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                e.stopPropagation();
+                choiceIndex = ((choiceIndex - 1) + len) % len;
+                _applyChoiceSelection();
+                return;
+              }
+              if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+                e.preventDefault();
+                e.stopPropagation();
+                choiceIndex = (choiceIndex + 1) % len;
+                _applyChoiceSelection();
+                return;
+              }
+              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z" || e.key === "e" || e.key === "E") {
+                e.preventDefault();
+                e.stopPropagation();
+                _emitChoice(choiceIndex | 0);
+                return;
+              }
+            } else {
+              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z") {
+                e.preventDefault();
+                e.stopPropagation();
+                advance();
+                return;
+              }
             }
           },
           true

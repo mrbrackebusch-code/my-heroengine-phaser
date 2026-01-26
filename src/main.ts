@@ -24,13 +24,14 @@ import { AURA_RADII } from "./auraConfig";
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
-import { loadWeaponAtlases, runWeaponAudit } from "./weaponAtlas";
+import { loadWeaponAtlases, runWeaponAudit, preloadWeaponChainImages } from "./weaponAtlas";
 import {
   DEBUG_COINFX,
   DEBUG_MAIN_LIFECYCLE,
   DEBUG_MONSTER_SPRITES,
   DEBUG_PHASER_BANNER,
   DEBUG_PROP_SYNC,
+  DEBUG_PAD_SINK_PROP_LOGS,
   DEBUG_RELIC_LOGS,
   DEBUG_RELICTIP_LOGS,
   DEBUG_SAVE_LOGS,
@@ -1431,6 +1432,7 @@ class HeroScene extends Phaser.Scene {
         _uiLoadingSet(20, "Queueing assets: weapons");
         logMain(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
+        preloadWeaponChainImages(this);
 
         _uiLoadingSet(25, "Queueing assets: effects");
         logMain(">>> [HeroScene.preload] loading effect sheets");
@@ -2061,21 +2063,24 @@ private _startBossIntro(evt: any): void {
 
     const g: any = globalThis as any;
     const internals = g.__HeroEnginePhaserInternals || {};
-    try { internals.setBossIntroHeroLock?.(true); } catch { }
-    try { internals.setEnginePaused?.(true, "bossIntro"); } catch { }
 
     this._bossIntroActive = true;
     this._bossIntroFloorIndex = (evt?.floorIndex | 0) || -1;
 
-    const INTRO_PAN_MS = 700;
+    const OPENING_PHASE_MS = 3000;
+    const OPENING_SHAKE_MS = 2600;
+    const OPENING_SHAKE_INTENSITY = 0.004;
+    const INTRO_PAN_MS = 600;
+    const INTRO_ROAR_HOLD_MS = 3000;
     const INTRO_ZOOM_OUT_PCT = 72;
     const INTRO_SHAKE_MS = 320;
-    const JUMP_START_DELAY_MS = INTRO_PAN_MS + 80;
+    const JUMP_START_DELAY_MS = INTRO_PAN_MS + INTRO_ROAR_HOLD_MS + 80;
     const RETURN_DELAY_MS = 1200;
     const SHADOW_MARGIN_PX = 170;
     const SHADOW_START_SCALE = 0.25;
     const SHADOW_END_SCALE = 3.2;
-    const CONTROL_RELEASE_EARLY_MS = 500;
+    const CONTROL_RELEASE_EARLY_MS = 0;
+    const MIN_UNLOCK_DELAY_MS = 0;
     const SPARK_TEX = "__bossShadowSpark";
     const SPARK_TINT = 0xbbe6ff;
     const DEFAULT_CONTROL_LEAD_MS = 4000;
@@ -2084,71 +2089,75 @@ private _startBossIntro(evt: any): void {
     const targetY = (evt?.y != null ? (evt.y | 0) : cam.midPoint?.y || 0);
     const monsterId = String(evt?.monsterId || "").trim();
 
-    let bossNative: any = null;
-    if (monsterId) {
-        bossNative = this._findEnemyNativeById(monsterId, targetX, targetY);
-    }
+    const startBossSequence = () => {
+        try { internals.setBossIntroHeroLock?.(true); } catch { }
+        try { internals.setEnginePaused?.(true, "bossIntro"); } catch { }
 
-    const prevZoom = (cam.zoom || 1);
-    try { cam.stopFollow(); } catch { }
-
-    if (bossNative) {
-        try { bossNative.setAlpha?.(0); } catch { bossNative.alpha = 0; }
-    }
-
-    const zoomOut = Math.max(0.55, prevZoom * (INTRO_ZOOM_OUT_PCT / 100));
-
-    cam.pan(targetX, targetY, INTRO_PAN_MS, "Sine.easeInOut");
-    cam.zoomTo(zoomOut, INTRO_PAN_MS, "Sine.easeInOut");
-
-    this.time.delayedCall(INTRO_PAN_MS + 40, () => {
-        if (bossNative) {
-            this.tweens.add({
-                targets: bossNative,
-                alpha: { from: 0.2, to: 1 },
-                duration: 220,
-                yoyo: true,
-                repeat: 2,
-                onComplete: () => {
-                    try { bossNative.setAlpha?.(1); } catch { bossNative.alpha = 1; }
-                }
-            });
+        let bossNative: any = null;
+        if (monsterId) {
+            bossNative = this._findEnemyNativeById(monsterId, targetX, targetY);
         }
-        try { cam.shake(INTRO_SHAKE_MS, 0.012); } catch { }
-    });
 
-    let finished = false;
-    const finishIntro = (restoreFollow: boolean): void => {
-        if (finished) return;
-        finished = true;
-        this._bossIntroActive = false;
-        this._camFollowPid = 0;
-        this._camFollowNative = undefined;
+        const prevZoom = (cam.zoom || 1);
         try { cam.stopFollow(); } catch { }
-        if (restoreFollow) this._updateCameraFollowLocalHero();
-        try { internals.setBossIntroHeroLock?.(false); } catch { }
-    };
 
-    const getRuntimeNow = (): number => {
-        try {
-            const gg: any = (globalThis as any).game;
-            if (gg && typeof gg.runtime === "function") return gg.runtime() | 0;
-        } catch { }
-        return (this.time?.now | 0) || 0;
-    };
+        if (bossNative) {
+            try { bossNative.setAlpha?.(0); } catch { bossNative.alpha = 0; }
+        }
 
-    this.time.delayedCall(JUMP_START_DELAY_MS, () => {
-        try { internals.setEnginePaused?.(false, "bossIntro"); } catch { }
-        let jumpInfo: any = null;
-        try { jumpInfo = internals.startBossIntroJump?.(evt); } catch { jumpInfo = null; }
+        const zoomOut = Math.max(0.55, prevZoom * (INTRO_ZOOM_OUT_PCT / 100));
 
-        const landAtMs = (jumpInfo && jumpInfo.ok) ? (jumpInfo.landAtMs | 0) : 0;
-        const controlLeadMs = (jumpInfo && jumpInfo.controlLeadMs != null) ? (jumpInfo.controlLeadMs | 0) : DEFAULT_CONTROL_LEAD_MS;
-        const shadowX = (jumpInfo && jumpInfo.targetX != null) ? (jumpInfo.targetX | 0) : targetX;
-        const shadowY = (jumpInfo && jumpInfo.targetY != null) ? (jumpInfo.targetY | 0) : targetY;
+        cam.pan(targetX, targetY, INTRO_PAN_MS, "Sine.easeInOut");
+        cam.zoomTo(zoomOut, INTRO_PAN_MS, "Sine.easeInOut");
 
-        const runtimeNow = getRuntimeNow();
-        const landDelay = landAtMs > 0 ? Math.max(0, landAtMs - runtimeNow) : 0;
+        this.time.delayedCall(INTRO_PAN_MS + 40, () => {
+            if (bossNative) {
+                this.tweens.add({
+                    targets: bossNative,
+                    alpha: { from: 0.2, to: 1 },
+                    duration: 220,
+                    yoyo: true,
+                    repeat: 2,
+                    onComplete: () => {
+                        try { bossNative.setAlpha?.(1); } catch { bossNative.alpha = 1; }
+                    }
+                });
+            }
+            try { cam.shake(INTRO_SHAKE_MS, 0.012); } catch { }
+        });
+
+        let finished = false;
+        const finishIntro = (restoreFollow: boolean): void => {
+            if (finished) return;
+            finished = true;
+            this._bossIntroActive = false;
+            this._camFollowPid = 0;
+            this._camFollowNative = undefined;
+            try { cam.stopFollow(); } catch { }
+            if (restoreFollow) this._updateCameraFollowLocalHero();
+            try { internals.setBossIntroHeroLock?.(false); } catch { }
+        };
+
+        const getRuntimeNow = (): number => {
+            try {
+                const gg: any = (globalThis as any).game;
+                if (gg && typeof gg.runtime === "function") return gg.runtime() | 0;
+            } catch { }
+            return (this.time?.now | 0) || 0;
+        };
+
+        this.time.delayedCall(JUMP_START_DELAY_MS, () => {
+            try { internals.setEnginePaused?.(false, "bossIntro"); } catch { }
+            let jumpInfo: any = null;
+            try { jumpInfo = internals.startBossIntroJump?.(evt); } catch { jumpInfo = null; }
+
+            const landAtMs = (jumpInfo && jumpInfo.ok) ? (jumpInfo.landAtMs | 0) : 0;
+            const controlLeadMs = (jumpInfo && jumpInfo.controlLeadMs != null) ? (jumpInfo.controlLeadMs | 0) : DEFAULT_CONTROL_LEAD_MS;
+            const shadowX = (jumpInfo && jumpInfo.targetX != null) ? (jumpInfo.targetX | 0) : targetX;
+            const shadowY = (jumpInfo && jumpInfo.targetY != null) ? (jumpInfo.targetY | 0) : targetY;
+
+            const runtimeNow = getRuntimeNow();
+            const landDelay = landAtMs > 0 ? Math.max(0, landAtMs - runtimeNow) : 0;
 
         if (jumpInfo && jumpInfo.ok) {
             this._bossIntroHoldActive = true;
@@ -2157,19 +2166,18 @@ private _startBossIntro(evt: any): void {
             this._bossIntroHoldShadowY = shadowY | 0;
         }
 
-        let shadow: any = null;
-        let sparkFx: any = null;
-        let unlockDelay = RETURN_DELAY_MS + 1600;
-        let returnPanMs = 2000;
+            let shadow: any = null;
+            let sparkFx: any = null;
+            let unlockDelay = RETURN_DELAY_MS + 1600;
+            let returnPanMs = 2000;
 
-        if (landDelay > 0) {
-            const minUnlockDelay = RETURN_DELAY_MS + 1600;
-            const effectiveLeadMs = Math.max(0, (controlLeadMs | 0) + (CONTROL_RELEASE_EARLY_MS | 0));
-            const unlockAtLead = Math.max(0, landDelay - effectiveLeadMs);
-            unlockDelay = Math.min(landDelay, Math.max(minUnlockDelay, unlockAtLead));
-            const panBudget = Math.max(800, unlockDelay - RETURN_DELAY_MS - 200);
-            returnPanMs = Math.min(3600, Math.max(1600, panBudget));
-        }
+            if (landDelay > 0) {
+                const effectiveLeadMs = Math.max(0, (controlLeadMs | 0) + (CONTROL_RELEASE_EARLY_MS | 0));
+                const unlockAtLead = Math.max(0, landDelay - effectiveLeadMs);
+                unlockDelay = Math.min(landDelay, Math.max(MIN_UNLOCK_DELAY_MS, unlockAtLead));
+                const panBudget = Math.max(800, unlockDelay - RETURN_DELAY_MS - 200);
+                returnPanMs = Math.min(3600, Math.max(1600, panBudget));
+            }
 
         if (landDelay > 0) {
             shadow = this.add.ellipse(shadowX, shadowY, 34, 20, 0x000000, 0.55);
@@ -2240,13 +2248,26 @@ private _startBossIntro(evt: any): void {
             cam.zoomTo(zoomTarget, returnPanMs, "Sine.easeInOut");
         });
 
-        if (landDelay > 0) {
-            this.time.delayedCall(unlockDelay, () => finishIntro(true));
-        } else {
-            const fallbackDelay = RETURN_DELAY_MS + returnPanMs;
-            this.time.delayedCall(fallbackDelay, () => finishIntro(true));
+            if (landDelay > 0) {
+                this.time.delayedCall(unlockDelay, () => finishIntro(true));
+            } else {
+                const fallbackDelay = RETURN_DELAY_MS + returnPanMs;
+                this.time.delayedCall(fallbackDelay, () => finishIntro(true));
+            }
+        });
+    };
+
+    try { internals.setBossIntroHeroLock?.(false); } catch { }
+    try { internals.setEnginePaused?.(false, "bossIntro"); } catch { }
+    this._updateCameraFollowLocalHero();
+    if (OPENING_PHASE_MS > 0) {
+        if (OPENING_SHAKE_MS > 0) {
+            try { cam.shake(OPENING_SHAKE_MS, OPENING_SHAKE_INTENSITY); } catch { }
         }
-    });
+        this.time.delayedCall(OPENING_PHASE_MS, () => startBossSequence());
+    } else {
+        startBossSequence();
+    }
 }
 
 private _updateBossIntro(nowMs: number): boolean {
@@ -2796,6 +2817,39 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
                 const offX = (p.offX ?? 0) | 0;
                 const offY = (p.offY ?? 0) | 0;
                 nextPropOffsetsByAnchor[key] = { offX, offY };
+            }
+
+            if (DEBUG_PAD_SINK_PROP_LOGS) {
+                let count = 0;
+                let minOffX = 999999;
+                let maxOffX = -999999;
+                let minOffY = 999999;
+                let maxOffY = -999999;
+                const anchors: string[] = [];
+                for (const key of Object.keys(nextPropByAnchor)) {
+                    if (nextPropByAnchor[key] !== "stairs_statue") continue;
+                    count++;
+                    const off = nextPropOffsetsByAnchor[key] || { offX: 0, offY: 0 };
+                    const ox = (off.offX | 0);
+                    const oy = (off.offY | 0);
+                    if (ox < minOffX) minOffX = ox;
+                    if (ox > maxOffX) maxOffX = ox;
+                    if (oy < minOffY) minOffY = oy;
+                    if (oy > maxOffY) maxOffY = oy;
+                    if (anchors.length < 4) anchors.push(key);
+                }
+                const offXRange = (count > 0) ? `${minOffX}..${maxOffX}` : "n/a";
+                const offYRange = (count > 0) ? `${minOffY}..${maxOffY}` : "n/a";
+                const anchorStr = anchors.length ? anchors.join("|") : "n/a";
+                const sig = `${decorRev}|${worldRev}|${floorIndex}|${count}|${offXRange}|${offYRange}|${anchorStr}`;
+                const gDbg: any = (globalThis as any);
+                if (gDbg.__padPillarDecorSig !== sig) {
+                    gDbg.__padPillarDecorSig = sig;
+                    console.log(
+                        `[PAD][PILLAR][DECOR] rev=${decorRev | 0} worldRev=${worldRev | 0} floor=${floorIndex | 0}` +
+                        ` count=${count | 0} offX=${offXRange} offY=${offYRange} anchors=${anchorStr}`
+                    );
+                }
             }
 
             if (renderer) {

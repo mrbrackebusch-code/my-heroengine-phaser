@@ -33,6 +33,7 @@ import {
   DEBUG_PROP_FOCUS_AURA_TRACE,
   DEBUG_PROP_FOCUS_AURA_VERBOSE,
   DEBUG_PROP_FOCUS_AURA_WORLD_MARKER,
+  DEBUG_PAD_SINK_PROP_LOGS,
   DEBUG_TILEMAP_GLUE,
   LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE,
   LOG_PROP_FOCUS_AURA_RENDER_ONCE,
@@ -2034,20 +2035,31 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
 
   const byRc: any = inst.byRc || anyThis.__propTileInfoByRC || null;
   const texObj: any = this.scene?.textures?.get?.(textureKey) || null;
-  const hasFrame = (frame: any): boolean => {
-    if (!texObj) return true;
-    try {
-      if (typeof texObj.has === "function" && (texObj.has(frame) || texObj.has(String(frame)))) return true;
-    } catch { /* ignore */ }
-    try {
-      if (typeof texObj.get === "function") {
-        const f0 = texObj.get(frame);
-        if (f0 && f0.name !== "__MISSING") return true;
-        const f1 = texObj.get(String(frame));
-        if (f1 && f1.name !== "__MISSING") return true;
+  const textureExists = !!this.scene?.textures?.exists?.(textureKey);
+  const frameNameSet = new Set<string>();
+  let maxNumericFrame = -1;
+  let minNumericFrame = -1;
+  let hasBaseFrame = false;
+  try {
+    const names: any[] = (texObj && typeof texObj.getFrameNames === "function") ? texObj.getFrameNames() : [];
+    for (let i = 0; i < names.length; i++) {
+      const nm = String(names[i] ?? "");
+      if (!nm) continue;
+      frameNameSet.add(nm);
+      if (nm === "__BASE") hasBaseFrame = true;
+      const n = parseInt(nm, 10);
+      if (Number.isFinite(n) && String(n) === nm) {
+        const ni = n | 0;
+        maxNumericFrame = Math.max(maxNumericFrame, ni);
+        minNumericFrame = (minNumericFrame < 0) ? ni : Math.min(minNumericFrame, ni);
       }
-    } catch { /* ignore */ }
-    return false;
+    }
+  } catch { /* ignore */ }
+  const hasFrame = (frame: any): boolean => {
+    if (!textureExists) return false;
+    if (frameNameSet.size <= 0) return false;
+    const key = String(frame ?? "");
+    return frameNameSet.has(key);
   };
 
   let objIdx = 0;
@@ -2064,21 +2076,15 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
       let canSetFrame = true;
 
       if (!hasFrame(safeFrame)) {
-        let maxNumeric = -1;
-        try {
-          const names: any[] = (texObj && typeof texObj.getFrameNames === "function") ? texObj.getFrameNames() : [];
-          for (let i = 0; i < names.length; i++) {
-            const n = parseInt(String(names[i] ?? ""), 10);
-            if (Number.isFinite(n)) maxNumeric = Math.max(maxNumeric, n | 0);
-          }
-        } catch { /* ignore */ }
-
-        if (maxNumeric >= 0) {
-          safeFrameIndex = Math.max(0, Math.min(safeFrameIndex | 0, maxNumeric | 0));
+        if (maxNumericFrame >= 0) {
+          const lo = (minNumericFrame >= 0) ? (minNumericFrame | 0) : 0;
+          const hi = maxNumericFrame | 0;
+          safeFrameIndex = Math.max(lo, Math.min(safeFrameIndex | 0, hi));
           safeFrame = safeFrameIndex;
-        }
-
-        if (!hasFrame(safeFrame)) {
+        } else if (hasBaseFrame) {
+          safeFrame = "__BASE";
+          safeFrameIndex = 0;
+        } else {
           safeFrame = 0;
           safeFrameIndex = 0;
         }
@@ -4942,6 +4948,44 @@ private _propShiftDisplayObj(obj: any, dx: number, dy: number, dd: number): void
   }
 }
 
+private _debugPadPillarInstances(reason: string): void {
+  if (!DEBUG_PAD_SINK_PROP_LOGS) return;
+  const anyThis: any = this as any;
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
+  let count = 0;
+  let minOffX = 999999;
+  let maxOffX = -999999;
+  let minOffY = 999999;
+  let maxOffY = -999999;
+  const anchors: string[] = [];
+  const keys = Object.keys(instByAnchor);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    const inst = instByAnchor[k];
+    if (!inst) continue;
+    const base = String(inst.baseName || "");
+    if (base !== "stairs_statue") continue;
+    count++;
+    const ox = (inst.offsetX ?? 0) | 0;
+    const oy = (inst.offsetY ?? 0) | 0;
+    if (ox < minOffX) minOffX = ox;
+    if (ox > maxOffX) maxOffX = ox;
+    if (oy < minOffY) minOffY = oy;
+    if (oy > maxOffY) maxOffY = oy;
+    if (anchors.length < 4) anchors.push(k);
+  }
+  const offXRange = (count > 0) ? `${minOffX}..${maxOffX}` : "n/a";
+  const offYRange = (count > 0) ? `${minOffY}..${maxOffY}` : "n/a";
+  const anchorStr = anchors.length ? anchors.join("|") : "n/a";
+  const sig = `${reason}|${count}|${offXRange}|${offYRange}|${anchorStr}`;
+  if (anyThis.__padPillarRenderSig === sig) return;
+  anyThis.__padPillarRenderSig = sig;
+  console.log(
+    `[PAD][PILLAR][RENDER] reason=${String(reason || "")}` +
+    ` count=${count | 0} offX=${offXRange} offY=${offYRange} anchors=${anchorStr}`
+  );
+}
+
 private _propUpdateOffsetForInstance(inst: any, nextOffX: number, nextOffY: number): void {
   if (!inst) return;
   const curOffX = (inst.offsetX ?? 0) | 0;
@@ -5027,6 +5071,7 @@ syncPropGridByName(propNameGrid: string[][]): void {
       const offY = (off?.offY ?? off?.y ?? 0) | 0;
       this._propUpdateOffsetForInstance(inst, offX | 0, offY | 0);
     }
+    this._debugPadPillarInstances("no-rebuild");
     return;
   }
 
@@ -5047,6 +5092,7 @@ syncPropGridByName(propNameGrid: string[][]): void {
   if (PROP_FOCUS_AURA_CACHE_STATE) {
     try { this._propReapplyFocusAuraCache(); } catch { /* ignore */ }
   }
+  this._debugPadPillarInstances("rebuild");
 }
 
 replacePropAt(anchorR: number, anchorC: number, rawKey: string): boolean {

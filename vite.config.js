@@ -1,5 +1,7 @@
 import { defineConfig } from "vite";
 import { spawn } from "child_process";
+import fs from "fs";
+import path from "path";
 import os from "os";
 
 const ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -41,6 +43,36 @@ function pickDefaultHost() {
     return candidates[0] || "0.0.0.0";
 }
 
+const TOWER_TRIAL_ARTIFACT_DIR = path.resolve(process.cwd(), "tmp/towerTrialRuns");
+const TOWER_TRIAL_ARTIFACT_LIMIT_BYTES = 2 * 1024 * 1024;
+
+function _safeTag(tag) {
+    if (!tag) return "";
+    return String(tag).trim().replace(/[^a-z0-9_\-]+/gi, "_").slice(0, 48);
+}
+
+function _writeTowerTrialArtifact(payload) {
+    const artifact = payload && payload.artifact ? payload.artifact : null;
+    if (!artifact) return { ok: false, reason: "missing-artifact" };
+
+    fs.mkdirSync(TOWER_TRIAL_ARTIFACT_DIR, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const runId = (artifact && Number.isFinite(artifact.runId)) ? (artifact.runId | 0) : 0;
+    const tag = _safeTag(payload && payload.tag ? payload.tag : "");
+    const tagSuffix = tag ? `_${tag}` : "";
+    const fileBase = `towerTrial_${stamp}_run${runId}${tagSuffix}.json`;
+    const filePath = path.join(TOWER_TRIAL_ARTIFACT_DIR, fileBase);
+    const latestPath = path.join(TOWER_TRIAL_ARTIFACT_DIR, "latest.json");
+    const text = JSON.stringify(artifact, null, 2);
+    fs.writeFileSync(filePath, text);
+    fs.writeFileSync(latestPath, text);
+    return {
+        ok: true,
+        path: path.relative(process.cwd(), filePath).replace(/\\/g, "/"),
+        latest: path.relative(process.cwd(), latestPath).replace(/\\/g, "/"),
+    };
+}
+
 export default defineConfig({
     server: {
         // Auto-pick a reachable LAN IP; override with DEV_HOST=192.168.x.x if needed.
@@ -51,6 +83,39 @@ export default defineConfig({
         {
             name: "multiplayer-server",
             configureServer(server) {
+                server.middlewares.use((req, res, next) => {
+                    const url = req && req.url ? String(req.url || "") : "";
+                    if (req && req.method === "POST" && url.startsWith("/__he/tower-trial-artifact")) {
+                        let body = "";
+                        req.on("data", (chunk) => {
+                            body += chunk;
+                            if (body.length > TOWER_TRIAL_ARTIFACT_LIMIT_BYTES) {
+                                res.statusCode = 413;
+                                res.setHeader("content-type", "application/json");
+                                res.end(JSON.stringify({ ok: false, reason: "payload-too-large" }));
+                                try { req.destroy(); } catch {}
+                            }
+                        });
+                        req.on("end", () => {
+                            let payload = null;
+                            try {
+                                payload = body ? JSON.parse(body) : null;
+                            } catch {
+                                res.statusCode = 400;
+                                res.setHeader("content-type", "application/json");
+                                res.end(JSON.stringify({ ok: false, reason: "invalid-json" }));
+                                return;
+                            }
+                            const result = _writeTowerTrialArtifact(payload);
+                            res.statusCode = result.ok ? 200 : 400;
+                            res.setHeader("content-type", "application/json");
+                            res.end(JSON.stringify(result));
+                        });
+                        return;
+                    }
+                    next();
+                });
+
                 server.middlewares.use((req, res, next) => {
                     if (req && shouldCacheAssetUrl(req.url || "")) {
                         const prev = res.setHeader;

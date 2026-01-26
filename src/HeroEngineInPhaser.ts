@@ -21,6 +21,9 @@ import {
     DEBUG_AGI_HOOKSHOT_THROTTLE_MS,
     DEBUG_AGI_HOOKSHOT_TICK_LOGS,
     DEBUG_AGI_HOOKSHOT_SLOW_MULT,
+    DEBUG_AGI_COMET_LOGS,
+    DEBUG_AGI_COMET_LOG_THROTTLE_MS,
+    DEBUG_AGI_COMET_LOG_VERBOSE,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -46,6 +49,9 @@ import {
     DEBUG_CONTRACT_THROTTLE_MS,
     DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
     DEBUG_DECOR_ENGINE_LOGS,
+    DEBUG_BOSS_INTRO,
+    DEBUG_BOSS_PAD_DUST_PERSIST,
+    DEBUG_PAD_SINK_PROP_LOGS,
     DEBUG_DUNGEON_LOGS,
     DEBUG_DEV_COMMANDS,
     DEBUG_FORCE_HALL_OF_ENEMIES,
@@ -65,6 +71,7 @@ import {
     DEBUG_INTERACT_LOGS,
     DEBUG_INTERACT_TICK_LOGS,
     DEBUG_PROP_INTERACT_LOGS,
+    DEBUG_TOWER_TRIAL_ARTIFACT_AUTOSAVE,
     DEBUG_TOWER_TRIAL_LOGS,
     DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
@@ -112,6 +119,7 @@ import {
     DEBUG_WPN_AURA_TRACE,
     DEBUG_WPN_AURA_TRACE_INTERVAL_MS,
     DEBUG_WPN_AURA_TRACE_VERBOSE,
+    WEAPON_DEBUG,
     DEBUG_WPN_DROP_SIM,
     DEBUG_WPN_DROP_SIM_HERO_INDEX,
     DEBUG_WPN_DROP_SIM_FLOOR_START,
@@ -2026,18 +2034,19 @@ function _spawnHeroBodyPaintFxForMove(
                 __effectMaskSpawnOnce.add(fxId);
                 const auraR = sprites.readDataNumber(hero, HERO_DATA.AURA_RADIUS) | 0;
                 const maskR = _heroBodyFxMaskRadiusForHero(hero) | 0;
-                console.log("[effectmask][spawn]", {
-                    fxId,
-                    heroIndex: heroIndex | 0,
-                    family: family | 0,
-                    elem: elem | 0,
-                    skin: pick.skinId,
-                    dir: pick.dir || "",
-                    mode: HERO_BODY_FX_MODE,
-                    maskRadius: maskR,
-                    maskRadiusPx: HERO_BODY_FX_MASK_RADIUS_PX | 0,
-                    auraRadius: auraR
-                });
+                console.log(
+                    "[EFFECT][MASK][HERO]" +
+                    " fx=" + (fxId | 0) +
+                    " hero=" + (heroIndex | 0) +
+                    " family=" + (family | 0) +
+                    " elem=" + (elem | 0) +
+                    " skin=" + pick.skinId +
+                    " dir=" + (pick.dir || "") +
+                    " mode=" + HERO_BODY_FX_MODE +
+                    " maskR=" + (maskR | 0) +
+                    " maskRpx=" + (HERO_BODY_FX_MASK_RADIUS_PX | 0) +
+                    " auraR=" + (auraR | 0)
+                );
             }
         } catch { /* ignore */ }
     }
@@ -2171,17 +2180,22 @@ function _spawnProjectileMaskFxForMove(
 
     if (DEBUG_EFFECT_MASKS) {
         try {
-            console.log("[effectmask][spawn]", {
-                fxId: (fx as any).id | 0,
-                heroIndex: heroIndex | 0,
-                family: family | 0,
-                elem: elem | 0,
-                skin: pick.skinId,
-                dir: pick.dir || "",
-                mode: PROJ_MASK_FX_MODE,
-                maskSpriteId: (maskSprite ? (maskSprite as any).id : (proj as any).id) | 0,
-                fitRadius: fitRadius | 0
-            });
+            const fxId = (fx as any).id | 0;
+            const projId = (proj as any).id | 0;
+            const maskSpriteId = (maskSprite ? (maskSprite as any).id : (proj as any).id) | 0;
+            console.log(
+                "[EFFECT][MASK][PROJ]" +
+                " fx=" + (fxId | 0) +
+                " proj=" + (projId | 0) +
+                " hero=" + (heroIndex | 0) +
+                " family=" + (family | 0) +
+                " elem=" + (elem | 0) +
+                " skin=" + pick.skinId +
+                " dir=" + (pick.dir || "") +
+                " mode=" + PROJ_MASK_FX_MODE +
+                " maskSprite=" + (maskSpriteId | 0) +
+                " fitR=" + (fitRadius | 0)
+            );
         } catch { /* ignore */ }
     }
 
@@ -2324,7 +2338,16 @@ function _destroyStrengthSwingFxSegments(proj: Sprite): void {
 
 function _destroyStrengthArcFxForProj(proj: Sprite): void {
     if (!proj) return;
-    const keys = [STR_ARC_MASK_FX_KEY, STR_ARC_FILL_FX_KEY, STR_ARC_OUTLINE_FX_KEY];
+    const keys = [
+        STR_ARC_MASK_FX_KEY,
+        STR_ARC_FILL_FX_KEY,
+        STR_ARC_OUTLINE_FX_KEY,
+        STR_ARC_EDGE_FX_KEY,
+        STR_ARC_EDGE_AURA_FX_KEY,
+        STR_ARC_AURA_R1_FX_KEY,
+        STR_ARC_AURA_R2_FX_KEY,
+        STR_ARC_AURA_R3_FX_KEY
+    ];
     for (const key of keys) {
         const fx = sprites.readDataSprite(proj, key);
         if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
@@ -2347,6 +2370,18 @@ function _spawnStrengthArcFxForProj(
 
     const zBase = (hero.z | 0) + 12;
     const showFill = !DEBUG_STR_ARC_NO_FILL;
+    const dir = _enemyDirFromVector(nx, ny) || "down";
+    const auraIdxR1 = (sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0) || 1;
+    const auraIdxR2 = (sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0) || auraIdxR1;
+    const auraIdxR3 = (sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0) || auraIdxR2;
+    let highlight = _strengthArcHighlightTints(element | 0, auraIdxR1, auraIdxR2, auraIdxR3);
+    let fillTint = STR_ARC_FILL_TINT_ENABLED ? (highlight.primary | 0) : 0;
+    let fillSkinId = "";
+    let fillDir = "";
+    let edgeSkinId = "";
+    let edgeDir = "";
+    let edgeAuraSkinId = "";
+    const auraSkinIds: string[] = [];
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
     maskFx.setFlag(SpriteFlag.Ghost, true);
     // Hide the mask only when a fill will render through it.
@@ -2362,9 +2397,20 @@ function _spawnStrengthArcFxForProj(
     sprites.setDataNumber(proj, PROJ_COLLIDER_SCALE_X1000_KEY, STR_ARC_COLLIDER_SCALE_X1000 | 0);
 
     if (showFill) {
-        const dir = _enemyDirFromVector(nx, ny);
-        const texPick = _strengthArcTexturePick(element | 0, dir || "down");
-        if (texPick && texPick.skinId) {
+        const ellipseFillPick = _strengthArcEllipseTexturePick(element | 0, dir || "down");
+        const fillPick = ellipseFillPick || _strengthArcTexturePick(element | 0, dir || "down");
+        if (fillPick && fillPick.skinId) {
+            fillSkinId = fillPick.skinId;
+            fillDir = fillPick.dir || dir || "";
+            const fillSkinTint = _effectTintForSkin(fillSkinId, fillDir || dir || "");
+            if (fillSkinTint) {
+                highlight = { primary: fillSkinTint | 0, secondary: fillSkinTint | 0 };
+            }
+            if (ellipseFillPick) {
+                fillTint = 0;
+            } else {
+                fillTint = STR_ARC_FILL_TINT_ENABLED ? (highlight.primary | 0) : 0;
+            }
             const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
             fillFx.setFlag(SpriteFlag.Ghost, true);
             fillFx.x = hero.x;
@@ -2376,27 +2422,156 @@ function _spawnStrengthArcFxForProj(
                 mode: "projectile",
                 repeat: -1,
                 frameIndex: 0,
-                maskSprite: maskFx
+                maskSprite: maskFx,
+                alpha: STR_ARC_FILL_ALPHA,
+                tint: fillTint || undefined
             };
-            if (texPick.dir) opts.dir = texPick.dir;
-            applyEffectToSprite(fillFx, texPick.skinId, opts);
+            opts.dir = fillPick.dir || dir;
+            applyEffectToSprite(fillFx, fillPick.skinId, opts);
             sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, fillFx);
+        }
+
+        const edgePick = _strengthArcEllipseTexturePick(element | 0, dir || "down");
+        if (edgePick && edgePick.skinId) {
+            edgeSkinId = edgePick.skinId;
+            edgeDir = edgePick.dir || dir || "";
+            const edgeFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+            edgeFx.setFlag(SpriteFlag.Ghost, true);
+            edgeFx.x = hero.x;
+            edgeFx.y = hero.y;
+            edgeFx.z = zBase + 2;
+            if ((lifespanMs | 0) > 0) edgeFx.lifespan = lifespanMs | 0;
+
+            const edgeOpts: EffectApplyOpts = {
+                mode: "projectile",
+                repeat: -1,
+                maskSprite: maskFx,
+                blend: STR_ARC_EDGE_BLEND,
+                alpha: 0.001
+            };
+            edgeOpts.dir = edgePick.dir || dir;
+            applyEffectToSprite(edgeFx, edgePick.skinId, edgeOpts);
+            sprites.setDataNumber(edgeFx, STR_ARC_EDGE_PHASE_KEY, -1);
+            sprites.setDataNumber(edgeFx, STR_ARC_EDGE_ROW_KEY, -1);
+            sprites.setDataSprite(proj, STR_ARC_EDGE_FX_KEY, edgeFx);
+
+            const edgeAuraSkin = _strengthArcAuraSkinForEffect(edgePick.skinId, 1);
+            if (edgeAuraSkin) {
+                edgeAuraSkinId = edgeAuraSkin;
+                const edgeAuraFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+                edgeAuraFx.setFlag(SpriteFlag.Ghost, true);
+                edgeAuraFx.x = hero.x;
+                edgeAuraFx.y = hero.y;
+                edgeAuraFx.z = zBase + (STR_ARC_EDGE_AURA_Z_OFFSET | 0);
+                if ((lifespanMs | 0) > 0) edgeAuraFx.lifespan = lifespanMs | 0;
+                const edgeAuraOpts: EffectApplyOpts = {
+                    mode: "projectile",
+                    repeat: -1,
+                    maskSprite: maskFx,
+                    maskPadOutPx: STR_ARC_EDGE_AURA_PAD_OUT_PX | 0,
+                    blend: STR_ARC_EDGE_BLEND,
+                    tint: highlight.primary | 0,
+                    alpha: 0.001
+                };
+                applyEffectToSprite(edgeAuraFx, edgeAuraSkin, edgeAuraOpts);
+                sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_PHASE_KEY, -1);
+                sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_ROW_KEY, -1);
+                sprites.setDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY, edgeAuraFx);
+            }
+        }
+
+        const auraTints = [highlight.primary];
+        const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
+        const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, auraTints.length);
+        for (let i = 0; i < auraCount; i++) {
+            const radius = STR_ARC_AURA_RADII[i] | 0;
+            const skinId = _strengthArcAuraSkinId(radius);
+            if (!skinId) continue;
+            auraSkinIds.push(skinId);
+            const auraFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+            auraFx.setFlag(SpriteFlag.Ghost, true);
+            auraFx.x = hero.x;
+            auraFx.y = hero.y;
+            auraFx.z = zBase + (STR_ARC_AURA_Z_OFFSET | 0) - i;
+            if ((lifespanMs | 0) > 0) auraFx.lifespan = lifespanMs | 0;
+            const padOut = STR_ARC_AURA_PAD_OUT_BY_RADIUS[i] | 0;
+            const auraOpts: EffectApplyOpts = {
+                mode: "projectile",
+                repeat: -1,
+                frameIndex: 0,
+                maskSprite: maskFx,
+                maskPadOutPx: padOut | 0,
+                blend: STR_ARC_AURA_BLEND,
+                tint: auraTints[i] | 0,
+                alpha: 0.001,
+                dir
+            };
+            applyEffectToSprite(auraFx, skinId, auraOpts);
+            sprites.setDataSprite(proj, auraKeys[i], auraFx);
         }
     } else {
         sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, null as any);
     }
 
-    const outlineId = _strengthArcOutlineSkinId();
+    const outlineId = STR_ARC_OUTLINE_ENABLED ? _strengthArcOutlineSkinId() : null;
     if (outlineId) {
         const outlineFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
         outlineFx.setFlag(SpriteFlag.Ghost, true);
         outlineFx.x = hero.x;
         outlineFx.y = hero.y;
-        outlineFx.z = zBase + 2;
+        outlineFx.z = zBase + (STR_ARC_OUTLINE_Z_OFFSET | 0);
         if ((lifespanMs | 0) > 0) outlineFx.lifespan = lifespanMs | 0;
+        const outlineTint = highlight.secondary || highlight.primary;
 
-        applyEffectToSprite(outlineFx, outlineId, { mode: "full", repeat: -1, frameIndex: 0 });
+        applyEffectToSprite(outlineFx, outlineId, {
+            mode: "full",
+            repeat: -1,
+            frameIndex: 0,
+            tint: outlineTint | 0,
+            alpha: STR_ARC_OUTLINE_ALPHA
+        });
         sprites.setDataSprite(proj, STR_ARC_OUTLINE_FX_KEY, outlineFx);
+    } else {
+        sprites.setDataSprite(proj, STR_ARC_OUTLINE_FX_KEY, null as any);
+    }
+
+    if (DEBUG_STR_PROJECTILE_METRICS) {
+        const atlas = _getEffectAtlasAny();
+        const atlasOn = atlas ? 1 : 0;
+        const resolve = (skin: string, dirKey: string): number => {
+            if (!atlas || !skin) return 0;
+            return _resolveEffectEntry(atlas, skin, dirKey || "") ? 1 : 0;
+        };
+        const fillOk = resolve(fillSkinId, fillDir || dir || "");
+        const edgeOk = resolve(edgeSkinId, edgeDir || dir || "");
+        const edgeAuraOk = resolve(edgeAuraSkinId, "");
+        const outlineOk = resolve(outlineId || "", "");
+        const auraOkList = auraSkinIds.map((skin) => resolve(skin, ""));
+        const auraList = auraSkinIds.length ? auraSkinIds.join(",") : "none";
+        const auraOk = auraOkList.length ? auraOkList.join(",") : "0";
+        console.log(
+            "[STR][ARC][FX]" +
+            " hero=" + (heroIndex | 0) +
+            " elem=" + (element | 0) +
+            " dir=" + (dir || "") +
+            " showFill=" + (showFill ? 1 : 0) +
+            " atlas=" + atlasOn +
+            " mask=" + STR_ARC_SKIN_ID +
+            " fill=" + (fillSkinId || "") +
+            " fillDir=" + (fillDir || dir || "") +
+            " fillAlpha=" + STR_ARC_FILL_ALPHA +
+            " fillTint=" + (fillTint | 0) +
+            " fillOk=" + fillOk +
+            " edge=" + (edgeSkinId || "") +
+            " edgeDir=" + (edgeDir || dir || "") +
+            " edgeOk=" + edgeOk +
+            " edgeAura=" + (edgeAuraSkinId || "") +
+            " edgeAuraOk=" + edgeAuraOk +
+            " aura=" + auraList +
+            " auraOk=" + auraOk +
+            " outline=" + (outlineId || "") +
+            " outlineOk=" + outlineOk
+        );
     }
 }
 
@@ -2438,6 +2613,7 @@ function _updateStrengthArcFxForProj(
         ? Math.max(0, Math.min(1, (segDur | 0) > 0 ? (segElapsed / Math.max(1, segDur)) : 1))
         : 0;
     const sweepT = resetT;
+    const isSlashSeg = segName === "strengthSlash";
 
     const arcAbs = Math.abs(totalArcDeg | 0);
     const halfArcRad = (arcAbs * 0.5) * (Math.PI / 180);
@@ -2449,6 +2625,7 @@ function _updateStrengthArcFxForProj(
     let posY = anchorY;
     let moveDx = nx;
     let moveDy = ny;
+    let travelR = ringR;
 
     if (segName === "strengthReset") {
         const ang = arcSide * arcSign * halfArcRad * sweepT;
@@ -2461,12 +2638,13 @@ function _updateStrengthArcFxForProj(
         moveDx = (-nx * sinA) + (sx * cosA);
         moveDy = (-ny * sinA) + (sy * cosA);
     } else {
-        const travelR = (frontStart | 0) + Math.round((reach | 0) * slashT);
+        travelR = (frontStart | 0) + Math.round((reach | 0) * slashT);
         posX = anchorX + (nx * travelR);
         posY = anchorY + (ny * travelR);
         moveDx = nx;
         moveDy = ny;
     }
+    const edgeRadius = isSlashSeg ? travelR : ringR;
 
     proj.x = posX;
     proj.y = posY;
@@ -2517,7 +2695,7 @@ function _updateStrengthArcFxForProj(
 
     const scale = (segName === "strengthReset")
         ? (1 + ((STR_ARC_END_SCALE - 1) * sweepT))
-        : Math.max(STR_ARC_EMERGE_SCALE_MIN, slashT);
+        : STR_ARC_SLASH_SCALE;
 
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame);
     sprites.setDataNumber(maskFx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
@@ -2528,6 +2706,20 @@ function _updateStrengthArcFxForProj(
     maskFx.y = posY;
     maskFx.z = (hero.z | 0) + 12;
 
+    const phase = isSlashSeg ? 0 : (sweepT >= STR_ARC_FILL_END_START ? 2 : 1);
+    let phaseMs = Math.max(1, segDur | 0);
+    if (!isSlashSeg) {
+        if (phase === 2) {
+            phaseMs = Math.max(1, (segDur | 0) - Math.round((segDur | 0) * STR_ARC_FILL_END_START));
+        } else {
+            phaseMs = Math.max(1, Math.round((segDur | 0) * STR_ARC_FILL_END_START));
+        }
+    }
+    const endFadeT = (!isSlashSeg && sweepT >= STR_ARC_FILL_END_START)
+        ? Math.max(0, Math.min(1, (sweepT - STR_ARC_FILL_END_START) / Math.max(0.0001, 1 - STR_ARC_FILL_END_START)))
+        : 0;
+    const leadWeight = _strengthArcLeadWeight(slashT, endFadeT, isSlashSeg);
+
     let fillFx = sprites.readDataSprite(proj, STR_ARC_FILL_FX_KEY);
     if (DEBUG_STR_ARC_NO_FILL) {
         if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) fillFx.destroy();
@@ -2535,25 +2727,15 @@ function _updateStrengthArcFxForProj(
         fillFx = null as any;
     }
     if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
-        let phase = 1;
-        if (segName === "strengthSlash") {
-            phase = 0;
-        } else if (segName === "strengthReset") {
-            phase = (sweepT >= STR_ARC_FILL_END_START) ? 2 : 1;
-        }
         const lastPhase = sprites.readDataNumber(fillFx, STR_ARC_FILL_PHASE_KEY) | 0;
         if (phase !== lastPhase) {
             let list = STR_ARC_FILL_TRAVEL_LIST;
-            let phaseMs = segDur | 0;
             if (phase === 0) {
                 list = STR_ARC_FILL_INTRO_LIST;
-                phaseMs = segDur | 0;
             } else if (phase === 2) {
                 list = STR_ARC_FILL_END_LIST;
-                phaseMs = Math.max(1, (segDur | 0) - Math.round((segDur | 0) * STR_ARC_FILL_END_START));
             } else {
                 list = STR_ARC_FILL_TRAVEL_LIST;
-                phaseMs = Math.max(1, Math.round((segDur | 0) * STR_ARC_FILL_END_START));
             }
             const listCount = _strengthArcFillListCount(list);
             const baseFps = (phaseMs > 0 && listCount > 0) ? (listCount / (phaseMs / 1000)) : 30;
@@ -2577,22 +2759,153 @@ function _updateStrengthArcFxForProj(
         fillFx.z = (hero.z | 0) + 13;
     }
 
+    const element = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
+    const auraIdxR1 = (sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0) || 1;
+    const auraIdxR2 = (sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0) || auraIdxR1;
+    const auraIdxR3 = (sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0) || auraIdxR2;
+    let highlight = _strengthArcHighlightTints(element | 0, auraIdxR1, auraIdxR2, auraIdxR3);
+    const fillSkin = (fillFx && !(fillFx.flags & sprites.Flag.Destroyed))
+        ? (sprites.readDataString(fillFx, "effectSkin") || "")
+        : "";
+    const fillSkinDir = (fillFx && !(fillFx.flags & sprites.Flag.Destroyed))
+        ? (sprites.readDataString(fillFx, "effectDir") || "")
+        : "";
+    const fillSkinTint = fillSkin ? _effectTintForSkin(fillSkin, fillSkinDir || "") : 0;
+    if (fillSkinTint) {
+        highlight = { primary: fillSkinTint | 0, secondary: fillSkinTint | 0 };
+    }
+
+    const edgeFx = sprites.readDataSprite(proj, STR_ARC_EDGE_FX_KEY);
+    const edgeAuraFx = sprites.readDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY);
+    if (DEBUG_STR_ARC_NO_FILL) {
+        if (edgeFx && !(edgeFx.flags & sprites.Flag.Destroyed)) edgeFx.destroy();
+        if (edgeAuraFx && !(edgeAuraFx.flags & sprites.Flag.Destroyed)) edgeAuraFx.destroy();
+        sprites.setDataSprite(proj, STR_ARC_EDGE_FX_KEY, null as any);
+        sprites.setDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY, null as any);
+        const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
+        for (const key of auraKeys) {
+            const auraFx = sprites.readDataSprite(proj, key);
+            if (auraFx && !(auraFx.flags & sprites.Flag.Destroyed)) auraFx.destroy();
+            sprites.setDataSprite(proj, key, null as any);
+        }
+    } else {
+        if (edgeFx && !(edgeFx.flags & sprites.Flag.Destroyed)) {
+            const edgeRowInfo = _strengthArcEdgeRowForRadius(edgeRadius | 0);
+            const edgeRow = edgeRowInfo.row | 0;
+            const lastRow = sprites.readDataNumber(edgeFx, STR_ARC_EDGE_ROW_KEY) | 0;
+            const lastPhase = sprites.readDataNumber(edgeFx, STR_ARC_EDGE_PHASE_KEY) | 0;
+            if (edgeRow !== lastRow || phase !== lastPhase) {
+                const list = _strengthArcEdgeFrameListRaw(edgeRow | 0);
+                const listCount = _strengthArcFillListCount(list);
+                const baseFps = (phaseMs > 0 && listCount > 0) ? (listCount / (phaseMs / 1000)) : 30;
+                const fps = Math.max(1, Math.round(baseFps * STR_ARC_EDGE_SPEED_MULT));
+                sprites.setDataString(edgeFx, EFFECT_FRAME_LIST_DATA_KEY, list);
+                sprites.setDataNumber(edgeFx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 1);
+                sprites.setDataNumber(edgeFx, EFFECT_FRAME_INDEX_DATA_KEY, -1);
+                sprites.setDataNumber(edgeFx, EFFECT_YOYO_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, EFFECT_FRAME_WINDOW_START_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, EFFECT_ANIM_DELAY_MS_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, EFFECT_FPS_DATA_KEY, fps | 0);
+                sprites.setDataNumber(edgeFx, EFFECT_REPEAT_DATA_KEY, 0);
+                sprites.setDataNumber(edgeFx, STR_ARC_EDGE_PHASE_KEY, phase | 0);
+                sprites.setDataNumber(edgeFx, STR_ARC_EDGE_ROW_KEY, edgeRow | 0);
+            }
+            const edgeAlphaRaw = isSlashSeg
+                ? (STR_ARC_EDGE_ALPHA_SLASH_MIN + ((STR_ARC_EDGE_ALPHA_SLASH_MAX - STR_ARC_EDGE_ALPHA_SLASH_MIN) * slashT))
+                : (STR_ARC_EDGE_ALPHA_RESET * (1 - endFadeT) + (STR_ARC_EDGE_ALPHA_END_MIN * endFadeT));
+            const edgeAlpha = Math.min(1, Math.max(0.001, edgeAlphaRaw * leadWeight));
+            sprites.setDataNumber(edgeFx, EFFECT_ALPHA_DATA_KEY, edgeAlpha);
+            sprites.setDataNumber(edgeFx, EFFECT_ROT_DATA_KEY, rot);
+            sprites.setDataNumber(edgeFx, EFFECT_SCALE_DATA_KEY, scale);
+            sprites.setDataNumber(edgeFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+            edgeFx.x = posX;
+            edgeFx.y = posY;
+            edgeFx.z = (hero.z | 0) + 14;
+            edgeFx.setFlag(SpriteFlag.Invisible, !(leadWeight > 0.02));
+
+            if (edgeAuraFx && !(edgeAuraFx.flags & sprites.Flag.Destroyed)) {
+                const lastAuraRow = sprites.readDataNumber(edgeAuraFx, STR_ARC_EDGE_ROW_KEY) | 0;
+                const lastAuraPhase = sprites.readDataNumber(edgeAuraFx, STR_ARC_EDGE_PHASE_KEY) | 0;
+                if (edgeRow !== lastAuraRow || phase !== lastAuraPhase) {
+                    const list = _strengthArcEdgeFrameListRaw(edgeRow | 0);
+                    const listCount = _strengthArcFillListCount(list);
+                    const baseFps = (phaseMs > 0 && listCount > 0) ? (listCount / (phaseMs / 1000)) : 30;
+                    const fps = Math.max(1, Math.round(baseFps * STR_ARC_EDGE_SPEED_MULT));
+                    sprites.setDataString(edgeAuraFx, EFFECT_FRAME_LIST_DATA_KEY, list);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 1);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_FRAME_INDEX_DATA_KEY, -1);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_YOYO_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_FRAME_WINDOW_START_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_ANIM_DELAY_MS_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_FPS_DATA_KEY, fps | 0);
+                    sprites.setDataNumber(edgeAuraFx, EFFECT_REPEAT_DATA_KEY, 0);
+                    sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_PHASE_KEY, phase | 0);
+                    sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_ROW_KEY, edgeRow | 0);
+                }
+                const edgeAuraAlpha = Math.min(1, Math.max(0.001, edgeAlpha * STR_ARC_EDGE_AURA_ALPHA_SCALE));
+                sprites.setDataNumber(edgeAuraFx, EFFECT_ALPHA_DATA_KEY, edgeAuraAlpha);
+                sprites.setDataNumber(edgeAuraFx, EFFECT_TINT_DATA_KEY, highlight.primary | 0);
+                sprites.setDataNumber(edgeAuraFx, EFFECT_ROT_DATA_KEY, rot);
+                sprites.setDataNumber(edgeAuraFx, EFFECT_SCALE_DATA_KEY, scale);
+                sprites.setDataNumber(edgeAuraFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+                edgeAuraFx.x = posX;
+                edgeAuraFx.y = posY;
+                edgeAuraFx.z = (hero.z | 0) + 12 + (STR_ARC_EDGE_AURA_Z_OFFSET | 0);
+                edgeAuraFx.setFlag(SpriteFlag.Invisible, !(leadWeight > 0.02));
+            }
+        }
+
+        const auraTints = [highlight.primary];
+        const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
+        const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, STR_ARC_AURA_ALPHA_BY_RADIUS.length);
+        for (let i = 0; i < auraCount; i++) {
+            const auraFx = sprites.readDataSprite(proj, auraKeys[i]);
+            if (!auraFx || (auraFx.flags & sprites.Flag.Destroyed)) continue;
+            const auraSkin = sprites.readDataString(auraFx, "effectSkin") || STR_ARC_SKIN_ID;
+            const auraIdx = _strengthArcFrameIndexFromRaw(auraSkin, rawFrame);
+            const auraAlphaRaw = (STR_ARC_AURA_ALPHA_BY_RADIUS[i] || 0) * leadWeight;
+            const auraAlpha = Math.min(1, Math.max(0.001, auraAlphaRaw));
+            sprites.setDataNumber(auraFx, EFFECT_FRAME_INDEX_DATA_KEY, auraIdx | 0);
+            sprites.setDataNumber(auraFx, EFFECT_ROT_DATA_KEY, rot);
+            sprites.setDataNumber(auraFx, EFFECT_SCALE_DATA_KEY, scale);
+            sprites.setDataNumber(auraFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+            sprites.setDataNumber(auraFx, EFFECT_TINT_DATA_KEY, auraTints[i] | 0);
+            sprites.setDataNumber(auraFx, EFFECT_ALPHA_DATA_KEY, auraAlpha);
+            auraFx.x = posX;
+            auraFx.y = posY;
+            auraFx.z = (hero.z | 0) + 12 + (STR_ARC_AURA_Z_OFFSET | 0) - i;
+            auraFx.setFlag(SpriteFlag.Invisible, !(leadWeight > 0.02));
+        }
+    }
+
     // If no fill is present (or fill is disabled), show the raw arc mask sprite.
     const fillAlive = !!(fillFx && !(fillFx.flags & sprites.Flag.Destroyed));
     const maskVisible = DEBUG_STR_ARC_NO_FILL || !fillAlive;
     maskFx.setFlag(SpriteFlag.Invisible, !maskVisible);
 
     const outlineFx = sprites.readDataSprite(proj, STR_ARC_OUTLINE_FX_KEY);
-    if (outlineFx && !(outlineFx.flags & sprites.Flag.Destroyed)) {
+    if (!STR_ARC_OUTLINE_ENABLED) {
+        if (outlineFx && !(outlineFx.flags & sprites.Flag.Destroyed)) outlineFx.destroy();
+        sprites.setDataSprite(proj, STR_ARC_OUTLINE_FX_KEY, null as any);
+    } else if (outlineFx && !(outlineFx.flags & sprites.Flag.Destroyed)) {
         const outlineSkin = sprites.readDataString(outlineFx, "effectSkin") || "";
         const outlineIdx = _strengthArcFrameIndexFromRaw(outlineSkin || STR_ARC_SKIN_ID, rawFrame);
+        const outlineTint = highlight.secondary || highlight.primary;
+        const outlineAlpha = Math.min(1, Math.max(0.01, STR_ARC_OUTLINE_ALPHA * leadWeight));
         sprites.setDataNumber(outlineFx, EFFECT_FRAME_INDEX_DATA_KEY, outlineIdx | 0);
         sprites.setDataNumber(outlineFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(outlineFx, EFFECT_SCALE_DATA_KEY, scale);
         sprites.setDataNumber(outlineFx, EFFECT_FLIP_X_DATA_KEY, flipX ? 1 : 0);
+        sprites.setDataNumber(outlineFx, EFFECT_TINT_DATA_KEY, outlineTint | 0);
+        sprites.setDataNumber(outlineFx, EFFECT_ALPHA_DATA_KEY, outlineAlpha);
         outlineFx.x = posX;
         outlineFx.y = posY;
-        outlineFx.z = (hero.z | 0) + 14;
+        outlineFx.z = (hero.z | 0) + 12 + (STR_ARC_OUTLINE_Z_OFFSET | 0);
+        outlineFx.setFlag(SpriteFlag.Invisible, !(leadWeight > 0.02));
     }
 
     return true;
@@ -2691,8 +3004,66 @@ function _destroyAgilityTrailFxSegments(proj: Sprite): void {
 function _destroyAgilityCometFx(proj: Sprite): void {
     if (!proj) return;
     const fx = sprites.readDataSprite(proj, AGI_COMET_FX_KEY);
-    if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
+    if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+        _destroyAgilityCometAurasForFx(fx);
+        fx.destroy();
+    }
     sprites.setDataSprite(proj, AGI_COMET_FX_KEY, null as any);
+}
+
+function _destroyAgilityCometAurasForFx(fx: Sprite): void {
+    if (!fx) return;
+    const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
+    for (const key of auraKeys) {
+        const auraFx = sprites.readDataSprite(fx, key);
+        if (auraFx && !(auraFx.flags & sprites.Flag.Destroyed)) auraFx.destroy();
+        sprites.setDataSprite(fx, key, null as any);
+    }
+}
+
+function _setAgilityCometAurasVisible(fx: Sprite, visible: boolean): void {
+    if (!fx) return;
+    const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
+    for (const key of auraKeys) {
+        const auraFx = sprites.readDataSprite(fx, key);
+        if (auraFx && !(auraFx.flags & sprites.Flag.Destroyed)) {
+            auraFx.setFlag(SpriteFlag.Invisible, !visible);
+        }
+    }
+}
+
+function _ensureAgilityCometAurasForFx(
+    fx: Sprite,
+    auraTints: number[],
+    zBase: number
+): void {
+    if (!fx) return;
+    const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
+    const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, auraTints.length);
+    for (let i = 0; i < auraCount; i++) {
+        const key = auraKeys[i];
+        const existing = sprites.readDataSprite(fx, key);
+        if (existing && !(existing.flags & sprites.Flag.Destroyed)) continue;
+        const radius = STR_ARC_AURA_RADII[i] | 0;
+        const skinId = _strengthArcAuraSkinId(radius);
+        if (!skinId) continue;
+        const auraFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+        auraFx.setFlag(SpriteFlag.Ghost, true);
+        auraFx.x = fx.x;
+        auraFx.y = fx.y;
+        auraFx.z = (zBase | 0) + i;
+        if ((fx.lifespan | 0) > 0) auraFx.lifespan = fx.lifespan | 0;
+        const auraOpts: EffectApplyOpts = {
+            mode: "full",
+            repeat: -1,
+            frameIndex: 0,
+            blend: STR_ARC_AURA_BLEND,
+            tint: auraTints[i] | 0,
+            alpha: 0.001
+        };
+        applyEffectToSprite(auraFx, skinId, auraOpts);
+        sprites.setDataSprite(fx, key, auraFx);
+    }
 }
 
 function _ensureAgilityCometFx(
@@ -2790,6 +3161,134 @@ function _agiCometPickRawFrame(
     return _strengthArcPickFromSequence(AGI_COMET_HOLD_RAW, loopT, 1, false);
 }
 
+function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMetrics | null {
+    const atlas = _getEffectAtlasAny();
+    const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null;
+    if (!resolved || !resolved.textureKey) return null;
+    const frameW = (resolved.frameW | 0) || 0;
+    const frameH = (resolved.frameH | 0) || 0;
+    if (frameW <= 0 || frameH <= 0) return null;
+    return _computeTextureFrameMetrics(
+        resolved.textureKey,
+        frameW,
+        frameH,
+        rawFrame | 0,
+        AGI_COMET_BASE_DIR_X,
+        AGI_COMET_BASE_DIR_Y
+    );
+}
+
+function _agiCometTipOffsetForRaw(skinId: string, rawFrame: number): { dx: number; dy: number } | null {
+    const metrics = _agiCometFrameMetrics(skinId, rawFrame | 0);
+    if (!metrics) return null;
+    return { dx: metrics.tipDx | 0, dy: metrics.tipDy | 0 };
+}
+
+function _agiCometAxisInfo(
+    skinId: string,
+    rawFrame?: number
+): { frameW: number; frameH: number; axisX: number; axisY: number; axisPxX: number; axisPxY: number; axisSrc: string } {
+    const key = `${String(skinId || "") || STR_ARC_SKIN_ID}|${Number.isFinite(rawFrame) ? (rawFrame as number) : "base"}`;
+    const cached = __agiCometAxisCache[key];
+    if (cached) return cached;
+    const atlas = _getEffectAtlasAny();
+    const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null;
+    let frameW = (resolved?.frameW | 0) || 0;
+    let frameH = (resolved?.frameH | 0) || 0;
+    let axisPxX = frameW > 0 ? Math.round((frameW - 1) / 2) : 0;
+    let axisPxY = frameH > 0 ? Math.round((frameH - 1) / 2) : 0;
+    let axisSrc = "frame_center";
+
+    if (Number.isFinite(rawFrame)) {
+        const metrics = _agiCometFrameMetrics(skinId, rawFrame as number);
+        if (metrics) {
+            frameW = metrics.frameW | 0;
+            frameH = metrics.frameH | 0;
+            axisPxX = metrics.centerX | 0;
+            axisPxY = metrics.centerY | 0;
+            axisSrc = "frame_scan";
+        }
+    }
+
+    const axisX = frameW > 1 ? (axisPxX / (frameW - 1)) : 0.5;
+    const axisY = frameH > 1 ? (axisPxY / (frameH - 1)) : 0.5;
+    const info = { frameW, frameH, axisX, axisY, axisPxX, axisPxY, axisSrc };
+    __agiCometAxisCache[key] = info;
+    return info;
+}
+
+function _agiCometDirOffset(nx: number, ny: number): { dx: number; dy: number } {
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const hit = AGI_COMET_DIR_OFFSETS[dirKey];
+    if (hit) return { dx: hit.dx | 0, dy: hit.dy | 0 };
+    const fallback = AGI_COMET_DIR_OFFSETS.none || { dx: 0, dy: 0 };
+    return { dx: fallback.dx | 0, dy: fallback.dy | 0 };
+}
+
+function _agiCometShouldLog(fx: Sprite, nowMs: number): boolean {
+    if (!DEBUG_AGI_COMET_LOGS) return false;
+    const throttle = DEBUG_AGI_COMET_LOG_THROTTLE_MS | 0;
+    const now = nowMs | 0;
+    if (throttle > 0) {
+        const last = sprites.readDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY) | 0;
+        if (last > 0 && (now - last) < throttle) return false;
+    }
+    sprites.setDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY, now | 0);
+    return true;
+}
+
+function _agiCometLogLine(payload: {
+    kind: string;
+    heroIndex: number;
+    ghost: boolean;
+    rawFrame: number;
+    frameIdx: number;
+    moveAngle: number;
+    rot: number;
+    tipX: number;
+    tipY: number;
+    baseX: number;
+    baseY: number;
+    nx: number;
+    ny: number;
+    scale: number;
+    alpha: number;
+    preActive: boolean;
+    growthT: number;
+    reelT: number;
+    skinId: string;
+}): void {
+    if (!DEBUG_AGI_COMET_LOGS) return;
+    const deg = 180 / Math.PI;
+    const axis = _agiCometAxisInfo(payload.skinId || STR_ARC_SKIN_ID, payload.rawFrame | 0);
+    let line =
+        "[AGI][COMET] msg=we_found_the_comet_frame_and_are_displaying_it_now" +
+        " display=1" +
+        " kind=" + payload.kind +
+        " hero=" + (payload.heroIndex | 0) +
+        " ghost=" + (payload.ghost ? 1 : 0) +
+        " raw=" + (payload.rawFrame | 0) +
+        " idx=" + (payload.frameIdx | 0) +
+        " frame=" + (axis.frameW | 0) + "x" + (axis.frameH | 0) +
+        " axis=" + axis.axisX.toFixed(3) + "," + axis.axisY.toFixed(3) +
+        " axisPx=" + axis.axisPxX.toFixed(1) + "," + axis.axisPxY.toFixed(1) +
+        " moveDeg=" + (payload.moveAngle * deg).toFixed(1) +
+        " rotDeg=" + (payload.rot * deg).toFixed(1) +
+        " tip=" + payload.tipX.toFixed(1) + "," + payload.tipY.toFixed(1) +
+        " base=" + payload.baseX.toFixed(1) + "," + payload.baseY.toFixed(1) +
+        " dir=" + payload.nx.toFixed(3) + "," + payload.ny.toFixed(3) +
+        " scale=" + payload.scale.toFixed(3) +
+        " alpha=" + payload.alpha.toFixed(3) +
+        " pre=" + (payload.preActive ? 1 : 0) +
+        " growT=" + payload.growthT.toFixed(3) +
+        " reelT=" + payload.reelT.toFixed(3);
+    if (DEBUG_AGI_COMET_LOG_VERBOSE) {
+        line += " skin=" + (payload.skinId || STR_ARC_SKIN_ID) + " axisSrc=" + (axis.axisSrc || "frame_center");
+    }
+    // eslint-disable-next-line no-console
+    console.log(line);
+}
+
 function _updateAgilityCometFx(
     proj: Sprite,
     heroIndex: number,
@@ -2816,12 +3315,13 @@ function _updateAgilityCometFx(
     const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0);
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        _setAgilityCometAurasVisible(fx, false);
         return;
     }
 
     const tipDist = _agiCometTipDistance(sBack, sFront, maxLen, reelT);
-    const tipX = anchorX + nx * tipDist;
-    const tipY = anchorY + ny * tipDist;
+    const baseTipX = anchorX + nx * tipDist;
+    const baseTipY = anchorY + ny * tipDist;
 
     const moveAngle = Math.atan2(ny, nx);
     const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
@@ -2843,11 +3343,14 @@ function _updateAgilityCometFx(
     }
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        _setAgilityCometAurasVisible(fx, false);
         return;
     }
 
     const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs, startMs);
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const fallbackOffset = _agiCometDirOffset(nx, ny);
 
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
@@ -2856,10 +3359,86 @@ function _updateAgilityCometFx(
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
 
+    let tipX = baseTipX;
+    let tipY = baseTipY;
+    if (tipOffset) {
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const offX = (tipOffset.dx * scale);
+        const offY = (tipOffset.dy * scale);
+        const rotX = (offX * cos) - (offY * sin);
+        const rotY = (offX * sin) + (offY * cos);
+        tipX = baseTipX - rotX;
+        tipY = baseTipY - rotY;
+    } else {
+        tipX = baseTipX + (fallbackOffset.dx | 0);
+        tipY = baseTipY + (fallbackOffset.dy | 0);
+    }
+
     fx.x = tipX;
     fx.y = tipY;
     fx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
+
+    // Aura outlines (r1/r2/r3) around the comet.
+    let auraIdxR1 = sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0;
+    let auraIdxR2 = sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0;
+    let auraIdxR3 = sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0;
+    if (!(auraIdxR1 > 0)) {
+        const dirKey = _weaponDirKeyFromVector(nx, ny);
+        const palette = _weaponAuraPaletteForElement(element | 0, dirKey, "offense");
+        auraIdxR1 = palette.r1 | 0;
+        auraIdxR2 = palette.r2 | 0;
+        auraIdxR3 = palette.r3 | 0;
+    }
+    const auraTints = [
+        _arcadeColorIndexToTint(auraIdxR1 | 0),
+        _arcadeColorIndexToTint((auraIdxR2 | 0) || (auraIdxR1 | 0)),
+        _arcadeColorIndexToTint((auraIdxR3 | 0) || (auraIdxR2 | 0) || (auraIdxR1 | 0))
+    ];
+    _ensureAgilityCometAurasForFx(fx, auraTints, (hero.z | 0) + (AGI_COMET_Z_BIAS | 0) + 1);
+    const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
+    const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, STR_ARC_AURA_ALPHA_BY_RADIUS.length);
+    for (let i = 0; i < auraCount; i++) {
+        const auraFx = sprites.readDataSprite(fx, auraKeys[i]);
+        if (!auraFx || (auraFx.flags & sprites.Flag.Destroyed)) continue;
+        const auraSkin = sprites.readDataString(auraFx, "effectSkin") || STR_ARC_SKIN_ID;
+        const auraIdx = _strengthArcFrameIndexFromRaw(auraSkin, rawFrame | 0);
+        const auraAlpha = Math.min(1, Math.max(0.01, alpha * (STR_ARC_AURA_ALPHA_BY_RADIUS[i] || 0) * AGI_COMET_AURA_ALPHA_MULT));
+        sprites.setDataNumber(auraFx, EFFECT_FRAME_INDEX_DATA_KEY, auraIdx | 0);
+        sprites.setDataNumber(auraFx, EFFECT_ROT_DATA_KEY, rot);
+        sprites.setDataNumber(auraFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(auraFx, EFFECT_ALPHA_DATA_KEY, auraAlpha);
+        sprites.setDataNumber(auraFx, EFFECT_TINT_DATA_KEY, auraTints[i] | 0);
+        auraFx.x = tipX;
+        auraFx.y = tipY;
+        auraFx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0) + 1 + i;
+        auraFx.setFlag(SpriteFlag.Invisible, false);
+    }
+
+    if (_agiCometShouldLog(fx, nowMs | 0)) {
+        _agiCometLogLine({
+            kind: "thrust",
+            heroIndex: heroIndex | 0,
+            ghost: false,
+            rawFrame: rawFrame | 0,
+            frameIdx: frameIdx | 0,
+            moveAngle,
+            rot,
+            tipX,
+            tipY,
+            baseX: anchorX,
+            baseY: anchorY,
+            nx,
+            ny,
+            scale,
+            alpha,
+            preActive,
+            growthT,
+            reelT,
+            skinId: STR_ARC_SKIN_ID
+        });
+    }
 }
 
 function _updateAgilityTrailFxSegments(
@@ -3171,9 +3750,9 @@ const STR_ARC_SHEET_ROWS = 20;
 const STR_ARC_CORE_COLS = 6;
 const STR_ARC_CORE_ROWS = 5;
 const STR_ARC_END_SCALE = 0.25;
+const STR_ARC_SLASH_SCALE = 0.75;
 const STR_ARC_BASE_TURNS_AT_360 = 20;
 const STR_ARC_CROSS_ROT_DEG = 35;
-const STR_ARC_EMERGE_SCALE_MIN = 0.4;
 // Raw sheet-frame sequences (these match the on-screen "#N" debug labels).
 const STR_ARC_SEQ_WISPY_RAW = [21, 15, 9, 3, 20, 14];
 const STR_ARC_SEQ_MEDIUM_RAW = [2, 7, 13, 19];
@@ -3197,25 +3776,37 @@ const STR_ARC_FILL_INTRO_LIST = "0,1,2,3,2,1,2,3";
 const STR_ARC_FILL_TRAVEL_LIST = "4,5,6,7,8,9,10,11,12,11,10,9,8,7,6,5,6,7,8,9,10,11,12";
 const STR_ARC_FILL_END_LIST = "13,14,15,14,13,14,15";
 const STR_ARC_FILL_END_START = 0.75;
+const STR_ARC_FILL_ALPHA = 0.99;
+const STR_ARC_FILL_TINT_ENABLED = true;
 const STR_ARC_OUTLINE_RADIUS = 2;
+const STR_ARC_OUTLINE_ENABLED = false;
+const STR_ARC_OUTLINE_ALPHA = 0.85;
+const STR_ARC_OUTLINE_Z_OFFSET = -2;
 const STR_ARC_COLLIDER_SCALE_X1000 = 900;
 const STR_ARC_EDGE_BLEND = "add";
 const STR_ARC_EDGE_SPEED_MULT = 1.35;
 const STR_ARC_EDGE_RADIUS_BIAS_PX = 0;
-const STR_ARC_EDGE_ALPHA_SLASH_MIN = 0.14;
-const STR_ARC_EDGE_ALPHA_SLASH_MAX = 0.7;
-const STR_ARC_EDGE_ALPHA_RESET = 0.82;
-const STR_ARC_EDGE_ALPHA_END_MIN = 0.22;
+const STR_ARC_EDGE_ALPHA_SLASH_MIN = 0.75;
+const STR_ARC_EDGE_ALPHA_SLASH_MAX = 1.0;
+const STR_ARC_EDGE_ALPHA_RESET = 0.92;
+const STR_ARC_EDGE_ALPHA_END_MIN = 0.8;
+const STR_ARC_EDGE_LEAD_START = 0.55;
+const STR_ARC_EDGE_LEAD_SPAN = 0.25;
+const STR_ARC_EDGE_LEAD_RESET_SCALE = 0.25;
+const STR_ARC_EDGE_AURA_ALPHA_SCALE = 0.9;
+const STR_ARC_EDGE_AURA_PAD_OUT_PX = 0;
+const STR_ARC_EDGE_AURA_Z_OFFSET = -1;
 const STR_ARC_EDGE_ELLIPSE_MIN_R = 10;
 const STR_ARC_EDGE_ELLIPSE_STEP_R = 5;
 const STR_ARC_EDGE_ELLIPSE_ROWS = 21;
 const STR_ARC_EDGE_ELLIPSE_COLS = 6;
 const STR_ARC_EDGE_ELLIPSE_MAX_R = STR_ARC_EDGE_ELLIPSE_MIN_R + ((STR_ARC_EDGE_ELLIPSE_ROWS - 1) * STR_ARC_EDGE_ELLIPSE_STEP_R);
 const STR_ARC_AURA_BLEND = "add";
-const STR_ARC_AURA_RADII = [1, 2, 3];
-const STR_ARC_AURA_ALPHA_BY_RADIUS = [0.34, 0.28, 0.22];
-const STR_ARC_AURA_PAD_OUT_BY_RADIUS = [1, 2, 3];
+const STR_ARC_AURA_RADII = [1];
+const STR_ARC_AURA_ALPHA_BY_RADIUS = [0.6];
+const STR_ARC_AURA_PAD_OUT_BY_RADIUS = [1];
 const STR_ARC_AURA_FALLBACK_TO_BASE = true;
+const STR_ARC_AURA_Z_OFFSET = -1;
 const PROJ_COLLIDER_SPRITE_KEY = "projColliderSprite";
 const PROJ_COLLIDER_SCALE_X1000_KEY = "projColliderScaleX1000";
 const STR_ARC_MASK_FX_KEY = "strArcMaskFx";
@@ -3223,6 +3814,7 @@ const STR_ARC_FILL_FX_KEY = "strArcFillFx";
 const STR_ARC_OUTLINE_FX_KEY = "strArcOutlineFx";
 const STR_ARC_FILL_PHASE_KEY = "strArcFillPhase";
 const STR_ARC_EDGE_FX_KEY = "strArcEdgeFx";
+const STR_ARC_EDGE_AURA_FX_KEY = "strArcEdgeAuraFx";
 const STR_ARC_EDGE_PHASE_KEY = "strArcEdgePhase";
 const STR_ARC_EDGE_ROW_KEY = "strArcEdgeRow";
 const STR_ARC_AURA_R1_FX_KEY = "strArcAuraR1Fx";
@@ -3298,6 +3890,8 @@ const AGI_COMET_PREACTIVE_ALPHA = 0.28;
 const AGI_COMET_SCALE = 0.95;
 const AGI_COMET_END_SCALE = 0.3;
 const AGI_COMET_SW_BASE_ANGLE = (3 * Math.PI) / 4; // authored pointing SW
+const AGI_COMET_BASE_DIR_X = -1;
+const AGI_COMET_BASE_DIR_Y = 1;
 const AGI_COMET_GROW_END_T = 0.52;
 const AGI_COMET_GROW_EXP = 0.6;
 const AGI_COMET_TIP_BACK_PX = 6;
@@ -3307,6 +3901,22 @@ const AGI_COMET_REEL_BACK_PCT_X1000 = 700;
 const AGI_COMET_HOLD_LOOP_MS = 80;
 const AGI_COMET_PRE_RAW = [22, 16, 21];
 const AGI_COMET_HOLD_RAW = [27, 10, 4];
+const AGI_COMET_AURA_R1_FX_KEY = "agiCometAuraR1Fx";
+const AGI_COMET_AURA_R2_FX_KEY = "agiCometAuraR2Fx";
+const AGI_COMET_AURA_R3_FX_KEY = "agiCometAuraR3Fx";
+const AGI_COMET_AURA_ALPHA_MULT = 1.25;
+const AGI_COMET_LOG_LAST_MS_KEY = "agiCometLogMs";
+const AGI_COMET_DIR_OFFSETS: { [k: string]: { dx: number; dy: number } } = {
+    left: { dx: 0, dy: 1 },
+    right: { dx: 0, dy: 1 },
+    up: { dx: -1, dy: 0 },
+    down: { dx: -1, dy: 0 },
+    up_left: { dx: -1, dy: 1 },
+    up_right: { dx: -1, dy: 1 },
+    down_left: { dx: -1, dy: 1 },
+    down_right: { dx: -1, dy: 1 },
+    none: { dx: 0, dy: 0 }
+};
 const WEAPON_TILE_FX_SIZE_PX = 32;
 const WEAPON_TILE_FX_MASK_OUT_PX = 2;
 const WEAPON_TILE_FX_MIRROR = true;
@@ -3352,6 +3962,7 @@ const WPN_TRACE_LAST_MS_KEY = "__wpnTraceLastMs";
 let __wpnTraceSeq = 0;
 const __wpnTraceLogOnce: { [k: string]: 1 } = Object.create(null);
 const _elementTintCache: { [k: string]: number } = Object.create(null);
+const __agiCometAxisCache: { [k: string]: { frameW: number; frameH: number; axisX: number; axisY: number; axisPxX: number; axisPxY: number; axisSrc: string } } = Object.create(null);
 
 function _getEffectAtlasAny(): any {
     const g: any = globalThis as any;
@@ -3524,6 +4135,37 @@ function _strengthArcPickFromSequence(seq: number[], t: number, loops: number, r
     return seq[idx] | 0;
 }
 
+function _strengthArcResolveVariantSkin(baseId: string, dir: string, variant: string): { skinId: string; dir?: string } | null {
+    if (!baseId) return null;
+    const atlas = _getEffectAtlasAny();
+    const useDir = String(dir || "").trim().toLowerCase();
+    const baseNorm = baseId.includes("_") ? baseId.replace(/_/g, " ") : baseId;
+    const baseCandidates = baseNorm && baseNorm !== baseId ? [baseNorm, baseId] : [baseId];
+
+    if (!atlas) {
+        const base = baseCandidates[0];
+        const dirInfixId = useDir ? `${base} ${useDir} ${variant}`.trim() : "";
+        if (dirInfixId) return { skinId: dirInfixId };
+        const variantId = `${base} ${variant}`.trim();
+        return variantId ? { skinId: variantId, dir: useDir || undefined } : null;
+    }
+
+    for (const base of baseCandidates) {
+        const dirInfixId = useDir ? `${base} ${useDir} ${variant}`.trim() : "";
+        const variantId = `${base} ${variant}`.trim();
+        if (dirInfixId && _resolveEffectEntry(atlas, dirInfixId, "")) {
+            return { skinId: dirInfixId };
+        }
+        if (variantId && _resolveEffectEntry(atlas, variantId, useDir)) {
+            return { skinId: variantId, dir: useDir || undefined };
+        }
+        if (_resolveEffectEntry(atlas, base, useDir)) {
+            return { skinId: base, dir: useDir || undefined };
+        }
+    }
+    return null;
+}
+
 function _strengthArcTexturePick(element: number, dir: string): { skinId: string; dir?: string } | null {
     const key = `${element | 0}|${dir || ""}`;
     if (Object.prototype.hasOwnProperty.call(__strengthArcTexturePickCache, key)) {
@@ -3534,23 +4176,104 @@ function _strengthArcTexturePick(element: number, dir: string): { skinId: string
         __strengthArcTexturePickCache[key] = null;
         return null;
     }
-    const atlas = _getEffectAtlasAny();
-    const baseId = pick.skinId;
-    const texId = `${baseId} texture`;
-    const useDir = pick.dir || "";
-    if (!atlas) {
-        const fallback = { skinId: texId, dir: useDir || undefined };
-        __strengthArcTexturePickCache[key] = fallback;
-        return fallback;
+    const resolved = _strengthArcResolveVariantSkin(pick.skinId, pick.dir || dir || "", "texture");
+    __strengthArcTexturePickCache[key] = resolved;
+    return resolved;
+}
+
+function _strengthArcEllipseTexturePick(element: number, dir: string): { skinId: string; dir?: string } | null {
+    const key = `${element | 0}|${dir || ""}`;
+    if (Object.prototype.hasOwnProperty.call(__strengthArcEllipsePickCache, key)) {
+        return __strengthArcEllipsePickCache[key];
     }
-    if (_resolveEffectEntry(atlas, texId, useDir)) {
-        const out = { skinId: texId, dir: useDir || undefined };
-        __strengthArcTexturePickCache[key] = out;
-        return out;
+    const pick = _heroSpellEffectPick(element | 0, dir || "down", "offense");
+    if (!pick || !pick.skinId) {
+        __strengthArcEllipsePickCache[key] = null;
+        return null;
     }
-    const out = { skinId: baseId, dir: useDir || undefined };
-    __strengthArcTexturePickCache[key] = out;
+    const resolved = _strengthArcResolveVariantSkin(pick.skinId, pick.dir || dir || "", "ellipses");
+    if (resolved && !String(resolved.skinId).toLowerCase().includes("ellipses")) {
+        __strengthArcEllipsePickCache[key] = null;
+        return null;
+    }
+    __strengthArcEllipsePickCache[key] = resolved;
+    return resolved;
+}
+
+function _strengthArcEdgeRowForRadius(radiusPx: number): { row: number; rowRadius: number } {
+    const biased = Math.max(
+        STR_ARC_EDGE_ELLIPSE_MIN_R,
+        Math.min(STR_ARC_EDGE_ELLIPSE_MAX_R, (radiusPx + STR_ARC_EDGE_RADIUS_BIAS_PX))
+    );
+    let row = Math.round((biased - STR_ARC_EDGE_ELLIPSE_MIN_R) / STR_ARC_EDGE_ELLIPSE_STEP_R);
+    if (row < 0) row = 0;
+    if (row >= STR_ARC_EDGE_ELLIPSE_ROWS) row = STR_ARC_EDGE_ELLIPSE_ROWS - 1;
+    let rowRadius = STR_ARC_EDGE_ELLIPSE_MIN_R + (row * STR_ARC_EDGE_ELLIPSE_STEP_R);
+    if (rowRadius > biased && row > 0) {
+        row -= 1;
+        rowRadius -= STR_ARC_EDGE_ELLIPSE_STEP_R;
+    }
+    return { row: row | 0, rowRadius: rowRadius | 0 };
+}
+
+function _strengthArcEdgeFrameListRaw(row: number): string {
+    const r = Math.max(0, Math.min(STR_ARC_EDGE_ELLIPSE_ROWS - 1, row | 0)) | 0;
+    const cached = __strengthArcEdgeFrameListCache[r];
+    if (cached) return cached;
+    const base = (r * STR_ARC_EDGE_ELLIPSE_COLS) | 0;
+    const raw = STR_ARC_EDGE_COL_YOYO.map((c) => base + (c | 0));
+    const out = raw.join(",");
+    __strengthArcEdgeFrameListCache[r] = out;
     return out;
+}
+
+function _strengthArcAuraSkinForEffect(baseSkinId: string, radius: number): string | null {
+    const base = String(baseSkinId || "").trim();
+    if (!base) return null;
+    const r = Math.max(1, radius | 0);
+    const auraId = `${base}_aura_r${r}`;
+    const atlas = _getEffectAtlasAny();
+    if (atlas && _resolveEffectEntry(atlas, auraId, "")) return auraId;
+    return null;
+}
+
+function _strengthArcHighlightTints(
+    element: number,
+    auraIdxR1: number,
+    auraIdxR2: number,
+    auraIdxR3: number
+): { primary: number; secondary: number } {
+    const rawIdx = [auraIdxR1 | 0, auraIdxR2 | 0, auraIdxR3 | 0];
+    const tints = rawIdx.map((v) => _arcadeColorIndexToTint(v));
+    const isBad = (c: number) => (c | 0) === 0x000000 || (c | 0) === 0xffffff;
+    let primary = tints.find((c) => !isBad(c)) || 0;
+    if (!primary) {
+        const elemTint = _elementTintForMode(element | 0, "offense") | 0;
+        if (elemTint && !isBad(elemTint)) primary = elemTint;
+    }
+    if (!primary) primary = tints[0] || 0xff8135;
+
+    let secondary = tints.find((c) => !isBad(c) && (c | 0) !== (primary | 0)) || 0;
+    if (!secondary) {
+        const elemTint = _elementTintForMode(element | 0, "offense") | 0;
+        if (elemTint && !isBad(elemTint) && (elemTint | 0) !== (primary | 0)) secondary = elemTint;
+    }
+    return { primary: primary | 0, secondary: secondary | 0 };
+}
+
+function _strengthArcLeadWeight(slashT: number, endFadeT: number, isSlashSeg: boolean): number {
+    const t = Math.max(0, Math.min(1, slashT));
+    let lead = 1;
+    if (isSlashSeg) {
+        const start = STR_ARC_EDGE_LEAD_START;
+        const span = Math.max(0.001, STR_ARC_EDGE_LEAD_SPAN);
+        let v = Math.max(0, Math.min(1, (t - start) / span));
+        v = v * v * (3 - 2 * v); // smoothstep
+        lead = v;
+    } else {
+        lead = Math.max(0, Math.min(1, (1 - endFadeT) * STR_ARC_EDGE_LEAD_RESET_SCALE));
+    }
+    return Math.max(0, Math.min(1, lead));
 }
 
 function _strengthArcOutlineSkinId(): string | null {
@@ -3558,6 +4281,16 @@ function _strengthArcOutlineSkinId(): string | null {
     const atlas = _getEffectAtlasAny();
     if (atlas && !_resolveEffectEntry(atlas, id, "")) return null;
     return id;
+}
+
+function _strengthArcAuraSkinId(radius: number): string | null {
+    const r = Math.max(1, radius | 0);
+    const auraId = `${STR_ARC_SKIN_ID}_aura_r${r}`;
+    const atlas = _getEffectAtlasAny();
+    if (atlas && _resolveEffectEntry(atlas, auraId, "")) {
+        return auraId;
+    }
+    return STR_ARC_AURA_FALLBACK_TO_BASE ? STR_ARC_SKIN_ID : null;
 }
 
 function _strengthArcFillFrameIndex(skinId: string, dir: string | undefined, t: number): number {
@@ -4405,6 +5138,7 @@ const HERO_DATA: Record<string, string> = {
     HERO_WPN_OFF_Y: "wpnOffY",
 
     WEAPON_ALWAYS_SHOW: "wAlw",
+    WEAPON_OVERLAY_HIDE: "wHide",
 
 
 
@@ -8783,6 +9517,39 @@ const TOWER_TRIAL_DIALOG_OWNER = "tower-trial"
 const TOWER_TRIAL_PHASE_SWITCH_COOLDOWN_MS = 800
 const TOWER_TRIAL_ENEMY_ID = "slime"
 const TOWER_TRIAL_ENEMY_COUNT = 2
+const TOWER_TRIAL_DIALOG_HINT_CHOICES = "Arrows: choose | Interact/Enter: select | Esc: close"
+const TOWER_TRIAL_DIALOG_HINT_ADVANCE = "Interact/Enter: next | Esc: close"
+const TOWER_TRIAL_DIALOG_CHOICE_START = "trial_start"
+const TOWER_TRIAL_DIALOG_CHOICE_PROVING = "trial_proving"
+const TOWER_TRIAL_DIALOG_CHOICE_HINT = "trial_hint"
+const TOWER_TRIAL_DIALOG_CHOICE_CLOSE = "trial_close"
+const TOWER_TRIAL_ANNOUNCER_SHOW_BLINK_MS = 40
+const TOWER_TRIAL_ANNOUNCER_SHOW_POSE_MS = 120
+const TOWER_TRIAL_ANNOUNCER_SHOW_LOOPS = 2
+
+const TOWER_TRIAL_INTRO_CHOICES: Array<{ id: string; label: string }> = [
+    { id: TOWER_TRIAL_DIALOG_CHOICE_START, label: "I'm ready." },
+    { id: TOWER_TRIAL_DIALOG_CHOICE_PROVING, label: "What am I proving?" },
+    { id: TOWER_TRIAL_DIALOG_CHOICE_HINT, label: "Give me a hint." },
+]
+
+const TOWER_TRIAL_SCRIPT_MAIN_LINES: Array<{ text: string; hint?: string }> = [
+    { text: "Ah. Another climber." },
+    { text: "You came to see power... or to borrow it?" },
+    { text: "This tower doesn't fall to strength. It falls to thinking." },
+    { text: "That's why the Trials exist - filters. Teachers. Teeth." },
+    { text: "They don't stop you. They force you to become the version of yourself that can win." },
+    { text: "So - show me your best." },
+    { text: "No weapons. No luck." },
+    { text: "Only logic." },
+    { text: "Step into the trial circle when you're ready." },
+]
+
+const TOWER_TRIAL_SCRIPT_PROVING_LINES: Array<{ text: string; hint?: string }> = [
+    { text: "That you can control your power with rules." },
+    { text: "Anyone can cast a spell." },
+    { text: "A legend can write one that works every time." },
+]
 
 type TowerTrialLiveEvidence = {
     pressCount: Record<string, number>
@@ -8837,6 +9604,32 @@ type TowerTrialStatusSnapshot = {
 
 const TOWER_TRIAL_DEBUG_EVENT_LIMIT = 900
 
+type TowerTrialDialogState = {
+    mode: "idle" | "intro" | "script"
+    scriptIndex: number
+    scriptLines: Array<{ text: string; hint?: string }> | null
+}
+
+type TowerTrialAnnouncerShowStep = {
+    dx: number
+    dy: number
+    dir: string
+    phase: string
+}
+
+type TowerTrialAnnouncerShow = {
+    active: boolean
+    homeX: number
+    homeY: number
+    steps: TowerTrialAnnouncerShowStep[]
+    stepIndex: number
+    loopsRemaining: number
+    nextAtMs: number
+    subState: number
+    blinkMs: number
+    poseMs: number
+}
+
 type TowerTrialDebugEvent = {
     t: number
     type: string
@@ -8855,6 +9648,8 @@ type TowerTrialDebugState = {
 
 let _towerTrialAnnouncerNpc: Sprite = null
 let _towerTrialSession: TowerTrialSession | null = null
+let _towerTrialDialogState: TowerTrialDialogState = { mode: "idle", scriptIndex: 0, scriptLines: null }
+let _towerTrialAnnouncerShow: TowerTrialAnnouncerShow | null = null
 let _towerTrialDebugState: TowerTrialDebugState = {
     runId: 0,
     startedAtMs: 0,
@@ -11552,6 +12347,27 @@ let _dunPadSunk = false
 let _dunPadSinkAnimStartMs = 0
 let _dunPadSinkAnimUntilMs = 0
 let _dunPadSinkOffYLast = 0
+let _dunPadSinkPropLogActive = false
+let _dunPadSinkPropLogStartMs = 0
+let _dunPadSinkPropLogEndMs = 0
+let _dunPadSinkPropLogCalls = 0
+let _dunPadSinkPropLogMisses = 0
+let _dunPadSinkPropLogChanged = 0
+let _dunPadSinkPropLogDesiredMinX = 0
+let _dunPadSinkPropLogDesiredMaxX = 0
+let _dunPadSinkPropLogDesiredMinY = 0
+let _dunPadSinkPropLogDesiredMaxY = 0
+let _dunPadSinkPropLogAppliedMinX = 0
+let _dunPadSinkPropLogAppliedMaxX = 0
+let _dunPadSinkPropLogAppliedMinY = 0
+let _dunPadSinkPropLogAppliedMaxY = 0
+let _dunPadSinkPropLogCenterMinX = 0
+let _dunPadSinkPropLogCenterMaxX = 0
+let _dunPadSinkPropLogCenterMinY = 0
+let _dunPadSinkPropLogCenterMaxY = 0
+let _dunPadSinkPropLogAppliedSamples = 0
+let _dunPadSinkPropLogLastX = 0
+let _dunPadSinkPropLogLastY = 0
 let _dunEntryFromDoor = false
 
 
@@ -11638,6 +12454,17 @@ const DUNGEON_PAD_SINK_ANIM_MS = 520
 const DUNGEON_PAD_SINK_OFFY_PX = 32
 const DUNGEON_PAD_SINK_SHAKE_MS = 420
 const DUNGEON_PAD_SINK_SHAKE_INTENSITY = 0.008
+const BOSS_PAD_SINK_DELAY_MS = 0
+const BOSS_PAD_SINK_ANIM_MS = 3000
+const BOSS_PAD_SINK_SHAKE_MS = 1200
+const BOSS_PAD_SINK_SHAKE_INTENSITY = 0.003
+const BOSS_PAD_SINK_DUST_MS = 2600
+const BOSS_PAD_SINK_DUST_RADIUS_PX = 120
+const BOSS_PAD_SINK_DUST_ALPHA = 0.7
+const BOSS_PAD_SINK_DUST_SKIN_ID = "smoke 128x128"
+const BOSS_PAD_SINK_DUST_COUNT = 10
+const BOSS_PAD_SINK_DUST_RISE_PX = 32
+const BOSS_PAD_SINK_DUST_RISE_PORTION = 0.6
 
 
 
@@ -11648,6 +12475,14 @@ let _dunTeleportRuneName = ""
 let _dunTeleportCommitAtMs = 0
 
 let _dunRuneSpinSinceMs = 0         // starts when ANY hero steps on rune
+
+let _dunPadSinkDelayMs = DUNGEON_PAD_SINK_DELAY_MS | 0
+let _dunPadSinkAnimMs = DUNGEON_PAD_SINK_ANIM_MS | 0
+let _dunPadSinkShakeMs = DUNGEON_PAD_SINK_SHAKE_MS | 0
+let _dunPadSinkShakeIntensity = DUNGEON_PAD_SINK_SHAKE_INTENSITY
+let _dunPadSinkDustSpawned = false
+let _dunPadSinkUseDust = false
+let _dunPadSinkDustFx: Sprite[] = []
 
 
 
@@ -11838,6 +12673,185 @@ function _dunDecor_setOffset(s: Sprite, offX: number, offY: number): void {
     sprites.setDataNumber(s, "decorOffY", offY | 0)
     _engineDecorRev = (_engineDecorRev + 1) | 0
 
+}
+
+function _dunPadSinkPropLogReset(startMs: number, endMs: number): void {
+    if (!DEBUG_PAD_SINK_PROP_LOGS) return
+    _dunPadSinkPropLogActive = true
+    _dunPadSinkPropLogStartMs = startMs | 0
+    _dunPadSinkPropLogEndMs = endMs | 0
+    _dunPadSinkPropLogCalls = 0
+    _dunPadSinkPropLogMisses = 0
+    _dunPadSinkPropLogChanged = 0
+    _dunPadSinkPropLogAppliedSamples = 0
+    _dunPadSinkPropLogLastX = 0
+    _dunPadSinkPropLogLastY = 0
+    const big = 1000000000
+    _dunPadSinkPropLogDesiredMinX = big
+    _dunPadSinkPropLogDesiredMaxX = -big
+    _dunPadSinkPropLogDesiredMinY = big
+    _dunPadSinkPropLogDesiredMaxY = -big
+    _dunPadSinkPropLogAppliedMinX = big
+    _dunPadSinkPropLogAppliedMaxX = -big
+    _dunPadSinkPropLogAppliedMinY = big
+    _dunPadSinkPropLogAppliedMaxY = -big
+    _dunPadSinkPropLogCenterMinX = big
+    _dunPadSinkPropLogCenterMaxX = -big
+    _dunPadSinkPropLogCenterMinY = big
+    _dunPadSinkPropLogCenterMaxY = -big
+}
+
+function _dunPadSinkPropLogUpdate(args: {
+    desiredX: number
+    desiredY: number
+    matched: number
+    changed: boolean
+    centerX?: number
+    centerY?: number
+}): void {
+    if (!DEBUG_PAD_SINK_PROP_LOGS || !_dunPadSinkPropLogActive) return
+    const dx = args.desiredX | 0
+    const dy = args.desiredY | 0
+    _dunPadSinkPropLogCalls = (_dunPadSinkPropLogCalls + 1) | 0
+    if ((dx | 0) < (_dunPadSinkPropLogDesiredMinX | 0)) _dunPadSinkPropLogDesiredMinX = dx | 0
+    if ((dx | 0) > (_dunPadSinkPropLogDesiredMaxX | 0)) _dunPadSinkPropLogDesiredMaxX = dx | 0
+    if ((dy | 0) < (_dunPadSinkPropLogDesiredMinY | 0)) _dunPadSinkPropLogDesiredMinY = dy | 0
+    if ((dy | 0) > (_dunPadSinkPropLogDesiredMaxY | 0)) _dunPadSinkPropLogDesiredMaxY = dy | 0
+    _dunPadSinkPropLogLastX = dx | 0
+    _dunPadSinkPropLogLastY = dy | 0
+    if (!args.matched) {
+        _dunPadSinkPropLogMisses = (_dunPadSinkPropLogMisses + 1) | 0
+    } else {
+        _dunPadSinkPropLogAppliedSamples = (_dunPadSinkPropLogAppliedSamples + (args.matched | 0)) | 0
+        if ((dx | 0) < (_dunPadSinkPropLogAppliedMinX | 0)) _dunPadSinkPropLogAppliedMinX = dx | 0
+        if ((dx | 0) > (_dunPadSinkPropLogAppliedMaxX | 0)) _dunPadSinkPropLogAppliedMaxX = dx | 0
+        if ((dy | 0) < (_dunPadSinkPropLogAppliedMinY | 0)) _dunPadSinkPropLogAppliedMinY = dy | 0
+        if ((dy | 0) > (_dunPadSinkPropLogAppliedMaxY | 0)) _dunPadSinkPropLogAppliedMaxY = dy | 0
+        if (typeof args.centerX === "number" && typeof args.centerY === "number") {
+            const cx = args.centerX | 0
+            const cy = args.centerY | 0
+            if ((cx | 0) < (_dunPadSinkPropLogCenterMinX | 0)) _dunPadSinkPropLogCenterMinX = cx | 0
+            if ((cx | 0) > (_dunPadSinkPropLogCenterMaxX | 0)) _dunPadSinkPropLogCenterMaxX = cx | 0
+            if ((cy | 0) < (_dunPadSinkPropLogCenterMinY | 0)) _dunPadSinkPropLogCenterMinY = cy | 0
+            if ((cy | 0) > (_dunPadSinkPropLogCenterMaxY | 0)) _dunPadSinkPropLogCenterMaxY = cy | 0
+        }
+    }
+    if (args.changed) _dunPadSinkPropLogChanged = (_dunPadSinkPropLogChanged + 1) | 0
+}
+
+function _dunPadSinkPropLogSummary(reason: string): void {
+    if (!DEBUG_PAD_SINK_PROP_LOGS || !_dunPadSinkPropLogActive) return
+    _dunPadSinkPropLogActive = false
+    const appliedSamples = _dunPadSinkPropLogAppliedSamples | 0
+    const desiredRange = {
+        x: [_dunPadSinkPropLogDesiredMinX | 0, _dunPadSinkPropLogDesiredMaxX | 0],
+        y: [_dunPadSinkPropLogDesiredMinY | 0, _dunPadSinkPropLogDesiredMaxY | 0],
+    }
+    const appliedRange = (appliedSamples > 0)
+        ? {
+            x: [_dunPadSinkPropLogAppliedMinX | 0, _dunPadSinkPropLogAppliedMaxX | 0],
+            y: [_dunPadSinkPropLogAppliedMinY | 0, _dunPadSinkPropLogAppliedMaxY | 0],
+        }
+        : null
+    const centerRange = (appliedSamples > 0)
+        ? {
+            x: [_dunPadSinkPropLogCenterMinX | 0, _dunPadSinkPropLogCenterMaxX | 0],
+            y: [_dunPadSinkPropLogCenterMinY | 0, _dunPadSinkPropLogCenterMaxY | 0],
+        }
+        : null
+    const reasonStr = String(reason || "")
+    const startMs = (_dunPadSinkPropLogStartMs | 0)
+    const endMs = (_dunPadSinkPropLogEndMs | 0)
+    const calls = (_dunPadSinkPropLogCalls | 0)
+    const misses = (_dunPadSinkPropLogMisses | 0)
+    const changed = (_dunPadSinkPropLogChanged | 0)
+    const lastX = (_dunPadSinkPropLogLastX | 0)
+    const lastY = (_dunPadSinkPropLogLastY | 0)
+    const desiredX = `${(_dunPadSinkPropLogDesiredMinX | 0)}..${(_dunPadSinkPropLogDesiredMaxX | 0)}`
+    const desiredY = `${(_dunPadSinkPropLogDesiredMinY | 0)}..${(_dunPadSinkPropLogDesiredMaxY | 0)}`
+    const appliedX = (appliedSamples > 0)
+        ? `${(_dunPadSinkPropLogAppliedMinX | 0)}..${(_dunPadSinkPropLogAppliedMaxX | 0)}`
+        : "n/a"
+    const appliedY = (appliedSamples > 0)
+        ? `${(_dunPadSinkPropLogAppliedMinY | 0)}..${(_dunPadSinkPropLogAppliedMaxY | 0)}`
+        : "n/a"
+    const centerX = (appliedSamples > 0)
+        ? `${(_dunPadSinkPropLogCenterMinX | 0)}..${(_dunPadSinkPropLogCenterMaxX | 0)}`
+        : "n/a"
+    const centerY = (appliedSamples > 0)
+        ? `${(_dunPadSinkPropLogCenterMinY | 0)}..${(_dunPadSinkPropLogCenterMaxY | 0)}`
+        : "n/a"
+    const line =
+        `[PAD][PILLAR] reason=${reasonStr}` +
+        ` startMs=${startMs} endMs=${endMs}` +
+        ` calls=${calls} misses=${misses} changed=${changed}` +
+        ` samples=${appliedSamples | 0}` +
+        ` desiredX=${desiredX} desiredY=${desiredY}` +
+        ` appliedX=${appliedX} appliedY=${appliedY}` +
+        ` centerX=${centerX} centerY=${centerY}` +
+        ` lastX=${lastX} lastY=${lastY}`
+    console.log(line)
+}
+
+function _dunDecor_applyOffsetToStairsStatue(offX: number, offY: number): void {
+    const ox = offX | 0
+    const oy = offY | 0
+    let changed = false
+    let matched = 0
+    let centerX: number | null = null
+    let centerY: number | null = null
+
+    const apply = (s: Sprite) => {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+        let name = ""
+        try { name = sprites.readDataString(s, DECOR_DATA.NAME) || "" } catch { name = "" }
+        if (name !== "stairs_statue") return
+        matched++
+        try {
+            const tileSize = WORLD_TILE_SIZE | 0
+            const r = sprites.readDataNumber(s, "decorTileR") | 0
+            const c = sprites.readDataNumber(s, "decorTileC") | 0
+            if (tileSize > 0 && r >= 0 && c >= 0) {
+                centerX = ((c * tileSize + (tileSize >> 1) + ox) | 0)
+                centerY = ((r * tileSize + (tileSize >> 1) + oy) | 0)
+            }
+        } catch { /* ignore */ }
+        const curX = sprites.readDataNumber(s, "decorOffX") | 0
+        const curY = sprites.readDataNumber(s, "decorOffY") | 0
+        if ((curX | 0) === (ox | 0) && (curY | 0) === (oy | 0)) return
+        sprites.setDataNumber(s, "decorOffX", ox | 0)
+        sprites.setDataNumber(s, "decorOffY", oy | 0)
+        changed = true
+    }
+
+    if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+        apply(_dunStairsStatueSolid)
+    } else if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            const s = _engineDecorSolids[i]
+            if (s) apply(s)
+        }
+    }
+
+    if (!changed && _engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = 0; i < _engineDecorTriggers.length; i++) {
+            const s = _engineDecorTriggers[i]
+            if (s) apply(s)
+        }
+    }
+
+    if (changed) _engineDecorRev = (_engineDecorRev + 1) | 0
+
+    if (DEBUG_PAD_SINK_PROP_LOGS && _dunPadSinkPropLogActive) {
+        _dunPadSinkPropLogUpdate({
+            desiredX: ox | 0,
+            desiredY: oy | 0,
+            matched,
+            changed,
+            centerX: (centerX ?? undefined),
+            centerY: (centerY ?? undefined),
+        })
+    }
 }
 
 
@@ -12957,6 +13971,46 @@ function _dunDecor_setDecalSafe(r: number, c: number, id: number): void {
 
 }
 
+function _dunDecor_removeStairsStatueSolids(): boolean {
+    let removed = false
+    const clearSprite = (s: Sprite) => {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+        let name = ""
+        try { name = sprites.readDataString(s, DECOR_DATA.NAME) || "" } catch { name = "" }
+        if (name !== "stairs_statue") return
+        try { sprites.setDataString(s, DECOR_DATA.NAME, "") } catch { /* ignore */ }
+        _dunDestroySprite(s)
+        removed = true
+    }
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = _engineDecorSolids.length - 1; i >= 0; i--) {
+            const s = _engineDecorSolids[i]
+            if (!s) continue
+            let name = ""
+            try { name = sprites.readDataString(s, DECOR_DATA.NAME) || "" } catch { name = "" }
+            if (name !== "stairs_statue") continue
+            clearSprite(s)
+            _engineDecorSolids.splice(i, 1)
+        }
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = _engineDecorTriggers.length - 1; i >= 0; i--) {
+            const s = _engineDecorTriggers[i]
+            if (!s) continue
+            let name = ""
+            try { name = sprites.readDataString(s, DECOR_DATA.NAME) || "" } catch { name = "" }
+            if (name !== "stairs_statue") continue
+            clearSprite(s)
+            _engineDecorTriggers.splice(i, 1)
+        }
+    }
+    if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
+        clearSprite(_dunStairsStatueSolid)
+    }
+    _dunStairsStatueSolid = null
+    return removed
+}
+
 function _dunDecor_clearPadVisual(): void {
     if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
     const pr = _dunPadTileR | 0
@@ -12969,10 +14023,7 @@ function _dunDecor_clearPadVisual(): void {
         _dunDecor_setDecalSafe(pr + 1, col, DECAL_NONE)
     }
 
-    if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
-        _dunDestroySprite(_dunStairsStatueSolid)
-    }
-    _dunStairsStatueSolid = null
+    _dunDecor_removeStairsStatueSolids()
 
     if (_dunTeleportRuneTrig && !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed)) {
         sprites.setDataString(_dunTeleportRuneTrig, DECOR_DATA.NAME, "")
@@ -13603,6 +14654,15 @@ function _dunSpawnExitPad(): void {
     _dunPadSinkAnimStartMs = 0
     _dunPadSinkAnimUntilMs = 0
     _dunPadSinkOffYLast = 0
+    _dunPadSinkPropLogActive = false
+    _dunPadSinkDelayMs = DUNGEON_PAD_SINK_DELAY_MS | 0
+    _dunPadSinkAnimMs = DUNGEON_PAD_SINK_ANIM_MS | 0
+    _dunPadSinkShakeMs = DUNGEON_PAD_SINK_SHAKE_MS | 0
+    _dunPadSinkShakeIntensity = DUNGEON_PAD_SINK_SHAKE_INTENSITY
+    _dunPadSinkDustSpawned = false
+    _dunPadSinkUseDust = false
+    _dunPadSinkDustFx = []
+    _dunPadSinkDustFx = []
 
     _dunTeleportCommitAtMs = 0
 
@@ -13746,12 +14806,89 @@ function _dunSpawnExitPad(): void {
 
 }
 
-function _dunSchedulePadSink(nowMs: number): void {
-    _dunPadSinkAtMs = ((nowMs | 0) + (DUNGEON_PAD_SINK_DELAY_MS | 0)) | 0
+function _dunSchedulePadSink(
+    nowMs: number,
+    delayMs?: number,
+    animMs?: number,
+    shakeMs?: number,
+    shakeIntensity?: number,
+    useDust?: boolean
+): void {
+    const useDelay = (typeof delayMs === "number") ? (delayMs | 0) : (DUNGEON_PAD_SINK_DELAY_MS | 0)
+    const useAnim = (typeof animMs === "number") ? (animMs | 0) : (DUNGEON_PAD_SINK_ANIM_MS | 0)
+    const useShakeMs = (typeof shakeMs === "number") ? (shakeMs | 0) : (DUNGEON_PAD_SINK_SHAKE_MS | 0)
+    const useShakeIntensity = (typeof shakeIntensity === "number") ? shakeIntensity : DUNGEON_PAD_SINK_SHAKE_INTENSITY
+    _dunPadSinkDelayMs = Math.max(0, useDelay | 0) | 0
+    _dunPadSinkAnimMs = Math.max(1, useAnim | 0) | 0
+    _dunPadSinkShakeMs = Math.max(0, useShakeMs | 0) | 0
+    _dunPadSinkShakeIntensity = useShakeIntensity
+    _dunPadSinkAtMs = ((nowMs | 0) + (_dunPadSinkDelayMs | 0)) | 0
     _dunPadSunk = false
     _dunPadSinkAnimStartMs = 0
     _dunPadSinkAnimUntilMs = 0
     _dunPadSinkOffYLast = 0
+    _dunPadSinkDustSpawned = false
+    _dunPadSinkUseDust = !!useDust
+    if (DEBUG_BOSS_INTRO && _dunPadSinkUseDust) {
+        console.log("[BOSS][INTRO] pad sink scheduled", {
+            atMs: _dunPadSinkAtMs | 0,
+            delayMs: _dunPadSinkDelayMs | 0,
+            animMs: _dunPadSinkAnimMs | 0,
+            shakeMs: _dunPadSinkShakeMs | 0,
+            shakeIntensity: _dunPadSinkShakeIntensity
+        })
+    }
+}
+
+function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
+    if (!BOSS_PAD_SINK_DUST_SKIN_ID) return
+    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
+    const baseX = _dunColToX(_dunPadTileC | 0) | 0
+    const baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    const tile = WORLD_TILE_SIZE | 0
+    const padW = (tile * 5) | 0
+    const padH = (tile * 2) | 0
+    const halfW = Math.max(1, Math.idiv(padW, 2)) | 0
+    const halfH = Math.max(1, Math.idiv(padH, 2)) | 0
+    const edgePad = Math.max(4, Math.round(tile * 0.15)) | 0
+    const total = BOSS_PAD_SINK_DUST_COUNT | 0
+    for (let i = 0; i < total; i++) {
+        const edge = Math.randomRange(0, 3) | 0
+        let ox = 0
+        let oy = 0
+        if (edge === 0) { // top
+            ox = Math.randomRange(-halfW, halfW) | 0
+            oy = (-halfH - edgePad) | 0
+        } else if (edge === 1) { // bottom
+            ox = Math.randomRange(-halfW, halfW) | 0
+            oy = (halfH + edgePad) | 0
+        } else if (edge === 2) { // left
+            ox = (-halfW - edgePad) | 0
+            oy = Math.randomRange(-halfH, halfH) | 0
+        } else { // right
+            ox = (halfW + edgePad) | 0
+            oy = Math.randomRange(-halfH, halfH) | 0
+        }
+        const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        fx.setFlag(SpriteFlag.Ghost, true)
+        fx.x = (baseX + ox) | 0
+        fx.y = (baseY + oy) | 0
+        fx.z = 1000
+        if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) fx.lifespan = durationMs | 0
+        applyEffectToSprite(fx, BOSS_PAD_SINK_DUST_SKIN_ID, {
+            alpha: BOSS_PAD_SINK_DUST_ALPHA,
+            fitRadiusPx: BOSS_PAD_SINK_DUST_RADIUS_PX,
+            repeat: -1,
+            yoyo: true,
+            fps: 8,
+            mode: "full"
+        })
+        const rise = Math.max(8, (BOSS_PAD_SINK_DUST_RISE_PX | 0) + (Math.randomRange(-6, 6) | 0)) | 0
+        sprites.setDataNumber(fx, "__padDustBaseX", fx.x | 0)
+        sprites.setDataNumber(fx, "__padDustBaseY", fx.y | 0)
+        sprites.setDataNumber(fx, "__padDustRisePx", rise | 0)
+        _dunPadSinkDustFx.push(fx)
+    }
 }
 
 function _dunTickPadSink(nowMs: number): void {
@@ -13767,15 +14904,58 @@ function _dunTickPadSink(nowMs: number): void {
         const offY = Math.round((DUNGEON_PAD_SINK_OFFY_PX | 0) * progress) | 0
         if ((offY | 0) !== (_dunPadSinkOffYLast | 0)) {
             _dunPadSinkOffYLast = offY | 0
-            if (_dunStairsStatueSolid && !(_dunStairsStatueSolid.flags & sprites.Flag.Destroyed)) {
-                _dunDecor_setOffset(_dunStairsStatueSolid, 0, offY | 0)
+        }
+        const shakeX = ((_dunPadSinkShakeMs | 0) > 0)
+            ? (Math.round(Math.sin((now | 0) / 35) * 1) | 0)
+            : 0
+        _dunDecor_applyOffsetToStairsStatue(shakeX | 0, offY | 0)
+        if (_dunPadSinkUseDust && _dunPadSinkDustFx && _dunPadSinkDustFx.length > 0) {
+            const risePortion = Math.max(0.05, Math.min(0.95, BOSS_PAD_SINK_DUST_RISE_PORTION))
+            const tNorm = Math.max(0, Math.min(1, progress))
+            const rising = tNorm <= risePortion
+            const tRise = rising ? (tNorm / risePortion) : 1
+            const tFall = rising ? 0 : ((tNorm - risePortion) / (1 - risePortion))
+            let write = 0
+            for (let i = 0; i < _dunPadSinkDustFx.length; i++) {
+                const fx = _dunPadSinkDustFx[i]
+                if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+                const baseX = sprites.readDataNumber(fx, "__padDustBaseX") | 0
+                const baseY = sprites.readDataNumber(fx, "__padDustBaseY") | 0
+                const risePx = Math.max(1, sprites.readDataNumber(fx, "__padDustRisePx") | 0) | 0
+                let y = baseY - Math.round(risePx * tRise)
+                if (!rising) {
+                    const down = Math.round((offY + risePx) * tFall)
+                    y = (baseY - risePx + down) | 0
+                }
+                fx.x = baseX | 0
+                fx.y = y | 0
+                _dunPadSinkDustFx[write++] = fx
             }
+            if (write < _dunPadSinkDustFx.length) _dunPadSinkDustFx.length = write
         }
         if ((now | 0) >= (end | 0)) {
             _dunPadSinkAnimStartMs = 0
             _dunPadSinkAnimUntilMs = 0
             _dunPadSunk = true
+            if (DEBUG_PAD_SINK_PROP_LOGS) _dunPadSinkPropLogSummary("complete")
             _dunDecor_clearPadVisual()
+            _dunPadSinkDelayMs = DUNGEON_PAD_SINK_DELAY_MS | 0
+            _dunPadSinkAnimMs = DUNGEON_PAD_SINK_ANIM_MS | 0
+            _dunPadSinkShakeMs = DUNGEON_PAD_SINK_SHAKE_MS | 0
+            _dunPadSinkShakeIntensity = DUNGEON_PAD_SINK_SHAKE_INTENSITY
+            _dunPadSinkDustSpawned = false
+            _dunPadSinkUseDust = false
+            if (_dunPadSinkDustFx && _dunPadSinkDustFx.length > 0) {
+                if (!DEBUG_BOSS_PAD_DUST_PERSIST) {
+                    for (let i = 0; i < _dunPadSinkDustFx.length; i++) {
+                        const fx = _dunPadSinkDustFx[i]
+                        if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+                            fx.destroy()
+                        }
+                    }
+                }
+            }
+            _dunPadSinkDustFx = []
         }
         return
     }
@@ -13785,9 +14965,17 @@ function _dunTickPadSink(nowMs: number): void {
 
     _dunPadSinkAtMs = 0
     _dunPadSinkAnimStartMs = now | 0
-    _dunPadSinkAnimUntilMs = ((now | 0) + (DUNGEON_PAD_SINK_ANIM_MS | 0)) | 0
+    _dunPadSinkAnimUntilMs = ((now | 0) + (_dunPadSinkAnimMs | 0)) | 0
     _dunPadSinkOffYLast = 0
-    _enemyScreenShake(DUNGEON_PAD_SINK_SHAKE_MS | 0, DUNGEON_PAD_SINK_SHAKE_INTENSITY)
+    if (DEBUG_PAD_SINK_PROP_LOGS) _dunPadSinkPropLogReset(_dunPadSinkAnimStartMs | 0, _dunPadSinkAnimUntilMs | 0)
+    if (_dunPadSinkUseDust && !_dunPadSinkDustSpawned) {
+        _dunPadSinkDustSpawned = true
+        const dustMs = Math.max(600, Math.min(6000, (_dunPadSinkAnimMs | 0) + 600)) | 0
+        _dunSpawnPadSinkDust(now | 0, dustMs | 0)
+    }
+    if ((_dunPadSinkShakeMs | 0) > 0 && (_dunPadSinkShakeIntensity || 0) > 0) {
+        _enemyScreenShake(_dunPadSinkShakeMs | 0, _dunPadSinkShakeIntensity)
+    }
 }
 
 function _dunSpawnDoorExit(nowMs: number): void {
@@ -22531,6 +23719,17 @@ function _towerTrialDebugLastSave(): any {
     return _towerTrialDebugState.lastSaveResult || null
 }
 
+function _towerTrialShouldAutosave(session?: TowerTrialSession | null): boolean {
+    if (DEBUG_TOWER_TRIAL_ARTIFACT_AUTOSAVE) return true
+    const s = session || _towerTrialSession
+    if (!s || !s.participants || !s.participants.length) return false
+    for (let i = 0; i < s.participants.length; i++) {
+        const prof = String(s.participants[i] || "").trim().toLowerCase()
+        if (prof === "longblond") return true
+    }
+    return false
+}
+
 function _towerTrialLog(msg: string, data?: any): void {
     if (!DEBUG_TOWER_TRIAL_LOGS) return
     if (data) {
@@ -22595,17 +23794,105 @@ function _towerTrialEnsureAnnouncer(): void {
     _towerTrialAnnouncerNpc = npc
     if (npc) _shopRegisterNpc(npc)
     _towerTrialLog("announcer_spawn", { x: x | 0, y: y | 0 })
+    _towerTrialDebugLog("announcer_spawn", { x: x | 0, y: y | 0 })
 }
 
 function _towerTrialDestroyAnnouncer(): void {
     if (!_towerTrialAnnouncerNpc) return
+    _towerTrialDebugLog("announcer_destroy")
     if (!(_towerTrialAnnouncerNpc.flags & sprites.Flag.Destroyed)) {
         _dunDestroySprite(_towerTrialAnnouncerNpc)
     }
     _towerTrialAnnouncerNpc = null
 }
 
-function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: boolean): void {
+function _towerTrialAnnouncerStartShow(nowMs: number): void {
+    const npc = _towerTrialAnnouncerNpc
+    if (!npc || (npc.flags & sprites.Flag.Destroyed)) return
+    const arena = _towerTrialArenaRect()
+    const tile = WORLD_TILE_SIZE | 0
+    const baseX = arena ? (arena.centerX | 0) : (npc.x | 0)
+    const baseY = arena ? (arena.centerY | 0) : (npc.y | 0)
+    const steps: TowerTrialAnnouncerShowStep[] = [
+        { dx: -tile, dy: -tile, dir: "down", phase: "slash" },
+        { dx: tile, dy: -tile, dir: "down", phase: "thrust" },
+        { dx: -tile, dy: tile, dir: "down", phase: "cast" },
+        { dx: tile, dy: tile, dir: "down", phase: "combo" },
+    ]
+    _towerTrialAnnouncerShow = {
+        active: true,
+        homeX: npc.x | 0,
+        homeY: npc.y | 0,
+        steps,
+        stepIndex: 0,
+        loopsRemaining: TOWER_TRIAL_ANNOUNCER_SHOW_LOOPS | 0,
+        nextAtMs: nowMs | 0,
+        subState: 0,
+        blinkMs: TOWER_TRIAL_ANNOUNCER_SHOW_BLINK_MS | 0,
+        poseMs: TOWER_TRIAL_ANNOUNCER_SHOW_POSE_MS | 0,
+    }
+    sprites.setDataNumber(npc, STORY_NPC_TALK_UNTIL_MS_KEY, (nowMs | 0) + 1200)
+    _towerTrialDebugLog("announcer_show_start", { baseX, baseY })
+    _towerTrialAnnouncerTickShow(nowMs | 0)
+}
+
+function _towerTrialAnnouncerStopShow(nowMs: number): void {
+    const npc = _towerTrialAnnouncerNpc
+    if (npc && !(npc.flags & sprites.Flag.Destroyed)) {
+        npc.setFlag(SpriteFlag.Invisible, false)
+        npc.setPosition(npc.x | 0, npc.y | 0)
+        _storyNpcStampPhase(npc, "idle", nowMs | 0, 999999, true)
+    }
+    _towerTrialAnnouncerShow = null
+}
+
+function _towerTrialAnnouncerTickShow(nowMs: number): void {
+    const show = _towerTrialAnnouncerShow
+    const npc = _towerTrialAnnouncerNpc
+    if (!show || !show.active) return
+    if (!npc || (npc.flags & sprites.Flag.Destroyed)) {
+        _towerTrialAnnouncerShow = null
+        return
+    }
+    if ((nowMs | 0) < (show.nextAtMs | 0)) return
+    if ((show.loopsRemaining | 0) <= 0) {
+        npc.setFlag(SpriteFlag.Invisible, false)
+        npc.setPosition(show.homeX | 0, show.homeY | 0)
+        _storyNpcStampPhase(npc, "idle", nowMs | 0, 999999, true)
+        _towerTrialAnnouncerShow = null
+        return
+    }
+    const steps = show.steps || []
+    if (!steps.length) {
+        _towerTrialAnnouncerShow = null
+        return
+    }
+
+    if ((show.subState | 0) === 0) {
+        npc.setFlag(SpriteFlag.Invisible, true)
+        show.subState = 1
+        show.nextAtMs = (nowMs + (show.blinkMs | 0)) | 0
+        return
+    }
+
+    const step = steps[show.stepIndex | 0] || steps[0]
+    const arena = _towerTrialArenaRect()
+    const baseX = arena ? (arena.centerX | 0) : (show.homeX | 0)
+    const baseY = arena ? (arena.centerY | 0) : (show.homeY | 0)
+    npc.setFlag(SpriteFlag.Invisible, false)
+    npc.setPosition((baseX + (step.dx | 0)) | 0, (baseY + (step.dy | 0)) | 0)
+    _storyNpcSetDir(npc, step.dir || "down")
+    _storyNpcStampPhase(npc, step.phase || "idle", nowMs | 0, show.poseMs | 0, true)
+    show.subState = 0
+    show.nextAtMs = (nowMs + (show.poseMs | 0)) | 0
+    show.stepIndex = ((show.stepIndex | 0) + 1) | 0
+    if ((show.stepIndex | 0) >= steps.length) {
+        show.stepIndex = 0
+        show.loopsRemaining = ((show.loopsRemaining | 0) - 1) | 0
+    }
+}
+
+function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: boolean, choices?: Array<string | { id: string; label: string }>): void {
     const session = _towerTrialSession
     if (!force && session) {
         const since = (nowMs | 0) - (session.lastDialogAtMs | 0)
@@ -22624,8 +23911,112 @@ function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: bo
             text: text || "",
             hint: hint || "",
             owner: TOWER_TRIAL_DIALOG_OWNER,
+            choices: choices && choices.length ? choices : undefined,
         })
     } catch { }
+}
+
+function _towerTrialDialogShowIntro(nowMs: number): void {
+    _towerTrialDialogState.mode = "intro"
+    _towerTrialDialogState.scriptIndex = 0
+    _towerTrialDialogState.scriptLines = null
+    _towerTrialDialog(
+        nowMs | 0,
+        "The Tower demands proof. Will you submit to a Trial?",
+        TOWER_TRIAL_DIALOG_HINT_CHOICES,
+        true,
+        TOWER_TRIAL_INTRO_CHOICES
+    )
+}
+
+function _towerTrialDialogShowScriptLine(nowMs: number): void {
+    const idx = _towerTrialDialogState.scriptIndex | 0
+    const lines = _towerTrialDialogState.scriptLines || []
+    const line = lines[idx]
+    if (!line) {
+        _towerTrialDialogShowIntro(nowMs | 0)
+        return
+    }
+    _towerTrialDialogState.mode = "script"
+    _towerTrialDialog(nowMs | 0, line.text || "", line.hint || TOWER_TRIAL_DIALOG_HINT_ADVANCE, true)
+}
+
+function _towerTrialDialogStartScript(nowMs: number, lines: Array<{ text: string; hint?: string }>): void {
+    _towerTrialDialogState.scriptIndex = 0
+    _towerTrialDialogState.scriptLines = lines
+    _towerTrialDialogShowScriptLine(nowMs | 0)
+}
+
+function _towerTrialDialogAdvanceScript(nowMs: number): void {
+    if (_towerTrialDialogState.mode !== "script") return
+    _towerTrialDialogState.scriptIndex = ((_towerTrialDialogState.scriptIndex | 0) + 1) | 0
+    const lines = _towerTrialDialogState.scriptLines || []
+    if ((_towerTrialDialogState.scriptIndex | 0) >= lines.length) {
+        _towerTrialDialogShowIntro(nowMs | 0)
+        return
+    }
+    _towerTrialDialogShowScriptLine(nowMs | 0)
+}
+
+function _towerTrialDialogHandleChoice(choiceId: string, nowMs: number): void {
+    const id = String(choiceId || "")
+    _towerTrialDebugLog("dialog_choice", { id }, nowMs | 0)
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_START) {
+        try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogState.mode = "idle"
+        _towerTrialDialogState.scriptLines = null
+        _towerTrialStart(nowMs | 0)
+        return
+    }
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_PROVING) {
+        _towerTrialDialogStartScript(nowMs | 0, TOWER_TRIAL_SCRIPT_PROVING_LINES)
+        return
+    }
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_HINT) {
+        _towerTrialDialogStartScript(nowMs | 0, _towerTrialBuildHintLines())
+        return
+    }
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_CLOSE) {
+        try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogState.mode = "idle"
+        _towerTrialDialogState.scriptLines = null
+        return
+    }
+}
+
+function _towerTrialDialogHandleAdvance(nowMs: number): void {
+    if (_towerTrialDialogState.mode === "script") {
+        _towerTrialDebugLog("dialog_advance", { scriptIndex: _towerTrialDialogState.scriptIndex | 0 }, nowMs | 0)
+        _towerTrialDialogAdvanceScript(nowMs | 0)
+    }
+}
+
+function _towerTrialBuildHintLines(): Array<{ text: string; hint?: string }> {
+    const req = towerTrialRequirementSetForFloor(_dunFloorIndex | 0)
+    const lines: Array<{ text: string; hint?: string }> = []
+    if (!req.ids.length) {
+        lines.push({ text: "No special rules on this floor." })
+        lines.push({ text: "Step into the circle and show your moves." })
+        return lines
+    }
+    lines.push({ text: `Trial rules for Floor ${_dunFloorIndex | 0}:` })
+    for (let i = 0; i < req.ids.length; i++) {
+        const id = String(req.ids[i] || "")
+        if (id === "noHardcodedTraits") {
+            lines.push({ text: "Traits must use variables or sensors - no raw numbers." })
+        } else if (id === "noRepeatPerButton") {
+            lines.push({ text: "Each button must output two different moves in a row." })
+        } else if (id === "dynamicFamilyOneButton") {
+            lines.push({ text: "At least one button must change family across phases." })
+        } else if (id === "noSingleEnemyBlocks") {
+            lines.push({ text: "Single-enemy blocks are banned - use list-based enemy data." })
+        } else if (id === "capOnlyFunctions") {
+            lines.push({ text: "Caps can only call functions, then return a move." })
+        } else {
+            lines.push({ text: `Rule: ${id}` })
+        }
+    }
+    return lines
 }
 
 function _towerTrialInitEvidence(): TowerTrialLiveEvidence {
@@ -22692,11 +24083,13 @@ function _towerTrialConfigureEnemySafe(enemy: Sprite): void {
 function _towerTrialDestroyEnemies(): void {
     const session = _towerTrialSession
     if (!session || !session.enemies) return
+    const count = session.enemies.length | 0
     for (let i = 0; i < session.enemies.length; i++) {
         const e = session.enemies[i]
         if (e && !(e.flags & sprites.Flag.Destroyed)) _dunDestroySprite(e)
     }
     session.enemies = []
+    if (count > 0) _towerTrialDebugLog("destroy_enemies", { count })
 }
 
 function _towerTrialSpawnEnemies(nowMs: number): void {
@@ -22809,11 +24202,12 @@ function _towerTrialStart(nowMs: number): void {
     }
     _towerTrialResetEvidence(_towerTrialSession)
     _towerTrialSpawnEnemies(nowMs | 0)
+    _towerTrialAnnouncerStartShow(nowMs | 0)
 
     const intro = requirementSet.ids.length > 0
-        ? "Tower Trial started."
+        ? "Tower Trial begins. The Announcer is watching."
         : "Trial ready."
-    _towerTrialDialog(nowMs, intro, "Press each button to prove your moves.", true)
+    _towerTrialDialog(nowMs, intro, "Press Q, W, E, R to test each move. Follow prompts.", true)
     _towerTrialDebugLog("start", {
         runId: runId | 0,
         floor: floor | 0,
@@ -22835,6 +24229,9 @@ function _towerTrialEnd(reason: string, nowMs: number): void {
     _towerTrialDebugLog("end", { reason: String(reason || "") }, nowMs | 0)
     _towerTrialDestroyEnemies()
     _towerTrialDebugBuildArtifact("end", session, reason || "")
+    if (_towerTrialShouldAutosave(session)) {
+        _towerTrialDebugSaveArtifact(String(reason || "end")).catch(() => { })
+    }
     _towerTrialSession = null
     _towerTrialLog("end", { reason: reason || "", now: nowMs | 0 })
 }
@@ -22858,15 +24255,23 @@ function _towerTrialCheckXmlChanges(nowMs: number): boolean {
     const g: any = globalThis as any
     const xmlByProfile = (g && g.__heBlocklyXmlByProfile) ? g.__heBlocklyXmlByProfile : {}
     let changed = false
+    const changedProfiles: string[] = []
     for (let i = 0; i < session.participants.length; i++) {
         const profile = session.participants[i]
         const xml = String(xmlByProfile?.[profile] || "")
         if (xml !== session.startXmlByProfile[profile]) {
             session.startXmlByProfile[profile] = xml
             changed = true
+            changedProfiles.push(profile)
         }
     }
     if (!changed) return false
+
+    // Persist the previous run artifact before resetting the debug stream.
+    _towerTrialDebugBuildArtifact("xml-reset-prev", session, "xml-reset")
+    const runId = ((_towerTrialDebugState.runId | 0) + 1) | 0
+    _towerTrialDebugReset(runId, nowMs | 0)
+
     session.completed = false
     session.phaseIndex = 0
     session.lastPhaseChangeMs = nowMs | 0
@@ -22874,9 +24279,29 @@ function _towerTrialCheckXmlChanges(nowMs: number): boolean {
         const profile = session.participants[i]
         session.simByProfile[profile] = towerTrialSimulateProfile(profile, session.startXmlByProfile[profile] || "", session.floorIndex | 0)
     }
+    const simSummary: Record<string, any> = Object.create(null)
+    for (let i = 0; i < session.participants.length; i++) {
+        const profile = session.participants[i]
+        const sim = session.simByProfile[profile]
+        const blockingIssues = (sim?.issues || [])
+            .filter((it) => _towerTrialIsBlockingIssue(String(it.requirementId || "")))
+            .map((it) => String(it.message || ""))
+        simSummary[profile] = {
+            ok: !!sim?.ok,
+            issueCount: (sim?.issues?.length || 0) | 0,
+            blockingIssues,
+            predictedRepeatButtons: (sim?.predictedRepeatButtons || []).slice(),
+            dynamicFamilyButtons: (sim?.dynamicFamilyButtons || []).slice(),
+        }
+    }
     _towerTrialResetEvidence(session)
     _towerTrialSpawnEnemies(nowMs | 0)
     _towerTrialDialog(nowMs, "Blockly updated.", "Trial reset. Run it start to finish.", true)
+    _towerTrialDebugLog("xml_reset", {
+        runId: runId | 0,
+        changedProfiles: changedProfiles.slice(),
+        simSummary,
+    }, nowMs | 0)
     _towerTrialLog("xml_reset", { now: nowMs | 0 })
     return true
 }
@@ -23035,8 +24460,12 @@ function _towerTrialGetStatusSnapshot(): TowerTrialStatusSnapshot {
 
 (() => {
     const g: any = globalThis as any
-    if (!g || typeof g.__heTowerTrialGetStatus === "function") return
+    if (!g) return
     g.__heTowerTrialGetStatus = () => _towerTrialGetStatusSnapshot()
+    g.__heTowerTrialDebugGet = (tag?: string) => _towerTrialDebugGetArtifact(tag)
+    g.__heTowerTrialDebugSave = (tag?: string) => _towerTrialDebugSaveArtifact(tag)
+    g.__heTowerTrialDebugClear = () => { _towerTrialDebugClear(); return { ok: true } }
+    g.__heTowerTrialDebugLastSave = () => _towerTrialDebugLastSave()
 })()
 
 function _towerTrialFindFirstIssue(session: TowerTrialSession): { text: string; hint: string } | null {
@@ -23080,6 +24509,10 @@ function _towerTrialEvaluateCompletion(nowMs: number, showDialogIfFail: boolean)
     if (allOk) {
         if (!session.completed) {
             session.completed = true
+            _towerTrialDebugLog("complete", { participants: session.participants.slice() }, nowMs | 0)
+            if (_towerTrialShouldAutosave(session)) {
+                _towerTrialDebugSaveArtifact("complete").catch(() => { })
+            }
             _towerTrialDialog(nowMs, "Trial complete.", "The exit pad is now powered.", true)
             _towerTrialLog("complete", { now: nowMs | 0 })
         }
@@ -23089,6 +24522,20 @@ function _towerTrialEvaluateCompletion(nowMs: number, showDialogIfFail: boolean)
 
     if (showDialogIfFail) {
         const issue = _towerTrialFindFirstIssue(session)
+        const statusByProfile: Record<string, any> = Object.create(null)
+        for (let i = 0; i < session.participants.length; i++) {
+            const profile = session.participants[i]
+            const status = _towerTrialProfileStatus(profile, session)
+            statusByProfile[profile] = {
+                ok: !!status.ok,
+                blockingIssue: status.blockingIssue?.message || "",
+                missingButtons: status.missingButtons.slice(),
+                repeatButtons: status.repeatButtons.slice(),
+                dynamicOk: !!status.dynamicOk,
+                needsPhasePress: !!status.needsPhasePress,
+            }
+        }
+        _towerTrialDebugLog("status_fail", { issue, statusByProfile }, nowMs | 0)
         if (issue) _towerTrialDialog(nowMs, issue.text, issue.hint)
     }
 }
@@ -23107,9 +24554,16 @@ function _towerTrialRecordMove(
 
     const live = session.liveByProfile[profileKey] || _towerTrialInitEvidence()
     session.liveByProfile[profileKey] = live
+    const phase = session.phaseIndex | 0
 
     if (!parsed) {
         live.invalidOutputCount = (live.invalidOutputCount | 0) + 1
+        _towerTrialDebugLog("invalid_output", {
+            profileKey,
+            button,
+            phase,
+            invalidOutputCount: live.invalidOutputCount | 0,
+        }, nowMs | 0)
         _towerTrialEvaluateCompletion(nowMs | 0, false)
         return
     }
@@ -23125,6 +24579,13 @@ function _towerTrialRecordMove(
     ]
 
     live.pressCount[button] = ((live.pressCount[button] | 0) + 1) | 0
+    _towerTrialDebugLog("move", {
+        profileKey,
+        button,
+        phase,
+        pressCount: live.pressCount[button] | 0,
+        output: out.slice(),
+    }, nowMs | 0)
 
     if (session.requirementSet.ids.indexOf("noRepeatPerButton") >= 0) {
         const sim = session.simByProfile[profileKey]
@@ -23133,6 +24594,7 @@ function _towerTrialRecordMove(
         if (sim && sim.predictedRepeatButtons && sim.predictedRepeatButtons.indexOf(button) >= 0) {
             if ((live.pressCount[button] | 0) === 1 && !warned[button]) {
                 warned[button] = true
+                _towerTrialDebugLog("repeat_warn", { profileKey, button, phase }, nowMs | 0)
                 _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} may repeat.`, "Change the output before the next press.")
             }
         }
@@ -23147,13 +24609,13 @@ function _towerTrialRecordMove(
             }
             if (same) {
                 live.repeatViolationByButton[button] = true
+                _towerTrialDebugLog("repeat_violation", { profileKey, button, phase, output: out.slice() }, nowMs | 0)
                 _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} repeats the same move.`, "Change the output and try again.")
             }
         }
     }
 
     if (session.requirementSet.ids.indexOf("dynamicFamilyOneButton") >= 0) {
-        const phase = session.phaseIndex | 0
         if (!live.familyByPhase[button]) live.familyByPhase[button] = Object.create(null)
         live.familyByPhase[button][phase] = String(parsed.family | 0)
     }
@@ -23171,7 +24633,16 @@ function _towerTrialRecordMove(
             }
             if (!ready) break
         }
-        if (ready) _towerTrialAdvancePhase(nowMs | 0)
+        if (ready) {
+            const pressSummary: Record<string, any> = Object.create(null)
+            for (let i = 0; i < session.participants.length; i++) {
+                const prof = session.participants[i]
+                const ev = session.liveByProfile[prof] || _towerTrialInitEvidence()
+                pressSummary[prof] = _towerTrialDebugCopy(ev.pressCount || {})
+            }
+            _towerTrialDebugLog("phase_ready", { phase: phase | 0, pressSummary }, nowMs | 0)
+            _towerTrialAdvancePhase(nowMs | 0)
+        }
     }
 
     _towerTrialEvaluateCompletion(nowMs | 0, false)
@@ -23189,7 +24660,8 @@ function _towerTrialTryHandleInteract(hero: Sprite, heroIndex: number, nowMs: nu
     if (!inRange) return false
 
     if (!_towerTrialSession || !_towerTrialSession.active) {
-        _towerTrialStart(nowMs | 0)
+        _towerTrialDialogStartScript(nowMs | 0, TOWER_TRIAL_SCRIPT_MAIN_LINES)
+        _towerTrialAnnouncerStartShow(nowMs | 0)
         return true
     }
 
@@ -23209,6 +24681,7 @@ function _towerTrialTick(nowMs: number): void {
         return
     }
     _towerTrialEnsureAnnouncer()
+    _towerTrialAnnouncerTickShow(nowMs | 0)
     if (!_towerTrialSession || !_towerTrialSession.active) return
     _towerTrialCheckXmlChanges(nowMs | 0)
     _towerTrialEvaluateCompletion(nowMs | 0, false)
@@ -28047,7 +29520,7 @@ function _dbgWpnDropApplyLoadoutForFloor(hi: number, hero: Sprite, floor: number
         " rarity=" + String(rarity || "") +
         " cast=" + String(castPick || "") +
         " slots=" + slotSummaries.join("|")
-    console.log("[WPN-DROP-SIM] " + line)
+    if (WEAPON_DEBUG) console.log("[WPN-DROP-SIM] " + line)
 }
 
 function _dbgWpnDropSimTick(): void {
@@ -43589,7 +45062,7 @@ function _strPublishSwingSegForHero(heroIndex: number, hero: Sprite, nowMs: numb
 
         // Debug only on segment transitions (not every frame)
         if (DEBUG_STR_PROJECTILE_FRAMES) {
-            console.log(`[STR][SEG] hi=${heroIndex} ${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
+            console.log(`[STR][SEG] hi=${heroIndex} seg=${segName} start=${segStart} dur=${segDur} phaseStart=${phaseStart} phaseDur=${phaseDur}`)
         }
     }
 
@@ -44038,7 +45511,12 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
         prepColNow = _strengthFrameColForSeg("prepareToCharge", elapsed | 0, partDur | 0);
         if ((prepColNow | 0) !== 2) {
             if (DEBUG_STR_PROJECTILE_FRAMES) {
-                console.log("[STR][CHARGEPIX][HIDE] part=" + partName + " col=" + (prepColNow | 0));
+                console.log(
+                    "[STR][CHARGEPIX][HIDE]" +
+                    " hero=" + (heroIndex | 0) +
+                    " part=" + partName +
+                    " col=" + (prepColNow | 0)
+                );
             }
             _destroyStrengthChargeTrail(heroIndex, hero);
             return;
@@ -44047,7 +45525,12 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
         // Keep the outline visible during charge hold.
     } else {
         if (DEBUG_STR_PROJECTILE_FRAMES) {
-            console.log("[STR][CHARGEPIX][HIDE] part=" + partName + " col=2");
+            console.log(
+                "[STR][CHARGEPIX][HIDE]" +
+                " hero=" + (heroIndex | 0) +
+                " part=" + partName +
+                " col=2"
+            );
         }
         _destroyStrengthChargeTrail(heroIndex, hero);
         return;
@@ -44137,11 +45620,15 @@ function _updateStrengthChargeTrailForHero(heroIndex: number, hero: Sprite, nowM
                 if (v === edgec) edge++;
             }
         }
-        console.log("[STR][CHARGEPIX] part=" + partName +
+        console.log(
+            "[STR][CHARGEPIX]" +
+            " hero=" + (heroIndex | 0) +
+            " part=" + partName +
             " col=" + (partName === "preparetocharge" ? prepColNow : 2) +
             " nz=" + nz +
             " r1=" + r1 +
-            " edge=" + edge);
+            " edge=" + edge
+        );
     }
 }
 
@@ -44778,20 +46265,21 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
         });
     }
     if (DEBUG_STR_PROJECTILE_METRICS) {
-        console.log("[STR][RELEASE][METRICS]", {
-            heroIndex,
-            actionSeq: sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0,
-            arcDeg: arcDeg | 0,
-            arcMaxDeg: arcMaxDeg0 | 0,
-            minArcDeg,
-            reachExtraPx: reachExtraPx | 0,
-            swingMs: swingDurationMs | 0,
-            chargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
-            chargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
-            wasHeld: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD) ? 1 : 0,
-            button,
-            element: el | 0
-        });
+        console.log(
+            "[STR][RELEASE][METRICS]" +
+            " hero=" + (heroIndex | 0) +
+            " actionSeq=" + (sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0) +
+            " arcDeg=" + (arcDeg | 0) +
+            " arcMaxDeg=" + (arcMaxDeg0 | 0) +
+            " minArcDeg=" + (minArcDeg | 0) +
+            " reachExtraPx=" + (reachExtraPx | 0) +
+            " swingMs=" + (swingDurationMs | 0) +
+            " chargeStartMs=" + (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0) +
+            " chargeMaxMs=" + (sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0) +
+            " held=" + (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD) ? 1 : 0) +
+            " button=" + button +
+            " element=" + (el | 0)
+        );
     }
 
     const payloadElement = sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0
@@ -45588,27 +47076,28 @@ function spawnStrengthSwingProjectile(
         sprites.setDataNumber(proj, "SS_LAST_T", 0)
 
         if (DEBUG_STR_PROJECTILE_METRICS) {
-            console.log("[STR][PROJ][SPAWN]", {
-                heroIndex,
-                side: arcSide | 0,
-                arcDeg: totalArcDeg | 0,
-                swingMs: swingDuration | 0,
-                arcStartFracX1000: arcStartFracX1000 | 0,
-                arcStartMs: arcStartMs | 0,
-                slashMs: slashMs | 0,
-                resetMs: resetMs | 0,
-                innerR: inner0 | 0,
-                leadEdge: leadEdge | 0,
-                frontStartR: frontStartR | 0,
-                reachFromInner: reachFromInner | 0,
-                outerR: outerR | 0,
-                arcBaseW: arcBaseW | 0,
-                arcBaseMin: arcBaseMin | 0,
-                nx: +nx.toFixed(3),
-                ny: +ny.toFixed(3),
-                tipLocalX: +tipInitX.toFixed(2),
-                tipLocalY: +tipInitY.toFixed(2)
-            });
+            console.log(
+                "[STR][PROJ][SPAWN]" +
+                " hero=" + (heroIndex | 0) +
+                " side=" + (arcSide | 0) +
+                " arcDeg=" + (totalArcDeg | 0) +
+                " swingMs=" + (swingDuration | 0) +
+                " arcStartFracX1000=" + (arcStartFracX1000 | 0) +
+                " arcStartMs=" + (arcStartMs | 0) +
+                " slashMs=" + (slashMs | 0) +
+                " resetMs=" + (resetMs | 0) +
+                " innerR=" + (inner0 | 0) +
+                " leadEdge=" + (leadEdge | 0) +
+                " frontStartR=" + (frontStartR | 0) +
+                " reachFromInner=" + (reachFromInner | 0) +
+                " outerR=" + (outerR | 0) +
+                " arcBaseW=" + (arcBaseW | 0) +
+                " arcBaseMin=" + (arcBaseMin | 0) +
+                " nx=" + (+nx.toFixed(3)) +
+                " ny=" + (+ny.toFixed(3)) +
+                " tipLocalX=" + (+tipInitX.toFixed(2)) +
+                " tipLocalY=" + (+tipInitY.toFixed(2))
+            );
         }
 
         proj.lifespan = swingDuration
@@ -45711,23 +47200,23 @@ function updateStrengthProjectilesMotionFor(
 
     if (age >= swingMs) {
         if (DEBUG_STR_PROJECTILE_METRICS) {
-            console.log("S-UPDATE: DONE heroIndex=" + heroIndex +
-                " age=" + age + " swingMs=" + swingMs)
-            console.log("[STR][PROJ][END]", {
-                heroIndex,
-                age: age | 0,
-                swingMs: swingMs | 0,
-                t: +(Math.max(0, Math.min(1, age / Math.max(1, swingMs)))).toFixed(3),
-                arcT: sprites.readDataNumber(proj, "SS_LAST_ARC_T") | 0,
-                arcActive: (sprites.readDataNumber(proj, "SS_LAST_ARC_ACTIVE") | 0),
-                segName: sprites.readDataString(proj, "SS_LAST_SEG") || "",
-                segElapsed: sprites.readDataNumber(proj, "SS_LAST_SEG_EL") | 0,
-                segDur: sprites.readDataNumber(proj, "SS_LAST_SEG_DUR") | 0,
-                arcStartFracX1000: sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0,
-                arcStartSegMs: sprites.readDataNumber(proj, "SS_LAST_ARC_START_SEG_MS") | 0,
-                arcDeg: sprites.readDataNumber(proj, "SS_ARC_DEG") | 0,
-                reachFromFront: sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0
-            });
+            const tNorm = +(Math.max(0, Math.min(1, age / Math.max(1, swingMs)))).toFixed(3);
+            console.log(
+                "[STR][PROJ][END]" +
+                " hero=" + (heroIndex | 0) +
+                " age=" + (age | 0) +
+                " swingMs=" + (swingMs | 0) +
+                " t=" + tNorm +
+                " arcT=" + (sprites.readDataNumber(proj, "SS_LAST_ARC_T") | 0) +
+                " arcActive=" + (sprites.readDataNumber(proj, "SS_LAST_ARC_ACTIVE") | 0) +
+                " seg=" + (sprites.readDataString(proj, "SS_LAST_SEG") || "") +
+                " segElapsed=" + (sprites.readDataNumber(proj, "SS_LAST_SEG_EL") | 0) +
+                " segDur=" + (sprites.readDataNumber(proj, "SS_LAST_SEG_DUR") | 0) +
+                " arcStartFracX1000=" + (sprites.readDataNumber(proj, STR_ARC_START_FRAC_KEY) | 0) +
+                " arcStartSegMs=" + (sprites.readDataNumber(proj, "SS_LAST_ARC_START_SEG_MS") | 0) +
+                " arcDeg=" + (sprites.readDataNumber(proj, "SS_ARC_DEG") | 0) +
+                " reachFromFront=" + (sprites.readDataNumber(proj, "SS_REACH_FRONT") | 0)
+            );
         }
 
         _destroyHeroBodyPaintFxForProj(proj)
@@ -45772,7 +47261,11 @@ function updateStrengthProjectilesMotionFor(
         nx = 1
         ny = 0
         if (DEBUG_STR_PROJECTILE_FRAMES) {
-            console.log("S-UPDATE: WARNING nx,ny were (0,0); defaulted to (1,0)")
+            console.log(
+                "[STR][PROJ][WARN]" +
+                " hero=" + (heroIndex | 0) +
+                " nx=0 ny=0 default=1,0"
+            );
         }
     }
 
@@ -45809,17 +47302,20 @@ function updateStrengthProjectilesMotionFor(
             3
         );
         const slashStarted = sprites.readDataNumber(proj, "SS_SLASH_STARTED") | 0;
-        if (slashStarted === 0) {
-            forceFrame3 = true;
-            frameCol = 3;
-            segElapsed = 0;
-            sprites.setDataNumber(proj, "SS_SLASH_STARTED", 1);
-            if (DEBUG_STR_PROJECTILE_FRAMES) {
-                console.log("[STR][FORCE_FRAME3] heroIndex=" + heroIndex +
-                    " segElapsed=" + (segElapsed | 0) +
-                    " segDur=" + (segDur | 0));
+            if (slashStarted === 0) {
+                forceFrame3 = true;
+                frameCol = 3;
+                segElapsed = 0;
+                sprites.setDataNumber(proj, "SS_SLASH_STARTED", 1);
+                if (DEBUG_STR_PROJECTILE_FRAMES) {
+                    console.log(
+                        "[STR][PROJ][FORCE_FRAME3]" +
+                        " hero=" + (heroIndex | 0) +
+                        " segElapsed=" + (segElapsed | 0) +
+                        " segDur=" + (segDur | 0)
+                    );
+                }
             }
-        }
         if ((sprites.readDataNumber(proj, "SS_SLASH_LOGGED") | 0) === 0) {
             if (DEBUG_STR_PROJECTILE_FRAMES) {
                 _wpnTraceLog("str.slash.start", {
@@ -45930,13 +47426,21 @@ function updateStrengthProjectilesMotionFor(
                 transitionMs: transitionMs | 0
             };
             _wpnTraceLog("str.proj.frame", frameLog);
-            console.log("[STR][PROJFRAME] seg=" + frameLog.seg +
+            console.log(
+                "[STR][PROJ][FRAME]" +
+                " id=" + (frameLog.id | 0) +
+                " hero=" + (frameLog.heroIndex | 0) +
+                " seg=" + frameLog.seg +
                 " col=" + frameLog.frameCol +
                 " segElapsed=" + frameLog.segElapsed +
                 " segDur=" + frameLog.segDur +
                 " arcActive=" + frameLog.arcActive +
                 " arcT=" + frameLog.arcT +
-                " trans=" + frameLog.inTransition);
+                " arcDeg=" + frameLog.arcDeg +
+                " swingMs=" + frameLog.swingMs +
+                " inTransition=" + frameLog.inTransition +
+                " transitionMs=" + frameLog.transitionMs
+            );
             sprites.setDataString(proj, STR_PROJ_LAST_SEG_LOG_KEY, segName || "");
             sprites.setDataNumber(proj, STR_PROJ_LAST_FRAME_COL_KEY, frameCol | 0);
             sprites.setDataNumber(proj, STR_PROJ_LAST_LOG_MS_KEY, nowMs | 0);
@@ -46322,9 +47826,12 @@ function updateStrengthProjectilesMotionFor(
                         0
                     );
                 } else if (DEBUG_STR_PROJECTILE_FRAMES) {
-                    console.log("[STR][FRAME3_MISSING] heroIndex=" + heroIndex +
+                    console.log(
+                        "[STR][PROJ][FRAME3_MISSING]" +
+                        " hero=" + (heroIndex | 0) +
                         " hasSeedInfo=" + (!!seedInfo ? 1 : 0) +
-                        " hasSeedShape=" + (!!seedShape ? 1 : 0));
+                        " hasSeedShape=" + (!!seedShape ? 1 : 0)
+                    );
                 }
             }
             if (STR_USE_WPN_AURA_OUTLINE_ONLY && inFrame4) {
@@ -46451,13 +47958,17 @@ function updateStrengthProjectilesMotionFor(
                     }
                 }
                 if (DEBUG_STR_PROJECTILE_FRAMES) {
-                    console.log("[STR][PROJ][TRANS] step=" + (stepIndex | 0) +
+                    console.log(
+                        "[STR][PROJ][TRANS]" +
+                        " hero=" + (heroIndex | 0) +
+                        " step=" + (stepIndex | 0) +
                         " t=" + tStep.toFixed(2) +
                         " seedR=" + (seedCenterR | 0) +
                         " targetR=" + (targetR | 0) +
                         " interpR=" + (interpR | 0) +
                         " rx=" + (interpRx | 0) +
-                        " ry=" + (interpRy | 0));
+                        " ry=" + (interpRy | 0)
+                    );
                 }
             }
             if (_wpnTraceShouldLog(proj, nowMs | 0) && segName === "strengthSlash") {
@@ -46510,13 +48021,17 @@ function updateStrengthProjectilesMotionFor(
                         if (v === edge) edgeCount++;
                     }
                 }
-                console.log("[STR][FRAMEPIX] seg=" + segName +
+                console.log(
+                    "[STR][PROJ][FRAMEPIX]" +
+                    " hero=" + (heroIndex | 0) +
+                    " seg=" + segName +
                     " col=" + (frameCol | 0) +
                     " in3=" + (inFrame3 ? 1 : 0) +
                     " in4=" + (inFrame4 ? 1 : 0) +
                     " nz=" + nonZero +
                     " r1=" + r1Count +
-                    " edge=" + edgeCount);
+                    " edge=" + edgeCount
+                );
             }
             _wpnTraceLogPixels(proj, nowMs | 0, "str.tracePixels", img, auraR1 | 0, auraEdge | 0)
         }
@@ -49440,6 +50955,16 @@ const AGI_WINDUP_PULLBACK_ENABLED = false
 const AGI_HOOKSHOT_AIM_STEP_MDEG = 5000           // 5 deg per frame
 const AGI_HOOKSHOT_CHAIN_LINK_PX = 10
 const AGI_HOOKSHOT_CHAIN_SPACING_PX = 5           // half-link overlap
+const AGI_HOOKSHOT_CHAIN_TEX_LOOP = "chain loop 128x128"
+const AGI_HOOKSHOT_CHAIN_TEX_MIDDLE = "chain middle 128x128"
+const AGI_HOOKSHOT_CHAIN_TEX_END = "chain end 128x128"
+const AGI_HOOKSHOT_CHAIN_TEX_BASE_PX = 128
+const AGI_HOOKSHOT_CHAIN_SCALE = 0.2
+const AGI_HOOKSHOT_CHAIN_OVERLAP_PCT_X1000 = 200
+const AGI_HOOKSHOT_CHAIN_Z_BIAS = (AGI_COMET_Z_BIAS | 0) - 2
+const AGI_HOOKSHOT_SPEAR_Z_BIAS = (AGI_COMET_Z_BIAS | 0) + 2
+const AGI_HOOKSHOT_SHOW_SPEAR_VISUAL = true
+const AGI_HOOKSHOT_SHOW_MARKER_VISUAL = false
 const AGI_HOOKSHOT_BASE_LEN_MULT_X1000 = 1000     // base reach = 1.0 * weapon length
 const AGI_HOOKSHOT_BASE_LEN_ADD_PX = 0
 const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-length of travel
@@ -52296,6 +53821,31 @@ function _agiHookChainImage(): Image {
     return img
 }
 
+function _agiHookChainTextureForIndex(i: number, count: number): string {
+    const idx = i | 0;
+    const total = count | 0;
+    if (total <= 1) return AGI_HOOKSHOT_CHAIN_TEX_END;
+    if (idx <= 0) return AGI_HOOKSHOT_CHAIN_TEX_LOOP;
+    if (idx >= (total - 1)) return AGI_HOOKSHOT_CHAIN_TEX_END;
+    return AGI_HOOKSHOT_CHAIN_TEX_MIDDLE;
+}
+
+function _agiHookApplyChainTexture(link: Sprite, texKey: string, rot: number): boolean {
+    if (!link) return false;
+    const anyLink: any = link as any;
+    const native = anyLink.native;
+    if (!native) return false;
+    const scene = native.scene;
+    if (!scene || !scene.textures || !scene.textures.exists || !scene.textures.exists(texKey)) return false;
+    try {
+        native.setTexture(texKey);
+        if (typeof native.setOrigin === "function") native.setOrigin(0.5, 0.5);
+        if (typeof native.setScale === "function") native.setScale(AGI_HOOKSHOT_CHAIN_SCALE, AGI_HOOKSHOT_CHAIN_SCALE);
+        if (typeof native.setRotation === "function") native.setRotation(rot);
+    } catch { }
+    return true;
+}
+
 let _agiHookMarkerImg: Image | null = null
 function _agiHookMarkerImage(): Image {
     if (_agiHookMarkerImg) return _agiHookMarkerImg
@@ -52322,14 +53872,27 @@ function _agiHookDestroySprite(s: Sprite | null): void {
     if (!(s.flags & sprites.Flag.Destroyed)) s.destroy()
 }
 
+function _agiHookHideSpearVisuals(st: AgiHookshotState): void {
+    if (st.spear) _agiHookDestroySprite(st.spear)
+    st.spear = null
+    if (st.aimSpear) _agiHookDestroySprite(st.aimSpear)
+    st.aimSpear = null
+}
+
 function _agiHookClearVisuals(st: AgiHookshotState): void {
     if (st.spear) _agiHookDestroySprite(st.spear)
     st.spear = null
     if (st.aimSpear) _agiHookDestroySprite(st.aimSpear)
     st.aimSpear = null
-    if (st.aimComet) _agiHookDestroySprite(st.aimComet)
+    if (st.aimComet) {
+        _destroyAgilityCometAurasForFx(st.aimComet);
+        _agiHookDestroySprite(st.aimComet)
+    }
     st.aimComet = null
-    if (st.comet) _agiHookDestroySprite(st.comet)
+    if (st.comet) {
+        _destroyAgilityCometAurasForFx(st.comet);
+        _agiHookDestroySprite(st.comet)
+    }
     st.comet = null
     if (st.marker) _agiHookDestroySprite(st.marker)
     st.marker = null
@@ -52616,7 +54179,7 @@ function _agiHookEnsureSpearSprite(st: AgiHookshotState, hero: Sprite, heroIndex
         spr = sprites.create(pack.img, SpriteKind.HeroWeapon)
         spr.setFlag(SpriteFlag.Ghost, true)
         spr.setFlag(SpriteFlag.Invisible, false)
-        spr.z = hero.z + 2
+        spr.z = hero.z + (AGI_HOOKSHOT_SPEAR_Z_BIAS | 0)
     } else {
         spr.setImage(pack.img)
     }
@@ -52633,6 +54196,217 @@ function _agiHookEnsureSpearSprite(st: AgiHookshotState, hero: Sprite, heroIndex
     if (isGhost) st.aimSpear = spr
     else st.spear = spr
     return spr
+}
+
+function _agiHookEnsureCometSprite(st: AgiHookshotState, hero: Sprite, heroIndex: number, element: number, isGhost: boolean): Sprite {
+    let fx = isGhost ? st.aimComet : st.comet
+    if (fx && (fx.flags & sprites.Flag.Destroyed)) fx = null
+    if (!fx) {
+        fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        fx.setFlag(SpriteFlag.Ghost, true)
+        fx.setFlag(SpriteFlag.Invisible, false)
+        fx.x = hero.x
+        fx.y = hero.y
+        fx.z = hero.z + (AGI_COMET_Z_BIAS | 0)
+
+        sprites.setDataNumber(fx, PROJ_DATA.FAMILY, FAMILY.AGILITY | 0)
+        sprites.setDataNumber(fx, PROJ_DATA.HERO_INDEX, heroIndex | 0)
+        sprites.setDataNumber(fx, PROJ_DATA.ELEMENT, element | 0)
+
+        const elem = _heroBodyEffectElement(hero, element | 0)
+        const tint = _elementTintForMode(elem | 0, "offense") | 0
+        applyEffectToSprite(fx, STR_ARC_SKIN_ID, {
+            mode: "full",
+            alpha: AGI_COMET_ALPHA,
+            blend: "normal",
+            repeat: -1,
+            tint: tint || undefined
+        })
+        sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, "")
+        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0)
+        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0)
+        sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0)
+    }
+    if (isGhost) st.aimComet = fx
+    else st.comet = fx
+    return fx
+}
+
+function _agiHookUpdateCometSprite(
+    st: AgiHookshotState,
+    hero: Sprite,
+    heroIndex: number,
+    nx: number,
+    ny: number,
+    baseX: number,
+    baseY: number,
+    tipDist: number,
+    weaponLen: number,
+    nowMs: number,
+    state: number,
+    isGhost: boolean,
+    alignX?: number,
+    alignY?: number
+): void {
+    const fx = _agiHookEnsureCometSprite(st, hero, heroIndex, st.element | 0, isGhost)
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
+
+    let wLen = weaponLen | 0
+    if (wLen <= 0) wLen = st.weaponLen | 0
+    if (wLen <= 0) wLen = _agiHookWeaponLength(hero, nx, ny)
+    if (wLen <= 0) wLen = 1
+
+    let tip = Math.max(wLen, tipDist | 0)
+    const maxDist = Math.max(wLen, st.maxDist | 0)
+
+    let preActive = false
+    let activateAt = 0
+    if ((state | 0) === AGI_HOOK_STATE.AIMING) {
+        activateAt = st.pendingWindupEndMs | 0
+        preActive = activateAt > (nowMs | 0)
+    }
+    const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0)
+    if (preActive && preT <= 0) {
+        fx.setFlag(SpriteFlag.Invisible, true)
+        _setAgilityCometAurasVisible(fx, false)
+        return
+    }
+
+    const holdHigh = !preActive && (((state | 0) === AGI_HOOK_STATE.RETRACT) || (((state | 0) === AGI_HOOK_STATE.EXTEND) && ((st.hitReady | 0) !== 0)))
+
+    let growthT = 0
+    if (!preActive) {
+        if (holdHigh) growthT = 1
+        else if (maxDist > wLen) growthT = Math.max(0, Math.min(1, (tip - wLen) / Math.max(1, (maxDist - wLen))))
+        else growthT = 1
+    }
+
+    let reelT = 0
+    if (!preActive && (state | 0) === AGI_HOOK_STATE.RETRACT) {
+        const nearStart = wLen * 1.2
+        if (tip <= nearStart) {
+            reelT = Math.max(0, Math.min(1, (nearStart - tip) / Math.max(1, wLen * 0.4)))
+        }
+    }
+
+    if (!preActive && reelT <= 0) {
+        tip = Math.max(wLen, tip - (AGI_COMET_TIP_BACK_PX | 0))
+    }
+    if (reelT > 0) {
+        const backOff = Math.max(0, (maxDist - wLen) * reelT * (AGI_COMET_REEL_BACK_PCT_X1000 / 1000))
+        tip = Math.max(wLen, tip - backOff)
+    }
+
+    const baseTipX = baseX + nx * tip
+    const baseTipY = baseY + ny * tip
+    const hasAlign = Number.isFinite(alignX) && Number.isFinite(alignY)
+    const tipAnchorX = hasAlign ? (alignX as number) : baseTipX
+    const tipAnchorY = hasAlign ? (alignY as number) : baseTipY
+
+    const moveAngle = Math.atan2(ny, nx)
+    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE)
+
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)))
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP)
+
+    let scale = AGI_COMET_SCALE * (0.6 + (0.4 * growEase))
+    if (preActive) scale *= 0.75
+    if (reelT > 0) scale *= Math.max(AGI_COMET_END_SCALE, 1 - (0.7 * reelT))
+
+    let alpha = preActive ? (AGI_COMET_PREACTIVE_ALPHA * (0.4 + (0.6 * preT))) : (AGI_COMET_ALPHA * (0.6 + (0.4 * growEase)))
+    if (reelT > 0) alpha *= Math.max(0, 1 - reelT)
+    if (isGhost) alpha *= 0.85
+
+    if (alpha <= 0.01 || scale <= 0.01) {
+        fx.setFlag(SpriteFlag.Invisible, true)
+        _setAgilityCometAurasVisible(fx, false)
+        return
+    }
+
+    const startMs = st.cometStartMs | 0
+    const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs | 0, startMs | 0)
+    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0)
+    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0)
+    const fallbackOffset = _agiCometDirOffset(nx, ny)
+
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0)
+    sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot)
+    sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale)
+    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)))
+    sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0)
+    sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0)
+
+    let tipX = tipAnchorX
+    let tipY = tipAnchorY
+    if (tipOffset) {
+        const cos = Math.cos(rot)
+        const sin = Math.sin(rot)
+        const offX = (tipOffset.dx * scale)
+        const offY = (tipOffset.dy * scale)
+        const rotX = (offX * cos) - (offY * sin)
+        const rotY = (offX * sin) + (offY * cos)
+        tipX = tipAnchorX - rotX
+        tipY = tipAnchorY - rotY
+    } else {
+        tipX = tipAnchorX + (fallbackOffset.dx | 0)
+        tipY = tipAnchorY + (fallbackOffset.dy | 0)
+    }
+
+    fx.x = tipX
+    fx.y = tipY
+    fx.z = hero.z + (AGI_COMET_Z_BIAS | 0)
+    fx.setFlag(SpriteFlag.Invisible, false)
+
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const auraPalette = _weaponAuraPaletteForElement(st.element | 0, dirKey, "offense");
+    const auraTints = [
+        _arcadeColorIndexToTint(auraPalette.r1 | 0),
+        _arcadeColorIndexToTint(auraPalette.r2 | 0),
+        _arcadeColorIndexToTint(auraPalette.r3 | 0)
+    ];
+    _ensureAgilityCometAurasForFx(fx, auraTints, (hero.z | 0) + (AGI_COMET_Z_BIAS | 0) + 1);
+    const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
+    const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, STR_ARC_AURA_ALPHA_BY_RADIUS.length);
+    for (let i = 0; i < auraCount; i++) {
+        const auraFx = sprites.readDataSprite(fx, auraKeys[i]);
+        if (!auraFx || (auraFx.flags & sprites.Flag.Destroyed)) continue;
+        const auraSkin = sprites.readDataString(auraFx, "effectSkin") || STR_ARC_SKIN_ID;
+        const auraIdx = _strengthArcFrameIndexFromRaw(auraSkin, rawFrame | 0);
+        const auraAlpha = Math.min(1, Math.max(0.01, alpha * (STR_ARC_AURA_ALPHA_BY_RADIUS[i] || 0) * AGI_COMET_AURA_ALPHA_MULT));
+        sprites.setDataNumber(auraFx, EFFECT_FRAME_INDEX_DATA_KEY, auraIdx | 0);
+        sprites.setDataNumber(auraFx, EFFECT_ROT_DATA_KEY, rot);
+        sprites.setDataNumber(auraFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(auraFx, EFFECT_ALPHA_DATA_KEY, auraAlpha);
+        sprites.setDataNumber(auraFx, EFFECT_TINT_DATA_KEY, auraTints[i] | 0);
+        auraFx.x = tipX;
+        auraFx.y = tipY;
+        auraFx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0) + 1 + i;
+        auraFx.setFlag(SpriteFlag.Invisible, false);
+    }
+
+    if (_agiCometShouldLog(fx, nowMs | 0)) {
+        _agiCometLogLine({
+            kind: isGhost ? "hook.aim" : ((state | 0) === AGI_HOOK_STATE.EXTEND ? "hook.extend" : "hook.retract"),
+            heroIndex: heroIndex | 0,
+            ghost: !!isGhost,
+            rawFrame: rawFrame | 0,
+            frameIdx: frameIdx | 0,
+            moveAngle,
+            rot,
+            tipX,
+            tipY,
+            baseX,
+            baseY,
+            nx,
+            ny,
+            scale,
+            alpha,
+            preActive,
+            growthT,
+            reelT,
+            skinId: STR_ARC_SKIN_ID
+        });
+    }
 }
 
 function _agiHookPositionSpear(spr: Sprite, baseX: number, baseY: number): void {
@@ -52912,17 +54686,24 @@ function _agiHookUpdateChain(
         }
         return
     }
-    const spacing = Math.max(1, AGI_HOOKSHOT_CHAIN_SPACING_PX | 0)
+    const basePx = Math.max(8, AGI_HOOKSHOT_CHAIN_TEX_BASE_PX | 0)
+    const scale = Math.max(0.05, AGI_HOOKSHOT_CHAIN_SCALE)
+    const overlap = Math.max(0, Math.min(900, AGI_HOOKSHOT_CHAIN_OVERLAP_PCT_X1000 | 0))
+    const spacing = Math.max(
+        2,
+        Math.round((basePx * scale) * (1 - (overlap / 1000)))
+    )
     let count = Math.floor(dist / spacing)
     if (count < 1) count = 1
 
     if (!st.chain) st.chain = []
+    const rot = Math.atan2(dy, dx) - (Math.PI / 2)
     const img = _agiHookChainImage()
     while (st.chain.length < count) {
         const link = sprites.create(img, SpriteKind.HeroEffect)
         link.setFlag(SpriteFlag.Ghost, true)
         link.setFlag(SpriteFlag.Invisible, false)
-        link.z = hero.z + 1
+        link.z = hero.z + (AGI_HOOKSHOT_CHAIN_Z_BIAS | 0)
         st.chain.push(link)
     }
     for (let i = 0; i < st.chain.length; i++) {
@@ -52934,7 +54715,15 @@ function _agiHookUpdateChain(
         const t = (count <= 1) ? 0 : (i * spacing) / dist
         link.x = baseX + dx * t
         link.y = baseY + dy * t
+        link.z = hero.z + (AGI_HOOKSHOT_CHAIN_Z_BIAS | 0)
         link.setFlag(SpriteFlag.Invisible, false)
+        const texKey = _agiHookChainTextureForIndex(i, count)
+        const applied = _agiHookApplyChainTexture(link, texKey, rot)
+        if (!applied) {
+            link.setImage(img)
+            const anyLink: any = link as any
+            if (typeof anyLink.setRotation === "function") anyLink.setRotation(rot)
+        }
     }
 }
 
@@ -53360,6 +55149,8 @@ function _agiHookFinish(
 
     _agiHookRescueIfBlocked(hero, st)
 
+    sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
+
     if (busyUntilNew > 0) setHeroBusyUntil(heroIndex, busyUntilNew | 0)
     else setHeroBusyUntil(heroIndex, 0)
 }
@@ -53376,6 +55167,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
         const state = st.state | 0
 
         if (state === AGI_HOOK_STATE.NONE) {
+            sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
             if (st.spear || st.marker || st.aimSpear || (st.chain && st.chain.length)) {
                 _agiHookClearVisuals(st)
             }
@@ -53383,6 +55175,8 @@ function updateAgilityHookshotAll(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
             continue
         }
+
+        sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 1)
 
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
             _agiHookFinish(hi, hero, st, now, true, "dead")
@@ -53520,25 +55314,36 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 }
             }
 
-            let marker = st.marker
-            if (!marker || (marker.flags & sprites.Flag.Destroyed)) {
-                marker = sprites.create(_agiHookMarkerImage(), SpriteKind.HeroEffect)
-                marker.setFlag(SpriteFlag.Ghost, true)
-                marker.setFlag(SpriteFlag.Invisible, false)
-                marker.z = hero.z + 2
-                st.marker = marker
-            }
-            if (marker) {
-                marker.x = ray.x
-                marker.y = ray.y
-                marker.setFlag(SpriteFlag.Invisible, false)
+            if (AGI_HOOKSHOT_SHOW_MARKER_VISUAL) {
+                let marker = st.marker
+                if (!marker || (marker.flags & sprites.Flag.Destroyed)) {
+                    marker = sprites.create(_agiHookMarkerImage(), SpriteKind.HeroEffect)
+                    marker.setFlag(SpriteFlag.Ghost, true)
+                    marker.setFlag(SpriteFlag.Invisible, false)
+                    marker.z = hero.z + 2
+                    st.marker = marker
+                }
+                if (marker) {
+                    marker.x = ray.x
+                    marker.y = ray.y
+                    marker.setFlag(SpriteFlag.Invisible, false)
+                }
+            } else {
+                if (st.marker) _agiHookDestroySprite(st.marker)
+                st.marker = null
             }
 
-            const aimSpear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, true)
-            _agiHookPositionSpear(aimSpear, base.x, base.y)
-            aimSpear.setFlag(SpriteFlag.Invisible, false)
-
-            _agiHookUpdateChain(st, hero, base.x, base.y, base.x, base.y)
+            if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                const aimSpear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, true)
+                _agiHookPositionSpear(aimSpear, base.x, base.y)
+                aimSpear.setFlag(SpriteFlag.Invisible, false)
+            } else {
+                _agiHookHideSpearVisuals(st)
+            }
+            const aimEndX = base.x + nx * (st.weaponLen | 0)
+            const aimEndY = base.y + ny * (st.weaponLen | 0)
+            _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.weaponLen | 0, st.weaponLen | 0, now | 0, AGI_HOOK_STATE.AIMING, true, aimEndX, aimEndY)
+            _agiHookUpdateChain(st, hero, base.x, base.y, aimEndX, aimEndY)
 
             hero.vx = 0
             hero.vy = 0
@@ -53593,8 +55398,12 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 st.targetY = 0
                 st.targetDist = 0
 
-                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
-                _agiHookPositionSpear(spear, base.x, base.y)
+                if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                    const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                    _agiHookPositionSpear(spear, base.x, base.y)
+                } else {
+                    _agiHookHideSpearVisuals(st)
+                }
 
                 sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
                 _agiHookLog(
@@ -53672,9 +55481,16 @@ function updateAgilityHookshotAll(nowMs: number): void {
             const buttDist = Math.max(0, (st.tipDist - weaponLen))
             const buttX = base.x + nx * buttDist
             const buttY = base.y + ny * buttDist
-            const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
-            _agiHookPositionSpear(spear, buttX, buttY)
-            _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+            if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                _agiHookPositionSpear(spear, buttX, buttY)
+            } else {
+                _agiHookHideSpearVisuals(st)
+            }
+            const tipX = base.x + nx * (st.tipDist | 0)
+            const tipY = base.y + ny * (st.tipDist | 0)
+            _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+            _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.EXTEND, false, tipX, tipY)
 
             hero.vx = 0
             hero.vy = 0
@@ -53745,9 +55561,16 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const buttDist = Math.max(0, (newDist - weaponLen))
                 const buttX = base.x + nx * buttDist
                 const buttY = base.y + ny * buttDist
-                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
-                _agiHookPositionSpear(spear, buttX, buttY)
-                _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+                if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                    const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                    _agiHookPositionSpear(spear, buttX, buttY)
+                } else {
+                    _agiHookHideSpearVisuals(st)
+                }
+                const tipX = base.x + nx * (st.tipDist | 0)
+                const tipY = base.y + ny * (st.tipDist | 0)
+                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
 
                 hero.vx = 0
                 hero.vy = 0
@@ -53823,9 +55646,16 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const buttDist = Math.max(0, (newDist - weaponLen))
                 const buttX = base.x + nx * buttDist
                 const buttY = base.y + ny * buttDist
-                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
-                _agiHookPositionSpear(spear, buttX, buttY)
-                _agiHookUpdateChain(st, hero, base.x, base.y, buttX, buttY)
+                if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                    const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                    _agiHookPositionSpear(spear, buttX, buttY)
+                } else {
+                    _agiHookHideSpearVisuals(st)
+                }
+                const tipX = base.x + nx * (st.tipDist | 0)
+                const tipY = base.y + ny * (st.tipDist | 0)
+                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
 
                 if (newDist <= (weaponLen + 0.1)) {
                     sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
@@ -53864,10 +55694,15 @@ function updateAgilityHookshotAll(nowMs: number): void {
 
                 const buttX = st.targetX - nx * weaponLen
                 const buttY = st.targetY - ny * weaponLen
-                const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
-                _agiHookPositionSpear(spear, buttX, buttY)
+                if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
+                    const spear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, false)
+                    _agiHookPositionSpear(spear, buttX, buttY)
+                } else {
+                    _agiHookHideSpearVisuals(st)
+                }
                 const handNow = _agiHookHandBase(hero, nx, ny)
-                _agiHookUpdateChain(st, hero, handNow.x, handNow.y, buttX, buttY)
+                _agiHookUpdateChain(st, hero, handNow.x, handNow.y, st.targetX, st.targetY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, st.targetX, st.targetY)
 
                 if (newDist <= 0.1) {
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
@@ -60352,23 +62187,19 @@ const ENEMY_PROJECTILE_MAGE_BULLET_SKIN_ID = "magebullet"
 const ENEMY_PROJECTILE_ARROW_SKIN_ID = "arrow"
 const ENEMY_PROJECTILE_EYEBALL_SKIN_ID = "monsterframe:eyeball:attack:3"
 const ENEMY_PROJECTILE_COLLISION_ALPHA_MIN = 8
+const ENEMY_PROJECTILE_HIT_INSET_PX = 1
 const ENEMY_BOSS_BARRAGE_MIN_COUNT = 4
 const ENEMY_BOSS_BARRAGE_MAX_COUNT = 8
 const ENEMY_BOSS_BARRAGE_PER_HERO = 2
 const ENEMY_BOSS_BARRAGE_CLUSTER_RADIUS_PX = 96
-const ENEMY_BOSS_BARRAGE_SPREAD_DEG = 50
-const ENEMY_BOSS_BARRAGE_JITTER_DEG = 6
-const ENEMY_BOSS_BARRAGE_TARGET_JITTER_PX = 48
-const ENEMY_BOSS_BARRAGE_SPEED = 110
+const ENEMY_BOSS_BARRAGE_SPREAD_DEG = 60
+const ENEMY_BOSS_BARRAGE_JITTER_DEG = 4
+const ENEMY_BOSS_BARRAGE_TARGET_JITTER_PX = 32
+const ENEMY_BOSS_BARRAGE_SPEED = 330
+const ENEMY_BOSS_BARRAGE_SHOT_GAP_MS = 120
+const ENEMY_BOSS_BARRAGE_COOLDOWN_MS = 1200
 const ENEMY_BOSS_PROJECTILE_EFFECTS: string[] = [
-    "starbeam2",
-    "lightningbolt",
-    "fireball3",
-    "bomb2",
-    "waterbeam",
-    "tentacles",
-    "chaosdart",
-    "eye"
+    "slimeprojectile"
 ]
 const MONSTER_SPAWN_VARIANT_SEP = "::"
 const ENEMY_DAMAGE_CAP_PCT_OF_MAX_HP = 50
@@ -62574,6 +64405,16 @@ function _dunQueueBossIntroForEnemy(enemy: Sprite, monsterId: string): void {
     if ((_dunFloorKind || "") !== DUNGEON_KIND_COMBAT) return
     if ((_dunFloorIndex | 0) <= 0) return
     if ((_dunBossIntroFloor | 0) === (_dunFloorIndex | 0) && _dunBossIntroEvent) return
+
+    const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    _dunSchedulePadSink(
+        nowMs | 0,
+        BOSS_PAD_SINK_DELAY_MS | 0,
+        BOSS_PAD_SINK_ANIM_MS | 0,
+        BOSS_PAD_SINK_SHAKE_MS | 0,
+        BOSS_PAD_SINK_SHAKE_INTENSITY,
+        true
+    )
 
     _dunBossIntroFloor = _dunFloorIndex | 0
     _dunBossIntroEvent = {
@@ -65393,6 +67234,7 @@ const ENEMY_AI_BOSS_BASE_INIT = "__aiBossBaseInit"
 const ENEMY_AI_BOSS_BASE_RANGE = "__aiBossBaseRange"
 const ENEMY_AI_BOSS_BASE_PROJ = "__aiBossBaseProj"
 const ENEMY_AI_BOSS_BASE_PROJ_SPEED = "__aiBossBaseProjSpeed"
+const ENEMY_AI_BOSS_BASE_ATK_INTERVAL = "__aiBossBaseAtkInterval"
 const ENEMY_AI_BOSS_RANGED_UNTIL = "__aiBossRangedUntil"
 const ENEMY_AI_BOSS_STUCK_MS = "__aiBossStuckMs"
 const ENEMY_AI_BOSS_STUCK_LAST_MS = "__aiBossStuckLastMs"
@@ -65550,11 +67392,11 @@ const ENEMY_BOSS_IDS = new Set<string>([
     "shadow"
 ])
 
-const BOSS_JUMP_WINDUP_MS = 420
-const BOSS_JUMP_ASCEND_MS = 650
-const BOSS_JUMP_APEX_HOLD_MS = 5200
-const BOSS_JUMP_DESCEND_MS = 1100
-const BOSS_JUMP_LAND_MS = 420
+const BOSS_JUMP_WINDUP_MS = 300
+const BOSS_JUMP_ASCEND_MS = 500
+const BOSS_JUMP_APEX_HOLD_MS = 1600
+const BOSS_JUMP_DESCEND_MS = 1200
+const BOSS_JUMP_LAND_MS = 400
 const BOSS_INTRO_CONTROL_LEAD_MS = 4000
 const BOSS_JUMP_COMPRESS_SCALE_X1000 = 820
 const BOSS_JUMP_LAUNCH_SCALE_X1000 = 1120
@@ -65591,12 +67433,24 @@ const HERO_BOSS_KNOCK_BOUNCE_Y = "__bossKnockBounceY"
 const HERO_BOSS_KNOCK_GHOST_PREV = "__bossKnockGhostPrev"
 
 const BOSS_KNOCK_TILE_DIST = 1
-const BOSS_KNOCK_AIR_MS = 520
-const BOSS_KNOCK_BOUNCE_MS = 220
-const BOSS_KNOCK_LAND_HOLD_MS = 260
+const BOSS_KNOCK_AIR_MS = 1200
+const BOSS_KNOCK_BOUNCE_MS = 500
+const BOSS_KNOCK_LAND_HOLD_MS = 1300
 const BOSS_KNOCK_ARC_PX = 18
 const BOSS_KNOCK_BOUNCE_ARC_PX = 8
 const BOSS_KNOCK_BOUNCE_EXTRA_PCT = 0.18
+
+function _bossIntroComputeJumpArcPx(): number {
+    const tile = WORLD_TILE_SIZE | 0
+    if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && tile > 0) {
+        const rows = _engineWorldTileMap.length | 0
+        if (rows > 0) {
+            const h = rows * tile
+            return Math.max(BOSS_JUMP_ARC_PX | 0, Math.round(h * 1.4) | 0) | 0
+        }
+    }
+    return Math.max(BOSS_JUMP_ARC_PX | 0, 1200) | 0
+}
 
 function _enemyIsBoss(enemy: Sprite): boolean {
     if (!enemy) return false
@@ -65623,21 +67477,24 @@ function _enemyBossLongRangePx(): number {
     return Math.max(RANGED_ADVANCE_RANGE_CAP_PX | 0, 800) | 0
 }
 
-function _enemyBossEnsureBaseRanged(enemy: Sprite): { baseRange: number, baseProj: string, baseProjSpeed: number } {
+function _enemyBossEnsureBaseRanged(enemy: Sprite): { baseRange: number, baseProj: string, baseProjSpeed: number, baseAtkInterval: number } {
     const inited = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_INIT) | 0
     if (!inited) {
         const baseRange = sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0
         const baseProj = sprites.readDataString(enemy, ENEMY_DATA.PROJECTILE_ID) || ""
         const baseProjSpeed = sprites.readDataNumber(enemy, "__projSpeed") | 0
+        const baseAtkInterval = sprites.readDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS) | 0
         sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_RANGE, baseRange | 0)
         sprites.setDataString(enemy, ENEMY_AI_BOSS_BASE_PROJ, baseProj)
         sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_PROJ_SPEED, baseProjSpeed | 0)
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_ATK_INTERVAL, baseAtkInterval | 0)
         sprites.setDataNumber(enemy, ENEMY_AI_BOSS_BASE_INIT, 1)
     }
     const baseRange = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_RANGE) | 0
     const baseProj = sprites.readDataString(enemy, ENEMY_AI_BOSS_BASE_PROJ) || ""
     const baseProjSpeed = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_PROJ_SPEED) | 0
-    return { baseRange: baseRange | 0, baseProj, baseProjSpeed: baseProjSpeed | 0 }
+    const baseAtkInterval = sprites.readDataNumber(enemy, ENEMY_AI_BOSS_BASE_ATK_INTERVAL) | 0
+    return { baseRange: baseRange | 0, baseProj, baseProjSpeed: baseProjSpeed | 0, baseAtkInterval: baseAtkInterval | 0 }
 }
 
 function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
@@ -65651,6 +67508,8 @@ function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
             sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, base.baseProj)
         }
         sprites.setDataNumber(enemy, "__projSpeed", ENEMY_BOSS_BARRAGE_SPEED | 0)
+        const rangedInterval = Math.max(base.baseAtkInterval | 0, ENEMY_BOSS_BARRAGE_COOLDOWN_MS | 0) | 0
+        sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, rangedInterval | 0)
         return true
     }
 
@@ -65658,6 +67517,7 @@ function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
     sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, base.baseRange | 0)
     sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, base.baseProj || "")
     sprites.setDataNumber(enemy, "__projSpeed", base.baseProjSpeed | 0)
+    sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, base.baseAtkInterval | 0)
     return false
 }
 
@@ -65838,7 +67698,12 @@ function _enemyBossPickIntroJumpTarget(enemy: Sprite): { centerX: number, center
 }
 
 function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCenterY: number, nowMs: number): any {
-    if (!enemy || !_enemyIsBoss(enemy)) return { ok: false }
+    if (!enemy || !_enemyIsBoss(enemy)) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump skip: not boss", { enemyId: enemy ? (enemy.id | 0) : -1 })
+        }
+        return { ok: false }
+    }
 
     const existingActive = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0
     const existingLandAt = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS) | 0
@@ -65853,7 +67718,7 @@ function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCe
             _bossIntroShadowY = sy | 0
             _bossIntroShadowUntilMs = Math.max(_bossIntroShadowUntilMs | 0, endMs | 0) | 0
         }
-        return {
+        const reuse = {
             ok: true,
             enemyId: enemy.id | 0,
             startMs: sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS) | 0,
@@ -65863,10 +67728,24 @@ function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCe
             targetY: sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0,
             controlLeadMs: BOSS_INTRO_CONTROL_LEAD_MS | 0
         }
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump reuse", reuse)
+        }
+        return reuse
     }
 
-    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return { ok: false }
-    if ((sprites.readDataNumber(enemy, "__bossIntroJumpDone") | 0) !== 0) return { ok: false }
+    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump skip: active", { enemyId: enemy.id | 0 })
+        }
+        return { ok: false }
+    }
+    if ((sprites.readDataNumber(enemy, "__bossIntroJumpDone") | 0) !== 0) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump skip: already done", { enemyId: enemy.id | 0 })
+        }
+        return { ok: false }
+    }
 
     const dims = _enemyGetColliderDims(enemy)
     const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
@@ -65907,7 +67786,7 @@ function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCe
     enemy.vy = 0
     _enemySetIntent(enemy, "bossJump")
 
-    return {
+    const info = {
         ok: true,
         enemyId: enemy.id | 0,
         startMs: nowMs | 0,
@@ -65917,6 +67796,19 @@ function _enemyBossStartIntroJump(enemy: Sprite, targetCenterX: number, targetCe
         targetY: toY | 0,
         controlLeadMs: BOSS_INTRO_CONTROL_LEAD_MS | 0
     }
+    if (DEBUG_BOSS_INTRO) {
+        console.log("[BOSS][INTRO] jump start", {
+            enemyId: enemy.id | 0,
+            fromX: fromX | 0,
+            fromY: fromY | 0,
+            toX: toX | 0,
+            toY: toY | 0,
+            startMs: nowMs | 0,
+            landAtMs: landAtMs | 0,
+            endMs: endMs | 0
+        })
+    }
+    return info
 }
 
 function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
@@ -65960,11 +67852,15 @@ function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
     const landed = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY) | 0
     if (!landed && nowMs >= impactAt) {
         sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY, 1)
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump impact", { enemyId: enemy.id | 0, nowMs: nowMs | 0, toX: toX | 0, toY: toY | 0 })
+        }
         _bossIntroKnockdownHeroes(enemy, nowMs | 0)
     }
 
     let offY = 0
     let scaleX1000 = 1000
+    const arcPx = _bossIntroComputeJumpArcPx() | 0
 
     if (nowMs < windupEnd) {
         const t = Math.min(1, Math.max(0, (nowMs - startMs) / Math.max(1, (BOSS_JUMP_WINDUP_MS | 0))))
@@ -65978,11 +67874,11 @@ function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
         const cx = Math.round(fromX + (midX - fromX) * ease)
         const cy = Math.round(fromY + (midY - fromY) * ease)
         _enemyBossMoveFeetCenterTo(enemy, cx | 0, cy | 0)
-        offY = Math.round(-Math.sin(t * Math.PI * 0.5) * (BOSS_JUMP_ARC_PX | 0))
+        offY = Math.round(-Math.sin(t * Math.PI * 0.5) * (arcPx | 0))
         scaleX1000 = Math.round(1000 + (BOSS_JUMP_LAUNCH_SCALE_X1000 - 1000) * (1 - t))
     } else if (nowMs < holdEnd) {
         _enemyBossMoveFeetCenterTo(enemy, midX | 0, midY | 0)
-        offY = -(BOSS_JUMP_ARC_PX | 0)
+        offY = -(arcPx | 0)
         scaleX1000 = 1000
     } else if (nowMs < impactAt) {
         const t = Math.min(1, Math.max(0, (nowMs - holdEnd) / Math.max(1, (BOSS_JUMP_DESCEND_MS | 0))))
@@ -65990,7 +67886,7 @@ function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
         const cx = Math.round(midX + (toX - midX) * ease)
         const cy = Math.round(midY + (toY - midY) * ease)
         _enemyBossMoveFeetCenterTo(enemy, cx | 0, cy | 0)
-        offY = Math.round(-Math.sin((1 - t) * Math.PI * 0.5) * (BOSS_JUMP_ARC_PX | 0))
+        offY = Math.round(-Math.sin((1 - t) * Math.PI * 0.5) * (arcPx | 0))
         scaleX1000 = Math.round(1000 + (BOSS_JUMP_LAND_SCALE_X1000 - 1000) * t)
     } else {
         const t = Math.min(1, Math.max(0, (nowMs - impactAt) / Math.max(1, (BOSS_JUMP_LAND_MS | 0))))
@@ -66391,9 +68287,19 @@ function _enemyFindBossForIntro(evt: any): Sprite | null {
 function _enemyBossStartIntroJumpForEvent(evt: any): any {
     const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
     const enemy = _enemyFindBossForIntro(evt)
-    if (!enemy) return { ok: false }
+    if (!enemy) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump event: boss not found", { evt })
+        }
+        return { ok: false }
+    }
     const target = _enemyBossPickIntroJumpTarget(enemy)
-    if (!target) return { ok: false }
+    if (!target) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO] jump event: no target", { enemyId: enemy.id | 0 })
+        }
+        return { ok: false }
+    }
     return _enemyBossStartIntroJump(enemy, target.centerX | 0, target.centerY | 0, nowMs | 0)
 }
 
@@ -68228,10 +70134,42 @@ function _enemyProjectileDimsForSkin(skinId: string): { w: number; h: number } {
     return { w: 16, h: 16 }
 }
 
+function _enemyProjectileHitDimsForSkin(skinId: string, dir: string): { w: number; h: number } {
+    const atlas = _getEffectAtlasAny()
+    const resolved = atlas ? _resolveEffectEntry(atlas, skinId, dir || "") : null
+    let w = resolved ? (resolved.frameW | 0) : 0
+    let h = resolved ? (resolved.frameH | 0) : 0
+    if (w <= 0 || h <= 0) {
+        const fallback = _effectCollisionBoxForSkin(skinId, dir)
+        if (fallback) {
+            w = fallback.w | 0
+            h = fallback.h | 0
+        }
+    }
+    if (w <= 0 || h <= 0) {
+        const base = _enemyProjectileDimsForSkin(skinId)
+        w = base.w | 0
+        h = base.h | 0
+    }
+    const inset = Math.max(0, ENEMY_PROJECTILE_HIT_INSET_PX | 0) | 0
+    const adjW = Math.max(2, (w - (inset * 2)) | 0) | 0
+    const adjH = Math.max(2, (h - (inset * 2)) | 0) | 0
+    return { w: adjW | 0, h: adjH | 0 }
+}
+
 type EffectCollisionBox = { w: number; h: number; offX: number; offY: number };
 
 const _effectCollisionCache: { [key: string]: EffectCollisionBox } = {};
 const _effectFrameBoundsCache: { [key: string]: EffectCollisionBox } = {};
+type EffectFrameMetrics = {
+    frameW: number;
+    frameH: number;
+    centerX: number;
+    centerY: number;
+    tipDx: number;
+    tipDy: number;
+};
+const _effectFrameMetricsCache: { [key: string]: EffectFrameMetrics } = {};
 
 function _parseMonsterFrameSkinId(skinId: string): { id: string; phase: string; frameIndex: number } | null {
     const raw = String(skinId || "").trim();
@@ -68318,6 +70256,96 @@ function _computeTextureFrameBounds(
 
         const result = { w: boxW | 0, h: boxH | 0, offX, offY };
         _effectFrameBoundsCache[cacheKey] = result;
+        return result;
+    } catch {
+        return null;
+    }
+}
+
+function _computeTextureFrameMetrics(
+    texKey: string,
+    frameW: number,
+    frameH: number,
+    frameIndex: number,
+    dirX: number,
+    dirY: number
+): EffectFrameMetrics | null {
+    const cacheKey = `${texKey}|${frameW}|${frameH}|${frameIndex}|${dirX}|${dirY}`;
+    if (_effectFrameMetricsCache[cacheKey]) return _effectFrameMetricsCache[cacheKey];
+    if (!isPhaserRuntime()) return null;
+    if (typeof document === "undefined") return null;
+    try {
+        const g: any = globalThis as any;
+        const sc: any = g ? g.__phaserScene : null;
+        const tex = sc?.textures?.get?.(texKey);
+        const source = tex?.getSourceImage?.();
+        if (!source) return null;
+
+        const w = (source.width | 0);
+        const h = (source.height | 0);
+        if (w <= 0 || h <= 0) return null;
+        const cols = Math.floor(w / frameW);
+        const rows = Math.floor(h / frameH);
+        if (cols <= 0 || rows <= 0) return null;
+
+        const maxIndex = (cols * rows) - 1;
+        const idx = Math.max(0, Math.min(maxIndex, frameIndex | 0)) | 0;
+        const row = Math.idiv(idx, cols) | 0;
+        const col = (idx % cols) | 0;
+        const baseX = (col * frameW) | 0;
+        const baseY = (row * frameH) | 0;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null;
+        if (!ctx) return null;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(source as any, 0, 0);
+        const img = ctx.getImageData(0, 0, w, h);
+        const data = img.data;
+
+        let minX = frameW;
+        let minY = frameH;
+        let maxX = -1;
+        let maxY = -1;
+        let bestProj = -1e18;
+        let bestX = 0;
+        let bestY = 0;
+        const aMin = ENEMY_PROJECTILE_COLLISION_ALPHA_MIN | 0;
+        const dx = Number.isFinite(dirX) ? dirX : 0;
+        const dy = Number.isFinite(dirY) ? dirY : 0;
+
+        for (let y = 0; y < frameH; y++) {
+            const rowStart = (baseY + y) * w + baseX;
+            let idxAlpha = (rowStart << 2) + 3;
+            for (let x = 0; x < frameW; x++) {
+                if (data[idxAlpha] >= aMin) {
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                    const proj = (x * dx) + (y * dy);
+                    if (proj > bestProj) {
+                        bestProj = proj;
+                        bestX = x;
+                        bestY = y;
+                    }
+                }
+                idxAlpha += 4;
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return null;
+        const centerX = Math.round((minX + maxX) / 2) | 0;
+        const centerY = Math.round((minY + maxY) / 2) | 0;
+        const frameCenterX = Math.round((frameW - 1) / 2) | 0;
+        const frameCenterY = Math.round((frameH - 1) / 2) | 0;
+        const tipDx = (bestX - frameCenterX) | 0;
+        const tipDy = (bestY - frameCenterY) | 0;
+
+        const result = { frameW: frameW | 0, frameH: frameH | 0, centerX, centerY, tipDx, tipDy };
+        _effectFrameMetricsCache[cacheKey] = result;
         return result;
     } catch {
         return null;
@@ -68411,10 +70439,99 @@ function _enemyBossSlimeBurst(enemy: Sprite, attackMs: number): void {
     _enemyScreenShake(SLIME_BOSS_BURST_SCREEN_SHAKE_MS | 0, SLIME_BOSS_BURST_SCREEN_SHAKE_INTENSITY)
 }
 
+function _enemyBossShuffleAngles(list: number[]): void {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.randomRange(0, i) | 0
+        const tmp = list[i]
+        list[i] = list[j]
+        list[j] = tmp
+    }
+}
+
+function _enemyBossSpawnBarrageShot(enemy: Sprite, ang: number): void {
+    if (!enemy) return
+    if (!Number.isFinite(ang)) return
+    const vx = Math.cos(ang)
+    const vy = Math.sin(ang)
+    if (!Number.isFinite(vx) || !Number.isFinite(vy)) return
+
+    const w = enemy.image ? enemy.image.width : 16
+    const h = enemy.image ? enemy.image.height : 16
+    const pad = 2
+    const offX = vx * ((w / 2) + pad)
+    const offY = vy * ((h / 2) + pad)
+
+    const pick = _enemyProjectilePick(enemy)
+    const skinId = pick.skinId
+    const dir = _enemyDirFromVector(vx, vy)
+    const elem = _enemyProjectileElementForEnemy(enemy) | 0
+    const collision = _effectCollisionBoxForSkin(skinId, dir)
+    const dims = _enemyProjectileHitDimsForSkin(skinId, dir)
+    const img = image.create(dims.w | 0, dims.h | 0)
+    img.fill(0)
+
+    const fx = sprites.create(img, SpriteKind.MonsterEffect)
+    fx.z = enemy.z + 2000
+    fx.x = enemy.x + offX
+    fx.y = enemy.y + offY
+    sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0)
+    sprites.setDataNumber(fx, "dmg", sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0)
+    sprites.setDataNumber(fx, "__projElem", elem | 0)
+    const effectOpts: EffectApplyOpts = { dir }
+    if (collision) {
+        effectOpts.offsetX = collision.offX | 0
+        effectOpts.offsetY = collision.offY | 0
+    }
+    if (pick.tint) effectOpts.tint = pick.tint | 0
+    applyEffectToSprite(fx, skinId, effectOpts)
+
+    const speed = ENEMY_BOSS_BARRAGE_SPEED | 0
+    fx.vx = (vx * speed) | 0
+    fx.vy = (vy * speed) | 0
+    const rangePx = _enemyBossLongRangePx() | 0
+    const life = Math.max(200, Math.idiv(rangePx * 1000, speed))
+    fx.lifespan = life
+}
+
+function _enemyBossProcessBarrageQueue(enemy: Sprite, nowMs: number): void {
+    if (!enemy) return
+    if (!_enemyIsBoss(enemy)) return
+    if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return
+
+    const anyEnemy = enemy as any
+    const rawQueue = anyEnemy.__bossBarrageQueue
+    const queue = Array.isArray(rawQueue) ? (rawQueue as number[]) : null
+    if (!queue || queue.length <= 0) {
+        if (rawQueue && Array.isArray(rawQueue) && rawQueue.length === 0) {
+            anyEnemy.__bossBarrageQueue = null
+        }
+        return
+    }
+
+    const nextMs = sprites.readDataNumber(enemy, "__bossBarrageNextMs") | 0
+    if (nextMs > nowMs) return
+
+    const ang = queue.shift()
+    if (typeof ang === "number") {
+        _enemyBossSpawnBarrageShot(enemy, ang)
+    }
+
+    if (queue.length > 0) {
+        const gap = Math.max(20, ENEMY_BOSS_BARRAGE_SHOT_GAP_MS | 0) | 0
+        sprites.setDataNumber(enemy, "__bossBarrageNextMs", (nowMs + gap) | 0)
+    } else {
+        anyEnemy.__bossBarrageQueue = null
+        sprites.setDataNumber(enemy, "__bossBarrageNextMs", 0)
+    }
+}
+
 function _enemyBossSpawnBarrage(enemy: Sprite, attackMs: number): void {
     if (!enemy) return
     const heroTargets = _enemyBuildLiveHeroTargets()
     if (!heroTargets || heroTargets.length <= 0) return
+    const anyEnemy = enemy as any
+    const existing = anyEnemy.__bossBarrageQueue
+    if (existing && Array.isArray(existing) && existing.length > 0) return
 
     const heroCount = heroTargets.length | 0
     const total = Math.min(
@@ -68462,8 +70579,8 @@ function _enemyBossSpawnBarrage(enemy: Sprite, attackMs: number): void {
     const spreadRad = (ENEMY_BOSS_BARRAGE_SPREAD_DEG | 0) * Math.PI / 180
     const jitterRad = (ENEMY_BOSS_BARRAGE_JITTER_DEG | 0) * Math.PI / 180
     const targetJitter = ENEMY_BOSS_BARRAGE_TARGET_JITTER_PX | 0
-    const rangePx = _enemyBossLongRangePx() | 0
-    const speed = ENEMY_BOSS_BARRAGE_SPEED | 0
+    const halfSpread = spreadRad * 0.5
+    const angles: number[] = []
 
     for (let i = 0; i < targets.length; i++) {
         const count = (rem > 0 ? (rem--, per + 1) : per) | 0
@@ -68478,46 +70595,17 @@ function _enemyBossSpawnBarrage(enemy: Sprite, attackMs: number): void {
             let offset = 0
             if (count > 1) offset = ((k / (count - 1)) * 2 - 1)
             const jitter = (Math.random() * 2 - 1) * jitterRad
-            const ang = base + (offset * spreadRad) + jitter
-            const vx = Math.cos(ang)
-            const vy = Math.sin(ang)
-
-            const w = enemy.image ? enemy.image.width : 16
-            const h = enemy.image ? enemy.image.height : 16
-            const pad = 2
-            const offX = vx * ((w / 2) + pad)
-            const offY = vy * ((h / 2) + pad)
-
-            const pick = _enemyProjectilePick(enemy)
-            const skinId = pick.skinId
-            const dir = _enemyDirFromVector(vx, vy)
-            const elem = _enemyProjectileElementForEnemy(enemy) | 0
-            const collision = _effectCollisionBoxForSkin(skinId, dir)
-            const dims = collision ? { w: collision.w | 0, h: collision.h | 0 } : _enemyProjectileDimsForSkin(skinId)
-            const img = image.create(dims.w | 0, dims.h | 0)
-            img.fill(0)
-
-            const fx = sprites.create(img, SpriteKind.MonsterEffect)
-            fx.z = enemy.z + 2000
-            fx.x = enemy.x + offX
-            fx.y = enemy.y + offY
-            sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0)
-            sprites.setDataNumber(fx, "dmg", sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0)
-            sprites.setDataNumber(fx, "__projElem", elem | 0)
-            const effectOpts: EffectApplyOpts = { dir }
-            if (collision) {
-                effectOpts.offsetX = collision.offX | 0
-                effectOpts.offsetY = collision.offY | 0
-            }
-            if (pick.tint) effectOpts.tint = pick.tint | 0
-            applyEffectToSprite(fx, skinId, effectOpts)
-
-            fx.vx = (vx * speed) | 0
-            fx.vy = (vy * speed) | 0
-            const life = Math.max(200, Math.idiv(rangePx * 1000, speed))
-            fx.lifespan = life
+            const ang = base + (offset * halfSpread) + jitter
+            angles.push(ang)
         }
     }
+
+    if (angles.length <= 0) return
+    _enemyBossShuffleAngles(angles)
+    anyEnemy.__bossBarrageQueue = angles
+    const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    sprites.setDataNumber(enemy, "__bossBarrageNextMs", nowMs | 0)
+    _enemyBossProcessBarrageQueue(enemy, nowMs | 0)
 }
 
 function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, attackMs: number): void {
@@ -68551,7 +70639,7 @@ function _spawnMonsterSlashOrProjectile(enemy: Sprite, dx: number, dy: number, a
         const dir = _enemyDirFromVector(dx, dy)
         const elem = _enemyProjectileElementForEnemy(enemy) | 0
         const collision = _effectCollisionBoxForSkin(skinId, dir)
-        const dims = collision ? { w: collision.w | 0, h: collision.h | 0 } : _enemyProjectileDimsForSkin(skinId)
+        const dims = _enemyProjectileHitDimsForSkin(skinId, dir)
         const img = image.create(dims.w | 0, dims.h | 0)
         img.fill(0)
 
@@ -69267,6 +71355,8 @@ function updateEnemyHoming(nowMs: number) {
         // Death timing cleanup
 
         if (_enemyTickDeathCleanupIfNeeded(ei, enemy, nowMs)) continue
+
+        _enemyBossProcessBarrageQueue(enemy, nowMs | 0)
 
         const bossJump = _enemyBossUpdateIntroJump(enemy, nowMs | 0)
         _enemyAiTraceAdd(trace, "bossJump", bossJump)
@@ -70538,6 +72628,7 @@ function updateHeroProjectiles() {
             if (proj) _destroyHeroBodyPaintFxForProj(proj)
             if (proj) _destroyProjectileMaskSpriteForProj(proj)
             if (proj) _destroyAgilityTrailFxSegments(proj)
+            if (proj) _destroyAgilityCometFx(proj)
             if (proj) _destroyStrengthArcFxForProj(proj)
             if (proj) _destroyStrengthSwingFxSegments(proj)
             heroProjectiles.removeAt(i)
@@ -70557,6 +72648,7 @@ function updateHeroProjectiles() {
             _destroyHeroBodyPaintFxForProj(proj)
             _destroyProjectileMaskSpriteForProj(proj)
             _destroyAgilityTrailFxSegments(proj)
+            _destroyAgilityCometFx(proj)
             _destroyStrengthArcFxForProj(proj)
             _destroyStrengthSwingFxSegments(proj)
             proj.destroy()
@@ -78827,6 +80919,32 @@ g.__heUiCommand = function (cmd: any): any {
 
 
 
+    if (t === "towerTrialArtifactGet") {
+        if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        const tag = cmd && typeof cmd.tag === "string" ? cmd.tag : ""
+        const artifact = _towerTrialDebugGetArtifact(tag)
+        return { ok: true, reason: "tower-trial-artifact", artifact, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "towerTrialArtifactSave") {
+        if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        const tag = cmd && typeof cmd.tag === "string" ? cmd.tag : ""
+        return _towerTrialDebugSaveArtifact(tag).then((res) => ({
+            ok: !!res?.ok,
+            reason: String(res?.reason || (res?.ok ? "saved" : "error")),
+            result: res,
+            snapshot: g.__heGetUiSnapshot(pid),
+        }))
+    }
+    if (t === "towerTrialArtifactLastSave") {
+        if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        return { ok: true, reason: "tower-trial-last-save", result: _towerTrialDebugLastSave(), snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "towerTrialArtifactClear") {
+        if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        _towerTrialDebugClear()
+        return { ok: true, reason: "tower-trial-cleared", snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
     if (t === "setSel") {
 
         const sel = cmd && typeof cmd.sel === "number" ? (cmd.sel | 0) : 0
@@ -79163,6 +81281,41 @@ try {
 
     }
 
+} catch (_e) { }
+
+try {
+    const g: any = globalThis as any
+    if (g && !g.__heTowerTrialDialogInstalled) {
+        g.__heTowerTrialDialogInstalled = true
+        if (typeof g.addEventListener === "function") {
+            g.addEventListener("he:dialogChoice", (ev: any) => {
+                const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
+                    ? String(g.__heDialog.__heOwner || "")
+                    : ""
+                if (owner !== TOWER_TRIAL_DIALOG_OWNER) return
+                const id = (ev && ev.detail) ? (ev.detail.id || ev.detail.label || "") : ""
+                const nowMs = game.runtime() | 0
+                _towerTrialDialogHandleChoice(String(id || ""), nowMs | 0)
+            })
+            g.addEventListener("he:dialogAdvance", () => {
+                const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
+                    ? String(g.__heDialog.__heOwner || "")
+                    : ""
+                if (owner !== TOWER_TRIAL_DIALOG_OWNER) return
+                const nowMs = game.runtime() | 0
+                _towerTrialDialogHandleAdvance(nowMs | 0)
+            })
+            g.addEventListener("he:dialogHide", () => {
+                const owner = (g.__heDialog && typeof g.__heDialog.__heOwner === "string")
+                    ? String(g.__heDialog.__heOwner || "")
+                    : ""
+                if (owner !== TOWER_TRIAL_DIALOG_OWNER) return
+                _towerTrialDialogState.mode = "idle"
+                _towerTrialDialogState.scriptIndex = 0
+                _towerTrialDialogState.scriptLines = null
+            })
+        }
+    }
 } catch (_e) { }
 
 try {

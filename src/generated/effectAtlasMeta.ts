@@ -45,6 +45,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "OLD torrentacle texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "OLD torrentacle texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "OLD torrentacle texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "Sword Arcs 125x150": {
     "frameIndices": [
       0,
@@ -190,6 +301,432 @@ export const EFFECT_ATLAS_META = {
       "w": 77,
       "h": 53,
       "centerX": 64,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
+  "Sword Arcs 125x150_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 105,
+      "maxY": 111,
+      "w": 82,
+      "h": 58,
+      "centerX": 65,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
+  "Sword Arcs 125x150_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 106,
+      "maxY": 112,
+      "w": 84,
+      "h": 60,
+      "centerX": 65,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
+  "Sword Arcs 125x150_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 107,
+      "maxY": 113,
+      "w": 86,
+      "h": 62,
+      "centerX": 65,
       "centerY": 83
     },
     "emptyCount": 18
@@ -343,6 +880,432 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 18
   },
+  "Sword Arcs 150x125_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 105,
+      "maxY": 111,
+      "w": 82,
+      "h": 58,
+      "centerX": 65,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
+  "Sword Arcs 150x125_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 106,
+      "maxY": 112,
+      "w": 84,
+      "h": 60,
+      "centerX": 65,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
+  "Sword Arcs 150x125_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 107,
+      "maxY": 113,
+      "w": 86,
+      "h": 62,
+      "centerX": 65,
+      "centerY": 83
+    },
+    "emptyCount": 18
+  },
   "absorption 128x128": {
     "frameIndices": [
       0,
@@ -380,6 +1343,96 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "absorption 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 17,
+      "minY": 10,
+      "maxX": 114,
+      "maxY": 119,
+      "w": 98,
+      "h": 110,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "absorption 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 16,
+      "minY": 9,
+      "maxX": 115,
+      "maxY": 120,
+      "w": 100,
+      "h": 112,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
+  "absorption 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 15,
+      "minY": 8,
+      "maxX": 116,
+      "maxY": 121,
+      "w": 102,
+      "h": 114,
+      "centerX": 66,
+      "centerY": 65
+    }
+  },
   "arcaneball1 32x32": {
     "frameIndices": [
       0,
@@ -414,6 +1467,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 14
     }
   },
+  "arcaneball1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "arcaneball1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "arcaneball2 32x32": {
     "frameIndices": [
       0,
@@ -445,6 +1579,87 @@ export const EFFECT_ATLAS_META = {
       "w": 28,
       "h": 28,
       "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "arcaneball2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 30,
+      "maxY": 30,
+      "w": 31,
+      "h": 30,
+      "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "arcaneball2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
       "centerY": 16
     }
   },
@@ -482,6 +1697,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "arcaneball3 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball3 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball3 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "arcaneball4 32x32": {
     "frameIndices": [
       0,
@@ -512,6 +1808,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 29,
       "w": 31,
       "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball4 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "arcaneball4 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "arcaneball4 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -579,6 +1956,174 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 18
   },
+  "arrow 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      51
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 46,
+      "maxX": 51,
+      "maxY": 53,
+      "w": 10,
+      "h": 8,
+      "centerX": 47,
+      "centerY": 50
+    },
+    "emptyCount": 18
+  },
+  "arrow 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      51
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 45,
+      "maxX": 52,
+      "maxY": 54,
+      "w": 12,
+      "h": 10,
+      "centerX": 47,
+      "centerY": 50
+    },
+    "emptyCount": 18
+  },
+  "arrow 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      51
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 40,
+      "minY": 44,
+      "maxX": 53,
+      "maxY": 55,
+      "w": 14,
+      "h": 12,
+      "centerX": 47,
+      "centerY": 50
+    },
+    "emptyCount": 18
+  },
   "bending_lightning 128x128": {
     "frameIndices": [
       0,
@@ -617,6 +2162,105 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "bending_lightning 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 5,
+      "maxX": 93,
+      "maxY": 122,
+      "w": 39,
+      "h": 118,
+      "centerX": 74,
+      "centerY": 64
+    }
+  },
+  "bending_lightning 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 4,
+      "maxX": 94,
+      "maxY": 123,
+      "w": 41,
+      "h": 120,
+      "centerX": 74,
+      "centerY": 64
+    }
+  },
+  "bending_lightning 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 3,
+      "maxX": 95,
+      "maxY": 124,
+      "w": 43,
+      "h": 122,
+      "centerX": 74,
+      "centerY": 64
+    }
+  },
   "bloodbullet1 32x32": {
     "frameIndices": [
       0,
@@ -647,6 +2291,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 29,
       "w": 30,
       "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "bloodbullet1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "bloodbullet1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "bloodbullet1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -685,6 +2410,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 17
     }
   },
+  "bloodbullet2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 3,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 28,
+      "centerX": 16,
+      "centerY": 17
+    }
+  },
+  "bloodbullet2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 2,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 17
+    }
+  },
+  "bloodbullet2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "bloodslash 32x32": {
     "frameIndices": [
       0,
@@ -715,6 +2521,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 27,
       "w": 30,
       "h": 26,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "bloodslash 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 28,
+      "w": 32,
+      "h": 28,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "bloodslash 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "bloodslash 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
       "centerX": 16,
       "centerY": 15
     }
@@ -753,6 +2640,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "bomb1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 29,
+      "maxY": 31,
+      "w": 30,
+      "h": 31,
+      "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "bomb1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 30,
+      "maxY": 31,
+      "w": 31,
+      "h": 32,
+      "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "bomb1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "bomb2 32x32": {
     "frameIndices": [
       0,
@@ -782,6 +2750,87 @@ export const EFFECT_ATLAS_META = {
       "maxX": 30,
       "maxY": 31,
       "w": 30,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "bomb2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "bomb2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "bomb2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
       "h": 32,
       "centerX": 16,
       "centerY": 16
@@ -821,6 +2870,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "chaosdart 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "chaosdart 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "chaosdart 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "earthshard 32x32": {
     "frameIndices": [
       0,
@@ -851,6 +2981,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 29,
       "w": 31,
       "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "earthshard 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "earthshard 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "earthshard 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -889,6 +3100,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "earthspike 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "earthspike 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "earthspike 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "expanding_circle 128x128": {
     "frameIndices": [
       0,
@@ -920,6 +3212,93 @@ export const EFFECT_ATLAS_META = {
       "maxY": 69,
       "w": 12,
       "h": 12,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "expanding_circle 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 56,
+      "maxX": 72,
+      "maxY": 71,
+      "w": 16,
+      "h": 16,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "expanding_circle 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 55,
+      "maxX": 73,
+      "maxY": 72,
+      "w": 18,
+      "h": 18,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "expanding_circle 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 54,
+      "maxX": 74,
+      "maxY": 73,
+      "w": 20,
+      "h": 20,
       "centerX": 65,
       "centerY": 64
     }
@@ -957,6 +3336,96 @@ export const EFFECT_ATLAS_META = {
       "maxY": 69,
       "w": 12,
       "h": 12,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "explosion 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 55,
+      "maxX": 72,
+      "maxY": 72,
+      "w": 18,
+      "h": 18,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "explosion 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 54,
+      "maxX": 73,
+      "maxY": 73,
+      "w": 20,
+      "h": 20,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "explosion 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 53,
+      "maxX": 74,
+      "maxY": 74,
+      "w": 22,
+      "h": 22,
       "centerX": 64,
       "centerY": 64
     }
@@ -1004,6 +3473,114 @@ export const EFFECT_ATLAS_META = {
       "centerY": 55
     }
   },
+  "explosion2 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 38,
+      "maxX": 78,
+      "maxY": 72,
+      "w": 24,
+      "h": 35,
+      "centerX": 67,
+      "centerY": 55
+    }
+  },
+  "explosion2 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 37,
+      "maxX": 79,
+      "maxY": 73,
+      "w": 26,
+      "h": 37,
+      "centerX": 67,
+      "centerY": 55
+    }
+  },
+  "explosion2 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 36,
+      "maxX": 80,
+      "maxY": 74,
+      "w": 28,
+      "h": 39,
+      "centerX": 67,
+      "centerY": 55
+    }
+  },
   "explosion3 128x128": {
     "frameIndices": [
       0,
@@ -1043,6 +3620,114 @@ export const EFFECT_ATLAS_META = {
       "maxY": 77,
       "w": 22,
       "h": 22,
+      "centerX": 68,
+      "centerY": 67
+    }
+  },
+  "explosion3 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 55,
+      "maxX": 80,
+      "maxY": 79,
+      "w": 26,
+      "h": 25,
+      "centerX": 68,
+      "centerY": 67
+    }
+  },
+  "explosion3 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 54,
+      "maxX": 81,
+      "maxY": 80,
+      "w": 28,
+      "h": 27,
+      "centerX": 68,
+      "centerY": 67
+    }
+  },
+  "explosion3 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 53,
+      "maxX": 82,
+      "maxY": 81,
+      "w": 30,
+      "h": 29,
       "centerX": 68,
       "centerY": 67
     }
@@ -1090,6 +3775,114 @@ export const EFFECT_ATLAS_META = {
       "centerY": 71
     }
   },
+  "explosion4 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 59,
+      "maxX": 93,
+      "maxY": 82,
+      "w": 44,
+      "h": 24,
+      "centerX": 72,
+      "centerY": 71
+    }
+  },
+  "explosion4 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 58,
+      "maxX": 94,
+      "maxY": 83,
+      "w": 46,
+      "h": 26,
+      "centerX": 72,
+      "centerY": 71
+    }
+  },
+  "explosion4 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 57,
+      "maxX": 95,
+      "maxY": 84,
+      "w": 48,
+      "h": 28,
+      "centerX": 72,
+      "centerY": 71
+    }
+  },
   "explosion5 128x128": {
     "frameIndices": [
       0,
@@ -1133,6 +3926,114 @@ export const EFFECT_ATLAS_META = {
       "centerY": 61
     }
   },
+  "explosion5 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 50,
+      "maxX": 81,
+      "maxY": 72,
+      "w": 26,
+      "h": 23,
+      "centerX": 69,
+      "centerY": 61
+    }
+  },
+  "explosion5 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 49,
+      "maxX": 82,
+      "maxY": 73,
+      "w": 28,
+      "h": 25,
+      "centerX": 69,
+      "centerY": 61
+    }
+  },
+  "explosion5 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 48,
+      "maxX": 83,
+      "maxY": 74,
+      "w": 30,
+      "h": 27,
+      "centerX": 69,
+      "centerY": 61
+    }
+  },
   "eye 32x32": {
     "frameIndices": [
       0,
@@ -1167,6 +4068,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 14
     }
   },
+  "eye 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "eye 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "eye 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "fireball1 32x32": {
     "frameIndices": [
       0,
@@ -1198,6 +4180,87 @@ export const EFFECT_ATLAS_META = {
       "w": 28,
       "h": 28,
       "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "fireball1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 29,
+      "maxY": 30,
+      "w": 30,
+      "h": 30,
+      "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "fireball1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 30,
+      "maxY": 31,
+      "w": 31,
+      "h": 32,
+      "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "fireball1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
       "centerY": 16
     }
   },
@@ -1235,6 +4298,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 15
     }
   },
+  "fireball2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "fireball2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "fireball2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "fireball3 32x32": {
     "frameIndices": [
       0,
@@ -1269,7 +4413,154 @@ export const EFFECT_ATLAS_META = {
       "centerY": 15
     }
   },
+  "fireball3 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "fireball3 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "fireball3 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "firefly 7x7": {
+    "frameIndices": [
+      0
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 6,
+      "maxY": 6,
+      "w": 7,
+      "h": 7,
+      "centerX": 3,
+      "centerY": 3
+    }
+  },
+  "firefly 7x7_aura_r1": {
+    "frameIndices": [
+      0
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 6,
+      "maxY": 6,
+      "w": 7,
+      "h": 7,
+      "centerX": 3,
+      "centerY": 3
+    }
+  },
+  "firefly 7x7_aura_r2": {
+    "frameIndices": [
+      0
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 6,
+      "maxY": 6,
+      "w": 7,
+      "h": 7,
+      "centerX": 3,
+      "centerY": 3
+    }
+  },
+  "firefly 7x7_aura_r3": {
     "frameIndices": [
       0
     ],
@@ -1440,6 +4731,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "firelion down ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 18,
+      "maxX": 103,
+      "maxY": 109,
+      "w": 80,
+      "h": 92,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 17,
+      "maxX": 104,
+      "maxY": 110,
+      "w": 82,
+      "h": 94,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 16,
+      "maxX": 105,
+      "maxY": 111,
+      "w": 84,
+      "h": 96,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "firelion down texture 128x128": {
     "frameIndices": [
       0,
@@ -1468,6 +5200,117 @@ export const EFFECT_ATLAS_META = {
         16769627
       ],
       "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion down texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -1631,6 +5474,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "firelion left ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 21,
+      "maxX": 99,
+      "maxY": 104,
+      "w": 74,
+      "h": 84,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "firelion left ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 20,
+      "maxX": 100,
+      "maxY": 105,
+      "w": 76,
+      "h": 86,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
+  "firelion left ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 19,
+      "maxX": 101,
+      "maxY": 106,
+      "w": 78,
+      "h": 88,
+      "centerX": 63,
+      "centerY": 63
+    }
+  },
   "firelion left texture 128x128": {
     "frameIndices": [
       0,
@@ -1659,6 +5943,117 @@ export const EFFECT_ATLAS_META = {
         12586758
       ],
       "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion left texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -1822,6 +6217,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "firelion right ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 23,
+      "maxX": 102,
+      "maxY": 104,
+      "w": 73,
+      "h": 82,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "firelion right ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 29,
+      "minY": 22,
+      "maxX": 103,
+      "maxY": 105,
+      "w": 75,
+      "h": 84,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
+  "firelion right ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 28,
+      "minY": 21,
+      "maxX": 104,
+      "maxY": 106,
+      "w": 77,
+      "h": 86,
+      "centerX": 66,
+      "centerY": 64
+    }
+  },
   "firelion right texture 128x128": {
     "frameIndices": [
       0,
@@ -1850,6 +6686,117 @@ export const EFFECT_ATLAS_META = {
         12586758
       ],
       "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion right texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -2012,6 +6959,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "firelion up ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 25,
+      "maxX": 102,
+      "maxY": 105,
+      "w": 77,
+      "h": 81,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 24,
+      "maxX": 103,
+      "maxY": 106,
+      "w": 79,
+      "h": 83,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "firelion up ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 23,
+      "maxX": 104,
+      "maxY": 107,
+      "w": 81,
+      "h": 85,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
   "firelion up texture 128x128": {
     "frameIndices": [
       0,
@@ -2040,6 +7428,117 @@ export const EFFECT_ATLAS_META = {
         16769627
       ],
       "tint": 13770000
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "firelion up texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -2093,6 +7592,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 57
     }
   },
+  "firelion_down 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 58,
+      "minY": 48,
+      "maxX": 72,
+      "maxY": 65,
+      "w": 15,
+      "h": 18,
+      "centerX": 65,
+      "centerY": 57
+    }
+  },
+  "firelion_down 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 47,
+      "maxX": 73,
+      "maxY": 66,
+      "w": 17,
+      "h": 20,
+      "centerX": 65,
+      "centerY": 57
+    }
+  },
+  "firelion_down 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 46,
+      "maxX": 74,
+      "maxY": 67,
+      "w": 19,
+      "h": 22,
+      "centerX": 65,
+      "centerY": 57
+    }
+  },
   "firelion_left 128x128": {
     "frameIndices": [
       0,
@@ -2129,6 +7739,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 63,
       "w": 18,
       "h": 13,
+      "centerX": 113,
+      "centerY": 57
+    }
+  },
+  "firelion_left 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 103,
+      "minY": 50,
+      "maxX": 122,
+      "maxY": 64,
+      "w": 20,
+      "h": 15,
+      "centerX": 113,
+      "centerY": 57
+    }
+  },
+  "firelion_left 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 102,
+      "minY": 49,
+      "maxX": 123,
+      "maxY": 65,
+      "w": 22,
+      "h": 17,
+      "centerX": 113,
+      "centerY": 57
+    }
+  },
+  "firelion_left 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 101,
+      "minY": 48,
+      "maxX": 124,
+      "maxY": 66,
+      "w": 24,
+      "h": 19,
       "centerX": 113,
       "centerY": 57
     }
@@ -2173,6 +7894,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 57
     }
   },
+  "firelion_right 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 5,
+      "minY": 50,
+      "maxX": 24,
+      "maxY": 64,
+      "w": 20,
+      "h": 15,
+      "centerX": 15,
+      "centerY": 57
+    }
+  },
+  "firelion_right 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 4,
+      "minY": 49,
+      "maxX": 25,
+      "maxY": 65,
+      "w": 22,
+      "h": 17,
+      "centerX": 15,
+      "centerY": 57
+    }
+  },
+  "firelion_right 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 3,
+      "minY": 48,
+      "maxX": 26,
+      "maxY": 66,
+      "w": 24,
+      "h": 19,
+      "centerX": 15,
+      "centerY": 57
+    }
+  },
   "firelion_up 128x128": {
     "frameIndices": [
       0,
@@ -2213,6 +8045,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 70
     }
   },
+  "firelion_up 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 58,
+      "minY": 58,
+      "maxX": 72,
+      "maxY": 81,
+      "w": 15,
+      "h": 24,
+      "centerX": 65,
+      "centerY": 70
+    }
+  },
+  "firelion_up 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 57,
+      "maxX": 73,
+      "maxY": 82,
+      "w": 17,
+      "h": 26,
+      "centerX": 65,
+      "centerY": 70
+    }
+  },
+  "firelion_up 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 56,
+      "maxX": 74,
+      "maxY": 83,
+      "w": 19,
+      "h": 28,
+      "centerX": 65,
+      "centerY": 70
+    }
+  },
   "firespark1 32x32": {
     "frameIndices": [
       0,
@@ -2244,6 +8187,87 @@ export const EFFECT_ATLAS_META = {
       "w": 31,
       "h": 32,
       "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "firespark1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "firespark1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "firespark1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
       "centerY": 16
     }
   },
@@ -2281,6 +8305,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 15
     }
   },
+  "firespark2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 2,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "firespark2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "firespark2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "firespark3 32x32": {
     "frameIndices": [
       0,
@@ -2311,6 +8416,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 27,
       "w": 31,
       "h": 25,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "firespark3 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 28,
+      "w": 32,
+      "h": 28,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "firespark3 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "firespark3 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
       "centerX": 16,
       "centerY": 15
     }
@@ -2362,6 +8548,126 @@ export const EFFECT_ATLAS_META = {
       "centerY": 108
     }
   },
+  "flame_warp 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 99,
+      "maxX": 119,
+      "maxY": 117,
+      "w": 112,
+      "h": 19,
+      "centerX": 64,
+      "centerY": 108
+    }
+  },
+  "flame_warp 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 7,
+      "minY": 98,
+      "maxX": 120,
+      "maxY": 118,
+      "w": 114,
+      "h": 21,
+      "centerX": 64,
+      "centerY": 108
+    }
+  },
+  "flame_warp 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 6,
+      "minY": 97,
+      "maxX": 121,
+      "maxY": 119,
+      "w": 116,
+      "h": 23,
+      "centerX": 64,
+      "centerY": 108
+    }
+  },
   "flameball 32x32": {
     "frameIndices": [
       0,
@@ -2388,6 +8694,81 @@ export const EFFECT_ATLAS_META = {
       "h": 30,
       "centerX": 16,
       "centerY": 15
+    }
+  },
+  "flameball 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 0,
+      "maxX": 24,
+      "maxY": 30,
+      "w": 17,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "flameball 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 7,
+      "minY": 0,
+      "maxX": 25,
+      "maxY": 31,
+      "w": 19,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "flameball 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 6,
+      "minY": 0,
+      "maxX": 26,
+      "maxY": 31,
+      "w": 21,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
     }
   },
   "flames 16x24": {
@@ -2423,6 +8804,105 @@ export const EFFECT_ATLAS_META = {
       "maxY": 20,
       "w": 8,
       "h": 18,
+      "centerX": 8,
+      "centerY": 12
+    }
+  },
+  "flames 16x24_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 3,
+      "minY": 2,
+      "maxX": 12,
+      "maxY": 21,
+      "w": 10,
+      "h": 20,
+      "centerX": 8,
+      "centerY": 12
+    }
+  },
+  "flames 16x24_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 2,
+      "minY": 1,
+      "maxX": 13,
+      "maxY": 22,
+      "w": 12,
+      "h": 22,
+      "centerX": 8,
+      "centerY": 12
+    }
+  },
+  "flames 16x24_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 1,
+      "minY": 0,
+      "maxX": 14,
+      "maxY": 23,
+      "w": 14,
+      "h": 24,
       "centerX": 8,
       "centerY": 12
     }
@@ -2471,6 +8951,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 49
     }
   },
+  "front_shield 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 10,
+      "minY": 3,
+      "maxX": 117,
+      "maxY": 99,
+      "w": 108,
+      "h": 97,
+      "centerX": 64,
+      "centerY": 51
+    }
+  },
+  "front_shield 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 9,
+      "minY": 2,
+      "maxX": 118,
+      "maxY": 100,
+      "w": 110,
+      "h": 99,
+      "centerX": 64,
+      "centerY": 51
+    }
+  },
+  "front_shield 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 1,
+      "maxX": 119,
+      "maxY": 101,
+      "w": 112,
+      "h": 101,
+      "centerX": 64,
+      "centerY": 51
+    }
+  },
   "front_shieldB 128x128": {
     "frameIndices": [
       0,
@@ -2514,6 +9105,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 47
     }
   },
+  "front_shieldB 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 10,
+      "minY": 0,
+      "maxX": 117,
+      "maxY": 98,
+      "w": 108,
+      "h": 99,
+      "centerX": 64,
+      "centerY": 49
+    }
+  },
+  "front_shieldB 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 9,
+      "minY": 0,
+      "maxX": 118,
+      "maxY": 99,
+      "w": 110,
+      "h": 100,
+      "centerX": 64,
+      "centerY": 50
+    }
+  },
+  "front_shieldB 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 0,
+      "maxX": 119,
+      "maxY": 100,
+      "w": 112,
+      "h": 101,
+      "centerX": 64,
+      "centerY": 50
+    }
+  },
   "iceshard1 32x32": {
     "frameIndices": [
       0,
@@ -2543,6 +9245,87 @@ export const EFFECT_ATLAS_META = {
       "maxX": 30,
       "maxY": 31,
       "w": 30,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "iceshard1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "iceshard1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "iceshard1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
       "h": 32,
       "centerX": 16,
       "centerY": 16
@@ -2582,6 +9365,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 15
     }
   },
+  "iceshard2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "iceshard2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "iceshard2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "iceshield 128x128": {
     "frameIndices": [
       0,
@@ -2617,6 +9481,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 64,
       "w": 3,
       "h": 3,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 61,
+      "maxX": 61,
+      "maxY": 65,
+      "w": 5,
+      "h": 5,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 60,
+      "maxX": 62,
+      "maxY": 66,
+      "w": 7,
+      "h": 7,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "iceshield 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 59,
+      "maxX": 63,
+      "maxY": 67,
+      "w": 9,
+      "h": 9,
       "centerX": 59,
       "centerY": 63
     }
@@ -2770,6 +9745,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "iceshield ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 38,
+      "maxX": 91,
+      "maxY": 89,
+      "w": 55,
+      "h": 52,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 37,
+      "maxX": 92,
+      "maxY": 90,
+      "w": 57,
+      "h": 54,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 36,
+      "maxX": 93,
+      "maxY": 91,
+      "w": 59,
+      "h": 56,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "iceshield textrure 128x128": {
     "frameIndices": [
       0,
@@ -2798,6 +10214,117 @@ export const EFFECT_ATLAS_META = {
         5607847
       ],
       "tint": 11000539
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield textrure 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield textrure 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "iceshield textrure 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -2849,6 +10376,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 91,
       "w": 19,
       "h": 7,
+      "centerX": 59,
+      "centerY": 88
+    }
+  },
+  "icetacle 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 84,
+      "maxX": 69,
+      "maxY": 92,
+      "w": 21,
+      "h": 9,
+      "centerX": 59,
+      "centerY": 88
+    }
+  },
+  "icetacle 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 83,
+      "maxX": 70,
+      "maxY": 93,
+      "w": 23,
+      "h": 11,
+      "centerX": 59,
+      "centerY": 88
+    }
+  },
+  "icetacle 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 47,
+      "minY": 82,
+      "maxX": 71,
+      "maxY": 94,
+      "w": 25,
+      "h": 13,
       "centerX": 59,
       "centerY": 88
     }
@@ -3005,6 +10643,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "icetacle ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 17,
+      "minY": 20,
+      "maxX": 107,
+      "maxY": 108,
+      "w": 91,
+      "h": 89,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "icetacle ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 16,
+      "minY": 19,
+      "maxX": 108,
+      "maxY": 109,
+      "w": 93,
+      "h": 91,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "icetacle ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 15,
+      "minY": 18,
+      "maxX": 109,
+      "maxY": 110,
+      "w": 95,
+      "h": 93,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
   "icetacle texture 128x128": {
     "frameIndices": [
       0,
@@ -3036,6 +11115,117 @@ export const EFFECT_ATLAS_META = {
         2714032
       ],
       "tint": 9032935
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "icetacle texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -3094,6 +11284,123 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "lightning 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 12,
+      "minY": 5,
+      "maxX": 111,
+      "maxY": 122,
+      "w": 100,
+      "h": 118,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "lightning 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 11,
+      "minY": 4,
+      "maxX": 112,
+      "maxY": 123,
+      "w": 102,
+      "h": 120,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "lightning 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 10,
+      "minY": 3,
+      "maxX": 113,
+      "maxY": 124,
+      "w": 104,
+      "h": 122,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
   "lightningbolt 32x32": {
     "frameIndices": [
       0,
@@ -3126,6 +11433,87 @@ export const EFFECT_ATLAS_META = {
       "h": 30,
       "centerX": 16,
       "centerY": 15
+    }
+  },
+  "lightningbolt 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "lightningbolt 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "lightningbolt 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
     }
   },
   "lightningclaw 128x128": {
@@ -3163,6 +11551,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 27,
       "w": 33,
       "h": 18,
+      "centerX": 73,
+      "centerY": 19
+    }
+  },
+  "lightningclaw 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 9,
+      "maxX": 90,
+      "maxY": 28,
+      "w": 35,
+      "h": 20,
+      "centerX": 73,
+      "centerY": 19
+    }
+  },
+  "lightningclaw 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 8,
+      "maxX": 91,
+      "maxY": 29,
+      "w": 37,
+      "h": 22,
+      "centerX": 73,
+      "centerY": 19
+    }
+  },
+  "lightningclaw 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 7,
+      "maxX": 92,
+      "maxY": 30,
+      "w": 39,
+      "h": 24,
       "centerX": 73,
       "centerY": 19
     }
@@ -3316,6 +11815,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "lightningclaw ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 22,
+      "maxX": 100,
+      "maxY": 106,
+      "w": 76,
+      "h": 85,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 21,
+      "maxX": 101,
+      "maxY": 107,
+      "w": 78,
+      "h": 87,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "lightningclaw ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 20,
+      "maxX": 102,
+      "maxY": 108,
+      "w": 80,
+      "h": 89,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "lightningclaw texture 128x128": {
     "frameIndices": [
       0,
@@ -3356,6 +12296,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "lightningclaw texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "lightningclaw texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "magebullet 13x13": {
     "frameIndices": [
       0,
@@ -3371,6 +12422,84 @@ export const EFFECT_ATLAS_META = {
         16777215
       ],
       "tint": 11285042
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 12,
+      "maxY": 12,
+      "w": 13,
+      "h": 13,
+      "centerX": 6,
+      "centerY": 6
+    }
+  },
+  "magebullet 13x13_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 12,
+      "maxY": 12,
+      "w": 13,
+      "h": 13,
+      "centerX": 6,
+      "centerY": 6
+    }
+  },
+  "magebullet 13x13_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 12,
+      "maxY": 12,
+      "w": 13,
+      "h": 13,
+      "centerX": 6,
+      "centerY": 6
+    }
+  },
+  "magebullet 13x13_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -3414,6 +12543,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 29,
       "w": 30,
       "h": 27,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "mine 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 2,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 29,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "mine 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "mine 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -3462,6 +12672,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 61
     }
   },
+  "odd_thruster 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 6,
+      "maxX": 93,
+      "maxY": 118,
+      "w": 62,
+      "h": 113,
+      "centerX": 63,
+      "centerY": 62
+    }
+  },
+  "odd_thruster 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 5,
+      "maxX": 94,
+      "maxY": 119,
+      "w": 64,
+      "h": 115,
+      "centerX": 63,
+      "centerY": 62
+    }
+  },
+  "odd_thruster 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 30,
+      "minY": 4,
+      "maxX": 95,
+      "maxY": 120,
+      "w": 66,
+      "h": 117,
+      "centerX": 63,
+      "centerY": 62
+    }
+  },
   "poisonball1 32x32": {
     "frameIndices": [
       0,
@@ -3494,6 +12815,87 @@ export const EFFECT_ATLAS_META = {
       "h": 27,
       "centerX": 16,
       "centerY": 15
+    }
+  },
+  "poisonball1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisonball1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisonball1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
     }
   },
   "poisonball2 32x32": {
@@ -3530,6 +12932,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "poisonball2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisonball2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisonball2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "poisondagger 32x32": {
     "frameIndices": [
       0,
@@ -3560,6 +13043,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 26,
       "w": 30,
       "h": 22,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisondagger 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 4,
+      "maxX": 31,
+      "maxY": 27,
+      "w": 32,
+      "h": 24,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisondagger 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 3,
+      "maxX": 31,
+      "maxY": 28,
+      "w": 32,
+      "h": 26,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "poisondagger 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 2,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 28,
       "centerX": 16,
       "centerY": 16
     }
@@ -3600,6 +13164,93 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "pulsating_beam 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 0,
+      "maxX": 79,
+      "maxY": 127,
+      "w": 30,
+      "h": 128,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "pulsating_beam 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 0,
+      "maxX": 80,
+      "maxY": 127,
+      "w": 32,
+      "h": 128,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "pulsating_beam 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 0,
+      "maxX": 81,
+      "maxY": 127,
+      "w": 34,
+      "h": 128,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
   "pulsating_beam2 128x128": {
     "frameIndices": [
       0,
@@ -3628,6 +13279,81 @@ export const EFFECT_ATLAS_META = {
       "maxY": 102,
       "w": 14,
       "h": 78,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_beam2 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 24,
+      "maxX": 72,
+      "maxY": 103,
+      "w": 18,
+      "h": 80,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_beam2 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 23,
+      "maxX": 73,
+      "maxY": 104,
+      "w": 20,
+      "h": 82,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_beam2 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 53,
+      "minY": 22,
+      "maxX": 74,
+      "maxY": 105,
+      "w": 22,
+      "h": 84,
       "centerX": 64,
       "centerY": 64
     }
@@ -3668,6 +13394,93 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "pulsating_shield 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 11,
+      "maxX": 93,
+      "maxY": 117,
+      "w": 59,
+      "h": 107,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_shield 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 10,
+      "maxX": 94,
+      "maxY": 118,
+      "w": 61,
+      "h": 109,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_shield 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 9,
+      "maxX": 95,
+      "maxY": 119,
+      "w": 63,
+      "h": 111,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "pulsating_star 128x128": {
     "frameIndices": [
       0,
@@ -3698,6 +13511,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 78,
       "w": 30,
       "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_star 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 45,
+      "maxX": 82,
+      "maxY": 82,
+      "w": 38,
+      "h": 38,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_star 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 44,
+      "maxX": 83,
+      "maxY": 83,
+      "w": 40,
+      "h": 40,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "pulsating_star 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 43,
+      "maxX": 84,
+      "maxY": 84,
+      "w": 42,
+      "h": 42,
       "centerX": 64,
       "centerY": 64
     }
@@ -3740,6 +13634,108 @@ export const EFFECT_ATLAS_META = {
       "centerY": 36
     }
   },
+  "radar 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 1,
+      "maxX": 116,
+      "maxY": 71,
+      "w": 61,
+      "h": 71,
+      "centerX": 86,
+      "centerY": 36
+    }
+  },
+  "radar 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 0,
+      "maxX": 117,
+      "maxY": 72,
+      "w": 63,
+      "h": 73,
+      "centerX": 86,
+      "centerY": 36
+    }
+  },
+  "radar 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 0,
+      "maxX": 118,
+      "maxY": 73,
+      "w": 65,
+      "h": 74,
+      "centerX": 86,
+      "centerY": 37
+    }
+  },
   "rays 128x128": {
     "frameIndices": [
       0,
@@ -3772,6 +13768,87 @@ export const EFFECT_ATLAS_META = {
       "h": 120,
       "centerX": 63,
       "centerY": 62
+    }
+  },
+  "rays 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 0,
+      "maxX": 101,
+      "maxY": 127,
+      "w": 77,
+      "h": 128,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "rays 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 0,
+      "maxX": 102,
+      "maxY": 127,
+      "w": 79,
+      "h": 128,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "rays 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 0,
+      "maxX": 103,
+      "maxY": 127,
+      "w": 81,
+      "h": 128,
+      "centerX": 63,
+      "centerY": 64
     }
   },
   "rings 128x128": {
@@ -3814,6 +13891,105 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "rings 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 11,
+      "minY": 29,
+      "maxX": 119,
+      "maxY": 98,
+      "w": 109,
+      "h": 70,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "rings 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 10,
+      "minY": 28,
+      "maxX": 120,
+      "maxY": 99,
+      "w": 111,
+      "h": 72,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
+  "rings 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 9,
+      "minY": 27,
+      "maxX": 121,
+      "maxY": 100,
+      "w": 113,
+      "h": 74,
+      "centerX": 65,
+      "centerY": 64
+    }
+  },
   "rotating_boxes 128x128": {
     "frameIndices": [
       0,
@@ -3853,6 +14029,108 @@ export const EFFECT_ATLAS_META = {
       "h": 107,
       "centerX": 64,
       "centerY": 63
+    }
+  },
+  "rotating_boxes 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 26,
+      "minY": 8,
+      "maxX": 101,
+      "maxY": 119,
+      "w": 76,
+      "h": 112,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "rotating_boxes 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 25,
+      "minY": 7,
+      "maxX": 102,
+      "maxY": 120,
+      "w": 78,
+      "h": 114,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "rotating_boxes 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 6,
+      "maxX": 103,
+      "maxY": 121,
+      "w": 80,
+      "h": 116,
+      "centerX": 64,
+      "centerY": 64
     }
   },
   "rotating_cone 128x128": {
@@ -3899,6 +14177,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "rotating_cone 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 6,
+      "maxX": 103,
+      "maxY": 119,
+      "w": 80,
+      "h": 114,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "rotating_cone 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 5,
+      "maxX": 104,
+      "maxY": 120,
+      "w": 82,
+      "h": 116,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "rotating_cone 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 4,
+      "maxX": 105,
+      "maxY": 121,
+      "w": 84,
+      "h": 118,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
   "rotating_shield 128x128": {
     "frameIndices": [
       0,
@@ -3937,6 +14326,105 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "rotating_shield 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 34,
+      "minY": 9,
+      "maxX": 94,
+      "maxY": 120,
+      "w": 61,
+      "h": 112,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "rotating_shield 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 8,
+      "maxX": 95,
+      "maxY": 121,
+      "w": 63,
+      "h": 114,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "rotating_shield 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 7,
+      "maxX": 96,
+      "maxY": 122,
+      "w": 65,
+      "h": 116,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
   "rotator3 128x128": {
     "frameIndices": [
       0,
@@ -3969,6 +14457,87 @@ export const EFFECT_ATLAS_META = {
       "h": 94,
       "centerX": 68,
       "centerY": 72
+    }
+  },
+  "rotator3 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 5,
+      "minY": 9,
+      "maxX": 123,
+      "maxY": 127,
+      "w": 119,
+      "h": 119,
+      "centerX": 64,
+      "centerY": 68
+    }
+  },
+  "rotator3 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 4,
+      "minY": 8,
+      "maxX": 124,
+      "maxY": 127,
+      "w": 121,
+      "h": 120,
+      "centerX": 64,
+      "centerY": 68
+    }
+  },
+  "rotator3 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 3,
+      "minY": 7,
+      "maxX": 125,
+      "maxY": 127,
+      "w": 123,
+      "h": 121,
+      "centerX": 64,
+      "centerY": 67
     }
   },
   "shield2 128x128": {
@@ -4011,6 +14580,105 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "shield2 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 4,
+      "maxX": 94,
+      "maxY": 123,
+      "w": 62,
+      "h": 120,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "shield2 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 3,
+      "maxX": 95,
+      "maxY": 124,
+      "w": 64,
+      "h": 122,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "shield2 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 2,
+      "maxX": 96,
+      "maxY": 125,
+      "w": 66,
+      "h": 124,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "shield3 128x128": {
     "frameIndices": [
       0,
@@ -4046,6 +14714,102 @@ export const EFFECT_ATLAS_META = {
       "maxY": 117,
       "w": 106,
       "h": 107,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "shield3 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 10,
+      "minY": 10,
+      "maxX": 117,
+      "maxY": 118,
+      "w": 108,
+      "h": 109,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "shield3 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 9,
+      "minY": 9,
+      "maxX": 118,
+      "maxY": 119,
+      "w": 110,
+      "h": 111,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "shield3 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 8,
+      "maxX": 119,
+      "maxY": 120,
+      "w": 112,
+      "h": 113,
       "centerX": 64,
       "centerY": 64
     }
@@ -4098,6 +14862,129 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "shield4 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 4,
+      "minY": 3,
+      "maxX": 123,
+      "maxY": 123,
+      "w": 120,
+      "h": 121,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "shield4 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 3,
+      "minY": 2,
+      "maxX": 124,
+      "maxY": 124,
+      "w": 122,
+      "h": 123,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
+  "shield4 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 2,
+      "minY": 1,
+      "maxX": 125,
+      "maxY": 125,
+      "w": 124,
+      "h": 125,
+      "centerX": 64,
+      "centerY": 63
+    }
+  },
   "skull 32x32": {
     "frameIndices": [
       0,
@@ -4132,6 +15019,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "skull 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "skull 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "skull 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "slimeprojectile 16x16": {
     "frameIndices": [
       0,
@@ -4157,6 +15125,81 @@ export const EFFECT_ATLAS_META = {
       "maxY": 12,
       "w": 9,
       "h": 10,
+      "centerX": 7,
+      "centerY": 8
+    }
+  },
+  "slimeprojectile 16x16_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 2,
+      "minY": 2,
+      "maxX": 12,
+      "maxY": 13,
+      "w": 11,
+      "h": 12,
+      "centerX": 7,
+      "centerY": 8
+    }
+  },
+  "slimeprojectile 16x16_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 1,
+      "minY": 1,
+      "maxX": 13,
+      "maxY": 14,
+      "w": 13,
+      "h": 14,
+      "centerX": 7,
+      "centerY": 8
+    }
+  },
+  "slimeprojectile 16x16_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 14,
+      "maxY": 15,
+      "w": 15,
+      "h": 16,
       "centerX": 7,
       "centerY": 8
     }
@@ -4195,6 +15238,114 @@ export const EFFECT_ATLAS_META = {
       "h": 102,
       "centerX": 64,
       "centerY": 68
+    }
+  },
+  "smoke 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 3,
+      "minY": 10,
+      "maxX": 123,
+      "maxY": 123,
+      "w": 121,
+      "h": 114,
+      "centerX": 63,
+      "centerY": 67
+    }
+  },
+  "smoke 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 2,
+      "minY": 9,
+      "maxX": 124,
+      "maxY": 124,
+      "w": 123,
+      "h": 116,
+      "centerX": 63,
+      "centerY": 67
+    }
+  },
+  "smoke 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 1,
+      "minY": 8,
+      "maxX": 125,
+      "maxY": 125,
+      "w": 125,
+      "h": 118,
+      "centerX": 63,
+      "centerY": 67
     }
   },
   "snakebite down ellipses 128x128": {
@@ -4346,6 +15497,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "snakebite down ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 34,
+      "maxX": 90,
+      "maxY": 95,
+      "w": 53,
+      "h": 62,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 33,
+      "maxX": 91,
+      "maxY": 96,
+      "w": 55,
+      "h": 64,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
+  "snakebite down ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 32,
+      "maxX": 92,
+      "maxY": 97,
+      "w": 57,
+      "h": 66,
+      "centerX": 64,
+      "centerY": 65
+    }
+  },
   "snakebite down textrue 128x128": {
     "frameIndices": [
       0,
@@ -4375,6 +15967,117 @@ export const EFFECT_ATLAS_META = {
         8316420
       ],
       "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down textrue 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down textrue 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite down textrue 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -4537,6 +16240,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "snakebite side ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 33,
+      "minY": 30,
+      "maxX": 94,
+      "maxY": 98,
+      "w": 62,
+      "h": 69,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 32,
+      "minY": 29,
+      "maxX": 95,
+      "maxY": 99,
+      "w": 64,
+      "h": 71,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 31,
+      "minY": 28,
+      "maxX": 96,
+      "maxY": 100,
+      "w": 66,
+      "h": 73,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "snakebite side textrue 128x128": {
     "frameIndices": [
       0,
@@ -4565,6 +16709,117 @@ export const EFFECT_ATLAS_META = {
         34068
       ],
       "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side textrue 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side textrue 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite side textrue 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -4727,6 +16982,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "snakebite up ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 32,
+      "maxX": 91,
+      "maxY": 93,
+      "w": 54,
+      "h": 62,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite up ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 31,
+      "maxX": 92,
+      "maxY": 94,
+      "w": 56,
+      "h": 64,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
+  "snakebite up ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 30,
+      "maxX": 93,
+      "maxY": 95,
+      "w": 58,
+      "h": 66,
+      "centerX": 65,
+      "centerY": 63
+    }
+  },
   "snakebite up textrue 128x128": {
     "frameIndices": [
       0,
@@ -4756,6 +17452,117 @@ export const EFFECT_ATLAS_META = {
         8316420
       ],
       "tint": 9499662
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up textrue 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up textrue 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "snakebite up textrue 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -4808,6 +17615,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "snakebite_down 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 59,
+      "minY": 61,
+      "maxX": 63,
+      "maxY": 65,
+      "w": 5,
+      "h": 5,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
+  "snakebite_down 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 58,
+      "minY": 60,
+      "maxX": 64,
+      "maxY": 66,
+      "w": 7,
+      "h": 7,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
+  "snakebite_down 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 59,
+      "maxX": 65,
+      "maxY": 67,
+      "w": 9,
+      "h": 9,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
   "snakebite_side 128x128": {
     "frameIndices": [
       0,
@@ -4843,6 +17761,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 64,
       "w": 3,
       "h": 3,
+      "centerX": 90,
+      "centerY": 63
+    }
+  },
+  "snakebite_side 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 88,
+      "minY": 61,
+      "maxX": 92,
+      "maxY": 65,
+      "w": 5,
+      "h": 5,
+      "centerX": 90,
+      "centerY": 63
+    }
+  },
+  "snakebite_side 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 87,
+      "minY": 60,
+      "maxX": 93,
+      "maxY": 66,
+      "w": 7,
+      "h": 7,
+      "centerX": 90,
+      "centerY": 63
+    }
+  },
+  "snakebite_side 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 86,
+      "minY": 59,
+      "maxX": 94,
+      "maxY": 67,
+      "w": 9,
+      "h": 9,
       "centerX": 90,
       "centerY": 63
     }
@@ -4886,6 +17915,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "snakebite_up 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 59,
+      "minY": 61,
+      "maxX": 63,
+      "maxY": 65,
+      "w": 5,
+      "h": 5,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
+  "snakebite_up 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 58,
+      "minY": 60,
+      "maxX": 64,
+      "maxY": 66,
+      "w": 7,
+      "h": 7,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
+  "snakebite_up 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 59,
+      "maxX": 65,
+      "maxY": 67,
+      "w": 9,
+      "h": 9,
+      "centerX": 61,
+      "centerY": 63
+    }
+  },
   "spikes 64x64": {
     "frameIndices": [
       0,
@@ -4923,6 +18063,99 @@ export const EFFECT_ATLAS_META = {
       "centerY": 59
     }
   },
+  "spikes 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 38,
+      "maxY": 63,
+      "w": 15,
+      "h": 10,
+      "centerX": 31,
+      "centerY": 59
+    }
+  },
+  "spikes 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 39,
+      "maxY": 63,
+      "w": 17,
+      "h": 11,
+      "centerX": 31,
+      "centerY": 58
+    }
+  },
+  "spikes 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 40,
+      "maxY": 63,
+      "w": 19,
+      "h": 12,
+      "centerX": 31,
+      "centerY": 58
+    }
+  },
   "spikes blue multiple 64x64": {
     "frameIndices": [
       0,
@@ -4957,6 +18190,99 @@ export const EFFECT_ATLAS_META = {
       "h": 8,
       "centerX": 31,
       "centerY": 59
+    }
+  },
+  "spikes blue multiple 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 38,
+      "maxY": 63,
+      "w": 15,
+      "h": 10,
+      "centerX": 31,
+      "centerY": 59
+    }
+  },
+  "spikes blue multiple 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 39,
+      "maxY": 63,
+      "w": 17,
+      "h": 11,
+      "centerX": 31,
+      "centerY": 58
+    }
+  },
+  "spikes blue multiple 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 40,
+      "maxY": 63,
+      "w": 19,
+      "h": 12,
+      "centerX": 31,
+      "centerY": 58
     }
   },
   "spikes blue multiple ellipses 128x128": {
@@ -5113,6 +18439,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "spikes blue multiple ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 49,
+      "maxX": 77,
+      "maxY": 79,
+      "w": 28,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 48,
+      "maxX": 78,
+      "maxY": 80,
+      "w": 30,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 47,
+      "maxX": 79,
+      "maxY": 81,
+      "w": 32,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "spikes blue multiple texture 128x128": {
     "frameIndices": [
       0,
@@ -5137,6 +18904,99 @@ export const EFFECT_ATLAS_META = {
         1323372
       ],
       "tint": 3897274
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes blue multiple texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -5181,6 +19041,93 @@ export const EFFECT_ATLAS_META = {
       "h": 8,
       "centerX": 31,
       "centerY": 59
+    },
+    "emptyCount": 3
+  },
+  "spikes blue single 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 38,
+      "maxY": 63,
+      "w": 15,
+      "h": 10,
+      "centerX": 31,
+      "centerY": 59
+    },
+    "emptyCount": 3
+  },
+  "spikes blue single 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 39,
+      "maxY": 63,
+      "w": 17,
+      "h": 11,
+      "centerX": 31,
+      "centerY": 58
+    },
+    "emptyCount": 3
+  },
+  "spikes blue single 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 40,
+      "maxY": 63,
+      "w": 19,
+      "h": 12,
+      "centerX": 31,
+      "centerY": 58
     },
     "emptyCount": 3
   },
@@ -5338,6 +19285,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "spikes blue single ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 75,
+      "maxY": 79,
+      "w": 25,
+      "h": 31,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 48,
+      "maxX": 76,
+      "maxY": 80,
+      "w": 27,
+      "h": 33,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes blue single ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 47,
+      "maxX": 77,
+      "maxY": 81,
+      "w": 29,
+      "h": 35,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "spikes brown multiple 64x64": {
     "frameIndices": [
       0,
@@ -5373,6 +19761,99 @@ export const EFFECT_ATLAS_META = {
       "h": 8,
       "centerX": 31,
       "centerY": 59
+    }
+  },
+  "spikes brown multiple 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 38,
+      "maxY": 63,
+      "w": 15,
+      "h": 10,
+      "centerX": 31,
+      "centerY": 59
+    }
+  },
+  "spikes brown multiple 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 39,
+      "maxY": 63,
+      "w": 17,
+      "h": 11,
+      "centerX": 31,
+      "centerY": 58
+    }
+  },
+  "spikes brown multiple 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 40,
+      "maxY": 63,
+      "w": 19,
+      "h": 12,
+      "centerX": 31,
+      "centerY": 58
     }
   },
   "spikes brown multiple ellipses 128x128": {
@@ -5529,6 +20010,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "spikes brown multiple ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 76,
+      "maxY": 79,
+      "w": 26,
+      "h": 31,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 48,
+      "maxX": 77,
+      "maxY": 80,
+      "w": 28,
+      "h": 33,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes brown multiple ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 47,
+      "maxX": 78,
+      "maxY": 81,
+      "w": 30,
+      "h": 35,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "spikes brown single 64x64": {
     "frameIndices": [
       0,
@@ -5561,6 +20483,93 @@ export const EFFECT_ATLAS_META = {
       "h": 8,
       "centerX": 31,
       "centerY": 59
+    },
+    "emptyCount": 3
+  },
+  "spikes brown single 64x64_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 54,
+      "maxX": 38,
+      "maxY": 63,
+      "w": 15,
+      "h": 10,
+      "centerX": 31,
+      "centerY": 59
+    },
+    "emptyCount": 3
+  },
+  "spikes brown single 64x64_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 53,
+      "maxX": 39,
+      "maxY": 63,
+      "w": 17,
+      "h": 11,
+      "centerX": 31,
+      "centerY": 58
+    },
+    "emptyCount": 3
+  },
+  "spikes brown single 64x64_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 52,
+      "maxX": 40,
+      "maxY": 63,
+      "w": 19,
+      "h": 12,
+      "centerX": 31,
+      "centerY": 58
     },
     "emptyCount": 3
   },
@@ -5714,6 +20723,447 @@ export const EFFECT_ATLAS_META = {
       "maxY": 77,
       "w": 23,
       "h": 28,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 75,
+      "maxY": 78,
+      "w": 25,
+      "h": 30,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 48,
+      "maxX": 76,
+      "maxY": 79,
+      "w": 27,
+      "h": 32,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "spikes brown single ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 47,
+      "maxX": 77,
+      "maxY": 80,
+      "w": 29,
+      "h": 34,
       "centerX": 63,
       "centerY": 64
     }
@@ -5872,6 +21322,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "spikes ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 51,
+      "minY": 49,
+      "maxX": 77,
+      "maxY": 78,
+      "w": 27,
+      "h": 30,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 48,
+      "maxX": 78,
+      "maxY": 79,
+      "w": 29,
+      "h": 32,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 47,
+      "maxX": 79,
+      "maxY": 80,
+      "w": 31,
+      "h": 34,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "spikes texture 128x128": {
     "frameIndices": [
       0,
@@ -5897,6 +21788,99 @@ export const EFFECT_ATLAS_META = {
         14268252
       ],
       "tint": 10054474
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "spikes texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -5944,6 +21928,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "starbeam1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "starbeam1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "starbeam1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "starbeam2 32x32": {
     "frameIndices": [
       0,
@@ -5976,6 +22041,87 @@ export const EFFECT_ATLAS_META = {
       "h": 30,
       "centerX": 17,
       "centerY": 15
+    }
+  },
+  "starbeam2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "starbeam2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "starbeam2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
     }
   },
   "tentacles 25x90": {
@@ -6025,6 +22171,129 @@ export const EFFECT_ATLAS_META = {
       "centerY": 85
     }
   },
+  "tentacles 25x90_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 8,
+      "minY": 82,
+      "maxX": 15,
+      "maxY": 87,
+      "w": 8,
+      "h": 6,
+      "centerX": 12,
+      "centerY": 85
+    }
+  },
+  "tentacles 25x90_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 7,
+      "minY": 81,
+      "maxX": 16,
+      "maxY": 88,
+      "w": 10,
+      "h": 8,
+      "centerX": 12,
+      "centerY": 85
+    }
+  },
+  "tentacles 25x90_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 6,
+      "minY": 80,
+      "maxX": 17,
+      "maxY": 89,
+      "w": 12,
+      "h": 10,
+      "centerX": 12,
+      "centerY": 85
+    }
+  },
   "tornado 128x128": {
     "frameIndices": [
       0,
@@ -6061,6 +22330,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 114,
       "w": 19,
       "h": 47,
+      "centerX": 67,
+      "centerY": 91
+    }
+  },
+  "tornado 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 67,
+      "maxX": 77,
+      "maxY": 115,
+      "w": 21,
+      "h": 49,
+      "centerX": 67,
+      "centerY": 91
+    }
+  },
+  "tornado 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 66,
+      "maxX": 78,
+      "maxY": 116,
+      "w": 23,
+      "h": 51,
+      "centerX": 67,
+      "centerY": 91
+    }
+  },
+  "tornado 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 65,
+      "maxX": 79,
+      "maxY": 117,
+      "w": 25,
+      "h": 53,
       "centerX": 67,
       "centerY": 91
     }
@@ -6215,6 +22595,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "tornado ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 35,
+      "maxX": 89,
+      "maxY": 92,
+      "w": 53,
+      "h": 58,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 36,
+      "minY": 34,
+      "maxX": 90,
+      "maxY": 93,
+      "w": 55,
+      "h": 60,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "tornado ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 35,
+      "minY": 33,
+      "maxX": 91,
+      "maxY": 94,
+      "w": 57,
+      "h": 62,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "tornado texture 128x128": {
     "frameIndices": [
       0,
@@ -6244,6 +23065,117 @@ export const EFFECT_ATLAS_META = {
         7700822
       ],
       "tint": 13094301
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "tornado texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -6293,6 +23225,117 @@ export const EFFECT_ATLAS_META = {
       "maxY": 91,
       "w": 17,
       "h": 6,
+      "centerX": 59,
+      "centerY": 89
+    }
+  },
+  "torrentacle 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 50,
+      "minY": 85,
+      "maxX": 68,
+      "maxY": 92,
+      "w": 19,
+      "h": 8,
+      "centerX": 59,
+      "centerY": 89
+    }
+  },
+  "torrentacle 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 49,
+      "minY": 84,
+      "maxX": 69,
+      "maxY": 93,
+      "w": 21,
+      "h": 10,
+      "centerX": 59,
+      "centerY": 89
+    }
+  },
+  "torrentacle 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 48,
+      "minY": 83,
+      "maxX": 70,
+      "maxY": 94,
+      "w": 23,
+      "h": 12,
       "centerX": 59,
       "centerY": 89
     }
@@ -6447,6 +23490,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "torrentacle ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 20,
+      "minY": 21,
+      "maxX": 104,
+      "maxY": 106,
+      "w": 85,
+      "h": 86,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "torrentacle ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 19,
+      "minY": 20,
+      "maxX": 105,
+      "maxY": 107,
+      "w": 87,
+      "h": 88,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
+  "torrentacle ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 18,
+      "minY": 19,
+      "maxX": 106,
+      "maxY": 108,
+      "w": 89,
+      "h": 90,
+      "centerX": 62,
+      "centerY": 64
+    }
+  },
   "torrentacle texture 128x128": {
     "frameIndices": [
       0,
@@ -6491,6 +23975,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "torrentacle texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "torrentacle texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "tractor_beam 128x128": {
     "frameIndices": [
       0,
@@ -6518,6 +24113,78 @@ export const EFFECT_ATLAS_META = {
       "h": 113,
       "centerX": 64,
       "centerY": 61
+    }
+  },
+  "tractor_beam 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 14,
+      "minY": 4,
+      "maxX": 113,
+      "maxY": 119,
+      "w": 100,
+      "h": 116,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "tractor_beam 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 13,
+      "minY": 3,
+      "maxX": 114,
+      "maxY": 120,
+      "w": 102,
+      "h": 118,
+      "centerX": 64,
+      "centerY": 62
+    }
+  },
+  "tractor_beam 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 12,
+      "minY": 2,
+      "maxX": 115,
+      "maxY": 121,
+      "w": 104,
+      "h": 120,
+      "centerX": 64,
+      "centerY": 62
     }
   },
   "turtleshell front ellipses 128x128": {
@@ -6669,6 +24336,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "turtleshell front ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 39,
+      "minY": 38,
+      "maxX": 87,
+      "maxY": 89,
+      "w": 49,
+      "h": 52,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 38,
+      "minY": 37,
+      "maxX": 88,
+      "maxY": 90,
+      "w": 51,
+      "h": 54,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "turtleshell front ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 37,
+      "minY": 36,
+      "maxX": 89,
+      "maxY": 91,
+      "w": 53,
+      "h": 56,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
   "turtleshell front texture 128x128": {
     "frameIndices": [
       0,
@@ -6697,6 +24805,117 @@ export const EFFECT_ATLAS_META = {
         34068
       ],
       "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell front texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -6859,6 +25078,447 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "turtleshell side ellipses 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 43,
+      "minY": 44,
+      "maxX": 81,
+      "maxY": 86,
+      "w": 39,
+      "h": 43,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "turtleshell side ellipses 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 42,
+      "minY": 43,
+      "maxX": 82,
+      "maxY": 87,
+      "w": 41,
+      "h": 45,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
+  "turtleshell side ellipses 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 41,
+      "minY": 42,
+      "maxX": 83,
+      "maxY": 88,
+      "w": 43,
+      "h": 47,
+      "centerX": 62,
+      "centerY": 65
+    }
+  },
   "turtleshell side texture 128x128": {
     "frameIndices": [
       0,
@@ -6888,6 +25548,117 @@ export const EFFECT_ATLAS_META = {
         34068
       ],
       "tint": 1953792
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side texture 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side texture 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
+  "turtleshell side texture 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -6940,6 +25711,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 63
     }
   },
+  "turtleshell_front 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 57,
+      "minY": 61,
+      "maxX": 61,
+      "maxY": 65,
+      "w": 5,
+      "h": 5,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "turtleshell_front 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 60,
+      "maxX": 62,
+      "maxY": 66,
+      "w": 7,
+      "h": 7,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
+  "turtleshell_front 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 59,
+      "maxX": 63,
+      "maxY": 67,
+      "w": 9,
+      "h": 9,
+      "centerX": 59,
+      "centerY": 63
+    }
+  },
   "turtleshell_side 128x128": {
     "frameIndices": [
       0,
@@ -6979,6 +25861,117 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "turtleshell_side 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 24,
+      "minY": 61,
+      "maxX": 28,
+      "maxY": 66,
+      "w": 5,
+      "h": 6,
+      "centerX": 26,
+      "centerY": 64
+    }
+  },
+  "turtleshell_side 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 23,
+      "minY": 60,
+      "maxX": 29,
+      "maxY": 67,
+      "w": 7,
+      "h": 8,
+      "centerX": 26,
+      "centerY": 64
+    }
+  },
+  "turtleshell_side 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 22,
+      "minY": 59,
+      "maxX": 30,
+      "maxY": 68,
+      "w": 9,
+      "h": 10,
+      "centerX": 26,
+      "centerY": 64
+    }
+  },
   "waterbeam 32x32": {
     "frameIndices": [
       0,
@@ -7009,6 +26002,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 29,
       "w": 31,
       "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbeam 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbeam 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbeam 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -7047,6 +26121,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 15
     }
   },
+  "waterbubble1 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble1 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble1 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "waterbubble2 32x32": {
     "frameIndices": [
       0,
@@ -7079,6 +26234,87 @@ export const EFFECT_ATLAS_META = {
       "h": 30,
       "centerX": 16,
       "centerY": 15
+    }
+  },
+  "waterbubble2 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble2 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble2 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
     }
   },
   "waterbubble3 32x32": {
@@ -7115,6 +26351,87 @@ export const EFFECT_ATLAS_META = {
       "centerY": 16
     }
   },
+  "waterbubble3 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble3 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "waterbubble3 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
   "waves 128x128": {
     "frameIndices": [
       0,
@@ -7143,6 +26460,90 @@ export const EFFECT_ATLAS_META = {
       "w": 33,
       "h": 7,
       "centerX": 63,
+      "centerY": 107
+    }
+  },
+  "waves 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 46,
+      "minY": 103,
+      "maxX": 81,
+      "maxY": 111,
+      "w": 36,
+      "h": 9,
+      "centerX": 64,
+      "centerY": 107
+    }
+  },
+  "waves 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 45,
+      "minY": 102,
+      "maxX": 82,
+      "maxY": 112,
+      "w": 38,
+      "h": 11,
+      "centerX": 64,
+      "centerY": 107
+    }
+  },
+  "waves 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 44,
+      "minY": 101,
+      "maxX": 83,
+      "maxY": 113,
+      "w": 40,
+      "h": 13,
+      "centerX": 64,
       "centerY": 107
     }
   },
@@ -7182,6 +26583,102 @@ export const EFFECT_ATLAS_META = {
       "centerY": 64
     }
   },
+  "windshield_wiper 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 56,
+      "minY": 1,
+      "maxX": 116,
+      "maxY": 125,
+      "w": 61,
+      "h": 125,
+      "centerX": 86,
+      "centerY": 63
+    }
+  },
+  "windshield_wiper 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 55,
+      "minY": 0,
+      "maxX": 117,
+      "maxY": 126,
+      "w": 63,
+      "h": 127,
+      "centerX": 86,
+      "centerY": 63
+    }
+  },
+  "windshield_wiper 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 54,
+      "minY": 0,
+      "maxX": 118,
+      "maxY": 127,
+      "w": 65,
+      "h": 128,
+      "centerX": 86,
+      "centerY": 64
+    }
+  },
   "wood 32x32": {
     "frameIndices": [
       0,
@@ -7212,6 +26709,87 @@ export const EFFECT_ATLAS_META = {
       "maxY": 28,
       "w": 30,
       "h": 25,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "wood 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 2,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 28,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "wood 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 30,
+      "centerX": 16,
+      "centerY": 16
+    }
+  },
+  "wood 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
       "centerX": 16,
       "centerY": 16
     }
@@ -7256,6 +26834,105 @@ export const EFFECT_ATLAS_META = {
       "centerY": 65
     }
   },
+  "yellow_cloud 128x128_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 125,
+      "maxY": 127,
+      "w": 126,
+      "h": 127,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "yellow_cloud 128x128_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 126,
+      "maxY": 127,
+      "w": 127,
+      "h": 128,
+      "centerX": 63,
+      "centerY": 64
+    }
+  },
+  "yellow_cloud 128x128_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 127,
+      "maxY": 127,
+      "w": 128,
+      "h": 128,
+      "centerX": 64,
+      "centerY": 64
+    }
+  },
   "zombieslash 32x32": {
     "frameIndices": [
       0,
@@ -7287,6 +26964,87 @@ export const EFFECT_ATLAS_META = {
       "w": 29,
       "h": 26,
       "centerX": 15,
+      "centerY": 16
+    }
+  },
+  "zombieslash 32x32_aura_r1": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 1,
+      "maxX": 31,
+      "maxY": 29,
+      "w": 32,
+      "h": 29,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "zombieslash 32x32_aura_r2": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 30,
+      "w": 32,
+      "h": 31,
+      "centerX": 16,
+      "centerY": 15
+    }
+  },
+  "zombieslash 32x32_aura_r3": {
+    "frameIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "palette": {
+      "colors": [
+        16777215
+      ],
+      "tint": 16777215
+    },
+    "collisionBounds": {
+      "frameIndex": 0,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 31,
+      "maxY": 31,
+      "w": 32,
+      "h": 32,
+      "centerX": 16,
       "centerY": 16
     }
   }

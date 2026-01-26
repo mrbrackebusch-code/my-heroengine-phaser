@@ -1150,6 +1150,7 @@ const HERO_WPN_CAST_KEY = "wCa";
 const HERO_WPN_EXEC_KEY = "wEx";
 const HERO_WPN_INT_KEY = "wInt";
 const HERO_WPN_SUP_KEY = "wSup";
+const HERO_WPN_HIDE_KEY = "wHide";
 const HERO_GHOST_ALPHA_KEY = "ghostAlpha";
 const HERO_GHOST_TINT_KEY = "ghostTint";
 const HERO_GHOST_ACTIVE_KEY = "deadGhost";
@@ -1977,9 +1978,10 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
     }
 
     const heroIndex = (dataAny[HERO_INDEX_DATA_KEY] as any | 0);
-    const weaponId = _heroCastWeaponByIndex[heroIndex] || (typeof dataAny[HERO_WPN_CAST_KEY] === "string" ? String(dataAny[HERO_WPN_CAST_KEY]) : "");
-    if (!weaponId) return;
-    const weaponVariant = _weaponVariantForHero(heroIndex, weaponId);
+    // Always use the crystal model for the orbiting "baby" ring (composite atlas),
+    // independent of the hero's cast weapon. This avoids empty-FG cast sheets.
+    const weaponId = "crystal";
+    const weaponVariant = "base";
 
     const dirRaw = (typeof dataAny.dir === "string" && dataAny.dir) ? dataAny.dir : "down";
     const dir = (dirRaw === "up" || dirRaw === "down" || dirRaw === "left" || dirRaw === "right") ? dirRaw : "down";
@@ -1999,7 +2001,7 @@ function _syncHeroIntellectCastCrystals(ctx: SyncContext, s: any, nativeHero: Ph
             heroSprite: nativeHero,
             weaponSprite: spr,
             weaponId,
-            heroPhase: "cast",
+            heroPhase: "thrust",
             dir: dir as any,
             heroFrameIndex: 0,
             variant: weaponVariant,
@@ -7690,14 +7692,13 @@ function _attachGetOrRecreateCanvasTexture(
                         const key = `projTexRecreate:${s.id}:${texKey}:${texW}x${texH}->${targetW}x${targetH}`;
                         if (!__effectMaskTexOnce.has(key)) {
                             __effectMaskTexOnce.add(key);
-                            console.log("[effectmask][projTexRecreate]", {
-                                spriteId: s.id | 0,
-                                texKey,
-                                oldW: texW | 0,
-                                oldH: texH | 0,
-                                newW: targetW | 0,
-                                newH: targetH | 0
-                            });
+                            console.log(
+                                "[EFFECT][MASK][PROJ_TEX_RECREATE]" +
+                                " id=" + (s.id | 0) +
+                                " tex=" + texKey +
+                                " old=" + (texW | 0) + "x" + (texH | 0) +
+                                " new=" + (targetW | 0) + "x" + (targetH | 0)
+                            );
                         }
                     }
                 }
@@ -8313,10 +8314,11 @@ function _syncSpriteLoop(ctx: SyncContext): void {
                     const key = `projTexRemove:${s.id}:${texKey}`;
                     if (!__effectMaskTexOnce.has(key)) {
                         __effectMaskTexOnce.add(key);
-                        console.log("[effectmask][projTexRemove]", {
-                            spriteId: s.id | 0,
-                            texKey
-                        });
+                        console.log(
+                            "[EFFECT][MASK][PROJ_TEX_REMOVE]" +
+                            " id=" + (s.id | 0) +
+                            " tex=" + texKey
+                        );
                     }
                 }
                 sc.textures.remove(texKey);
@@ -11607,9 +11609,15 @@ function _syncWeaponOverlaysForHeroNative(
     if (!overlays) return;
 
     const dataAny: any = (s as any).data || {};
+    const hideWeaponOverlay = !!dataAny[HERO_WPN_HIDE_KEY];
 
     // Inputs
     const requestedDir = _wpnNormalizeDir((typeof dataAny.dir === "string" ? dataAny.dir : "down"));
+
+    if (hideWeaponOverlay) {
+        _wpnHideAllIfNoWeapon(anyHero, sc, overlays, nativeHero);
+        return;
+    }
 
     // Decide weaponId + weaponPhase based on DISPLAYED animation (and combo/execute rules)
     const sel = _wpnSelectWeaponAndPhase(dataAny, nativeHero);
@@ -12516,10 +12524,11 @@ function _effectClearPaintMask(nativeAny: any): void {
             const key = "clear:" + id;
             if (!__effectMaskClearOnce.has(key)) {
                 __effectMaskClearOnce.add(key);
-                console.log("[effectmask][clear]", {
-                    spriteId: id,
-                    maskType: String(nativeAny.__effectPaintMaskType || "")
-                });
+                console.log(
+                    "[EFFECT][MASK][CLEAR]" +
+                    " id=" + (id | 0) +
+                    " type=" + String(nativeAny.__effectPaintMaskType || "")
+                );
             }
         } catch { /* ignore */ }
     }
@@ -12663,16 +12672,17 @@ function _ensureHeroAuraMaskImage(heroNative: any, radius: number): any | null {
             const key = maskTexKey + "::" + String(maskUsesFrame ? frameName : "__BASE");
             if (!__effectMaskKeyOnce.has(key)) {
                 __effectMaskKeyOnce.add(key);
-                console.log("[effectmask][mask]", {
-                    key,
-                    heroTex: heroTexKey,
-                    heroFrame: frameName,
-                    radius: r | 0,
-                    maskTex: maskTexKey,
-                    maskUsesFrame: !!maskUsesFrame,
-                    w: (maskImg.width ?? 0) | 0,
-                    h: (maskImg.height ?? 0) | 0
-                });
+                console.log(
+                    "[EFFECT][MASK][HERO]" +
+                    " key=" + key +
+                    " heroTex=" + heroTexKey +
+                    " heroFrame=" + String(frameName ?? "") +
+                    " radius=" + (r | 0) +
+                    " maskTex=" + maskTexKey +
+                    " usesFrame=" + (maskUsesFrame ? 1 : 0) +
+                    " w=" + ((maskImg.width ?? 0) | 0) +
+                    " h=" + ((maskImg.height ?? 0) | 0)
+                );
             }
         } catch { /* ignore */ }
     }
@@ -12691,11 +12701,13 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
                 const key = "heroMissing:" + heroTex + ":" + heroFrame + ":r" + (radius | 0);
                 if (!__effectMaskKeyOnce.has(key)) {
                     __effectMaskKeyOnce.add(key);
-                    console.log("[effectmask][maskMissing]", {
-                        heroTex,
-                        heroFrame,
-                        radius: radius | 0
-                    });
+                    console.log(
+                        "[EFFECT][MASK][MISSING]" +
+                        " kind=hero" +
+                        " heroTex=" + heroTex +
+                        " heroFrame=" + heroFrame +
+                        " radius=" + (radius | 0)
+                    );
                 }
             } catch { /* ignore */ }
         }
@@ -12787,10 +12799,12 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
                 const key = "maskTexMissing:" + texKey + ":" + String(frameName);
                 if (!__effectMaskKeyOnce.has(key)) {
                     __effectMaskKeyOnce.add(key);
-                    console.log("[effectmask][maskMissing]", {
-                        tex: texKey,
-                        frame: String(frameName)
-                    });
+                    console.log(
+                        "[EFFECT][MASK][MISSING]" +
+                        " kind=sprite" +
+                        " tex=" + texKey +
+                        " frame=" + String(frameName)
+                    );
                 }
             } catch { /* ignore */ }
         }
@@ -13207,22 +13221,23 @@ function _syncEffectPath(
             const key = "init:" + String(s.id | 0);
             if (!__effectMaskInitOnce.has(key)) {
                 __effectMaskInitOnce.add(key);
-                console.log("[effectmask][init]", {
-                    spriteId: s.id | 0,
-                    skin,
-                    dir,
-                    mode: modeRaw || "",
-                    wantsPaint: wantsPaint ? 1 : 0,
-                    wantsHeroMaskOnly: wantsHeroMaskOnly ? 1 : 0,
-                    heroIndex: heroIndexForDebug | 0,
-                    hasHeroIndex: hasHeroIndexKey ? 1 : 0,
-                    hasHeroRef: heroRefForMask ? 1 : 0,
-                    hasMaskSprite: maskSpriteRef ? 1 : 0,
-                    maskSpriteId: maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0,
-                    maskRadius: maskRadiusRaw | 0,
-                    maskRadiusPx: maskRadiusPxRaw | 0,
-                    forceTop: forceTop ? 1 : 0
-                });
+                console.log(
+                    "[EFFECT][MASK][INIT]" +
+                    " id=" + (s.id | 0) +
+                    " skin=" + skin +
+                    " dir=" + dir +
+                    " mode=" + (modeRaw || "") +
+                    " wantsPaint=" + (wantsPaint ? 1 : 0) +
+                    " wantsHeroMaskOnly=" + (wantsHeroMaskOnly ? 1 : 0) +
+                    " hero=" + (heroIndexForDebug | 0) +
+                    " hasHeroIndex=" + (hasHeroIndexKey ? 1 : 0) +
+                    " hasHeroRef=" + (heroRefForMask ? 1 : 0) +
+                    " hasMaskSprite=" + (maskSpriteRef ? 1 : 0) +
+                    " maskSpriteId=" + (maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0) +
+                    " maskRadius=" + (maskRadiusRaw | 0) +
+                    " maskRadiusPx=" + (maskRadiusPxRaw | 0) +
+                    " forceTop=" + (forceTop ? 1 : 0)
+                );
             }
         } catch { /* ignore */ }
     }
@@ -13261,10 +13276,11 @@ function _syncEffectPath(
                                 const key = "heroRef:" + String(s.id | 0);
                                 if (!__effectMaskSyncOnce.has(key)) {
                                     __effectMaskSyncOnce.add(key);
-                                    console.log("[effectmask][heroRef]", {
-                                        spriteId: s.id | 0,
-                                        heroIndex: heroIndexForDebug | 0
-                                    });
+                                    console.log(
+                                        "[EFFECT][MASK][HERO_REF]" +
+                                        " id=" + (s.id | 0) +
+                                        " hero=" + (heroIndexForDebug | 0)
+                                    );
                                 }
                             } catch { /* ignore */ }
                         }
@@ -13299,12 +13315,13 @@ function _syncEffectPath(
                         const key = "hide:" + String(s.id | 0);
                         if (!__effectMaskHideOnce.has(key)) {
                             __effectMaskHideOnce.add(key);
-                            console.log("[effectmask][hide]", {
-                                spriteId: s.id | 0,
-                                heroIndex: heroIndexForDebug | 0,
-                                mode: modeRaw || "",
-                                maskType
-                            });
+                            console.log(
+                                "[EFFECT][MASK][HIDE]" +
+                                " id=" + (s.id | 0) +
+                                " hero=" + (heroIndexForDebug | 0) +
+                                " mode=" + (modeRaw || "") +
+                                " maskType=" + maskType
+                            );
                         }
                     } catch { /* ignore */ }
                 }
@@ -13317,17 +13334,18 @@ function _syncEffectPath(
                 if (!__effectMaskSyncOnce.has(key)) {
                     __effectMaskSyncOnce.add(key);
                     const maskAttached = !!nativeAny.__effectPaintMask;
-                    console.log("[effectmask][sync]", {
-                        spriteId: s.id | 0,
-                        heroIndex: heroIndexForDebug | 0,
-                        mode: modeRaw || "",
-                        maskType,
-                        maskAttached: maskAttached ? 1 : 0,
-                        maskRadius: maskRadiusRaw | 0,
-                        maskRadiusPx: maskRadiusPxRaw | 0,
-                        maskSpriteId: maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0,
-                        wantsHeroMaskOnly: wantsHeroMaskOnly ? 1 : 0
-                    });
+                    console.log(
+                        "[EFFECT][MASK][SYNC]" +
+                        " id=" + (s.id | 0) +
+                        " hero=" + (heroIndexForDebug | 0) +
+                        " mode=" + (modeRaw || "") +
+                        " maskType=" + maskType +
+                        " maskAttached=" + (maskAttached ? 1 : 0) +
+                        " maskRadius=" + (maskRadiusRaw | 0) +
+                        " maskRadiusPx=" + (maskRadiusPxRaw | 0) +
+                        " maskSpriteId=" + (maskSpriteRef ? ((maskSpriteRef as any).id | 0) : 0) +
+                        " wantsHeroMaskOnly=" + (wantsHeroMaskOnly ? 1 : 0)
+                    );
                 }
             } catch { /* ignore */ }
         }
@@ -13337,11 +13355,12 @@ function _syncEffectPath(
                 const key = "skip:" + String(s.id | 0);
                 if (!__effectMaskSkipOnce.has(key)) {
                     __effectMaskSkipOnce.add(key);
-                    console.log("[effectmask][skip]", {
-                        spriteId: s.id | 0,
-                        mode: modeRaw || "",
-                        wantsPaint: wantsPaint ? 1 : 0
-                    });
+                    console.log(
+                        "[EFFECT][MASK][SKIP]" +
+                        " id=" + (s.id | 0) +
+                        " mode=" + (modeRaw || "") +
+                        " wantsPaint=" + (wantsPaint ? 1 : 0)
+                    );
                 }
             } catch { /* ignore */ }
         }
@@ -13726,20 +13745,21 @@ function _syncVisibilityAndDebugTail(
             const key = "vis:" + String(s.id | 0);
             if (!__effectMaskVisOnce.has(key)) {
                 __effectMaskVisOnce.add(key);
-                console.log("[effectmask][vis]", {
-                    spriteId: s.id | 0,
-                    visible: !!native.visible,
-                    alpha: (native.alpha ?? 0),
-                    depth: (native as any).depth ?? 0,
-                    tex: (native as any).texture?.key ?? "",
-                    frame: (native as any).frame?.name ?? "",
-                    displayW: (native as any).displayWidth ?? (native as any).width ?? 0,
-                    displayH: (native as any).displayHeight ?? (native as any).height ?? 0,
-                    mode: String(dataAny[EFFECT_MODE_DATA_KEY] || ""),
-                    maskType: String((native as any).__effectPaintMaskType || ""),
-                    maskAttached: (native as any).__effectPaintMask ? 1 : 0,
-                    forceTop: forceTop ? 1 : 0
-                });
+                console.log(
+                    "[EFFECT][MASK][VIS]" +
+                    " id=" + (s.id | 0) +
+                    " visible=" + (native.visible ? 1 : 0) +
+                    " alpha=" + (native.alpha ?? 0) +
+                    " depth=" + ((native as any).depth ?? 0) +
+                    " tex=" + ((native as any).texture?.key ?? "") +
+                    " frame=" + ((native as any).frame?.name ?? "") +
+                    " displayW=" + ((native as any).displayWidth ?? (native as any).width ?? 0) +
+                    " displayH=" + ((native as any).displayHeight ?? (native as any).height ?? 0) +
+                    " mode=" + String(dataAny[EFFECT_MODE_DATA_KEY] || "") +
+                    " maskType=" + String((native as any).__effectPaintMaskType || "") +
+                    " maskAttached=" + ((native as any).__effectPaintMask ? 1 : 0) +
+                    " forceTop=" + (forceTop ? 1 : 0)
+                );
             }
         } catch { /* ignore */ }
     }
