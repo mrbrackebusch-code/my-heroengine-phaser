@@ -5138,10 +5138,11 @@ const STAT = {
 
     STRENGTH_REACH_EXTRA_PX: 15,
     AGILITY_REACH_PX: 16,
+    AGILITY_ANIM_MS: 17,
 
 
 
-    LEN: 17
+    LEN: 18
 
 }
 
@@ -5510,6 +5511,7 @@ const HERO_DATA: Record<string, string> = {
     AgilityLungeDirY1000: "AgilityLungeDirY1000",   // number
 
     AgilityLungeSpeed: "AgilityLungeSpeed",         // number (px/s)
+    AgilityAnimTotalMs: "AgilityAnimTotalMs",       // number (visual timing only)
 
 
 
@@ -5821,6 +5823,7 @@ const PROJ_DATA = {
     LAST_T: "lastT",
 
     DASH_MS: "dashMs",
+    DASH_ANIM_MS: "dashAnimMs",
 
     DASH_END_MS: "dashEndMs",
 
@@ -9984,6 +9987,8 @@ const TOWER_TRIAL_DIALOG_CHOICE_START = "trial_start"
 const TOWER_TRIAL_DIALOG_CHOICE_PROVING = "trial_proving"
 const TOWER_TRIAL_DIALOG_CHOICE_HINT = "trial_hint"
 const TOWER_TRIAL_DIALOG_CHOICE_CLOSE = "trial_close"
+const TOWER_TRIAL_DIALOG_CHOICE_SANITY_START = "trial_sanity_start"
+const TOWER_TRIAL_DIALOG_CHOICE_SANITY_CANCEL = "trial_sanity_cancel"
 const TOWER_TRIAL_ANNOUNCER_SHOW_BLINK_MS = 180
 const TOWER_TRIAL_ANNOUNCER_SHOW_POSE_MS = 900
 const TOWER_TRIAL_ANNOUNCER_SHOW_LOOPS = 2
@@ -9992,6 +9997,11 @@ const TOWER_TRIAL_INTRO_CHOICES: Array<{ id: string; label: string }> = [
     { id: TOWER_TRIAL_DIALOG_CHOICE_START, label: "I'm ready." },
     { id: TOWER_TRIAL_DIALOG_CHOICE_PROVING, label: "What am I proving?" },
     { id: TOWER_TRIAL_DIALOG_CHOICE_HINT, label: "Give me a hint." },
+]
+
+const TOWER_TRIAL_SANITY_CHOICES: Array<{ id: string; label: string }> = [
+    { id: TOWER_TRIAL_DIALOG_CHOICE_SANITY_START, label: "Start anyway." },
+    { id: TOWER_TRIAL_DIALOG_CHOICE_SANITY_CANCEL, label: "I'll fix it." },
 ]
 
 const TOWER_TRIAL_SCRIPT_MAIN_LINES: Array<{ text: string; hint?: string }> = [
@@ -10063,6 +10073,21 @@ type TowerTrialStatusSnapshot = {
     profiles: Record<string, TowerTrialProfileSnapshot>
 }
 
+type TowerTrialSanitySummary = {
+    ok: boolean
+    totalMoves: number
+    passingMoves: number
+    issueCount: number
+    participants: string[]
+    globalIssues: string[]
+    perProfile: Record<string, {
+        passingMoves: number
+        totalMoves: number
+        failingButtons: string[]
+        globalIssues: string[]
+    }>
+}
+
 const TOWER_TRIAL_DEBUG_EVENT_LIMIT = 900
 
 type TowerTrialDialogState = {
@@ -10122,6 +10147,10 @@ let _towerTrialPlatformFlashUntilMs = 0
 let _towerTrialPlatformHoldUntilMs = 0
 let _towerTrialPlatformHoldX = 0
 let _towerTrialPlatformHoldY = 0
+let _towerTrialSanityPending = false
+let _towerTrialSanityAllowStart = false
+let _towerTrialSanityBlockUntilOff = false
+let _towerTrialSanityLastSummary: TowerTrialSanitySummary | null = null
 let _towerTrialDebugState: TowerTrialDebugState = {
     runId: 0,
     startedAtMs: 0,
@@ -19278,37 +19307,29 @@ function splitAgiThrustDurations(totalMs: number): [number, number, number] {
 
     const T = Math.max(1, totalMs | 0)
 
-
-
-    let wind = Math.idiv(T * AGI_THRUST_WINDUP_FRAC_X1000, 1000)
-
-    let fwd  = Math.idiv(T * AGI_THRUST_FORWARD_FRAC_X1000, 1000)
-
-    let land = T - wind - fwd
-
-
-
-    // safety mins so we never get 0ms phases on small durations
-
-    if (wind < 1) wind = 1
-
-    if (fwd < 1) fwd = 1
-
-    if (land < 1) land = 1
-
-
-
-    // re-balance if we over-allocated
-
-    const sum = wind + fwd + land
-
-    if (sum !== T) {
-
-        land = Math.max(1, land + (T - sum))
-
+    const windMin = AGI_THRUST_WINDUP_MIN_MS | 0
+    const landMin = AGI_THRUST_LANDING_MIN_MS | 0
+    if (T >= (windMin + landMin + 1)) {
+        const wind = Math.max(1, windMin)
+        const land = Math.max(1, landMin)
+        const fwd = Math.max(1, T - wind - land)
+        return [wind, fwd, land]
     }
 
+    let wind = Math.idiv(T * AGI_THRUST_WINDUP_FRAC_X1000, 1000)
+    let fwd  = Math.idiv(T * AGI_THRUST_FORWARD_FRAC_X1000, 1000)
+    let land = T - wind - fwd
 
+    // safety mins so we never get 0ms phases on small durations
+    if (wind < 1) wind = 1
+    if (fwd < 1) fwd = 1
+    if (land < 1) land = 1
+
+    // re-balance if we over-allocated
+    const sum = wind + fwd + land
+    if (sum !== T) {
+        land = Math.max(1, land + (T - sum))
+    }
 
     return [wind, fwd, land]
 
@@ -24599,10 +24620,21 @@ function _towerTrialPlatformTick(nowMs: number): void {
     if (armed) desired = SHOP_TRIAL_PLATFORM_NAME_SPIN
 
     const onPlatform = armed && _towerTrialPlatformAreAllHeroesOn(center.x | 0, center.y | 0)
+    if (!onPlatform) {
+        _towerTrialSanityPending = false
+        _towerTrialSanityAllowStart = false
+        _towerTrialSanityBlockUntilOff = false
+    }
     if (onPlatform) {
         if (!_towerTrialPlatformTriggered) {
             if (!_towerTrialSession || !_towerTrialSession.active) {
-                _towerTrialStart(nowMs | 0)
+                if (_towerTrialSanityAllowStart) {
+                    _towerTrialSanityAllowStart = false
+                    _towerTrialStart(nowMs | 0)
+                } else if (!_towerTrialSanityPending && !_towerTrialSanityBlockUntilOff) {
+                    const prompted = _towerTrialMaybePromptSanity(nowMs | 0)
+                    if (!prompted) _towerTrialStart(nowMs | 0)
+                }
             }
             if (_towerTrialSession && _towerTrialSession.active) {
                 _towerTrialPlatformTriggerBegin(nowMs | 0, center.x | 0, center.y | 0)
@@ -24614,6 +24646,131 @@ function _towerTrialPlatformTick(nowMs: number): void {
     }
 
     _towerTrialPlatformSetName(desired)
+}
+
+function _towerTrialShorten(text: string, maxLen: number): string {
+    const s = String(text || "")
+    const max = maxLen | 0
+    if (max <= 0 || s.length <= max) return s
+    const cut = Math.max(0, (max - 3) | 0)
+    return s.slice(0, cut) + "..."
+}
+
+function _towerTrialCollectParticipants(): { participants: string[]; pids: number[] } {
+    const participants: string[] = []
+    const pids: number[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
+        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+        if (pid <= 0 || !_dunIsPidActive(pid)) continue
+        let profile = _heroProfileKeyForIndex(hi) || ""
+        if (!profile) profile = sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        if (!profile) continue
+        if (participants.indexOf(profile) < 0) participants.push(profile)
+        if (pids.indexOf(pid) < 0) pids.push(pid)
+    }
+    return { participants, pids }
+}
+
+function _towerTrialBuildSanitySummary(
+    floor: number,
+    participants: string[],
+    xmlByProfile: Record<string, string>
+): TowerTrialSanitySummary {
+    const perProfile: TowerTrialSanitySummary["perProfile"] = Object.create(null)
+    const totalMoves = (participants.length | 0) * (TOWER_TRIAL_BUTTONS.length | 0)
+    let passingMoves = totalMoves | 0
+    let issueCount = 0
+    const globalIssues: string[] = []
+    const globalSeen: Record<string, boolean> = Object.create(null)
+
+    for (let i = 0; i < participants.length; i++) {
+        const profile = participants[i]
+        const xml = String(xmlByProfile?.[profile] || "")
+        const sim = towerTrialSimulateProfile(profile, xml, floor | 0)
+        const failingButtons: Record<string, boolean> = Object.create(null)
+        const profileGlobals: string[] = []
+
+        const issues = sim?.issues || []
+        for (let j = 0; j < issues.length; j++) {
+            const issue = issues[j]
+            if (!issue) continue
+            issueCount = (issueCount + 1) | 0
+            const reqId = String(issue.requirementId || "")
+            const button = String(issue.button || "")
+            if (!button && reqId === "invalidOutput") {
+                for (let k = 0; k < TOWER_TRIAL_BUTTONS.length; k++) {
+                    failingButtons[TOWER_TRIAL_BUTTONS[k]] = true
+                }
+                const msg = String(issue.message || "")
+                if (msg) profileGlobals.push(msg)
+                continue
+            }
+            if (button) {
+                failingButtons[button] = true
+                continue
+            }
+            const msg = String(issue.message || "")
+            if (msg) profileGlobals.push(msg)
+        }
+
+        const failingList = Object.keys(failingButtons)
+        passingMoves = (passingMoves - (failingList.length | 0)) | 0
+        perProfile[profile] = {
+            passingMoves: Math.max(0, (TOWER_TRIAL_BUTTONS.length | 0) - (failingList.length | 0)) | 0,
+            totalMoves: TOWER_TRIAL_BUTTONS.length | 0,
+            failingButtons: failingList,
+            globalIssues: profileGlobals.slice(),
+        }
+        for (let j = 0; j < profileGlobals.length; j++) {
+            const msg = String(profileGlobals[j] || "")
+            if (!msg) continue
+            if (globalSeen[msg]) continue
+            globalSeen[msg] = true
+            globalIssues.push(msg)
+        }
+    }
+
+    if ((passingMoves | 0) < 0) passingMoves = 0
+    return {
+        ok: (issueCount | 0) <= 0,
+        totalMoves: totalMoves | 0,
+        passingMoves: passingMoves | 0,
+        issueCount: issueCount | 0,
+        participants: participants.slice(),
+        globalIssues: globalIssues.slice(),
+        perProfile,
+    }
+}
+
+function _towerTrialMaybePromptSanity(nowMs: number): boolean {
+    const floor = _dunFloorIndex | 0
+    const requirementSet = towerTrialRequirementSetForFloor(floor)
+    if (!requirementSet.ids.length) return false
+    const { participants } = _towerTrialCollectParticipants()
+    if (!participants.length) {
+        _towerTrialDialog(nowMs, "No active heroes found.", "Join the trial before starting.", true)
+        return true
+    }
+    const g: any = globalThis as any
+    const xmlByProfile = (g && g.__heBlocklyXmlByProfile) ? g.__heBlocklyXmlByProfile : {}
+    const summary = _towerTrialBuildSanitySummary(floor, participants, xmlByProfile || {})
+    _towerTrialSanityLastSummary = summary
+    if (summary.ok) return false
+
+    const total = summary.totalMoves | 0
+    const passing = summary.passingMoves | 0
+    const globalIssue = summary.globalIssues.length ? summary.globalIssues[0] : ""
+    let text = `Sanity check: ${passing}/${total} moves pass right now. Are you sure?`
+    if (globalIssue) {
+        text = `Sanity check: ${passing}/${total} moves pass right now.\nRule failing: ${_towerTrialShorten(globalIssue, 80)}\nAre you sure you want to start?`
+    }
+    _towerTrialSanityPending = true
+    _towerTrialDialog(nowMs | 0, text, TOWER_TRIAL_DIALOG_HINT_CHOICES, true, TOWER_TRIAL_SANITY_CHOICES)
+    _towerTrialDebugLog("sanity_prompt", { summary }, nowMs | 0)
+    return true
 }
 
 function _towerTrialCameraHoldInfo(): any {
@@ -25039,6 +25196,35 @@ function _towerTrialDialogAdvanceScript(nowMs: number): void {
 function _towerTrialDialogHandleChoice(choiceId: string, nowMs: number): void {
     const id = String(choiceId || "")
     _towerTrialDebugLog("dialog_choice", { id }, nowMs | 0)
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_SANITY_START) {
+        try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogLockHeroes(false, nowMs | 0)
+        _towerTrialDialogState.mode = "idle"
+        _towerTrialDialogState.scriptLines = null
+        _towerTrialSanityPending = false
+        _towerTrialSanityAllowStart = true
+        _towerTrialSanityBlockUntilOff = false
+        const arena = _towerTrialArenaRect()
+        if (arena) {
+            const center = _towerTrialPlatformCenterXY(arena)
+            if (_towerTrialPlatformAreAllHeroesOn(center.x | 0, center.y | 0)) {
+                _towerTrialSanityAllowStart = false
+                _towerTrialStart(nowMs | 0)
+            }
+        }
+        return
+    }
+    if (id === TOWER_TRIAL_DIALOG_CHOICE_SANITY_CANCEL) {
+        try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogLockHeroes(false, nowMs | 0)
+        _towerTrialDialogState.mode = "idle"
+        _towerTrialDialogState.scriptLines = null
+        _towerTrialSanityPending = false
+        _towerTrialSanityAllowStart = false
+        _towerTrialSanityBlockUntilOff = true
+        _towerTrialDialogCommentary(nowMs | 0, "Fix your Blockly, then step on the circle.")
+        return
+    }
     if (id === TOWER_TRIAL_DIALOG_CHOICE_START) {
         try { (globalThis as any).__heDialog?.hide?.() } catch { }
         _towerTrialDialogLockHeroes(false, nowMs | 0)
@@ -25223,25 +25409,15 @@ function _towerTrialStart(nowMs: number): void {
 
     _towerTrialPlatformTriggered = false
     _towerTrialPlatformFlashUntilMs = 0
+    _towerTrialSanityPending = false
+    _towerTrialSanityAllowStart = false
+    _towerTrialSanityBlockUntilOff = false
 
     if (_towerTrialSession && _towerTrialSession.active) {
         _towerTrialEnd("restart", nowMs | 0)
     }
 
-    const participants: string[] = []
-    const pids: number[] = []
-    for (let hi = 0; hi < heroes.length; hi++) {
-        const hero = heroes[hi]
-        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
-        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
-        const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-        if (pid <= 0 || !_dunIsPidActive(pid)) continue
-        let profile = _heroProfileKeyForIndex(hi) || ""
-        if (!profile) profile = sprites.readDataString(hero, HERO_DATA.NAME) || ""
-        if (!profile) continue
-        if (participants.indexOf(profile) < 0) participants.push(profile)
-        if (pids.indexOf(pid) < 0) pids.push(pid)
-    }
+    const { participants, pids } = _towerTrialCollectParticipants()
     if (!participants.length) {
         _towerTrialDialog(nowMs, "No active heroes found.", "Join the trial before starting.", true)
         return
@@ -25816,6 +25992,9 @@ function _towerTrialTick(nowMs: number): void {
         _towerTrialPlatformFlashUntilMs = 0
         _towerTrialPlatformHoldUntilMs = 0
         _towerTrialPlatformSetName(SHOP_TRIAL_PLATFORM_NAME_IDLE)
+        _towerTrialSanityPending = false
+        _towerTrialSanityAllowStart = false
+        _towerTrialSanityBlockUntilOff = false
         _towerTrialEnd("floor-exit", nowMs | 0)
         _towerTrialDestroyAnnouncer()
         return
@@ -25826,6 +26005,9 @@ function _towerTrialTick(nowMs: number): void {
         _towerTrialPlatformFlashUntilMs = 0
         _towerTrialPlatformHoldUntilMs = 0
         _towerTrialPlatformSetName(SHOP_TRIAL_PLATFORM_NAME_IDLE)
+        _towerTrialSanityPending = false
+        _towerTrialSanityAllowStart = false
+        _towerTrialSanityBlockUntilOff = false
         _towerTrialEnd("not-required", nowMs | 0)
         _towerTrialDestroyAnnouncer()
         return
@@ -40685,6 +40867,7 @@ function _doHeroMoveTryAgilityExecuteThisPress(
     sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
 
     sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityAnimTotalMs, 0)
 
 
 
@@ -41278,6 +41461,12 @@ function _doHeroMovePlayAnimAndDispatch(
     let animDuration = stats[STAT.MOVE_DURATION] | 0
 
     if (animDuration <= 0) animDuration = 1
+
+
+    if (family == FAMILY.AGILITY) {
+        const agiAnim = stats[STAT.AGILITY_ANIM_MS] | 0
+        if (agiAnim > 0) animDuration = agiAnim | 0
+    }
 
 
 
@@ -41973,6 +42162,8 @@ function _doHeroMoveApplyMovementScheduleAndVelocity(
         sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, Math.round(ay * 1000) | 0)
 
         sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, lungeCapped | 0)
+        const animTotal = stats[STAT.AGILITY_ANIM_MS] | 0
+        sprites.setDataNumber(hero, HERO_DATA.AgilityAnimTotalMs, (animTotal > 0 ? animTotal : moveDuration) | 0)
 
 
 
@@ -52176,13 +52367,14 @@ const AGI_HOOKSHOT_SHOW_AIM_INDICATOR = true
 const AGI_HOOKSHOT_AIM_TILT_UP_DEG = 30
 const AGI_HOOKSHOT_AIM_TILT_SIDE_DEG = 22.5
 const AGI_HOOKSHOT_AIM_DOT_COUNT = 4
-const AGI_HOOKSHOT_AIM_DOT_RADIUS_PX = 5
-const AGI_HOOKSHOT_AIM_DOT_SPACING_PX = 16
+const AGI_HOOKSHOT_AIM_DOT_RADIUS_PX = 8
+const AGI_HOOKSHOT_AIM_DOT_OUTLINE_PX = 2
+const AGI_HOOKSHOT_AIM_DOT_SPACING_PX = 18
 const AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 = 250
 const AGI_HOOKSHOT_AIM_DOT_TIP_PAD_PX = 10
-const AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN = 0.35
-const AGI_HOOKSHOT_AIM_DOT_ALPHA_MAX = 0.95
-const AGI_HOOKSHOT_AIM_DOT_PULSE_MS = 520
+const AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN = 0.9
+const AGI_HOOKSHOT_AIM_DOT_ALPHA_MAX = 1
+const AGI_HOOKSHOT_AIM_DOT_PULSE_MS = 600
 const AGI_HOOKSHOT_BASE_LEN_MULT_X1000 = 1000     // base reach = 1.0 * weapon length
 const AGI_HOOKSHOT_BASE_LEN_ADD_PX = 0
 const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-length of travel
@@ -53637,9 +53829,17 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
 
         // Transition-based PhasePart stamping:
-
         // Only set Name/Start/Duration when the part actually changes.
-
+        const animTotal = sprites.readDataNumber(hero, HERO_DATA.AgilityAnimTotalMs) | 0
+        let animWind = 0
+        let animFwd = 0
+        let animLand = 0
+        if (animTotal > 0) {
+            const parts = splitAgiThrustDurations(animTotal | 0)
+            animWind = parts[0] | 0
+            animFwd = parts[1] | 0
+            animLand = parts[2] | 0
+        }
         const curPart = sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
 
         if (curPart !== desiredPart) {
@@ -53657,6 +53857,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
                 const windStart = (phaseStart > 0 ? phaseStart : now) | 0
 
                 let windDur = (lungeStart - windStart) | 0
+                if (animWind > 0) windDur = animWind | 0
 
                 if (windDur <= 0) windDur = 1
 
@@ -53671,6 +53872,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             } else if (desiredPart === "forward") {
 
                 let fwdDur = (lungeEnd - lungeStart) | 0
+                if (animFwd > 0) fwdDur = animFwd | 0
 
                 if (fwdDur <= 0) fwdDur = 1
 
@@ -53685,6 +53887,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             } else { // landing
 
                 let landDur = (phaseEnd - lungeEnd) | 0
+                if (animLand > 0) landDur = animLand | 0
 
                 if (landDur <= 0) landDur = 1
 
@@ -53847,6 +54050,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
 
             sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AgilityAnimTotalMs, 0)
 
 
 
@@ -54706,6 +54910,22 @@ function calculateAgilityStats(
 
     // ----------------------------------------------------
 
+    // ANIMATION DURATION (visual timing; not travel-coupled)
+
+    // ----------------------------------------------------
+
+    let animTotal = baseTimeMs | 0
+    if (animTotal < (BALANCE.MOVES.AGILITY.MOVE_DURATION_MIN_MS | 0)) animTotal = BALANCE.MOVES.AGILITY.MOVE_DURATION_MIN_MS | 0
+    const animMinTotalForForward = Math.idiv((AGI_THRUST_FORWARD_MIN_MS * 1000 + fwdFrac - 1), fwdFrac) | 0
+    const animMinTotalForWindLand = Math.idiv((windLandMin * 1000 + windLandFrac - 1), windLandFrac) | 0
+    const animMinTotal = Math.max(animMinTotalForForward | 0, animMinTotalForWindLand | 0) | 0
+    if (animTotal < animMinTotal) animTotal = animMinTotal
+    stats[STAT.AGILITY_ANIM_MS] = animTotal | 0
+
+
+
+    // ----------------------------------------------------
+
     // MOVE DURATION – baseline (then debug slowmo)
 
     // ----------------------------------------------------
@@ -55102,25 +55322,29 @@ function _agiHookDestroySprite(s: Sprite | null): void {
     if (!(s.flags & sprites.Flag.Destroyed)) s.destroy()
 }
 
-const __agiHookAimDotCache: { [k: number]: Image } = Object.create(null);
-function _agiHookAimDotImage(colorIdx: number): Image {
-    const key = (colorIdx | 0) & 0xff;
+const __agiHookAimDotCache: { [k: string]: Image } = Object.create(null);
+function _agiHookAimDotImage(fillIdx: number, edgeIdx: number): Image {
+    const key = `${(fillIdx | 0) & 0xff}:${(edgeIdx | 0) & 0xff}:${AGI_HOOKSHOT_AIM_DOT_RADIUS_PX | 0}`;
     const cached = __agiHookAimDotCache[key];
     if (cached) return cached;
     const r = Math.max(1, AGI_HOOKSHOT_AIM_DOT_RADIUS_PX | 0);
     const size = (r * 2) + 1;
     const img = image.create(size, size);
     img.fill(0);
-    _img_fillCircleCompat(img, r, r, r, key);
-    if (r > 1) _img_fillCircleCompat(img, r, r, r - 1, 0);
+    const edge = (edgeIdx | 0) || 15;
+    const fill = (fillIdx | 0) || 1;
+    const outline = Math.max(1, AGI_HOOKSHOT_AIM_DOT_OUTLINE_PX | 0);
+    _img_fillCircleCompat(img, r, r, r, edge);
+    const inner = Math.max(0, r - outline);
+    if (inner > 0) _img_fillCircleCompat(img, r, r, inner, fill);
     __agiHookAimDotCache[key] = img;
     return img;
 }
 
-function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, colorIdx: number): Sprite[] {
+function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: number, edgeIdx: number): Sprite[] {
     let arr = st.aimIndicator || null;
     const count = Math.max(1, AGI_HOOKSHOT_AIM_DOT_COUNT | 0);
-    const img = _agiHookAimDotImage(colorIdx | 0);
+    const img = _agiHookAimDotImage(fillIdx | 0, edgeIdx | 0);
     if (!arr || arr.length !== count) {
         if (arr) {
             for (const d of arr) _agiHookDestroySprite(d);
@@ -55169,8 +55393,9 @@ function _agiHookUpdateAimDots(
     }
     const dirKey = _weaponDirKeyFromVector(nx, ny);
     const palette = _weaponAuraPaletteForElement(st.element | 0, dirKey, "offense");
-    const colorIdx = (palette.r3 | 0) || (palette.r2 | 0) || (palette.r1 | 0) || 1;
-    const dots = _agiHookEnsureAimDots(st, hero, colorIdx | 0);
+    const fillIdx = (palette.r3 | 0) || (palette.r2 | 0) || (palette.r1 | 0) || 1;
+    const edgeIdx = (palette.edge | 0) || 15;
+    const dots = _agiHookEnsureAimDots(st, hero, fillIdx | 0, edgeIdx | 0);
     const dist = Math.hypot(tipX - baseX, tipY - baseY);
     const baseLen = Math.max(1, weaponLen | 0);
     const start = Math.max(2, Math.round((baseLen * (AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 | 0)) / 1000));
@@ -56237,6 +56462,7 @@ function _agiHookClearLungeSchedule(hero: Sprite): void {
     sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirX1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.AgilityLungeDirY1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.AgilityLungeSpeed, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AgilityAnimTotalMs, 0)
 }
 
 function _agiHookFindEnemyById(id: number): Sprite | null {
@@ -57607,6 +57833,11 @@ function spawnAgilityThrustProjectile(
     const dashMs = Math.max(1, (lungeEnd - lungeStart) | 0)
 
     sprites.setDataNumber(proj, PROJ_DATA.DASH_MS, dashMs)
+    {
+        const animTotal = sprites.readDataNumber(hero, HERO_DATA.AgilityAnimTotalMs) | 0
+        const animFwd = (animTotal > 0) ? (splitAgiThrustDurations(animTotal | 0)[1] | 0) : dashMs
+        sprites.setDataNumber(proj, PROJ_DATA.DASH_ANIM_MS, animFwd | 0)
+    }
 
 
 
@@ -58436,7 +58667,14 @@ function updateAgilityProjectilesMotionFor(
         if (debugFront > sFront) sFront = debugFront;
     }
 
-    const growthTComet = (maxLen > 0) ? Math.max(0, Math.min(1, arrowLen / maxLen)) : 0;
+    let growthTComet = (maxLen > 0) ? Math.max(0, Math.min(1, arrowLen / maxLen)) : 0;
+    const dashAnimMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_ANIM_MS) | 0;
+    if (dashAnimMs > 0) {
+        let uAnim = (nowMs - startMs) / dashAnimMs;
+        if (uAnim < 0) uAnim = 0;
+        if (uAnim > 1) uAnim = 1;
+        growthTComet = uAnim;
+    }
     const reelTComet = (reachT > 0) ? Math.max(0, Math.min(1, (nowMs - reachT) / Math.max(1, AGI_COMET_REEL_MS))) : 0;
     const elementNow = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
     _updateAgilityCometFx(
@@ -65546,8 +65784,9 @@ function xpForMonsterId(monsterId: string): number {
 
 
     const tags = (MONSTER_ARCHETYPE[monsterId] as string[]) || []
-
-    const isBoss = tags.indexOf("BOSS") >= 0
+    const bossId = String(monsterIdNorm || "").trim().toLowerCase()
+    const isBossById = !!bossId && (bossId.indexOf("boss") >= 0 || ENEMY_BOSS_IDS.has(bossId))
+    const isBoss = tags.indexOf("BOSS") >= 0 || isBossById
 
 
 
@@ -74779,6 +75018,19 @@ function _heroDeath_requestLoadLatestSave(profileKey: string, pid: number, mode?
     }
 }
 
+function _dunRestartCurrentFloor(reason: string): boolean {
+    if (!DUNGEON_MODE_ACTIVE) return false
+    const g: any = globalThis as any
+    if (g && g.__isHost === false) return false
+    try { if (g) g.__forceScreenFlashOnNextTilemap = true } catch { }
+    _dunTeleportCommitAtMs = 0
+    _dunAllReadySinceMs = 0
+    _dunRuneSpinSinceMs = 0
+    relic_cancelNextFloorChoiceIfPending(`respawn:${reason || "restart"}`)
+    _dunEnterFloor(_dunFloorIndex | 0, String(_dunFloorKind || DUNGEON_KIND_COMBAT), game.runtime() | 0)
+    return true
+}
+
 function _heroDeath_tryRespawn(profileKey: string): { ok: boolean; reason: string } {
     const key = _death_normProfileKey(profileKey)
     if (!key) return { ok: false, reason: "no-profile" }
@@ -74812,13 +75064,19 @@ function _heroDeath_tryRespawn(profileKey: string): { ok: boolean; reason: strin
     const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
     const newHp = maxHp > 0 ? maxHp : 1
     sprites.setDataNumber(hero, HERO_DATA.HP, newHp)
-    updateHeroHPBar(hi)
+    const hpBar = _getHeroHPBar(hi)
+    if (!hpBar || (hpBar.flags & sprites.Flag.Destroyed)) {
+        initHeroHP(hi, hero, (maxHp > 0 ? maxHp : newHp) | 0)
+    } else {
+        updateHeroHPBar(hi)
+    }
 
     unlockHeroControls(hi)
     setHeroPhaseString(hi, "idle")
     _animKeys_stampPhaseWindow(hi, hero, "idle", game.runtime() | 0, _ambientPhaseWindowMs("idle"), "respawn")
 
     _heroDeath_clearHeadstone(key)
+    _dunRestartCurrentFloor("respawn")
     _beginHeroTeleportFx(hi, hero, 1, key, "respawn")
     return { ok: true, reason: "respawned" }
 }
@@ -83108,6 +83366,11 @@ try {
                 _towerTrialDialogState.scriptIndex = 0
                 _towerTrialDialogState.scriptLines = null
                 _towerTrialDialogHeroIndex = -1
+                if (_towerTrialSanityPending) {
+                    _towerTrialSanityPending = false
+                    _towerTrialSanityAllowStart = false
+                    _towerTrialSanityBlockUntilOff = true
+                }
             })
         }
     }

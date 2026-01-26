@@ -164,6 +164,7 @@ function _uiLoadingMaybeDone(): void {
 function _tryPruneUnconnectedHeroes(reason: string): void {
   try {
     const g: any = globalThis as any;
+    const forceFlash = !!msg.forceFlash;
     const internals: any = g.__HeroEnginePhaserInternals;
     if (internals && typeof internals.pruneUnconnectedHeroes === "function") {
       internals.pruneUnconnectedHeroes(reason || "scene");
@@ -2844,6 +2845,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
 
     const worldRev = (msg.worldRev | 0) || 0;
     const floorIndex = (typeof msg.floorIndex === "number") ? (msg.floorIndex | 0) : -1;
+    const prevFloor = this._tilemapAppliedFloorIndex | 0;
     const decor: DecorPayload | undefined = msg.decor;
     const decorRev = (decor && typeof (decor as any).rev === "number") ? ((decor as any).rev | 0) : -1;
     const decorOnly = !!msg.decorOnly;
@@ -2905,6 +2907,11 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     }
     g.__tilemapAppliedWorldRev = (this._tilemapAppliedWorldRev | 0);
     g.__tilemapAppliedFloorIndex = (this._tilemapAppliedFloorIndex | 0);
+
+    const shouldFlash = shouldApplyBase && (forceFlash || (floorIndex | 0) !== (prevFloor | 0));
+    if (shouldFlash) {
+        this.cameras?.main?.flash(140);
+    }
 
     if (shouldApplyBase) {
         this._tilemapAppliedPropByAnchor = null;
@@ -3548,6 +3555,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         ((decorPayload.rev | 0) !== (this._tilemapAppliedDecorRev | 0));
 
     const prevFloor = this._tilemapAppliedFloorIndex | 0;
+    const forceFlash = !!g.__forceScreenFlashOnNextTilemap;
     const baseChanged =
         (worldRev | 0) !== (this._tilemapAppliedWorldRev | 0) ||
         (floorIndex | 0) !== (this._tilemapAppliedFloorIndex | 0) ||
@@ -3613,9 +3621,13 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         });
     }
 
-    // Only flash the screen on true floor changes (not decor updates/chest opens).
-    if ((floorIndex | 0) !== (prevFloor | 0)) {
+    // Only flash the screen on true floor changes unless a forced flash was requested.
+    const shouldFlash = baseChanged && (forceFlash || (floorIndex | 0) !== (prevFloor | 0));
+    if (shouldFlash) {
       this.cameras?.main?.flash(140);
+    }
+    if (forceFlash && baseChanged) {
+      g.__forceScreenFlashOnNextTilemap = false;
     }
 
     // Broadcast to clients (monotonic net rev)
@@ -3655,6 +3667,7 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         floorIndex,
         floorKind: (internals.getFloorKind?.() || g.__floorKind || ""),
         decorOnly: (!baseChanged && !!decorNeedsApply),
+        forceFlash: forceFlash ? 1 : undefined,
         decor: decorPayload || undefined,
         baseSig: syncHash ? (syncHash.baseSig | 0) : undefined,
         decorSig: syncHash ? (syncHash.decorSig | 0) : undefined,
